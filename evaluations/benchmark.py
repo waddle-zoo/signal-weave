@@ -78,7 +78,10 @@ def _build_judger(system: str) -> Any:
             )
         judger = EmbeddingReasoningJudger(
             base_url=base_url,
-            model=os.getenv(f"{prefix}_MODEL", "luna"),
+            model=os.getenv(
+                f"{prefix}_MODEL",
+                "gpt-4o-mini" if system == "openai" else "luna",
+            ),
             embedding_model=os.getenv(
                 f"{prefix}_EMBEDDING_MODEL", "text-embedding-3-small"
             ),

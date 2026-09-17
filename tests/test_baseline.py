@@ -2,9 +2,16 @@ import json
 
 import httpx
 
+from evaluations.benchmark import _build_judger
 from evaluations.cases import load_evaluation_cases
 from evaluations.embedding_baseline import EmbeddingReasoningJudger
 from signalweave.compiler import base_plan
+
+
+def test_openai_benchmark_uses_a_valid_default_model(monkeypatch):
+    monkeypatch.delenv("OPENAI_MODEL", raising=False)
+    judger = _build_judger("openai")
+    assert judger.model == "gpt-4o-mini"
 
 
 async def test_embedding_reasoning_adapter_uses_two_calls_and_typed_json():
@@ -33,7 +40,8 @@ async def test_embedding_reasoning_adapter_uses_two_calls_and_typed_json():
                             '"rationale":"Related mobile evidence supports notification.",'
                             '"confidence":0.81,"watch_results":[{"key":"watch_0","probability":0.91}],'
                             '"question_results":[{"key":"question_0","probability":0.84}],'
-                            '"probabilities":{"notify":0.81,"investigate":0.19}}'
+                            '"probabilities":[{"key":"notify","probability":0.81},'
+                            '{"key":"investigate","probability":0.19}]}'
                         }
                     }
                 ],
@@ -106,6 +114,7 @@ async def test_openai_responses_baseline_uses_strict_schema_and_counts_usage():
         assert response_format["type"] == "json_schema"
         assert response_format["strict"] is True
         assert response_format["schema"]["additionalProperties"] is False
+        assert response_format["schema"]["properties"]["probabilities"]["type"] == "array"
         return httpx.Response(
             200,
             json={
@@ -116,7 +125,7 @@ async def test_openai_responses_baseline_uses_strict_schema_and_counts_usage():
                         "confidence": 0.81,
                         "watch_results": [{"key": "watch_0", "probability": 0.91}],
                         "question_results": [{"key": "question_0", "probability": 0.84}],
-                        "probabilities": {"notify": 0.81},
+                        "probabilities": [{"key": "notify", "probability": 0.81}],
                     }
                 ),
                 "usage": {"input_tokens": 30, "output_tokens": 8},

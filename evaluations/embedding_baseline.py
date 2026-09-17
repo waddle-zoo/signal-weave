@@ -145,10 +145,7 @@ class EmbeddingReasoningJudger:
             ),
             rationale=str(result.get("rationale") or "Embedding-plus-reasoning baseline result."),
             confidence=confidence,
-            probabilities={
-                str(key): max(0.0, min(1.0, float(value)))
-                for key, value in (result.get("probabilities") or {}).items()
-            },
+            probabilities=self._probabilities(result.get("probabilities")),
             watch_results=watch_results,
             question_results=question_results,
             evidence=[Evidence.model_validate(item) for item in retrieved_evidence],
@@ -326,8 +323,8 @@ class EmbeddingReasoningJudger:
                 "watch_results": {"type": "array", "items": probability_item},
                 "question_results": {"type": "array", "items": probability_item},
                 "probabilities": {
-                    "type": "object",
-                    "additionalProperties": {"type": "number"},
+                    "type": "array",
+                    "items": probability_item,
                 },
             },
             "required": [
@@ -348,6 +345,21 @@ class EmbeddingReasoningJudger:
                 if content.get("type") == "output_text" and isinstance(content.get("text"), str):
                     return content["text"]
         return ""
+
+    @staticmethod
+    def _probabilities(raw_values: Any) -> dict[str, float]:
+        if not isinstance(raw_values, list):
+            return {}
+        values: dict[str, float] = {}
+        for item in raw_values:
+            if not isinstance(item, dict) or not item.get("key"):
+                continue
+            try:
+                probability = float(item["probability"])
+            except (KeyError, TypeError, ValueError):
+                continue
+            values[str(item["key"])] = max(0.0, min(1.0, probability))
+        return values
 
     @staticmethod
     def _parse_json(content: str) -> dict[str, Any]:
