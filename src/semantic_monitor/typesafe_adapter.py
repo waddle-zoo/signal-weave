@@ -95,7 +95,7 @@ class JevJudger:
         plan: MonitorPlan,
         observations: list[Observation],
     ) -> Decision:
-        from typesafe_sdk import Choice, Score
+        from typesafe_sdk import Choice, Noul
 
         default_guidance = {
             Outcome.IGNORE.value: "Do not send a notification; the evidence is not actionable.",
@@ -104,54 +104,61 @@ class JevJudger:
             Outcome.ESCALATE.value: "Send an urgent escalation to one approved recipient group.",
             Outcome.INSUFFICIENT_DATA.value: "Do not interpret the dashboard because required evidence is missing or stale.",
         }
-        criteria = {
-            outcome.value: card.outcome_guidance.get(outcome.value, default_guidance[outcome.value])
-            for outcome in card.allowed_outcomes
+        action_outcomes = {
+            Outcome.IGNORE,
+            Outcome.NOTIFY,
+            Outcome.ESCALATE,
+        }
+        action_checks = [outcome for outcome in card.allowed_outcomes if outcome in action_outcomes]
+        questions = {
+            f"matches_{outcome.value}": Noul(
+                instructions=(
+                    f"Does the current dashboard evidence satisfy the owner-defined condition "
+                    f"for the `{outcome.value}` outcome? Compare `monitor_card.intent`, "
+                    "`monitor_card.materiality_definition`, `monitor_card.outcome_guidance`, "
+                    "and the numeric `observations` and `evidence`."
+                ),
+                criteria={
+                    "true": card.outcome_guidance.get(outcome.value, default_guidance[outcome.value]),
+                    "false": "The evidence does not satisfy this outcome condition.",
+                },
+            )
+            for outcome in action_checks
         }
         recipient_criteria = {"no_recipient": "No notification should be sent."} | {
             recipient.key: recipient.label for recipient in card.recipients
         }
+        questions["recipient"] = Choice(
+            instructions="Which approved recipient group should receive an automatic action, if one is supported? Choose no_recipient when no automatic action is supported.",
+            criteria=recipient_criteria,
+        )
         async with self._client_type(api_key=self._api_key) as client:
-            response = await client.system_one(
-                state=state,
-                questions={
-                    "outcome": Choice(
-                        instructions=(
-                            "Given the dashboard monitoring intent and computed evidence, "
-                            "what should the monitoring workflow do next? Follow any "
-                            "owner-provided outcome guidance in `monitor_card.outcome_guidance`."
-                        ),
-                        criteria=criteria,
-                    ),
-                    "materiality": Score(
-                        instructions=(
-                            "How materially does the evidence violate the dashboard owner's "
-                            "monitoring intent? Use `monitor_card.materiality_definition` "
-                            "when it is provided."
-                        ),
-                        criteria=["normal", "notable", "material", "critical"],
-                    ),
-                    "recipient": Choice(
-                        instructions="Which approved recipient group should receive this decision, if any? Choose no_recipient when no notification is warranted.",
-                        criteria=recipient_criteria,
-                    ),
-                },
-            )
+            response = await client.system_one(state=state, questions=questions)
         self.metrics.record(response)
-        try:
-            outcome = Outcome(response.choices["outcome"].choice)
-        except ValueError:
+        matches = {
+            outcome: response.nouls[f"matches_{outcome.value}"].noul for outcome in action_checks
+        }
+        selected_outcome, selected_probability = (
+            max(matches.items(), key=lambda item: item[1])
+            if matches
+            else (Outcome.INVESTIGATE, 0.0)
+        )
+        if selected_probability >= card.action_confidence_threshold:
+            outcome = selected_outcome
+            confidence = selected_probability
+        else:
             outcome = Outcome.INVESTIGATE
-        if outcome not in card.allowed_outcomes:
-            outcome = Outcome.INVESTIGATE
+            confidence = max(matches.values(), default=0.0)
         recipient = response.choices["recipient"].choice
-        score = response.scores["materiality"]
         return Decision(
             outcome=outcome,
             recipient_key=None if recipient == "no_recipient" else recipient,
-            rationale=f"TypeSafe classified the monitoring state as {outcome.value}; materiality={score.score:.2f}.",
-            confidence=response.choices["outcome"].confidence,
-            probabilities=response.choices["outcome"].probabilities,
+            rationale=(
+                f"TypeSafe evaluated owner-defined action conditions; selected={outcome.value}, "
+                f"support={confidence:.2f}."
+            ),
+            confidence=confidence,
+            probabilities={outcome.value: probability for outcome, probability in matches.items()},
             evidence=state["evidence"],
             observations=observations,
             monitor_id=card.id,

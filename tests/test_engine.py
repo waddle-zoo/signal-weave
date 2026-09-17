@@ -49,6 +49,7 @@ class SafetyTestDouble:
 
     async def judge(self, state, card, plan, observations):
         del plan
+        assert all(isinstance(item, dict) for item in state["evidence"])
         return Decision(
             outcome=Outcome.INVESTIGATE,
             rationale="Test-only neutral semantic result.",

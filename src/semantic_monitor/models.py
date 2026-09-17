@@ -67,6 +67,7 @@ class MonitorCard(BaseModel):
     )
     investigation_hints: list[str] = Field(default_factory=list, max_length=50)
     materiality_threshold_pct: float = Field(default=10.0, ge=0.0, le=100000.0)
+    action_confidence_threshold: float = Field(default=0.70, ge=0.0, le=1.0)
     materiality_definition: str | None = Field(default=None, max_length=4000)
     outcome_guidance: dict[str, str] = Field(default_factory=dict, max_length=10)
     recipients: list[Recipient] = Field(default_factory=list, max_length=100)

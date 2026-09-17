@@ -76,6 +76,9 @@ class MonitorEngine:
             for error in source_errors
         ]
         evidence.extend(source_error_evidence)
+        evidence_payload = [
+            item.model_dump(mode="json") if isinstance(item, Evidence) else item for item in evidence
+        ]
         state: dict[str, Any] = {
             "dashboard": {
                 "id": dashboard.id,
@@ -90,7 +93,7 @@ class MonitorEngine:
                 observation.model_dump(mode="json") for observation in candidates
             ],
             "source_errors": source_errors,
-            "evidence": evidence,
+            "evidence": evidence_payload,
         }
         decision = await self.judger.judge(state, card, plan, observations)
         decision = self._apply_safety_gates(
@@ -209,8 +212,11 @@ class MonitorEngine:
                 }
             )
         if (
-            decision.outcome in (Outcome.IGNORE, Outcome.NOTIFY)
-            and (decision.confidence is None or decision.confidence < 0.70)
+            decision.outcome in (Outcome.IGNORE, Outcome.NOTIFY, Outcome.ESCALATE)
+            and (
+                decision.confidence is None
+                or decision.confidence < card.action_confidence_threshold
+            )
         ):
             confidence_text = (
                 f"confidence {decision.confidence:.2f}"

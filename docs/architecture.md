@@ -40,6 +40,9 @@ The workflow is designed so a language model is not responsible for the whole ta
 - The card defines the allowed charts, comparison windows, recipients, and outcomes.
 - The compiler emits a finite operation vocabulary; it cannot generate arbitrary SQL.
 - TypeSafe receives structured state and answers typed questions with probabilities.
+- Jev evaluates each owner-defined automatic-action condition as a `Noul`; code composes those independent supports and uses a card-specific action-confidence threshold.
+- Jev uses a bounded `Choice` only for the approved recipient group; it does not invent a destination.
+- The returned outcome supports are independent condition probabilities, not a normalized probability distribution over mutually exclusive outcomes.
 - Code enforces freshness, baseline availability, recipient allowlists, and confidence thresholds.
 - The returned decision includes the observations and evidence that caused it.
 

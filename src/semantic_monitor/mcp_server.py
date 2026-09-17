@@ -9,7 +9,7 @@ from mcp.server.fastmcp import FastMCP
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
-from .models import MonitorCard, Recipient
+from .models import MonitorCard, Outcome, Recipient
 from .runtime import Runtime, build_runtime
 
 
@@ -51,13 +51,20 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
         comparison_windows: list[str] | None = None,
         investigation_hints: list[str] | None = None,
         materiality_threshold_pct: float = 10.0,
+        action_confidence_threshold: float = 0.70,
         materiality_definition: str | None = None,
         outcome_guidance: dict[str, str] | None = None,
+        allowed_outcomes: list[str] | None = None,
     ) -> dict[str, Any]:
         """Draft a versioned monitoring card from owner intent; no alert is sent."""
         dashboard = runtime.store.get_dashboard(dashboard_id, include_data=False)
         if inspect.isawaitable(dashboard):
             dashboard = await dashboard
+        selected_outcomes = (
+            [Outcome(value) for value in allowed_outcomes]
+            if allowed_outcomes is not None
+            else list(Outcome)
+        )
         card = MonitorCard(
             id=f"draft-{dashboard_id}-{title.lower().replace(' ', '-')}",
             dashboard_id=dashboard_id,
@@ -69,8 +76,10 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
             or ["previous_period", "trailing_4_period_average"],
             investigation_hints=investigation_hints or [],
             materiality_threshold_pct=materiality_threshold_pct,
+            action_confidence_threshold=action_confidence_threshold,
             materiality_definition=materiality_definition,
             outcome_guidance=outcome_guidance or {},
+            allowed_outcomes=selected_outcomes,
         )
         plan = await runtime.engine.compile(card, dashboard)
         runtime.store.save_card(card)

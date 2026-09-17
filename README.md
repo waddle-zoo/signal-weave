@@ -52,11 +52,10 @@ For one evaluation, SignalWeave asks Jev to:
 
 - select the analysis capabilities that match the owner’s intent from a finite registry;
 - select the best comparison window from the monitor card;
-- classify the next outcome from the card’s allowed outcomes;
-- score materiality on a defined scale; and
+- evaluate each allowed automatic-action condition independently; and
 - select only an explicitly approved recipient group.
 
-These are `Noul`, `Choice`, and `Score` judgments—not a request for a long narrative, generated SQL, or an autonomous agent loop. The [TypeSafe documentation](https://docs.typesafe.ai/concepts/how-to-build-with-system-one) describes this as structured, parallel, comparable, fast, and confidence-aware. SignalWeave then composes those outputs in code.
+These are atomic `Noul` condition checks plus a typed `Choice` for the approved recipient—not a request for a long narrative, generated SQL, or an autonomous agent loop. The [TypeSafe documentation](https://docs.typesafe.ai/concepts/how-to-build-with-system-one) describes this as structured, parallel, comparable, fast, and confidence-aware. SignalWeave then composes those outputs in code.
 
 That separation matters:
 
@@ -67,7 +66,7 @@ That separation matters:
 | Interpreting relationships and owner language | Jev |
 | Allowed actions, recipients, confidence gates, and side effects | SignalWeave code + company policy |
 
-Confidence is used as a routing signal. A low-confidence automatic `ignore` or `notify` becomes `investigate`; stale, missing, or incomparable source data cannot silently become a no-op. TypeSafe itself cautions that confidence thresholds must be calibrated to the consequences of the application—this repository treats the four demo cases as a starting point, not a universal benchmark. See [TypeSafe confidence guidance](https://docs.typesafe.ai/confidence).
+Confidence is used as a routing signal. A low-confidence automatic `ignore`, `notify`, or `escalate` becomes `investigate`; stale, missing, or incomparable source data cannot silently become a no-op. Each card can set its action threshold, and TypeSafe itself cautions that thresholds must be calibrated to the consequences of the application—this repository treats the four demo cases as a starting point, not a universal benchmark. See [TypeSafe confidence guidance](https://docs.typesafe.ai/confidence).
 
 ## What a user actually does
 
@@ -191,7 +190,7 @@ Every decision includes:
 - normalized observations with current and baseline values;
 - change percentages, dimensions, and freshness;
 - source URLs for the underlying chart data;
-- Jev probabilities and confidence when Jev supplies the judgment; and
+- Jev condition support and confidence when Jev supplies the judgment; and
 - the selected approved recipient, if any.
 
 The engine applies safety gates after Jev:
@@ -215,7 +214,9 @@ TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
   --format markdown --output artifacts/jev-benchmark.md
 ```
 
-Current local Jev proof: 20 evaluations across five repeats, 100% exact outcome-plus-recipient accuracy, 648.62 ms median, 780.02 ms p95, 40 API requests, and 0 provider errors. This is four labeled synthetic cases—not a universal model claim—and is recorded with the benchmark protocol in [`docs/benchmark.md`](docs/benchmark.md).
+Current local Jev proof: 20 evaluations across five repeats, 100% exact outcome-plus-recipient accuracy, 701.62 ms median, 914.17 ms p95, 40 API requests, and 0 provider errors. This is four labeled synthetic cases—not a universal model claim—and is recorded with the benchmark protocol in [`docs/benchmark.md`](docs/benchmark.md).
+
+The larger live trial covered 72 generated cases across 12 company domains and six failure/action classes, repeated twice: 144 exact decisions, 100% exact outcome-plus-recipient accuracy, 0 wrong automatic actions, 0 false urgent actions, 0 provider errors, and 72/72 repeat-stable cases. See [`docs/large-scale-trial.md`](docs/large-scale-trial.md) for the methodology and its limits.
 
 The optional `embedding-reasoning` lane is a real OpenAI-compatible adapter. It embeds the same observations, retrieves the top cards, then asks a general model for structured JSON. Run it against the provider/model you actually want to compare—“Luna” is not a TypeSafe model documented by this repository, so no Luna result is claimed without a configured endpoint:
 
@@ -241,6 +242,8 @@ See [`docs/benchmark.md`](docs/benchmark.md) for the protocol and interpretation
 - `examples/monitor-card.json` — a monitor-card shape to copy and adapt
 - `docs/architecture.md` — component boundary and lifecycle
 - `docs/demo.md` — local Superset walkthrough
+- `docs/benchmark.md` — benchmark protocol and interpretation
+- `docs/large-scale-trial.md` — live large-scale Jev trial and enterprise evidence
 - `docs/security.md` — credentials, source permissions, and deployment boundary
 - `tests/` — unit and integration tests; Superset integration is opt-in
 

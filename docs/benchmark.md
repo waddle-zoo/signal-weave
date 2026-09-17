@@ -32,7 +32,7 @@ The current local run (2026-09-17, five repeats, 20 total evaluations) produced:
 
 | Evaluator | Exact decision accuracy | Median | p95 | API requests | Provider errors |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Jev | 100% (20/20) | 648.62 ms | 780.02 ms | 40 | 0 |
+| Jev | 100% (20/20) | 701.62 ms | 914.17 ms | 40 | 0 |
 
 Jev selected the labeled outcome and approved recipient for all four cases on every repeat. This result is useful evidence that the current owner-defined cards and typed decision contract work together; it is not evidence that Jev is universally more accurate than a general model. No Luna/general-model result is recorded because this environment has no such provider endpoint or credential configured.
 
@@ -47,7 +47,7 @@ TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
   --output artifacts/jev-benchmark.md
 ```
 
-Jev uses one typed planning request and one typed judgment request per evaluation. The report records request count, reported input/output tokens, latency, outcome accuracy, exact outcome-plus-recipient accuracy, and errors. Repeating the cases exposes instability rather than hiding it behind one best-looking run.
+Jev uses one typed planning request and one typed judgment request per evaluation. The judgment contains independent `Noul` support values for the owner-defined automatic actions; SignalWeave composes them in code and applies the card threshold. The report records request count, reported input/output tokens, latency, outcome accuracy, exact outcome-plus-recipient accuracy, and errors. Repeating the cases exposes instability rather than hiding it behind one best-looking run.
 
 ## Run a real general-model baseline
 

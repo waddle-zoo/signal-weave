@@ -11,6 +11,7 @@
     "Do not notify when the dashboard has no comparable baseline."
   ],
   "materiality_threshold_pct": 10.0,
+  "action_confidence_threshold": 0.70,
   "materiality_definition": "Treat a movement as material when it is large enough to affect the operating decision, is not explained by an expected seasonal pattern, and is supported by a related chart.",
   "outcome_guidance": {
     "ignore": "No owner action is needed because the movement is expected or not decision-relevant.",
