@@ -161,17 +161,27 @@ or SQL query adapter gets the same failure behavior as Superset.
 
 ## Lifecycle
 
-### Draft
+### Discover and draft
 
-An MCP client calls `list_resources`, inspects relevant refs, and calls
-`draft_workflow`. Drafting stores the workflow and returns Jev’s finite plan. No
+An existing agent can start with a natural-language goal and call
+`discover_monitor_inputs`. SignalWeave bounds the installed catalog, asks Jev to
+rank the candidates, and returns opaque refs plus enough metadata for a person to
+confirm the source selection. `propose_monitor_card` then turns that selection into
+a stored draft with Jev’s finite plan and explicit clarification questions. No
 notification or side effect occurs.
 
-### Review
+Callers that already know their complete source refs can use `draft_workflow`
+directly.
 
-The workflow and plan can be reviewed in a UI, pull request, or catalog. Reviewers
-can see the source refs, owner definition, allowed outcomes, recipients, and
-finite operation vocabulary.
+### Preview and review
+
+`simulate_monitor_card` evaluates a draft against fresh snapshots without treating
+the result as an approved push action. The workflow and plan can then be reviewed
+in a UI, pull request, or catalog. Reviewers can see the source refs, owner
+definition, allowed outcomes, recipients, and finite operation vocabulary.
+
+`approve_monitor_card` is an explicit state transition. Push evaluation rejects
+draft workflows until they are approved.
 
 ### Evaluate
 

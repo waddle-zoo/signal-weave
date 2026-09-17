@@ -31,7 +31,43 @@ The demo uses the local Superset credentials `admin` / `admin` and empty optiona
 SignalWeave bearer tokens. The compose file binds published ports to loopback;
 do not expose this stack to a network or use its credentials outside the demo.
 
-Connect an MCP client to `http://localhost:18000/mcp`. The intended flow is:
+Connect an MCP client to `http://localhost:18000/mcp`. The intended flow is to
+start from the owner’s goal, not from chart IDs:
+
+```text
+discover_monitor_inputs(
+  goal="Watch the Growth dashboard for anything that could put Q3 revenue at risk."
+)
+```
+
+The agent shows the Jev-ranked candidates and asks the owner to confirm the
+relevant dashboard or charts. It then proposes a draft card:
+
+```text
+propose_monitor_card(
+  goal="Watch the Growth dashboard for anything that could put Q3 revenue at risk.",
+  selected_sources=[{
+    "ref":"superset|dashboard:7",
+    "parameters":{"chart_ids":["62","64"]}
+  }],
+  recipients=[{
+    "key":"revenue-operations",
+    "label":"Revenue Operations",
+    "destination":"slack://revenue-operations"
+  }]
+)
+```
+
+The returned questions and plan are shown to the owner. Preview it before approval:
+
+```text
+simulate_monitor_card(workflow_id="<workflow_id returned by propose_monitor_card>")
+approve_monitor_card(workflow_id="<workflow_id returned by propose_monitor_card>")
+```
+
+After approval, an existing scheduler or agent can evaluate it. The lower-level
+workflow contract is still available for callers that already know their source
+refs:
 
 ```text
 list_resources(adapter="superset")
@@ -56,6 +92,8 @@ draft_workflow(
     "destination":"slack://revenue-operations"
   }]
 )
+simulate_monitor_card(workflow_id="workflow-sales-pulse")
+approve_monitor_card(workflow_id="workflow-sales-pulse")
 evaluate_workflow(workflow_id="workflow-sales-pulse")
 ```
 

@@ -6,7 +6,7 @@ import tempfile
 from pathlib import Path
 from typing import Protocol
 
-from .models import MonitorWorkflow
+from .models import MonitorWorkflow, WorkflowStatus
 
 
 class WorkflowStore(Protocol):
@@ -15,6 +15,10 @@ class WorkflowStore(Protocol):
     def list_workflows(self) -> list[MonitorWorkflow]: ...
 
     def save_workflow(self, workflow: MonitorWorkflow) -> None: ...
+
+    def set_workflow_status(
+        self, workflow_id: str, status: WorkflowStatus
+    ) -> MonitorWorkflow: ...
 
 
 class JsonWorkflowStore:
@@ -51,6 +55,14 @@ class JsonWorkflowStore:
         if workflow_id not in workflows:
             raise KeyError(f"Unknown workflow: {workflow_id}")
         return MonitorWorkflow.model_validate(workflows[workflow_id])
+
+    def set_workflow_status(
+        self, workflow_id: str, status: WorkflowStatus
+    ) -> MonitorWorkflow:
+        workflow = self.get_workflow(workflow_id)
+        updated = workflow.model_copy(update={"status": status})
+        self.save_workflow(updated)
+        return updated
 
     def list_workflows(self) -> list[MonitorWorkflow]:
         return [MonitorWorkflow.model_validate(item) for item in self._load().values()]

@@ -15,6 +15,11 @@ class Outcome(StrEnum):
     INSUFFICIENT_DATA = "insufficient_data"
 
 
+class WorkflowStatus(StrEnum):
+    DRAFT = "draft"
+    APPROVED = "approved"
+
+
 class SourceRef(BaseModel):
     """A workflow-owned reference to one approved resource in one adapter.
 
@@ -42,6 +47,31 @@ class ResourceDescriptor(BaseModel):
     description: str = ""
     source_url: str | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class ResourceMatch(BaseModel):
+    """A bounded catalog candidate ranked for a user's monitoring goal."""
+
+    ref: str
+    adapter: str
+    resource: str
+    kind: str
+    title: str
+    description: str = ""
+    source_url: str | None = None
+    relevance: float = Field(ge=0.0, le=1.0)
+    recommended: bool = False
+
+
+class ResourceDiscovery(BaseModel):
+    """The inspectable result of goal-to-resource discovery."""
+
+    goal: str
+    matches: list[ResourceMatch] = Field(default_factory=list)
+    candidate_count: int = Field(ge=0)
+    candidate_limit: int = Field(ge=1)
+    truncated: bool = False
+    evaluator: str
 
 
 class Observation(BaseModel):
@@ -128,6 +158,7 @@ class MonitorWorkflow(BaseModel):
     allowed_outcomes: list[Outcome] = Field(default_factory=lambda: list(Outcome))
     owner: str | None = None
     version: int = Field(default=1, ge=1)
+    status: WorkflowStatus = WorkflowStatus.DRAFT
 
     @model_validator(mode="after")
     def validate_routing_contract(self) -> MonitorWorkflow:
@@ -157,6 +188,16 @@ class MonitorPlan(BaseModel):
     recipient_keys: list[str]
     compiled_by: str = "jev-latest"
     source_intent: str
+
+
+class MonitorCardProposal(BaseModel):
+    """A human-reviewable monitor card assembled from a natural-language goal."""
+
+    workflow: MonitorWorkflow
+    plan: MonitorPlan
+    discovery: ResourceDiscovery
+    questions: list[str] = Field(default_factory=list)
+    status: WorkflowStatus = WorkflowStatus.DRAFT
 
 
 class Decision(BaseModel):

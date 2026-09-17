@@ -13,7 +13,7 @@ automatic operations.
 
 ## What passed
 
-- Local lint and tests: `32 passed, 1 skipped`.
+- Local lint and tests: `37 passed, 1 skipped`.
 - GitHub Actions CI is green on the current `main` commit.
 - The package builds successfully and declares Apache 2.0 metadata.
 - The visual assets are valid SVGs and are included in source distributions.
@@ -21,6 +21,9 @@ automatic operations.
   file scan.
 - Superset is a concrete first adapter while the workflow contract remains
   source-oriented.
+- The conversational authoring path is executable: Jev-ranked discovery,
+  proposal, no-delivery preview, and explicit approval are covered by an
+  end-to-end MCP contract test.
 - Jev is the production semantic path; the service does not silently fall back to
   a heuristic evaluator.
 
@@ -36,21 +39,19 @@ automatic operations.
   safety-gated, but every adapter path must promote chart or query failures into a
   structured `ResourceSnapshot.error` before evaluation.
 - **Workflow authorization is deployment-owned, not enforced by the catalog.**
-  Draft workflows are stored and can be evaluated through the local service; there
-  is no approval state, identity-aware ownership, or version collision policy yet.
+  Draft workflows now require explicit approval before MCP or webhook evaluation,
+  but approval is not identity-aware and there is no durable audit trail or
+  version collision policy yet.
 - **Allowed outcomes need a final runtime gate.** A model result outside the
   workflow’s declared outcome allowlist must be downgraded before recipient
   routing.
 
 ### Medium priority
 
-- Add an executable first-use path and a complete MCP request/response example for
-  a new contributor or operator.
 - Document that source and recipient allowlists are deployment configuration, not
   organization-wide authorization provided by SignalWeave.
 - Add request-size, catalog-size, and rate limits at the HTTP boundary.
-- Make dependency and container builds reproducible and test supported Python
-  versions in CI.
+- Make dependency and container builds reproducible beyond the current CI matrix.
 - Add runtime adapter-registration tests, not only heterogeneous engine tests.
 - Keep benchmark and Jev proof claims tied to labeled datasets and explicitly
   separate synthetic evidence from production performance.
@@ -68,7 +69,7 @@ evidence sent to TypeSafe Jev. See [`SECURITY.md`](../SECURITY.md) and
 
 ```text
 .venv/bin/ruff check .                 passed
-.venv/bin/python -m pytest -q          32 passed, 1 skipped
+.venv/bin/python -m pytest -q          37 passed, 1 skipped
 GitHub Actions CI                      passed on main
 SVG XML validation and rendering       passed
 Tracked credential scan                no secrets found

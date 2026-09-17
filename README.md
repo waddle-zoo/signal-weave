@@ -71,8 +71,8 @@ See [`docs/demo.md`](docs/demo.md) for the complete walkthrough and
 SignalWeave sits between company systems and the system that already delivers or
 acts on alerts. It does not replace a scheduler, BI tool, durable workflow engine,
 knowledge graph, or general-purpose agent framework. Source and recipient
-allowlisting is deployment configuration; SignalWeave does not provide identity or
-an approval workflow.
+allowlisting is deployment configuration; identity-aware authorization remains
+deployment-owned.
 
 - **Define:** an operations lead or analyst names the configured sources, intent,
   materiality, outcomes, and recipients.
@@ -91,9 +91,18 @@ The MCP surface is intentionally small:
 ```text
 list_resources(adapter?)
 inspect_resource(adapter, resource, parameters?)
+discover_monitor_inputs(goal, adapter?, limit?)
+propose_monitor_card(goal, selected_sources?, recipients?, ...)
+simulate_monitor_card(workflow_id)
+approve_monitor_card(workflow_id)
 draft_workflow(title, intent, sources, policy...)
 evaluate_workflow(workflow_id)
 ```
+
+The monitor-card tools let an existing agent guide a person from a plain-language
+goal to Jev-ranked source candidates, a draft card, a no-delivery preview, and an
+explicit approval. The older `draft_workflow` tool remains the lower-level escape
+hatch for callers that already have a complete workflow contract.
 
 The first included adapter is Apache Superset. The workflow contract stays
 source-oriented so an installation can add configured SQL, Airflow, data-quality,

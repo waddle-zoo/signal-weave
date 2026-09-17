@@ -5,7 +5,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
 
-from .models import Decision, MonitorPlan, MonitorWorkflow, Observation, Outcome
+from .models import (
+    Decision,
+    MonitorPlan,
+    MonitorWorkflow,
+    Observation,
+    Outcome,
+    ResourceDescriptor,
+)
 
 
 class DecisionJudger(Protocol):
@@ -62,6 +69,53 @@ class JevJudger:
         self._api_key = api_key
         self._timeout = timeout_seconds
         self.metrics = JudgerMetrics()
+
+    async def rank_resources(
+        self, goal: str, resources: list[ResourceDescriptor]
+    ) -> dict[str, float]:
+        """Rank bounded catalog candidates for a natural-language monitoring goal."""
+        from typesafe_sdk import Noul
+
+        state = {
+            "goal": goal,
+            "candidate_resources": [
+                {
+                    "ref": f"{resource.adapter}|{resource.resource}",
+                    "adapter": resource.adapter,
+                    "resource": resource.resource,
+                    "kind": resource.kind,
+                    "title": resource.title,
+                    "description": resource.description,
+                    "source_url": resource.source_url,
+                    "metadata": resource.metadata,
+                }
+                for resource in resources
+            ],
+        }
+        questions = {
+            f"resource_{index}": Noul(
+                instructions=(
+                    f"Is candidate_resources[{index}] materially relevant to the user's "
+                    "monitoring goal? Consider the candidate title, description, kind, "
+                    "and metadata. Judge relevance to the goal, not whether the source "
+                    "is merely a valid resource."
+                ),
+                criteria={
+                    "true": "The resource contains or represents signals that could help monitor the goal.",
+                    "false": "The resource is unrelated, too vague, or not useful for monitoring the goal.",
+                },
+            )
+            for index in range(len(resources))
+        }
+        if not questions:
+            return {}
+        async with self._client_type(api_key=self._api_key, timeout=self._timeout) as client:
+            response = await client.system_one(state=state, questions=questions)
+        self.metrics.record(response)
+        return {
+            f"{resource.adapter}|{resource.resource}": response.nouls[f"resource_{index}"].noul
+            for index, resource in enumerate(resources)
+        }
 
     async def compile_plan(
         self, state: dict[str, Any], workflow: MonitorWorkflow

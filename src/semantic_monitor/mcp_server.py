@@ -10,7 +10,8 @@ from mcp.server.fastmcp import FastMCP
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
-from .models import MonitorWorkflow, Outcome, Recipient, SourceRef
+from .models import MonitorWorkflow, Outcome, Recipient, SourceRef, WorkflowStatus
+from .onboarding import MonitorAuthoringService, proposal_summary
 from .runtime import Runtime, build_runtime
 
 
@@ -24,6 +25,7 @@ async def _maybe_await(value: Any) -> Any:
 
 def create_mcp(runtime: Runtime | None = None) -> FastMCP:
     runtime = runtime or build_runtime()
+    authoring = MonitorAuthoringService(runtime.sources, runtime.engine)
     mcp = FastMCP("signal-weave")
 
     @mcp.tool()
@@ -49,6 +51,51 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
         )
         snapshot = await runtime.sources.inspect(source)
         return snapshot.model_dump(mode="json")
+
+    @mcp.tool()
+    async def discover_monitor_inputs(
+        goal: str,
+        adapter: str | None = None,
+        limit: int = 10,
+    ) -> dict[str, Any]:
+        """Find bounded, Jev-ranked source candidates for a monitoring goal."""
+        discovery = await authoring.discover(goal, adapter=adapter, limit=limit)
+        return discovery.model_dump(mode="json")
+
+    @mcp.tool()
+    async def propose_monitor_card(
+        goal: str,
+        selected_sources: list[dict[str, Any]] | None = None,
+        adapter: str | None = None,
+        limit: int = 10,
+        comparison_windows: list[str] | None = None,
+        materiality_threshold_pct: float = 10.0,
+        materiality_definition: str | None = None,
+        recipients: list[dict[str, str]] | None = None,
+        owner: str | None = None,
+    ) -> dict[str, Any]:
+        """Propose and save a draft monitor card from a natural-language goal.
+
+        ``selected_sources`` contains refs returned by ``discover_monitor_inputs``;
+        each item may also provide adapter parameters such as Superset chart IDs.
+        The result is a draft until a human or policy service approves it.
+        """
+        proposal = await authoring.propose(
+            goal,
+            selected_sources=selected_sources,
+            adapter=adapter,
+            limit=limit,
+            comparison_windows=comparison_windows,
+            materiality_threshold_pct=materiality_threshold_pct,
+            materiality_definition=materiality_definition,
+            recipients=[Recipient.model_validate(recipient) for recipient in (recipients or [])],
+            owner=owner,
+        )
+        runtime.workflow_store.save_workflow(proposal.workflow)
+        return {
+            "proposal": proposal.model_dump(mode="json"),
+            "summary": proposal_summary(proposal),
+        }
 
     @mcp.tool()
     async def draft_workflow(
@@ -107,12 +154,44 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
     async def evaluate_workflow(workflow_id: str) -> dict[str, Any]:
         """Evaluate an approved workflow over freshly fetched source snapshots."""
         workflow = runtime.workflow_store.get_workflow(workflow_id)
+        if workflow.status != WorkflowStatus.APPROVED:
+            raise ValueError(
+                f"Workflow {workflow_id} is a draft; simulate it, then approve it before evaluation"
+            )
         evaluation = await runtime.engine.evaluate(workflow)
         return {
             "workflow": evaluation.workflow.model_dump(mode="json"),
             "resources": [resource.model_dump(mode="json") for resource in evaluation.resources],
             "plan": evaluation.plan.model_dump(mode="json"),
             "decision": evaluation.decision.model_dump(mode="json"),
+        }
+
+    @mcp.tool()
+    async def simulate_monitor_card(workflow_id: str) -> dict[str, Any]:
+        """Evaluate a draft without treating the result as an approved push action."""
+        workflow = runtime.workflow_store.get_workflow(workflow_id)
+        evaluation = await runtime.engine.evaluate(workflow)
+        return {
+            "status": "preview",
+            "delivery_enabled": False,
+            "workflow": evaluation.workflow.model_dump(mode="json"),
+            "resources": [resource.model_dump(mode="json") for resource in evaluation.resources],
+            "plan": evaluation.plan.model_dump(mode="json"),
+            "decision": evaluation.decision.model_dump(mode="json"),
+        }
+
+    @mcp.tool()
+    def approve_monitor_card(workflow_id: str) -> dict[str, Any]:
+        """Approve a draft monitor card for later scheduler or webhook evaluation."""
+        workflow = runtime.workflow_store.get_workflow(workflow_id)
+        if not workflow.sources:
+            raise ValueError("a monitor card needs at least one selected source before approval")
+        approved = runtime.workflow_store.set_workflow_status(
+            workflow_id, WorkflowStatus.APPROVED
+        )
+        return {
+            "status": approved.status.value,
+            "workflow": approved.model_dump(mode="json"),
         }
 
     @mcp.resource("workflow://catalog")
@@ -151,6 +230,16 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
             return JSONResponse({"error": "workflow_id is required"}, status_code=400)
         try:
             workflow = runtime.workflow_store.get_workflow(workflow_id)
+            if workflow.status != WorkflowStatus.APPROVED:
+                return JSONResponse(
+                    {
+                        "error": (
+                            f"Workflow {workflow_id} is a draft; simulate it, then approve it "
+                            "before evaluation"
+                        )
+                    },
+                    status_code=409,
+                )
             evaluation = await runtime.engine.evaluate(workflow)
         except (KeyError, ValueError) as error:
             return JSONResponse({"error": str(error)}, status_code=404)

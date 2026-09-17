@@ -29,6 +29,8 @@ unrelated repositories as part of work in this repository.
   an explicit workflow or adapter allowlist. Never let a model invent them.
 - Confidence is a routing signal, not proof. A low-confidence automatic action must
   be downgraded or escalated according to code-owned policy.
+- Draft workflows may be simulated for review, but MCP and webhook evaluation must
+  reject them until an explicit approval transition occurs.
 - Secrets and production data must not be committed, printed in tests, or sent to
   external services without explicit configuration and authorization.
 

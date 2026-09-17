@@ -9,7 +9,7 @@ explainable decision that an existing system can act on.
 - [x] Jev-only production decision path with no implicit heuristic fallback
 - [x] Source-oriented workflow and adapter contracts
 - [x] Superset-backed local demo and integration tests
-- [x] MCP tools for cataloging, inspection, drafting, and evaluation
+- [x] MCP tools for cataloging, goal-to-card discovery, drafting, preview, approval, and evaluation
 - [x] Webhook surface for push-triggered evaluation
 - [x] Code-owned evidence, freshness, recipient, and confidence safety gates
 - [x] External-input evaluation and embedding/reasoning comparison harness
@@ -24,8 +24,8 @@ gaps have tests or deployment controls.
 
 - [ ] Publish a small, reproducible labeled benchmark with documented limits and
       an apples-to-apples Jev comparison
-- [ ] Make workflow authoring easy for a non-technical dashboard owner without
-      weakening the explicit source and action boundaries
+- [ ] Add a small operator-facing UI or integrate the authoring protocol with an
+      existing company agent
 - [ ] Add durable workflow versioning and decision traces suitable for review
 - [ ] Add one second approved read-only source adapter to prove the contract is
       useful beyond a single BI system
