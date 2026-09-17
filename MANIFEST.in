@@ -5,6 +5,7 @@ include README.md
 include docker-compose.yml
 include pyproject.toml
 include uv.lock
+recursive-include assets *.svg
 recursive-include docker *
 recursive-include docs *.md
 recursive-include evaluations *.py *.json
