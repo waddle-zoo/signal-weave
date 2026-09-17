@@ -6,24 +6,24 @@ This walkthrough proves three things independently:
 2. the same code can read a real Superset dashboard;
 3. an external trigger can push an evaluation without turning the service into a scheduler.
 
-## A. Offline company proof
+## A. Jev-backed company proof
 
 ```bash
 uv sync --extra dev
-uv run signalweave prove
+TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe uv run signalweave prove
 ```
 
-Expected result:
+The result is live typed classification over the external cases in `examples/demo-cases.json`. The output shape is:
 
 ```text
 scenario             outcome          recipient              confidence  expected  pass  ms
-data_freshness       escalate         data-platform                0.99  escalate  yes
-mobile_conversion    notify           growth                       0.94  notify    yes
-revenue_decline      notify           revenue-operations           0.92  notify    yes
-seasonal_normal      ignore           -                            0.86  ignore    yes
+data_freshness       escalate         data-platform                1.00  escalate  yes  885.6
+mobile_conversion    notify           growth                       0.96  notify    yes  711.8
+revenue_decline      notify           revenue-operations           0.98  notify    yes  711.6
+seasonal_normal      ignore           -                            0.92  ignore    yes  766.3
 ```
 
-Exact confidence values can change when the heuristic is edited; the proof asserts the decision contract and recipient routing.
+Jev probabilities and latency can vary. This proof demonstrates wiring, evidence, and routing behavior; it is not a general accuracy claim.
 
 Generate a report with evidence statements:
 
@@ -36,7 +36,7 @@ uv run signalweave prove --format markdown --output artifacts/proof.md
 Start the isolated stack:
 
 ```bash
-docker compose up --build
+TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe docker compose up --build
 ```
 
 Wait for the health checks, then verify:
@@ -74,14 +74,13 @@ curl -X POST http://localhost:18000/webhooks/evaluate \
 
 The response is a JSON `Decision`. The caller decides whether `notify` or `escalate` should be delivered and how to retry it.
 
-## D. Jev proof
+## D. Repeatable evaluator benchmark
 
 Keep the credential outside the repository:
 
 ```bash
-TYPESAFE_MODE=jev \
 TYPESAFE_API_KEY_FILE=/path/to/apikey_typesafe \
-uv run signalweave prove --mode jev --format markdown --output artifacts/jev-proof.md
+uv run signalweave benchmark --systems jev --repeats 5 --format markdown --output artifacts/jev-benchmark.md
 ```
 
-The output records the typed outcome, confidence distribution, recipient, rationale, and evidence. It does not replace the engine’s safety gates.
+The output records exact outcome-plus-recipient accuracy against the checked-in labels, repeat stability, confidence distribution, latency, requests, and provider-reported usage. To compare a general model with embeddings, follow [benchmark.md](benchmark.md).

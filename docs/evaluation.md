@@ -13,7 +13,7 @@ The goal is not to claim that a semantic model is universally correct. The goal 
 
 ## Representative cases
 
-The four fixtures intentionally exercise different failure modes:
+The four external demo cases intentionally exercise different failure modes:
 
 | Case | Signal | Correct behavior | Main protection |
 | --- | --- | --- | --- |
@@ -25,7 +25,10 @@ The four fixtures intentionally exercise different failure modes:
 ## Reproduce
 
 ```bash
-uv run signalweave prove
+TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
+  uv run signalweave prove
+TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
+  uv run signalweave benchmark --systems jev --repeats 5
 uv run python -m pytest
 RUN_SUPERSET_INTEGRATION=1 \
   SUPERSET_URL=http://localhost:8088 \
@@ -34,7 +37,9 @@ RUN_SUPERSET_INTEGRATION=1 \
   uv run python -m pytest -q tests/test_superset_integration.py
 ```
 
-The live integration test is skipped unless explicitly enabled. This keeps normal CI independent of a running Superset while preserving a one-command local proof when the Docker stack is available.
+The live integration test is skipped unless explicitly enabled. This keeps normal CI independent of a running Superset while preserving a one-command local proof when the Docker stack is available. Unit tests use injected test doubles and do not replace the live Jev proof.
+
+For the provider-neutral embeddings-plus-reasoning comparison, see [benchmark.md](benchmark.md).
 
 ## What to measure in a real deployment
 

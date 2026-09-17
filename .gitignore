@@ -8,7 +8,9 @@ __pycache__/
 .env
 .env.*
 !.env.example
+secrets/
 data/*.json
 data/*.db
+artifacts/
 superset_home/
 *.log

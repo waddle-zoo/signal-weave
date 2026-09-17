@@ -1,11 +1,14 @@
-from semantic_monitor.proof import run_fixture_proof
+from semantic_monitor.demo import load_demo_cases
 
 
-async def test_fixture_proof_matches_expected_outcomes():
-    results = await run_fixture_proof("heuristic")
+def test_demo_cases_are_external_labeled_inputs():
+    cases = load_demo_cases()
 
-    assert len(results) == 4
-    assert all(result.passed for result in results)
-    revenue = next(result for result in results if result.scenario == "revenue_decline")
-    assert revenue.recipient == "revenue-operations"
-    assert revenue.evidence
+    assert {case.id for case in cases} == {
+        "data_freshness",
+        "mobile_conversion",
+        "revenue_decline",
+        "seasonal_normal",
+    }
+    assert all(case.monitor_card.chart_ids for case in cases)
+    assert all(case.expected_outcome for case in cases)

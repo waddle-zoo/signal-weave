@@ -35,18 +35,19 @@ The verdict does not mean a company should deploy the local JSON catalog or stat
 - Superset is an adapter and demo source, not the product name or workflow engine.
 - TypeSafe is used for narrow typed plan/judgment questions; code owns calculations, allowlists, and safety policy.
 - Airflow, Temporal, schedulers, chat delivery, and agent orchestration remain outside scope.
-- The offline proof demonstrates four distinct company situations and the live demo exercises real Superset charts.
+- The Jev proof demonstrates four distinct external demo cases and the live demo exercises real Superset charts.
 
 ## Evidence collected
 
 ```text
-make verify                         local lint + tests + deterministic proof
-22 passed, 1 skipped                adversarial/unit suite
+make verify                         local lint + unit suite
+25 passed, 1 skipped                adversarial/unit suite
 1 passed                            live Superset integration
-4 containers healthy                Docker runtime
+3 dependency containers healthy      Superset/Postgres/Redis runtime
+Host Jev + Superset evaluation       Sales Dashboard round-trip
 UID 10001                           non-root monitor
 401 / 200                           unauthenticated/authenticated MCP and push checks
-TypeSafe Jev                         live final proof completed
+TypeSafe Jev                         20-case repeated proof: 100% exact, 0 errors
 GitHub Actions CI                   green on the release commit
 ```
 

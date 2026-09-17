@@ -11,7 +11,6 @@ from starlette.responses import JSONResponse
 
 from .models import MonitorCard, Recipient
 from .runtime import Runtime, build_runtime
-from .scenarios import scenario_catalog
 
 
 def create_mcp(runtime: Runtime | None = None) -> FastMCP:
@@ -49,6 +48,11 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
         intent: str,
         chart_ids: list[str] | None = None,
         recipients: list[dict[str, str]] | None = None,
+        comparison_windows: list[str] | None = None,
+        investigation_hints: list[str] | None = None,
+        materiality_threshold_pct: float = 10.0,
+        materiality_definition: str | None = None,
+        outcome_guidance: dict[str, str] | None = None,
     ) -> dict[str, Any]:
         """Draft a versioned monitoring card from owner intent; no alert is sent."""
         dashboard = runtime.store.get_dashboard(dashboard_id, include_data=False)
@@ -61,8 +65,14 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
             intent=intent,
             chart_ids=chart_ids or [chart.id for chart in dashboard.charts],
             recipients=[Recipient.model_validate(recipient) for recipient in (recipients or [])],
+            comparison_windows=comparison_windows
+            or ["previous_period", "trailing_4_period_average"],
+            investigation_hints=investigation_hints or [],
+            materiality_threshold_pct=materiality_threshold_pct,
+            materiality_definition=materiality_definition,
+            outcome_guidance=outcome_guidance or {},
         )
-        plan = await runtime.engine.compile(card)
+        plan = await runtime.engine.compile(card, dashboard)
         runtime.store.save_card(card)
         return {
             "card": card.model_dump(mode="json"),
@@ -71,17 +81,12 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
         }
 
     @mcp.tool()
-    async def evaluate_monitor(monitor_id: str, scenario: str | None = None) -> dict[str, Any]:
+    async def evaluate_monitor(monitor_id: str) -> dict[str, Any]:
         """Evaluate an approved monitor and return an evidence-backed decision."""
         card = runtime.store.get_card(monitor_id)
-        if scenario:
-            if not hasattr(runtime.store, "get_dashboard_by_scenario"):
-                raise ValueError("scenario evaluation is only available in fixture mode")
-            dashboard = runtime.store.get_dashboard_by_scenario(scenario)
-        else:
-            dashboard = runtime.store.get_dashboard(
-                card.dashboard_id, chart_ids=card.chart_ids, include_data=True
-            )
+        dashboard = runtime.store.get_dashboard(
+            card.dashboard_id, chart_ids=card.chart_ids, include_data=True
+        )
         if inspect.isawaitable(dashboard):
             dashboard = await dashboard
         evaluation = await runtime.engine.evaluate(dashboard, card)
@@ -90,11 +95,6 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
             "plan": evaluation.plan.model_dump(mode="json"),
             "decision": evaluation.decision.model_dump(mode="json"),
         }
-
-    @mcp.tool()
-    def list_demo_scenarios() -> list[str]:
-        """List deterministic local company scenarios used for testing."""
-        return sorted(scenario_catalog())
 
     @mcp.resource("monitor://catalog")
     def monitor_catalog() -> str:
@@ -136,4 +136,5 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
     return mcp
 
 
-mcp = create_mcp()
+# The CLI constructs the server after resolving the runtime and credentials. Keeping module import
+# side-effect free lets tests inspect the MCP factory without requiring a production API key.

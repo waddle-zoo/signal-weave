@@ -15,7 +15,6 @@ prove:
 verify:
 	uv run ruff check .
 	uv run python -m pytest
-	uv run signalweave prove
 
 docker-up:
 	docker compose up --build

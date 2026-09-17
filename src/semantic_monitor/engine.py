@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from .analysis import candidate_observations, evidence_statements, observations_for_plan
-from .compiler import compile_with_typesafe, heuristic_compile
+from .compiler import compile_with_typesafe
 from .models import (
     DashboardSnapshot,
     Decision,
@@ -14,7 +14,7 @@ from .models import (
     Observation,
     Outcome,
 )
-from .typesafe_adapter import DecisionJudger, HeuristicJudger
+from .typesafe_adapter import DecisionJudger, JevJudger
 
 
 @dataclass
@@ -26,18 +26,27 @@ class Evaluation:
 
 class MonitorEngine:
     def __init__(self, judger: DecisionJudger | None = None) -> None:
-        self.judger = judger or HeuristicJudger()
+        self.judger = judger or JevJudger()
 
-    async def compile(self, card: MonitorCard) -> MonitorPlan:
-        if self.judger.name == "heuristic":
-            return heuristic_compile(card)
-        return await compile_with_typesafe(card, self.judger)
+    async def compile(
+        self, card: MonitorCard, dashboard: DashboardSnapshot | None = None
+    ) -> MonitorPlan:
+        state = {"dashboard": dashboard.model_dump(mode="json")} if dashboard else None
+        return await compile_with_typesafe(card, self.judger, state=state)
 
     async def evaluate(self, dashboard: DashboardSnapshot, card: MonitorCard) -> Evaluation:
-        plan = await self.compile(card)
+        plan = await self.compile(card, dashboard)
         observations = observations_for_plan(dashboard, plan)
         source_errors = self._source_errors(dashboard, plan)
         candidates = candidate_observations(observations, card)
+        candidate_keys = {
+            (observation.chart_id, observation.metric) for observation in candidates
+        }
+        evidence_observations = candidates + [
+            observation
+            for observation in observations
+            if (observation.chart_id, observation.metric) not in candidate_keys
+        ]
         evidence = [
             {
                 "chart_id": observation.chart_id,
@@ -48,11 +57,12 @@ class MonitorEngine:
                     "baseline": observation.baseline,
                     "change_pct": observation.change_pct,
                     "freshness": observation.freshness,
+                    "candidate": (observation.chart_id, observation.metric) in candidate_keys,
                 },
                 "source_url": observation.source_url,
             }
             for observation, statement in zip(
-                candidates, evidence_statements(candidates), strict=False
+                evidence_observations, evidence_statements(evidence_observations), strict=False
             )
         ]
         source_error_evidence = [
@@ -199,15 +209,19 @@ class MonitorEngine:
                 }
             )
         if (
-            decision.confidence is not None
-            and decision.confidence < 0.70
-            and decision.outcome in (Outcome.IGNORE, Outcome.NOTIFY)
+            decision.outcome in (Outcome.IGNORE, Outcome.NOTIFY)
+            and (decision.confidence is None or decision.confidence < 0.70)
         ):
+            confidence_text = (
+                f"confidence {decision.confidence:.2f}"
+                if decision.confidence is not None
+                else "no confidence"
+            )
             return decision.model_copy(
                 update={
                     "outcome": Outcome.INVESTIGATE,
                     "recipient_key": None,
-                    "rationale": f"The semantic decision was {decision.outcome.value}, but confidence {decision.confidence:.2f} is below the automatic-action threshold.",
+                    "rationale": f"The semantic decision was {decision.outcome.value}, but {confidence_text} is below the automatic-action threshold.",
                 }
             )
         if decision.outcome in (Outcome.NOTIFY, Outcome.ESCALATE) and decision.recipient_key is None:

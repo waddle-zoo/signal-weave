@@ -6,8 +6,8 @@ import tempfile
 from pathlib import Path
 from typing import Protocol
 
+from .demo import copy_dashboard, default_cards, scenario_catalog
 from .models import DashboardSnapshot, MonitorCard
-from .scenarios import copy_dashboard, default_cards, scenario_catalog
 from .superset_client import SupersetClient
 
 

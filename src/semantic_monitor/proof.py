@@ -7,15 +7,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .demo import load_demo_cases
 from .models import Decision, Outcome
 from .runtime import build_runtime
-
-EXPECTED_HEURISTIC_OUTCOMES = {
-    "data_freshness": Outcome.ESCALATE,
-    "mobile_conversion": Outcome.NOTIFY,
-    "revenue_decline": Outcome.NOTIFY,
-    "seasonal_normal": Outcome.IGNORE,
-}
 
 
 @dataclass(frozen=True)
@@ -57,9 +51,13 @@ class ProofResult:
         return asdict(self)
 
 
-async def run_fixture_proof(mode: str = "heuristic") -> list[ProofResult]:
-    """Run the deterministic company scenarios through the production engine."""
+async def run_fixture_proof() -> list[ProofResult]:
+    """Run external demo cases through the Jev-backed production engine."""
+    mode = "jev"
     runtime = build_runtime(mode=mode, source="fixtures")
+    expected_by_scenario = {
+        case.id: Outcome(case.expected_outcome) for case in load_demo_cases()
+    }
     results: list[ProofResult] = []
     for scenario in sorted(runtime.store.dashboards):
         dashboard = runtime.store.get_dashboard_by_scenario(scenario)
@@ -67,7 +65,7 @@ async def run_fixture_proof(mode: str = "heuristic") -> list[ProofResult]:
         started = time.perf_counter()
         evaluation = await runtime.engine.evaluate(dashboard, card)
         elapsed_ms = (time.perf_counter() - started) * 1000
-        expected = EXPECTED_HEURISTIC_OUTCOMES.get(scenario) if mode == "heuristic" else None
+        expected = expected_by_scenario.get(scenario)
         results.append(
             ProofResult.from_decision(
                 scenario=scenario,
@@ -80,8 +78,8 @@ async def run_fixture_proof(mode: str = "heuristic") -> list[ProofResult]:
     return results
 
 
-def run_fixture_proof_sync(mode: str = "heuristic") -> list[ProofResult]:
-    return asyncio.run(run_fixture_proof(mode))
+def run_fixture_proof_sync() -> list[ProofResult]:
+    return asyncio.run(run_fixture_proof())
 
 
 def render_table(results: list[ProofResult]) -> str:
@@ -103,8 +101,7 @@ def render_table(results: list[ProofResult]) -> str:
 
 def render_markdown(results: list[ProofResult], mode: str) -> str:
     generated = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-    passed = sum(result.passed is True for result in results)
-    checks = f"{passed}/{len(results)} expected outcomes" if mode == "heuristic" else "semantic classifications recorded"
+    checks = "live typed classifications recorded"
     lines = [
         "# Semantic monitor proof run",
         "",
@@ -113,7 +110,7 @@ def render_markdown(results: list[ProofResult], mode: str) -> str:
         f"- Result: **{checks}**",
         "",
         "This report runs the same engine used by the MCP and push webhook over four representative company situations.",
-        "The heuristic run is fully offline and has exact expected outcomes. Jev runs record the live typed judgment; confidence gates remain in the engine.",
+        "This is a live Jev run over external demo inputs. The labels are useful for review, but four synthetic cases are not a general accuracy claim; use the benchmark harness on labeled production history.",
         "",
         "| Scenario | Outcome | Recipient | Confidence | Expected | Time |",
         "| --- | --- | --- | ---: | --- | ---: |",

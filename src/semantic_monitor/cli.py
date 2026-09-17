@@ -5,12 +5,18 @@ import asyncio
 import json
 import os
 
+from .benchmark import (
+    render_benchmark_markdown,
+    render_benchmark_table,
+    run_fixture_benchmark_sync,
+    write_benchmark_report,
+)
 from .proof import render_markdown, render_table, run_fixture_proof_sync, write_report
 from .runtime import build_runtime
 
 
-async def _simulate(scenario: str, mode: str | None) -> int:
-    runtime = build_runtime(mode, source="fixtures")
+async def _simulate(scenario: str) -> int:
+    runtime = build_runtime(source="fixtures")
     scenarios = sorted(runtime.store.dashboards)
     names = scenarios if scenario == "all" else [scenario]
     for name in names:
@@ -38,7 +44,6 @@ def main() -> None:
 
     simulate = subparsers.add_parser("simulate", help="Run local dashboard monitoring scenarios")
     simulate.add_argument("--scenario", default="all")
-    simulate.add_argument("--mode", choices=["heuristic", "jev"], default=None)
 
     serve = subparsers.add_parser("serve", help="Run the MCP server")
     serve.add_argument("--transport", choices=["stdio", "streamable-http"], default="stdio")
@@ -48,18 +53,24 @@ def main() -> None:
     prove = subparsers.add_parser(
         "prove", help="Run the representative company scenarios through the engine"
     )
-    prove.add_argument(
-        "--mode",
-        choices=["heuristic", "jev"],
-        default=None,
-        help="Decision mode; defaults to TYPESAFE_MODE or heuristic",
-    )
     prove.add_argument("--format", choices=["table", "json", "markdown"], default="table")
     prove.add_argument("--output", help="Write a Markdown proof report to this path")
 
+    benchmark = subparsers.add_parser(
+        "benchmark", help="Compare Jev with an optional embedding-plus-reasoning baseline"
+    )
+    benchmark.add_argument(
+        "--systems",
+        default="jev",
+        help="Comma-separated systems: jev, embedding-reasoning",
+    )
+    benchmark.add_argument("--repeats", type=int, default=1)
+    benchmark.add_argument("--format", choices=["table", "json", "markdown"], default="table")
+    benchmark.add_argument("--output", help="Write a Markdown benchmark report to this path")
+
     args = parser.parse_args()
     if args.command == "simulate":
-        raise SystemExit(asyncio.run(_simulate(args.scenario, args.mode)))
+        raise SystemExit(asyncio.run(_simulate(args.scenario)))
     if args.command == "serve":
         from .mcp_server import create_mcp
 
@@ -84,10 +95,8 @@ def main() -> None:
                 log_level=server.settings.log_level.lower(),
             )
     if args.command == "prove":
-        mode = args.mode or os.getenv("TYPESAFE_MODE", "heuristic").lower()
-        if mode not in {"heuristic", "jev"}:
-            parser.error(f"Unsupported TYPESAFE_MODE: {mode}")
-        results = run_fixture_proof_sync(mode)
+        mode = "jev"
+        results = run_fixture_proof_sync()
         if args.output:
             write_report(results, mode, args.output)
         if args.format == "json":
@@ -96,6 +105,17 @@ def main() -> None:
             print(render_markdown(results, mode))
         else:
             print(render_table(results))
+    if args.command == "benchmark":
+        systems = [system.strip() for system in args.systems.split(",") if system.strip()]
+        results = run_fixture_benchmark_sync(systems, args.repeats)
+        if args.output:
+            write_benchmark_report(results, args.output)
+        if args.format == "json":
+            print(json.dumps([result.as_json() for result in results], indent=2))
+        elif args.format == "markdown":
+            print(render_benchmark_markdown(results))
+        else:
+            print(render_benchmark_table(results))
 
 
 if __name__ == "__main__":

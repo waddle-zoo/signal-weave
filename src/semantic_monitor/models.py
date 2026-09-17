@@ -62,10 +62,13 @@ class MonitorCard(BaseModel):
     intent: str = Field(min_length=1, max_length=8000)
     chart_ids: list[str] = Field(default_factory=list, max_length=200)
     comparison_windows: list[str] = Field(
-        default_factory=lambda: ["previous_period", "trailing_4_period_average"]
+        default_factory=lambda: ["previous_period", "trailing_4_period_average"],
+        max_length=20,
     )
-    investigation_hints: list[str] = Field(default_factory=list)
+    investigation_hints: list[str] = Field(default_factory=list, max_length=50)
     materiality_threshold_pct: float = Field(default=10.0, ge=0.0, le=100000.0)
+    materiality_definition: str | None = Field(default=None, max_length=4000)
+    outcome_guidance: dict[str, str] = Field(default_factory=dict, max_length=10)
     recipients: list[Recipient] = Field(default_factory=list, max_length=100)
     allowed_outcomes: list[Outcome] = Field(
         default_factory=lambda: [
@@ -87,6 +90,9 @@ class MonitorCard(BaseModel):
         recipient_keys = [recipient.key for recipient in self.recipients]
         if len(recipient_keys) != len(set(recipient_keys)):
             raise ValueError("recipient keys must be unique")
+        unknown_guidance = set(self.outcome_guidance) - {outcome.value for outcome in self.allowed_outcomes}
+        if unknown_guidance:
+            raise ValueError("outcome_guidance may only describe allowed_outcomes")
         return self
 
 
@@ -98,7 +104,7 @@ class MonitorPlan(BaseModel):
     operations: list[str]
     investigation_questions: list[str]
     recipient_keys: list[str]
-    compiled_by: str = "heuristic"
+    compiled_by: str = "jev-latest"
     source_intent: str
 
 

@@ -25,7 +25,7 @@ The service has four separable layers:
                          │
               ┌──────────┴──────────┐
               │                     │
-       HeuristicJudger        JevJudger (optional)
+       Jev planner            Jev judger
               │                     │
               └──────────┬──────────┘
                          ▼
@@ -91,9 +91,9 @@ The service returns a decision. Delivery remains with the caller so companies ca
 
 ## Operating modes
 
-### Offline proof mode
+### Demo fixture mode
 
-`MONITOR_SOURCE=fixtures` uses deterministic synthetic dashboards representing common company environments. This is the fastest path for tests, CI, demos, and prompt/plan review.
+`MONITOR_SOURCE=fixtures` loads external, checked-in demo dashboards from `examples/demo-cases.json`. This is for local Jev proofs and tests; it is not a semantic fallback and is not used by a Superset deployment.
 
 ### Superset mode
 
@@ -101,7 +101,9 @@ The service returns a decision. Delivery remains with the caller so companies ca
 
 ### Jev mode
 
-`TYPESAFE_MODE=jev` swaps the decision implementation while preserving the same typed state, plan, evidence, and safety gates. The API key is loaded from an environment variable or external file and is never persisted by this repository.
+`TYPESAFE_MODE=jev` is the production decision implementation. It preserves the same typed state, plan, evidence, and safety gates while allowing the owner’s card and dashboard catalog to determine which capabilities and comparison choices are relevant. The API key is loaded from an environment variable or external file and is never persisted by this repository.
+
+The service does not ship a semantic fallback. Unit tests inject local doubles for code-owned safety behavior; a production runtime without Jev credentials fails at startup rather than silently changing the decision model.
 
 ## Enterprise integration shape
 

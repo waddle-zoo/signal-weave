@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from .engine import MonitorEngine
 from .store import FixtureStore, SupersetStore
 from .superset_client import SupersetClient
-from .typesafe_adapter import HeuristicJudger, JevJudger, load_api_key
+from .typesafe_adapter import JevJudger, load_api_key
 
 
 @dataclass
@@ -16,7 +16,7 @@ class Runtime:
 
 
 def build_runtime(mode: str | None = None, source: str | None = None) -> Runtime:
-    mode = (mode or os.getenv("TYPESAFE_MODE", "heuristic")).lower()
+    mode = (mode or os.getenv("TYPESAFE_MODE", "jev")).lower()
     if mode == "jev":
         key = load_api_key()
         if not key:
@@ -24,10 +24,8 @@ def build_runtime(mode: str | None = None, source: str | None = None) -> Runtime
                 "TYPESAFE_MODE=jev requires TYPESAFE_API_KEY or TYPESAFE_API_KEY_FILE"
             )
         judger = JevJudger(api_key=key)
-    elif mode == "heuristic":
-        judger = HeuristicJudger()
     else:
-        raise ValueError(f"Unsupported TYPESAFE_MODE: {mode}")
+        raise ValueError("SignalWeave production runtime only supports TYPESAFE_MODE=jev")
     source = (source or os.getenv("MONITOR_SOURCE", "fixtures")).lower()
     if source == "superset":
         url = os.getenv("SUPERSET_URL")

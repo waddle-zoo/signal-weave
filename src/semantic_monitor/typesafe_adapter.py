@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -21,116 +22,24 @@ class DecisionJudger(Protocol):
     ) -> Decision: ...
 
 
-class HeuristicJudger:
-    name = "heuristic"
+@dataclass
+class JudgerMetrics:
+    """Small, non-sensitive counters used by the local benchmark harness."""
 
-    async def compile_plan(self, state: dict[str, Any], card: MonitorCard) -> dict[str, Any]:
-        intent = card.intent.lower()
-        operations = ["percent_change", "baseline_comparison", "freshness_check"]
-        if "season" in intent:
-            operations.append("seasonality_check")
-        if any(word in intent for word in ("segment", "mobile", "enterprise", "regional")):
-            operations.append("dimension_contribution")
-        if any(word in intent for word in ("related", "together", "compare", "inspect")):
-            operations.append("cross_chart_comparison")
-        return {"operations": list(dict.fromkeys(operations))}
+    requests: int = 0
+    input_tokens: int = 0
+    output_tokens: int = 0
 
-    async def judge(
-        self,
-        state: dict[str, Any],
-        card: MonitorCard,
-        plan: MonitorPlan,
-        observations: list[Observation],
-    ) -> Decision:
-        stale = [
-            observation
-            for observation in observations
-            if observation.freshness and "stale" in observation.freshness.lower()
-        ]
-        candidates = [
-            observation
-            for observation in observations
-            if observation.change_pct is not None
-            and abs(observation.change_pct) >= card.materiality_threshold_pct
-        ]
-        if stale:
-            outcome = (
-                Outcome.ESCALATE
-                if Outcome.ESCALATE in card.allowed_outcomes
-                else Outcome.INVESTIGATE
-            )
-            rationale, confidence = (
-                "A monitored input is stale, so the dashboard cannot be interpreted as current.",
-                0.99,
-            )
-        elif not candidates:
-            outcome, rationale, confidence = (
-                Outcome.IGNORE,
-                "No monitored observation crossed the owner-defined materiality threshold.",
-                0.98,
-            )
-        elif any("error" in observation.metric.lower() for observation in candidates):
-            outcome, rationale, confidence = (
-                Outcome.NOTIFY,
-                "A material movement is accompanied by a related error signal.",
-                0.94,
-            )
-        elif any("churn" in observation.metric.lower() for observation in candidates):
-            outcome, rationale, confidence = (
-                Outcome.NOTIFY,
-                "A material movement is associated with churn, matching the monitoring intent.",
-                0.92,
-            )
-        elif any("season" in observation.metric.lower() for observation in observations):
-            outcome, rationale, confidence = (
-                Outcome.IGNORE,
-                "The movement is large, but the dashboard includes an explicit seasonal context signal.",
-                0.86,
-            )
-        else:
-            outcome, rationale, confidence = (
-                Outcome.INVESTIGATE,
-                "A material movement was found, but the evidence does not identify a safe routing decision.",
-                0.66,
-            )
-        if outcome not in card.allowed_outcomes:
-            outcome = Outcome.INVESTIGATE
-        recipient_key = None
-        if outcome in (Outcome.NOTIFY, Outcome.ESCALATE) and card.recipients:
-            recipient_key = card.recipients[0].key
-        evidence = [
-            {
-                "chart_id": observation.chart_id,
-                "chart_title": observation.chart_title,
-                "statement": f"{observation.chart_title} is {observation.freshness}."
-                if observation.freshness
-                else (
-                    f"{observation.chart_title} changed {observation.change_pct:.1f}% versus baseline."
-                    if observation.change_pct is not None
-                    else f"{observation.chart_title} has no comparable baseline."
-                ),
-                "values": {
-                    "current": observation.current,
-                    "baseline": observation.baseline,
-                    "change_pct": observation.change_pct,
-                    "freshness": observation.freshness,
-                },
-                "source_url": observation.source_url,
-            }
-            for observation in (stale or candidates or observations[:1])
-        ]
-        return Decision(
-            outcome=outcome,
-            recipient_key=recipient_key,
-            rationale=rationale,
-            confidence=confidence,
-            probabilities={outcome.value: confidence, "other": 1 - confidence},
-            evidence=evidence,
-            observations=observations,
-            monitor_id=card.id,
-            dashboard_id=card.dashboard_id,
-            evaluator=self.name,
+    def record(self, response: Any) -> None:
+        self.requests += 1
+        usage = getattr(response, "usage", None)
+        self.record_tokens(
+            getattr(usage, "input_tokens", None), getattr(usage, "output_tokens", None)
         )
+
+    def record_tokens(self, input_tokens: Any = None, output_tokens: Any = None) -> None:
+        self.input_tokens += int(input_tokens or 0)
+        self.output_tokens += int(output_tokens or 0)
 
 
 class JevJudger:
@@ -141,52 +50,42 @@ class JevJudger:
 
         self._client_type = AsyncTypeSafeClient
         self._api_key = api_key
+        self.metrics = JudgerMetrics()
 
     async def compile_plan(self, state: dict[str, Any], card: MonitorCard) -> dict[str, Any]:
         from typesafe_sdk import Choice, Noul
 
+        available_operations = state["available_operations"]
+        questions = {
+            f"use_{operation['key']}": Noul(
+                instructions=(
+                    f"Does the owner's monitoring intent require the `{operation['key']}` "
+                    "analysis capability for this dashboard?"
+                ),
+                criteria={
+                    "true": operation["description"],
+                    "false": "This capability is not needed to answer the owner's monitoring intent.",
+                },
+            )
+            for operation in available_operations
+        }
+        windows = card.comparison_windows or ["previous_period"]
+        questions["baseline"] = Choice(
+            instructions="Which comparison window best matches the owner's monitoring intent?",
+            criteria={window: None for window in windows},
+        )
+
         async with self._client_type(api_key=self._api_key) as client:
             response = await client.system_one(
                 state=state,
-                questions={
-                    "need_seasonality": Noul(
-                        instructions="Does the monitoring intent require seasonal or same-period comparison?",
-                        criteria={
-                            "true": "The intent mentions seasonality or periodic variation.",
-                            "false": "No seasonal comparison is requested.",
-                        },
-                    ),
-                    "need_dimensions": Noul(
-                        instructions="Does the monitoring intent require segment or dimension contribution analysis?",
-                        criteria={
-                            "true": "The intent asks to inspect a segment, region, device, customer type, or similar dimension.",
-                            "false": "No dimension analysis is requested.",
-                        },
-                    ),
-                    "need_cross_chart": Noul(
-                        instructions="Does the monitoring intent require comparing related charts together?",
-                        criteria={
-                            "true": "The intent asks to inspect related charts or multiple signals together.",
-                            "false": "One chart or signal is sufficient.",
-                        },
-                    ),
-                    "baseline": Choice(
-                        instructions="Which baseline should this monitoring plan use?",
-                        criteria={
-                            "previous_period": "Immediately preceding equivalent period.",
-                            "trailing_4_period_average": "Mean of the last four equivalent periods.",
-                            "same_period_last_year": "Equivalent period last year.",
-                        },
-                    ),
-                },
+                questions=questions,
             )
-        operations = ["percent_change", "baseline_comparison", "freshness_check"]
-        if response.nouls["need_seasonality"].noul >= 0.6:
-            operations.append("seasonality_check")
-        if response.nouls["need_dimensions"].noul >= 0.6:
-            operations.append("dimension_contribution")
-        if response.nouls["need_cross_chart"].noul >= 0.6:
-            operations.append("cross_chart_comparison")
+        self.metrics.record(response)
+        operations = [
+            operation["key"]
+            for operation in available_operations
+            if response.nouls[f"use_{operation['key']}"].noul >= 0.6
+        ]
         return {"operations": operations, "baseline": response.choices["baseline"].choice}
 
     async def judge(
@@ -198,10 +97,17 @@ class JevJudger:
     ) -> Decision:
         from typesafe_sdk import Choice, Score
 
-        criteria = {outcome.value: None for outcome in card.allowed_outcomes}
-        criteria.setdefault(
-            "insufficient_data", "Evidence is missing, stale, or not comparable enough to decide."
-        )
+        default_guidance = {
+            Outcome.IGNORE.value: "Do not send a notification; the evidence is not actionable.",
+            Outcome.INVESTIGATE.value: "Route for human or downstream investigation before action.",
+            Outcome.NOTIFY.value: "Send a low-risk notification to one approved recipient group.",
+            Outcome.ESCALATE.value: "Send an urgent escalation to one approved recipient group.",
+            Outcome.INSUFFICIENT_DATA.value: "Do not interpret the dashboard because required evidence is missing or stale.",
+        }
+        criteria = {
+            outcome.value: card.outcome_guidance.get(outcome.value, default_guidance[outcome.value])
+            for outcome in card.allowed_outcomes
+        }
         recipient_criteria = {"no_recipient": "No notification should be sent."} | {
             recipient.key: recipient.label for recipient in card.recipients
         }
@@ -210,11 +116,19 @@ class JevJudger:
                 state=state,
                 questions={
                     "outcome": Choice(
-                        instructions="Given the dashboard monitoring intent and computed evidence, what should the monitoring workflow do next?",
+                        instructions=(
+                            "Given the dashboard monitoring intent and computed evidence, "
+                            "what should the monitoring workflow do next? Follow any "
+                            "owner-provided outcome guidance in `monitor_card.outcome_guidance`."
+                        ),
                         criteria=criteria,
                     ),
                     "materiality": Score(
-                        instructions="How materially does the evidence violate the dashboard owner's monitoring intent?",
+                        instructions=(
+                            "How materially does the evidence violate the dashboard owner's "
+                            "monitoring intent? Use `monitor_card.materiality_definition` "
+                            "when it is provided."
+                        ),
                         criteria=["normal", "notable", "material", "critical"],
                     ),
                     "recipient": Choice(
@@ -223,6 +137,7 @@ class JevJudger:
                     ),
                 },
             )
+        self.metrics.record(response)
         try:
             outcome = Outcome(response.choices["outcome"].choice)
         except ValueError:
