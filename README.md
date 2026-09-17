@@ -66,7 +66,7 @@ That separation matters:
 | Interpreting relationships and owner language | Jev |
 | Allowed actions, recipients, confidence gates, and side effects | SignalWeave code + company policy |
 
-Confidence is used as a routing signal. A low-confidence automatic `ignore`, `notify`, or `escalate` becomes `investigate`; stale, missing, or incomparable source data cannot silently become a no-op. Each card can set its action threshold, and TypeSafe itself cautions that thresholds must be calibrated to the consequences of the application—this repository treats the four demo cases as a starting point, not a universal benchmark. See [TypeSafe confidence guidance](https://docs.typesafe.ai/confidence).
+Confidence is used as a routing signal. A low-confidence automatic `ignore`, `notify`, or `escalate` becomes `investigate`; stale, missing, or incomparable source data cannot silently become a no-op. Each card can set its action threshold, and TypeSafe itself cautions that thresholds must be calibrated to the consequences of the application—this repository treats the four labeled evaluation cases as a starting point, not a universal benchmark. See [TypeSafe confidence guidance](https://docs.typesafe.ai/confidence).
 
 ## What a user actually does
 
@@ -120,14 +120,14 @@ uv sync --extra dev
 # Keep the key outside the repository.
 export TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe
 
-# Run the Jev-backed proof over the checked-in demo cases.
-uv run signalweave prove
+# Run the Jev-backed evaluation over labeled cases (outside the service package).
+uv run python -m evaluations.cli prove
 
 # Run lint and unit tests.
 make verify
 ```
 
-The unit suite uses explicit test doubles so CI does not spend API credits. It does not pretend those tests are a Jev quality evaluation. Run `signalweave prove` for a live semantic proof.
+The unit suite uses explicit test doubles so CI does not spend API credits. It does not pretend those tests are a Jev quality evaluation. Run the evaluation command above for a live Jev proof; run the live Superset check below for an unlabeled external-source proof.
 
 ## Run the isolated Superset demo
 
@@ -210,7 +210,7 @@ The repository contains a reproducible harness over the same normalized dashboar
 ```bash
 # Live Jev run; repeat to inspect stability and p95 latency.
 TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
-  uv run signalweave benchmark --systems jev --repeats 5 \
+  uv run python -m evaluations.cli benchmark --systems jev --repeats 5 \
   --format markdown --output artifacts/jev-benchmark.md
 ```
 
@@ -226,20 +226,33 @@ BASELINE_API_KEY=... \
 BASELINE_MODEL=luna \
 BASELINE_EMBEDDING_MODEL=your-embedding-model \
 TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
-  uv run signalweave benchmark \
+  uv run python -m evaluations.cli benchmark \
   --systems jev,embedding-reasoning --repeats 5 \
   --format markdown --output artifacts/jev-vs-luna.md
 ```
 
-The benchmark reports exact decision accuracy, outcome accuracy, median/p95 latency, request count, token usage when the provider reports it, and provider errors. The labels are stored alongside the demo inputs in [`examples/demo-cases.json`](examples/demo-cases.json), not inside the runtime package. Four synthetic cases can prove wiring and failure behavior; they cannot prove that Jev is universally better. A meaningful enterprise comparison needs a labeled export of real dashboard events and should measure false alerts, missed actions, investigation rate, owner corrections, latency, and cost.
+The benchmark reports exact decision accuracy, outcome accuracy, median/p95 latency, request count, token usage when the provider reports it, and provider errors. The labels live under [`evaluations/data/demo-cases.json`](evaluations/data/demo-cases.json), outside the runtime package. Four synthetic cases can prove wiring and failure behavior; they cannot prove that Jev is universally better. A meaningful enterprise comparison needs a labeled export of real dashboard events and should measure false alerts, missed actions, investigation rate, owner corrections, latency, and cost.
+
+To exercise a real Superset dashboard with an owner-supplied card and no expected outcome baked into the check:
+
+```bash
+SUPERSET_URL=http://127.0.0.1:8088 \
+SUPERSET_USERNAME=admin SUPERSET_PASSWORD=admin \
+TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
+  uv run python scripts/live_superset_check.py \
+  --monitor-card examples/monitor-card.json
+```
+
+This command succeeds only when the card is read from Superset, Jev is the evaluator, and the resulting decision contains evidence. It does not grade the answer against a demo label.
 
 See [`docs/benchmark.md`](docs/benchmark.md) for the protocol and interpretation, and [`docs/evaluation.md`](docs/evaluation.md) for the broader evidence standard.
 
 ## Repository map
 
 - `src/semantic_monitor/` — source adapter, typed models, Jev integration, engine, MCP, and webhook
-- `examples/demo-cases.json` — external demo inputs and labels; not production logic
+- `evaluations/` — labeled evaluation cases, benchmarks, and large-scale trial harnesses; never imported by the service
 - `examples/monitor-card.json` — a monitor-card shape to copy and adapt
+- `scripts/live_superset_check.py` — unlabeled acceptance check against an external Superset dashboard
 - `docs/architecture.md` — component boundary and lifecycle
 - `docs/demo.md` — local Superset walkthrough
 - `docs/benchmark.md` — benchmark protocol and interpretation

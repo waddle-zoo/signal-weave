@@ -1,0 +1,13 @@
+include .env.example
+include LICENSE
+include Makefile
+include README.md
+include docker-compose.yml
+include pyproject.toml
+include uv.lock
+recursive-include docker *
+recursive-include docs *.md
+recursive-include evaluations *.py *.json
+recursive-include examples *.json
+recursive-include scripts *.py
+recursive-include tests *.py

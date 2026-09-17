@@ -13,9 +13,9 @@ from typing import Any
 
 import httpx
 
-from .compiler import base_plan
-from .models import Decision, MonitorCard, MonitorPlan, Observation, Outcome
-from .typesafe_adapter import JudgerMetrics
+from semantic_monitor.compiler import base_plan
+from semantic_monitor.models import Decision, MonitorCard, MonitorPlan, Observation, Outcome
+from semantic_monitor.typesafe_adapter import JudgerMetrics
 
 
 class EmbeddingReasoningJudger:

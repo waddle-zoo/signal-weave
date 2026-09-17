@@ -45,11 +45,20 @@ class JudgerMetrics:
 class JevJudger:
     name = "jev-latest"
 
-    def __init__(self, api_key: str | None = None) -> None:
+    def __init__(self, api_key: str | None = None, timeout: float | None = None) -> None:
         from typesafe_sdk import AsyncTypeSafeClient
 
+        timeout_seconds = timeout
+        if timeout_seconds is None:
+            try:
+                timeout_seconds = float(os.getenv("TYPESAFE_TIMEOUT_SECONDS", "30"))
+            except ValueError as error:
+                raise ValueError("TYPESAFE_TIMEOUT_SECONDS must be a positive number") from error
+        if timeout_seconds <= 0:
+            raise ValueError("TYPESAFE_TIMEOUT_SECONDS must be a positive number")
         self._client_type = AsyncTypeSafeClient
         self._api_key = api_key
+        self._timeout = timeout_seconds
         self.metrics = JudgerMetrics()
 
     async def compile_plan(self, state: dict[str, Any], card: MonitorCard) -> dict[str, Any]:
@@ -75,7 +84,7 @@ class JevJudger:
             criteria={window: None for window in windows},
         )
 
-        async with self._client_type(api_key=self._api_key) as client:
+        async with self._client_type(api_key=self._api_key, timeout=self._timeout) as client:
             response = await client.system_one(
                 state=state,
                 questions=questions,
@@ -132,7 +141,7 @@ class JevJudger:
             instructions="Which approved recipient group should receive an automatic action, if one is supported? Choose no_recipient when no automatic action is supported.",
             criteria=recipient_criteria,
         )
-        async with self._client_type(api_key=self._api_key) as client:
+        async with self._client_type(api_key=self._api_key, timeout=self._timeout) as client:
             response = await client.system_one(state=state, questions=questions)
         self.metrics.record(response)
         matches = {

@@ -1,4 +1,4 @@
-.PHONY: install test lint prove verify docker-up docker-down
+.PHONY: install test lint prove benchmark verify docker-up docker-down
 
 install:
 	uv sync --extra dev
@@ -10,7 +10,10 @@ lint:
 	uv run ruff check .
 
 prove:
-	uv run signalweave prove
+	uv run python -m evaluations.cli prove
+
+benchmark:
+	uv run python -m evaluations.cli benchmark --systems jev --repeats 5
 
 verify:
 	uv run ruff check .

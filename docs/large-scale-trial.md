@@ -1,6 +1,6 @@
 # Large-scale live Jev trial
 
-This is the current stress/proof run for the SignalWeave decision boundary. It runs the same production `MonitorEngine` and `JevJudger` used by MCP and push evaluations; the trial generator is only a test harness under `scripts/`.
+This is the current stress/proof run for the SignalWeave decision boundary. It runs the same production `MonitorEngine` and `JevJudger` used by MCP and push evaluations; the generator is evaluation-only code under `evaluations/`.
 
 ## Trial design
 
@@ -15,7 +15,7 @@ Run it yourself:
 
 ```bash
 TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
-  uv run python scripts/large_scale_trial.py \
+  uv run python -m evaluations.large_scale_trial \
   --repeats 2 --concurrency 8 \
   --output artifacts/large-scale-trial.json
 ```

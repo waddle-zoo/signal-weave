@@ -10,10 +10,10 @@ This walkthrough proves three things independently:
 
 ```bash
 uv sync --extra dev
-TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe uv run signalweave prove
+TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe uv run python -m evaluations.cli prove
 ```
 
-The result is live typed classification over the external cases in `examples/demo-cases.json`. The output shape is:
+The result is live typed classification over the external cases in `evaluations/data/demo-cases.json`. The output shape is:
 
 ```text
 scenario             outcome          recipient              confidence  expected  pass  ms
@@ -28,7 +28,7 @@ Jev probabilities and latency can vary. This proof demonstrates wiring, evidence
 Generate a report with evidence statements:
 
 ```bash
-uv run signalweave prove --format markdown --output artifacts/proof.md
+uv run python -m evaluations.cli prove --format markdown --output artifacts/proof.md
 ```
 
 ## B. Real Superset proof
@@ -80,7 +80,7 @@ Keep the credential outside the repository:
 
 ```bash
 TYPESAFE_API_KEY_FILE=/path/to/apikey_typesafe \
-uv run signalweave benchmark --systems jev --repeats 5 --format markdown --output artifacts/jev-benchmark.md
+uv run python -m evaluations.cli benchmark --systems jev --repeats 5 --format markdown --output artifacts/jev-benchmark.md
 ```
 
 The output records exact outcome-plus-recipient accuracy against the checked-in labels, repeat stability, confidence distribution, latency, requests, and provider-reported usage. To compare a general model with embeddings, follow [benchmark.md](benchmark.md).

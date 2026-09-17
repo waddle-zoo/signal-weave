@@ -4,7 +4,7 @@
 
 The goal is not to claim that a semantic model is universally correct. The goal is to prove the application contract that makes semantic automation useful:
 
-- facts are sourced from the dashboard or deterministic fixture;
+- facts are sourced from the dashboard or an explicitly labeled evaluation input;
 - owner intent becomes a bounded, reviewable plan;
 - decisions use only explicit outcomes and recipients;
 - evidence is returned with the decision;
@@ -13,7 +13,7 @@ The goal is not to claim that a semantic model is universally correct. The goal 
 
 ## Representative cases
 
-The four external demo cases intentionally exercise different failure modes:
+The four labeled evaluation cases intentionally exercise different failure modes:
 
 | Case | Signal | Correct behavior | Main protection |
 | --- | --- | --- | --- |
@@ -26,9 +26,9 @@ The four external demo cases intentionally exercise different failure modes:
 
 ```bash
 TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
-  uv run signalweave prove
+  uv run python -m evaluations.cli prove
 TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
-  uv run signalweave benchmark --systems jev --repeats 5
+  uv run python -m evaluations.cli benchmark --systems jev --repeats 5
 uv run python -m pytest
 RUN_SUPERSET_INTEGRATION=1 \
   SUPERSET_URL=http://localhost:8088 \
@@ -37,7 +37,16 @@ RUN_SUPERSET_INTEGRATION=1 \
   uv run python -m pytest -q tests/test_superset_integration.py
 ```
 
-The live integration test is skipped unless explicitly enabled. This keeps normal CI independent of a running Superset while preserving a one-command local proof when the Docker stack is available. Unit tests use injected test doubles and do not replace the live Jev proof.
+The live integration test is skipped unless explicitly enabled. This keeps normal CI independent of a running Superset while preserving a one-command source-adapter proof when the Docker stack is available. The unlabeled external-source acceptance check is:
+
+```bash
+TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
+SUPERSET_URL=http://127.0.0.1:8088 \
+  uv run python scripts/live_superset_check.py \
+  --monitor-card examples/monitor-card.json
+```
+
+Unit tests use injected test doubles and do not replace the live Jev or live Superset proofs.
 
 For the provider-neutral embeddings-plus-reasoning comparison, see [benchmark.md](benchmark.md).
 

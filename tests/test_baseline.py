@@ -1,8 +1,8 @@
 import httpx
 
-from semantic_monitor.baseline import EmbeddingReasoningJudger
+from evaluations.cases import load_evaluation_cases
+from evaluations.embedding_baseline import EmbeddingReasoningJudger
 from semantic_monitor.compiler import base_plan
-from semantic_monitor.demo import load_demo_cases
 
 
 async def test_embedding_reasoning_adapter_uses_two_calls_and_typed_json():
@@ -37,7 +37,7 @@ async def test_embedding_reasoning_adapter_uses_two_calls_and_typed_json():
             },
         )
 
-    case = next(case for case in load_demo_cases() if case.id == "mobile_conversion")
+    case = next(case for case in load_evaluation_cases() if case.id == "mobile_conversion")
     dashboard = case.dashboard
     observations = [
         observation

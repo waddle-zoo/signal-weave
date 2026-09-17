@@ -35,7 +35,7 @@ The verdict does not mean a company should deploy the local JSON catalog or stat
 - Superset is an adapter and demo source, not the product name or workflow engine.
 - TypeSafe is used for narrow typed plan/judgment questions; code owns calculations, allowlists, and safety policy.
 - Airflow, Temporal, schedulers, chat delivery, and agent orchestration remain outside scope.
-- The Jev proof demonstrates four distinct external demo cases and the live demo exercises real Superset charts.
+- The Jev proof demonstrates four distinct labeled evaluation cases; the separate live acceptance check exercises a real Superset dashboard without an expected label.
 
 ## Evidence collected
 

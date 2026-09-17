@@ -6,52 +6,25 @@ import tempfile
 from pathlib import Path
 from typing import Protocol
 
-from .demo import copy_dashboard, default_cards, scenario_catalog
 from .models import DashboardSnapshot, MonitorCard
 from .superset_client import SupersetClient
 
 
 class DashboardStore(Protocol):
-    def get_dashboard(self, dashboard_id: str) -> DashboardSnapshot: ...
-
-
-class FixtureStore:
-    def __init__(self) -> None:
-        self.dashboards = scenario_catalog()
-        self.cards = default_cards()
-
     def get_dashboard(
         self,
         dashboard_id: str,
         chart_ids: list[str] | None = None,
         include_data: bool = True,
-    ) -> DashboardSnapshot:
-        for dashboard in self.dashboards.values():
-            if dashboard.id == dashboard_id:
-                snapshot = copy_dashboard(dashboard)
-                if chart_ids:
-                    snapshot = snapshot.model_copy(
-                        update={
-                            "charts": [chart for chart in snapshot.charts if chart.id in chart_ids]
-                        }
-                    )
-                return snapshot
-        raise KeyError(f"Unknown dashboard: {dashboard_id}")
+    ) -> DashboardSnapshot: ...
 
-    def list_dashboards(self) -> list[DashboardSnapshot]:
-        return [copy_dashboard(dashboard) for dashboard in self.dashboards.values()]
+    def list_dashboards(self) -> list[DashboardSnapshot]: ...
 
-    def get_dashboard_by_scenario(self, scenario: str) -> DashboardSnapshot:
-        return copy_dashboard(self.dashboards[scenario])
+    def get_card(self, monitor_id: str) -> MonitorCard: ...
 
-    def get_card(self, monitor_id: str) -> MonitorCard:
-        return self.cards[monitor_id].model_copy(deep=True)
+    def list_cards(self) -> list[MonitorCard]: ...
 
-    def list_cards(self) -> list[MonitorCard]:
-        return [card.model_copy(deep=True) for card in self.cards.values()]
-
-    def save_card(self, card: MonitorCard) -> None:
-        self.cards[card.id] = card.model_copy(deep=True)
+    def save_card(self, card: MonitorCard) -> None: ...
 
 
 class SupersetStore:

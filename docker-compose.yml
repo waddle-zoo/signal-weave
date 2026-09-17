@@ -57,8 +57,8 @@ services:
       superset:
         condition: service_healthy
     environment:
-      MONITOR_SOURCE: ${MONITOR_SOURCE:-superset}
       TYPESAFE_MODE: ${TYPESAFE_MODE:-jev}
+      TYPESAFE_TIMEOUT_SECONDS: ${TYPESAFE_TIMEOUT_SECONDS:-30}
       TYPESAFE_API_KEY_FILE: /run/secrets/typesafe_api_key
       SUPERSET_URL: http://superset:8088
       SUPERSET_USERNAME: admin

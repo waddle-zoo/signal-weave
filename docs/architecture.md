@@ -92,15 +92,9 @@ The judgment chooses only from card-approved outcomes and recipients. The engine
 
 The service returns a decision. Delivery remains with the caller so companies can use Slack, email, PagerDuty, tickets, an agent, or an existing workflow system.
 
-## Operating modes
+## Operating mode
 
-### Demo fixture mode
-
-`MONITOR_SOURCE=fixtures` loads external, checked-in demo dashboards from `examples/demo-cases.json`. This is for local Jev proofs and tests; it is not a semantic fallback and is not used by a Superset deployment.
-
-### Superset mode
-
-`MONITOR_SOURCE=superset` connects to a Superset instance, stores cards in the configured monitor store, and queries the selected saved charts. The Docker Compose stack uses this mode by default.
+The deployable runtime connects to Superset, stores cards in the configured monitor store, and queries the selected saved charts. It has no fixture source or semantic fallback. Labeled cases and simulated trials live in the top-level `evaluations/` package and are not imported by the service.
 
 ### Jev mode
 
@@ -110,7 +104,7 @@ The service does not ship a semantic fallback. Unit tests inject local doubles f
 
 ## Enterprise integration shape
 
-The proof uses local JSON because it keeps the repository easy to run. A production deployment should replace that boundary with:
+The local JSON monitor catalog keeps the repository easy to run. A production deployment should replace that boundary with:
 
 - company identity and dashboard permissions;
 - a reviewed monitor-card store with version history;

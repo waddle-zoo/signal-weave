@@ -7,9 +7,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from .demo import load_demo_cases
-from .models import Decision, Outcome
-from .runtime import build_runtime
+from evaluations.cases import load_evaluation_cases
+from semantic_monitor.engine import MonitorEngine
+from semantic_monitor.models import Decision, Outcome
+from semantic_monitor.typesafe_adapter import JevJudger, load_api_key
 
 
 @dataclass(frozen=True)
@@ -51,19 +52,22 @@ class ProofResult:
         return asdict(self)
 
 
-async def run_fixture_proof() -> list[ProofResult]:
-    """Run external demo cases through the Jev-backed production engine."""
-    mode = "jev"
-    runtime = build_runtime(mode=mode, source="fixtures")
-    expected_by_scenario = {
-        case.id: Outcome(case.expected_outcome) for case in load_demo_cases()
-    }
+async def run_labeled_proof() -> list[ProofResult]:
+    """Run evaluation cases through the same engine used by the service."""
+    api_key = load_api_key()
+    if not api_key:
+        raise RuntimeError("Jev proof requires TYPESAFE_API_KEY or TYPESAFE_API_KEY_FILE")
+    judger = JevJudger(api_key=api_key)
+    engine = MonitorEngine(judger=judger)
+    cases = load_evaluation_cases()
+    expected_by_scenario = {case.id: Outcome(case.expected_outcome) for case in cases}
     results: list[ProofResult] = []
-    for scenario in sorted(runtime.store.dashboards):
-        dashboard = runtime.store.get_dashboard_by_scenario(scenario)
-        card = next(card for card in runtime.store.list_cards() if card.dashboard_id == dashboard.id)
+    for case in sorted(cases, key=lambda item: item.id):
+        scenario = case.id
+        dashboard = case.dashboard
+        card = case.monitor_card
         started = time.perf_counter()
-        evaluation = await runtime.engine.evaluate(dashboard, card)
+        evaluation = await engine.evaluate(dashboard, card)
         elapsed_ms = (time.perf_counter() - started) * 1000
         expected = expected_by_scenario.get(scenario)
         results.append(
@@ -78,8 +82,8 @@ async def run_fixture_proof() -> list[ProofResult]:
     return results
 
 
-def run_fixture_proof_sync() -> list[ProofResult]:
-    return asyncio.run(run_fixture_proof())
+def run_labeled_proof_sync() -> list[ProofResult]:
+    return asyncio.run(run_labeled_proof())
 
 
 def render_table(results: list[ProofResult]) -> str:

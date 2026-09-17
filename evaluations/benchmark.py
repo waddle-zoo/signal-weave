@@ -12,11 +12,11 @@ from pathlib import Path
 from statistics import median
 from typing import Any
 
-from .baseline import EmbeddingReasoningJudger
-from .demo import load_demo_cases
-from .engine import MonitorEngine
-from .models import Outcome
-from .typesafe_adapter import JevJudger, JudgerMetrics, load_api_key
+from evaluations.cases import load_evaluation_cases
+from evaluations.embedding_baseline import EmbeddingReasoningJudger
+from semantic_monitor.engine import MonitorEngine
+from semantic_monitor.models import Outcome
+from semantic_monitor.typesafe_adapter import JevJudger, JudgerMetrics, load_api_key
 
 SUPPORTED_SYSTEMS = {"jev", "embedding-reasoning"}
 
@@ -83,7 +83,7 @@ def _build_judger(system: str) -> Any:
     raise ValueError(f"Unsupported benchmark system: {system}")
 
 
-async def run_fixture_benchmark(
+async def run_labeled_benchmark(
     systems: list[str] | tuple[str, ...] = ("jev",), repeats: int = 1
 ) -> list[BenchmarkResult]:
     """Run every system on the same four labeled dashboard situations."""
@@ -93,7 +93,7 @@ async def run_fixture_benchmark(
     if unknown:
         raise ValueError(f"Unsupported benchmark systems: {sorted(unknown)}")
 
-    cases = load_demo_cases()
+    cases = load_evaluation_cases()
     results: list[BenchmarkResult] = []
     for system in systems:
         judger = _build_judger(system)
@@ -142,10 +142,10 @@ async def run_fixture_benchmark(
     return results
 
 
-def run_fixture_benchmark_sync(
+def run_labeled_benchmark_sync(
     systems: list[str] | tuple[str, ...] = ("jev",), repeats: int = 1
 ) -> list[BenchmarkResult]:
-    return asyncio.run(run_fixture_benchmark(systems, repeats))
+    return asyncio.run(run_labeled_benchmark(systems, repeats))
 
 
 def _summary(results: list[BenchmarkResult], system: str) -> dict[str, Any]:
@@ -210,8 +210,8 @@ def render_benchmark_markdown(results: list[BenchmarkResult]) -> str:
         "# SignalWeave evaluator benchmark",
         "",
         f"- Generated: `{generated}`",
-        f"- Labeled cases: `{len(load_demo_cases())}` per repeat and system",
-        "- Gold labels: the intended behavior stored with each case in `examples/demo-cases.json`",
+        f"- Labeled cases: `{len(load_evaluation_cases())}` per repeat and system",
+        "- Gold labels: the intended behavior stored with each case in `evaluations/data/demo-cases.json`",
         "",
         "This is a local decision-quality benchmark, not a claim of universal model accuracy. "
         "Every system receives the same monitor card, normalized observations, evidence, allowed outcomes, "
@@ -253,7 +253,7 @@ def render_benchmark_markdown(results: list[BenchmarkResult]) -> str:
             "",
             "- `jev` is the product path: Jev supplies typed semantic judgments and the same code owns calculations, evidence, routing, and safety gates.",
             "- `embedding-reasoning` is an optional OpenAI-compatible baseline: it embeds the same dashboard observations, retrieves the top cards, and asks a general model for JSON. Set `BASELINE_BASE_URL`, `BASELINE_MODEL`, and `BASELINE_EMBEDDING_MODEL` to run it against a real provider.",
-            "- Do not claim Jev is better from four fixtures alone. Use this harness on a labeled export of real dashboard events and compare accuracy, false alerts, investigation rate, latency, and provider usage.",
+            "- Do not claim Jev is better from four labeled cases alone. Use this harness on a labeled export of real dashboard events and compare accuracy, false alerts, investigation rate, latency, and provider usage.",
         ]
     )
     return "\n".join(lines)

@@ -1,7 +1,12 @@
 from semantic_monitor.engine import MonitorEngine
 from semantic_monitor.mcp_server import create_mcp
 from semantic_monitor.runtime import Runtime
-from semantic_monitor.store import FixtureStore
+
+
+class StubStore:
+    """Construction-only store stub; MCP behavior is tested through dedicated routes."""
+
+    pass
 
 
 class TestJudger:
@@ -28,5 +33,5 @@ class TestJudger:
 
 
 def test_server_exposes_mcp_object():
-    server = create_mcp(Runtime(store=FixtureStore(), engine=MonitorEngine(TestJudger())))
+    server = create_mcp(Runtime(store=StubStore(), engine=MonitorEngine(TestJudger())))
     assert server.name == "signal-weave"

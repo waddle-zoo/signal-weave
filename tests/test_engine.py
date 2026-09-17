@@ -1,6 +1,6 @@
 import pytest
 
-from semantic_monitor.demo import default_cards, load_demo_cases, scenario_catalog
+from evaluations.cases import load_evaluation_cases
 from semantic_monitor.engine import MonitorEngine
 from semantic_monitor.models import (
     ChartSnapshot,
@@ -12,8 +12,19 @@ from semantic_monitor.models import (
 )
 
 
+def scenario_catalog():
+    return {case.id: case.dashboard.model_copy(deep=True) for case in load_evaluation_cases()}
+
+
+def default_cards():
+    return {
+        case.monitor_card.id: case.monitor_card.model_copy(deep=True)
+        for case in load_evaluation_cases()
+    }
+
+
 class JevTestDouble:
-    """Test-only stand-in for Jev; expected labels live in examples/demo-cases.json."""
+    """Test-only stand-in for Jev; expected labels live in evaluations/data."""
 
     name = "jev-test-double"
 
@@ -23,7 +34,7 @@ class JevTestDouble:
 
     async def judge(self, state, card, plan, observations):
         del plan
-        case = next(case for case in load_demo_cases() if case.monitor_card.id == card.id)
+        case = next(case for case in load_evaluation_cases() if case.monitor_card.id == card.id)
         return Decision(
             outcome=case.expected_outcome,
             recipient_key=case.expected_recipient,

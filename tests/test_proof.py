@@ -1,8 +1,8 @@
-from semantic_monitor.demo import load_demo_cases
+from evaluations.cases import load_evaluation_cases
 
 
 def test_demo_cases_are_external_labeled_inputs():
-    cases = load_demo_cases()
+    cases = load_evaluation_cases()
 
     assert {case.id for case in cases} == {
         "data_freshness",

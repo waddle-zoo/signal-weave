@@ -15,7 +15,7 @@ Each evaluator receives the same:
 
 The engine applies the same post-judgment gates to both evaluators. The embedding-plus-reasoning adapter only changes how evidence is retrieved and how the semantic decision is produced; it does not get a different dashboard or an easier routing contract.
 
-The checked-in cases are deliberately external data in [`examples/demo-cases.json`](../examples/demo-cases.json). They cover:
+The checked-in cases are deliberately external data in [`evaluations/data/demo-cases.json`](../evaluations/data/demo-cases.json). They cover:
 
 | Case | Labeled decision | Semantic difficulty |
 | --- | --- | --- |
@@ -40,7 +40,7 @@ Jev selected the labeled outcome and approved recipient for all four cases on ev
 
 ```bash
 TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
-  uv run signalweave benchmark \
+  uv run python -m evaluations.cli benchmark \
   --systems jev \
   --repeats 5 \
   --format markdown \
@@ -59,7 +59,7 @@ BASELINE_API_KEY=... \
 BASELINE_MODEL=luna \
 BASELINE_EMBEDDING_MODEL=provider-embedding-model \
 TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
-  uv run signalweave benchmark \
+  uv run python -m evaluations.cli benchmark \
   --systems jev,embedding-reasoning \
   --repeats 5 \
   --format markdown \

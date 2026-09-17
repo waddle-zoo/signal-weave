@@ -117,7 +117,7 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
     async def healthz(request: Request) -> JSONResponse:
         """Small liveness endpoint for a container or scheduler."""
         return JSONResponse(
-            {"status": "ok", "service": "signal-weave", "source": os.getenv("MONITOR_SOURCE", "fixtures")}
+            {"status": "ok", "service": "signal-weave", "source": "superset"}
         )
 
     @mcp.custom_route("/webhooks/evaluate", methods=["POST"])
