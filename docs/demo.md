@@ -20,12 +20,16 @@ safety behavior; synthetic labels are not a general accuracy claim.
 
 ## B. Real Superset proof
 
-Start the isolated stack:
+Start the isolated, localhost-only stack:
 
 ```bash
 TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe docker compose up --build
 curl http://localhost:18000/healthz
 ```
+
+The demo uses the local Superset credentials `admin` / `admin` and empty optional
+SignalWeave bearer tokens. The compose file binds published ports to loopback;
+do not expose this stack to a network or use its credentials outside the demo.
 
 Connect an MCP client to `http://localhost:18000/mcp`. The intended flow is:
 
@@ -46,7 +50,11 @@ draft_workflow(
     "label":"Sales dashboard",
     "parameters":{"chart_ids":["62","64"]}
   }],
-  recipients=[{"key":"revenue-operations", ...}]
+  recipients=[{
+    "key":"revenue-operations",
+    "label":"Revenue Operations",
+    "destination":"slack://revenue-operations"
+  }]
 )
 evaluate_workflow(workflow_id="workflow-sales-pulse")
 ```

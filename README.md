@@ -9,14 +9,14 @@
 
 <p align="center">
   <a href="https://github.com/waddle-zoo/signal-weave/actions/workflows/ci.yml"><img src="https://github.com/waddle-zoo/signal-weave/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="https://www.python.org/"><img src="https://img.shields.io/badge/python-3.10%2B-3776AB?logo=python&logoColor=white" alt="Python 3.10+"></a>
+  <a href="https://www.python.org/"><img src="https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white" alt="Python 3.11+"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-2ea44f.svg" alt="Apache 2.0 license"></a>
 </p>
 
-SignalWeave is a small open-source MCP and webhook service for teams that need to
-turn existing dashboards, queries, jobs, and ownership metadata into reliable
-actions. A person describes what matters in plain language; approved source
-adapters provide bounded evidence; [TypeSafe Jev](https://docs.typesafe.ai/introduction)
+SignalWeave is a small open-source Model Context Protocol (MCP) and webhook service
+for teams that need to turn existing dashboards, queries, jobs, and ownership
+metadata into reliable actions. A person describes what matters in plain language;
+deployment-configured source adapters provide bounded evidence; [TypeSafe Jev](https://docs.typesafe.ai/introduction)
 supplies narrow typed judgments; SignalWeave returns an inspectable decision.
 
 <p align="center">
@@ -25,7 +25,7 @@ supplies narrow typed judgments; SignalWeave returns an inspectable decision.
 
 ## Try it
 
-Requirements: Python 3.10+, [uv](https://docs.astral.sh/uv/), and a TypeSafe API
+Requirements: Python 3.11+, [uv](https://docs.astral.sh/uv/), and a TypeSafe API
 key. Jev is the production decision path; there is no implicit heuristic fallback.
 
 ```bash
@@ -44,21 +44,37 @@ TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
   docker compose up --build
 ```
 
-Then open Superset at <http://localhost:8088> (`admin` / `admin`). SignalWeave
-serves health at <http://localhost:18000/healthz>, MCP at
+This is a localhost-only development stack. It uses `admin` / `admin` for the
+local Superset instance and leaves optional bearer tokens empty; do not expose it
+to a network. The published ports are bound to `127.0.0.1` by default.
+
+Open Superset at <http://localhost:8088>. SignalWeave serves health at
+<http://localhost:18000/healthz>, MCP at
 <http://localhost:18000/mcp>, and push evaluation at
 `POST http://localhost:18000/webhooks/evaluate`.
 
+To run the first live decision over the included workflow:
+
+```bash
+SUPERSET_URL=http://127.0.0.1:8088 \
+SUPERSET_USERNAME=admin SUPERSET_PASSWORD=admin \
+TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
+  uv run python scripts/live_workflow_check.py \
+  --workflow examples/workflow.json
+```
+
 See [`docs/demo.md`](docs/demo.md) for the complete walkthrough and
-[`examples/workflow.json`](examples/workflow.json) for a runnable workflow.
+[`examples/workflow.json`](examples/workflow.json) for the workflow input.
 
 ## What it does
 
 SignalWeave sits between company systems and the system that already delivers or
 acts on alerts. It does not replace a scheduler, BI tool, durable workflow engine,
-knowledge graph, or general-purpose agent framework.
+knowledge graph, or general-purpose agent framework. Source and recipient
+allowlisting is deployment configuration; SignalWeave does not provide identity or
+an approval workflow.
 
-- **Define:** an operations lead or analyst names the approved sources, intent,
+- **Define:** an operations lead or analyst names the configured sources, intent,
   materiality, outcomes, and recipients.
 - **Understand:** adapters normalize source state into typed observations and
   evidence. Workflows can compose multiple sources.
@@ -80,7 +96,7 @@ evaluate_workflow(workflow_id)
 ```
 
 The first included adapter is Apache Superset. The workflow contract stays
-source-oriented so an installation can add approved SQL, Airflow, data-quality,
+source-oriented so an installation can add configured SQL, Airflow, data-quality,
 or other operational adapters without making the service Superset-shaped.
 
 ## Why Jev
@@ -98,6 +114,9 @@ silently authorizing an automatic action.
 
 That boundary keeps the useful flexibility of natural language without putting an
 entire dashboard, workflow, or side-effect policy into one unconstrained prompt.
+Normalized evidence is sent to the configured TypeSafe service during Jev
+evaluation; review [`docs/security.md`](docs/security.md) and your organization’s
+data policy before using live company data.
 Read the [TypeSafe System One building guide](https://docs.typesafe.ai/concepts/how-to-build-with-system-one)
 and [confidence guidance](https://docs.typesafe.ai/confidence) for the design
 principles behind this approach.
@@ -117,12 +136,14 @@ systems.
 
 ## Evidence and safety
 
-Every decision includes the workflow ID, source references, compiled plan,
-normalized observations, source evidence and URLs, Jev evaluator, confidence, and
-the selected approved recipient when applicable.
+The MCP evaluation response includes the workflow, fetched resources, compiled
+plan, and typed decision. The webhook returns the typed decision, including the
+workflow ID, source keys, normalized observations, source evidence and URLs, Jev
+evaluator, confidence, and the selected configured recipient when applicable.
 
 Required source failures, stale observations, missing baselines, unknown
-recipients, and low-confidence automatic actions are handled by code-owned gates.
+recipients, and low-confidence automatic actions are handled by code-owned gates
+where the source adapter provides the required state.
 The source registry resolves references independently, so one failed source can be
 reported alongside healthy evidence. The caller owns delivery, retries,
 idempotency, and side effects.
@@ -134,6 +155,7 @@ idempotency, and side effects.
 - [`docs/source-adapters.md`](docs/source-adapters.md) — adapter contract and security boundary
 - [`docs/benchmark.md`](docs/benchmark.md) — evaluation methodology and comparison measures
 - [`docs/security.md`](docs/security.md) — credentials, evidence, and deployment notes
+- [`SECURITY.md`](SECURITY.md) — vulnerability reporting and release posture
 - [`ROADMAP.md`](ROADMAP.md) — current focus and future work
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — setup, testing, and pull requests
 - [`AGENTS.md`](AGENTS.md) — guidance for coding agents

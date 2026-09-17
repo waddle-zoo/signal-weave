@@ -20,7 +20,7 @@ straight to a pull request.
 
 ## Development setup
 
-Requirements: Python 3.10+, [uv](https://docs.astral.sh/uv/), and Docker only for
+Requirements: Python 3.11+, [uv](https://docs.astral.sh/uv/), and Docker only for
 the local Superset stack.
 
 ```bash
@@ -87,6 +87,5 @@ new orchestration layer.
 ## Reporting security issues
 
 Do not post credentials, private source data, or an exploitable vulnerability in a
-public issue. Contact the repository maintainers privately with reproduction
-details and the minimum information needed to investigate.
-
+public issue. Follow [`SECURITY.md`](SECURITY.md) for private reporting and include
+the minimum reproduction details needed to investigate.

@@ -3,13 +3,19 @@
 SignalWeave is a read-and-decide layer. It should not become an unreviewed code
 execution or notification surface.
 
+The local compose stack is for localhost-only development. It binds published
+ports to loopback, uses the demo Superset credentials `admin` / `admin`, and leaves
+optional bearer tokens empty. Do not expose it to an untrusted network. Jev
+evaluation sends normalized evidence to the configured TypeSafe service, so each
+deployment must establish a data policy before using company data.
+
 ## Defenses in the repository
 
-- Set `SIGNALWEAVE_API_TOKEN` outside the repository to protect MCP and webhook HTTP traffic; `/healthz` remains public for liveness.
+- Set `SIGNALWEAVE_API_TOKEN` outside the repository to protect MCP and webhook HTTP traffic; `/healthz` remains public for liveness. The local demo intentionally leaves this blank only because its published ports are loopback-bound.
 - `PUSH_WEBHOOK_TOKEN` can add a separate bearer check for push relays.
 - Source adapters own authentication and execution. The Superset adapter executes saved chart definitions only; it does not accept arbitrary SQL from an MCP caller.
 - Superset row and series limits are bounded, dashboard pagination is capped, and chart fetches have timeouts.
-- A required source timeout, missing resource, empty/ambiguous Superset result, or failed adapter becomes evidence of insufficient data—not an automatic `ignore`.
+- A required source timeout or missing resource becomes evidence of insufficient data—not an automatic `ignore`. Adapter failure propagation and machine-readable freshness are still release-hardening work; see [`adversarial-review.md`](adversarial-review.md).
 - Workflow recipients are allowlisted. Jev cannot invent a destination, and actions without an approved recipient are downgraded to `investigate`.
 - Stale data escalates only when an approved escalation recipient exists; otherwise it becomes `investigate`.
 - Low-confidence automatic outcomes are downgraded to `investigate`.

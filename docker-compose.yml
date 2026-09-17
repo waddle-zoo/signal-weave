@@ -43,7 +43,7 @@ services:
       - ./docker/superset/bootstrap.sh:/app/pythonpath/bootstrap.sh:ro
       - superset_home:/app/superset_home
     ports:
-      - "8088:8088"
+      - "127.0.0.1:${SUPERSET_PORT_HOST:-8088}:8088"
     command: ["/bin/sh", "/app/pythonpath/bootstrap.sh"]
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8088/health"]
@@ -72,7 +72,7 @@ services:
       - ${TYPESAFE_API_KEY_FILE:-./secrets/typesafe_api_key}:/run/secrets/typesafe_api_key:ro
       - monitor_data:/app/data
     ports:
-      - "${MONITOR_PORT_HOST:-18000}:8000"
+      - "127.0.0.1:${MONITOR_PORT_HOST:-18000}:8000"
     command: ["python", "-m", "semantic_monitor.cli", "serve", "--transport", "streamable-http"]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz', timeout=3)"]

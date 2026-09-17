@@ -16,6 +16,10 @@ explainable decision that an existing system can act on.
 - [ ] Adversarial review of the public README, examples, security posture, and
       product claims
 
+The current review is recorded in [`docs/adversarial-review.md`](docs/adversarial-review.md);
+it intentionally remains a **not public-ready** verdict until the listed safety
+gaps have tests or deployment controls.
+
 ## Next: prove the narrow wedge
 
 - [ ] Publish a small, reproducible labeled benchmark with documented limits and

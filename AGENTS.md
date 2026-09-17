@@ -8,8 +8,8 @@ permission to perform external or destructive actions.
 
 Before changing code, read [`README.md`](README.md), the relevant file in `docs/`,
 and the tests covering the contract you are changing. For TypeSafe behavior, also
-follow the current TypeSafe skill and official documentation. Do not modify the
-sibling `folio-lattice` repository as part of work in this repository.
+follow the integration docs and official TypeSafe documentation. Do not modify
+unrelated repositories as part of work in this repository.
 
 ## Repository invariants
 
@@ -68,4 +68,3 @@ bounded query behavior, freshness semantics, failure evidence, and tests in
 Do not force-push, rewrite history, change repository settings, or publish data
 without an explicit user request. Preserve unrelated working-tree changes. Never
 use destructive cleanup commands against broad paths.
-

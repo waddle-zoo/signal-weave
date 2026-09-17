@@ -12,5 +12,7 @@ secrets/
 data/*.json
 data/*.db
 artifacts/
+build/
+dist/
 superset_home/
 *.log

@@ -1,54 +1,79 @@
-# SignalWeave adversarial review
+# Adversarial public-readiness review
 
-This review treats SignalWeave as a small enterprise boundary around existing data systems, not as a complete enterprise control plane.
+This review treats SignalWeave as an alpha open-source decision layer, not as a
+complete enterprise control plane. It was refreshed after independent product,
+security, and contributor reviews on 2026-09-17.
 
 ## Verdict
 
-**Ready for the minimal self-hosted proof/product boundary.** The source is scoped, tested, containerized, authenticated when deployed with `SIGNALWEAVE_API_TOKEN`, and fails closed on the high-risk data and routing cases below.
+**Not ready to present as production-ready.** The repository is suitable for a
+private, localhost-only proof and has a clear product boundary, but the runtime
+still needs safety hardening before a public release can imply dependable
+automatic operations.
 
-The verdict does not mean a company should deploy the local JSON catalog or static token as its final governance system. Those are explicit integration seams documented in [security.md](security.md).
+## What passed
 
-## Review lenses
+- Local lint and tests: `32 passed, 1 skipped`.
+- GitHub Actions CI is green on the current `main` commit.
+- The package builds successfully and declares Apache 2.0 metadata.
+- The visual assets are valid SVGs and are included in source distributions.
+- No committed API keys, access tokens, or private keys were found by the tracked
+  file scan.
+- Superset is a concrete first adapter while the workflow contract remains
+  source-oriented.
+- Jev is the production semantic path; the service does not silently fall back to
+  a heuristic evaluator.
 
-### Security reviewer — pass with deployment conditions
+## Findings to fix before public release
 
-- MCP and webhook requests reject missing bearer credentials when the deployment token is configured.
-- Health remains available without credentials for orchestration.
-- The service does not execute caller-supplied SQL.
-- The monitor container runs as UID 10001.
-- Credentials are loaded at runtime and are not written to the repository.
-- Remaining condition: production deployments must provide TLS, token rotation or an identity gateway, and a secret manager.
+### High priority
 
-### Reliability reviewer — pass
+- **Freshness is not a complete machine-readable safety contract.** The current
+  engine looks for a textual `stale` marker and does not consistently derive age
+  from source capture timestamps. A stale source can therefore be interpreted
+  incorrectly depending on the adapter and allowed outcomes.
+- **Adapter failures must fail closed end-to-end.** Required source errors are
+  safety-gated, but every adapter path must promote chart or query failures into a
+  structured `ResourceSnapshot.error` before evaluation.
+- **Workflow authorization is deployment-owned, not enforced by the catalog.**
+  Draft workflows are stored and can be evaluated through the local service; there
+  is no approval state, identity-aware ownership, or version collision policy yet.
+- **Allowed outcomes need a final runtime gate.** A model result outside the
+  workflow’s declared outcome allowlist must be downgraded before recipient
+  routing.
 
-- Superset requests have timeouts and refresh a cached API token after a 401.
-- Dashboard discovery is paginated and bounded; chart loading is concurrency-limited.
-- Row and series limits are bounded.
-- Missing charts, source timeouts, empty results, and ambiguous metrics become evidence-backed `insufficient_data`/`investigate`, never `ignore`.
-- Stale data, missing baselines, low confidence, and unapproved recipients are safety-gated.
-- Workflow-catalog writes are atomic.
-- Remaining condition: use a durable store and idempotent delivery worker when running more than one service replica.
+### Medium priority
 
-### Product reviewer — pass
+- Add an executable first-use path and a complete MCP request/response example for
+  a new contributor or operator.
+- Document that source and recipient allowlists are deployment configuration, not
+  organization-wide authorization provided by SignalWeave.
+- Add request-size, catalog-size, and rate limits at the HTTP boundary.
+- Make dependency and container builds reproducible and test supported Python
+  versions in CI.
+- Add runtime adapter-registration tests, not only heterogeneous engine tests.
+- Keep benchmark and Jev proof claims tied to labeled datasets and explicitly
+  separate synthetic evidence from production performance.
 
-- The product boundary is one decision layer above existing data assets.
-- Superset is an adapter and demo source, not the product name or workflow engine.
-- TypeSafe is used for narrow typed plan/judgment questions; code owns calculations, allowlists, and safety policy.
-- Airflow, Temporal, schedulers, chat delivery, and agent orchestration remain outside scope.
-- The Jev proof demonstrates four distinct labeled evaluation cases; the separate live acceptance check exercises a real Superset workflow without an expected label.
+## Current security posture
 
-## Evidence collected
+The local compose stack binds its published ports to loopback and is explicitly a
+demo. It still uses `admin` / `admin` for local Superset and leaves optional bearer
+tokens empty. Production deployments need TLS, identity-aware access, secret
+management, reviewed workflow storage, audit history, and a data policy for
+evidence sent to TypeSafe Jev. See [`SECURITY.md`](../SECURITY.md) and
+[`security.md`](security.md).
+
+## Review evidence
 
 ```text
-make verify                         local lint + unit suite
-25 passed, 1 skipped                adversarial/unit suite
-1 passed                            live Superset integration
-3 dependency containers healthy      Superset/Postgres/Redis runtime
-Host Jev + Superset evaluation       Sales Dashboard round-trip
-UID 10001                           non-root monitor
-401 / 200                           unauthenticated/authenticated MCP and push checks
-TypeSafe Jev                         20-case repeated proof: 100% exact, 0 errors
-GitHub Actions CI                   green on the release commit
+.venv/bin/ruff check .                 passed
+.venv/bin/python -m pytest -q          32 passed, 1 skipped
+GitHub Actions CI                      passed on main
+SVG XML validation and rendering       passed
+Tracked credential scan                no secrets found
 ```
 
-The exact thresholds and Jev confidence values remain calibration inputs, not universal truth. Teams should label outcomes and tune them against operational consequences before enabling automatic delivery.
+This document is a release gate, not a claim that the listed gaps are harmless.
+Update the verdict and evidence only when the corresponding tests or documented
+deployment controls exist.
