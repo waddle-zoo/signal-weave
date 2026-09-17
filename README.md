@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/waddle-zoo/signal-weave/actions/workflows/ci.yml/badge.svg)](https://github.com/waddle-zoo/signal-weave/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![License](https://img.shields.io/badge/license-MIT-2ea44f.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-Apache--2.0-2ea44f.svg)](LICENSE)
 
 Typed decisions for push-triggered operational workflows.
 
@@ -297,6 +297,10 @@ evidence-backed decisions without putting the whole task into one unconstrained
 LLM prompt.
 
 ## Contributing
+
+SignalWeave is designed to be useful to both humans and coding agents. Read
+[`CONTRIBUTING.md`](CONTRIBUTING.md) for the development workflow and
+[`AGENTS.md`](AGENTS.md) for the repository invariants that must remain true.
 
 Start with an issue describing the source system, decision contract, or evidence
 gap. Keep source facts and side effects in code, keep semantic questions narrow

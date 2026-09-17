@@ -3,6 +3,8 @@ name = "signal-weave"
 version = "0.1.0"
 description = "A semantic decision layer that turns operational intent and existing data signals into typed, explainable actions."
 readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 requires-python = ">=3.10"
 dependencies = [
   "fastapi>=0.115,<1",
@@ -13,6 +15,17 @@ dependencies = [
   "python-dotenv>=1.0,<2",
   "typesafe-sdk>=0.1.0",
   "uvicorn[standard]>=0.30,<1",
+]
+
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Office/Business",
 ]
 
 [build-system]
