@@ -86,7 +86,7 @@ def _build_judger(system: str) -> Any:
 async def run_labeled_benchmark(
     systems: list[str] | tuple[str, ...] = ("jev",), repeats: int = 1
 ) -> list[BenchmarkResult]:
-    """Run every system on the same four labeled dashboard situations."""
+    """Run every system on the same four labeled workflow situations."""
     if repeats < 1 or repeats > 100:
         raise ValueError("repeats must be between 1 and 100")
     unknown = set(systems) - SUPPORTED_SYSTEMS
@@ -102,14 +102,13 @@ async def run_labeled_benchmark(
             del repeat
             for case in cases:
                 scenario = case.id
-                dashboard = case.dashboard
-                card = case.monitor_card
+                workflow = case.workflow
                 expected_outcome = Outcome(case.expected_outcome)
                 expected_recipient = case.expected_recipient
                 before = _metrics(judger)
                 started = time.perf_counter()
                 try:
-                    evaluation = await engine.evaluate(dashboard, card)
+                    evaluation = await engine.evaluate(workflow, case.resources)
                     decision = evaluation.decision
                     outcome = decision.outcome.value
                     recipient = decision.recipient_key
@@ -214,7 +213,7 @@ def render_benchmark_markdown(results: list[BenchmarkResult]) -> str:
         "- Gold labels: the intended behavior stored with each case in `evaluations/data/demo-cases.json`",
         "",
         "This is a local decision-quality benchmark, not a claim of universal model accuracy. "
-        "Every system receives the same monitor card, normalized observations, evidence, allowed outcomes, "
+        "Every system receives the same workflow, normalized observations, evidence, allowed outcomes, "
         "and recipient allowlist. The engine applies the same safety gates after each judgment.",
         "",
         "## Summary",
@@ -252,8 +251,8 @@ def render_benchmark_markdown(results: list[BenchmarkResult]) -> str:
             "## Interpretation",
             "",
             "- `jev` is the product path: Jev supplies typed semantic judgments and the same code owns calculations, evidence, routing, and safety gates.",
-            "- `embedding-reasoning` is an optional OpenAI-compatible baseline: it embeds the same dashboard observations, retrieves the top cards, and asks a general model for JSON. Set `BASELINE_BASE_URL`, `BASELINE_MODEL`, and `BASELINE_EMBEDDING_MODEL` to run it against a real provider.",
-            "- Do not claim Jev is better from four labeled cases alone. Use this harness on a labeled export of real dashboard events and compare accuracy, false alerts, investigation rate, latency, and provider usage.",
+            "- `embedding-reasoning` is an optional OpenAI-compatible baseline: it embeds the same workflow observations, retrieves the top evidence items, and asks a general model for JSON. Set `BASELINE_BASE_URL`, `BASELINE_MODEL`, and `BASELINE_EMBEDDING_MODEL` to run it against a real provider.",
+            "- Do not claim Jev is better from four labeled cases alone. Use this harness on a labeled export of real workflow events and compare accuracy, false alerts, investigation rate, latency, and provider usage.",
         ]
     )
     return "\n".join(lines)

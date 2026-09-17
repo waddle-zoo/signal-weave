@@ -2,6 +2,8 @@ import os
 
 import pytest
 
+from semantic_monitor.models import SourceRef
+from semantic_monitor.superset_adapter import SupersetAdapter
 from semantic_monitor.superset_client import SupersetClient
 
 pytestmark = pytest.mark.skipif(
@@ -29,3 +31,15 @@ async def test_local_superset_dashboard_data_round_trip():
 
     timeseries = await client.dashboard_snapshot(7, chart_ids=["64"])
     assert timeseries.charts[0].observations[0].baseline is not None
+
+    workflow_source = SourceRef(
+        key="sales-dashboard",
+        adapter="superset",
+        resource="dashboard:7",
+        label="Sales dashboard",
+        parameters={"chart_ids": ["64"]},
+    )
+    resource = await SupersetAdapter(client).inspect(workflow_source)
+    assert resource.source_key == "sales-dashboard"
+    assert resource.metadata["provider"] == "superset"
+    assert resource.observations[0].baseline is not None

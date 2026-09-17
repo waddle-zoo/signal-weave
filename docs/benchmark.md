@@ -6,14 +6,14 @@ SignalWeave should earn its Jev dependency with measurements, not a marketing cl
 
 Each evaluator receives the same:
 
-- monitor card and owner intent;
-- selected dashboard charts;
+- workflow and owner intent;
+- selected source references;
 - normalized current, baseline, change, dimension, and freshness values;
-- evidence statements and source references;
+- source metadata and evidence statements;
 - allowed outcomes; and
 - approved recipient allowlist.
 
-The engine applies the same post-judgment gates to both evaluators. The embedding-plus-reasoning adapter only changes how evidence is retrieved and how the semantic decision is produced; it does not get a different dashboard or an easier routing contract.
+The engine applies the same post-judgment gates to both evaluators. The embedding-plus-reasoning adapter only changes how evidence is retrieved and how the semantic decision is produced; it does not get a different source set or an easier routing contract.
 
 The checked-in cases are deliberately external data in [`evaluations/data/demo-cases.json`](../evaluations/data/demo-cases.json). They cover:
 
@@ -26,15 +26,15 @@ The checked-in cases are deliberately external data in [`evaluations/data/demo-c
 
 These are wiring and behavior cases, not a statistically representative enterprise dataset.
 
-## Latest Jev run
+## Recorded Jev baseline
 
-The current local run (2026-09-17, five repeats, 20 total evaluations) produced:
+The recorded local run (2026-09-17, five repeats, 20 total evaluations, before the generic source-contract refactor) produced:
 
 | Evaluator | Exact decision accuracy | Median | p95 | API requests | Provider errors |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | Jev | 100% (20/20) | 701.62 ms | 914.17 ms | 40 | 0 |
 
-Jev selected the labeled outcome and approved recipient for all four cases on every repeat. This result is useful evidence that the current owner-defined cards and typed decision contract work together; it is not evidence that Jev is universally more accurate than a general model. No Luna/general-model result is recorded because this environment has no such provider endpoint or credential configured.
+Jev selected the labeled outcome and approved recipient for all four cases on every repeat in the recorded baseline run. This result is useful evidence that owner-defined workflows and the typed decision contract can work together; it is not evidence that Jev is universally more accurate than a general model. No Luna/general-model result is recorded because this environment has no such provider endpoint or credential configured.
 
 ## Run Jev
 
@@ -47,7 +47,7 @@ TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
   --output artifacts/jev-benchmark.md
 ```
 
-Jev uses one typed planning request and one typed judgment request per evaluation. The judgment contains independent `Noul` support values for the owner-defined automatic actions; SignalWeave composes them in code and applies the card threshold. The report records request count, reported input/output tokens, latency, outcome accuracy, exact outcome-plus-recipient accuracy, and errors. Repeating the cases exposes instability rather than hiding it behind one best-looking run.
+Jev uses one typed planning request and one typed judgment request per evaluation. The judgment contains independent `Noul` support values for the owner-defined automatic actions; SignalWeave composes them in code and applies the workflow threshold. The report records request count, reported input/output tokens, latency, outcome accuracy, exact outcome-plus-recipient accuracy, and errors. Repeating the cases exposes instability rather than hiding it behind one best-looking run.
 
 ## Run a real general-model baseline
 
@@ -66,7 +66,7 @@ TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
   --output artifacts/jev-vs-luna.md
 ```
 
-The baseline performs two calls per case: an embeddings request over the owner intent and the same dashboard observations, followed by a deterministic-temperature chat-completions request over the retrieved observations. Its response must contain JSON fields for `outcome`, `recipient_key`, `rationale`, `confidence`, and optional `probabilities`.
+The baseline performs two calls per case: an embeddings request over the owner intent and the same normalized source observations, followed by a deterministic-temperature chat-completions request over the retrieved observations. Its response must contain JSON fields for `outcome`, `recipient_key`, `rationale`, `confidence`, and optional `probabilities`.
 
 If the provider is not OpenAI-compatible, add a small adapter rather than silently changing the benchmark contract. A missing baseline endpoint is an explicit configuration error; it is never reported as a model result.
 
@@ -87,11 +87,11 @@ Jev is expected to have a structural advantage when the job is a small, typed ju
 
 For a credible claim, export historical evaluations with:
 
-1. dashboard and monitor-card version;
+1. workflow version and source references;
 2. all evidence shown to the evaluator;
 3. owner-expected outcome and recipient;
 4. whether the alert was useful, noisy, late, or unsafe;
 5. the eventual operational outcome; and
 6. the provider latency and usage metadata.
 
-Split by time or dashboard owner so the test set is not just a replay of the examples used to tune the prompts. Calibrate confidence thresholds by consequence, and keep `investigate` as a first-class outcome.
+Split by time, source mix, or workflow owner so the test set is not just a replay of the examples used to tune the prompts. Calibrate confidence thresholds by consequence, and keep `investigate` as a first-class outcome.

@@ -38,13 +38,12 @@ async def test_embedding_reasoning_adapter_uses_two_calls_and_typed_json():
         )
 
     case = next(case for case in load_evaluation_cases() if case.id == "mobile_conversion")
-    dashboard = case.dashboard
+    workflow = case.workflow
     observations = [
         observation
-        for chart in dashboard.charts
-        for observation in chart.observations
+        for resource in case.resources
+        for observation in resource.observations
     ]
-    card = case.monitor_card
     judger = EmbeddingReasoningJudger(
         base_url="http://baseline/v1",
         model="luna",
@@ -54,8 +53,9 @@ async def test_embedding_reasoning_adapter_uses_two_calls_and_typed_json():
     state = {
         "evidence": [
             {
-                "chart_id": observation.chart_id,
-                "chart_title": observation.chart_title,
+                "source_key": observation.source_key,
+                "subject_id": observation.subject_id,
+                "subject_label": observation.subject_label,
                 "statement": "test evidence",
                 "values": {},
             }
@@ -65,8 +65,8 @@ async def test_embedding_reasoning_adapter_uses_two_calls_and_typed_json():
 
     decision = await judger.judge(
         state,
-        card,
-        base_plan(card),
+        workflow,
+        base_plan(workflow),
         observations,
     )
 

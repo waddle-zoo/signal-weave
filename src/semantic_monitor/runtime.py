@@ -4,14 +4,17 @@ import os
 from dataclasses import dataclass
 
 from .engine import MonitorEngine
-from .store import DashboardStore, SupersetStore
+from .sources import SourceRegistry
+from .store import JsonWorkflowStore, WorkflowStore
+from .superset_adapter import SupersetAdapter
 from .superset_client import SupersetClient
 from .typesafe_adapter import JevJudger, load_api_key
 
 
 @dataclass
 class Runtime:
-    store: DashboardStore
+    workflow_store: WorkflowStore
+    sources: SourceRegistry
     engine: MonitorEngine
 
 
@@ -29,12 +32,19 @@ def build_runtime(mode: str | None = None) -> Runtime:
     url = os.getenv("SUPERSET_URL")
     if not url:
         raise RuntimeError("SignalWeave production runtime requires SUPERSET_URL")
-    store = SupersetStore(
-        client=SupersetClient(
-            base_url=url,
-            username=os.getenv("SUPERSET_USERNAME"),
-            password=os.getenv("SUPERSET_PASSWORD"),
-        ),
-        monitor_path=os.getenv("MONITOR_STORE", "data/monitors.json"),
+    registry = SourceRegistry(
+        [
+            SupersetAdapter(
+                SupersetClient(
+                    base_url=url,
+                    username=os.getenv("SUPERSET_USERNAME"),
+                    password=os.getenv("SUPERSET_PASSWORD"),
+                )
+            )
+        ]
     )
-    return Runtime(store=store, engine=MonitorEngine(judger=judger))
+    return Runtime(
+        workflow_store=JsonWorkflowStore(os.getenv("MONITOR_STORE", "data/workflows.json")),
+        sources=registry,
+        engine=MonitorEngine(judger=judger, registry=registry),
+    )

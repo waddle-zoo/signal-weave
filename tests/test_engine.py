@@ -3,24 +3,17 @@ import pytest
 from evaluations.cases import load_evaluation_cases
 from semantic_monitor.engine import MonitorEngine
 from semantic_monitor.models import (
-    ChartSnapshot,
-    DashboardSnapshot,
     Decision,
-    MonitorCard,
+    MonitorWorkflow,
     Observation,
     Outcome,
+    ResourceSnapshot,
+    SourceRef,
 )
 
 
-def scenario_catalog():
-    return {case.id: case.dashboard.model_copy(deep=True) for case in load_evaluation_cases()}
-
-
-def default_cards():
-    return {
-        case.monitor_card.id: case.monitor_card.model_copy(deep=True)
-        for case in load_evaluation_cases()
-    }
+def evaluation_catalog():
+    return {case.id: case for case in load_evaluation_cases()}
 
 
 class JevTestDouble:
@@ -28,13 +21,15 @@ class JevTestDouble:
 
     name = "jev-test-double"
 
-    async def compile_plan(self, state, card):
-        del state, card
+    async def compile_plan(self, state, workflow):
+        del state, workflow
         return {"operations": ["percent_change", "baseline_comparison", "freshness_check"]}
 
-    async def judge(self, state, card, plan, observations):
+    async def judge(self, state, workflow, plan, observations):
         del plan
-        case = next(case for case in load_evaluation_cases() if case.monitor_card.id == card.id)
+        case = next(
+            case for case in load_evaluation_cases() if case.workflow.id == workflow.id
+        )
         return Decision(
             outcome=case.expected_outcome,
             recipient_key=case.expected_recipient,
@@ -43,8 +38,8 @@ class JevTestDouble:
             probabilities={case.expected_outcome: 0.99, "other": 0.01},
             evidence=state["evidence"],
             observations=observations,
-            monitor_id=card.id,
-            dashboard_id=card.dashboard_id,
+            workflow_id=workflow.id,
+            source_keys=[source["source_key"] for source in state["sources"]],
             evaluator=self.name,
         )
 
@@ -54,11 +49,11 @@ class SafetyTestDouble:
 
     name = "jev-safety-test-double"
 
-    async def compile_plan(self, state, card):
-        del state, card
+    async def compile_plan(self, state, workflow):
+        del state, workflow
         return {"operations": ["percent_change", "baseline_comparison", "freshness_check"]}
 
-    async def judge(self, state, card, plan, observations):
+    async def judge(self, state, workflow, plan, observations):
         del plan
         assert all(isinstance(item, dict) for item in state["evidence"])
         return Decision(
@@ -68,18 +63,15 @@ class SafetyTestDouble:
             probabilities={Outcome.INVESTIGATE.value: 0.99},
             evidence=state["evidence"],
             observations=observations,
-            monitor_id=card.id,
-            dashboard_id=card.dashboard_id,
+            workflow_id=workflow.id,
+            source_keys=[source["source_key"] for source in state["sources"]],
             evaluator=self.name,
         )
 
 
 async def evaluate(scenario: str):
-    dashboards = scenario_catalog()
-    cards = default_cards()
-    dashboard = dashboards[scenario]
-    card = next(card for card in cards.values() if card.dashboard_id == dashboard.id)
-    return await MonitorEngine(JevTestDouble()).evaluate(dashboard, card)
+    case = evaluation_catalog()[scenario]
+    return await MonitorEngine(JevTestDouble()).evaluate(case.workflow, case.resources)
 
 
 async def test_revenue_decline_is_notified():
@@ -110,72 +102,70 @@ async def test_low_confidence_notify_is_safely_downgraded():
     class LowConfidenceJudger(JevTestDouble):
         name = "test-low-confidence"
 
-        async def judge(self, state, card, plan, observations):
-            decision = await super().judge(state, card, plan, observations)
+        async def judge(self, state, workflow, plan, observations):
+            decision = await super().judge(state, workflow, plan, observations)
             return decision.model_copy(update={"outcome": Outcome.NOTIFY, "confidence": 0.2})
 
-    dashboards = scenario_catalog()
-    card = default_cards()["monitor-revenue"]
-    result = await MonitorEngine(LowConfidenceJudger()).evaluate(
-        dashboards["revenue_decline"], card
-    )
+    case = evaluation_catalog()["revenue_decline"]
+    result = await MonitorEngine(LowConfidenceJudger()).evaluate(case.workflow, case.resources)
     assert result.decision.outcome == Outcome.INVESTIGATE
 
 
 async def test_missing_baseline_is_not_treated_as_noop():
-    dashboard = DashboardSnapshot(
-        id="dash-no-baseline",
-        title="Current-only dashboard",
-        charts=[
-            ChartSnapshot(
-                id="chart-current",
-                title="Current value",
-                metric="current_value",
-                observations=[
-                    Observation(
-                        chart_id="chart-current",
-                        chart_title="Current value",
-                        metric="current_value",
-                        current=100,
-                    )
-                ],
+    workflow = MonitorWorkflow(
+        id="workflow-no-baseline",
+        title="Current-only workflow",
+        intent="Notify when this value changes.",
+        sources=[
+            SourceRef(
+                key="current-source",
+                adapter="sql",
+                resource="query:current",
+                label="Current value query",
             )
         ],
     )
-    card = MonitorCard(
-        id="monitor-no-baseline",
-        dashboard_id=dashboard.id,
-        title="Current-only monitor",
-        intent="Notify when this value changes.",
-        chart_ids=["chart-current"],
+    resource = ResourceSnapshot(
+        source_key="current-source",
+        adapter="sql",
+        resource="query:current",
+        title="Current value query",
+        observations=[
+            Observation(
+                source_key="current-source",
+                subject_id="current-value",
+                subject_label="Current value",
+                metric="current_value",
+                current=100,
+            )
+        ],
     )
-    result = await MonitorEngine(SafetyTestDouble()).evaluate(dashboard, card)
+    result = await MonitorEngine(SafetyTestDouble()).evaluate(workflow, [resource])
     assert result.decision.outcome == Outcome.INSUFFICIENT_DATA
 
 
 async def test_source_failure_is_not_treated_as_ignore():
-    dashboard = DashboardSnapshot(
-        id="dash-source-error",
-        title="Unavailable dashboard",
-        charts=[
-            ChartSnapshot(
-                id="chart-broken",
-                title="Broken chart",
-                metric="revenue",
-                error="Data unavailable from Superset: timeout",
+    workflow = MonitorWorkflow(
+        id="workflow-source-error",
+        title="Unavailable source workflow",
+        intent="Notify when revenue moves materially.",
+        sources=[
+            SourceRef(
+                key="broken-query",
+                adapter="sql",
+                resource="query:revenue",
+                label="Revenue query",
             )
         ],
     )
-    card = MonitorCard(
-        id="monitor-source-error",
-        dashboard_id=dashboard.id,
-        title="Broken monitor",
-        intent="Notify when revenue moves materially.",
-        chart_ids=["chart-broken"],
+    resource = ResourceSnapshot(
+        source_key="broken-query",
+        adapter="sql",
+        resource="query:revenue",
+        title="Revenue query",
+        error="query timeout",
     )
-
-    result = await MonitorEngine(SafetyTestDouble()).evaluate(dashboard, card)
-
+    result = await MonitorEngine(SafetyTestDouble()).evaluate(workflow, [resource])
     assert result.decision.outcome == Outcome.INSUFFICIENT_DATA
     assert result.decision.recipient_key is None
     assert "timeout" in result.decision.evidence[-1].statement
@@ -185,34 +175,32 @@ async def test_unapproved_recipient_cannot_be_notified():
     class UnapprovedRecipientJudger(SafetyTestDouble):
         name = "test-unapproved-recipient"
 
-        async def judge(self, state, card, plan, observations):
-            decision = await super().judge(state, card, plan, observations)
+        async def judge(self, state, workflow, plan, observations):
+            decision = await super().judge(state, workflow, plan, observations)
             return decision.model_copy(
                 update={"outcome": Outcome.NOTIFY, "recipient_key": "not-allowlisted"}
             )
 
-    dashboard = scenario_catalog()["revenue_decline"]
-    card = default_cards()["monitor-revenue"]
-    result = await MonitorEngine(UnapprovedRecipientJudger()).evaluate(dashboard, card)
-
+    case = evaluation_catalog()["revenue_decline"]
+    result = await MonitorEngine(UnapprovedRecipientJudger()).evaluate(
+        case.workflow, case.resources
+    )
     assert result.decision.outcome == Outcome.INVESTIGATE
     assert result.decision.recipient_key is None
 
 
-def test_monitor_card_requires_safe_fallback_and_unique_recipients():
+def test_workflow_requires_safe_fallback_and_unique_recipients():
     with pytest.raises(ValueError, match="allowed_outcomes"):
-        MonitorCard(
-            id="unsafe-card",
-            dashboard_id="dashboard",
+        MonitorWorkflow(
+            id="unsafe-workflow",
             title="Unsafe",
             intent="Monitor it.",
             allowed_outcomes=[Outcome.NOTIFY],
         )
 
     with pytest.raises(ValueError, match="unique"):
-        MonitorCard(
+        MonitorWorkflow(
             id="duplicate-recipients",
-            dashboard_id="dashboard",
             title="Duplicate recipients",
             intent="Monitor it.",
             recipients=[
@@ -229,42 +217,84 @@ async def test_plan_compilation_is_bounded():
 
 
 async def test_unfamiliar_metric_flows_through_without_metric_specific_logic():
-    dashboard = DashboardSnapshot(
-        id="dash-api-latency",
-        title="API reliability",
-        charts=[
-            ChartSnapshot(
-                id="latency-p95",
-                title="P95 API latency",
-                metric="p95_api_latency",
-                observations=[
-                    Observation(
-                        chart_id="latency-p95",
-                        chart_title="P95 API latency",
-                        metric="p95_api_latency",
-                        unit="milliseconds",
-                        current=900,
-                        baseline=500,
-                        change_pct=80,
-                    )
-                ],
+    workflow = MonitorWorkflow(
+        id="workflow-api-latency",
+        title="API latency workflow",
+        intent="Escalate when p95 API latency materially increases.",
+        sources=[
+            SourceRef(
+                key="latency-source",
+                adapter="superset",
+                resource="chart:latency-p95",
+                label="P95 API latency",
             )
         ],
-    )
-    card = MonitorCard(
-        id="monitor-api-latency",
-        dashboard_id=dashboard.id,
-        title="API latency monitor",
-        intent="Escalate when p95 API latency materially increases.",
-        chart_ids=["latency-p95"],
         materiality_definition="Material means p95 latency is at least 50% above baseline.",
         recipients=[
             {"key": "platform", "label": "Platform", "destination": "slack://platform"}
         ],
     )
-
-    result = await MonitorEngine(SafetyTestDouble()).evaluate(dashboard, card)
-
+    resource = ResourceSnapshot(
+        source_key="latency-source",
+        adapter="superset",
+        resource="chart:latency-p95",
+        title="P95 API latency",
+        observations=[
+            Observation(
+                source_key="latency-source",
+                subject_id="latency-p95",
+                subject_label="P95 API latency",
+                metric="p95_api_latency",
+                unit="milliseconds",
+                current=900,
+                baseline=500,
+                change_pct=80,
+            )
+        ],
+    )
+    result = await MonitorEngine(SafetyTestDouble()).evaluate(workflow, [resource])
     assert result.plan.operations == ["percent_change", "baseline_comparison", "freshness_check"]
     assert result.decision.observations[0].metric == "p95_api_latency"
     assert result.decision.evidence[0].values["change_pct"] == 80
+
+
+async def test_heterogeneous_sources_are_composed_without_provider_logic():
+    sources = [
+        SourceRef(key="exec-dashboard", adapter="superset", resource="dashboard:7", label="Executive dashboard"),
+        SourceRef(key="quality-query", adapter="sql", resource="query:data-quality", label="Data quality query"),
+        SourceRef(key="load-dag", adapter="airflow", resource="dag:warehouse-load", label="Warehouse load DAG"),
+        SourceRef(key="table-check", adapter="table", resource="table:warehouse.orders", label="Orders table"),
+    ]
+    resources = [
+        ResourceSnapshot(
+            source_key=source.key,
+            adapter=source.adapter,
+            resource=source.resource,
+            title=source.label,
+            observations=[
+                Observation(
+                    source_key=source.key,
+                    subject_id=source.key,
+                    subject_label=source.label,
+                    metric="health_signal",
+                    current=110,
+                    baseline=100,
+                    change_pct=10,
+                )
+            ],
+            metadata={"provider": source.adapter},
+        )
+        for source in sources
+    ]
+    workflow = MonitorWorkflow(
+        id="workflow-heterogeneous",
+        title="Cross-system order health",
+        intent="Investigate when the dashboard, data quality query, load DAG, and table checks disagree.",
+        sources=sources,
+    )
+    result = await MonitorEngine(SafetyTestDouble()).evaluate(workflow, resources)
+    assert result.plan.selected_source_keys == [source.key for source in sources]
+    assert {observation.source_key for observation in result.decision.observations} == {
+        source.key for source in sources
+    }
+    assert result.resources[1].metadata["provider"] == "sql"

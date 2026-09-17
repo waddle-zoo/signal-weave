@@ -26,7 +26,7 @@ The verdict does not mean a company should deploy the local JSON catalog or stat
 - Row and series limits are bounded.
 - Missing charts, source timeouts, empty results, and ambiguous metrics become evidence-backed `insufficient_data`/`investigate`, never `ignore`.
 - Stale data, missing baselines, low confidence, and unapproved recipients are safety-gated.
-- Monitor-card writes are atomic.
+- Workflow-catalog writes are atomic.
 - Remaining condition: use a durable store and idempotent delivery worker when running more than one service replica.
 
 ### Product reviewer — pass
@@ -35,7 +35,7 @@ The verdict does not mean a company should deploy the local JSON catalog or stat
 - Superset is an adapter and demo source, not the product name or workflow engine.
 - TypeSafe is used for narrow typed plan/judgment questions; code owns calculations, allowlists, and safety policy.
 - Airflow, Temporal, schedulers, chat delivery, and agent orchestration remain outside scope.
-- The Jev proof demonstrates four distinct labeled evaluation cases; the separate live acceptance check exercises a real Superset dashboard without an expected label.
+- The Jev proof demonstrates four distinct labeled evaluation cases; the separate live acceptance check exercises a real Superset workflow without an expected label.
 
 ## Evidence collected
 

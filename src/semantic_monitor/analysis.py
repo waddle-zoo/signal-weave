@@ -2,28 +2,32 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
-from .models import DashboardSnapshot, MonitorCard, MonitorPlan, Observation
+from .models import MonitorWorkflow, Observation, ResourceSnapshot
 
 
-def observations_for_plan(dashboard: DashboardSnapshot, plan: MonitorPlan) -> list[Observation]:
-    selected = set(plan.selected_chart_ids)
-    observations: list[Observation] = []
-    for chart in dashboard.charts:
-        if chart.id in selected:
-            observations.extend(chart.observations)
-    return observations
+def observations_for_plan(
+    resources: Iterable[ResourceSnapshot], plan_source_keys: Iterable[str]
+) -> list[Observation]:
+    """Flatten the selected adapter snapshots without knowing their provider."""
+    selected = set(plan_source_keys)
+    return [
+        observation
+        for resource in resources
+        if resource.source_key in selected
+        for observation in resource.observations
+    ]
 
 
 def candidate_observations(
-    observations: Iterable[Observation], card: MonitorCard
+    observations: Iterable[Observation], workflow: MonitorWorkflow
 ) -> list[Observation]:
-    result = []
+    result: list[Observation] = []
     for observation in observations:
         if observation.freshness and "stale" in observation.freshness.lower():
             result.append(observation)
         elif (
             observation.change_pct is not None
-            and abs(observation.change_pct) >= card.materiality_threshold_pct
+            and abs(observation.change_pct) >= workflow.materiality_threshold_pct
         ):
             result.append(observation)
     return result
@@ -32,16 +36,21 @@ def candidate_observations(
 def evidence_statements(observations: Iterable[Observation]) -> list[str]:
     statements: list[str] = []
     for observation in observations:
+        label = observation.subject_label or observation.subject_id
         if observation.freshness and "stale" in observation.freshness.lower():
-            statements.append(f"{observation.chart_title} is {observation.freshness}.")
+            statements.append(f"{label} is {observation.freshness}.")
             continue
         if observation.change_pct is None:
-            statements.append(f"{observation.chart_title} has no current value.")
+            statements.append(f"{label} has no current comparable value.")
             continue
         direction = "increased" if observation.change_pct > 0 else "declined"
-        statement = f"{observation.chart_title} {direction} {abs(observation.change_pct):.1f}% versus baseline."
+        statement = (
+            f"{label} {direction} {abs(observation.change_pct):.1f}% versus baseline."
+        )
         if observation.dimensions:
-            detail = ", ".join(f"{key}={value:g}" for key, value in observation.dimensions.items())
+            detail = ", ".join(
+                f"{key}={value}" for key, value in observation.dimensions.items()
+            )
             statement += f" Dimensions: {detail}."
         statements.append(statement)
     return statements

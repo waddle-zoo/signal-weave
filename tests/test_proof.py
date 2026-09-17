@@ -10,5 +10,5 @@ def test_demo_cases_are_external_labeled_inputs():
         "revenue_decline",
         "seasonal_normal",
     }
-    assert all(case.monitor_card.chart_ids for case in cases)
+    assert all(case.workflow.sources for case in cases)
     assert all(case.expected_outcome for case in cases)

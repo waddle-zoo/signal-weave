@@ -1,35 +1,22 @@
 # SignalWeave demo walkthrough
 
-This walkthrough proves three things independently:
+This walkthrough proves the three boundaries independently:
 
-1. the semantic layer can make useful decisions from structured dashboard evidence;
-2. the same code can read a real Superset dashboard;
-3. an external trigger can push an evaluation without turning the service into a scheduler.
+1. Jev makes typed decisions over owner-authored workflow inputs;
+2. the Superset adapter reads real saved dashboard/chart assets; and
+3. an external trigger can push an evaluation without SignalWeave becoming a scheduler.
 
-## A. Jev-backed company proof
+## A. Jev-backed proof
 
 ```bash
 uv sync --extra dev
-TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe uv run python -m evaluations.cli prove
+TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
+  uv run python -m evaluations.cli prove
 ```
 
-The result is live typed classification over the external cases in `evaluations/data/demo-cases.json`. The output shape is:
-
-```text
-scenario             outcome          recipient              confidence  expected  pass  ms
-data_freshness       escalate         data-platform                1.00  escalate  yes  885.6
-mobile_conversion    notify           growth                       0.96  notify    yes  711.8
-revenue_decline      notify           revenue-operations           0.98  notify    yes  711.6
-seasonal_normal      ignore           -                            0.92  ignore    yes  766.3
-```
-
-Jev probabilities and latency can vary. This proof demonstrates wiring, evidence, and routing behavior; it is not a general accuracy claim.
-
-Generate a report with evidence statements:
-
-```bash
-uv run python -m evaluations.cli prove --format markdown --output artifacts/proof.md
-```
+The cases live outside `src/` and are loaded as generic `MonitorWorkflow` plus
+`ResourceSnapshot` inputs. The proof demonstrates typed routing, evidence, and
+safety behavior; synthetic labels are not a general accuracy claim.
 
 ## B. Real Superset proof
 
@@ -37,50 +24,75 @@ Start the isolated stack:
 
 ```bash
 TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe docker compose up --build
-```
-
-Wait for the health checks, then verify:
-
-```bash
 curl http://localhost:18000/healthz
 ```
 
-Use an MCP client against `http://localhost:18000/mcp`, or use the following conceptual tool sequence:
+Connect an MCP client to `http://localhost:18000/mcp`. The intended flow is:
 
 ```text
-list_dashboards()
-inspect_dashboard(dashboard_id="7")
-draft_monitor(
-  dashboard_id="7",
+list_resources(adapter="superset")
+inspect_resource(
+  adapter="superset",
+  resource="dashboard:7",
+  parameters={"chart_ids":["62","64"]}
+)
+draft_workflow(
   title="Sales pulse",
   intent="Alert when revenue changes materially. Compare related charts before routing.",
-  chart_ids=["62", "64"],
+  sources=[{
+    "key":"sales-dashboard",
+    "adapter":"superset",
+    "resource":"dashboard:7",
+    "label":"Sales dashboard",
+    "parameters":{"chart_ids":["62","64"]}
+  }],
   recipients=[{"key":"revenue-operations", ...}]
 )
-evaluate_monitor(monitor_id="draft-7-sales-pulse")
+evaluate_workflow(workflow_id="workflow-sales-pulse")
 ```
 
-The adapter reads the dashboard’s saved chart definitions. A time-grained chart returns a comparable observation; a current-only chart returns evidence but is prevented from becoming an automatic action without a baseline.
+The adapter reads the dashboard’s saved chart definitions, preserves relationships,
+and normalizes time-grained data. A workflow can add another Superset dashboard as
+another source ref, or add a future approved SQL/DAG/table adapter without changing
+the engine contract.
 
 ## C. Push proof
 
-After drafting a card, an existing scheduler or webhook relay can trigger it:
+After drafting a workflow, an existing scheduler or alert relay can trigger it:
 
 ```bash
 curl -X POST http://localhost:18000/webhooks/evaluate \
   -H 'content-type: application/json' \
-  -d '{"monitor_id":"draft-7-sales-pulse"}'
+  -d '{"workflow_id":"workflow-sales-pulse"}'
 ```
 
-The response is a JSON `Decision`. The caller decides whether `notify` or `escalate` should be delivered and how to retry it.
+The response is a JSON `Decision`. The caller decides whether and how to deliver
+`notify` or `escalate`, including retries and idempotency.
 
-## D. Repeatable evaluator benchmark
+## D. Live unlabeled acceptance check
 
-Keep the credential outside the repository:
+For a workflow file that points to the local Superset:
+
+```bash
+SUPERSET_URL=http://127.0.0.1:8088 \
+SUPERSET_USERNAME=admin SUPERSET_PASSWORD=admin \
+TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
+  uv run python scripts/live_workflow_check.py \
+  --workflow examples/workflow.json
+```
+
+No expected outcome is supplied. The command verifies that the workflow is read,
+the source adapter returns live evidence, Jev is the evaluator, and safety gates
+produce a typed decision.
+
+## E. Repeatable benchmark
 
 ```bash
 TYPESAFE_API_KEY_FILE=/path/to/apikey_typesafe \
-uv run python -m evaluations.cli benchmark --systems jev --repeats 5 --format markdown --output artifacts/jev-benchmark.md
+  uv run python -m evaluations.cli benchmark \
+  --systems jev --repeats 5 --format markdown \
+  --output artifacts/jev-benchmark.md
 ```
 
-The output records exact outcome-plus-recipient accuracy against the checked-in labels, repeat stability, confidence distribution, latency, requests, and provider-reported usage. To compare a general model with embeddings, follow [benchmark.md](benchmark.md).
+For a configured provider comparison using embeddings plus a general model, see
+[`benchmark.md`](benchmark.md).

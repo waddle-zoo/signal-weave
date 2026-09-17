@@ -63,7 +63,7 @@ services:
       SUPERSET_URL: http://superset:8088
       SUPERSET_USERNAME: admin
       SUPERSET_PASSWORD: admin
-      MONITOR_STORE: /app/data/monitors.json
+      MONITOR_STORE: /app/data/workflows.json
       MCP_HOST: 0.0.0.0
       MCP_PORT: 8000
       SIGNALWEAVE_API_TOKEN: ${SIGNALWEAVE_API_TOKEN:-}

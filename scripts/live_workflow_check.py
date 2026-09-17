@@ -1,47 +1,46 @@
-"""Evaluate a user-supplied monitor card against a live Superset dashboard.
+"""Evaluate a user-supplied workflow against its live source adapters.
 
-Unlike the labeled evaluation tools, this command has no expected outcome and
-does not import evaluation fixtures. It proves that the deployed source adapter,
-owner card, Jev adapter, safety gates, and evidence contract work together on an
-external dashboard.
+This command has no expected outcome and does not import evaluation fixtures. It
+proves that a user-authored workflow, installed source adapters, Jev adapter,
+safety gates, and evidence contract work together on live inputs.
 """
 
 from __future__ import annotations
 
 import argparse
 import asyncio
-import inspect
 import json
 import signal
 import sys
 from pathlib import Path
 from typing import Any
 
-from semantic_monitor.models import MonitorCard
+from semantic_monitor.models import MonitorWorkflow
 from semantic_monitor.runtime import build_runtime
 
 
-async def run(card_path: str | Path, *, verbose: bool = False) -> dict[str, Any]:
+async def run(workflow_path: str | Path, *, verbose: bool = False) -> dict[str, Any]:
     def progress(message: str) -> None:
         if verbose:
             print(message, file=sys.stderr, flush=True)
 
-    progress("loading owner monitor card")
-    card = MonitorCard.model_validate(json.loads(Path(card_path).read_text()))
-    progress(f"fetching Superset dashboard {card.dashboard_id}")
+    progress("loading owner workflow")
+    workflow = MonitorWorkflow.model_validate(json.loads(Path(workflow_path).read_text()))
     runtime = build_runtime()
-    dashboard = runtime.store.get_dashboard(
-        card.dashboard_id,
-        chart_ids=card.chart_ids or None,
-        include_data=True,
+    missing_adapters = sorted(
+        {source.adapter for source in workflow.sources} - set(runtime.sources.adapter_names())
     )
-    if inspect.isawaitable(dashboard):
-        dashboard = await dashboard
-    if not dashboard.charts:
-        raise RuntimeError("Superset returned no charts for the monitor card")
+    if missing_adapters:
+        raise RuntimeError(
+            "workflow references source adapters that are not installed: "
+            + ", ".join(missing_adapters)
+        )
 
-    progress(f"evaluating {len(dashboard.charts)} charts with Jev")
-    evaluation = await runtime.engine.evaluate(dashboard, card)
+    progress(
+        f"fetching {len(workflow.sources)} source(s): "
+        + ", ".join(f"{source.key}={source.adapter}" for source in workflow.sources)
+    )
+    evaluation = await runtime.engine.evaluate(workflow)
     decision = evaluation.decision
     if decision.evaluator != "jev-latest":
         raise RuntimeError(f"unexpected evaluator: {decision.evaluator}")
@@ -49,22 +48,25 @@ async def run(card_path: str | Path, *, verbose: bool = False) -> dict[str, Any]
         raise RuntimeError("evaluation returned no evidence")
 
     return {
-        "source": "superset",
-        "dashboard": {
-            "id": dashboard.id,
-            "title": dashboard.title,
-            "chart_count": len(dashboard.charts),
-        },
-        "monitor": {
-            "id": card.id,
-            "title": card.title,
-            "owner_defined": True,
-            "chart_ids": card.chart_ids,
-        },
+        "sources": [
+            {
+                "key": source.key,
+                "adapter": source.adapter,
+                "resource": source.resource,
+                "title": snapshot.title,
+                "observation_count": len(snapshot.observations),
+                "error": snapshot.error,
+            }
+            for source in workflow.sources
+            for snapshot in evaluation.resources
+            if snapshot.source_key == source.key
+        ],
+        "workflow": workflow.model_dump(mode="json"),
         "plan": evaluation.plan.model_dump(mode="json"),
         "decision": decision.model_dump(mode="json"),
         "proof": {
-            "live_source": True,
+            "live_sources": True,
+            "installed_adapters": runtime.sources.adapter_names(),
             "jev_evaluator": True,
             "evidence_count": len(decision.evidence),
             "expected_outcome_supplied": False,
@@ -75,9 +77,9 @@ async def run(card_path: str | Path, *, verbose: bool = False) -> dict[str, Any]
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--monitor-card",
+        "--workflow",
         required=True,
-        help="JSON monitor card containing the live dashboard ID and owner policy",
+        help="JSON workflow containing source references and owner policy",
     )
     parser.add_argument(
         "--timeout",
@@ -101,10 +103,10 @@ def main() -> None:
         signal.setitimer(signal.ITIMER_REAL, args.timeout)
     try:
         payload = asyncio.run(
-            asyncio.wait_for(run(args.monitor_card, verbose=args.verbose), timeout=args.timeout)
+            asyncio.wait_for(run(args.workflow, verbose=args.verbose), timeout=args.timeout)
         )
     except TimeoutError as error:
-        raise SystemExit(f"live Superset acceptance check timed out after {args.timeout:g}s") from error
+        raise SystemExit(f"live workflow acceptance check timed out after {args.timeout:g}s") from error
     finally:
         if alarm_enabled:
             signal.setitimer(signal.ITIMER_REAL, 0)

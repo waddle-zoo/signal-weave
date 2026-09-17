@@ -6,66 +6,27 @@ import tempfile
 from pathlib import Path
 from typing import Protocol
 
-from .models import DashboardSnapshot, MonitorCard
-from .superset_client import SupersetClient
+from .models import MonitorWorkflow
 
 
-class DashboardStore(Protocol):
-    def get_dashboard(
-        self,
-        dashboard_id: str,
-        chart_ids: list[str] | None = None,
-        include_data: bool = True,
-    ) -> DashboardSnapshot: ...
+class WorkflowStore(Protocol):
+    def get_workflow(self, workflow_id: str) -> MonitorWorkflow: ...
 
-    def list_dashboards(self) -> list[DashboardSnapshot]: ...
+    def list_workflows(self) -> list[MonitorWorkflow]: ...
 
-    def get_card(self, monitor_id: str) -> MonitorCard: ...
-
-    def list_cards(self) -> list[MonitorCard]: ...
-
-    def save_card(self, card: MonitorCard) -> None: ...
+    def save_workflow(self, workflow: MonitorWorkflow) -> None: ...
 
 
-class SupersetStore:
-    """Remote dashboard store backed by Superset and a local monitor catalog."""
+class JsonWorkflowStore:
+    """Small atomic catalog for user-authored workflow contracts."""
 
-    def __init__(self, client: SupersetClient, monitor_path: str | Path) -> None:
-        self.client = client
-        self.monitors = JsonMonitorStore(monitor_path)
-
-    async def list_dashboards(self) -> list[DashboardSnapshot]:
-        metadata = await self.client.list_dashboards()
-        return [self.client.metadata_to_snapshot(item) for item in metadata]
-
-    async def get_dashboard(
-        self,
-        dashboard_id: str,
-        chart_ids: list[str] | None = None,
-        include_data: bool = True,
-    ) -> DashboardSnapshot:
-        return await self.client.dashboard_snapshot(
-            dashboard_id, include_data=include_data, chart_ids=chart_ids
-        )
-
-    def get_card(self, monitor_id: str) -> MonitorCard:
-        return self.monitors.get(monitor_id)
-
-    def list_cards(self) -> list[MonitorCard]:
-        return self.monitors.list()
-
-    def save_card(self, card: MonitorCard) -> None:
-        self.monitors.save(card)
-
-
-class JsonMonitorStore:
     def __init__(self, path: str | Path) -> None:
         self.path = Path(path)
 
-    def save(self, card: MonitorCard) -> None:
+    def save_workflow(self, workflow: MonitorWorkflow) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        cards = self._load()
-        cards[card.id] = card.model_dump(mode="json")
+        workflows = self._load()
+        workflows[workflow.id] = workflow.model_dump(mode="json")
         temporary_path: str | None = None
         try:
             with tempfile.NamedTemporaryFile(
@@ -77,7 +38,7 @@ class JsonMonitorStore:
                 delete=False,
             ) as temporary:
                 temporary_path = temporary.name
-                temporary.write(json.dumps(cards, indent=2) + "\n")
+                temporary.write(json.dumps(workflows, indent=2) + "\n")
                 temporary.flush()
                 os.fsync(temporary.fileno())
             os.replace(temporary_path, self.path)
@@ -85,16 +46,19 @@ class JsonMonitorStore:
             if temporary_path and os.path.exists(temporary_path):
                 os.unlink(temporary_path)
 
-    def get(self, monitor_id: str) -> MonitorCard:
-        cards = self._load()
-        if monitor_id not in cards:
-            raise KeyError(f"Unknown monitor: {monitor_id}")
-        return MonitorCard.model_validate(cards[monitor_id])
+    def get_workflow(self, workflow_id: str) -> MonitorWorkflow:
+        workflows = self._load()
+        if workflow_id not in workflows:
+            raise KeyError(f"Unknown workflow: {workflow_id}")
+        return MonitorWorkflow.model_validate(workflows[workflow_id])
 
-    def list(self) -> list[MonitorCard]:
-        return [MonitorCard.model_validate(card) for card in self._load().values()]
+    def list_workflows(self) -> list[MonitorWorkflow]:
+        return [MonitorWorkflow.model_validate(item) for item in self._load().values()]
 
-    def _load(self) -> dict:
+    def _load(self) -> dict[str, object]:
         if not self.path.exists():
             return {}
-        return json.loads(self.path.read_text())
+        payload = json.loads(self.path.read_text())
+        if not isinstance(payload, dict):
+            raise ValueError(f"Workflow catalog must contain a JSON object: {self.path}")
+        return payload

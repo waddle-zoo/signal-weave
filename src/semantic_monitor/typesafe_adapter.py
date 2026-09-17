@@ -5,18 +5,20 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
 
-from .models import Decision, MonitorCard, MonitorPlan, Observation, Outcome
+from .models import Decision, MonitorPlan, MonitorWorkflow, Observation, Outcome
 
 
 class DecisionJudger(Protocol):
     name: str
 
-    async def compile_plan(self, state: dict[str, Any], card: MonitorCard) -> dict[str, Any]: ...
+    async def compile_plan(
+        self, state: dict[str, Any], workflow: MonitorWorkflow
+    ) -> dict[str, Any]: ...
 
     async def judge(
         self,
         state: dict[str, Any],
-        card: MonitorCard,
+        workflow: MonitorWorkflow,
         plan: MonitorPlan,
         observations: list[Observation],
     ) -> Decision: ...
@@ -61,15 +63,17 @@ class JevJudger:
         self._timeout = timeout_seconds
         self.metrics = JudgerMetrics()
 
-    async def compile_plan(self, state: dict[str, Any], card: MonitorCard) -> dict[str, Any]:
+    async def compile_plan(
+        self, state: dict[str, Any], workflow: MonitorWorkflow
+    ) -> dict[str, Any]:
         from typesafe_sdk import Choice, Noul
 
         available_operations = state["available_operations"]
         questions = {
             f"use_{operation['key']}": Noul(
                 instructions=(
-                    f"Does the owner's monitoring intent require the `{operation['key']}` "
-                    "analysis capability for this dashboard?"
+                    f"Does the owner's workflow intent require the `{operation['key']}` "
+                    "analysis capability for the selected sources?"
                 ),
                 criteria={
                     "true": operation["description"],
@@ -78,7 +82,7 @@ class JevJudger:
             )
             for operation in available_operations
         }
-        windows = card.comparison_windows or ["previous_period"]
+        windows = workflow.comparison_windows or ["previous_period"]
         questions["baseline"] = Choice(
             instructions="Which comparison window best matches the owner's monitoring intent?",
             criteria={window: None for window in windows},
@@ -100,7 +104,7 @@ class JevJudger:
     async def judge(
         self,
         state: dict[str, Any],
-        card: MonitorCard,
+        workflow: MonitorWorkflow,
         plan: MonitorPlan,
         observations: list[Observation],
     ) -> Decision:
@@ -111,31 +115,36 @@ class JevJudger:
             Outcome.INVESTIGATE.value: "Route for human or downstream investigation before action.",
             Outcome.NOTIFY.value: "Send a low-risk notification to one approved recipient group.",
             Outcome.ESCALATE.value: "Send an urgent escalation to one approved recipient group.",
-            Outcome.INSUFFICIENT_DATA.value: "Do not interpret the dashboard because required evidence is missing or stale.",
+            Outcome.INSUFFICIENT_DATA.value: "Do not interpret the workflow because required source evidence is missing or stale.",
         }
         action_outcomes = {
             Outcome.IGNORE,
             Outcome.NOTIFY,
             Outcome.ESCALATE,
         }
-        action_checks = [outcome for outcome in card.allowed_outcomes if outcome in action_outcomes]
+        action_checks = [
+            outcome for outcome in workflow.allowed_outcomes if outcome in action_outcomes
+        ]
         questions = {
             f"matches_{outcome.value}": Noul(
                 instructions=(
-                    f"Does the current dashboard evidence satisfy the owner-defined condition "
-                    f"for the `{outcome.value}` outcome? Compare `monitor_card.intent`, "
-                    "`monitor_card.materiality_definition`, `monitor_card.outcome_guidance`, "
-                    "and the numeric `observations` and `evidence`."
+                    f"Does the current workflow evidence satisfy the owner-defined condition "
+                    f"for the `{outcome.value}` outcome? Compare `monitor_workflow.intent`, "
+                    "`monitor_workflow.materiality_definition`, "
+                    "`monitor_workflow.outcome_guidance`, `sources`, and the "
+                    "normalized `observations` and `evidence`."
                 ),
                 criteria={
-                    "true": card.outcome_guidance.get(outcome.value, default_guidance[outcome.value]),
+                    "true": workflow.outcome_guidance.get(
+                        outcome.value, default_guidance[outcome.value]
+                    ),
                     "false": "The evidence does not satisfy this outcome condition.",
                 },
             )
             for outcome in action_checks
         }
         recipient_criteria = {"no_recipient": "No notification should be sent."} | {
-            recipient.key: recipient.label for recipient in card.recipients
+            recipient.key: recipient.label for recipient in workflow.recipients
         }
         questions["recipient"] = Choice(
             instructions="Which approved recipient group should receive an automatic action, if one is supported? Choose no_recipient when no automatic action is supported.",
@@ -152,7 +161,7 @@ class JevJudger:
             if matches
             else (Outcome.INVESTIGATE, 0.0)
         )
-        if selected_probability >= card.action_confidence_threshold:
+        if selected_probability >= workflow.action_confidence_threshold:
             outcome = selected_outcome
             confidence = selected_probability
         else:
@@ -170,8 +179,13 @@ class JevJudger:
             probabilities={outcome.value: probability for outcome, probability in matches.items()},
             evidence=state["evidence"],
             observations=observations,
-            monitor_id=card.id,
-            dashboard_id=card.dashboard_id,
+            workflow_id=workflow.id,
+            source_keys=[
+                source["source_key"]
+                for source in state.get("sources", [])
+                if "source_key" in source
+            ]
+            or [source.key for source in workflow.sources],
             evaluator=self.name,
         )
 

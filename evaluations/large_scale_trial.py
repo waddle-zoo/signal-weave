@@ -19,12 +19,13 @@ from typing import Any
 
 from semantic_monitor.engine import MonitorEngine
 from semantic_monitor.models import (
-    ChartSnapshot,
-    DashboardSnapshot,
-    MonitorCard,
+    Evidence,
+    MonitorWorkflow,
     Observation,
     Outcome,
     Recipient,
+    ResourceSnapshot,
+    SourceRef,
 )
 from semantic_monitor.typesafe_adapter import JevJudger, load_api_key
 
@@ -44,8 +45,8 @@ class TrialCase:
     domain_id: str
     domain_name: str
     trial_class: str
-    dashboard: DashboardSnapshot
-    card: MonitorCard
+    resources: list[ResourceSnapshot]
+    workflow: MonitorWorkflow
     expected_outcome: Outcome
     expected_recipient: str | None
 
@@ -140,7 +141,7 @@ def _materiality_definition(
 def _trial_intent(
     domain_name: str, primary_title: str, context_title: str, trial_class: str
 ) -> str:
-    prefix = f"Monitor {primary_title} on the {domain_name} operating dashboard. "
+    prefix = f"Monitor {primary_title} in the {domain_name} operating workflow. "
     if trial_class == "corroborated_notify":
         return prefix + (
             f"For this policy, a lower {primary_title} is adverse and a higher {context_title} "
@@ -157,15 +158,16 @@ def _trial_intent(
             "Investigate an uncorroborated movement."
         )
     if trial_class == "stale_escalation":
-        return prefix + f"Escalate when {primary_title} is stale; do not interpret stale values."
+        return prefix + f"Escalate when the source for {primary_title} is stale; do not interpret stale values."
     if trial_class == "missing_baseline":
         return prefix + f"Require a comparable baseline for {primary_title}; otherwise report insufficient data."
     return prefix + f"Treat a failed {primary_title} query as insufficient data; do not infer from {context_title}."
 
 
 def _observation(
-    chart_id: str,
-    chart_title: str,
+    source_key: str,
+    subject_id: str,
+    subject_label: str,
     metric: str,
     *,
     current: float | None,
@@ -174,15 +176,17 @@ def _observation(
     freshness: str | None = None,
 ) -> Observation:
     return Observation(
-        chart_id=chart_id,
-        chart_title=chart_title,
+        source_key=source_key,
+        subject_id=subject_id,
+        subject_label=subject_label,
+        subject_type="metric",
         metric=metric,
         unit="normalized units",
         current=current,
         baseline=baseline,
         change_pct=change_pct,
         freshness=freshness,
-        source_url=f"trial://chart/{chart_id}",
+        source_url=f"trial://{source_key}/{subject_id}",
     )
 
 
@@ -254,64 +258,106 @@ def build_trial_cases(domains: list[dict[str, Any]]) -> list[TrialCase]:
                 primary_error = f"{primary_title} query timed out"
                 expected_outcome = Outcome.INSUFFICIENT_DATA
 
-            primary_chart = ChartSnapshot(
-                id=primary_id,
-                title=primary_title,
-                metric=primary_metric,
-                observations=[]
-                if primary_error
-                else [
-                    _observation(
-                        primary_id,
-                        primary_title,
-                        primary_metric,
-                        current=primary_current_value,
-                        baseline=primary_baseline_value,
-                        change_pct=primary_change,
-                        freshness=freshness,
-                    )
-                ],
+            primary_source_key = f"{domain_id}-{trial_class}-primary-source"
+            context_source_key = f"{domain_id}-{trial_class}-context-source"
+            context_adapter = ("superset", "sql", "airflow", "table")[index % 4]
+            context_resource_prefix = {
+                "superset": "dashboard",
+                "sql": "query",
+                "airflow": "dag",
+                "table": "table",
+            }[context_adapter]
+            primary_observations = [] if primary_error else [
+                _observation(
+                    primary_source_key,
+                    primary_id,
+                    primary_title,
+                    primary_metric,
+                    current=primary_current_value,
+                    baseline=primary_baseline_value,
+                    change_pct=primary_change,
+                    freshness=freshness,
+                )
+            ]
+            context_observations = [
+                _observation(
+                    context_source_key,
+                    context_id,
+                    trial_context_title,
+                    trial_context_metric,
+                    current=context_current_value,
+                    baseline=context_baseline_value,
+                    change_pct=context_change,
+                )
+            ]
+            primary_resource = ResourceSnapshot(
+                source_key=primary_source_key,
+                adapter="superset",
+                resource=f"dashboard:{domain_id}-{trial_class}",
+                title=f"{domain_name} primary signal",
+                description=f"Saved Superset dashboard signal for {domain_name}.",
+                observations=primary_observations,
                 error=primary_error,
-                related_chart_ids=[context_id],
+                metadata={
+                    "provider": "superset",
+                    "dashboard_id": f"{domain_id}-{trial_class}",
+                    "chart_ids": [primary_id],
+                    "related_source_key": context_source_key,
+                },
+                source_url=f"trial://superset/dashboard/{domain_id}-{trial_class}",
             )
-            context_chart = ChartSnapshot(
-                id=context_id,
+            context_resource = ResourceSnapshot(
+                source_key=context_source_key,
+                adapter=context_adapter,
+                resource=f"{context_resource_prefix}:{domain_id}-{trial_class}-context",
                 title=trial_context_title,
-                metric=trial_context_metric,
-                observations=[
-                    _observation(
-                        context_id,
-                        trial_context_title,
-                        trial_context_metric,
-                        current=context_current_value,
-                        baseline=context_baseline_value,
-                        change_pct=context_change,
+                description=f"Generated {context_adapter} context for {domain_name}.",
+                observations=context_observations,
+                evidence=[
+                    Evidence(
+                        source_key=context_source_key,
+                        subject_id=context_id,
+                        subject_label=trial_context_title,
+                        statement=(
+                            "The workflow's corroborating context is supplied by the "
+                            f"{context_adapter} adapter."
+                        ),
+                        values={"adapter": context_adapter},
+                        source_url=f"trial://{context_adapter}/{context_id}",
                     )
                 ],
-                related_chart_ids=[primary_id],
+                metadata={
+                    "provider": context_adapter,
+                    "related_source_key": primary_source_key,
+                },
+                source_url=f"trial://{context_adapter}/{context_id}",
             )
-            dashboard_id = f"trial-dashboard-{domain_id}-{trial_class}"
-            card_id = f"trial-monitor-{domain_id}-{trial_class}"
-            dashboard = DashboardSnapshot(
-                id=dashboard_id,
-                title=f"{domain_name} operating dashboard",
-                description=f"Generated trial dashboard for {domain_name}.",
-                owners=[domain_name.lower().replace(" ", "-")],
-                charts=[primary_chart, context_chart],
-                source_url=f"trial://dashboard/{dashboard_id}",
-            )
+            workflow_id = f"trial-workflow-{domain_id}-{trial_class}"
             guidance = _guidance(recipient.key, trial_class)
             if trial_class == "stale_escalation":
-                guidance["escalate"] = f"Choose escalate when the primary chart freshness says stale; urgent attention from {recipient.key} is required before interpreting values."
-            card = MonitorCard(
-                id=card_id,
-                dashboard_id=dashboard_id,
+                guidance["escalate"] = f"Choose escalate when the primary source freshness says stale; urgent attention from {recipient.key} is required before interpreting values."
+            workflow = MonitorWorkflow(
+                id=workflow_id,
                 title=f"{domain_name} signal monitor",
                 intent=_trial_intent(domain_name, primary_title, trial_context_title, trial_class),
-                chart_ids=[primary_id, context_id],
+                sources=[
+                    SourceRef(
+                        key=primary_source_key,
+                        adapter="superset",
+                        resource=f"dashboard:{domain_id}-{trial_class}",
+                        label=f"{domain_name} primary Superset dashboard",
+                        parameters={"chart_ids": [primary_id]},
+                    ),
+                    SourceRef(
+                        key=context_source_key,
+                        adapter=context_adapter,
+                        resource=f"{context_resource_prefix}:{domain_id}-{trial_class}-context",
+                        label=trial_context_title,
+                    ),
+                ],
                 comparison_windows=["previous_period", "trailing_4_period_average"],
                 investigation_hints=[
-                    f"Compare {primary_title} with {trial_context_title}.",
+                    f"Compare {primary_title} with {trial_context_title} across the selected sources.",
                     "Check freshness and baseline availability before interpreting the movement.",
                 ],
                 materiality_threshold_pct=15.0,
@@ -329,12 +375,12 @@ def build_trial_cases(domains: list[dict[str, Any]]) -> list[TrialCase]:
             )
             cases.append(
                 TrialCase(
-                    case_id=card_id,
+                    case_id=workflow_id,
                     domain_id=domain_id,
                     domain_name=domain_name,
                     trial_class=trial_class,
-                    dashboard=dashboard,
-                    card=card,
+                    resources=[primary_resource, context_resource],
+                    workflow=workflow,
                     expected_outcome=expected_outcome,
                     expected_recipient=recipient.key if expected_outcome in {Outcome.NOTIFY, Outcome.ESCALATE} else None,
                 )
@@ -356,7 +402,7 @@ async def run_trial(
             before = judger.metrics.requests
             started = time.perf_counter()
             try:
-                evaluation = await engine.evaluate(case.dashboard, case.card)
+                evaluation = await engine.evaluate(case.workflow, case.resources)
                 decision = evaluation.decision
                 actual_outcome = decision.outcome.value
                 actual_recipient = decision.recipient_key

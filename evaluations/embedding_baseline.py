@@ -3,7 +3,7 @@
 The adapter speaks the common OpenAI-compatible ``/embeddings`` and
 ``/chat/completions`` shape. It is deliberately not part of the product runtime:
 it exists so a team can compare Jev with the model and provider it already uses,
-using the same normalized dashboard state and safety gates.
+using the same normalized workflow state and safety gates.
 """
 
 from __future__ import annotations
@@ -14,12 +14,12 @@ from typing import Any
 import httpx
 
 from semantic_monitor.compiler import base_plan
-from semantic_monitor.models import Decision, MonitorCard, MonitorPlan, Observation, Outcome
+from semantic_monitor.models import Decision, MonitorPlan, MonitorWorkflow, Observation, Outcome
 from semantic_monitor.typesafe_adapter import JudgerMetrics
 
 
 class EmbeddingReasoningJudger:
-    """Retrieve dashboard evidence with embeddings, then ask a model for JSON."""
+    """Retrieve workflow evidence with embeddings, then ask a model for JSON."""
 
     name = "embedding-reasoning"
 
@@ -45,27 +45,29 @@ class EmbeddingReasoningJudger:
         self.transport = transport
         self.metrics = JudgerMetrics()
 
-    async def compile_plan(self, state: dict[str, Any], card: MonitorCard) -> dict[str, Any]:
+    async def compile_plan(
+        self, state: dict[str, Any], workflow: MonitorWorkflow
+    ) -> dict[str, Any]:
         """Hold plan compilation constant so the comparison isolates judgment quality."""
-        plan = base_plan(card)
+        plan = base_plan(workflow)
         return {"operations": plan.operations, "baseline": plan.comparison_windows[0]}
 
     async def judge(
         self,
         state: dict[str, Any],
-        card: MonitorCard,
+        workflow: MonitorWorkflow,
         plan: MonitorPlan,
         observations: list[Observation],
     ) -> Decision:
         documents = [self._document(observation) for observation in observations]
-        query = card.intent
+        query = workflow.intent
         ranked = await self._rank(query, documents)
         retrieved = [documents[index] for index in ranked[: self.top_k]]
         payload = {
-            "monitor_intent": card.intent,
-            "allowed_outcomes": [outcome.value for outcome in card.allowed_outcomes],
-            "approved_recipients": [recipient.key for recipient in card.recipients],
-            "retrieved_dashboard_cards": retrieved,
+            "workflow_intent": workflow.intent,
+            "allowed_outcomes": [outcome.value for outcome in workflow.allowed_outcomes],
+            "approved_recipients": [recipient.key for recipient in workflow.recipients],
+            "retrieved_source_observations": retrieved,
             "evidence": state["evidence"],
         }
         result = await self._reason(payload)
@@ -73,7 +75,7 @@ class EmbeddingReasoningJudger:
             outcome = Outcome(result["outcome"])
         except (KeyError, ValueError, TypeError) as error:
             raise ValueError("baseline response must contain a valid outcome") from error
-        if outcome not in card.allowed_outcomes:
+        if outcome not in workflow.allowed_outcomes:
             outcome = Outcome.INVESTIGATE
         confidence = result.get("confidence")
         if confidence is not None:
@@ -87,16 +89,23 @@ class EmbeddingReasoningJudger:
             probabilities={str(key): float(value) for key, value in probabilities.items()},
             evidence=state["evidence"],
             observations=observations,
-            monitor_id=card.id,
-            dashboard_id=card.dashboard_id,
+            workflow_id=workflow.id,
+            source_keys=[
+                source["source_key"]
+                for source in state.get("sources", [])
+                if "source_key" in source
+            ]
+            or [source.key for source in workflow.sources],
             evaluator=self.name,
         )
 
     @staticmethod
     def _document(observation: Observation) -> dict[str, Any]:
         return {
-            "chart_id": observation.chart_id,
-            "chart_title": observation.chart_title,
+            "source_key": observation.source_key,
+            "subject_id": observation.subject_id,
+            "subject_label": observation.subject_label,
+            "subject_type": observation.subject_type,
             "metric": observation.metric,
             "unit": observation.unit,
             "current": observation.current,
@@ -166,7 +175,7 @@ class EmbeddingReasoningJudger:
     def _text(document: dict[str, Any]) -> str:
         return " ".join(
             str(document.get(key) or "")
-            for key in ("chart_title", "metric", "unit", "freshness", "dimensions")
+            for key in ("subject_label", "metric", "unit", "freshness", "dimensions")
         )
 
     @staticmethod

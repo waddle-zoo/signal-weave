@@ -16,7 +16,7 @@ from semantic_monitor.typesafe_adapter import JevJudger, load_api_key
 @dataclass(frozen=True)
 class ProofResult:
     scenario: str
-    dashboard: str
+    workflow: str
     outcome: str
     confidence: float | None
     recipient: str | None
@@ -30,14 +30,14 @@ class ProofResult:
     def from_decision(
         cls,
         scenario: str,
-        dashboard: str,
+        workflow: str,
         decision: Decision,
         expected: Outcome | None,
         elapsed_ms: float,
     ) -> ProofResult:
         return cls(
             scenario=scenario,
-            dashboard=dashboard,
+            workflow=workflow,
             outcome=decision.outcome.value,
             confidence=decision.confidence,
             recipient=decision.recipient_key,
@@ -64,16 +64,15 @@ async def run_labeled_proof() -> list[ProofResult]:
     results: list[ProofResult] = []
     for case in sorted(cases, key=lambda item: item.id):
         scenario = case.id
-        dashboard = case.dashboard
-        card = case.monitor_card
+        workflow = case.workflow
         started = time.perf_counter()
-        evaluation = await engine.evaluate(dashboard, card)
+        evaluation = await engine.evaluate(workflow, case.resources)
         elapsed_ms = (time.perf_counter() - started) * 1000
         expected = expected_by_scenario.get(scenario)
         results.append(
             ProofResult.from_decision(
                 scenario=scenario,
-                dashboard=dashboard.title,
+                workflow=workflow.title,
                 decision=evaluation.decision,
                 expected=expected,
                 elapsed_ms=elapsed_ms,
@@ -135,7 +134,7 @@ def render_markdown(results: list[ProofResult], mode: str) -> str:
         for item in result.evidence:
             values = item.get("values", {})
             lines.append(
-                f"- **{item['chart_title']}**: {item['statement']} "
+                f"- **{item['subject_label']}**: {item['statement']} "
                 f"(`current={values.get('current')}`, `baseline={values.get('baseline')}`, "
                 f"`change_pct={values.get('change_pct')}`)"
             )

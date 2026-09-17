@@ -9,7 +9,7 @@ from .runtime import build_runtime
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run the SignalWeave MCP server")
     serve = parser.add_subparsers(dest="command", required=True).add_parser(
-        "serve", help="Run the MCP server against the configured Superset"
+        "serve", help="Run the MCP server against configured source adapters"
     )
     serve.add_argument("--transport", choices=["stdio", "streamable-http"], default="stdio")
     serve.add_argument("--host", default=os.getenv("MCP_HOST", "127.0.0.1"))

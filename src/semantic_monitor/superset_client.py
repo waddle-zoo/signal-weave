@@ -7,7 +7,8 @@ from typing import Any
 
 import httpx
 
-from .models import ChartSnapshot, DashboardSnapshot, Observation
+from .models import Observation
+from .superset_models import SupersetChartSnapshot, SupersetDashboardSnapshot
 
 
 class SupersetClient:
@@ -337,8 +338,10 @@ class SupersetClient:
                     dimensions[label] = float(row[metric_key])
         return [
             Observation(
-                chart_id=str(chart.get("id")),
-                chart_title=str(chart.get("slice_name") or chart.get("id")),
+                source_key=f"superset-chart:{chart.get('id')}",
+                subject_id=str(chart.get("id")),
+                subject_label=str(chart.get("slice_name") or chart.get("id")),
+                subject_type="superset_chart",
                 metric=metric_key,
                 current=current,
                 baseline=baseline,
@@ -362,7 +365,7 @@ class SupersetClient:
         dashboard_id: int | str,
         include_data: bool = True,
         chart_ids: list[str] | None = None,
-    ) -> DashboardSnapshot:
+    ) -> SupersetDashboardSnapshot:
         metadata = await self.get_dashboard_metadata(dashboard_id)
         snapshot = self.metadata_to_snapshot(metadata)
         if not include_data:
@@ -376,7 +379,7 @@ class SupersetClient:
 
         semaphore = asyncio.Semaphore(8)
 
-        async def load_chart(chart: ChartSnapshot) -> ChartSnapshot:
+        async def load_chart(chart: SupersetChartSnapshot) -> SupersetChartSnapshot:
             async with semaphore:
                 try:
                     chart_metadata = await self.get_chart_metadata(chart.id)
@@ -398,7 +401,7 @@ class SupersetClient:
         return snapshot.model_copy(update={"charts": charts})
 
     @staticmethod
-    def metadata_to_snapshot(metadata: dict[str, Any]) -> DashboardSnapshot:
+    def metadata_to_snapshot(metadata: dict[str, Any]) -> SupersetDashboardSnapshot:
         """Map stable dashboard metadata into a safe inspection snapshot."""
         position = metadata.get("position_json", {})
         if isinstance(position, str):
@@ -406,7 +409,7 @@ class SupersetClient:
                 position = json.loads(position)
             except json.JSONDecodeError:
                 position = {}
-        charts: list[ChartSnapshot] = []
+        charts: list[SupersetChartSnapshot] = []
         for item in position.values() if isinstance(position, dict) else []:
             if not isinstance(item, dict) or item.get("type") != "CHART":
                 continue
@@ -414,7 +417,7 @@ class SupersetClient:
             if chart_id is None:
                 continue
             charts.append(
-                ChartSnapshot(
+                SupersetChartSnapshot(
                     id=str(chart_id),
                     title=str(
                         item.get("meta", {}).get("sliceNameOverride")
@@ -424,7 +427,7 @@ class SupersetClient:
                     metric="unknown",
                 )
             )
-        return DashboardSnapshot(
+        return SupersetDashboardSnapshot(
             id=str(metadata.get("id")),
             title=metadata.get("dashboard_title")
             or "Untitled dashboard",

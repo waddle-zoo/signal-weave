@@ -12,11 +12,11 @@ class StubStore:
 class TestJudger:
     name = "jev-test-double"
 
-    async def compile_plan(self, state, card):
-        del state, card
+    async def compile_plan(self, state, workflow):
+        del state, workflow
         return {"operations": ["freshness_check"]}
 
-    async def judge(self, state, card, plan, observations):
+    async def judge(self, state, workflow, plan, observations):
         from semantic_monitor.models import Decision, Outcome
 
         del plan
@@ -26,12 +26,20 @@ class TestJudger:
             confidence=1.0,
             evidence=state["evidence"],
             observations=observations,
-            monitor_id=card.id,
-            dashboard_id=card.dashboard_id,
+            workflow_id=workflow.id,
+            source_keys=[source.key for source in workflow.sources],
             evaluator=self.name,
         )
 
 
 def test_server_exposes_mcp_object():
-    server = create_mcp(Runtime(store=StubStore(), engine=MonitorEngine(TestJudger())))
+    from semantic_monitor.sources import SourceRegistry
+
+    server = create_mcp(
+        Runtime(
+            workflow_store=StubStore(),
+            sources=SourceRegistry(),
+            engine=MonitorEngine(TestJudger()),
+        )
+    )
     assert server.name == "signal-weave"

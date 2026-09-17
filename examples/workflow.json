@@ -1,9 +1,16 @@
 {
-  "id": "monitor-sales-pulse",
-  "dashboard_id": "7",
+  "id": "workflow-sales-pulse",
   "title": "Sales pulse",
   "intent": "Alert when revenue changes materially versus the previous comparable period. Inspect related dashboard charts before routing. Ignore expected seasonal movement. Notify revenue operations only when the evidence supports action.",
-  "chart_ids": ["62", "64"],
+  "sources": [
+    {
+      "key": "sales-dashboard",
+      "adapter": "superset",
+      "resource": "dashboard:7",
+      "label": "Sales dashboard",
+      "parameters": {"chart_ids": ["62", "64"]}
+    }
+  ],
   "comparison_windows": ["previous_period", "trailing_4_period_average"],
   "investigation_hints": [
     "Compare total revenue with the time-grained revenue chart.",
