@@ -14,7 +14,7 @@ operations.
 
 ## What passed
 
-- Local lint and tests: `48 passed, 1 skipped`.
+- Local lint and tests: `49 passed, 1 skipped`.
 - GitHub Actions CI is green on the published `main` commit.
 - The package builds successfully and declares Apache 2.0 metadata.
 - The visual assets are valid SVGs and are included in source distributions.
@@ -73,7 +73,7 @@ evidence sent to TypeSafe Jev. See [`SECURITY.md`](../SECURITY.md) and
 
 ```text
 ruff check .                           passed
-Python 3.12 + pytest -q                48 passed, 1 skipped
+Python 3.12 + pytest -q                49 passed, 1 skipped
 GitHub Actions CI                      passed on published main
 SVG XML validation and rendering       passed
 Tracked credential scan                no secrets found
