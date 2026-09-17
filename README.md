@@ -4,7 +4,7 @@
 
 <p align="center">
   <strong>Typed decisions for operational signals.</strong><br>
-  Turn the systems your company already uses into fast, explainable push decisions.
+  Turn the systems your company already uses into explainable push decisions.
 </p>
 
 <p align="center">
@@ -13,11 +13,15 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-2ea44f.svg" alt="Apache 2.0 license"></a>
 </p>
 
-SignalWeave is a small open-source Model Context Protocol (MCP) and webhook service
-for teams that need to turn existing dashboards, queries, jobs, and ownership
-metadata into reliable actions. A person describes what matters in plain language;
-deployment-configured source adapters provide bounded evidence; [TypeSafe Jev](https://docs.typesafe.ai/introduction)
-supplies narrow typed judgments; SignalWeave returns an inspectable decision.
+Turn the dashboards, queries, jobs, and ownership metadata your team already has
+into reviewed, evidence-backed push decisions. When a signal moves, SignalWeave
+checks whether it matters, looks at the related context, and returns an inspectable
+action for an existing agent, scheduler, or delivery system.
+
+SignalWeave is a small open-source MCP and webhook service: a person describes
+what matters in plain language, configured adapters provide bounded evidence, and
+[TypeSafe Jev](https://docs.typesafe.ai/introduction) supplies narrow typed
+judgments. It does not become your BI tool, workflow engine, or agent runtime.
 
 <p align="center">
   <img src="assets/decision-flow.svg" alt="SignalWeave turns approved source signals into bounded evidence, a TypeSafe Jev judgment, code-owned safety gates, and an existing push or agent action" width="900">
@@ -63,7 +67,8 @@ TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
   --workflow examples/workflow.json
 ```
 
-See [`docs/demo.md`](docs/demo.md) for the complete walkthrough and
+See [`docs/evidence-brief.md`](docs/evidence-brief.md) for the measured case for
+trying it, and [`docs/demo.md`](docs/demo.md) for the complete walkthrough and
 [`examples/workflow.json`](examples/workflow.json) for the workflow input.
 
 ## What it does
@@ -113,6 +118,12 @@ SignalWeave runtime or delivery system.
 The first included adapter is Apache Superset. The workflow contract stays
 source-oriented so an installation can add configured SQL, Airflow, data-quality,
 or other operational adapters without making the service Superset-shaped.
+
+The [evidence brief](docs/evidence-brief.md) reports a small live comparison:
+on four synthetic labeled situations, an earlier recorded Jev run was exact on
+20/20 decisions while two current OpenAI baseline runs were exact on 15/20 and
+16/20. That is a reason to run the harness on your own history, not a universal
+accuracy claim.
 
 ## Why Jev
 
@@ -169,6 +180,7 @@ idempotency, and side effects.
 - [`docs/demo.md`](docs/demo.md) — local setup and walkthrough
 - [`docs/source-adapters.md`](docs/source-adapters.md) — adapter contract and security boundary
 - [`docs/benchmark.md`](docs/benchmark.md) — evaluation methodology and comparison measures
+- [`docs/evidence-brief.md`](docs/evidence-brief.md) — concise product case and measured comparison
 - [`docs/security.md`](docs/security.md) — credentials, evidence, and deployment notes
 - [`SECURITY.md`](SECURITY.md) — vulnerability reporting and release posture
 - [`ROADMAP.md`](ROADMAP.md) — current focus and future work

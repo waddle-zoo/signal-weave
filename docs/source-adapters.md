@@ -27,7 +27,10 @@ The adapter should:
 - resolve only approved/read-only resources;
 - bound result size and execution time;
 - return numeric facts as `Observation` values;
+- include supported comparison baselines in `Observation.comparison_baselines`
+  when the source can calculate them;
 - return non-numeric facts, relationships, and run metadata as `Evidence` or `metadata`;
+- set `captured_at` to the source snapshot time rather than process time when possible;
 - include a source URL/run ID when possible; and
 - return a `ResourceSnapshot(error=...)` through the registry path when the source cannot be trusted.
 

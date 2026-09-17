@@ -95,6 +95,9 @@ class SupersetAdapter:
             ],
             "parameters": source.parameters,
         }
+        chart_errors = [
+            f"{chart.title}: {chart.error}" for chart in dashboard.charts if chart.error
+        ]
         return ResourceSnapshot(
             source_key=source.key,
             adapter=self.name,
@@ -104,6 +107,9 @@ class SupersetAdapter:
             observations=observations,
             evidence=evidence,
             metadata=metadata,
+            error=("One or more Superset charts were unavailable: " + "; ".join(chart_errors))
+            if chart_errors
+            else None,
             source_url=dashboard.source_url,
             captured_at=dashboard.captured_at,
         )

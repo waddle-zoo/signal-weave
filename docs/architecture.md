@@ -53,6 +53,10 @@ The workflow is the durable, reviewable user contract:
 - explicit recipient allowlist; and
 - action-confidence threshold.
 
+When a card is proposed or drafted, its Jev-compiled `MonitorPlan` is stored with
+the workflow. Later approved evaluations reuse that plan instead of silently
+recompiling a different interpretation of the owner’s card.
+
 There is no `dashboard_id` or `chart_ids` in this contract. Superset chart scope
 is expressed as adapter-owned `SourceRef.parameters`, so a workflow can contain:
 
@@ -81,7 +85,8 @@ runtime result with:
 - `observations` for normalized values that code can compare;
 - `evidence` for source facts that may be non-numeric or relationship-oriented;
 - adapter metadata for context Jev may need;
-- source URL and capture time; and
+- source URL and capture time;
+- adapter-provided comparison baselines for supported windows; and
 - an explicit `error` when the source could not be trusted.
 
 The registry resolves sources independently. One failed required source blocks
@@ -150,6 +155,7 @@ the control plane.
 After Jev, code enforces:
 
 - required source errors → `insufficient_data` or `investigate`;
+- empty required snapshots or snapshots older than the workflow freshness limit → `insufficient_data` or `investigate`;
 - stale observations → escalation only if explicitly allowed and routable;
 - no comparable baseline → no automatic no-op;
 - unknown recipient → recipient removed and investigation required;

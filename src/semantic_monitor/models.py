@@ -93,6 +93,7 @@ class Observation(BaseModel):
     baseline: float | None = None
     previous: float | None = None
     change_pct: float | None = None
+    comparison_baselines: dict[str, float] = Field(default_factory=dict, max_length=20)
     dimensions: dict[str, Any] = Field(default_factory=dict)
     freshness: str | None = None
     source_url: str | None = None
@@ -138,6 +139,17 @@ class Recipient(BaseModel):
     destination: str = Field(min_length=1, max_length=500)
 
 
+class MonitorPlan(BaseModel):
+    workflow_id: str
+    selected_source_keys: list[str]
+    comparison_windows: list[str]
+    operations: list[str]
+    investigation_questions: list[str]
+    recipient_keys: list[str]
+    compiled_by: str = "jev-latest"
+    source_intent: str
+
+
 class MonitorWorkflow(BaseModel):
     """The user-authored workflow contract evaluated by SignalWeave."""
 
@@ -158,6 +170,9 @@ class MonitorWorkflow(BaseModel):
     allowed_outcomes: list[Outcome] = Field(default_factory=lambda: list(Outcome))
     owner: str | None = None
     version: int = Field(default=1, ge=1)
+    max_source_age_hours: float | None = Field(default=24.0, ge=0.0, le=876000.0)
+    escalation_recipient_key: str | None = None
+    compiled_plan: MonitorPlan | None = None
     status: WorkflowStatus = WorkflowStatus.DRAFT
 
     @model_validator(mode="after")
@@ -171,23 +186,19 @@ class MonitorWorkflow(BaseModel):
         recipient_keys = [recipient.key for recipient in self.recipients]
         if len(recipient_keys) != len(set(recipient_keys)):
             raise ValueError("recipient keys must be unique")
+        if self.escalation_recipient_key and self.escalation_recipient_key not in recipient_keys:
+            raise ValueError("escalation_recipient_key must name an approved recipient")
+        if self.compiled_plan:
+            if self.compiled_plan.workflow_id != self.id:
+                raise ValueError("compiled_plan must belong to its workflow")
+            if not set(self.compiled_plan.selected_source_keys).issubset(source_keys):
+                raise ValueError("compiled_plan may only select workflow sources")
         unknown_guidance = set(self.outcome_guidance) - {
             outcome.value for outcome in self.allowed_outcomes
         }
         if unknown_guidance:
             raise ValueError("outcome_guidance may only describe allowed_outcomes")
         return self
-
-
-class MonitorPlan(BaseModel):
-    workflow_id: str
-    selected_source_keys: list[str]
-    comparison_windows: list[str]
-    operations: list[str]
-    investigation_questions: list[str]
-    recipient_keys: list[str]
-    compiled_by: str = "jev-latest"
-    source_intent: str
 
 
 class MonitorCardProposal(BaseModel):

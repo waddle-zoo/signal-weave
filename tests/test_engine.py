@@ -1,9 +1,12 @@
+from datetime import datetime, timedelta, timezone
+
 import pytest
 
 from evaluations.cases import load_evaluation_cases
 from semantic_monitor.engine import MonitorEngine
 from semantic_monitor.models import (
     Decision,
+    MonitorPlan,
     MonitorWorkflow,
     Observation,
     Outcome,
@@ -169,6 +172,218 @@ async def test_source_failure_is_not_treated_as_ignore():
     assert result.decision.outcome == Outcome.INSUFFICIENT_DATA
     assert result.decision.recipient_key is None
     assert "timeout" in result.decision.evidence[-1].statement
+
+
+async def test_empty_required_source_is_not_automatic():
+    workflow = MonitorWorkflow(
+        id="workflow-empty-source",
+        title="Empty source workflow",
+        intent="Notify when revenue moves materially.",
+        sources=[
+            SourceRef(
+                key="empty-source",
+                adapter="sql",
+                resource="query:revenue",
+                label="Revenue query",
+            )
+        ],
+        recipients=[{"key": "ops", "label": "Ops", "destination": "slack://ops"}],
+    )
+    resource = ResourceSnapshot(
+        source_key="empty-source",
+        adapter="sql",
+        resource="query:revenue",
+        title="Revenue query",
+    )
+
+    result = await MonitorEngine(SafetyTestDouble()).evaluate(workflow, [resource])
+
+    assert result.decision.outcome == Outcome.INSUFFICIENT_DATA
+    assert result.decision.recipient_key is None
+    assert "no observations or evidence" in result.decision.evidence[-1].statement
+
+
+async def test_old_required_source_snapshot_is_not_automatic():
+    workflow = MonitorWorkflow(
+        id="workflow-old-source",
+        title="Old source workflow",
+        intent="Notify when revenue moves materially.",
+        sources=[
+            SourceRef(
+                key="old-source",
+                adapter="sql",
+                resource="query:revenue",
+                label="Revenue query",
+            )
+        ],
+        recipients=[{"key": "ops", "label": "Ops", "destination": "slack://ops"}],
+        max_source_age_hours=24,
+    )
+    resource = ResourceSnapshot(
+        source_key="old-source",
+        adapter="sql",
+        resource="query:revenue",
+        title="Revenue query",
+        captured_at=datetime.now(timezone.utc) - timedelta(hours=25),
+        observations=[
+            Observation(
+                source_key="old-source",
+                subject_id="revenue",
+                subject_label="Revenue",
+                metric="revenue",
+                current=90,
+                baseline=100,
+                change_pct=-10,
+            )
+        ],
+    )
+
+    result = await MonitorEngine(SafetyTestDouble()).evaluate(workflow, [resource])
+
+    assert result.decision.outcome == Outcome.INSUFFICIENT_DATA
+    assert result.decision.recipient_key is None
+    assert "hours old" in result.decision.evidence[-1].statement
+
+
+async def test_disallowed_semantic_outcome_is_downgraded():
+    class DisallowedOutcomeJudger(SafetyTestDouble):
+        async def judge(self, state, workflow, plan, observations):
+            decision = await super().judge(state, workflow, plan, observations)
+            return decision.model_copy(
+                update={"outcome": Outcome.NOTIFY, "recipient_key": "ops"}
+            )
+
+    workflow = MonitorWorkflow(
+        id="workflow-disallowed-outcome",
+        title="Disallowed outcome workflow",
+        intent="Investigate this signal.",
+        sources=[
+            SourceRef(
+                key="signal",
+                adapter="sql",
+                resource="query:signal",
+                label="Signal",
+            )
+        ],
+        allowed_outcomes=[Outcome.INVESTIGATE],
+    )
+    resource = ResourceSnapshot(
+        source_key="signal",
+        adapter="sql",
+        resource="query:signal",
+        title="Signal",
+        observations=[
+            Observation(
+                source_key="signal",
+                subject_id="signal",
+                subject_label="Signal",
+                metric="signal",
+                current=1,
+                baseline=1,
+                change_pct=0,
+            )
+        ],
+    )
+
+    result = await MonitorEngine(DisallowedOutcomeJudger()).evaluate(workflow, [resource])
+
+    assert result.decision.outcome == Outcome.INVESTIGATE
+    assert result.decision.recipient_key is None
+    assert "disallowed outcome" in result.decision.rationale
+
+
+async def test_selected_comparison_window_recomputes_change():
+    workflow = MonitorWorkflow(
+        id="workflow-trailing-baseline",
+        title="Trailing baseline workflow",
+        intent="Investigate a movement against the trailing average.",
+        sources=[
+            SourceRef(
+                key="metric-source",
+                adapter="sql",
+                resource="query:metric",
+                label="Metric",
+            )
+        ],
+        comparison_windows=["trailing_4_period_average"],
+    )
+    resource = ResourceSnapshot(
+        source_key="metric-source",
+        adapter="sql",
+        resource="query:metric",
+        title="Metric",
+        observations=[
+            Observation(
+                source_key="metric-source",
+                subject_id="metric",
+                subject_label="Metric",
+                metric="metric",
+                current=150,
+                baseline=100,
+                change_pct=50,
+                comparison_baselines={"trailing_4_period_average": 120},
+            )
+        ],
+    )
+
+    result = await MonitorEngine(SafetyTestDouble()).evaluate(workflow, [resource])
+    observation = result.decision.observations[0]
+
+    assert result.plan.comparison_windows == ["trailing_4_period_average"]
+    assert observation.baseline == 120
+    assert observation.change_pct == 25.0
+
+
+async def test_stored_compiled_plan_is_used_without_recompiling():
+    class CompileMustNotRun(SafetyTestDouble):
+        async def compile_plan(self, state, workflow):
+            raise AssertionError("an approved stored plan must not be recompiled")
+
+    source = SourceRef(
+        key="stored-source",
+        adapter="sql",
+        resource="query:stored",
+        label="Stored source",
+    )
+    plan = MonitorPlan(
+        workflow_id="workflow-stored-plan",
+        selected_source_keys=[source.key],
+        comparison_windows=["previous_period"],
+        operations=["percent_change"],
+        investigation_questions=[],
+        recipient_keys=[],
+        compiled_by="jev-onboarding-test-double",
+        source_intent="Investigate this stored plan.",
+    )
+    workflow = MonitorWorkflow(
+        id=plan.workflow_id,
+        title="Stored plan workflow",
+        intent=plan.source_intent,
+        sources=[source],
+        compiled_plan=plan,
+        status="approved",
+    )
+    resource = ResourceSnapshot(
+        source_key=source.key,
+        adapter=source.adapter,
+        resource=source.resource,
+        title=source.label,
+        observations=[
+            Observation(
+                source_key=source.key,
+                subject_id="stored",
+                subject_label="Stored metric",
+                metric="stored_metric",
+                current=110,
+                baseline=100,
+                change_pct=10,
+            )
+        ],
+    )
+
+    result = await MonitorEngine(CompileMustNotRun()).evaluate(workflow, [resource])
+
+    assert result.plan == plan
 
 
 async def test_unapproved_recipient_cannot_be_notified():

@@ -180,7 +180,7 @@ async def test_goal_to_card_flow_discovers_proposes_previews_and_requires_approv
     assert preview["delivery_enabled"] is False
     assert preview["decision"]["outcome"] == "notify"
 
-    approved = tool(server, "approve_monitor_card")(workflow_id)
+    approved = await tool(server, "approve_monitor_card")(workflow_id)
     assert approved["status"] == "approved"
     assert tool(server, "get_monitor_card")(workflow_id)["status"] == "approved"
     assert tool(server, "list_monitor_cards")(status="approved")["count"] == 1

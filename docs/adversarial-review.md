@@ -6,15 +6,16 @@ security, and contributor reviews on 2026-09-17.
 
 ## Verdict
 
-**Not ready to present as production-ready.** The repository is suitable for a
-private, localhost-only proof and has a clear product boundary, but the runtime
-still needs safety hardening before a public release can imply dependable
-automatic operations.
+**Ready to present as a technical alpha; not ready to present as production-ready.**
+The repository now has a coherent wedge, a runnable onboarding path, a Jev-backed
+decision contract, a measured comparison fixture, and fail-closed tests. It still
+needs enterprise controls before a public release can imply dependable automatic
+operations.
 
 ## What passed
 
-- Local lint and tests: `37 passed, 1 skipped`.
-- GitHub Actions CI is green on the current `main` commit.
+- Local lint and tests: `45 passed, 1 skipped`.
+- GitHub Actions CI is green on the published `main` commit.
 - The package builds successfully and declares Apache 2.0 metadata.
 - The visual assets are valid SVGs and are included in source distributions.
 - No committed API keys, access tokens, or private keys were found by the tracked
@@ -26,25 +27,28 @@ automatic operations.
   end-to-end MCP contract test.
 - Jev is the production semantic path; the service does not silently fall back to
   a heuristic evaluator.
+- Required empty, stale, unavailable, or incomplete sources are blocked before
+  automatic action; selected comparison windows use adapter-provided baselines.
+- The approved monitor card stores its compiled Jev plan, so later evaluation does
+  not silently recompile a different plan.
+- The benchmark compares the same four labeled inputs against a real OpenAI
+  embeddings-plus-Responses baseline and documents its synthetic limits.
 
 ## Findings to fix before public release
 
 ### High priority
 
-- **Freshness is not a complete machine-readable safety contract.** The current
-  engine looks for a textual `stale` marker and does not consistently derive age
-  from source capture timestamps. A stale source can therefore be interpreted
-  incorrectly depending on the adapter and allowed outcomes.
-- **Adapter failures must fail closed end-to-end.** Required source errors are
-  safety-gated, but every adapter path must promote chart or query failures into a
-  structured `ResourceSnapshot.error` before evaluation.
 - **Workflow authorization is deployment-owned, not enforced by the catalog.**
-  Draft workflows now require explicit approval before MCP or webhook evaluation,
-  but approval is not identity-aware and there is no durable audit trail or
-  version collision policy yet.
-- **Allowed outcomes need a final runtime gate.** A model result outside the
-  workflow’s declared outcome allowlist must be downgraded before recipient
-  routing.
+  Draft workflows require explicit approval before MCP or webhook evaluation, but
+  approval is not identity-aware and there is no durable audit trail or version
+  collision policy yet.
+- **Production delivery remains outside the service.** The caller still needs
+  identity, retries, idempotency, delivery receipts, and a policy for what happens
+  when a decision is delayed or duplicated.
+- **The Jev comparison needs a fresh run and real history before release claims.**
+  The checked-in Jev row is historical relative to the source-contract refactor;
+  the OpenAI comparison is live but the four cases are synthetic. A time-split
+  export from a design partner is the meaningful next gate.
 
 ### Medium priority
 
@@ -68,9 +72,9 @@ evidence sent to TypeSafe Jev. See [`SECURITY.md`](../SECURITY.md) and
 ## Review evidence
 
 ```text
-.venv/bin/ruff check .                 passed
-.venv/bin/python -m pytest -q          37 passed, 1 skipped
-GitHub Actions CI                      passed on main
+ruff check .                           passed
+Python 3.12 + pytest -q                45 passed, 1 skipped
+GitHub Actions CI                      passed on published main
 SVG XML validation and rendering       passed
 Tracked credential scan                no secrets found
 ```

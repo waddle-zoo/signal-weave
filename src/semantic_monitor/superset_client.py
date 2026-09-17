@@ -315,7 +315,12 @@ class SupersetClient:
         ]
         comparable_values = ordered_values if len(ordered_values) >= 2 else values
         current = float(comparable_values[-1]) if comparable_values else None
-        baseline = float(comparable_values[-2]) if len(comparable_values) > 1 else None
+        comparison_baselines: dict[str, float] = {}
+        if len(ordered_values) >= 2:
+            comparison_baselines["previous_period"] = float(ordered_values[-2])
+        if len(ordered_values) >= 5:
+            comparison_baselines["trailing_4_period_average"] = sum(ordered_values[-5:-1]) / 4
+        baseline = comparison_baselines.get("previous_period")
         change_pct = None
         if current is not None and baseline not in (None, 0):
             change_pct = round((current - baseline) / abs(baseline) * 100, 3)
@@ -346,6 +351,7 @@ class SupersetClient:
                 current=current,
                 baseline=baseline,
                 change_pct=change_pct,
+                comparison_baselines=comparison_baselines,
                 dimensions=dimensions,
                 source_url=chart.get("url"),
             )
@@ -373,6 +379,13 @@ class SupersetClient:
 
         selected = set(chart_ids) if chart_ids else None
         if selected is not None:
+            available = {chart.id for chart in snapshot.charts}
+            missing = sorted(selected - available)
+            if missing:
+                raise ValueError(
+                    "Superset dashboard does not contain selected chart IDs: "
+                    + ", ".join(missing)
+                )
             snapshot = snapshot.model_copy(
                 update={"charts": [chart for chart in snapshot.charts if chart.id in selected]}
             )

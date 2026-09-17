@@ -1,10 +1,17 @@
 # SignalWeave demo walkthrough
 
-This walkthrough proves the three boundaries independently:
+This walkthrough is the shortest path from the product idea to a live decision.
+An owner describes what matters, SignalWeave turns that into an approved monitor
+card, and an existing scheduler or agent pushes an evaluation when it is time.
+
+The three boundaries are independently visible:
 
 1. Jev makes typed decisions over owner-authored workflow inputs;
 2. the Superset adapter reads real saved dashboard/chart assets; and
 3. an external trigger can push an evaluation without SignalWeave becoming a scheduler.
+
+The measured reason to try this path is in [`evidence-brief.md`](evidence-brief.md).
+The repository is an alpha proof; the local stack is not a production deployment.
 
 ## A. Jev-backed proof
 

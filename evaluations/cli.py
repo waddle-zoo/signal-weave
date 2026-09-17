@@ -28,7 +28,7 @@ def main() -> None:
     benchmark.add_argument(
         "--systems",
         default="jev",
-        help="Comma-separated systems: jev, embedding-reasoning",
+        help="Comma-separated systems: jev, openai, embedding-reasoning",
     )
     benchmark.add_argument("--repeats", type=int, default=1)
     benchmark.add_argument("--format", choices=["table", "json", "markdown"], default="table")

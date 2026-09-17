@@ -120,6 +120,8 @@ class MonitorAuthoringService:
         materiality_definition: str | None = None,
         recipients: list[Recipient] | None = None,
         owner: str | None = None,
+        max_source_age_hours: float | None = 24.0,
+        escalation_recipient_key: str | None = None,
     ) -> MonitorCardProposal:
         discovery = await self.discover(goal, adapter=adapter, limit=limit)
         matches = {match.ref: match for match in discovery.matches}
@@ -155,6 +157,8 @@ class MonitorAuthoringService:
             materiality_definition=materiality_definition,
             recipients=recipients or [],
             owner=owner,
+            max_source_age_hours=max_source_age_hours,
+            escalation_recipient_key=escalation_recipient_key,
         )
         plan = await self.engine.compile(workflow)
         questions: list[str] = []

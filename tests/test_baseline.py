@@ -1,3 +1,5 @@
+import json
+
 import httpx
 
 from evaluations.cases import load_evaluation_cases
@@ -74,6 +76,87 @@ async def test_embedding_reasoning_adapter_uses_two_calls_and_typed_json():
     assert decision.recipient_key == "growth"
     assert decision.confidence == 0.81
     assert [request.url.path for request in requests] == ["/v1/embeddings", "/v1/chat/completions"]
+    assert judger.metrics.requests == 2
+    assert judger.metrics.input_tokens == 42
+    assert judger.metrics.output_tokens == 8
+
+
+async def test_openai_responses_baseline_uses_strict_schema_and_counts_usage():
+    requests = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        if request.url.path.endswith("/embeddings"):
+            payload = json.loads(request.content)
+            return httpx.Response(
+                200,
+                json={
+                    "data": [
+                        {"index": index, "embedding": [1.0, 0.0]}
+                        for index, _text in enumerate(payload["input"])
+                    ],
+                    "usage": {"prompt_tokens": 12},
+                },
+            )
+        payload = json.loads(request.content)
+        response_format = payload["text"]["format"]
+        assert payload["store"] is False
+        assert response_format["type"] == "json_schema"
+        assert response_format["strict"] is True
+        assert response_format["schema"]["additionalProperties"] is False
+        return httpx.Response(
+            200,
+            json={
+                "output_text": json.dumps(
+                    {
+                        "outcome": "notify",
+                        "recipient_key": "growth",
+                        "rationale": "Related mobile evidence supports notification.",
+                        "confidence": 0.81,
+                    }
+                ),
+                "usage": {"input_tokens": 30, "output_tokens": 8},
+            },
+        )
+
+    case = next(case for case in load_evaluation_cases() if case.id == "mobile_conversion")
+    observations = [
+        observation
+        for resource in case.resources
+        for observation in resource.observations
+    ]
+    judger = EmbeddingReasoningJudger(
+        base_url="http://baseline/v1",
+        model="gpt-5.6-luna",
+        embedding_model="text-embedding-3-small",
+        api_key="test-only",
+        transport=httpx.MockTransport(handler),
+        responses_api=True,
+    )
+    state = {
+        "evidence": [
+            {
+                "source_key": observation.source_key,
+                "subject_id": observation.subject_id,
+                "subject_label": observation.subject_label,
+                "statement": "test evidence",
+                "values": {},
+            }
+            for observation in observations
+        ]
+    }
+
+    decision = await judger.judge(
+        state,
+        case.workflow,
+        base_plan(case.workflow),
+        observations,
+    )
+
+    assert decision.outcome.value == "notify"
+    assert decision.recipient_key == "growth"
+    assert decision.probabilities == {"notify": 0.81}
+    assert [request.url.path for request in requests] == ["/v1/embeddings", "/v1/responses"]
     assert judger.metrics.requests == 2
     assert judger.metrics.input_tokens == 42
     assert judger.metrics.output_tokens == 8

@@ -1,9 +1,10 @@
 """Optional embedding-plus-reasoning baseline for apples-to-apples evaluation.
 
-The adapter speaks the common OpenAI-compatible ``/embeddings`` and
-``/chat/completions`` shape. It is deliberately not part of the product runtime:
-it exists so a team can compare Jev with the model and provider it already uses,
-using the same normalized workflow state and safety gates.
+The adapter speaks the common OpenAI-compatible ``/embeddings`` shape and either
+``/chat/completions`` or ``/responses`` for the decision. It is deliberately not
+part of the product runtime: it exists so a team can compare Jev with the model
+and provider it already uses, using the same normalized workflow state and safety
+gates.
 """
 
 from __future__ import annotations
@@ -33,6 +34,7 @@ class EmbeddingReasoningJudger:
         top_k: int = 8,
         timeout: float = 30.0,
         transport: httpx.AsyncBaseTransport | None = None,
+        responses_api: bool = False,
     ) -> None:
         if not base_url.strip():
             raise ValueError("BASELINE_BASE_URL is required for embedding-reasoning mode")
@@ -43,6 +45,7 @@ class EmbeddingReasoningJudger:
         self.top_k = max(1, min(top_k, 32))
         self.timeout = timeout
         self.transport = transport
+        self.responses_api = responses_api
         self.metrics = JudgerMetrics()
 
     async def compile_plan(
@@ -112,6 +115,7 @@ class EmbeddingReasoningJudger:
             "baseline": observation.baseline,
             "previous": observation.previous,
             "change_pct": observation.change_pct,
+            "comparison_baselines": observation.comparison_baselines,
             "dimensions": observation.dimensions,
             "freshness": observation.freshness,
         }
@@ -127,6 +131,52 @@ class EmbeddingReasoningJudger:
         return [index for _score, index in sorted(scores, reverse=True)]
 
     async def _reason(self, payload: dict[str, Any]) -> dict[str, Any]:
+        if self.responses_api:
+            body = await self._post(
+                "/responses",
+                {
+                    "model": self.model,
+                    "instructions": (
+                        "Classify a monitoring event. Return only the requested JSON schema. "
+                        "Use only allowed outcomes and approved recipients. Never invent "
+                        "evidence or recipients."
+                    ),
+                    "input": json.dumps(payload, separators=(",", ":")),
+                    "store": False,
+                    "text": {
+                        "format": {
+                            "type": "json_schema",
+                            "name": "monitor_decision",
+                            "strict": True,
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "outcome": {
+                                        "type": "string",
+                                        "enum": [outcome.value for outcome in Outcome],
+                                    },
+                                    "recipient_key": {"type": ["string", "null"]},
+                                    "rationale": {"type": "string"},
+                                    "confidence": {"type": "number"},
+                                },
+                                "required": [
+                                    "outcome",
+                                    "recipient_key",
+                                    "rationale",
+                                    "confidence",
+                                ],
+                                "additionalProperties": False,
+                            },
+                        }
+                    },
+                },
+            )
+            content = body.get("output_text")
+            if not isinstance(content, str):
+                content = self._response_output_text(body)
+            if not content:
+                raise ValueError("baseline Responses API returned no output text")
+            return self._parse_json(content)
         body = await self._post(
             "/chat/completions",
             {
@@ -150,6 +200,18 @@ class EmbeddingReasoningJudger:
         content = body["choices"][0]["message"]["content"]
         if not isinstance(content, str):
             raise ValueError("baseline response content must be a JSON string")
+        return self._parse_json(content)
+
+    @staticmethod
+    def _response_output_text(body: dict[str, Any]) -> str:
+        for item in body.get("output", []):
+            for content in item.get("content", []):
+                if content.get("type") == "output_text" and isinstance(content.get("text"), str):
+                    return content["text"]
+        return ""
+
+    @staticmethod
+    def _parse_json(content: str) -> dict[str, Any]:
         try:
             return json.loads(content)
         except json.JSONDecodeError:
@@ -164,11 +226,23 @@ class EmbeddingReasoningJudger:
             headers["authorization"] = f"Bearer {self.api_key}"
         async with httpx.AsyncClient(timeout=self.timeout, transport=self.transport) as client:
             response = await client.post(self.base_url + path, headers=headers, json=payload)
-        response.raise_for_status()
+        if response.is_error:
+            try:
+                detail = response.json().get("error", {})
+            except ValueError:
+                detail = response.text[:500]
+            raise httpx.HTTPStatusError(
+                f"{response.status_code} {detail}",
+                request=response.request,
+                response=response,
+            )
         body = response.json()
         usage = body.get("usage", {})
         self.metrics.requests += 1
-        self.metrics.record_tokens(usage.get("prompt_tokens"), usage.get("completion_tokens"))
+        self.metrics.record_tokens(
+            usage.get("prompt_tokens") or usage.get("input_tokens"),
+            usage.get("completion_tokens") or usage.get("output_tokens"),
+        )
         return body
 
     @staticmethod

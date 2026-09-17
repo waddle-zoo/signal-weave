@@ -1,6 +1,6 @@
 # Benchmark protocol
 
-SignalWeave should earn its Jev dependency with measurements, not a marketing claim. This repository therefore includes a small benchmark that compares the production Jev path with an optional conventional embedding-plus-reasoning pipeline.
+SignalWeave should earn its Jev dependency with measurements, not a marketing claim. This repository therefore includes a small benchmark that compares the production Jev path with an optional conventional embedding-plus-reasoning pipeline. The concise measured case is in [`evidence-brief.md`](evidence-brief.md).
 
 ## What is held constant
 
@@ -26,15 +26,28 @@ The checked-in cases are deliberately external data in [`evaluations/data/demo-c
 
 These are wiring and behavior cases, not a statistically representative enterprise dataset.
 
-## Recorded Jev baseline
+## Current evidence snapshot
 
-The recorded local run (2026-09-17, five repeats, 20 total evaluations, before the generic source-contract refactor) produced:
+The following runs used the four checked-in synthetic cases and five repeats per
+run. The Jev row is a recorded local run from before the generic source-contract
+refactor. OpenAI runs A and B were made against the real OpenAI API on
+2026-09-17 with the local development configuration; they are included to show
+the comparison path, not to imply a production benchmark.
 
-| Evaluator | Exact decision accuracy | Median | p95 | API requests | Provider errors |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| Jev | 100% (20/20) | 701.62 ms | 914.17 ms | 40 | 0 |
+| Evaluator | Exact decision accuracy | Wrong automatic actions | Median | p95 | API requests | Provider errors |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Jev, recorded baseline | 100% (20/20) | 0 | 701.62 ms | 914.17 ms | 40 | 0 |
+| OpenAI baseline, run A | 75% (15/20) | 5 | 2,981.51 ms | 5,964.23 ms | 40 | 0 |
+| OpenAI baseline, run B | 80% (16/20) | 4 | 2,855.41 ms | 4,202.77 ms | 40 | 0 |
 
-Jev selected the labeled outcome and approved recipient for all four cases on every repeat in the recorded baseline run. This result is useful evidence that owner-defined workflows and the typed decision contract can work together; it is not evidence that Jev is universally more accurate than a general model. No Luna/general-model result is recorded because this environment has no such provider endpoint or credential configured.
+The OpenAI misses were false `notify` decisions for the seasonal case: the
+baseline routed a decline to Retail Operations even though the related context
+said to ignore it. This is a small but concrete example of why retrieval and
+free-form reasoning should be compared on the final decision, not only on the
+quality of an explanation. The two OpenAI runs also show repeat variation on the
+same fixture. These results are not evidence that Jev is universally more
+accurate or faster; the next step is a time-split evaluation on real workflow
+history.
 
 ## Run Jev
 
@@ -49,9 +62,29 @@ TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
 
 Jev uses one typed planning request and one typed judgment request per evaluation. The judgment contains independent `Noul` support values for the owner-defined automatic actions; SignalWeave composes them in code and applies the workflow threshold. The report records request count, reported input/output tokens, latency, outcome accuracy, exact outcome-plus-recipient accuracy, and errors. Repeating the cases exposes instability rather than hiding it behind one best-looking run.
 
-## Run a real general-model baseline
+## Run a real OpenAI baseline
 
-The repository does not bundle or pretend to know the API contract for a model called “Luna.” Use the provider’s OpenAI-compatible base URL and actual model names:
+The `openai` arm uses the same normalized workflow state and safety gates, but
+replaces Jev’s typed judgments with embedding retrieval plus a general model
+JSON decision. It defaults to OpenAI’s API root; set the model names explicitly
+for a reproducible run:
+
+```bash
+OPENAI_API_KEY=... \
+OPENAI_MODEL=gpt-5.6-luna \
+OPENAI_EMBEDDING_MODEL=text-embedding-3-small \
+TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
+  uv run python -m evaluations.cli benchmark \
+  --systems jev,openai --repeats 5 --format markdown \
+  --output artifacts/jev-vs-openai.md
+```
+
+The benchmark never writes either credential to the report.
+
+## Run another general-model baseline
+
+The repository also supports any provider with an OpenAI-compatible embeddings
+and chat-completions API. Use the provider’s base URL and actual model names:
 
 ```bash
 BASELINE_BASE_URL=https://provider.example/v1 \
@@ -66,7 +99,7 @@ TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
   --output artifacts/jev-vs-luna.md
 ```
 
-The baseline performs two calls per case: an embeddings request over the owner intent and the same normalized source observations, followed by a deterministic-temperature chat-completions request over the retrieved observations. Its response must contain JSON fields for `outcome`, `recipient_key`, `rationale`, `confidence`, and optional `probabilities`.
+The baseline performs two calls per case: an embeddings request over the owner intent and the same normalized source observations, followed by a decision request over the retrieved observations. The generic chat-completions path uses deterministic temperature and optional `probabilities`; the `openai` path uses a strict Responses JSON schema with `outcome`, `recipient_key`, `rationale`, and `confidence`.
 
 If the provider is not OpenAI-compatible, add a small adapter rather than silently changing the benchmark contract. A missing baseline endpoint is an explicit configuration error; it is never reported as a model result.
 

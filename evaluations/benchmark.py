@@ -18,7 +18,7 @@ from semantic_monitor.engine import MonitorEngine
 from semantic_monitor.models import Outcome
 from semantic_monitor.typesafe_adapter import JevJudger, JudgerMetrics, load_api_key
 
-SUPPORTED_SYSTEMS = {"jev", "embedding-reasoning"}
+SUPPORTED_SYSTEMS = {"jev", "embedding-reasoning", "openai"}
 
 
 @dataclass(frozen=True)
@@ -66,20 +66,29 @@ def _build_judger(system: str) -> Any:
         if not key:
             raise RuntimeError("Jev benchmark requires TYPESAFE_API_KEY or TYPESAFE_API_KEY_FILE")
         return JevJudger(api_key=key)
-    if system == "embedding-reasoning":
-        base_url = os.getenv("BASELINE_BASE_URL")
+    if system in {"embedding-reasoning", "openai"}:
+        prefix = "OPENAI" if system == "openai" else "BASELINE"
+        base_url = os.getenv(f"{prefix}_BASE_URL")
+        if system == "openai":
+            base_url = base_url or "https://api.openai.com/v1"
         if not base_url:
             raise RuntimeError(
                 "embedding-reasoning benchmark requires BASELINE_BASE_URL "
                 "(an OpenAI-compatible API root)"
             )
-        return EmbeddingReasoningJudger(
+        judger = EmbeddingReasoningJudger(
             base_url=base_url,
-            model=os.getenv("BASELINE_MODEL", "luna"),
-            embedding_model=os.getenv("BASELINE_EMBEDDING_MODEL", "text-embedding-3-small"),
-            api_key=os.getenv("BASELINE_API_KEY"),
-            top_k=int(os.getenv("BASELINE_TOP_K", "8")),
+            model=os.getenv(f"{prefix}_MODEL", "luna"),
+            embedding_model=os.getenv(
+                f"{prefix}_EMBEDDING_MODEL", "text-embedding-3-small"
+            ),
+            api_key=os.getenv(f"{prefix}_API_KEY"),
+            top_k=int(os.getenv(f"{prefix}_TOP_K", "8")),
+            responses_api=system == "openai",
         )
+        if system == "openai":
+            judger.name = "openai-embedding-reasoning"
+        return judger
     raise ValueError(f"Unsupported benchmark system: {system}")
 
 
@@ -176,15 +185,17 @@ def _summary(results: list[BenchmarkResult], system: str) -> dict[str, Any]:
 def render_benchmark_table(results: list[BenchmarkResult]) -> str:
     systems = list(dict.fromkeys(result.system for result in results))
     lines = [
-        "system                 cases  outcome  decision  median_ms  p95_ms  requests  errors",
-        "---------------------  -----  -------  --------  ---------  ------  --------  ------",
+        "system                 cases  outcome  decision  median_ms  p95_ms  requests  in_tok  out_tok  errors",
+        "---------------------  -----  -------  --------  ---------  ------  --------  -------  -------  ------",
     ]
     for system in systems:
         summary = _summary(results, system)
         lines.append(
             f"{system:<21}  {summary['cases']:>5}  {summary['outcome_accuracy']:.1%}  "
             f"{summary['decision_accuracy']:.1%}  {summary['median_ms']:>9.2f}  "
-            f"{summary['p95_ms']:>6.2f}  {summary['requests']:>8}  {summary['errors']:>6}"
+            f"{summary['p95_ms']:>6.2f}  {summary['requests']:>8}  "
+            f"{summary['input_tokens']:>7}  {summary['output_tokens']:>7}  "
+            f"{summary['errors']:>6}"
         )
     lines.extend(
         [
@@ -218,15 +229,16 @@ def render_benchmark_markdown(results: list[BenchmarkResult]) -> str:
         "",
         "## Summary",
         "",
-        "| System | Cases | Outcome accuracy | Exact decision accuracy | Median | p95 | Requests | Errors |",
-        "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+            "| System | Cases | Outcome accuracy | Exact decision accuracy | Median | p95 | Requests | Input tokens | Output tokens | Errors |",
+            "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
     ]
     for system in systems:
         summary = _summary(results, system)
         lines.append(
             f"| `{system}` | {summary['cases']} | {summary['outcome_accuracy']:.1%} | "
             f"{summary['decision_accuracy']:.1%} | {summary['median_ms']:.2f} ms | "
-            f"{summary['p95_ms']:.2f} ms | {summary['requests']} | {summary['errors']} |"
+            f"{summary['p95_ms']:.2f} ms | {summary['requests']} | {summary['input_tokens']} | "
+            f"{summary['output_tokens']} | {summary['errors']} |"
         )
     lines.extend(
         [
@@ -251,7 +263,7 @@ def render_benchmark_markdown(results: list[BenchmarkResult]) -> str:
             "## Interpretation",
             "",
             "- `jev` is the product path: Jev supplies typed semantic judgments and the same code owns calculations, evidence, routing, and safety gates.",
-            "- `embedding-reasoning` is an optional OpenAI-compatible baseline: it embeds the same workflow observations, retrieves the top evidence items, and asks a general model for JSON. Set `BASELINE_BASE_URL`, `BASELINE_MODEL`, and `BASELINE_EMBEDDING_MODEL` to run it against a real provider.",
+            "- `openai` is the explicit OpenAI embedding-plus-reasoning baseline; `embedding-reasoning` is the same adapter configured for another OpenAI-compatible provider.",
             "- Do not claim Jev is better from four labeled cases alone. Use this harness on a labeled export of real workflow events and compare accuracy, false alerts, investigation rate, latency, and provider usage.",
         ]
     )

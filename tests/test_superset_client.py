@@ -1,6 +1,8 @@
 import httpx
 import pytest
 
+from semantic_monitor.models import SourceRef
+from semantic_monitor.superset_adapter import SupersetAdapter
 from semantic_monitor.superset_client import SupersetClient
 
 
@@ -112,6 +114,30 @@ async def test_dashboard_snapshot_records_source_failures_for_safety_gates():
 
     assert snapshot.charts[0].error
     assert "source timeout" in snapshot.charts[0].error
+    resource = await SupersetAdapter(BrokenClient("http://superset")).inspect(
+        SourceRef(
+            key="broken-dashboard",
+            adapter="superset",
+            resource="dashboard:7",
+            label="Broken dashboard",
+        )
+    )
+    assert resource.error
+    assert "source timeout" in resource.error
+
+
+@pytest.mark.asyncio
+async def test_dashboard_snapshot_rejects_unknown_selected_chart_ids():
+    class CatalogClient(SupersetClient):
+        async def get_dashboard_metadata(self, dashboard_id):
+            return {
+                "id": dashboard_id,
+                "dashboard_title": "Catalog",
+                "position_json": '{"chart": {"type": "CHART", "meta": {"chartId": 42}}}',
+            }
+
+    with pytest.raises(ValueError, match="selected chart IDs"):
+        await CatalogClient("http://superset").dashboard_snapshot(7, chart_ids=["99"])
 
 
 def test_time_series_rows_become_a_comparable_observation():
@@ -141,6 +167,31 @@ def test_time_series_rows_become_a_comparable_observation():
     assert observations[0].current == 30
     assert observations[0].baseline == 15
     assert observations[0].change_pct == 100.0
+
+
+def test_time_series_rows_include_supported_comparison_baselines():
+    observations = SupersetClient.observations_from_chart_data(
+        {
+            "id": 42,
+            "params": {"metrics": [{"label": "Revenue"}], "granularity_sqla": "period"},
+        },
+        [
+            {
+                "data": [
+                    {"period": 1, "Revenue": 10},
+                    {"period": 2, "Revenue": 20},
+                    {"period": 3, "Revenue": 30},
+                    {"period": 4, "Revenue": 40},
+                    {"period": 5, "Revenue": 50},
+                ]
+            }
+        ],
+    )
+
+    assert observations[0].comparison_baselines == {
+        "previous_period": 40.0,
+        "trailing_4_period_average": 25.0,
+    }
 
 
 def test_ambiguous_numeric_result_is_rejected_instead_of_guessing_metric():

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Any
 
 from .analysis import candidate_observations, evidence_statements, observations_for_plan
@@ -42,6 +43,8 @@ class MonitorEngine:
         workflow: MonitorWorkflow,
         resources: list[ResourceSnapshot] | None = None,
     ) -> MonitorPlan:
+        if workflow.compiled_plan is not None:
+            return workflow.compiled_plan
         state = {
             "sources": (
                 [resource.model_dump(mode="json") for resource in resources]
@@ -65,6 +68,7 @@ class MonitorEngine:
 
         plan = await self.compile(workflow, resources)
         observations = observations_for_plan(resources, plan.selected_source_keys)
+        observations = self._apply_comparison_window(observations, plan)
         source_errors = self._source_errors(workflow, resources)
         blocking_source_errors = [error for error in source_errors if error["blocking"]]
         candidates = candidate_observations(observations, workflow)
@@ -156,6 +160,29 @@ class MonitorEngine:
         )
 
     @staticmethod
+    def _apply_comparison_window(
+        observations: list[Observation], plan: MonitorPlan
+    ) -> list[Observation]:
+        """Use the compiled window when the source exposes that baseline."""
+        window = plan.comparison_windows[0] if plan.comparison_windows else "previous_period"
+        if window == "previous_period":
+            return observations
+        adjusted: list[Observation] = []
+        for observation in observations:
+            baseline = observation.comparison_baselines.get(window)
+            change_pct = None
+            if baseline is not None and observation.current is not None and baseline != 0:
+                change_pct = round(
+                    (observation.current - baseline) / abs(baseline) * 100, 3
+                )
+            adjusted.append(
+                observation.model_copy(
+                    update={"baseline": baseline, "change_pct": change_pct}
+                )
+            )
+        return adjusted
+
+    @staticmethod
     def _source_errors(
         workflow: MonitorWorkflow, resources: list[ResourceSnapshot]
     ) -> list[dict[str, Any]]:
@@ -197,6 +224,36 @@ class MonitorEngine:
                         "blocking": source.required,
                     }
                 )
+            elif not resource.observations and not resource.evidence:
+                errors.append(
+                    {
+                        "source_key": key,
+                        "resource": source.resource,
+                        "label": resource.title or source.label,
+                        "message": "Source returned no observations or evidence.",
+                        "source_url": resource.source_url,
+                        "blocking": source.required,
+                    }
+                )
+            if resource is not None and workflow.max_source_age_hours is not None:
+                captured_at = resource.captured_at
+                if captured_at.tzinfo is None:
+                    captured_at = captured_at.replace(tzinfo=timezone.utc)
+                age_hours = (datetime.now(timezone.utc) - captured_at).total_seconds() / 3600
+                if age_hours > workflow.max_source_age_hours:
+                    errors.append(
+                        {
+                            "source_key": key,
+                            "resource": source.resource,
+                            "label": resource.title or source.label,
+                            "message": (
+                                f"Source snapshot is {age_hours:.1f} hours old; maximum is "
+                                f"{workflow.max_source_age_hours:g} hours."
+                            ),
+                            "source_url": resource.source_url,
+                            "blocking": source.required,
+                        }
+                    )
         return errors
 
     @staticmethod
@@ -207,6 +264,22 @@ class MonitorEngine:
         blocking_source_errors: list[dict[str, Any]],
         source_error_evidence: list[Evidence],
     ) -> Decision:
+        if decision.outcome not in workflow.allowed_outcomes:
+            fallback = (
+                Outcome.INSUFFICIENT_DATA
+                if Outcome.INSUFFICIENT_DATA in workflow.allowed_outcomes
+                else Outcome.INVESTIGATE
+            )
+            return decision.model_copy(
+                update={
+                    "outcome": fallback,
+                    "recipient_key": None,
+                    "rationale": (
+                        f"The semantic decision returned disallowed outcome "
+                        f"{decision.outcome.value}; routed to {fallback.value}."
+                    ),
+                }
+            )
         allowed_recipient_keys = {recipient.key for recipient in workflow.recipients}
         if decision.outcome not in (Outcome.NOTIFY, Outcome.ESCALATE) or (
             decision.recipient_key not in allowed_recipient_keys
@@ -253,7 +326,9 @@ class MonitorEngine:
             return decision.model_copy(
                 update={
                     "outcome": Outcome.ESCALATE,
-                    "recipient_key": workflow.recipients[0].key,
+                    "recipient_key": (
+                        workflow.escalation_recipient_key or workflow.recipients[0].key
+                    ),
                     "rationale": "A hard freshness gate requires escalation before interpreting the workflow sources.",
                     "confidence": max(decision.confidence or 0.0, 0.99),
                 }

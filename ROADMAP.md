@@ -22,8 +22,8 @@ gaps have tests or deployment controls.
 
 ## Next: prove the narrow wedge
 
-- [ ] Publish a small, reproducible labeled benchmark with documented limits and
-      an apples-to-apples Jev comparison
+- [x] Publish a small, reproducible labeled benchmark with documented limits and
+      an apples-to-apples Jev comparison (see [`docs/evidence-brief.md`](docs/evidence-brief.md))
 - [ ] Add a small operator-facing UI or integrate the authoring protocol with an
       existing company agent
 - [ ] Add durable workflow versioning and decision traces suitable for review

@@ -73,6 +73,8 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
         materiality_definition: str | None = None,
         recipients: list[dict[str, str]] | None = None,
         owner: str | None = None,
+        max_source_age_hours: float | None = 24.0,
+        escalation_recipient_key: str | None = None,
     ) -> dict[str, Any]:
         """Propose and save a draft monitor card from a natural-language goal.
 
@@ -90,8 +92,14 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
             materiality_definition=materiality_definition,
             recipients=[Recipient.model_validate(recipient) for recipient in (recipients or [])],
             owner=owner,
+            max_source_age_hours=max_source_age_hours,
+            escalation_recipient_key=escalation_recipient_key,
         )
-        runtime.workflow_store.save_workflow(proposal.workflow)
+        stored_workflow = proposal.workflow.model_copy(
+            update={"compiled_plan": proposal.plan}
+        )
+        runtime.workflow_store.save_workflow(stored_workflow)
+        proposal = proposal.model_copy(update={"workflow": stored_workflow})
         return {
             "proposal": proposal.model_dump(mode="json"),
             "summary": proposal_summary(proposal),
@@ -111,6 +119,8 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
         outcome_guidance: dict[str, str] | None = None,
         allowed_outcomes: list[str] | None = None,
         owner: str | None = None,
+        max_source_age_hours: float | None = 24.0,
+        escalation_recipient_key: str | None = None,
     ) -> dict[str, Any]:
         """Draft a versioned workflow over any installed source resources; no alert is sent.
 
@@ -141,8 +151,11 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
             outcome_guidance=outcome_guidance or {},
             allowed_outcomes=selected_outcomes,
             owner=owner,
+            max_source_age_hours=max_source_age_hours,
+            escalation_recipient_key=escalation_recipient_key,
         )
         plan = await runtime.engine.compile(workflow)
+        workflow = workflow.model_copy(update={"compiled_plan": plan})
         runtime.workflow_store.save_workflow(workflow)
         return {
             "workflow": workflow.model_dump(mode="json"),
@@ -181,11 +194,15 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
         }
 
     @mcp.tool()
-    def approve_monitor_card(workflow_id: str) -> dict[str, Any]:
+    async def approve_monitor_card(workflow_id: str) -> dict[str, Any]:
         """Approve a draft monitor card for later scheduler or webhook evaluation."""
         workflow = runtime.workflow_store.get_workflow(workflow_id)
         if not workflow.sources:
             raise ValueError("a monitor card needs at least one selected source before approval")
+        if workflow.compiled_plan is None:
+            plan = await runtime.engine.compile(workflow)
+            workflow = workflow.model_copy(update={"compiled_plan": plan})
+            runtime.workflow_store.save_workflow(workflow)
         approved = runtime.workflow_store.set_workflow_status(
             workflow_id, WorkflowStatus.APPROVED
         )
