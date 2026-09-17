@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 from collections.abc import Iterable
 from typing import Any
@@ -23,25 +24,49 @@ class SupersetClient:
         self.username = username
         self.password = password
         self._token: str | None = None
+        self._auth_lock = asyncio.Lock()
 
-    async def _auth_headers(self) -> dict[str, str]:
-        if self._token:
+    async def _auth_headers(self, force_refresh: bool = False) -> dict[str, str]:
+        if self._token and not force_refresh:
             return {"Authorization": f"Bearer {self._token}"}
         if not self.username or not self.password:
             return {}
-        async with httpx.AsyncClient(base_url=self.base_url, timeout=20) as client:
-            response = await client.post(
-                "/api/v1/security/login",
-                json={
-                    "username": self.username,
-                    "password": self.password,
-                    "provider": "db",
-                    "refresh": True,
-                },
-            )
-            response.raise_for_status()
-            self._token = response.json()["access_token"]
+        async with self._auth_lock:
+            if self._token and not force_refresh:
+                return {"Authorization": f"Bearer {self._token}"}
+            async with httpx.AsyncClient(base_url=self.base_url, timeout=20) as client:
+                response = await client.post(
+                    "/api/v1/security/login",
+                    json={
+                        "username": self.username,
+                        "password": self.password,
+                        "provider": "db",
+                        "refresh": True,
+                    },
+                )
+                response.raise_for_status()
+                self._token = response.json()["access_token"]
         return {"Authorization": f"Bearer {self._token}"}
+
+    async def _request(
+        self,
+        method: str,
+        path: str,
+        *,
+        timeout: float,
+        **kwargs: Any,
+    ) -> httpx.Response:
+        headers = await self._auth_headers()
+        async with httpx.AsyncClient(
+            base_url=self.base_url, timeout=timeout, headers=headers
+        ) as client:
+            response = await client.request(method, path, **kwargs)
+            if response.status_code == 401 and self._token and self.username and self.password:
+                self._token = None
+                refreshed_headers = await self._auth_headers(force_refresh=True)
+                response = await client.request(method, path, headers=refreshed_headers, **kwargs)
+            response.raise_for_status()
+            return response
 
     async def health(self) -> bool:
         async with httpx.AsyncClient(base_url=self.base_url, timeout=10) as client:
@@ -49,18 +74,12 @@ class SupersetClient:
             return response.is_success
 
     async def get_dashboard_metadata(self, dashboard_id: int | str) -> dict[str, Any]:
-        headers = await self._auth_headers()
-        async with httpx.AsyncClient(base_url=self.base_url, timeout=30, headers=headers) as client:
-            response = await client.get(f"/api/v1/dashboard/{dashboard_id}")
-            response.raise_for_status()
-            return response.json().get("result", response.json())
+        response = await self._request("GET", f"/api/v1/dashboard/{dashboard_id}", timeout=30)
+        return response.json().get("result", response.json())
 
     async def get_chart_metadata(self, chart_id: int | str) -> dict[str, Any]:
-        headers = await self._auth_headers()
-        async with httpx.AsyncClient(base_url=self.base_url, timeout=30, headers=headers) as client:
-            response = await client.get(f"/api/v1/chart/{chart_id}")
-            response.raise_for_status()
-            return response.json().get("result", response.json())
+        response = await self._request("GET", f"/api/v1/chart/{chart_id}", timeout=30)
+        return response.json().get("result", response.json())
 
     async def list_dashboards(
         self, page: int = 0, page_size: int = 100, max_pages: int = 100
@@ -73,26 +92,25 @@ class SupersetClient:
         """
         if page < 0 or page_size <= 0 or max_pages <= 0:
             raise ValueError("page must be non-negative; page_size and max_pages must be positive")
-        headers = await self._auth_headers()
-        async with httpx.AsyncClient(base_url=self.base_url, timeout=30, headers=headers) as client:
-            dashboards: list[dict[str, Any]] = []
-            for current_page in range(page, page + max_pages):
-                response = await client.get(
-                    "/api/v1/dashboard/",
-                    params={"page": current_page, "page_size": page_size},
-                )
-                response.raise_for_status()
-                result = response.json()
-                batch = result.get("result", [])
-                if not isinstance(batch, list):
-                    break
-                dashboards.extend(item for item in batch if isinstance(item, dict))
-                count = result.get("count")
-                if not batch or len(batch) < page_size or (
-                    isinstance(count, int) and (current_page + 1) * page_size >= count
-                ):
-                    break
-            return dashboards
+        dashboards: list[dict[str, Any]] = []
+        for current_page in range(page, page + max_pages):
+            response = await self._request(
+                "GET",
+                "/api/v1/dashboard/",
+                timeout=30,
+                params={"page": current_page, "page_size": page_size},
+            )
+            result = response.json()
+            batch = result.get("result", [])
+            if not isinstance(batch, list):
+                break
+            dashboards.extend(item for item in batch if isinstance(item, dict))
+            count = result.get("count")
+            if not batch or len(batch) < page_size or (
+                isinstance(count, int) and (current_page + 1) * page_size >= count
+            ):
+                break
+        return dashboards
 
     @staticmethod
     def _params(chart: dict[str, Any]) -> dict[str, Any]:
@@ -117,6 +135,16 @@ class SupersetClient:
                 continue
             filters.append({"col": subject, "op": operator, "val": comparator})
         return filters
+
+    @staticmethod
+    def _bounded_int(
+        params: dict[str, Any], key: str, default: int, minimum: int, maximum: int
+    ) -> int:
+        try:
+            value = int(params.get(key) or default)
+        except (TypeError, ValueError):
+            value = default
+        return max(minimum, min(value, maximum))
 
     @classmethod
     def _query_context(cls, chart: dict[str, Any]) -> dict[str, Any]:
@@ -156,8 +184,8 @@ class SupersetClient:
                     "columns": columns,
                     "orderby": [],
                     "annotation_layers": [],
-                    "row_limit": int(params.get("row_limit") or 10000),
-                    "series_limit": int(params.get("series_limit") or 0),
+                    "row_limit": cls._bounded_int(params, "row_limit", 10000, 1, 10000),
+                    "series_limit": cls._bounded_int(params, "series_limit", 0, 0, 1000),
                     "order_desc": True,
                     "url_params": {},
                     "custom_params": {},
@@ -186,15 +214,27 @@ class SupersetClient:
         context["force"] = False
         context["result_format"] = "json"
         context["result_type"] = "full"
+        queries = context.get("queries")
+        if isinstance(queries, list):
+            bounded_queries: list[dict[str, Any]] = []
+            for query in queries:
+                if not isinstance(query, dict):
+                    continue
+                bounded_query = dict(query)
+                bounded_query["row_limit"] = cls._bounded_int(
+                    bounded_query, "row_limit", 10000, 1, 10000
+                )
+                bounded_query["series_limit"] = cls._bounded_int(
+                    bounded_query, "series_limit", 0, 0, 1000
+                )
+                bounded_queries.append(bounded_query)
+            context["queries"] = bounded_queries
         return context
 
     async def chart_data(self, chart: dict[str, Any]) -> list[dict[str, Any]]:
-        headers = await self._auth_headers()
-        async with httpx.AsyncClient(base_url=self.base_url, timeout=60, headers=headers) as client:
-            payload = self._saved_query_context(chart) or self._query_context(chart)
-            response = await client.post("/api/v1/chart/data", json=payload)
-            response.raise_for_status()
-            return response.json().get("result", [])
+        payload = self._saved_query_context(chart) or self._query_context(chart)
+        response = await self._request("POST", "/api/v1/chart/data", timeout=60, json=payload)
+        return response.json().get("result", [])
 
     @staticmethod
     def _numeric_keys(rows: Iterable[dict[str, Any]]) -> list[str]:
@@ -229,7 +269,8 @@ class SupersetClient:
             params.get("granularity_sqla"),
             params.get("x_axis"),
         }
-        return next((key for key in numeric_keys if key not in granularity), None)
+        fallback = [key for key in numeric_keys if key not in granularity]
+        return fallback[0] if len(fallback) == 1 else None
 
     @classmethod
     def _time_key(cls, chart: dict[str, Any], rows: list[dict[str, Any]]) -> str | None:
@@ -333,20 +374,27 @@ class SupersetClient:
                 update={"charts": [chart for chart in snapshot.charts if chart.id in selected]}
             )
 
-        charts: list[ChartSnapshot] = []
-        for chart in snapshot.charts:
-            try:
-                chart_metadata = await self.get_chart_metadata(chart.id)
-                observations = self.observations_from_chart_data(
-                    chart_metadata, await self.chart_data(chart_metadata)
-                )
-                charts.append(chart.model_copy(update={"observations": observations}))
-            except (httpx.HTTPError, KeyError, TypeError, ValueError) as error:
-                charts.append(
-                    chart.model_copy(
-                        update={"description": f"Data unavailable from Superset: {error}"}
+        semaphore = asyncio.Semaphore(8)
+
+        async def load_chart(chart: ChartSnapshot) -> ChartSnapshot:
+            async with semaphore:
+                try:
+                    chart_metadata = await self.get_chart_metadata(chart.id)
+                    observations = self.observations_from_chart_data(
+                        chart_metadata, await self.chart_data(chart_metadata)
                     )
-                )
+                    if not observations:
+                        raise ValueError("no unambiguous numeric metric observation was returned")
+                    return chart.model_copy(update={"observations": observations})
+                except (httpx.HTTPError, KeyError, TypeError, ValueError) as error:
+                    return chart.model_copy(
+                        update={
+                            "error": f"Data unavailable from Superset: {error}",
+                            "description": f"Data unavailable from Superset: {error}",
+                        }
+                    )
+
+        charts = await asyncio.gather(*(load_chart(chart) for chart in snapshot.charts))
         return snapshot.model_copy(update={"charts": charts})
 
     @staticmethod

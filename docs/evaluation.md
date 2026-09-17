@@ -59,3 +59,14 @@ Track at least:
 - recipient correction and monitor-card revision rate.
 
 The thresholds in this repository are a starting point for the proof, not a universal calibration. Production thresholds should be set from the company’s consequences and feedback.
+
+## Adversarial cases covered
+
+The automated suite also verifies that the service:
+
+- does not treat source timeouts or missing charts as `ignore`;
+- rejects ambiguous numeric chart results instead of guessing a metric;
+- bounds saved query limits;
+- rejects unapproved recipients;
+- protects HTTP routes when a deployment token is configured; and
+- keeps the MCP health check available without exposing the decision surface.

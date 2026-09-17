@@ -69,19 +69,19 @@ class HeuristicJudger:
                 "No monitored observation crossed the owner-defined materiality threshold.",
                 0.98,
             )
-        elif any("error" in observation.metric for observation in candidates):
+        elif any("error" in observation.metric.lower() for observation in candidates):
             outcome, rationale, confidence = (
                 Outcome.NOTIFY,
                 "A material movement is accompanied by a related error signal.",
                 0.94,
             )
-        elif any("churn" in observation.metric for observation in candidates):
+        elif any("churn" in observation.metric.lower() for observation in candidates):
             outcome, rationale, confidence = (
                 Outcome.NOTIFY,
                 "A material movement is associated with churn, matching the monitoring intent.",
                 0.92,
             )
-        elif any("season" in observation.metric for observation in observations):
+        elif any("season" in observation.metric.lower() for observation in observations):
             outcome, rationale, confidence = (
                 Outcome.IGNORE,
                 "The movement is large, but the dashboard includes an explicit seasonal context signal.",

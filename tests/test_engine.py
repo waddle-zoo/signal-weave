@@ -1,3 +1,5 @@
+import pytest
+
 from semantic_monitor.engine import MonitorEngine
 from semantic_monitor.models import (
     ChartSnapshot,
@@ -87,6 +89,75 @@ async def test_missing_baseline_is_not_treated_as_noop():
     )
     result = await MonitorEngine(HeuristicJudger()).evaluate(dashboard, card)
     assert result.decision.outcome == Outcome.INSUFFICIENT_DATA
+
+
+async def test_source_failure_is_not_treated_as_ignore():
+    dashboard = DashboardSnapshot(
+        id="dash-source-error",
+        title="Unavailable dashboard",
+        charts=[
+            ChartSnapshot(
+                id="chart-broken",
+                title="Broken chart",
+                metric="revenue",
+                error="Data unavailable from Superset: timeout",
+            )
+        ],
+    )
+    card = MonitorCard(
+        id="monitor-source-error",
+        dashboard_id=dashboard.id,
+        title="Broken monitor",
+        intent="Notify when revenue moves materially.",
+        chart_ids=["chart-broken"],
+    )
+
+    result = await MonitorEngine(HeuristicJudger()).evaluate(dashboard, card)
+
+    assert result.decision.outcome == Outcome.INSUFFICIENT_DATA
+    assert result.decision.recipient_key is None
+    assert "timeout" in result.decision.evidence[-1].statement
+
+
+async def test_unapproved_recipient_cannot_be_notified():
+    class UnapprovedRecipientJudger(HeuristicJudger):
+        name = "test-unapproved-recipient"
+
+        async def judge(self, state, card, plan, observations):
+            decision = await HeuristicJudger().judge(state, card, plan, observations)
+            return decision.model_copy(
+                update={"outcome": Outcome.NOTIFY, "recipient_key": "not-allowlisted"}
+            )
+
+    dashboard = scenario_catalog()["revenue_decline"]
+    card = default_cards()["monitor-revenue"]
+    result = await MonitorEngine(UnapprovedRecipientJudger()).evaluate(dashboard, card)
+
+    assert result.decision.outcome == Outcome.INVESTIGATE
+    assert result.decision.recipient_key is None
+
+
+def test_monitor_card_requires_safe_fallback_and_unique_recipients():
+    with pytest.raises(ValueError, match="allowed_outcomes"):
+        MonitorCard(
+            id="unsafe-card",
+            dashboard_id="dashboard",
+            title="Unsafe",
+            intent="Monitor it.",
+            allowed_outcomes=[Outcome.NOTIFY],
+        )
+
+    with pytest.raises(ValueError, match="unique"):
+        MonitorCard(
+            id="duplicate-recipients",
+            dashboard_id="dashboard",
+            title="Duplicate recipients",
+            intent="Monitor it.",
+            recipients=[
+                {"key": "ops", "label": "Ops", "destination": "#ops"},
+                {"key": "ops", "label": "Ops again", "destination": "#ops"},
+            ],
+        )
 
 
 async def test_plan_compilation_is_bounded():

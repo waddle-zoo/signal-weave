@@ -42,7 +42,7 @@ def main() -> None:
 
     serve = subparsers.add_parser("serve", help="Run the MCP server")
     serve.add_argument("--transport", choices=["stdio", "streamable-http"], default="stdio")
-    serve.add_argument("--host", default=os.getenv("MCP_HOST", "0.0.0.0"))
+    serve.add_argument("--host", default=os.getenv("MCP_HOST", "127.0.0.1"))
     serve.add_argument("--port", type=int, default=int(os.getenv("MCP_PORT", "8000")))
 
     prove = subparsers.add_parser(
@@ -67,9 +67,22 @@ def main() -> None:
         if args.transport == "stdio":
             server.run(transport="stdio")
         else:
+            import uvicorn
+
+            from .auth import BearerTokenMiddleware
+
             server.settings.host = args.host
             server.settings.port = args.port
-            server.run(transport="streamable-http")
+            app = server.streamable_http_app()
+            api_token = os.getenv("SIGNALWEAVE_API_TOKEN")
+            if api_token:
+                app.add_middleware(BearerTokenMiddleware, token=api_token)
+            uvicorn.run(
+                app,
+                host=server.settings.host,
+                port=server.settings.port,
+                log_level=server.settings.log_level.lower(),
+            )
     if args.command == "prove":
         mode = args.mode or os.getenv("TYPESAFE_MODE", "heuristic").lower()
         if mode not in {"heuristic", "jev"}:

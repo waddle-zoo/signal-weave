@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import os
+import tempfile
 from pathlib import Path
 from typing import Protocol
 
@@ -91,7 +93,24 @@ class JsonMonitorStore:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         cards = self._load()
         cards[card.id] = card.model_dump(mode="json")
-        self.path.write_text(json.dumps(cards, indent=2) + "\n")
+        temporary_path: str | None = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                mode="w",
+                encoding="utf-8",
+                dir=self.path.parent,
+                prefix=f".{self.path.name}.",
+                suffix=".tmp",
+                delete=False,
+            ) as temporary:
+                temporary_path = temporary.name
+                temporary.write(json.dumps(cards, indent=2) + "\n")
+                temporary.flush()
+                os.fsync(temporary.fileno())
+            os.replace(temporary_path, self.path)
+        finally:
+            if temporary_path and os.path.exists(temporary_path):
+                os.unlink(temporary_path)
 
     def get(self, monitor_id: str) -> MonitorCard:
         cards = self._load()

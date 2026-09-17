@@ -5,7 +5,15 @@ from typing import Any
 
 from .analysis import candidate_observations, evidence_statements, observations_for_plan
 from .compiler import compile_with_typesafe, heuristic_compile
-from .models import DashboardSnapshot, Decision, MonitorCard, MonitorPlan, Observation, Outcome
+from .models import (
+    DashboardSnapshot,
+    Decision,
+    Evidence,
+    MonitorCard,
+    MonitorPlan,
+    Observation,
+    Outcome,
+)
 from .typesafe_adapter import DecisionJudger, HeuristicJudger
 
 
@@ -28,6 +36,7 @@ class MonitorEngine:
     async def evaluate(self, dashboard: DashboardSnapshot, card: MonitorCard) -> Evaluation:
         plan = await self.compile(card)
         observations = observations_for_plan(dashboard, plan)
+        source_errors = self._source_errors(dashboard, plan)
         candidates = candidate_observations(observations, card)
         evidence = [
             {
@@ -46,6 +55,17 @@ class MonitorEngine:
                 candidates, evidence_statements(candidates), strict=False
             )
         ]
+        source_error_evidence = [
+            Evidence(
+                chart_id=error["chart_id"],
+                chart_title=error["chart_title"],
+                statement=error["message"],
+                values={"error": error["message"]},
+                source_url=error.get("source_url"),
+            )
+            for error in source_errors
+        ]
+        evidence.extend(source_error_evidence)
         state: dict[str, Any] = {
             "dashboard": {
                 "id": dashboard.id,
@@ -59,24 +79,103 @@ class MonitorEngine:
             "candidate_observations": [
                 observation.model_dump(mode="json") for observation in candidates
             ],
+            "source_errors": source_errors,
             "evidence": evidence,
         }
         decision = await self.judger.judge(state, card, plan, observations)
-        decision = self._apply_safety_gates(decision, card, observations)
+        decision = self._apply_safety_gates(
+            decision, card, observations, source_errors, source_error_evidence
+        )
         return Evaluation(card=card, plan=plan, decision=decision)
 
     @staticmethod
+    def _source_errors(
+        dashboard: DashboardSnapshot, plan: MonitorPlan
+    ) -> list[dict[str, str | None]]:
+        selected = set(plan.selected_chart_ids)
+        charts = {chart.id: chart for chart in dashboard.charts}
+        errors: list[dict[str, str | None]] = []
+        if not selected:
+            errors.append(
+                {
+                    "chart_id": "*",
+                    "chart_title": "Selected charts",
+                    "message": "The monitoring plan selected no source charts.",
+                    "source_url": dashboard.source_url,
+                }
+            )
+        for chart_id in sorted(selected - charts.keys()):
+            errors.append(
+                {
+                    "chart_id": chart_id,
+                    "chart_title": chart_id,
+                    "message": f"Selected chart {chart_id} was not present in the source dashboard.",
+                    "source_url": dashboard.source_url,
+                }
+            )
+        for chart in dashboard.charts:
+            if chart.id in selected and chart.error:
+                errors.append(
+                    {
+                        "chart_id": chart.id,
+                        "chart_title": chart.title,
+                        "message": chart.error,
+                        "source_url": dashboard.source_url,
+                    }
+                )
+        return errors
+
+    @staticmethod
     def _apply_safety_gates(
-        decision: Decision, card: MonitorCard, observations: list[Observation]
+        decision: Decision,
+        card: MonitorCard,
+        observations: list[Observation],
+        source_errors: list[dict[str, str | None]],
+        source_error_evidence: list[Evidence],
     ) -> Decision:
-        if decision.outcome not in (Outcome.NOTIFY, Outcome.ESCALATE) and decision.recipient_key is not None:
+        allowed_recipient_keys = {recipient.key for recipient in card.recipients}
+        if decision.outcome not in (Outcome.NOTIFY, Outcome.ESCALATE) or (
+            decision.recipient_key not in allowed_recipient_keys
+        ):
             decision = decision.model_copy(update={"recipient_key": None})
+        if source_errors:
+            outcome = (
+                Outcome.INSUFFICIENT_DATA
+                if Outcome.INSUFFICIENT_DATA in card.allowed_outcomes
+                else Outcome.INVESTIGATE
+            )
+            existing_evidence = {
+                (item.chart_id, item.statement) for item in decision.evidence
+            }
+            new_evidence = list(decision.evidence)
+            new_evidence.extend(
+                item
+                for item in source_error_evidence
+                if (item.chart_id, item.statement) not in existing_evidence
+            )
+            return decision.model_copy(
+                update={
+                    "outcome": outcome,
+                    "recipient_key": None,
+                    "rationale": "One or more selected source charts were unavailable or ambiguous, so no automatic action is safe.",
+                    "confidence": max(decision.confidence or 0.0, 0.95),
+                    "evidence": new_evidence,
+                }
+            )
         stale = [
             observation
             for observation in observations
             if observation.freshness and "stale" in observation.freshness.lower()
         ]
         if stale and Outcome.ESCALATE in card.allowed_outcomes:
+            if not card.recipients:
+                return decision.model_copy(
+                    update={
+                        "outcome": Outcome.INVESTIGATE,
+                        "recipient_key": None,
+                        "rationale": "The dashboard is stale, but no approved recipient is available for escalation.",
+                    }
+                )
             return decision.model_copy(
                 update={
                     "outcome": Outcome.ESCALATE,
@@ -109,6 +208,13 @@ class MonitorEngine:
                     "outcome": Outcome.INVESTIGATE,
                     "recipient_key": None,
                     "rationale": f"The semantic decision was {decision.outcome.value}, but confidence {decision.confidence:.2f} is below the automatic-action threshold.",
+                }
+            )
+        if decision.outcome in (Outcome.NOTIFY, Outcome.ESCALATE) and decision.recipient_key is None:
+            return decision.model_copy(
+                update={
+                    "outcome": Outcome.INVESTIGATE,
+                    "rationale": "An automatic action was selected without an approved recipient, so it requires investigation.",
                 }
             )
         return decision

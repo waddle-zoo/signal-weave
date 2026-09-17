@@ -1,3 +1,4 @@
+import httpx
 import pytest
 
 from semantic_monitor.superset_client import SupersetClient
@@ -45,11 +46,28 @@ def test_query_context_preserves_chart_time_grain_and_filters():
     assert query_object["filters"] == [{"col": "region", "op": "IN", "val": ["NA"]}]
 
 
+def test_query_context_bounds_saved_chart_limits():
+    query = SupersetClient._query_context(
+        {"params": {"row_limit": 999999, "series_limit": -10}}
+    )
+
+    query_object = query["queries"][0]
+    assert query_object["row_limit"] == 10000
+    assert query_object["series_limit"] == 0
+
+
 def test_saved_query_context_is_preferred_and_forced_to_bounded_json():
     chart = {
         "query_context": {
             "datasource": {"id": 3, "type": "table"},
-            "queries": [{"columns": ["event_date"], "metrics": ["Revenue"]}],
+            "queries": [
+                {
+                    "columns": ["event_date"],
+                    "metrics": ["Revenue"],
+                    "row_limit": 999999,
+                    "series_limit": -2,
+                }
+            ],
             "result_format": "csv",
             "result_type": "results",
             "force": True,
@@ -63,6 +81,8 @@ def test_saved_query_context_is_preferred_and_forced_to_bounded_json():
     assert query["result_type"] == "full"
     assert query["force"] is False
     assert query["queries"][0]["columns"] == ["event_date"]
+    assert query["queries"][0]["row_limit"] == 10000
+    assert query["queries"][0]["series_limit"] == 0
 
 
 @pytest.mark.asyncio
@@ -73,6 +93,25 @@ async def test_dashboard_paging_arguments_are_bounded():
         with pytest.raises(ValueError):
             # The method validates before opening a network client.
             await client.list_dashboards(*args)
+
+
+@pytest.mark.asyncio
+async def test_dashboard_snapshot_records_source_failures_for_safety_gates():
+    class BrokenClient(SupersetClient):
+        async def get_dashboard_metadata(self, dashboard_id):
+            return {
+                "id": dashboard_id,
+                "dashboard_title": "Broken dashboard",
+                "position_json": '{"chart": {"type": "CHART", "meta": {"chartId": 42}}}',
+            }
+
+        async def get_chart_metadata(self, chart_id):
+            raise httpx.ReadTimeout("source timeout")
+
+    snapshot = await BrokenClient("http://superset").dashboard_snapshot(7)
+
+    assert snapshot.charts[0].error
+    assert "source timeout" in snapshot.charts[0].error
 
 
 def test_time_series_rows_become_a_comparable_observation():
@@ -102,3 +141,12 @@ def test_time_series_rows_become_a_comparable_observation():
     assert observations[0].current == 30
     assert observations[0].baseline == 15
     assert observations[0].change_pct == 100.0
+
+
+def test_ambiguous_numeric_result_is_rejected_instead_of_guessing_metric():
+    observations = SupersetClient.observations_from_chart_data(
+        {"id": 42, "params": {}},
+        [{"data": [{"revenue": 10, "orders": 2}, {"revenue": 12, "orders": 3}]}],
+    )
+
+    assert observations == []

@@ -43,6 +43,8 @@ The workflow is designed so a language model is not responsible for the whole ta
 - Code enforces freshness, baseline availability, recipient allowlists, and confidence thresholds.
 - The returned decision includes the observations and evidence that caused it.
 
+Source failures are first-class state. A missing chart, Superset timeout, empty result, or ambiguous metric is represented as evidence and routed to `insufficient_data`/`investigate`; it cannot silently become `ignore`.
+
 That separation gives the team a useful middle ground: more context-sensitive than a static alert, more deterministic and economical than repeatedly asking a general LLM to inspect a full dashboard.
 
 ## Monitor lifecycle

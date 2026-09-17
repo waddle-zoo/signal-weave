@@ -82,6 +82,8 @@ Example push payload:
 
 Set `PUSH_WEBHOOK_TOKEN` to require `Authorization: Bearer ...` on that endpoint.
 
+For a deployed HTTP service, set `SIGNALWEAVE_API_TOKEN` outside the repository. It protects MCP and webhook traffic while leaving `/healthz` available to container orchestration. The local demo intentionally leaves it blank.
+
 ## Use TypeSafe when it helps
 
 The offline heuristic is the default for local development and deterministic tests. Jev is enabled explicitly and reads the key only at runtime:
@@ -124,4 +126,4 @@ This project intentionally leaves several responsibilities to the surrounding co
 - Charts without a saved query context or a comparable baseline return evidence plus `investigate`/`insufficient_data` rather than guessing.
 - Monitor cards are stored locally in JSON for the proof. Production deployments should put them behind the company’s normal database, identity, review, and audit controls.
 
-Read [docs/architecture.md](docs/architecture.md), then follow [docs/demo.md](docs/demo.md) for the full local walkthrough. The evidence standard is documented in [docs/evaluation.md](docs/evaluation.md).
+Read [docs/architecture.md](docs/architecture.md), then follow [docs/demo.md](docs/demo.md) for the full local walkthrough. The evidence standard is documented in [docs/evaluation.md](docs/evaluation.md), and the adversarial security/operations boundary is in [docs/security.md](docs/security.md).

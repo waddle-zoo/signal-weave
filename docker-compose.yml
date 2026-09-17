@@ -66,6 +66,7 @@ services:
       MONITOR_STORE: /app/data/monitors.json
       MCP_HOST: 0.0.0.0
       MCP_PORT: 8000
+      SIGNALWEAVE_API_TOKEN: ${SIGNALWEAVE_API_TOKEN:-}
       PUSH_WEBHOOK_TOKEN: ${PUSH_WEBHOOK_TOKEN:-}
     volumes:
       - monitor_data:/app/data
@@ -73,7 +74,7 @@ services:
       - "${MONITOR_PORT_HOST:-18000}:8000"
     command: ["python", "-m", "semantic_monitor.cli", "serve", "--transport", "streamable-http"]
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz', timeout=3)"]
       interval: 10s
       timeout: 5s
       retries: 10

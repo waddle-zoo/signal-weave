@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from enum import StrEnum
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class Outcome(StrEnum):
@@ -34,6 +34,7 @@ class ChartSnapshot(BaseModel):
     title: str
     metric: str
     description: str = ""
+    error: str | None = None
     observations: list[Observation] = Field(default_factory=list)
     related_chart_ids: list[str] = Field(default_factory=list)
 
@@ -49,23 +50,23 @@ class DashboardSnapshot(BaseModel):
 
 
 class Recipient(BaseModel):
-    key: str
-    label: str
-    destination: str
+    key: str = Field(min_length=1, max_length=120)
+    label: str = Field(min_length=1, max_length=200)
+    destination: str = Field(min_length=1, max_length=500)
 
 
 class MonitorCard(BaseModel):
-    id: str
-    dashboard_id: str
-    title: str
-    intent: str
-    chart_ids: list[str] = Field(default_factory=list)
+    id: str = Field(min_length=1, max_length=160)
+    dashboard_id: str = Field(min_length=1, max_length=160)
+    title: str = Field(min_length=1, max_length=200)
+    intent: str = Field(min_length=1, max_length=8000)
+    chart_ids: list[str] = Field(default_factory=list, max_length=200)
     comparison_windows: list[str] = Field(
         default_factory=lambda: ["previous_period", "trailing_4_period_average"]
     )
     investigation_hints: list[str] = Field(default_factory=list)
-    materiality_threshold_pct: float = 10.0
-    recipients: list[Recipient] = Field(default_factory=list)
+    materiality_threshold_pct: float = Field(default=10.0, ge=0.0, le=100000.0)
+    recipients: list[Recipient] = Field(default_factory=list, max_length=100)
     allowed_outcomes: list[Outcome] = Field(
         default_factory=lambda: [
             Outcome.IGNORE,
@@ -76,7 +77,17 @@ class MonitorCard(BaseModel):
         ]
     )
     owner: str | None = None
-    version: int = 1
+    version: int = Field(default=1, ge=1)
+
+    @model_validator(mode="after")
+    def validate_routing_contract(self) -> MonitorCard:
+        safe_outcomes = {Outcome.INVESTIGATE, Outcome.INSUFFICIENT_DATA}
+        if not safe_outcomes.intersection(self.allowed_outcomes):
+            raise ValueError("allowed_outcomes must include investigate or insufficient_data")
+        recipient_keys = [recipient.key for recipient in self.recipients]
+        if len(recipient_keys) != len(set(recipient_keys)):
+            raise ValueError("recipient keys must be unique")
+        return self
 
 
 class MonitorPlan(BaseModel):
