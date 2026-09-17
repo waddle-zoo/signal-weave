@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 280" role="img" aria-labelledby="title desc">
+  <title id="title">SignalWeave decision flow</title>
+  <desc id="desc">Approved sources become bounded evidence, TypeSafe Jev makes typed judgments, code applies safety gates, and an existing agent or push system acts.</desc>
+  <style>
+    .label { fill: #101828; font: 700 19px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    .detail { fill: #667085; font: 500 14px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    .arrow { stroke: #98a2b3; stroke-width: 3; fill: none; stroke-linecap: round; }
+    @media (prefers-color-scheme: dark) {
+      .label { fill: #f8fafc; }
+      .detail { fill: #98a2b3; }
+      .arrow { stroke: #667085; }
+    }
+  </style>
+  <defs>
+    <linearGradient id="source" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ecfdf3"/><stop offset="1" stop-color="#d1fae5"/></linearGradient>
+    <linearGradient id="evidence" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#eff8ff"/><stop offset="1" stop-color="#dbeafe"/></linearGradient>
+    <linearGradient id="jev" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#eef4ff"/><stop offset="1" stop-color="#e0e7ff"/></linearGradient>
+    <linearGradient id="guard" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff6ed"/><stop offset="1" stop-color="#ffead5"/></linearGradient>
+    <linearGradient id="action" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fdf2fa"/><stop offset="1" stop-color="#fce7f3"/></linearGradient>
+    <marker id="arrowhead" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto"><path d="M0 0 L9 3.5 L0 7 Z" fill="#98a2b3"/></marker>
+  </defs>
+  <rect width="1200" height="280" rx="28" fill="#ffffff"/>
+  <path class="arrow" marker-end="url(#arrowhead)" d="M220 140 H254"/>
+  <path class="arrow" marker-end="url(#arrowhead)" d="M454 140 H488"/>
+  <path class="arrow" marker-end="url(#arrowhead)" d="M688 140 H722"/>
+  <path class="arrow" marker-end="url(#arrowhead)" d="M922 140 H956"/>
+  <g transform="translate(20 55)">
+    <rect width="200" height="170" rx="18" fill="url(#source)" stroke="#12b76a" stroke-opacity=".35"/>
+    <text class="label" x="22" y="48">Approved sources</text>
+    <text class="detail" x="22" y="84">Dashboards · queries</text>
+    <text class="detail" x="22" y="108">jobs · ownership data</text>
+    <text class="detail" x="22" y="144">bounded references</text>
+  </g>
+  <g transform="translate(254 55)">
+    <rect width="200" height="170" rx="18" fill="url(#evidence)" stroke="#2e90fa" stroke-opacity=".35"/>
+    <text class="label" x="22" y="48">Typed evidence</text>
+    <text class="detail" x="22" y="84">Observations · context</text>
+    <text class="detail" x="22" y="108">freshness · provenance</text>
+    <text class="detail" x="22" y="144">inspectable snapshots</text>
+  </g>
+  <g transform="translate(488 55)">
+    <rect width="200" height="170" rx="18" fill="url(#jev)" stroke="#6366f1" stroke-opacity=".4"/>
+    <text class="label" x="22" y="48">TypeSafe Jev</text>
+    <text class="detail" x="22" y="84">Narrow semantic</text>
+    <text class="detail" x="22" y="108">judgments and choices</text>
+    <text class="detail" x="22" y="144">confidence as signal</text>
+  </g>
+  <g transform="translate(722 55)">
+    <rect width="200" height="170" rx="18" fill="url(#guard)" stroke="#f79009" stroke-opacity=".4"/>
+    <text class="label" x="22" y="48">Safety gates</text>
+    <text class="detail" x="22" y="84">Policy · baselines</text>
+    <text class="detail" x="22" y="108">permissions · freshness</text>
+    <text class="detail" x="22" y="144">code-owned outcomes</text>
+  </g>
+  <g transform="translate(956 55)">
+    <rect width="220" height="170" rx="18" fill="url(#action)" stroke="#ec4a9d" stroke-opacity=".35"/>
+    <text class="label" x="22" y="48">Existing action</text>
+    <text class="detail" x="22" y="84">Agent · webhook</text>
+    <text class="detail" x="22" y="108">Slack · ticket · pager</text>
+    <text class="detail" x="22" y="144">your system acts</text>
+  </g>
+</svg>
