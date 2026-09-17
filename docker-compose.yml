@@ -51,7 +51,7 @@ services:
       timeout: 5s
       retries: 30
 
-  monitor:
+  signal-weave:
     build: .
     depends_on:
       superset:
@@ -63,17 +63,17 @@ services:
       SUPERSET_URL: http://superset:8088
       SUPERSET_USERNAME: admin
       SUPERSET_PASSWORD: admin
-      MONITOR_STORE: /app/data/workflows.json
+      INSIGHT_CARD_STORE: /app/data/insight-cards.json
       MCP_HOST: 0.0.0.0
       MCP_PORT: 8000
       SIGNALWEAVE_API_TOKEN: ${SIGNALWEAVE_API_TOKEN:-}
       PUSH_WEBHOOK_TOKEN: ${PUSH_WEBHOOK_TOKEN:-}
     volumes:
       - ${TYPESAFE_API_KEY_FILE:-./secrets/typesafe_api_key}:/run/secrets/typesafe_api_key:ro
-      - monitor_data:/app/data
+      - insight_card_data:/app/data
     ports:
-      - "127.0.0.1:${MONITOR_PORT_HOST:-18000}:8000"
-    command: ["python", "-m", "semantic_monitor.cli", "serve", "--transport", "streamable-http"]
+      - "127.0.0.1:${SIGNALWEAVE_PORT_HOST:-18000}:8000"
+    command: ["python", "-m", "signalweave.cli", "serve", "--transport", "streamable-http"]
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz', timeout=3)"]
       interval: 10s
@@ -83,4 +83,4 @@ services:
 volumes:
   postgres_data:
   superset_home:
-  monitor_data:
+  insight_card_data:

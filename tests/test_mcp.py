@@ -1,6 +1,6 @@
-from semantic_monitor.engine import MonitorEngine
-from semantic_monitor.mcp_server import create_mcp
-from semantic_monitor.runtime import Runtime
+from signalweave.engine import InsightEngine
+from signalweave.mcp_server import create_mcp
+from signalweave.runtime import Runtime
 
 
 class StubStore:
@@ -12,34 +12,35 @@ class StubStore:
 class TestJudger:
     name = "jev-test-double"
 
-    async def compile_plan(self, state, workflow):
-        del state, workflow
-        return {"operations": ["freshness_check"]}
+    async def compile_plan(self, state, card):
+        del state, card
+        return {"capabilities": ["freshness_check"], "baseline": "previous_period"}
 
-    async def judge(self, state, workflow, plan, observations):
-        from semantic_monitor.models import Decision, Outcome
+    async def judge(self, state, card, plan, observations):
+        from signalweave.models import InsightResult, Outcome
 
         del plan
-        return Decision(
+        return InsightResult(
+            card_id=card.id,
             outcome=Outcome.INVESTIGATE,
+            summary="Test-only result.",
             rationale="Test-only result.",
             confidence=1.0,
             evidence=state["evidence"],
             observations=observations,
-            workflow_id=workflow.id,
-            source_keys=[source.key for source in workflow.sources],
+            source_keys=[source.key for source in card.sources],
             evaluator=self.name,
         )
 
 
 def test_server_exposes_mcp_object():
-    from semantic_monitor.sources import SourceRegistry
+    from signalweave.sources import SourceRegistry
 
     server = create_mcp(
         Runtime(
-            workflow_store=StubStore(),
+            card_store=StubStore(),
             sources=SourceRegistry(),
-            engine=MonitorEngine(TestJudger()),
+            engine=InsightEngine(TestJudger()),
         )
     )
     assert server.name == "signal-weave"

@@ -1,19 +1,19 @@
 import httpx
 import pytest
 
-from semantic_monitor.engine import MonitorEngine
-from semantic_monitor.mcp_server import create_mcp
-from semantic_monitor.models import (
-    Decision,
+from signalweave.engine import InsightEngine
+from signalweave.mcp_server import create_mcp
+from signalweave.models import (
     Evidence,
+    InsightResult,
     Observation,
     Outcome,
     ResourceDescriptor,
     ResourceSnapshot,
 )
-from semantic_monitor.runtime import Runtime
-from semantic_monitor.sources import SourceRegistry
-from semantic_monitor.store import JsonWorkflowStore
+from signalweave.runtime import Runtime
+from signalweave.sources import SourceRegistry
+from signalweave.store import JsonInsightCardStore
 
 
 class SupersetCatalogDouble:
@@ -81,24 +81,25 @@ class OnboardingJevDouble:
             for resource in resources
         }
 
-    async def compile_plan(self, state, workflow):
+    async def compile_plan(self, state, card):
         del state
         return {
-            "operations": ["percent_change", "cross_source_comparison"],
-            "baseline": workflow.comparison_windows[0],
+            "capabilities": ["percent_change", "cross_source_comparison"],
+            "baseline": card.comparison_windows[0],
         }
 
-    async def judge(self, state, workflow, plan, observations):
+    async def judge(self, state, card, plan, observations):
         del plan
-        return Decision(
+        return InsightResult(
+            card_id=card.id,
             outcome=Outcome.NOTIFY,
-            recipient_key=workflow.recipients[0].key if workflow.recipients else None,
+            summary="Test-only onboarding result.",
             rationale="Test-only onboarding decision.",
             confidence=0.91,
             probabilities={Outcome.NOTIFY.value: 0.91},
+            delivery_methods=[],
             evidence=[Evidence.model_validate(item) for item in state["evidence"]],
             observations=observations,
-            workflow_id=workflow.id,
             source_keys=[source["source_key"] for source in state["sources"]],
             evaluator=self.name,
         )
@@ -110,10 +111,10 @@ class NoResourceRankingJudger:
 
 def make_server(tmp_path):
     registry = SourceRegistry([SupersetCatalogDouble()])
-    engine = MonitorEngine(OnboardingJevDouble(), registry=registry)
+    engine = InsightEngine(OnboardingJevDouble(), registry=registry)
     return create_mcp(
         Runtime(
-            workflow_store=JsonWorkflowStore(tmp_path / "workflows.json"),
+            card_store=JsonInsightCardStore(tmp_path / "cards.json"),
             sources=registry,
             engine=engine,
         )
@@ -125,99 +126,146 @@ def tool(server, name):
 
 
 @pytest.mark.asyncio
-async def test_goal_to_card_flow_discovers_proposes_previews_and_requires_approval(tmp_path):
+async def test_generic_card_flow_discovers_proposes_previews_and_requires_approval(tmp_path):
     server = make_server(tmp_path)
 
-    discovery = await tool(server, "discover_monitor_inputs")(
-        goal="Watch growth checkout conversion for revenue risk.",
+    discovery = await tool(server, "discover_insight_sources")(
+        goal="Checkout conversion and mobile revenue risk.",
         adapter="superset",
         limit=2,
     )
     assert discovery["matches"][0]["resource"] == "dashboard:7"
     assert discovery["matches"][0]["recommended"] is True
 
-    proposal = await tool(server, "propose_monitor_card")(
-        goal="Watch growth checkout conversion for revenue risk.",
+    proposal = await tool(server, "propose_insight_card")(
+        what_to_watch="Checkout conversion and related mobile signals.",
+        why_watch="Help Growth decide whether a conversion movement needs action.",
+        watch_for=["Checkout conversion is materially down.", "Mobile errors corroborate the movement."],
+        questions=["Is mobile the likely source of the regression?"],
         selected_sources=[
             {
                 "ref": "superset|dashboard:7",
                 "parameters": {"chart_ids": ["62", "64"]},
             }
         ],
-        recipients=[
+        delivery_methods=[
             {
                 "key": "growth-ops",
+                "outcome": "notify",
                 "label": "Growth Ops",
                 "destination": "slack://growth-ops",
             }
         ],
     )
-    workflow_id = proposal["proposal"]["workflow"]["id"]
+    card_id = proposal["proposal"]["card"]["id"]
     assert proposal["proposal"]["status"] == "draft"
-    assert proposal["proposal"]["workflow"]["sources"][0]["parameters"] == {
+    assert proposal["proposal"]["card"]["what_to_watch"].startswith("Checkout")
+    assert proposal["proposal"]["card"]["watch_for"] == [
+        "Checkout conversion is materially down.",
+        "Mobile errors corroborate the movement.",
+    ]
+    assert proposal["proposal"]["card"]["sources"][0]["parameters"] == {
         "chart_ids": ["62", "64"]
     }
-    assert proposal["proposal"]["questions"]
+    assert proposal["proposal"]["setup_questions"]
 
-    stored = tool(server, "get_monitor_card")(workflow_id)
+    stored = tool(server, "get_insight_card")(card_id)
     assert stored["status"] == "draft"
-    assert tool(server, "list_monitor_cards")(status="draft")["count"] == 1
+    assert tool(server, "list_insight_cards")(status="draft")["count"] == 1
 
     with pytest.raises(ValueError, match="draft"):
-        await tool(server, "evaluate_workflow")(workflow_id)
+        await tool(server, "evaluate_insight_card")(card_id)
 
     app = server.streamable_http_app()
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
     ) as client:
-        response = await client.post(
-            "/webhooks/evaluate", json={"workflow_id": workflow_id}
-        )
+        response = await client.post("/webhooks/evaluate", json={"card_id": card_id})
     assert response.status_code == 409
 
-    preview = await tool(server, "simulate_monitor_card")(workflow_id)
+    preview = await tool(server, "simulate_insight_card")(card_id)
     assert preview["status"] == "preview"
     assert preview["delivery_enabled"] is False
-    assert preview["decision"]["outcome"] == "notify"
+    assert preview["result"]["outcome"] == "notify"
+    assert preview["result"]["delivery_methods"][0]["key"] == "growth-ops"
 
-    approved = await tool(server, "approve_monitor_card")(workflow_id)
+    approved = await tool(server, "approve_insight_card")(card_id)
     assert approved["status"] == "approved"
-    assert tool(server, "get_monitor_card")(workflow_id)["status"] == "approved"
-    assert tool(server, "list_monitor_cards")(status="approved")["count"] == 1
-    evaluated = await tool(server, "evaluate_workflow")(workflow_id)
-    assert evaluated["decision"]["recipient_key"] == "growth-ops"
+    assert tool(server, "get_insight_card")(card_id)["status"] == "approved"
+    assert tool(server, "list_insight_cards")(status="approved")["count"] == 1
+    evaluated = await tool(server, "evaluate_insight_card")(card_id)
+    assert evaluated["result"]["delivery_methods"][0]["key"] == "growth-ops"
 
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
     ) as client:
-        response = await client.post(
-            "/webhooks/evaluate", json={"workflow_id": workflow_id}
-        )
+        response = await client.post("/webhooks/evaluate", json={"card_id": card_id})
     assert response.status_code == 200
-    assert response.json()["recipient_key"] == "growth-ops"
+    assert response.json()["delivery_methods"][0]["key"] == "growth-ops"
 
 
 @pytest.mark.asyncio
 async def test_proposal_rejects_source_not_returned_by_discovery(tmp_path):
     server = make_server(tmp_path)
 
-    with pytest.raises(ValueError, match="discover_monitor_inputs"):
-        await tool(server, "propose_monitor_card")(
-            goal="Watch checkout conversion.",
+    with pytest.raises(ValueError, match="discover_insight_sources"):
+        await tool(server, "propose_insight_card")(
+            what_to_watch="Checkout conversion.",
+            why_watch="Decide whether Growth should act.",
             selected_sources=[{"ref": "superset|dashboard:999"}],
         )
 
 
-def test_mcp_exposes_conversational_authoring_tools(tmp_path):
+@pytest.mark.asyncio
+async def test_direct_draft_accepts_free_form_card_and_outcome_routes(tmp_path):
+    server = make_server(tmp_path)
+    drafted = await tool(server, "draft_insight_card")(
+        title="Cross-system data health",
+        what_to_watch="A Superset dashboard and a warehouse quality query.",
+        why_watch="Decide whether an analyst can trust the numbers.",
+        sources=[
+            {
+                "key": "dashboard",
+                "adapter": "superset",
+                "resource": "dashboard:7",
+                "label": "Growth overview",
+            },
+            {
+                "key": "quality",
+                "adapter": "superset",
+                "resource": "dashboard:8",
+                "label": "Finance close",
+            },
+        ],
+        questions=["Can the current numbers be trusted?"],
+        delivery_methods=[
+            {
+                "key": "analyst-review",
+                "outcome": "investigate",
+                "label": "Analyst review",
+                "destination": "queue://analysts",
+            }
+        ],
+    )
+    assert drafted["card"]["what_to_watch"].startswith("A Superset")
+    assert drafted["plan"]["capabilities"] == [
+        "percent_change",
+        "cross_source_comparison",
+    ]
+
+
+def test_mcp_exposes_generic_authoring_tools(tmp_path):
     server = make_server(tmp_path)
     names = set(server._tool_manager._tools)
     assert {
-        "discover_monitor_inputs",
-        "propose_monitor_card",
-        "simulate_monitor_card",
-        "approve_monitor_card",
-        "list_monitor_cards",
-        "get_monitor_card",
+        "discover_insight_sources",
+        "propose_insight_card",
+        "draft_insight_card",
+        "simulate_insight_card",
+        "approve_insight_card",
+        "evaluate_insight_card",
+        "list_insight_cards",
+        "get_insight_card",
     } <= names
 
 
@@ -226,11 +274,11 @@ async def test_discovery_requires_jev_resource_ranking(tmp_path):
     registry = SourceRegistry([SupersetCatalogDouble()])
     server = create_mcp(
         Runtime(
-            workflow_store=JsonWorkflowStore(tmp_path / "workflows.json"),
+            card_store=JsonInsightCardStore(tmp_path / "cards.json"),
             sources=registry,
-            engine=MonitorEngine(NoResourceRankingJudger(), registry=registry),
+            engine=InsightEngine(NoResourceRankingJudger(), registry=registry),
         )
     )
 
     with pytest.raises(RuntimeError, match="does not support resource discovery"):
-        await tool(server, "discover_monitor_inputs")(goal="Watch growth")
+        await tool(server, "discover_insight_sources")(goal="Checkout growth")

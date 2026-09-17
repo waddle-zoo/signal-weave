@@ -1,16 +1,17 @@
 import json
 
-from semantic_monitor.models import MonitorWorkflow, SourceRef
-from semantic_monitor.store import JsonWorkflowStore
+from signalweave.models import InsightCard, SourceRef
+from signalweave.store import JsonInsightCardStore
 
 
-def test_monitor_store_writes_valid_catalog_atomically(tmp_path):
-    path = tmp_path / "monitors.json"
-    store = JsonWorkflowStore(path)
-    workflow = MonitorWorkflow(
-        id="monitor-1",
+def test_insight_card_store_writes_valid_catalog_atomically(tmp_path):
+    path = tmp_path / "cards.json"
+    store = JsonInsightCardStore(path)
+    card = InsightCard(
+        id="card-1",
         title="Sales pulse",
-        intent="Notify when sales move materially.",
+        what_to_watch="Sales movement.",
+        why_watch="Decide whether Sales should act.",
         sources=[
             SourceRef(
                 key="sales",
@@ -21,7 +22,9 @@ def test_monitor_store_writes_valid_catalog_atomically(tmp_path):
         ],
     )
 
-    store.save_workflow(workflow)
+    store.save_card(card)
 
-    assert json.loads(path.read_text())["monitor-1"]["title"] == "Sales pulse"
+    assert json.loads(path.read_text())["card-1"]["title"] == "Sales pulse"
+    assert store.get_card("card-1").what_to_watch == "Sales movement."
+    assert store.list_cards()[0].id == "card-1"
     assert list(tmp_path.glob("*.tmp")) == []

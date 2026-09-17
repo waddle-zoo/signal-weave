@@ -2,12 +2,12 @@
 
 SignalWeave’s extension point is a read-only source adapter, not a new workflow
 runtime. Add an adapter when a company already has a system that owns the fact or
-status needed by a decision workflow.
+status needed by an insight card.
 
 ## Contract
 
 ```python
-from semantic_monitor.models import ResourceDescriptor, ResourceSnapshot, SourceRef
+from signalweave.models import ResourceDescriptor, ResourceSnapshot, SourceRef
 
 
 class SourceAdapter:
@@ -49,9 +49,9 @@ Airflow    dag:warehouse_load parameters.run="latest"
 Table      table:warehouse.orders parameters.check="exists_and_fresh"
 ```
 
-A mixed workflow can reference all four. The registry resolves them concurrently
+A mixed card can reference all four. The registry resolves them concurrently
 with a bounded fan-out, and the engine gives Jev the resulting snapshots together
-so owner intent can be evaluated over their relationships.
+so the card’s author guidance can be evaluated over their relationships.
 
 ## SQL adapter boundary
 
@@ -86,8 +86,8 @@ registry = SourceRegistry([
     ApprovedQueryAdapter(query_catalog, warehouse),
     AirflowStatusAdapter(airflow_client),
 ])
-engine = MonitorEngine(judger=JevJudger(api_key=key), registry=registry)
+engine = InsightEngine(judger=JevJudger(api_key=key), registry=registry)
 ```
 
 The MCP tools then discover all installed resources through `list_resources`, and
-the workflow schema does not change.
+the insight-card schema does not change.

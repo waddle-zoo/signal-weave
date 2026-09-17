@@ -18,7 +18,7 @@ class SourceAdapter(Protocol):
 
 
 class SourceRegistry:
-    """Resolve workflow source refs through explicitly installed adapters."""
+    """Resolve insight-card source refs through explicitly installed adapters."""
 
     def __init__(
         self, adapters: Iterable[SourceAdapter] = (), *, max_concurrency: int = 8

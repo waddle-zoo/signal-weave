@@ -4,7 +4,7 @@ import httpx
 
 from evaluations.cases import load_evaluation_cases
 from evaluations.embedding_baseline import EmbeddingReasoningJudger
-from semantic_monitor.compiler import base_plan
+from signalweave.compiler import base_plan
 
 
 async def test_embedding_reasoning_adapter_uses_two_calls_and_typed_json():
@@ -29,9 +29,11 @@ async def test_embedding_reasoning_adapter_uses_two_calls_and_typed_json():
                 "choices": [
                     {
                         "message": {
-                            "content": '{"outcome":"notify","recipient_key":"growth",'
+                            "content": '{"outcome":"notify",'
                             '"rationale":"Related mobile evidence supports notification.",'
-                            '"confidence":0.81,"probabilities":{"notify":0.81,"investigate":0.19}}'
+                            '"confidence":0.81,"watch_results":[{"key":"watch_0","probability":0.91}],'
+                            '"question_results":[{"key":"question_0","probability":0.84}],'
+                            '"probabilities":{"notify":0.81,"investigate":0.19}}'
                         }
                     }
                 ],
@@ -40,7 +42,7 @@ async def test_embedding_reasoning_adapter_uses_two_calls_and_typed_json():
         )
 
     case = next(case for case in load_evaluation_cases() if case.id == "mobile_conversion")
-    workflow = case.workflow
+    card = case.card
     observations = [
         observation
         for resource in case.resources
@@ -67,13 +69,13 @@ async def test_embedding_reasoning_adapter_uses_two_calls_and_typed_json():
 
     decision = await judger.judge(
         state,
-        workflow,
-        base_plan(workflow),
+        card,
+        base_plan(card),
         observations,
     )
 
     assert decision.outcome.value == "notify"
-    assert decision.recipient_key == "growth"
+    assert [method.key for method in decision.delivery_methods] == ["growth", "engineering-oncall"]
     assert decision.confidence == 0.81
     assert [request.url.path for request in requests] == ["/v1/embeddings", "/v1/chat/completions"]
     assert judger.metrics.requests == 2
@@ -110,9 +112,11 @@ async def test_openai_responses_baseline_uses_strict_schema_and_counts_usage():
                 "output_text": json.dumps(
                     {
                         "outcome": "notify",
-                        "recipient_key": "growth",
                         "rationale": "Related mobile evidence supports notification.",
                         "confidence": 0.81,
+                        "watch_results": [{"key": "watch_0", "probability": 0.91}],
+                        "question_results": [{"key": "question_0", "probability": 0.84}],
+                        "probabilities": {"notify": 0.81},
                     }
                 ),
                 "usage": {"input_tokens": 30, "output_tokens": 8},
@@ -148,13 +152,13 @@ async def test_openai_responses_baseline_uses_strict_schema_and_counts_usage():
 
     decision = await judger.judge(
         state,
-        case.workflow,
-        base_plan(case.workflow),
+        case.card,
+        base_plan(case.card),
         observations,
     )
 
     assert decision.outcome.value == "notify"
-    assert decision.recipient_key == "growth"
+    assert [method.key for method in decision.delivery_methods] == ["growth", "engineering-oncall"]
     assert decision.probabilities == {"notify": 0.81}
     assert [request.url.path for request in requests] == ["/v1/embeddings", "/v1/responses"]
     assert judger.metrics.requests == 2

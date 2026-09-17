@@ -1,17 +1,17 @@
 # SignalWeave roadmap
 
 This is a working tracker, not a promise or a product catalog. The project stays
-focused on one job: turning approved operational evidence into a bounded,
-explainable decision that an existing system can act on.
+focused on one job: turning an approved insight card and existing operational
+evidence into a bounded, explainable result that an existing system can act on.
 
 ## Current focus
 
 - [x] Jev-only production decision path with no implicit heuristic fallback
-- [x] Source-oriented workflow and adapter contracts
+- [x] Source-oriented insight-card and adapter contracts
 - [x] Superset-backed local demo and integration tests
-- [x] MCP tools for cataloging, goal-to-card discovery, drafting, preview, approval, and evaluation
+- [x] MCP tools for cataloging, goal-to-card discovery, free-form drafting, preview, approval, and evaluation
 - [x] Webhook surface for push-triggered evaluation
-- [x] Code-owned evidence, freshness, recipient, and confidence safety gates
+- [x] Code-owned evidence, freshness, delivery-method, and confidence safety gates
 - [x] External-input evaluation and embedding/reasoning comparison harness
 - [ ] Adversarial review of the public README, examples, security posture, and
       product claims
@@ -26,8 +26,8 @@ production-control gaps explicit.
       an apples-to-apples Jev comparison (see [`docs/evidence-brief.md`](docs/evidence-brief.md))
 - [ ] Add a small operator-facing UI or integrate the authoring protocol with an
       existing company agent
-- [ ] Add durable workflow versioning and decision traces suitable for review
-- [ ] Add one second approved read-only source adapter to prove the contract is
+- [ ] Add durable card versioning and result traces suitable for review
+- [ ] Add one second approved read-only source adapter to prove the card contract is
       useful beyond a single BI system
 - [ ] Document deployment patterns for an existing scheduler, agent, and delivery
       system without adding orchestration to SignalWeave
@@ -38,8 +38,8 @@ production-control gaps explicit.
       relationships, precedents, conflicts, and provenance
 - [ ] Record human feedback as append-only, provenance-bearing events linked to a
       decision and context version
-- [ ] Let agents propose workflow or graph changes for human approval; never let
-      raw feedback silently rewrite policy
+- [ ] Let agents propose card or graph changes for human approval; never let raw
+      feedback silently rewrite policy
 - [ ] Add context-aware Jev judgments that can distinguish known explanations from
       genuinely new movement
 - [ ] Add calibrated routing metrics for false alerts, missed actions, latency,

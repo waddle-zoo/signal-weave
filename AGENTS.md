@@ -18,18 +18,18 @@ unrelated repositories as part of work in this repository.
 - `src/` contains reusable production code, not demos, trial scenarios, benchmark
   labels, company names, hard-coded dashboard IDs, or test-only metrics.
 - `evaluations/` and `examples/` stay outside the service import path.
-- Workflows are source-adapter driven and may combine multiple approved sources,
-  while Superset remains the first-class shipped integration.
+- Insight cards are source-adapter driven and may combine multiple approved
+  sources, while Superset remains the first-class shipped integration.
 - Source adapters fetch bounded, typed evidence and never accept arbitrary code or
   unrestricted queries from an MCP caller.
 - Jev supplies narrow typed judgments. Code owns control flow, numeric and
   freshness checks, permissions, safety gates, retries, idempotency, and side
   effects.
-- Recipients, actions, source references, and operation types are always bounded by
-  an explicit workflow or adapter allowlist. Never let a model invent them.
+- Delivery methods, outcomes, source references, and capability types are always
+  bounded by an explicit card or adapter allowlist. Never let a model invent them.
 - Confidence is a routing signal, not proof. A low-confidence automatic action must
   be downgraded or escalated according to code-owned policy.
-- Draft workflows may be simulated for review, but MCP and webhook evaluation must
+- Draft cards may be simulated for review, but MCP and webhook evaluation must
   reject them until an explicit approval transition occurs.
 - Secrets and production data must not be committed, printed in tests, or sent to
   external services without explicit configuration and authorization.
@@ -59,7 +59,7 @@ Do not introduce a scheduler, durable workflow engine, general-purpose agent loo
 or generic knowledge-management product into this repository. Integrate with those
 systems through bounded adapters and webhooks. Keep graph context and human
 feedback versioned and provenance-bearing if that layer is added; raw feedback
-must not silently rewrite a workflow or knowledge graph.
+must not silently rewrite a card or knowledge graph.
 
 When adding an adapter, document its reference grammar, authentication model,
 bounded query behavior, freshness semantics, failure evidence, and tests in

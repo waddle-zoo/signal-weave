@@ -7,32 +7,33 @@ from typing import Any
 from .analysis import candidate_observations, evidence_statements, observations_for_plan
 from .compiler import compile_with_typesafe
 from .models import (
-    Decision,
+    DeliveryMethod,
     Evidence,
-    MonitorPlan,
-    MonitorWorkflow,
+    InsightCard,
+    InsightPlan,
+    InsightResult,
     Observation,
     Outcome,
     ResourceSnapshot,
 )
 from .sources import SourceRegistry
-from .typesafe_adapter import DecisionJudger, JevJudger
+from .typesafe_adapter import InsightJudger, JevJudger
 
 
 @dataclass
-class Evaluation:
-    workflow: MonitorWorkflow
+class InsightRun:
+    card: InsightCard
     resources: list[ResourceSnapshot]
-    plan: MonitorPlan
-    decision: Decision
+    plan: InsightPlan
+    result: InsightResult
 
 
-class MonitorEngine:
-    """Evaluate a user workflow over one or more adapter-provided snapshots."""
+class InsightEngine:
+    """Evaluate a user-authored insight card over adapter-provided snapshots."""
 
     def __init__(
         self,
-        judger: DecisionJudger | None = None,
+        judger: InsightJudger | None = None,
         registry: SourceRegistry | None = None,
     ) -> None:
         self.judger = judger or JevJudger()
@@ -40,47 +41,50 @@ class MonitorEngine:
 
     async def compile(
         self,
-        workflow: MonitorWorkflow,
+        card: InsightCard,
         resources: list[ResourceSnapshot] | None = None,
-    ) -> MonitorPlan:
-        if workflow.compiled_plan is not None:
-            return workflow.compiled_plan
+    ) -> InsightPlan:
+        if card.compiled_plan is not None and card.compiled_plan.card_version == card.version:
+            return card.compiled_plan
         state = {
             "sources": (
                 [resource.model_dump(mode="json") for resource in resources]
                 if resources is not None
-                else [source.model_dump(mode="json") for source in workflow.sources]
+                else [source.model_dump(mode="json") for source in card.sources]
             )
         }
-        return await compile_with_typesafe(workflow, self.judger, state=state)
+        return await compile_with_typesafe(card, self.judger, state=state)
 
     async def evaluate(
         self,
-        workflow: MonitorWorkflow,
+        card: InsightCard,
         resources: list[ResourceSnapshot] | None = None,
-    ) -> Evaluation:
+    ) -> InsightRun:
         if resources is None:
             if self.registry is None:
-                raise ValueError("MonitorEngine needs resources or a SourceRegistry")
-            resources = await self.registry.resolve(workflow.sources)
+                raise ValueError("InsightEngine needs resources or a SourceRegistry")
+            resources = await self.registry.resolve(card.sources)
         else:
             resources = list(resources)
 
-        plan = await self.compile(workflow, resources)
+        plan = await self.compile(card, resources)
         observations = observations_for_plan(resources, plan.selected_source_keys)
         observations = self._apply_comparison_window(observations, plan)
-        source_errors = self._source_errors(workflow, resources)
+        source_errors = self._source_errors(card, resources)
         blocking_source_errors = [error for error in source_errors if error["blocking"]]
-        candidates = candidate_observations(observations, workflow)
-        candidate_keys = {
+
+        # Priority ordering helps a client render the interesting rows first. It
+        # is not a retrieval boundary: all observations remain in state/evidence.
+        priority_observations = candidate_observations(observations)
+        priority_keys = {
             (observation.source_key, observation.subject_id, observation.metric)
-            for observation in candidates
+            for observation in priority_observations
         }
-        evidence_observations = candidates + [
+        evidence_observations = priority_observations + [
             observation
             for observation in observations
             if (observation.source_key, observation.subject_id, observation.metric)
-            not in candidate_keys
+            not in priority_keys
         ]
         evidence = [
             Evidence(
@@ -94,12 +98,12 @@ class MonitorEngine:
                     "previous": observation.previous,
                     "change_pct": observation.change_pct,
                     "freshness": observation.freshness,
-                    "candidate": (
+                    "priority": (
                         observation.source_key,
                         observation.subject_id,
                         observation.metric,
                     )
-                    in candidate_keys,
+                    in priority_keys,
                     "metric": observation.metric,
                     "unit": observation.unit,
                     "dimensions": observation.dimensions,
@@ -133,35 +137,31 @@ class MonitorEngine:
         evidence.extend(source_error_evidence)
         evidence_payload = [item.model_dump(mode="json") for item in evidence]
         state: dict[str, Any] = {
-            "workflow": workflow.model_dump(mode="json"),
-            "monitor_workflow": workflow.model_dump(mode="json"),
-            "monitor_plan": plan.model_dump(mode="json"),
+            "card": card.model_dump(mode="json"),
+            "insight_card": card.model_dump(mode="json"),
+            "insight_plan": plan.model_dump(mode="json"),
             "sources": [resource.model_dump(mode="json") for resource in resources],
             "observations": [observation.model_dump(mode="json") for observation in observations],
-            "candidate_observations": [
-                observation.model_dump(mode="json") for observation in candidates
+            "priority_observations": [
+                observation.model_dump(mode="json") for observation in priority_observations
             ],
             "source_errors": source_errors,
             "evidence": evidence_payload,
         }
-        decision = await self.judger.judge(state, workflow, plan, observations)
-        decision = self._apply_safety_gates(
-            decision,
-            workflow,
+        result = await self.judger.judge(state, card, plan, observations)
+        result = self._apply_safety_gates(
+            result,
+            card,
+            plan,
             observations,
             blocking_source_errors,
             source_error_evidence,
         )
-        return Evaluation(
-            workflow=workflow,
-            resources=resources,
-            plan=plan,
-            decision=decision,
-        )
+        return InsightRun(card=card, resources=resources, plan=plan, result=result)
 
     @staticmethod
     def _apply_comparison_window(
-        observations: list[Observation], plan: MonitorPlan
+        observations: list[Observation], plan: InsightPlan
     ) -> list[Observation]:
         """Use the compiled window when the source exposes that baseline."""
         window = plan.comparison_windows[0] if plan.comparison_windows else "previous_period"
@@ -184,9 +184,9 @@ class MonitorEngine:
 
     @staticmethod
     def _source_errors(
-        workflow: MonitorWorkflow, resources: list[ResourceSnapshot]
+        card: InsightCard, resources: list[ResourceSnapshot]
     ) -> list[dict[str, Any]]:
-        declared = {source.key: source for source in workflow.sources}
+        declared = {source.key: source for source in card.sources}
         provided = {resource.source_key: resource for resource in resources}
         errors: list[dict[str, Any]] = []
         if not declared:
@@ -194,8 +194,8 @@ class MonitorEngine:
                 {
                     "source_key": "*",
                     "resource": "*",
-                    "label": "Workflow sources",
-                    "message": "The workflow declares no source references.",
+                    "label": "Insight card sources",
+                    "message": "The insight card declares no source references.",
                     "source_url": None,
                     "blocking": True,
                 }
@@ -235,12 +235,12 @@ class MonitorEngine:
                         "blocking": source.required,
                     }
                 )
-            if resource is not None and workflow.max_source_age_hours is not None:
+            if resource is not None and card.max_source_age_hours is not None:
                 captured_at = resource.captured_at
                 if captured_at.tzinfo is None:
                     captured_at = captured_at.replace(tzinfo=timezone.utc)
                 age_hours = (datetime.now(timezone.utc) - captured_at).total_seconds() / 3600
-                if age_hours > workflow.max_source_age_hours:
+                if age_hours > card.max_source_age_hours:
                     errors.append(
                         {
                             "source_key": key,
@@ -248,7 +248,7 @@ class MonitorEngine:
                             "label": resource.title or source.label,
                             "message": (
                                 f"Source snapshot is {age_hours:.1f} hours old; maximum is "
-                                f"{workflow.max_source_age_hours:g} hours."
+                                f"{card.max_source_age_hours:g} hours."
                             ),
                             "source_url": resource.source_url,
                             "blocking": source.required,
@@ -257,120 +257,144 @@ class MonitorEngine:
         return errors
 
     @staticmethod
+    def _delivery_methods_for(card: InsightCard, outcome: Outcome) -> list[DeliveryMethod]:
+        return [method for method in card.delivery_methods if method.outcome == outcome]
+
+    @classmethod
+    def _with_outcome(
+        cls,
+        result: InsightResult,
+        card: InsightCard,
+        outcome: Outcome,
+        **updates: Any,
+    ) -> InsightResult:
+        updates = {
+            **updates,
+            "outcome": outcome,
+            "delivery_methods": cls._delivery_methods_for(card, outcome),
+        }
+        return result.model_copy(update=updates)
+
+    @classmethod
     def _apply_safety_gates(
-        decision: Decision,
-        workflow: MonitorWorkflow,
+        cls,
+        result: InsightResult,
+        card: InsightCard,
+        plan: InsightPlan,
         observations: list[Observation],
         blocking_source_errors: list[dict[str, Any]],
         source_error_evidence: list[Evidence],
-    ) -> Decision:
-        if decision.outcome not in workflow.allowed_outcomes:
-            fallback = (
-                Outcome.INSUFFICIENT_DATA
-                if Outcome.INSUFFICIENT_DATA in workflow.allowed_outcomes
-                else Outcome.INVESTIGATE
+    ) -> InsightResult:
+        safe_outcomes = {Outcome.IGNORE, Outcome.INVESTIGATE, Outcome.INSUFFICIENT_DATA}
+        configured_outcomes = {method.outcome for method in card.delivery_methods}
+        available_outcomes = safe_outcomes | configured_outcomes
+        if result.outcome not in available_outcomes:
+            return cls._with_outcome(
+                result,
+                card,
+                Outcome.INVESTIGATE,
+                rationale=(
+                    f"The semantic result returned unavailable outcome "
+                    f"{result.outcome.value}; routed to investigate."
+                ),
             )
-            return decision.model_copy(
-                update={
-                    "outcome": fallback,
-                    "recipient_key": None,
-                    "rationale": (
-                        f"The semantic decision returned disallowed outcome "
-                        f"{decision.outcome.value}; routed to {fallback.value}."
-                    ),
-                }
-            )
-        allowed_recipient_keys = {recipient.key for recipient in workflow.recipients}
-        if decision.outcome not in (Outcome.NOTIFY, Outcome.ESCALATE) or (
-            decision.recipient_key not in allowed_recipient_keys
-        ):
-            decision = decision.model_copy(update={"recipient_key": None})
+
         if blocking_source_errors:
-            outcome = (
-                Outcome.INSUFFICIENT_DATA
-                if Outcome.INSUFFICIENT_DATA in workflow.allowed_outcomes
-                else Outcome.INVESTIGATE
-            )
             existing_evidence = {
-                (item.source_key, item.subject_id, item.statement) for item in decision.evidence
+                (item.source_key, item.subject_id, item.statement) for item in result.evidence
             }
-            new_evidence = list(decision.evidence)
+            new_evidence = list(result.evidence)
             new_evidence.extend(
                 item
                 for item in source_error_evidence
                 if (item.source_key, item.subject_id, item.statement) not in existing_evidence
             )
-            return decision.model_copy(
-                update={
-                    "outcome": outcome,
-                    "recipient_key": None,
-                    "rationale": "One or more required workflow sources were unavailable, so no automatic action is safe.",
-                    "confidence": max(decision.confidence or 0.0, 0.95),
-                    "evidence": new_evidence,
-                }
+            return cls._with_outcome(
+                result,
+                card,
+                Outcome.INSUFFICIENT_DATA,
+                rationale=(
+                    "One or more required card sources were unavailable, so no automatic "
+                    "interpretation is safe."
+                ),
+                confidence=max(result.confidence or 0.0, 0.95),
+                evidence=new_evidence,
             )
+
         stale = [
             observation
             for observation in observations
             if observation.freshness and "stale" in observation.freshness.lower()
         ]
-        if stale and Outcome.ESCALATE in workflow.allowed_outcomes:
-            if not workflow.recipients:
-                return decision.model_copy(
-                    update={
-                        "outcome": Outcome.INVESTIGATE,
-                        "recipient_key": None,
-                        "rationale": "A workflow source is stale, but no approved recipient is available for escalation.",
-                    }
-                )
-            return decision.model_copy(
-                update={
-                    "outcome": Outcome.ESCALATE,
-                    "recipient_key": (
-                        workflow.escalation_recipient_key or workflow.recipients[0].key
-                    ),
-                    "rationale": "A hard freshness gate requires escalation before interpreting the workflow sources.",
-                    "confidence": max(decision.confidence or 0.0, 0.99),
-                }
-            )
-        if observations and not any(observation.change_pct is not None for observation in observations):
-            outcome = (
-                Outcome.INSUFFICIENT_DATA
-                if Outcome.INSUFFICIENT_DATA in workflow.allowed_outcomes
+        if stale:
+            stale_outcome = (
+                Outcome.ESCALATE
+                if cls._delivery_methods_for(card, Outcome.ESCALATE)
                 else Outcome.INVESTIGATE
             )
-            return decision.model_copy(
-                update={
-                    "outcome": outcome,
-                    "recipient_key": None,
-                    "rationale": "The workflow returned observations but no comparable baseline, so no automatic action is safe.",
-                    "confidence": max(decision.confidence or 0.0, 0.95),
-                }
+            return cls._with_outcome(
+                result,
+                card,
+                stale_outcome,
+                rationale=(
+                    "A freshness gate found stale evidence; the result requires attention "
+                    "before interpreting the movement."
+                ),
+                confidence=max(result.confidence or 0.0, 0.99),
             )
+
+        numeric_observations = [observation for observation in observations if observation.current is not None]
+        if numeric_observations and not any(
+            observation.change_pct is not None for observation in numeric_observations
+        ):
+            return cls._with_outcome(
+                result,
+                card,
+                Outcome.INSUFFICIENT_DATA,
+                rationale=(
+                    "Numeric observations were returned without a comparable baseline, "
+                    "so no automatic interpretation is safe."
+                ),
+                confidence=max(result.confidence or 0.0, 0.95),
+            )
+
         if (
-            decision.outcome in (Outcome.IGNORE, Outcome.NOTIFY, Outcome.ESCALATE)
+            result.outcome in (Outcome.IGNORE, Outcome.NOTIFY, Outcome.ESCALATE)
             and (
-                decision.confidence is None
-                or decision.confidence < workflow.action_confidence_threshold
+                result.confidence is None
+                or result.confidence < card.action_confidence_threshold
             )
         ):
             confidence_text = (
-                f"confidence {decision.confidence:.2f}"
-                if decision.confidence is not None
+                f"confidence {result.confidence:.2f}"
+                if result.confidence is not None
                 else "no confidence"
             )
-            return decision.model_copy(
-                update={
-                    "outcome": Outcome.INVESTIGATE,
-                    "recipient_key": None,
-                    "rationale": f"The semantic decision was {decision.outcome.value}, but {confidence_text} is below the automatic-action threshold.",
-                }
+            return cls._with_outcome(
+                result,
+                card,
+                Outcome.INVESTIGATE,
+                rationale=(
+                    f"The semantic result was {result.outcome.value}, but {confidence_text} "
+                    "is below the automatic-action threshold."
+                ),
             )
-        if decision.outcome in (Outcome.NOTIFY, Outcome.ESCALATE) and decision.recipient_key is None:
-            return decision.model_copy(
-                update={
-                    "outcome": Outcome.INVESTIGATE,
-                    "rationale": "An automatic action was selected without an approved recipient, so it requires investigation.",
-                }
+
+        if result.outcome in (Outcome.NOTIFY, Outcome.ESCALATE) and not cls._delivery_methods_for(
+            card, result.outcome
+        ):
+            return cls._with_outcome(
+                result,
+                card,
+                Outcome.INVESTIGATE,
+                rationale=(
+                    "An automatic outcome was selected without a configured delivery method, "
+                    "so it requires investigation."
+                ),
             )
-        return decision
+
+        # Delivery routes are always selected from the stored card, never from
+        # model output. This keeps destinations and side effects code-owned.
+        return result.model_copy(
+            update={"delivery_methods": cls._delivery_methods_for(card, result.outcome)}
+        )

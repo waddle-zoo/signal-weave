@@ -4,10 +4,12 @@ from datetime import datetime, timezone
 from enum import StrEnum
 from typing import Any
 
-from pydantic import AliasChoices, BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, model_validator
 
 
 class Outcome(StrEnum):
+    """The small set of outcomes a card can produce."""
+
     IGNORE = "ignore"
     INVESTIGATE = "investigate"
     NOTIFY = "notify"
@@ -15,15 +17,27 @@ class Outcome(StrEnum):
     INSUFFICIENT_DATA = "insufficient_data"
 
 
-class WorkflowStatus(StrEnum):
+class InsightCardStatus(StrEnum):
     DRAFT = "draft"
     APPROVED = "approved"
 
 
-class SourceRef(BaseModel):
-    """A workflow-owned reference to one approved resource in one adapter.
+class WatchStatus(StrEnum):
+    PRESENT = "present"
+    ABSENT = "absent"
+    UNKNOWN = "unknown"
 
-    ``resource`` is intentionally opaque to the workflow engine. The adapter owns
+
+class QuestionStatus(StrEnum):
+    SUPPORTED = "supported"
+    NOT_SUPPORTED = "not_supported"
+    UNKNOWN = "unknown"
+
+
+class SourceRef(BaseModel):
+    """A card-owned reference to one approved resource in one adapter.
+
+    ``resource`` is intentionally opaque to the insight engine. The adapter owns
     its locator grammar and execution policy. For example, the Superset adapter
     accepts ``dashboard:7``; a future SQL adapter can accept ``query:orders_daily``
     without making SQL a core engine concern.
@@ -50,7 +64,7 @@ class ResourceDescriptor(BaseModel):
 
 
 class ResourceMatch(BaseModel):
-    """A bounded catalog candidate ranked for a user's monitoring goal."""
+    """A bounded catalog candidate ranked for a user's insight goal."""
 
     ref: str
     adapter: str
@@ -78,14 +92,8 @@ class Observation(BaseModel):
     """A normalized fact from any source, not necessarily a dashboard metric."""
 
     source_key: str = "unknown"
-    subject_id: str = Field(
-        default="unknown",
-        validation_alias=AliasChoices("subject_id", "chart_id"),
-    )
-    subject_label: str = Field(
-        default="unknown",
-        validation_alias=AliasChoices("subject_label", "chart_title"),
-    )
+    subject_id: str = "unknown"
+    subject_label: str = "unknown"
     subject_type: str = "metric"
     metric: str
     unit: str = "number"
@@ -101,17 +109,11 @@ class Observation(BaseModel):
 
 
 class Evidence(BaseModel):
-    """A source-provided or engine-derived fact shown with the decision."""
+    """A source-provided or engine-derived fact shown with an insight result."""
 
     source_key: str = "unknown"
-    subject_id: str = Field(
-        default="unknown",
-        validation_alias=AliasChoices("subject_id", "chart_id"),
-    )
-    subject_label: str = Field(
-        default="unknown",
-        validation_alias=AliasChoices("subject_label", "chart_title"),
-    )
+    subject_id: str = "unknown"
+    subject_label: str = "unknown"
     statement: str
     values: dict[str, Any] = Field(default_factory=dict)
     source_url: str | None = None
@@ -133,93 +135,115 @@ class ResourceSnapshot(BaseModel):
     captured_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
-class Recipient(BaseModel):
+class DeliveryMethod(BaseModel):
+    """A configured way to deliver one outcome to a caller-owned destination."""
+
     key: str = Field(min_length=1, max_length=120)
+    outcome: Outcome
     label: str = Field(min_length=1, max_length=200)
     destination: str = Field(min_length=1, max_length=500)
+    instructions: str = Field(default="", max_length=4000)
 
 
-class MonitorPlan(BaseModel):
-    workflow_id: str
+class InsightPlan(BaseModel):
+    """Jev's bounded execution plan for one insight card."""
+
+    card_id: str
+    card_version: int = Field(default=1, ge=1)
     selected_source_keys: list[str]
     comparison_windows: list[str]
-    operations: list[str]
-    investigation_questions: list[str]
-    recipient_keys: list[str]
+    capabilities: list[str]
+    watch_for: list[str] = Field(default_factory=list)
+    questions: list[str] = Field(default_factory=list)
+    delivery_method_keys: list[str] = Field(default_factory=list)
     compiled_by: str = "jev-latest"
-    source_intent: str
+    card_scope: str
 
 
-class MonitorWorkflow(BaseModel):
-    """The user-authored workflow contract evaluated by SignalWeave."""
+class InsightCard(BaseModel):
+    """The small, free-form contract a person authors for an insight."""
 
     id: str = Field(min_length=1, max_length=160)
     title: str = Field(min_length=1, max_length=200)
-    intent: str = Field(min_length=1, max_length=8000)
+    what_to_watch: str = Field(min_length=1, max_length=8000)
+    why_watch: str = Field(min_length=1, max_length=4000)
+    watch_for: list[str] = Field(default_factory=list, max_length=100)
+    questions: list[str] = Field(default_factory=list, max_length=100)
     sources: list[SourceRef] = Field(default_factory=list, max_length=200)
     comparison_windows: list[str] = Field(
         default_factory=lambda: ["previous_period", "trailing_4_period_average"],
         max_length=20,
     )
-    investigation_hints: list[str] = Field(default_factory=list, max_length=50)
-    materiality_threshold_pct: float = Field(default=10.0, ge=0.0, le=100000.0)
     action_confidence_threshold: float = Field(default=0.70, ge=0.0, le=1.0)
-    materiality_definition: str | None = Field(default=None, max_length=4000)
-    outcome_guidance: dict[str, str] = Field(default_factory=dict, max_length=10)
-    recipients: list[Recipient] = Field(default_factory=list, max_length=100)
-    allowed_outcomes: list[Outcome] = Field(default_factory=lambda: list(Outcome))
-    owner: str | None = None
+    owner: str | None = Field(default=None, max_length=240)
     version: int = Field(default=1, ge=1)
     max_source_age_hours: float | None = Field(default=24.0, ge=0.0, le=876000.0)
-    escalation_recipient_key: str | None = None
-    compiled_plan: MonitorPlan | None = None
-    status: WorkflowStatus = WorkflowStatus.DRAFT
+    delivery_methods: list[DeliveryMethod] = Field(default_factory=list, max_length=100)
+    compiled_plan: InsightPlan | None = None
+    status: InsightCardStatus = InsightCardStatus.DRAFT
 
     @model_validator(mode="after")
-    def validate_routing_contract(self) -> MonitorWorkflow:
-        safe_outcomes = {Outcome.INVESTIGATE, Outcome.INSUFFICIENT_DATA}
-        if not safe_outcomes.intersection(self.allowed_outcomes):
-            raise ValueError("allowed_outcomes must include investigate or insufficient_data")
+    def validate_contract(self) -> InsightCard:
         source_keys = [source.key for source in self.sources]
         if len(source_keys) != len(set(source_keys)):
-            raise ValueError("source keys must be unique within a workflow")
-        recipient_keys = [recipient.key for recipient in self.recipients]
-        if len(recipient_keys) != len(set(recipient_keys)):
-            raise ValueError("recipient keys must be unique")
-        if self.escalation_recipient_key and self.escalation_recipient_key not in recipient_keys:
-            raise ValueError("escalation_recipient_key must name an approved recipient")
+            raise ValueError("source keys must be unique within an insight card")
+        delivery_keys = [method.key for method in self.delivery_methods]
+        if len(delivery_keys) != len(set(delivery_keys)):
+            raise ValueError("delivery method keys must be unique")
+        for field_name in ("watch_for", "questions", "comparison_windows"):
+            values = getattr(self, field_name)
+            if any(not value.strip() for value in values):
+                raise ValueError(f"{field_name} entries must not be empty")
         if self.compiled_plan:
-            if self.compiled_plan.workflow_id != self.id:
-                raise ValueError("compiled_plan must belong to its workflow")
+            if self.compiled_plan.card_id != self.id:
+                raise ValueError("compiled_plan must belong to its insight card")
+            if self.compiled_plan.card_version != self.version:
+                raise ValueError("compiled_plan must match the insight card version")
             if not set(self.compiled_plan.selected_source_keys).issubset(source_keys):
-                raise ValueError("compiled_plan may only select workflow sources")
-        unknown_guidance = set(self.outcome_guidance) - {
-            outcome.value for outcome in self.allowed_outcomes
-        }
-        if unknown_guidance:
-            raise ValueError("outcome_guidance may only describe allowed_outcomes")
+                raise ValueError("compiled_plan may only select card sources")
+            if not set(self.compiled_plan.delivery_method_keys).issubset(delivery_keys):
+                raise ValueError("compiled_plan may only select card delivery methods")
         return self
 
 
-class MonitorCardProposal(BaseModel):
-    """A human-reviewable monitor card assembled from a natural-language goal."""
+class InsightCardProposal(BaseModel):
+    """A human-reviewable card assembled from a natural-language goal."""
 
-    workflow: MonitorWorkflow
-    plan: MonitorPlan
+    card: InsightCard
+    plan: InsightPlan
     discovery: ResourceDiscovery
-    questions: list[str] = Field(default_factory=list)
-    status: WorkflowStatus = WorkflowStatus.DRAFT
+    setup_questions: list[str] = Field(default_factory=list)
+    status: InsightCardStatus = InsightCardStatus.DRAFT
 
 
-class Decision(BaseModel):
+class WatchResult(BaseModel):
+    key: str
+    watch_for: str
+    status: WatchStatus
+    probability: float = Field(ge=0.0, le=1.0)
+
+
+class QuestionResult(BaseModel):
+    key: str
+    question: str
+    status: QuestionStatus
+    probability: float = Field(ge=0.0, le=1.0)
+
+
+class InsightResult(BaseModel):
+    """Typed outcome plus the evidence and per-item judgments behind it."""
+
+    card_id: str
     outcome: Outcome
-    recipient_key: str | None = None
+    delivery_methods: list[DeliveryMethod] = Field(default_factory=list)
+    summary: str
     rationale: str
-    confidence: float | None = None
+    confidence: float | None = Field(default=None, ge=0.0, le=1.0)
     probabilities: dict[str, float] = Field(default_factory=dict)
+    watch_results: list[WatchResult] = Field(default_factory=list)
+    question_results: list[QuestionResult] = Field(default_factory=list)
     evidence: list[Evidence] = Field(default_factory=list)
     observations: list[Observation] = Field(default_factory=list)
-    workflow_id: str
     source_keys: list[str] = Field(default_factory=list)
     evaluated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     evaluator: str

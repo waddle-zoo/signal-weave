@@ -7,10 +7,10 @@ from .superset_client import SupersetClient
 class SupersetAdapter:
     """First-class Superset adapter for saved dashboards and chart data.
 
-    Workflows can reference several dashboards, or narrow one dashboard with
+    Insight cards can reference several dashboards, or narrow one dashboard with
     ``parameters.chart_ids``. The adapter preserves dashboard owners, chart
     relationships, saved metric definitions, and normalized chart observations
-    in the generic snapshot consumed by the workflow engine.
+    in the generic snapshot consumed by the insight engine.
     """
 
     name = "superset"

@@ -7,16 +7,16 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from semantic_monitor.models import MonitorWorkflow, Observation, ResourceSnapshot, SourceRef
+from signalweave.models import InsightCard, Observation, ResourceSnapshot, SourceRef
 
 
 @dataclass(frozen=True)
 class EvaluationCase:
     id: str
     expected_outcome: str
-    expected_recipient: str | None
+    expected_delivery_methods: list[str]
     resources: list[ResourceSnapshot]
-    workflow: MonitorWorkflow
+    card: InsightCard
 
 
 def default_fixture_path() -> Path:
@@ -66,9 +66,9 @@ def _normalize_dashboard(raw: dict[str, Any]) -> tuple[ResourceSnapshot, str]:
     return resource, source_key
 
 
-def _workflow_from_card(
+def _card_from_fixture(
     raw: dict[str, Any], dashboard: dict[str, Any], source_key: str
-) -> MonitorWorkflow:
+) -> InsightCard:
     card = dict(raw)
     chart_ids = card.pop("chart_ids", [])
     card.pop("dashboard_id", None)
@@ -81,7 +81,7 @@ def _workflow_from_card(
             parameters={"chart_ids": chart_ids} if chart_ids else {},
         )
     ]
-    return MonitorWorkflow.model_validate(card)
+    return InsightCard.model_validate(card)
 
 
 def load_evaluation_cases(path: str | Path | None = None) -> list[EvaluationCase]:
@@ -94,9 +94,9 @@ def load_evaluation_cases(path: str | Path | None = None) -> list[EvaluationCase
             EvaluationCase(
                 id=item["id"],
                 expected_outcome=item["expected_outcome"],
-                expected_recipient=item.get("expected_recipient"),
+                expected_delivery_methods=item.get("expected_delivery_methods", []),
                 resources=[resource],
-                workflow=_workflow_from_card(item["monitor_card"], item["dashboard"], source_key),
+                card=_card_from_fixture(item["insight_card"], item["dashboard"], source_key),
             )
         )
     return cases

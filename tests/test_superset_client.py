@@ -1,9 +1,9 @@
 import httpx
 import pytest
 
-from semantic_monitor.models import SourceRef
-from semantic_monitor.superset_adapter import SupersetAdapter
-from semantic_monitor.superset_client import SupersetClient
+from signalweave.models import SourceRef
+from signalweave.superset_adapter import SupersetAdapter
+from signalweave.superset_client import SupersetClient
 
 
 def test_metadata_mapping_is_read_only_and_safe():

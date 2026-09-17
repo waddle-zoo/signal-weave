@@ -3,8 +3,17 @@ from types import SimpleNamespace
 import pytest
 import typesafe_sdk
 
-from semantic_monitor.models import ResourceDescriptor
-from semantic_monitor.typesafe_adapter import JevJudger
+from signalweave.compiler import base_plan
+from signalweave.models import (
+    DeliveryMethod,
+    Evidence,
+    InsightCard,
+    Observation,
+    Outcome,
+    ResourceDescriptor,
+    SourceRef,
+)
+from signalweave.typesafe_adapter import JevJudger
 
 
 class FakeNoul:
@@ -17,10 +26,31 @@ class FakeResponse:
     usage = SimpleNamespace(input_tokens=41, output_tokens=7)
 
     def __init__(self, questions):
-        self.nouls = {
-            key: SimpleNamespace(noul=0.91 if key == "resource_0" else 0.08)
-            for key in questions
-        }
+        self.nouls = {}
+        self.choices = {}
+        for key in questions:
+            if key == "baseline":
+                self.choices[key] = SimpleNamespace(choice="previous_period")
+                continue
+            if key == "resource_0":
+                probability = 0.91
+            elif key.startswith("resource_"):
+                probability = 0.08
+            elif key.startswith("watch_"):
+                probability = 0.91
+            elif key.startswith("question_"):
+                probability = 0.83
+            elif key.startswith("use_"):
+                probability = 0.91
+            elif key == "outcome_notify":
+                probability = 0.93
+            elif key == "outcome_ignore":
+                probability = 0.05
+            elif key == "outcome_investigate":
+                probability = 0.10
+            else:
+                probability = 0.08
+            self.nouls[key] = SimpleNamespace(noul=probability)
 
 
 class FakeClient:
@@ -63,7 +93,7 @@ async def test_jev_rank_resources_uses_typed_questions_and_returns_probabilities
         ),
     ]
 
-    scores = await judger.rank_resources("Monitor revenue risk", resources)
+    scores = await judger.rank_resources("Understand revenue risk", resources)
 
     assert scores == {
         "superset|dashboard:growth": 0.91,
@@ -71,10 +101,104 @@ async def test_jev_rank_resources_uses_typed_questions_and_returns_probabilities
     }
     assert len(FakeClient.calls) == 1
     call = FakeClient.calls[0]
-    assert call["state"]["goal"] == "Monitor revenue risk"
+    assert call["state"]["goal"] == "Understand revenue risk"
     assert len(call["state"]["candidate_resources"]) == 2
     assert set(call["questions"]) == {"resource_0", "resource_1"}
     assert all(isinstance(question, FakeNoul) for question in call["questions"].values())
     assert judger.metrics.requests == 1
     assert judger.metrics.input_tokens == 41
     assert judger.metrics.output_tokens == 7
+
+
+@pytest.mark.asyncio
+async def test_jev_compiles_and_judges_free_form_card_items(monkeypatch):
+    FakeClient.calls = []
+    monkeypatch.setattr(typesafe_sdk, "AsyncTypeSafeClient", FakeClient)
+    monkeypatch.setattr(typesafe_sdk, "Noul", FakeNoul)
+    judger = JevJudger(api_key="synthetic-test-key", timeout=3)
+    source = SourceRef(
+        key="sales-signals",
+        adapter="superset",
+        resource="dashboard:7",
+        label="Sales signals",
+    )
+    card = InsightCard(
+        id="card-free-form",
+        title="Sales pulse",
+        what_to_watch="Revenue and the related signals that explain whether sales are on course.",
+        why_watch="Help the revenue team decide what deserves attention this week.",
+        watch_for=["Revenue falls while a related signal corroborates the movement."],
+        questions=["Is there enough evidence to notify the revenue team?"],
+        sources=[source],
+        delivery_methods=[
+            DeliveryMethod(
+                key="revenue-team",
+                outcome=Outcome.NOTIFY,
+                label="Revenue team",
+                destination="slack://revenue-team",
+            )
+        ],
+    )
+    compile_state = {
+        "card": card.model_dump(mode="json"),
+        "insight_card": card.model_dump(mode="json"),
+        "sources": [source.model_dump(mode="json")],
+        "available_capabilities": [
+            {"key": "percent_change", "description": "Compare current and baseline values."},
+            {"key": "related_context_check", "description": "Use related source context."},
+        ],
+    }
+
+    compiled = await judger.compile_plan(compile_state, card)
+    plan = base_plan(card).model_copy(
+        update={
+            "capabilities": compiled["capabilities"],
+            "comparison_windows": [compiled["baseline"]],
+        }
+    )
+    observation = Observation(
+        source_key=source.key,
+        subject_id="revenue",
+        subject_label="Revenue",
+        metric="revenue",
+        unit="USD",
+        current=820.0,
+        baseline=1000.0,
+        change_pct=-18.0,
+    )
+    evidence = Evidence(
+        source_key=source.key,
+        subject_id=observation.subject_id,
+        subject_label=observation.subject_label,
+        statement="Revenue is down 18% versus the previous period.",
+    )
+    result = await judger.judge(
+        {
+            "card": card.model_dump(mode="json"),
+            "insight_card": card.model_dump(mode="json"),
+            "insight_plan": plan.model_dump(mode="json"),
+            "observations": [observation.model_dump(mode="json")],
+            "evidence": [evidence.model_dump(mode="json")],
+        },
+        card,
+        plan,
+        [observation],
+    )
+
+    assert compiled["capabilities"] == ["percent_change", "related_context_check"]
+    assert compiled["baseline"] == "previous_period"
+    assert result.outcome == Outcome.NOTIFY
+    assert result.watch_results[0].status.value == "present"
+    assert result.question_results[0].status.value == "supported"
+    assert result.observations == [observation]
+    assert len(FakeClient.calls) == 2
+    judge_call = FakeClient.calls[1]
+    assert set(judge_call["questions"]) == {
+        "watch_0",
+        "question_0",
+        "outcome_ignore",
+        "outcome_investigate",
+        "outcome_notify",
+    }
+    assert judge_call["state"]["insight_card"]["what_to_watch"] == card.what_to_watch
+    assert judge_call["state"]["insight_card"]["questions"] == card.questions

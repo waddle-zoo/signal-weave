@@ -5,11 +5,11 @@ from dataclasses import dataclass
 from typing import Any, Protocol
 from uuid import uuid4
 
-from .compiler import SUPPORTED_OPERATIONS
+from .compiler import SUPPORTED_CAPABILITIES
 from .models import (
-    MonitorCardProposal,
-    MonitorWorkflow,
-    Recipient,
+    DeliveryMethod,
+    InsightCard,
+    InsightCardProposal,
     ResourceDescriptor,
     ResourceDiscovery,
     ResourceMatch,
@@ -34,7 +34,7 @@ def resource_ref(resource: ResourceDescriptor) -> str:
 
 
 def _slug(value: str) -> str:
-    return re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")[:80] or "monitor"
+    return re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")[:80] or "insight"
 
 
 def _terms(value: str) -> set[str]:
@@ -44,13 +44,35 @@ def _terms(value: str) -> set[str]:
 def _search_text(resource: ResourceDescriptor) -> str:
     metadata = " ".join(str(value) for value in resource.metadata.values())
     return " ".join(
-        [resource.adapter, resource.resource, resource.kind, resource.title, resource.description, metadata]
+        [
+            resource.adapter,
+            resource.resource,
+            resource.kind,
+            resource.title,
+            resource.description,
+            metadata,
+        ]
     )
 
 
+def insight_goal(
+    what_to_watch: str,
+    why_watch: str,
+    watch_for: list[str] | None = None,
+    questions: list[str] | None = None,
+) -> str:
+    """Create the discovery query without adding another card concept."""
+    parts = [what_to_watch.strip(), f"Purpose: {why_watch.strip()}"]
+    if watch_for:
+        parts.append("Look for: " + "; ".join(watch_for))
+    if questions:
+        parts.append("Questions: " + "; ".join(questions))
+    return "\n".join(parts)
+
+
 @dataclass
-class MonitorAuthoringService:
-    """Conversation-facing monitor-card authoring over installed source adapters.
+class InsightAuthoringService:
+    """Conversation-facing card authoring over installed source adapters.
 
     Candidate retrieval is deliberately bounded before Jev sees the catalog. The
     lexical prefilter is only a recall guard for very large catalogs; Jev remains
@@ -70,7 +92,7 @@ class MonitorAuthoringService:
         limit: int = 10,
     ) -> ResourceDiscovery:
         if not goal.strip():
-            raise ValueError("monitoring goal must not be empty")
+            raise ValueError("insight goal must not be empty")
         if not 1 <= limit <= 25:
             raise ValueError("limit must be between 1 and 25")
         resources = await self.registry.list_resources(adapter)
@@ -110,19 +132,29 @@ class MonitorAuthoringService:
 
     async def propose(
         self,
-        goal: str,
+        what_to_watch: str,
+        why_watch: str,
         *,
+        watch_for: list[str] | None = None,
+        questions: list[str] | None = None,
         selected_sources: list[dict[str, Any]] | None = None,
         adapter: str | None = None,
         limit: int = 10,
+        title: str | None = None,
         comparison_windows: list[str] | None = None,
-        materiality_threshold_pct: float = 10.0,
-        materiality_definition: str | None = None,
-        recipients: list[Recipient] | None = None,
+        delivery_methods: list[DeliveryMethod] | None = None,
+        action_confidence_threshold: float = 0.70,
         owner: str | None = None,
         max_source_age_hours: float | None = 24.0,
-        escalation_recipient_key: str | None = None,
-    ) -> MonitorCardProposal:
+    ) -> InsightCardProposal:
+        if not what_to_watch.strip():
+            raise ValueError("what_to_watch must not be empty")
+        if not why_watch.strip():
+            raise ValueError("why_watch must not be empty")
+        watch_for = list(watch_for or [])
+        questions = list(questions or [])
+        delivery_methods = list(delivery_methods or [])
+        goal = insight_goal(what_to_watch, why_watch, watch_for, questions)
         discovery = await self.discover(goal, adapter=adapter, limit=limit)
         matches = {match.ref: match for match in discovery.matches}
         requested = selected_sources
@@ -131,7 +163,7 @@ class MonitorAuthoringService:
         unknown = [item.get("ref") for item in requested if item.get("ref") not in matches]
         if unknown:
             raise ValueError(
-                "selected source refs must come from discover_monitor_inputs: "
+                "selected source refs must come from discover_insight_sources: "
                 + ", ".join(str(item) for item in unknown)
             )
         source_refs = [
@@ -145,45 +177,48 @@ class MonitorAuthoringService:
             )
             for item in requested
         ]
-        title = goal.strip().rstrip(".")[:200] or "Operational monitor"
-        workflow = MonitorWorkflow(
-            id=f"workflow-{_slug(title)}-{uuid4().hex[:8]}",
-            title=title,
-            intent=goal,
+        card_title = (title or what_to_watch.strip().rstrip("."))[:200] or "Untitled insight"
+        card = InsightCard(
+            id=f"card-{_slug(card_title)}-{uuid4().hex[:8]}",
+            title=card_title,
+            what_to_watch=what_to_watch,
+            why_watch=why_watch,
+            watch_for=watch_for,
+            questions=questions,
             sources=source_refs,
             comparison_windows=comparison_windows
             or ["previous_period", "trailing_4_period_average"],
-            materiality_threshold_pct=materiality_threshold_pct,
-            materiality_definition=materiality_definition,
-            recipients=recipients or [],
+            delivery_methods=delivery_methods,
+            action_confidence_threshold=action_confidence_threshold,
             owner=owner,
             max_source_age_hours=max_source_age_hours,
-            escalation_recipient_key=escalation_recipient_key,
         )
-        plan = await self.engine.compile(workflow)
-        questions: list[str] = []
+        plan = await self.engine.compile(card)
+        setup_questions: list[str] = []
         if not source_refs:
-            questions.append("Select at least one source candidate before approval.")
-        if not workflow.recipients:
-            questions.append("Choose the configured recipient groups for notify or escalate outcomes.")
-        if not workflow.materiality_definition:
-            questions.append(
-                f"Define what counts as material, or confirm the starting threshold of "
-                f"{workflow.materiality_threshold_pct:g}%.")
+            setup_questions.append("Select at least one source candidate before approval.")
+        if not watch_for and not questions:
+            setup_questions.append(
+                "Add at least one thing to look for or one question the evidence should answer."
+            )
+        if not delivery_methods:
+            setup_questions.append(
+                "Add delivery methods if this card should push a result beyond the calling client."
+            )
         if plan.comparison_windows:
-            questions.append(
+            setup_questions.append(
                 f"Confirm the comparison window proposed by Jev: {plan.comparison_windows[0]}."
             )
         if discovery.truncated:
-            questions.append(
+            setup_questions.append(
                 "Confirm the selected sources; discovery used a bounded candidate set "
                 f"from {discovery.candidate_count} catalog resources."
             )
-        return MonitorCardProposal(
-            workflow=workflow,
+        return InsightCardProposal(
+            card=card,
             plan=plan,
             discovery=discovery,
-            questions=questions,
+            setup_questions=setup_questions,
         )
 
     def _relevance_judger(self) -> ResourceRelevanceJudger:
@@ -209,20 +244,26 @@ class MonitorAuthoringService:
         return [resource for _, resource in ranked[: self.max_candidates]], True
 
 
-def proposal_summary(proposal: MonitorCardProposal) -> dict[str, Any]:
+def proposal_summary(proposal: InsightCardProposal) -> dict[str, Any]:
     """Return a compact MCP-friendly view while retaining the full typed proposal."""
     return {
         "status": proposal.status.value,
-        "workflow_id": proposal.workflow.id,
-        "title": proposal.workflow.title,
-        "selected_sources": [source.model_dump(mode="json") for source in proposal.workflow.sources],
-        "recommended_operations": [
-            {"key": operation, "description": SUPPORTED_OPERATIONS[operation]}
-            for operation in proposal.plan.operations
-            if operation in SUPPORTED_OPERATIONS
+        "card_id": proposal.card.id,
+        "title": proposal.card.title,
+        "what_to_watch": proposal.card.what_to_watch,
+        "why_watch": proposal.card.why_watch,
+        "watch_for": proposal.card.watch_for,
+        "questions": proposal.card.questions,
+        "selected_sources": [source.model_dump(mode="json") for source in proposal.card.sources],
+        "recommended_capabilities": [
+            {"key": capability, "description": SUPPORTED_CAPABILITIES[capability]}
+            for capability in proposal.plan.capabilities
+            if capability in SUPPORTED_CAPABILITIES
         ],
         "comparison_windows": proposal.plan.comparison_windows,
-        "recipients": [recipient.model_dump(mode="json") for recipient in proposal.workflow.recipients],
-        "questions": proposal.questions,
+        "delivery_methods": [
+            method.model_dump(mode="json") for method in proposal.card.delivery_methods
+        ],
+        "setup_questions": proposal.setup_questions,
         "discovery": proposal.discovery.model_dump(mode="json"),
     }

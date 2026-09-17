@@ -3,9 +3,9 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 
-from .engine import MonitorEngine
+from .engine import InsightEngine
 from .sources import SourceRegistry
-from .store import JsonWorkflowStore, WorkflowStore
+from .store import InsightCardStore, JsonInsightCardStore
 from .superset_adapter import SupersetAdapter
 from .superset_client import SupersetClient
 from .typesafe_adapter import JevJudger, load_api_key
@@ -13,9 +13,9 @@ from .typesafe_adapter import JevJudger, load_api_key
 
 @dataclass
 class Runtime:
-    workflow_store: WorkflowStore
+    card_store: InsightCardStore
     sources: SourceRegistry
-    engine: MonitorEngine
+    engine: InsightEngine
 
 
 def build_runtime(mode: str | None = None) -> Runtime:
@@ -44,7 +44,7 @@ def build_runtime(mode: str | None = None) -> Runtime:
         ]
     )
     return Runtime(
-        workflow_store=JsonWorkflowStore(os.getenv("MONITOR_STORE", "data/workflows.json")),
+        card_store=JsonInsightCardStore(os.getenv("INSIGHT_CARD_STORE", "data/insight-cards.json")),
         sources=registry,
-        engine=MonitorEngine(judger=judger, registry=registry),
+        engine=InsightEngine(judger=judger, registry=registry),
     )

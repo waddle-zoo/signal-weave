@@ -1,8 +1,8 @@
-"""Evaluate a user-supplied workflow against its live source adapters.
+"""Evaluate a user-supplied insight card against its live source adapters.
 
 This command has no expected outcome and does not import evaluation fixtures. It
-proves that a user-authored workflow, installed source adapters, Jev adapter,
-safety gates, and evidence contract work together on live inputs.
+proves that a user-authored card, installed source adapters, Jev adapter, safety
+gates, and evidence contract work together on live inputs.
 """
 
 from __future__ import annotations
@@ -15,36 +15,36 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from semantic_monitor.models import MonitorWorkflow
-from semantic_monitor.runtime import build_runtime
+from signalweave.models import InsightCard
+from signalweave.runtime import build_runtime
 
 
-async def run(workflow_path: str | Path, *, verbose: bool = False) -> dict[str, Any]:
+async def run(card_path: str | Path, *, verbose: bool = False) -> dict[str, Any]:
     def progress(message: str) -> None:
         if verbose:
             print(message, file=sys.stderr, flush=True)
 
-    progress("loading owner workflow")
-    workflow = MonitorWorkflow.model_validate(json.loads(Path(workflow_path).read_text()))
+    progress("loading insight card")
+    card = InsightCard.model_validate(json.loads(Path(card_path).read_text()))
     runtime = build_runtime()
     missing_adapters = sorted(
-        {source.adapter for source in workflow.sources} - set(runtime.sources.adapter_names())
+        {source.adapter for source in card.sources} - set(runtime.sources.adapter_names())
     )
     if missing_adapters:
         raise RuntimeError(
-            "workflow references source adapters that are not installed: "
+            "card references source adapters that are not installed: "
             + ", ".join(missing_adapters)
         )
 
     progress(
-        f"fetching {len(workflow.sources)} source(s): "
-        + ", ".join(f"{source.key}={source.adapter}" for source in workflow.sources)
+        f"fetching {len(card.sources)} source(s): "
+        + ", ".join(f"{source.key}={source.adapter}" for source in card.sources)
     )
-    evaluation = await runtime.engine.evaluate(workflow)
-    decision = evaluation.decision
-    if decision.evaluator != "jev-latest":
-        raise RuntimeError(f"unexpected evaluator: {decision.evaluator}")
-    if not decision.evidence:
+    run_result = await runtime.engine.evaluate(card)
+    result = run_result.result
+    if result.evaluator != "jev-latest":
+        raise RuntimeError(f"unexpected evaluator: {result.evaluator}")
+    if not result.evidence:
         raise RuntimeError("evaluation returned no evidence")
 
     return {
@@ -57,18 +57,18 @@ async def run(workflow_path: str | Path, *, verbose: bool = False) -> dict[str, 
                 "observation_count": len(snapshot.observations),
                 "error": snapshot.error,
             }
-            for source in workflow.sources
-            for snapshot in evaluation.resources
+            for source in card.sources
+            for snapshot in run_result.resources
             if snapshot.source_key == source.key
         ],
-        "workflow": workflow.model_dump(mode="json"),
-        "plan": evaluation.plan.model_dump(mode="json"),
-        "decision": decision.model_dump(mode="json"),
+        "card": card.model_dump(mode="json"),
+        "plan": run_result.plan.model_dump(mode="json"),
+        "result": result.model_dump(mode="json"),
         "proof": {
             "live_sources": True,
             "installed_adapters": runtime.sources.adapter_names(),
             "jev_evaluator": True,
-            "evidence_count": len(decision.evidence),
+            "evidence_count": len(result.evidence),
             "expected_outcome_supplied": False,
         },
     }
@@ -77,9 +77,9 @@ async def run(workflow_path: str | Path, *, verbose: bool = False) -> dict[str, 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--workflow",
+        "--card",
         required=True,
-        help="JSON workflow containing source references and owner policy",
+        help="JSON insight card containing source references and author guidance",
     )
     parser.add_argument(
         "--timeout",
@@ -103,10 +103,10 @@ def main() -> None:
         signal.setitimer(signal.ITIMER_REAL, args.timeout)
     try:
         payload = asyncio.run(
-            asyncio.wait_for(run(args.workflow, verbose=args.verbose), timeout=args.timeout)
+            asyncio.wait_for(run(args.card, verbose=args.verbose), timeout=args.timeout)
         )
     except TimeoutError as error:
-        raise SystemExit(f"live workflow acceptance check timed out after {args.timeout:g}s") from error
+        raise SystemExit(f"live card acceptance check timed out after {args.timeout:g}s") from error
     finally:
         if alarm_enabled:
             signal.setitimer(signal.ITIMER_REAL, 0)

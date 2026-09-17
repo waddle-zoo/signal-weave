@@ -1,7 +1,7 @@
 # Contributing to SignalWeave
 
 Thanks for helping build a small, dependable decision layer for operational
-systems. Contributions are welcome when they make the core contract more useful,
+systems. Contributions are welcome when they make the core card contract more useful,
 more inspectable, or easier to operate.
 
 ## Before you start
@@ -14,7 +14,7 @@ Please read:
 - [`docs/security.md`](docs/security.md) before adding a connector or handling credentials.
 
 Open an issue first for a substantial change. Include the problem, the source
-system or workflow shape involved, the decision contract you expect, and how the
+system or card shape involved, the result contract you expect, and how the
 behavior will be evaluated. Small fixes and documentation improvements can go
 straight to a pull request.
 
@@ -39,14 +39,14 @@ or fixture for the contract it changes.
 
 ## What belongs where
 
-- `src/semantic_monitor/` contains production runtime code only.
+- `src/signalweave/` contains production runtime code only.
 - `tests/` contains unit and integration tests for production contracts.
 - `evaluations/` contains labeled evaluation harnesses and benchmarks. It must not
   be imported by the service.
-- `examples/` contains user-facing workflow examples and sample inputs.
+- `examples/` contains user-facing insight-card examples and sample inputs.
 - `docs/` contains architecture, operations, security, and evaluation guidance.
 
-The first-class integration is Superset, but workflows must not be hard-coded to
+The first-class integration is Superset, but cards must not be hard-coded to
 one dashboard, metric, company, or test scenario. New source adapters should
 implement the bounded adapter contract in [`docs/source-adapters.md`](docs/source-adapters.md),
 expose approved references rather than arbitrary execution, and report failures as
@@ -78,7 +78,7 @@ for a focused follow-up rather than merging unrelated cleanup into a feature.
 SignalWeave uses Jev for narrow semantic judgments. Application code owns source
 execution, deterministic calculations, policy gates, permissions, retries, and
 side effects. Do not replace a missing contract with a prompt that returns free
-form instructions, invent recipients, or silently fall back to a heuristic.
+form instructions, invent delivery methods, or silently fall back to a heuristic.
 
 The project is not a replacement for Temporal, Airflow, a BI system, a knowledge
 graph, or a general-purpose agent framework. Prefer a small extension point over a

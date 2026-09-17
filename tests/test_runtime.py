@@ -1,6 +1,6 @@
 import pytest
 
-from semantic_monitor.runtime import build_runtime
+from signalweave.runtime import build_runtime
 
 
 def test_runtime_requires_jev_credentials_by_default(monkeypatch):

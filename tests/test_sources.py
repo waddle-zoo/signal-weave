@@ -1,13 +1,13 @@
 import pytest
 
-from semantic_monitor.models import (
+from signalweave.models import (
     Observation,
     ResourceSnapshot,
     SourceRef,
 )
-from semantic_monitor.sources import SourceRegistry
-from semantic_monitor.superset_adapter import SupersetAdapter
-from semantic_monitor.superset_models import SupersetChartSnapshot, SupersetDashboardSnapshot
+from signalweave.sources import SourceRegistry
+from signalweave.superset_adapter import SupersetAdapter
+from signalweave.superset_models import SupersetChartSnapshot, SupersetDashboardSnapshot
 
 
 class FakeAdapter:
