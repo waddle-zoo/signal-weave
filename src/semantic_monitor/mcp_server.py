@@ -194,6 +194,25 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
             "workflow": approved.model_dump(mode="json"),
         }
 
+    @mcp.tool()
+    def list_monitor_cards(status: str | None = None) -> dict[str, Any]:
+        """List stored monitor cards for a client-owned UI or agent."""
+        selected_status = WorkflowStatus(status) if status else None
+        cards = [
+            workflow
+            for workflow in runtime.workflow_store.list_workflows()
+            if selected_status is None or workflow.status == selected_status
+        ]
+        return {
+            "cards": [workflow.model_dump(mode="json") for workflow in cards],
+            "count": len(cards),
+        }
+
+    @mcp.tool()
+    def get_monitor_card(workflow_id: str) -> dict[str, Any]:
+        """Return one stored monitor card by its stable ID."""
+        return runtime.workflow_store.get_workflow(workflow_id).model_dump(mode="json")
+
     @mcp.resource("workflow://catalog")
     def workflow_catalog() -> str:
         """Human-readable catalog for an MCP client."""

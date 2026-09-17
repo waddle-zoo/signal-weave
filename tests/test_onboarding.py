@@ -159,6 +159,10 @@ async def test_goal_to_card_flow_discovers_proposes_previews_and_requires_approv
     }
     assert proposal["proposal"]["questions"]
 
+    stored = tool(server, "get_monitor_card")(workflow_id)
+    assert stored["status"] == "draft"
+    assert tool(server, "list_monitor_cards")(status="draft")["count"] == 1
+
     with pytest.raises(ValueError, match="draft"):
         await tool(server, "evaluate_workflow")(workflow_id)
 
@@ -178,6 +182,8 @@ async def test_goal_to_card_flow_discovers_proposes_previews_and_requires_approv
 
     approved = tool(server, "approve_monitor_card")(workflow_id)
     assert approved["status"] == "approved"
+    assert tool(server, "get_monitor_card")(workflow_id)["status"] == "approved"
+    assert tool(server, "list_monitor_cards")(status="approved")["count"] == 1
     evaluated = await tool(server, "evaluate_workflow")(workflow_id)
     assert evaluated["decision"]["recipient_key"] == "growth-ops"
 
@@ -210,6 +216,8 @@ def test_mcp_exposes_conversational_authoring_tools(tmp_path):
         "propose_monitor_card",
         "simulate_monitor_card",
         "approve_monitor_card",
+        "list_monitor_cards",
+        "get_monitor_card",
     } <= names
 
 
