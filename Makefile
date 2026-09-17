@@ -1,15 +1,20 @@
-.PHONY: install test lint prove docker-up docker-down
+.PHONY: install test lint prove verify docker-up docker-down
 
 install:
 	uv sync --extra dev
 
 test:
-	uv run pytest
+	uv run python -m pytest
 
 lint:
 	uv run ruff check .
 
 prove:
+	uv run signalweave prove
+
+verify:
+	uv run ruff check .
+	uv run python -m pytest
 	uv run signalweave prove
 
 docker-up:

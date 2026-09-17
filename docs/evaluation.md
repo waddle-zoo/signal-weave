@@ -26,12 +26,12 @@ The four fixtures intentionally exercise different failure modes:
 
 ```bash
 uv run signalweave prove
-uv run pytest
+uv run python -m pytest
 RUN_SUPERSET_INTEGRATION=1 \
   SUPERSET_URL=http://localhost:8088 \
   SUPERSET_USERNAME=admin \
   SUPERSET_PASSWORD=admin \
-  uv run pytest -q tests/test_superset_integration.py
+  uv run python -m pytest -q tests/test_superset_integration.py
 ```
 
 The live integration test is skipped unless explicitly enabled. This keeps normal CI independent of a running Superset while preserving a one-command local proof when the Docker stack is available.

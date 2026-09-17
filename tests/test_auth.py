@@ -1,7 +1,8 @@
+import httpx
+import pytest
 from starlette.applications import Starlette
 from starlette.responses import JSONResponse
 from starlette.routing import Route
-from starlette.testclient import TestClient
 
 from semantic_monitor.auth import BearerTokenMiddleware
 
@@ -16,11 +17,13 @@ def make_app():
     return app
 
 
-def test_bearer_token_protects_http_surface_but_keeps_health_public():
-    with TestClient(make_app()) as client:
-        assert client.get("/healthz").status_code == 200
-        assert client.get("/private").status_code == 401
-        response = client.get(
+@pytest.mark.asyncio
+async def test_bearer_token_protects_http_surface_but_keeps_health_public():
+    transport = httpx.ASGITransport(app=make_app())
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        assert (await client.get("/healthz")).status_code == 200
+        assert (await client.get("/private")).status_code == 401
+        response = await client.get(
             "/private", headers={"authorization": "Bearer local-test-token"}
         )
 

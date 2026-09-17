@@ -18,5 +18,5 @@ jobs:
           python-version: "3.12"
       - run: uv sync --extra dev
       - run: uv run ruff check .
-      - run: uv run pytest
+      - run: uv run python -m pytest
       - run: uv run signalweave prove

@@ -17,7 +17,7 @@ This is the boundary a small self-hosted deployment should make explicit before 
 Run the adversarial unit checks with:
 
 ```bash
-uv run pytest -q
+uv run python -m pytest -q
 ```
 
 ## Deployment responsibilities

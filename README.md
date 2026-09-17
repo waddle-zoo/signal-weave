@@ -35,8 +35,10 @@ Requirements: Python 3.10+ and `uv`.
 ```bash
 uv sync --extra dev
 uv run signalweave prove
-uv run pytest
+uv run python -m pytest
 ```
+
+The same local release gate is available as `make verify`.
 
 The proof runs four representative company situations through the same engine used by MCP and the webhook:
 
