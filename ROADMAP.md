@@ -17,8 +17,8 @@ explainable decision that an existing system can act on.
       product claims
 
 The current review is recorded in [`docs/adversarial-review.md`](docs/adversarial-review.md);
-it intentionally remains a **not public-ready** verdict until the listed safety
-gaps have tests or deployment controls.
+it supports a **public technical-alpha** posture while keeping the listed
+production-control gaps explicit.
 
 ## Next: prove the narrow wedge
 
@@ -55,11 +55,11 @@ gaps have tests or deployment controls.
 
 ## Public-release checklist
 
-- [ ] A new contributor can install the project and run local checks from a clean
+- [x] A new contributor can install the project and run local checks from a clean
       checkout
-- [ ] The README makes no claim stronger than the available evidence
-- [ ] Examples are clearly separated from production code and contain no secrets
-- [ ] Security boundaries and credential handling are documented
-- [ ] CI is green on the default branch
-- [ ] At least one independent reviewer can explain the product boundary and why
+- [x] The README makes no claim stronger than the available evidence
+- [x] Examples are clearly separated from production code and contain no secrets
+- [x] Security boundaries and credential handling are documented
+- [x] CI is green on the default branch
+- [x] At least one independent reviewer can explain the product boundary and why
       Jev is used
