@@ -1,4 +1,4 @@
-# Demo walkthrough
+# SignalWeave demo walkthrough
 
 This walkthrough proves three things independently:
 
@@ -10,7 +10,7 @@ This walkthrough proves three things independently:
 
 ```bash
 uv sync --extra dev
-uv run semantic-monitor prove
+uv run signalweave prove
 ```
 
 Expected result:
@@ -28,7 +28,7 @@ Exact confidence values can change when the heuristic is edited; the proof asser
 Generate a report with evidence statements:
 
 ```bash
-uv run semantic-monitor prove --format markdown --output artifacts/proof.md
+uv run signalweave prove --format markdown --output artifacts/proof.md
 ```
 
 ## B. Real Superset proof
@@ -81,7 +81,7 @@ Keep the credential outside the repository:
 ```bash
 TYPESAFE_MODE=jev \
 TYPESAFE_API_KEY_FILE=/path/to/apikey_typesafe \
-uv run semantic-monitor prove --mode jev --format markdown --output artifacts/jev-proof.md
+uv run signalweave prove --mode jev --format markdown --output artifacts/jev-proof.md
 ```
 
 The output records the typed outcome, confidence distribution, recipient, rationale, and evidence. It does not replace the engine’s safety gates.

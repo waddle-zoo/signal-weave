@@ -16,7 +16,7 @@ from .scenarios import scenario_catalog
 
 def create_mcp(runtime: Runtime | None = None) -> FastMCP:
     runtime = runtime or build_runtime()
-    mcp = FastMCP("superset-semantic-monitor")
+    mcp = FastMCP("signal-weave")
 
     @mcp.tool()
     async def list_dashboards() -> list[dict[str, Any]]:
@@ -108,7 +108,7 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
     async def healthz(request: Request) -> JSONResponse:
         """Small liveness endpoint for a container or scheduler."""
         return JSONResponse(
-            {"status": "ok", "service": "superset-semantic-monitor", "source": os.getenv("MONITOR_SOURCE", "fixtures")}
+            {"status": "ok", "service": "signal-weave", "source": os.getenv("MONITOR_SOURCE", "fixtures")}
         )
 
     @mcp.custom_route("/webhooks/evaluate", methods=["POST"])

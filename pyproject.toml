@@ -1,7 +1,7 @@
 [project]
-name = "superset-semantic-monitor-mcp"
+name = "signal-weave"
 version = "0.1.0"
-description = "An MCP server that turns Superset dashboard intent into typed, explainable monitoring decisions."
+description = "A semantic decision layer that turns operational intent and existing data signals into typed, explainable actions."
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
@@ -30,6 +30,7 @@ dev = [
 ]
 
 [project.scripts]
+signalweave = "semantic_monitor.cli:main"
 semantic-monitor = "semantic_monitor.cli:main"
 
 [tool.pytest.ini_options]

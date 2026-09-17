@@ -1,4 +1,4 @@
-# Evaluation and proof standard
+# SignalWeave evaluation and proof standard
 
 ## What the proof is testing
 
@@ -25,7 +25,7 @@ The four fixtures intentionally exercise different failure modes:
 ## Reproduce
 
 ```bash
-uv run semantic-monitor prove
+uv run signalweave prove
 uv run pytest
 RUN_SUPERSET_INTEGRATION=1 \
   SUPERSET_URL=http://localhost:8088 \

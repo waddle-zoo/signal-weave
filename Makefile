@@ -10,7 +10,7 @@ lint:
 	uv run ruff check .
 
 prove:
-	uv run semantic-monitor prove
+	uv run signalweave prove
 
 docker-up:
 	docker compose up --build

@@ -1,12 +1,12 @@
-# Superset Semantic Monitor MCP
+# SignalWeave
 
-An open-source decision layer for teams that already use Apache Superset and want reliable insight workflows on top of their existing dashboards.
+An open-source semantic decision layer for teams that want reliable insight workflows on top of their existing operational data.
 
-Dashboard owners describe what matters in plain language. The service turns that intent into a bounded monitoring plan, reads the saved Superset chart definitions, computes comparable observations, and returns an evidence-backed action:
+Dashboard owners describe what matters in plain language. SignalWeave turns that intent into a bounded monitoring plan, reads existing data assets, computes comparable observations, and returns an evidence-backed action. The first source adapter is Apache Superset:
 
 `ignore` · `investigate` · `notify` · `escalate` · `insufficient_data`
 
-It is deliberately not a new agent builder, workflow engine, BI product, or RAG system. Superset and ordinary code calculate facts. TypeSafe is an optional semantic judgment layer for the parts that thresholds and SQL do not express well: whether a movement is meaningful in context, which outcome is appropriate, and whether the evidence is strong enough to act.
+It is deliberately not a new agent builder, workflow engine, BI product, or RAG system. Source systems and ordinary code calculate facts. TypeSafe is an optional semantic judgment layer for the parts that thresholds and SQL do not express well: whether a movement is meaningful in context, which outcome is appropriate, and whether the evidence is strong enough to act.
 
 ## Why this exists
 
@@ -15,7 +15,7 @@ Most companies already have dashboards, metric definitions, owners, and chat gro
 This project makes that layer explicit:
 
 ```text
-Superset dashboard + owner intent
+existing data asset + owner intent
         ↓
 bounded monitoring plan
         ↓
@@ -34,7 +34,7 @@ Requirements: Python 3.10+ and `uv`.
 
 ```bash
 uv sync --extra dev
-uv run semantic-monitor prove
+uv run signalweave prove
 uv run pytest
 ```
 
@@ -50,12 +50,12 @@ The proof runs four representative company situations through the same engine us
 To save an inspectable report:
 
 ```bash
-uv run semantic-monitor prove --format markdown --output artifacts/proof.md
+uv run signalweave prove --format markdown --output artifacts/proof.md
 ```
 
 ## Run against local Superset
 
-The Docker stack starts Superset 6.1 with Postgres metadata, Redis, example datasets, and this MCP service. It leaves the existing Folio environment alone and uses port `18000` for the monitor by default.
+The Docker demo starts Superset 6.1 with Postgres metadata, Redis, example datasets, and SignalWeave. It leaves the existing Folio environment alone and uses port `18000` for the service by default.
 
 ```bash
 docker compose up --build
@@ -68,7 +68,7 @@ docker compose up --build
 
 The container defaults to `MONITOR_SOURCE=superset`. The MCP loop is:
 
-1. `list_dashboards` discovers existing Superset dashboards.
+1. `list_dashboards` discovers dashboards from the configured source.
 2. `inspect_dashboard` returns chart metadata and normalized observations.
 3. `draft_monitor` stores an owner’s intent and compiles a reviewable plan.
 4. `evaluate_monitor` executes only the monitor’s selected saved charts.
@@ -89,7 +89,7 @@ The offline heuristic is the default for local development and deterministic tes
 ```bash
 TYPESAFE_MODE=jev \
 TYPESAFE_API_KEY_FILE=/path/to/apikey_typesafe \
-uv run semantic-monitor prove --format markdown --output artifacts/jev-proof.md
+uv run signalweave prove --format markdown --output artifacts/jev-proof.md
 ```
 
 The code asks narrow typed questions rather than requesting a narrative answer:
@@ -108,7 +108,7 @@ Confidence is treated as a routing signal, not proof of truth. Low-confidence au
 - `src/semantic_monitor/compiler.py` — bounded intent-to-operation compilation
 - `src/semantic_monitor/typesafe_adapter.py` — heuristic and Jev judgment implementations
 - `src/semantic_monitor/engine.py` — evaluation pipeline and safety gates
-- `src/semantic_monitor/mcp_server.py` — MCP tools, catalog resource, health, and push route
+- `src/semantic_monitor/mcp_server.py` — SignalWeave MCP tools, catalog resource, health, and push route
 - `src/semantic_monitor/scenarios.py` — deterministic company proof cases
 - `src/semantic_monitor/proof.py` — reproducible proof harness and report renderer
 - `docs/` — architecture, demo walkthrough, and evaluation criteria

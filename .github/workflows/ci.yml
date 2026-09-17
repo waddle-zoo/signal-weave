@@ -19,4 +19,4 @@ jobs:
       - run: uv sync --extra dev
       - run: uv run ruff check .
       - run: uv run pytest
-      - run: uv run semantic-monitor prove
+      - run: uv run signalweave prove

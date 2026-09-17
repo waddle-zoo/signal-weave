@@ -1,8 +1,8 @@
-# Architecture
+# SignalWeave architecture
 
 ## Product boundary
 
-Superset already answers “what are the numbers?” This service answers “given the owner’s definition of what matters, what should happen next?”
+SignalWeave answers “given the owner’s definition of what matters, what should happen next?” while leaving facts in the company’s existing data systems. Superset is the first source adapter, not the product boundary.
 
 The service has four separable layers:
 
@@ -13,10 +13,10 @@ The service has four separable layers:
 
 ```text
              existing company assets
-     Superset dashboards, owners, chart definitions
+     existing data assets, owners, source definitions
                          │
                          ▼
-                SupersetClient (read-only)
+                 source adapter (read-only)
                          │
                          ▼
        DashboardSnapshot → Observation[] → Evidence[]
