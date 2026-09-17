@@ -26,3 +26,6 @@ async def test_local_superset_dashboard_data_round_trip():
     assert snapshot.title == "Sales Dashboard"
     assert len(snapshot.charts) >= 5
     assert any(chart.observations for chart in snapshot.charts)
+
+    timeseries = await client.dashboard_snapshot(7, chart_ids=["64"])
+    assert timeseries.charts[0].observations[0].baseline is not None

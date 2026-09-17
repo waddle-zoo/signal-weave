@@ -1,80 +1,127 @@
 # Superset Semantic Monitor MCP
 
-An intentionally small MCP server for push-based analytics over Apache Superset.
+An open-source decision layer for teams that already use Apache Superset and want reliable insight workflows on top of their existing dashboards.
 
-Dashboard owners describe what matters in natural language. The server compiles that intent into a versioned monitoring plan, runs deterministic metric calculations, and uses TypeSafe for the semantic decisions that SQL and thresholds cannot express cleanly.
+Dashboard owners describe what matters in plain language. The service turns that intent into a bounded monitoring plan, reads the saved Superset chart definitions, computes comparable observations, and returns an evidence-backed action:
 
-It is not a replacement for Superset, Airflow, Temporal, or LangGraph. It is a decision layer that can be called by an existing agent or scheduler.
+`ignore` · `investigate` · `notify` · `escalate` · `insufficient_data`
 
-## First vertical slice
+It is deliberately not a new agent builder, workflow engine, BI product, or RAG system. Superset and ordinary code calculate facts. TypeSafe is an optional semantic judgment layer for the parts that thresholds and SQL do not express well: whether a movement is meaningful in context, which outcome is appropriate, and whether the evidence is strong enough to act.
+
+## Why this exists
+
+Most companies already have dashboards, metric definitions, owners, and chat groups. The missing layer is the operational meaning between “a number moved” and “someone should do something.”
+
+This project makes that layer explicit:
 
 ```text
 Superset dashboard + owner intent
-        -> monitoring plan
-        -> deterministic observations
-        -> TypeSafe/heuristic decision
-        -> evidence-backed alert or no-op
+        ↓
+bounded monitoring plan
+        ↓
+saved chart queries + deterministic observations
+        ↓
+TypeSafe judgment or deterministic heuristic
+        ↓
+evidence-backed push decision
 ```
 
-The initial outcome vocabulary is:
+The result is cheaper and easier to audit than asking a general LLM to inspect an entire dashboard on every run, while remaining more expressive than fixed threshold SQL alone.
 
-- `ignore`
-- `investigate`
-- `notify`
-- `escalate`
-- `insufficient_data`
+## Five-minute proof
 
-The TypeSafe path uses the official Python SDK when `TYPESAFE_MODE=jev`. The default `heuristic` path is deterministic and makes local development, tests, and offline demos useful without an API key.
-
-## Run locally
+Requirements: Python 3.10+ and `uv`.
 
 ```bash
 uv sync --extra dev
-uv run semantic-monitor simulate --scenario all
+uv run semantic-monitor prove
 uv run pytest
-uv run ruff check .
 ```
 
-Run the MCP server:
+The proof runs four representative company situations through the same engine used by MCP and the webhook:
+
+| Situation | Expected decision | Why it matters |
+| --- | --- | --- |
+| Revenue declines while enterprise churn spikes | `notify` Revenue Operations | Correlated business context beats a blind threshold |
+| Retail sales dip with a stable seasonal signal | `ignore` | Avoids alerting on expected variation |
+| Mobile conversion falls while mobile errors spike | `notify` Growth | Related dashboard signals explain the movement |
+| Warehouse load is stale | `escalate` Data Platform | Freshness gates prevent acting on untrusted data |
+
+To save an inspectable report:
 
 ```bash
-TYPESAFE_MODE=heuristic uv run semantic-monitor serve --transport streamable-http
+uv run semantic-monitor prove --format markdown --output artifacts/proof.md
 ```
 
-For the TypeSafe path, point `TYPESAFE_API_KEY_FILE` at a file that contains the key. The key is read at runtime and is never copied into the repository:
+## Run against local Superset
 
-```bash
-TYPESAFE_MODE=jev \
-TYPESAFE_API_KEY_FILE=/path/to/apikey_typesafe \
-uv run semantic-monitor simulate --scenario revenue_decline
-```
-
-## Docker
-
-The compose stack includes a local Superset, Postgres metadata storage, Redis, and the monitor MCP server. It also loads Superset's example data where supported by the image.
+The Docker stack starts Superset 6.1 with Postgres metadata, Redis, example datasets, and this MCP service. It leaves the existing Folio environment alone and uses port `18000` for the monitor by default.
 
 ```bash
 docker compose up --build
 ```
 
-The MCP server is available at `http://localhost:18000/mcp` and Superset at `http://localhost:8088` (`admin` / `admin`). Set `MONITOR_PORT_HOST` if that port is also occupied.
+- Superset: <http://localhost:8088> (`admin` / `admin`)
+- MCP: <http://localhost:18000/mcp>
+- Health: <http://localhost:18000/healthz>
+- Push evaluation: `POST http://localhost:18000/webhooks/evaluate`
 
-The same service exposes `POST http://localhost:18000/webhooks/evaluate` for push-triggered runs. Send `{"monitor_id":"..."}` from a Superset alert, webhook relay, or existing scheduler. Set `PUSH_WEBHOOK_TOKEN` to require a bearer token. The endpoint evaluates the saved card and returns the same evidence-backed decision as the MCP tool; delivery is intentionally left to the caller.
+The container defaults to `MONITOR_SOURCE=superset`. The MCP loop is:
 
-For a real TypeSafe run without putting the key in an environment file:
+1. `list_dashboards` discovers existing Superset dashboards.
+2. `inspect_dashboard` returns chart metadata and normalized observations.
+3. `draft_monitor` stores an owner’s intent and compiles a reviewable plan.
+4. `evaluate_monitor` executes only the monitor’s selected saved charts.
+5. A scheduler, Superset webhook relay, or agent can call `/webhooks/evaluate` to push a decision.
 
-```bash
-docker compose run --rm \
-  -e TYPESAFE_MODE=jev \
-  -e TYPESAFE_API_KEY_FILE=/run/secrets/typesafe_api_key \
-  -v /Users/brandonsovran/Downloads/apikey_typesafe:/run/secrets/typesafe_api_key:ro \
-  monitor python -m semantic_monitor.cli simulate --scenario revenue_decline
+Example push payload:
+
+```json
+{"monitor_id":"draft-7-sales-pulse"}
 ```
 
-## Design rules
+Set `PUSH_WEBHOOK_TOKEN` to require `Authorization: Bearer ...` on that endpoint.
 
-1. Superset and ordinary code calculate facts; TypeSafe interprets bounded state.
-2. Natural-language intent compiles into a reviewable plan; it does not generate arbitrary SQL at runtime.
-3. High-confidence results may notify; ambiguous results stay visible as `investigate` or `insufficient_data`.
-4. Recipients come from explicit allowlisted groups, never invented names.
-5. The same evaluation core serves MCP calls and future scheduled push runners.
+## Use TypeSafe when it helps
+
+The offline heuristic is the default for local development and deterministic tests. Jev is enabled explicitly and reads the key only at runtime:
+
+```bash
+TYPESAFE_MODE=jev \
+TYPESAFE_API_KEY_FILE=/path/to/apikey_typesafe \
+uv run semantic-monitor prove --format markdown --output artifacts/jev-proof.md
+```
+
+The code asks narrow typed questions rather than requesting a narrative answer:
+
+- Which bounded analysis operations does this owner intent require?
+- Which allowed outcome best fits the observed evidence?
+- How material is the movement?
+- Which explicitly approved recipient, if any, should receive it?
+
+Confidence is treated as a routing signal, not proof of truth. Low-confidence automatic actions are downgraded to `investigate`; stale or incomparable data cannot silently become `ignore`.
+
+## Project map
+
+- `src/semantic_monitor/models.py` — typed cards, observations, plans, evidence, and decisions
+- `src/semantic_monitor/superset_client.py` — read-only Superset API adapter and chart normalization
+- `src/semantic_monitor/compiler.py` — bounded intent-to-operation compilation
+- `src/semantic_monitor/typesafe_adapter.py` — heuristic and Jev judgment implementations
+- `src/semantic_monitor/engine.py` — evaluation pipeline and safety gates
+- `src/semantic_monitor/mcp_server.py` — MCP tools, catalog resource, health, and push route
+- `src/semantic_monitor/scenarios.py` — deterministic company proof cases
+- `src/semantic_monitor/proof.py` — reproducible proof harness and report renderer
+- `docs/` — architecture, demo walkthrough, and evaluation criteria
+- `examples/` — safe monitor-card and webhook payload examples
+
+## Boundaries and current limitations
+
+This project intentionally leaves several responsibilities to the surrounding company stack:
+
+- Superset remains the source of metrics and dashboard definitions.
+- Airflow, Temporal, cron, Superset alerts, or an existing agent remain responsible for scheduling and delivery.
+- Recipient groups are explicit card inputs; the service does not invent people or send chat messages.
+- Charts without a saved query context or a comparable baseline return evidence plus `investigate`/`insufficient_data` rather than guessing.
+- Monitor cards are stored locally in JSON for the proof. Production deployments should put them behind the company’s normal database, identity, review, and audit controls.
+
+Read [docs/architecture.md](docs/architecture.md), then follow [docs/demo.md](docs/demo.md) for the full local walkthrough. The evidence standard is documented in [docs/evaluation.md](docs/evaluation.md).

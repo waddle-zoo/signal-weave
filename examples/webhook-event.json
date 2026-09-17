@@ -1,0 +1,5 @@
+{
+  "monitor_id": "monitor-sales-pulse",
+  "source": "superset-alert-relay",
+  "reason": "dashboard_refresh_completed"
+}

@@ -5,6 +5,7 @@ import asyncio
 import json
 import os
 
+from .proof import render_markdown, render_table, run_fixture_proof_sync, write_report
 from .runtime import build_runtime
 
 
@@ -44,6 +45,18 @@ def main() -> None:
     serve.add_argument("--host", default=os.getenv("MCP_HOST", "0.0.0.0"))
     serve.add_argument("--port", type=int, default=int(os.getenv("MCP_PORT", "8000")))
 
+    prove = subparsers.add_parser(
+        "prove", help="Run the representative company scenarios through the engine"
+    )
+    prove.add_argument(
+        "--mode",
+        choices=["heuristic", "jev"],
+        default=None,
+        help="Decision mode; defaults to TYPESAFE_MODE or heuristic",
+    )
+    prove.add_argument("--format", choices=["table", "json", "markdown"], default="table")
+    prove.add_argument("--output", help="Write a Markdown proof report to this path")
+
     args = parser.parse_args()
     if args.command == "simulate":
         raise SystemExit(asyncio.run(_simulate(args.scenario, args.mode)))
@@ -57,6 +70,19 @@ def main() -> None:
             server.settings.host = args.host
             server.settings.port = args.port
             server.run(transport="streamable-http")
+    if args.command == "prove":
+        mode = args.mode or os.getenv("TYPESAFE_MODE", "heuristic").lower()
+        if mode not in {"heuristic", "jev"}:
+            parser.error(f"Unsupported TYPESAFE_MODE: {mode}")
+        results = run_fixture_proof_sync(mode)
+        if args.output:
+            write_report(results, mode, args.output)
+        if args.format == "json":
+            print(json.dumps([result.as_json() for result in results], indent=2))
+        elif args.format == "markdown":
+            print(render_markdown(results, mode))
+        else:
+            print(render_table(results))
 
 
 if __name__ == "__main__":

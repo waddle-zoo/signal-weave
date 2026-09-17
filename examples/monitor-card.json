@@ -1,0 +1,21 @@
+{
+  "id": "monitor-sales-pulse",
+  "dashboard_id": "7",
+  "title": "Sales pulse",
+  "intent": "Alert when revenue changes materially versus the previous comparable period. Inspect related dashboard charts before routing. Ignore expected seasonal movement. Notify revenue operations only when the evidence supports action.",
+  "chart_ids": ["62", "64"],
+  "comparison_windows": ["previous_period", "trailing_4_period_average"],
+  "investigation_hints": [
+    "Compare total revenue with the time-grained revenue chart.",
+    "Check whether the movement is concentrated in one product line.",
+    "Do not notify when the dashboard has no comparable baseline."
+  ],
+  "materiality_threshold_pct": 10.0,
+  "recipients": [
+    {
+      "key": "revenue-operations",
+      "label": "Revenue Operations",
+      "destination": "slack://revenue-operations"
+    }
+  ]
+}
