@@ -27,6 +27,17 @@ class FakeAdapter:
         )
 
 
+class BrokenCatalogAdapter:
+    name = "broken"
+
+    async def list_resources(self):
+        raise TimeoutError("catalog timeout")
+
+    async def inspect(self, source):
+        del source
+        raise AssertionError("inspect must not run after catalog failure")
+
+
 class TenantCatalogAdapter:
     name = "superset"
 
@@ -85,6 +96,22 @@ async def test_source_registry_turns_adapter_failures_into_snapshots():
 
     assert snapshots[0].source_key == "airflow-load"
     assert "not installed" in snapshots[0].error
+
+
+@pytest.mark.asyncio
+async def test_source_registry_isolates_unrelated_catalog_outages():
+    registry = SourceRegistry(
+        [FakeAdapter(), BrokenCatalogAdapter()], enforce_catalog=False
+    )
+    sources = [
+        SourceRef(key="healthy", adapter="sql", resource="query:orders", label="Orders"),
+        SourceRef(key="broken", adapter="broken", resource="query:catalog", label="Broken"),
+    ]
+
+    snapshots = await registry.resolve(sources)
+
+    assert snapshots[0].error is None
+    assert "catalog unavailable" in snapshots[1].error
 
 
 @pytest.mark.asyncio

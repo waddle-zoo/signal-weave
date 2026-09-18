@@ -4,18 +4,28 @@ SignalWeave is a read-and-decide layer. It should not become an unreviewed code
 execution or notification surface.
 
 The local compose stack is for localhost-only development. It binds published
-ports to loopback, uses the demo Superset credentials `admin` / `admin`, and leaves
-optional bearer tokens empty. Do not expose it to an untrusted network. Jev
+ports to loopback and uses the demo Superset credentials `admin` / `admin`.
+It supplies the loopback-only token `local-dev-token`; replace it through
+environment variables before any shared deployment. Do not expose it to an
+untrusted network. Jev
 evaluation sends normalized evidence to the configured TypeSafe service, so each
 deployment must establish a data policy before using company data.
 
 ## Defenses in the repository
 
-- Set `SIGNALWEAVE_API_TOKEN` outside the repository to protect MCP and webhook HTTP traffic; `/healthz` remains public for liveness. The local demo intentionally leaves this blank only because its published ports are loopback-bound.
-- `PUSH_WEBHOOK_TOKEN` can add a separate bearer check for push relays.
+- Set `SIGNALWEAVE_API_TOKEN` outside the repository to protect MCP HTTP traffic;
+  `/healthz` remains public for liveness. The CLI refuses unauthenticated
+  streamable HTTP unless `SIGNALWEAVE_ALLOW_INSECURE_HTTP=1` is explicitly set
+  for an isolated test.
+- Set `PUSH_WEBHOOK_TOKEN` for the webhook bearer check. The webhook fails closed
+  with `503` when it is not configured and uses only the authenticated
+  `X-SignalWeave-Actor` header for actor attribution.
 - Source adapters own authentication and execution. The Superset adapter executes saved chart definitions only; it does not accept arbitrary SQL from an MCP caller.
 - Superset row and series limits are bounded, dashboard pagination is capped, and chart fetches have timeouts.
-- A required source timeout or missing resource becomes evidence of insufficient data—not an automatic `ignore`. Adapter failure propagation and machine-readable freshness are still release-hardening work; see [`adversarial-review.md`](adversarial-review.md).
+- A required source timeout, missing resource, stale contract, or partial result
+  becomes visible evidence and cannot silently become an automatic `ignore`.
+  Optional investigation-source failures are recorded in the trace and route to
+  `investigate` when the follow-up was selected.
 - Card delivery methods are allowlisted. Jev cannot invent a destination, and outcomes without a matching configured method are downgraded to `investigate`.
 - Stale data escalates only when a configured escalation delivery method exists; otherwise it becomes `investigate`.
 - Low-confidence automatic outcomes are downgraded to `investigate`.
@@ -23,6 +33,13 @@ deployment must establish a data policy before using company data.
 - `SIGNALWEAVE_TENANT_ID` can restrict discovery and evaluation to resources whose
   typed catalog contract belongs to the configured tenant; missing or foreign
   resources fail closed.
+- Follow-up source selection is checked against the already authorized catalog in
+  code; Jev cannot cause an opaque or cross-tenant source to be inspected.
+- Context snapshots supplied through MCP are marked `unverified` and are visible
+  in result provenance. A deployment-owned `ContextProvider` is the path for
+  trusted graph or catalog context.
+- If the bounded investigation selector fails, automatic outcomes are downgraded
+  to `investigate` rather than silently using incomplete follow-up evidence.
 - Trino execution accepts only compiler-produced `SELECT` queries with validated
   identifiers and bounded timestamp parameters. It is not a raw SQL endpoint.
 - Push evaluation requires an idempotency key and writes a durable decision
@@ -30,6 +47,9 @@ deployment must establish a data policy before using company data.
   the existing receipt. The default SQLite store enforces the claim atomically;
   its single-file scope is suitable for one service process or a shared mounted
   volume, not a multi-replica deployment without a stronger store.
+- Idempotency replays are bound to the card version, actor, and context snapshot;
+  reusing a key for a different request is rejected. The push webhook also
+  enforces a bounded request body and rejects malformed JSON.
 - Insight cards and metric query cards use the same SQLite persistence boundary by
   default, and the service image runs as a non-root user.
 

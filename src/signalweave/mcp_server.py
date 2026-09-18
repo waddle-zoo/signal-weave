@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import os
 import re
@@ -13,10 +14,12 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 from .models import (
+    ContextSnapshot,
     DecisionReceipt,
     DeliveryMethod,
     InsightCard,
     InsightCardStatus,
+    InvestigationMode,
     MetricQueryCard,
     Outcome,
     QueryCardStatus,
@@ -34,6 +37,24 @@ def _slug(value: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")[:80] or "insight"
 
 
+def _evaluation_fingerprint(
+    card: InsightCard,
+    *,
+    actor: str,
+    context: ContextSnapshot | None,
+) -> str:
+    payload = {
+        "card_id": card.id,
+        "card_version": card.version,
+        "actor": actor or "mcp-client",
+        "context": (
+            context.model_dump(mode="json", exclude={"captured_at"}) if context else None
+        ),
+    }
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
 def create_mcp(runtime: Runtime | None = None) -> FastMCP:
     runtime = runtime or build_runtime()
     authoring = InsightAuthoringService(runtime.sources, runtime.engine)
@@ -44,9 +65,11 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
     idempotency_locks: dict[str, asyncio.Lock] = {}
     mcp = FastMCP("signal-weave")
 
-    async def prepare_insight_card(card: InsightCard) -> tuple[InsightCard, Any]:
+    async def prepare_insight_card(
+        card: InsightCard, context: ContextSnapshot | None = None
+    ) -> tuple[InsightCard, Any]:
         """Resolve optional related sources without mutating the stored card."""
-        bundle = await authoring.resolve_bundle(card)
+        bundle = await authoring.resolve_bundle(card, context)
         expanded = card
         if [source.model_dump(mode="json") for source in bundle.selected_sources] != [
             source.model_dump(mode="json") for source in card.sources
@@ -61,6 +84,7 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
         *,
         idempotency_key: str | None,
         actor: str,
+        context: ContextSnapshot | None = None,
     ) -> dict[str, Any]:
         card = runtime.card_store.get_card(card_id)
         if card.status != InsightCardStatus.APPROVED:
@@ -70,8 +94,14 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
         key = (idempotency_key or f"manual:{card_id}:{uuid4().hex}").strip()
         if not key:
             raise ValueError("idempotency_key must not be empty")
+        fingerprint = _evaluation_fingerprint(card, actor=actor, context=context)
         existing = decision_receipts.get_by_idempotency_key(key)
         if existing is not None:
+            if existing.request_fingerprint and existing.request_fingerprint != fingerprint:
+                raise ValueError(
+                    "idempotency key is already bound to a different card, actor, version, "
+                    "or context"
+                )
             if existing.status == ReceiptStatus.PREPARED:
                 raise ValueError("idempotency key is already being evaluated; retry shortly")
             return {
@@ -84,6 +114,7 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
         prepared = DecisionReceipt(
             receipt_id=f"receipt-{uuid4().hex}",
             idempotency_key=key,
+            request_fingerprint=fingerprint,
             card_id=card.id,
             card_version=card.version,
             actor=actor or "mcp-client",
@@ -91,6 +122,11 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
         )
         if not decision_receipts.claim(prepared):
             existing = decision_receipts.get_by_idempotency_key(key)
+            if existing is not None and existing.request_fingerprint and existing.request_fingerprint != fingerprint:
+                raise ValueError(
+                    "idempotency key is already bound to a different card, actor, version, "
+                    "or context"
+                )
             if existing is not None and existing.status == ReceiptStatus.PREPARED:
                 raise ValueError("idempotency key is already being evaluated; retry shortly")
             if existing is None:
@@ -103,8 +139,8 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
                 "result": existing.result,
             }
         try:
-            evaluation_card, bundle = await prepare_insight_card(card)
-            run = await runtime.engine.evaluate(evaluation_card)
+            evaluation_card, bundle = await prepare_insight_card(card, context)
+            run = await runtime.engine.evaluate(evaluation_card, context_override=context)
             evaluated_result = run.result.model_copy(update={"retrieval": bundle})
             result = evaluated_result.model_dump(mode="json")
         except Exception as error:  # noqa: BLE001 - persist failed claims for replay safety
@@ -143,6 +179,7 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
         *,
         idempotency_key: str | None,
         actor: str,
+        context: ContextSnapshot | None = None,
     ) -> dict[str, Any]:
         key = (idempotency_key or f"manual:{card_id}:{uuid4().hex}").strip()
         if not key:
@@ -150,7 +187,7 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
         lock = idempotency_locks.setdefault(key, asyncio.Lock())
         async with lock:
             return await evaluate_approved_card_once(
-                card_id, idempotency_key=key, actor=actor
+                card_id, idempotency_key=key, actor=actor, context=context
             )
 
     async def selected_query_sources(selected_sources: list[dict[str, Any]]) -> list[SourceRef]:
@@ -233,6 +270,9 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
         owner: str | None = None,
         max_source_age_hours: float | None = 24.0,
         retrieval_mode: str = "expand",
+        investigation_mode: str = "bounded",
+        max_investigation_sources: int = 3,
+        investigation_threshold: float = 0.60,
     ) -> dict[str, Any]:
         """Propose and save a draft free-form insight card.
 
@@ -258,6 +298,9 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
             owner=owner,
             max_source_age_hours=max_source_age_hours,
             retrieval_mode=RetrievalMode(retrieval_mode),
+            investigation_mode=InvestigationMode(investigation_mode),
+            max_investigation_sources=max_investigation_sources,
+            investigation_threshold=investigation_threshold,
         )
         stored_card = proposal.card.model_copy(update={"compiled_plan": proposal.plan})
         runtime.card_store.save_card(stored_card)
@@ -282,6 +325,9 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
         owner: str | None = None,
         max_source_age_hours: float | None = 24.0,
         retrieval_mode: str = "fixed",
+        investigation_mode: str = "none",
+        max_investigation_sources: int = 3,
+        investigation_threshold: float = 0.60,
     ) -> dict[str, Any]:
         """Draft a card over explicit source resources; no push is sent."""
         if not sources:
@@ -304,6 +350,9 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
             owner=owner,
             max_source_age_hours=max_source_age_hours,
             retrieval_mode=RetrievalMode(retrieval_mode),
+            investigation_mode=InvestigationMode(investigation_mode),
+            max_investigation_sources=max_investigation_sources,
+            investigation_threshold=investigation_threshold,
         )
         plan = await runtime.engine.compile(card)
         card = card.model_copy(update={"compiled_plan": plan})
@@ -409,28 +458,51 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
         card_id: str,
         idempotency_key: str | None = None,
         actor: str = "mcp-client",
+        context: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        """Evaluate an approved card over freshly fetched source snapshots."""
+        """Evaluate an approved card, optionally with a versioned external context view."""
+        context_snapshot = (
+            ContextSnapshot.model_validate(context).model_copy(update={"trust": "unverified"})
+            if context
+            else None
+        )
         return await evaluate_approved_card(
-            card_id, idempotency_key=idempotency_key, actor=actor
+            card_id,
+            idempotency_key=idempotency_key,
+            actor=actor,
+            context=context_snapshot,
         )
 
     @mcp.tool()
-    async def resolve_insight_sources(card_id: str) -> dict[str, Any]:
+    async def resolve_insight_sources(
+        card_id: str, context: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """Preview the bounded Jev-ranked evidence bundle for a stored card."""
         card = runtime.card_store.get_card(card_id)
-        bundle = await authoring.resolve_bundle(card)
+        context_snapshot = (
+            ContextSnapshot.model_validate(context).model_copy(update={"trust": "unverified"})
+            if context
+            else None
+        )
+        bundle = await authoring.resolve_bundle(card, context_snapshot)
         return {
             "card": card.model_dump(mode="json"),
             "bundle": bundle.model_dump(mode="json"),
         }
 
     @mcp.tool()
-    async def simulate_insight_card(card_id: str) -> dict[str, Any]:
+    async def simulate_insight_card(
+        card_id: str, context: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """Evaluate a draft without treating the result as an approved push action."""
         card = runtime.card_store.get_card(card_id)
-        evaluation_card, bundle = await prepare_insight_card(card)
-        run = await runtime.engine.evaluate(evaluation_card)
+        context_snapshot = (
+            ContextSnapshot.model_validate(context).model_copy(update={"trust": "unverified"})
+            if context
+            else None
+        )
+        evaluation_card, bundle = await prepare_insight_card(card, context_snapshot)
+        run = await runtime.engine.evaluate(evaluation_card, context_override=context_snapshot)
         result = run.result.model_copy(update={"retrieval": bundle})
         return {
             "status": "preview",
@@ -508,9 +580,33 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
     async def evaluate_webhook(request: Request) -> JSONResponse:
         """Push-triggered card evaluation endpoint for schedulers and source alerts."""
         expected_token = os.getenv("PUSH_WEBHOOK_TOKEN")
-        if expected_token and request.headers.get("authorization") != f"Bearer {expected_token}":
+        if not expected_token:
+            return JSONResponse(
+                {"error": "push webhook authentication is not configured"}, status_code=503
+            )
+        if request.headers.get("authorization") != f"Bearer {expected_token}":
             return JSONResponse({"error": "unauthorized"}, status_code=401)
-        payload = await request.json()
+        try:
+            max_body_bytes = int(os.getenv("SIGNALWEAVE_MAX_HTTP_BODY_BYTES", "1048576"))
+        except ValueError:
+            max_body_bytes = 1048576
+        content_length = request.headers.get("content-length")
+        if content_length:
+            try:
+                declared_length = int(content_length)
+            except ValueError:
+                return JSONResponse({"error": "invalid content-length"}, status_code=400)
+            if declared_length > max_body_bytes:
+                return JSONResponse({"error": "request body is too large"}, status_code=413)
+        body = await request.body()
+        if len(body) > max_body_bytes:
+            return JSONResponse({"error": "request body is too large"}, status_code=413)
+        try:
+            payload = json.loads(body)
+        except json.JSONDecodeError:
+            return JSONResponse({"error": "request body must be valid JSON"}, status_code=400)
+        if not isinstance(payload, dict):
+            return JSONResponse({"error": "request body must be a JSON object"}, status_code=400)
         card_id = payload.get("card_id")
         if not card_id:
             return JSONResponse({"error": "card_id is required"}, status_code=400)
@@ -519,10 +615,20 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
             return JSONResponse(
                 {"error": "idempotency_key is required for push evaluation"}, status_code=400
             )
-        actor = str(payload.get("actor") or request.headers.get("X-SignalWeave-Actor") or "webhook")
+        actor = str(request.headers.get("X-SignalWeave-Actor") or "webhook")
         try:
+            context = (
+                ContextSnapshot.model_validate(payload["context"]).model_copy(
+                    update={"trust": "unverified"}
+                )
+                if payload.get("context")
+                else None
+            )
             result = await evaluate_approved_card(
-                card_id, idempotency_key=str(idempotency_key), actor=actor
+                card_id,
+                idempotency_key=str(idempotency_key),
+                actor=actor,
+                context=context,
             )
         except (KeyError, ValueError) as error:
             message = str(error)

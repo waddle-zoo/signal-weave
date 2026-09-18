@@ -31,6 +31,11 @@ def main() -> None:
     server.settings.port = args.port
     app = server.streamable_http_app()
     api_token = os.getenv("SIGNALWEAVE_API_TOKEN")
+    if not api_token and os.getenv("SIGNALWEAVE_ALLOW_INSECURE_HTTP") != "1":
+        raise RuntimeError(
+            "streamable HTTP requires SIGNALWEAVE_API_TOKEN; set "
+            "SIGNALWEAVE_ALLOW_INSECURE_HTTP=1 only for an isolated local test"
+        )
     if api_token:
         app.add_middleware(BearerTokenMiddleware, token=api_token)
     uvicorn.run(

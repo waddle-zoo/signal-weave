@@ -1,0 +1,247 @@
+{
+  "schema_version": 1,
+  "scenarios": [
+    {
+      "id": "saas-checkout",
+      "domain": "saas",
+      "title": "Checkout conversion pulse",
+      "what_to_watch": "Checkout conversion and the operational signals that explain a meaningful movement.",
+      "why_watch": "Help Growth decide whether a conversion movement needs a response.",
+      "watch_for": ["Checkout conversion falls and a related operational signal corroborates the movement."],
+      "questions": ["Is there evidence that the movement is actionable rather than ordinary variation?"],
+      "anchor": {
+        "resource": "dashboard:saas-checkout",
+        "title": "Checkout conversion",
+        "description": "SaaS checkout conversion by device and plan.",
+        "metric": "checkout_conversion",
+        "current": 0.082,
+        "baseline": 0.104,
+        "change_pct": -21.154
+      },
+      "diagnostics": [
+        {
+          "resource": "dashboard:saas-payments",
+          "title": "Payment failures",
+          "description": "Payment authorization failures and retries.",
+          "metric": "payment_failures",
+          "current": 0.146,
+          "baseline": 0.041,
+          "change_pct": 256.098,
+          "relation": "explains"
+        }
+      ],
+      "decoys": [
+        {"resource": "dashboard:saas-people", "title": "People operations", "description": "Hiring and retention."},
+        {"resource": "dashboard:saas-brand", "title": "Brand awareness", "description": "Campaign reach and impressions."},
+        {"resource": "dashboard:saas-checkout-other-tenant", "title": "Checkout conversion", "description": "A separate tenant's checkout dashboard.", "tenant_id": "tenant-other"}
+      ],
+      "context_facts": [
+        {
+          "fact_id": "saas-checkout-edge",
+          "subject_ref": "superset|dashboard:saas-checkout",
+          "relation": "diagnosed_by",
+          "object_ref": "superset|dashboard:saas-payments",
+          "statement": "Checkout conversion is diagnosed by payment authorization failure rate.",
+          "provenance": ["owner:growth", "source:metric-catalog"]
+        }
+      ],
+      "expected_outcome": "notify",
+      "expected_delivery": ["growth"],
+      "expected_related": ["superset|dashboard:saas-payments"]
+    },
+    {
+      "id": "retail-seasonality",
+      "domain": "retail",
+      "title": "Retail sales pulse",
+      "what_to_watch": "Sales movement and the context needed to distinguish a business issue from expected seasonality.",
+      "why_watch": "Help Retail Operations avoid paging people for an expected seasonal pattern.",
+      "watch_for": ["Sales fall materially but the movement is explained by the seasonal context."],
+      "questions": ["Is the movement actionable after considering the expected seasonal pattern?"],
+      "anchor": {
+        "resource": "dashboard:retail-sales",
+        "title": "Retail sales",
+        "description": "Daily sales by store and channel.",
+        "metric": "sales",
+        "current": 820000,
+        "baseline": 1000000,
+        "change_pct": -18.0
+      },
+      "diagnostics": [
+        {
+          "resource": "dashboard:retail-seasonality",
+          "title": "Seasonal demand context",
+          "description": "Expected demand index by week of year.",
+          "metric": "seasonal_index",
+          "current": 0.81,
+          "baseline": 0.80,
+          "change_pct": 1.25,
+          "relation": "explains"
+        },
+        {
+          "resource": "dashboard:retail-inventory",
+          "title": "Inventory health",
+          "description": "Stock availability and replenishment risk.",
+          "metric": "stockout_rate",
+          "current": 0.031,
+          "baseline": 0.029,
+          "change_pct": 6.897,
+          "relation": "context"
+        }
+      ],
+      "decoys": [
+        {"resource": "dashboard:retail-hr", "title": "Store staffing", "description": "Staffing and scheduling."},
+        {"resource": "dashboard:retail-marketing", "title": "Retail marketing", "description": "Campaign performance."},
+        {"resource": "dashboard:retail-sales-other-tenant", "title": "Retail sales", "description": "A separate tenant's sales dashboard.", "tenant_id": "tenant-other"}
+      ],
+      "context_facts": [
+        {
+          "fact_id": "retail-seasonality-edge",
+          "subject_ref": "superset|dashboard:retail-sales",
+          "relation": "explained_by",
+          "object_ref": "superset|dashboard:retail-seasonality",
+          "statement": "The current sales comparison is expected to follow the seasonal demand index.",
+          "provenance": ["owner:retail-ops", "source:planning-calendar"]
+        }
+      ],
+      "expected_outcome": "ignore",
+      "expected_delivery": [],
+      "expected_related": ["superset|dashboard:retail-seasonality"]
+    },
+    {
+      "id": "logistics-carrier",
+      "domain": "logistics",
+      "title": "Fulfillment service pulse",
+      "what_to_watch": "Fulfillment latency and operational signals that identify the likely source of a service degradation.",
+      "why_watch": "Help Operations decide which team should investigate a customer-impacting delay.",
+      "watch_for": ["Fulfillment latency rises with corroborating carrier failures."],
+      "questions": ["Which operational signal most directly explains the customer impact?"],
+      "anchor": {
+        "resource": "dashboard:logistics-fulfillment",
+        "title": "Fulfillment latency",
+        "description": "Order-to-delivery latency by region and carrier.",
+        "metric": "fulfillment_latency_hours",
+        "current": 46.0,
+        "baseline": 29.0,
+        "change_pct": 58.621
+      },
+      "diagnostics": [
+        {
+          "resource": "dashboard:logistics-carriers",
+          "title": "Carrier failure rate",
+          "description": "Carrier acceptance failures and outage status.",
+          "metric": "carrier_failures",
+          "current": 0.118,
+          "baseline": 0.021,
+          "change_pct": 461.905,
+          "relation": "explains"
+        },
+        {
+          "resource": "dashboard:logistics-support",
+          "title": "Delivery support volume",
+          "description": "Customer contacts mentioning late delivery.",
+          "metric": "late_delivery_contacts",
+          "current": 1840,
+          "baseline": 1100,
+          "change_pct": 67.273,
+          "relation": "corroborates"
+        }
+      ],
+      "decoys": [
+        {"resource": "dashboard:logistics-fleet", "title": "Fleet utilization", "description": "Vehicle utilization and fuel."},
+        {"resource": "dashboard:logistics-warehouse", "title": "Warehouse throughput", "description": "Pick and pack throughput."},
+        {"resource": "dashboard:logistics-fulfillment-other-tenant", "title": "Fulfillment latency", "description": "A separate tenant's logistics dashboard.", "tenant_id": "tenant-other"}
+      ],
+      "context_facts": [
+        {
+          "fact_id": "logistics-carrier-edge",
+          "subject_ref": "superset|dashboard:logistics-fulfillment",
+          "relation": "diagnosed_by",
+          "object_ref": "superset|dashboard:logistics-carriers",
+          "statement": "Fulfillment latency is diagnosed by carrier acceptance failures.",
+          "provenance": ["owner:operations", "source:incident-catalog"]
+        }
+      ],
+      "expected_outcome": "notify",
+      "expected_delivery": ["operations"],
+      "expected_related": ["superset|dashboard:logistics-carriers", "superset|dashboard:logistics-support"]
+    },
+    {
+      "id": "fintech-freshness",
+      "domain": "fintech",
+      "title": "Settlement data freshness",
+      "what_to_watch": "Settlement reporting and whether the data is trustworthy enough for financial decisions.",
+      "why_watch": "Escalate to Data Platform when settlement data is stale rather than interpreting a false movement.",
+      "watch_for": ["Settlement data is too stale to support an automatic business interpretation."],
+      "questions": ["Can this result be trusted for a financial operating decision?"],
+      "anchor": {
+        "resource": "dashboard:fintech-settlement",
+        "title": "Settlement reporting",
+        "description": "Settlement volume and reconciliation status.",
+        "metric": "settlement_volume",
+        "current": 1200000,
+        "baseline": 1190000,
+        "change_pct": 0.84,
+        "freshness": "stale:31h"
+      },
+      "diagnostics": [
+        {
+          "resource": "dashboard:fintech-warehouse",
+          "title": "Warehouse load health",
+          "description": "Latest successful settlement warehouse load.",
+          "metric": "warehouse_load_age_hours",
+          "current": 31,
+          "baseline": 1,
+          "change_pct": 3000,
+          "freshness": "stale:31h",
+          "relation": "quality"
+        }
+      ],
+      "decoys": [
+        {"resource": "dashboard:fintech-fraud", "title": "Fraud monitoring", "description": "Fraud rate and review queue."},
+        {"resource": "dashboard:fintech-liquidity", "title": "Liquidity position", "description": "Cash and liquidity."},
+        {"resource": "dashboard:fintech-settlement-other-tenant", "title": "Settlement reporting", "description": "A separate tenant's settlement dashboard.", "tenant_id": "tenant-other"}
+      ],
+      "context_facts": [
+        {
+          "fact_id": "fintech-quality-edge",
+          "subject_ref": "superset|dashboard:fintech-settlement",
+          "relation": "quality_checked_by",
+          "object_ref": "superset|dashboard:fintech-warehouse",
+          "statement": "Settlement reporting is trustworthy only when the warehouse load is fresh.",
+          "provenance": ["owner:data-platform", "source:data-quality-catalog"]
+        }
+      ],
+      "expected_outcome": "escalate",
+      "expected_delivery": ["data-platform"],
+      "expected_related": ["superset|dashboard:fintech-warehouse"]
+    },
+    {
+      "id": "marketplace-ambiguous",
+      "domain": "marketplace",
+      "title": "Marketplace demand movement",
+      "what_to_watch": "Marketplace order movement and any evidence that distinguishes a real issue from an incomplete view.",
+      "why_watch": "Investigate when the available evidence cannot identify a safe explanation.",
+      "watch_for": ["Order movement requires investigation when no trusted diagnostic signal is available."],
+      "questions": ["Is there enough evidence to route this to a specific owner?"],
+      "anchor": {
+        "resource": "dashboard:marketplace-orders",
+        "title": "Marketplace orders",
+        "description": "Orders by marketplace and region.",
+        "metric": "orders",
+        "current": 91000,
+        "baseline": 100000,
+        "change_pct": -9.0
+      },
+      "diagnostics": [],
+      "decoys": [
+        {"resource": "dashboard:marketplace-support", "title": "Marketplace support", "description": "Support contacts with no validated relationship."},
+        {"resource": "dashboard:marketplace-marketing", "title": "Marketplace marketing", "description": "Campaign traffic."},
+        {"resource": "dashboard:marketplace-orders-other-tenant", "title": "Marketplace orders", "description": "A separate tenant's order dashboard.", "tenant_id": "tenant-other"}
+      ],
+      "context_facts": [],
+      "expected_outcome": "investigate",
+      "expected_delivery": [],
+      "expected_related": []
+    }
+  ]
+}

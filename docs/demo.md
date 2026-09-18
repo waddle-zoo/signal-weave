@@ -121,6 +121,7 @@ After approval, an existing scheduler or alert relay can trigger a fresh read:
 ```bash
 curl -X POST http://localhost:18000/webhooks/evaluate \
   -H 'content-type: application/json' \
+  -H 'authorization: Bearer local-dev-token' \
   -H 'Idempotency-Key: daily:<date>:<card-id>' \
   -d '{"card_id":"<approved-card-id>","idempotency_key":"daily:<date>:<card-id>"}'
 ```

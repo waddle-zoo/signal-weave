@@ -17,11 +17,17 @@ evidence into a bounded, explainable result that an existing system can act on.
 - [x] Bounded Trino execution for compiler-produced read-only queries
 - [x] Idempotent push decision receipts and explicit approval identity
 - [x] Jev-ranked evidence-bundle expansion that preserves human anchors and adds optional context
+- [x] Hybrid metadata/context candidate pools that preserve relationship-linked sources before Jev ranking
+- [x] One bounded Jev-selected follow-up investigation stage with typed evidence roles and abstention
+- [x] Versioned external context snapshots with provenance through MCP and the engine boundary
+- [x] Explicit no-match discovery and fail-closed bounded-investigation abstention
+- [x] Stale contract, unverified-context, idempotency-collision, and webhook-boundary gates
 - [x] Durable SQLite cards, metric cards, and receipt claims for a single-process deployment
 - [x] Partial Superset evidence is visible and fails closed only when the affected source is required
 - [x] External-input evaluation and embedding/reasoning comparison harness
 - [x] Adversarial review of the public README, examples, security posture, and
       product claims
+- [x] Cross-enterprise adversarial retrieval/explanation fixture with live Jev coverage
 
 The current review is recorded in [`docs/adversarial-review.md`](docs/adversarial-review.md);
 it supports a **public technical-alpha** posture while keeping the listed
@@ -38,13 +44,21 @@ production-control gaps explicit.
       existing company agent
 - [ ] Add customer-owned, time-split shadow labels and result traces suitable for
       a production calibration review
+- [ ] Measure top-driver acceptance and diagnostic-source recall on a real Superset
+      catalog with same-name assets, aliases, lineage, and permission boundaries
+- [ ] Add a permission-aware, paginated catalog-search interface so large deployments
+      do not load every asset into SignalWeave before Jev ranking
+- [ ] Add tenant-qualified resource references and request-scoped identity/ACLs for
+      shared multi-tenant service deployments
+- [ ] Add aggregate evidence/context payload budgets and per-card Jev cost/latency
+      limits
 - [ ] Replace the single-file store with a shared transactional store before
       multi-replica production deployment
 
 ## Later: context that can improve decisions
 
-- [ ] Add a versioned knowledge-context provider for definitions, ownership,
-      relationships, precedents, conflicts, and provenance
+- [x] Add a versioned knowledge-context provider boundary for definitions,
+      ownership, relationships, precedents, conflicts, and provenance
 - [ ] Record human feedback as append-only, provenance-bearing events linked to a
       decision and context version
 - [ ] Let agents propose card or graph changes for human approval; never let raw

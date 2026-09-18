@@ -92,6 +92,8 @@ async def run_scripted_matrix(
     trace_path = Path(trace_path)
     if store.exists():
         store.unlink()
+    if trace_path.exists():
+        trace_path.unlink()
     run_id = run_id or datetime.now(timezone.utc).strftime("run-%Y%m%dT%H%M%SZ")
     tasks = fixture["tasks"][:limit] if limit else fixture["tasks"]
     for task in tasks:
