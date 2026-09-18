@@ -226,6 +226,7 @@ limitations.
 - [`docs/evidence-brief.md`](docs/evidence-brief.md) — measured product case
 - [`docs/enterprise-experiment.md`](docs/enterprise-experiment.md) — MCP-only enterprise readiness experiment
 - [`docs/enterprise-closure.md`](docs/enterprise-closure.md) — current proof boundary and next gate
+- [`docs/postfix-agent-trial.md`](docs/postfix-agent-trial.md) — live post-fix Luna agent trial
 - [`docs/security.md`](docs/security.md) — credentials and deployment notes
 - [`ROADMAP.md`](ROADMAP.md) — future work tracker
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — setup and pull-request guidance

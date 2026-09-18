@@ -2,6 +2,8 @@ import pytest
 
 from signalweave.models import (
     Observation,
+    ResourceContract,
+    ResourceDescriptor,
     ResourceSnapshot,
     SourceRef,
 )
@@ -15,6 +17,36 @@ class FakeAdapter:
 
     async def list_resources(self):
         return []
+
+    async def inspect(self, source):
+        return ResourceSnapshot(
+            source_key=source.key,
+            adapter=self.name,
+            resource=source.resource,
+            title=source.label,
+        )
+
+
+class TenantCatalogAdapter:
+    name = "superset"
+
+    async def list_resources(self):
+        return [
+            ResourceDescriptor(
+                adapter=self.name,
+                resource="dashboard:allowed",
+                kind="dashboard",
+                title="Allowed dashboard",
+                contract=ResourceContract(tenant_id="tenant-a"),
+            ),
+            ResourceDescriptor(
+                adapter=self.name,
+                resource="dashboard:other-tenant",
+                kind="dashboard",
+                title="Other tenant dashboard",
+                contract=ResourceContract(tenant_id="tenant-b"),
+            ),
+        ]
 
     async def inspect(self, source):
         return ResourceSnapshot(
@@ -53,6 +85,26 @@ async def test_source_registry_turns_adapter_failures_into_snapshots():
 
     assert snapshots[0].source_key == "airflow-load"
     assert "not installed" in snapshots[0].error
+
+
+@pytest.mark.asyncio
+async def test_source_registry_blocks_direct_inspection_outside_authorized_catalog():
+    registry = SourceRegistry(
+        [TenantCatalogAdapter()],
+        authorized_tenants={"tenant-a"},
+    )
+    source = SourceRef(
+        key="other-tenant",
+        adapter="superset",
+        resource="dashboard:other-tenant",
+        label="Other tenant dashboard",
+    )
+
+    snapshot = await registry.inspect(source)
+
+    assert snapshot.error == (
+        "source is not present in the authorized adapter catalog; rediscover it before inspection"
+    )
 
 
 class FakeSupersetClient:

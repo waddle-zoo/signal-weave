@@ -18,6 +18,16 @@ It is intentionally explicit about synthetic evidence versus production proof.
 | SQL safety | Same metric trial | 24/24 partition-bounded, SELECT-only, semicolon-free |
 | Receipt concurrency | MCP test with two concurrent calls | one evaluation and one replay per key |
 
+## Post-fix general-agent trial
+
+The live MCP-only Luna trial is documented in
+[`postfix-agent-trial.md`](postfix-agent-trial.md). Across 20 available
+enterprise/scenario combinations it achieved 3/20 exact outcome-plus-source
+decisions and 4/20 exact source sets. It had 0 wrong-tenant leaks and 0 catalog
+leaks, but produced 3 would-be unsafe automatic routes with delivery disabled.
+This is evidence that server-side isolation works while autonomous source
+onboarding remains the open product problem.
+
 The discovery and metric labels were generated independently of the Jev
 requests and were not sent to Jev. The deterministic compiler—not Jev—owns
 relations, columns, aggregation syntax, time bounds, and query safety.
@@ -39,6 +49,7 @@ catalogs.
 - Cross-process receipt durability and an external delivery sink.
 - OS-level sandboxing for agents that are supposed to use MCP only.
 - Broad superiority over a well-tuned model/RAG system.
+- Reliable autonomous onboarding by a general-purpose MCP agent.
 
 ## Next closure gate
 

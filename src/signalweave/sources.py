@@ -65,7 +65,34 @@ class SourceRegistry:
         return [resource for resource in resources if self._is_authorized(resource)]
 
     async def inspect(self, source: SourceRef) -> ResourceSnapshot:
-        return await self._get(source.adapter).inspect(source)
+        adapter = self._get(source.adapter)
+        if self._enforce_catalog:
+            catalog = {
+                resource.resource: resource
+                for resource in await self.list_resources(source.adapter)
+            }
+            descriptor = catalog.get(source.resource)
+            if descriptor is None:
+                return ResourceSnapshot(
+                    source_key=source.key,
+                    adapter=source.adapter,
+                    resource=source.resource,
+                    title=source.label,
+                    error=(
+                        "source is not present in the authorized adapter catalog; "
+                        "rediscover it before inspection"
+                    ),
+                )
+        snapshot = await adapter.inspect(source)
+        if self._enforce_catalog:
+            descriptor = catalog[source.resource]
+            snapshot = snapshot.model_copy(
+                update={
+                    "contract": descriptor.contract,
+                    "source_url": snapshot.source_url or descriptor.source_url,
+                }
+            )
+        return snapshot
 
     async def resolve(self, sources: Iterable[SourceRef]) -> list[ResourceSnapshot]:
         """Fetch sources independently so one broken source is visible to the engine."""
