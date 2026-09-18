@@ -76,14 +76,18 @@ questions. Preview and approve it explicitly:
 
 ```text
 simulate_insight_card(card_id="<card_id returned by the proposal>")
+resolve_insight_sources(card_id="<card_id returned by the proposal>")
 approve_insight_card(card_id="<card_id returned by the proposal>")
 evaluate_insight_card(card_id="<card_id returned by the proposal>")
 ```
 
 The result includes the chosen outcome, configured delivery methods,
 `watch_results`, `question_results`, every normalized observation, source evidence,
-and the Jev evaluator. A card with many metrics still receives the complete
+the Jev evaluator, and the retrieval bundle. The proposal flow keeps the
+human-confirmed dashboard as an anchor, then Jev can add bounded optional
+context from the authorized catalog. A card with many metrics still receives the complete
 normalized observation set; changed rows are only ordered first for presentation.
+Use `retrieval_mode="fixed"` when the client wants exactly the sources it supplied.
 
 If a caller already knows its refs, use `draft_insight_card` directly:
 
@@ -117,12 +121,13 @@ After approval, an existing scheduler or alert relay can trigger a fresh read:
 ```bash
 curl -X POST http://localhost:18000/webhooks/evaluate \
   -H 'content-type: application/json' \
-  -d '{"card_id":"<approved-card-id>"}'
+  -H 'Idempotency-Key: daily:<date>:<card-id>' \
+  -d '{"card_id":"<approved-card-id>","idempotency_key":"daily:<date>:<card-id>"}'
 ```
 
-The caller decides whether and how to deliver the configured routes, including
-retries and idempotency. SignalWeave does not become a scheduler or delivery
-worker.
+The caller decides when to run and how to deliver the configured routes.
+SignalWeave records the idempotency receipt and replays a completed result for
+the same key, but it does not become a scheduler or delivery worker.
 
 ## D. Live unlabeled acceptance check
 

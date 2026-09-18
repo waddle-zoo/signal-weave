@@ -1,7 +1,8 @@
 # Adversarial public-readiness review
 
 This review treats SignalWeave as an alpha open-source result layer, not as a
-complete enterprise control plane. It was refreshed after the closure trials on
+complete enterprise control plane. It was refreshed after the retrieval,
+durability, and closure trials on
 2026-09-18.
 
 ## Verdict
@@ -14,7 +15,7 @@ operations.
 
 ## What passed
 
-- Local lint and tests: `63 passed, 1 skipped`.
+- Local lint and tests: `74 passed, 1 skipped`.
 - The feature branch is verified locally and GitHub Actions checks for PR #1
   pass on Python 3.11 and 3.12.
 - The package builds successfully and declares Apache 2.0 metadata.
@@ -28,8 +29,16 @@ operations.
   end-to-end MCP contract test.
 - Jev is the production semantic path; the service does not silently fall back to
   a heuristic evaluator.
+- Proposal cards can ask Jev to expand a human-approved anchor into a bounded,
+  authorized evidence bundle; fixed cards remain available when expansion is not
+  wanted. The live 48-case bundle trial selected 48/48 independently labeled
+  related sources, preserved 48/48 anchors, respected the source limit in 48/48
+  cases, and returned zero wrong-tenant resources.
 - Required empty, stale, unavailable, or incomplete sources are blocked before
   automatic action; selected comparison windows use adapter-provided baselines.
+- Partial Superset dashboards preserve healthy chart observations while required
+  partial data fails closed; optional related context does not veto complete
+  required evidence.
 - The approved insight card stores its compiled Jev plan, so later evaluation does
   not silently recompile a different plan.
 - The benchmark compares the same four labeled inputs against a real OpenAI
@@ -47,16 +56,20 @@ operations.
   48/48 top-ten coverage, and 0/48 wrong-tenant returns with labels held out
   from Jev. The metric-plan trial achieved 24/24 correct metric, dimension, and
   grain selections with partition-bounded, SELECT-only output.
+- The default runtime now uses a durable SQLite file for insight cards, metric
+  cards, and decision receipts. Restart persistence and an atomic idempotency-key
+  claim across two store instances are covered by tests.
 
 ## Findings to fix before public release
 
 ### High priority
 
-- **Production delivery remains outside the service.** The service now records
-  actor, card version, idempotency key, outcome, and a replayable receipt, and
-  the concurrent test proves one evaluation per key in-process. A caller still
-  owns the actual delivery sink, cross-process receipt store, retries around that
-  sink, and the policy for delayed or failed delivery.
+- **Production delivery remains outside the service.** The service records actor,
+  card version, idempotency key, outcome, and a replayable receipt. The default
+  SQLite store proves an atomic claim across store instances for a single shared
+  file. A caller still owns the delivery sink, retries around that sink, and the
+  policy for delayed or failed delivery; a multi-replica deployment needs a
+  shared transactional store behind the same interface.
 - **The live enterprise evidence still has meaningful gaps.** The closure Jev
   run is 130/144 exact on a synthetic matrix; discovery and metric compilation
   are separately covered by synthetic held-out trials. There are still no
@@ -70,6 +83,8 @@ operations.
 - Add request-size, catalog-size, and rate limits at the HTTP boundary.
 - Make dependency and container builds reproducible beyond the current CI matrix.
 - Add runtime adapter-registration tests, not only heterogeneous engine tests.
+- Keep the JSON store explicitly limited to local fixtures; do not use it as a
+  multi-process idempotency protocol.
 - Keep benchmark and Jev proof claims tied to labeled datasets and explicitly
   separate synthetic evidence from production performance.
 - Enforce MCP-only persona isolation at the process or tool-policy boundary; the
@@ -89,7 +104,7 @@ evidence sent to TypeSafe Jev. See [`SECURITY.md`](../SECURITY.md) and
 
 ```text
 ruff check src tests evaluations       passed
-Python 3.12 + pytest -q                 63 passed, 1 skipped
+Python 3.12 + pytest -q                 74 passed, 1 skipped
 GitHub Actions PR #1                   test (3.11), test (3.12) passed
 SVG XML validation and rendering       passed
 Tracked credential scan                no secrets found

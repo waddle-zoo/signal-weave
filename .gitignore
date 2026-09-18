@@ -11,6 +11,7 @@ __pycache__/
 secrets/
 data/*.json
 data/*.db
+data/*.db-*
 artifacts/
 build/
 dist/

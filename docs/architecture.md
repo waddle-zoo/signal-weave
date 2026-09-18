@@ -15,15 +15,15 @@ when installed, SQL, Airflow, table-quality, or other bounded read adapters.
  what_to_watch + why + look_for + questions + delivery_methods
                          │
                          ▼
-                 SourceRegistry
-            resolve each ref independently
+          Authoring + SourceRegistry
+        resolve anchors + Jev-ranked context
                          │
                          ▼
               ResourceSnapshot[]
         observations + evidence + metadata
                          │
                          ▼
-                InsightEngine / compiler
+       InsightEngine / compiler
                  finite capability plan
                          │
                          ▼
@@ -147,6 +147,27 @@ blocking every other source. This is what lets a card combine a Superset
 dashboard with a quality query or job-status signal without provider-specific
 logic in the engine.
 
+## Evidence-bundle retrieval
+
+`retrieval_mode` is the small control for using related context:
+
+- `fixed` evaluates only the card's human-approved `sources`; and
+- `expand` keeps those sources as anchors, asks Jev to rank a bounded authorized
+  catalog, and adds at most the configured number of related sources as optional
+  context.
+
+Expansion happens at the MCP evaluation boundary. It never mutates the stored
+card or replaces an anchor. `resolve_insight_sources` exposes the selected and
+omitted candidates before approval or evaluation, and the `InsightResult` carries
+the `EvidenceBundle` used for that run. This makes retrieval inspectable and lets
+a client show why a related dashboard or query was included.
+
+The catalog is filtered by the registry's authorization boundary before Jev sees
+it. A lexical prefilter only bounds very large catalogs; Jev remains the semantic
+ranker. Related sources are optional, so a missing context source is preserved as
+evidence without vetoing a complete required anchor. The card owner still
+controls the anchor and approval decision.
+
 The Superset adapter preserves the value that makes this useful as a first wedge:
 dashboard and chart titles, descriptions, owners, relationships, saved chart
 definitions, filters, dimensions, bounded series, current/baseline movement,
@@ -182,8 +203,8 @@ agent runner:
   options;
 - one `Noul` evaluates every `watch_for` item;
 - one `Noul` evaluates whether every `question` is supported by the evidence; and
-- independent outcome `Noul`s compare the evidence with the card's purpose and
-  configured delivery instructions.
+- one bounded `Choice` selects the mutually exclusive outcome from the card's
+  configured delivery vocabulary.
 
 The service composes those judgments in code. It never asks Jev to generate SQL,
 invent a destination, call a delivery system, or return an unconstrained action
@@ -196,9 +217,9 @@ After Jev, code enforces:
 
 - required source errors or empty required snapshots → `insufficient_data`;
 - source snapshots older than the card freshness limit → `insufficient_data`;
-- stale observations → `escalate` only when the card has an escalation delivery
+- stale observations from required sources → `escalate` only when the card has an escalation delivery
   method, otherwise `investigate`;
-- numeric observations with no comparable baseline → `insufficient_data`;
+- numeric observations from required sources with no comparable baseline → `insufficient_data`;
 - an outcome without a matching configured delivery method → `investigate`; and
 - low-confidence `ignore`, `notify`, or `escalate` → `investigate`.
 
@@ -221,6 +242,7 @@ approve_insight_card(card_id)
 list_insight_cards(status?)
 get_insight_card(card_id)
 evaluate_insight_card(card_id)
+resolve_insight_sources(card_id)
 ```
 
 The proposal flow uses Jev to rank a bounded source catalog, stores a draft, and
@@ -231,8 +253,13 @@ fetches fresh snapshots. The webhook accepts `{ "card_id": "..." }` for a
 caller-owned scheduler or push relay. Push evaluation requires an idempotency key
 and stores a decision receipt with card version, actor, outcome, selected delivery
 methods, and delivery state. Repeated keys replay the receipt instead of fetching
-sources again. Delivery remains disabled unless a deployment adds a reviewed
-delivery sink; the receipt is the handoff boundary.
+sources again. The default runtime stores cards, metric cards, and receipts in a
+single SQLite file with a uniqueness constraint on the idempotency key; JSON is
+available only as a small local/legacy backend and is not a multi-process claim
+protocol. Delivery remains disabled unless a deployment adds a reviewed delivery
+sink; the receipt is the handoff boundary. A multi-replica deployment should
+replace the store interface with a shared transactional database before routing
+traffic to more than one process.
 
 ## Future context and feedback
 

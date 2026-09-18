@@ -22,7 +22,9 @@ On 2026-09-18 we ran the same four labeled situations five times each:
 Both evaluators received the same insight cards, observations, and source
 evidence. Both used the same engine safety gates. The OpenAI arm used embeddings
 plus a general model with a strict JSON result contract. The Jev and OpenAI rows
-below are the current five-repeat run.
+below are a recorded five-repeat reference run from the decision-path benchmark.
+Re-run the harness against the current provider/model configuration before
+treating the latency or accuracy figures as current.
 
 | Evaluator | Evaluations | Exact decisions | Wrong automatic actions | Median | p95 | Requests | Errors |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -107,7 +109,9 @@ LLM or rules using exact decision accuracy, false automatic actions, investigati
 rate, latency, and provider usage. Keep a time-split holdout so the cases used to
 write the cards are not also used to grade them.
 
-The current repository is an alpha proof, not an enterprise control plane. Identity-
-aware authorization, durable audit history, card version conflicts, and
-production delivery guarantees remain deployment or follow-up work. See
+The current repository is an alpha proof, not an enterprise control plane. A
+single-process deployment has durable SQLite cards and idempotency receipts, but
+identity-aware authorization, shared multi-replica storage, durable audit history,
+card version conflicts, and production delivery guarantees remain deployment or
+follow-up work. See
 [`benchmark.md`](benchmark.md) for the full protocol and limitations.

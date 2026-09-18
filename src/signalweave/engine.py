@@ -72,6 +72,11 @@ class InsightEngine:
         observations = self._apply_comparison_window(observations, plan)
         source_errors = self._source_errors(card, resources)
         blocking_source_errors = [error for error in source_errors if error["blocking"]]
+        blocking_partial_source_errors = [
+            error
+            for error in source_errors
+            if error.get("quality_status") == "partial" and error["blocking"]
+        ]
 
         # Priority ordering helps a client render the interesting rows first. It
         # is not a retrieval boundary: all observations remain in state/evidence.
@@ -129,7 +134,11 @@ class InsightEngine:
                 subject_id=error["resource"],
                 subject_label=error["label"],
                 statement=error["message"],
-                values={"error": error["message"], "blocking": error["blocking"]},
+                values={
+                    "error": error["message"],
+                    "blocking": error["blocking"],
+                    "quality_status": error.get("quality_status"),
+                },
                 source_url=error.get("source_url"),
             )
             for error in source_errors
@@ -155,6 +164,7 @@ class InsightEngine:
             plan,
             observations,
             blocking_source_errors,
+            blocking_partial_source_errors,
             source_error_evidence,
         )
         return InsightRun(card=card, resources=resources, plan=plan, result=result)
@@ -239,6 +249,24 @@ class InsightEngine:
                         "blocking": source.required,
                     }
                 )
+            quality = resource.metadata.get("data_quality") if resource is not None else None
+            if isinstance(quality, dict) and quality.get("status") == "partial":
+                errors.append(
+                    {
+                        "source_key": key,
+                        "resource": source.resource,
+                        "label": resource.title or source.label,
+                        "message": (
+                            "Source returned partial evidence: "
+                            f"{len(quality.get('chart_errors', []))} chart error(s), "
+                            f"{len(quality.get('missing_baseline_chart_ids', []))} chart(s) "
+                            "without a comparable baseline."
+                        ),
+                        "source_url": resource.source_url,
+                        "blocking": source.required,
+                        "quality_status": "partial",
+                    }
+                )
             if resource is not None and card.max_source_age_hours is not None:
                 captured_at = resource.captured_at
                 if captured_at.tzinfo is None:
@@ -287,6 +315,7 @@ class InsightEngine:
         plan: InsightPlan,
         observations: list[Observation],
         blocking_source_errors: list[dict[str, Any]],
+        blocking_partial_source_errors: list[dict[str, Any]],
         source_error_evidence: list[Evidence],
     ) -> InsightResult:
         safe_outcomes = {Outcome.IGNORE, Outcome.INVESTIGATE, Outcome.INSUFFICIENT_DATA}
@@ -325,10 +354,37 @@ class InsightEngine:
                 evidence=new_evidence,
             )
 
+        if blocking_partial_source_errors:
+            existing_evidence = {
+                (item.source_key, item.subject_id, item.statement) for item in result.evidence
+            }
+            new_evidence = list(result.evidence)
+            new_evidence.extend(
+                item
+                for item in source_error_evidence
+                if (item.source_key, item.subject_id, item.statement) not in existing_evidence
+            )
+            return cls._with_outcome(
+                result,
+                card,
+                Outcome.INSUFFICIENT_DATA,
+                rationale=(
+                    "One or more required sources returned partial evidence, so no automatic "
+                    "interpretation is safe until the missing dashboard data is resolved."
+                ),
+                confidence=max(result.confidence or 0.0, 0.95),
+                evidence=new_evidence,
+            )
+
+        required_source_keys = {
+            source.key for source in card.sources if source.required
+        }
         stale = [
             observation
             for observation in observations
-            if observation.freshness and "stale" in observation.freshness.lower()
+            if observation.source_key in required_source_keys
+            and observation.freshness
+            and "stale" in observation.freshness.lower()
         ]
         if stale:
             stale_outcome = (
@@ -350,7 +406,8 @@ class InsightEngine:
         ambiguous = [
             observation
             for observation in observations
-            if str(observation.attributes.get("source_status", "")).lower() == "ambiguous"
+            if observation.source_key in required_source_keys
+            and str(observation.attributes.get("source_status", "")).lower() == "ambiguous"
         ]
         if ambiguous and result.outcome in {Outcome.NOTIFY, Outcome.ESCALATE}:
             return cls._with_outcome(
@@ -369,7 +426,8 @@ class InsightEngine:
         incomplete_baselines = [
             observation
             for observation in numeric_observations
-            if observation.baseline is None or observation.change_pct is None
+            if observation.source_key in required_source_keys
+            and (observation.baseline is None or observation.change_pct is None)
         ]
         if incomplete_baselines:
             return cls._with_outcome(

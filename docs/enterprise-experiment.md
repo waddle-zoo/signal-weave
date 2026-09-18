@@ -171,6 +171,21 @@ These are synthetic regression gates for the typed catalog and compiler. They do
 not establish production accuracy, query cost, or correctness of an arbitrary
 company's metadata catalog.
 
+The dynamic evidence-bundle trial uses the same 48-task catalog, but gives each
+card one human-approved anchor and asks Jev to add related context. The expected
+related source is held out from the request. It selected 48/48 expected related
+sources, preserved 48/48 anchors, respected the related-source limit in 48/48
+cases, and returned zero wrong-tenant resources. Run it with:
+
+```bash
+TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
+  make bundle-trial
+```
+
+This proves the retrieval boundary and tenant filtering under the fixture; it
+does not prove that a company's metadata descriptions are complete or that every
+related source is operationally useful.
+
 ## Smaller evaluator comparison
 
 The five-repeat four-case comparison uses identical normalized inputs and the

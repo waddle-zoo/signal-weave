@@ -61,7 +61,11 @@ Table      table:warehouse.orders parameters.check="exists_and_fresh"
 
 A mixed card can reference all four. The registry resolves them concurrently
 with a bounded fan-out, and the engine gives Jev the resulting snapshots together
-so the card’s author guidance can be evaluated over their relationships.
+so the card’s author guidance can be evaluated over their relationships. Cards
+created through `propose_insight_card` default to `retrieval_mode="expand"`:
+human-selected sources remain required anchors, while Jev may add a small number
+of authorized optional context sources at evaluation time. Use
+`retrieval_mode="fixed"` when the source set must not expand.
 
 ## SQL adapter boundary
 

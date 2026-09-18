@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import json
 import os
+import sqlite3
 import tempfile
+import threading
 from pathlib import Path
 from typing import Protocol
 
@@ -37,6 +39,8 @@ class MetricQueryCardStore(Protocol):
 
 class DecisionReceiptStore(Protocol):
     def get_by_idempotency_key(self, key: str) -> DecisionReceipt | None: ...
+
+    def claim(self, receipt: DecisionReceipt) -> bool: ...
 
     def save(self, receipt: DecisionReceipt) -> None: ...
 
@@ -148,13 +152,21 @@ class JsonMetricQueryCardStore:
 
 
 class InMemoryDecisionReceiptStore:
-    """Safe default for tests; production runtimes use the durable JSON store."""
+    """Safe default for tests; production runtimes use the durable SQLite store."""
 
     def __init__(self) -> None:
         self._receipts: dict[str, DecisionReceipt] = {}
+        self._lock = threading.Lock()
 
     def get_by_idempotency_key(self, key: str) -> DecisionReceipt | None:
         return self._receipts.get(key)
+
+    def claim(self, receipt: DecisionReceipt) -> bool:
+        with self._lock:
+            if receipt.idempotency_key in self._receipts:
+                return False
+            self._receipts[receipt.idempotency_key] = receipt
+            return True
 
     def save(self, receipt: DecisionReceipt) -> None:
         existing = self._receipts.get(receipt.idempotency_key)
@@ -173,6 +185,14 @@ class JsonDecisionReceiptStore:
         payload = self._load()
         item = payload.get(key)
         return DecisionReceipt.model_validate(item) if item is not None else None
+
+    def claim(self, receipt: DecisionReceipt) -> bool:
+        # JSON remains useful for small local fixtures. Production runtimes use
+        # SQLite so this insert is protected by a database uniqueness constraint.
+        if self.get_by_idempotency_key(receipt.idempotency_key) is not None:
+            return False
+        self.save(receipt)
+        return True
 
     def save(self, receipt: DecisionReceipt) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
@@ -209,3 +229,162 @@ class JsonDecisionReceiptStore:
         if not isinstance(payload, dict):
             raise ValueError(f"Decision receipt catalog must contain a JSON object: {self.path}")
         return payload
+
+
+class SQLiteInsightCardStore:
+    """Durable single-file card store with transactional updates."""
+
+    def __init__(self, path: str | Path) -> None:
+        self.path = Path(path)
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        with self._connect() as connection:
+            connection.execute(
+                "CREATE TABLE IF NOT EXISTS insight_cards ("
+                "id TEXT PRIMARY KEY, payload TEXT NOT NULL"
+                ")"
+            )
+
+    def _connect(self) -> sqlite3.Connection:
+        connection = sqlite3.connect(self.path, timeout=30)
+        connection.execute("PRAGMA busy_timeout = 30000")
+        connection.execute("PRAGMA journal_mode = WAL")
+        connection.execute("PRAGMA synchronous = NORMAL")
+        return connection
+
+    def save_card(self, card: InsightCard) -> None:
+        with self._connect() as connection:
+            connection.execute(
+                "INSERT INTO insight_cards (id, payload) VALUES (?, ?) "
+                "ON CONFLICT(id) DO UPDATE SET payload = excluded.payload",
+                (card.id, json.dumps(card.model_dump(mode="json"))),
+            )
+
+    def get_card(self, card_id: str) -> InsightCard:
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT payload FROM insight_cards WHERE id = ?", (card_id,)
+            ).fetchone()
+        if row is None:
+            raise KeyError(f"Unknown insight card: {card_id}")
+        return InsightCard.model_validate(json.loads(row[0]))
+
+    def set_card_status(self, card_id: str, status: InsightCardStatus) -> InsightCard:
+        card = self.get_card(card_id)
+        updated = card.model_copy(update={"status": status})
+        self.save_card(updated)
+        return updated
+
+    def list_cards(self) -> list[InsightCard]:
+        with self._connect() as connection:
+            rows = connection.execute(
+                "SELECT payload FROM insight_cards ORDER BY id"
+            ).fetchall()
+        return [InsightCard.model_validate(json.loads(row[0])) for row in rows]
+
+
+class SQLiteMetricQueryCardStore:
+    """Durable single-file store for plain-language metric query cards."""
+
+    def __init__(self, path: str | Path) -> None:
+        self.path = Path(path)
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        with self._connect() as connection:
+            connection.execute(
+                "CREATE TABLE IF NOT EXISTS metric_query_cards ("
+                "id TEXT PRIMARY KEY, payload TEXT NOT NULL"
+                ")"
+            )
+
+    def _connect(self) -> sqlite3.Connection:
+        connection = sqlite3.connect(self.path, timeout=30)
+        connection.execute("PRAGMA busy_timeout = 30000")
+        connection.execute("PRAGMA journal_mode = WAL")
+        connection.execute("PRAGMA synchronous = NORMAL")
+        return connection
+
+    def save_card(self, card: MetricQueryCard) -> None:
+        with self._connect() as connection:
+            connection.execute(
+                "INSERT INTO metric_query_cards (id, payload) VALUES (?, ?) "
+                "ON CONFLICT(id) DO UPDATE SET payload = excluded.payload",
+                (card.id, json.dumps(card.model_dump(mode="json"))),
+            )
+
+    def get_card(self, card_id: str) -> MetricQueryCard:
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT payload FROM metric_query_cards WHERE id = ?", (card_id,)
+            ).fetchone()
+        if row is None:
+            raise KeyError(f"Unknown metric query card: {card_id}")
+        return MetricQueryCard.model_validate(json.loads(row[0]))
+
+    def set_card_status(self, card_id: str, status: QueryCardStatus) -> MetricQueryCard:
+        card = self.get_card(card_id)
+        updated = card.model_copy(update={"status": status})
+        self.save_card(updated)
+        return updated
+
+    def list_cards(self) -> list[MetricQueryCard]:
+        with self._connect() as connection:
+            rows = connection.execute(
+                "SELECT payload FROM metric_query_cards ORDER BY id"
+            ).fetchall()
+        return [MetricQueryCard.model_validate(json.loads(row[0])) for row in rows]
+
+
+class SQLiteDecisionReceiptStore:
+    """Durable receipt store with an atomic idempotency-key claim."""
+
+    def __init__(self, path: str | Path) -> None:
+        self.path = Path(path)
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        with self._connect() as connection:
+            connection.execute(
+                "CREATE TABLE IF NOT EXISTS decision_receipts ("
+                "idempotency_key TEXT PRIMARY KEY, payload TEXT NOT NULL"
+                ")"
+            )
+
+    def _connect(self) -> sqlite3.Connection:
+        connection = sqlite3.connect(self.path, timeout=30)
+        connection.execute("PRAGMA busy_timeout = 30000")
+        connection.execute("PRAGMA journal_mode = WAL")
+        connection.execute("PRAGMA synchronous = NORMAL")
+        return connection
+
+    def get_by_idempotency_key(self, key: str) -> DecisionReceipt | None:
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT payload FROM decision_receipts WHERE idempotency_key = ?", (key,)
+            ).fetchone()
+        return DecisionReceipt.model_validate(json.loads(row[0])) if row else None
+
+    def claim(self, receipt: DecisionReceipt) -> bool:
+        try:
+            with self._connect() as connection:
+                connection.execute(
+                    "INSERT INTO decision_receipts (idempotency_key, payload) VALUES (?, ?)",
+                    (receipt.idempotency_key, json.dumps(receipt.model_dump(mode="json"))),
+                )
+            return True
+        except sqlite3.IntegrityError:
+            return False
+
+    def save(self, receipt: DecisionReceipt) -> None:
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT payload FROM decision_receipts WHERE idempotency_key = ?",
+                (receipt.idempotency_key,),
+            ).fetchone()
+            if row is not None:
+                existing = DecisionReceipt.model_validate(json.loads(row[0]))
+                if existing.receipt_id != receipt.receipt_id:
+                    raise ValueError(
+                        f"idempotency key already belongs to receipt {existing.receipt_id}"
+                    )
+            connection.execute(
+                "INSERT INTO decision_receipts (idempotency_key, payload) VALUES (?, ?) "
+                "ON CONFLICT(idempotency_key) DO UPDATE SET payload = excluded.payload",
+                (receipt.idempotency_key, json.dumps(receipt.model_dump(mode="json"))),
+            )

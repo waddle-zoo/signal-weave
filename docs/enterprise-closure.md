@@ -7,16 +7,17 @@ It is intentionally explicit about synthetic evidence versus production proof.
 
 | Surface | Evidence | Result |
 | --- | --- | ---: |
-| Python contract suite | `PYTHONPATH=src .venv/bin/python -m pytest -q` | 63 passed, 1 skipped |
+| Python contract suite | `.venv/bin/python -m pytest -q` | 74 passed, 1 skipped |
 | Static checks | `ruff check src tests evaluations` | passed |
 | Decision matrix | Live Jev, 3 companies, 144 hidden-label tasks | 130/144 exact |
 | Decision safety | Same Jev run | 0 unsafe automatic actions |
 | Contract completeness | Same Jev run | 144/144 workflow, card, provenance, source selection |
 | Trace integrity | 4,032-event closure trace | valid hash chain and protocol |
 | Source discovery | Live Jev, 48 held-out tasks, 576 pre-filter resources | 48/48 exact top-2; 0 wrong tenant |
+| Evidence-bundle retrieval | Live Jev, 48 human-anchor tasks, 576 pre-filter resources | 48/48 expected related sources; 48/48 anchors; 0 wrong tenant |
 | Metric planning | Live Jev, 24 held-out metric labels | 24/24 metric, dimension, and grain selections |
 | SQL safety | Same metric trial | 24/24 partition-bounded, SELECT-only, semicolon-free |
-| Receipt concurrency | MCP test with two concurrent calls | one evaluation and one replay per key |
+| Receipt durability | SQLite restart and two-store claim tests | persisted cards and one atomic claim per key |
 
 ## Post-fix general-agent trial
 
@@ -46,7 +47,7 @@ catalogs.
 - Time-split or historical holdout performance.
 - Real Superset and Trino deployments rather than compatible local adapters.
 - Query cost, freshness, and scale for a real multi-tenant catalog.
-- Cross-process receipt durability and an external delivery sink.
+- A shared transactional receipt store for multi-replica deployments and an external delivery sink.
 - OS-level sandboxing for agents that are supposed to use MCP only.
 - Broad superiority over a well-tuned model/RAG system.
 - Reliable autonomous onboarding by a general-purpose MCP agent.

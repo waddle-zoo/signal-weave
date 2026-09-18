@@ -121,6 +121,7 @@ An existing UI or agent can guide onboarding without SignalWeave owning the UI:
 ```text
 discover_insight_sources(goal, adapter?, limit?)
 propose_insight_card(what_to_watch, why_watch, watch_for?, questions?, ...)
+resolve_insight_sources(card_id)
 simulate_insight_card(card_id)
 approve_insight_card(card_id)
 evaluate_insight_card(card_id)
@@ -134,13 +135,19 @@ draft_insight_card(title, what_to_watch, why_watch, sources, ...)
 
 The proposal path uses Jev to rank a bounded source catalog, stores a draft, and
 returns setup questions. Preview is delivery-disabled. Approval is explicit.
+Proposal-created cards default to `retrieval_mode="expand"`: the selected source
+stays a human-approved anchor, while Jev can add a bounded set of authorized,
+optional context sources at evaluation time. `resolve_insight_sources` previews
+that bundle. Direct drafts default to `fixed`; set `retrieval_mode="expand"` if
+the caller wants the same related-source behavior.
 After approval, an existing scheduler or alert relay posts:
 
 ```json
 {"card_id": "card-sales-pulse"}
 ```
 
-The caller owns delivery, retries, idempotency, and side effects.
+The caller owns scheduling, delivery, retries around the sink, and side effects;
+SignalWeave records the evaluation idempotency key and replays completed results.
 
 ## Plain-language metric queries
 
@@ -193,8 +200,9 @@ decision layer between those systems.
 
 The repository includes reproducible synthetic trials, not a substitute for a
 customer's historical holdout. The controlled Jev decision matrix covered 3
-companies, 22 personas, 1,664 heterogeneous resources, and 144 tasks: Jev made
-134/144 exact outcome decisions, with all ten misses conservative
+companies, 22 personas, 1,664 heterogeneous resources, and 144 tasks: the latest
+live Jev run made 130/144 exact outcome decisions, with all fourteen misses
+conservative
 `notify` → `investigate` routes. That runner supplied hidden source refs, so its
 source-selection result is not a discovery score.
 
@@ -204,14 +212,24 @@ to Jev. It achieved 48/48 exact top-2 sets, 48/48 top-10 coverage, and 0 wrong-
 tenant returns with an explicit tenant boundary. The live metric-plan trial used
 24 held-out metric labels and achieved 24/24 correct definitions, dimensions, and
 time grains; all 24 compiled queries were bounded, `SELECT`-only, and semicolon-
-free. These are synthetic regression measurements, not universal accuracy or
-production safety claims.
+free. The live evidence-bundle trial used the same 48-task catalog with a
+human-approved anchor and independently held-out related-source labels: 48/48
+expected related sources were selected, 48/48 anchors were preserved, and 0
+wrong-tenant sources were returned. Run it with `make bundle-trial`. These are
+synthetic regression measurements, not universal accuracy or production safety
+claims.
 
 The MCP enterprise trial also exposed the limits: malformed client calls and
 unscoped catalogs caused source-discovery failures. Keep tenant identity, metric
 definition, population, grain, freshness, lineage, and source status in adapter
 metadata, and run a domain-owner-labeled, time-split shadow trial before enabling
 automated actions.
+
+The default runtime stores insight cards, metric cards, and decision receipts in
+one SQLite file. Its database uniqueness constraint makes a completed
+idempotency key replayable after restart. Multi-replica deployments should
+provide a shared transactional store through the store interfaces before routing
+traffic to more than one evaluator process.
 
 See [`docs/evidence-brief.md`](docs/evidence-brief.md) for the measured case and
 limitations.
@@ -232,6 +250,7 @@ not a universal accuracy claim.
 - [`docs/evidence-brief.md`](docs/evidence-brief.md) — measured product case
 - [`docs/enterprise-experiment.md`](docs/enterprise-experiment.md) — MCP-only enterprise readiness experiment
 - [`docs/enterprise-closure.md`](docs/enterprise-closure.md) — current proof boundary and next gate
+- [`docs/adversarial-review.md`](docs/adversarial-review.md) — public-readiness review and explicit gaps
 - [`docs/postfix-agent-trial.md`](docs/postfix-agent-trial.md) — live post-fix Luna agent trial
 - [`docs/security.md`](docs/security.md) — credentials and deployment notes
 - [`ROADMAP.md`](ROADMAP.md) — future work tracker

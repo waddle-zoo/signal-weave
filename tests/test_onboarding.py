@@ -15,7 +15,11 @@ from signalweave.models import (
 )
 from signalweave.runtime import Runtime
 from signalweave.sources import SourceRegistry
-from signalweave.store import JsonInsightCardStore
+from signalweave.store import (
+    JsonInsightCardStore,
+    SQLiteDecisionReceiptStore,
+    SQLiteInsightCardStore,
+)
 
 
 class SupersetCatalogDouble:
@@ -107,18 +111,39 @@ class OnboardingJevDouble:
         )
 
 
+class BundleJevDouble(OnboardingJevDouble):
+    async def rank_resources(self, goal, resources):
+        del goal
+        return {
+            f"{resource.adapter}|{resource.resource}": {
+                "dashboard:7": 0.94,
+                "dashboard:8": 0.88,
+                "dashboard:9": 0.12,
+            }[resource.resource]
+            for resource in resources
+        }
+
+
 class NoResourceRankingJudger:
     name = "non-jev-test-judger"
 
 
-def make_server(tmp_path):
+def make_server(tmp_path, judger=None, *, sqlite=False):
     registry = SourceRegistry([SupersetCatalogDouble()])
-    engine = InsightEngine(OnboardingJevDouble(), registry=registry)
+    engine = InsightEngine(judger or OnboardingJevDouble(), registry=registry)
+    card_store = (
+        SQLiteInsightCardStore(tmp_path / "signalweave.db")
+        if sqlite
+        else JsonInsightCardStore(tmp_path / "cards.json")
+    )
     return create_mcp(
         Runtime(
-            card_store=JsonInsightCardStore(tmp_path / "cards.json"),
+            card_store=card_store,
             sources=registry,
             engine=engine,
+            decision_receipts=(
+                SQLiteDecisionReceiptStore(tmp_path / "signalweave.db") if sqlite else None
+            ),
         )
     )
 
@@ -166,6 +191,7 @@ async def test_generic_card_flow_discovers_proposes_previews_and_requires_approv
         "Checkout conversion is materially down.",
         "Mobile errors corroborate the movement.",
     ]
+    assert proposal["proposal"]["card"]["retrieval_mode"] == "expand"
     assert proposal["proposal"]["card"]["sources"][0]["parameters"] == {
         "chart_ids": ["62", "64"]
     }
@@ -283,11 +309,111 @@ async def test_direct_draft_accepts_free_form_card_and_outcome_routes(tmp_path):
     ]
 
 
+@pytest.mark.asyncio
+async def test_dynamic_bundle_keeps_anchors_and_adds_jev_related_sources(tmp_path):
+    server = make_server(tmp_path, BundleJevDouble())
+    drafted = await tool(server, "draft_insight_card")(
+        title="Growth with finance context",
+        what_to_watch="Checkout conversion and the context needed to understand a movement.",
+        why_watch="Help Growth decide whether a conversion change needs action.",
+        sources=[
+            {
+                "key": "growth-anchor",
+                "adapter": "superset",
+                "resource": "dashboard:7",
+                "label": "Growth overview",
+            }
+        ],
+        retrieval_mode="expand",
+        card_id="dynamic-bundle",
+    )
+    assert drafted["card"]["retrieval_mode"] == "expand"
+
+    bundle_preview = await tool(server, "resolve_insight_sources")("dynamic-bundle")
+    bundle = bundle_preview["bundle"]
+    assert bundle["anchor_source_keys"] == ["growth-anchor"]
+    assert [match["resource"] for match in bundle["related_matches"]] == ["dashboard:8"]
+    assert [source["resource"] for source in bundle["selected_sources"]] == [
+        "dashboard:7",
+        "dashboard:8",
+    ]
+    assert bundle["selected_sources"][1]["required"] is False
+
+    await tool(server, "approve_insight_card")("dynamic-bundle")
+    evaluated = await tool(server, "evaluate_insight_card")(
+        "dynamic-bundle", idempotency_key="dynamic-bundle:1"
+    )
+    assert evaluated["retrieval"]["evaluator"] == "jev-onboarding-test-double"
+    assert evaluated["result"]["retrieval"]["selected_sources"][1]["resource"] == "dashboard:8"
+    assert evaluated["result"]["source_keys"] == ["growth-anchor", "related-superset-dashboard-8"]
+
+
+@pytest.mark.asyncio
+async def test_dynamic_bundle_avoids_colliding_with_human_source_keys(tmp_path):
+    server = make_server(tmp_path, BundleJevDouble())
+    drafted = await tool(server, "draft_insight_card")(
+        title="Collision-safe context",
+        what_to_watch="Checkout conversion and related context.",
+        why_watch="Decide whether the conversion movement needs action.",
+        sources=[
+            {
+                "key": "related-superset-dashboard-8",
+                "adapter": "superset",
+                "resource": "dashboard:7",
+                "label": "Growth overview",
+            }
+        ],
+        retrieval_mode="expand",
+        card_id="collision-safe-bundle",
+    )
+
+    bundle = (await tool(server, "resolve_insight_sources")("collision-safe-bundle"))["bundle"]
+    assert [source["key"] for source in bundle["selected_sources"]] == [
+        "related-superset-dashboard-8",
+        "related-superset-dashboard-8-2",
+    ]
+    assert drafted["card"]["retrieval_mode"] == "expand"
+
+
+@pytest.mark.asyncio
+async def test_sqlite_runtime_replays_completed_evaluation_after_restart(tmp_path):
+    server = make_server(tmp_path, sqlite=True)
+    drafted = await tool(server, "draft_insight_card")(
+        title="Restart-safe card",
+        what_to_watch="Checkout conversion.",
+        why_watch="Decide whether Growth should act.",
+        sources=[
+            {
+                "key": "growth",
+                "adapter": "superset",
+                "resource": "dashboard:7",
+                "label": "Growth overview",
+            }
+        ],
+        card_id="restart-safe",
+    )
+    await tool(server, "approve_insight_card")("restart-safe")
+    first = await tool(server, "evaluate_insight_card")(
+        drafted["card"]["id"], idempotency_key="daily:restart-safe"
+    )
+
+    restarted = make_server(tmp_path, sqlite=True)
+    replay = await tool(restarted, "evaluate_insight_card")(
+        "restart-safe", idempotency_key="daily:restart-safe"
+    )
+
+    assert first["replayed"] is False
+    assert replay["replayed"] is True
+    assert replay["receipt"]["status"] == "replayed"
+    assert replay["result"] == first["result"]
+
+
 def test_mcp_exposes_generic_authoring_tools(tmp_path):
     server = make_server(tmp_path)
     names = set(server._tool_manager._tools)
     assert {
         "discover_insight_sources",
+        "resolve_insight_sources",
         "propose_insight_card",
         "draft_insight_card",
         "simulate_insight_card",

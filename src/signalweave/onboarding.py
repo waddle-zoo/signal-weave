@@ -8,11 +8,13 @@ from uuid import uuid4
 from .compiler import SUPPORTED_CAPABILITIES
 from .models import (
     DeliveryMethod,
+    EvidenceBundle,
     InsightCard,
     InsightCardProposal,
     ResourceDescriptor,
     ResourceDiscovery,
     ResourceMatch,
+    RetrievalMode,
     SourceRef,
 )
 from .sources import SourceRegistry
@@ -104,6 +106,7 @@ class InsightAuthoringService:
     engine: Any
     max_candidates: int = 40
     recommendation_threshold: float = 0.60
+    related_source_limit: int = 6
 
     async def discover(
         self,
@@ -185,6 +188,7 @@ class InsightAuthoringService:
         action_confidence_threshold: float = 0.70,
         owner: str | None = None,
         max_source_age_hours: float | None = 24.0,
+        retrieval_mode: RetrievalMode = RetrievalMode.EXPAND,
     ) -> InsightCardProposal:
         if not what_to_watch.strip():
             raise ValueError("what_to_watch must not be empty")
@@ -231,6 +235,7 @@ class InsightAuthoringService:
             action_confidence_threshold=action_confidence_threshold,
             owner=owner,
             max_source_age_hours=max_source_age_hours,
+            retrieval_mode=retrieval_mode,
         )
         plan = await self.engine.compile(card)
         setup_questions: list[str] = []
@@ -258,6 +263,115 @@ class InsightAuthoringService:
             plan=plan,
             discovery=discovery,
             setup_questions=setup_questions,
+        )
+
+    async def resolve_bundle(self, card: InsightCard) -> EvidenceBundle:
+        """Resolve a bounded Jev-ranked source bundle for one card evaluation.
+
+        Card sources remain the human-approved anchors. Expansion only adds
+        optional catalog resources above the configured relevance threshold;
+        missing or weakly related candidates never replace an anchor.
+        """
+        goal = insight_goal(card.what_to_watch, card.why_watch, card.watch_for, card.questions)
+        anchors = list(card.sources)
+        if card.retrieval_mode == RetrievalMode.FIXED:
+            return EvidenceBundle(
+                card_id=card.id,
+                goal=goal,
+                anchor_source_keys=[source.key for source in anchors],
+                selected_sources=anchors,
+                candidate_count=0,
+                candidate_limit=self.max_candidates,
+                evaluator="fixed-card-sources",
+                warnings=["Card retrieval_mode is fixed; no related source expansion was requested."],
+            )
+
+        resources = await self.registry.list_resources()
+        anchor_refs = {f"{source.adapter}|{source.resource}" for source in anchors}
+        anchor_descriptors = {
+            resource_ref(resource): resource
+            for resource in resources
+            if resource_ref(resource) in anchor_refs
+        }
+        anchor_context = " ".join(
+            _search_text(resource) for resource in anchor_descriptors.values()
+        )
+        ranked_goal = f"{goal}\nConfirmed anchor context: {anchor_context}" if anchor_context else goal
+        candidates, truncated = self._bounded_candidates(ranked_goal, resources)
+        judger = self._relevance_judger()
+        scores = await judger.rank_resources(ranked_goal, candidates)
+        matches = [
+            ResourceMatch(
+                ref=resource_ref(resource),
+                adapter=resource.adapter,
+                resource=resource.resource,
+                kind=resource.kind,
+                title=resource.title,
+                description=resource.description,
+                source_url=resource.source_url,
+                relevance=max(0.0, min(1.0, float(scores.get(resource_ref(resource), 0.0)))),
+                recommended=False,
+                contract=resource.contract,
+            )
+            for resource in candidates
+            if resource_ref(resource) not in anchor_refs
+        ]
+        matches.sort(key=lambda match: (-match.relevance, match.title.lower(), match.ref))
+        selected_matches = [
+            match
+            for match in matches
+            if match.relevance >= self.recommendation_threshold
+        ][: self.related_source_limit]
+        selected_refs = {match.ref for match in selected_matches}
+        selected_matches = [match.model_copy(update={"recommended": True}) for match in selected_matches]
+        omitted_matches = [match for match in matches if match.ref not in selected_refs]
+        selected_sources = list(anchors)
+        source_keys = {source.key for source in selected_sources}
+        for match in selected_matches:
+            base_key = f"related-{_slug(match.ref)}"
+            source_key = base_key
+            suffix = 2
+            while source_key in source_keys:
+                source_key = f"{base_key}-{suffix}"
+                suffix += 1
+            source_keys.add(source_key)
+            selected_sources.append(
+                SourceRef(
+                    key=source_key,
+                    adapter=match.adapter,
+                    resource=match.resource,
+                    label=match.title,
+                    required=False,
+                )
+            )
+        warnings: list[str] = []
+        if truncated:
+            warnings.append(
+                "The catalog was bounded before Jev ranking; related-source recall depends "
+                "on adapter metadata and lexical candidate coverage."
+            )
+        if not selected_matches:
+            warnings.append(
+                "Jev found no related source above the expansion threshold; the card will "
+                "run over its human-approved anchors only."
+            )
+        if any(resource.contract.tenant_id == "default" for resource in candidates):
+            warnings.append(
+                "One or more candidates lack explicit tenant identity; production adapters "
+                "should configure tenant-aware metadata."
+            )
+        return EvidenceBundle(
+            card_id=card.id,
+            goal=goal,
+            anchor_source_keys=[source.key for source in anchors],
+            selected_sources=selected_sources,
+            related_matches=selected_matches,
+            omitted_matches=omitted_matches,
+            candidate_count=len(resources),
+            candidate_limit=self.max_candidates,
+            truncated=truncated,
+            evaluator=judger.name,
+            warnings=warnings,
         )
 
     def _relevance_judger(self) -> ResourceRelevanceJudger:
@@ -293,6 +407,7 @@ def proposal_summary(proposal: InsightCardProposal) -> dict[str, Any]:
         "why_watch": proposal.card.why_watch,
         "watch_for": proposal.card.watch_for,
         "questions": proposal.card.questions,
+        "retrieval_mode": proposal.card.retrieval_mode.value,
         "selected_sources": [source.model_dump(mode="json") for source in proposal.card.sources],
         "recommended_capabilities": [
             {"key": capability, "description": SUPPORTED_CAPABILITIES[capability]}

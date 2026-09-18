@@ -15,6 +15,9 @@ from .store import (
     JsonInsightCardStore,
     JsonMetricQueryCardStore,
     MetricQueryCardStore,
+    SQLiteDecisionReceiptStore,
+    SQLiteInsightCardStore,
+    SQLiteMetricQueryCardStore,
 )
 from .superset_adapter import SupersetAdapter
 from .superset_client import SupersetClient
@@ -77,14 +80,28 @@ def build_runtime(mode: str | None = None) -> Runtime:
                 ),
             )
         )
+    store_backend = os.getenv("SIGNALWEAVE_STORE_BACKEND", "sqlite").lower()
+    if store_backend == "sqlite":
+        store_path = os.getenv("SIGNALWEAVE_STORE_PATH", "data/signalweave.db")
+        card_store = SQLiteInsightCardStore(store_path)
+        decision_receipts: DecisionReceiptStore = SQLiteDecisionReceiptStore(store_path)
+        metric_query_store: MetricQueryCardStore = SQLiteMetricQueryCardStore(store_path)
+    elif store_backend == "json":
+        card_store = JsonInsightCardStore(
+            os.getenv("INSIGHT_CARD_STORE", "data/insight-cards.json")
+        )
+        decision_receipts = JsonDecisionReceiptStore(
+            os.getenv("DECISION_RECEIPT_STORE", "data/decision-receipts.json")
+        )
+        metric_query_store = JsonMetricQueryCardStore(
+            os.getenv("METRIC_QUERY_CARD_STORE", "data/metric-query-cards.json")
+        )
+    else:
+        raise ValueError("SIGNALWEAVE_STORE_BACKEND must be sqlite or json")
     return Runtime(
-        card_store=JsonInsightCardStore(os.getenv("INSIGHT_CARD_STORE", "data/insight-cards.json")),
+        card_store=card_store,
         sources=registry,
         engine=InsightEngine(judger=judger, registry=registry),
-        metric_query_store=JsonMetricQueryCardStore(
-            os.getenv("METRIC_QUERY_CARD_STORE", "data/metric-query-cards.json")
-        ),
-        decision_receipts=JsonDecisionReceiptStore(
-            os.getenv("DECISION_RECEIPT_STORE", "data/decision-receipts.json")
-        ),
+        metric_query_store=metric_query_store,
+        decision_receipts=decision_receipts,
     )

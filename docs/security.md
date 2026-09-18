@@ -27,8 +27,11 @@ deployment must establish a data policy before using company data.
   identifiers and bounded timestamp parameters. It is not a raw SQL endpoint.
 - Push evaluation requires an idempotency key and writes a durable decision
   receipt with card version, actor, outcome, and delivery state. Replays return
-  the existing receipt.
-- The insight-card catalog is written atomically, and the service image runs as a non-root user.
+  the existing receipt. The default SQLite store enforces the claim atomically;
+  its single-file scope is suitable for one service process or a shared mounted
+  volume, not a multi-replica deployment without a stronger store.
+- Insight cards and metric query cards use the same SQLite persistence boundary by
+  default, and the service image runs as a non-root user.
 
 Run the adversarial unit checks with:
 
@@ -60,6 +63,6 @@ durable control plane. A production deployment should add:
 - dashboards/alerts for source latency, failure rate, `investigate` rate, and delivery-method corrections; and
 - a data policy for what evidence may be sent to TypeSafe Jev.
 
-The local JSON catalogs and static bearer token are suitable for a contained proof
-or internal sidecar, not a substitute for those company controls. SignalWeave
+The optional JSON catalogs and static bearer token are suitable for a contained
+proof or internal sidecar, not a substitute for those company controls. SignalWeave
 does not claim OS-level process isolation or provide an identity provider.

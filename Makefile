@@ -1,4 +1,4 @@
-.PHONY: install test lint prove benchmark daily-trial enterprise-trial discovery-trial query-trial verify docker-up docker-down
+.PHONY: install test lint prove benchmark daily-trial enterprise-trial discovery-trial bundle-trial query-trial verify docker-up docker-down
 
 install:
 	uv sync --extra dev
@@ -24,6 +24,9 @@ enterprise-trial:
 
 discovery-trial:
 	TYPESAFE_API_KEY_FILE=$${TYPESAFE_API_KEY_FILE:?set a live TypeSafe key file} uv run python -c 'import asyncio, json; from pathlib import Path; from evaluations.discovery_trial import run_trial; print(json.dumps(asyncio.run(run_trial(48, Path("artifacts/discovery-trial-48.json"))), indent=2))'
+
+bundle-trial:
+	TYPESAFE_API_KEY_FILE=$${TYPESAFE_API_KEY_FILE:?set a live TypeSafe key file} uv run python -c 'import asyncio, json; from pathlib import Path; from evaluations.bundle_trial import run_trial; print(json.dumps(asyncio.run(run_trial(48, Path("artifacts/bundle-trial-48.json"))), indent=2))'
 
 query-trial:
 	TYPESAFE_API_KEY_FILE=$${TYPESAFE_API_KEY_FILE:?set a live TypeSafe key file} uv run python -c 'import asyncio, json; from pathlib import Path; from evaluations.query_trial import run_trial; print(json.dumps(asyncio.run(run_trial(24, Path("artifacts/query-trial-24.json"))), indent=2))'

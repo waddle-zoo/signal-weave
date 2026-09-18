@@ -16,8 +16,11 @@ evidence into a bounded, explainable result that an existing system can act on.
 - [x] Plain-language metric query cards with typed plans and deterministic SQL compilation
 - [x] Bounded Trino execution for compiler-produced read-only queries
 - [x] Idempotent push decision receipts and explicit approval identity
+- [x] Jev-ranked evidence-bundle expansion that preserves human anchors and adds optional context
+- [x] Durable SQLite cards, metric cards, and receipt claims for a single-process deployment
+- [x] Partial Superset evidence is visible and fails closed only when the affected source is required
 - [x] External-input evaluation and embedding/reasoning comparison harness
-- [ ] Adversarial review of the public README, examples, security posture, and
+- [x] Adversarial review of the public README, examples, security posture, and
       product claims
 
 The current review is recorded in [`docs/adversarial-review.md`](docs/adversarial-review.md);
@@ -35,6 +38,8 @@ production-control gaps explicit.
       existing company agent
 - [ ] Add customer-owned, time-split shadow labels and result traces suitable for
       a production calibration review
+- [ ] Replace the single-file store with a shared transactional store before
+      multi-replica production deployment
 
 ## Later: context that can improve decisions
 

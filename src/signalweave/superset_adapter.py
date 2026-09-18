@@ -109,6 +109,30 @@ class SupersetAdapter:
         chart_errors = [
             f"{chart.title}: {chart.error}" for chart in dashboard.charts if chart.error
         ]
+        charts_with_observations = [chart for chart in dashboard.charts if chart.observations]
+        missing_baseline_chart_ids = [
+            chart.id
+            for chart in charts_with_observations
+            if any(
+                observation.current is not None
+                and (observation.baseline is None or observation.change_pct is None)
+                for observation in chart.observations
+            )
+        ]
+        quality_status = (
+            "failed"
+            if dashboard.charts and not charts_with_observations
+            else "partial"
+            if chart_errors or missing_baseline_chart_ids
+            else "healthy"
+        )
+        metadata["data_quality"] = {
+            "status": quality_status,
+            "chart_count": len(dashboard.charts),
+            "charts_with_observations": len(charts_with_observations),
+            "chart_errors": chart_errors,
+            "missing_baseline_chart_ids": missing_baseline_chart_ids,
+        }
         return ResourceSnapshot(
             source_key=source.key,
             adapter=self.name,
@@ -118,8 +142,8 @@ class SupersetAdapter:
             observations=observations,
             evidence=evidence,
             metadata=metadata,
-            error=("One or more Superset charts were unavailable: " + "; ".join(chart_errors))
-            if chart_errors
+            error=("All Superset charts were unavailable: " + "; ".join(chart_errors))
+            if chart_errors and not charts_with_observations
             else None,
             source_url=dashboard.source_url,
             captured_at=dashboard.captured_at,

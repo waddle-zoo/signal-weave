@@ -22,6 +22,11 @@ class InsightCardStatus(StrEnum):
     APPROVED = "approved"
 
 
+class RetrievalMode(StrEnum):
+    FIXED = "fixed"
+    EXPAND = "expand"
+
+
 class WatchStatus(StrEnum):
     PRESENT = "present"
     ABSENT = "absent"
@@ -158,7 +163,7 @@ class DecisionReceipt(BaseModel):
     card_version: int = Field(ge=1)
     actor: str = Field(min_length=1, max_length=240)
     status: ReceiptStatus
-    outcome: Outcome
+    outcome: Outcome | None = None
     delivery_enabled: bool = False
     delivery_method_keys: list[str] = Field(default_factory=list, max_length=100)
     result: dict[str, Any] = Field(default_factory=dict)
@@ -221,6 +226,22 @@ class ResourceMatch(BaseModel):
     relevance: float = Field(ge=0.0, le=1.0)
     recommended: bool = False
     contract: ResourceContract = Field(default_factory=ResourceContract)
+
+
+class EvidenceBundle(BaseModel):
+    """The bounded source set resolved for one card evaluation."""
+
+    card_id: str
+    goal: str
+    anchor_source_keys: list[str] = Field(default_factory=list, max_length=200)
+    selected_sources: list[SourceRef] = Field(default_factory=list, max_length=200)
+    related_matches: list[ResourceMatch] = Field(default_factory=list, max_length=100)
+    omitted_matches: list[ResourceMatch] = Field(default_factory=list, max_length=100)
+    candidate_count: int = Field(ge=0)
+    candidate_limit: int = Field(ge=1)
+    truncated: bool = False
+    evaluator: str
+    warnings: list[str] = Field(default_factory=list, max_length=50)
 
 
 class ResourceDiscovery(BaseModel):
@@ -329,6 +350,7 @@ class InsightCard(BaseModel):
     version: int = Field(default=1, ge=1)
     max_source_age_hours: float | None = Field(default=24.0, ge=0.0, le=876000.0)
     delivery_methods: list[DeliveryMethod] = Field(default_factory=list, max_length=100)
+    retrieval_mode: RetrievalMode = RetrievalMode.FIXED
     compiled_plan: InsightPlan | None = None
     status: InsightCardStatus = InsightCardStatus.DRAFT
     approved_by: str | None = Field(default=None, max_length=240)
@@ -397,5 +419,6 @@ class InsightResult(BaseModel):
     evidence: list[Evidence] = Field(default_factory=list)
     observations: list[Observation] = Field(default_factory=list)
     source_keys: list[str] = Field(default_factory=list)
+    retrieval: EvidenceBundle | None = None
     evaluated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     evaluator: str

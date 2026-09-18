@@ -18,8 +18,10 @@ from .models import (
     InsightCard,
     InsightCardStatus,
     MetricQueryCard,
+    Outcome,
     QueryCardStatus,
     ReceiptStatus,
+    RetrievalMode,
     SourceRef,
 )
 from .onboarding import InsightAuthoringService, proposal_summary
@@ -42,6 +44,18 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
     idempotency_locks: dict[str, asyncio.Lock] = {}
     mcp = FastMCP("signal-weave")
 
+    async def prepare_insight_card(card: InsightCard) -> tuple[InsightCard, Any]:
+        """Resolve optional related sources without mutating the stored card."""
+        bundle = await authoring.resolve_bundle(card)
+        expanded = card
+        if [source.model_dump(mode="json") for source in bundle.selected_sources] != [
+            source.model_dump(mode="json") for source in card.sources
+        ]:
+            expanded = card.model_copy(
+                update={"sources": bundle.selected_sources, "compiled_plan": None}
+            )
+        return expanded, bundle
+
     async def evaluate_approved_card_once(
         card_id: str,
         *,
@@ -58,6 +72,8 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
             raise ValueError("idempotency_key must not be empty")
         existing = decision_receipts.get_by_idempotency_key(key)
         if existing is not None:
+            if existing.status == ReceiptStatus.PREPARED:
+                raise ValueError("idempotency key is already being evaluated; retry shortly")
             return {
                 "receipt": existing.model_copy(update={"status": ReceiptStatus.REPLAYED}).model_dump(
                     mode="json"
@@ -65,25 +81,58 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
                 "replayed": True,
                 "result": existing.result,
             }
-        run = await runtime.engine.evaluate(card)
-        result = run.result.model_dump(mode="json")
-        receipt = DecisionReceipt(
+        prepared = DecisionReceipt(
             receipt_id=f"receipt-{uuid4().hex}",
             idempotency_key=key,
             card_id=card.id,
             card_version=card.version,
             actor=actor or "mcp-client",
-            status=ReceiptStatus.DELIVERY_DISABLED,
-            outcome=run.result.outcome,
-            delivery_enabled=False,
-            delivery_method_keys=[method.key for method in run.result.delivery_methods],
-            result=result,
+            status=ReceiptStatus.PREPARED,
+        )
+        if not decision_receipts.claim(prepared):
+            existing = decision_receipts.get_by_idempotency_key(key)
+            if existing is not None and existing.status == ReceiptStatus.PREPARED:
+                raise ValueError("idempotency key is already being evaluated; retry shortly")
+            if existing is None:
+                raise RuntimeError("unable to claim idempotency key")
+            return {
+                "receipt": existing.model_copy(update={"status": ReceiptStatus.REPLAYED}).model_dump(
+                    mode="json"
+                ),
+                "replayed": True,
+                "result": existing.result,
+            }
+        try:
+            evaluation_card, bundle = await prepare_insight_card(card)
+            run = await runtime.engine.evaluate(evaluation_card)
+            evaluated_result = run.result.model_copy(update={"retrieval": bundle})
+            result = evaluated_result.model_dump(mode="json")
+        except Exception as error:  # noqa: BLE001 - persist failed claims for replay safety
+            decision_receipts.save(
+                prepared.model_copy(
+                    update={
+                        "status": ReceiptStatus.FAILED,
+                        "outcome": Outcome.INSUFFICIENT_DATA,
+                        "result": {"error": f"{type(error).__name__}: {error}"},
+                    }
+                )
+            )
+            raise
+        receipt = prepared.model_copy(
+            update={
+                "status": ReceiptStatus.DELIVERY_DISABLED,
+                "outcome": run.result.outcome,
+                "delivery_enabled": False,
+                "delivery_method_keys": [method.key for method in run.result.delivery_methods],
+                "result": result,
+            }
         )
         decision_receipts.save(receipt)
         return {
             "receipt": receipt.model_dump(mode="json"),
             "replayed": False,
             "card": run.card.model_dump(mode="json"),
+            "retrieval": bundle.model_dump(mode="json"),
             "resources": [resource.model_dump(mode="json") for resource in run.resources],
             "plan": run.plan.model_dump(mode="json"),
             "result": result,
@@ -183,6 +232,7 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
         action_confidence_threshold: float = 0.70,
         owner: str | None = None,
         max_source_age_hours: float | None = 24.0,
+        retrieval_mode: str = "expand",
     ) -> dict[str, Any]:
         """Propose and save a draft free-form insight card.
 
@@ -207,6 +257,7 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
             action_confidence_threshold=action_confidence_threshold,
             owner=owner,
             max_source_age_hours=max_source_age_hours,
+            retrieval_mode=RetrievalMode(retrieval_mode),
         )
         stored_card = proposal.card.model_copy(update={"compiled_plan": proposal.plan})
         runtime.card_store.save_card(stored_card)
@@ -230,6 +281,7 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
         action_confidence_threshold: float = 0.70,
         owner: str | None = None,
         max_source_age_hours: float | None = 24.0,
+        retrieval_mode: str = "fixed",
     ) -> dict[str, Any]:
         """Draft a card over explicit source resources; no push is sent."""
         if not sources:
@@ -251,6 +303,7 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
             action_confidence_threshold=action_confidence_threshold,
             owner=owner,
             max_source_age_hours=max_source_age_hours,
+            retrieval_mode=RetrievalMode(retrieval_mode),
         )
         plan = await runtime.engine.compile(card)
         card = card.model_copy(update={"compiled_plan": plan})
@@ -363,17 +416,30 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
         )
 
     @mcp.tool()
+    async def resolve_insight_sources(card_id: str) -> dict[str, Any]:
+        """Preview the bounded Jev-ranked evidence bundle for a stored card."""
+        card = runtime.card_store.get_card(card_id)
+        bundle = await authoring.resolve_bundle(card)
+        return {
+            "card": card.model_dump(mode="json"),
+            "bundle": bundle.model_dump(mode="json"),
+        }
+
+    @mcp.tool()
     async def simulate_insight_card(card_id: str) -> dict[str, Any]:
         """Evaluate a draft without treating the result as an approved push action."""
         card = runtime.card_store.get_card(card_id)
-        run = await runtime.engine.evaluate(card)
+        evaluation_card, bundle = await prepare_insight_card(card)
+        run = await runtime.engine.evaluate(evaluation_card)
+        result = run.result.model_copy(update={"retrieval": bundle})
         return {
             "status": "preview",
             "delivery_enabled": False,
             "card": run.card.model_dump(mode="json"),
             "resources": [resource.model_dump(mode="json") for resource in run.resources],
             "plan": run.plan.model_dump(mode="json"),
-            "result": run.result.model_dump(mode="json"),
+            "retrieval": bundle.model_dump(mode="json"),
+            "result": result.model_dump(mode="json"),
         }
 
     @mcp.tool()
@@ -459,7 +525,8 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
                 card_id, idempotency_key=str(idempotency_key), actor=actor
             )
         except (KeyError, ValueError) as error:
-            status_code = 409 if "draft" in str(error) else 404
+            message = str(error)
+            status_code = 409 if "draft" in message or "already being evaluated" in message else 404
             return JSONResponse({"error": str(error)}, status_code=status_code)
         return JSONResponse(result)
 

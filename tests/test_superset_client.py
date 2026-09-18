@@ -127,6 +127,51 @@ async def test_dashboard_snapshot_records_source_failures_for_safety_gates():
 
 
 @pytest.mark.asyncio
+async def test_partial_dashboard_preserves_good_charts_and_quality_metadata():
+    class PartiallyBrokenClient(SupersetClient):
+        async def get_dashboard_metadata(self, dashboard_id):
+            return {
+                "id": dashboard_id,
+                "dashboard_title": "Partially available dashboard",
+                "position_json": (
+                    '{"good": {"type": "CHART", "meta": {"chartId": 42}}, '
+                    '"bad": {"type": "CHART", "meta": {"chartId": 43}}}'
+                ),
+            }
+
+        async def get_chart_metadata(self, chart_id):
+            return {
+                "id": chart_id,
+                "slice_name": f"Chart {chart_id}",
+                "params": {"metrics": [{"label": "Revenue"}], "granularity_sqla": "period"},
+            }
+
+        async def chart_data(self, chart):
+            if str(chart["id"]) == "43":
+                raise httpx.ReadTimeout("chart unavailable")
+            return [{"data": [{"period": 1, "Revenue": 10}, {"period": 2, "Revenue": 12}]}]
+
+    resource = await SupersetAdapter(PartiallyBrokenClient("http://superset")).inspect(
+        SourceRef(
+            key="partial-dashboard",
+            adapter="superset",
+            resource="dashboard:7",
+            label="Partially available dashboard",
+        )
+    )
+
+    assert resource.error is None
+    assert len(resource.observations) == 1
+    assert resource.metadata["data_quality"] == {
+        "status": "partial",
+        "chart_count": 2,
+        "charts_with_observations": 1,
+        "chart_errors": ["43: Data unavailable from Superset: chart unavailable"],
+        "missing_baseline_chart_ids": [],
+    }
+
+
+@pytest.mark.asyncio
 async def test_dashboard_snapshot_rejects_unknown_selected_chart_ids():
     class CatalogClient(SupersetClient):
         async def get_dashboard_metadata(self, dashboard_id):

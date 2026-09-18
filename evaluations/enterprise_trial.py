@@ -57,6 +57,7 @@ ALLOWED_MCP_TOOLS = (
     "discover_insight_sources",
     "propose_insight_card",
     "draft_insight_card",
+    "resolve_insight_sources",
     "simulate_insight_card",
     "approve_insight_card",
     "list_insight_cards",

@@ -313,6 +313,132 @@ async def test_source_failure_is_not_treated_as_ignore():
     assert "timeout" in run.result.evidence[-1].statement
 
 
+async def test_partial_required_source_is_not_automatically_interpreted():
+    source = SourceRef(
+        key="partial-dashboard",
+        adapter="superset",
+        resource="dashboard:revenue",
+        label="Revenue dashboard",
+    )
+    card = card_for(
+        card_id="card-partial-dashboard",
+        title="Partial dashboard",
+        source=source,
+        delivery_methods=[
+            DeliveryMethod(
+                key="ops",
+                outcome=Outcome.NOTIFY,
+                label="Ops",
+                destination="slack://ops",
+            )
+        ],
+    )
+    resource = ResourceSnapshot(
+        source_key=source.key,
+        adapter=source.adapter,
+        resource=source.resource,
+        title=source.label,
+        metadata={
+            "data_quality": {
+                "status": "partial",
+                "chart_count": 2,
+                "charts_with_observations": 1,
+                "chart_errors": ["Chart 2 unavailable"],
+                "missing_baseline_chart_ids": [],
+            }
+        },
+        observations=[
+            Observation(
+                source_key=source.key,
+                subject_id="revenue",
+                subject_label="Revenue",
+                metric="revenue",
+                current=110,
+                baseline=100,
+                change_pct=10,
+            )
+        ],
+    )
+
+    run = await InsightEngine(SafetyTestDouble()).evaluate(card, [resource])
+    assert run.result.outcome == Outcome.INSUFFICIENT_DATA
+    assert run.result.delivery_methods == []
+    assert any("partial evidence" in item.statement for item in run.result.evidence)
+
+
+async def test_optional_related_source_does_not_block_required_evidence():
+    required = SourceRef(
+        key="dashboard-anchor",
+        adapter="superset",
+        resource="dashboard:anchor",
+        label="Dashboard anchor",
+    )
+    related = SourceRef(
+        key="related-context",
+        adapter="superset",
+        resource="dashboard:related",
+        label="Related context",
+        required=False,
+    )
+    card = card_for(
+        card_id="card-optional-context",
+        title="Optional context",
+        source=required,
+        delivery_methods=[
+            DeliveryMethod(
+                key="ops",
+                outcome=Outcome.NOTIFY,
+                label="Operations",
+                destination="slack://ops",
+            )
+        ],
+    ).model_copy(update={"sources": [required, related]})
+
+    class NotifyJudger(SafetyTestDouble):
+        async def judge(self, state, card, plan, observations):
+            result = await super().judge(state, card, plan, observations)
+            return result.model_copy(update={"outcome": Outcome.NOTIFY, "confidence": 0.99})
+
+    resources = [
+        ResourceSnapshot(
+            source_key=required.key,
+            adapter=required.adapter,
+            resource=required.resource,
+            title=required.label,
+            observations=[
+                Observation(
+                    source_key=required.key,
+                    subject_id="revenue",
+                    subject_label="Revenue",
+                    metric="revenue",
+                    current=110,
+                    baseline=100,
+                    change_pct=10,
+                )
+            ],
+        ),
+        ResourceSnapshot(
+            source_key=related.key,
+            adapter=related.adapter,
+            resource=related.resource,
+            title=related.label,
+            observations=[
+                Observation(
+                    source_key=related.key,
+                    subject_id="context",
+                    subject_label="Context",
+                    metric="context",
+                    current=12,
+                )
+            ],
+        ),
+    ]
+
+    run = await InsightEngine(NotifyJudger()).evaluate(card, resources)
+    assert run.result.outcome == Outcome.NOTIFY
+    assert [method.key for method in run.result.delivery_methods] == ["ops"]
+
+
 async def test_empty_required_source_is_not_automatic():
     source = SourceRef(
         key="empty-source",
