@@ -15,8 +15,8 @@ operations.
 ## What passed
 
 - Local lint and tests: `63 passed, 1 skipped`.
-- The feature branch is verified locally; GitHub branch/CI state is reported
-  separately when the remote is reachable.
+- The feature branch is verified locally and GitHub Actions checks for PR #1
+  pass on Python 3.11 and 3.12.
 - The package builds successfully and declares Apache 2.0 metadata.
 - The visual assets are valid SVGs and are included in source distributions.
 - No committed API keys, access tokens, or private keys were found by the tracked
@@ -90,7 +90,7 @@ evidence sent to TypeSafe Jev. See [`SECURITY.md`](../SECURITY.md) and
 ```text
 ruff check src tests evaluations       passed
 Python 3.12 + pytest -q                 63 passed, 1 skipped
-GitHub Actions / remote branch         verify after network access
+GitHub Actions PR #1                   test (3.11), test (3.12) passed
 SVG XML validation and rendering       passed
 Tracked credential scan                no secrets found
 ```
