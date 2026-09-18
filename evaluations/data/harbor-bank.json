@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "company": {
+    "id": "harbor-bank",
+    "name": "Harbor Bank",
+    "description": "A regulated retail and commercial bank with digital, branch, risk, and treasury operations.",
+    "seed": 20260918
+  },
+  "catalog": {
+    "dashboard_count": 100,
+    "charts_per_dashboard": [5, 14],
+    "refresh_profiles": [
+      {"name": "near_real_time", "minutes": 5, "weight": 15},
+      {"name": "hourly", "minutes": 60, "weight": 30},
+      {"name": "daily", "minutes": 1440, "weight": 30},
+      {"name": "weekly", "minutes": 10080, "weight": 15},
+      {"name": "regulatory_ad_hoc", "minutes": 0, "weight": 10}
+    ],
+    "chart_type_weights": [
+      {"name": "line", "weight": 24},
+      {"name": "big_number", "weight": 18},
+      {"name": "table", "weight": 18},
+      {"name": "heatmap", "weight": 12},
+      {"name": "bar", "weight": 12},
+      {"name": "funnel", "weight": 6},
+      {"name": "scatter", "weight": 5},
+      {"name": "donut", "weight": 5}
+    ]
+  },
+  "domains": [
+    {"id": "consumer-banking", "name": "Consumer Banking", "dashboard_count": 14, "owner_team": "Consumer Banking Operations", "metrics": ["deposit growth", "active accounts", "digital engagement", "branch service time"]},
+    {"id": "lending", "name": "Lending", "dashboard_count": 14, "owner_team": "Lending Operations", "metrics": ["application approval rate", "underwriting cycle time", "delinquency rate", "loan origination volume"]},
+    {"id": "payments", "name": "Payments", "dashboard_count": 12, "owner_team": "Payments Operations", "metrics": ["authorization rate", "payment failure rate", "fraud approval rate", "settlement delay"]},
+    {"id": "fraud", "name": "Fraud and Financial Crime", "dashboard_count": 12, "owner_team": "Financial Crime Operations", "metrics": ["suspicious transaction rate", "case backlog", "false positive rate", "account takeover rate"]},
+    {"id": "risk", "name": "Risk", "dashboard_count": 12, "owner_team": "Enterprise Risk", "metrics": ["credit exposure", "capital ratio", "limit utilization", "stress loss estimate"]},
+    {"id": "compliance", "name": "Compliance", "dashboard_count": 12, "owner_team": "Compliance Operations", "metrics": ["KYC completion", "alert aging", "review backlog", "policy exception rate"]},
+    {"id": "treasury", "name": "Treasury", "dashboard_count": 12, "owner_team": "Treasury Operations", "metrics": ["liquidity coverage", "cash forecast variance", "funding cost", "intraday position"]},
+    {"id": "bank-data-platform", "name": "Bank Data Platform", "dashboard_count": 12, "owner_team": "Data Platform", "metrics": ["warehouse freshness", "query success rate", "lineage coverage", "data quality score"]}
+  ],
+  "personas": [
+    {"id": "chief-risk-officer", "name": "Chief Risk Officer", "technical_literacy": "low", "domain": "risk", "role_goal": "Decide whether a risk movement is trustworthy enough for executive attention."},
+    {"id": "payments-operations-lead", "name": "Payments Operations Lead", "technical_literacy": "medium", "domain": "payments", "role_goal": "Separate a real authorization problem from settlement or source freshness issues."},
+    {"id": "financial-crime-analyst", "name": "Financial Crime Analyst", "technical_literacy": "high", "domain": "fraud", "role_goal": "Investigate suspicious-transaction movement with related case and false-positive context."},
+    {"id": "lending-director", "name": "Lending Director", "technical_literacy": "medium", "domain": "lending", "role_goal": "Know whether an approval-rate movement needs operational intervention."},
+    {"id": "treasury-manager", "name": "Treasury Manager", "technical_literacy": "medium", "domain": "treasury", "role_goal": "Prepare a trustworthy liquidity brief across dashboards and upstream data sources."},
+    {"id": "bank-data-sre", "name": "Bank Data Platform SRE", "technical_literacy": "high", "domain": "bank-data-platform", "role_goal": "Distinguish a data incident from a genuine business movement before escalation."}
+  ],
+  "task_variants": ["corroborated_notify", "explained_ignore", "contradictory_investigate", "definition_mismatch", "stale_escalation", "missing_baseline", "source_failure"]
+}

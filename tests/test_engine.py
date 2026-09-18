@@ -142,6 +142,55 @@ async def test_stale_data_escalates_to_configured_method():
     assert run.result.evidence[0].values["freshness"]
 
 
+async def test_ambiguous_source_cannot_take_an_automatic_route():
+    class AmbiguousNotifyJudger(SafetyTestDouble):
+        async def judge(self, state, card, plan, observations):
+            result = await super().judge(state, card, plan, observations)
+            return result.model_copy(update={"outcome": Outcome.NOTIFY, "confidence": 0.99})
+
+    source = SourceRef(
+        key="ambiguous-source",
+        adapter="sql",
+        resource="query:metric",
+        label="Ambiguous metric",
+    )
+    card = card_for(
+        card_id="card-ambiguous-source",
+        title="Ambiguous metric comparison",
+        source=source,
+        watch_for=["The metric definition is comparable."],
+        delivery_methods=[
+            DeliveryMethod(
+                key="ops",
+                outcome=Outcome.NOTIFY,
+                label="Operations",
+                destination="slack://ops",
+            )
+        ],
+    )
+    resource = ResourceSnapshot(
+        source_key=source.key,
+        adapter=source.adapter,
+        resource=source.resource,
+        title=source.label,
+        observations=[
+            Observation(
+                source_key=source.key,
+                subject_id="metric",
+                subject_label="Metric",
+                metric="metric",
+                current=82,
+                baseline=100,
+                change_pct=-18,
+                attributes={"source_status": "ambiguous"},
+            )
+        ],
+    )
+    run = await InsightEngine(AmbiguousNotifyJudger()).evaluate(card, [resource])
+    assert run.result.outcome == Outcome.INVESTIGATE
+    assert run.result.delivery_methods == []
+
+
 async def test_low_confidence_notify_is_safely_downgraded():
     class LowConfidenceJudger(JevTestDouble):
         name = "test-low-confidence"
@@ -186,6 +235,49 @@ async def test_missing_baseline_is_not_treated_as_ignore():
     )
     run = await InsightEngine(SafetyTestDouble()).evaluate(card, [resource])
     assert run.result.outcome == Outcome.INSUFFICIENT_DATA
+
+
+async def test_unavailable_comparison_window_preserves_adapter_baseline():
+    class TrailingWindowJudger(SafetyTestDouble):
+        async def compile_plan(self, state, card):
+            del state
+            return {
+                "capabilities": ["percent_change", "baseline_comparison"],
+                "baseline": card.comparison_windows[-1],
+            }
+
+    source = SourceRef(
+        key="single-window-source",
+        adapter="sql",
+        resource="query:metric",
+        label="Metric query",
+    )
+    card = card_for(
+        card_id="card-single-window",
+        title="Single-window comparison",
+        source=source,
+        comparison_windows=["previous_period", "trailing_4_period_average"],
+    )
+    resource = ResourceSnapshot(
+        source_key=source.key,
+        adapter=source.adapter,
+        resource=source.resource,
+        title=source.label,
+        observations=[
+            Observation(
+                source_key=source.key,
+                subject_id="metric",
+                subject_label="Metric",
+                metric="metric",
+                current=110,
+                baseline=100,
+            )
+        ],
+    )
+    run = await InsightEngine(TrailingWindowJudger()).evaluate(card, [resource])
+    assert run.result.outcome == Outcome.INVESTIGATE
+    assert run.result.observations[0].baseline == 100
+    assert run.result.observations[0].change_pct == 10
 
 
 async def test_source_failure_is_not_treated_as_ignore():

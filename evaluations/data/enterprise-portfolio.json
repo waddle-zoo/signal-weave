@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "portfolio": {
+    "id": "signalweave-enterprise-portfolio",
+    "name": "SignalWeave enterprise readiness portfolio",
+    "companies": [
+      {"namespace": "northstar", "config": "northstar-company.json"},
+      {"namespace": "harbor", "config": "harbor-bank.json"},
+      {"namespace": "orbit", "config": "orbitworks-saas.json"}
+    ]
+  }
+}

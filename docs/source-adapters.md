@@ -34,6 +34,15 @@ The adapter should:
 - include a source URL/run ID when possible; and
 - return a `ResourceSnapshot(error=...)` through the registry path when the source cannot be trusted.
 
+For production catalogs, populate the typed `ResourceContract` as well:
+
+- `tenant_id` and `authorized` identify the security boundary;
+- `domain`, `scope`, `population`, and `grain` explain what the resource means;
+- `freshness_sla_hours`, `source_status`, and `lineage` describe trust and recency;
+- `roles` describes whether the resource is a primary metric, context, quality, or
+  other approved evidence role; and
+- `metric_definitions` describes approved queryable metrics without exposing raw SQL.
+
 The engine does not parse the resource locator or execute source languages. This
 keeps a SQL adapter from turning the MCP surface into an arbitrary SQL console,
 and keeps an Airflow adapter from becoming a DAG execution API.
@@ -45,6 +54,7 @@ These are intended adapter contracts, not shipped connectors in the current repo
 ```text
 Superset   dashboard:7       parameters.chart_ids=[62,64]
 SQL        query:orders_quality
+Trino      query:net_revenue
 Airflow    dag:warehouse_load parameters.run="latest"
 Table      table:warehouse.orders parameters.check="exists_and_fresh"
 ```
@@ -60,6 +70,12 @@ query catalog. It should not accept raw SQL from `SourceRef.parameters` unless t
 deployment has an explicit, separately reviewed policy for that capability. The
 adapter should return the query’s declared metric names, grain, current/baseline
 values, freshness, and data-quality evidence.
+
+`TrinoQueryAdapter` implements the same boundary for data-lake metric queries. Its
+source parameters may name an approved `metric_key`, dimensions, a supported time
+grain, and an explicit ISO-8601 window. The adapter compiles those fields through
+`MetricQueryPlan`; it rejects caller SQL, unapproved relations/columns, missing
+windows, and non-`SELECT` execution.
 
 ## Airflow or Dagster adapter boundary
 

@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "company": {
+    "id": "orbitworks-saas",
+    "name": "OrbitWorks SaaS",
+    "description": "A global B2B SaaS company operating subscription, product, support, and cloud platforms.",
+    "seed": 20260919
+  },
+  "catalog": {
+    "dashboard_count": 100,
+    "charts_per_dashboard": [4, 16],
+    "refresh_profiles": [
+      {"name": "event_driven", "minutes": 5, "weight": 20},
+      {"name": "quarter_hourly", "minutes": 15, "weight": 20},
+      {"name": "hourly", "minutes": 60, "weight": 30},
+      {"name": "daily", "minutes": 1440, "weight": 20},
+      {"name": "ad_hoc", "minutes": 0, "weight": 10}
+    ],
+    "chart_type_weights": [
+      {"name": "line", "weight": 28},
+      {"name": "big_number", "weight": 18},
+      {"name": "funnel", "weight": 14},
+      {"name": "bar", "weight": 12},
+      {"name": "table", "weight": 10},
+      {"name": "scatter", "weight": 8},
+      {"name": "heatmap", "weight": 6},
+      {"name": "donut", "weight": 4}
+    ]
+  },
+  "domains": [
+    {"id": "growth", "name": "Growth", "dashboard_count": 14, "owner_team": "Growth Operations", "metrics": ["activation rate", "trial conversion", "customer acquisition cost", "qualified pipeline"]},
+    {"id": "product", "name": "Product", "dashboard_count": 14, "owner_team": "Product Operations", "metrics": ["feature adoption", "weekly active teams", "retention", "time to value"]},
+    {"id": "subscriptions", "name": "Subscriptions", "dashboard_count": 12, "owner_team": "Subscription Operations", "metrics": ["net revenue retention", "gross churn", "expansion rate", "renewal forecast"]},
+    {"id": "customer-success", "name": "Customer Success", "dashboard_count": 12, "owner_team": "Customer Success", "metrics": ["health score", "renewal risk", "time to resolution", "executive sponsor coverage"]},
+    {"id": "support", "name": "Support", "dashboard_count": 12, "owner_team": "Support Operations", "metrics": ["first response time", "SLA attainment", "backlog age", "reopen rate"]},
+    {"id": "cloud-platform", "name": "Cloud Platform", "dashboard_count": 12, "owner_team": "Platform Reliability", "metrics": ["API error rate", "p95 latency", "deployment failure rate", "incident volume"]},
+    {"id": "data-platform", "name": "Data Platform", "dashboard_count": 12, "owner_team": "Analytics Engineering", "metrics": ["warehouse freshness", "query success rate", "semantic coverage", "null rate"]},
+    {"id": "sales", "name": "Sales", "dashboard_count": 12, "owner_team": "Revenue Operations", "metrics": ["pipeline coverage", "win rate", "bookings", "forecast variance"]}
+  ],
+  "personas": [
+    {"id": "chief-product-officer", "name": "Chief Product Officer", "technical_literacy": "low", "domain": "product", "role_goal": "Know which product movements deserve an executive decision rather than a dashboard review."},
+    {"id": "growth-lead", "name": "Growth Lead", "technical_literacy": "medium", "domain": "growth", "role_goal": "Distinguish a real funnel regression from acquisition mix or tracking changes."},
+    {"id": "customer-success-vp", "name": "VP Customer Success", "technical_literacy": "medium", "domain": "customer-success", "role_goal": "Find renewal risk that is supported by customer health and operational evidence."},
+    {"id": "platform-sre", "name": "Platform SRE", "technical_literacy": "high", "domain": "cloud-platform", "role_goal": "Separate a service incident from stale dashboards and failed refresh jobs."},
+    {"id": "analytics-engineer", "name": "Analytics Engineer", "technical_literacy": "high", "domain": "data-platform", "role_goal": "Validate definitions, grain, filters, and freshness before a metric is used."},
+    {"id": "sales-ops-director", "name": "Sales Operations Director", "technical_literacy": "medium", "domain": "sales", "role_goal": "Prepare a forecast action brief from pipeline, bookings, and data-quality context."}
+  ],
+  "task_variants": ["corroborated_notify", "explained_ignore", "contradictory_investigate", "definition_mismatch", "stale_escalation", "missing_baseline", "source_failure"]
+}

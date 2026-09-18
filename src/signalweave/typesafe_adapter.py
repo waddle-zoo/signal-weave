@@ -18,6 +18,7 @@ from .models import (
     WatchResult,
     WatchStatus,
 )
+from .query_planner import MetricCandidate
 
 
 class InsightJudger(Protocol):
@@ -34,6 +35,14 @@ class InsightJudger(Protocol):
         plan: InsightPlan,
         observations: list[Observation],
     ) -> InsightResult: ...
+
+    async def select_metric_plan(
+        self,
+        goal: str,
+        candidates: list[MetricCandidate],
+        requested_dimensions: list[str],
+        requested_time_grain: str | None,
+    ) -> dict[str, Any]: ...
 
 
 @dataclass
@@ -96,6 +105,7 @@ class JevJudger:
                     "description": resource.description,
                     "source_url": resource.source_url,
                     "metadata": resource.metadata,
+                    "contract": resource.contract.model_dump(mode="json"),
                 }
                 for resource in resources
             ],
@@ -123,6 +133,100 @@ class JevJudger:
         return {
             f"{resource.adapter}|{resource.resource}": response.nouls[f"resource_{index}"].noul
             for index, resource in enumerate(resources)
+        }
+
+    async def select_metric_plan(
+        self,
+        goal: str,
+        candidates: list[MetricCandidate],
+        requested_dimensions: list[str],
+        requested_time_grain: str | None,
+    ) -> dict[str, Any]:
+        """Select an approved metric definition; never ask Jev to write SQL."""
+        from typesafe_sdk import Choice, Noul
+
+        if not candidates:
+            raise ValueError("metric selection requires at least one candidate")
+        candidate_criteria = {
+            str(candidate["candidate_id"]): {
+                "label": str(candidate["label"]),
+                "description": str(candidate["description"]),
+                "domain": str(candidate["domain"]),
+                "population": str(candidate["population"]),
+                "grain": str(candidate["grain"]),
+                "relation": str(candidate["relation"]),
+                "dimensions": list(candidate["dimensions"]),
+            }
+            for candidate in candidates[:50]
+        }
+        dimensions = sorted(
+            {
+                name
+                for candidate in candidates
+                for name in candidate.get("dimensions", {})
+            }
+        )
+        grains = sorted(
+            {
+                grain
+                for candidate in candidates
+                for grain in candidate.get("supported_grains", [])
+            }
+        )
+        questions: dict[str, Any] = {
+            "metric": Choice(
+                instructions=(
+                    "Which approved metric definition best answers the user's metric question? "
+                    "Choose only a candidate whose population, grain, relation, and dimensions "
+                    "match the question. Never choose a definition merely because its label shares "
+                    "a word with the question."
+                ),
+                criteria=candidate_criteria,
+            )
+        }
+        for index, dimension in enumerate(dimensions):
+            questions[f"dimension_{index}"] = Noul(
+                instructions=(
+                    f"Does the user's metric question require grouping by the approved dimension "
+                    f"`{dimension}`? Treat an explicit 'by {dimension}' or an equivalent business "
+                    "phrase as positive evidence."
+                ),
+                criteria={
+                    "true": f"The answer must be broken out by {dimension}.",
+                    "false": f"The answer does not need a {dimension} breakdown.",
+                },
+            )
+        if requested_time_grain is None and grains:
+            questions["time_grain"] = Choice(
+                instructions="Which approved time grain best matches the user's metric question?",
+                criteria={grain: f"Group the metric by {grain}." for grain in grains},
+            )
+
+        state = {
+            "goal": goal,
+            "requested_dimensions": requested_dimensions,
+            "requested_time_grain": requested_time_grain,
+            "metric_candidates": [dict(candidate) for candidate in candidates[:50]],
+        }
+        async with self._client_type(api_key=self._api_key, timeout=self._timeout) as client:
+            response = await client.system_one(state=state, questions=questions)
+        self.metrics.record(response)
+        metric_answer = response.choices["metric"]
+        selected_dimensions = list(requested_dimensions)
+        if not selected_dimensions:
+            selected_dimensions = [
+                dimension
+                for index, dimension in enumerate(dimensions)
+                if response.nouls[f"dimension_{index}"].noul >= 0.60
+            ]
+        selected_grain = requested_time_grain
+        if selected_grain is None and "time_grain" in response.choices:
+            selected_grain = response.choices["time_grain"].choice
+        return {
+            "candidate_id": metric_answer.choice,
+            "probability": metric_answer.probabilities.get(metric_answer.choice, 0.0),
+            "dimensions": selected_dimensions,
+            "time_grain": selected_grain,
         }
 
     async def compile_plan(
@@ -211,7 +315,14 @@ class JevJudger:
         for outcome in action_outcomes:
             methods = [method for method in card.delivery_methods if method.outcome == outcome]
             if outcome == Outcome.IGNORE:
-                condition = "The evidence is not actionable for this card's stated purpose."
+                condition = (
+                    "The evidence is non-actionable for this card's stated purpose. Read the "
+                    "owner-authored card guidance closely: if it says a movement is expected, "
+                    "normal, seasonal, explainable, within range, or should not create a "
+                    "notification, that guidance is positive evidence for ignore when the "
+                    "related observations support it. A large numeric movement alone is not "
+                    "enough to notify when the card's context explains it."
+                )
             elif outcome == Outcome.INVESTIGATE:
                 condition = "The evidence warrants human or downstream investigation before an automatic action."
             elif methods:

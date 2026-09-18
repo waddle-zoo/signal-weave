@@ -21,12 +21,21 @@ class SourceRegistry:
     """Resolve insight-card source refs through explicitly installed adapters."""
 
     def __init__(
-        self, adapters: Iterable[SourceAdapter] = (), *, max_concurrency: int = 8
+        self,
+        adapters: Iterable[SourceAdapter] = (),
+        *,
+        max_concurrency: int = 8,
+        authorized_tenants: Iterable[str] | None = None,
+        enforce_catalog: bool = True,
     ) -> None:
         if max_concurrency < 1:
             raise ValueError("max_concurrency must be positive")
         self._adapters: dict[str, SourceAdapter] = {}
         self._max_concurrency = max_concurrency
+        self._authorized_tenants = (
+            frozenset(authorized_tenants) if authorized_tenants is not None else None
+        )
+        self._enforce_catalog = enforce_catalog
         for adapter in adapters:
             self.register(adapter)
 
@@ -40,6 +49,10 @@ class SourceRegistry:
     def adapter_names(self) -> list[str]:
         return sorted(self._adapters)
 
+    @property
+    def authorized_tenants(self) -> frozenset[str] | None:
+        return self._authorized_tenants
+
     async def list_resources(self, adapter_name: str | None = None) -> list[ResourceDescriptor]:
         adapters = (
             [self._get(adapter_name)]
@@ -49,16 +62,43 @@ class SourceRegistry:
         resources: list[ResourceDescriptor] = []
         for adapter in adapters:
             resources.extend(await adapter.list_resources())
-        return resources
+        return [resource for resource in resources if self._is_authorized(resource)]
 
     async def inspect(self, source: SourceRef) -> ResourceSnapshot:
         return await self._get(source.adapter).inspect(source)
 
     async def resolve(self, sources: Iterable[SourceRef]) -> list[ResourceSnapshot]:
         """Fetch sources independently so one broken source is visible to the engine."""
+        source_list = list(sources)
+        catalog = {
+            (resource.adapter, resource.resource): resource
+            for resource in await self.list_resources()
+        }
         semaphore = asyncio.Semaphore(self._max_concurrency)
 
         async def resolve_one(source: SourceRef) -> ResourceSnapshot:
+            try:
+                self._get(source.adapter)
+            except Exception as error:  # noqa: BLE001 - preserve adapter failure as evidence
+                return ResourceSnapshot(
+                    source_key=source.key,
+                    adapter=source.adapter,
+                    resource=source.resource,
+                    title=source.label,
+                    error=f"{type(error).__name__}: {error}",
+                )
+            descriptor = catalog.get((source.adapter, source.resource))
+            if self._enforce_catalog and descriptor is None:
+                return ResourceSnapshot(
+                    source_key=source.key,
+                    adapter=source.adapter,
+                    resource=source.resource,
+                    title=source.label,
+                    error=(
+                        "source is not present in the authorized adapter catalog; "
+                        "rediscover it before evaluation"
+                    ),
+                )
             try:
                 async with semaphore:
                     snapshot = await self.inspect(source)
@@ -72,9 +112,26 @@ class SourceRegistry:
                 )
             if snapshot.source_key != source.key:
                 snapshot = snapshot.model_copy(update={"source_key": source.key})
+            if descriptor is not None:
+                snapshot = snapshot.model_copy(
+                    update={
+                        "contract": descriptor.contract,
+                        "source_url": snapshot.source_url or descriptor.source_url,
+                    }
+                )
             return snapshot
 
-        return list(await asyncio.gather(*(resolve_one(source) for source in sources)))
+        return list(await asyncio.gather(*(resolve_one(source) for source in source_list)))
+
+    def _is_authorized(self, resource: ResourceDescriptor) -> bool:
+        if not resource.contract.authorized:
+            return False
+        if (
+            self._authorized_tenants is not None
+            and resource.contract.tenant_id not in self._authorized_tenants
+        ):
+            return False
+        return True
 
     def _get(self, name: str | None) -> SourceAdapter:
         if not name:

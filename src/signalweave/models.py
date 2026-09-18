@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from enum import StrEnum
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -51,6 +51,150 @@ class SourceRef(BaseModel):
     required: bool = True
 
 
+class MetricDefinition(BaseModel):
+    """An approved, structured definition from a catalog or query adapter.
+
+    This is deliberately not SQL.  A query adapter owns the relation and column
+    allowlist; the compiler combines these fields into a bounded query after a
+    semantic selector chooses one definition.
+    """
+
+    key: str = Field(min_length=1, max_length=160, pattern=r"^[a-zA-Z0-9_.:-]+$")
+    label: str = Field(min_length=1, max_length=240)
+    description: str = Field(default="", max_length=4000)
+    relation: str = Field(min_length=1, max_length=400)
+    dialect: Literal["trino", "postgres", "ansi"] = "trino"
+    aggregation: Literal[
+        "sum", "avg", "min", "max", "count", "count_distinct"
+    ]
+    measure_column: str | None = Field(default=None, max_length=160)
+    time_column: str = Field(min_length=1, max_length=160)
+    supported_grains: list[Literal["day", "week", "month", "quarter", "year"]] = Field(
+        default_factory=lambda: ["day", "week", "month", "quarter", "year"], max_length=5
+    )
+    dimensions: dict[str, str] = Field(default_factory=dict, max_length=50)
+    partition_column: str | None = Field(default=None, max_length=160)
+    aliases: list[str] = Field(default_factory=list, max_length=50)
+    population: str = Field(default="", max_length=1000)
+    grain: str = Field(default="", max_length=1000)
+    lineage: list[str] = Field(default_factory=list, max_length=100)
+
+    @model_validator(mode="after")
+    def validate_metric_definition(self) -> MetricDefinition:
+        if self.aggregation in {"sum", "avg", "min", "max", "count_distinct"} and not self.measure_column:
+            raise ValueError(f"{self.aggregation} metrics require measure_column")
+        if not self.supported_grains:
+            raise ValueError("metric definitions require at least one supported grain")
+        if any(not name.strip() or not column.strip() for name, column in self.dimensions.items()):
+            raise ValueError("metric dimensions require non-empty names and columns")
+        return self
+
+
+class ResourceContract(BaseModel):
+    """Typed identity and trust metadata used during discovery and evaluation."""
+
+    tenant_id: str = Field(default="default", min_length=1, max_length=160)
+    domain: str = Field(default="unknown", min_length=1, max_length=160)
+    scope: str = Field(default="", max_length=1000)
+    metric_names: list[str] = Field(default_factory=list, max_length=100)
+    metric_definitions: list[MetricDefinition] = Field(default_factory=list, max_length=100)
+    population: str = Field(default="", max_length=1000)
+    grain: str = Field(default="", max_length=1000)
+    freshness_sla_hours: float | None = Field(default=None, ge=0.0, le=876000.0)
+    lineage: list[str] = Field(default_factory=list, max_length=100)
+    roles: list[str] = Field(default_factory=list, max_length=30)
+    source_status: Literal["healthy", "stale", "failed", "ambiguous", "unknown"] = "healthy"
+    authorized: bool = True
+
+
+class MetricQueryPlan(BaseModel):
+    """A fully resolved query plan made only from an approved metric definition."""
+
+    source_key: str
+    metric_key: str
+    relation: str
+    dialect: Literal["trino", "postgres", "ansi"]
+    aggregation: Literal["sum", "avg", "min", "max", "count", "count_distinct"]
+    measure_column: str | None = None
+    time_column: str
+    time_grain: Literal["day", "week", "month", "quarter", "year"]
+    dimensions: dict[str, str] = Field(default_factory=dict)
+    partition_column: str | None = None
+    population: str = ""
+    grain: str = ""
+    selection_probability: float = Field(ge=0.0, le=1.0)
+    selected_by: str = "jev-latest"
+
+
+class CompiledQuery(BaseModel):
+    """Deterministic SQL plus the bounded execution parameters."""
+
+    plan: MetricQueryPlan
+    sql: str
+    parameters: dict[str, str]
+    fingerprint: str
+    scan_guard: str
+
+
+class QueryCardStatus(StrEnum):
+    DRAFT = "draft"
+    APPROVED = "approved"
+
+
+class ReceiptStatus(StrEnum):
+    PREPARED = "prepared"
+    REPLAYED = "replayed"
+    DELIVERED = "delivered"
+    DELIVERY_DISABLED = "delivery_disabled"
+    FAILED = "failed"
+
+
+class DecisionReceipt(BaseModel):
+    """An idempotent record of one evaluated decision and delivery state."""
+
+    receipt_id: str = Field(min_length=1, max_length=160)
+    idempotency_key: str = Field(min_length=1, max_length=240)
+    card_id: str = Field(min_length=1, max_length=160)
+    card_version: int = Field(ge=1)
+    actor: str = Field(min_length=1, max_length=240)
+    status: ReceiptStatus
+    outcome: Outcome
+    delivery_enabled: bool = False
+    delivery_method_keys: list[str] = Field(default_factory=list, max_length=100)
+    result: dict[str, Any] = Field(default_factory=dict)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class MetricQueryCard(BaseModel):
+    """A plain-language metric request resolved into an approved query plan."""
+
+    id: str = Field(min_length=1, max_length=160)
+    title: str = Field(min_length=1, max_length=200)
+    question: str = Field(min_length=1, max_length=8000)
+    why: str = Field(min_length=1, max_length=4000)
+    sources: list[SourceRef] = Field(default_factory=list, max_length=50)
+    requested_dimensions: list[str] = Field(default_factory=list, max_length=50)
+    requested_time_grain: Literal["day", "week", "month", "quarter", "year"] | None = None
+    query_plan: MetricQueryPlan | None = None
+    status: QueryCardStatus = QueryCardStatus.DRAFT
+    version: int = Field(default=1, ge=1)
+    approved_by: str | None = Field(default=None, max_length=240)
+    approved_at: datetime | None = None
+
+    @model_validator(mode="after")
+    def validate_query_card(self) -> MetricQueryCard:
+        keys = [source.key for source in self.sources]
+        if len(keys) != len(set(keys)):
+            raise ValueError("query card source keys must be unique")
+        if self.query_plan and self.query_plan.source_key not in keys:
+            raise ValueError("query plan must reference one of the query card sources")
+        if self.query_plan and any(
+            name not in self.query_plan.dimensions for name in self.requested_dimensions
+        ):
+            raise ValueError("query plan does not contain every requested dimension")
+        return self
+
+
 class ResourceDescriptor(BaseModel):
     """Safe catalog metadata exposed by a source adapter."""
 
@@ -61,6 +205,7 @@ class ResourceDescriptor(BaseModel):
     description: str = ""
     source_url: str | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
+    contract: ResourceContract = Field(default_factory=ResourceContract)
 
 
 class ResourceMatch(BaseModel):
@@ -75,6 +220,7 @@ class ResourceMatch(BaseModel):
     source_url: str | None = None
     relevance: float = Field(ge=0.0, le=1.0)
     recommended: bool = False
+    contract: ResourceContract = Field(default_factory=ResourceContract)
 
 
 class ResourceDiscovery(BaseModel):
@@ -86,6 +232,8 @@ class ResourceDiscovery(BaseModel):
     candidate_limit: int = Field(ge=1)
     truncated: bool = False
     evaluator: str
+    authorized_tenant: str | None = None
+    warnings: list[str] = Field(default_factory=list, max_length=50)
 
 
 class Observation(BaseModel):
@@ -133,6 +281,7 @@ class ResourceSnapshot(BaseModel):
     error: str | None = None
     source_url: str | None = None
     captured_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    contract: ResourceContract = Field(default_factory=ResourceContract)
 
 
 class DeliveryMethod(BaseModel):
@@ -158,6 +307,7 @@ class InsightPlan(BaseModel):
     delivery_method_keys: list[str] = Field(default_factory=list)
     compiled_by: str = "jev-latest"
     card_scope: str
+    metric_query_plans: list[MetricQueryPlan] = Field(default_factory=list, max_length=50)
 
 
 class InsightCard(BaseModel):
@@ -181,6 +331,8 @@ class InsightCard(BaseModel):
     delivery_methods: list[DeliveryMethod] = Field(default_factory=list, max_length=100)
     compiled_plan: InsightPlan | None = None
     status: InsightCardStatus = InsightCardStatus.DRAFT
+    approved_by: str | None = Field(default=None, max_length=240)
+    approved_at: datetime | None = None
 
     @model_validator(mode="after")
     def validate_contract(self) -> InsightCard:

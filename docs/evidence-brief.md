@@ -12,7 +12,7 @@ allowlists, confidence, and side effects.
 
 ## The measured case
 
-On 2026-09-17 we ran the same four labeled situations five times each:
+On 2026-09-18 we ran the same four labeled situations five times each:
 
 - revenue decline corroborated by enterprise churn;
 - a seasonal sales decline that should be ignored;
@@ -21,26 +21,24 @@ On 2026-09-17 we ran the same four labeled situations five times each:
 
 Both evaluators received the same insight cards, observations, and source
 evidence. Both used the same engine safety gates. The OpenAI arm used embeddings
-plus a general model with a strict JSON result contract. The Jev row is a
-recorded five-repeat run from before this generic card-contract refactor; rerun
-it before treating it as a release number.
+plus a general model with a strict JSON result contract. The Jev and OpenAI rows
+below are the current five-repeat run.
 
 | Evaluator | Evaluations | Exact decisions | Wrong automatic actions | Median | p95 | Requests | Errors |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| Jev, recorded baseline | 20 | 20/20 (100%) | 0 | 701.62 ms | 914.17 ms | 40 | 0 |
-| OpenAI baseline, run A | 20 | 15/20 (75%) | 5 | 2,981.51 ms | 5,964.23 ms | 40 | 0 |
-| OpenAI baseline, run B | 20 | 16/20 (80%) | 4 | 2,855.41 ms | 4,202.77 ms | 40 | 0 |
+| Jev | 20 | 15/20 (75%) | 0 | 770.77 ms | 990.48 ms | 40 | 0 |
+| OpenAI embedding + reasoning | 20 | 14/20 (70%) | 4 | 2,300.14 ms | 2,681.64 ms | 40 | 0 |
 
-OpenAI run B reported 16,185 input tokens and 2,784 output tokens across the
-20 evaluations. Measure provider cost separately with the model and pricing a
-deployment actually uses; this repository does not invent a cost comparison.
+The Jev run reported 155,689 input tokens and 7,895 output tokens; the OpenAI
+run reported 21,535 input tokens and 3,804 output tokens across 20 evaluations.
+Those token counts are provider-reported and not directly comparable across
+APIs. Measure provider cost separately with the model and pricing a deployment
+actually uses; this repository does not invent a cost comparison.
 
-Every incorrect OpenAI result in these runs was a false `notify` for the
-seasonal case: a normal contextual decline was routed to Retail Operations. The result is useful
-because it tests the real failure mode—whether related signals change the action—
-instead of grading how persuasive a paragraph sounds. The two runs also show
-that a general model can vary on the same input even with a deterministic request
-setting.
+The Jev misses were conservative `investigate` results for the seasonal case.
+The OpenAI baseline produced four false `notify` decisions for that same case.
+The result is useful because it tests the real failure mode—whether related
+signals change the action—instead of grading how persuasive a paragraph sounds.
 
 This is evidence for a product hypothesis, not a claim of universal model
 accuracy. Four synthetic cases cannot establish enterprise performance. The
@@ -87,7 +85,7 @@ To compare against the OpenAI baseline using the same fixture:
 
 ```bash
 OPENAI_API_KEY=... \
-OPENAI_MODEL=gpt-5.6-luna \
+OPENAI_MODEL=gpt-4o-mini \
 OPENAI_EMBEDDING_MODEL=text-embedding-3-small \
   uv run python -m evaluations.cli benchmark \
   --systems openai --repeats 5 --format markdown

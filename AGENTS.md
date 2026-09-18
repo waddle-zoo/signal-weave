@@ -23,8 +23,9 @@ unrelated repositories as part of work in this repository.
 - Source adapters fetch bounded, typed evidence and never accept arbitrary code or
   unrestricted queries from an MCP caller.
 - Jev supplies narrow typed judgments. Code owns control flow, numeric and
-  freshness checks, permissions, safety gates, retries, idempotency, and side
-  effects.
+  freshness checks, permissions, safety gates, retries, idempotency receipts,
+  and side-effect admission; caller-owned delivery sinks own the actual external
+  side effect.
 - Delivery methods, outcomes, source references, and capability types are always
   bounded by an explicit card or adapter allowlist. Never let a model invent them.
 - Confidence is a routing signal, not proof. A low-confidence automatic action must

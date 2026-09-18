@@ -103,6 +103,31 @@ table table:warehouse.orders
 
 The engine never parses those locators or executes their source language.
 
+Metric query cards use a separate typed path for data-lake questions:
+
+```text
+plain-language question
+          │
+          ▼
+approved ResourceContract.metric_definitions
+          │
+          ▼
+Jev selects one definition and requested dimensions
+          │
+          ▼
+code builds MetricQueryPlan
+          │
+          ▼
+deterministic compiler emits bounded SELECT SQL
+          │
+          ▼
+TrinoQueryAdapter executes only that compiled query
+```
+
+The metric path does not ask Jev to generate SQL. Relations, aggregations,
+columns, dimensions, time grains, and partition columns come from an approved
+catalog; the compiler validates them and requires an explicit time window.
+
 ## Source adapters
 
 An adapter has two operations:
@@ -203,7 +228,11 @@ returns setup questions. The direct draft flow is for a caller that already know
 its source references. Both flows compile and store a plan. Simulation is
 delivery-disabled preview; approval is an explicit state transition; evaluation
 fetches fresh snapshots. The webhook accepts `{ "card_id": "..." }` for a
-caller-owned scheduler or push relay.
+caller-owned scheduler or push relay. Push evaluation requires an idempotency key
+and stores a decision receipt with card version, actor, outcome, selected delivery
+methods, and delivery state. Repeated keys replay the receipt instead of fetching
+sources again. Delivery remains disabled unless a deployment adds a reviewed
+delivery sink; the receipt is the handoff boundary.
 
 ## Future context and feedback
 

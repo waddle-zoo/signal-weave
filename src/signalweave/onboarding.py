@@ -42,6 +42,20 @@ def _terms(value: str) -> set[str]:
 
 
 def _search_text(resource: ResourceDescriptor) -> str:
+    metric_text = " ".join(
+        " ".join(
+            [
+                definition.key,
+                definition.label,
+                definition.description,
+                definition.population,
+                definition.grain,
+                " ".join(definition.aliases),
+                " ".join(definition.dimensions),
+            ]
+        )
+        for definition in resource.contract.metric_definitions
+    )
     metadata = " ".join(str(value) for value in resource.metadata.values())
     return " ".join(
         [
@@ -50,6 +64,13 @@ def _search_text(resource: ResourceDescriptor) -> str:
             resource.kind,
             resource.title,
             resource.description,
+            resource.contract.tenant_id,
+            resource.contract.domain,
+            resource.contract.scope,
+            resource.contract.population,
+            resource.contract.grain,
+            " ".join(resource.contract.metric_names),
+            metric_text,
             metadata,
         ]
     )
@@ -109,6 +130,7 @@ class InsightAuthoringService:
                 description=resource.description,
                 source_url=resource.source_url,
                 relevance=max(0.0, min(1.0, float(scores.get(resource_ref(resource), 0.0)))),
+                contract=resource.contract,
             )
             for resource in candidates
         ]
@@ -121,6 +143,21 @@ class InsightAuthoringService:
                 match.model_copy(update={"recommended": match.relevance >= self.recommendation_threshold})
                 for match in visible
             ]
+        warnings: list[str] = []
+        if truncated:
+            warnings.append(
+                "The catalog was bounded before Jev ranking; verify that the selected "
+                "source is present in the returned candidate set."
+            )
+        if any(resource.contract.tenant_id == "default" for resource in candidates):
+            warnings.append(
+                "One or more candidates lack an explicit tenant identity; production "
+                "deployments should configure tenant-aware adapter metadata."
+            )
+        authorized_tenants = self.registry.authorized_tenants
+        authorized_tenant = (
+            next(iter(authorized_tenants)) if authorized_tenants and len(authorized_tenants) == 1 else None
+        )
         return ResourceDiscovery(
             goal=goal,
             matches=visible,
@@ -128,6 +165,8 @@ class InsightAuthoringService:
             candidate_limit=self.max_candidates,
             truncated=truncated,
             evaluator=judger.name,
+            authorized_tenant=authorized_tenant,
+            warnings=warnings,
         )
 
     async def propose(

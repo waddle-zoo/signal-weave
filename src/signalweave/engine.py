@@ -169,7 +169,11 @@ class InsightEngine:
             return observations
         adjusted: list[Observation] = []
         for observation in observations:
-            baseline = observation.comparison_baselines.get(window)
+            # A card can request several windows while an adapter only exposes
+            # one of them. Preserve the adapter's ordinary baseline when the
+            # selected window is unavailable; otherwise a valid comparison is
+            # accidentally turned into insufficient data.
+            baseline = observation.comparison_baselines.get(window, observation.baseline)
             change_pct = None
             if baseline is not None and observation.current is not None and baseline != 0:
                 change_pct = round(
@@ -343,17 +347,38 @@ class InsightEngine:
                 confidence=max(result.confidence or 0.0, 0.99),
             )
 
-        numeric_observations = [observation for observation in observations if observation.current is not None]
-        if numeric_observations and not any(
-            observation.change_pct is not None for observation in numeric_observations
-        ):
+        ambiguous = [
+            observation
+            for observation in observations
+            if str(observation.attributes.get("source_status", "")).lower() == "ambiguous"
+        ]
+        if ambiguous and result.outcome in {Outcome.NOTIFY, Outcome.ESCALATE}:
+            return cls._with_outcome(
+                result,
+                card,
+                Outcome.INVESTIGATE,
+                rationale=(
+                    "One or more selected sources were marked ambiguous by the adapter, "
+                    "so no automatic route is safe until the definitions are reconciled."
+                ),
+            )
+
+        numeric_observations = [
+            observation for observation in observations if observation.current is not None
+        ]
+        incomplete_baselines = [
+            observation
+            for observation in numeric_observations
+            if observation.baseline is None or observation.change_pct is None
+        ]
+        if incomplete_baselines:
             return cls._with_outcome(
                 result,
                 card,
                 Outcome.INSUFFICIENT_DATA,
                 rationale=(
-                    "Numeric observations were returned without a comparable baseline, "
-                    "so no automatic interpretation is safe."
+                    f"{len(incomplete_baselines)} numeric observation(s) were returned without "
+                    "a comparable baseline, so no automatic interpretation is safe."
                 ),
                 confidence=max(result.confidence or 0.0, 0.95),
             )

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from .models import Evidence, ResourceDescriptor, ResourceSnapshot, SourceRef
+from .models import Evidence, ResourceContract, ResourceDescriptor, ResourceSnapshot, SourceRef
 from .superset_client import SupersetClient
 
 
@@ -36,6 +36,17 @@ class SupersetAdapter:
                         for owner in item.get("owners", [])
                     ]
                 },
+                contract=ResourceContract(
+                    tenant_id=str(item.get("tenant_id") or "default"),
+                    domain=str(item.get("domain") or "bi"),
+                    metric_names=[str(metric) for metric in item.get("metric_names", [])],
+                    population=str(item.get("population") or ""),
+                    grain=str(item.get("grain") or ""),
+                    freshness_sla_hours=item.get("freshness_sla_hours"),
+                    lineage=[str(value) for value in item.get("lineage", [])],
+                    roles=[str(value) for value in item.get("roles", ["primary"])],
+                    source_status=str(item.get("source_status") or "healthy"),
+                ),
             )
             for item in dashboards
         ]

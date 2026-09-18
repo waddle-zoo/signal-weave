@@ -202,3 +202,4 @@ async def test_jev_compiles_and_judges_free_form_card_items(monkeypatch):
     }
     assert judge_call["state"]["insight_card"]["what_to_watch"] == card.what_to_watch
     assert judge_call["state"]["insight_card"]["questions"] == card.questions
+    assert "owner-authored card guidance" in judge_call["questions"]["outcome_ignore"].criteria["true"]

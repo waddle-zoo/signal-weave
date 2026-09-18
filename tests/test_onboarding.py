@@ -1,3 +1,5 @@
+import asyncio
+
 import httpx
 import pytest
 
@@ -180,7 +182,10 @@ async def test_generic_card_flow_discovers_proposes_previews_and_requires_approv
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
     ) as client:
-        response = await client.post("/webhooks/evaluate", json={"card_id": card_id})
+        response = await client.post(
+            "/webhooks/evaluate",
+            json={"card_id": card_id, "idempotency_key": "draft-evaluation"},
+        )
     assert response.status_code == 409
 
     preview = await tool(server, "simulate_insight_card")(card_id)
@@ -196,12 +201,36 @@ async def test_generic_card_flow_discovers_proposes_previews_and_requires_approv
     evaluated = await tool(server, "evaluate_insight_card")(card_id)
     assert evaluated["result"]["delivery_methods"][0]["key"] == "growth-ops"
 
+    concurrent = await asyncio.gather(
+        tool(server, "evaluate_insight_card")(
+            card_id, idempotency_key="concurrent-evaluation", actor="scheduler-a"
+        ),
+        tool(server, "evaluate_insight_card")(
+            card_id, idempotency_key="concurrent-evaluation", actor="scheduler-b"
+        ),
+    )
+    assert sorted(result["replayed"] for result in concurrent) == [False, True]
+
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
     ) as client:
-        response = await client.post("/webhooks/evaluate", json={"card_id": card_id})
+        response = await client.post(
+            "/webhooks/evaluate",
+            json={"card_id": card_id, "idempotency_key": "approved-evaluation"},
+        )
     assert response.status_code == 200
-    assert response.json()["delivery_methods"][0]["key"] == "growth-ops"
+    assert response.json()["result"]["delivery_methods"][0]["key"] == "growth-ops"
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        replay = await client.post(
+            "/webhooks/evaluate",
+            json={"card_id": card_id, "idempotency_key": "approved-evaluation"},
+        )
+    assert replay.status_code == 200
+    assert replay.json()["replayed"] is True
+    assert replay.json()["receipt"]["status"] == "replayed"
 
 
 @pytest.mark.asyncio

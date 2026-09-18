@@ -20,6 +20,14 @@ deployment must establish a data policy before using company data.
 - Stale data escalates only when a configured escalation delivery method exists; otherwise it becomes `investigate`.
 - Low-confidence automatic outcomes are downgraded to `investigate`.
 - The source registry resolves refs independently, so a mixed card can show which dashboard/query/DAG/table failed.
+- `SIGNALWEAVE_TENANT_ID` can restrict discovery and evaluation to resources whose
+  typed catalog contract belongs to the configured tenant; missing or foreign
+  resources fail closed.
+- Trino execution accepts only compiler-produced `SELECT` queries with validated
+  identifiers and bounded timestamp parameters. It is not a raw SQL endpoint.
+- Push evaluation requires an idempotency key and writes a durable decision
+  receipt with card version, actor, outcome, and delivery state. Replays return
+  the existing receipt.
 - The insight-card catalog is written atomically, and the service image runs as a non-root user.
 
 Run the adversarial unit checks with:
@@ -52,5 +60,6 @@ durable control plane. A production deployment should add:
 - dashboards/alerts for source latency, failure rate, `investigate` rate, and delivery-method corrections; and
 - a data policy for what evidence may be sent to TypeSafe Jev.
 
-The local JSON catalog and static bearer token are suitable for a contained proof
-or internal sidecar, not a substitute for those company controls.
+The local JSON catalogs and static bearer token are suitable for a contained proof
+or internal sidecar, not a substitute for those company controls. SignalWeave
+does not claim OS-level process isolation or provide an identity provider.

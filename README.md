@@ -142,6 +142,23 @@ After approval, an existing scheduler or alert relay posts:
 
 The caller owns delivery, retries, idempotency, and side effects.
 
+## Plain-language metric queries
+
+For data-lake questions, use a metric query card over an approved Trino catalog:
+
+```text
+propose_metric_query_card(question, why, selected_sources, dimensions?, time_grain?)
+compile_metric_query_card(card_id, window_start, window_end)
+approve_metric_query_card(card_id, actor?)
+```
+
+Jev selects among catalog-owned metric definitions. SignalWeave then compiles a
+typed plan into deterministic `SELECT` SQL with approved relations, columns,
+aggregations, dimensions, and a required partition/time bound. It never accepts
+raw SQL from the MCP caller and never asks Jev to generate executable SQL. The
+included Trino adapter can execute only those compiled queries and returns bounded,
+normalized observations.
+
 ## Why Jev instead of one large prompt?
 
 Embeddings and RAG can retrieve a relevant dashboard, definition, owner, or
@@ -174,12 +191,27 @@ decision layer between those systems.
 
 ## Evidence and limits
 
-The repository includes a labeled four-case benchmark and a larger generated
-cross-domain Jev trial. The recorded comparison is deliberately small: an earlier
-20-evaluation Jev run was exact on 20/20, while two OpenAI
-embedding-plus-reasoning runs were exact on 15/20 and 16/20. Those figures are
-reference evidence from synthetic cases, not a universal accuracy claim. Run the
-harness on your own labeled history before making a production decision.
+The repository includes reproducible synthetic trials, not a substitute for a
+customer's historical holdout. The controlled Jev decision matrix covered 3
+companies, 22 personas, 1,664 heterogeneous resources, and 144 tasks: Jev made
+134/144 exact outcome decisions, with all ten misses conservative
+`notify` → `investigate` routes. That runner supplied hidden source refs, so its
+source-selection result is not a discovery score.
+
+The independent live discovery trial used 48 tasks, 576 resources before tenant
+filtering, same-name cross-tenant decoys, and two-source labels that were not sent
+to Jev. It achieved 48/48 exact top-2 sets, 48/48 top-10 coverage, and 0 wrong-
+tenant returns with an explicit tenant boundary. The live metric-plan trial used
+24 held-out metric labels and achieved 24/24 correct definitions, dimensions, and
+time grains; all 24 compiled queries were bounded, `SELECT`-only, and semicolon-
+free. These are synthetic regression measurements, not universal accuracy or
+production safety claims.
+
+The MCP enterprise trial also exposed the limits: malformed client calls and
+unscoped catalogs caused source-discovery failures. Keep tenant identity, metric
+definition, population, grain, freshness, lineage, and source status in adapter
+metadata, and run a domain-owner-labeled, time-split shadow trial before enabling
+automated actions.
 
 See [`docs/evidence-brief.md`](docs/evidence-brief.md) for the measured case and
 limitations.
@@ -189,8 +221,11 @@ limitations.
 - [`docs/architecture.md`](docs/architecture.md) — contracts, pipeline, and boundaries
 - [`docs/demo.md`](docs/demo.md) — local setup and onboarding walkthrough
 - [`docs/source-adapters.md`](docs/source-adapters.md) — adapter contract and security boundary
+- [`docs/metric-query-cards.md`](docs/metric-query-cards.md) — approved catalogs, Trino plans, and SQL bounds
 - [`docs/benchmark.md`](docs/benchmark.md) — comparison methodology
 - [`docs/evidence-brief.md`](docs/evidence-brief.md) — measured product case
+- [`docs/enterprise-experiment.md`](docs/enterprise-experiment.md) — MCP-only enterprise readiness experiment
+- [`docs/enterprise-closure.md`](docs/enterprise-closure.md) — current proof boundary and next gate
 - [`docs/security.md`](docs/security.md) — credentials and deployment notes
 - [`ROADMAP.md`](ROADMAP.md) — future work tracker
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — setup and pull-request guidance

@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "company": {
+    "id": "northstar-commerce",
+    "name": "Northstar Commerce",
+    "description": "A global omnichannel commerce company with 18,000 employees, 12 regions, and 24/7 operations.",
+    "seed": 20260917
+  },
+  "catalog": {
+    "dashboard_count": 144,
+    "charts_per_dashboard": [4, 12],
+    "refresh_profiles": [
+      {"name": "quarter_hourly", "minutes": 15, "weight": 15},
+      {"name": "hourly", "minutes": 60, "weight": 35},
+      {"name": "daily", "minutes": 1440, "weight": 25},
+      {"name": "weekly", "minutes": 10080, "weight": 15},
+      {"name": "ad_hoc", "minutes": 0, "weight": 10}
+    ],
+    "chart_type_weights": [
+      {"name": "line", "weight": 25},
+      {"name": "big_number", "weight": 20},
+      {"name": "bar", "weight": 15},
+      {"name": "table", "weight": 10},
+      {"name": "heatmap", "weight": 10},
+      {"name": "funnel", "weight": 8},
+      {"name": "scatter", "weight": 5},
+      {"name": "donut", "weight": 4},
+      {"name": "map", "weight": 3}
+    ]
+  },
+  "domains": [
+    {"id": "payments", "name": "Payments", "dashboard_count": 12, "owner_team": "Payments Operations", "metrics": ["authorization rate", "issuer decline rate", "fraud approval rate", "chargeback rate"]},
+    {"id": "fulfillment", "name": "Fulfillment", "dashboard_count": 12, "owner_team": "Fulfillment Operations", "metrics": ["on-time delivery", "carrier delay rate", "warehouse backlog", "pick-pack cycle time"]},
+    {"id": "support", "name": "Support", "dashboard_count": 10, "owner_team": "Customer Support", "metrics": ["SLA attainment", "backlog age", "reopen rate", "first response time"]},
+    {"id": "security", "name": "Security", "dashboard_count": 10, "owner_team": "Security Operations", "metrics": ["suspicious login rate", "account takeover rate", "MFA challenge rate", "credential reset volume"]},
+    {"id": "cloud-platform", "name": "Cloud Platform", "dashboard_count": 12, "owner_team": "Platform Reliability", "metrics": ["API error rate", "p95 latency", "deployment failure rate", "incident volume"]},
+    {"id": "sales", "name": "Sales", "dashboard_count": 14, "owner_team": "Revenue Operations", "metrics": ["pipeline coverage", "bookings", "enterprise churn", "renewal forecast"]},
+    {"id": "marketing", "name": "Marketing", "dashboard_count": 12, "owner_team": "Growth Marketing", "metrics": ["conversion rate", "customer acquisition cost", "campaign return", "qualified lead volume"]},
+    {"id": "data-platform", "name": "Data Platform", "dashboard_count": 12, "owner_team": "Data Platform", "metrics": ["warehouse freshness", "query success rate", "queue age", "null rate"]},
+    {"id": "retail-stores", "name": "Retail Stores", "dashboard_count": 12, "owner_team": "Retail Operations", "metrics": ["store sales", "store traffic", "store conversion", "inventory availability"]},
+    {"id": "people-operations", "name": "People Operations", "dashboard_count": 10, "owner_team": "People Operations", "metrics": ["candidate funnel age", "offer acceptance", "attrition", "time to hire"]},
+    {"id": "logistics", "name": "Logistics", "dashboard_count": 12, "owner_team": "Logistics Operations", "metrics": ["shipment cost", "fuel surcharge", "route performance", "delivery exception rate"]},
+    {"id": "product", "name": "Product", "dashboard_count": 16, "owner_team": "Product Operations", "metrics": ["feature adoption", "activation rate", "retention", "support contact rate"]}
+  ],
+  "personas": [
+    {"id": "cfo", "name": "CFO", "technical_literacy": "low", "domain": "sales", "role_goal": "Decide whether a revenue movement deserves executive attention."},
+    {"id": "vp-sales", "name": "VP Sales", "technical_literacy": "medium", "domain": "sales", "role_goal": "Distinguish pipeline deterioration from forecast-data staleness."},
+    {"id": "payments-lead", "name": "Payments Operations Lead", "technical_literacy": "medium", "domain": "payments", "role_goal": "Diagnose a regional authorization-rate movement."},
+    {"id": "support-director", "name": "Support Director", "technical_literacy": "low", "domain": "support", "role_goal": "Decide whether SLA degradation is operational or explained by backlog aging."},
+    {"id": "security-analyst", "name": "Security Analyst", "technical_literacy": "high", "domain": "security", "role_goal": "Investigate suspicious-login movement with account-takeover context."},
+    {"id": "data-platform-sre", "name": "Data Platform SRE", "technical_literacy": "high", "domain": "data-platform", "role_goal": "Separate a warehouse incident from stale or failed upstream jobs."},
+    {"id": "retail-manager", "name": "Retail Regional Manager", "technical_literacy": "low", "domain": "retail-stores", "role_goal": "Assess whether store-sales movement is seasonal or operational."},
+    {"id": "product-manager", "name": "Product Manager", "technical_literacy": "medium", "domain": "product", "role_goal": "Identify whether feature-adoption movement is caused by activation failures."},
+    {"id": "analytics-engineer", "name": "Analytics Engineer", "technical_literacy": "high", "domain": "marketing", "role_goal": "Validate metric lineage, grain, filters, and chart comparability."},
+    {"id": "chief-of-staff", "name": "Chief of Staff", "technical_literacy": "low", "domain": "cloud-platform", "role_goal": "Prepare a trustworthy cross-domain operating brief with provenance."}
+  ],
+  "task_variants": [
+    "corroborated_notify",
+    "explained_ignore",
+    "contradictory_investigate",
+    "stale_escalation",
+    "missing_baseline",
+    "source_failure"
+  ]
+}
