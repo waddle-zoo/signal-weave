@@ -51,6 +51,23 @@ SUPERSET_URL=http://127.0.0.1:8088 \
   --card examples/insight-card.json
 ```
 
+The scheduled daily path can be exercised end to end through the real MCP
+approval flow and webhook using a rotating Superset-shaped fixture:
+
+```bash
+TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
+  uv run python -m evaluations.daily_monitor_trial \
+  --output artifacts/daily-monitor-trial.json
+```
+
+That trial proves a human-confirmed card can return `ignore` for an ordinary
+snapshot, `notify` with the configured owner route when a primary metric and
+related driver move together, include every dashboard observation as evidence,
+and replay a scheduler retry without evaluating or routing twice. It does not
+prove that Jev or any card will be semantically correct for every company's
+definitions; the live Superset acceptance check and a domain-owner holdout are
+still required.
+
 Unit tests use injected doubles and do not replace live Jev or Superset proofs.
 The heterogeneous contract test combines Superset, SQL, Airflow, and table-style
 source refs without requiring those services to be installed.

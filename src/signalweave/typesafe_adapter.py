@@ -273,7 +273,7 @@ class JevJudger:
         plan: InsightPlan,
         observations: list[Observation],
     ) -> InsightResult:
-        from typesafe_sdk import Noul
+        from typesafe_sdk import Choice, Noul
 
         # Each owner-authored item gets a typed judgment. That is what makes a
         # result useful for cards with many metrics: the caller gets the exact
@@ -312,6 +312,7 @@ class JevJudger:
                 Outcome.INSUFFICIENT_DATA
             }:
                 action_outcomes.append(method.outcome)
+        outcome_criteria: dict[str, str] = {}
         for outcome in action_outcomes:
             methods = [method for method in card.delivery_methods if method.outcome == outcome]
             if outcome == Outcome.IGNORE:
@@ -334,18 +335,21 @@ class JevJudger:
                 )
             else:
                 condition = "The evidence supports this outcome under the card's stated purpose."
-            questions[f"outcome_{outcome.value}"] = Noul(
-                instructions=(
-                    f"Does the current evidence satisfy the card's condition for the "
-                    f"`{outcome.value}` outcome? Read card.what_to_watch, card.why_watch, "
-                    "card.watch_for, card.questions, all observations, and all evidence. "
-                    "Do not invent sources, destinations, or facts."
-                ),
-                criteria={
-                    "true": condition,
-                    "false": "The evidence does not support this outcome condition.",
-                },
-            )
+            outcome_criteria[outcome.value] = condition
+
+        # Outcomes are mutually exclusive. Use one Choice rather than separate
+        # Nouls: independent yes/no probabilities are not a normalized decision
+        # distribution and can make a benign case look like investigation simply
+        # because several conditions are moderately plausible.
+        questions["outcome"] = Choice(
+            instructions=(
+                "Which single outcome best fits the current evidence and the owner's "
+                "card purpose? Choose only from the allowed outcomes. Treat an outcome "
+                "as unavailable if its delivery route is not configured. Do not invent "
+                "facts, sources, or destinations."
+            ),
+            criteria=outcome_criteria,
+        )
 
         async with self._client_type(api_key=self._api_key, timeout=self._timeout) as client:
             response = await client.system_one(state=state, questions=questions)
@@ -362,13 +366,15 @@ class JevJudger:
             self._question_result(index, question, probability(f"question_{index}"))
             for index, question in enumerate(card.questions)
         ]
+        selected_outcome = str(response.choices["outcome"].choice)
+        raw_probabilities = getattr(response.choices["outcome"], "probabilities", {})
         action_probabilities = {
-            outcome.value: probability(f"outcome_{outcome.value}")
+            outcome.value: max(0.0, min(1.0, float(raw_probabilities.get(outcome.value, 0.0))))
             for outcome in action_outcomes
         }
-        selected_outcome, selected_probability = max(
-            action_probabilities.items(), key=lambda item: item[1]
-        )
+        if selected_outcome not in action_probabilities:
+            selected_outcome = Outcome.INVESTIGATE.value
+        selected_probability = action_probabilities.get(selected_outcome, 0.0)
         outcome = Outcome(selected_outcome)
         confidence = selected_probability
         if confidence < card.action_confidence_threshold:

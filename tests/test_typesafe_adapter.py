@@ -32,6 +32,24 @@ class FakeResponse:
             if key == "baseline":
                 self.choices[key] = SimpleNamespace(choice="previous_period")
                 continue
+            if key == "time_grain":
+                self.choices[key] = SimpleNamespace(choice="month")
+                continue
+            if key == "metric":
+                self.choices[key] = SimpleNamespace(
+                    choice="candidate-1", probabilities={"candidate-1": 0.91}
+                )
+                continue
+            if key == "outcome":
+                self.choices[key] = SimpleNamespace(
+                    choice="notify",
+                    probabilities={
+                        "ignore": 0.05,
+                        "investigate": 0.10,
+                        "notify": 0.93,
+                    },
+                )
+                continue
             if key == "resource_0":
                 probability = 0.91
             elif key.startswith("resource_"):
@@ -196,10 +214,8 @@ async def test_jev_compiles_and_judges_free_form_card_items(monkeypatch):
     assert set(judge_call["questions"]) == {
         "watch_0",
         "question_0",
-        "outcome_ignore",
-        "outcome_investigate",
-        "outcome_notify",
+        "outcome",
     }
     assert judge_call["state"]["insight_card"]["what_to_watch"] == card.what_to_watch
     assert judge_call["state"]["insight_card"]["questions"] == card.questions
-    assert "owner-authored card guidance" in judge_call["questions"]["outcome_ignore"].criteria["true"]
+    assert "owner-authored card guidance" in judge_call["questions"]["outcome"].criteria["ignore"]

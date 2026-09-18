@@ -216,6 +216,12 @@ automated actions.
 See [`docs/evidence-brief.md`](docs/evidence-brief.md) for the measured case and
 limitations.
 
+To reproduce the narrower daily-monitor contract—no-change suppression,
+contextual notification, complete evidence, and idempotent scheduler retry—run
+`make daily-trial`. The trial uses live Jev through the real MCP and webhook
+surfaces over a rotating Superset-shaped fixture. It is an integration proof,
+not a universal accuracy claim.
+
 ## Documentation
 
 - [`docs/architecture.md`](docs/architecture.md) — contracts, pipeline, and boundaries
