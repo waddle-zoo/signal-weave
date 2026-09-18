@@ -6,14 +6,17 @@ SignalWeave should earn its Jev dependency with measurements, not a marketing cl
 
 Each evaluator receives the same:
 
-- workflow and owner intent;
+- insight card and author guidance;
 - selected source references;
 - normalized current, baseline, change, dimension, and freshness values;
 - source metadata and evidence statements;
-- allowed outcomes; and
-- approved recipient allowlist.
+- configured delivery methods; and
+- source and card metadata.
 
-The engine applies the same post-judgment gates to both evaluators. The embedding-plus-reasoning adapter only changes how evidence is retrieved and how the semantic decision is produced; it does not get a different source set or an easier routing contract.
+The engine applies the same post-judgment gates to both evaluators. The
+embedding-plus-reasoning adapter changes how evidence is retrieved and how the
+semantic result is produced: its model receives only embedding-selected
+observations, while Jev receives the complete normalized observation set.
 
 The checked-in cases are deliberately external data in [`evaluations/data/demo-cases.json`](../evaluations/data/demo-cases.json). They cover:
 
@@ -28,26 +31,22 @@ These are wiring and behavior cases, not a statistically representative enterpri
 
 ## Current evidence snapshot
 
-The following runs used the four checked-in synthetic cases and five repeats per
-run. The Jev row is a recorded local run from before the generic source-contract
-refactor. OpenAI runs A and B were made against the real OpenAI API on
-2026-09-17 with the local development configuration; they are included to show
-the comparison path, not to imply a production benchmark.
+The following run used the four checked-in synthetic cases and five repeats per
+system against the real TypeSafe and OpenAI APIs on 2026-09-18. It is included
+to show the comparison path, not to imply a production benchmark.
 
 | Evaluator | Exact decision accuracy | Wrong automatic actions | Median | p95 | API requests | Provider errors |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| Jev, recorded baseline | 100% (20/20) | 0 | 701.62 ms | 914.17 ms | 40 | 0 |
-| OpenAI baseline, run A | 75% (15/20) | 5 | 2,981.51 ms | 5,964.23 ms | 40 | 0 |
-| OpenAI baseline, run B | 80% (16/20) | 4 | 2,855.41 ms | 4,202.77 ms | 40 | 0 |
+| Jev | 75% (15/20) | 0 | 770.77 ms | 990.48 ms | 40 | 0 |
+| OpenAI embedding + reasoning | 70% (14/20) | 4 | 2,300.14 ms | 2,681.64 ms | 40 | 0 |
 
-The OpenAI misses were false `notify` decisions for the seasonal case: the
-baseline routed a decline to Retail Operations even though the related context
-said to ignore it. This is a small but concrete example of why retrieval and
-free-form reasoning should be compared on the final decision, not only on the
-quality of an explanation. The two OpenAI runs also show repeat variation on the
-same fixture. These results are not evidence that Jev is universally more
-accurate or faster; the next step is a time-split evaluation on real workflow
-history.
+The Jev misses were conservative `investigate` decisions for the seasonal case.
+The OpenAI baseline produced four false `notify` decisions for that case, routing
+a contextual decline to Retail Operations. This is a small but concrete example
+of why retrieval and free-form reasoning should be compared on the final
+decision, not only on the quality of an explanation. These results are not
+evidence that Jev is universally more accurate or faster; the next step is a
+time-split evaluation on real card history.
 
 ## Run Jev
 
@@ -60,18 +59,24 @@ TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
   --output artifacts/jev-benchmark.md
 ```
 
-Jev uses one typed planning request and one typed judgment request per evaluation. The judgment contains independent `Noul` support values for the owner-defined automatic actions; SignalWeave composes them in code and applies the workflow threshold. The report records request count, reported input/output tokens, latency, outcome accuracy, exact outcome-plus-recipient accuracy, and errors. Repeating the cases exposes instability rather than hiding it behind one best-looking run.
+Jev uses one typed planning request and one typed judgment request per evaluation.
+The judgment contains independent `Noul` support values for each `watch_for`
+item, each question, and each configured outcome; SignalWeave composes them in
+code and applies the card threshold. The report records request count, reported
+input/output tokens, latency, outcome accuracy, exact outcome-plus-delivery-method
+accuracy, and errors. Repeating the cases exposes instability rather than hiding
+it behind one best-looking run.
 
 ## Run a real OpenAI baseline
 
-The `openai` arm uses the same normalized workflow state and safety gates, but
-replaces Jev’s typed judgments with embedding retrieval plus a general model
-JSON decision. It defaults to OpenAI’s API root; set the model names explicitly
+The `openai` arm uses the same normalized card and safety gates, but replaces
+Jev’s typed judgments with embedding retrieval plus a general model JSON result.
+It defaults to OpenAI’s API root; set the model names explicitly
 for a reproducible run:
 
 ```bash
 OPENAI_API_KEY=... \
-OPENAI_MODEL=gpt-5.6-luna \
+OPENAI_MODEL=gpt-4o-mini \
 OPENAI_EMBEDDING_MODEL=text-embedding-3-small \
 TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
   uv run python -m evaluations.cli benchmark \
@@ -99,7 +104,12 @@ TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
   --output artifacts/jev-vs-luna.md
 ```
 
-The baseline performs two calls per case: an embeddings request over the owner intent and the same normalized source observations, followed by a decision request over the retrieved observations. The generic chat-completions path uses deterministic temperature and optional `probabilities`; the `openai` path uses a strict Responses JSON schema with `outcome`, `recipient_key`, `rationale`, and `confidence`.
+The baseline performs two calls per case: an embeddings request over the card
+purpose and normalized source observations, followed by a result request over
+the retrieved observations. The generic chat-completions path uses deterministic
+temperature; the `openai` path uses a strict Responses JSON schema with
+`outcome`, `rationale`, `confidence`, `watch_results`, `question_results`, and
+`probabilities`. Delivery methods are selected from the stored card in code.
 
 If the provider is not OpenAI-compatible, add a small adapter rather than silently changing the benchmark contract. A missing baseline endpoint is an explicit configuration error; it is never reported as a model result.
 
@@ -120,11 +130,13 @@ Jev is expected to have a structural advantage when the job is a small, typed ju
 
 For a credible claim, export historical evaluations with:
 
-1. workflow version and source references;
+1. card version and source references;
 2. all evidence shown to the evaluator;
-3. owner-expected outcome and recipient;
+3. owner-expected outcome and delivery methods;
 4. whether the alert was useful, noisy, late, or unsafe;
 5. the eventual operational outcome; and
 6. the provider latency and usage metadata.
 
-Split by time, source mix, or workflow owner so the test set is not just a replay of the examples used to tune the prompts. Calibrate confidence thresholds by consequence, and keep `investigate` as a first-class outcome.
+Split by time, source mix, or card owner so the test set is not just a replay of
+the examples used to tune the prompts. Calibrate confidence thresholds by
+consequence, and keep `investigate` as a first-class outcome.

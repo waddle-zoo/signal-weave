@@ -4,7 +4,7 @@ from starlette.applications import Starlette
 from starlette.responses import JSONResponse
 from starlette.routing import Route
 
-from semantic_monitor.auth import BearerTokenMiddleware
+from signalweave.auth import BearerTokenMiddleware
 
 
 async def ok(request):

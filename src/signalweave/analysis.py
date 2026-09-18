@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
-from .models import MonitorWorkflow, Observation, ResourceSnapshot
+from .models import Observation, ResourceSnapshot
 
 
 def observations_for_plan(
@@ -19,16 +19,19 @@ def observations_for_plan(
 
 
 def candidate_observations(
-    observations: Iterable[Observation], workflow: MonitorWorkflow
+    observations: Iterable[Observation],
 ) -> list[Observation]:
+    """Order changed or incomplete observations first without hiding the rest.
+
+    This is only an evidence ordering aid. The engine always sends every
+    normalized observation to the configured judger, so a card with a hundred
+    metrics does not silently become a top-k alert.
+    """
     result: list[Observation] = []
     for observation in observations:
         if observation.freshness and "stale" in observation.freshness.lower():
             result.append(observation)
-        elif (
-            observation.change_pct is not None
-            and abs(observation.change_pct) >= workflow.materiality_threshold_pct
-        ):
+        elif observation.change_pct is not None and observation.change_pct != 0:
             result.append(observation)
     return result
 

@@ -21,4 +21,4 @@ USER signalweave
 
 EXPOSE 8000
 
-CMD ["python", "-m", "semantic_monitor.cli", "serve", "--transport", "streamable-http"]
+CMD ["python", "-m", "signalweave.cli", "serve", "--transport", "streamable-http"]

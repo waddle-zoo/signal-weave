@@ -2,7 +2,7 @@
 
 This is a trial harness, not production decision logic. It deliberately keeps
 the oracle here with the generated cases so the production engine never sees
-the expected label. Every evaluation still uses MonitorEngine and JevJudger.
+the expected label. Every evaluation still uses InsightEngine and JevJudger.
 """
 
 from __future__ import annotations
@@ -17,17 +17,17 @@ from pathlib import Path
 from statistics import median
 from typing import Any
 
-from semantic_monitor.engine import MonitorEngine
-from semantic_monitor.models import (
+from signalweave.engine import InsightEngine
+from signalweave.models import (
+    DeliveryMethod,
     Evidence,
-    MonitorWorkflow,
+    InsightCard,
     Observation,
     Outcome,
-    Recipient,
     ResourceSnapshot,
     SourceRef,
 )
-from semantic_monitor.typesafe_adapter import JevJudger, load_api_key
+from signalweave.typesafe_adapter import JevJudger, load_api_key
 
 TRIAL_CLASSES = (
     "corroborated_notify",
@@ -46,9 +46,9 @@ class TrialCase:
     domain_name: str
     trial_class: str
     resources: list[ResourceSnapshot]
-    workflow: MonitorWorkflow
+    card: InsightCard
     expected_outcome: Outcome
-    expected_recipient: str | None
+    expected_delivery_methods: list[str]
 
 
 @dataclass(frozen=True)
@@ -58,8 +58,8 @@ class TrialResult:
     trial_class: str
     expected_outcome: str
     actual_outcome: str
-    expected_recipient: str | None
-    actual_recipient: str | None
+    expected_delivery_methods: list[str]
+    actual_delivery_methods: list[str]
     outcome_correct: bool
     decision_correct: bool
     confidence: float | None
@@ -76,92 +76,65 @@ def load_domains(path: str | Path) -> list[dict[str, Any]]:
     return domains
 
 
-def _guidance(recipient: str, trial_class: str) -> dict[str, str]:
-    common = {
-        "investigate": "Use when the signal is ambiguous, contradictory, or incomplete; do not send an automatic notification.",
-        "notify": f"Use when the owner-defined corroborating evidence supports a non-urgent action by {recipient}.",
-        "escalate": f"Use for a severe or untrustworthy condition requiring urgent attention from {recipient}.",
-        "ignore": "Use when the movement is expected, explained by context, or not decision-relevant.",
-        "insufficient_data": "Use when source evidence is unavailable or cannot be compared safely.",
-    }
+def _delivery_methods(domain: dict[str, Any]) -> list[DeliveryMethod]:
+    key = str(domain["delivery_target"])
+    label = str(domain["name"]) + " Operations"
+    return [
+        DeliveryMethod(
+            key=f"{key}-notify",
+            outcome=Outcome.NOTIFY,
+            label=label,
+            destination=f"slack://{key}",
+            instructions=f"Notify {label} when the owner-defined corroborating evidence supports a non-urgent action.",
+        ),
+        DeliveryMethod(
+            key=f"{key}-escalate",
+            outcome=Outcome.ESCALATE,
+            label=label,
+            destination=f"slack://{key}",
+            instructions=f"Escalate to {label} for a severe or untrustworthy condition requiring urgent attention.",
+        ),
+    ]
+
+
+def _watch_items(primary_title: str, context_title: str, trial_class: str) -> list[str]:
+    common = [
+        f"{primary_title} is available with a comparable baseline.",
+        f"{context_title} provides relevant context for interpreting {primary_title}.",
+    ]
     if trial_class == "corroborated_notify":
-        common["notify"] = f"Choose notify only when the primary chart change_pct is at or below -15 and the related chart change_pct is at or above 20; both support action by {recipient}."
-    elif trial_class == "explained_ignore":
-        common["ignore"] = "Choose ignore when the primary and related chart change_pct values are both negative and within 5 percentage points; this paired movement is expected and needs no notification."
-    elif trial_class == "contradictory_investigate":
-        common["investigate"] = "Choose investigate when the primary chart change_pct is at or below -15 but the related chart change_pct is between -5 and 5; the movement is not corroborated."
-    elif trial_class == "stale_escalation":
-        common["escalate"] = f"Use when the source is stale; urgent attention from {recipient} is required before interpreting the movement."
-    return common
-
-
-def _recipient(domain: dict[str, Any]) -> Recipient:
-    key = str(domain["recipient"])
-    return Recipient(key=key, label=str(domain["name"]) + " Operations", destination=f"slack://{key}")
-
-
-def _allowed_outcomes(trial_class: str) -> list[Outcome]:
-    if trial_class == "corroborated_notify":
-        return [Outcome.NOTIFY, Outcome.INVESTIGATE]
+        return common + [
+            f"{primary_title} decreases at least 15% while {context_title} increases at least 20%.",
+            "The related signals are fresh and support a non-urgent action.",
+        ]
     if trial_class == "explained_ignore":
-        return [Outcome.IGNORE, Outcome.INVESTIGATE]
-    if trial_class == "stale_escalation":
-        return [Outcome.ESCALATE, Outcome.INVESTIGATE]
-    if trial_class in {"missing_baseline", "source_failure"}:
-        return [Outcome.INSUFFICIENT_DATA, Outcome.INVESTIGATE]
-    return [Outcome.INVESTIGATE, Outcome.NOTIFY, Outcome.IGNORE]
-
-
-def _materiality_definition(
-    primary_title: str, context_title: str, trial_class: str
-) -> str:
-    if trial_class == "corroborated_notify":
-        return (
-            f"Treat the movement as material when {primary_title} decreases at least 15% "
-            f"versus its comparable baseline and {context_title} increases at least 20%; "
-            "both charts must have fresh, comparable evidence."
-        )
-    if trial_class == "explained_ignore":
-        return (
-            f"Treat the movement as expected when {primary_title} and {context_title} "
-            "decrease together within 5 percentage points; do not notify on that paired movement."
-        )
+        return common + [
+            f"{primary_title} and {context_title} decrease together within 5 percentage points.",
+            "The paired movement is expected and does not need notification.",
+        ]
     if trial_class == "contradictory_investigate":
-        return (
-            f"Treat the movement as ambiguous when {primary_title} decreases at least 15% "
-            f"but {context_title} changes less than 5%; require review instead of notifying."
-        )
+        return common + [
+            f"{primary_title} decreases at least 15% without {context_title} corroborating it.",
+            "The movement is ambiguous and should be reviewed before notification.",
+        ]
     if trial_class == "stale_escalation":
-        return f"Treat the source as unsafe to interpret when {primary_title} is stale; escalate before using its values."
+        return common + [f"The source for {primary_title} is stale before values are interpreted."]
     if trial_class == "missing_baseline":
-        return f"Treat {primary_title} as not comparable when its current value has no baseline."
-    return f"Treat {primary_title} as unavailable when its source query fails; do not interpret the remaining chart as sufficient."
+        return common + [f"{primary_title} has no comparable baseline."]
+    return common + [f"The source for {primary_title} fails or times out."]
 
 
-def _trial_intent(
-    domain_name: str, primary_title: str, context_title: str, trial_class: str
-) -> str:
-    prefix = f"Monitor {primary_title} in the {domain_name} operating workflow. "
-    if trial_class == "corroborated_notify":
-        return prefix + (
-            f"For this policy, a lower {primary_title} is adverse and a higher {context_title} "
-            f"is corroborating adverse context. Notify only when both changes meet the owner-defined materiality."
-        )
-    if trial_class == "explained_ignore":
-        return prefix + (
-            f"For this policy, a lower {primary_title} is expected when {context_title} falls with it. "
-            "Ignore that paired movement unless the relationship is broken."
-        )
-    if trial_class == "contradictory_investigate":
-        return prefix + (
-            f"A lower {primary_title} is adverse, but {context_title} must corroborate it before action. "
-            "Investigate an uncorroborated movement."
-        )
+def _questions(primary_title: str, context_title: str, trial_class: str) -> list[str]:
     if trial_class == "stale_escalation":
-        return prefix + f"Escalate when the source for {primary_title} is stale; do not interpret stale values."
+        return [f"Can {primary_title} be trusted while its source is stale?"]
     if trial_class == "missing_baseline":
-        return prefix + f"Require a comparable baseline for {primary_title}; otherwise report insufficient data."
-    return prefix + f"Treat a failed {primary_title} query as insufficient data; do not infer from {context_title}."
+        return [f"Can the movement in {primary_title} be compared safely?"]
+    if trial_class == "source_failure":
+        return [f"Can the card be answered when the {primary_title} source fails?"]
+    return [
+        f"Does {context_title} explain or corroborate the movement in {primary_title}?",
+        f"Is there enough evidence to choose an action for {primary_title}?",
+    ]
 
 
 def _observation(
@@ -199,7 +172,7 @@ def build_trial_cases(domains: list[dict[str, Any]]) -> list[TrialCase]:
         primary_title = str(domain["primary_title"])
         context_metric = str(domain["context_metric"])
         context_title = str(domain["context_title"])
-        recipient = _recipient(domain)
+        methods = _delivery_methods(domain)
         primary_baseline = 100.0 + index * 17.0
         context_baseline = 1000.0 + index * 53.0
 
@@ -237,7 +210,6 @@ def build_trial_cases(domains: list[dict[str, Any]]) -> list[TrialCase]:
                 context_current = context_baseline * 1.01
                 context_change = 1.0
                 context_current_value = context_current
-                expected_outcome = Outcome.INVESTIGATE
             elif trial_class == "stale_escalation":
                 freshness = f"stale: {24 + index}h"
                 primary_current_value = primary_baseline
@@ -319,7 +291,7 @@ def build_trial_cases(domains: list[dict[str, Any]]) -> list[TrialCase]:
                         subject_id=context_id,
                         subject_label=trial_context_title,
                         statement=(
-                            "The workflow's corroborating context is supplied by the "
+                            "The card's corroborating context is supplied by the "
                             f"{context_adapter} adapter."
                         ),
                         values={"adapter": context_adapter},
@@ -332,14 +304,18 @@ def build_trial_cases(domains: list[dict[str, Any]]) -> list[TrialCase]:
                 },
                 source_url=f"trial://{context_adapter}/{context_id}",
             )
-            workflow_id = f"trial-workflow-{domain_id}-{trial_class}"
-            guidance = _guidance(recipient.key, trial_class)
-            if trial_class == "stale_escalation":
-                guidance["escalate"] = f"Choose escalate when the primary source freshness says stale; urgent attention from {recipient.key} is required before interpreting values."
-            workflow = MonitorWorkflow(
-                id=workflow_id,
-                title=f"{domain_name} signal monitor",
-                intent=_trial_intent(domain_name, primary_title, trial_context_title, trial_class),
+            card_id = f"trial-card-{domain_id}-{trial_class}"
+            card = InsightCard(
+                id=card_id,
+                title=f"{domain_name} signal insight",
+                what_to_watch=(
+                    f"{primary_title} in the {domain_name} operating context, using {trial_context_title} as related evidence."
+                ),
+                why_watch=(
+                    "Decide whether the signal is expected, actionable, ambiguous, or unsafe to interpret, with a path for the owning team to respond."
+                ),
+                watch_for=_watch_items(primary_title, trial_context_title, trial_class),
+                questions=_questions(primary_title, trial_context_title, trial_class),
                 sources=[
                     SourceRef(
                         key=primary_source_key,
@@ -356,33 +332,30 @@ def build_trial_cases(domains: list[dict[str, Any]]) -> list[TrialCase]:
                     ),
                 ],
                 comparison_windows=["previous_period", "trailing_4_period_average"],
-                investigation_hints=[
-                    f"Compare {primary_title} with {trial_context_title} across the selected sources.",
-                    "Check freshness and baseline availability before interpreting the movement.",
-                ],
-                materiality_threshold_pct=15.0,
                 action_confidence_threshold=0.40 if trial_class == "explained_ignore" else 0.70,
-                materiality_definition=_materiality_definition(
-                    primary_title, trial_context_title, trial_class
-                ),
-                outcome_guidance={
-                    outcome: text
-                    for outcome, text in guidance.items()
-                    if outcome in {item.value for item in _allowed_outcomes(trial_class)}
-                },
-                allowed_outcomes=_allowed_outcomes(trial_class),
-                recipients=[recipient],
+                delivery_methods=methods,
+            )
+            expected_delivery_methods = (
+                [
+                    next(
+                        method.key
+                        for method in methods
+                        if method.outcome == expected_outcome
+                    )
+                ]
+                if expected_outcome in {Outcome.NOTIFY, Outcome.ESCALATE}
+                else []
             )
             cases.append(
                 TrialCase(
-                    case_id=workflow_id,
+                    case_id=card_id,
                     domain_id=domain_id,
                     domain_name=domain_name,
                     trial_class=trial_class,
                     resources=[primary_resource, context_resource],
-                    workflow=workflow,
+                    card=card,
                     expected_outcome=expected_outcome,
-                    expected_recipient=recipient.key if expected_outcome in {Outcome.NOTIFY, Outcome.ESCALATE} else None,
+                    expected_delivery_methods=expected_delivery_methods,
                 )
             )
     return cases
@@ -392,7 +365,7 @@ async def run_trial(
     cases: list[TrialCase], *, repeats: int, concurrency: int, api_key: str
 ) -> tuple[list[TrialResult], dict[str, Any]]:
     judger = JevJudger(api_key=api_key)
-    engine = MonitorEngine(judger=judger)
+    engine = InsightEngine(judger=judger)
     semaphore = asyncio.Semaphore(concurrency)
     jobs = [(case, repeat + 1) for repeat in range(repeats) for case in cases]
 
@@ -402,15 +375,15 @@ async def run_trial(
             before = judger.metrics.requests
             started = time.perf_counter()
             try:
-                evaluation = await engine.evaluate(case.workflow, case.resources)
-                decision = evaluation.decision
-                actual_outcome = decision.outcome.value
-                actual_recipient = decision.recipient_key
+                run = await engine.evaluate(case.card, case.resources)
+                result = run.result
+                actual_outcome = result.outcome.value
+                actual_delivery_methods = [method.key for method in result.delivery_methods]
                 error = None
-                confidence = decision.confidence
+                confidence = result.confidence
             except Exception as exc:  # noqa: BLE001 - trial must record provider failures
                 actual_outcome = Outcome.INSUFFICIENT_DATA.value
-                actual_recipient = None
+                actual_delivery_methods = []
                 error = f"{type(exc).__name__}: {exc}"
                 confidence = None
             return TrialResult(
@@ -419,12 +392,12 @@ async def run_trial(
                 trial_class=case.trial_class,
                 expected_outcome=case.expected_outcome.value,
                 actual_outcome=actual_outcome,
-                expected_recipient=case.expected_recipient,
-                actual_recipient=actual_recipient,
+                expected_delivery_methods=case.expected_delivery_methods,
+                actual_delivery_methods=actual_delivery_methods,
                 outcome_correct=actual_outcome == case.expected_outcome.value,
                 decision_correct=(
                     actual_outcome == case.expected_outcome.value
-                    and actual_recipient == case.expected_recipient
+                    and actual_delivery_methods == case.expected_delivery_methods
                 ),
                 confidence=confidence,
                 elapsed_ms=round((time.perf_counter() - started) * 1000, 2),
@@ -444,9 +417,7 @@ async def run_trial(
 def summarize(results: list[TrialResult], metrics: dict[str, Any], repeats: int) -> dict[str, Any]:
     latencies = sorted(result.elapsed_ms for result in results)
     p95_index = max(0, int(len(latencies) * 0.95) - 1)
-    confidences = sorted(
-        result.confidence for result in results if result.confidence is not None
-    )
+    confidences = sorted(result.confidence for result in results if result.confidence is not None)
     by_class: dict[str, list[TrialResult]] = defaultdict(list)
     for result in results:
         by_class[result.trial_class].append(result)
@@ -485,8 +456,7 @@ def summarize(results: list[TrialResult], metrics: dict[str, Any], repeats: int)
         "missed_actionable_cases": len(missed_actions),
         "false_urgent_actions": len(false_urgent),
         "stable_unique_cases": sum(
-            len({item.actual_outcome for item in items}) == 1
-            and len({item.actual_recipient for item in items}) == 1
+            len({(item.actual_outcome, tuple(item.actual_delivery_methods)) for item in items}) == 1
             for items in by_case.values()
         ),
         "confidence_min": round(min(confidences), 4) if confidences else None,

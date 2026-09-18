@@ -2,63 +2,96 @@
 
 ## Product boundary
 
-SignalWeave evaluates a user-authored decision workflow over approved company
-sources. It does not own the company’s BI, knowledge graph, scheduler, durable
-execution, identity, or delivery system.
+SignalWeave is a small decision layer between company-owned source systems and
+the system that already delivers or acts on an insight. It does not own BI,
+search, a knowledge graph, scheduling, durable execution, identity, or delivery.
 
-Superset is the first-class source adapter and the first product wedge. The core
-boundary is deliberately one level above Superset: a workflow can combine several
-Superset resources and, when installed, other bounded source adapters.
+Superset is the first-class shipped adapter, but the core contract is a generic
+card over approved source references. A card can combine several dashboards and,
+when installed, SQL, Airflow, table-quality, or other bounded read adapters.
 
 ```text
-        MonitorWorkflow
-        intent + policy + SourceRef[]
-                     │
-                     ▼
-             SourceRegistry
-       resolve each ref independently
-                     │
-                     ▼
-          ResourceSnapshot[]
-    observations + evidence + metadata
-                     │
-                     ▼
-          MonitorEngine / compiler
-          finite executable plan
-                     │
-              ┌──────┴──────┐
-              │             │
-       Jev plan judgments  Jev action conditions
-       Noul + Choice       independent Nouls + Choice
-              │             │
-              └──────┬──────┘
-                     ▼
-             code-owned gates
-                     │
-                     ▼
-          Decision → MCP / webhook
+ InsightCard
+ what_to_watch + why + look_for + questions + delivery_methods
+                         │
+                         ▼
+          Authoring + SourceRegistry
+        resolve anchors + Jev-ranked context
+                         │
+                         ▼
+              ResourceSnapshot[]
+        observations + evidence + metadata
+                         │
+                         ▼
+       InsightEngine / compiler
+                 finite capability plan
+                         │
+                         ▼
+       Jev typed judgments for plan + card items
+                         │
+                         ▼
+                code-owned safety gates
+                         │
+                         ▼
+              InsightResult → MCP / webhook
 ```
 
-## Contracts
+## The card contract
 
-### `MonitorWorkflow`
+`InsightCard` is intentionally small and free-form. The author supplies the
+meaning; the platform supplies source resolution, bounded analysis, typed
+judgments, and safe outcome routing.
 
-The workflow is the durable, reviewable user contract:
+```json
+{
+  "id": "card-sales-pulse",
+  "title": "Sales pulse",
+  "what_to_watch": "Revenue and related dashboard signals that show whether sales are on course.",
+  "why_watch": "Help Revenue Operations distinguish expected movement from a business issue.",
+  "watch_for": [
+    "Revenue changes materially versus the selected comparison window.",
+    "A related chart corroborates the movement."
+  ],
+  "questions": [
+    "Is the movement outside expected seasonal behavior?",
+    "Does this warrant a Revenue Operations response?"
+  ],
+  "sources": [
+    {
+      "key": "sales-dashboard",
+      "adapter": "superset",
+      "resource": "dashboard:7",
+      "label": "Sales dashboard",
+      "parameters": {"chart_ids": ["62", "64"]}
+    }
+  ],
+  "delivery_methods": [
+    {
+      "key": "revenue-operations",
+      "outcome": "notify",
+      "label": "Revenue Operations",
+      "destination": "slack://revenue-operations",
+      "instructions": "Notify when the evidence supports a non-urgent operating response."
+    }
+  ]
+}
+```
 
-- plain-language `intent`;
-- named `sources`;
-- comparison windows and investigation hints;
-- owner-defined materiality language;
-- allowed outcomes;
-- explicit recipient allowlist; and
-- action-confidence threshold.
+The five authoring fields are the important part:
 
-When a card is proposed or drafted, its Jev-compiled `MonitorPlan` is stored with
-the workflow. Later approved evaluations reuse that plan instead of silently
-recompiling a different interpretation of the owner’s card.
+- `what_to_watch` describes the subject and scope in ordinary language;
+- `why_watch` describes the decision the result should support;
+- `watch_for` lists optional conditions that should be surfaced individually;
+- `questions` lists optional questions the available evidence should answer; and
+- `delivery_methods` maps outcomes to caller-owned destinations and instructions.
 
-There is no `dashboard_id` or `chart_ids` in this contract. Superset chart scope
-is expressed as adapter-owned `SourceRef.parameters`, so a workflow can contain:
+Sources, comparison windows, freshness, confidence, version, and approval status
+are platform controls. A compiled `InsightPlan` stores the Jev-selected finite
+capabilities and the card items it will evaluate. Its card version is checked
+before reuse, so an edited card cannot silently run an old plan.
+
+There is no `dashboard_id` or `chart_ids` in the engine contract. Superset scope
+is adapter-owned `SourceRef.parameters`, so the same card can contain:
 
 ```text
 superset dashboard:7, charts [62, 64]
@@ -68,9 +101,34 @@ airflow dag:warehouse_load
 table table:warehouse.orders
 ```
 
-The generic engine never parses those locators or executes their source language.
+The engine never parses those locators or executes their source language.
 
-### `SourceAdapter` and `SourceRegistry`
+Metric query cards use a separate typed path for data-lake questions:
+
+```text
+plain-language question
+          │
+          ▼
+approved ResourceContract.metric_definitions
+          │
+          ▼
+Jev selects one definition and requested dimensions
+          │
+          ▼
+code builds MetricQueryPlan
+          │
+          ▼
+deterministic compiler emits bounded SELECT SQL
+          │
+          ▼
+TrinoQueryAdapter executes only that compiled query
+```
+
+The metric path does not ask Jev to generate SQL. Relations, aggregations,
+columns, dimensions, time grains, and partition columns come from an approved
+catalog; the compiler validates them and requires an explicit time window.
+
+## Source adapters
 
 An adapter has two operations:
 
@@ -79,134 +137,134 @@ async def list_resources() -> list[ResourceDescriptor]
 async def inspect(source: SourceRef) -> ResourceSnapshot
 ```
 
-`ResourceDescriptor` is safe discovery metadata. `ResourceSnapshot` is a bounded
-runtime result with:
+`ResourceDescriptor` is safe catalog metadata for onboarding. A
+`ResourceSnapshot` contains bounded observations, non-numeric evidence, metadata,
+source URL, capture time, optional comparison baselines, and an explicit error.
 
-- `observations` for normalized values that code can compare;
-- `evidence` for source facts that may be non-numeric or relationship-oriented;
-- adapter metadata for context Jev may need;
-- source URL and capture time;
-- adapter-provided comparison baselines for supported windows; and
-- an explicit `error` when the source could not be trusted.
+The registry resolves sources independently. A required failure becomes typed
+insufficient data; an optional failure remains visible without automatically
+blocking every other source. This is what lets a card combine a Superset
+dashboard with a quality query or job-status signal without provider-specific
+logic in the engine.
 
-The registry resolves sources independently. One failed required source blocks
-automatic action and becomes evidence; optional-source failures remain visible but
-do not automatically block the workflow. This matters for workflows that combine
-a dashboard with a best-effort context query or a job-status source.
+## Evidence-bundle retrieval
 
-### Superset adapter
+`retrieval_mode` is the small control for using related context:
 
-The Superset adapter translates `dashboard:<id>` and `chart:<id>` refs into the
-generic snapshot contract. It still preserves Superset-specific value:
+- `fixed` evaluates only the card's human-approved `sources`; and
+- `expand` keeps those sources as anchors, asks Jev to rank a bounded authorized
+  catalog, and adds at most the configured number of related sources as optional
+  context.
 
-- dashboard owners and descriptions;
-- chart IDs, titles, metric definitions, and relationships;
-- saved query context where available;
-- filters, grouping, granularity, and bounded row/series limits;
-- time-series current/baseline/change calculations;
-- dimensions and source URLs; and
-- per-chart failures.
+Expansion happens at the MCP evaluation boundary. It never mutates the stored
+card or replaces an anchor. `resolve_insight_sources` exposes the selected and
+omitted candidates before approval or evaluation, and the `InsightResult` carries
+the `EvidenceBundle` used for that run. This makes retrieval inspectable and lets
+a client show why a related dashboard or query was included.
 
-The Superset models are isolated in `superset_models.py`; the workflow engine does
-not depend on them. That is the important compromise: Superset is not flattened
-into a lowest-common-denominator dashboard abstraction, but other sources do not
-need to impersonate one.
+The catalog is filtered by the registry's authorization boundary before Jev sees
+it. A lexical prefilter only bounds very large catalogs; Jev remains the semantic
+ranker. Related sources are optional, so a missing context source is preserved as
+evidence without vetoing a complete required anchor. The card owner still
+controls the anchor and approval decision.
 
-SQL, Airflow, and table checks are extension points in this repository. The
-heterogeneous tests and trial harness exercise the generic composition contract;
-they do not claim those live adapters are already shipped.
+The Superset adapter preserves the value that makes this useful as a first wedge:
+dashboard and chart titles, descriptions, owners, relationships, saved chart
+definitions, filters, dimensions, bounded series, current/baseline movement,
+source URLs, and per-chart errors. Other adapters do not need to impersonate a
+dashboard.
 
-## Decision design
+## Evaluation pipeline
 
-The engine performs deterministic preparation:
+For every evaluation the engine:
 
-1. resolve workflow sources;
-2. flatten selected observations and preserve source evidence;
-3. identify candidate observations by numeric materiality/freshness for context;
-4. build a JSON-safe state containing the workflow, plan, snapshots, observations, and evidence;
-5. ask Jev for typed semantic judgments; and
-6. apply hard safety gates before returning the decision.
+1. resolves the approved card sources;
+2. applies the selected comparison window in code when a source supplies it;
+3. creates evidence statements for every normalized observation and preserves all
+   source evidence;
+4. sends the complete normalized observation set plus the card to the configured
+   Jev judger;
+5. receives an outcome plus per-item `watch_results` and `question_results`; and
+6. applies hard gates before returning the result.
 
-The candidate filter is only an evidence prioritization aid. Jev still sees the
-full normalized observations and source metadata so niche policies can reason
-about non-candidate context, cross-source disagreement, and non-numeric evidence.
+Changed or incomplete observations are ordered first for client rendering, but
+they are not a retrieval limit. Jev sees all observations in the evaluation state,
+which is essential when the answer depends on a quiet related chart, a cross-source
+contradiction, or a non-numeric condition such as freshness or existence.
 
-### Jev composition
+## Jev composition
 
-The TypeSafe integration follows the [System One building model](https://docs.typesafe.ai/concepts/how-to-build-with-system-one):
+SignalWeave uses Jev as a programmable semantic primitive, not an autonomous
+agent runner:
 
-- independent `Noul` checks select relevant analysis capabilities;
-- a bounded `Choice` selects an owner-approved comparison window;
-- independent `Noul` checks evaluate each allowed automatic-action condition; and
-- a bounded `Choice` selects only from approved recipient keys.
+- independent `Noul` judgments select relevant finite capabilities during plan
+  compilation;
+- one bounded `Choice` selects a comparison window from the card's configured
+  options;
+- one `Noul` evaluates every `watch_for` item;
+- one `Noul` evaluates whether every `question` is supported by the evidence; and
+- one bounded `Choice` selects the mutually exclusive outcome from the card's
+  configured delivery vocabulary.
 
-The action conditions are intentionally independent. They are not treated as a
-normalized distribution over mutually exclusive outcomes. Code chooses the
-highest-supported allowed action only when its configured threshold is met, and
-otherwise routes to investigation. This matches TypeSafe’s guidance on composing
-judgments and treating confidence as a routing signal rather than truth.
-
-Jev never generates SQL, chooses an unapproved recipient, calls a delivery system,
-or controls retries. It supplies semantic interpretation; the application remains
-the control plane.
+The service composes those judgments in code. It never asks Jev to generate SQL,
+invent a destination, call a delivery system, or return an unconstrained action
+plan. Confidence is a routing signal: below the card threshold, automatic
+outcomes become `investigate`.
 
 ## Safety gates
 
 After Jev, code enforces:
 
-- required source errors → `insufficient_data` or `investigate`;
-- empty required snapshots or snapshots older than the workflow freshness limit → `insufficient_data` or `investigate`;
-- stale observations → escalation only if explicitly allowed and routable;
-- no comparable baseline → no automatic no-op;
-- unknown recipient → recipient removed and investigation required;
-- non-action outcome → no recipient retained; and
-- low-confidence automatic action → investigation.
+- required source errors or empty required snapshots → `insufficient_data`;
+- source snapshots older than the card freshness limit → `insufficient_data`;
+- stale observations from required sources → `escalate` only when the card has an escalation delivery
+  method, otherwise `investigate`;
+- numeric observations from required sources with no comparable baseline → `insufficient_data`;
+- an outcome without a matching configured delivery method → `investigate`; and
+- low-confidence `ignore`, `notify`, or `escalate` → `investigate`.
 
-These gates are provider-neutral. A table-existence adapter, DAG-status adapter,
-or SQL query adapter gets the same failure behavior as Superset.
+Delivery methods are always selected from the stored card after judgment. Model
+output cannot change a destination, and the caller still owns actual delivery,
+retries, idempotency, and side effects.
 
-## Lifecycle
+## Lifecycle and MCP surface
 
-### Discover and draft
+An existing UI or agent can use the small surface below:
 
-An existing agent can start with a natural-language goal and call
-`discover_monitor_inputs`. SignalWeave bounds the installed catalog, asks Jev to
-rank the candidates, and returns opaque refs plus enough metadata for a person to
-confirm the source selection. `propose_monitor_card` then turns that selection into
-a stored draft with Jev’s finite plan and explicit clarification questions. No
-notification or side effect occurs.
+```text
+list_resources(adapter?)
+inspect_resource(adapter, resource, parameters?)
+discover_insight_sources(goal, adapter?, limit?)
+propose_insight_card(what_to_watch, why_watch, watch_for?, questions?, ...)
+draft_insight_card(title, what_to_watch, why_watch, sources, ...)
+simulate_insight_card(card_id)
+approve_insight_card(card_id)
+list_insight_cards(status?)
+get_insight_card(card_id)
+evaluate_insight_card(card_id)
+resolve_insight_sources(card_id)
+```
 
-Callers that already know their complete source refs can use `draft_workflow`
-directly.
+The proposal flow uses Jev to rank a bounded source catalog, stores a draft, and
+returns setup questions. The direct draft flow is for a caller that already knows
+its source references. Both flows compile and store a plan. Simulation is
+delivery-disabled preview; approval is an explicit state transition; evaluation
+fetches fresh snapshots. The webhook accepts `{ "card_id": "..." }` for a
+caller-owned scheduler or push relay. Push evaluation requires an idempotency key
+and stores a decision receipt with card version, actor, outcome, selected delivery
+methods, and delivery state. Repeated keys replay the receipt instead of fetching
+sources again. The default runtime stores cards, metric cards, and receipts in a
+single SQLite file with a uniqueness constraint on the idempotency key; JSON is
+available only as a small local/legacy backend and is not a multi-process claim
+protocol. Delivery remains disabled unless a deployment adds a reviewed delivery
+sink; the receipt is the handoff boundary. A multi-replica deployment should
+replace the store interface with a shared transactional database before routing
+traffic to more than one process.
 
-### Preview and review
+## Future context and feedback
 
-`simulate_monitor_card` evaluates a draft against fresh snapshots without treating
-the result as an approved push action. The workflow and plan can then be reviewed
-in a UI, pull request, or catalog. Reviewers can see the source refs, owner
-definition, allowed outcomes, recipients, and finite operation vocabulary.
-
-`approve_monitor_card` is an explicit state transition. Push evaluation rejects
-draft workflows until they are approved.
-
-### Evaluate
-
-An MCP client or existing scheduler calls `evaluate_workflow`, or a push relay
-posts `{ "workflow_id": "..." }` to the webhook. Evaluation fetches fresh source
-snapshots and uses the same engine in both paths.
-
-### Deliver
-
-The caller owns Slack/email/PagerDuty/ticket delivery, retries, idempotency, and
-side effects. SignalWeave only returns the typed decision and evidence.
-
-## Operating boundary
-
-The local JSON workflow catalog makes the repo easy to run. An enterprise adapter
-should replace it with reviewed storage and identity-aware access. It should also
-record every source snapshot, Jev judgment, returned decision, delivery attempt,
-and owner correction for calibration.
-
-The architecture intentionally stops before becoming Temporal, Airflow, LangGraph,
-or a search product. Its job is the narrow missing layer: turning heterogeneous,
-sparse operational context into a bounded, evidence-backed decision.
+A future knowledge-context adapter can add definitions, ownership, relationships,
+precedents, conflicts, and human feedback as versioned, provenance-bearing input
+to the same card evaluation state. That can improve the Jev decision without
+turning SignalWeave into a graph store or agent runtime. Raw feedback must not
+silently rewrite a card or graph; proposed changes need review and a new version.

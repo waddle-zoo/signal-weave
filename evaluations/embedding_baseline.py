@@ -3,8 +3,7 @@
 The adapter speaks the common OpenAI-compatible ``/embeddings`` shape and either
 ``/chat/completions`` or ``/responses`` for the decision. It is deliberately not
 part of the product runtime: it exists so a team can compare Jev with the model
-and provider it already uses, using the same normalized workflow state and safety
-gates.
+and provider it already uses, using the same normalized card and source snapshots.
 """
 
 from __future__ import annotations
@@ -14,15 +13,27 @@ from typing import Any
 
 import httpx
 
-from semantic_monitor.compiler import base_plan
-from semantic_monitor.models import Decision, MonitorPlan, MonitorWorkflow, Observation, Outcome
-from semantic_monitor.typesafe_adapter import JudgerMetrics
+from signalweave.compiler import base_plan
+from signalweave.models import (
+    Evidence,
+    InsightCard,
+    InsightPlan,
+    InsightResult,
+    Observation,
+    Outcome,
+    QuestionResult,
+    QuestionStatus,
+    WatchResult,
+    WatchStatus,
+)
+from signalweave.typesafe_adapter import JudgerMetrics
 
 
 class EmbeddingReasoningJudger:
-    """Retrieve workflow evidence with embeddings, then ask a model for JSON."""
+    """Retrieve source observations with embeddings, then ask a model for JSON."""
 
     name = "embedding-reasoning"
+    item_threshold = 0.70
 
     def __init__(
         self,
@@ -49,58 +60,159 @@ class EmbeddingReasoningJudger:
         self.metrics = JudgerMetrics()
 
     async def compile_plan(
-        self, state: dict[str, Any], workflow: MonitorWorkflow
+        self, state: dict[str, Any], card: InsightCard
     ) -> dict[str, Any]:
-        """Hold plan compilation constant so the comparison isolates judgment quality."""
-        plan = base_plan(workflow)
-        return {"operations": plan.operations, "baseline": plan.comparison_windows[0]}
+        """Hold plan compilation constant so judgment quality is isolated."""
+        del state
+        plan = base_plan(card)
+        return {"capabilities": plan.capabilities, "baseline": plan.comparison_windows[0]}
 
     async def judge(
         self,
         state: dict[str, Any],
-        workflow: MonitorWorkflow,
-        plan: MonitorPlan,
+        card: InsightCard,
+        plan: InsightPlan,
         observations: list[Observation],
-    ) -> Decision:
+    ) -> InsightResult:
         documents = [self._document(observation) for observation in observations]
-        query = workflow.intent
+        query = "\n".join([card.what_to_watch, card.why_watch, *card.watch_for, *card.questions])
         ranked = await self._rank(query, documents)
-        retrieved = [documents[index] for index in ranked[: self.top_k]]
+        retrieved_indices = ranked[: self.top_k]
+        retrieved = [documents[index] for index in retrieved_indices]
+        retrieved_keys = {
+            (
+                documents[index]["source_key"],
+                documents[index]["subject_id"],
+                documents[index]["metric"],
+            )
+            for index in retrieved_indices
+        }
+        retrieved_evidence = [
+            item
+            for item in state["evidence"]
+            if "metric" not in item.get("values", {})
+            or (
+                item["source_key"],
+                item["subject_id"],
+                item.get("values", {}).get("metric"),
+            )
+            in retrieved_keys
+        ]
         payload = {
-            "workflow_intent": workflow.intent,
-            "allowed_outcomes": [outcome.value for outcome in workflow.allowed_outcomes],
-            "approved_recipients": [recipient.key for recipient in workflow.recipients],
-            "retrieved_source_observations": retrieved,
-            "evidence": state["evidence"],
+            "card": {
+                "title": card.title,
+                "what_to_watch": card.what_to_watch,
+                "why_watch": card.why_watch,
+                "watch_for": card.watch_for,
+                "questions": card.questions,
+                "delivery_methods": [
+                    method.model_dump(mode="json") for method in card.delivery_methods
+                ],
+            },
+            "retrieved_observations": retrieved,
+            "retrieved_evidence": retrieved_evidence,
+            "retrieved_observation_count": len(retrieved),
+            "total_observation_count": len(observations),
         }
         result = await self._reason(payload)
         try:
             outcome = Outcome(result["outcome"])
         except (KeyError, ValueError, TypeError) as error:
             raise ValueError("baseline response must contain a valid outcome") from error
-        if outcome not in workflow.allowed_outcomes:
+        available_outcomes = {
+            Outcome.IGNORE,
+            Outcome.INVESTIGATE,
+            Outcome.INSUFFICIENT_DATA,
+            *(method.outcome for method in card.delivery_methods),
+        }
+        if outcome not in available_outcomes:
             outcome = Outcome.INVESTIGATE
         confidence = result.get("confidence")
         if confidence is not None:
             confidence = max(0.0, min(float(confidence), 1.0))
-        probabilities = result.get("probabilities") or {outcome.value: confidence or 0.0}
-        return Decision(
+        watch_results = self._watch_results(card, result.get("watch_results"))
+        question_results = self._question_results(card, result.get("question_results"))
+        return InsightResult(
+            card_id=card.id,
             outcome=outcome,
-            recipient_key=result.get("recipient_key"),
-            rationale=str(result.get("rationale") or "Embedding-plus-reasoning baseline decision."),
+            delivery_methods=[
+                method for method in card.delivery_methods if method.outcome == outcome
+            ],
+            summary=(
+                f"Embedding retrieval supplied {len(retrieved)} of {len(observations)} "
+                f"observations across {len(plan.selected_source_keys)} sources; "
+                f"{len(watch_results)} watch items and {len(question_results)} questions were checked."
+            ),
+            rationale=str(result.get("rationale") or "Embedding-plus-reasoning baseline result."),
             confidence=confidence,
-            probabilities={str(key): float(value) for key, value in probabilities.items()},
-            evidence=state["evidence"],
-            observations=observations,
-            workflow_id=workflow.id,
-            source_keys=[
-                source["source_key"]
-                for source in state.get("sources", [])
-                if "source_key" in source
-            ]
-            or [source.key for source in workflow.sources],
+            probabilities=self._probabilities(result.get("probabilities")),
+            watch_results=watch_results,
+            question_results=question_results,
+            evidence=[Evidence.model_validate(item) for item in retrieved_evidence],
+            observations=[Observation.model_validate(doc) for doc in retrieved],
+            source_keys=plan.selected_source_keys,
             evaluator=self.name,
         )
+
+    @classmethod
+    def _watch_results(
+        cls, card: InsightCard, raw_results: Any
+    ) -> list[WatchResult]:
+        by_key = {
+            str(item.get("key")): item
+            for item in (raw_results if isinstance(raw_results, list) else [])
+            if isinstance(item, dict)
+        }
+        results: list[WatchResult] = []
+        for index, item in enumerate(card.watch_for):
+            raw_probability = by_key.get(f"watch_{index}", {}).get("probability", 0.5)
+            probability = max(0.0, min(1.0, float(raw_probability)))
+            status = (
+                WatchStatus.PRESENT
+                if probability >= cls.item_threshold
+                else WatchStatus.ABSENT
+                if probability <= 1 - cls.item_threshold
+                else WatchStatus.UNKNOWN
+            )
+            results.append(
+                WatchResult(
+                    key=f"watch_{index}",
+                    watch_for=item,
+                    status=status,
+                    probability=probability,
+                )
+            )
+        return results
+
+    @classmethod
+    def _question_results(
+        cls, card: InsightCard, raw_results: Any
+    ) -> list[QuestionResult]:
+        by_key = {
+            str(item.get("key")): item
+            for item in (raw_results if isinstance(raw_results, list) else [])
+            if isinstance(item, dict)
+        }
+        results: list[QuestionResult] = []
+        for index, question in enumerate(card.questions):
+            raw_probability = by_key.get(f"question_{index}", {}).get("probability", 0.5)
+            probability = max(0.0, min(1.0, float(raw_probability)))
+            status = (
+                QuestionStatus.SUPPORTED
+                if probability >= cls.item_threshold
+                else QuestionStatus.NOT_SUPPORTED
+                if probability <= 1 - cls.item_threshold
+                else QuestionStatus.UNKNOWN
+            )
+            results.append(
+                QuestionResult(
+                    key=f"question_{index}",
+                    question=question,
+                    status=status,
+                    probability=probability,
+                )
+            )
+        return results
 
     @staticmethod
     def _document(observation: Observation) -> dict[str, Any]:
@@ -118,6 +230,7 @@ class EmbeddingReasoningJudger:
             "comparison_baselines": observation.comparison_baselines,
             "dimensions": observation.dimensions,
             "freshness": observation.freshness,
+            "attributes": observation.attributes,
         }
 
     async def _rank(self, query: str, documents: list[dict[str, Any]]) -> list[int]:
@@ -127,7 +240,10 @@ class EmbeddingReasoningJudger:
         body = await self._post("/embeddings", {"model": self.embedding_model, "input": texts})
         vectors = [item["embedding"] for item in sorted(body["data"], key=lambda item: item["index"])]
         query_vector = vectors[0]
-        scores = [(self._cosine(query_vector, vector), index) for index, vector in enumerate(vectors[1:])]
+        scores = [
+            (self._cosine(query_vector, vector), index)
+            for index, vector in enumerate(vectors[1:])
+        ]
         return [index for _score, index in sorted(scores, reverse=True)]
 
     async def _reason(self, payload: dict[str, Any]) -> dict[str, Any]:
@@ -137,36 +253,18 @@ class EmbeddingReasoningJudger:
                 {
                     "model": self.model,
                     "instructions": (
-                        "Classify a monitoring event. Return only the requested JSON schema. "
-                        "Use only allowed outcomes and approved recipients. Never invent "
-                        "evidence or recipients."
+                        "Classify an insight card over retrieved evidence. Return only the "
+                        "requested JSON schema. Use only the configured outcomes and delivery "
+                        "methods. Never invent evidence, destinations, or facts."
                     ),
                     "input": json.dumps(payload, separators=(",", ":")),
                     "store": False,
                     "text": {
                         "format": {
                             "type": "json_schema",
-                            "name": "monitor_decision",
+                            "name": "insight_result",
                             "strict": True,
-                            "schema": {
-                                "type": "object",
-                                "properties": {
-                                    "outcome": {
-                                        "type": "string",
-                                        "enum": [outcome.value for outcome in Outcome],
-                                    },
-                                    "recipient_key": {"type": ["string", "null"]},
-                                    "rationale": {"type": "string"},
-                                    "confidence": {"type": "number"},
-                                },
-                                "required": [
-                                    "outcome",
-                                    "recipient_key",
-                                    "rationale",
-                                    "confidence",
-                                ],
-                                "additionalProperties": False,
-                            },
+                            "schema": self._response_schema(),
                         }
                     },
                 },
@@ -186,10 +284,10 @@ class EmbeddingReasoningJudger:
                     {
                         "role": "system",
                         "content": (
-                            "Classify a monitoring event. Return JSON only with keys "
-                            "outcome, recipient_key, rationale, confidence, probabilities. "
-                            "Use only allowed outcomes and approved recipients. "
-                            "Never invent evidence or recipients."
+                            "Classify an insight card over retrieved evidence. Return JSON only "
+                            "with keys outcome, rationale, confidence, watch_results, "
+                            "question_results, probabilities. Use only configured outcomes "
+                            "and delivery methods. Never invent evidence or facts."
                         ),
                     },
                     {"role": "user", "content": json.dumps(payload, separators=(",", ":"))},
@@ -203,12 +301,65 @@ class EmbeddingReasoningJudger:
         return self._parse_json(content)
 
     @staticmethod
+    def _response_schema() -> dict[str, Any]:
+        probability_item = {
+            "type": "object",
+            "properties": {
+                "key": {"type": "string"},
+                "probability": {"type": "number"},
+            },
+            "required": ["key", "probability"],
+            "additionalProperties": False,
+        }
+        return {
+            "type": "object",
+            "properties": {
+                "outcome": {
+                    "type": "string",
+                    "enum": [outcome.value for outcome in Outcome],
+                },
+                "rationale": {"type": "string"},
+                "confidence": {"type": "number"},
+                "watch_results": {"type": "array", "items": probability_item},
+                "question_results": {"type": "array", "items": probability_item},
+                "probabilities": {
+                    "type": "array",
+                    "items": probability_item,
+                },
+            },
+            "required": [
+                "outcome",
+                "rationale",
+                "confidence",
+                "watch_results",
+                "question_results",
+                "probabilities",
+            ],
+            "additionalProperties": False,
+        }
+
+    @staticmethod
     def _response_output_text(body: dict[str, Any]) -> str:
         for item in body.get("output", []):
             for content in item.get("content", []):
                 if content.get("type") == "output_text" and isinstance(content.get("text"), str):
                     return content["text"]
         return ""
+
+    @staticmethod
+    def _probabilities(raw_values: Any) -> dict[str, float]:
+        if not isinstance(raw_values, list):
+            return {}
+        values: dict[str, float] = {}
+        for item in raw_values:
+            if not isinstance(item, dict) or not item.get("key"):
+                continue
+            try:
+                probability = float(item["probability"])
+            except (KeyError, TypeError, ValueError):
+                continue
+            values[str(item["key"])] = max(0.0, min(1.0, probability))
+        return values
 
     @staticmethod
     def _parse_json(content: str) -> dict[str, Any]:
@@ -249,7 +400,14 @@ class EmbeddingReasoningJudger:
     def _text(document: dict[str, Any]) -> str:
         return " ".join(
             str(document.get(key) or "")
-            for key in ("subject_label", "metric", "unit", "freshness", "dimensions")
+            for key in (
+                "subject_label",
+                "metric",
+                "unit",
+                "freshness",
+                "dimensions",
+                "attributes",
+            )
         )
 
     @staticmethod

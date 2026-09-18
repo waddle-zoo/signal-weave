@@ -1,16 +1,16 @@
 from __future__ import annotations
 
-from .models import Evidence, ResourceDescriptor, ResourceSnapshot, SourceRef
+from .models import Evidence, ResourceContract, ResourceDescriptor, ResourceSnapshot, SourceRef
 from .superset_client import SupersetClient
 
 
 class SupersetAdapter:
     """First-class Superset adapter for saved dashboards and chart data.
 
-    Workflows can reference several dashboards, or narrow one dashboard with
+    Insight cards can reference several dashboards, or narrow one dashboard with
     ``parameters.chart_ids``. The adapter preserves dashboard owners, chart
     relationships, saved metric definitions, and normalized chart observations
-    in the generic snapshot consumed by the workflow engine.
+    in the generic snapshot consumed by the insight engine.
     """
 
     name = "superset"
@@ -36,6 +36,17 @@ class SupersetAdapter:
                         for owner in item.get("owners", [])
                     ]
                 },
+                contract=ResourceContract(
+                    tenant_id=str(item.get("tenant_id") or "default"),
+                    domain=str(item.get("domain") or "bi"),
+                    metric_names=[str(metric) for metric in item.get("metric_names", [])],
+                    population=str(item.get("population") or ""),
+                    grain=str(item.get("grain") or ""),
+                    freshness_sla_hours=item.get("freshness_sla_hours"),
+                    lineage=[str(value) for value in item.get("lineage", [])],
+                    roles=[str(value) for value in item.get("roles", ["primary"])],
+                    source_status=str(item.get("source_status") or "healthy"),
+                ),
             )
             for item in dashboards
         ]
@@ -98,6 +109,30 @@ class SupersetAdapter:
         chart_errors = [
             f"{chart.title}: {chart.error}" for chart in dashboard.charts if chart.error
         ]
+        charts_with_observations = [chart for chart in dashboard.charts if chart.observations]
+        missing_baseline_chart_ids = [
+            chart.id
+            for chart in charts_with_observations
+            if any(
+                observation.current is not None
+                and (observation.baseline is None or observation.change_pct is None)
+                for observation in chart.observations
+            )
+        ]
+        quality_status = (
+            "failed"
+            if dashboard.charts and not charts_with_observations
+            else "partial"
+            if chart_errors or missing_baseline_chart_ids
+            else "healthy"
+        )
+        metadata["data_quality"] = {
+            "status": quality_status,
+            "chart_count": len(dashboard.charts),
+            "charts_with_observations": len(charts_with_observations),
+            "chart_errors": chart_errors,
+            "missing_baseline_chart_ids": missing_baseline_chart_ids,
+        }
         return ResourceSnapshot(
             source_key=source.key,
             adapter=self.name,
@@ -107,8 +142,8 @@ class SupersetAdapter:
             observations=observations,
             evidence=evidence,
             metadata=metadata,
-            error=("One or more Superset charts were unavailable: " + "; ".join(chart_errors))
-            if chart_errors
+            error=("All Superset charts were unavailable: " + "; ".join(chart_errors))
+            if chart_errors and not charts_with_observations
             else None,
             source_url=dashboard.source_url,
             captured_at=dashboard.captured_at,

@@ -1,0 +1,43 @@
+{
+  "id": "card-sales-pulse",
+  "title": "Sales pulse",
+  "what_to_watch": "Revenue and related dashboard signals that show whether the sales pulse is on course.",
+  "why_watch": "Help Revenue Operations distinguish expected movement from a business issue and decide what deserves attention.",
+  "watch_for": [
+    "Revenue changes materially versus the selected comparison window.",
+    "The movement is concentrated in one product line or related segment.",
+    "A related chart corroborates the movement rather than explaining it away."
+  ],
+  "questions": [
+    "Is the movement outside expected seasonal behavior?",
+    "Which related signals are most relevant to the decision?",
+    "Does this warrant a Revenue Operations response?"
+  ],
+  "sources": [
+    {
+      "key": "sales-dashboard",
+      "adapter": "superset",
+      "resource": "dashboard:7",
+      "label": "Sales dashboard",
+      "parameters": {"chart_ids": ["62", "64"]}
+    }
+  ],
+  "comparison_windows": ["previous_period", "trailing_4_period_average"],
+  "action_confidence_threshold": 0.70,
+  "delivery_methods": [
+    {
+      "key": "revenue-operations",
+      "outcome": "notify",
+      "label": "Revenue Operations",
+      "destination": "slack://revenue-operations",
+      "instructions": "Notify Revenue Operations when the evidence supports a non-urgent operating response."
+    },
+    {
+      "key": "executive-escalation",
+      "outcome": "escalate",
+      "label": "Executive Escalation",
+      "destination": "slack://executive-escalation",
+      "instructions": "Escalate only when the evidence indicates severe business impact or untrustworthy data."
+    }
+  ]
+}

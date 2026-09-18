@@ -2,12 +2,12 @@
 
 SignalWeave’s extension point is a read-only source adapter, not a new workflow
 runtime. Add an adapter when a company already has a system that owns the fact or
-status needed by a decision workflow.
+status needed by an insight card.
 
 ## Contract
 
 ```python
-from semantic_monitor.models import ResourceDescriptor, ResourceSnapshot, SourceRef
+from signalweave.models import ResourceDescriptor, ResourceSnapshot, SourceRef
 
 
 class SourceAdapter:
@@ -34,6 +34,15 @@ The adapter should:
 - include a source URL/run ID when possible; and
 - return a `ResourceSnapshot(error=...)` through the registry path when the source cannot be trusted.
 
+For production catalogs, populate the typed `ResourceContract` as well:
+
+- `tenant_id` and `authorized` identify the security boundary;
+- `domain`, `scope`, `population`, and `grain` explain what the resource means;
+- `freshness_sla_hours`, `source_status`, and `lineage` describe trust and recency;
+- `roles` describes whether the resource is a primary metric, context, quality, or
+  other approved evidence role; and
+- `metric_definitions` describes approved queryable metrics without exposing raw SQL.
+
 The engine does not parse the resource locator or execute source languages. This
 keeps a SQL adapter from turning the MCP surface into an arbitrary SQL console,
 and keeps an Airflow adapter from becoming a DAG execution API.
@@ -45,13 +54,18 @@ These are intended adapter contracts, not shipped connectors in the current repo
 ```text
 Superset   dashboard:7       parameters.chart_ids=[62,64]
 SQL        query:orders_quality
+Trino      query:net_revenue
 Airflow    dag:warehouse_load parameters.run="latest"
 Table      table:warehouse.orders parameters.check="exists_and_fresh"
 ```
 
-A mixed workflow can reference all four. The registry resolves them concurrently
+A mixed card can reference all four. The registry resolves them concurrently
 with a bounded fan-out, and the engine gives Jev the resulting snapshots together
-so owner intent can be evaluated over their relationships.
+so the card’s author guidance can be evaluated over their relationships. Cards
+created through `propose_insight_card` default to `retrieval_mode="expand"`:
+human-selected sources remain required anchors, while Jev may add a small number
+of authorized optional context sources at evaluation time. Use
+`retrieval_mode="fixed"` when the source set must not expand.
 
 ## SQL adapter boundary
 
@@ -60,6 +74,12 @@ query catalog. It should not accept raw SQL from `SourceRef.parameters` unless t
 deployment has an explicit, separately reviewed policy for that capability. The
 adapter should return the query’s declared metric names, grain, current/baseline
 values, freshness, and data-quality evidence.
+
+`TrinoQueryAdapter` implements the same boundary for data-lake metric queries. Its
+source parameters may name an approved `metric_key`, dimensions, a supported time
+grain, and an explicit ISO-8601 window. The adapter compiles those fields through
+`MetricQueryPlan`; it rejects caller SQL, unapproved relations/columns, missing
+windows, and non-`SELECT` execution.
 
 ## Airflow or Dagster adapter boundary
 
@@ -86,8 +106,8 @@ registry = SourceRegistry([
     ApprovedQueryAdapter(query_catalog, warehouse),
     AirflowStatusAdapter(airflow_client),
 ])
-engine = MonitorEngine(judger=JevJudger(api_key=key), registry=registry)
+engine = InsightEngine(judger=JevJudger(api_key=key), registry=registry)
 ```
 
 The MCP tools then discover all installed resources through `list_resources`, and
-the workflow schema does not change.
+the insight-card schema does not change.

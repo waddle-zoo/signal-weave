@@ -3,8 +3,8 @@
 </p>
 
 <p align="center">
-  <strong>Typed decisions for operational signals.</strong><br>
-  Turn the systems your company already uses into explainable push decisions.
+  <strong>Typed decisions for the signals your company already has.</strong><br>
+  Turn dashboards, queries, jobs, and source context into evidence-backed results.
 </p>
 
 <p align="center">
@@ -13,178 +13,248 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-2ea44f.svg" alt="Apache 2.0 license"></a>
 </p>
 
-Turn the dashboards, queries, jobs, and ownership metadata your team already has
-into reviewed, evidence-backed push decisions. When a signal moves, SignalWeave
-checks whether it matters, looks at the related context, and returns an inspectable
-action for an existing agent, scheduler, or delivery system.
+Most companies already know what they want to watch. The hard part is turning
+that guidance into a repeatable answer when several sparse signals, relationships,
+and ownership rules matter at once.
 
-SignalWeave is a small open-source MCP and webhook service: a person describes
-what matters in plain language, configured adapters provide bounded evidence, and
-[TypeSafe Jev](https://docs.typesafe.ai/introduction) supplies narrow typed
-judgments. It does not become your BI tool, workflow engine, or agent runtime.
+SignalWeave is a small open-source MCP and webhook service for that seam. A
+person writes a free-form insight card, source adapters return bounded evidence,
+[TypeSafe Jev](https://docs.typesafe.ai/introduction) makes narrow typed
+judgments, and your existing agent, scheduler, or delivery system decides what
+to do next.
 
 <p align="center">
-  <img src="assets/decision-flow.svg" alt="SignalWeave turns approved source signals into bounded evidence, a TypeSafe Jev judgment, code-owned safety gates, and an existing push or agent action" width="900">
+  <img src="assets/decision-flow.svg" alt="SignalWeave turns an insight card and source evidence into Jev judgments, safety gates, and an existing push or agent action" width="900">
 </p>
 
-## Try it
+## Quick start
 
 Requirements: Python 3.11+, [uv](https://docs.astral.sh/uv/), and a TypeSafe API
-key. Jev is the production decision path; there is no implicit heuristic fallback.
+key.
 
 ```bash
 git clone https://github.com/waddle-zoo/signal-weave.git
 cd signal-weave
 uv sync --extra dev
 export TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe
-
 make verify
 ```
 
-Run the local Superset-backed demo stack:
+Run the localhost Superset demo:
 
 ```bash
 TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
   docker compose up --build
 ```
 
-This is a localhost-only development stack. It uses `admin` / `admin` for the
-local Superset instance and leaves optional bearer tokens empty; do not expose it
-to a network. The published ports are bound to `127.0.0.1` by default.
+Superset is available at <http://localhost:8088>. SignalWeave serves MCP at
+<http://localhost:18000/mcp>, health at <http://localhost:18000/healthz>, and
+push evaluation at `POST /webhooks/evaluate`. The demo credentials are
+`admin` / `admin`; ports are loopback-only and must not be exposed.
 
-Open Superset at <http://localhost:8088>. SignalWeave serves health at
-<http://localhost:18000/healthz>, MCP at
-<http://localhost:18000/mcp>, and push evaluation at
-`POST http://localhost:18000/webhooks/evaluate`.
-
-To run the first live decision over the included workflow:
+To run the included card against live local Superset:
 
 ```bash
 SUPERSET_URL=http://127.0.0.1:8088 \
 SUPERSET_USERNAME=admin SUPERSET_PASSWORD=admin \
 TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
-  uv run python scripts/live_workflow_check.py \
-  --workflow examples/workflow.json
+  uv run python scripts/live_card_check.py \
+  --card examples/insight-card.json
 ```
 
-See [`docs/evidence-brief.md`](docs/evidence-brief.md) for the measured case for
-trying it, and [`docs/demo.md`](docs/demo.md) for the complete walkthrough and
-[`examples/workflow.json`](examples/workflow.json) for the workflow input.
+## The card
 
-## What it does
+The user-facing contract is intentionally generic:
 
-SignalWeave sits between company systems and the system that already delivers or
-acts on alerts. It does not replace a scheduler, BI tool, durable workflow engine,
-knowledge graph, or general-purpose agent framework. Source and recipient
-allowlisting is deployment configuration; identity-aware authorization remains
-deployment-owned.
+```json
+{
+  "title": "Sales pulse",
+  "what_to_watch": "Revenue and related dashboard signals.",
+  "why_watch": "Help Revenue Operations distinguish expected movement from a business issue.",
+  "watch_for": [
+    "Revenue changes materially.",
+    "A related chart corroborates the movement."
+  ],
+  "questions": [
+    "Is this outside expected seasonal behavior?",
+    "Does this warrant a Revenue Operations response?"
+  ],
+  "sources": [
+    {
+      "key": "sales-dashboard",
+      "adapter": "superset",
+      "resource": "dashboard:7",
+      "label": "Sales dashboard",
+      "parameters": {"chart_ids": ["62", "64"]}
+    }
+  ],
+  "delivery_methods": [
+    {
+      "key": "revenue-operations",
+      "outcome": "notify",
+      "label": "Revenue Operations",
+      "destination": "slack://revenue-operations",
+      "instructions": "Notify when the evidence supports a non-urgent response."
+    }
+  ]
+}
+```
 
-- **Define:** an operations lead or analyst names the configured sources, intent,
-  materiality, outcomes, and recipients.
-- **Understand:** adapters normalize source state into typed observations and
-  evidence. Workflows can compose multiple sources.
-- **Decide:** Jev answers bounded semantic questions over that evidence, such as
-  whether a movement is material, which comparison applies, or whether context
-  corroborates it.
-- **Enforce:** application code owns freshness, baselines, permissions, allowed
-  recipients, confidence routing, and side effects.
-- **Push:** the caller receives a decision such as `ignore`, `investigate`,
-  `notify`, `escalate`, or `insufficient_data`.
+In plain language:
 
-The MCP surface is intentionally small:
+- `what_to_watch` says what the card is about;
+- `why_watch` says which decision it should support;
+- `watch_for` optionally names conditions to surface one by one;
+- `questions` optionally names questions the evidence should answer; and
+- `delivery_methods` maps outcomes to caller-owned destinations.
+
+The result gives you the chosen `outcome`, configured delivery methods,
+per-item `watch_results`, per-question `question_results`, every normalized
+observation, source evidence, confidence, and provenance. If the card names 100
+things to watch, Jev receives all 100 observations; changed rows are only placed
+first for client rendering.
+
+## MCP flow
+
+An existing UI or agent can guide onboarding without SignalWeave owning the UI:
 
 ```text
-list_resources(adapter?)
-inspect_resource(adapter, resource, parameters?)
-discover_monitor_inputs(goal, adapter?, limit?)
-propose_monitor_card(goal, selected_sources?, recipients?, ...)
-simulate_monitor_card(workflow_id)
-approve_monitor_card(workflow_id)
-list_monitor_cards(status?)
-get_monitor_card(workflow_id)
-draft_workflow(title, intent, sources, policy...)
-evaluate_workflow(workflow_id)
+discover_insight_sources(goal, adapter?, limit?)
+propose_insight_card(what_to_watch, why_watch, watch_for?, questions?, ...)
+resolve_insight_sources(card_id)
+simulate_insight_card(card_id)
+approve_insight_card(card_id)
+evaluate_insight_card(card_id)
 ```
 
-The monitor-card tools let an existing agent guide a person from a plain-language
-goal to Jev-ranked source candidates, a draft card, a no-delivery preview, and an
-explicit approval. The older `draft_workflow` tool remains the lower-level escape
-hatch for callers that already have a complete workflow contract.
+Or, when source refs are already known:
 
-Approved cards are stored as typed JSON contracts. A customer-owned UI, agent,
-scheduler, or webhook relay can list or retrieve them later without adopting a
-SignalWeave runtime or delivery system.
+```text
+draft_insight_card(title, what_to_watch, why_watch, sources, ...)
+```
 
-The first included adapter is Apache Superset. The workflow contract stays
-source-oriented so an installation can add configured SQL, Airflow, data-quality,
-or other operational adapters without making the service Superset-shaped.
+The proposal path uses Jev to rank a bounded source catalog, stores a draft, and
+returns setup questions. Preview is delivery-disabled. Approval is explicit.
+Proposal-created cards default to `retrieval_mode="expand"`: the selected source
+stays a human-approved anchor, while Jev can add a bounded set of authorized,
+optional context sources at evaluation time. `resolve_insight_sources` previews
+that bundle. Direct drafts default to `fixed`; set `retrieval_mode="expand"` if
+the caller wants the same related-source behavior.
+After approval, an existing scheduler or alert relay posts:
 
-The [evidence brief](docs/evidence-brief.md) reports a small live comparison:
-on four synthetic labeled situations, an earlier recorded Jev run was exact on
-20/20 decisions while two current OpenAI baseline runs were exact on 15/20 and
-16/20. That is a reason to run the harness on your own history, not a universal
-accuracy claim.
+```json
+{"card_id": "card-sales-pulse"}
+```
 
-## Why Jev
+The caller owns scheduling, delivery, retries around the sink, and side effects;
+SignalWeave records the evaluation idempotency key and replays completed results.
 
-The hard part is not retrieving a metric. It is deciding whether several pieces of
-evidence belong together, whether a change matters under an owner’s definition,
-whether the data is safe to act on, and who is allowed to receive the result.
+## Plain-language metric queries
 
-SignalWeave uses TypeSafe as a programmable decision primitive rather than an
-autonomous agent runner. Jev handles the semantic parts that are difficult to
-encode as ordinary rules; code handles the parts that must be deterministic and
-reviewable. Independent predicates use typed judgments, bounded choices use
-allowlisted options, and low confidence routes to investigation instead of
-silently authorizing an automatic action.
+For data-lake questions, use a metric query card over an approved Trino catalog:
 
-That boundary keeps the useful flexibility of natural language without putting an
-entire dashboard, workflow, or side-effect policy into one unconstrained prompt.
-Normalized evidence is sent to the configured TypeSafe service during Jev
-evaluation; review [`docs/security.md`](docs/security.md) and your organization’s
-data policy before using live company data.
-Read the [TypeSafe System One building guide](https://docs.typesafe.ai/concepts/how-to-build-with-system-one)
-and [confidence guidance](https://docs.typesafe.ai/confidence) for the design
-principles behind this approach.
+```text
+propose_metric_query_card(question, why, selected_sources, dimensions?, time_grain?)
+compile_metric_query_card(card_id, window_start, window_end)
+approve_metric_query_card(card_id, actor?)
+```
 
-## The problem
+Jev selects among catalog-owned metric definitions. SignalWeave then compiles a
+typed plan into deterministic `SELECT` SQL with approved relations, columns,
+aggregations, dimensions, and a required partition/time bound. It never accepts
+raw SQL from the MCP caller and never asks Jev to generate executable SQL. The
+included Trino adapter can execute only those compiled queries and returns bounded,
+normalized observations.
 
-Most companies do not lack data. They lack a dependable translation from “this
-changed” to “this matters, this is why, and this is what should happen next.”
+## Why Jev instead of one large prompt?
 
-Embedding search and RAG can retrieve a relevant dashboard, definition, or owner.
-They do not by themselves provide a stable decision contract across related
-sources, changing context, missing baselines, stale data, conflicting signals, and
-approved actions. The common alternatives are a human watching dashboards, a large
-LLM prompt that improvises over all available context, or a growing collection of
-narrow jobs. SignalWeave is the small typed layer for the decision between those
-systems.
+Embeddings and RAG can retrieve a relevant dashboard, definition, owner, or
+document. They do not by themselves provide a stable boundary for deciding when
+several signals belong together, when context explains a movement, or when the
+evidence is unsafe to act on.
 
-## Evidence and safety
+SignalWeave uses Jev as a programmable decision primitive, not an autonomous
+agent. Jev selects from a finite capability vocabulary and evaluates the card's
+watch items, questions, and outcome conditions with typed probabilities. Code
+keeps ownership of baselines, freshness, allowlists, confidence routing, and
+side effects. Destinations never come from model output.
 
-The MCP evaluation response includes the workflow, fetched resources, compiled
-plan, and typed decision. The webhook returns the typed decision, including the
-workflow ID, source keys, normalized observations, source evidence and URLs, Jev
-evaluator, confidence, and the selected configured recipient when applicable.
+That combination gives a person natural-language flexibility without turning the
+whole source state and action policy into one untestable response. It also means
+an existing agent can enrich the state with approved knowledge-graph context or
+human feedback later without SignalWeave owning the graph or the agent loop.
 
-Required source failures, stale observations, missing baselines, unknown
-recipients, and low-confidence automatic actions are handled by code-owned gates
-where the source adapter provides the required state.
-The source registry resolves references independently, so one failed source can be
-reported alongside healthy evidence. The caller owns delivery, retries,
-idempotency, and side effects.
+## First integration, broader contract
+
+The included adapter is Apache Superset and preserves dashboard/chart metadata,
+relationships, saved definitions, dimensions, bounded series, baselines, and
+source URLs. The card itself is not Superset-shaped: one card can combine several
+Superset dashboards with approved SQL, Airflow, table-quality, or other read-only
+source adapters.
+
+SignalWeave is not a replacement for Temporal, Airflow, Dagster, a BI tool,
+Glean, a knowledge graph, or a general-purpose agent framework. It is the typed
+decision layer between those systems.
+
+## Evidence and limits
+
+The repository includes reproducible synthetic trials, not a substitute for a
+customer's historical holdout. The controlled Jev decision matrix covered 3
+companies, 22 personas, 1,664 heterogeneous resources, and 144 tasks: the latest
+live Jev run made 130/144 exact outcome decisions, with all fourteen misses
+conservative
+`notify` → `investigate` routes. That runner supplied hidden source refs, so its
+source-selection result is not a discovery score.
+
+The independent live discovery trial used 48 tasks, 576 resources before tenant
+filtering, same-name cross-tenant decoys, and two-source labels that were not sent
+to Jev. It achieved 48/48 exact top-2 sets, 48/48 top-10 coverage, and 0 wrong-
+tenant returns with an explicit tenant boundary. The live metric-plan trial used
+24 held-out metric labels and achieved 24/24 correct definitions, dimensions, and
+time grains; all 24 compiled queries were bounded, `SELECT`-only, and semicolon-
+free. The live evidence-bundle trial used the same 48-task catalog with a
+human-approved anchor and independently held-out related-source labels: 48/48
+expected related sources were selected, 48/48 anchors were preserved, and 0
+wrong-tenant sources were returned. Run it with `make bundle-trial`. These are
+synthetic regression measurements, not universal accuracy or production safety
+claims.
+
+The MCP enterprise trial also exposed the limits: malformed client calls and
+unscoped catalogs caused source-discovery failures. Keep tenant identity, metric
+definition, population, grain, freshness, lineage, and source status in adapter
+metadata, and run a domain-owner-labeled, time-split shadow trial before enabling
+automated actions.
+
+The default runtime stores insight cards, metric cards, and decision receipts in
+one SQLite file. Its database uniqueness constraint makes a completed
+idempotency key replayable after restart. Multi-replica deployments should
+provide a shared transactional store through the store interfaces before routing
+traffic to more than one evaluator process.
+
+See [`docs/evidence-brief.md`](docs/evidence-brief.md) for the measured case and
+limitations.
+
+To reproduce the narrower daily-monitor contract—no-change suppression,
+contextual notification, complete evidence, and idempotent scheduler retry—run
+`make daily-trial`. The trial uses live Jev through the real MCP and webhook
+surfaces over a rotating Superset-shaped fixture. It is an integration proof,
+not a universal accuracy claim.
 
 ## Documentation
 
-- [`docs/architecture.md`](docs/architecture.md) — runtime boundaries and data flow
-- [`docs/demo.md`](docs/demo.md) — local setup and walkthrough
+- [`docs/architecture.md`](docs/architecture.md) — contracts, pipeline, and boundaries
+- [`docs/demo.md`](docs/demo.md) — local setup and onboarding walkthrough
 - [`docs/source-adapters.md`](docs/source-adapters.md) — adapter contract and security boundary
-- [`docs/benchmark.md`](docs/benchmark.md) — evaluation methodology and comparison measures
-- [`docs/evidence-brief.md`](docs/evidence-brief.md) — concise product case and measured comparison
-- [`docs/security.md`](docs/security.md) — credentials, evidence, and deployment notes
-- [`SECURITY.md`](SECURITY.md) — vulnerability reporting and release posture
-- [`ROADMAP.md`](ROADMAP.md) — current focus and future work
-- [`CONTRIBUTING.md`](CONTRIBUTING.md) — setup, testing, and pull requests
+- [`docs/metric-query-cards.md`](docs/metric-query-cards.md) — approved catalogs, Trino plans, and SQL bounds
+- [`docs/benchmark.md`](docs/benchmark.md) — comparison methodology
+- [`docs/evidence-brief.md`](docs/evidence-brief.md) — measured product case
+- [`docs/enterprise-experiment.md`](docs/enterprise-experiment.md) — MCP-only enterprise readiness experiment
+- [`docs/enterprise-closure.md`](docs/enterprise-closure.md) — current proof boundary and next gate
+- [`docs/adversarial-review.md`](docs/adversarial-review.md) — public-readiness review and explicit gaps
+- [`docs/postfix-agent-trial.md`](docs/postfix-agent-trial.md) — live post-fix Luna agent trial
+- [`docs/security.md`](docs/security.md) — credentials and deployment notes
+- [`ROADMAP.md`](ROADMAP.md) — future work tracker
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) — setup and pull-request guidance
 - [`AGENTS.md`](AGENTS.md) — guidance for coding agents
 
 ## License

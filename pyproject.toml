@@ -1,7 +1,7 @@
 [project]
 name = "signal-weave"
 version = "0.1.0"
-description = "A semantic decision layer that turns operational intent and existing data signals into typed, explainable actions."
+description = "A semantic decision layer that turns author guidance and existing data signals into typed, explainable actions."
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
@@ -42,8 +42,7 @@ dev = [
 ]
 
 [project.scripts]
-signalweave = "semantic_monitor.cli:main"
-semantic-monitor = "semantic_monitor.cli:main"
+signalweave = "signalweave.cli:main"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

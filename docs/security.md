@@ -16,11 +16,22 @@ deployment must establish a data policy before using company data.
 - Source adapters own authentication and execution. The Superset adapter executes saved chart definitions only; it does not accept arbitrary SQL from an MCP caller.
 - Superset row and series limits are bounded, dashboard pagination is capped, and chart fetches have timeouts.
 - A required source timeout or missing resource becomes evidence of insufficient data—not an automatic `ignore`. Adapter failure propagation and machine-readable freshness are still release-hardening work; see [`adversarial-review.md`](adversarial-review.md).
-- Workflow recipients are allowlisted. Jev cannot invent a destination, and actions without an approved recipient are downgraded to `investigate`.
-- Stale data escalates only when an approved escalation recipient exists; otherwise it becomes `investigate`.
+- Card delivery methods are allowlisted. Jev cannot invent a destination, and outcomes without a matching configured method are downgraded to `investigate`.
+- Stale data escalates only when a configured escalation delivery method exists; otherwise it becomes `investigate`.
 - Low-confidence automatic outcomes are downgraded to `investigate`.
-- The source registry resolves refs independently, so a mixed workflow can show which dashboard/query/DAG/table failed.
-- The workflow catalog is written atomically, and the monitor image runs as a non-root user.
+- The source registry resolves refs independently, so a mixed card can show which dashboard/query/DAG/table failed.
+- `SIGNALWEAVE_TENANT_ID` can restrict discovery and evaluation to resources whose
+  typed catalog contract belongs to the configured tenant; missing or foreign
+  resources fail closed.
+- Trino execution accepts only compiler-produced `SELECT` queries with validated
+  identifiers and bounded timestamp parameters. It is not a raw SQL endpoint.
+- Push evaluation requires an idempotency key and writes a durable decision
+  receipt with card version, actor, outcome, and delivery state. Replays return
+  the existing receipt. The default SQLite store enforces the claim atomically;
+  its single-file scope is suitable for one service process or a shared mounted
+  volume, not a multi-replica deployment without a stronger store.
+- Insight cards and metric query cards use the same SQLite persistence boundary by
+  default, and the service image runs as a non-root user.
 
 Run the adversarial unit checks with:
 
@@ -47,10 +58,11 @@ durable control plane. A production deployment should add:
 
 - TLS and an identity-aware gateway or OIDC integration;
 - secret-manager injection and token rotation;
-- reviewed workflow storage with version history and source permissions;
+- reviewed card storage with version history and source permissions;
 - an append-only decision/audit store and idempotent delivery worker;
-- dashboards/alerts for source latency, failure rate, `investigate` rate, and recipient corrections; and
+- dashboards/alerts for source latency, failure rate, `investigate` rate, and delivery-method corrections; and
 - a data policy for what evidence may be sent to TypeSafe Jev.
 
-The local JSON catalog and static bearer token are suitable for a contained proof
-or internal sidecar, not a substitute for those company controls.
+The optional JSON catalogs and static bearer token are suitable for a contained
+proof or internal sidecar, not a substitute for those company controls. SignalWeave
+does not claim OS-level process isolation or provide an identity provider.

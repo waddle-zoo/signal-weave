@@ -14,9 +14,9 @@ from typing import Any
 
 from evaluations.cases import load_evaluation_cases
 from evaluations.embedding_baseline import EmbeddingReasoningJudger
-from semantic_monitor.engine import MonitorEngine
-from semantic_monitor.models import Outcome
-from semantic_monitor.typesafe_adapter import JevJudger, JudgerMetrics, load_api_key
+from signalweave.engine import InsightEngine
+from signalweave.models import Outcome
+from signalweave.typesafe_adapter import JevJudger, JudgerMetrics, load_api_key
 
 SUPPORTED_SYSTEMS = {"jev", "embedding-reasoning", "openai"}
 
@@ -26,9 +26,9 @@ class BenchmarkResult:
     system: str
     scenario: str
     outcome: str
-    recipient: str | None
+    delivery_methods: list[str]
     expected_outcome: str
-    expected_recipient: str | None
+    expected_delivery_methods: list[str]
     outcome_correct: bool
     decision_correct: bool
     elapsed_ms: float
@@ -78,7 +78,10 @@ def _build_judger(system: str) -> Any:
             )
         judger = EmbeddingReasoningJudger(
             base_url=base_url,
-            model=os.getenv(f"{prefix}_MODEL", "luna"),
+            model=os.getenv(
+                f"{prefix}_MODEL",
+                "gpt-4o-mini" if system == "openai" else "luna",
+            ),
             embedding_model=os.getenv(
                 f"{prefix}_EMBEDDING_MODEL", "text-embedding-3-small"
             ),
@@ -95,7 +98,7 @@ def _build_judger(system: str) -> Any:
 async def run_labeled_benchmark(
     systems: list[str] | tuple[str, ...] = ("jev",), repeats: int = 1
 ) -> list[BenchmarkResult]:
-    """Run every system on the same four labeled workflow situations."""
+    """Run every system on the same four labeled insight situations."""
     if repeats < 1 or repeats > 100:
         raise ValueError("repeats must be between 1 and 100")
     unknown = set(systems) - SUPPORTED_SYSTEMS
@@ -106,25 +109,25 @@ async def run_labeled_benchmark(
     results: list[BenchmarkResult] = []
     for system in systems:
         judger = _build_judger(system)
-        engine = MonitorEngine(judger=judger)
+        engine = InsightEngine(judger=judger)
         for repeat in range(repeats):
             del repeat
             for case in cases:
                 scenario = case.id
-                workflow = case.workflow
+                card = case.card
                 expected_outcome = Outcome(case.expected_outcome)
-                expected_recipient = case.expected_recipient
+                expected_delivery_methods = case.expected_delivery_methods
                 before = _metrics(judger)
                 started = time.perf_counter()
                 try:
-                    evaluation = await engine.evaluate(workflow, case.resources)
-                    decision = evaluation.decision
-                    outcome = decision.outcome.value
-                    recipient = decision.recipient_key
+                    run = await engine.evaluate(card, case.resources)
+                    result = run.result
+                    outcome = result.outcome.value
+                    delivery_methods = [method.key for method in result.delivery_methods]
                     error = None
                 except Exception as exc:  # noqa: BLE001 - benchmark must record provider failures
                     outcome = Outcome.INSUFFICIENT_DATA.value
-                    recipient = None
+                    delivery_methods = []
                     error = f"{type(exc).__name__}: {exc}"
                 elapsed_ms = (time.perf_counter() - started) * 1000
                 requests, input_tokens, output_tokens = _metric_delta(before, _metrics(judger))
@@ -133,12 +136,13 @@ async def run_labeled_benchmark(
                         system=system,
                         scenario=scenario,
                         outcome=outcome,
-                        recipient=recipient,
+                        delivery_methods=delivery_methods,
                         expected_outcome=expected_outcome.value,
-                        expected_recipient=expected_recipient,
+                        expected_delivery_methods=expected_delivery_methods,
                         outcome_correct=outcome == expected_outcome.value,
                         decision_correct=(
-                            outcome == expected_outcome.value and recipient == expected_recipient
+                            outcome == expected_outcome.value
+                            and delivery_methods == expected_delivery_methods
                         ),
                         elapsed_ms=round(elapsed_ms, 2),
                         requests=requests,
@@ -200,14 +204,14 @@ def render_benchmark_table(results: list[BenchmarkResult]) -> str:
     lines.extend(
         [
             "",
-            "system                 scenario             outcome          recipient              expected  exact",
+            "system                 scenario             outcome          delivery methods       expected  exact",
             "---------------------  -------------------  ---------------  ---------------------  --------  -----",
         ]
     )
     for result in results:
         lines.append(
             f"{result.system:<21}  {result.scenario:<19}  {result.outcome:<15}  "
-            f"{(result.recipient or '-'): <21}  {result.expected_outcome:<8}  "
+            f"{(','.join(result.delivery_methods) or '-'): <21}  {result.expected_outcome:<8}  "
             f"{'yes' if result.decision_correct else 'NO'}"
         )
     return "\n".join(lines)
@@ -224,8 +228,8 @@ def render_benchmark_markdown(results: list[BenchmarkResult]) -> str:
         "- Gold labels: the intended behavior stored with each case in `evaluations/data/demo-cases.json`",
         "",
         "This is a local decision-quality benchmark, not a claim of universal model accuracy. "
-        "Every system receives the same workflow, normalized observations, evidence, allowed outcomes, "
-        "and recipient allowlist. The engine applies the same safety gates after each judgment.",
+        "Every system receives the same insight card, normalized source observations, and evidence "
+        "contract. The engine applies the same safety gates after each judgment.",
         "",
         "## Summary",
         "",
@@ -245,15 +249,15 @@ def render_benchmark_markdown(results: list[BenchmarkResult]) -> str:
             "",
             "## Case results",
             "",
-            "| System | Scenario | Outcome | Recipient | Expected | Exact | Time | Error |",
+            "| System | Scenario | Outcome | Delivery methods | Expected | Exact | Time | Error |",
             "| --- | --- | --- | --- | --- | :---: | ---: | --- |",
         ]
     )
     for result in results:
         lines.append(
             f"| `{result.system}` | `{result.scenario}` | `{result.outcome}` | "
-            f"`{result.recipient or '—'}` | `{result.expected_outcome}` / "
-            f"`{result.expected_recipient or '—'}` | "
+            f"`{', '.join(result.delivery_methods) or '—'}` | `{result.expected_outcome}` / "
+            f"`{', '.join(result.expected_delivery_methods) or '—'}` | "
             f"{'yes' if result.decision_correct else 'NO'} | {result.elapsed_ms:.2f} ms | "
             f"{result.error or '—'} |"
         )
@@ -264,7 +268,7 @@ def render_benchmark_markdown(results: list[BenchmarkResult]) -> str:
             "",
             "- `jev` is the product path: Jev supplies typed semantic judgments and the same code owns calculations, evidence, routing, and safety gates.",
             "- `openai` is the explicit OpenAI embedding-plus-reasoning baseline; `embedding-reasoning` is the same adapter configured for another OpenAI-compatible provider.",
-            "- Do not claim Jev is better from four labeled cases alone. Use this harness on a labeled export of real workflow events and compare accuracy, false alerts, investigation rate, latency, and provider usage.",
+            "- Do not claim Jev is better from four labeled cases alone. Use this harness on a labeled export of real card evaluations and compare accuracy, false alerts, investigation rate, latency, and provider usage.",
         ]
     )
     return "\n".join(lines)

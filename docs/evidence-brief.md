@@ -1,7 +1,7 @@
 # SignalWeave evidence brief
 
 SignalWeave is for one narrow problem: turning an owner’s definition of a
-meaningful change into a bounded decision over the operational sources a company
+meaningful change into a bounded result over the operational sources a company
 already has.
 
 It does not replace Superset, a knowledge graph, Temporal, Airflow, a scheduler,
@@ -12,35 +12,35 @@ allowlists, confidence, and side effects.
 
 ## The measured case
 
-On 2026-09-17 we ran the same four labeled situations five times each:
+On 2026-09-18 we ran the same four labeled situations five times each:
 
 - revenue decline corroborated by enterprise churn;
 - a seasonal sales decline that should be ignored;
 - mobile conversion decline corroborated by mobile checkout errors; and
 - stale warehouse data that should escalate to Data Platform.
 
-Both evaluators received the same workflow, observations, evidence, allowed
-outcomes, and approved recipients. Both used the same engine safety gates. The
-OpenAI arm used embeddings plus a general model with a strict JSON decision
-contract. The Jev row is a recorded five-repeat run from before the generic
-source-contract refactor; rerun it before treating it as a release number.
+Both evaluators received the same insight cards, observations, and source
+evidence. Both used the same engine safety gates. The OpenAI arm used embeddings
+plus a general model with a strict JSON result contract. The Jev and OpenAI rows
+below are a recorded five-repeat reference run from the decision-path benchmark.
+Re-run the harness against the current provider/model configuration before
+treating the latency or accuracy figures as current.
 
 | Evaluator | Evaluations | Exact decisions | Wrong automatic actions | Median | p95 | Requests | Errors |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| Jev, recorded baseline | 20 | 20/20 (100%) | 0 | 701.62 ms | 914.17 ms | 40 | 0 |
-| OpenAI baseline, run A | 20 | 15/20 (75%) | 5 | 2,981.51 ms | 5,964.23 ms | 40 | 0 |
-| OpenAI baseline, run B | 20 | 16/20 (80%) | 4 | 2,855.41 ms | 4,202.77 ms | 40 | 0 |
+| Jev | 20 | 15/20 (75%) | 0 | 770.77 ms | 990.48 ms | 40 | 0 |
+| OpenAI embedding + reasoning | 20 | 14/20 (70%) | 4 | 2,300.14 ms | 2,681.64 ms | 40 | 0 |
 
-OpenAI run B reported 16,185 input tokens and 2,784 output tokens across the
-20 evaluations. Measure provider cost separately with the model and pricing a
-deployment actually uses; this repository does not invent a cost comparison.
+The Jev run reported 155,689 input tokens and 7,895 output tokens; the OpenAI
+run reported 21,535 input tokens and 3,804 output tokens across 20 evaluations.
+Those token counts are provider-reported and not directly comparable across
+APIs. Measure provider cost separately with the model and pricing a deployment
+actually uses; this repository does not invent a cost comparison.
 
-Every incorrect OpenAI decision in these runs was a false `notify` for the
-seasonal case: a normal contextual decline was routed to Retail Operations. The result is useful
-because it tests the real failure mode—whether related signals change the action—
-instead of grading how persuasive a paragraph sounds. The two runs also show
-that a general model can vary on the same input even with a deterministic request
-setting.
+The Jev misses were conservative `investigate` results for the seasonal case.
+The OpenAI baseline produced four false `notify` decisions for that same case.
+The result is useful because it tests the real failure mode—whether related
+signals change the action—instead of grading how persuasive a paragraph sounds.
 
 This is evidence for a product hypothesis, not a claim of universal model
 accuracy. Four synthetic cases cannot establish enterprise performance. The
@@ -55,17 +55,17 @@ document. They do not by themselves define a stable decision boundary when:
 - several charts jointly determine whether a movement is material;
 - a context signal explains a change that should not page anyone;
 - freshness or missing baselines make interpretation unsafe; or
-- the correct action includes an approved recipient, not just an explanation.
+- the correct action includes approved delivery methods, not just an explanation.
 
 Hard-coded SQL jobs can solve each known case, but they make every new owner
 definition a software project. One unconstrained LLM prompt is flexible, but it
 mixes retrieval, arithmetic, interpretation, policy, and side effects in a large
 surface that is difficult to test.
 
-SignalWeave keeps the useful middle: owners write the condition in a monitor card;
-adapters normalize existing assets; Jev supplies narrow semantic judgments; and
-code owns the parts that must be deterministic. The output is a decision another
-system can consume, not a new agent that takes over the company.
+SignalWeave keeps the useful middle: owners write the condition in a free-form
+insight card; adapters normalize existing assets; Jev supplies narrow semantic
+judgments; and code owns the parts that must be deterministic. The output is a
+result another system can consume, not a new agent that takes over the company.
 
 ## The five-minute test
 
@@ -87,7 +87,7 @@ To compare against the OpenAI baseline using the same fixture:
 
 ```bash
 OPENAI_API_KEY=... \
-OPENAI_MODEL=gpt-5.6-luna \
+OPENAI_MODEL=gpt-4o-mini \
 OPENAI_EMBEDDING_MODEL=text-embedding-3-small \
   uv run python -m evaluations.cli benchmark \
   --systems openai --repeats 5 --format markdown
@@ -95,7 +95,7 @@ OPENAI_EMBEDDING_MODEL=text-embedding-3-small \
 
 For a real source, start the localhost Superset stack and follow the
 [onboarding walkthrough](demo.md). The owner starts with a goal, confirms the
-Jev-ranked source candidates, previews the monitor card, and explicitly approves
+Jev-ranked source candidates, previews the insight card, and explicitly approves
 it. An existing scheduler, agent, or webhook relay can then call the approved
 card. There is no required SignalWeave UI or delivery worker.
 
@@ -103,13 +103,15 @@ card. There is no required SignalWeave UI or delivery worker.
 
 The next test is not a larger synthetic generator. A design partner should export
 roughly 100 historical alert or monitoring situations from one team, including
-the workflow version, source evidence, expected outcome, expected recipient,
+the card version, source evidence, expected outcome, expected delivery methods,
 usefulness, and eventual operational result. Compare Jev with the team’s current
 LLM or rules using exact decision accuracy, false automatic actions, investigation
 rate, latency, and provider usage. Keep a time-split holdout so the cases used to
 write the cards are not also used to grade them.
 
-The current repository is an alpha proof, not an enterprise control plane. Identity-
-aware authorization, durable audit history, workflow version conflicts, and
-production delivery guarantees remain deployment or follow-up work. See
+The current repository is an alpha proof, not an enterprise control plane. A
+single-process deployment has durable SQLite cards and idempotency receipts, but
+identity-aware authorization, shared multi-replica storage, durable audit history,
+card version conflicts, and production delivery guarantees remain deployment or
+follow-up work. See
 [`benchmark.md`](benchmark.md) for the full protocol and limitations.
