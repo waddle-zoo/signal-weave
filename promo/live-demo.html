@@ -1,0 +1,658 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SignalWeave — live demo recording surface</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #080b12;
+      --panel: rgba(17, 24, 39, 0.92);
+      --panel-strong: #121b2a;
+      --panel-soft: rgba(24, 35, 55, 0.68);
+      --line: rgba(137, 157, 195, 0.18);
+      --line-bright: rgba(137, 157, 195, 0.35);
+      --text: #f4f7ff;
+      --muted: #8e9bb4;
+      --violet: #a796ff;
+      --cyan: #58e1d0;
+      --green: #7de5a5;
+      --amber: #ffcc73;
+      --red: #ff7691;
+      --shadow: 0 30px 80px rgba(0, 0, 0, 0.32);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { min-width: 320px; min-height: 100%; }
+    body {
+      margin: 0;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 72% 16%, rgba(94, 80, 190, 0.15), transparent 29rem),
+        radial-gradient(circle at 20% 80%, rgba(34, 179, 166, 0.08), transparent 24rem),
+        var(--bg);
+      color: var(--text);
+    }
+
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
+
+    .recording-stage {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      min-height: 620px;
+      overflow: hidden;
+      isolation: isolate;
+    }
+
+    .ambient-grid {
+      position: absolute;
+      inset: 0;
+      opacity: 0.32;
+      background-image:
+        linear-gradient(rgba(149, 165, 202, 0.07) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(149, 165, 202, 0.07) 1px, transparent 1px);
+      background-size: 48px 48px;
+      mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 82%, transparent 100%);
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    .app-chrome {
+      position: absolute;
+      inset: 18px 22px auto;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 18px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(11, 17, 29, 0.84);
+      box-shadow: var(--shadow);
+      z-index: 5;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      letter-spacing: 0.16em;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      width: 28px;
+      height: 28px;
+      border: 1px solid rgba(167, 150, 255, 0.75);
+      border-radius: 9px;
+      color: var(--violet);
+      font-size: 11px;
+      letter-spacing: 0;
+      box-shadow: 0 0 20px rgba(167, 150, 255, 0.24);
+    }
+
+    .workspace-context {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .live-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 14px rgba(125, 229, 165, 0.7);
+    }
+
+    .workspace {
+      position: absolute;
+      inset: 102px 22px 92px;
+      display: grid;
+      grid-template-columns: minmax(210px, 0.9fr) minmax(420px, 1.8fr) minmax(240px, 0.95fr);
+      gap: 14px;
+      transition: transform 900ms cubic-bezier(.2, .8, .2, 1), filter 700ms ease;
+      transform-origin: 52% 52%;
+    }
+
+    .workspace.zoomed {
+      transform: scale(1.18) translate(-1.5%, 1%);
+      filter: saturate(1.08);
+    }
+
+    .rail, .graph-panel, .evidence-panel {
+      min-height: 0;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .rail {
+      display: flex;
+      flex-direction: column;
+      border-radius: 20px;
+      padding: 18px;
+    }
+
+    .eyebrow {
+      margin-bottom: 12px;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+    }
+
+    .goal-title {
+      margin: 0 0 16px;
+      font-size: 17px;
+      line-height: 1.25;
+      font-weight: 760;
+    }
+
+    .rail-rule {
+      height: 1px;
+      margin: 0 0 15px;
+      background: var(--line);
+    }
+
+    .source-list { display: grid; gap: 9px; }
+    .source-item {
+      display: grid;
+      grid-template-columns: 10px 1fr auto;
+      align-items: center;
+      gap: 9px;
+      min-height: 42px;
+      padding: 8px 9px;
+      border: 1px solid transparent;
+      border-radius: 12px;
+      color: var(--muted);
+      font-size: 12px;
+      transition: 400ms ease;
+    }
+    .source-item.active {
+      border-color: rgba(167, 150, 255, 0.38);
+      background: rgba(167, 150, 255, 0.1);
+      color: var(--text);
+    }
+    .source-item .source-status {
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 700;
+    }
+    .source-item.active .source-status { color: var(--cyan); }
+    .source-icon {
+      width: 8px;
+      height: 8px;
+      border-radius: 3px;
+      background: var(--line-bright);
+    }
+    .source-item.active .source-icon { background: var(--violet); box-shadow: 0 0 12px rgba(167, 150, 255, .9); }
+
+    .card-note {
+      margin-top: auto;
+      padding-top: 16px;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.55;
+    }
+    .card-note strong { color: var(--text); font-weight: 700; }
+
+    .graph-panel {
+      position: relative;
+      overflow: hidden;
+      border-radius: 24px;
+      background:
+        radial-gradient(circle at 50% 50%, rgba(104, 83, 212, 0.13), transparent 18rem),
+        rgba(14, 21, 35, 0.9);
+    }
+
+    .graph-heading {
+      position: absolute;
+      top: 20px;
+      left: 24px;
+      right: 24px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      z-index: 3;
+    }
+    .graph-heading h1 { margin: 0; font-size: 18px; letter-spacing: -0.02em; }
+    .graph-heading p { margin: 5px 0 0; color: var(--muted); font-size: 11px; }
+    .graph-state {
+      min-width: 135px;
+      padding: 8px 10px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      color: var(--muted);
+      font-size: 10px;
+      text-align: right;
+    }
+    .graph-state strong { display: block; margin-top: 3px; color: var(--cyan); font-size: 12px; }
+
+    .graph-canvas {
+      position: absolute;
+      inset: 88px 18px 18px;
+    }
+    .graph-lines { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+    .graph-lines line {
+      stroke: rgba(132, 151, 190, 0.18);
+      stroke-width: 1.5;
+      stroke-dasharray: 5 7;
+      transition: 700ms ease;
+    }
+    .graph-lines line.active {
+      stroke: var(--violet);
+      stroke-width: 2.2;
+      stroke-dasharray: none;
+      filter: drop-shadow(0 0 5px rgba(167, 150, 255, 0.7));
+    }
+
+    .node {
+      position: absolute;
+      display: grid;
+      gap: 6px;
+      width: 164px;
+      min-height: 88px;
+      padding: 13px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(17, 27, 44, 0.86);
+      opacity: 0.56;
+      transform: translate(-50%, -50%) scale(.92);
+      transition: 650ms cubic-bezier(.2, .8, .2, 1);
+    }
+    .node.active {
+      opacity: 1;
+      border-color: rgba(167, 150, 255, 0.65);
+      background: rgba(25, 33, 56, 0.96);
+      box-shadow: 0 0 30px rgba(119, 94, 230, 0.16);
+      transform: translate(-50%, -50%) scale(1);
+    }
+    .node .node-kind { color: var(--muted); font-size: 9px; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
+    .node .node-name { color: var(--text); font-size: 12px; font-weight: 720; }
+    .node .node-value { color: var(--muted); font-size: 11px; }
+    .node .node-value.bad { color: var(--red); }
+    .node .node-value.good { color: var(--cyan); }
+    .node.center {
+      left: 50%; top: 50%; width: 190px; min-height: 114px;
+      border-color: rgba(167, 150, 255, 0.64);
+      background: linear-gradient(145deg, rgba(47, 39, 86, .95), rgba(18, 29, 51, .98));
+    }
+    .node.center .node-kind { color: var(--violet); }
+    .node.center .node-name { font-size: 16px; }
+    .node.center .node-value { color: var(--text); }
+    .node.northstar { left: 16%; top: 24%; }
+    .node.funnel { left: 84%; top: 24%; }
+    .node.support { left: 16%; top: 76%; }
+    .node.finance { left: 84%; top: 76%; }
+
+    .typing-caret {
+      display: inline-block;
+      width: 2px;
+      height: 18px;
+      margin-left: 2px;
+      vertical-align: -3px;
+      background: var(--cyan);
+      animation: blink 850ms steps(1) infinite;
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+
+    .evidence-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 13px;
+      border-radius: 20px;
+      padding: 18px;
+    }
+    .evidence-panel h2 { margin: 0; font-size: 14px; }
+    .evidence-panel .subhead { margin: -7px 0 4px; color: var(--muted); font-size: 11px; }
+    .evidence-list { display: grid; gap: 9px; min-height: 0; }
+    .evidence-item {
+      display: grid;
+      grid-template-columns: 8px 1fr auto;
+      gap: 9px;
+      align-items: start;
+      padding: 10px;
+      border: 1px solid transparent;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.02);
+      opacity: 0;
+      transform: translateX(14px);
+      transition: 550ms ease;
+    }
+    .evidence-item.visible { opacity: 1; transform: translateX(0); border-color: var(--line); }
+    .evidence-item .evidence-dot { width: 7px; height: 7px; margin-top: 4px; border-radius: 50%; background: var(--cyan); }
+    .evidence-item.alert .evidence-dot { background: var(--red); }
+    .evidence-item .evidence-label { color: var(--text); font-size: 11px; font-weight: 700; }
+    .evidence-item .evidence-detail { margin-top: 4px; color: var(--muted); font-size: 10px; line-height: 1.35; }
+    .evidence-item .evidence-delta { color: var(--red); font-size: 11px; font-weight: 800; }
+
+    .decision {
+      margin-top: auto;
+      padding: 14px;
+      border: 1px solid rgba(255, 118, 145, 0.34);
+      border-radius: 15px;
+      background: linear-gradient(145deg, rgba(84, 35, 57, .38), rgba(28, 26, 48, .64));
+      opacity: 0;
+      transform: translateY(12px);
+      transition: 650ms cubic-bezier(.2, .8, .2, 1);
+    }
+    .decision.visible { opacity: 1; transform: translateY(0); }
+    .decision-label { color: var(--red); font-size: 10px; font-weight: 800; letter-spacing: .12em; }
+    .decision h3 { margin: 7px 0 5px; font-size: 17px; }
+    .decision p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.45; }
+
+    .composer {
+      position: absolute;
+      left: 50%;
+      bottom: 28px;
+      display: flex;
+      align-items: center;
+      width: min(720px, calc(100vw - 44px));
+      min-height: 54px;
+      padding: 8px 9px 8px 16px;
+      border: 1px solid rgba(167, 150, 255, 0.42);
+      border-radius: 17px;
+      background: rgba(15, 22, 37, .93);
+      box-shadow: 0 22px 60px rgba(0,0,0,.36), 0 0 36px rgba(116, 88, 240, .12);
+      transform: translateX(-50%);
+      z-index: 6;
+      transition: 500ms ease;
+    }
+    .composer.focused { border-color: var(--cyan); box-shadow: 0 22px 70px rgba(0,0,0,.44), 0 0 44px rgba(88,225,208,.18); }
+    .composer-prefix { margin-right: 11px; color: var(--violet); font-size: 13px; font-weight: 800; }
+    .composer-text { min-height: 22px; flex: 1; color: var(--text); font-size: 14px; line-height: 1.5; }
+    .composer-action {
+      display: grid;
+      place-items: center;
+      width: 37px;
+      height: 37px;
+      border: 0;
+      border-radius: 11px;
+      background: var(--violet);
+      color: #17142b;
+      font-weight: 900;
+      transition: 300ms ease;
+    }
+    .composer-action:hover { background: var(--cyan); transform: translateY(-1px); }
+
+    .controls {
+      position: absolute;
+      right: 24px;
+      bottom: 28px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      z-index: 7;
+    }
+    .control-button {
+      display: grid;
+      place-items: center;
+      min-width: 42px;
+      height: 38px;
+      padding: 0 11px;
+      border: 1px solid var(--line-bright);
+      border-radius: 11px;
+      background: rgba(15, 22, 37, .86);
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 750;
+    }
+    .control-button:hover { color: var(--text); border-color: var(--violet); }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    @media (max-width: 980px) and (min-width: 721px) {
+      .workspace { inset: 94px 12px 92px; grid-template-columns: 180px minmax(300px, 1fr) 220px; gap: 10px; }
+      .rail, .evidence-panel { padding: 14px; }
+      .node { width: 132px; min-height: 78px; padding: 10px; }
+      .node.center { width: 150px; }
+      .node .node-name { font-size: 11px; }
+      .node .node-value { font-size: 10px; }
+      .composer { width: min(680px, calc(100vw - 24px)); }
+      .controls { top: 80px; right: 12px; bottom: auto; }
+    }
+    @media (max-width: 720px) {
+      .node { width: 140px; }
+      .node.center { width: 170px; }
+      .controls { top: 80px; right: 12px; bottom: auto; }
+      .evidence-panel { display: none; }
+    }
+    @media (max-width: 620px) {
+      body { overflow: auto; }
+      .recording-stage { min-height: 760px; height: 100svh; }
+      .app-chrome { inset: 12px; }
+      .workspace { inset: 86px 12px 150px; display: block; }
+      .rail { display: none; }
+      .graph-panel { height: 100%; }
+      .composer { bottom: 72px; width: calc(100vw - 24px); }
+      .controls { right: 12px; bottom: 20px; }
+      .workspace.zoomed { transform: scale(1.04); }
+      .node { width: 124px; min-height: 78px; padding: 10px; }
+      .node.center { width: 145px; }
+      .node.northstar, .node.support { left: 11%; }
+      .node.funnel, .node.finance { left: 89%; }
+      .graph-heading { left: 18px; right: 18px; }
+      .graph-state { display: none; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: 1ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="recording-stage" aria-label="SignalWeave live product demo">
+    <div class="ambient-grid" aria-hidden="true"></div>
+
+    <header class="app-chrome">
+      <div class="brand"><span class="brand-mark">SW</span><span>SIGNALWEAVE</span></div>
+      <div class="workspace-context"><span class="live-dot"></span><span>Northstar Outfitters / decision workspace</span></div>
+    </header>
+
+    <section class="workspace" id="workspace">
+      <aside class="rail" aria-label="Connected sources">
+        <div class="eyebrow">Insight card</div>
+        <h2 class="goal-title">What changed in revenue, and should anyone act?</h2>
+        <div class="rail-rule"></div>
+        <div class="eyebrow">Evidence scope</div>
+        <div class="source-list">
+          <div class="source-item" data-source="superset"><span class="source-icon"></span><span>Superset dashboard</span><span class="source-status">ready</span></div>
+          <div class="source-item" data-source="funnel"><span class="source-icon"></span><span>Web funnel</span><span class="source-status">ready</span></div>
+          <div class="source-item" data-source="support"><span class="source-icon"></span><span>Support operations</span><span class="source-status">ready</span></div>
+          <div class="source-item" data-source="finance"><span class="source-icon"></span><span>Finance daily</span><span class="source-status">ready</span></div>
+        </div>
+        <p class="card-note"><strong>Owner intent</strong><br>Notify leadership only when the movement is material and corroborated. Route ambiguity to analytics. Ignore normal movement.</p>
+      </aside>
+
+      <section class="graph-panel" aria-label="Semantic evidence graph">
+        <div class="graph-heading">
+          <div>
+            <h1>Revenue health</h1>
+            <p id="graphSubhead">Waiting for a question…</p>
+          </div>
+          <div class="graph-state"><span>DECISION STATE</span><strong id="graphState">standby</strong></div>
+        </div>
+        <div class="graph-canvas">
+          <svg class="graph-lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+            <line data-line="superset" x1="16" y1="24" x2="50" y2="50"></line>
+            <line data-line="funnel" x1="84" y1="24" x2="50" y2="50"></line>
+            <line data-line="support" x1="16" y1="76" x2="50" y2="50"></line>
+            <line data-line="finance" x1="84" y1="76" x2="50" y2="50"></line>
+          </svg>
+          <article class="node northstar" data-node="superset"><span class="node-kind">BI / Superset</span><span class="node-name">Executive Pulse</span><span class="node-value bad">Revenue −22%</span></article>
+          <article class="node funnel" data-node="funnel"><span class="node-kind">Product signal</span><span class="node-name">Web funnel</span><span class="node-value bad">Conversion −15%</span></article>
+          <article class="node support" data-node="support"><span class="node-kind">Operations</span><span class="node-name">Support backlog</span><span class="node-value bad">Backlog +28%</span></article>
+          <article class="node finance" data-node="finance"><span class="node-kind">Finance</span><span class="node-name">Booked revenue</span><span class="node-value bad">Revenue −21%</span></article>
+          <article class="node center" data-node="jev"><span class="node-kind">TypeSafe / Jev</span><span class="node-name">Typed judgment</span><span class="node-value" id="centerState">Waiting for evidence</span></article>
+        </div>
+      </section>
+
+      <aside class="evidence-panel" aria-label="Returned evidence">
+        <div class="eyebrow">Retrieved evidence</div>
+        <h2>What the decision can see</h2>
+        <p class="subhead" id="evidenceSubhead">No evidence selected yet</p>
+        <div class="evidence-list">
+          <div class="evidence-item alert" data-evidence="0"><span class="evidence-dot"></span><div><div class="evidence-label">Executive Pulse</div><div class="evidence-detail">Material movement in net sales</div></div><span class="evidence-delta">−22%</span></div>
+          <div class="evidence-item" data-evidence="1"><span class="evidence-dot"></span><div><div class="evidence-label">Web funnel</div><div class="evidence-detail">Conversion corroborates the move</div></div><span class="evidence-delta">−15%</span></div>
+          <div class="evidence-item" data-evidence="2"><span class="evidence-dot"></span><div><div class="evidence-label">Support operations</div><div class="evidence-detail">Backlog adds operational context</div></div><span class="evidence-delta">+28%</span></div>
+          <div class="evidence-item" data-evidence="3"><span class="evidence-dot"></span><div><div class="evidence-label">Finance daily</div><div class="evidence-detail">Independent source agrees</div></div><span class="evidence-delta">−21%</span></div>
+        </div>
+        <div class="decision" id="decision" aria-live="polite">
+          <div class="decision-label">RECOMMENDED ACTION</div>
+          <h3>Notify leadership</h3>
+          <p>Four related sources tell the same story. The configured route is ready.</p>
+        </div>
+      </aside>
+    </section>
+
+    <form class="composer" id="composer" aria-label="Ask SignalWeave">
+      <span class="composer-prefix">⌁</span>
+      <div class="composer-text" id="composerText" aria-live="polite"><span class="typing-caret"></span></div>
+      <button class="composer-action" type="submit" aria-label="Run insight">↗</button>
+    </form>
+
+    <div class="controls" aria-label="Demo controls">
+      <button class="control-button" id="playButton" type="button">Pause</button>
+      <button class="control-button" id="resetButton" type="button">Reset</button>
+    </div>
+    <p class="sr-only" id="demoStatus" aria-live="polite">Demo ready.</p>
+  </main>
+
+  <script>
+    const question = "What changed in revenue this week, and should anyone act?";
+    const duration = 30000;
+    const workspace = document.querySelector('#workspace');
+    const composer = document.querySelector('#composer');
+    const composerText = document.querySelector('#composerText');
+    const graphSubhead = document.querySelector('#graphSubhead');
+    const graphState = document.querySelector('#graphState');
+    const centerState = document.querySelector('#centerState');
+    const evidenceSubhead = document.querySelector('#evidenceSubhead');
+    const decision = document.querySelector('#decision');
+    const playButton = document.querySelector('#playButton');
+    const resetButton = document.querySelector('#resetButton');
+    const demoStatus = document.querySelector('#demoStatus');
+    const sourceItems = [...document.querySelectorAll('[data-source]')];
+    const nodes = [...document.querySelectorAll('[data-node]')];
+    const lines = [...document.querySelectorAll('[data-line]')];
+    const evidence = [...document.querySelectorAll('[data-evidence]')];
+
+    let startedAt = performance.now();
+    let pausedAt = 0;
+    let paused = false;
+    let previousPhase = '';
+
+    function setPlaying(value) {
+      paused = !value;
+      playButton.textContent = paused ? 'Play' : 'Pause';
+      demoStatus.textContent = paused ? 'Demo paused.' : 'Demo playing.';
+    }
+
+    function reset() {
+      startedAt = performance.now();
+      pausedAt = 0;
+      previousPhase = '';
+      paused = false;
+      playButton.textContent = 'Pause';
+      render(0);
+      demoStatus.textContent = 'Demo reset.';
+    }
+
+    function phaseAt(ms) {
+      if (ms < 3000) return 'idle';
+      if (ms < 8000) return 'typing';
+      if (ms < 10500) return 'zoom';
+      if (ms < 16500) return 'retrieve';
+      if (ms < 22500) return 'decide';
+      return 'result';
+    }
+
+    function render(ms) {
+      const phase = phaseAt(ms);
+      if (phase !== previousPhase) {
+        previousPhase = phase;
+        demoStatus.textContent = `Demo phase: ${phase}.`;
+      }
+
+      const typingProgress = Math.max(0, Math.min(1, (ms - 3000) / 5000));
+      const typedCount = Math.floor(question.length * typingProgress);
+      const typed = question.slice(0, typedCount);
+      composerText.innerHTML = typed + (phase !== 'result' ? '<span class="typing-caret"></span>' : '');
+
+      composer.classList.toggle('focused', phase === 'typing' || phase === 'zoom');
+      workspace.classList.toggle('zoomed', phase === 'zoom');
+
+      graphSubhead.textContent = phase === 'idle' ? 'Waiting for a question…' : phase === 'typing' ? 'Reading owner intent…' : phase === 'zoom' ? 'Understanding the question…' : phase === 'retrieve' ? 'Connecting related evidence…' : 'Decision ready';
+      graphState.textContent = phase === 'idle' ? 'standby' : phase === 'typing' ? 'interpreting' : phase === 'zoom' ? 'scoping' : phase === 'retrieve' ? 'retrieving' : 'actionable';
+
+      const sourceActivation = {
+        superset: ms >= 11000,
+        funnel: ms >= 12200,
+        support: ms >= 13400,
+        finance: ms >= 14600,
+      };
+      sourceItems.forEach((item) => item.classList.toggle('active', Boolean(sourceActivation[item.dataset.source])));
+      nodes.forEach((node) => node.classList.toggle('active', node.dataset.node === 'jev' ? ms >= 9000 : Boolean(sourceActivation[node.dataset.node])));
+      lines.forEach((item) => item.classList.toggle('active', Boolean(sourceActivation[item.dataset.line])));
+
+      evidence.forEach((item, index) => item.classList.toggle('visible', ms >= 15500 + index * 850));
+      evidenceSubhead.textContent = ms >= 15500 ? '4 related signals returned' : 'No evidence selected yet';
+      decision.classList.toggle('visible', ms >= 18300);
+      centerState.textContent = ms < 9000 ? 'Waiting for evidence' : ms < 16500 ? 'Connecting signals' : 'Corroborated decline';
+    }
+
+    function tick(now) {
+      if (!paused) {
+        const elapsed = Math.min(duration, now - startedAt);
+        render(elapsed);
+        if (elapsed >= duration) setPlaying(false);
+      }
+      requestAnimationFrame(tick);
+    }
+
+    playButton.addEventListener('click', () => {
+      if (paused) {
+        startedAt = performance.now() - pausedAt;
+        setPlaying(true);
+      } else {
+        pausedAt = performance.now() - startedAt;
+        setPlaying(false);
+      }
+    });
+    resetButton.addEventListener('click', reset);
+    composer.addEventListener('submit', (event) => event.preventDefault());
+    window.addEventListener('keydown', (event) => {
+      if (event.code === 'Space' && event.target === document.body) {
+        event.preventDefault();
+        playButton.click();
+      }
+      if (event.key.toLowerCase() === 'r') reset();
+    });
+
+    render(0);
+    requestAnimationFrame(tick);
+  </script>
+</body>
+</html>

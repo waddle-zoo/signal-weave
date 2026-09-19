@@ -1,0 +1,25 @@
+Every company has dashboards.
+
+But the useful question is not “what moved?”
+
+It’s: what changed, what is connected to it, and should anyone act?
+
+Here’s SignalWeave.
+
+I type the question in plain English: what changed in revenue this week, and should anyone act?
+
+SignalWeave turns that intent into a bounded search across the sources this team already trusts.
+
+It finds the executive dashboard, the web funnel, support operations, and finance.
+
+Then TypeSafe Jev makes the semantic judgment over the evidence—not a vague summary over a giant prompt.
+
+Four sources agree: revenue is down twenty-two percent, conversion is down fifteen percent, support backlog is up twenty-eight percent, and finance confirms the move.
+
+So the result is not another noisy alert.
+
+It’s a typed decision: notify leadership, with the evidence attached.
+
+When sources conflict, route it to investigation. When nothing meaningful changed, stay quiet.
+
+SignalWeave: stop checking dashboards. Start receiving decisions.
