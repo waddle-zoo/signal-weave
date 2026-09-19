@@ -1,6 +1,7 @@
 import pytest
 
 from signalweave.models import (
+    CatalogSearchPage,
     Observation,
     ResourceContract,
     ResourceDescriptor,
@@ -58,6 +59,41 @@ class TenantCatalogAdapter:
                 contract=ResourceContract(tenant_id="tenant-b"),
             ),
         ]
+
+    async def inspect(self, source):
+        return ResourceSnapshot(
+            source_key=source.key,
+            adapter=self.name,
+            resource=source.resource,
+            title=source.label,
+        )
+
+
+class BoundedSearchAdapter:
+    name = "catalog"
+
+    async def list_resources(self):
+        raise AssertionError("bounded search must not materialize the full catalog")
+
+    async def search_resources(self, query, *, limit, cursor=None):
+        assert query == "revenue movement"
+        assert limit == 3
+        assert cursor is None
+        return CatalogSearchPage(
+            resources=[
+                ResourceDescriptor(
+                    adapter=self.name,
+                    resource="dashboard:revenue",
+                    kind="dashboard",
+                    title="Revenue movement",
+                )
+            ],
+            total_count=100_000,
+            has_more=True,
+            next_cursor="page-2",
+            provider="catalog-index",
+            strategy="server-search",
+        )
 
     async def inspect(self, source):
         return ResourceSnapshot(
@@ -134,6 +170,19 @@ async def test_source_registry_blocks_direct_inspection_outside_authorized_catal
     )
 
 
+@pytest.mark.asyncio
+async def test_source_registry_preserves_bounded_search_coverage_without_full_scan():
+    registry = SourceRegistry([BoundedSearchAdapter()])
+
+    page = await registry.search_resources("revenue movement", limit=3)
+
+    assert [resource.resource for resource in page.resources] == ["dashboard:revenue"]
+    assert page.total_count == 100_000
+    assert page.has_more is True
+    assert page.next_cursor == "page-2"
+    assert page.strategy == "server-search"
+
+
 class FakeSupersetClient:
     async def list_dashboards(self):
         return [{"id": 7, "dashboard_title": "Revenue", "owners": [{"username": "alice"}]}]
@@ -166,6 +215,26 @@ class FakeSupersetClient:
                 )
             ],
         )
+
+
+@pytest.mark.asyncio
+async def test_superset_adapter_uses_server_paged_catalog_search():
+    class PaginatedClient(FakeSupersetClient):
+        async def list_dashboards_page(self, *, page, page_size, query):
+            assert page == 0
+            assert page_size == 5
+            assert query == "revenue movement"
+            return ([{"id": 7, "dashboard_title": "Revenue movement"}], 100_000)
+
+    page = await SupersetAdapter(PaginatedClient()).search_resources(
+        "revenue movement", limit=5
+    )
+
+    assert page.resources[0].resource == "dashboard:7"
+    assert page.total_count == 100_000
+    assert page.has_more is True
+    assert page.next_cursor == "1"
+    assert page.strategy == "superset-server-filter"
 
 
 @pytest.mark.asyncio

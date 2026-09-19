@@ -217,8 +217,11 @@ class InsightEngine:
                     "is not configured; the card will be judged over its current evidence."
                 ],
             )
+        goal = f"{card.what_to_watch}\nPurpose: {card.why_watch}"
         try:
-            catalog = await self.registry.list_resources()
+            catalog_page = await self.registry.search_resources(
+                goal, limit=self.investigation_candidate_limit
+            )
         except Exception as error:  # noqa: BLE001 - optional investigation fails closed
             return InvestigationTrace(
                 mode=card.investigation_mode,
@@ -232,6 +235,7 @@ class InsightEngine:
                     f"{type(error).__name__}: {error}"
                 ],
             )
+        catalog = catalog_page.resources
         current_refs = {(resource.adapter, resource.resource) for resource in resources}
         anchors = [
             descriptor
@@ -239,7 +243,6 @@ class InsightEngine:
             if (descriptor.adapter, descriptor.resource)
             in {(source.adapter, source.resource) for source in card.sources}
         ]
-        goal = f"{card.what_to_watch}\nPurpose: {card.why_watch}"
         pool = build_candidate_pool(
             goal,
             catalog,
@@ -258,9 +261,15 @@ class InsightEngine:
                 attempted=False,
                 candidate_count=0,
                 candidate_limit=card.max_investigation_sources,
+                catalog_count=catalog_page.total_count,
+                catalog_has_more=catalog_page.has_more,
+                catalog_strategy=catalog_page.strategy,
                 evaluator=getattr(selector, "name", "jev-latest"),
                 context_version=context.version if context else None,
-                warnings=["No authorized follow-up candidates were available."],
+                warnings=[
+                    "No authorized follow-up candidates were available.",
+                    *catalog_page.warnings,
+                ],
             )
         observations = observations_for_plan(resources, plan.selected_source_keys)
         observations = self._apply_comparison_window(observations, plan)
@@ -294,12 +303,16 @@ class InsightEngine:
                 attempted=True,
                 candidate_count=len(candidates),
                 candidate_limit=card.max_investigation_sources,
+                catalog_count=catalog_page.total_count,
+                catalog_has_more=catalog_page.has_more,
+                catalog_strategy=catalog_page.strategy,
                 failed=True,
                 evaluator=getattr(selector, "name", "jev-latest"),
                 context_version=context.version if context else None,
                 warnings=[
                     "Jev could not select a bounded follow-up source: "
-                    f"{type(error).__name__}: {error}"
+                    f"{type(error).__name__}: {error}",
+                    *catalog_page.warnings,
                 ],
             )
         proceed_probability = max(
@@ -308,6 +321,11 @@ class InsightEngine:
         candidate_by_ref = {resource_ref(resource): resource for resource in candidates}
         selected: list[InvestigationSelection] = []
         warnings: list[str] = []
+        if catalog_page.has_more:
+            warnings.append(
+                "The adapter returned a bounded catalog page; Jev did not see the full "
+                "authorized catalog."
+            )
         failed = False
         if proceed_probability < card.investigation_threshold:
             warnings.append(
@@ -356,11 +374,15 @@ class InsightEngine:
                 )
                 failed = True
         selected_refs = {selection.source.adapter + "|" + selection.source.resource for selection in selected}
+        warnings.extend(catalog_page.warnings)
         return InvestigationTrace(
             mode=card.investigation_mode,
             attempted=True,
             candidate_count=len(candidates),
             candidate_limit=card.max_investigation_sources,
+            catalog_count=catalog_page.total_count,
+            catalog_has_more=catalog_page.has_more,
+            catalog_strategy=catalog_page.strategy,
             failed=failed,
             need_probability=proceed_probability,
             selected=selected,

@@ -79,7 +79,10 @@ class InsightAuthoringService:
             raise ValueError("insight goal must not be empty")
         if not 1 <= limit <= 25:
             raise ValueError("limit must be between 1 and 25")
-        resources = await self.registry.list_resources(adapter)
+        catalog = await self.registry.search_resources(
+            goal, adapter_name=adapter, limit=self.max_candidates
+        )
+        resources = catalog.resources
         pool = build_candidate_pool(goal, resources, limit=self.max_candidates)
         candidates = pool.resources
         judger = self._relevance_judger()
@@ -120,7 +123,7 @@ class InsightAuthoringService:
                 "No catalog candidate cleared the Jev recommendation threshold; "
                 "select a source explicitly or refine the insight goal."
             )
-        if pool.truncated:
+        if pool.truncated or catalog.has_more:
             warnings.append(
                 "The catalog was bounded before Jev ranking; verify that the selected "
                 "source is present in the returned candidate set."
@@ -130,6 +133,7 @@ class InsightAuthoringService:
                 "One or more candidates lack an explicit tenant identity; production "
                 "deployments should configure tenant-aware adapter metadata."
             )
+        warnings.extend(catalog.warnings)
         authorized_tenants = self.registry.authorized_tenants
         authorized_tenant = (
             next(iter(authorized_tenants)) if authorized_tenants and len(authorized_tenants) == 1 else None
@@ -137,11 +141,11 @@ class InsightAuthoringService:
         return ResourceDiscovery(
             goal=goal,
             matches=visible,
-            candidate_count=len(resources),
+            candidate_count=catalog.total_count,
             candidate_limit=self.max_candidates,
-            truncated=pool.truncated,
+            truncated=pool.truncated or catalog.has_more,
             no_match=no_match,
-            candidate_strategy=pool.strategy,
+            candidate_strategy=f"{catalog.strategy}+{pool.strategy}",
             evaluator=judger.name,
             authorized_tenant=authorized_tenant,
             warnings=warnings,
@@ -271,7 +275,8 @@ class InsightAuthoringService:
                 warnings=["Card retrieval_mode is fixed; no related source expansion was requested."],
             )
 
-        resources = await self.registry.list_resources()
+        catalog = await self.registry.search_resources(goal, limit=self.max_candidates)
+        resources = catalog.resources
         anchor_refs = {f"{source.adapter}|{source.resource}" for source in anchors}
         anchor_descriptors = {
             resource_ref(resource): resource
@@ -336,7 +341,7 @@ class InsightAuthoringService:
                 )
             )
         warnings: list[str] = []
-        if pool.truncated:
+        if pool.truncated or catalog.has_more:
             warnings.append(
                 "The catalog was bounded before Jev ranking; related-source recall depends "
                 "on adapter metadata and lexical candidate coverage."
@@ -351,6 +356,7 @@ class InsightAuthoringService:
                 "One or more candidates lack explicit tenant identity; production adapters "
                 "should configure tenant-aware metadata."
             )
+        warnings.extend(catalog.warnings)
         return EvidenceBundle(
             card_id=card.id,
             goal=goal,
@@ -358,10 +364,10 @@ class InsightAuthoringService:
             selected_sources=selected_sources,
             related_matches=selected_matches,
             omitted_matches=omitted_matches,
-            candidate_count=len(resources),
+            candidate_count=catalog.total_count,
             candidate_limit=self.max_candidates,
-            candidate_strategy=pool.strategy,
-            truncated=pool.truncated,
+            candidate_strategy=f"{catalog.strategy}+{pool.strategy}",
+            truncated=pool.truncated or catalog.has_more,
             context_version=context.version if context else None,
             evaluator=judger.name,
             warnings=warnings,

@@ -98,6 +98,36 @@ async def test_dashboard_paging_arguments_are_bounded():
 
 
 @pytest.mark.asyncio
+async def test_dashboard_search_page_uses_server_side_json_filter():
+    class SearchClient(SupersetClient):
+        def __init__(self):
+            super().__init__("http://superset")
+            self.params = None
+
+        async def _request(self, method, path, *, timeout, **kwargs):
+            del method, path, timeout
+            self.params = kwargs["params"]
+            return httpx.Response(
+                200,
+                json={
+                    "result": [{"id": 7, "dashboard_title": "Revenue movement"}],
+                    "count": 1,
+                },
+                request=httpx.Request("GET", "http://superset/api/v1/dashboard/"),
+            )
+
+    client = SearchClient()
+    dashboards, count = await client.list_dashboards_page(
+        page=0, page_size=10, query="revenue movement"
+    )
+
+    assert dashboards[0]["id"] == 7
+    assert count == 1
+    assert '"dashboard_title"' in client.params["q"]
+    assert '"revenue movement"' in client.params["q"]
+
+
+@pytest.mark.asyncio
 async def test_dashboard_snapshot_records_source_failures_for_safety_gates():
     class BrokenClient(SupersetClient):
         async def get_dashboard_metadata(self, dashboard_id):

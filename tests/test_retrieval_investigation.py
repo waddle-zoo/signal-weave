@@ -6,6 +6,7 @@ import pytest
 
 from signalweave.engine import InsightEngine
 from signalweave.models import (
+    CatalogSearchPage,
     ContextFact,
     ContextSnapshot,
     DeliveryMethod,
@@ -368,3 +369,61 @@ async def test_bounded_investigation_abstains_when_selector_is_not_available():
     assert run.result.investigation.failed is True
     assert run.result.outcome == Outcome.INVESTIGATE
     assert "not configured" in run.result.investigation.warnings[0]
+
+
+@pytest.mark.asyncio
+async def test_investigation_keeps_100k_catalog_bounded_before_jev():
+    anchor = SourceRef(
+        key="anchor", adapter="superset", resource="dashboard:exec", label="Executive pulse"
+    )
+    diagnostic = SourceRef(
+        key="diagnostic", adapter="superset", resource="dashboard:billing", label="Billing operations"
+    )
+
+    class SearchOnlyAdapter:
+        name = "superset"
+
+        def __init__(self):
+            self.search_calls = 0
+
+        async def list_resources(self):
+            return []
+
+        async def search_resources(self, query, *, limit, cursor=None):
+            del query, cursor
+            self.search_calls += 1
+            assert limit == 40
+            return CatalogSearchPage(
+                resources=[descriptor(diagnostic.resource, diagnostic.label)],
+                total_count=100_000,
+                has_more=True,
+                next_cursor="next-page",
+                provider="superset-index",
+                strategy="server-search",
+            )
+
+        async def inspect(self, source):
+            return snapshot(source, observation(source.key, "billing_failures", 20, 5))
+
+    adapter = SearchOnlyAdapter()
+    registry = SourceRegistry([adapter], enforce_catalog=False)
+    card = InsightCard(
+        id="card-100k-catalog",
+        title="Executive pulse",
+        what_to_watch="Revenue movement",
+        why_watch="Support an operating decision.",
+        sources=[anchor],
+        investigation_mode=InvestigationMode.BOUNDED,
+        max_investigation_sources=1,
+    )
+
+    run = await InsightEngine(
+        InvestigationJudger(), registry=registry, context_provider=ContextDouble()
+    ).evaluate(card, resources=[snapshot(anchor, observation(anchor.key, "revenue", 80, 100))])
+
+    assert adapter.search_calls == 1
+    assert run.result.investigation is not None
+    assert run.result.investigation.catalog_count == 100_000
+    assert run.result.investigation.catalog_has_more is True
+    assert run.result.investigation.catalog_strategy == "server-search"
+    assert run.result.investigation.candidate_count == 1

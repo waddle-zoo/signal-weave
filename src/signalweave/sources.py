@@ -4,7 +4,7 @@ import asyncio
 from collections.abc import Iterable
 from typing import Protocol
 
-from .models import ResourceDescriptor, ResourceSnapshot, SourceRef
+from .models import CatalogSearchPage, ResourceDescriptor, ResourceSnapshot, SourceRef
 
 
 class SourceAdapter(Protocol):
@@ -63,6 +63,77 @@ class SourceRegistry:
         for adapter in adapters:
             resources.extend(await adapter.list_resources())
         return [resource for resource in resources if self._is_authorized(resource)]
+
+    async def search_resources(
+        self,
+        query: str,
+        *,
+        adapter_name: str | None = None,
+        limit: int = 40,
+        cursor: str | None = None,
+    ) -> CatalogSearchPage:
+        """Search the authorized catalog without forcing a full materialization.
+
+        Adapters that own a server-side search or graph index should implement
+        ``search_resources``.  Existing adapters fall back to ``list_resources``
+        and are explicitly marked as ``local-scan-fallback`` so the caller can
+        measure and replace that path before claiming enterprise scale.
+        """
+        if not query.strip():
+            raise ValueError("catalog search query must not be empty")
+        if not 1 <= limit <= 500:
+            raise ValueError("catalog search limit must be between 1 and 500")
+        if cursor and not adapter_name:
+            raise ValueError("a catalog cursor requires an explicit adapter name")
+        adapters = (
+            [self._get(adapter_name)]
+            if adapter_name
+            else [self._adapters[name] for name in sorted(self._adapters)]
+        )
+        if not adapters:
+            return CatalogSearchPage(
+                total_count=0,
+                provider="signalweave",
+                strategy="empty-catalog",
+            )
+        per_adapter_limit = max(1, (limit + len(adapters) - 1) // len(adapters))
+        pages: list[CatalogSearchPage] = []
+        for adapter in adapters:
+            search = getattr(adapter, "search_resources", None)
+            if callable(search):
+                page = await search(query, limit=per_adapter_limit, cursor=cursor)
+                page = (
+                    page
+                    if isinstance(page, CatalogSearchPage)
+                    else CatalogSearchPage.model_validate(page)
+                )
+            else:
+                resources = await adapter.list_resources()
+                page = CatalogSearchPage(
+                    resources=resources,
+                    total_count=len(resources),
+                    provider=adapter.name,
+                    strategy="local-scan-fallback",
+                    warnings=[
+                        f"Adapter {adapter.name} does not implement bounded catalog search; "
+                        "the full catalog was materialized before candidate bounding."
+                    ],
+                )
+            visible = [resource for resource in page.resources if self._is_authorized(resource)]
+            pages.append(page.model_copy(update={"resources": visible}))
+        resources = [resource for page in pages for resource in page.resources]
+        if len(adapters) > 1:
+            resources = resources[:limit]
+        page = pages[0] if len(pages) == 1 else None
+        return CatalogSearchPage(
+            resources=resources,
+            total_count=sum(page_item.total_count for page_item in pages),
+            has_more=any(page_item.has_more for page_item in pages),
+            next_cursor=page.next_cursor if page is not None else None,
+            provider=(page.provider if page is not None else "signalweave"),
+            strategy=(page.strategy if page is not None else "multi-adapter-search"),
+            warnings=[warning for page_item in pages for warning in page_item.warnings],
+        )
 
     async def inspect(self, source: SourceRef) -> ResourceSnapshot:
         adapter = self._get(source.adapter)
