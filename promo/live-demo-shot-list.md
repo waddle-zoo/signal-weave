@@ -1,6 +1,6 @@
 # SignalWeave live-demo recording
 
-This is one continuous browser run. A scheduled Codex agent wakes up, types its
+This is one continuous browser run. A scheduled Growth Monitoring Agent wakes up, types its
 question, SignalWeave connects the evidence and runs the query path, then the
 bundle returns to Codex for a Slack notification and human acknowledgement.
 Each part gets its own focused page, with a fast transition inside the same

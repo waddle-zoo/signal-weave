@@ -63,12 +63,12 @@ def logo() -> str:
 
 
 def shell(now: float, page: int) -> str:
-    names = ["SCHEDULED RUN", "HUMAN CONTEXT", "EVIDENCE GRAPH", "BUNDLE TO CODEX", "PUSH + ACK"]
+    names = ["SCHEDULED RUN", "HUMAN CONTEXT", "EVIDENCE GRAPH", "BUNDLE TO AGENT", "PUSH + ACK"]
     parts = [
         rect(40, 28, 1200, 664, PANEL, 22, stroke=LINE, stroke_width=1), logo(),
         circle(64, 56, 4, ORANGE), circle(78, 56, 4, TEAL), circle(92, 56, 4, INDIGO),
         rect(288, 42, 590, 28, "#F9FAFB", 8, stroke=LINE, stroke_width=1),
-        text(583, 60, "agent session / Codex / SignalWeave MCP", 10, MUTED, text_anchor="middle", font_family="Arial"),
+        text(583, 60, "agent session / Growth Monitoring Agent / SignalWeave MCP", 10, MUTED, text_anchor="middle", font_family="Arial"),
         text(1208, 59, "recording · 00:22", 9, MUTED, text_anchor="end", font_family="Arial", font_weight="700", letter_spacing=".8"),
         text(1208, 77, "scheduled run", 8, TEAL, text_anchor="end", font_family="Arial", font_weight="700", letter_spacing="1.1"),
         line(72, 102, 1208, 102, LINE, 1), line(72, 126, 94, 126, INDIGO, 2),
@@ -83,19 +83,16 @@ def shell(now: float, page: int) -> str:
 
 
 def page_header(kicker: str, right: str) -> str:
-    return "".join([
-        text(72, 176, kicker, 10, INDIGO, font_family="Arial", font_weight="700", letter_spacing="1.6"),
-        text(1208, 176, right, 10, MUTED, text_anchor="end", font_family="Arial", font_weight="700", letter_spacing="1.3"),
-    ])
+    return ""
 
 
 def page_scheduled(now: float) -> str:
     query = "What changed in revenue this week, and should we act?"
     query_visible = query[: int(len(query) * reveal(.7, 3.0, now))]
     parts = [
-        page_header("CODEX / SCHEDULED", "06:00 · GROWTH-HEALTH"), rect(72, 194, 1136, 422, PANEL, 18, stroke=LINE, stroke_width=1),
+        page_header("GROWTH MONITORING AGENT / SCHEDULED", "06:00 · GROWTH-HEALTH"), rect(72, 194, 1136, 422, PANEL, 18, stroke=LINE, stroke_width=1),
         rect(104, 242, 650, 284, "#FCFCFD", 14, stroke=LINE, stroke_width=1),
-        text(130, 274, "CODEX", 10, INK, font_family="Arial", font_weight="700", letter_spacing="1.4"), text(728, 274, "scheduled", 9, MUTED, text_anchor="end", font_family="Arial", font_weight="700", letter_spacing="1.2"),
+        text(130, 274, "GROWTH MONITORING AGENT", 10, INK, font_family="Arial", font_weight="700", letter_spacing="1.1"), text(728, 274, "scheduled", 9, MUTED, text_anchor="end", font_family="Arial", font_weight="700", letter_spacing="1.2"),
         text(130, 319, "AGENT QUERY", 9, INDIGO, font_family="Arial", font_weight="700", letter_spacing="1.4"),
         rect(130, 336, 598, 70, "#FBFBFF", 12, stroke="#BFC7FF", stroke_width=1), text(150, 380, query_visible, 17, INK, font_family="Arial", font_weight="700"),
         text(130, 441, "QUERY SENT", 9, TEAL, font_family="Arial", font_weight="700", letter_spacing="1.3", opacity=reveal(2.8, 3.15, now)), circle(120, 438, 4, TEAL, opacity=reveal(2.8, 3.15, now)),
@@ -124,12 +121,13 @@ def page_card(now: float) -> str:
     probabilities = [("notify", .91, INDIGO), ("review", .07, ORANGE), ("ignore", .02, FAINT)]
     for index, (label, probability, color) in enumerate(probabilities):
         y = 471 + index * 18
-        parts += [text(706, y, label, 9, MUTED, font_family="Arial", font_weight="700"), rect(760, y - 8, 270, 6, "#EAECF0", 3), rect(760, y - 8, 270 * probability, 6, color, 3), text(1050, y, f"{probability:.2f}", 9, INK, text_anchor="end", font_family="Arial", font_weight="700")]
+        fill = reveal(5.5 + index * .18, 5.95 + index * .18, now)
+        parts += [text(706, y, label, 9, MUTED, font_family="Arial", font_weight="700", opacity=fill), rect(760, y - 8, 270, 6, "#EAECF0", 3, opacity=fill), rect(760, y - 8, 270 * probability * fill, 6, color, 3, opacity=fill), text(1050, y, f"{probability:.2f}", 9, INK, text_anchor="end", font_family="Arial", font_weight="700", opacity=fill)]
     return "".join(parts)
 
 
 def network_node(x: float, y: float, label: str, note: str, color: str, active: float, radius: float = 28) -> str:
-    return "".join([circle(x, y, radius, PANEL, stroke=color, stroke_width=2, opacity=.25 + .75 * active), circle(x, y, 6, color, opacity=.18 + .82 * active), text(x, y + radius + 17, label, 10, INK if active > .5 else MUTED, text_anchor="middle", font_family="Arial", font_weight="700", opacity=.35 + .65 * active), text(x, y + radius + 31, note, 8, FAINT, text_anchor="middle", font_family="Arial", opacity=.35 + .65 * active)])
+    return "".join([circle(x, y, radius, PANEL, stroke=color, stroke_width=2, opacity=.25 + .75 * active), circle(x, y, 6, color, opacity=.18 + .82 * active), text(x, y + radius + 17, label, 10, INK if active > .5 else MUTED, text_anchor="middle", font_family="Arial", font_weight="700", opacity=.35 + .65 * active)])
 
 
 def page_graph(now: float) -> str:
@@ -151,7 +149,7 @@ def page_graph(now: float) -> str:
 
 
 def page_bundle(now: float) -> str:
-    parts = [page_header("JEV RESULT", "EVIDENCE → ACTION"), rect(72, 194, 1136, 422, PANEL, 18, stroke=LINE, stroke_width=1), text(104, 276, "Evidence → action.", 37, INK, font_family="Arial", font_weight="700", letter_spacing="-2.0"), text(104, 302, "returned to Codex", 11, MUTED, font_family="Arial"), rect(104, 332, 560, 236, "#FCFCFD", 14, stroke=LINE, stroke_width=1), text(128, 360, "GROWTH-HEALTH / RESULT", 9, INK, font_family="Arial", font_weight="700", letter_spacing="1.2"), text(638, 360, "JEV", 9, MUTED, text_anchor="end", font_family="Arial", font_weight="700", letter_spacing="1.2")]
+    parts = [page_header("JEV RESULT", "EVIDENCE → ACTION"), rect(72, 194, 1136, 422, PANEL, 18, stroke=LINE, stroke_width=1), text(104, 276, "Evidence → action.", 37, INK, font_family="Arial", font_weight="700", letter_spacing="-2.0"), text(104, 302, "returned to agent", 11, MUTED, font_family="Arial"), rect(104, 332, 560, 236, "#FCFCFD", 14, stroke=LINE, stroke_width=1), text(128, 360, "GROWTH-HEALTH / RESULT", 9, INK, font_family="Arial", font_weight="700", letter_spacing="1.2"), text(638, 360, "JEV", 9, MUTED, text_anchor="end", font_family="Arial", font_weight="700", letter_spacing="1.2")]
     rows = [("revenue", "−22%", RED), ("conversion", "−15%", RED), ("support backlog", "+28%", ORANGE), ("finance", "agrees", GREEN)]
     for index, (label, value, color) in enumerate(rows):
         row_a = reveal(10.2 + index * .34, 10.65 + index * .34, now)
@@ -171,7 +169,7 @@ def page_slack(now: float) -> str:
     message = reveal(15.9, 17.0, now)
     ack = reveal(18.0, 19.0, now)
     foot = reveal(19.2, 20.0, now)
-    return "".join([page_header("CODEX → SLACK → HUMAN", "PUSH + ACKNOWLEDGEMENT"), rect(260, 224, 760, 344, PANEL, 17, stroke=LINE, stroke_width=1), line(260, 270, 1020, 270, LINE, 1), text(284, 254, "#growth-leadership", 12, INK, font_family="Arial", font_weight="700"), text(996, 254, "Codex sent evidence", 10, MUTED, text_anchor="end", font_family="Arial"), rect(510, 304, 448, 64, "#EFF4FF", 12, opacity=message), text(532, 330, "CODEX", 9, INDIGO, font_family="Arial", font_weight="700", letter_spacing="1.0", opacity=message), text(532, 351, "Revenue drift is meaningful. Evidence attached.", 11, INK_SOFT, font_family="Arial", opacity=message), rect(286, 398, 420, 62, "#ECFDF3", 12, opacity=ack), text(308, 423, "GROWTH LEADERSHIP", 9, GREEN, font_family="Arial", font_weight="700", letter_spacing="1.0", opacity=ack), text(308, 444, "Ack — looking into it!", 11, INK_SOFT, font_family="Arial", opacity=ack), line(260, 526, 1020, 526, LINE, 1), circle(284, 545, 4, GREEN, opacity=foot), text(298, 549, "human response received", 10, GREEN, font_family="Arial", font_weight="700", opacity=foot)])
+    return "".join([page_header("GROWTH AGENT → SLACK → HUMAN", "PUSH + ACKNOWLEDGEMENT"), rect(260, 224, 760, 344, PANEL, 17, stroke=LINE, stroke_width=1), line(260, 270, 1020, 270, LINE, 1), text(284, 254, "#growth-leadership", 12, INK, font_family="Arial", font_weight="700"), text(996, 254, "Growth Monitoring Agent", 10, MUTED, text_anchor="end", font_family="Arial"), rect(510, 304, 448, 64, "#EFF4FF", 12, opacity=message), text(532, 330, "GROWTH AGENT", 9, INDIGO, font_family="Arial", font_weight="700", letter_spacing="1.0", opacity=message), text(532, 351, "Revenue drift is meaningful. Evidence attached.", 11, INK_SOFT, font_family="Arial", opacity=message), rect(286, 398, 420, 62, "#ECFDF3", 12, opacity=ack), text(308, 423, "GROWTH LEADERSHIP", 9, GREEN, font_family="Arial", font_weight="700", letter_spacing="1.0", opacity=ack), text(308, 444, "Ack — looking into it!", 11, INK_SOFT, font_family="Arial", opacity=ack), line(260, 526, 1020, 526, LINE, 1), circle(284, 545, 4, GREEN, opacity=foot), text(298, 549, "human response received", 10, GREEN, font_family="Arial", font_weight="700", opacity=foot)])
 
 
 def page_for(now: float) -> tuple[int, float, str]:

@@ -1,4 +1,4 @@
-At six, a Codex workflow wakes up with a human-curated card.
+At six, the Growth Monitoring Agent wakes up with a human-curated card.
 
 It types the question into its own run: what changed in revenue this week, and should we act?
 
@@ -10,7 +10,7 @@ Then SignalWeave connects the dots, runs the bounded query path, and judges the 
 
 The bundle comes back with the facts, the likely explanation, the confidence, and the next instruction.
 
-Codex types the heads-up into growth leadership.
+The Growth Monitoring Agent types the heads-up into growth leadership.
 
 “Ack — looking into it.”
 

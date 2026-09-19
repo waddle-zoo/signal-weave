@@ -502,6 +502,48 @@
     .story-bundle-page { padding: 22px; }
     .story-bundle-title { margin-top: 4px; font-size: 25px; }
     .story-bundle-copy { margin-top: 7px; font-size: 10px; }
+    .story-page-topline { display: none; }
+    .story-page-shell { height: 100%; margin-top: 0; }
+    .story-graph-sub, .story-bundle-copy, .story-slack-head span { display: none; }
+    .network-node small { display: none; }
+    .story-agent-shell.is-sent .story-page-query { border-color: #8fe3d5; box-shadow: 0 0 0 5px rgba(18,184,166,.08), 0 12px 26px rgba(18,184,166,.1); }
+    .story-agent-shell.is-sent .story-agent-mini-card { animation: card-breathe 1.8s ease-in-out infinite; }
+    @keyframes card-breathe { 0%, 100% { transform: translateY(0); box-shadow: 0 12px 24px rgba(16,24,40,.05); } 50% { transform: translateY(-4px); box-shadow: 0 18px 32px rgba(99,102,241,.11); } }
+    .story-page-step.is-live { animation: step-pop 520ms cubic-bezier(.2,1.3,.4,1) both; }
+    @keyframes step-pop { 0% { opacity: .35; transform: translateY(8px) scale(.9); } 65% { transform: translateY(-2px) scale(1.04); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
+    .story-context-page.is-active .story-context-card { animation: context-in 650ms cubic-bezier(.2,.85,.2,1) both; }
+    .story-context-page.is-active .story-jev-call { animation: context-in 650ms 180ms cubic-bezier(.2,.85,.2,1) both; }
+    @keyframes context-in { from { opacity: .18; transform: translateY(12px) scale(.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    .story-context-page.is-active .story-jev-shape > div { animation: shape-row-in 460ms both; }
+    .story-context-page.is-active .story-jev-shape > div:nth-child(2) { animation-delay: 120ms; }
+    .story-context-page.is-active .story-jev-shape > div:nth-child(3) { animation-delay: 240ms; }
+    @keyframes shape-row-in { from { opacity: 0; transform: translateX(8px); } to { opacity: 1; transform: translateX(0); } }
+    .story-context-page.is-active .story-prob-row i b { transform: scaleX(0); transform-origin: left; animation: probability-fill 780ms 300ms cubic-bezier(.2,.9,.2,1) both; }
+    .story-context-page.is-active .story-prob-row:nth-child(2) i b { animation-delay: 480ms; }
+    .story-context-page.is-active .story-prob-row:nth-child(3) i b { animation-delay: 660ms; }
+    @keyframes probability-fill { to { transform: scaleX(1); } }
+    .story-network .edge.is-live { animation: edge-draw 680ms cubic-bezier(.2,.8,.2,1) both, edge-flow 1.6s linear 680ms infinite; stroke-dasharray: 100; stroke-dashoffset: 100; }
+    .story-network .edge-packet { fill: var(--indigo); filter: drop-shadow(0 0 4px rgba(99,102,241,.7)); }
+    @keyframes edge-draw { to { stroke-dashoffset: 0; } }
+    .story-network .network-node.is-live { animation: node-pop 560ms cubic-bezier(.2,1.25,.4,1) both; }
+    @keyframes node-pop { 0% { opacity: .15; transform: scale(.66); } 65% { transform: scale(1.07); } 100% { opacity: 1; transform: scale(1); } }
+    .story-network.is-building .network-node.jev { animation: jev-pulse 1.4s ease-in-out infinite; }
+    @keyframes jev-pulse { 0%, 100% { box-shadow: 0 7px 16px rgba(16,24,40,.08), 0 0 0 0 rgba(99,102,241,.12); } 50% { box-shadow: 0 10px 24px rgba(99,102,241,.18), 0 0 0 12px rgba(99,102,241,0); } }
+    .story-bundle-row.is-live { animation: bundle-row-in 500ms cubic-bezier(.2,.9,.2,1) both; }
+    @keyframes bundle-row-in { from { opacity: .2; transform: translateX(18px); } to { opacity: 1; transform: translateX(0); } }
+    .story-bundle-footer.is-live { animation: confidence-pop 650ms 180ms cubic-bezier(.2,1.2,.4,1) both; }
+    @keyframes confidence-pop { from { opacity: 0; transform: scale(.92); } to { opacity: 1; transform: scale(1); } }
+    .story-bundle-packet { position: absolute; z-index: 5; left: 47%; bottom: 9%; padding: 6px 9px; border: 1px solid #bfc7ff; border-radius: 999px; background: #eff4ff; color: var(--indigo); font-size: 8px; font-weight: 780; letter-spacing: .1em; text-transform: uppercase; opacity: 0; pointer-events: none; }
+    .story-bundle-packet.is-live { animation: bundle-flight 1100ms cubic-bezier(.2,.8,.2,1) both; }
+    @keyframes bundle-flight { 0% { opacity: 0; transform: translateX(0) scale(.7); } 15% { opacity: 1; transform: translateX(0) scale(1); } 100% { opacity: 0; transform: translateX(330px) scale(.85); } }
+    .story-slack-window { animation: slack-window-in 700ms cubic-bezier(.2,.85,.2,1) both; }
+    @keyframes slack-window-in { from { opacity: .2; transform: translateY(18px) scale(.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    .story-chat.is-live { animation: chat-pop 560ms cubic-bezier(.2,1.2,.4,1) both; }
+    @keyframes chat-pop { from { opacity: 0; transform: translateY(14px) scale(.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    .story-bundle-side p, .story-bundle-side code { display: none; }
+    .story-bundle-side strong { font-size: 20px; }
+    .story-agent-mini-title { font-size: 0; line-height: 0; margin-top: 0; }
+    .story-agent-mini-title br { display: none; }
 
     .story-graph-page { height: 100%; display: flex; flex-direction: column; padding: 20px 24px; }
     .story-graph-sub { color: var(--muted); font-size: 11px; }
@@ -582,6 +624,7 @@
       .network-node.jev { left: 38%; }
       .story-sql-chip { left: 10%; right: 10%; font-size: 8px; }
     }
+    .story-pages .network-node small { display: none; }
 
     .stage-footer { position: absolute; z-index: 4; right: 0; bottom: 0; left: 0; display: flex; align-items: center; justify-content: flex-end; gap: 16px; padding: 12px 24px 16px; background: linear-gradient(180deg, rgba(245,247,250,0), rgba(245,247,250,.96) 36%); }
     .stage-caption { display: none; min-width: 0; color: var(--ink-soft); font-size: 11px; font-weight: 700; }
@@ -645,7 +688,7 @@
         </svg>
         <div><div class="brand-name">SignalWeave</div><div class="brand-tagline">EVIDENCE · JUDGMENT · ACTION</div></div>
       </div>
-      <div class="address-bar">agent session / Codex / SignalWeave MCP</div>
+      <div class="address-bar">agent session / Growth Monitoring Agent / SignalWeave MCP</div>
       <div class="run-badge">recording · 00:22</div>
     </header>
 
@@ -722,10 +765,10 @@
       <div class="story-pages" id="storyPages" aria-label="SignalWeave agent run pages">
         <div class="story-track" id="storyTrack">
           <section class="story-page" data-story-page="0">
-            <div class="story-page-topline"><strong>01 · Scheduled run</strong><span>Codex / 06:00</span></div>
-            <div class="story-page-shell story-agent-shell">
+            <div class="story-page-topline"><strong>01 · Scheduled run</strong><span>Growth Monitoring Agent / 06:00</span></div>
+            <div id="storyAgentShell" class="story-page-shell story-agent-shell">
               <div class="story-agent-panel">
-                <div class="story-agent-top"><strong>Codex</strong><span>scheduled · growth-health</span></div>
+                <div class="story-agent-top"><strong>Growth Monitoring Agent</strong><span>scheduled · growth-health</span></div>
                 <div class="story-agent-query-label">AGENT QUERY</div>
                 <div class="story-page-query"><span id="storyPageQuery"></span><span class="composer-caret" aria-hidden="true"></span></div>
                 <div id="storySendLine" class="story-send-line">query sent</div>
@@ -736,7 +779,7 @@
             </div>
           </section>
 
-          <section class="story-page" data-story-page="1">
+          <section id="storyContextPage" class="story-page" data-story-page="1">
             <div class="story-page-topline"><strong>02 · Human context</strong><span>free-form card → typed judgment</span></div>
             <div class="story-page-shell story-context-page">
               <div class="story-context-card"><div class="story-card-panel-head"><strong>growth-health</strong><span>card / v7</span></div><div class="story-card-field"><label>what to watch</label><p>revenue + drivers</p></div><div class="story-card-field"><label>why it matters</label><p>growth plan</p></div><div class="story-card-field"><label>deliver based on outcomes</label><p>evidence-backed alert</p></div></div>
@@ -747,22 +790,22 @@
           <section class="story-page" data-story-page="2">
             <div class="story-page-topline"><strong>03 · Evidence graph</strong><span>connect → query → judge</span></div>
             <div class="story-page-shell story-graph-page"><div class="story-graph-sub">Jev finds the sources that belong to the question.</div><div class="story-network" id="storyNetwork">
-              <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path class="edge" d="M16 51 C28 51 35 52 45 52"/><path class="edge" d="M50 22 C50 31 50 36 50 42"/><path class="edge" d="M57 49 C68 39 75 29 84 26"/><path class="edge" d="M59 52 C69 52 76 52 84 52"/><path class="edge" d="M57 58 C68 67 75 77 84 78"/></svg>
+              <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><defs><path id="graphPathCard" d="M16 51 C28 51 35 52 45 52"/><path id="graphPathSql" d="M50 22 C50 31 50 36 50 42"/><path id="graphPathSup" d="M57 49 C68 39 75 29 84 26"/><path id="graphPathWeb" d="M59 52 C69 52 76 52 84 52"/><path id="graphPathOps" d="M57 58 C68 67 75 77 84 78"/></defs><path class="edge" d="M16 51 C28 51 35 52 45 52"/><path class="edge" d="M50 22 C50 31 50 36 50 42"/><path class="edge" d="M57 49 C68 39 75 29 84 26"/><path class="edge" d="M59 52 C69 52 76 52 84 52"/><path class="edge" d="M57 58 C68 67 75 77 84 78"/><circle class="edge-packet" r="1.1"><animateMotion begin="indefinite" dur=".78s" fill="remove"><mpath href="#graphPathCard"/></animateMotion><animate attributeName="opacity" begin="indefinite" dur=".78s" values="0;1;0" fill="freeze"/></circle><circle class="edge-packet" r="1.1"><animateMotion begin="indefinite" dur=".78s" fill="remove"><mpath href="#graphPathSql"/></animateMotion><animate attributeName="opacity" begin="indefinite" dur=".78s" values="0;1;0" fill="freeze"/></circle><circle class="edge-packet" r="1.1"><animateMotion begin="indefinite" dur=".78s" fill="remove"><mpath href="#graphPathSup"/></animateMotion><animate attributeName="opacity" begin="indefinite" dur=".78s" values="0;1;0" fill="freeze"/></circle><circle class="edge-packet" r="1.1"><animateMotion begin="indefinite" dur=".78s" fill="remove"><mpath href="#graphPathWeb"/></animateMotion><animate attributeName="opacity" begin="indefinite" dur=".78s" values="0;1;0" fill="freeze"/></circle><circle class="edge-packet" r="1.1"><animateMotion begin="indefinite" dur=".78s" fill="remove"><mpath href="#graphPathOps"/></animateMotion><animate attributeName="opacity" begin="indefinite" dur=".78s" values="0;1;0" fill="freeze"/></circle></svg>
               <div class="network-node card"><span>CARD</span><small>human intent</small></div><div class="network-node sql"><span>SQL</span><small>bounded query</small></div><div class="network-node jev"><span>Jev</span><small>judgment</small></div><div class="network-node sup"><span>SUPERSET</span><small>dashboard</small></div><div class="network-node web"><span>FUNNEL</span><small>conversion</small></div><div class="network-node ops"><span>OPS</span><small>support + finance</small></div><div id="storySqlChip" class="story-sql-chip">SELECT revenue, conversion FROM trusted_sources</div>
             </div></div>
           </section>
 
-          <section class="story-page" data-story-page="3">
+          <section id="storyBundlePage" class="story-page" data-story-page="3">
             <div class="story-page-topline"><strong>04 · Evidence bundle</strong><span>returned to Codex</span></div>
             <div class="story-page-shell story-bundle-page">
               <div class="story-bundle-main"><div class="story-overline">JEV RESULT</div><div class="story-bundle-title">Evidence → action.</div><p class="story-bundle-copy">returned to Codex</p><div class="story-bundle-card"><div class="story-bundle-card-head"><strong>growth-health / result</strong><span>Jev</span></div><div class="story-bundle-row down"><i></i><span>revenue</span><b>−22%</b></div><div class="story-bundle-row down"><i></i><span>conversion</span><b>−15%</b></div><div class="story-bundle-row up"><i></i><span>support backlog</span><b>+28%</b></div><div class="story-bundle-row"><i></i><span>finance</span><b>agrees</b></div><div id="storyBundleFooter" class="story-bundle-footer"><span>confidence</span><strong>0.91 · notify</strong></div></div></div>
-              <div id="storyBundleSide" class="story-bundle-side"><div class="story-bundle-side-label">typed result</div><strong>send to growth leadership</strong><p>Evidence attached. Side effect stays with the agent.</p><code>receipt: safe to replay</code></div>
+              <div id="storyBundleSide" class="story-bundle-side"><div class="story-bundle-side-label">typed result</div><strong>send to growth leadership</strong><p>Evidence attached. Side effect stays with the agent.</p><code>receipt: safe to replay</code></div><div id="storyBundlePacket" class="story-bundle-packet">bundle</div>
             </div>
           </section>
 
           <section class="story-page" data-story-page="4">
-            <div class="story-page-topline"><strong>05 · Push + acknowledgement</strong><span>Codex → Slack → human</span></div>
-            <div class="story-page-shell story-slack-page"><div class="story-slack-window"><div class="story-slack-head"><strong>#growth-leadership</strong><span>Codex sent evidence</span></div><div class="story-slack-body"><div id="storyChatCodex" class="story-chat codex"><small>Codex</small>Revenue drift is meaningful. Evidence attached.</div><div id="storyChatAck" class="story-chat leadership"><small>Growth leadership</small>Ack — looking into it!</div></div><div id="storySlackFoot" class="story-slack-foot">human response received</div></div></div>
+            <div class="story-page-topline"><strong>05 · Push + acknowledgement</strong><span>Growth Monitoring Agent → Slack → human</span></div>
+            <div class="story-page-shell story-slack-page"><div class="story-slack-window"><div class="story-slack-head"><strong>#growth-leadership</strong><span>Growth Monitoring Agent sent evidence</span></div><div class="story-slack-body"><div id="storyChatCodex" class="story-chat codex"><small>Growth Monitoring Agent</small>Revenue drift is meaningful. Evidence attached.</div><div id="storyChatAck" class="story-chat leadership"><small>Growth leadership</small>Ack — looking into it!</div></div><div id="storySlackFoot" class="story-slack-foot">human response received</div></div></div>
           </section>
         </div>
       </div>
@@ -831,7 +874,7 @@
     (() => {
       const DURATION = 22000;
       const task = "What changed in revenue this week, and should we act?";
-      const captions = [["01", "Scheduled run", "Codex wakes up and writes the question it is executing."], ["02", "Human context", "The card becomes a typed judgment the agent can use."], ["03", "Evidence graph", "Jev connects the sources and runs the bounded query path."], ["04", "Bundle to Codex", "Evidence, confidence, and the next instruction return together."], ["05", "Push + ack", "Codex sends the heads-up and gets a human response."]];
+      const captions = [["01", "Scheduled run", "The Growth Monitoring Agent wakes and writes the question."], ["02", "Human context", "The card becomes a typed judgment."], ["03", "Evidence graph", "Jev connects the sources and runs the query path."], ["04", "Bundle to agent", "Evidence and the next instruction return together."], ["05", "Push + ack", "The agent sends the heads-up and gets a human response."]];
       const filmstrip = document.getElementById("agentFilmstrip");
       const agentViewport = document.querySelector(".agent-run");
       const pages = [...document.querySelectorAll("#agentFilmstrip .demo-page")];
@@ -863,14 +906,20 @@
       const storyPageQuery = document.getElementById("storyPageQuery");
       const storyPageSteps = [...document.querySelectorAll("#storyPages .story-page-step")];
       const storySendLine = document.getElementById("storySendLine");
+      const storyAgentShell = document.getElementById("storyAgentShell");
       const storyPageStatus = document.getElementById("storyPageStatus");
       const storyNetwork = document.getElementById("storyNetwork");
       const storyEdges = [...document.querySelectorAll("#storyNetwork .edge")];
+      const storyPacketMotions = [...document.querySelectorAll("#storyNetwork .edge-packet animateMotion")];
+      const storyPacketFades = [...document.querySelectorAll("#storyNetwork .edge-packet animate[attributeName='opacity']")];
       const storyNetworkNodes = [...document.querySelectorAll("#storyNetwork .network-node")];
       const storySqlChip = document.getElementById("storySqlChip");
       const storyBundleRows = [...document.querySelectorAll("#storyPages .story-bundle-row")];
       const storyBundleFooter = document.getElementById("storyBundleFooter");
       const storyBundleSide = document.getElementById("storyBundleSide");
+      const storyContextPage = document.getElementById("storyContextPage");
+      const storyBundlePage = document.getElementById("storyBundlePage");
+      const storyBundlePacket = document.getElementById("storyBundlePacket");
       const storyChatCodex = document.getElementById("storyChatCodex");
       const storyChatAck = document.getElementById("storyChatAck");
       const storySlackFoot = document.getElementById("storySlackFoot");
@@ -878,6 +927,7 @@
       let pausedAt = 0;
       let paused = false;
       let lastPage = -1;
+      let lastPacket = -1;
 
       function activePage(elapsed) { if (elapsed < 5200) return 0; if (elapsed < 8200) return 1; if (elapsed < 12500) return 2; if (elapsed < 16500) return 3; return 4; }
       function setPage(page) {
@@ -906,8 +956,10 @@
         const queryChars = elapsed < 800 ? 0 : Math.min(task.length, Math.floor((elapsed - 800) / 42));
         storyPageQuery.textContent = task.slice(0, queryChars);
         storySendLine.classList.toggle("is-live", elapsed >= 2900);
+        storyAgentShell.classList.toggle("is-sent", elapsed >= 2900);
         storyPageSteps.forEach((el, index) => el.classList.toggle("is-live", elapsed >= 3000 + index * 450));
         storyPageStatus.textContent = elapsed < 1200 ? "waking on schedule" : elapsed < 2900 ? "writing internal question" : elapsed < 5000 ? "running steps" : "context loaded";
+        storyContextPage.classList.toggle("is-active", elapsed >= 5200 && elapsed < 8200);
         const nodeLive = {
           card: elapsed >= 8500,
           sql: elapsed >= 9000,
@@ -919,10 +971,19 @@
         storyNetworkNodes.forEach((el) => el.classList.toggle("is-live", Boolean(nodeLive[el.classList[1]])));
         storyNetwork.classList.toggle("is-building", elapsed >= 8500 && elapsed < 11600);
         storyEdges.forEach((el, index) => el.classList.toggle("is-live", elapsed >= 8500 + index * 430));
+        if (elapsed < 8500) lastPacket = -1;
+        const packetIndex = elapsed < 8500 ? -1 : Math.min(storyPacketMotions.length - 1, Math.floor((elapsed - 8500) / 430));
+        for (let index = lastPacket + 1; index <= packetIndex; index += 1) {
+          storyPacketMotions[index]?.beginElement?.();
+          storyPacketFades[index]?.beginElement?.();
+        }
+        lastPacket = Math.max(lastPacket, packetIndex);
         storySqlChip.classList.toggle("is-live", elapsed >= 10900);
         storyBundleRows.forEach((el, index) => el.classList.toggle("is-live", elapsed >= 12600 + index * 420));
         storyBundleFooter.classList.toggle("is-live", elapsed >= 14400);
         storyBundleSide.classList.toggle("is-live", elapsed >= 14000);
+        storyBundlePage.classList.toggle("is-active", elapsed >= 12500 && elapsed < 16500);
+        storyBundlePacket.classList.toggle("is-live", elapsed >= 15000 && elapsed < 16500);
         storyChatCodex.classList.toggle("is-live", elapsed >= 16900);
         storyChatAck.classList.toggle("is-live", elapsed >= 18800);
         storySlackFoot.classList.toggle("is-live", elapsed >= 19800);
@@ -952,7 +1013,7 @@
         if (!paused && elapsed >= DURATION) { paused = true; pausedAt = DURATION; render(DURATION); }
       }
       pauseButton.addEventListener("click", () => { if (paused) { paused = false; startedAt = performance.now() - pausedAt; requestAnimationFrame(tick); } else { paused = true; pausedAt = performance.now() - startedAt; render(pausedAt); } });
-      resetButton.addEventListener("click", () => { paused = false; pausedAt = 0; startedAt = performance.now(); lastPage = -1; resetTransientState(); requestAnimationFrame(tick); });
+      resetButton.addEventListener("click", () => { paused = false; pausedAt = 0; startedAt = performance.now(); lastPage = -1; lastPacket = -1; resetTransientState(); requestAnimationFrame(tick); });
       document.addEventListener("keydown", (event) => { if (event.code === "Space") { event.preventDefault(); pauseButton.click(); } if (event.key.toLowerCase() === "r") resetButton.click(); });
       render(0);
       requestAnimationFrame(tick);
