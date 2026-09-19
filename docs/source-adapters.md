@@ -44,6 +44,12 @@ The adapter should:
 - include a source URL/run ID when possible; and
 - return a `ResourceSnapshot(error=...)` through the registry path when the source cannot be trusted.
 
+The registry also enforces a serialized snapshot byte budget (1 MiB by default).
+An oversized adapter result is stripped of observations, evidence, and metadata
+and returned as a typed source error. Required sources therefore route to
+`insufficient_data` instead of silently sending an unbounded payload to Jev.
+Deployments can lower the budget with `SourceRegistry(max_snapshot_bytes=...)`.
+
 For catalogs that are too large to materialize, implement `search_resources`.
 It should apply the caller's authorization at the source, return only a bounded
 page of descriptors, and report the authorized `total_count`, `has_more`, and a

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from collections.abc import Iterable
 from typing import Protocol
 
@@ -27,15 +28,19 @@ class SourceRegistry:
         max_concurrency: int = 8,
         authorized_tenants: Iterable[str] | None = None,
         enforce_catalog: bool = True,
+        max_snapshot_bytes: int = 1_000_000,
     ) -> None:
         if max_concurrency < 1:
             raise ValueError("max_concurrency must be positive")
+        if max_snapshot_bytes < 1:
+            raise ValueError("max_snapshot_bytes must be positive")
         self._adapters: dict[str, SourceAdapter] = {}
         self._max_concurrency = max_concurrency
         self._authorized_tenants = (
             frozenset(authorized_tenants) if authorized_tenants is not None else None
         )
         self._enforce_catalog = enforce_catalog
+        self._max_snapshot_bytes = max_snapshot_bytes
         for adapter in adapters:
             self.register(adapter)
 
@@ -163,7 +168,31 @@ class SourceRegistry:
                     "source_url": snapshot.source_url or descriptor.source_url,
                 }
             )
-        return snapshot
+        return self._enforce_snapshot_budget(snapshot)
+
+    def _enforce_snapshot_budget(self, snapshot: ResourceSnapshot) -> ResourceSnapshot:
+        """Keep oversized adapter payloads out of Jev and fail them closed."""
+        encoded = json.dumps(snapshot.model_dump(mode="json"), separators=(",", ":"))
+        observed_bytes = len(encoded.encode("utf-8"))
+        if observed_bytes <= self._max_snapshot_bytes:
+            return snapshot
+        return snapshot.model_copy(
+            update={
+                "observations": [],
+                "evidence": [],
+                "metadata": {
+                    "signalweave_budget": {
+                        "status": "exceeded",
+                        "max_snapshot_bytes": self._max_snapshot_bytes,
+                        "observed_snapshot_bytes": observed_bytes,
+                    }
+                },
+                "error": (
+                    "source snapshot exceeded the SignalWeave payload budget "
+                    f"({observed_bytes} > {self._max_snapshot_bytes} bytes)"
+                ),
+            }
+        )
 
     async def resolve(self, sources: Iterable[SourceRef]) -> list[ResourceSnapshot]:
         """Fetch sources independently so one broken source is visible to the engine."""
