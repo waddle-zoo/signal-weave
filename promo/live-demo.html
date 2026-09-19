@@ -3,656 +3,916 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>SignalWeave — live demo recording surface</title>
+  <meta name="theme-color" content="#f5f7fa">
+  <title>SignalWeave — live product demo</title>
   <style>
     :root {
-      color-scheme: dark;
-      --bg: #080b12;
-      --panel: rgba(17, 24, 39, 0.92);
-      --panel-strong: #121b2a;
-      --panel-soft: rgba(24, 35, 55, 0.68);
-      --line: rgba(137, 157, 195, 0.18);
-      --line-bright: rgba(137, 157, 195, 0.35);
-      --text: #f4f7ff;
-      --muted: #8e9bb4;
-      --violet: #a796ff;
-      --cyan: #58e1d0;
-      --green: #7de5a5;
-      --amber: #ffcc73;
-      --red: #ff7691;
-      --shadow: 0 30px 80px rgba(0, 0, 0, 0.32);
+      color-scheme: light;
+      --ink: #101828;
+      --ink-soft: #344054;
+      --muted: #667085;
+      --faint: #98a2b3;
+      --line: #e4e7ec;
+      --line-strong: #d0d5dd;
+      --canvas: #f5f7fa;
+      --panel: #ffffff;
+      --panel-soft: #f9fafb;
+      --teal: #12b8a6;
+      --indigo: #6366f1;
+      --orange: #f79009;
+      --pink: #ec4a9d;
+      --red: #d92d20;
+      --green: #039855;
+      --shadow: 0 24px 70px rgba(16, 24, 40, .12), 0 3px 12px rgba(16, 24, 40, .06);
+      --radius: 18px;
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
 
     * { box-sizing: border-box; }
     html, body { min-width: 320px; min-height: 100%; }
-    body {
-      margin: 0;
+    body { margin: 0; overflow: hidden; background: var(--canvas); color: var(--ink); }
+    button { font: inherit; cursor: pointer; }
+    button:focus-visible { outline: 3px solid rgba(99, 102, 241, .3); outline-offset: 2px; }
+
+    .demo-shell {
+      width: min(1280px, calc(100vw - 32px));
+      height: min(820px, calc(100vh - 28px));
+      min-height: 560px;
+      margin: 14px auto;
+      display: flex;
+      flex-direction: column;
       overflow: hidden;
-      background:
-        radial-gradient(circle at 72% 16%, rgba(94, 80, 190, 0.15), transparent 29rem),
-        radial-gradient(circle at 20% 80%, rgba(34, 179, 166, 0.08), transparent 24rem),
-        var(--bg);
-      color: var(--text);
-    }
-
-    button, input { font: inherit; }
-    button { cursor: pointer; }
-    button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
-
-    .recording-stage {
-      position: relative;
-      width: 100vw;
-      height: 100vh;
-      min-height: 620px;
-      overflow: hidden;
-      isolation: isolate;
-    }
-
-    .ambient-grid {
-      position: absolute;
-      inset: 0;
-      opacity: 0.32;
-      background-image:
-        linear-gradient(rgba(149, 165, 202, 0.07) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(149, 165, 202, 0.07) 1px, transparent 1px);
-      background-size: 48px 48px;
-      mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 82%, transparent 100%);
-      pointer-events: none;
-      z-index: -1;
-    }
-
-    .app-chrome {
-      position: absolute;
-      inset: 18px 22px auto;
-      height: 56px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 18px;
-      border: 1px solid var(--line);
-      border-radius: 18px;
-      background: rgba(11, 17, 29, 0.84);
-      box-shadow: var(--shadow);
-      z-index: 5;
-    }
-
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 11px;
-      letter-spacing: 0.16em;
-      font-size: 12px;
-      font-weight: 800;
-    }
-
-    .brand-mark {
-      display: grid;
-      place-items: center;
-      width: 28px;
-      height: 28px;
-      border: 1px solid rgba(167, 150, 255, 0.75);
-      border-radius: 9px;
-      color: var(--violet);
-      font-size: 11px;
-      letter-spacing: 0;
-      box-shadow: 0 0 20px rgba(167, 150, 255, 0.24);
-    }
-
-    .workspace-context {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      color: var(--muted);
-      font-size: 12px;
-    }
-
-    .live-dot {
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background: var(--green);
-      box-shadow: 0 0 14px rgba(125, 229, 165, 0.7);
-    }
-
-    .workspace {
-      position: absolute;
-      inset: 102px 22px 92px;
-      display: grid;
-      grid-template-columns: minmax(210px, 0.9fr) minmax(420px, 1.8fr) minmax(240px, 0.95fr);
-      gap: 14px;
-      transition: transform 900ms cubic-bezier(.2, .8, .2, 1), filter 700ms ease;
-      transform-origin: 52% 52%;
-    }
-
-    .workspace.zoomed {
-      transform: scale(1.18) translate(-1.5%, 1%);
-      filter: saturate(1.08);
-    }
-
-    .rail, .graph-panel, .evidence-panel {
-      min-height: 0;
-      border: 1px solid var(--line);
+      border: 1px solid var(--line-strong);
+      border-radius: 22px;
       background: var(--panel);
       box-shadow: var(--shadow);
     }
 
-    .rail {
-      display: flex;
-      flex-direction: column;
-      border-radius: 20px;
-      padding: 18px;
-    }
+    .browser-bar { height: 54px; flex: 0 0 54px; display: flex; align-items: center; gap: 18px; padding: 0 18px; border-bottom: 1px solid var(--line); background: rgba(255, 255, 255, .96); }
+    .window-dots { display: flex; gap: 6px; }
+    .window-dots i { width: 8px; height: 8px; border-radius: 50%; background: #d0d5dd; }
+    .window-dots i:first-child { background: #f79009; }
+    .window-dots i:nth-child(2) { background: #12b8a6; }
+    .window-dots i:last-child { background: #6366f1; }
+    .brand-lockup { display: flex; align-items: center; gap: 9px; min-width: 180px; }
+    .brand-mark { width: 34px; height: 24px; flex: 0 0 34px; }
+    .brand-name { font-size: 14px; font-weight: 760; letter-spacing: -.04em; }
+    .brand-tagline { margin-top: 1px; color: var(--muted); font-size: 7px; font-weight: 700; letter-spacing: .16em; }
+    .address-bar { min-width: 0; flex: 1; height: 30px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--line); border-radius: 8px; background: var(--panel-soft); color: var(--muted); font-size: 11px; }
+    .run-badge { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: 11px; white-space: nowrap; }
+    .run-badge::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 0 3px rgba(18, 184, 166, .12); }
 
-    .eyebrow {
-      margin-bottom: 12px;
-      color: var(--muted);
-      font-size: 10px;
-      font-weight: 800;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
-    }
+    .run-stage { position: relative; min-height: 0; flex: 1; display: flex; flex-direction: column; background: var(--canvas); }
+    .stage-label { position: absolute; z-index: 5; top: 18px; left: 24px; display: flex; align-items: center; gap: 9px; color: var(--muted); font-size: 10px; font-weight: 760; letter-spacing: .14em; text-transform: uppercase; pointer-events: none; }
+    .stage-label::before { content: ""; width: 22px; height: 2px; background: linear-gradient(90deg, var(--teal), var(--indigo)); }
+    .film-window { --film-clip: 24px; min-height: 0; flex: 1; overflow: hidden; padding: 54px 24px 18px; clip-path: inset(0 var(--film-clip) 0 var(--film-clip)); }
+    .filmstrip { height: 100%; display: flex; width: 400%; transition: transform 640ms cubic-bezier(.22, .8, .2, 1); will-change: transform; }
+    .demo-page { position: relative; width: 25%; flex: 0 0 25%; min-width: 0; overflow: hidden; padding: 4px 4px 0; }
+    .page-inner { height: 100%; transform: scale(1) translate3d(0, 0, 0); transform-origin: 50% 50%; transition: transform 720ms cubic-bezier(.2, .8, .2, 1), opacity 420ms ease; }
+    .demo-page.is-camera-close .page-inner { transform: scale(1.025) translate3d(0, 0, 0); }
+    .demo-page.is-camera-right .page-inner { transform: scale(1.04) translate3d(-1%, 0, 0); }
+    .demo-page.is-camera-left .page-inner { transform: scale(1.04) translate3d(1%, 0, 0); }
+    .decision-page.is-camera-close .page-inner { transform: scale(1) translate3d(0, 0, 0); }
+    .eyebrow { color: var(--faint); font-size: 10px; font-weight: 780; letter-spacing: .14em; text-transform: uppercase; }
+    .page-heading { margin: 8px 0 0; font-size: clamp(22px, 3.2vw, 38px); line-height: 1.04; letter-spacing: -.055em; }
+    .page-subheading { max-width: 600px; margin: 9px 0 0; color: var(--muted); font-size: 13px; line-height: 1.45; }
+    .page-topline { display: flex; align-items: center; justify-content: space-between; gap: 18px; color: var(--muted); font-size: 11px; }
+    .panel { border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); box-shadow: 0 9px 24px rgba(16, 24, 40, .05); }
+    .panel-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 16px 17px; border-bottom: 1px solid var(--line); }
+    .panel-title { font-size: 13px; font-weight: 760; letter-spacing: -.02em; }
+    .panel-meta { margin-top: 4px; color: var(--muted); font-size: 10px; }
+    .tiny-pill { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--line); border-radius: 999px; padding: 5px 8px; color: var(--muted); background: var(--panel-soft); font-size: 10px; white-space: nowrap; }
+    .tiny-pill .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--teal); }
 
-    .goal-title {
-      margin: 0 0 16px;
-      font-size: 17px;
-      line-height: 1.25;
-      font-weight: 760;
-    }
-
-    .rail-rule {
-      height: 1px;
-      margin: 0 0 15px;
-      background: var(--line);
-    }
-
-    .source-list { display: grid; gap: 9px; }
-    .source-item {
-      display: grid;
-      grid-template-columns: 10px 1fr auto;
-      align-items: center;
-      gap: 9px;
-      min-height: 42px;
-      padding: 8px 9px;
-      border: 1px solid transparent;
-      border-radius: 12px;
-      color: var(--muted);
-      font-size: 12px;
-      transition: 400ms ease;
-    }
-    .source-item.active {
-      border-color: rgba(167, 150, 255, 0.38);
-      background: rgba(167, 150, 255, 0.1);
-      color: var(--text);
-    }
-    .source-item .source-status {
-      color: var(--muted);
-      font-size: 10px;
-      font-weight: 700;
-    }
-    .source-item.active .source-status { color: var(--cyan); }
-    .source-icon {
-      width: 8px;
-      height: 8px;
-      border-radius: 3px;
-      background: var(--line-bright);
-    }
-    .source-item.active .source-icon { background: var(--violet); box-shadow: 0 0 12px rgba(167, 150, 255, .9); }
-
-    .card-note {
-      margin-top: auto;
-      padding-top: 16px;
-      color: var(--muted);
-      font-size: 11px;
-      line-height: 1.55;
-    }
-    .card-note strong { color: var(--text); font-weight: 700; }
-
-    .graph-panel {
-      position: relative;
-      overflow: hidden;
-      border-radius: 24px;
-      background:
-        radial-gradient(circle at 50% 50%, rgba(104, 83, 212, 0.13), transparent 18rem),
-        rgba(14, 21, 35, 0.9);
-    }
-
-    .graph-heading {
-      position: absolute;
-      top: 20px;
-      left: 24px;
-      right: 24px;
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      z-index: 3;
-    }
-    .graph-heading h1 { margin: 0; font-size: 18px; letter-spacing: -0.02em; }
-    .graph-heading p { margin: 5px 0 0; color: var(--muted); font-size: 11px; }
-    .graph-state {
-      min-width: 135px;
-      padding: 8px 10px;
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      color: var(--muted);
-      font-size: 10px;
-      text-align: right;
-    }
-    .graph-state strong { display: block; margin-top: 3px; color: var(--cyan); font-size: 12px; }
-
-    .graph-canvas {
-      position: absolute;
-      inset: 88px 18px 18px;
-    }
-    .graph-lines { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
-    .graph-lines line {
-      stroke: rgba(132, 151, 190, 0.18);
-      stroke-width: 1.5;
-      stroke-dasharray: 5 7;
-      transition: 700ms ease;
-    }
-    .graph-lines line.active {
-      stroke: var(--violet);
-      stroke-width: 2.2;
-      stroke-dasharray: none;
-      filter: drop-shadow(0 0 5px rgba(167, 150, 255, 0.7));
-    }
-
-    .node {
-      position: absolute;
-      display: grid;
-      gap: 6px;
-      width: 164px;
-      min-height: 88px;
-      padding: 13px;
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      background: rgba(17, 27, 44, 0.86);
-      opacity: 0.56;
-      transform: translate(-50%, -50%) scale(.92);
-      transition: 650ms cubic-bezier(.2, .8, .2, 1);
-    }
-    .node.active {
-      opacity: 1;
-      border-color: rgba(167, 150, 255, 0.65);
-      background: rgba(25, 33, 56, 0.96);
-      box-shadow: 0 0 30px rgba(119, 94, 230, 0.16);
-      transform: translate(-50%, -50%) scale(1);
-    }
-    .node .node-kind { color: var(--muted); font-size: 9px; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
-    .node .node-name { color: var(--text); font-size: 12px; font-weight: 720; }
-    .node .node-value { color: var(--muted); font-size: 11px; }
-    .node .node-value.bad { color: var(--red); }
-    .node .node-value.good { color: var(--cyan); }
-    .node.center {
-      left: 50%; top: 50%; width: 190px; min-height: 114px;
-      border-color: rgba(167, 150, 255, 0.64);
-      background: linear-gradient(145deg, rgba(47, 39, 86, .95), rgba(18, 29, 51, .98));
-    }
-    .node.center .node-kind { color: var(--violet); }
-    .node.center .node-name { font-size: 16px; }
-    .node.center .node-value { color: var(--text); }
-    .node.northstar { left: 16%; top: 24%; }
-    .node.funnel { left: 84%; top: 24%; }
-    .node.support { left: 16%; top: 76%; }
-    .node.finance { left: 84%; top: 76%; }
-
-    .typing-caret {
-      display: inline-block;
-      width: 2px;
-      height: 18px;
-      margin-left: 2px;
-      vertical-align: -3px;
-      background: var(--cyan);
-      animation: blink 850ms steps(1) infinite;
-    }
+    .monitor-page, .card-page, .retrieval-page, .decision-page { display: flex; flex-direction: column; height: 100%; }
+    .monitor-grid, .card-grid, .retrieval-grid, .decision-grid { min-height: 0; flex: 1; display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(230px, .75fr); gap: 16px; margin-top: 22px; }
+    .monitor-main { min-width: 0; display: flex; flex-direction: column; }
+    .metric-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 12px; }
+    .metric { padding: 13px 14px; border: 1px solid var(--line); border-radius: 13px; background: var(--panel); }
+    .metric-label { color: var(--muted); font-size: 10px; }
+    .metric-value { margin-top: 5px; font-size: 20px; font-weight: 760; letter-spacing: -.055em; }
+    .metric-delta { margin-top: 4px; font-size: 10px; font-weight: 740; }
+    .metric-delta.down { color: var(--red); }
+    .metric-delta.up { color: var(--orange); }
+    .chart-panel { min-height: 0; flex: 1; overflow: hidden; }
+    .chart-wrap { position: relative; height: calc(100% - 61px); min-height: 170px; padding: 12px 16px 16px; }
+    .chart-grid-line { stroke: #eaecf0; stroke-width: 1; }
+    .chart-label { fill: #98a2b3; font-size: 9px; }
+    .chart-fill { fill: url(#chartFill); opacity: .65; }
+    .chart-line { fill: none; stroke: var(--indigo); stroke-width: 2.8; stroke-linecap: round; stroke-linejoin: round; }
+    .chart-line-secondary { fill: none; stroke: var(--teal); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 4 5; }
+    .chart-point { fill: white; stroke: var(--indigo); stroke-width: 2; }
+    .chart-callout { position: absolute; right: 17%; top: 28%; padding: 6px 8px; border: 1px solid #c7d7fe; border-radius: 7px; background: #eff4ff; color: #3538cd; font-size: 10px; font-weight: 730; opacity: 0; transform: translateY(6px); transition: opacity 300ms ease, transform 300ms ease; }
+    .monitor-page.is-signal .chart-callout { opacity: 1; transform: translateY(0); }
+    .composer { position: relative; margin-top: 12px; padding: 14px 15px; border: 1px solid #bfc7ff; border-radius: 13px; background: #fbfbff; box-shadow: 0 0 0 4px rgba(99, 102, 241, .06); }
+    .composer-label { display: flex; align-items: center; gap: 7px; color: var(--indigo); font-size: 10px; font-weight: 780; letter-spacing: .1em; text-transform: uppercase; }
+    .composer-label::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--indigo); }
+    .composer-text { min-height: 22px; margin-top: 8px; color: var(--ink); font-size: clamp(13px, 1.55vw, 17px); font-weight: 650; letter-spacing: -.02em; }
+    .composer-caret { display: inline-block; width: 2px; height: 18px; margin-left: 2px; vertical-align: -3px; background: var(--indigo); animation: blink 900ms steps(1) infinite; }
     @keyframes blink { 50% { opacity: 0; } }
+    .composer-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; color: var(--muted); font-size: 10px; }
+    .composer-action { display: inline-flex; align-items: center; gap: 6px; color: var(--indigo); font-weight: 760; }
+    .composer-action::after { content: "↗"; font-size: 13px; }
+    .monitor-rail, .card-side { display: flex; flex-direction: column; gap: 12px; }
+    .watchlist { padding: 16px; }
+    .watchlist h3 { margin: 0; font-size: 13px; letter-spacing: -.02em; }
+    .watchlist p { margin: 6px 0 13px; color: var(--muted); font-size: 11px; line-height: 1.45; }
+    .asset-list { display: flex; flex-direction: column; gap: 8px; }
+    .asset { display: flex; align-items: center; gap: 9px; padding: 9px 0; border-top: 1px solid var(--line); font-size: 11px; }
+    .asset:first-child { border-top: 0; }
+    .asset-icon { width: 22px; height: 22px; display: grid; place-items: center; border-radius: 6px; background: #eff4ff; color: var(--indigo); font-size: 10px; font-weight: 800; }
+    .asset-icon.teal { background: #ecfdf3; color: var(--green); }
+    .asset-icon.orange { background: #fffaeb; color: #b54708; }
+    .asset span:nth-child(2) { min-width: 0; flex: 1; }
+    .asset small { color: var(--faint); font-size: 10px; }
+    .empty-state { min-height: 0; flex: 1; padding: 15px; border: 1px dashed var(--line-strong); border-radius: 14px; background: rgba(255,255,255,.52); }
+    .empty-state strong { display: block; font-size: 11px; }
+    .empty-state p { margin: 7px 0 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
 
-    .evidence-panel {
-      display: flex;
-      flex-direction: column;
-      gap: 13px;
-      border-radius: 20px;
-      padding: 18px;
-    }
-    .evidence-panel h2 { margin: 0; font-size: 14px; }
-    .evidence-panel .subhead { margin: -7px 0 4px; color: var(--muted); font-size: 11px; }
-    .evidence-list { display: grid; gap: 9px; min-height: 0; }
-    .evidence-item {
-      display: grid;
-      grid-template-columns: 8px 1fr auto;
-      gap: 9px;
-      align-items: start;
-      padding: 10px;
-      border: 1px solid transparent;
-      border-radius: 12px;
-      background: rgba(255,255,255,0.02);
-      opacity: 0;
-      transform: translateX(14px);
-      transition: 550ms ease;
-    }
-    .evidence-item.visible { opacity: 1; transform: translateX(0); border-color: var(--line); }
-    .evidence-item .evidence-dot { width: 7px; height: 7px; margin-top: 4px; border-radius: 50%; background: var(--cyan); }
-    .evidence-item.alert .evidence-dot { background: var(--red); }
-    .evidence-item .evidence-label { color: var(--text); font-size: 11px; font-weight: 700; }
-    .evidence-item .evidence-detail { margin-top: 4px; color: var(--muted); font-size: 10px; line-height: 1.35; }
-    .evidence-item .evidence-delta { color: var(--red); font-size: 11px; font-weight: 800; }
+    .card-grid { grid-template-columns: minmax(0, 1.35fr) minmax(240px, .65fr); }
+    .free-card { min-height: 0; overflow: hidden; }
+    .free-card-body { padding: 15px 17px 17px; }
+    .free-card-title { font-size: 18px; font-weight: 760; letter-spacing: -.04em; }
+    .free-card-owner { display: flex; align-items: center; gap: 7px; margin-top: 6px; color: var(--muted); font-size: 10px; }
+    .avatar { width: 19px; height: 19px; display: grid; place-items: center; border-radius: 50%; background: #fce7f3; color: #be185d; font-size: 9px; font-weight: 800; }
+    .free-field { margin-top: 14px; padding: 12px 13px; border: 1px solid var(--line); border-radius: 11px; background: var(--panel-soft); opacity: .54; transition: opacity 300ms ease, border-color 300ms ease, background 300ms ease; }
+    .free-field.is-focus { opacity: 1; border-color: #bfc7ff; background: #fbfbff; }
+    .free-field-label { color: var(--muted); font-size: 10px; font-weight: 760; }
+    .free-field p { margin: 6px 0 0; color: var(--ink-soft); font-size: 12px; line-height: 1.42; }
+    .card-side-panel { padding: 16px; }
+    .card-side-panel h3 { margin: 0; font-size: 13px; }
+    .source-chips { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 12px; }
+    .source-chip { display: inline-flex; align-items: center; gap: 6px; padding: 7px 9px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink-soft); background: var(--panel-soft); font-size: 10px; }
+    .source-chip::before { content: ""; width: 6px; height: 6px; border-radius: 2px; background: var(--indigo); }
+    .source-chip:nth-child(2)::before { background: var(--teal); }
+    .source-chip:nth-child(3)::before { background: var(--orange); }
+    .route { display: flex; align-items: center; gap: 8px; margin-top: 14px; color: var(--muted); font-size: 10px; }
+    .route-line { height: 1px; flex: 1; background: var(--line-strong); }
+    .approve-button { width: 100%; margin-top: auto; padding: 11px 13px; border: 0; border-radius: 10px; background: var(--ink); color: white; font-size: 11px; font-weight: 760; }
+    .approve-button span { color: #a7f3d0; }
 
-    .decision {
-      margin-top: auto;
-      padding: 14px;
-      border: 1px solid rgba(255, 118, 145, 0.34);
-      border-radius: 15px;
-      background: linear-gradient(145deg, rgba(84, 35, 57, .38), rgba(28, 26, 48, .64));
-      opacity: 0;
-      transform: translateY(12px);
-      transition: 650ms cubic-bezier(.2, .8, .2, 1);
-    }
-    .decision.visible { opacity: 1; transform: translateY(0); }
-    .decision-label { color: var(--red); font-size: 10px; font-weight: 800; letter-spacing: .12em; }
-    .decision h3 { margin: 7px 0 5px; font-size: 17px; }
-    .decision p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.45; }
+    .retrieval-grid { grid-template-columns: minmax(0, 1.3fr) minmax(250px, .7fr); }
+    .connection-canvas { position: relative; min-height: 310px; overflow: hidden; background: #fcfcfd; }
+    .connection-canvas::before { content: ""; position: absolute; inset: 0; opacity: .6; background-image: linear-gradient(#eaecf0 1px, transparent 1px), linear-gradient(90deg, #eaecf0 1px, transparent 1px); background-size: 26px 26px; mask-image: linear-gradient(to bottom, black, transparent 90%); }
+    .canvas-head { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 15px 16px; border-bottom: 1px solid var(--line); background: rgba(255,255,255,.8); }
+    .canvas-head strong { font-size: 12px; }
+    .canvas-head span { color: var(--muted); font-size: 10px; }
+    .node { position: absolute; z-index: 2; min-width: 124px; padding: 10px 11px; border: 1px solid var(--line-strong); border-radius: 10px; background: white; box-shadow: 0 7px 16px rgba(16,24,40,.07); opacity: .42; transform: scale(.96); transition: opacity 360ms ease, transform 360ms ease, border-color 360ms ease; }
+    .node.is-active { opacity: 1; transform: scale(1); border-color: #bfc7ff; }
+    .node-label { display: flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 760; }
+    .node-label::before { content: ""; width: 7px; height: 7px; border-radius: 2px; background: var(--indigo); }
+    .node small { display: block; margin-top: 5px; color: var(--muted); font-size: 9px; }
+    .node.intent { left: 50%; top: 85px; transform: translateX(-50%) scale(.96); border-color: #bfc7ff; }
+    .node.intent.is-active { transform: translateX(-50%) scale(1); }
+    .node.superset { left: 8%; top: 205px; }
+    .node.funnel { left: 34%; top: 252px; }
+    .node.support { right: 31%; top: 252px; }
+    .node.finance { right: 7%; top: 205px; }
+    .node.superset .node-label::before { background: var(--orange); }
+    .node.funnel .node-label::before { background: var(--teal); }
+    .node.support .node-label::before { background: var(--pink); }
+    .node.finance .node-label::before { background: var(--indigo); }
+    .node-line { position: absolute; z-index: 1; height: 1px; transform-origin: left center; background: #c9d2fe; opacity: 0; transition: opacity 320ms ease; }
+    .node-line.is-active { opacity: 1; }
+    .line-one { left: 38%; top: 147px; width: 93px; transform: rotate(39deg); }
+    .line-two { left: 46%; top: 151px; width: 107px; transform: rotate(74deg); }
+    .line-three { left: 54%; top: 151px; width: 110px; transform: rotate(106deg); }
+    .line-four { left: 62%; top: 147px; width: 95px; transform: rotate(141deg); }
+    .canvas-callout { position: absolute; left: 50%; bottom: 15px; z-index: 3; transform: translateX(-50%) translateY(8px); width: max-content; max-width: 80%; padding: 7px 10px; border: 1px solid #b7ebdf; border-radius: 8px; background: #ecfdf3; color: #047857; font-size: 10px; font-weight: 730; opacity: 0; transition: opacity 360ms ease, transform 360ms ease; }
+    .connection-canvas.is-connected .canvas-callout { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .trace-panel { min-height: 0; display: flex; flex-direction: column; }
+    .trace-body { min-height: 0; flex: 1; padding: 15px 16px; }
+    .trace-intro { color: var(--muted); font-size: 11px; line-height: 1.45; }
+    .trace-list { display: flex; flex-direction: column; gap: 12px; margin-top: 14px; }
+    .trace-item { display: grid; grid-template-columns: 20px 1fr; gap: 9px; opacity: .42; transform: translateX(5px); transition: opacity 360ms ease, transform 360ms ease; }
+    .trace-item.is-active { opacity: 1; transform: translateX(0); }
+    .trace-icon { width: 20px; height: 20px; display: grid; place-items: center; border-radius: 6px; background: #eff4ff; color: var(--indigo); font-size: 10px; font-weight: 800; }
+    .trace-item:nth-child(2) .trace-icon { background: #ecfdf3; color: var(--green); }
+    .trace-item:nth-child(3) .trace-icon { background: #fffaeb; color: #b54708; }
+    .trace-item strong { display: block; font-size: 11px; }
+    .trace-item p { margin: 3px 0 0; color: var(--muted); font-size: 10px; line-height: 1.35; }
+    .trace-footer { margin-top: auto; padding: 12px 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 10px; }
 
-    .composer {
-      position: absolute;
-      left: 50%;
-      bottom: 28px;
-      display: flex;
-      align-items: center;
-      width: min(720px, calc(100vw - 44px));
-      min-height: 54px;
-      padding: 8px 9px 8px 16px;
-      border: 1px solid rgba(167, 150, 255, 0.42);
-      border-radius: 17px;
-      background: rgba(15, 22, 37, .93);
-      box-shadow: 0 22px 60px rgba(0,0,0,.36), 0 0 36px rgba(116, 88, 240, .12);
-      transform: translateX(-50%);
-      z-index: 6;
-      transition: 500ms ease;
-    }
-    .composer.focused { border-color: var(--cyan); box-shadow: 0 22px 70px rgba(0,0,0,.44), 0 0 44px rgba(88,225,208,.18); }
-    .composer-prefix { margin-right: 11px; color: var(--violet); font-size: 13px; font-weight: 800; }
-    .composer-text { min-height: 22px; flex: 1; color: var(--text); font-size: 14px; line-height: 1.5; }
-    .composer-action {
-      display: grid;
-      place-items: center;
-      width: 37px;
-      height: 37px;
-      border: 0;
-      border-radius: 11px;
-      background: var(--violet);
-      color: #17142b;
-      font-weight: 900;
-      transition: 300ms ease;
-    }
-    .composer-action:hover { background: var(--cyan); transform: translateY(-1px); }
+    .decision-grid { grid-template-columns: minmax(0, 1.38fr) minmax(250px, .62fr); }
+    .evidence-panel { min-height: 0; overflow: hidden; }
+    .evidence-table { width: 100%; border-collapse: collapse; }
+    .evidence-table th, .evidence-table td { padding: 12px 14px; border-top: 1px solid var(--line); text-align: left; font-size: 10px; vertical-align: middle; }
+    .evidence-table th { color: var(--faint); font-size: 9px; font-weight: 760; letter-spacing: .1em; text-transform: uppercase; }
+    .evidence-table td strong { display: block; font-size: 11px; }
+    .evidence-table td small { display: block; margin-top: 3px; color: var(--muted); }
+    .signal { font-weight: 780; }
+    .signal.down { color: var(--red); }
+    .signal.up { color: #b54708; }
+    .confidence { display: inline-flex; align-items: center; gap: 5px; color: var(--green); font-size: 10px; font-weight: 760; }
+    .confidence::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+    .decision-card { position: relative; display: flex; flex-direction: column; padding: 18px; overflow: hidden; background: var(--ink); color: white; }
+    .decision-card::before { content: ""; position: absolute; top: 0; right: 0; width: 56%; height: 4px; background: linear-gradient(90deg, var(--teal), var(--indigo), var(--pink)); }
+    .decision-kicker { color: #98a2b3; font-size: 10px; font-weight: 760; letter-spacing: .14em; text-transform: uppercase; }
+    .decision-title { margin-top: 16px; font-size: clamp(26px, 3.4vw, 42px); line-height: .98; letter-spacing: -.06em; }
+    .decision-copy { margin-top: 13px; color: #d0d5dd; font-size: 11px; line-height: 1.5; }
+    .decision-reason { margin-top: 18px; padding: 11px 12px; border: 1px solid rgba(255,255,255,.14); border-radius: 10px; background: rgba(255,255,255,.06); color: #eaecf0; font-size: 10px; line-height: 1.45; }
+    .decision-reason b { color: #a7f3d0; }
+    .decision-actions { display: flex; gap: 8px; margin-top: auto; }
+    .decision-actions button { flex: 1; padding: 10px 9px; border: 1px solid rgba(255,255,255,.2); border-radius: 8px; background: transparent; color: #eaecf0; font-size: 10px; font-weight: 760; }
+    .decision-actions button.primary { border-color: white; background: white; color: var(--ink); }
 
-    .controls {
-      position: absolute;
-      right: 24px;
-      bottom: 28px;
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      z-index: 7;
-    }
-    .control-button {
-      display: grid;
-      place-items: center;
-      min-width: 42px;
-      height: 38px;
-      padding: 0 11px;
-      border: 1px solid var(--line-bright);
-      border-radius: 11px;
-      background: rgba(15, 22, 37, .86);
-      color: var(--muted);
-      font-size: 11px;
-      font-weight: 750;
-    }
-    .control-button:hover { color: var(--text); border-color: var(--violet); }
+    /* The recording shows the platform inside an agent session, not a SignalWeave UI. */
+    #filmstrip { display: none; }
+    .agent-run { position: absolute; z-index: 1; inset: 0 0 60px; overflow: hidden; padding: 54px 24px 18px; clip-path: inset(0 24px 0 24px); }
+    .agent-run::after { content: ""; position: absolute; z-index: 8; top: -12%; bottom: -12%; left: -22%; width: 15%; pointer-events: none; opacity: 0; background: linear-gradient(180deg, transparent, rgba(18,184,166,.55), rgba(99,102,241,.7), rgba(236,74,157,.48), transparent); filter: blur(12px); transform: skewX(-12deg) translateX(0); }
+    .agent-run.is-weaving::after { animation: weave-pass 780ms cubic-bezier(.25,.8,.25,1) both; }
+    @keyframes weave-pass { 0% { opacity: 0; transform: skewX(-12deg) translateX(0); } 18% { opacity: .9; } 100% { opacity: 0; transform: skewX(-12deg) translateX(850%); } }
+    .agent-track { height: 100%; display: flex; width: 400%; transition: transform 640ms cubic-bezier(.22, .8, .2, 1); will-change: transform; }
+    .agent-run .page-inner { overflow: visible; }
+    .agent-page { height: 100%; }
+    .agent-page .page-inner { transform-origin: 50% 50%; }
+    .agent-page.is-prompt-focus .page-inner,
+    .agent-page.is-contract-focus .page-inner,
+    .agent-page.is-evidence-focus .page-inner,
+    .agent-page.is-action-focus .page-inner { transform: none; }
+    .agent-page.is-prompt-focus .prompt-bubble { box-shadow: 0 0 0 5px rgba(99,102,241,.09), 0 16px 40px rgba(99,102,241,.12); }
+    .agent-page .page-subheading { max-width: 700px; }
+    .agent-grid, .contract-grid, .response-grid { min-height: 0; flex: 1; display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(280px, .85fr); gap: 16px; margin-top: 22px; }
+    .agent-panel, .contract-panel, .agent-response { min-height: 0; overflow: hidden; }
+    .agent-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 13px 16px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 10px; }
+    .agent-panel-head strong { color: var(--ink); font-size: 12px; }
+    .agent-panel-head code { color: var(--indigo); font: 700 10px ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .transcript-body { min-height: 0; height: calc(100% - 47px); padding: 16px 22px; display: flex; flex-direction: column; justify-content: flex-start; gap: 10px; overflow: hidden; background: #fcfcfd; }
+    .speaker-line { color: var(--faint); font-size: 10px; font-weight: 760; letter-spacing: .12em; text-transform: uppercase; }
+    .prompt-bubble { min-height: 86px; padding: 16px 17px; border: 1px solid #bfc7ff; border-radius: 14px; background: #fbfbff; box-shadow: 0 0 0 4px rgba(99, 102, 241, .06); color: var(--ink); font-size: clamp(16px, 2vw, 24px); font-weight: 680; line-height: 1.2; letter-spacing: -.04em; }
+    .prompt-bubble .composer-caret { height: 23px; }
+    .agent-status { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 11px; }
+    .agent-status::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--orange); box-shadow: 0 0 0 4px rgba(247,144,9,.11); }
+    .agent-status.is-called::before { background: var(--teal); box-shadow: 0 0 0 4px rgba(18,184,166,.11); }
+    .workflow-title { font-size: clamp(20px, 2.5vw, 30px); font-weight: 760; letter-spacing: -.055em; }
+    .workflow-meta { margin-top: 6px; color: var(--muted); font-size: 10px; }
+    .workflow-steps { display: flex; flex-direction: column; gap: 9px; margin-top: 16px; }
+    .workflow-step { display: grid; grid-template-columns: 22px 1fr auto; gap: 9px; align-items: center; padding: 8px 10px; border: 1px solid var(--line); border-radius: 9px; background: white; opacity: .4; transform: translateX(6px); transition: opacity 300ms ease, transform 300ms ease, border-color 300ms ease; }
+    .workflow-step.is-live { opacity: 1; transform: translateX(0); border-color: #b7ebdf; }
+    .workflow-step i { width: 20px; height: 20px; display: grid; place-items: center; border-radius: 6px; background: #eff4ff; color: var(--indigo); font-size: 9px; font-style: normal; font-weight: 800; }
+    .workflow-step:nth-child(2) i { background: #ecfdf3; color: var(--green); }
+    .workflow-step:nth-child(3) i { background: #fffaeb; color: #b54708; }
+    .workflow-step:nth-child(4) i { background: #fce7f3; color: #be185d; }
+    .workflow-step strong { font-size: 10px; }
+    .workflow-step small { color: var(--faint); font-size: 9px; }
+    .agent-query { margin-top: 14px; padding: 10px 12px; border: 1px solid #bfc7ff; border-radius: 10px; background: #fbfbff; }
+    .agent-query .tool-kicker { color: var(--indigo); }
+    .agent-query-text { min-height: 20px; margin-top: 5px; color: var(--ink); font-size: 12px; font-weight: 650; letter-spacing: -.02em; }
+    .tool-body { min-height: 0; height: calc(100% - 47px); padding: 17px; display: flex; flex-direction: column; background: #f9fafb; }
+    .tool-kicker { color: var(--faint); font-size: 10px; font-weight: 760; letter-spacing: .12em; text-transform: uppercase; }
+    .tool-body pre, .contract-panel pre { margin: 12px 0 0; padding: 14px; overflow: hidden; border: 1px solid var(--line); border-radius: 10px; background: white; color: var(--ink-soft); font: 10px/1.65 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap; }
+    .tool-body pre b, .contract-panel pre b { color: var(--indigo); }
+    .tool-note { margin-top: auto; padding-top: 14px; border-top: 1px solid var(--line); color: var(--muted); font-size: 10px; line-height: 1.5; }
+    .tool-note strong { color: var(--green); }
+    .contract-panel { padding: 18px; }
+    .contract-panel h3 { margin: 0; font-size: 20px; letter-spacing: -.04em; }
+    .contract-panel .panel-meta { max-width: 420px; line-height: 1.45; }
+    .free-note { margin-top: 16px; padding: 14px 15px; border-left: 3px solid var(--teal); background: #f6fffd; color: var(--ink-soft); font-size: 13px; line-height: 1.52; }
+    .contract-question { margin-top: 14px; color: var(--muted); font-size: 11px; line-height: 1.45; }
+    .contract-question strong { display: block; margin-bottom: 5px; color: var(--ink); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+    .contract-call { min-height: 0; display: flex; flex-direction: column; }
+    .contract-call .tool-note { margin: 0 16px 16px; }
+    .response-grid { grid-template-columns: minmax(0, 1.25fr) minmax(250px, .75fr); }
+    .evidence-bundle { min-height: 0; display: flex; flex-direction: column; }
+    .evidence-bundle-body { min-height: 0; flex: 1; padding: 15px 16px; }
+    .bundle-row { display: grid; grid-template-columns: 24px 1fr auto; gap: 10px; align-items: start; padding: 12px 0; border-top: 1px solid var(--line); opacity: .42; transform: translateX(7px); transition: opacity 320ms ease, transform 320ms ease; }
+    .bundle-row:first-child { border-top: 0; }
+    .bundle-row.is-live { opacity: 1; transform: translateX(0); }
+    .bundle-icon { width: 22px; height: 22px; display: grid; place-items: center; border-radius: 6px; background: #eff4ff; color: var(--indigo); font-size: 9px; font-weight: 800; }
+    .bundle-row:nth-child(2) .bundle-icon { background: #ecfdf3; color: var(--green); }
+    .bundle-row:nth-child(3) .bundle-icon { background: #fffaeb; color: #b54708; }
+    .bundle-row:nth-child(4) .bundle-icon { background: #fce7f3; color: #be185d; }
+    .bundle-row strong { display: block; font-size: 11px; }
+    .bundle-row p { margin: 4px 0 0; color: var(--muted); font-size: 10px; line-height: 1.35; }
+    .bundle-row em { color: var(--red); font-size: 11px; font-style: normal; font-weight: 780; }
+    .bundle-footer { margin-top: auto; padding: 12px 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 10px; }
+    .jevs-flow { display: flex; align-items: center; justify-content: center; gap: 9px; margin: 4px 0 14px; }
+    .flow-node { position: relative; display: grid; place-items: center; min-width: 52px; height: 28px; border: 1px solid var(--line-strong); border-radius: 999px; background: white; color: var(--muted); font-size: 9px; font-weight: 780; letter-spacing: .05em; text-transform: uppercase; }
+    .flow-node.jev { border-color: #bfc7ff; background: #eff4ff; color: #3538cd; }
+    .flow-link { position: relative; width: 34px; height: 1px; overflow: visible; background: #c9d2fe; }
+    .flow-link::after { content: ""; position: absolute; top: -2px; left: 0; width: 5px; height: 5px; border-radius: 50%; background: var(--teal); opacity: 0; }
+    .evidence-bundle.is-running .flow-link::after { animation: flow-dot 850ms ease-in-out infinite; }
+    @keyframes flow-dot { 0% { opacity: 0; transform: translateX(0); } 25% { opacity: 1; } 100% { opacity: 0; transform: translateX(31px); } }
+    .response-panel { min-height: 0; display: flex; flex-direction: column; }
+    .response-panel-body { min-height: 0; flex: 1; padding: 19px; }
+    .response-panel-body h3 { margin: 0; font-size: 16px; letter-spacing: -.03em; }
+    .response-panel-body p { margin: 10px 0 0; color: var(--ink-soft); font-size: 12px; line-height: 1.5; }
+    .response-reason { margin-top: 16px; padding: 12px; border: 1px solid #b7ebdf; border-radius: 10px; background: #f3fffc; color: #047857; font-size: 10px; line-height: 1.45; }
+    .response-action { margin-top: auto; padding: 13px 16px; border-top: 1px solid var(--line); background: #f9fafb; color: var(--muted); font: 10px ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .response-action strong { color: var(--ink); }
+    .response-action code { color: var(--indigo); }
 
-    .sr-only {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      padding: 0;
-      margin: -1px;
-      overflow: hidden;
-      clip: rect(0, 0, 0, 0);
-      white-space: nowrap;
-      border: 0;
-    }
-
-    @media (max-width: 980px) and (min-width: 721px) {
-      .workspace { inset: 94px 12px 92px; grid-template-columns: 180px minmax(300px, 1fr) 220px; gap: 10px; }
-      .rail, .evidence-panel { padding: 14px; }
-      .node { width: 132px; min-height: 78px; padding: 10px; }
-      .node.center { width: 150px; }
-      .node .node-name { font-size: 11px; }
-      .node .node-value { font-size: 10px; }
-      .composer { width: min(680px, calc(100vw - 24px)); }
-      .controls { top: 80px; right: 12px; bottom: auto; }
+    @media (max-width: 900px) {
+      .agent-grid, .contract-grid, .response-grid { grid-template-columns: minmax(0, 1.3fr) minmax(190px, .7fr); gap: 10px; }
+      .agent-run { padding-left: 16px; padding-right: 16px; clip-path: inset(0 16px 0 16px); }
     }
     @media (max-width: 720px) {
-      .node { width: 140px; }
-      .node.center { width: 170px; }
-      .controls { top: 80px; right: 12px; bottom: auto; }
-      .evidence-panel { display: none; }
-    }
-    @media (max-width: 620px) {
-      body { overflow: auto; }
-      .recording-stage { min-height: 760px; height: 100svh; }
-      .app-chrome { inset: 12px; }
-      .workspace { inset: 86px 12px 150px; display: block; }
-      .rail { display: none; }
-      .graph-panel { height: 100%; }
-      .composer { bottom: 72px; width: calc(100vw - 24px); }
-      .controls { right: 12px; bottom: 20px; }
-      .workspace.zoomed { transform: scale(1.04); }
-      .node { width: 124px; min-height: 78px; padding: 10px; }
-      .node.center { width: 145px; }
-      .node.northstar, .node.support { left: 11%; }
-      .node.funnel, .node.finance { left: 89%; }
-      .graph-heading { left: 18px; right: 18px; }
-      .graph-state { display: none; }
+      .agent-grid, .contract-grid, .response-grid { display: block; }
+      .tool-body, .contract-call, .evidence-bundle { display: none; }
+      .agent-page.is-prompt-focus .page-inner { transform: none; }
+      .agent-run { padding-left: 12px; padding-right: 12px; clip-path: inset(0 12px 0 12px); }
     }
 
+    /* One browser window, one continuous pushed-analytics run. */
+    .film-window, .agent-run { display: none; }
+    .story-board { position: absolute; z-index: 2; inset: 0 0 60px; padding: 54px 24px 12px; overflow: hidden; clip-path: inset(0 24px 0 24px); }
+    .story-board::after { content: ""; position: absolute; z-index: 9; top: -10%; bottom: -10%; left: -20%; width: 12%; pointer-events: none; opacity: 0; background: linear-gradient(180deg, transparent, rgba(18,184,166,.55), rgba(99,102,241,.72), rgba(236,74,157,.5), transparent); filter: blur(10px); transform: skewX(-12deg); }
+    .story-board.is-weaving::after { animation: story-weave 850ms cubic-bezier(.2,.8,.2,1) both; }
+    @keyframes story-weave { 0% { opacity: 0; transform: skewX(-12deg) translateX(0); } 16% { opacity: .8; } 100% { opacity: 0; transform: skewX(-12deg) translateX(950%); } }
+    .story-packet { position: absolute; z-index: 8; left: 79%; top: 57%; padding: 6px 9px; border: 1px solid #bfc7ff; border-radius: 999px; background: #eff4ff; color: var(--indigo); font-size: 9px; font-weight: 780; letter-spacing: .08em; text-transform: uppercase; opacity: 0; pointer-events: none; box-shadow: 0 6px 18px rgba(99,102,241,.18); }
+    .story-board.is-returning .story-packet { animation: bundle-return 1250ms cubic-bezier(.2,.8,.2,1) both; }
+    @keyframes bundle-return { 0% { opacity: 0; transform: translate(0, 0) scale(.75); } 18% { opacity: 1; transform: translate(-32px, 0) scale(1); } 100% { opacity: 0; transform: translate(-420px, 0) scale(.9); } }
+    .story-agent.is-receiving { box-shadow: 0 0 0 3px rgba(99,102,241,.08), 0 8px 22px rgba(99,102,241,.12); }
+    .story-kicker { height: 24px; display: flex; align-items: center; justify-content: space-between; color: var(--muted); font-size: 10px; font-weight: 760; letter-spacing: .12em; text-transform: uppercase; }
+    .story-grid { min-height: 0; height: calc(100% - 35px); display: grid; grid-template-columns: minmax(190px, .9fr) minmax(300px, 1.35fr) minmax(190px, .9fr); gap: 12px; }
+    .story-panel { min-width: 0; min-height: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: rgba(255,255,255,.96); box-shadow: 0 8px 22px rgba(16,24,40,.06); }
+    .story-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 13px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 9px; font-weight: 760; letter-spacing: .1em; text-transform: uppercase; }
+    .story-panel-head strong { color: var(--ink); font-size: 11px; letter-spacing: -.01em; }
+    .story-agent-body { padding: 15px 14px; }
+    .story-label { color: var(--indigo); font-size: 9px; font-weight: 780; letter-spacing: .12em; }
+    .story-query { min-height: 64px; margin-top: 9px; padding: 11px; border: 1px solid #bfc7ff; border-radius: 10px; background: #fbfbff; color: var(--ink); font-size: 12px; font-weight: 680; line-height: 1.35; }
+    .story-query .composer-caret { height: 15px; }
+    .story-steps { display: flex; flex-direction: column; gap: 7px; margin-top: 16px; }
+    .story-step { display: flex; align-items: center; gap: 7px; padding: 7px 8px; border: 1px solid var(--line); border-radius: 8px; opacity: .35; transition: opacity 260ms ease, border-color 260ms ease; }
+    .story-step.is-live { opacity: 1; border-color: #b7ebdf; }
+    .story-step i { width: 17px; height: 17px; display: grid; place-items: center; border-radius: 5px; background: #eff4ff; color: var(--indigo); font-size: 8px; font-style: normal; font-weight: 800; }
+    .story-step:nth-child(2) i { background: #ecfdf3; color: var(--green); }
+    .story-step:nth-child(3) i { background: #fffaeb; color: #b54708; }
+    .story-step:nth-child(4) i { background: #fce7f3; color: #be185d; }
+    .story-step span { min-width: 0; color: var(--ink-soft); font-size: 9px; font-weight: 700; }
+    .story-agent-status { display: flex; align-items: center; gap: 6px; margin-top: 14px; color: var(--muted); font-size: 9px; }
+    .story-agent-status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--orange); }
+    .story-agent-status.is-done::before { background: var(--teal); }
+    .story-graph { position: relative; background: #fcfcfd; }
+    .story-graph::before { content: ""; position: absolute; inset: 45px 0 0; opacity: .6; background-image: linear-gradient(#eaecf0 1px, transparent 1px), linear-gradient(90deg, #eaecf0 1px, transparent 1px); background-size: 24px 24px; }
+    .story-graph svg { position: absolute; inset: 46px 0 0; width: 100%; height: calc(100% - 46px); }
+    .story-graph .story-link { stroke: #c9d2fe; stroke-width: 1.5; stroke-linecap: round; opacity: .18; stroke-dasharray: 3 4; transition: opacity 420ms ease, stroke 420ms ease; }
+    .story-graph.is-connecting .story-link { opacity: .95; stroke: #aab5f6; }
+    .story-node { position: absolute; z-index: 2; display: grid; place-items: center; border: 1px solid var(--line-strong); border-radius: 999px; background: white; box-shadow: 0 5px 14px rgba(16,24,40,.08); color: var(--muted); font-size: 9px; font-weight: 780; opacity: .22; transform: scale(.75); transition: opacity 360ms ease, transform 360ms ease, border-color 360ms ease; }
+    .story-node.is-live { opacity: 1; transform: scale(1); }
+    .story-node.card { left: 7%; top: 28%; width: 64px; height: 30px; }
+    .story-node.jev { left: 43%; top: 42%; width: 72px; height: 72px; border-color: #bfc7ff; background: #eff4ff; color: #3538cd; font-size: 15px; }
+    .story-node.sql { left: 42%; top: 11%; width: 54px; height: 26px; border-color: #c7d7fe; color: var(--indigo); }
+    .story-node.sup { right: 7%; top: 19%; width: 58px; height: 28px; border-color: #fedf89; color: #b54708; }
+    .story-node.web { right: 7%; top: 39%; width: 58px; height: 28px; border-color: #b7ebdf; color: var(--green); }
+    .story-node.ops { right: 7%; top: 59%; width: 58px; height: 28px; border-color: #f5b5d4; color: #be185d; }
+    .story-sql { position: absolute; z-index: 3; left: 10%; right: 10%; bottom: 9%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: white; color: var(--ink-soft); font: 9px ui-monospace, SFMono-Regular, Menlo, monospace; opacity: 0; transform: translateY(6px); transition: opacity 360ms ease, transform 360ms ease; }
+    .story-sql.is-live { opacity: 1; transform: translateY(0); }
+    .story-sql::before { content: "running"; margin-right: 8px; color: var(--teal); font-family: Inter, sans-serif; font-weight: 760; text-transform: uppercase; }
+    .story-output { position: relative; }
+    .story-evidence, .story-slack { position: absolute; inset: 0; padding: 14px; transition: opacity 500ms ease, transform 500ms ease; }
+    .story-slack { opacity: 0; transform: translateX(18px); pointer-events: none; }
+    .story-output.is-slack .story-evidence { opacity: .15; transform: translateX(-12px); }
+    .story-output.is-slack .story-slack { opacity: 1; transform: translateX(0); }
+    .story-output-title { display: flex; align-items: center; justify-content: space-between; color: var(--muted); font-size: 9px; font-weight: 760; letter-spacing: .1em; text-transform: uppercase; }
+    .story-output-title strong { color: var(--ink); font-size: 11px; letter-spacing: -.01em; }
+    .evidence-row { display: flex; align-items: center; gap: 7px; padding: 13px 0; border-bottom: 1px solid var(--line); opacity: .25; transform: translateX(8px); transition: opacity 320ms ease, transform 320ms ease; }
+    .evidence-row.is-live { opacity: 1; transform: translateX(0); }
+    .evidence-row i { width: 7px; height: 7px; border-radius: 50%; background: var(--indigo); }
+    .evidence-row:nth-child(2) i { background: var(--teal); }
+    .evidence-row:nth-child(3) i { background: var(--orange); }
+    .evidence-row:nth-child(4) i { background: var(--pink); }
+    .evidence-row span { flex: 1; color: var(--ink-soft); font-size: 10px; font-weight: 700; }
+    .evidence-row b { font-size: 12px; }
+    .evidence-row.down b { color: var(--red); }
+    .evidence-row.up b { color: #b54708; }
+    .story-confidence { margin-top: 18px; padding: 10px; border-radius: 9px; background: #ecfdf3; color: var(--green); font-size: 10px; font-weight: 760; }
+    .story-slack .story-output-title { margin-bottom: 18px; }
+    .chat-bubble { max-width: 92%; margin-bottom: 13px; padding: 10px; border-radius: 10px; font-size: 10px; line-height: 1.4; opacity: 0; transform: translateY(7px); transition: opacity 360ms ease, transform 360ms ease; }
+    .chat-bubble.is-live { opacity: 1; transform: translateY(0); }
+    .chat-bubble.codex { margin-left: auto; background: #eff4ff; color: var(--ink-soft); }
+    .chat-bubble.leadership { background: #ecfdf3; color: var(--ink-soft); }
+    .chat-bubble small { display: block; margin-bottom: 5px; color: var(--indigo); font-size: 8px; font-weight: 780; text-transform: uppercase; }
+    .chat-bubble.leadership small { color: var(--green); }
+    .story-board .story-state { position: absolute; left: 24px; bottom: 5px; color: var(--muted); font-size: 9px; font-weight: 700; }
+    @media (max-width: 900px) {
+      .story-board { padding-left: 16px; padding-right: 16px; clip-path: inset(0 16px 0 16px); }
+      .story-grid { grid-template-columns: minmax(175px, .85fr) minmax(260px, 1.3fr) minmax(175px, .85fr); gap: 8px; }
+      .story-panel-head { padding-left: 10px; padding-right: 10px; }
+      .story-agent-body, .story-evidence, .story-slack { padding-left: 10px; padding-right: 10px; }
+      .story-query { font-size: 10px; }
+      .story-step span { font-size: 8px; }
+    }
+    @media (max-width: 720px) {
+      .story-board { padding-left: 12px; padding-right: 12px; clip-path: inset(0 12px 0 12px); }
+      .story-grid { grid-template-columns: 1fr 1.25fr; grid-template-rows: 1fr 1fr; }
+      .story-output { grid-column: 1 / -1; }
+      .story-node.jev { left: 42%; }
+    }
+
+    /* The recording moves through four focused pages inside one browser session. */
+    .story-board { display: none; }
+    .story-pages { position: absolute; z-index: 2; inset: 0 0 60px; padding: 54px 24px 18px; overflow: hidden; clip-path: inset(0 24px 0 24px); }
+    .story-track { height: 100%; display: flex; width: 500%; transition: transform 560ms cubic-bezier(.22,.8,.2,1); will-change: transform; }
+    .story-page { position: relative; width: 20%; flex: 0 0 20%; min-width: 0; height: 100%; padding: 0 4px; }
+    .story-page-topline { display: flex; align-items: center; justify-content: space-between; gap: 16px; height: 24px; color: var(--muted); font-size: 10px; font-weight: 760; letter-spacing: .12em; text-transform: uppercase; }
+    .story-page-topline strong { color: var(--ink); }
+    .story-page-shell { position: relative; min-height: 0; height: calc(100% - 30px); margin-top: 6px; overflow: hidden; border: 1px solid var(--line); border-radius: 18px; background: #fff; box-shadow: 0 12px 28px rgba(16,24,40,.06); }
+    .story-page-shell::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(120deg, rgba(18,184,166,.03), transparent 38%, rgba(99,102,241,.04)); }
+    .story-scheduled { height: 100%; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(240px, .9fr); gap: 18px; padding: 28px; }
+    .story-scheduled-main { min-width: 0; display: flex; flex-direction: column; justify-content: center; }
+    .story-overline { color: var(--indigo); font-size: 10px; font-weight: 780; letter-spacing: .14em; text-transform: uppercase; }
+    .story-scheduled h1 { max-width: 570px; margin: 10px 0 0; font-size: clamp(30px, 4.7vw, 56px); line-height: .98; letter-spacing: -.065em; }
+    .story-scheduled-copy { max-width: 440px; margin: 14px 0 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .story-query-card { margin-top: 24px; padding: 16px; border: 1px solid #bfc7ff; border-radius: 14px; background: #fbfbff; box-shadow: 0 0 0 4px rgba(99,102,241,.06); }
+    .story-query-label { color: var(--indigo); font-size: 9px; font-weight: 780; letter-spacing: .13em; text-transform: uppercase; }
+    .story-page-query { min-height: 34px; margin-top: 9px; color: var(--ink); font-size: clamp(15px, 2vw, 21px); font-weight: 680; line-height: 1.22; letter-spacing: -.035em; }
+    .story-page-query .composer-caret { height: 20px; }
+    .story-scheduled-side { display: flex; flex-direction: column; justify-content: center; gap: 9px; }
+    .story-run-card { padding: 17px; border: 1px solid var(--line); border-radius: 14px; background: #fcfcfd; }
+    .story-run-card-head { display: flex; justify-content: space-between; color: var(--muted); font-size: 9px; font-weight: 760; letter-spacing: .11em; text-transform: uppercase; }
+    .story-run-card-head strong { color: var(--ink); }
+    .story-run-name { margin-top: 18px; font-size: 24px; font-weight: 760; letter-spacing: -.055em; }
+    .story-run-meta { margin-top: 4px; color: var(--muted); font-size: 10px; }
+    .story-page-steps { display: flex; flex-direction: column; gap: 7px; margin-top: 20px; }
+    .story-page-step { display: flex; align-items: center; gap: 8px; padding: 9px 10px; border: 1px solid var(--line); border-radius: 9px; color: var(--muted); opacity: .42; transition: opacity 300ms ease, border-color 300ms ease, color 300ms ease; }
+    .story-page-step.is-live { border-color: #b7ebdf; color: var(--ink); opacity: 1; }
+    .story-page-step i { width: 18px; height: 18px; display: grid; place-items: center; border-radius: 5px; background: #eff4ff; color: var(--indigo); font-size: 8px; font-style: normal; font-weight: 800; }
+    .story-page-step:nth-child(2) i { background: #ecfdf3; color: var(--green); }
+    .story-page-step:nth-child(3) i { background: #fffaeb; color: #b54708; }
+    .story-page-step:nth-child(4) i { background: #fce7f3; color: #be185d; }
+    .story-page-step span { font-size: 10px; font-weight: 700; }
+    .story-page-status { display: flex; align-items: center; gap: 7px; margin-top: 14px; color: var(--muted); font-size: 10px; }
+    .story-page-status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--orange); }
+    .story-page-status.is-done::before { background: var(--teal); }
+    .story-card-page { height: 100%; display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(250px, .92fr); gap: 18px; padding: 24px; }
+    .story-card-column { min-width: 0; display: flex; flex-direction: column; justify-content: center; }
+    .story-card-title { margin-top: 10px; font-size: clamp(29px, 4.2vw, 50px); line-height: .98; letter-spacing: -.065em; }
+    .story-card-copy { max-width: 430px; margin-top: 12px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .story-card-panel { margin-top: 20px; padding: 16px; border: 1px solid var(--line); border-radius: 14px; background: #fcfcfd; }
+    .story-card-panel-head { display: flex; align-items: center; justify-content: space-between; color: var(--muted); font-size: 9px; font-weight: 760; letter-spacing: .1em; text-transform: uppercase; }
+    .story-card-panel-head strong { color: var(--ink); font-size: 11px; }
+    .story-card-field { padding: 12px 0; border-bottom: 1px solid var(--line); }
+    .story-card-field:last-child { border-bottom: 0; }
+    .story-card-field label { color: var(--indigo); font-size: 8px; font-weight: 780; letter-spacing: .12em; text-transform: uppercase; }
+    .story-card-field p { margin: 5px 0 0; color: var(--ink-soft); font-size: 11px; line-height: 1.42; }
+    .story-shape-panel { align-self: center; padding: 18px; border: 1px solid #bfc7ff; border-radius: 14px; background: #fbfbff; box-shadow: 0 0 0 4px rgba(99,102,241,.05); }
+    .story-shape-kicker { color: var(--indigo); font-size: 9px; font-weight: 780; letter-spacing: .12em; text-transform: uppercase; }
+    .story-shape-title { margin-top: 10px; font-size: 20px; font-weight: 760; letter-spacing: -.045em; }
+    .story-shape-code { margin: 16px 0 0; padding: 13px; border: 1px solid #dfe3ff; border-radius: 9px; background: white; color: var(--ink-soft); font: 10px/1.75 ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .story-shape-code .key { color: var(--indigo); }
+    .story-shape-code .value { color: var(--green); }
+    .story-shape-code .number { color: #b54708; }
+    .story-shape-note { margin-top: 13px; color: var(--muted); font-size: 10px; line-height: 1.45; }
+    .story-card-connection { display: flex; align-items: center; gap: 8px; margin-top: 16px; color: var(--muted); font-size: 9px; font-weight: 720; }
+    .story-card-connection i { flex: 1; height: 1px; background: linear-gradient(90deg, #bfc7ff, #b7ebdf); }
+
+    .story-graph-page { height: 100%; display: flex; flex-direction: column; padding: 20px 24px; }
+    .story-graph-sub { color: var(--muted); font-size: 11px; }
+    .story-network { position: relative; min-height: 0; flex: 1; margin-top: 6px; overflow: hidden; border-radius: 13px; background: radial-gradient(circle at 50% 49%, rgba(99,102,241,.075), transparent 22%), linear-gradient(#f7f8fa 1px, transparent 1px), linear-gradient(90deg, #f7f8fa 1px, transparent 1px); background-size: auto, 28px 28px, 28px 28px; }
+    .story-network svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+    .story-network .edge { fill: none; stroke: #c5cdf7; stroke-width: 1.5; stroke-linecap: round; stroke-dasharray: 5 7; opacity: .16; transition: opacity 380ms ease, stroke 380ms ease; }
+    .story-network.is-building .edge { opacity: .92; stroke: #a6b1ef; animation: edge-flow 1.6s linear infinite; }
+    @keyframes edge-flow { to { stroke-dashoffset: -24; } }
+    .network-node { position: absolute; z-index: 2; display: grid; place-items: center; border: 1px solid var(--line-strong); border-radius: 12px; background: rgba(255,255,255,.94); box-shadow: 0 7px 16px rgba(16,24,40,.08); color: var(--muted); font-size: 10px; font-weight: 780; opacity: .22; transform: scale(.82); transition: opacity 380ms ease, transform 380ms ease, box-shadow 380ms ease; }
+    .network-node.is-live { opacity: 1; transform: scale(1); }
+    .network-node small { display: block; margin-top: 3px; color: var(--faint); font-size: 8px; font-weight: 650; }
+    .network-node.card { left: 8%; top: 39%; width: 106px; height: 52px; border-color: #bfc7ff; color: var(--indigo); }
+    .network-node.sql { left: 43%; top: 8%; width: 92px; height: 44px; border-color: #c7d7fe; color: var(--indigo); }
+    .network-node.jev { left: 43%; top: 37%; width: 114px; height: 114px; border: 0; border-radius: 50%; background: radial-gradient(circle at 34% 28%, #fff, #eff4ff 56%, #e0e7ff); box-shadow: 0 0 0 1px #bfc7ff, 0 0 0 8px rgba(99,102,241,.06), 0 14px 30px rgba(99,102,241,.16); color: #3538cd; font-size: 24px; letter-spacing: -.06em; }
+    .network-node.jev small { color: #6872d8; font-size: 9px; letter-spacing: .08em; text-transform: uppercase; }
+    .network-node.sup { right: 8%; top: 18%; width: 106px; height: 52px; border-color: #fedf89; color: #b54708; }
+    .network-node.web { right: 8%; top: 41%; width: 106px; height: 52px; border-color: #b7ebdf; color: var(--green); }
+    .network-node.ops { right: 8%; top: 64%; width: 106px; height: 52px; border-color: #f5b5d4; color: #be185d; }
+    .story-sql-chip { position: absolute; z-index: 3; left: 26%; right: 26%; bottom: 7%; display: flex; align-items: center; gap: 8px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 9px; background: rgba(255,255,255,.95); color: var(--ink-soft); font: 10px ui-monospace, SFMono-Regular, Menlo, monospace; opacity: 0; transform: translateY(7px); transition: opacity 360ms ease, transform 360ms ease; }
+    .story-sql-chip.is-live { opacity: 1; transform: translateY(0); }
+    .story-sql-chip::before { content: "SQL"; color: var(--teal); font-family: Inter, sans-serif; font-size: 9px; font-weight: 780; letter-spacing: .08em; }
+
+    .story-bundle-page { height: 100%; display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(230px, .8fr); gap: 18px; padding: 28px; }
+    .story-bundle-main { min-width: 0; display: flex; flex-direction: column; justify-content: center; }
+    .story-bundle-title { margin-top: 10px; font-size: clamp(30px, 4.3vw, 52px); line-height: .98; letter-spacing: -.065em; }
+    .story-bundle-copy { max-width: 450px; margin-top: 12px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+    .story-bundle-card { padding: 18px; border: 1px solid var(--line); border-radius: 14px; background: #fcfcfd; }
+    .story-bundle-card-head { display: flex; justify-content: space-between; color: var(--muted); font-size: 9px; font-weight: 760; letter-spacing: .1em; text-transform: uppercase; }
+    .story-bundle-card-head strong { color: var(--ink); }
+    .story-bundle-row { display: grid; grid-template-columns: 8px 1fr auto; gap: 9px; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--line); opacity: .26; transform: translateX(9px); transition: opacity 300ms ease, transform 300ms ease; }
+    .story-bundle-row.is-live { opacity: 1; transform: translateX(0); }
+    .story-bundle-row i { width: 7px; height: 7px; border-radius: 50%; background: var(--red); }
+    .story-bundle-row.down i { background: var(--red); }
+    .story-bundle-row.up i { background: var(--orange); }
+    .story-bundle-row:not(.down):not(.up) i { background: var(--green); }
+    .story-bundle-row span { color: var(--ink-soft); font-size: 11px; font-weight: 700; }
+    .story-bundle-row b { font-size: 13px; }
+    .story-bundle-row.down b { color: var(--red); }
+    .story-bundle-row.up b { color: #b54708; }
+    .story-bundle-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 15px; padding: 11px; border-radius: 9px; background: #ecfdf3; color: var(--green); font-size: 10px; font-weight: 760; opacity: 0; transform: translateY(6px); transition: opacity 360ms ease, transform 360ms ease; }
+    .story-bundle-footer.is-live { opacity: 1; transform: translateY(0); }
+    .story-bundle-side { align-self: center; padding: 18px; border: 1px solid #bfc7ff; border-radius: 14px; background: #fbfbff; opacity: .28; transform: translateX(8px); transition: opacity 450ms ease, transform 450ms ease; }
+    .story-bundle-side.is-live { opacity: 1; transform: translateX(0); }
+    .story-bundle-side-label { color: var(--indigo); font-size: 9px; font-weight: 780; letter-spacing: .12em; text-transform: uppercase; }
+    .story-bundle-side strong { display: block; margin-top: 14px; font-size: 25px; letter-spacing: -.055em; }
+    .story-bundle-side p { margin: 8px 0 0; color: var(--muted); font-size: 10px; line-height: 1.45; }
+    .story-bundle-side code { display: block; margin-top: 16px; color: var(--indigo); font: 10px ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+    .story-slack-page { height: 100%; display: grid; place-items: center; padding: 24px; background: radial-gradient(circle at 50% 48%, rgba(99,102,241,.055), transparent 44%); }
+    .story-slack-window { width: min(620px, 100%); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; background: white; box-shadow: 0 16px 34px rgba(16,24,40,.08); }
+    .story-slack-head { display: flex; align-items: center; justify-content: space-between; padding: 13px 16px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 10px; }
+    .story-slack-head strong { color: var(--ink); font-size: 12px; }
+    .story-slack-body { min-height: 260px; padding: 22px; background: #fcfcfd; }
+    .story-chat { max-width: 78%; margin-bottom: 15px; padding: 12px 14px; border-radius: 12px; color: var(--ink-soft); font-size: 11px; line-height: 1.45; opacity: 0; transform: translateY(8px); transition: opacity 360ms ease, transform 360ms ease; }
+    .story-chat.is-live { opacity: 1; transform: translateY(0); }
+    .story-chat.codex { margin-left: auto; background: #eff4ff; }
+    .story-chat.leadership { background: #ecfdf3; }
+    .story-chat small { display: block; margin-bottom: 5px; color: var(--indigo); font-size: 8px; font-weight: 780; letter-spacing: .08em; text-transform: uppercase; }
+    .story-chat.leadership small { color: var(--green); }
+    .story-slack-foot { display: flex; align-items: center; gap: 7px; padding: 12px 16px; border-top: 1px solid var(--line); color: var(--green); font-size: 10px; font-weight: 720; opacity: 0; transition: opacity 400ms ease; }
+    .story-slack-foot.is-live { opacity: 1; }
+    .story-slack-foot::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+    @media (max-width: 900px) {
+      .story-pages { padding-left: 16px; padding-right: 16px; clip-path: inset(0 16px 0 16px); }
+      .story-scheduled, .story-bundle-page { padding: 18px; gap: 10px; }
+      .story-scheduled h1, .story-bundle-title { font-size: 36px; }
+    }
+    @media (max-width: 720px) {
+      .story-pages { padding-left: 12px; padding-right: 12px; clip-path: inset(0 12px 0 12px); }
+      .story-scheduled { display: block; padding: 16px; }
+      .story-scheduled-side { display: none; }
+      .story-scheduled h1, .story-bundle-title { font-size: 31px; }
+      .story-bundle-page { display: block; padding: 16px; }
+      .story-bundle-side { margin-top: 16px; }
+      .network-node.card { left: 3%; }
+      .network-node.sup, .network-node.web, .network-node.ops { right: 3%; }
+      .network-node.jev { left: 38%; }
+      .story-sql-chip { left: 10%; right: 10%; font-size: 8px; }
+    }
+
+    .stage-footer { position: absolute; z-index: 4; right: 0; bottom: 0; left: 0; display: flex; align-items: center; justify-content: flex-end; gap: 16px; padding: 12px 24px 16px; background: linear-gradient(180deg, rgba(245,247,250,0), rgba(245,247,250,.96) 36%); }
+    .stage-caption { display: none; min-width: 0; color: var(--ink-soft); font-size: 11px; font-weight: 700; }
+    .progress { display: flex; align-items: center; gap: 6px; }
+    .progress i { width: 26px; height: 3px; border-radius: 999px; background: #d0d5dd; transition: background 260ms ease, width 260ms ease; }
+    .progress i.is-current { width: 42px; background: var(--indigo); }
+    .control-cluster { display: flex; gap: 7px; }
+    .control-cluster button { padding: 7px 10px; border: 1px solid var(--line-strong); border-radius: 7px; background: white; color: var(--ink-soft); font-size: 10px; font-weight: 700; }
+    .control-cluster button:hover { border-color: var(--indigo); color: var(--indigo); }
+
+    @media (max-width: 900px) {
+      .demo-shell { width: calc(100vw - 20px); height: calc(100vh - 18px); margin: 9px auto; }
+      .film-window { --film-clip: 16px; padding-left: 16px; padding-right: 16px; }
+      .stage-label { left: 16px; }
+      .monitor-grid, .card-grid, .retrieval-grid, .decision-grid { grid-template-columns: minmax(0, 1.3fr) minmax(190px, .7fr); gap: 10px; }
+      .panel-head { padding: 13px 14px; }
+      .watchlist, .card-side-panel, .trace-body { padding: 13px; }
+      .evidence-table th, .evidence-table td { padding: 9px 10px; }
+    }
+    @media (max-width: 720px) {
+      .demo-shell { min-height: 480px; }
+      .browser-bar { padding: 0 12px; gap: 10px; }
+      .address-bar { display: none; }
+      .run-badge { margin-left: auto; font-size: 9px; }
+      .film-window { --film-clip: 12px; padding: 50px 12px 10px; }
+      .stage-label { top: 15px; left: 12px; }
+      .page-topline { font-size: 9px; }
+      .monitor-grid, .card-grid, .retrieval-grid, .decision-grid { display: block; }
+      .monitor-rail, .card-side, .trace-panel { display: none; }
+      .metric-strip { gap: 6px; }
+      .metric { padding: 10px; }
+      .metric-value { font-size: 16px; }
+      .chart-wrap { min-height: 150px; }
+      .stage-footer { flex-wrap: wrap; padding: 9px 12px 12px; }
+      .stage-caption { flex: 1 1 100%; order: 0; }
+      .progress { order: 1; }
+      .control-cluster { order: 2; }
+      .node { min-width: 100px; padding: 8px; }
+      .node.superset { left: 3%; }
+      .node.finance { right: 3%; }
+      .node.funnel { left: 28%; }
+      .node.support { right: 24%; }
+      .evidence-table th:nth-child(2), .evidence-table td:nth-child(2) { display: none; }
+      .decision-title { font-size: 35px; }
+    }
     @media (prefers-reduced-motion: reduce) {
-      *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: 1ms !important; }
+      *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; }
     }
   </style>
 </head>
 <body>
-  <main class="recording-stage" aria-label="SignalWeave live product demo">
-    <div class="ambient-grid" aria-hidden="true"></div>
-
-    <header class="app-chrome">
-      <div class="brand"><span class="brand-mark">SW</span><span>SIGNALWEAVE</span></div>
-      <div class="workspace-context"><span class="live-dot"></span><span>Northstar Outfitters / decision workspace</span></div>
+  <main class="demo-shell" aria-label="SignalWeave live product demo">
+    <header class="browser-bar">
+      <div class="window-dots" aria-hidden="true"><i></i><i></i><i></i></div>
+      <div class="brand-lockup" aria-label="SignalWeave">
+        <svg class="brand-mark" viewBox="0 0 164 110" aria-hidden="true">
+          <defs><linearGradient id="markCool" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#12b8a6"/><stop offset="1" stop-color="#6366f1"/></linearGradient><linearGradient id="markWarm" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#f79009"/><stop offset="1" stop-color="#ec4a9d"/></linearGradient></defs>
+          <path d="M14 55 C34 2 62 2 82 55 S130 108 150 55" fill="none" stroke="url(#markCool)" stroke-width="16" stroke-linecap="round"/>
+          <path d="M14 55 C34 108 62 108 82 55 S130 2 150 55" fill="none" stroke="url(#markWarm)" stroke-width="16" stroke-linecap="round"/>
+          <path d="M14 55 H150" fill="none" stroke="#101828" stroke-opacity=".16" stroke-width="8"/><circle cx="14" cy="55" r="8" fill="#101828"/><circle cx="150" cy="55" r="8" fill="#101828"/>
+        </svg>
+        <div><div class="brand-name">SignalWeave</div><div class="brand-tagline">EVIDENCE · JUDGMENT · ACTION</div></div>
+      </div>
+      <div class="address-bar">agent session / Codex / SignalWeave MCP</div>
+      <div class="run-badge">recording · 00:22</div>
     </header>
 
-    <section class="workspace" id="workspace">
-      <aside class="rail" aria-label="Connected sources">
-        <div class="eyebrow">Insight card</div>
-        <h2 class="goal-title">What changed in revenue, and should anyone act?</h2>
-        <div class="rail-rule"></div>
-        <div class="eyebrow">Evidence scope</div>
-        <div class="source-list">
-          <div class="source-item" data-source="superset"><span class="source-icon"></span><span>Superset dashboard</span><span class="source-status">ready</span></div>
-          <div class="source-item" data-source="funnel"><span class="source-icon"></span><span>Web funnel</span><span class="source-status">ready</span></div>
-          <div class="source-item" data-source="support"><span class="source-icon"></span><span>Support operations</span><span class="source-status">ready</span></div>
-          <div class="source-item" data-source="finance"><span class="source-icon"></span><span>Finance daily</span><span class="source-status">ready</span></div>
-        </div>
-        <p class="card-note"><strong>Owner intent</strong><br>Notify leadership only when the movement is material and corroborated. Route ambiguity to analytics. Ignore normal movement.</p>
-      </aside>
+    <section class="run-stage">
+      <div class="stage-label"><span id="stageIndex">01</span><span id="stageName">Ask in plain language</span></div>
+      <div class="film-window">
+        <div class="filmstrip" id="filmstrip">
+          <section class="demo-page" data-page="0"><div class="page-inner monitor-page">
+            <div class="page-topline"><span class="eyebrow">Daily monitor</span><span>Northstar Outfitters · executive pulse</span></div>
+            <h1 class="page-heading">Know what changed before someone asks.</h1>
+            <p class="page-subheading">A single question turns an existing dashboard into a focused, evidence-backed check.</p>
+            <div class="monitor-grid"><div class="monitor-main">
+              <div class="metric-strip"><div class="metric"><div class="metric-label">Net revenue</div><div class="metric-value">$1.28M</div><div class="metric-delta down">↓ 22% vs last week</div></div><div class="metric"><div class="metric-label">Web conversion</div><div class="metric-value">2.4%</div><div class="metric-delta down">↓ 15% vs last week</div></div><div class="metric"><div class="metric-label">Open support cases</div><div class="metric-value">312</div><div class="metric-delta up">↑ 28% vs last week</div></div></div>
+              <div class="panel chart-panel"><div class="panel-head"><div><div class="panel-title">Revenue and conversion</div><div class="panel-meta">last 30 days · selected from existing dashboard assets</div></div><span class="tiny-pill"><span class="dot"></span> live data</span></div><div class="chart-wrap"><svg viewBox="0 0 620 220" width="100%" height="100%" preserveAspectRatio="none" aria-label="Revenue chart"><defs><linearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6366f1" stop-opacity=".22"/><stop offset="1" stop-color="#6366f1" stop-opacity="0"/></linearGradient></defs><line class="chart-grid-line" x1="0" y1="34" x2="620" y2="34"/><line class="chart-grid-line" x1="0" y1="82" x2="620" y2="82"/><line class="chart-grid-line" x1="0" y1="130" x2="620" y2="130"/><line class="chart-grid-line" x1="0" y1="178" x2="620" y2="178"/><path class="chart-fill" d="M8 65 L66 59 L124 73 L182 55 L240 68 L298 52 L356 62 L414 79 L472 96 L530 137 L588 162 L612 164 L612 205 L8 205 Z"/><path class="chart-line-secondary" d="M8 128 L66 122 L124 119 L182 111 L240 117 L298 109 L356 115 L414 126 L472 132 L530 144 L588 151 L612 153"/><path class="chart-line" d="M8 65 L66 59 L124 73 L182 55 L240 68 L298 52 L356 62 L414 79 L472 96 L530 137 L588 162 L612 164"/><circle class="chart-point" cx="530" cy="137" r="4"/><circle class="chart-point" cx="588" cy="162" r="4"/><text class="chart-label" x="4" y="216">May 20</text><text class="chart-label" x="188" y="216">May 27</text><text class="chart-label" x="374" y="216">Jun 03</text><text class="chart-label" x="560" y="216">Jun 10</text></svg><div class="chart-callout">signal detected · Jun 10</div></div></div>
+              <div class="composer" id="composer"><div class="composer-label">Ask SignalWeave</div><div class="composer-text"><span id="typedQuestion"></span><span class="composer-caret" aria-hidden="true"></span></div><div class="composer-footer"><span>Uses the card, connected sources, and the latest run.</span><span class="composer-action">Run insight check</span></div></div>
+            </div><aside class="monitor-rail"><div class="panel watchlist"><h3>Assets in this check</h3><p>The monitor follows meaning, not just one chart.</p><div class="asset-list"><div class="asset"><span class="asset-icon">S</span><span>Revenue dashboard</span><small>8 charts</small></div><div class="asset"><span class="asset-icon teal">W</span><span>Web funnel</span><small>4 charts</small></div><div class="asset"><span class="asset-icon orange">F</span><span>Finance close</span><small>3 checks</small></div><div class="asset"><span class="asset-icon">+</span><span>Support context</span><small>linked</small></div></div></div><div class="empty-state"><strong>No alert has been sent.</strong><p>SignalWeave is still checking whether this movement matters and what the owner should see next.</p></div></aside></div>
+          </div></section>
 
-      <section class="graph-panel" aria-label="Semantic evidence graph">
-        <div class="graph-heading">
-          <div>
-            <h1>Revenue health</h1>
-            <p id="graphSubhead">Waiting for a question…</p>
-          </div>
-          <div class="graph-state"><span>DECISION STATE</span><strong id="graphState">standby</strong></div>
-        </div>
-        <div class="graph-canvas">
-          <svg class="graph-lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-            <line data-line="superset" x1="16" y1="24" x2="50" y2="50"></line>
-            <line data-line="funnel" x1="84" y1="24" x2="50" y2="50"></line>
-            <line data-line="support" x1="16" y1="76" x2="50" y2="50"></line>
-            <line data-line="finance" x1="84" y1="76" x2="50" y2="50"></line>
-          </svg>
-          <article class="node northstar" data-node="superset"><span class="node-kind">BI / Superset</span><span class="node-name">Executive Pulse</span><span class="node-value bad">Revenue −22%</span></article>
-          <article class="node funnel" data-node="funnel"><span class="node-kind">Product signal</span><span class="node-name">Web funnel</span><span class="node-value bad">Conversion −15%</span></article>
-          <article class="node support" data-node="support"><span class="node-kind">Operations</span><span class="node-name">Support backlog</span><span class="node-value bad">Backlog +28%</span></article>
-          <article class="node finance" data-node="finance"><span class="node-kind">Finance</span><span class="node-name">Booked revenue</span><span class="node-value bad">Revenue −21%</span></article>
-          <article class="node center" data-node="jev"><span class="node-kind">TypeSafe / Jev</span><span class="node-name">Typed judgment</span><span class="node-value" id="centerState">Waiting for evidence</span></article>
-        </div>
-      </section>
+          <section class="demo-page" data-page="1"><div class="page-inner card-page">
+            <div class="page-topline"><span class="eyebrow">Insight card</span><span>reusable context · human-defined</span></div>
+            <h1 class="page-heading">The intent stays visible.</h1>
+            <p class="page-subheading">People describe what matters in their own words. The system carries that context into every run.</p>
+            <div class="card-grid"><article class="panel free-card"><div class="panel-head"><div><div class="panel-title">Revenue health / weekly monitoring</div><div class="panel-meta">active · last edited by Maya Chen</div></div><span class="tiny-pill"><span class="dot"></span> approved</span></div><div class="free-card-body"><div class="free-card-title">Keep the growth plan on course.</div><div class="free-card-owner"><span class="avatar">MC</span> Business operations · shared with leadership</div><div class="free-field is-focus"><div class="free-field-label">What to watch</div><p>Watch revenue, conversion, and the leading signals that explain a meaningful change in weekly growth.</p></div><div class="free-field"><div class="free-field-label">Why are we watching it?</div><p>Leadership needs an early signal when the plan is drifting—not another stream of dashboard noise.</p></div><div class="free-field"><div class="free-field-label">Questions we want answered</div><p>What moved? Is the movement real? What related evidence explains it? Who needs to know?</p></div></div></article><aside class="card-side"><div class="panel card-side-panel"><h3>Bring the right context</h3><div class="source-chips"><span class="source-chip">Superset charts</span><span class="source-chip">web funnel</span><span class="source-chip">finance note</span></div><div class="route"><span>outcome</span><span class="route-line"></span><strong>leadership alert</strong></div></div><div class="panel card-side-panel"><div class="panel-title">The card is not the workflow.</div><div class="panel-meta">It is the shared meaning that helps each workflow make a better decision.</div></div><button class="approve-button">Card ready <span>→</span></button></aside></div>
+          </div></section>
 
-      <aside class="evidence-panel" aria-label="Returned evidence">
-        <div class="eyebrow">Retrieved evidence</div>
-        <h2>What the decision can see</h2>
-        <p class="subhead" id="evidenceSubhead">No evidence selected yet</p>
-        <div class="evidence-list">
-          <div class="evidence-item alert" data-evidence="0"><span class="evidence-dot"></span><div><div class="evidence-label">Executive Pulse</div><div class="evidence-detail">Material movement in net sales</div></div><span class="evidence-delta">−22%</span></div>
-          <div class="evidence-item" data-evidence="1"><span class="evidence-dot"></span><div><div class="evidence-label">Web funnel</div><div class="evidence-detail">Conversion corroborates the move</div></div><span class="evidence-delta">−15%</span></div>
-          <div class="evidence-item" data-evidence="2"><span class="evidence-dot"></span><div><div class="evidence-label">Support operations</div><div class="evidence-detail">Backlog adds operational context</div></div><span class="evidence-delta">+28%</span></div>
-          <div class="evidence-item" data-evidence="3"><span class="evidence-dot"></span><div><div class="evidence-label">Finance daily</div><div class="evidence-detail">Independent source agrees</div></div><span class="evidence-delta">−21%</span></div>
+          <section class="demo-page" data-page="2"><div class="page-inner retrieval-page">
+            <div class="page-topline"><span class="eyebrow">Semantic retrieval</span><span>connected evidence · Jev judgment</span></div>
+            <h1 class="page-heading">Pull the evidence that belongs together.</h1>
+            <p class="page-subheading">Related dashboards, charts, notes, and checks become one explainable context window for the decision.</p>
+            <div class="retrieval-grid"><div class="panel connection-canvas" id="connectionCanvas"><div class="canvas-head"><strong>Context assembled for this run</strong><span>4 source groups · 12 assets</span></div><div class="node intent" data-node="intent"><div class="node-label">Growth plan</div><small>from insight card</small></div><div class="node superset" data-node="superset"><div class="node-label">Dashboard</div><small>revenue + conversion</small></div><div class="node funnel" data-node="funnel"><div class="node-label">Web funnel</div><small>checkout drop-off</small></div><div class="node support" data-node="support"><div class="node-label">Support</div><small>case backlog</small></div><div class="node finance" data-node="finance"><div class="node-label">Finance</div><small>weekly close</small></div><i class="node-line line-one" data-line="one"></i><i class="node-line line-two" data-line="two"></i><i class="node-line line-three" data-line="three"></i><i class="node-line line-four" data-line="four"></i><div class="canvas-callout">Jev ranked the connected context · ready to judge</div></div><aside class="panel trace-panel"><div class="panel-head"><div><div class="panel-title">Retrieval trace</div><div class="panel-meta">why these sources are here</div></div><span class="tiny-pill">fast path</span></div><div class="trace-body"><div class="trace-intro">The card’s questions guide retrieval before any message is drafted.</div><div class="trace-list"><div class="trace-item"><div class="trace-icon">1</div><div><strong>Find the movement</strong><p>Revenue and conversion moved together.</p></div></div><div class="trace-item"><div class="trace-icon">2</div><div><strong>Test the explanation</strong><p>Funnel and support show a related customer drop.</p></div></div><div class="trace-item"><div class="trace-icon">3</div><div><strong>Check for corroboration</strong><p>Finance close agrees with the direction.</p></div></div></div></div><div class="trace-footer">No giant prompt. No blind similarity match.</div></aside></div>
+          </div></section>
+
+          <section class="demo-page" data-page="3"><div class="page-inner decision-page">
+            <div class="page-topline"><span class="eyebrow">Decision</span><span>evidence-backed delivery · 00:24</span></div>
+            <h1 class="page-heading">Send the signal. Keep the proof.</h1>
+            <p class="page-subheading">The end user gets the relevant movement, the likely explanation, and a clear next action—not a dashboard tour.</p>
+            <div class="decision-grid"><div class="panel evidence-panel"><div class="panel-head"><div><div class="panel-title">What changed this week</div><div class="panel-meta">selected evidence from the connected run</div></div><span class="tiny-pill"><span class="dot"></span> 91% decision confidence</span></div><table class="evidence-table"><thead><tr><th>Signal</th><th>Evidence</th><th>Movement</th><th>Confidence</th></tr></thead><tbody><tr><td><strong>Net revenue</strong><small>Superset · executive pulse</small></td><td>New customer revenue softened</td><td class="signal down">−22%</td><td><span class="confidence">high</span></td></tr><tr><td><strong>Web conversion</strong><small>Web funnel · checkout</small></td><td>Checkout completion fell</td><td class="signal down">−15%</td><td><span class="confidence">high</span></td></tr><tr><td><strong>Support backlog</strong><small>Support · open cases</small></td><td>Delivery questions increased</td><td class="signal up">+28%</td><td><span class="confidence">med</span></td></tr><tr><td><strong>Finance close</strong><small>Finance · weekly note</small></td><td>Direction corroborated</td><td class="signal down">agree</td><td><span class="confidence">high</span></td></tr></tbody></table></div><aside class="decision-card"><div class="decision-kicker">Recommended action</div><div class="decision-title">Notify leadership.</div><p class="decision-copy">The movement is meaningful, connected across sources, and matches the card’s definition of “needs attention.”</p><div class="decision-reason"><b>Why now:</b> revenue and conversion moved together, while support and finance provide a plausible explanation.</div><div class="decision-actions"><button>Open evidence</button><button class="primary">Notify leadership ↗</button></div></aside></div>
+          </div></section>
         </div>
-        <div class="decision" id="decision" aria-live="polite">
-          <div class="decision-label">RECOMMENDED ACTION</div>
-          <h3>Notify leadership</h3>
-          <p>Four related sources tell the same story. The configured route is ready.</p>
+      </div>
+
+      <div class="agent-run" aria-label="Codex and SignalWeave agent session">
+        <div class="agent-track" id="agentFilmstrip">
+          <section class="demo-page agent-page" data-agent-page="0"><div class="page-inner monitor-page">
+            <div class="page-topline"><span class="eyebrow">Agent session · Codex</span><span>Northstar Outfitters · sample run</span></div>
+            <h1 class="page-heading">Codex runs the daily growth watch.</h1>
+            <p class="page-subheading">A scheduled agent uses the human-curated card, runs the workflow, and returns a decision when the signal matters.</p>
+            <div class="agent-grid"><article class="panel agent-panel"><div class="agent-panel-head"><strong>Codex · daily run</strong><span>06:00 scheduled</span></div><div class="transcript-body"><div class="speaker-line">SCHEDULED WORKFLOW</div><div class="workflow-title">growth-health</div><div class="workflow-meta">every day · no human prompt · sample run</div><div class="agent-query"><div class="tool-kicker">AGENT QUERY</div><div class="agent-query-text"><span id="typedTask"></span><span class="composer-caret" aria-hidden="true"></span></div></div><div class="workflow-steps"><div class="workflow-step"><i>1</i><strong>Load insight card</strong><small>human context</small></div><div class="workflow-step"><i>2</i><strong>Inspect connected sources</strong><small>bounded evidence</small></div><div class="workflow-step"><i>3</i><strong>Ask Jev for judgment</strong><small>typed outcome</small></div><div class="workflow-step"><i>4</i><strong>Return analysis</strong><small>push if needed</small></div></div><div class="agent-status" id="agentStatus">starting scheduled workflow</div></div></article><aside class="panel agent-panel"><div class="agent-panel-head"><strong>tool call</strong><code>signalweave.evaluate_insight_card</code></div><div class="tool-body"><div class="tool-kicker">Codex → SignalWeave</div><pre><b>card_id</b>: "growth-health" · <b>actor</b>: "codex" · <b>trigger</b>: "schedule:06:00" · <b>context</b>: "company-graph:v18"</pre><div class="tool-note"><strong>side effects disabled</strong><br>SignalWeave returns evidence, retrieval, plan, and result. Codex keeps control of the action.</div></div></aside></div>
+          </div></section>
+
+          <section class="demo-page agent-page" data-agent-page="1"><div class="page-inner card-page">
+            <div class="page-topline"><span class="eyebrow">Stored platform context</span><span>insight card · human-defined</span></div>
+            <h1 class="page-heading">Human intent → reusable context.</h1>
+            <p class="page-subheading">growth-health · version 7</p>
+            <div class="contract-grid"><article class="panel contract-panel"><div class="panel-title">growth-health</div><div class="panel-meta">approved · free-form intent</div><div class="free-note">Watch weekly revenue movement and the leading signals that explain why it changed. Route a response only when the evidence supports it.</div><div class="contract-question"><strong>Questions</strong>what moved · why · who</div></article><aside class="panel contract-call"><div class="agent-panel-head"><strong>platform call</strong><span>context resolved</span></div><pre><b>card_id</b>: "growth-health" · <b>what_to_watch</b>: "revenue + leading signals" · <b>retrieval</b>: "expand"</pre><div class="tool-note">Human context in. Specific evidence out.</div></aside></div>
+          </div></section>
+
+          <section class="demo-page agent-page" data-agent-page="2"><div class="page-inner retrieval-page">
+            <div class="page-topline"><span class="eyebrow">SignalWeave response</span><span>evidence bundle · Jev judgment</span></div>
+            <h1 class="page-heading">Jev finds the connected signal.</h1>
+            <p class="page-subheading">dashboard · funnel · support · finance</p>
+            <div class="response-grid"><article class="panel evidence-bundle"><div class="agent-panel-head"><strong>evidence bundle</strong><span id="bundleState">assembling</span></div><div class="evidence-bundle-body"><div class="jevs-flow"><span class="flow-node">card</span><i class="flow-link"></i><span class="flow-node jev">Jev</span><i class="flow-link"></i><span class="flow-node">evidence</span></div><div class="bundle-row"><div class="bundle-icon">S</div><div><strong>Net revenue · Superset</strong><p>new customer revenue softened</p></div><em>−22%</em></div><div class="bundle-row"><div class="bundle-icon">W</div><div><strong>Web conversion · funnel</strong><p>checkout completion fell</p></div><em>−15%</em></div><div class="bundle-row"><div class="bundle-icon">U</div><div><strong>Support backlog</strong><p>delivery questions increased</p></div><em>+28%</em></div><div class="bundle-row"><div class="bundle-icon">F</div><div><strong>Finance close</strong><p>direction corroborated</p></div><em>agree</em></div></div><div class="bundle-footer">roles · provenance · confidence</div></article><aside class="panel response-panel"><div class="agent-panel-head"><strong>typed result</strong><span>delivery disabled</span></div><div class="response-panel-body"><h3>Outcome: notify</h3><div class="response-reason">confidence <strong>0.91</strong> · graph <strong>v18</strong> · receipt <strong>safe to replay</strong></div></div><div class="response-action"><strong>result</strong> → <code>Codex</code></div></aside></div>
+          </div></section>
+
+          <section class="demo-page agent-page" data-agent-page="3"><div class="page-inner decision-page">
+            <div class="page-topline"><span class="eyebrow">Agent action selection · Codex</span><span>the side effect stays with the caller</span></div>
+            <h1 class="page-heading">Codex chooses the next action.</h1>
+            <p class="page-subheading">evidence in · action out</p>
+            <div class="response-grid"><article class="panel response-panel"><div class="agent-panel-head"><strong>Codex response</strong><span>grounded</span></div><div class="response-panel-body"><h3>Notify growth leadership.</h3><p>Revenue, conversion, support, and finance agree. The movement is meaningful.</p><div class="response-reason"><strong>Next:</strong> send the heads-up, then ask the checkout owner to investigate.</div></div><div class="response-action"><strong>trace</strong> → <code>outcome: notify</code></div></article><aside class="decision-card"><div class="decision-kicker">Codex chooses the tool</div><div class="decision-title">Notify.</div><p class="decision-copy">SignalWeave did not send a message. It gave Codex enough evidence to choose one.</p><div class="decision-reason"><b>proof:</b> observations · provenance · confidence · receipt</div><div class="decision-actions"><button>Ask for review</button><button class="primary">slack.send ↗</button></div></aside></div>
+          </div></section>
         </div>
-      </aside>
+      </div>
+
+      <div class="story-pages" id="storyPages" aria-label="SignalWeave agent run pages">
+        <div class="story-track" id="storyTrack">
+          <section class="story-page" data-story-page="0">
+            <div class="story-page-topline"><strong>01 · Scheduled run</strong><span>Codex / 06:00</span></div>
+            <div class="story-page-shell story-scheduled">
+              <div class="story-scheduled-main">
+                <div class="story-overline">Pushed analytics</div>
+                <h1>No one asked.<br>Codex woke up.</h1>
+                <p class="story-scheduled-copy">A scheduled agent loads a human-curated card, writes the question it needs answered, and starts the run.</p>
+                <div class="story-query-card"><div class="story-query-label">AGENT QUERY</div><div class="story-page-query"><span id="storyPageQuery"></span><span class="composer-caret" aria-hidden="true"></span></div></div>
+              </div>
+              <div class="story-scheduled-side">
+                <div class="story-run-card"><div class="story-run-card-head"><strong>growth-health</strong><span>scheduled</span></div><div class="story-run-name">Human intent<br>already loaded.</div><div class="story-run-meta">card · sources · delivery path</div></div>
+                <div class="story-page-steps"><div class="story-page-step"><i>1</i><span>load the card</span></div><div class="story-page-step"><i>2</i><span>inspect the evidence</span></div><div class="story-page-step"><i>3</i><span>ask Jev</span></div><div class="story-page-step"><i>4</i><span>return the bundle</span></div></div>
+                <div id="storyPageStatus" class="story-page-status">writing internal question</div>
+              </div>
+            </div>
+          </section>
+
+          <section class="story-page" data-story-page="1">
+            <div class="story-page-topline"><strong>02 · Human context</strong><span>free-form card → typed judgment</span></div>
+            <div class="story-page-shell story-card-page">
+              <div class="story-card-column">
+                <div class="story-overline">The card is the context</div>
+                <div class="story-card-title">People define what matters.<br>Jev makes it usable.</div>
+                <p class="story-card-copy">The platform keeps the human intent free-form, then turns the run into a typed judgment the calling agent can use.</p>
+                <div class="story-card-panel"><div class="story-card-panel-head"><strong>growth-health</strong><span>approved · v7</span></div><div class="story-card-field"><label>what to watch</label><p>Weekly revenue movement and the signals that explain a meaningful change.</p></div><div class="story-card-field"><label>why it matters</label><p>Leadership needs an early signal when the growth plan is drifting.</p></div><div class="story-card-field"><label>deliver based on outcomes</label><p>Notify the right owner only when the evidence supports it.</p></div></div>
+              </div>
+                <div class="story-card-column"><div class="story-shape-panel"><div class="story-shape-kicker">TypeSafe / Jev</div><div class="story-shape-title">A judgment the agent can trust.</div><div class="story-shape-code"><div><span class="key">verdict</span>: <span class="value">"notify"</span></div><div><span class="key">confidence</span>: <span class="number">0.91</span></div><div><span class="key">probabilities</span>: <span class="value">notify .91 · review .07</span></div><div><span class="key">evidence</span>: <span class="value">4 sources</span></div><div><span class="key">next</span>: <span class="value">"send + investigate"</span></div></div><div class="story-shape-note">Structured output. Provenance attached. Codex keeps control of the side effect.</div></div><div class="story-card-connection"><span>card intent</span><i></i><strong>typed outcome</strong></div></div>
+            </div>
+          </section>
+
+          <section class="story-page" data-story-page="2">
+            <div class="story-page-topline"><strong>03 · Evidence graph</strong><span>connect → query → judge</span></div>
+            <div class="story-page-shell story-graph-page"><div class="story-graph-sub">Jev finds the sources that belong to the question.</div><div class="story-network" id="storyNetwork">
+              <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path class="edge" d="M16 51 C28 51 35 52 45 52"/><path class="edge" d="M50 22 C50 31 50 36 50 42"/><path class="edge" d="M57 49 C68 39 75 29 84 26"/><path class="edge" d="M59 52 C69 52 76 52 84 52"/><path class="edge" d="M57 58 C68 67 75 77 84 78"/></svg>
+              <div class="network-node card"><span>CARD</span><small>human intent</small></div><div class="network-node sql"><span>SQL</span><small>bounded query</small></div><div class="network-node jev"><span>Jev</span><small>judgment</small></div><div class="network-node sup"><span>SUPERSET</span><small>dashboard</small></div><div class="network-node web"><span>FUNNEL</span><small>conversion</small></div><div class="network-node ops"><span>OPS</span><small>support + finance</small></div><div id="storySqlChip" class="story-sql-chip">SELECT revenue, conversion FROM trusted_sources</div>
+            </div></div>
+          </section>
+
+          <section class="story-page" data-story-page="3">
+            <div class="story-page-topline"><strong>04 · Evidence bundle</strong><span>returned to Codex</span></div>
+            <div class="story-page-shell story-bundle-page">
+              <div class="story-bundle-main"><div class="story-overline">The result is a decision surface</div><div class="story-bundle-title">Facts, confidence,<br>next instruction.</div><p class="story-bundle-copy">The sources resolve into one compact bundle. Codex gets enough context to act without taking a dashboard tour.</p><div class="story-bundle-card"><div class="story-bundle-card-head"><strong>growth-health / result</strong><span>Jev</span></div><div class="story-bundle-row down"><i></i><span>revenue</span><b>−22%</b></div><div class="story-bundle-row down"><i></i><span>conversion</span><b>−15%</b></div><div class="story-bundle-row up"><i></i><span>support backlog</span><b>+28%</b></div><div class="story-bundle-row"><i></i><span>finance</span><b>agrees</b></div><div id="storyBundleFooter" class="story-bundle-footer"><span>confidence</span><strong>0.91 · notify</strong></div></div></div>
+              <div id="storyBundleSide" class="story-bundle-side"><div class="story-bundle-side-label">typed result</div><strong>send to growth leadership</strong><p>Evidence attached. Side effect stays with the agent.</p><code>receipt: safe to replay</code></div>
+            </div>
+          </section>
+
+          <section class="story-page" data-story-page="4">
+            <div class="story-page-topline"><strong>05 · Push + acknowledgement</strong><span>Codex → Slack → human</span></div>
+            <div class="story-page-shell story-slack-page"><div class="story-slack-window"><div class="story-slack-head"><strong>#growth-leadership</strong><span>Codex sent evidence</span></div><div class="story-slack-body"><div id="storyChatCodex" class="story-chat codex"><small>Codex</small>Revenue drift is meaningful. Evidence attached.</div><div id="storyChatAck" class="story-chat leadership"><small>Growth leadership</small>Ack — looking into it!</div></div><div id="storySlackFoot" class="story-slack-foot">human response received</div></div></div>
+          </section>
+        </div>
+      </div>
+
+      <div class="story-board" id="storyBoard" aria-label="Codex pushed analytics run">
+        <div class="story-kicker"><span>Codex / scheduled workflow</span><span>06:00 · growth-health</span></div>
+        <div class="story-grid">
+          <article class="story-panel story-agent">
+            <div class="story-panel-head"><strong>Codex</strong><span>scheduled</span></div>
+            <div class="story-agent-body">
+              <div class="story-label">AGENT QUERY</div>
+              <div class="story-query"><span id="storyQuery"></span><span class="composer-caret" aria-hidden="true"></span></div>
+              <div class="story-steps">
+                <div class="story-step"><i>1</i><span>load card</span></div>
+                <div class="story-step"><i>2</i><span>inspect sources</span></div>
+                <div class="story-step"><i>3</i><span>ask Jev</span></div>
+                <div class="story-step"><i>4</i><span>return bundle</span></div>
+              </div>
+              <div id="storyAgentStatus" class="story-agent-status">waking up</div>
+            </div>
+          </article>
+
+          <section class="story-panel story-graph" id="storyGraph" aria-label="SignalWeave evidence graph">
+            <div class="story-panel-head"><strong>SignalWeave</strong><span>Jev</span></div>
+            <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+              <line class="story-link" x1="18" y1="39" x2="49" y2="50" />
+              <line class="story-link" x1="49" y1="50" x2="47" y2="20" />
+              <line class="story-link" x1="58" y1="50" x2="86" y2="29" />
+              <line class="story-link" x1="58" y1="55" x2="86" y2="49" />
+              <line class="story-link" x1="58" y1="60" x2="86" y2="69" />
+            </svg>
+            <div class="story-node card">CARD</div>
+            <div class="story-node sql">SQL</div>
+            <div class="story-node jev">Jev</div>
+            <div class="story-node sup">SUP</div>
+            <div class="story-node web">WEB</div>
+            <div class="story-node ops">OPS</div>
+            <div id="storySql" class="story-sql">SELECT revenue, conversion FROM trusted_sources</div>
+          </section>
+
+          <aside class="story-panel story-output" id="storyOutput" aria-label="Evidence and delivery">
+            <div class="story-evidence" id="storyEvidence">
+              <div class="story-output-title"><strong>evidence bundle</strong><span>result</span></div>
+              <div class="evidence-row down"><i></i><span>revenue</span><b>−22%</b></div>
+              <div class="evidence-row down"><i></i><span>conversion</span><b>−15%</b></div>
+              <div class="evidence-row up"><i></i><span>support</span><b>+28%</b></div>
+              <div class="evidence-row"><i></i><span>finance</span><b>agree</b></div>
+              <div class="story-confidence">0.91 · notify</div>
+            </div>
+            <div class="story-slack" id="storySlack">
+              <div class="story-output-title"><strong>Slack</strong><span>#growth-leadership</span></div>
+              <div class="chat-bubble codex" id="storySlackMessage"><small>Codex</small>Revenue drift is meaningful. Evidence attached.</div>
+              <div class="chat-bubble leadership" id="storyAck"><small>Growth leadership</small>Ack — looking into it!</div>
+            </div>
+          </aside>
+        </div>
+        <div class="story-packet" id="storyPacket">bundle → Codex</div>
+        <div class="story-state" id="storyState">waiting for scheduled run</div>
+      </div>
+
+      <footer class="stage-footer"><div class="stage-caption" id="stageCaption">A scheduled agent starts the run.</div><div class="progress" aria-label="Demo progress"><i class="is-current"></i><i></i><i></i><i></i><i></i></div><div class="control-cluster"><button id="pauseButton" type="button">Pause</button><button id="resetButton" type="button">Reset</button></div></footer>
     </section>
-
-    <form class="composer" id="composer" aria-label="Ask SignalWeave">
-      <span class="composer-prefix">⌁</span>
-      <div class="composer-text" id="composerText" aria-live="polite"><span class="typing-caret"></span></div>
-      <button class="composer-action" type="submit" aria-label="Run insight">↗</button>
-    </form>
-
-    <div class="controls" aria-label="Demo controls">
-      <button class="control-button" id="playButton" type="button">Pause</button>
-      <button class="control-button" id="resetButton" type="button">Reset</button>
-    </div>
-    <p class="sr-only" id="demoStatus" aria-live="polite">Demo ready.</p>
   </main>
 
   <script>
-    const question = "What changed in revenue this week, and should anyone act?";
-    const duration = 30000;
-    const workspace = document.querySelector('#workspace');
-    const composer = document.querySelector('#composer');
-    const composerText = document.querySelector('#composerText');
-    const graphSubhead = document.querySelector('#graphSubhead');
-    const graphState = document.querySelector('#graphState');
-    const centerState = document.querySelector('#centerState');
-    const evidenceSubhead = document.querySelector('#evidenceSubhead');
-    const decision = document.querySelector('#decision');
-    const playButton = document.querySelector('#playButton');
-    const resetButton = document.querySelector('#resetButton');
-    const demoStatus = document.querySelector('#demoStatus');
-    const sourceItems = [...document.querySelectorAll('[data-source]')];
-    const nodes = [...document.querySelectorAll('[data-node]')];
-    const lines = [...document.querySelectorAll('[data-line]')];
-    const evidence = [...document.querySelectorAll('[data-evidence]')];
+    (() => {
+      const DURATION = 22000;
+      const task = "What changed in revenue this week, and should we act?";
+      const captions = [["01", "Scheduled run", "Codex wakes up and writes the question it is executing."], ["02", "Human context", "The card becomes a typed judgment the agent can use."], ["03", "Evidence graph", "Jev connects the sources and runs the bounded query path."], ["04", "Bundle to Codex", "Evidence, confidence, and the next instruction return together."], ["05", "Push + ack", "Codex sends the heads-up and gets a human response."]];
+      const filmstrip = document.getElementById("agentFilmstrip");
+      const agentViewport = document.querySelector(".agent-run");
+      const pages = [...document.querySelectorAll("#agentFilmstrip .demo-page")];
+      const typedQuestion = document.getElementById("typedTask");
+      const workflowSteps = [...document.querySelectorAll("#agentFilmstrip .workflow-step")];
+      const stageIndex = document.getElementById("stageIndex");
+      const stageName = document.getElementById("stageName");
+      const stageCaption = document.getElementById("stageCaption");
+      const progress = [...document.querySelectorAll(".progress i")];
+      const pauseButton = document.getElementById("pauseButton");
+      const resetButton = document.getElementById("resetButton");
+      const agentStatus = document.getElementById("agentStatus");
+      const bundleState = document.getElementById("bundleState");
+      const storyBoard = document.getElementById("storyBoard");
+      const storyQuery = document.getElementById("storyQuery");
+      const storySteps = [...document.querySelectorAll("#storyBoard .story-step")];
+      const storyAgent = document.querySelector("#storyBoard .story-agent");
+      const storyGraph = document.getElementById("storyGraph");
+      const storyNodes = [...document.querySelectorAll("#storyBoard .story-node")];
+      const storySql = document.getElementById("storySql");
+      const storyOutput = document.getElementById("storyOutput");
+      const storyRows = [...document.querySelectorAll("#storyBoard .evidence-row")];
+      const storySlackMessage = document.getElementById("storySlackMessage");
+      const storyAck = document.getElementById("storyAck");
+      const storyAgentStatus = document.getElementById("storyAgentStatus");
+      const storyState = document.getElementById("storyState");
+      const storyPages = document.getElementById("storyPages");
+      const storyTrack = document.getElementById("storyTrack");
+      const storyPageQuery = document.getElementById("storyPageQuery");
+      const storyPageSteps = [...document.querySelectorAll("#storyPages .story-page-step")];
+      const storyPageStatus = document.getElementById("storyPageStatus");
+      const storyNetwork = document.getElementById("storyNetwork");
+      const storyNetworkNodes = [...document.querySelectorAll("#storyNetwork .network-node")];
+      const storySqlChip = document.getElementById("storySqlChip");
+      const storyBundleRows = [...document.querySelectorAll("#storyPages .story-bundle-row")];
+      const storyBundleFooter = document.getElementById("storyBundleFooter");
+      const storyBundleSide = document.getElementById("storyBundleSide");
+      const storyChatCodex = document.getElementById("storyChatCodex");
+      const storyChatAck = document.getElementById("storyChatAck");
+      const storySlackFoot = document.getElementById("storySlackFoot");
+      let startedAt = performance.now();
+      let pausedAt = 0;
+      let paused = false;
+      let lastPage = -1;
 
-    let startedAt = performance.now();
-    let pausedAt = 0;
-    let paused = false;
-    let previousPhase = '';
-
-    function setPlaying(value) {
-      paused = !value;
-      playButton.textContent = paused ? 'Play' : 'Pause';
-      demoStatus.textContent = paused ? 'Demo paused.' : 'Demo playing.';
-    }
-
-    function reset() {
-      startedAt = performance.now();
-      pausedAt = 0;
-      previousPhase = '';
-      paused = false;
-      playButton.textContent = 'Pause';
-      render(0);
-      demoStatus.textContent = 'Demo reset.';
-    }
-
-    function phaseAt(ms) {
-      if (ms < 3000) return 'idle';
-      if (ms < 8000) return 'typing';
-      if (ms < 10500) return 'zoom';
-      if (ms < 16500) return 'retrieve';
-      if (ms < 22500) return 'decide';
-      return 'result';
-    }
-
-    function render(ms) {
-      const phase = phaseAt(ms);
-      if (phase !== previousPhase) {
-        previousPhase = phase;
-        demoStatus.textContent = `Demo phase: ${phase}.`;
+      function activePage(elapsed) { if (elapsed < 5200) return 0; if (elapsed < 8200) return 1; if (elapsed < 12500) return 2; if (elapsed < 16500) return 3; return 4; }
+      function setPage(page) {
+        if (page === lastPage) return;
+        lastPage = page;
+        filmstrip.style.transform = `translateX(-${page * 25}%)`;
+        storyTrack.style.transform = `translateX(-${page * 20}%)`;
+        agentViewport.classList.remove("is-weaving");
+        void agentViewport.offsetWidth;
+        agentViewport.classList.add("is-weaving");
+        storyBoard.classList.remove("is-weaving");
+        void storyBoard.offsetWidth;
+        storyBoard.classList.add("is-weaving");
+        progress.forEach((el, index) => el.classList.toggle("is-current", index === page));
+        const [index, name, caption] = captions[page];
+        stageIndex.textContent = index;
+        stageName.textContent = name;
+        stageCaption.textContent = caption;
       }
-
-      const typingProgress = Math.max(0, Math.min(1, (ms - 3000) / 5000));
-      const typedCount = Math.floor(question.length * typingProgress);
-      const typed = question.slice(0, typedCount);
-      composerText.innerHTML = typed + (phase !== 'result' ? '<span class="typing-caret"></span>' : '');
-
-      composer.classList.toggle('focused', phase === 'typing' || phase === 'zoom');
-      workspace.classList.toggle('zoomed', phase === 'zoom');
-
-      graphSubhead.textContent = phase === 'idle' ? 'Waiting for a question…' : phase === 'typing' ? 'Reading owner intent…' : phase === 'zoom' ? 'Understanding the question…' : phase === 'retrieve' ? 'Connecting related evidence…' : 'Decision ready';
-      graphState.textContent = phase === 'idle' ? 'standby' : phase === 'typing' ? 'interpreting' : phase === 'zoom' ? 'scoping' : phase === 'retrieve' ? 'retrieving' : 'actionable';
-
-      const sourceActivation = {
-        superset: ms >= 11000,
-        funnel: ms >= 12200,
-        support: ms >= 13400,
-        finance: ms >= 14600,
-      };
-      sourceItems.forEach((item) => item.classList.toggle('active', Boolean(sourceActivation[item.dataset.source])));
-      nodes.forEach((node) => node.classList.toggle('active', node.dataset.node === 'jev' ? ms >= 9000 : Boolean(sourceActivation[node.dataset.node])));
-      lines.forEach((item) => item.classList.toggle('active', Boolean(sourceActivation[item.dataset.line])));
-
-      evidence.forEach((item, index) => item.classList.toggle('visible', ms >= 15500 + index * 850));
-      evidenceSubhead.textContent = ms >= 15500 ? '4 related signals returned' : 'No evidence selected yet';
-      decision.classList.toggle('visible', ms >= 18300);
-      centerState.textContent = ms < 9000 ? 'Waiting for evidence' : ms < 16500 ? 'Connecting signals' : 'Corroborated decline';
-    }
-
-    function tick(now) {
-      if (!paused) {
-        const elapsed = Math.min(duration, now - startedAt);
+      function resetTransientState() {
+        pages.forEach((page) => { page.classList.remove("is-prompt-focus", "is-contract-focus", "is-evidence-focus", "is-action-focus"); page.querySelectorAll(".is-live").forEach((el) => el.classList.remove("is-live")); });
+        agentStatus.classList.remove("is-called");
+        bundleState.textContent = "assembling";
+      }
+      function renderStory(elapsed) {
+        const queryChars = elapsed < 800 ? 0 : Math.min(task.length, Math.floor((elapsed - 800) / 42));
+        storyPageQuery.textContent = task.slice(0, queryChars);
+        storyPageSteps.forEach((el, index) => el.classList.toggle("is-live", elapsed >= 1000 + index * 650));
+        storyPageStatus.textContent = elapsed < 1200 ? "waking on schedule" : elapsed < 4000 ? "writing internal question" : "question ready · loading context";
+        const nodeLive = {
+          card: elapsed >= 6500,
+          sql: elapsed >= 7000,
+          jev: elapsed >= 7350,
+          sup: elapsed >= 7700,
+          web: elapsed >= 8100,
+          ops: elapsed >= 8500,
+        };
+        storyNetworkNodes.forEach((el) => el.classList.toggle("is-live", Boolean(nodeLive[el.classList[1]])));
+        storyNetwork.classList.toggle("is-building", elapsed >= 6800 && elapsed < 11600);
+        storySqlChip.classList.toggle("is-live", elapsed >= 8800);
+        storyBundleRows.forEach((el, index) => el.classList.toggle("is-live", elapsed >= 12600 + index * 420));
+        storyBundleFooter.classList.toggle("is-live", elapsed >= 14400);
+        storyBundleSide.classList.toggle("is-live", elapsed >= 14000);
+        storyChatCodex.classList.toggle("is-live", elapsed >= 16900);
+        storyChatAck.classList.toggle("is-live", elapsed >= 18800);
+        storySlackFoot.classList.toggle("is-live", elapsed >= 19800);
+      }
+      function render(elapsed) {
+        const clamped = Math.max(0, Math.min(DURATION, elapsed));
+        const page = activePage(clamped);
+        setPage(page);
+        typedQuestion.textContent = clamped < 1100 ? "" : task.slice(0, Math.min(task.length, Math.floor((clamped - 1100) / 42)));
+        const agent = pages[0], context = pages[1], evidence = pages[2], decision = pages[3];
+        workflowSteps.forEach((el, index) => el.classList.toggle("is-live", clamped >= 700 + index * 800));
+        context.classList.toggle("is-contract-focus", clamped >= 5600 && clamped < 8800);
+        evidence.classList.toggle("is-evidence-focus", clamped >= 9900 && clamped < 14300);
+        decision.classList.toggle("is-action-focus", clamped >= 15100);
+        agentStatus.classList.toggle("is-called", clamped >= 4100);
+        agentStatus.textContent = clamped < 1500 ? "starting scheduled workflow" : clamped < 3200 ? "Codex is writing the internal question" : clamped < 5000 ? "calling signalweave.evaluate_insight_card" : "waiting for typed result";
+        evidence.querySelectorAll(".bundle-row").forEach((el, index) => el.classList.toggle("is-live", clamped >= 9700 + index * 520));
+        evidence.querySelector(".evidence-bundle").classList.toggle("is-running", clamped >= 9200 && clamped < 14500);
+        bundleState.textContent = clamped < 9700 ? "assembling" : clamped < 12500 ? "evidence resolved" : "judged · ready for Codex";
+        renderStory(clamped);
+        pauseButton.textContent = paused ? "Play" : "Pause";
+      }
+      function tick(now) {
+        const elapsed = paused ? pausedAt : now - startedAt;
         render(elapsed);
-        if (elapsed >= duration) setPlaying(false);
+        if (!paused && elapsed < DURATION) requestAnimationFrame(tick);
+        if (!paused && elapsed >= DURATION) { paused = true; pausedAt = DURATION; render(DURATION); }
       }
+      pauseButton.addEventListener("click", () => { if (paused) { paused = false; startedAt = performance.now() - pausedAt; requestAnimationFrame(tick); } else { paused = true; pausedAt = performance.now() - startedAt; render(pausedAt); } });
+      resetButton.addEventListener("click", () => { paused = false; pausedAt = 0; startedAt = performance.now(); lastPage = -1; resetTransientState(); requestAnimationFrame(tick); });
+      document.addEventListener("keydown", (event) => { if (event.code === "Space") { event.preventDefault(); pauseButton.click(); } if (event.key.toLowerCase() === "r") resetButton.click(); });
+      render(0);
       requestAnimationFrame(tick);
-    }
-
-    playButton.addEventListener('click', () => {
-      if (paused) {
-        startedAt = performance.now() - pausedAt;
-        setPlaying(true);
-      } else {
-        pausedAt = performance.now() - startedAt;
-        setPlaying(false);
-      }
-    });
-    resetButton.addEventListener('click', reset);
-    composer.addEventListener('submit', (event) => event.preventDefault());
-    window.addEventListener('keydown', (event) => {
-      if (event.code === 'Space' && event.target === document.body) {
-        event.preventDefault();
-        playButton.click();
-      }
-      if (event.key.toLowerCase() === 'r') reset();
-    });
-
-    render(0);
-    requestAnimationFrame(tick);
+    })();
   </script>
 </body>
 </html>

@@ -1,25 +1,17 @@
-Every company has dashboards.
+At six, a Codex workflow wakes up with a human-curated card.
 
-But the useful question is not “what moved?”
+It types the question into its own run: what changed in revenue this week, and should we act?
 
-It’s: what changed, what is connected to it, and should anyone act?
+The card carries the human context: what to watch, why it matters, and when to deliver.
 
-Here’s SignalWeave.
+TypeSafe Jev turns that free-form intent into a typed judgment the agent can use.
 
-I type the question in plain English: what changed in revenue this week, and should anyone act?
+Then SignalWeave connects the dots, runs the bounded query path, and judges the evidence.
 
-SignalWeave turns that intent into a bounded search across the sources this team already trusts.
+The bundle comes back with the facts, the likely explanation, the confidence, and the next instruction.
 
-It finds the executive dashboard, the web funnel, support operations, and finance.
+Codex types the heads-up into growth leadership.
 
-Then TypeSafe Jev makes the semantic judgment over the evidence—not a vague summary over a giant prompt.
+“Ack — looking into it.”
 
-Four sources agree: revenue is down twenty-two percent, conversion is down fifteen percent, support backlog is up twenty-eight percent, and finance confirms the move.
-
-So the result is not another noisy alert.
-
-It’s a typed decision: notify leadership, with the evidence attached.
-
-When sources conflict, route it to investigation. When nothing meaningful changed, stay quiet.
-
-SignalWeave: stop checking dashboards. Start receiving decisions.
+Push-based analytics: the agent watches, the evidence travels, and people only hear when it matters.

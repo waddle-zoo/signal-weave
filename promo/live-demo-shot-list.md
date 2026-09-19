@@ -1,7 +1,11 @@
 # SignalWeave live-demo recording
 
-This is a single continuous product scene, not a slide deck. Record the browser
-window at 1080p with the cursor visible and the page at 100% zoom. Upload
+This is one continuous browser run. A scheduled Codex agent wakes up, types its
+question, SignalWeave connects the evidence and runs the query path, then the
+bundle returns to Codex for a Slack notification and human acknowledgement.
+Each part gets its own focused page, with a fast transition inside the same
+browser frame. Record the browser window at 1080p with the cursor visible and
+the page at 100% zoom. Upload
 `live-demo-voiceover.txt` to ElevenLabs and use the generated track as the edit
 timing reference.
 
@@ -9,19 +13,17 @@ timing reference.
 
 | Time | On screen | Narration beat |
 | --- | --- | --- |
-| 0:00–0:03 | Idle SignalWeave workspace; sources visible, composer waiting | “Every company has dashboards…” |
-| 0:03–0:08 | Question types into the composer | “I type the question in plain English…” |
-| 0:08–0:10.5 | Workspace zooms toward the composer and center node | “SignalWeave turns that intent…” |
-| 0:10.5–0:16.5 | Connections light one by one; four source nodes activate | “It finds the executive dashboard…” |
-| 0:15.5–0:19 | Evidence rail fills with the four returned facts | “Four sources agree…” |
-| 0:18–0:22.5 | Decision card appears: `NOTIFY LEADERSHIP` | “It’s a typed decision…” |
-| 0:22.5–0:27 | Keep the same workspace; decision state remains while the evidence is readable | “When sources conflict…” |
-| 0:27–0:30 | Leave the evidence and decision visible; no end card or logo slide | “Stop checking dashboards…” |
+| 0:00–0:05.2 | Codex wakes on schedule and types the internal question | “At six, a Codex workflow…” |
+| 0:05.2–0:08.2 | The free-form card resolves into the typed Jev judgment shape | “The card carries the human context…” |
+| 0:08.2–0:12.5 | The graph connects CARD → SQL → Jev → source nodes | “Then SignalWeave connects the dots…” |
+| 0:12.5–0:16.5 | Evidence resolves into one bundle with confidence and instruction | “The bundle comes back…” |
+| 0:16.5–0:22 | Codex types to Slack and leadership replies | “Codex types the heads-up… Ack…” |
 
 ## Recording notes
 
 - Do not cut to title cards, stock footage, or a logo outro.
-- Start mid-task. The first frame should already look like a real operational workspace.
-- Keep the cursor near the composer while typing, then move it along the connections as they activate.
-- If the ElevenLabs read is longer than 30 seconds, slow the browser recording or trim pauses—not the evidence sequence.
+- Start with the scheduled run already waking up. No one is typing a request to start it.
+- Keep the cursor optional; the visual story is carried by the typed agent query, card shape, evidence motion, and Slack response.
+- The generated browser demo is 22 seconds: `promo/render_agent_demo.py` writes `artifacts/promo/signalweave-agent-demo.mp4`.
+- Keep the browser frame continuous; use fast page transitions, not a deck or title-card cut.
 - The numbers are clearly sample-run values from the Northstar demo environment; do not present them as customer results.
