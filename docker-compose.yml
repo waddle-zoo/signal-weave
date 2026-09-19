@@ -67,8 +67,8 @@ services:
       SIGNALWEAVE_STORE_PATH: /app/data/signalweave.db
       MCP_HOST: 0.0.0.0
       MCP_PORT: 8000
-      SIGNALWEAVE_API_TOKEN: ${SIGNALWEAVE_API_TOKEN:-}
-      PUSH_WEBHOOK_TOKEN: ${PUSH_WEBHOOK_TOKEN:-}
+      SIGNALWEAVE_API_TOKEN: ${SIGNALWEAVE_API_TOKEN:-local-dev-token}
+      PUSH_WEBHOOK_TOKEN: ${PUSH_WEBHOOK_TOKEN:-local-dev-token}
     volumes:
       - ${TYPESAFE_API_KEY_FILE:-./secrets/typesafe_api_key}:/run/secrets/typesafe_api_key:ro
       - insight_card_data:/app/data

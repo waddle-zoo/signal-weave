@@ -5,12 +5,15 @@ import pytest
 from evaluations.cases import load_evaluation_cases
 from signalweave.engine import InsightEngine
 from signalweave.models import (
+    ContextFact,
+    ContextSnapshot,
     DeliveryMethod,
     InsightCard,
     InsightPlan,
     InsightResult,
     Observation,
     Outcome,
+    ResourceContract,
     ResourceSnapshot,
     SourceRef,
 )
@@ -140,6 +143,119 @@ async def test_stale_data_escalates_to_configured_method():
     assert run.result.outcome == Outcome.ESCALATE
     assert [method.key for method in run.result.delivery_methods] == ["data-platform"]
     assert run.result.evidence[0].values["freshness"]
+
+
+async def test_stale_contract_status_cannot_notify_without_freshness_attribute():
+    class NotifyJudger(SafetyTestDouble):
+        async def judge(self, state, card, plan, observations):
+            result = await super().judge(state, card, plan, observations)
+            return result.model_copy(update={"outcome": Outcome.NOTIFY, "confidence": 0.99})
+
+    source = SourceRef(
+        key="stale-contract",
+        adapter="sql",
+        resource="query:metric",
+        label="Stale metric",
+    )
+    card = card_for(
+        card_id="card-stale-contract",
+        title="Stale contract metric",
+        source=source,
+        delivery_methods=[
+            DeliveryMethod(
+                key="ops",
+                outcome=Outcome.NOTIFY,
+                label="Operations",
+                destination="slack://ops",
+            )
+        ],
+    )
+    resource = ResourceSnapshot(
+        source_key=source.key,
+        adapter=source.adapter,
+        resource=source.resource,
+        title=source.label,
+        contract=ResourceContract(source_status="stale"),
+        observations=[
+            Observation(
+                source_key=source.key,
+                subject_id="metric",
+                subject_label="Metric",
+                metric="metric",
+                current=82,
+                baseline=100,
+                change_pct=-18,
+            )
+        ],
+    )
+
+    run = await InsightEngine(NotifyJudger()).evaluate(card, [resource])
+
+    assert run.result.outcome == Outcome.INVESTIGATE
+    assert run.result.delivery_methods == []
+
+
+async def test_unverified_context_cannot_authorize_automatic_action():
+    class NotifyJudger(SafetyTestDouble):
+        async def judge(self, state, card, plan, observations):
+            result = await super().judge(state, card, plan, observations)
+            return result.model_copy(update={"outcome": Outcome.NOTIFY, "confidence": 0.99})
+
+    source = SourceRef(
+        key="context-source",
+        adapter="sql",
+        resource="query:metric",
+        label="Metric",
+    )
+    card = card_for(
+        card_id="card-unverified-context",
+        title="Context-sensitive metric",
+        source=source,
+        delivery_methods=[
+            DeliveryMethod(
+                key="ops",
+                outcome=Outcome.NOTIFY,
+                label="Operations",
+                destination="slack://ops",
+            )
+        ],
+    )
+    resource = ResourceSnapshot(
+        source_key=source.key,
+        adapter=source.adapter,
+        resource=source.resource,
+        title=source.label,
+        observations=[
+            Observation(
+                source_key=source.key,
+                subject_id="metric",
+                subject_label="Metric",
+                metric="metric",
+                current=82,
+                baseline=100,
+                change_pct=-18,
+            )
+        ],
+    )
+    context = ContextSnapshot(
+        provider="caller",
+        version="unverified-1",
+        trust="unverified",
+        facts=[
+            ContextFact(
+                fact_id="fact-1",
+                subject_ref="sql|query:metric",
+                relation="owned_by",
+                object_ref="team:ops",
+                statement="Operations owns this metric.",
+            )
+        ],
+    )
+
+    run = await InsightEngine(NotifyJudger()).evaluate(card, [resource], context)
+
+    assert run.result.outcome == Outcome.INVESTIGATE
+    assert run.result.delivery_methods == []
 
 
 async def test_ambiguous_source_cannot_take_an_automatic_route():

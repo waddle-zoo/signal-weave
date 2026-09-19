@@ -1,21 +1,22 @@
 # Adversarial public-readiness review
 
 This review treats SignalWeave as an alpha open-source result layer, not as a
-complete enterprise control plane. It was refreshed after the retrieval,
-durability, and closure trials on
-2026-09-18.
+complete enterprise control plane. It was refreshed after three independent
+adversarial reviews, the retrieval/explanation trial, and the local Superset
+round trip on 2026-09-18.
 
 ## Verdict
 
 **Ready to present as a technical alpha; not ready to present as production-ready.**
 The repository now has a coherent wedge, a runnable onboarding path, a Jev-backed
-card/result contract, a measured comparison fixture, and fail-closed tests. It still
-needs enterprise controls before a public release can imply dependable automatic
-operations.
+card/result contract, bounded follow-up retrieval, provenance, and fail-closed
+tests. It still needs request-scoped identity, indexed catalog retrieval, payload
+budgets, and customer-owned shadow labels before a deployment can imply dependable
+automatic operations.
 
 ## What passed
 
-- Local lint and tests: `74 passed, 1 skipped`.
+- Local lint and tests: `85 passed, 1 skipped`.
 - The feature branch is verified locally and GitHub Actions checks for PR #1
   pass on Python 3.11 and 3.12.
 - The package builds successfully and declares Apache 2.0 metadata.
@@ -59,6 +60,19 @@ operations.
 - The default runtime now uses a durable SQLite file for insight cards, metric
   cards, and decision receipts. Restart persistence and an atomic idempotency-key
   claim across two store instances are covered by tests.
+- The bounded retrieval/explanation fixture covers SaaS, retail, logistics,
+  fintech, and marketplace cases with same-name tenant decoys, context facts,
+  stale contracts, unrelated sources, and an unavailable diagnostic source. A
+  real Jev run completed 5/5 exact outcomes, 5/5 exact delivery routes, and
+  5/5 authorized selections; labeled diagnostic-source recall was 0.70. The
+  imperfect recall is retained as a release signal, not hidden as a pass.
+- The adversarial regression pass covers false no-match recommendations, stale
+  contract metadata, unverified-context automatic-action gates, idempotency-key
+  collisions, malformed/oversized webhook bodies, and isolation when an
+  unrelated adapter catalog is unavailable.
+- The rebuilt Docker service became healthy with Jev configured, rejected an
+  unauthenticated MCP request with `401`, and the real local Superset dashboard
+  round trip passed.
 
 ## Findings to fix before public release
 
@@ -75,12 +89,22 @@ operations.
   are separately covered by synthetic held-out trials. There are still no
   independent domain-owner labels, historical holdout data, or real delivery
   outcomes. These are bounded technical-alpha results, not a production claim.
+- **The catalog retrieval path is still bounded in-process.** It preserves
+  relationship and context signals before Jev ranking, but it still loads the
+  adapter catalog and truncates the candidate pool. A 100k-resource deployment
+  needs a permission-aware `search`/pagination interface supplied by the catalog
+  or graph system; Jev cannot recover a source that never enters the pool.
+- **Identity is still a deployment boundary.** The local bearer token protects
+  the HTTP surface, but cards, actors, graph facts, and source ACLs are not yet
+  request-scoped inside SignalWeave. Shared multi-tenant service deployments need
+  an identity-aware gateway plus tenant-qualified resource references and stores.
 
 ### Medium priority
 
 - Keep source and delivery-method allowlists documented as deployment
   configuration, not organization-wide authorization provided by SignalWeave.
-- Add request-size, catalog-size, and rate limits at the HTTP boundary.
+- Add catalog-size and rate limits at the HTTP boundary; push request-size
+  limits now exist, while aggregate Jev payload budgets remain open.
 - Make dependency and container builds reproducible beyond the current CI matrix.
 - Add runtime adapter-registration tests, not only heterogeneous engine tests.
 - Keep the JSON store explicitly limited to local fixtures; do not use it as a
@@ -94,8 +118,8 @@ operations.
 ## Current security posture
 
 The local compose stack binds its published ports to loopback and is explicitly a
-demo. It still uses `admin` / `admin` for local Superset and leaves optional bearer
-tokens empty. Production deployments need TLS, identity-aware access, secret
+demo. It still uses `admin` / `admin` for local Superset and a known
+`local-dev-token`. Production deployments need TLS, identity-aware access, secret
 management, reviewed card storage, audit history, and a data policy for
 evidence sent to TypeSafe Jev. See [`SECURITY.md`](../SECURITY.md) and
 [`security.md`](security.md).
@@ -104,7 +128,8 @@ evidence sent to TypeSafe Jev. See [`SECURITY.md`](../SECURITY.md) and
 
 ```text
 ruff check src tests evaluations       passed
-Python 3.12 + pytest -q                 74 passed, 1 skipped
+Python 3.12 + pytest -q                 85 passed, 1 skipped
+Local Superset integration               1 passed
 GitHub Actions PR #1                   test (3.11), test (3.12) passed
 SVG XML validation and rendering       passed
 Tracked credential scan                no secrets found

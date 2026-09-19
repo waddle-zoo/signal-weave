@@ -27,6 +27,11 @@ class RetrievalMode(StrEnum):
     EXPAND = "expand"
 
 
+class InvestigationMode(StrEnum):
+    NONE = "none"
+    BOUNDED = "bounded"
+
+
 class WatchStatus(StrEnum):
     PRESENT = "present"
     ABSENT = "absent"
@@ -159,6 +164,7 @@ class DecisionReceipt(BaseModel):
 
     receipt_id: str = Field(min_length=1, max_length=160)
     idempotency_key: str = Field(min_length=1, max_length=240)
+    request_fingerprint: str = Field(default="", max_length=128)
     card_id: str = Field(min_length=1, max_length=160)
     card_version: int = Field(ge=1)
     actor: str = Field(min_length=1, max_length=240)
@@ -225,7 +231,31 @@ class ResourceMatch(BaseModel):
     source_url: str | None = None
     relevance: float = Field(ge=0.0, le=1.0)
     recommended: bool = False
+    retrieval_signals: list[str] = Field(default_factory=list, max_length=20)
     contract: ResourceContract = Field(default_factory=ResourceContract)
+
+
+class ContextFact(BaseModel):
+    """A versioned, provenance-bearing fact supplied by an external context system."""
+
+    fact_id: str = Field(min_length=1, max_length=240)
+    subject_ref: str = Field(min_length=1, max_length=500)
+    relation: str = Field(min_length=1, max_length=160)
+    object_ref: str | None = Field(default=None, max_length=500)
+    statement: str = Field(min_length=1, max_length=4000)
+    source_url: str | None = Field(default=None, max_length=2000)
+    provenance: list[str] = Field(default_factory=list, max_length=20)
+
+
+class ContextSnapshot(BaseModel):
+    """An immutable context view used for one evaluation."""
+
+    provider: str = Field(min_length=1, max_length=160)
+    version: str = Field(min_length=1, max_length=240)
+    trust: Literal["trusted", "unverified"] = "trusted"
+    facts: list[ContextFact] = Field(default_factory=list, max_length=500)
+    warnings: list[str] = Field(default_factory=list, max_length=50)
+    captured_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class EvidenceBundle(BaseModel):
@@ -240,6 +270,8 @@ class EvidenceBundle(BaseModel):
     candidate_count: int = Field(ge=0)
     candidate_limit: int = Field(ge=1)
     truncated: bool = False
+    candidate_strategy: str = "hybrid-metadata"
+    context_version: str | None = None
     evaluator: str
     warnings: list[str] = Field(default_factory=list, max_length=50)
 
@@ -252,6 +284,8 @@ class ResourceDiscovery(BaseModel):
     candidate_count: int = Field(ge=0)
     candidate_limit: int = Field(ge=1)
     truncated: bool = False
+    no_match: bool = False
+    candidate_strategy: str = "hybrid-metadata"
     evaluator: str
     authorized_tenant: str | None = None
     warnings: list[str] = Field(default_factory=list, max_length=50)
@@ -286,6 +320,8 @@ class Evidence(BaseModel):
     statement: str
     values: dict[str, Any] = Field(default_factory=dict)
     source_url: str | None = None
+    origin: Literal["source", "context", "derived"] = "source"
+    provenance: list[str] = Field(default_factory=list, max_length=20)
 
 
 class ResourceSnapshot(BaseModel):
@@ -329,6 +365,8 @@ class InsightPlan(BaseModel):
     compiled_by: str = "jev-latest"
     card_scope: str
     metric_query_plans: list[MetricQueryPlan] = Field(default_factory=list, max_length=50)
+    investigation_mode: InvestigationMode = InvestigationMode.NONE
+    max_investigation_sources: int = Field(default=0, ge=0, le=10)
 
 
 class InsightCard(BaseModel):
@@ -351,6 +389,9 @@ class InsightCard(BaseModel):
     max_source_age_hours: float | None = Field(default=24.0, ge=0.0, le=876000.0)
     delivery_methods: list[DeliveryMethod] = Field(default_factory=list, max_length=100)
     retrieval_mode: RetrievalMode = RetrievalMode.FIXED
+    investigation_mode: InvestigationMode = InvestigationMode.NONE
+    max_investigation_sources: int = Field(default=3, ge=0, le=10)
+    investigation_threshold: float = Field(default=0.60, ge=0.0, le=1.0)
     compiled_plan: InsightPlan | None = None
     status: InsightCardStatus = InsightCardStatus.DRAFT
     approved_by: str | None = Field(default=None, max_length=240)
@@ -404,6 +445,60 @@ class QuestionResult(BaseModel):
     probability: float = Field(ge=0.0, le=1.0)
 
 
+class EvidenceFinding(BaseModel):
+    """A typed role for one observation in the final explanation."""
+
+    key: str
+    source_key: str
+    subject_id: str
+    subject_label: str
+    metric: str
+    role: Literal[
+        "driver",
+        "corroborates",
+        "contradicts",
+        "quality",
+        "unrelated",
+        "unknown",
+    ]
+    probability: float = Field(ge=0.0, le=1.0)
+    suggested_role: Literal[
+        "driver",
+        "corroborates",
+        "contradicts",
+        "quality",
+        "unrelated",
+        "unknown",
+    ] | None = None
+
+
+class InvestigationSelection(BaseModel):
+    """One optional source selected for the bounded follow-up stage."""
+
+    source: SourceRef
+    score: float = Field(ge=0.0, le=1.0)
+    confidence: float = Field(ge=0.0, le=1.0)
+    selection_reason: str = Field(min_length=1, max_length=1000)
+    retrieval_status: Literal["not_attempted", "succeeded", "failed"] = "not_attempted"
+    retrieval_error: str | None = Field(default=None, max_length=1000)
+
+
+class InvestigationTrace(BaseModel):
+    """Inspectable record of the single bounded follow-up retrieval stage."""
+
+    mode: InvestigationMode
+    attempted: bool = False
+    failed: bool = False
+    need_probability: float | None = Field(default=None, ge=0.0, le=1.0)
+    candidate_count: int = Field(ge=0)
+    candidate_limit: int = Field(ge=0, le=10)
+    selected: list[InvestigationSelection] = Field(default_factory=list, max_length=10)
+    omitted_refs: list[str] = Field(default_factory=list, max_length=100)
+    evaluator: str
+    context_version: str | None = None
+    warnings: list[str] = Field(default_factory=list, max_length=50)
+
+
 class InsightResult(BaseModel):
     """Typed outcome plus the evidence and per-item judgments behind it."""
 
@@ -416,9 +511,12 @@ class InsightResult(BaseModel):
     probabilities: dict[str, float] = Field(default_factory=dict)
     watch_results: list[WatchResult] = Field(default_factory=list)
     question_results: list[QuestionResult] = Field(default_factory=list)
+    evidence_findings: list[EvidenceFinding] = Field(default_factory=list, max_length=500)
     evidence: list[Evidence] = Field(default_factory=list)
     observations: list[Observation] = Field(default_factory=list)
     source_keys: list[str] = Field(default_factory=list)
     retrieval: EvidenceBundle | None = None
+    context: ContextSnapshot | None = None
+    investigation: InvestigationTrace | None = None
     evaluated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     evaluator: str

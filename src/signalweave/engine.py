@@ -6,16 +6,23 @@ from typing import Any
 
 from .analysis import candidate_observations, evidence_statements, observations_for_plan
 from .compiler import compile_with_typesafe
+from .context import ContextProvider, context_facts_as_evidence
 from .models import (
+    ContextSnapshot,
     DeliveryMethod,
     Evidence,
     InsightCard,
     InsightPlan,
     InsightResult,
+    InvestigationMode,
+    InvestigationSelection,
+    InvestigationTrace,
     Observation,
     Outcome,
     ResourceSnapshot,
+    SourceRef,
 )
+from .retrieval import build_candidate_pool, resource_ref
 from .sources import SourceRegistry
 from .typesafe_adapter import InsightJudger, JevJudger
 
@@ -28,6 +35,17 @@ class InsightRun:
     result: InsightResult
 
 
+@dataclass
+class _EvaluationMaterials:
+    observations: list[Observation]
+    evidence: list[Evidence]
+    state: dict[str, Any]
+    blocking_source_errors: list[dict[str, Any]]
+    blocking_partial_source_errors: list[dict[str, Any]]
+    source_error_evidence: list[Evidence]
+    source_errors: list[dict[str, Any]]
+
+
 class InsightEngine:
     """Evaluate a user-authored insight card over adapter-provided snapshots."""
 
@@ -35,9 +53,15 @@ class InsightEngine:
         self,
         judger: InsightJudger | None = None,
         registry: SourceRegistry | None = None,
+        context_provider: ContextProvider | None = None,
+        investigation_candidate_limit: int = 40,
     ) -> None:
+        if investigation_candidate_limit < 1:
+            raise ValueError("investigation_candidate_limit must be positive")
         self.judger = judger or JevJudger()
         self.registry = registry
+        self.context_provider = context_provider
+        self.investigation_candidate_limit = investigation_candidate_limit
 
     async def compile(
         self,
@@ -59,6 +83,7 @@ class InsightEngine:
         self,
         card: InsightCard,
         resources: list[ResourceSnapshot] | None = None,
+        context_override: ContextSnapshot | None = None,
     ) -> InsightRun:
         if resources is None:
             if self.registry is None:
@@ -67,7 +92,292 @@ class InsightEngine:
         else:
             resources = list(resources)
 
+        context = context_override or await self._load_context(card, resources)
         plan = await self.compile(card, resources)
+        investigation = await self._select_investigation(
+            card, plan, resources, context
+        )
+        evaluation_card = card
+        if investigation is not None and investigation.selected and self.registry is not None:
+            selected_sources = [selection.source for selection in investigation.selected]
+            selected_resources = await self.registry.resolve(selected_sources)
+            selected_by_key = {resource.source_key: resource for resource in selected_resources}
+            updated_selections: list[InvestigationSelection] = []
+            investigation_failed = investigation.failed
+            investigation_warnings = list(investigation.warnings)
+            for selection in investigation.selected:
+                resource = selected_by_key.get(selection.source.key)
+                retrieval_error = None
+                retrieval_status = "succeeded"
+                if resource is None:
+                    retrieval_status = "failed"
+                    retrieval_error = "selected source was not returned by the registry"
+                elif resource.error:
+                    retrieval_status = "failed"
+                    retrieval_error = resource.error
+                elif resource.contract.source_status != "healthy":
+                    retrieval_status = "failed"
+                    retrieval_error = (
+                        "selected source contract status is "
+                        f"{resource.contract.source_status}"
+                    )
+                elif not resource.observations and not resource.evidence:
+                    retrieval_status = "failed"
+                    retrieval_error = "selected source returned no observations or evidence"
+                if retrieval_status == "failed":
+                    investigation_failed = True
+                    investigation_warnings.append(
+                        f"Selected follow-up source {selection.source.resource} could not be "
+                        f"used: {retrieval_error}"
+                    )
+                updated_selections.append(
+                    selection.model_copy(
+                        update={
+                            "retrieval_status": retrieval_status,
+                            "retrieval_error": retrieval_error,
+                        }
+                    )
+                )
+            investigation = investigation.model_copy(
+                update={
+                    "failed": investigation_failed,
+                    "selected": updated_selections,
+                    "warnings": investigation_warnings,
+                }
+            )
+            resources = [*resources, *selected_resources]
+            evaluation_card = card.model_copy(
+                update={
+                    "sources": [*card.sources, *selected_sources],
+                    "compiled_plan": None,
+                }
+            )
+            plan = await self.compile(evaluation_card, resources)
+
+        materials = self._evaluation_materials(
+            evaluation_card, plan, resources, context, investigation
+        )
+        result = await self.judger.judge(
+            materials.state, evaluation_card, plan, materials.observations
+        )
+        result = result.model_copy(
+            update={"context": context, "investigation": investigation}
+        )
+        result = self._apply_safety_gates(
+            result,
+            evaluation_card,
+            plan,
+            materials.observations,
+            materials.blocking_source_errors,
+            materials.blocking_partial_source_errors,
+            materials.source_error_evidence,
+            materials.source_errors,
+        )
+        return InsightRun(
+            card=card,
+            resources=resources,
+            plan=plan,
+            result=result,
+        )
+
+    async def _load_context(
+        self, card: InsightCard, resources: list[ResourceSnapshot]
+    ) -> ContextSnapshot | None:
+        if self.context_provider is None:
+            return None
+        try:
+            return await self.context_provider.get_context(card, resources)
+        except Exception as error:  # noqa: BLE001 - context is visible but optional
+            return ContextSnapshot(
+                provider=self.context_provider.name,
+                version="unavailable",
+                warnings=[f"Context provider failed: {type(error).__name__}: {error}"],
+            )
+
+    async def _select_investigation(
+        self,
+        card: InsightCard,
+        plan: InsightPlan,
+        resources: list[ResourceSnapshot],
+        context: ContextSnapshot | None,
+    ) -> InvestigationTrace | None:
+        if card.investigation_mode != InvestigationMode.BOUNDED:
+            return None
+        selector = getattr(self.judger, "select_investigation_sources", None)
+        if self.registry is None or not callable(selector):
+            return InvestigationTrace(
+                mode=card.investigation_mode,
+                candidate_count=0,
+                candidate_limit=card.max_investigation_sources,
+                failed=True,
+                evaluator="not-configured",
+                context_version=context.version if context else None,
+                warnings=[
+                    "Bounded investigation was requested but the registry or Jev selector "
+                    "is not configured; the card will be judged over its current evidence."
+                ],
+            )
+        try:
+            catalog = await self.registry.list_resources()
+        except Exception as error:  # noqa: BLE001 - optional investigation fails closed
+            return InvestigationTrace(
+                mode=card.investigation_mode,
+                candidate_count=0,
+                candidate_limit=card.max_investigation_sources,
+                failed=True,
+                evaluator=getattr(selector, "name", "jev-latest"),
+                context_version=context.version if context else None,
+                warnings=[
+                    "The authorized catalog could not be read for bounded investigation: "
+                    f"{type(error).__name__}: {error}"
+                ],
+            )
+        current_refs = {(resource.adapter, resource.resource) for resource in resources}
+        anchors = [
+            descriptor
+            for descriptor in catalog
+            if (descriptor.adapter, descriptor.resource)
+            in {(source.adapter, source.resource) for source in card.sources}
+        ]
+        goal = f"{card.what_to_watch}\nPurpose: {card.why_watch}"
+        pool = build_candidate_pool(
+            goal,
+            catalog,
+            anchors=anchors,
+            context=context,
+            limit=self.investigation_candidate_limit,
+        )
+        candidates = [
+            resource
+            for resource in pool.resources
+            if (resource.adapter, resource.resource) not in current_refs
+        ]
+        if not candidates:
+            return InvestigationTrace(
+                mode=card.investigation_mode,
+                attempted=False,
+                candidate_count=0,
+                candidate_limit=card.max_investigation_sources,
+                evaluator=getattr(selector, "name", "jev-latest"),
+                context_version=context.version if context else None,
+                warnings=["No authorized follow-up candidates were available."],
+            )
+        observations = observations_for_plan(resources, plan.selected_source_keys)
+        observations = self._apply_comparison_window(observations, plan)
+        initial_materials = self._evaluation_materials(
+            card, plan, resources, context, None
+        )
+        try:
+            decision = await selector(
+                {
+                    "card": card.model_dump(mode="json"),
+                    "insight_card": card.model_dump(mode="json"),
+                    "insight_plan": plan.model_dump(mode="json"),
+                    "observations": [item.model_dump(mode="json") for item in observations],
+                    "evidence": [
+                        item.model_dump(mode="json") for item in initial_materials.evidence
+                    ],
+                    "context": context.model_dump(mode="json") if context else None,
+                    "candidate_signals": {
+                        resource_ref(resource): pool.signals.get(resource_ref(resource), [])
+                        for resource in candidates
+                    },
+                },
+                card,
+                plan,
+                candidates,
+                card.max_investigation_sources,
+            )
+        except Exception as error:  # noqa: BLE001 - optional investigation fails closed
+            return InvestigationTrace(
+                mode=card.investigation_mode,
+                attempted=True,
+                candidate_count=len(candidates),
+                candidate_limit=card.max_investigation_sources,
+                failed=True,
+                evaluator=getattr(selector, "name", "jev-latest"),
+                context_version=context.version if context else None,
+                warnings=[
+                    "Jev could not select a bounded follow-up source: "
+                    f"{type(error).__name__}: {error}"
+                ],
+            )
+        proceed_probability = max(
+            0.0, min(1.0, float(decision.get("probability", 0.0)))
+        )
+        candidate_by_ref = {resource_ref(resource): resource for resource in candidates}
+        selected: list[InvestigationSelection] = []
+        warnings: list[str] = []
+        failed = False
+        if proceed_probability < card.investigation_threshold:
+            warnings.append(
+                f"Jev did not support a bounded follow-up ({proceed_probability:.2f} < "
+                f"{card.investigation_threshold:.2f}); the initial evidence was retained."
+            )
+        else:
+            seen_refs: set[str] = set()
+            for item in decision.get("selections", []):
+                ref = str(item.get("ref") or "")
+                candidate = candidate_by_ref.get(ref)
+                if candidate is None:
+                    warnings.append(f"Jev returned an unauthorized or unknown candidate: {ref}")
+                    continue
+                if ref in seen_refs:
+                    continue
+                score = max(0.0, min(1.0, float(item.get("score", 0.0))))
+                confidence = max(0.0, min(1.0, float(item.get("confidence", 0.0))))
+                if score < 0.50:
+                    continue
+                seen_refs.add(ref)
+                selected.append(
+                    InvestigationSelection(
+                        source=SourceRef(
+                            key=f"investigate-{len(selected) + 1}",
+                            adapter=candidate.adapter,
+                            resource=candidate.resource,
+                            label=candidate.title,
+                            required=False,
+                        ),
+                        score=score,
+                        confidence=confidence,
+                        selection_reason=(
+                            "Jev selected this authorized source as potentially explanatory; "
+                            "candidate signals: "
+                            + ", ".join(pool.signals.get(ref, []))
+                        ),
+                    )
+                )
+                if len(selected) >= card.max_investigation_sources:
+                    break
+            if not selected:
+                warnings.append(
+                    "Jev supported a follow-up, but no authorized candidate met the "
+                    "minimum explanatory score; the result cannot be treated as complete."
+                )
+                failed = True
+        selected_refs = {selection.source.adapter + "|" + selection.source.resource for selection in selected}
+        return InvestigationTrace(
+            mode=card.investigation_mode,
+            attempted=True,
+            candidate_count=len(candidates),
+            candidate_limit=card.max_investigation_sources,
+            failed=failed,
+            need_probability=proceed_probability,
+            selected=selected,
+            omitted_refs=[resource_ref(resource) for resource in candidates if resource_ref(resource) not in selected_refs][:100],
+            evaluator=getattr(selector, "name", "jev-latest"),
+            context_version=context.version if context else None,
+            warnings=warnings,
+        )
+
+    def _evaluation_materials(
+        self,
+        card: InsightCard,
+        plan: InsightPlan,
+        resources: list[ResourceSnapshot],
+        context: ContextSnapshot | None,
+        investigation: InvestigationTrace | None,
+    ) -> _EvaluationMaterials:
         observations = observations_for_plan(resources, plan.selected_source_keys)
         observations = self._apply_comparison_window(observations, plan)
         source_errors = self._source_errors(card, resources)
@@ -77,9 +387,6 @@ class InsightEngine:
             for error in source_errors
             if error.get("quality_status") == "partial" and error["blocking"]
         ]
-
-        # Priority ordering helps a client render the interesting rows first. It
-        # is not a retrieval boundary: all observations remain in state/evidence.
         priority_observations = candidate_observations(observations)
         priority_keys = {
             (observation.source_key, observation.subject_id, observation.metric)
@@ -140,11 +447,12 @@ class InsightEngine:
                     "quality_status": error.get("quality_status"),
                 },
                 source_url=error.get("source_url"),
+                origin="derived",
             )
             for error in source_errors
         ]
         evidence.extend(source_error_evidence)
-        evidence_payload = [item.model_dump(mode="json") for item in evidence]
+        evidence.extend(context_facts_as_evidence(context))
         state: dict[str, Any] = {
             "card": card.model_dump(mode="json"),
             "insight_card": card.model_dump(mode="json"),
@@ -155,19 +463,19 @@ class InsightEngine:
                 observation.model_dump(mode="json") for observation in priority_observations
             ],
             "source_errors": source_errors,
-            "evidence": evidence_payload,
+            "evidence": [item.model_dump(mode="json") for item in evidence],
+            "context": context.model_dump(mode="json") if context else None,
+            "investigation": investigation.model_dump(mode="json") if investigation else None,
         }
-        result = await self.judger.judge(state, card, plan, observations)
-        result = self._apply_safety_gates(
-            result,
-            card,
-            plan,
-            observations,
-            blocking_source_errors,
-            blocking_partial_source_errors,
-            source_error_evidence,
+        return _EvaluationMaterials(
+            observations=observations,
+            evidence=evidence,
+            state=state,
+            blocking_source_errors=blocking_source_errors,
+            blocking_partial_source_errors=blocking_partial_source_errors,
+            source_error_evidence=source_error_evidence,
+            source_errors=source_errors,
         )
-        return InsightRun(card=card, resources=resources, plan=plan, result=result)
 
     @staticmethod
     def _apply_comparison_window(
@@ -249,6 +557,19 @@ class InsightEngine:
                         "blocking": source.required,
                     }
                 )
+            if resource is not None and resource.contract.source_status != "healthy":
+                status = resource.contract.source_status
+                errors.append(
+                    {
+                        "source_key": key,
+                        "resource": source.resource,
+                        "label": resource.title or source.label,
+                        "message": f"Source contract status is {status}.",
+                        "source_url": resource.source_url,
+                        "blocking": source.required and status in {"failed", "unknown"},
+                        "quality_status": status,
+                    }
+                )
             quality = resource.metadata.get("data_quality") if resource is not None else None
             if isinstance(quality, dict) and quality.get("status") == "partial":
                 errors.append(
@@ -317,6 +638,7 @@ class InsightEngine:
         blocking_source_errors: list[dict[str, Any]],
         blocking_partial_source_errors: list[dict[str, Any]],
         source_error_evidence: list[Evidence],
+        source_errors: list[dict[str, Any]],
     ) -> InsightResult:
         safe_outcomes = {Outcome.IGNORE, Outcome.INVESTIGATE, Outcome.INSUFFICIENT_DATA}
         configured_outcomes = {method.outcome for method in card.delivery_methods}
@@ -354,6 +676,33 @@ class InsightEngine:
                 evidence=new_evidence,
             )
 
+        if result.investigation is not None and result.investigation.failed:
+            return cls._with_outcome(
+                result,
+                card,
+                Outcome.INVESTIGATE,
+                rationale=(
+                    "The bounded investigation stage failed before it could establish the "
+                    "requested follow-up evidence, so the result requires review."
+                ),
+            )
+
+        if (
+            result.context is not None
+            and result.context.trust == "unverified"
+            and result.context.facts
+            and result.outcome in {Outcome.NOTIFY, Outcome.ESCALATE}
+        ):
+            return cls._with_outcome(
+                result,
+                card,
+                Outcome.INVESTIGATE,
+                rationale=(
+                    "The result used caller-supplied context marked unverified; a trusted "
+                    "context provider or human review is required before automatic action."
+                ),
+            )
+
         if blocking_partial_source_errors:
             existing_evidence = {
                 (item.source_key, item.subject_id, item.statement) for item in result.evidence
@@ -386,6 +735,18 @@ class InsightEngine:
             and observation.freshness
             and "stale" in observation.freshness.lower()
         ]
+        stale_keys = {
+            error["source_key"]
+            for error in source_errors
+            if error.get("quality_status") == "stale"
+        }
+        stale.extend(
+            observation
+            for observation in observations
+            if observation.source_key in required_source_keys
+            and observation.source_key in stale_keys
+            and observation not in stale
+        )
         if stale:
             stale_outcome = (
                 Outcome.ESCALATE

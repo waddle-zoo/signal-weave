@@ -44,6 +44,8 @@ def base_plan(card: InsightCard) -> InsightPlan:
         delivery_method_keys=[method.key for method in card.delivery_methods],
         compiled_by="jev-latest",
         card_scope=f"{card.what_to_watch}\nWhy: {card.why_watch}",
+        investigation_mode=card.investigation_mode,
+        max_investigation_sources=card.max_investigation_sources,
     )
 
 

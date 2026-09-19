@@ -1,4 +1,4 @@
-.PHONY: install test lint prove benchmark daily-trial enterprise-trial discovery-trial bundle-trial query-trial verify docker-up docker-down
+.PHONY: install test lint prove benchmark daily-trial enterprise-trial discovery-trial bundle-trial query-trial retrieval-explanation-trial verify docker-up docker-down
 
 install:
 	uv sync --extra dev
@@ -30,6 +30,9 @@ bundle-trial:
 
 query-trial:
 	TYPESAFE_API_KEY_FILE=$${TYPESAFE_API_KEY_FILE:?set a live TypeSafe key file} uv run python -c 'import asyncio, json; from pathlib import Path; from evaluations.query_trial import run_trial; print(json.dumps(asyncio.run(run_trial(24, Path("artifacts/query-trial-24.json"))), indent=2))'
+
+retrieval-explanation-trial:
+	TYPESAFE_API_KEY_FILE=$${TYPESAFE_API_KEY_FILE:?set a live TypeSafe key file} uv run python evaluations/retrieval_explanation_trial.py --output artifacts/retrieval-explanation-trial.json
 
 verify:
 	uv run ruff check .

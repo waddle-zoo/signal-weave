@@ -8,6 +8,7 @@ from signalweave.models import (
     DeliveryMethod,
     Evidence,
     InsightCard,
+    InvestigationMode,
     Observation,
     Outcome,
     ResourceDescriptor,
@@ -22,12 +23,19 @@ class FakeNoul:
         self.criteria = criteria
 
 
+class FakeScore:
+    def __init__(self, *, instructions, criteria):
+        self.instructions = instructions
+        self.criteria = criteria
+
+
 class FakeResponse:
     usage = SimpleNamespace(input_tokens=41, output_tokens=7)
 
     def __init__(self, questions):
         self.nouls = {}
         self.choices = {}
+        self.scores = {}
         for key in questions:
             if key == "baseline":
                 self.choices[key] = SimpleNamespace(choice="previous_period")
@@ -48,6 +56,18 @@ class FakeResponse:
                         "investigate": 0.10,
                         "notify": 0.93,
                     },
+                )
+                continue
+            if key == "need_investigation":
+                self.nouls[key] = SimpleNamespace(noul=0.94)
+                continue
+            if key.startswith("candidate_"):
+                self.scores[key] = SimpleNamespace(score=3.6, confidence=0.91)
+                continue
+            if key.startswith("evidence_"):
+                self.choices[key] = SimpleNamespace(
+                    choice="driver",
+                    probabilities={"driver": 0.91, "unknown": 0.04},
                 )
                 continue
             if key == "resource_0":
@@ -219,3 +239,96 @@ async def test_jev_compiles_and_judges_free_form_card_items(monkeypatch):
     assert judge_call["state"]["insight_card"]["what_to_watch"] == card.what_to_watch
     assert judge_call["state"]["insight_card"]["questions"] == card.questions
     assert "owner-authored card guidance" in judge_call["questions"]["outcome"].criteria["ignore"]
+
+
+@pytest.mark.asyncio
+async def test_jev_selects_bounded_followup_sources_with_scores(monkeypatch):
+    FakeClient.calls = []
+    monkeypatch.setattr(typesafe_sdk, "AsyncTypeSafeClient", FakeClient)
+    monkeypatch.setattr(typesafe_sdk, "Noul", FakeNoul)
+    monkeypatch.setattr(typesafe_sdk, "Score", FakeScore)
+    judger = JevJudger(api_key="synthetic-test-key", timeout=3)
+    card = InsightCard(
+        id="card-investigation",
+        title="Revenue pulse",
+        what_to_watch="Revenue movement and its operational explanation.",
+        why_watch="Decide whether Revenue Operations should respond.",
+        sources=[
+            SourceRef(
+                key="anchor", adapter="superset", resource="dashboard:exec", label="Executive"
+            )
+        ],
+        investigation_mode=InvestigationMode.BOUNDED,
+    )
+    plan = base_plan(card)
+    candidate = ResourceDescriptor(
+        adapter="superset",
+        resource="dashboard:billing",
+        kind="dashboard",
+        title="Billing operations",
+        description="Checkout failures and payment health.",
+    )
+
+    result = await judger.select_investigation_sources(
+        {
+            "observations": [{"metric": "revenue", "change_pct": -18}],
+            "evidence": [],
+        },
+        card,
+        plan,
+        [candidate],
+        1,
+    )
+
+    assert result["probability"] == 0.94
+    assert result["selections"][0]["ref"] == "superset|dashboard:billing"
+    assert result["selections"][0]["score"] == 0.9
+    call = FakeClient.calls[0]
+    assert isinstance(call["questions"]["candidate_0"], FakeScore)
+    assert call["state"]["candidate_resources"][0]["title"] == "Billing operations"
+
+
+@pytest.mark.asyncio
+async def test_jev_bounded_judgment_returns_typed_evidence_findings(monkeypatch):
+    FakeClient.calls = []
+    monkeypatch.setattr(typesafe_sdk, "AsyncTypeSafeClient", FakeClient)
+    monkeypatch.setattr(typesafe_sdk, "Noul", FakeNoul)
+    judger = JevJudger(api_key="synthetic-test-key", timeout=3)
+    source = SourceRef(
+        key="anchor", adapter="superset", resource="dashboard:exec", label="Executive"
+    )
+    card = InsightCard(
+        id="card-bounded-judgment",
+        title="Revenue pulse",
+        what_to_watch="Revenue movement.",
+        why_watch="Support an operating decision.",
+        sources=[source],
+        investigation_mode=InvestigationMode.BOUNDED,
+    )
+    plan = base_plan(card)
+    item = Observation(
+        source_key="anchor",
+        subject_id="revenue",
+        subject_label="Revenue",
+        metric="revenue",
+        current=80,
+        baseline=100,
+        change_pct=-20,
+    )
+
+    result = await judger.judge(
+        {
+            "card": card.model_dump(mode="json"),
+            "insight_card": card.model_dump(mode="json"),
+            "insight_plan": plan.model_dump(mode="json"),
+            "observations": [item.model_dump(mode="json")],
+            "evidence": [],
+        },
+        card,
+        plan,
+        [item],
+    )
+
+    assert result.evidence_findings[0].role == "driver"
+    assert result.evidence_findings[0].probability == 0.91
+    assert "evidence_0" in FakeClient.calls[0]["questions"]

@@ -1,22 +1,24 @@
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass
 from typing import Any, Protocol
 from uuid import uuid4
 
 from .compiler import SUPPORTED_CAPABILITIES
 from .models import (
+    ContextSnapshot,
     DeliveryMethod,
     EvidenceBundle,
     InsightCard,
     InsightCardProposal,
+    InvestigationMode,
     ResourceDescriptor,
     ResourceDiscovery,
     ResourceMatch,
     RetrievalMode,
     SourceRef,
 )
+from .retrieval import _search_text, build_candidate_pool, resource_ref
 from .sources import SourceRegistry
 
 
@@ -30,52 +32,10 @@ class ResourceRelevanceJudger(Protocol):
     ) -> dict[str, float]: ...
 
 
-def resource_ref(resource: ResourceDescriptor) -> str:
-    """Return the opaque reference an MCP client can pass back after selection."""
-    return f"{resource.adapter}|{resource.resource}"
-
-
 def _slug(value: str) -> str:
+    import re
+
     return re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")[:80] or "insight"
-
-
-def _terms(value: str) -> set[str]:
-    return {term for term in re.findall(r"[a-z0-9]+", value.lower()) if len(term) > 2}
-
-
-def _search_text(resource: ResourceDescriptor) -> str:
-    metric_text = " ".join(
-        " ".join(
-            [
-                definition.key,
-                definition.label,
-                definition.description,
-                definition.population,
-                definition.grain,
-                " ".join(definition.aliases),
-                " ".join(definition.dimensions),
-            ]
-        )
-        for definition in resource.contract.metric_definitions
-    )
-    metadata = " ".join(str(value) for value in resource.metadata.values())
-    return " ".join(
-        [
-            resource.adapter,
-            resource.resource,
-            resource.kind,
-            resource.title,
-            resource.description,
-            resource.contract.tenant_id,
-            resource.contract.domain,
-            resource.contract.scope,
-            resource.contract.population,
-            resource.contract.grain,
-            " ".join(resource.contract.metric_names),
-            metric_text,
-            metadata,
-        ]
-    )
 
 
 def insight_goal(
@@ -98,7 +58,7 @@ class InsightAuthoringService:
     """Conversation-facing card authoring over installed source adapters.
 
     Candidate retrieval is deliberately bounded before Jev sees the catalog. The
-    lexical prefilter is only a recall guard for very large catalogs; Jev remains
+    pool unions lexical, relationship, domain, and context signals; Jev remains
     the required semantic ranker and there is no local relevance fallback.
     """
 
@@ -120,7 +80,8 @@ class InsightAuthoringService:
         if not 1 <= limit <= 25:
             raise ValueError("limit must be between 1 and 25")
         resources = await self.registry.list_resources(adapter)
-        candidates, truncated = self._bounded_candidates(goal, resources)
+        pool = build_candidate_pool(goal, resources, limit=self.max_candidates)
+        candidates = pool.resources
         judger = self._relevance_judger()
         scores = await judger.rank_resources(goal, candidates)
         matches = [
@@ -134,20 +95,32 @@ class InsightAuthoringService:
                 source_url=resource.source_url,
                 relevance=max(0.0, min(1.0, float(scores.get(resource_ref(resource), 0.0)))),
                 contract=resource.contract,
+                retrieval_signals=pool.signals.get(resource_ref(resource), []),
             )
             for resource in candidates
         ]
         matches.sort(key=lambda match: (-match.relevance, match.title.lower(), match.ref))
         visible = matches[:limit]
-        if visible and not any(match.relevance >= self.recommendation_threshold for match in visible):
-            visible[0] = visible[0].model_copy(update={"recommended": True})
-        else:
-            visible = [
-                match.model_copy(update={"recommended": match.relevance >= self.recommendation_threshold})
-                for match in visible
-            ]
+        no_match = not any(
+            match.relevance >= self.recommendation_threshold for match in visible
+        )
+        visible = [
+            match.model_copy(
+                update={
+                    "recommended": (
+                        not no_match and match.relevance >= self.recommendation_threshold
+                    )
+                }
+            )
+            for match in visible
+        ]
         warnings: list[str] = []
-        if truncated:
+        if no_match:
+            warnings.append(
+                "No catalog candidate cleared the Jev recommendation threshold; "
+                "select a source explicitly or refine the insight goal."
+            )
+        if pool.truncated:
             warnings.append(
                 "The catalog was bounded before Jev ranking; verify that the selected "
                 "source is present in the returned candidate set."
@@ -166,7 +139,9 @@ class InsightAuthoringService:
             matches=visible,
             candidate_count=len(resources),
             candidate_limit=self.max_candidates,
-            truncated=truncated,
+            truncated=pool.truncated,
+            no_match=no_match,
+            candidate_strategy=pool.strategy,
             evaluator=judger.name,
             authorized_tenant=authorized_tenant,
             warnings=warnings,
@@ -189,6 +164,9 @@ class InsightAuthoringService:
         owner: str | None = None,
         max_source_age_hours: float | None = 24.0,
         retrieval_mode: RetrievalMode = RetrievalMode.EXPAND,
+        investigation_mode: InvestigationMode = InvestigationMode.BOUNDED,
+        max_investigation_sources: int = 3,
+        investigation_threshold: float = 0.60,
     ) -> InsightCardProposal:
         if not what_to_watch.strip():
             raise ValueError("what_to_watch must not be empty")
@@ -236,6 +214,9 @@ class InsightAuthoringService:
             owner=owner,
             max_source_age_hours=max_source_age_hours,
             retrieval_mode=retrieval_mode,
+            investigation_mode=investigation_mode,
+            max_investigation_sources=max_investigation_sources,
+            investigation_threshold=investigation_threshold,
         )
         plan = await self.engine.compile(card)
         setup_questions: list[str] = []
@@ -265,7 +246,9 @@ class InsightAuthoringService:
             setup_questions=setup_questions,
         )
 
-    async def resolve_bundle(self, card: InsightCard) -> EvidenceBundle:
+    async def resolve_bundle(
+        self, card: InsightCard, context: ContextSnapshot | None = None
+    ) -> EvidenceBundle:
         """Resolve a bounded Jev-ranked source bundle for one card evaluation.
 
         Card sources remain the human-approved anchors. Expansion only adds
@@ -282,6 +265,8 @@ class InsightAuthoringService:
                 selected_sources=anchors,
                 candidate_count=0,
                 candidate_limit=self.max_candidates,
+                candidate_strategy="fixed-card-sources",
+                context_version=context.version if context else None,
                 evaluator="fixed-card-sources",
                 warnings=["Card retrieval_mode is fixed; no related source expansion was requested."],
             )
@@ -293,11 +278,16 @@ class InsightAuthoringService:
             for resource in resources
             if resource_ref(resource) in anchor_refs
         }
-        anchor_context = " ".join(
-            _search_text(resource) for resource in anchor_descriptors.values()
-        )
+        anchor_context = " ".join(_search_text(resource) for resource in anchor_descriptors.values())
         ranked_goal = f"{goal}\nConfirmed anchor context: {anchor_context}" if anchor_context else goal
-        candidates, truncated = self._bounded_candidates(ranked_goal, resources)
+        pool = build_candidate_pool(
+            ranked_goal,
+            resources,
+            anchors=list(anchor_descriptors.values()),
+            context=context,
+            limit=self.max_candidates,
+        )
+        candidates = pool.resources
         judger = self._relevance_judger()
         scores = await judger.rank_resources(ranked_goal, candidates)
         matches = [
@@ -312,6 +302,7 @@ class InsightAuthoringService:
                 relevance=max(0.0, min(1.0, float(scores.get(resource_ref(resource), 0.0)))),
                 recommended=False,
                 contract=resource.contract,
+                retrieval_signals=pool.signals.get(resource_ref(resource), []),
             )
             for resource in candidates
             if resource_ref(resource) not in anchor_refs
@@ -345,7 +336,7 @@ class InsightAuthoringService:
                 )
             )
         warnings: list[str] = []
-        if truncated:
+        if pool.truncated:
             warnings.append(
                 "The catalog was bounded before Jev ranking; related-source recall depends "
                 "on adapter metadata and lexical candidate coverage."
@@ -369,7 +360,9 @@ class InsightAuthoringService:
             omitted_matches=omitted_matches,
             candidate_count=len(resources),
             candidate_limit=self.max_candidates,
-            truncated=truncated,
+            candidate_strategy=pool.strategy,
+            truncated=pool.truncated,
+            context_version=context.version if context else None,
             evaluator=judger.name,
             warnings=warnings,
         )
@@ -379,23 +372,6 @@ class InsightAuthoringService:
         if not hasattr(judger, "rank_resources"):
             raise RuntimeError("the configured Jev judger does not support resource discovery")
         return judger
-
-    def _bounded_candidates(
-        self, goal: str, resources: list[ResourceDescriptor]
-    ) -> tuple[list[ResourceDescriptor], bool]:
-        if len(resources) <= self.max_candidates:
-            return resources, False
-        goal_terms = _terms(goal)
-        ranked = sorted(
-            enumerate(resources),
-            key=lambda item: (
-                -len(goal_terms & _terms(_search_text(item[1]))),
-                item[1].title.lower(),
-                item[0],
-            ),
-        )
-        return [resource for _, resource in ranked[: self.max_candidates]], True
-
 
 def proposal_summary(proposal: InsightCardProposal) -> dict[str, Any]:
     """Return a compact MCP-friendly view while retaining the full typed proposal."""
@@ -408,6 +384,8 @@ def proposal_summary(proposal: InsightCardProposal) -> dict[str, Any]:
         "watch_for": proposal.card.watch_for,
         "questions": proposal.card.questions,
         "retrieval_mode": proposal.card.retrieval_mode.value,
+        "investigation_mode": proposal.card.investigation_mode.value,
+        "max_investigation_sources": proposal.card.max_investigation_sources,
         "selected_sources": [source.model_dump(mode="json") for source in proposal.card.sources],
         "recommended_capabilities": [
             {"key": capability, "description": SUPPORTED_CAPABILITIES[capability]}

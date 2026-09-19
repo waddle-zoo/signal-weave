@@ -50,7 +50,9 @@ TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
 Superset is available at <http://localhost:8088>. SignalWeave serves MCP at
 <http://localhost:18000/mcp>, health at <http://localhost:18000/healthz>, and
 push evaluation at `POST /webhooks/evaluate`. The demo credentials are
-`admin` / `admin`; ports are loopback-only and must not be exposed.
+`admin` / `admin`; the loopback demo token is `local-dev-token`. Ports are
+loopback-only and must not be exposed. Set `SIGNALWEAVE_API_TOKEN` and
+`PUSH_WEBHOOK_TOKEN` to real deployment secrets outside local development.
 
 To run the included card against live local Superset:
 
@@ -149,6 +151,41 @@ After approval, an existing scheduler or alert relay posts:
 The caller owns scheduling, delivery, retries around the sink, and side effects;
 SignalWeave records the evaluation idempotency key and replays completed results.
 
+Cards created through the proposal path also default to one bounded investigation
+stage. Jev first decides whether the initial evidence needs more context, then
+scores a small set of authorized read-only candidates. SignalWeave fetches only
+the selected candidates and runs the final judgment over the combined evidence.
+The result includes the selected sources, omitted candidates, context version,
+typed evidence roles (`driver`, `corroborates`, `contradicts`, `quality`, or
+`unknown`), and an explicit abstention warning when no follow-up is justified.
+Set `investigation_mode="none"` for a fixed-evidence card.
+
+An existing agent or graph service can provide a versioned context snapshot when
+calling `simulate_insight_card` or `evaluate_insight_card`:
+
+```json
+{
+  "provider": "company-context",
+  "version": "graph-2026-09-18T10:00Z",
+  "facts": [
+    {
+      "fact_id": "edge-123",
+      "subject_ref": "superset|dashboard:7",
+      "relation": "diagnosed_by",
+      "object_ref": "superset|dashboard:12",
+      "statement": "Checkout conversion is diagnosed by payment failures.",
+      "provenance": ["owner:growth", "source:metric-catalog"]
+    }
+  ]
+}
+```
+
+Context supplied through MCP is marked `unverified` and is evidence for the run,
+not a silent policy update; if non-empty unverified context would support an
+automatic `notify` or `escalate`, the result is downgraded to `investigate`. A
+server-side `ContextProvider` can supply trusted context from a deployment-owned
+system. Cards and graph changes remain caller-owned and reviewable.
+
 ## Plain-language metric queries
 
 For data-lake questions, use a metric query card over an approved Trino catalog:
@@ -177,7 +214,9 @@ SignalWeave uses Jev as a programmable decision primitive, not an autonomous
 agent. Jev selects from a finite capability vocabulary and evaluates the card's
 watch items, questions, and outcome conditions with typed probabilities. Code
 keeps ownership of baselines, freshness, allowlists, confidence routing, and
-side effects. Destinations never come from model output.
+side effects. In the bounded investigation path, Jev also scores candidate
+evidence for explanatory usefulness; it does not generate a tool call, query, or
+destination. Destinations never come from model output.
 
 That combination gives a person natural-language flexibility without turning the
 whole source state and action policy into one untestable response. It also means
@@ -225,6 +264,15 @@ definition, population, grain, freshness, lineage, and source status in adapter
 metadata, and run a domain-owner-labeled, time-split shadow trial before enabling
 automated actions.
 
+The live adversarial retrieval-and-explanation fixture covers SaaS, retail,
+logistics, fintech, and marketplace cases with same-name tenant decoys, graph
+context, stale evidence, related and unrelated dashboards, and a no-diagnostic
+case. The current five-case run made 5/5 exact outcome decisions, 5/5 exact
+delivery decisions, selected only authorized sources in 5/5 cases, and averaged
+0.70 recall over the labeled optional diagnostic-source set. This is a synthetic
+stress test; the imperfect source recall is intentionally visible and is not a
+production accuracy claim. Re-run it with `make retrieval-explanation-trial`.
+
 The default runtime stores insight cards, metric cards, and decision receipts in
 one SQLite file. Its database uniqueness constraint makes a completed
 idempotency key replayable after restart. Multi-replica deployments should
@@ -251,6 +299,7 @@ not a universal accuracy claim.
 - [`docs/enterprise-experiment.md`](docs/enterprise-experiment.md) — MCP-only enterprise readiness experiment
 - [`docs/enterprise-closure.md`](docs/enterprise-closure.md) — current proof boundary and next gate
 - [`docs/adversarial-review.md`](docs/adversarial-review.md) — public-readiness review and explicit gaps
+- [`docs/retrieval-explanation.md`](docs/retrieval-explanation.md) — bounded investigation contract and adversarial trial
 - [`docs/postfix-agent-trial.md`](docs/postfix-agent-trial.md) — live post-fix Luna agent trial
 - [`docs/security.md`](docs/security.md) — credentials and deployment notes
 - [`ROADMAP.md`](ROADMAP.md) — future work tracker

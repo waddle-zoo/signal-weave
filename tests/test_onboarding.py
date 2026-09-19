@@ -94,6 +94,12 @@ class OnboardingJevDouble:
             "baseline": card.comparison_windows[0],
         }
 
+    async def select_investigation_sources(
+        self, state, card, plan, candidates, max_sources
+    ):
+        del state, card, plan, candidates, max_sources
+        return {"probability": 0.0, "selections": []}
+
     async def judge(self, state, card, plan, observations):
         del plan
         return InsightResult(
@@ -128,6 +134,12 @@ class NoResourceRankingJudger:
     name = "non-jev-test-judger"
 
 
+class LowRelevanceJudger(OnboardingJevDouble):
+    async def rank_resources(self, goal, resources):
+        del goal
+        return {f"{resource.adapter}|{resource.resource}": 0.12 for resource in resources}
+
+
 def make_server(tmp_path, judger=None, *, sqlite=False):
     registry = SourceRegistry([SupersetCatalogDouble()])
     engine = InsightEngine(judger or OnboardingJevDouble(), registry=registry)
@@ -153,7 +165,10 @@ def tool(server, name):
 
 
 @pytest.mark.asyncio
-async def test_generic_card_flow_discovers_proposes_previews_and_requires_approval(tmp_path):
+async def test_generic_card_flow_discovers_proposes_previews_and_requires_approval(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setenv("PUSH_WEBHOOK_TOKEN", "test-webhook-token")
     server = make_server(tmp_path)
 
     discovery = await tool(server, "discover_insight_sources")(
@@ -211,13 +226,18 @@ async def test_generic_card_flow_discovers_proposes_previews_and_requires_approv
         response = await client.post(
             "/webhooks/evaluate",
             json={"card_id": card_id, "idempotency_key": "draft-evaluation"},
+            headers={"Authorization": "Bearer test-webhook-token"},
         )
     assert response.status_code == 409
 
-    preview = await tool(server, "simulate_insight_card")(card_id)
+    preview = await tool(server, "simulate_insight_card")(
+        card_id,
+        context={"provider": "agent-context", "version": "v1", "facts": []},
+    )
     assert preview["status"] == "preview"
     assert preview["delivery_enabled"] is False
     assert preview["result"]["outcome"] == "notify"
+    assert preview["result"]["context"]["trust"] == "unverified"
     assert preview["result"]["delivery_methods"][0]["key"] == "growth-ops"
 
     approved = await tool(server, "approve_insight_card")(card_id)
@@ -232,10 +252,15 @@ async def test_generic_card_flow_discovers_proposes_previews_and_requires_approv
             card_id, idempotency_key="concurrent-evaluation", actor="scheduler-a"
         ),
         tool(server, "evaluate_insight_card")(
-            card_id, idempotency_key="concurrent-evaluation", actor="scheduler-b"
+            card_id, idempotency_key="concurrent-evaluation", actor="scheduler-a"
         ),
     )
     assert sorted(result["replayed"] for result in concurrent) == [False, True]
+
+    with pytest.raises(ValueError, match="already bound"):
+        await tool(server, "evaluate_insight_card")(
+            card_id, idempotency_key="concurrent-evaluation", actor="scheduler-b"
+        )
 
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
@@ -243,6 +268,7 @@ async def test_generic_card_flow_discovers_proposes_previews_and_requires_approv
         response = await client.post(
             "/webhooks/evaluate",
             json={"card_id": card_id, "idempotency_key": "approved-evaluation"},
+            headers={"Authorization": "Bearer test-webhook-token"},
         )
     assert response.status_code == 200
     assert response.json()["result"]["delivery_methods"][0]["key"] == "growth-ops"
@@ -253,10 +279,58 @@ async def test_generic_card_flow_discovers_proposes_previews_and_requires_approv
         replay = await client.post(
             "/webhooks/evaluate",
             json={"card_id": card_id, "idempotency_key": "approved-evaluation"},
+            headers={"Authorization": "Bearer test-webhook-token"},
         )
     assert replay.status_code == 200
     assert replay.json()["replayed"] is True
     assert replay.json()["receipt"]["status"] == "replayed"
+
+
+@pytest.mark.asyncio
+async def test_discovery_abstains_when_no_candidate_clears_recommendation_threshold(tmp_path):
+    server = make_server(tmp_path, judger=LowRelevanceJudger())
+
+    discovery = await tool(server, "discover_insight_sources")(
+        goal="A metric that is absent from this catalog.", adapter="superset", limit=3
+    )
+
+    assert discovery["no_match"] is True
+    assert all(match["recommended"] is False for match in discovery["matches"])
+    assert "No catalog candidate" in discovery["warnings"][0]
+
+
+@pytest.mark.asyncio
+async def test_webhook_fails_closed_and_rejects_oversized_or_invalid_payloads(
+    tmp_path, monkeypatch
+):
+    server = make_server(tmp_path)
+    app = server.streamable_http_app()
+    monkeypatch.delenv("PUSH_WEBHOOK_TOKEN", raising=False)
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        missing_token = await client.post(
+            "/webhooks/evaluate", content=b"{}"
+        )
+    assert missing_token.status_code == 503
+
+    monkeypatch.setenv("PUSH_WEBHOOK_TOKEN", "test-webhook-token")
+    monkeypatch.setenv("SIGNALWEAVE_MAX_HTTP_BODY_BYTES", "8")
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        oversized = await client.post(
+            "/webhooks/evaluate",
+            content=b'{"card_id":"x"}',
+            headers={"Authorization": "Bearer test-webhook-token"},
+        )
+        malformed = await client.post(
+            "/webhooks/evaluate",
+            content=b"not-json",
+            headers={"Authorization": "Bearer test-webhook-token"},
+        )
+    assert oversized.status_code == 413
+    assert malformed.status_code == 400
 
 
 @pytest.mark.asyncio

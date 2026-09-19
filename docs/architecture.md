@@ -163,7 +163,8 @@ the `EvidenceBundle` used for that run. This makes retrieval inspectable and let
 a client show why a related dashboard or query was included.
 
 The catalog is filtered by the registry's authorization boundary before Jev sees
-it. A lexical prefilter only bounds very large catalogs; Jev remains the semantic
+it. The bounded candidate pool unions lexical, title, domain, adapter-published
+relationship, lineage, and versioned-context references; Jev remains the semantic
 ranker. Related sources are optional, so a missing context source is preserved as
 evidence without vetoing a complete required anchor. The card owner still
 controls the anchor and approval decision.
@@ -179,13 +180,17 @@ dashboard.
 For every evaluation the engine:
 
 1. resolves the approved card sources;
-2. applies the selected comparison window in code when a source supplies it;
-3. creates evidence statements for every normalized observation and preserves all
+2. loads one immutable context snapshot from the configured provider or caller;
+3. applies the selected comparison window in code when a source supplies it;
+4. optionally asks Jev whether one bounded follow-up inspection is warranted;
+5. validates selected references against the authorized candidate pool and fetches
+   only those read-only sources;
+6. creates evidence statements for every normalized observation and preserves all
    source evidence;
-4. sends the complete normalized observation set plus the card to the configured
+7. sends the complete normalized observation set, context, and card to the configured
    Jev judger;
-5. receives an outcome plus per-item `watch_results` and `question_results`; and
-6. applies hard gates before returning the result.
+8. receives an outcome, per-item watch/question results, and typed evidence roles; and
+9. applies hard gates before returning the result.
 
 Changed or incomplete observations are ordered first for client rendering, but
 they are not a retrieval limit. Jev sees all observations in the evaluation state,
@@ -204,12 +209,15 @@ agent runner:
 - one `Noul` evaluates every `watch_for` item;
 - one `Noul` evaluates whether every `question` is supported by the evidence; and
 - one bounded `Choice` selects the mutually exclusive outcome from the card's
-  configured delivery vocabulary.
+  configured delivery vocabulary;
+- one `Noul` decides whether a bounded follow-up is useful; and
+- independent `Score` judgments rank follow-up candidates for explanatory value.
 
 The service composes those judgments in code. It never asks Jev to generate SQL,
 invent a destination, call a delivery system, or return an unconstrained action
-plan. Confidence is a routing signal: below the card threshold, automatic
-outcomes become `investigate`.
+plan. A follow-up candidate is still checked against the authorized catalog in
+code. Confidence is a routing signal: below the card threshold, automatic
+outcomes become `investigate`; low-confidence evidence roles become `unknown`.
 
 ## Safety gates
 
@@ -245,6 +253,13 @@ evaluate_insight_card(card_id)
 resolve_insight_sources(card_id)
 ```
 
+`simulate_insight_card`, `evaluate_insight_card`, and
+`resolve_insight_sources` accept an optional versioned `ContextSnapshot`. A
+deployment can also inject a `ContextProvider` into `InsightEngine`. The result
+contains the context version, investigation trace, selected and omitted
+references, and typed evidence findings. The stored card and external graph are
+not mutated by evaluation.
+
 The proposal flow uses Jev to rank a bounded source catalog, stores a draft, and
 returns setup questions. The direct draft flow is for a caller that already knows
 its source references. Both flows compile and store a plan. Simulation is
@@ -261,10 +276,11 @@ sink; the receipt is the handoff boundary. A multi-replica deployment should
 replace the store interface with a shared transactional database before routing
 traffic to more than one process.
 
-## Future context and feedback
+## Context and feedback boundary
 
-A future knowledge-context adapter can add definitions, ownership, relationships,
-precedents, conflicts, and human feedback as versioned, provenance-bearing input
-to the same card evaluation state. That can improve the Jev decision without
-turning SignalWeave into a graph store or agent runtime. Raw feedback must not
-silently rewrite a card or graph; proposed changes need review and a new version.
+An external knowledge-context adapter can add definitions, ownership,
+relationships, precedents, conflicts, and human feedback as versioned,
+provenance-bearing input to the same card evaluation state. That can improve the
+Jev decision without turning SignalWeave into a graph store or agent runtime. Raw
+feedback must not silently rewrite a card or graph; proposed changes need review
+and a new version.
