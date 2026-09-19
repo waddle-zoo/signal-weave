@@ -93,35 +93,38 @@ def page_scheduled(now: float) -> str:
     query = "What changed in revenue this week, and should we act?"
     query_visible = query[: int(len(query) * reveal(.7, 3.0, now))]
     parts = [
-        page_header("PUSHED ANALYTICS", "CODEX / 06:00"), rect(72, 194, 1136, 422, PANEL, 18, stroke=LINE, stroke_width=1),
-        text(104, 300, "No one asked.", 48, INK, font_family="Arial", font_weight="700", letter_spacing="-2.6"),
-        text(104, 350, "Codex woke up.", 48, INK, font_family="Arial", font_weight="700", letter_spacing="-2.6"),
-        text(104, 386, "A scheduled agent loads a human-curated card and starts the run.", 12, MUTED, font_family="Arial"),
-        text(104, 432, "AGENT QUERY", 9, INDIGO, font_family="Arial", font_weight="700", letter_spacing="1.4"),
-        rect(104, 448, 570, 72, "#FBFBFF", 12, stroke="#BFC7FF", stroke_width=1), text(123, 490, query_visible, 17, INK, font_family="Arial", font_weight="700"),
-        rect(756, 248, 390, 92, "#FCFCFD", 14, stroke=LINE, stroke_width=1), text(778, 275, "GROWTH-HEALTH", 9, INK, font_family="Arial", font_weight="700", letter_spacing="1.3"),
-        text(1124, 275, "SCHEDULED", 9, MUTED, text_anchor="end", font_family="Arial", font_weight="700", letter_spacing="1.2"), text(778, 310, "Human intent already loaded.", 21, INK, font_family="Arial", font_weight="700", letter_spacing="-.8"), text(778, 326, "card · sources · delivery path", 10, MUTED, font_family="Arial"),
+        page_header("CODEX / SCHEDULED", "06:00 · GROWTH-HEALTH"), rect(72, 194, 1136, 422, PANEL, 18, stroke=LINE, stroke_width=1),
+        rect(104, 242, 650, 284, "#FCFCFD", 14, stroke=LINE, stroke_width=1),
+        text(130, 274, "CODEX", 10, INK, font_family="Arial", font_weight="700", letter_spacing="1.4"), text(728, 274, "scheduled", 9, MUTED, text_anchor="end", font_family="Arial", font_weight="700", letter_spacing="1.2"),
+        text(130, 319, "AGENT QUERY", 9, INDIGO, font_family="Arial", font_weight="700", letter_spacing="1.4"),
+        rect(130, 336, 598, 70, "#FBFBFF", 12, stroke="#BFC7FF", stroke_width=1), text(150, 380, query_visible, 17, INK, font_family="Arial", font_weight="700"),
+        text(130, 441, "QUERY SENT", 9, TEAL, font_family="Arial", font_weight="700", letter_spacing="1.3", opacity=reveal(2.8, 3.15, now)), circle(120, 438, 4, TEAL, opacity=reveal(2.8, 3.15, now)),
+        rect(806, 242, 340, 284, "#FCFCFD", 14, stroke=LINE, stroke_width=1), text(832, 274, "GROWTH-HEALTH", 9, INK, font_family="Arial", font_weight="700", letter_spacing="1.3"), text(1120, 274, "CARD", 9, MUTED, text_anchor="end", font_family="Arial", font_weight="700", letter_spacing="1.2"),
+        text(832, 320, "what matters", 10, INDIGO, font_family="Arial", font_weight="700", letter_spacing="1.1"), text(832, 342, "revenue + drivers", 13, INK_SOFT, font_family="Arial"), line(832, 360, 1120, 360, LINE, 1), text(832, 389, "why", 10, INDIGO, font_family="Arial", font_weight="700", letter_spacing="1.1"), text(832, 411, "growth plan", 13, INK_SOFT, font_family="Arial"), line(832, 429, 1120, 429, LINE, 1), text(832, 458, "deliver", 10, INDIGO, font_family="Arial", font_weight="700", letter_spacing="1.1"), text(832, 480, "evidence-backed", 13, INK_SOFT, font_family="Arial"),
     ]
-    steps = [("load the card", INDIGO), ("inspect the evidence", TEAL), ("ask Jev", ORANGE), ("return the bundle", PINK)]
+    steps = [("load card", INDIGO), ("inspect", TEAL), ("ask Jev", ORANGE), ("return", PINK)]
     for index, (label, color) in enumerate(steps):
-        active = reveal(1.0 + index * .55, 1.45 + index * .55, now)
-        y = 384 + index * 39
-        parts += [rect(756, y, 390, 29, PANEL, 8, stroke=LINE if active < .8 else "#B7EBDF", stroke_width=1, opacity=.42 + .58 * active), circle(770, y + 14, 7, color, opacity=.18 + .82 * active), text(770, y + 17, str(index + 1), 8, color, text_anchor="middle", font_family="Arial", font_weight="700", opacity=active), text(790, y + 18, label, 10, INK, font_family="Arial", font_weight="700", opacity=active)]
+        active = reveal(3.0 + index * .45, 3.35 + index * .45, now)
+        x = 130 + index * 150
+        parts += [rect(x, 460, 136, 46, PANEL, 9, stroke=LINE if active < .8 else "#B7EBDF", stroke_width=1, opacity=.35 + .65 * active), circle(x + 18, 478, 8, color, opacity=.18 + .82 * active), text(x + 18, 481, str(index + 1), 8, color, text_anchor="middle", font_family="Arial", font_weight="700", opacity=active), text(x + 35, 482, label, 10, INK, font_family="Arial", font_weight="700", opacity=active)]
     return "".join(parts)
 
 
 def page_card(now: float) -> str:
     parts = [
-        page_header("THE CARD IS THE CONTEXT", "FREE-FORM CARD → TYPED JUDGMENT"), rect(72, 194, 1136, 422, PANEL, 18, stroke=LINE, stroke_width=1),
-        text(104, 252, "People define what matters.", 39, INK, font_family="Arial", font_weight="700", letter_spacing="-2.0"), text(104, 294, "Jev makes it usable.", 39, INK, font_family="Arial", font_weight="700", letter_spacing="-2.0"),
-        text(104, 324, "Human intent in. A typed outcome the agent can use.", 12, MUTED, font_family="Arial"), rect(104, 358, 500, 222, "#FCFCFD", 14, stroke=LINE, stroke_width=1),
-        text(126, 386, "GROWTH-HEALTH", 10, INK, font_family="Arial", font_weight="700", letter_spacing="1.4"), text(578, 386, "APPROVED · V7", 9, MUTED, text_anchor="end", font_family="Arial", font_weight="700", letter_spacing="1.1"),
+        page_header("CARD → JEV.CALL", "FREE-FORM → TYPED"), rect(72, 194, 1136, 422, PANEL, 18, stroke=LINE, stroke_width=1),
+        rect(104, 246, 500, 282, "#FCFCFD", 14, stroke=LINE, stroke_width=1),
+        text(128, 277, "GROWTH-HEALTH", 10, INK, font_family="Arial", font_weight="700", letter_spacing="1.4"), text(578, 277, "CARD · V7", 9, MUTED, text_anchor="end", font_family="Arial", font_weight="700", letter_spacing="1.1"),
     ]
-    fields = [("WHAT TO WATCH", "Weekly revenue movement and the signals that explain a meaningful change."), ("WHY IT MATTERS", "Leadership needs an early signal when the growth plan is drifting."), ("DELIVER BASED ON OUTCOMES", "Notify the right owner only when the evidence supports it.")]
+    fields = [("WHAT TO WATCH", "revenue + drivers"), ("WHY IT MATTERS", "growth plan"), ("DELIVER", "evidence-backed alert")]
     for index, (label, value) in enumerate(fields):
-        y = 418 + index * 52
-        parts += [text(126, y, label, 8, INDIGO, font_family="Arial", font_weight="700", letter_spacing="1.1"), text(126, y + 20, value, 10, INK_SOFT, font_family="Arial"), line(126, y + 32, 578, y + 32, LINE, 1, opacity=.8)]
-    parts += [rect(680, 294, 466, 230, "#FBFBFF", 14, stroke="#BFC7FF", stroke_width=1), text(706, 324, "TYPESAFE / JEV", 9, INDIGO, font_family="Arial", font_weight="700", letter_spacing="1.5"), text(706, 355, "A judgment the agent can trust.", 22, INK, font_family="Arial", font_weight="700", letter_spacing="-.9"), rect(706, 378, 414, 106, PANEL, 9, stroke="#DFE3FF", stroke_width=1), text(724, 401, 'verdict:     "notify"', 11, INK_SOFT, font_family="Courier New"), text(724, 422, "confidence:  0.91", 11, INK_SOFT, font_family="Courier New"), text(724, 443, "probabilities: notify .91 · review .07", 11, INK_SOFT, font_family="Courier New"), text(724, 464, "evidence:    4 sources", 11, INK_SOFT, font_family="Courier New"), text(724, 485, 'next:        "send + investigate"', 11, INK_SOFT, font_family="Courier New"), text(706, 512, "structured output · provenance attached", 10, MUTED, font_family="Arial")]
+        y = 316 + index * 55
+        parts += [text(128, y, label, 8, INDIGO, font_family="Arial", font_weight="700", letter_spacing="1.1"), text(128, y + 21, value, 14, INK_SOFT, font_family="Arial"), line(128, y + 35, 580, y + 35, LINE, 1, opacity=.8)]
+    parts += [rect(680, 246, 466, 282, "#FBFBFF", 14, stroke="#BFC7FF", stroke_width=1), text(706, 277, "TYPESAFE / JEV", 9, INDIGO, font_family="Arial", font_weight="700", letter_spacing="1.5"), text(706, 316, "Jev.call", 25, INK, font_family="Arial", font_weight="700", letter_spacing="-1"), rect(706, 338, 414, 82, PANEL, 9, stroke="#DFE3FF", stroke_width=1), text(724, 360, 'verdict:  "notify"', 11, INK_SOFT, font_family="Courier New"), text(724, 381, "evidence: 4 sources", 11, INK_SOFT, font_family="Courier New"), text(724, 402, 'next:     "send + investigate"', 11, INK_SOFT, font_family="Courier New"), text(706, 448, "weighted probability", 9, MUTED, font_family="Arial", font_weight="700", letter_spacing="1.1")]
+    probabilities = [("notify", .91, INDIGO), ("review", .07, ORANGE), ("ignore", .02, FAINT)]
+    for index, (label, probability, color) in enumerate(probabilities):
+        y = 471 + index * 18
+        parts += [text(706, y, label, 9, MUTED, font_family="Arial", font_weight="700"), rect(760, y - 8, 270, 6, "#EAECF0", 3), rect(760, y - 8, 270 * probability, 6, color, 3), text(1050, y, f"{probability:.2f}", 9, INK, text_anchor="end", font_family="Arial", font_weight="700")]
     return "".join(parts)
 
 
@@ -130,7 +133,7 @@ def network_node(x: float, y: float, label: str, note: str, color: str, active: 
 
 
 def page_graph(now: float) -> str:
-    active = reveal(7.0, 9.0, now)
+    active = reveal(8.3, 9.6, now)
     parts = [page_header("JEV FINDS THE CONNECTED EVIDENCE", "CONNECT → QUERY → JUDGE"), rect(72, 194, 1136, 422, "#FCFCFD", 18, stroke=LINE, stroke_width=1)]
     for x in range(104, 1180, 34):
         parts.append(line(x, 218, x, 586, "#F0F2F5", 1))
@@ -139,20 +142,20 @@ def page_graph(now: float) -> str:
     cx, cy = 650, 388
     sources = [(264, 388, "CARD", "human intent", INDIGO), (650, 250, "SQL", "bounded query", INDIGO), (1010, 300, "SUPERSET", "dashboard", ORANGE), (1010, 388, "FUNNEL", "conversion", TEAL), (1010, 476, "OPS", "support + finance", PINK)]
     for index, (x, y, label, note, color) in enumerate(sources):
-        edge = reveal(6.8 + index * .42, 7.3 + index * .42, now)
+        edge = reveal(8.45 + index * .45, 8.9 + index * .45, now)
         parts += [line(cx, cy, x, y, "#AAB5EF", 2, opacity=.15 + .85 * edge), circle(cx + (x - cx) * edge, cy + (y - cy) * edge, 5, color, opacity=edge), network_node(x, y, label, note, color, edge, 27)]
     parts += [circle(cx, cy, 52, "#EFF4FF", stroke="#BFC7FF", stroke_width=2, opacity=.72 + .28 * active), text(cx, cy + 7, "Jev", 25, INDIGO, text_anchor="middle", font_family="Arial", font_weight="700", opacity=.72 + .28 * active), text(cx, cy + 25, "JUDGMENT", 8, "#6872D8", text_anchor="middle", font_family="Arial", font_weight="700", letter_spacing="1.4", opacity=.72 + .28 * active)]
-    sql = reveal(8.4, 9.0, now)
+    sql = reveal(10.8, 11.25, now)
     parts += [rect(430, 548, 440, 34, PANEL, 8, stroke=LINE, stroke_width=1, opacity=sql), text(448, 570, "SQL", 9, TEAL, font_family="Arial", font_weight="700", letter_spacing="1.0", opacity=sql), text(486, 570, "SELECT revenue, conversion FROM trusted_sources", 10, INK_SOFT, font_family="Courier New", opacity=sql)]
     return "".join(parts)
 
 
 def page_bundle(now: float) -> str:
-    parts = [page_header("THE RESULT IS A DECISION SURFACE", "EVIDENCE, CONFIDENCE, NEXT INSTRUCTION"), rect(72, 194, 1136, 422, PANEL, 18, stroke=LINE, stroke_width=1), text(104, 263, "Facts, confidence,", 41, INK, font_family="Arial", font_weight="700", letter_spacing="-2.1"), text(104, 306, "next instruction.", 41, INK, font_family="Arial", font_weight="700", letter_spacing="-2.1"), text(104, 338, "The sources resolve into one compact bundle for Codex.", 12, MUTED, font_family="Arial"), rect(104, 372, 560, 196, "#FCFCFD", 14, stroke=LINE, stroke_width=1), text(128, 400, "GROWTH-HEALTH / RESULT", 9, INK, font_family="Arial", font_weight="700", letter_spacing="1.2"), text(638, 400, "JEV", 9, MUTED, text_anchor="end", font_family="Arial", font_weight="700", letter_spacing="1.2")]
+    parts = [page_header("JEV RESULT", "EVIDENCE → ACTION"), rect(72, 194, 1136, 422, PANEL, 18, stroke=LINE, stroke_width=1), text(104, 276, "Evidence → action.", 37, INK, font_family="Arial", font_weight="700", letter_spacing="-2.0"), text(104, 302, "returned to Codex", 11, MUTED, font_family="Arial"), rect(104, 332, 560, 236, "#FCFCFD", 14, stroke=LINE, stroke_width=1), text(128, 360, "GROWTH-HEALTH / RESULT", 9, INK, font_family="Arial", font_weight="700", letter_spacing="1.2"), text(638, 360, "JEV", 9, MUTED, text_anchor="end", font_family="Arial", font_weight="700", letter_spacing="1.2")]
     rows = [("revenue", "−22%", RED), ("conversion", "−15%", RED), ("support backlog", "+28%", ORANGE), ("finance", "agrees", GREEN)]
     for index, (label, value, color) in enumerate(rows):
         row_a = reveal(10.2 + index * .34, 10.65 + index * .34, now)
-        y = 432 + index * 32
+        y = 392 + index * 32
         parts += [line(128, y - 17, 638, y - 17, LINE, 1, opacity=row_a), circle(136, y - 2, 5, color, opacity=row_a), text(152, y + 2, label, 11, INK_SOFT, font_family="Arial", font_weight="700", opacity=row_a), text(628, y + 2, value, 13, color, text_anchor="end", font_family="Arial", font_weight="700", opacity=row_a)]
     footer_a = reveal(11.7, 12.3, now)
     parts += [rect(128, 532, 510, 24, "#ECFDF3", 7, opacity=footer_a), text(142, 549, "confidence", 9, GREEN, font_family="Arial", font_weight="700", opacity=footer_a), text(624, 549, "0.91 · notify", 10, GREEN, text_anchor="end", font_family="Arial", font_weight="700", opacity=footer_a)]

@@ -13,9 +13,9 @@ timing reference.
 
 | Time | On screen | Narration beat |
 | --- | --- | --- |
-| 0:00–0:05.2 | Codex wakes on schedule and types the internal question | “At six, a Codex workflow…” |
-| 0:05.2–0:08.2 | The free-form card resolves into the typed Jev judgment shape | “The card carries the human context…” |
-| 0:08.2–0:12.5 | The graph connects CARD → SQL → Jev → source nodes | “Then SignalWeave connects the dots…” |
+| 0:00–0:05.2 | Codex types the question; after `QUERY SENT`, steps 1 → 2 → 3 → 4 pop in | “At six, a Codex workflow…” |
+| 0:05.2–0:08.2 | The free-form card resolves into a Jev call shape with weighted probabilities | “The card carries the human context…” |
+| 0:08.2–0:12.5 | Graph arms connect one-by-one: CARD → SQL → Jev → source nodes | “Then SignalWeave connects the dots…” |
 | 0:12.5–0:16.5 | Evidence resolves into one bundle with confidence and instruction | “The bundle comes back…” |
 | 0:16.5–0:22 | Codex types to Slack and leadership replies | “Codex types the heads-up… Ack…” |
 

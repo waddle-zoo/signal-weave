@@ -456,13 +456,60 @@
     .story-shape-note { margin-top: 13px; color: var(--muted); font-size: 10px; line-height: 1.45; }
     .story-card-connection { display: flex; align-items: center; gap: 8px; margin-top: 16px; color: var(--muted); font-size: 9px; font-weight: 720; }
     .story-card-connection i { flex: 1; height: 1px; background: linear-gradient(90deg, #bfc7ff, #b7ebdf); }
+    .story-agent-shell { height: 100%; display: grid; grid-template-columns: minmax(0, 1.28fr) minmax(250px, .72fr); gap: 18px; padding: 26px; }
+    .story-agent-panel { min-width: 0; display: flex; flex-direction: column; justify-content: center; }
+    .story-agent-top { display: flex; align-items: center; justify-content: space-between; color: var(--muted); font-size: 10px; font-weight: 760; letter-spacing: .12em; text-transform: uppercase; }
+    .story-agent-top strong { color: var(--ink); font-size: 12px; }
+    .story-agent-query-label { margin-top: 38px; color: var(--indigo); font-size: 9px; font-weight: 780; letter-spacing: .13em; }
+    .story-agent-shell .story-page-query { min-height: 58px; margin-top: 11px; padding: 17px 18px; border: 1px solid #bfc7ff; border-radius: 14px; background: #fbfbff; box-shadow: 0 0 0 4px rgba(99,102,241,.05); font-size: clamp(17px, 2.2vw, 25px); }
+    .story-send-line { display: flex; align-items: center; gap: 7px; margin-top: 12px; color: var(--teal); font-size: 9px; font-weight: 760; letter-spacing: .1em; text-transform: uppercase; opacity: 0; transition: opacity 280ms ease; }
+    .story-send-line.is-live { opacity: 1; }
+    .story-send-line::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 0 4px rgba(18,184,166,.1); }
+    .story-page-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 28px; }
+    .story-page-step { min-height: 54px; display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; gap: 6px; padding: 10px; transform: translateY(3px) scale(.98); }
+    .story-page-step.is-live { transform: translateY(0) scale(1); }
+    .story-page-step span { font-size: 9px; }
+    .story-agent-mini-card { align-self: center; width: 100%; padding: 18px; border: 1px solid var(--line); border-radius: 15px; background: #fcfcfd; box-shadow: 0 12px 24px rgba(16,24,40,.05); }
+    .story-agent-mini-card-head { display: flex; justify-content: space-between; color: var(--muted); font-size: 9px; font-weight: 760; letter-spacing: .1em; text-transform: uppercase; }
+    .story-agent-mini-card-head strong { color: var(--ink); }
+    .story-agent-mini-title { margin-top: 24px; font-size: 25px; font-weight: 760; letter-spacing: -.055em; }
+    .story-agent-mini-fields { display: flex; flex-direction: column; gap: 7px; margin-top: 18px; }
+    .story-agent-mini-field { padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; color: var(--muted); font-size: 9px; font-weight: 700; }
+    .story-agent-mini-field b { display: block; margin-bottom: 3px; color: var(--indigo); font-size: 8px; letter-spacing: .1em; text-transform: uppercase; }
+    .story-context-page { height: 100%; display: grid; grid-template-columns: minmax(0, 1fr) minmax(250px, .9fr); gap: 18px; padding: 24px; }
+    .story-context-card { min-width: 0; align-self: center; padding: 18px; border: 1px solid var(--line); border-radius: 15px; background: #fcfcfd; }
+    .story-context-card .story-card-panel-head { margin-bottom: 8px; }
+    .story-context-card .story-card-field { padding: 13px 0; }
+    .story-context-card .story-card-field p { max-width: 430px; font-size: 11px; }
+    .story-jev-call { align-self: center; padding: 18px; border: 1px solid #bfc7ff; border-radius: 15px; background: #fbfbff; box-shadow: 0 0 0 4px rgba(99,102,241,.05); }
+    .story-jev-call-head { display: flex; align-items: center; justify-content: space-between; color: var(--muted); font-size: 9px; font-weight: 760; letter-spacing: .1em; text-transform: uppercase; }
+    .story-jev-call-head strong { color: var(--indigo); }
+    .story-jev-call-title { margin-top: 22px; font-size: 22px; font-weight: 760; letter-spacing: -.05em; }
+    .story-jev-shape { margin-top: 16px; padding: 13px; border: 1px solid #dfe3ff; border-radius: 10px; background: white; color: var(--ink-soft); font: 10px/1.7 ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .story-jev-shape .key { color: var(--indigo); }
+    .story-jev-shape .value { color: var(--green); }
+    .story-jev-shape .number { color: #b54708; }
+    .story-probabilities { margin-top: 15px; }
+    .story-prob-row { display: grid; grid-template-columns: 54px 1fr 33px; gap: 7px; align-items: center; margin-top: 7px; color: var(--muted); font-size: 9px; font-weight: 700; }
+    .story-prob-row:first-child { margin-top: 0; }
+    .story-prob-row i { height: 6px; overflow: hidden; border-radius: 999px; background: #eaecf0; }
+    .story-prob-row i b { display: block; height: 100%; border-radius: inherit; background: var(--indigo); }
+    .story-prob-row:nth-child(2) i b { background: var(--orange); }
+    .story-prob-row:nth-child(3) i b { background: var(--faint); }
+    .story-prob-row strong { color: var(--ink); text-align: right; font-size: 9px; }
+    .story-context-link { display: flex; align-items: center; gap: 8px; margin-top: 16px; color: var(--muted); font-size: 9px; font-weight: 720; }
+    .story-context-link i { flex: 1; height: 1px; background: linear-gradient(90deg, #bfc7ff, #b7ebdf); }
+    .story-bundle-page { padding: 22px; }
+    .story-bundle-title { margin-top: 4px; font-size: 25px; }
+    .story-bundle-copy { margin-top: 7px; font-size: 10px; }
 
     .story-graph-page { height: 100%; display: flex; flex-direction: column; padding: 20px 24px; }
     .story-graph-sub { color: var(--muted); font-size: 11px; }
     .story-network { position: relative; min-height: 0; flex: 1; margin-top: 6px; overflow: hidden; border-radius: 13px; background: radial-gradient(circle at 50% 49%, rgba(99,102,241,.075), transparent 22%), linear-gradient(#f7f8fa 1px, transparent 1px), linear-gradient(90deg, #f7f8fa 1px, transparent 1px); background-size: auto, 28px 28px, 28px 28px; }
     .story-network svg { position: absolute; inset: 0; width: 100%; height: 100%; }
     .story-network .edge { fill: none; stroke: #c5cdf7; stroke-width: 1.5; stroke-linecap: round; stroke-dasharray: 5 7; opacity: .16; transition: opacity 380ms ease, stroke 380ms ease; }
-    .story-network.is-building .edge { opacity: .92; stroke: #a6b1ef; animation: edge-flow 1.6s linear infinite; }
+    .story-network.is-building .edge { opacity: 0; stroke: #a6b1ef; animation: edge-flow 1.6s linear infinite; }
+    .story-network.is-building .edge.is-live { opacity: .92; }
     @keyframes edge-flow { to { stroke-dashoffset: -24; } }
     .network-node { position: absolute; z-index: 2; display: grid; place-items: center; border: 1px solid var(--line-strong); border-radius: 12px; background: rgba(255,255,255,.94); box-shadow: 0 7px 16px rgba(16,24,40,.08); color: var(--muted); font-size: 10px; font-weight: 780; opacity: .22; transform: scale(.82); transition: opacity 380ms ease, transform 380ms ease, box-shadow 380ms ease; }
     .network-node.is-live { opacity: 1; transform: scale(1); }
@@ -676,31 +723,24 @@
         <div class="story-track" id="storyTrack">
           <section class="story-page" data-story-page="0">
             <div class="story-page-topline"><strong>01 · Scheduled run</strong><span>Codex / 06:00</span></div>
-            <div class="story-page-shell story-scheduled">
-              <div class="story-scheduled-main">
-                <div class="story-overline">Pushed analytics</div>
-                <h1>No one asked.<br>Codex woke up.</h1>
-                <p class="story-scheduled-copy">A scheduled agent loads a human-curated card, writes the question it needs answered, and starts the run.</p>
-                <div class="story-query-card"><div class="story-query-label">AGENT QUERY</div><div class="story-page-query"><span id="storyPageQuery"></span><span class="composer-caret" aria-hidden="true"></span></div></div>
-              </div>
-              <div class="story-scheduled-side">
-                <div class="story-run-card"><div class="story-run-card-head"><strong>growth-health</strong><span>scheduled</span></div><div class="story-run-name">Human intent<br>already loaded.</div><div class="story-run-meta">card · sources · delivery path</div></div>
-                <div class="story-page-steps"><div class="story-page-step"><i>1</i><span>load the card</span></div><div class="story-page-step"><i>2</i><span>inspect the evidence</span></div><div class="story-page-step"><i>3</i><span>ask Jev</span></div><div class="story-page-step"><i>4</i><span>return the bundle</span></div></div>
+            <div class="story-page-shell story-agent-shell">
+              <div class="story-agent-panel">
+                <div class="story-agent-top"><strong>Codex</strong><span>scheduled · growth-health</span></div>
+                <div class="story-agent-query-label">AGENT QUERY</div>
+                <div class="story-page-query"><span id="storyPageQuery"></span><span class="composer-caret" aria-hidden="true"></span></div>
+                <div id="storySendLine" class="story-send-line">query sent</div>
+                <div class="story-page-steps"><div class="story-page-step"><i>1</i><span>load card</span></div><div class="story-page-step"><i>2</i><span>inspect</span></div><div class="story-page-step"><i>3</i><span>ask Jev</span></div><div class="story-page-step"><i>4</i><span>return</span></div></div>
                 <div id="storyPageStatus" class="story-page-status">writing internal question</div>
               </div>
+              <div class="story-agent-mini-card"><div class="story-agent-mini-card-head"><strong>growth-health</strong><span>card loaded</span></div><div class="story-agent-mini-title">What matters<br>is already here.</div><div class="story-agent-mini-fields"><div class="story-agent-mini-field"><b>watch</b>revenue + drivers</div><div class="story-agent-mini-field"><b>why</b>growth plan</div><div class="story-agent-mini-field"><b>deliver</b>evidence-backed</div></div></div>
             </div>
           </section>
 
           <section class="story-page" data-story-page="1">
             <div class="story-page-topline"><strong>02 · Human context</strong><span>free-form card → typed judgment</span></div>
-            <div class="story-page-shell story-card-page">
-              <div class="story-card-column">
-                <div class="story-overline">The card is the context</div>
-                <div class="story-card-title">People define what matters.<br>Jev makes it usable.</div>
-                <p class="story-card-copy">The platform keeps the human intent free-form, then turns the run into a typed judgment the calling agent can use.</p>
-                <div class="story-card-panel"><div class="story-card-panel-head"><strong>growth-health</strong><span>approved · v7</span></div><div class="story-card-field"><label>what to watch</label><p>Weekly revenue movement and the signals that explain a meaningful change.</p></div><div class="story-card-field"><label>why it matters</label><p>Leadership needs an early signal when the growth plan is drifting.</p></div><div class="story-card-field"><label>deliver based on outcomes</label><p>Notify the right owner only when the evidence supports it.</p></div></div>
-              </div>
-                <div class="story-card-column"><div class="story-shape-panel"><div class="story-shape-kicker">TypeSafe / Jev</div><div class="story-shape-title">A judgment the agent can trust.</div><div class="story-shape-code"><div><span class="key">verdict</span>: <span class="value">"notify"</span></div><div><span class="key">confidence</span>: <span class="number">0.91</span></div><div><span class="key">probabilities</span>: <span class="value">notify .91 · review .07</span></div><div><span class="key">evidence</span>: <span class="value">4 sources</span></div><div><span class="key">next</span>: <span class="value">"send + investigate"</span></div></div><div class="story-shape-note">Structured output. Provenance attached. Codex keeps control of the side effect.</div></div><div class="story-card-connection"><span>card intent</span><i></i><strong>typed outcome</strong></div></div>
+            <div class="story-page-shell story-context-page">
+              <div class="story-context-card"><div class="story-card-panel-head"><strong>growth-health</strong><span>card / v7</span></div><div class="story-card-field"><label>what to watch</label><p>revenue + drivers</p></div><div class="story-card-field"><label>why it matters</label><p>growth plan</p></div><div class="story-card-field"><label>deliver based on outcomes</label><p>evidence-backed alert</p></div></div>
+              <div><div class="story-jev-call"><div class="story-jev-call-head"><strong>Jev.call</strong><span>typed</span></div><div class="story-jev-call-title">Judgment shape</div><div class="story-jev-shape"><div><span class="key">verdict</span>: <span class="value">"notify"</span></div><div><span class="key">evidence</span>: <span class="value">4 sources</span></div><div><span class="key">next</span>: <span class="value">"send + investigate"</span></div></div><div class="story-probabilities"><div class="story-prob-row"><span>notify</span><i><b style="width:91%"></b></i><strong>.91</strong></div><div class="story-prob-row"><span>review</span><i><b style="width:7%"></b></i><strong>.07</strong></div><div class="story-prob-row"><span>ignore</span><i><b style="width:2%"></b></i><strong>.02</strong></div></div></div><div class="story-context-link"><span>card</span><i></i><strong>Jev</strong><i></i><span>shape</span></div></div>
             </div>
           </section>
 
@@ -715,7 +755,7 @@
           <section class="story-page" data-story-page="3">
             <div class="story-page-topline"><strong>04 · Evidence bundle</strong><span>returned to Codex</span></div>
             <div class="story-page-shell story-bundle-page">
-              <div class="story-bundle-main"><div class="story-overline">The result is a decision surface</div><div class="story-bundle-title">Facts, confidence,<br>next instruction.</div><p class="story-bundle-copy">The sources resolve into one compact bundle. Codex gets enough context to act without taking a dashboard tour.</p><div class="story-bundle-card"><div class="story-bundle-card-head"><strong>growth-health / result</strong><span>Jev</span></div><div class="story-bundle-row down"><i></i><span>revenue</span><b>−22%</b></div><div class="story-bundle-row down"><i></i><span>conversion</span><b>−15%</b></div><div class="story-bundle-row up"><i></i><span>support backlog</span><b>+28%</b></div><div class="story-bundle-row"><i></i><span>finance</span><b>agrees</b></div><div id="storyBundleFooter" class="story-bundle-footer"><span>confidence</span><strong>0.91 · notify</strong></div></div></div>
+              <div class="story-bundle-main"><div class="story-overline">JEV RESULT</div><div class="story-bundle-title">Evidence → action.</div><p class="story-bundle-copy">returned to Codex</p><div class="story-bundle-card"><div class="story-bundle-card-head"><strong>growth-health / result</strong><span>Jev</span></div><div class="story-bundle-row down"><i></i><span>revenue</span><b>−22%</b></div><div class="story-bundle-row down"><i></i><span>conversion</span><b>−15%</b></div><div class="story-bundle-row up"><i></i><span>support backlog</span><b>+28%</b></div><div class="story-bundle-row"><i></i><span>finance</span><b>agrees</b></div><div id="storyBundleFooter" class="story-bundle-footer"><span>confidence</span><strong>0.91 · notify</strong></div></div></div>
               <div id="storyBundleSide" class="story-bundle-side"><div class="story-bundle-side-label">typed result</div><strong>send to growth leadership</strong><p>Evidence attached. Side effect stays with the agent.</p><code>receipt: safe to replay</code></div>
             </div>
           </section>
@@ -822,8 +862,10 @@
       const storyTrack = document.getElementById("storyTrack");
       const storyPageQuery = document.getElementById("storyPageQuery");
       const storyPageSteps = [...document.querySelectorAll("#storyPages .story-page-step")];
+      const storySendLine = document.getElementById("storySendLine");
       const storyPageStatus = document.getElementById("storyPageStatus");
       const storyNetwork = document.getElementById("storyNetwork");
+      const storyEdges = [...document.querySelectorAll("#storyNetwork .edge")];
       const storyNetworkNodes = [...document.querySelectorAll("#storyNetwork .network-node")];
       const storySqlChip = document.getElementById("storySqlChip");
       const storyBundleRows = [...document.querySelectorAll("#storyPages .story-bundle-row")];
@@ -863,19 +905,21 @@
       function renderStory(elapsed) {
         const queryChars = elapsed < 800 ? 0 : Math.min(task.length, Math.floor((elapsed - 800) / 42));
         storyPageQuery.textContent = task.slice(0, queryChars);
-        storyPageSteps.forEach((el, index) => el.classList.toggle("is-live", elapsed >= 1000 + index * 650));
-        storyPageStatus.textContent = elapsed < 1200 ? "waking on schedule" : elapsed < 4000 ? "writing internal question" : "question ready · loading context";
+        storySendLine.classList.toggle("is-live", elapsed >= 2900);
+        storyPageSteps.forEach((el, index) => el.classList.toggle("is-live", elapsed >= 3000 + index * 450));
+        storyPageStatus.textContent = elapsed < 1200 ? "waking on schedule" : elapsed < 2900 ? "writing internal question" : elapsed < 5000 ? "running steps" : "context loaded";
         const nodeLive = {
-          card: elapsed >= 6500,
-          sql: elapsed >= 7000,
-          jev: elapsed >= 7350,
-          sup: elapsed >= 7700,
-          web: elapsed >= 8100,
-          ops: elapsed >= 8500,
+          card: elapsed >= 8500,
+          sql: elapsed >= 9000,
+          jev: elapsed >= 9350,
+          sup: elapsed >= 9700,
+          web: elapsed >= 10100,
+          ops: elapsed >= 10500,
         };
         storyNetworkNodes.forEach((el) => el.classList.toggle("is-live", Boolean(nodeLive[el.classList[1]])));
-        storyNetwork.classList.toggle("is-building", elapsed >= 6800 && elapsed < 11600);
-        storySqlChip.classList.toggle("is-live", elapsed >= 8800);
+        storyNetwork.classList.toggle("is-building", elapsed >= 8500 && elapsed < 11600);
+        storyEdges.forEach((el, index) => el.classList.toggle("is-live", elapsed >= 8500 + index * 430));
+        storySqlChip.classList.toggle("is-live", elapsed >= 10900);
         storyBundleRows.forEach((el, index) => el.classList.toggle("is-live", elapsed >= 12600 + index * 420));
         storyBundleFooter.classList.toggle("is-live", elapsed >= 14400);
         storyBundleSide.classList.toggle("is-live", elapsed >= 14000);
