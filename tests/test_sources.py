@@ -104,6 +104,40 @@ class BoundedSearchAdapter:
         )
 
 
+class OversizedSnapshotAdapter:
+    name = "oversized"
+
+    async def list_resources(self):
+        return [
+            ResourceDescriptor(
+                adapter=self.name,
+                resource="payload:large",
+                kind="payload",
+                title="Large payload",
+            )
+        ]
+
+    async def inspect(self, source):
+        return ResourceSnapshot(
+            source_key=source.key,
+            adapter=self.name,
+            resource=source.resource,
+            title=source.label,
+            observations=[
+                Observation(
+                    source_key=source.key,
+                    subject_id="metric",
+                    subject_label="Metric",
+                    metric="metric",
+                    current=2,
+                    baseline=1,
+                    change_pct=100,
+                )
+            ],
+            metadata={"large_field": "x" * 10_000},
+        )
+
+
 @pytest.mark.asyncio
 async def test_source_registry_resolves_multiple_adapter_refs():
     registry = SourceRegistry([FakeAdapter()])
@@ -181,6 +215,24 @@ async def test_source_registry_preserves_bounded_search_coverage_without_full_sc
     assert page.has_more is True
     assert page.next_cursor == "page-2"
     assert page.strategy == "server-search"
+
+
+@pytest.mark.asyncio
+async def test_source_registry_fails_closed_on_oversized_snapshot_payload():
+    registry = SourceRegistry([OversizedSnapshotAdapter()], max_snapshot_bytes=1_024)
+    source = SourceRef(
+        key="large", adapter="oversized", resource="payload:large", label="Large payload"
+    )
+
+    snapshot = await registry.inspect(source)
+
+    assert snapshot.observations == []
+    assert snapshot.evidence == []
+    assert "payload budget" in snapshot.error
+    budget = snapshot.metadata["signalweave_budget"]
+    assert budget["status"] == "exceeded"
+    assert budget["max_snapshot_bytes"] == 1_024
+    assert budget["observed_snapshot_bytes"] > budget["max_snapshot_bytes"]
 
 
 class FakeSupersetClient:

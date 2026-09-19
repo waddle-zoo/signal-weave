@@ -429,6 +429,48 @@ async def test_source_failure_is_not_treated_as_ignore():
     assert "timeout" in run.result.evidence[-1].statement
 
 
+async def test_oversized_source_payload_cannot_trigger_automatic_delivery():
+    source = SourceRef(
+        key="large-dashboard",
+        adapter="superset",
+        resource="dashboard:large",
+        label="Large dashboard",
+    )
+    card = card_for(
+        card_id="card-large-dashboard",
+        title="Large dashboard insight",
+        source=source,
+        delivery_methods=[
+            DeliveryMethod(
+                key="ops",
+                outcome=Outcome.NOTIFY,
+                label="Ops",
+                destination="slack://ops",
+            )
+        ],
+    )
+    resource = ResourceSnapshot(
+        source_key=source.key,
+        adapter=source.adapter,
+        resource=source.resource,
+        title=source.label,
+        error="source snapshot exceeded the SignalWeave payload budget (2000000 > 1024 bytes)",
+        metadata={
+            "signalweave_budget": {
+                "status": "exceeded",
+                "max_snapshot_bytes": 1024,
+                "observed_snapshot_bytes": 2_000_000,
+            }
+        },
+    )
+
+    run = await InsightEngine(SafetyTestDouble()).evaluate(card, [resource])
+
+    assert run.result.outcome == Outcome.INSUFFICIENT_DATA
+    assert run.result.delivery_methods == []
+    assert "payload budget" in run.result.evidence[-1].statement
+
+
 async def test_partial_required_source_is_not_automatically_interpreted():
     source = SourceRef(
         key="partial-dashboard",
