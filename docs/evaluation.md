@@ -56,6 +56,7 @@ approval flow and webhook using a rotating Superset-shaped fixture:
 
 ```bash
 TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
+PUSH_WEBHOOK_TOKEN=local-trial-token \
   uv run python -m evaluations.daily_monitor_trial \
   --output artifacts/daily-monitor-trial.json
 ```

@@ -13,7 +13,7 @@ prove:
 	uv run python -m evaluations.cli prove
 
 daily-trial:
-	TYPESAFE_API_KEY_FILE=$${TYPESAFE_API_KEY_FILE:?set a live TypeSafe key file} uv run python -m evaluations.daily_monitor_trial --output artifacts/daily-monitor-trial.json
+	PUSH_WEBHOOK_TOKEN=$${PUSH_WEBHOOK_TOKEN:?set a trial webhook token} TYPESAFE_API_KEY_FILE=$${TYPESAFE_API_KEY_FILE:?set a live TypeSafe key file} uv run python -m evaluations.daily_monitor_trial --output artifacts/daily-monitor-trial.json
 
 benchmark:
 	uv run python -m evaluations.cli benchmark --systems jev --repeats 5
