@@ -264,6 +264,7 @@ inspect_resource(adapter, resource, parameters?)
 discover_insight_sources(goal, adapter?, limit?)
 propose_insight_card(what_to_watch, why_watch, watch_for?, questions?, ...)
 draft_insight_card(title, what_to_watch, why_watch, sources, ...)
+review_insight_card(card_id, adapter?, limit?)
 simulate_insight_card(card_id)
 approve_insight_card(card_id)
 list_insight_cards(status?)
@@ -280,8 +281,11 @@ references, and typed evidence findings. The stored card and external graph are
 not mutated by evaluation.
 
 The proposal flow uses Jev to rank a bounded source catalog, stores a draft, and
-returns setup questions. The direct draft flow is for a caller that already knows
-its source references. Both flows compile and store a plan. Simulation is
+returns setup questions plus an onboarding review. The direct draft flow is for a
+caller that already knows its source references; it can use
+`review_insight_card` for the same confirmation boundary. The review exposes
+per-source reasons, omitted recommendations, and ambiguous repeated candidates
+before a human approves the card. Both flows compile and store a plan. Simulation is
 delivery-disabled preview; approval is an explicit state transition; evaluation
 fetches fresh snapshots. The webhook accepts `{ "card_id": "..." }` for a
 caller-owned scheduler or push relay. Push evaluation requires an idempotency key

@@ -133,7 +133,10 @@ def _tool_specs() -> list[dict[str, Any]]:
             "resource": {"type": "string"},
             "label": {"type": "string"},
             "parameters": {"type": "object", "additionalProperties": True},
-            "required": {"type": "boolean"},
+            "required": {
+                "type": "boolean",
+                "description": "True only when the card cannot make its decision without this source; use false for optional context.",
+            },
         },
         "required": ["key", "adapter", "resource", "label"],
         "additionalProperties": False,
@@ -190,7 +193,7 @@ def _tool_specs() -> list[dict[str, Any]]:
         ),
         fn(
             "draft_insight_card",
-            "Draft a card over the selected source refs. Use at least every source needed to answer the questions.",
+            "Draft a card over the selected source refs. Use every source needed to answer the questions, but mark merely helpful context as required=false.",
             {
                 "type": "object",
                 "properties": {
@@ -204,6 +207,20 @@ def _tool_specs() -> list[dict[str, Any]]:
                     "card_id": {"type": ["string", "null"]},
                 },
                 "required": ["title", "what_to_watch", "why_watch", "sources"],
+                "additionalProperties": False,
+            },
+        ),
+        fn(
+            "review_insight_card",
+            "Review a draft against bounded Jev-ranked candidates. Show why sources were suggested and which relevant candidates the draft omitted. If it identifies a missing source, revise the same card with draft_insight_card using its card_id before simulating.",
+            {
+                "type": "object",
+                "properties": {
+                    "card_id": {"type": "string"},
+                    "adapter": {"type": ["string", "null"]},
+                    "limit": {"type": "integer", "minimum": 1, "maximum": 20},
+                },
+                "required": ["card_id"],
                 "additionalProperties": False,
             },
         ),
@@ -268,8 +285,11 @@ Required workflow:
    the authorized catalog, do not substitute an invented ref.
 3. Draft a complete card preserving the owner's intent, all relevant watch items,
    questions, selected source refs, and allowed delivery methods.
-4. Simulate the card, approve it only if complete, then evaluate it.
-5. Finish with the evidence-backed result. Never claim a source was inspected unless
+4. Review the draft. If the review identifies an omitted source that is needed to
+   answer the owner's questions, inspect it and revise the same card with its card_id.
+   Do not add sources merely because they are related; keep the set tied to the goal.
+5. Simulate the card, approve it only if complete, then evaluate it.
+6. Finish with the evidence-backed result. Never claim a source was inspected unless
    the tool returned it.
 """
 
@@ -656,7 +676,14 @@ def score_agent_trace(fixture: dict[str, Any], trace_path: Path) -> dict[str, An
         actual_methods = [item.get("key") for item in result.get("delivery_methods", [])]
         workflow = [
             any(event.get("payload", {}).get("tool") == name for event in completed)
-            for name in ("discover_insight_sources", "draft_insight_card", "simulate_insight_card", "approve_insight_card", "evaluate_insight_card")
+            for name in (
+                "discover_insight_sources",
+                "draft_insight_card",
+                "review_insight_card",
+                "simulate_insight_card",
+                "approve_insight_card",
+                "evaluate_insight_card",
+            )
         ]
         card_complete = bool(
             card.get("what_to_watch")

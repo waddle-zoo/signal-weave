@@ -491,6 +491,24 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
         }
 
     @mcp.tool()
+    async def review_insight_card(
+        card_id: str, adapter: str | None = None, limit: int = 10
+    ) -> dict[str, Any]:
+        """Review a draft's source coverage before a human approves it.
+
+        This is an onboarding review, not an automatic policy change. It shows
+        bounded Jev-ranked candidates, why they were surfaced, and which
+        recommendations the draft omitted so a client-owned UI or agent can ask
+        for confirmation or revise the card.
+        """
+        card = runtime.card_store.get_card(card_id)
+        review = await authoring.review(card, adapter=adapter, limit=limit)
+        return {
+            "card": card.model_dump(mode="json"),
+            "review": review.model_dump(mode="json"),
+        }
+
+    @mcp.tool()
     async def simulate_insight_card(
         card_id: str, context: dict[str, Any] | None = None
     ) -> dict[str, Any]:
