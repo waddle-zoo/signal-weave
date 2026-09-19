@@ -20,8 +20,8 @@ deployment must establish a data policy before using company data.
 - Set `PUSH_WEBHOOK_TOKEN` for the webhook bearer check. The webhook fails closed
   with `503` when it is not configured and uses only the authenticated
   `X-SignalWeave-Actor` header for actor attribution.
-- Source adapters own authentication and execution. The Superset adapter executes saved chart definitions only; it does not accept arbitrary SQL from an MCP caller.
-- Superset row and series limits are bounded, dashboard pagination is capped, and chart fetches have timeouts.
+- Source adapters own authentication and execution. The Superset adapter executes saved chart definitions only; it does not accept arbitrary SQL from an MCP caller. The same boundary applies to every connector: SignalWeave does not turn a BI, notebook, query, or workflow API into an unrestricted tool surface.
+- Source-specific row and series limits are bounded, catalog pagination is capped, and source fetches have timeouts.
 - A required source timeout, missing resource, stale contract, or partial result
   becomes visible evidence and cannot silently become an automatic `ignore`.
   Optional investigation-source failures are recorded in the trace and route to
@@ -32,7 +32,8 @@ deployment must establish a data policy before using company data.
 - The source registry resolves refs independently, so a mixed card can show which dashboard/query/DAG/table failed.
 - `SIGNALWEAVE_TENANT_ID` can restrict discovery and evaluation to resources whose
   typed catalog contract belongs to the configured tenant; missing or foreign
-  resources fail closed.
+  resources fail closed. This is not a universal RBAC layer: each adapter must
+  enforce the source's own credential or identity boundary.
 - Follow-up source selection is checked against the already authorized catalog in
   code; Jev cannot cause an opaque or cross-tenant source to be inspected.
 - Context snapshots supplied through MCP are marked `unverified` and are visible

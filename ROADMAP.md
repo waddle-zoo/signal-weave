@@ -8,7 +8,7 @@ evidence into a bounded, explainable result that an existing system can act on.
 
 - [x] Jev-only production decision path with no implicit heuristic fallback
 - [x] Source-oriented insight-card and adapter contracts
-- [x] Superset-backed local demo and integration tests
+- [x] Superset-backed first-connector demo and integration tests
 - [x] MCP tools for cataloging, goal-to-card discovery, free-form drafting, preview, approval, and evaluation
 - [x] Webhook surface for push-triggered evaluation
 - [x] Code-owned evidence, freshness, delivery-method, and confidence safety gates
@@ -44,8 +44,11 @@ production-control gaps explicit.
       existing company agent
 - [ ] Add customer-owned, time-split shadow labels and result traces suitable for
       a production calibration review
-- [ ] Measure top-driver acceptance and diagnostic-source recall on a real Superset
-      catalog with same-name assets, aliases, lineage, and permission boundaries
+- [ ] Measure top-driver acceptance and diagnostic-source recall on a real
+      multi-artifact catalog with same-name assets, aliases, lineage, and the
+      source's own permission boundary
+- [ ] Ship read-only Looker and Hex adapters that map native dashboards,
+      queries/projects, runs, and bounded result evidence to the generic contract
 - [ ] Add a permission-aware, paginated catalog-search interface so large deployments
       do not load every asset into SignalWeave before Jev ranking
 - [ ] Add tenant-qualified resource references and request-scoped identity/ACLs for

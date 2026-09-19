@@ -9,7 +9,11 @@ the generator is evaluation-only code under `evaluations/`.
 - 12 company domains: payments, fulfillment, support, security, cloud platform, sales, marketing, data warehouse, retail, people operations, logistics, and product.
 - 6 decision classes per domain: corroborated `notify`, explained `ignore`, contradictory `investigate`, stale `escalate`, missing baseline, and source failure.
 - 72 unique cards, generated from the external domain catalog in [`examples/trial-domains.json`](../examples/trial-domains.json).
-- Every card combines a Superset primary source with a second source ref. The second source rotates across Superset, SQL, Airflow, and table-style resources to exercise cross-source composition.
+- Every card combines a Superset primary source with a second source ref. The
+  second source rotates across Superset, SQL, Airflow, and table-style resources
+  to exercise cross-source composition. This is a first-connector stress fixture,
+  not the product boundary; the next matrix should vary the primary artifact
+  system as well.
 - 2 repeats per case, for 144 full evaluations and 288 Jev API requests.
 - Expected labels are held by the trial oracle and are never passed into the production engine.
 - All cases use owner-provided `what_to_watch`, `why_watch`, `watch_for`, `questions`, delivery methods, and action-confidence thresholds.

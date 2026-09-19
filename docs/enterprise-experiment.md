@@ -21,6 +21,10 @@ task variants include corroborated notify, explained ignore, contradictory
 investigate, definition/grain mismatch, stale escalation, missing baseline, and
 source failure.
 
+This fixture is intentionally dashboard-heavy because the first proof uses the
+shipped Superset adapter. It tests cross-source composition; it is not a claim
+that an enterprise must use Superset or that a monitor is limited to dashboards.
+
 The task labels are hidden from the MCP client. Each task is a free-form card
 brief with `what_to_watch`, `why_watch`, `watch_for`, `questions`, and configured
 delivery outcomes. The engine receives all normalized observations; changed rows

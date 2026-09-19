@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import json
 import os
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 
 from .engine import InsightEngine
 from .models import ResourceDescriptor
-from .sources import SourceRegistry
+from .sources import SourceAdapter, SourceRegistry
 from .store import (
     DecisionReceiptStore,
     InsightCardStore,
@@ -34,7 +35,18 @@ class Runtime:
     decision_receipts: DecisionReceiptStore | None = None
 
 
-def build_runtime(mode: str | None = None) -> Runtime:
+def build_runtime(
+    mode: str | None = None,
+    *,
+    adapters: Iterable[SourceAdapter] = (),
+) -> Runtime:
+    """Build the Jev runtime around the source adapters a deployment installs.
+
+    Superset is the first shipped adapter, not a runtime requirement. Embedded
+    deployments can pass adapters for Looker, Hex, a data catalog, or an
+    internal artifact gateway here. The environment-driven CLI still registers
+    Superset and Trino when their connector settings are present.
+    """
     mode = (mode or os.getenv("TYPESAFE_MODE", "jev")).lower()
     if mode == "jev":
         key = load_api_key()
@@ -45,12 +57,11 @@ def build_runtime(mode: str | None = None) -> Runtime:
         judger = JevJudger(api_key=key)
     else:
         raise ValueError("SignalWeave production runtime only supports TYPESAFE_MODE=jev")
+    configured_adapters = list(adapters)
     url = os.getenv("SUPERSET_URL")
-    if not url:
-        raise RuntimeError("SignalWeave production runtime requires SUPERSET_URL")
-    tenant_id = os.getenv("SIGNALWEAVE_TENANT_ID")
-    registry = SourceRegistry(
-        [
+    configured_names = {adapter.name for adapter in configured_adapters}
+    if url and "superset" not in configured_names:
+        configured_adapters.append(
             SupersetAdapter(
                 SupersetClient(
                     base_url=url,
@@ -58,7 +69,10 @@ def build_runtime(mode: str | None = None) -> Runtime:
                     password=os.getenv("SUPERSET_PASSWORD"),
                 )
             )
-        ],
+        )
+    tenant_id = os.getenv("SIGNALWEAVE_TENANT_ID")
+    registry = SourceRegistry(
+        configured_adapters,
         authorized_tenants=[tenant_id] if tenant_id else None,
     )
     trino_url = os.getenv("TRINO_URL")
@@ -79,6 +93,11 @@ def build_runtime(mode: str | None = None) -> Runtime:
                     max_rows=int(os.getenv("TRINO_MAX_ROWS", "1000")),
                 ),
             )
+        )
+    if not registry.adapter_names():
+        raise RuntimeError(
+            "SignalWeave production runtime requires at least one source adapter; "
+            "configure SUPERSET_URL, a Trino catalog, or pass adapters to build_runtime"
         )
     store_backend = os.getenv("SIGNALWEAVE_STORE_BACKEND", "sqlite").lower()
     if store_backend == "sqlite":
