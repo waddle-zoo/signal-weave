@@ -1,0 +1,9 @@
+Every company has dashboards. Few companies have decisions.
+
+SignalWeave watches the signals you already own. When a metric moves, it retrieves the related evidence across your dashboards and data sources. TypeSafe Jev makes a typed judgment.
+
+Notify leadership when the story is corroborated. Route ambiguity to analytics. Ignore normal movement.
+
+Stop checking dashboards. Start receiving decisions.
+
+SignalWeave: push-based analytics for the work you already do.
