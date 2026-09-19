@@ -83,7 +83,11 @@ class SupersetClient:
         return response.json().get("result", response.json())
 
     async def list_dashboards(
-        self, page: int = 0, page_size: int = 100, max_pages: int = 100
+        self,
+        page: int = 0,
+        page_size: int = 100,
+        max_pages: int = 100,
+        query: str | None = None,
     ) -> list[dict[str, Any]]:
         """List dashboards across Superset pages, bounded to a safe maximum.
 
@@ -95,23 +99,49 @@ class SupersetClient:
             raise ValueError("page must be non-negative; page_size and max_pages must be positive")
         dashboards: list[dict[str, Any]] = []
         for current_page in range(page, page + max_pages):
-            response = await self._request(
-                "GET",
-                "/api/v1/dashboard/",
-                timeout=30,
-                params={"page": current_page, "page_size": page_size},
+            batch, count = await self.list_dashboards_page(
+                page=current_page, page_size=page_size, query=query
             )
-            result = response.json()
-            batch = result.get("result", [])
-            if not isinstance(batch, list):
-                break
             dashboards.extend(item for item in batch if isinstance(item, dict))
-            count = result.get("count")
             if not batch or len(batch) < page_size or (
                 isinstance(count, int) and (current_page + 1) * page_size >= count
             ):
                 break
         return dashboards
+
+    async def list_dashboards_page(
+        self,
+        *,
+        page: int = 0,
+        page_size: int = 100,
+        query: str | None = None,
+    ) -> tuple[list[dict[str, Any]], int | None]:
+        """Return one permission-filtered dashboard page and its server count."""
+        if page < 0 or page_size <= 0:
+            raise ValueError("page must be non-negative and page_size must be positive")
+        params: dict[str, Any] = {"page": page, "page_size": page_size}
+        if query and query.strip():
+            params["q"] = json.dumps(
+                {
+                    "filters": [
+                        {
+                            "col": "dashboard_title",
+                            "opr": "ct",
+                            "value": query.strip(),
+                        }
+                    ]
+                },
+                separators=(",", ":"),
+            )
+        response = await self._request(
+            "GET", "/api/v1/dashboard/", timeout=30, params=params
+        )
+        result = response.json()
+        batch = result.get("result", [])
+        return (
+            [item for item in batch if isinstance(item, dict)] if isinstance(batch, list) else [],
+            result.get("count") if isinstance(result.get("count"), int) else None,
+        )
 
     @staticmethod
     def _params(chart: dict[str, Any]) -> dict[str, Any]:

@@ -7,13 +7,23 @@ status needed by an insight card.
 ## Contract
 
 ```python
-from signalweave.models import ResourceDescriptor, ResourceSnapshot, SourceRef
+from signalweave.models import (
+    CatalogSearchPage,
+    ResourceDescriptor,
+    ResourceSnapshot,
+    SourceRef,
+)
 
 
 class SourceAdapter:
     name = "example"
 
     async def list_resources(self) -> list[ResourceDescriptor]:
+        ...
+
+    async def search_resources(
+        self, query: str, *, limit: int, cursor: str | None = None
+    ) -> CatalogSearchPage:
         ...
 
     async def inspect(self, source: SourceRef) -> ResourceSnapshot:
@@ -33,6 +43,14 @@ The adapter should:
 - set `captured_at` to the source snapshot time rather than process time when possible;
 - include a source URL/run ID when possible; and
 - return a `ResourceSnapshot(error=...)` through the registry path when the source cannot be trusted.
+
+For catalogs that are too large to materialize, implement `search_resources`.
+It should apply the caller's authorization at the source, return only a bounded
+page of descriptors, and report the authorized `total_count`, `has_more`, and a
+resume cursor. The registry records the adapter's search strategy and warnings.
+Adapters without this method still work through a `local-scan-fallback`, but that
+path deliberately reports that the full catalog was materialized and is not an
+enterprise-scale implementation.
 
 For production catalogs, populate the typed `ResourceContract` as well:
 

@@ -219,6 +219,24 @@ class ResourceDescriptor(BaseModel):
     contract: ResourceContract = Field(default_factory=ResourceContract)
 
 
+class CatalogSearchPage(BaseModel):
+    """A bounded, adapter-owned catalog search result.
+
+    ``resources`` is the only set that may be sent to Jev.  ``total_count`` and
+    ``has_more`` make coverage visible to callers instead of allowing a local
+    limit to look like a complete catalog.  A source adapter may implement this
+    with a native search index, a graph query, or a paginated API.
+    """
+
+    resources: list[ResourceDescriptor] = Field(default_factory=list, max_length=500)
+    total_count: int = Field(ge=0)
+    has_more: bool = False
+    next_cursor: str | None = Field(default=None, max_length=500)
+    provider: str = Field(min_length=1, max_length=160)
+    strategy: str = Field(min_length=1, max_length=160)
+    warnings: list[str] = Field(default_factory=list, max_length=50)
+
+
 class ResourceMatch(BaseModel):
     """A bounded catalog candidate ranked for a user's insight goal."""
 
@@ -492,6 +510,9 @@ class InvestigationTrace(BaseModel):
     need_probability: float | None = Field(default=None, ge=0.0, le=1.0)
     candidate_count: int = Field(ge=0)
     candidate_limit: int = Field(ge=0, le=10)
+    catalog_count: int = Field(default=0, ge=0)
+    catalog_has_more: bool = False
+    catalog_strategy: str = "not-requested"
     selected: list[InvestigationSelection] = Field(default_factory=list, max_length=10)
     omitted_refs: list[str] = Field(default_factory=list, max_length=100)
     evaluator: str

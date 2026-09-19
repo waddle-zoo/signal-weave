@@ -1,6 +1,13 @@
 from __future__ import annotations
 
-from .models import Evidence, ResourceContract, ResourceDescriptor, ResourceSnapshot, SourceRef
+from .models import (
+    CatalogSearchPage,
+    Evidence,
+    ResourceContract,
+    ResourceDescriptor,
+    ResourceSnapshot,
+    SourceRef,
+)
 from .superset_client import SupersetClient
 
 
@@ -20,6 +27,47 @@ class SupersetAdapter:
 
     async def list_resources(self) -> list[ResourceDescriptor]:
         dashboards = await self.client.list_dashboards()
+        return self._descriptors(dashboards)
+
+    async def search_resources(
+        self, query: str, *, limit: int, cursor: str | None = None
+    ) -> CatalogSearchPage:
+        """Use Superset's paginated, permission-filtered dashboard API when available."""
+        page = 0
+        if cursor:
+            try:
+                page = int(cursor)
+            except ValueError as error:
+                raise ValueError("Superset catalog cursors must be numeric pages") from error
+        list_page = getattr(self.client, "list_dashboards_page", None)
+        if not callable(list_page):
+            resources = await self.list_resources()
+            return CatalogSearchPage(
+                resources=resources,
+                total_count=len(resources),
+                provider=self.name,
+                strategy="local-scan-fallback",
+                warnings=[
+                    "The configured Superset client does not expose paginated search; "
+                    "the full dashboard catalog was materialized."
+                ],
+            )
+        dashboards, count = await list_page(page=page, page_size=limit, query=query)
+        resources = self._descriptors(dashboards)
+        total_count = count if count is not None else len(resources)
+        has_more = (count is not None and (page + 1) * limit < count) or (
+            count is None and len(resources) >= limit
+        )
+        return CatalogSearchPage(
+            resources=resources,
+            total_count=total_count,
+            has_more=has_more,
+            next_cursor=str(page + 1) if has_more else None,
+            provider=self.name,
+            strategy="superset-server-filter",
+        )
+
+    def _descriptors(self, dashboards: list[dict[str, object]]) -> list[ResourceDescriptor]:
         return [
             ResourceDescriptor(
                 adapter=self.name,
