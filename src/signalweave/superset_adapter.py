@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import asyncio
+import re
+
 from .models import (
     CatalogSearchPage,
     Evidence,
@@ -32,7 +35,15 @@ class SupersetAdapter:
     async def search_resources(
         self, query: str, *, limit: int, cursor: str | None = None
     ) -> CatalogSearchPage:
-        """Use Superset's paginated, permission-filtered dashboard API when available."""
+        """Use Superset search with a bounded natural-language fallback.
+
+        Superset's native dashboard filter treats a natural-language goal as one
+        literal substring. That works for an exact title but returns nothing for
+        a free-form onboarding request such as "what changed on the executive
+        command center?". If the phrase returns no rows, retry a bounded set of
+        terms and union the permission-filtered results. Jev still performs the
+        semantic ranking; this is recall only.
+        """
         page = 0
         if cursor:
             try:
@@ -53,6 +64,41 @@ class SupersetAdapter:
                 ],
             )
         dashboards, count = await list_page(page=page, page_size=limit, query=query)
+        strategy = "superset-server-filter"
+        warnings: list[str] = []
+        if not dashboards and not cursor and len(query.split()) > 1:
+            fallback_terms: list[str] = []
+            for clause in re.split(r"[\n.;:?!]+", query):
+                terms = [
+                    term
+                    for term in re.findall(r"[a-z0-9]+", clause.lower())
+                    if len(term) > 2
+                ]
+                # Titles commonly appear at either end of a free-form clause.
+                fallback_terms.extend(terms[:3] + terms[-3:])
+            # The cap bounds API fan-out for large enterprise catalogs while
+            # preserving title terms from each card section.
+            fallback_terms = list(dict.fromkeys(fallback_terms))[:18]
+            fallback_results = await asyncio.gather(
+                *(
+                    list_page(page=0, page_size=limit, query=term)
+                    for term in fallback_terms
+                )
+            )
+            seen: set[str] = set()
+            for fallback_dashboards, _ in fallback_results:
+                for dashboard in fallback_dashboards:
+                    key = str(dashboard.get("id"))
+                    if key not in seen:
+                        seen.add(key)
+                        dashboards.append(dashboard)
+            if dashboards:
+                count = len(dashboards)
+                strategy = "superset-server-filter-term-fallback"
+                warnings.append(
+                    "Superset returned no exact phrase matches; bounded title-term "
+                    "fallback expanded candidate recall before Jev ranking."
+                )
         resources = self._descriptors(dashboards)
         total_count = count if count is not None else len(resources)
         has_more = (count is not None and (page + 1) * limit < count) or (
@@ -64,7 +110,8 @@ class SupersetAdapter:
             has_more=has_more,
             next_cursor=str(page + 1) if has_more else None,
             provider=self.name,
-            strategy="superset-server-filter",
+            strategy=strategy,
+            warnings=warnings,
         )
 
     def _descriptors(self, dashboards: list[dict[str, object]]) -> list[ResourceDescriptor]:

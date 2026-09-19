@@ -48,9 +48,40 @@ def test_query_context_preserves_chart_time_grain_and_filters():
     assert query_object["filters"] == [{"col": "region", "op": "IN", "val": ["NA"]}]
 
 
+def test_query_context_derives_datasource_from_superset_form_data():
+    query = SupersetClient._query_context(
+        {
+            "id": 42,
+            "params": {
+                "datasource": "17__table",
+                "metrics": [{"label": "SUM(revenue)"}],
+            },
+        }
+    )
+
+    assert query["datasource"] == {"id": 17, "type": "table"}
+
+
+def test_query_context_uses_all_columns_for_saved_table_charts():
+    query = SupersetClient._query_context(
+        {
+            "datasource_id": 17,
+            "params": {
+                "viz_type": "table",
+                "all_columns": ["order_date", "region", "net_sales"],
+            },
+        }
+    )
+
+    assert query["queries"][0]["columns"] == ["order_date", "region", "net_sales"]
+
+
 def test_query_context_bounds_saved_chart_limits():
     query = SupersetClient._query_context(
-        {"params": {"row_limit": 999999, "series_limit": -10}}
+        {
+            "datasource_id": 3,
+            "params": {"row_limit": 999999, "series_limit": -10},
+        }
     )
 
     query_object = query["queries"][0]
@@ -276,3 +307,26 @@ def test_ambiguous_numeric_result_is_rejected_instead_of_guessing_metric():
     )
 
     assert observations == []
+
+
+def test_table_chart_uses_date_like_column_as_time_and_numeric_column_as_metric():
+    observations = SupersetClient.observations_from_chart_data(
+        {
+            "id": 42,
+            "params": {
+                "all_columns": ["order_date", "region", "net_sales"],
+            },
+        },
+        [
+            {
+                "data": [
+                    {"order_date": 1, "region": "NA", "net_sales": 10},
+                    {"order_date": 2, "region": "NA", "net_sales": 12},
+                ]
+            }
+        ],
+    )
+
+    assert observations[0].metric == "net_sales"
+    assert observations[0].current == 12
+    assert observations[0].baseline == 10

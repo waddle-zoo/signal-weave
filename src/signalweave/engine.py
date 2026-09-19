@@ -606,7 +606,7 @@ class InsightEngine:
                             "without a comparable baseline."
                         ),
                         "source_url": resource.source_url,
-                        "blocking": source.required,
+                        "blocking": source.required and bool(quality.get("chart_errors")),
                         "quality_status": "partial",
                     }
                 )
@@ -812,14 +812,22 @@ class InsightEngine:
             if observation.source_key in required_source_keys
             and (observation.baseline is None or observation.change_pct is None)
         ]
-        if incomplete_baselines:
+        comparable_baselines = [
+            observation
+            for observation in numeric_observations
+            if observation.source_key in required_source_keys
+            and observation.baseline is not None
+            and observation.change_pct is not None
+        ]
+        if incomplete_baselines and not comparable_baselines:
             return cls._with_outcome(
                 result,
                 card,
                 Outcome.INSUFFICIENT_DATA,
                 rationale=(
                     f"{len(incomplete_baselines)} numeric observation(s) were returned without "
-                    "a comparable baseline, so no automatic interpretation is safe."
+                    "a comparable baseline and no required observation had one, so no "
+                    "automatic interpretation is safe."
                 ),
                 confidence=max(result.confidence or 0.0, 0.95),
             )

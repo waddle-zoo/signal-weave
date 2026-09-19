@@ -524,6 +524,72 @@ async def test_partial_required_source_is_not_automatically_interpreted():
     assert any("partial evidence" in item.statement for item in run.result.evidence)
 
 
+async def test_missing_baselines_warn_without_blocking_healthy_chart_evidence():
+    source = SourceRef(
+        key="mixed-dashboard",
+        adapter="superset",
+        resource="dashboard:mixed",
+        label="Mixed dashboard",
+    )
+    card = card_for(
+        card_id="card-mixed-dashboard",
+        title="Mixed dashboard",
+        source=source,
+        delivery_methods=[
+            DeliveryMethod(
+                key="ops",
+                outcome=Outcome.NOTIFY,
+                label="Ops",
+                destination="slack://ops",
+            )
+        ],
+    )
+    resource = ResourceSnapshot(
+        source_key=source.key,
+        adapter=source.adapter,
+        resource=source.resource,
+        title=source.label,
+        metadata={
+            "data_quality": {
+                "status": "partial",
+                "chart_count": 2,
+                "charts_with_observations": 2,
+                "chart_errors": [],
+                "missing_baseline_chart_ids": ["orders-by-region"],
+            }
+        },
+        observations=[
+            Observation(
+                source_key=source.key,
+                subject_id="revenue-trend",
+                subject_label="Revenue",
+                metric="revenue",
+                current=110,
+                baseline=100,
+                change_pct=10,
+            ),
+            Observation(
+                source_key=source.key,
+                subject_id="orders-by-region",
+                subject_label="Orders by region",
+                metric="orders",
+                current=200,
+            ),
+        ],
+    )
+
+    class NotifyMixedDashboard(SafetyTestDouble):
+        async def judge(self, state, card, plan, observations):
+            result = await super().judge(state, card, plan, observations)
+            return result.model_copy(update={"outcome": Outcome.NOTIFY})
+
+    run = await InsightEngine(NotifyMixedDashboard()).evaluate(card, [resource])
+
+    assert run.result.outcome == Outcome.NOTIFY
+    assert run.result.delivery_methods[0].key == "ops"
+    assert any("partial evidence" in item.statement for item in run.result.evidence)
+
+
 async def test_optional_related_source_does_not_block_required_evidence():
     required = SourceRef(
         key="dashboard-anchor",

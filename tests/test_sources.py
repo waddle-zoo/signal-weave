@@ -364,6 +364,24 @@ async def test_superset_adapter_uses_server_paged_catalog_search():
 
 
 @pytest.mark.asyncio
+async def test_superset_adapter_recovers_natural_language_title_search():
+    class NaturalLanguageClient:
+        async def list_dashboards_page(self, *, page, page_size, query):
+            del page, page_size
+            if query == "executive":
+                return ([{"id": 7, "dashboard_title": "Executive Command Center"}], 1)
+            return ([], 0)
+
+    page = await SupersetAdapter(NaturalLanguageClient()).search_resources(
+        "what changed on the executive command center", limit=5
+    )
+
+    assert [resource.resource for resource in page.resources] == ["dashboard:7"]
+    assert page.strategy == "superset-server-filter-term-fallback"
+    assert "bounded title-term fallback" in page.warnings[0]
+
+
+@pytest.mark.asyncio
 async def test_superset_adapter_preserves_dashboard_chart_context():
     adapter = SupersetAdapter(FakeSupersetClient())
     source = SourceRef(

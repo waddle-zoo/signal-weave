@@ -167,6 +167,33 @@ class SupersetClient:
             filters.append({"col": subject, "op": operator, "val": comparator})
         return filters
 
+    @classmethod
+    def _datasource(cls, chart: dict[str, Any]) -> dict[str, Any]:
+        """Normalize the dataset locator across Superset chart API shapes.
+
+        Superset versions and saved-chart responses do not expose this field
+        consistently. Some return `datasource_id`/`datasource_type` while
+        others only retain the Explore form-data value, for example
+        `params.datasource = "17__table"`. Sending a null datasource makes
+        an otherwise valid saved chart fail with a 400 response.
+        """
+        params = cls._params(chart)
+        raw = chart.get("datasource") or params.get("datasource")
+        datasource_id = chart.get("datasource_id")
+        datasource_type = chart.get("datasource_type")
+        if isinstance(raw, dict):
+            datasource_id = datasource_id or raw.get("id")
+            datasource_type = datasource_type or raw.get("type")
+        elif isinstance(raw, str):
+            identifier, separator, raw_type = raw.partition("__")
+            if datasource_id is None and identifier:
+                datasource_id = int(identifier) if identifier.isdigit() else identifier
+            if datasource_type is None and separator and raw_type:
+                datasource_type = raw_type
+        if datasource_id is None:
+            raise ValueError("Superset chart metadata did not expose a datasource id")
+        return {"id": datasource_id, "type": datasource_type or "table"}
+
     @staticmethod
     def _bounded_int(
         params: dict[str, Any], key: str, default: int, minimum: int, maximum: int
@@ -190,7 +217,7 @@ class SupersetClient:
             or params.get("granularity_sqla")
             or params.get("x_axis")
         )
-        columns = list(params.get("columns") or groupby)
+        columns = list(params.get("columns") or groupby or params.get("all_columns") or [])
         if params.get("time_grain_sqla") and granularity and granularity not in columns:
             columns.insert(0, granularity)
         extras = {}
@@ -199,10 +226,7 @@ class SupersetClient:
         form_data = dict(params)
         form_data["slice_id"] = chart.get("id")
         return {
-            "datasource": {
-                "id": chart.get("datasource_id"),
-                "type": chart.get("datasource_type", "table"),
-            },
+            "datasource": cls._datasource(chart),
             "force": False,
             "queries": [
                 {
@@ -300,6 +324,12 @@ class SupersetClient:
             params.get("granularity_sqla"),
             params.get("x_axis"),
         }
+        granularity.update(
+            str(column)
+            for column in params.get("all_columns", [])
+            if isinstance(column, str)
+            and any(token in column.lower() for token in ("date", "time", "timestamp"))
+        )
         fallback = [key for key in numeric_keys if key not in granularity]
         return fallback[0] if len(fallback) == 1 else None
 
@@ -312,6 +342,13 @@ class SupersetClient:
             params.get("x_axis"),
         ):
             if candidate and any(candidate in row for row in rows):
+                return candidate
+        for candidate in params.get("all_columns", []):
+            if (
+                isinstance(candidate, str)
+                and any(token in candidate.lower() for token in ("date", "time", "timestamp"))
+                and any(candidate in row for row in rows)
+            ):
                 return candidate
         return None
 
