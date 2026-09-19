@@ -69,6 +69,27 @@ prove that Jev or any card will be semantically correct for every company's
 definitions; the live Superset acceptance check and a domain-owner holdout are
 still required.
 
+For the Northstar Outfitters local enterprise trial, the real seed rows behind
+the Superset warehouse can be replayed as normalized aggregates across sales,
+funnel, support, and finance sources:
+
+```bash
+uv run python -m evaluations.northstar_shadow_trial \
+  --seed-dir /path/to/northstar/warehouse/init \
+  --typesafe-key-file /absolute/path/to/apikey_typesafe \
+  --output artifacts/northstar-shadow-trial.json \
+  --skip-openai
+```
+
+The harness validates the local Superset dashboard separately, then compares
+Jev with an explicit fixed-threshold comparator over the same six-case
+counterfactual replay. It records the human rubric, exact outcomes, false and
+missed notifications, latency, and provider usage. The replay uses real local
+rows but simulated day-to-day movements; it is evidence about the decision
+contract, not a production accuracy claim. Supplying `--openai-dotenv` enables
+the optional embedding-plus-reasoning baseline. Only normalized aggregates are
+sent to external providers; raw seed rows are not.
+
 Unit tests use injected doubles and do not replace live Jev or Superset proofs.
 The heterogeneous contract tests combine multiple source shapes without
 requiring those services to be installed. The connector-neutral artifact test
