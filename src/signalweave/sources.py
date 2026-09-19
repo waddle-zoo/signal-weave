@@ -2,10 +2,63 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 from collections.abc import Iterable
 from typing import Protocol
 
 from .models import CatalogSearchPage, ResourceDescriptor, ResourceSnapshot, SourceRef
+
+
+def _catalog_terms(resource: ResourceDescriptor) -> set[str]:
+    """Extract bounded lexical terms for adapters without native search.
+
+    This is only candidate recall.  It is deliberately not a relevance decision;
+    Jev still ranks the bounded pool in the onboarding and retrieval layers.
+    """
+    values = [
+        resource.adapter,
+        resource.resource,
+        resource.kind,
+        resource.title,
+        resource.description,
+        resource.contract.domain,
+        resource.contract.scope,
+        resource.contract.population,
+        resource.contract.grain,
+        *resource.contract.metric_names,
+        *resource.contract.roles,
+        *resource.contract.lineage,
+        *(str(value) for value in resource.metadata.values()),
+    ]
+    return {
+        term
+        for value in values
+        for term in re.findall(r"[a-z0-9]+", str(value).lower())
+        if len(term) > 2
+    }
+
+
+def _bounded_local_search(
+    query: str, resources: list[ResourceDescriptor], limit: int
+) -> list[ResourceDescriptor]:
+    query_terms = {
+        term for term in re.findall(r"[a-z0-9]+", query.lower()) if len(term) > 2
+    }
+    ranked = sorted(
+        resources,
+        key=lambda resource: (
+            len(query_terms & _catalog_terms(resource)),
+            len(query_terms & {
+                term
+                for term in re.findall(r"[a-z0-9]+", resource.title.lower())
+                if len(term) > 2
+            }),
+            resource.title.lower(),
+            resource.resource,
+        ),
+        reverse=True,
+    )
+    return ranked[:limit]
 
 
 class SourceAdapter(Protocol):
@@ -114,21 +167,35 @@ class SourceRegistry:
                 )
             else:
                 resources = await adapter.list_resources()
+                authorized = [
+                    resource for resource in resources if self._is_authorized(resource)
+                ]
+                visible = _bounded_local_search(query, authorized, per_adapter_limit)
                 page = CatalogSearchPage(
-                    resources=resources,
-                    total_count=len(resources),
+                    resources=visible,
+                    total_count=len(authorized),
+                    has_more=len(authorized) > len(visible),
                     provider=adapter.name,
                     strategy="local-scan-fallback",
                     warnings=[
                         f"Adapter {adapter.name} does not implement bounded catalog search; "
-                        "the full catalog was materialized before candidate bounding."
+                        "the catalog was locally scanned and lexically bounded before Jev ranking."
                     ],
                 )
             visible = [resource for resource in page.resources if self._is_authorized(resource)]
-            pages.append(page.model_copy(update={"resources": visible}))
-        resources = [resource for page in pages for resource in page.resources]
+            pages.append(page.model_copy(update={"resources": visible[:per_adapter_limit]}))
         if len(adapters) > 1:
-            resources = resources[:limit]
+            # Give every installed adapter a chance to contribute candidates.  A
+            # simple concatenation would let alphabetically earlier adapters
+            # consume the entire bounded pool and hide relevant sources in later
+            # systems (for example, SQL or Superset behind Airflow).
+            resources = []
+            for index in range(per_adapter_limit):
+                for page in pages:
+                    if index < len(page.resources) and len(resources) < limit:
+                        resources.append(page.resources[index])
+        else:
+            resources = list(pages[0].resources)
         page = pages[0] if len(pages) == 1 else None
         return CatalogSearchPage(
             resources=resources,

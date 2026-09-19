@@ -310,6 +310,48 @@ class ResourceDiscovery(BaseModel):
     warnings: list[str] = Field(default_factory=list, max_length=50)
 
 
+class OnboardingSourceReview(BaseModel):
+    """A human-readable review of one candidate during card authoring."""
+
+    ref: str
+    adapter: str
+    resource: str
+    kind: str
+    title: str
+    description: str = ""
+    source_url: str | None = None
+    domain: str = "unknown"
+    tenant_id: str = "default"
+    source_status: str = "unknown"
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    selected: bool = False
+    recommended: bool = False
+    relevance: float = Field(ge=0.0, le=1.0)
+    reason: str = Field(min_length=1, max_length=2000)
+    retrieval_signals: list[str] = Field(default_factory=list, max_length=20)
+
+
+class InsightCardOnboardingReview(BaseModel):
+    """The confirmation boundary between an agent-drafted card and approval."""
+
+    card_id: str
+    status: Literal["needs_human_input", "ready_for_approval"]
+    selected_source_refs: list[str] = Field(default_factory=list, max_length=200)
+    recommended_source_refs: list[str] = Field(default_factory=list, max_length=200)
+    missing_recommended_refs: list[str] = Field(default_factory=list, max_length=200)
+    selected_outside_bounded_candidates: list[str] = Field(
+        default_factory=list, max_length=200
+    )
+    ambiguous_candidate_groups: list[list[str]] = Field(
+        default_factory=list, max_length=50
+    )
+    source_candidates: list[OnboardingSourceReview] = Field(
+        default_factory=list, max_length=100
+    )
+    questions: list[str] = Field(default_factory=list, max_length=50)
+    warnings: list[str] = Field(default_factory=list, max_length=50)
+
+
 class Observation(BaseModel):
     """A normalized fact from any source, not necessarily a dashboard metric."""
 
@@ -446,6 +488,7 @@ class InsightCardProposal(BaseModel):
     card: InsightCard
     plan: InsightPlan
     discovery: ResourceDiscovery
+    onboarding_review: InsightCardOnboardingReview
     setup_questions: list[str] = Field(default_factory=list)
     status: InsightCardStatus = InsightCardStatus.DRAFT
 

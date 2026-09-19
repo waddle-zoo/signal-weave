@@ -72,7 +72,17 @@ propose_insight_card(
 ```
 
 The response contains the stored card, Jev's finite capability plan, and setup
-questions. Preview and approve it explicitly:
+questions. Before approval, review the onboarding boundary:
+
+```text
+review_insight_card(card_id="<card_id returned by the proposal>")
+```
+
+The review shows each candidate's relevance, catalog metadata, selection reason,
+omitted recommendations, and ambiguous candidate groups. A client-owned UI or
+agent should use it to ask the owner whether a source is actually required. Do
+not add a source merely because it is related; mark optional context with
+`required=false` or leave it out. Then preview and approve it explicitly:
 
 ```text
 simulate_insight_card(card_id="<card_id returned by the proposal>")
@@ -88,6 +98,11 @@ human-confirmed dashboard as an anchor, then Jev can add bounded optional
 context from the authorized catalog. A card with many metrics still receives the complete
 normalized observation set; changed rows are only ordered first for presentation.
 Use `retrieval_mode="fixed"` when the client wants exactly the sources it supplied.
+
+For a direct draft, call `review_insight_card` after `draft_insight_card` as the
+same confirmation step. Repeated titles or source names are expected in large
+catalogs; the review intentionally asks for a human choice instead of silently
+selecting the first match.
 
 If a caller already knows its refs, use `draft_insight_card` directly:
 

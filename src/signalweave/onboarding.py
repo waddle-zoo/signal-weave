@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import defaultdict
 from dataclasses import dataclass
 from typing import Any, Protocol
 from uuid import uuid4
@@ -10,8 +11,10 @@ from .models import (
     DeliveryMethod,
     EvidenceBundle,
     InsightCard,
+    InsightCardOnboardingReview,
     InsightCardProposal,
     InvestigationMode,
+    OnboardingSourceReview,
     ResourceDescriptor,
     ResourceDiscovery,
     ResourceMatch,
@@ -67,6 +70,137 @@ class InsightAuthoringService:
     max_candidates: int = 40
     recommendation_threshold: float = 0.60
     related_source_limit: int = 6
+
+    @staticmethod
+    def _source_reason(match: ResourceMatch) -> str:
+        """Explain a candidate without pretending ranking proves ownership."""
+        reasons: list[str] = []
+        if match.recommended:
+            reasons.append("Jev judged it materially relevant to the stated goal")
+        else:
+            reasons.append("it remained in the bounded candidate set for review")
+        if "title-match" in match.retrieval_signals:
+            reasons.append("its title matches the user's language")
+        if "anchor-relationship" in match.retrieval_signals:
+            reasons.append("the adapter published a relationship to a selected source")
+        if "context-reference" in match.retrieval_signals:
+            reasons.append("the supplied context references it")
+        if match.contract.domain and match.contract.domain != "unknown":
+            reasons.append(f"its catalog domain is {match.contract.domain}")
+        return "; ".join(reasons) + "."
+
+    @classmethod
+    def build_onboarding_review(
+        cls, card: InsightCard, discovery: ResourceDiscovery
+    ) -> InsightCardOnboardingReview:
+        selected_refs = {
+            resource_ref(
+                ResourceDescriptor(
+                    adapter=source.adapter,
+                    resource=source.resource,
+                    kind="selected",
+                    title=source.label,
+                )
+            )
+            for source in card.sources
+        }
+        candidate_refs = {match.ref for match in discovery.matches}
+        recommended_refs = {
+            match.ref for match in discovery.matches if match.recommended
+        }
+        missing_recommended = sorted(recommended_refs - selected_refs)
+        selected_outside = sorted(selected_refs - candidate_refs)
+        by_identity: dict[tuple[str, str, str], list[str]] = defaultdict(list)
+        for match in discovery.matches:
+            by_identity[
+                (match.adapter, match.title.strip().lower(), match.contract.domain)
+            ].append(match.ref)
+        ambiguous_groups = [
+            sorted(refs) for refs in by_identity.values() if len(refs) > 1
+        ]
+        candidates = [
+            OnboardingSourceReview(
+                ref=match.ref,
+                adapter=match.adapter,
+                resource=match.resource,
+                kind=match.kind,
+                title=match.title,
+                description=match.description,
+                source_url=match.source_url,
+                domain=match.contract.domain,
+                tenant_id=match.contract.tenant_id,
+                source_status=match.contract.source_status,
+                metadata=match.contract.model_dump(mode="json"),
+                selected=match.ref in selected_refs,
+                recommended=match.recommended,
+                relevance=match.relevance,
+                reason=cls._source_reason(match),
+                retrieval_signals=match.retrieval_signals,
+            )
+            for match in discovery.matches
+        ]
+        questions: list[str] = []
+        warnings: list[str] = []
+        if not card.sources:
+            questions.append("Select at least one authorized source before approval.")
+        if not card.watch_for and not card.questions:
+            questions.append(
+                "Add at least one concrete thing to look for or one question the evidence should answer."
+            )
+        if missing_recommended:
+            labels = [
+                match.title
+                for match in discovery.matches
+                if match.ref in missing_recommended
+            ]
+            questions.append(
+                "Review the suggested sources before approval; the draft omitted: "
+                + ", ".join(labels)
+                + "."
+            )
+        if selected_outside:
+            questions.append(
+                "Confirm the explicitly selected source(s) outside this bounded candidate set: "
+                + ", ".join(selected_outside)
+                + "."
+            )
+        if ambiguous_groups:
+            questions.append(
+                "Disambiguate repeated catalog candidates before approval using owner, lineage, freshness, or relationship metadata."
+            )
+        if discovery.truncated:
+            warnings.append(
+                "Discovery was bounded; an omitted source is not proof that the catalog lacks it."
+            )
+        if discovery.no_match:
+            warnings.append(
+                "No candidate cleared the Jev relevance threshold; source selection needs explicit human confirmation."
+            )
+        return InsightCardOnboardingReview(
+            card_id=card.id,
+            status="needs_human_input" if questions else "ready_for_approval",
+            selected_source_refs=sorted(selected_refs),
+            recommended_source_refs=sorted(recommended_refs),
+            missing_recommended_refs=missing_recommended,
+            selected_outside_bounded_candidates=selected_outside,
+            ambiguous_candidate_groups=ambiguous_groups,
+            source_candidates=candidates,
+            questions=questions,
+            warnings=warnings,
+        )
+
+    async def review(
+        self,
+        card: InsightCard,
+        *,
+        adapter: str | None = None,
+        limit: int = 10,
+    ) -> InsightCardOnboardingReview:
+        goal = insight_goal(
+            card.what_to_watch, card.why_watch, card.watch_for, card.questions
+        )
+        discovery = await self.discover(goal, adapter=adapter, limit=limit)
+        return self.build_onboarding_review(card, discovery)
 
     async def discover(
         self,
@@ -223,17 +357,8 @@ class InsightAuthoringService:
             investigation_threshold=investigation_threshold,
         )
         plan = await self.engine.compile(card)
-        setup_questions: list[str] = []
-        if not source_refs:
-            setup_questions.append("Select at least one source candidate before approval.")
-        if not watch_for and not questions:
-            setup_questions.append(
-                "Add at least one thing to look for or one question the evidence should answer."
-            )
-        if not delivery_methods:
-            setup_questions.append(
-                "Add delivery methods if this card should push a result beyond the calling client."
-            )
+        onboarding_review = self.build_onboarding_review(card, discovery)
+        setup_questions: list[str] = list(onboarding_review.questions)
         if plan.comparison_windows:
             setup_questions.append(
                 f"Confirm the comparison window proposed by Jev: {plan.comparison_windows[0]}."
@@ -247,6 +372,7 @@ class InsightAuthoringService:
             card=card,
             plan=plan,
             discovery=discovery,
+            onboarding_review=onboarding_review,
             setup_questions=setup_questions,
         )
 
@@ -403,5 +529,6 @@ def proposal_summary(proposal: InsightCardProposal) -> dict[str, Any]:
             method.model_dump(mode="json") for method in proposal.card.delivery_methods
         ],
         "setup_questions": proposal.setup_questions,
+        "onboarding_review": proposal.onboarding_review.model_dump(mode="json"),
         "discovery": proposal.discovery.model_dump(mode="json"),
     }

@@ -58,6 +58,7 @@ ALLOWED_MCP_TOOLS = (
     "propose_insight_card",
     "draft_insight_card",
     "resolve_insight_sources",
+    "review_insight_card",
     "simulate_insight_card",
     "approve_insight_card",
     "list_insight_cards",
@@ -1361,9 +1362,10 @@ Your task:
 - Approved delivery options, if evidence supports them:
 {methods}
 
-Work through discovery, draft a card from returned source references, simulate it,
-approve it only if the card is well-defined, and evaluate it. Use the MCP outputs to
-decide what to do. Do not assume that a source is trustworthy just because it exists.
+Work through discovery, draft a card from returned source references, review the
+card's source coverage and ambiguity, revise it if needed, simulate it, approve it
+only if the card is well-defined, and evaluate it. Use the MCP outputs to decide
+what to do. Do not assume that a source is trustworthy just because it exists.
 Finish with a short explanation of the evidence and the action you would take.
 """
 

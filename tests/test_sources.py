@@ -95,6 +95,23 @@ class BoundedSearchAdapter:
             strategy="server-search",
         )
 
+
+class LocalScanAdapter:
+    name = "local"
+
+    async def list_resources(self):
+        return [
+            ResourceDescriptor(
+                adapter=self.name,
+                resource=f"query:{index}",
+                kind="query",
+                title=title,
+            )
+            for index, title in enumerate(
+                ["Unrelated one", "Revenue movement", "Unrelated two", "Revenue quality"]
+            )
+        ]
+
     async def inspect(self, source):
         return ResourceSnapshot(
             source_key=source.key,
@@ -102,6 +119,30 @@ class BoundedSearchAdapter:
             resource=source.resource,
             title=source.label,
         )
+
+
+class LargeLocalScanAdapter(LocalScanAdapter):
+    name = "large-local"
+
+    async def list_resources(self):
+        resources = [
+            ResourceDescriptor(
+                adapter=self.name,
+                resource="query:revenue-movement",
+                kind="query",
+                title="Revenue movement",
+            )
+        ]
+        resources.extend(
+            ResourceDescriptor(
+                adapter=self.name,
+                resource=f"query:unrelated-{index}",
+                kind="query",
+                title=f"Unrelated {index}",
+            )
+            for index in range(599)
+        )
+        return resources
 
 
 class OversizedSnapshotAdapter:
@@ -215,6 +256,39 @@ async def test_source_registry_preserves_bounded_search_coverage_without_full_sc
     assert page.has_more is True
     assert page.next_cursor == "page-2"
     assert page.strategy == "server-search"
+
+
+@pytest.mark.asyncio
+async def test_source_registry_bounds_local_scan_and_preserves_multiple_adapters():
+    class OtherLocalAdapter(LocalScanAdapter):
+        name = "other"
+
+        async def list_resources(self):
+            resources = await super().list_resources()
+            return [resource.model_copy(update={"adapter": self.name}) for resource in resources]
+
+    registry = SourceRegistry([LocalScanAdapter(), OtherLocalAdapter()])
+
+    page = await registry.search_resources("revenue movement", limit=4)
+
+    assert len(page.resources) == 4
+    assert {resource.adapter for resource in page.resources} == {"local", "other"}
+    assert all("Revenue" in resource.title for resource in page.resources)
+    assert page.total_count == 8
+    assert page.has_more is True
+    assert any("locally scanned" in warning for warning in page.warnings)
+
+
+@pytest.mark.asyncio
+async def test_source_registry_does_not_overflow_bounded_catalog_page():
+    registry = SourceRegistry([LargeLocalScanAdapter()])
+
+    page = await registry.search_resources("revenue movement", limit=5)
+
+    assert len(page.resources) == 5
+    assert page.resources[0].resource == "query:revenue-movement"
+    assert page.total_count == 600
+    assert page.has_more is True
 
 
 @pytest.mark.asyncio

@@ -1,74 +1,68 @@
-# Post-fix Luna agent trial
+# Guided onboarding trial
 
-This trial answers a narrow question: after tenant-aware catalog enforcement,
-can a general-purpose Luna agent reliably onboard itself to messy enterprise
-monitoring workflows through MCP alone?
+This trial asks a narrow question: does a guided onboarding review help a
+general-purpose Luna agent create a usable monitoring card over a messy,
+multi-adapter enterprise catalog?
 
 The run used the real `gpt-5.6-luna` Responses API, the real SignalWeave MCP
-registry, and the real Jev-backed discovery and evaluation path. The agent saw
-only the task brief and MCP tool schemas. Expected source refs remained in the
-scorer and were not sent to the agent.
+registry, and the real Jev-backed discovery and evaluation path. Expected source
+refs remained outside the agent prompt and scorer. Delivery stayed disabled.
 
 ## Trial design
 
-- 20 available enterprise/scenario combinations from the three-company fixture.
-- Northstar Commerce, Harbor Bank, and OrbitWorks SaaS.
-- Corroborated notification, explained ignore, contradictory investigation,
-  stale escalation, missing baseline, source failure, and definition/grain
-  mismatch cases.
+- 20 enterprise/scenario sessions across Northstar Commerce, Harbor Bank, and
+  OrbitWorks SaaS.
 - Superset, SQL, Airflow, table-quality, incident, and calendar-shaped sources.
-- Typed tenant contracts and `SourceRegistry(authorized_tenants={...})` on every
-  session.
-- Serial sessions to avoid rate-limit or transport concurrency effects.
-- Independent labels held outside the MCP surface.
+- Tenant-aware catalogs with intentionally repeated semantic titles and noisy
+  related artifacts.
+- The agent workflow was: discover → draft → `review_insight_card` → revise if
+  needed → simulate → approve → evaluate.
+- The review exposed Jev relevance, source reasons, omitted recommendations,
+  catalog metadata, and ambiguous candidate groups.
 
 ## Results
 
-| Measure | Result |
-| --- | ---: |
-| Sessions | 20 |
-| Exact outcome + source decision | 3/20 |
-| Complete MCP workflows | 15/20 |
-| Complete cards | 18/20 |
-| Complete provenance | 15/20 |
-| Exact selected source sets | 4/20 |
-| Average required-source recall | 25% |
-| Wrong-tenant attempts reaching data | 0 |
-| Wrong-tenant data leaks | 0 |
-| Catalog leaks | 0 |
-| Would-be unsafe automatic routes | 3 |
-| Trace integrity | valid; 1,034 events |
-
-The agent usually produced a syntactically complete card, but it often chose
-extra related sources, omitted one of the required sources, or selected the
-wrong related workflow. It also produced three automatic `notify`/`escalate`
-outcomes that were wrong under the hidden labels. Delivery remained disabled,
-so these were blocked would-be actions rather than external side effects.
+| Measure | Before review | With review |
+| --- | ---: | ---: |
+| Sessions | 20 | 20 |
+| Complete onboarding workflow | 7/20 | 17/20 |
+| Complete cards | 10/20 | 19/20 |
+| Complete provenance | 7/20 | 17/20 |
+| Exact selected source sets | 0/20 | 1/20 |
+| Required-source recall | 5% | 27.5% |
+| Wrong-tenant data leaks | 0 | 0 |
+| Unsafe automatic actions | 0 | 0 |
+| Trace integrity | valid | valid; 1,665 events |
 
 ## What this proves
 
-The tenant boundary is effective even when a general agent is imperfect: the
-agent never received another tenant's catalog, and direct opaque inspection is
-now catalog-checked as well as card evaluation. The trace is independently
-scorable and complete enough to identify the failure mode.
+The review step materially improved workflow completion and card completeness.
+It also made source ambiguity visible instead of silently selecting the first
+matching dashboard or context artifact. The catalog fallback was fixed to bound
+large local scans and interleave candidates from multiple adapters; previously,
+large catalogs could fail validation or starve later adapters.
 
-It does **not** prove reliable autonomous onboarding. The bottleneck is source
-set construction and workflow semantics, not just final Jev classification.
-The current public claim should therefore be: SignalWeave can provide a safe,
-typed decision boundary for an agent, but the agent still needs guided source
-selection or human confirmation before automatic operations.
+It does **not** prove autonomous onboarding. Exact source selection remained
+poor because the fixture contains many near-duplicate resources with the same
+semantic title. This is representative of a real enterprise problem: source
+selection needs human confirmation when ownership, lineage, freshness, or
+relationships disambiguate otherwise similar assets.
 
-## Next product gate
+The current product claim should be:
 
-Add a guided source-resolution step that returns a proposed source set with
-per-source reasons, required/optional status, and an explicit confirmation
-boundary before approval. Then rerun this same hidden-label cohort. Do not
-enable delivery merely because a card is syntactically complete or because Jev
-returned a confident final judgment.
+> SignalWeave helps an agent turn a human's free-form operating intent into a
+> reviewable, evidence-backed card. It does not silently decide which ambiguous
+> enterprise asset the business meant.
 
-The raw ignored artifacts are in:
+## Artifacts
+
+The latest raw run is in:
 
 ```text
-artifacts/enterprise/postfix-luna-21-v2.report.json
-artifacts/enterprise/postfix-luna-21-v2.trace.jsonl
+artifacts/live-postfix-luna-2026-09-19-onboarding-v3.report.json
+artifacts/live-postfix-luna-2026-09-19-onboarding-v3.trace.jsonl
 ```
+
+The labels remain independent of the agent. The result is evidence for the
+onboarding boundary, not a universal accuracy claim for every enterprise
+catalog.

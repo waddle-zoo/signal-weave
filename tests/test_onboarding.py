@@ -70,7 +70,13 @@ class SupersetCatalogDouble:
                     change_pct=-13.684,
                 )
             ],
-        )
+            )
+
+
+class AmbiguousSupersetCatalogDouble(SupersetCatalogDouble):
+    def __init__(self):
+        super().__init__()
+        self.resources[1] = self.resources[1].model_copy(update={"title": "Growth overview"})
 
 
 class OnboardingJevDouble:
@@ -140,8 +146,19 @@ class LowRelevanceJudger(OnboardingJevDouble):
         return {f"{resource.adapter}|{resource.resource}": 0.12 for resource in resources}
 
 
-def make_server(tmp_path, judger=None, *, sqlite=False):
-    registry = SourceRegistry([SupersetCatalogDouble()])
+class AmbiguousCatalogJevDouble(OnboardingJevDouble):
+    async def rank_resources(self, goal, resources):
+        del goal
+        return {
+            f"{resource.adapter}|{resource.resource}": 0.91
+            if resource.resource in {"dashboard:7", "dashboard:8"}
+            else 0.12
+            for resource in resources
+        }
+
+
+def make_server(tmp_path, judger=None, *, sqlite=False, catalog=None):
+    registry = SourceRegistry([catalog or SupersetCatalogDouble()])
     engine = InsightEngine(judger or OnboardingJevDouble(), registry=registry)
     card_store = (
         SQLiteInsightCardStore(tmp_path / "signalweave.db")
@@ -210,6 +227,8 @@ async def test_generic_card_flow_discovers_proposes_previews_and_requires_approv
     assert proposal["proposal"]["card"]["sources"][0]["parameters"] == {
         "chart_ids": ["62", "64"]
     }
+    assert proposal["proposal"]["onboarding_review"]["status"] == "ready_for_approval"
+    assert proposal["proposal"]["onboarding_review"]["source_candidates"][0]["selected"] is True
     assert proposal["proposal"]["setup_questions"]
 
     stored = tool(server, "get_insight_card")(card_id)
@@ -343,6 +362,69 @@ async def test_proposal_rejects_source_not_returned_by_discovery(tmp_path):
             why_watch="Decide whether Growth should act.",
             selected_sources=[{"ref": "superset|dashboard:999"}],
         )
+
+
+@pytest.mark.asyncio
+async def test_review_insight_card_explains_omitted_recommended_sources(tmp_path):
+    server = make_server(tmp_path, BundleJevDouble())
+    drafted = await tool(server, "draft_insight_card")(
+        title="Growth context review",
+        what_to_watch="Checkout conversion and the context needed to understand a movement.",
+        why_watch="Help Growth decide whether a conversion change needs action.",
+        questions=["What explains the movement?"],
+        sources=[
+            {
+                "key": "growth-anchor",
+                "adapter": "superset",
+                "resource": "dashboard:7",
+                "label": "Growth overview",
+            }
+        ],
+    )
+
+    review = await tool(server, "review_insight_card")(drafted["card"]["id"])
+
+    assert review["review"]["status"] == "needs_human_input"
+    assert review["review"]["selected_source_refs"] == ["superset|dashboard:7"]
+    assert review["review"]["missing_recommended_refs"] == ["superset|dashboard:8"]
+    candidate = next(
+        item
+        for item in review["review"]["source_candidates"]
+        if item["resource"] == "dashboard:8"
+    )
+    assert candidate["recommended"] is True
+    assert "Jev judged it materially relevant" in candidate["reason"]
+
+
+@pytest.mark.asyncio
+async def test_review_insight_card_surfaces_ambiguous_candidates(tmp_path):
+    server = make_server(
+        tmp_path,
+        AmbiguousCatalogJevDouble(),
+        catalog=AmbiguousSupersetCatalogDouble(),
+    )
+    drafted = await tool(server, "draft_insight_card")(
+        title="Repeated growth source",
+        what_to_watch="Checkout conversion.",
+        why_watch="Decide whether Growth should act.",
+        watch_for=["Conversion moves materially."],
+        sources=[
+            {
+                "key": "growth",
+                "adapter": "superset",
+                "resource": "dashboard:7",
+                "label": "Growth overview",
+            }
+        ],
+    )
+
+    review = await tool(server, "review_insight_card")(drafted["card"]["id"])
+
+    assert review["review"]["status"] == "needs_human_input"
+    assert review["review"]["ambiguous_candidate_groups"] == [
+        ["superset|dashboard:7", "superset|dashboard:8"]
+    ]
+    assert any("Disambiguate" in question for question in review["review"]["questions"])
 
 
 @pytest.mark.asyncio
@@ -488,6 +570,7 @@ def test_mcp_exposes_generic_authoring_tools(tmp_path):
     assert {
         "discover_insight_sources",
         "resolve_insight_sources",
+        "review_insight_card",
         "propose_insight_card",
         "draft_insight_card",
         "simulate_insight_card",
