@@ -16,15 +16,16 @@ automatic operations.
 
 ## What passed
 
-- Local lint and tests: `85 passed, 1 skipped`.
+- Local lint and tests: `94 passed, 1 skipped`.
 - The feature branch is verified locally and GitHub Actions checks for PR #1
   pass on Python 3.11 and 3.12.
 - The package builds successfully and declares Apache 2.0 metadata.
 - The visual assets are valid SVGs and are included in source distributions.
 - No committed API keys, access tokens, or private keys were found by the tracked
   file scan.
-- Superset is a concrete first adapter while the card contract remains
-  source-oriented.
+- Superset is a concrete first shipped adapter while the card and runtime
+  contracts remain analytical-artifact oriented; non-Superset adapters can be
+  installed by the deployment.
 - The conversational authoring path is executable: Jev-ranked discovery,
   free-form card proposal, no-delivery preview, and explicit approval are covered by an
   end-to-end MCP contract test.
@@ -70,6 +71,10 @@ automatic operations.
   contract metadata, unverified-context automatic-action gates, idempotency-key
   collisions, malformed/oversized webhook bodies, and isolation when an
   unrelated adapter catalog is unavailable.
+- The connector-neutral contract test combines Looker-shaped dashboard evidence
+  and Hex-shaped notebook-run evidence without vendor-specific logic in the
+  engine, and runtime tests prove Superset is not required when an embedded
+  deployment supplies another adapter.
 - The rebuilt Docker service became healthy with Jev configured, rejected an
   unauthenticated MCP request with `401`, and the real local Superset dashboard
   round trip passed.

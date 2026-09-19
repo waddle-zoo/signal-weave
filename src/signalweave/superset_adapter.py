@@ -12,7 +12,7 @@ from .superset_client import SupersetClient
 
 
 class SupersetAdapter:
-    """First-class Superset adapter for saved dashboards and chart data.
+    """First shipped Superset adapter for saved dashboards and chart data.
 
     Insight cards can reference several dashboards, or narrow one dashboard with
     ``parameters.chart_ids``. The adapter preserves dashboard owners, chart

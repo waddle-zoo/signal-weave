@@ -49,8 +49,9 @@ class SourceRef(BaseModel):
 
     ``resource`` is intentionally opaque to the insight engine. The adapter owns
     its locator grammar and execution policy. For example, the Superset adapter
-    accepts ``dashboard:7``; a future SQL adapter can accept ``query:orders_daily``
-    without making SQL a core engine concern.
+    accepts ``dashboard:7``; another adapter can accept ``project:retention`` or
+    ``query:orders_daily`` without making that vendor or source language a core
+    engine concern.
     """
 
     key: str = Field(min_length=1, max_length=120)

@@ -13,9 +13,11 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-2ea44f.svg" alt="Apache 2.0 license"></a>
 </p>
 
-Most companies already know what they want to watch. The hard part is turning
-that guidance into a repeatable answer when several sparse signals, relationships,
-and ownership rules matter at once.
+Most companies already know what they want to watch. The hard part is not making
+another dashboard. It is getting an agent to understand a set of dashboards,
+charts, notebooks, queries, and operational signals well enough to check them,
+spot what matters, and run the right bounded workflow without a person opening
+everything every morning.
 
 SignalWeave is a small open-source MCP and webhook service for that seam. A
 person writes a free-form insight card, source adapters return bounded evidence,
@@ -40,7 +42,7 @@ export TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe
 make verify
 ```
 
-Run the localhost Superset demo:
+Run the optional localhost Superset demo (the first shipped connector):
 
 ```bash
 TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
@@ -223,13 +225,30 @@ whole source state and action policy into one untestable response. It also means
 an existing agent can enrich the state with approved knowledge-graph context or
 human feedback later without SignalWeave owning the graph or the agent loop.
 
-## First integration, broader contract
+## Analytical artifact integrations
 
-The included adapter is Apache Superset and preserves dashboard/chart metadata,
-relationships, saved definitions, dimensions, bounded series, baselines, and
-source URLs. The card itself is not Superset-shaped: one card can combine several
-Superset dashboards with approved SQL, Airflow, table-quality, or other read-only
-source adapters.
+The core unit is an analytical artifact set, not a Superset dashboard. An
+adapter can expose a BI dashboard or chart, a saved query, a notebook/project,
+a data-lake result, a data-quality check, or a workflow status. A single card can
+combine artifacts from different systems when that is what the owner's question
+requires. Jev ranks and judges the bounded evidence; code owns source execution,
+freshness, permissions, and side effects.
+
+The first shipped connector is Apache Superset. It preserves dashboard/chart
+metadata, relationships, saved definitions, dimensions, bounded series,
+baselines, and source URLs. Looker and Hex are compatible with the same adapter
+contract, but native connectors are not yet bundled: a deployment can provide a
+read-only adapter for Looker dashboards/saved queries or Hex projects/runs while
+the core remains vendor-neutral. See the official [Looker API](https://cloud.google.com/looker/docs/api-getting-started)
+and [Hex public API](https://learn.hex.tech/docs/api-integrations/api/overview)
+documentation for the source capabilities those adapters would map.
+
+SignalWeave does not assume Superset RBAC or impose a universal enterprise ACL.
+Each adapter runs under the deployment's approved credentials or identity
+gateway and must return only the artifacts that caller is allowed to use. A
+source without native per-user permissions should be placed behind an approved
+gateway or isolated deployment; that security decision belongs to the source
+integration, not to a hidden SignalWeave default.
 
 SignalWeave is not a replacement for Temporal, Airflow, Dagster, a BI tool,
 Glean, a knowledge graph, or a general-purpose agent framework. It is the typed
@@ -282,11 +301,12 @@ traffic to more than one evaluator process.
 See [`docs/evidence-brief.md`](docs/evidence-brief.md) for the measured case and
 limitations.
 
-To reproduce the narrower daily-monitor contract—no-change suppression,
-contextual notification, complete evidence, and idempotent scheduler retry—run
-`make daily-trial`. The trial uses live Jev through the real MCP and webhook
-surfaces over a rotating Superset-shaped fixture. It is an integration proof,
-not a universal accuracy claim.
+To reproduce the scheduled analytical-artifact monitor contract—no-change
+suppression, contextual notification, complete evidence, and idempotent
+scheduler retry—run `make daily-trial`. The current fixture uses Superset-shaped
+artifacts because Superset is the first shipped connector; the engine contract
+does not require that shape. It is an integration proof, not a universal
+accuracy claim.
 
 ## Documentation
 

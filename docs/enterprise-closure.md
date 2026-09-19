@@ -35,17 +35,19 @@ relations, columns, aggregation syntax, time bounds, and query safety.
 
 ## Supported claim
 
-SignalWeave is a bounded technical alpha for turning approved, typed source
-metadata and owner-written monitoring intent into inspectable Jev judgments,
-deterministic metric plans, and caller-owned push results. It is useful as a
-decision layer above Superset today, with a typed Trino-shaped path for data-lake
-catalogs.
+SignalWeave is a bounded technical alpha for turning approved, typed analytical-
+artifact metadata and owner-written monitoring intent into inspectable Jev
+judgments, deterministic metric plans, and caller-owned push results. Superset
+and the typed Trino-shaped data-lake path are the shipped proofs today; the
+decision layer is intended to sit across any installed artifact adapters rather
+than above one BI vendor.
 
 ## Not yet proved
 
 - Accuracy on independent domain-owner labels from a real company.
 - Time-split or historical holdout performance.
-- Real Superset and Trino deployments rather than compatible local adapters.
+- Real production deployments and native connectors beyond the current Superset
+  and Trino proofs, including Looker and Hex adapters.
 - Query cost, freshness, and scale for a real multi-tenant catalog.
 - A shared transactional receipt store for multi-replica deployments and an external delivery sink.
 - OS-level sandboxing for agents that are supposed to use MCP only.

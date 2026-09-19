@@ -1,8 +1,9 @@
 # Source adapter guide
 
-SignalWeave’s extension point is a read-only source adapter, not a new workflow
-runtime. Add an adapter when a company already has a system that owns the fact or
-status needed by an insight card.
+SignalWeave’s extension point is a read-only analytical-artifact adapter, not a
+new BI product or workflow runtime. Add an adapter when a company already has a
+system that owns the dashboard, chart, notebook, query, quality result, or status
+needed by an insight card.
 
 ## Contract
 
@@ -73,19 +74,24 @@ and keeps an Airflow adapter from becoming a DAG execution API.
 
 ## Example source shapes
 
-These are intended adapter contracts, not shipped connectors in the current repo:
+These are intended adapter contracts. Superset and the bounded Trino query path
+are shipped in this repository; the other examples are extension points, not
+claims that native connectors are already bundled:
 
 ```text
-Superset   dashboard:7       parameters.chart_ids=[62,64]
-SQL        query:orders_quality
-Trino      query:net_revenue
-Airflow    dag:warehouse_load parameters.run="latest"
-Table      table:warehouse.orders parameters.check="exists_and_fresh"
+Superset   dashboard:7                 parameters.chart_ids=[62,64]
+Looker     dashboard:executive-growth  native dashboard/saved-query API
+Hex        project:retention            published run/cell-output API
+SQL        query:orders_quality         reviewed query catalog
+Trino      query:net_revenue            compiled metric definition
+Airflow    dag:warehouse_load           parameters.run="latest"
+Table      table:warehouse.orders       parameters.check="exists_and_fresh"
 ```
 
-A mixed card can reference all four. The registry resolves them concurrently
-with a bounded fan-out, and the engine gives Jev the resulting snapshots together
-so the card’s author guidance can be evaluated over their relationships. Cards
+A mixed card can reference any combination of these. The registry resolves them
+concurrently with a bounded fan-out, and the engine gives Jev the resulting
+snapshots together so the card’s author guidance can be evaluated over their
+relationships. Cards
 created through `propose_insight_card` default to `retrieval_mode="expand"`:
 human-selected sources remain required anchors, while Jev may add a small number
 of authorized optional context sources at evaluation time. Use
@@ -121,12 +127,15 @@ establish their state.
 
 ## Registering an adapter
 
-The local runtime registers `SupersetAdapter` explicitly. A deployment can add
-another adapter at construction time:
+The local runtime registers `SupersetAdapter` when `SUPERSET_URL` is configured.
+A deployment can add any connector at construction time; Superset is not a
+required runtime dependency:
 
 ```python
 registry = SourceRegistry([
     SupersetAdapter(superset_client),
+    LookerArtifactAdapter(looker_client),
+    HexArtifactAdapter(hex_client),
     ApprovedQueryAdapter(query_catalog, warehouse),
     AirflowStatusAdapter(airflow_client),
 ])
@@ -134,4 +143,8 @@ engine = InsightEngine(judger=JevJudger(api_key=key), registry=registry)
 ```
 
 The MCP tools then discover all installed resources through `list_resources`, and
-the insight-card schema does not change.
+the insight-card schema does not change. The adapter owns the source's auth
+model: SignalWeave does not assume Superset RBAC, and it does not synthesize a
+universal ACL for systems that do not provide one. A connector must enforce its
+approved credential or identity boundary before returning catalog entries or
+snapshots.

@@ -2,13 +2,15 @@
 
 ## Product boundary
 
-SignalWeave is a small decision layer between company-owned source systems and
-the system that already delivers or acts on an insight. It does not own BI,
+SignalWeave is a small decision layer between company-owned analytical systems
+and the system that already delivers or acts on an insight. It does not own BI,
 search, a knowledge graph, scheduling, durable execution, identity, or delivery.
 
-Superset is the first-class shipped adapter, but the core contract is a generic
-card over approved source references. A card can combine several dashboards and,
-when installed, SQL, Airflow, table-quality, or other bounded read adapters.
+Superset is the first shipped adapter, but the core contract is a generic card
+over approved analytical artifacts. A card can combine dashboards, individual
+charts, saved queries, notebooks, data-quality checks, workflow status, and
+other bounded read adapters. It does not matter whether those artifacts come
+from Superset, Looker, Hex, a warehouse, or an internal system.
 
 ```text
  InsightCard
@@ -90,11 +92,13 @@ are platform controls. A compiled `InsightPlan` stores the Jev-selected finite
 capabilities and the card items it will evaluate. Its card version is checked
 before reuse, so an edited card cannot silently run an old plan.
 
-There is no `dashboard_id` or `chart_ids` in the engine contract. Superset scope
-is adapter-owned `SourceRef.parameters`, so the same card can contain:
+There is no `dashboard_id` or `chart_ids` in the engine contract. A source
+locator and its parameters are adapter-owned, so the same card can contain:
 
 ```text
 superset dashboard:7, charts [62, 64]
+looker dashboard:executive-growth
+hex project:retention-investigation
 superset dashboard:12, charts [91]
 sql query:orders_quality
 airflow dag:warehouse_load
@@ -169,11 +173,26 @@ ranker. Related sources are optional, so a missing context source is preserved a
 evidence without vetoing a complete required anchor. The card owner still
 controls the anchor and approval decision.
 
-The Superset adapter preserves the value that makes this useful as a first wedge:
+The Superset adapter preserves the value that makes it useful as a first wedge:
 dashboard and chart titles, descriptions, owners, relationships, saved chart
 definitions, filters, dimensions, bounded series, current/baseline movement,
-source URLs, and per-chart errors. Other adapters do not need to impersonate a
-dashboard.
+source URLs, and per-chart errors. A Looker adapter might map dashboards and
+saved query results; a Hex adapter might map published projects, run status, and
+bounded cell outputs. Other adapters do not need to impersonate a dashboard.
+
+## The monitoring unit is an artifact set
+
+The user does not have to choose one dashboard as the product boundary. They
+describe the outcome they care about, then name or discover the artifacts that
+can answer it. For example, “tell me whether activation is off course and why”
+may require an executive dashboard, a related Looker explore, a Hex diagnostic
+project, and a warehouse quality check. The connector layer resolves those
+artifacts; Jev selects and judges evidence from the bounded set; the caller's
+agent or workflow runner decides how to present or act on the result.
+
+This is why SignalWeave is not another BI tool or workflow engine: it removes the
+manual checking step between existing analytical assets and an existing action
+system.
 
 ## Evaluation pipeline
 

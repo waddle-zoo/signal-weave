@@ -1,19 +1,26 @@
 # Enterprise gap analysis
 
 SignalWeave should stay small. It is not a catalog, semantic layer, workflow
-engine, or agent builder. Its useful boundary is narrower:
+engine, BI product, or agent builder. Its useful boundary is narrower:
 
-> Given a human-authored goal, retrieve an authorized and sufficiently fresh
-> evidence set from existing enterprise systems, use Jev to make bounded typed
-> decisions over that evidence, and return an inspectable receipt that another
-> system or agent can act on.
+> Given a human-authored goal over a set of analytical artifacts, retrieve an
+> authorized and sufficiently fresh evidence set from existing enterprise
+> systems, use Jev to make bounded typed decisions over that evidence, and
+> return an inspectable receipt that another system or agent can act on.
+
+The product promise is operational: people should not have to open a series of
+dashboards, notebooks, and query results every morning to decide whether
+anything important changed. A card names the outcome, the artifacts or search
+scope, what to look for, and what should happen for each outcome. SignalWeave
+connects those artifacts, evaluates the current evidence, and pushes a bounded
+result to the system that already handles delivery or action.
 
 This boundary matters because the adjacent products are already good at the
 parts they own:
 
 | Adjacent system | What it already does well | What it does not provide to SignalWeave's caller |
 | --- | --- | --- |
-| Superset | Dashboard/chart metadata, chart data, pagination, and source RBAC. The Superset MCP surface documents paginated list tools and permission checks. | A cross-source, goal-specific evidence bundle and a typed decision about what matters now. |
+| BI and notebook systems (Superset, Looker, Hex, and others) | Each system owns its dashboards, charts, queries, notebooks, runs, and native access model. | A cross-artifact, goal-specific evidence bundle and a typed decision about what matters now. |
 | Data catalogs / metadata graphs | Search, ownership, glossary, lineage, quality, and entity relationships. OpenMetadata exposes these both through APIs and MCP tools. | A bounded investigation plan tied to a particular user goal and current observations. |
 | Glean-like enterprise search | Permission-aware indexing and relevance over enterprise content, people, and activity. | A deterministic application contract for selecting evidence, abstaining, and routing an operational outcome. |
 | dbt Semantic Layer / Cube | Governed metric definitions, joins, dimensions, access policies, and refresh semantics. | The choice of which governed assets matter for an open-ended monitoring or investigation goal. |
@@ -56,17 +63,19 @@ Proof target: a 100,000-resource fake adapter must make one bounded search call,
 return the relevant resource, and never materialize the full catalog in the
 registry or Jev request.
 
-### 2. Identity and authorization are request-scoped — P0
+### 2. Connector authorization is explicit — P0
 
-The current single-process service can be deployed safely behind a trusted
-gateway, but it does not yet model a principal, tenant, or source authorization
-decision in the application contract. Resource contracts contain a tenant field,
-but resource references and card storage are still process-scoped.
+SignalWeave must not assume that every enterprise uses Superset RBAC or that
+every source has the same permission model. The current service can be deployed
+safely behind a trusted gateway, and each adapter can enforce its own credential
+or principal boundary, but shared deployments still need request-scoped identity
+and card/receipt isolation.
 
 The next design should accept a caller principal from the deployment boundary and
 make it available to every catalog search, source inspection, context lookup, and
-receipt. The service should not invent an identity provider; it should fail closed
-when a deployment claims shared-tenant operation without supplying one.
+receipt. The service should not invent an identity provider or a universal ACL;
+it should fail closed when a deployment claims shared-tenant operation without
+supplying one, and adapters must return only resources visible to that principal.
 
 Proof target: two tenants with colliding resource names cannot discover, inspect,
 or reuse each other’s cards or receipts, including through bounded investigation.
@@ -110,8 +119,8 @@ workflow being evaluated.
 
 ## Sequence
 
-1. Ship the bounded catalog-search contract and 100k-resource stress proof.
-2. Add request-scoped principal/tenant propagation and cross-tenant tests.
+1. Ship the bounded catalog-search contract and 100k-artifact stress proof.
+2. Add request-scoped principal/tenant propagation and cross-source tests.
 3. Replace unverified context input with a connector contract carrying
    authorization, freshness, and completeness.
 4. Add explicit payload/time budgets and benchmark abstention under truncation.
@@ -124,6 +133,10 @@ workflow being evaluated.
 - [Jev model reference](https://systemonemodels.org/models/jev/)
 - [Superset dashboard API](https://superset.apache.org/developer-docs/api/get-a-list-of-dashboards/)
 - [Superset MCP deployment, pagination, and RBAC](https://superset.apache.org/admin-docs/configuration/mcp-server/)
+- [Looker API getting started](https://cloud.google.com/looker/docs/api-getting-started)
+- [Looker run query API](https://cloud.google.com/looker/docs/reference/looker-api/latest/methods/Query/run_query)
+- [Hex public API overview](https://learn.hex.tech/docs/api-integrations/api/overview)
+- [Hex public API reference](https://learn.hex.tech/docs/api-integrations/api/reference)
 - [Glean knowledge graph and permissions](https://docs.glean.com/security/knowledge-graph)
 - [OpenMetadata AI SDK and MCP tools](https://docs.open-metadata.org/v1.12.x/api-reference/sdk/ai-sdk)
 - [dbt Developer Hub and Semantic Layer](https://docs.getdbt.com/)

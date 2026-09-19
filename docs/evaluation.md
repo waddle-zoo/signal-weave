@@ -69,8 +69,10 @@ definitions; the live Superset acceptance check and a domain-owner holdout are
 still required.
 
 Unit tests use injected doubles and do not replace live Jev or Superset proofs.
-The heterogeneous contract test combines Superset, SQL, Airflow, and table-style
-source refs without requiring those services to be installed.
+The heterogeneous contract tests combine multiple source shapes without
+requiring those services to be installed. The connector-neutral artifact test
+uses Looker-shaped dashboard evidence and Hex-shaped notebook-run evidence;
+other tests cover Superset, SQL, Airflow, and table-style refs.
 
 For the provider-neutral embeddings-plus-reasoning comparison, see
 [`benchmark.md`](benchmark.md).
