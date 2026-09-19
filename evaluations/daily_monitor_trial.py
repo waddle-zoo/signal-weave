@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import os
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -103,6 +104,9 @@ async def run_trial(output: Path) -> dict[str, Any]:
     api_key = load_api_key()
     if not api_key:
         raise RuntimeError("daily Jev trial requires TYPESAFE_API_KEY or TYPESAFE_API_KEY_FILE")
+    webhook_token = os.getenv("PUSH_WEBHOOK_TOKEN")
+    if not webhook_token:
+        raise RuntimeError("daily push trial requires PUSH_WEBHOOK_TOKEN")
 
     case = next(case for case in load_evaluation_cases() if case.id == "revenue_decline")
     trial_card = case.card.model_copy(
@@ -155,17 +159,21 @@ async def run_trial(output: Path) -> dict[str, Any]:
 
     app = server.streamable_http_app()
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://trial") as client:
+        headers = {"Authorization": f"Bearer {webhook_token}"}
         no_change_response = await client.post(
             "/webhooks/evaluate",
             json={"card_id": card_id, "idempotency_key": "daily:2026-09-17", "actor": "scheduler"},
+            headers=headers,
         )
         replay_response = await client.post(
             "/webhooks/evaluate",
             json={"card_id": card_id, "idempotency_key": "daily:2026-09-17", "actor": "scheduler-retry"},
+            headers=headers,
         )
         material_response = await client.post(
             "/webhooks/evaluate",
             json={"card_id": card_id, "idempotency_key": "daily:2026-09-18", "actor": "scheduler"},
+            headers=headers,
         )
 
     no_change_payload = no_change_response.json()
@@ -182,7 +190,7 @@ async def run_trial(output: Path) -> dict[str, Any]:
         "why_evidence_is_complete": expected_evidence.issubset(
             {item["subject_label"] for item in material_result["evidence"]}
         ),
-        "all_dashboard_observations_reach_jev": len(material_result["observations"]) == 4,
+        "all_source_observations_reach_jev": len(material_result["observations"]) == 4,
         "jev_is_evaluator": material_result["evaluator"] == "jev-latest",
         "delivery_remains_caller_owned": material_payload["receipt"]["delivery_enabled"] is False,
     }
