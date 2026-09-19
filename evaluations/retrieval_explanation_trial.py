@@ -17,6 +17,7 @@ from typing import Any
 
 from signalweave.engine import InsightEngine
 from signalweave.models import (
+    CatalogSearchPage,
     ContextFact,
     ContextSnapshot,
     DeliveryMethod,
@@ -68,7 +69,7 @@ class ScenarioAdapter:
             for item in _asset_items(scenario)
         }
 
-    async def list_resources(self) -> list[ResourceDescriptor]:
+    def _descriptors(self, items: list[tuple[str, dict[str, Any]]]) -> list[ResourceDescriptor]:
         return [
             ResourceDescriptor(
                 adapter=self.name,
@@ -83,8 +84,30 @@ class ScenarioAdapter:
                     roles=["primary"] if resource == self.anchor_resource else ["context"],
                 ),
             )
-            for resource, item in self.items.items()
+            for resource, item in items
         ]
+
+    async def list_resources(self) -> list[ResourceDescriptor]:
+        return self._descriptors(list(self.items.items()))
+
+    async def search_resources(
+        self, query: str, *, limit: int, cursor: str | None = None
+    ) -> CatalogSearchPage:
+        """Exercise the same bounded adapter contract used by production sources."""
+        del query
+        page = int(cursor or "0")
+        items = list(self.items.items())
+        start = page * limit
+        selected = items[start : start + limit]
+        has_more = start + limit < len(items)
+        return CatalogSearchPage(
+            resources=self._descriptors(selected),
+            total_count=len(items),
+            has_more=has_more,
+            next_cursor=str(page + 1) if has_more else None,
+            provider=self.name,
+            strategy="scenario-server-search",
+        )
 
     async def inspect(self, source: SourceRef) -> ResourceSnapshot:
         item = self.items.get(source.resource)
