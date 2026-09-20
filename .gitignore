@@ -17,3 +17,5 @@ build/
 dist/
 superset_home/
 *.log
+promo/remotion/node_modules/
+promo/remotion/out/

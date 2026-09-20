@@ -1,0 +1,16 @@
+{
+  "name": "signalweave-remotion-film",
+  "private": true,
+  "description": "Remotion composition for the SignalWeave product film.",
+  "scripts": {
+    "studio": "remotion studio src/index.tsx",
+    "render": "remotion render src/index.tsx SignalWeaveFilm out/signalweave-remotion-film.mp4 --overwrite --codec=h264 --crf=18",
+    "render:mac": "remotion render src/index.tsx SignalWeaveFilm out/signalweave-remotion-film.mp4 --overwrite --codec=h264 --crf=18 --concurrency=1 --browser-executable=\"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome\""
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "remotion": "^4.0.0"
+  }
+}
