@@ -26,14 +26,16 @@ function p(frame: number, from: number, to: number, easing = smooth) {
 
 function sceneVisibility(frame: number, index: number) {
   const scene = scenes[index];
-  const enter = interpolate(frame, [scene.start - TRANSITION, scene.start + TRANSITION], [0, 1], clamp);
-  const direction = index % 2 === 0 ? 1 : -1;
+  const enter = p(frame, scene.start - TRANSITION, scene.start + TRANSITION);
+  const arrival = index === 0 ? 1 : enter;
+  const direction = 1;
   const visible = frame >= scene.start - TRANSITION && frame < scene.end + TRANSITION;
-  const reveal = interpolate(enter, [0, 1], [100, 0], clamp);
+  const exit = interpolate(frame, [scene.end - TRANSITION, scene.end + TRANSITION], [0, 1], clamp);
+  const enterX = interpolate(arrival, [0, 1], [direction * 1180, 0], clamp);
+  const exitX = interpolate(exit, [0, 1], [0, direction * -42], clamp);
   return {
     opacity: visible ? 1 : 0,
-    clipPath: index === 0 ? "inset(0 0 0 0)" : direction > 0 ? `inset(0 ${reveal}% 0 0)` : `inset(0 0 0 ${reveal}%)`,
-    transform: `translate3d(${interpolate(enter, [0, 1], [direction * 52, 0], clamp)}px, ${interpolate(enter, [0, 1], [index === 0 ? 18 : -8, 0], clamp)}px, 0) rotateZ(${interpolate(enter, [0, 1], [direction * 1.1, 0], clamp)}deg) scale(${interpolate(enter, [0, 1], [.99, 1], clamp)})`,
+    transform: `translate3d(${enterX + exitX}px, ${interpolate(arrival, [0, 1], [index === 0 ? 0 : -5, 0], clamp)}px, 0) rotateZ(${interpolate(arrival, [0, 1], [.35, 0], clamp)}deg) scale(${interpolate(arrival, [0, 1], [.985, 1], clamp)})`,
   };
 }
 
@@ -52,7 +54,7 @@ const Pill: FC<{ children: ReactNode; tone?: Tone; dark?: boolean }> = ({ childr
 
 const Frame: FC<{ index: number; frame: number; children: ReactNode }> = ({ index, frame, children }) => {
   const motion = sceneVisibility(frame, index);
-  return <div style={{ position: "absolute", inset: 0, opacity: motion.opacity, clipPath: motion.clipPath, transform: motion.transform, pointerEvents: "none", zIndex: index + 1 }}><div style={{ position: "absolute", inset: 30, borderRadius: 30, overflow: "hidden", background: colors.paper, border: "1px solid rgba(15,23,42,.1)", boxShadow: "0 34px 90px rgba(15,23,42,.14)" }}><div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at 10% 8%, rgba(20,184,166,.08), transparent 29%), radial-gradient(circle at 91% 88%, rgba(91,97,232,.1), transparent 32%)" }} /><div style={{ position: "absolute", top: 32, left: 44, right: 44, display: "flex", alignItems: "center", justifyContent: "space-between" }}><Brand /><div style={{ display: "flex", alignItems: "center", gap: 16 }}><div style={{ color: colors.muted, fontSize: 11, letterSpacing: ".16em", fontWeight: 700 }}>PUSHED ANALYTICS</div><div style={{ color: colors.muted, fontSize: 12, fontVariantNumeric: "tabular-nums" }}>{scenes[index].number} / 05</div></div></div><div style={{ position: "absolute", left: 44, top: 94, right: 44, height: 1, background: colors.line }} />{children}</div></div>;
+  return <div style={{ position: "absolute", inset: 0, opacity: motion.opacity, transform: motion.transform, pointerEvents: "none", zIndex: index + 1 }}><div style={{ position: "absolute", inset: 30, borderRadius: 30, overflow: "hidden", background: colors.paper, border: "1px solid rgba(15,23,42,.1)", boxShadow: "0 34px 90px rgba(15,23,42,.14)" }}><div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at 10% 8%, rgba(20,184,166,.08), transparent 29%), radial-gradient(circle at 91% 88%, rgba(91,97,232,.1), transparent 32%)" }} /><div style={{ position: "absolute", top: 32, left: 44, right: 44, display: "flex", alignItems: "center", justifyContent: "space-between" }}><Brand /><div style={{ display: "flex", alignItems: "center", gap: 16 }}><div style={{ color: colors.muted, fontSize: 11, letterSpacing: ".16em", fontWeight: 700 }}>PUSHED ANALYTICS</div><div style={{ color: colors.muted, fontSize: 12, fontVariantNumeric: "tabular-nums" }}>{scenes[index].number} / 05</div></div></div><div style={{ position: "absolute", left: 44, top: 94, right: 44, height: 1, background: colors.line }} />{children}</div></div>;
 };
 
 const QueryScene: FC<{ frame: number }> = ({ frame }) => {
@@ -77,7 +79,7 @@ const JudgmentScene: FC<{ frame: number }> = ({ frame }) => {
 };
 
 type GraphNode = { x: number; y: number; label: string; tone: Tone; delay: number };
-const graphNodes: GraphNode[] = [{ x: 148, y: 353, label: "CARD", tone: "indigo", delay: 0 }, { x: 640, y: 177, label: "SQL", tone: "teal", delay: 12 }, { x: 1066, y: 246, label: "SUPERSET", tone: "amber", delay: 27 }, { x: 1066, y: 360, label: "FUNNEL", tone: "teal", delay: 41 }, { x: 1066, y: 481, label: "OPS", tone: "pink", delay: 55 }];
+const graphNodes: GraphNode[] = [{ x: 148, y: 353, label: "CARD", tone: "indigo", delay: 0 }, { x: 640, y: 260, label: "SQL", tone: "teal", delay: 12 }, { x: 1066, y: 246, label: "SUPERSET", tone: "amber", delay: 27 }, { x: 1066, y: 360, label: "FUNNEL", tone: "teal", delay: 41 }, { x: 1066, y: 481, label: "OPS", tone: "pink", delay: 55 }];
 
 const GraphScene: FC<{ frame: number }> = ({ frame }) => {
   const start = scenes[2].start;
