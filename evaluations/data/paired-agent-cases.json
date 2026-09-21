@@ -5,6 +5,10 @@
   "principal": "growth-monitoring-agent",
   "authorization_scope": "northstar-outfitters:analytics",
   "snapshot_version": "northstar-analytics-2026-09-20",
+  "delivery_methods": [
+    {"key": "growth-leadership", "outcome": "notify", "destination": "slack|channel:growth-leadership"},
+    {"key": "data-platform", "outcome": "escalate", "destination": "airflow|dag:signup-refresh"}
+  ],
   "replicates": 4,
   "shared_context": [
     "human-authored-card",

@@ -31,6 +31,10 @@ def test_both_arms_use_the_same_shared_input_shape():
     assert shared["tenant"] == "northstar-outfitters"
     assert len(shared["cached_charts"]) >= 2
     assert len(shared["authorized_source_catalog"]) >= 3
+    assert {item["key"] for item in shared["card"]["delivery_methods"]} == {
+        "growth-leadership",
+        "data-platform",
+    }
     assert "human-authored-card" in shared["context_fields"]
     assert "tenant-and-permission-scope" in shared["context_fields"]
 

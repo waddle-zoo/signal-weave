@@ -74,7 +74,7 @@ def _load_cases(path: str | Path = DEFAULT_CASES) -> list[dict[str, Any]]:
                 "principal": payload["principal"],
                 "authorization_scope": payload["authorization_scope"],
                 "snapshot_version": payload["snapshot_version"],
-                "card": template["card"],
+                "card": {**template["card"], "delivery_methods": payload["delivery_methods"]},
                 "cached_charts": template["charts"],
                 "authorized_source_catalog": catalog,
                 "context_fields": payload["shared_context"],
