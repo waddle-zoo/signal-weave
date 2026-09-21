@@ -241,6 +241,8 @@ async def test_generic_card_flow_discovers_proposes_previews_and_requires_approv
     assert proposal["proposal"]["onboarding_review"]["status"] == "ready_for_approval"
     assert proposal["proposal"]["onboarding_review"]["principal_id"] == "test-principal"
     assert proposal["proposal"]["onboarding_review"]["principal_tenant"] == "default"
+    assert proposal["proposal"]["onboarding_review"]["discovery_receipt"]["evaluator"] == "jev-onboarding-test-double"
+    assert proposal["proposal"]["onboarding_review"]["discovery_receipt"]["candidate_refs"]
     assert proposal["proposal"]["onboarding_review"]["source_candidates"][0]["selected"] is True
     assert proposal["proposal"]["setup_questions"]
 

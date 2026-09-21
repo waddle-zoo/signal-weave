@@ -316,6 +316,9 @@ class ResourceDiscovery(BaseModel):
     candidate_strategy: str = "hybrid-metadata"
     evaluator: str
     authorized_tenant: str | None = None
+    catalog_provider: str = "unknown"
+    catalog_strategy: str = "unknown"
+    catalog_cursor: str | None = None
     warnings: list[str] = Field(default_factory=list, max_length=50)
 
 
@@ -375,6 +378,22 @@ class OnboardingBlocker(BaseModel):
     refs: list[str] = Field(default_factory=list, max_length=200)
 
 
+class OnboardingDiscoveryReceipt(BaseModel):
+    """Replay identity for one bounded onboarding discovery decision."""
+
+    principal_id: str | None = Field(default=None, max_length=240)
+    principal_tenant: str | None = Field(default=None, max_length=160)
+    authorization_evidence: str = Field(default="not-provided", max_length=240)
+    catalog_provider: str = Field(min_length=1, max_length=160)
+    catalog_strategy: str = Field(min_length=1, max_length=160)
+    catalog_cursor: str | None = Field(default=None, max_length=500)
+    candidate_refs: list[str] = Field(default_factory=list, max_length=200)
+    candidate_count: int = Field(ge=0)
+    candidate_limit: int = Field(ge=1)
+    truncated: bool = False
+    evaluator: str = Field(min_length=1, max_length=160)
+
+
 class InsightCardOnboardingReview(BaseModel):
     """The confirmation boundary between an agent-drafted card and approval."""
 
@@ -387,6 +406,7 @@ class InsightCardOnboardingReview(BaseModel):
     principal_id: str | None = Field(default=None, max_length=240)
     principal_tenant: str | None = Field(default=None, max_length=160)
     authorization_evidence: str = Field(default="not-provided", max_length=240)
+    discovery_receipt: OnboardingDiscoveryReceipt
     selected_source_refs: list[str] = Field(default_factory=list, max_length=200)
     recommended_source_refs: list[str] = Field(default_factory=list, max_length=200)
     missing_recommended_refs: list[str] = Field(default_factory=list, max_length=200)

@@ -118,12 +118,13 @@ The remaining implementation slice should stay narrow:
   `quality`, `owner`) with a reason and source provenance;
 - replace the deployment-scoped principal with request-scoped identity/OAuth
   evidence when the service is used by a shared multi-tenant gateway;
-- carry a discovery receipt containing principal, cursor/version, candidate set,
-  Jev evaluator, and card version into later runs;
+- persist the typed discovery receipt with the approved card and carry it into
+  later runs and correction records;
 - add time-split, operator-labeled cases rather than inflating synthetic
   scenario count;
 - measure review time and correction rate, not only retrieval metrics.
 
-Do not move the readiness prototype into `src/` yet. The matrix shows which
-contracts are worth promoting; it does not establish that the current API
-shape is the right public surface.
+The core safety blockers and replay receipt are now in the production review
+contract. Keep the remaining evaluation-only policy work—especially role
+classification and correction learning—out of `src/` until it has the same
+cross-enterprise evidence.

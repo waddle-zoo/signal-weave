@@ -11,6 +11,7 @@ from evaluations.onboarding_readiness import assess_readiness
 from signalweave.models import (
     InsightCard,
     InsightCardOnboardingReview,
+    OnboardingDiscoveryReceipt,
     ResourceContract,
     ResourceDiscovery,
     ResourceMatch,
@@ -121,6 +122,13 @@ def test_missing_principal_is_a_hard_readiness_block():
     review = InsightCardOnboardingReview(
         card_id=card.id,
         status="needs_human_input",
+        discovery_receipt=OnboardingDiscoveryReceipt(
+            catalog_provider="test",
+            catalog_strategy="fixture",
+            candidate_count=0,
+            candidate_limit=10,
+            evaluator="test-jev",
+        ),
     )
 
     readiness = assess_readiness(
@@ -218,6 +226,13 @@ def test_readiness_defense_in_depth_blocks_a_post_discovery_permission_drift():
     review = InsightCardOnboardingReview(
         card_id=card.id,
         status="ready_for_approval",
+        discovery_receipt=OnboardingDiscoveryReceipt(
+            catalog_provider="test",
+            catalog_strategy="fixture",
+            candidate_count=1,
+            candidate_limit=10,
+            evaluator="test-jev",
+        ),
     )
 
     readiness = assess_readiness(

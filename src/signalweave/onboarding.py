@@ -17,6 +17,7 @@ from .models import (
     OnboardingBlocker,
     OnboardingBlockerCode,
     OnboardingBlockerSeverity,
+    OnboardingDiscoveryReceipt,
     OnboardingSourceReview,
     PrincipalContext,
     ResourceDescriptor,
@@ -367,6 +368,19 @@ class InsightAuthoringService:
             if highest == 1
             else "ready_for_approval"
         )
+        discovery_receipt = OnboardingDiscoveryReceipt(
+            principal_id=principal_id,
+            principal_tenant=principal_tenant,
+            authorization_evidence=authorization_evidence,
+            catalog_provider=discovery.catalog_provider,
+            catalog_strategy=discovery.catalog_strategy,
+            catalog_cursor=discovery.catalog_cursor,
+            candidate_refs=sorted(candidate_refs),
+            candidate_count=discovery.candidate_count,
+            candidate_limit=discovery.candidate_limit,
+            truncated=discovery.truncated,
+            evaluator=discovery.evaluator,
+        )
         return InsightCardOnboardingReview(
             card_id=card.id,
             status="needs_human_input" if questions else "ready_for_approval",
@@ -375,6 +389,7 @@ class InsightAuthoringService:
             principal_id=principal_id,
             principal_tenant=principal_tenant,
             authorization_evidence=authorization_evidence,
+            discovery_receipt=discovery_receipt,
             selected_source_refs=sorted(selected_refs),
             recommended_source_refs=sorted(recommended_refs),
             missing_recommended_refs=missing_recommended,
@@ -478,6 +493,9 @@ class InsightAuthoringService:
             candidate_strategy=f"{catalog.strategy}+{pool.strategy}",
             evaluator=judger.name,
             authorized_tenant=authorized_tenant,
+            catalog_provider=catalog.provider,
+            catalog_strategy=catalog.strategy,
+            catalog_cursor=catalog.next_cursor,
             warnings=warnings,
         )
 
