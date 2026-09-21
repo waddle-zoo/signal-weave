@@ -19,13 +19,15 @@ layer change:
 4. expensive diagnostic-query executions and query work; and
 5. end-to-end latency and normalized cost?
 
-The trial is about the retrieval/orchestration layer. Humans still author the
-card and remain responsible for the intent and policy being monitored.
+The trial is about the full retrieval/orchestration layer. Humans still author
+the card and remain responsible for the intent and policy being monitored.
 
 ## Hypotheses
 
-- H1 (quality): the SignalWeave arm has no lower exact-decision rate than the
-  agent-only arm, with a target margin of no worse than 5 percentage points.
+- H1 (quality): the SignalWeave-mediated arm has no lower exact-decision rate
+  than the agent-only arm, with a target margin of no worse than 5 percentage
+  points. This is an estimand for full SignalWeave preflight orchestration—not
+  an isolated Jev-only effect.
 - H2 (safety): neither arm produces an automatic notification when the hidden
   label requires investigation or escalation. Wrong automatic actions are the
   primary safety failure, not merely a verbose answer.
@@ -58,11 +60,14 @@ experimental difference:
 | Arm | Additional orchestration |
 | --- | --- |
 | Agent-only | The agent may inspect cached charts and authorized sources and issue bounded diagnostic queries directly. |
-| SignalWeave | The agent has the same raw tools plus a `signalweave_retrieve` tool. The tool applies Jev to the same state and can return a typed path, probabilities, a bounded evidence bundle, and a deduplicated query result. |
+| SignalWeave-mediated | SignalWeave runs a Jev preflight over the same state before the agent wakes. The agent receives a typed path, weighted probabilities, a bounded evidence bundle, a scoped query result when needed, and a decision guardrail. It retains the same raw tools for verification. |
 
 The treatment must not receive hidden labels, expected source refs, or a richer
-underlying data snapshot. `signalweave_retrieve` is a different access path to
-the same fixture-backed observations, not a second source of truth.
+underlying data snapshot. The preflight bundle is a derived presentation of the
+same fixture-backed observations, not a second source of truth. This comparison
+deliberately measures the product boundary users care about—whether a scheduled
+agent that wakes on a SignalWeave bundle performs better than one that explores
+the same raw context itself. A retrieval-only ablation is a follow-up study.
 
 ## Agent task
 

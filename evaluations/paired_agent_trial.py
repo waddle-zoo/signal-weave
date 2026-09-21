@@ -225,6 +225,11 @@ class JevRetriever:
             ],
             "query": None,
         }
+        bundle["decision_guardrail"] = {
+            "reuse": "Cached evidence is sufficient for the workflow's next decision; do not create extra analytical work unless a card question remains unanswered.",
+            "query": "A material question remains unresolved; use the returned evidence to investigate before taking an automatic business action.",
+            "escalate": "Do not interpret the business movement as trustworthy; route the source-contract or freshness issue to its owner.",
+        }.get(path, "Treat this retrieval result as evidence, not as a hidden label or causal conclusion.")
         if path == "query":
             bundle["query"] = await executor.execute(reason="typed Jev retrieval path")
             bundle["evidence"].extend(bundle["query"]["evidence"])
@@ -256,7 +261,7 @@ def _tool(name: str, description: str, properties: dict[str, Any], required: lis
     }
 
 
-def _tool_specs(treatment: bool) -> list[dict[str, Any]]:
+def _tool_specs(_treatment: bool) -> list[dict[str, Any]]:
     specs = [
         _tool(
             "get_cached_charts",
@@ -296,22 +301,14 @@ def _tool_specs(treatment: bool) -> list[dict[str, Any]]:
             ["outcome", "delivery", "reason", "evidence_refs", "query_justified", "confidence"],
         ),
     ]
-    if treatment:
-        specs.insert(
-            4,
-            _tool(
-                "signalweave_retrieve",
-                "Use SignalWeave to retrieve a typed path, weighted probabilities, and a bounded evidence bundle from the same card, charts, and authorized catalog. It may reuse cached evidence, run one deduplicated diagnostic query, or escalate source trust.",
-                {"goal": {"type": "string"}},
-                ["goal"],
-            ),
-        )
     return specs
 
 
-def _agent_prompt(case: dict[str, Any], treatment: bool) -> str:
+def _agent_prompt(
+    case: dict[str, Any], treatment: bool, retrieval_bundle: dict[str, Any] | None = None
+) -> str:
     shared = json.dumps(case["shared_input"], sort_keys=True)
-    return f"""You are a scheduled analytical agent for Northstar Outfitters.
+    prompt = f"""You are a scheduled analytical agent for Northstar Outfitters.
 
 This is a push-based workflow: no human typed a question. A monitoring card woke
 you up and you must return a safe, useful decision for its owner. The available
@@ -332,6 +329,14 @@ query_justified must reflect whether you actually needed a diagnostic query.
 Shared workflow input:
 {shared}
 """
+    if treatment and retrieval_bundle is not None:
+        prompt += (
+            "\n\nSignalWeave preflight bundle (produced before this agent woke up):\n"
+            f"{json.dumps(retrieval_bundle, sort_keys=True)}\n"
+            "Use its path, probabilities, evidence, and guardrail as typed context. "
+            "Verify any source you cite; the bundle is not a replacement for provenance."
+        )
+    return prompt
 
 
 class ResponsesAgent:
@@ -348,11 +353,15 @@ class ResponsesAgent:
         treatment: bool,
         retriever: JevRetriever | None,
         executor: QueryExecutor,
+        retrieval_bundle: dict[str, Any] | None = None,
         max_turns: int = 10,
     ) -> dict[str, Any]:
         headers = {"authorization": f"Bearer {self.api_key}", "content-type": "application/json"}
         request_input: list[Any] = [
-            {"role": "user", "content": [{"type": "input_text", "text": _agent_prompt(case, treatment)}]}
+            {
+                "role": "user",
+                "content": [{"type": "input_text", "text": _agent_prompt(case, treatment, retrieval_bundle)}],
+            }
         ]
         events: list[dict[str, Any]] = []
         submission: dict[str, Any] | None = None
@@ -360,7 +369,9 @@ class ResponsesAgent:
         tool_calls = 0
         input_tokens = 0
         output_tokens = 0
-        oracle_leaks = sum(field in _agent_prompt(case, treatment) for field in ORACLE_FIELDS)
+        oracle_leaks = sum(
+            field in _agent_prompt(case, treatment, retrieval_bundle) for field in ORACLE_FIELDS
+        )
         started = time.perf_counter()
 
         async def call_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
@@ -627,12 +638,14 @@ async def run_trial(args: argparse.Namespace) -> dict[str, Any]:
             retriever = JevRetriever(typesafe_key) if treatment else None
             executor = QueryExecutor(public_case, arm, ledgers[arm])
             try:
+                retrieval_bundle = await retriever.retrieve(public_case, executor) if retriever else None
                 return await agent.run(
                     public_case,
                     arm=arm,
                     treatment=treatment,
                     retriever=retriever,
                     executor=executor,
+                    retrieval_bundle=retrieval_bundle,
                 )
             except Exception as error:  # noqa: BLE001 - failures remain in denominator
                 return {
@@ -752,7 +765,7 @@ def render_report(report: dict[str, Any]) -> str:
         "",
         f"Model: `{report['model']}`. Cases: **{report['cases']}**, paired cases scored: **{report['paired_cases_scored']}**.",
         "",
-        "The baseline and treatment agent received the same cards, cached charts, authorized source catalog, tenant scope, snapshot, model, and final submission contract. The treatment added only SignalWeave retrieval backed by Jev.",
+        "The baseline and treatment agent received the same cards, cached charts, authorized source catalog, tenant scope, snapshot, model, and final submission contract. The treatment received only a SignalWeave Jev preflight bundle derived from that same input.",
         "",
         "| Metric | Agent-only | SignalWeave-assisted |",
         "| --- | ---: | ---: |",

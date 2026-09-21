@@ -121,9 +121,9 @@ def test_scoring_rejects_unsafe_notification_and_missing_evidence():
     assert scored["evidence_recall"] < 1.0
 
 
-def test_treatment_has_one_additional_retrieval_tool_and_same_submission_contract():
+def test_both_arms_share_raw_tool_contract_and_final_submission_schema():
     baseline = {tool["name"] for tool in _tool_specs(False)}
     treatment = {tool["name"] for tool in _tool_specs(True)}
 
-    assert treatment - baseline == {"signalweave_retrieve"}
+    assert treatment == baseline
     assert "submit_analysis" in baseline & treatment
