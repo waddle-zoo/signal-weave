@@ -131,6 +131,27 @@ The remaining implementation slice should stay narrow:
   scenario count;
 - measure review time and correction rate, not only retrieval metrics.
 
+## Promotion checklist
+
+The exploratory contract is ready for a larger shadow trial, not an
+autonomous-production claim. Promote it only when each item has evidence:
+
+- [x] 30 synthetic cases across seven tenants, ten domains, and five company
+  shapes.
+- [x] Fixture and live Jev adversarial reviews pass correctness, scope, and
+  generalization with no unsafe approval-ready recommendation.
+- [x] Required-candidate recall, tenant isolation, abstention, catalog
+  completeness, source health, semantic ambiguity, and principal evidence are
+  typed and reproducible.
+- [x] Approval re-checks onboarding blockers and fails closed.
+- [x] Discovery receipts preserve principal, authorization source, catalog
+  page, candidate refs, evaluator, and truncation state.
+- [ ] Request-scoped identity/OAuth is verified through a shared gateway.
+- [ ] Role-aware candidate judgments are validated against operator labels.
+- [ ] Time-split replay and real reviewer time/correction measurements exist.
+- [ ] Provider outage, permission revocation, and catalog drift are tested in a
+  staging deployment with real adapter contracts.
+
 The core safety blockers and replay receipt are now in the production review
 contract. Keep the remaining evaluation-only policy work—especially role
 classification and correction learning—out of `src/` until it has the same
