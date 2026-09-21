@@ -140,7 +140,7 @@
         {"ref": "superset|chart:signup-funnel", "adapter": "superset", "resource": "chart:signup-funnel", "kind": "chart", "title": "Signup funnel", "description": "Funnel conversion chart.", "contract": {"grain": "visitor-day", "population": "all visitors", "freshness": "fresh", "owner": "growth-analytics"}, "evidence": "The funnel chart uses all visitors, so its denominator differs."},
         {"ref": "trino|table:signup_facts", "adapter": "trino", "resource": "table:signup_facts", "kind": "table", "title": "Signup facts", "description": "Governed signup definition and population.", "contract": {"grain": "user-day", "population": "eligible users", "freshness": "fresh", "owner": "growth-data"}, "evidence": "The governed definition requires a population and grain reconciliation before action."}
       ],
-      "query": {"group": "growth-definition", "bytes_scanned": 320000000000, "evidence_refs": ["superset|dashboard:growth", "superset|chart:signup-funnel", "trino|table:signup_facts"], "finding": "Observed populations are eligible-users at user-day grain and all-visitors at visitor-day grain."},
+      "query": {"group": "growth-definition", "bytes_scanned": 320000000000, "cpu_seconds": 480, "evidence_refs": ["superset|dashboard:growth", "superset|chart:signup-funnel", "trino|table:signup_facts"], "finding": "Observed populations are eligible-users at user-day grain and all-visitors at visitor-day grain."},
       "label": {"outcome": "investigate", "delivery": "none", "required_evidence": ["superset|dashboard:growth", "superset|chart:signup-funnel", "trino|table:signup_facts"], "query_required": true}
     },
     {
