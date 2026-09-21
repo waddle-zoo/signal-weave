@@ -553,7 +553,9 @@ def score_run(case: dict[str, Any], run: dict[str, Any]) -> dict[str, Any]:
         "cpu_seconds": sum(call["cpu_seconds"] for call in query_calls),
         "tool_calls": run["tool_calls"],
         "api_requests": run["api_requests"],
-        "elapsed_ms": run["elapsed_ms"],
+        "elapsed_ms": run.get("end_to_end_elapsed_ms", run["elapsed_ms"]),
+        "agent_elapsed_ms": run["elapsed_ms"],
+        "preflight_elapsed_ms": run.get("preflight_elapsed_ms", 0.0),
         "submission_present": bool(submission),
         "unsupported_evidence_refs": sorted(unknown_evidence_refs),
         "oracle_leaks": run.get("oracle_leaks", 0),
@@ -637,9 +639,12 @@ async def run_trial(args: argparse.Namespace) -> dict[str, Any]:
             public_case = _public_case(case)
             retriever = JevRetriever(typesafe_key) if treatment else None
             executor = QueryExecutor(public_case, arm, ledgers[arm])
+            preflight_elapsed_ms = 0.0
             try:
+                preflight_started = time.perf_counter()
                 retrieval_bundle = await retriever.retrieve(public_case, executor) if retriever else None
-                return await agent.run(
+                preflight_elapsed_ms = round((time.perf_counter() - preflight_started) * 1000, 2)
+                result = await agent.run(
                     public_case,
                     arm=arm,
                     treatment=treatment,
@@ -647,7 +652,13 @@ async def run_trial(args: argparse.Namespace) -> dict[str, Any]:
                     executor=executor,
                     retrieval_bundle=retrieval_bundle,
                 )
+                result["preflight_elapsed_ms"] = preflight_elapsed_ms
+                result["end_to_end_elapsed_ms"] = round(
+                    preflight_elapsed_ms + result["elapsed_ms"], 2
+                )
+                return result
             except Exception as error:  # noqa: BLE001 - failures remain in denominator
+                preflight_elapsed_ms = round((time.perf_counter() - preflight_started) * 1000, 2)
                 return {
                     "case_id": case["case_id"],
                     "arm": arm,
@@ -663,6 +674,8 @@ async def run_trial(args: argparse.Namespace) -> dict[str, Any]:
                     "prompt_digest": _digest(_agent_prompt(public_case, treatment)),
                     "tool_schema_digest": _digest(_tool_specs(treatment)),
                     "elapsed_ms": 0.0,
+                    "preflight_elapsed_ms": preflight_elapsed_ms,
+                    "end_to_end_elapsed_ms": preflight_elapsed_ms,
                     "query_calls": executor.calls,
                     "jev": {
                         "requests": retriever.requests if retriever else 0,
