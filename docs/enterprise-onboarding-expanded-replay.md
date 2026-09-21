@@ -39,8 +39,9 @@ expected labels are not sent to Jev.
 | Typed readiness gates satisfied | 24 / 24 | 30 / 30 | 30 / 30 |
 | Safe onboarding outcomes | — | 30 / 30 | 30 / 30 |
 | Mean required-candidate recall | 1.00 | 1.00 | 1.00 |
-| Exact recommended candidate sets | 20 / 24 live | 29 / 30 | 26 / 30 |
+| Exact recommended candidate sets | 20 / 24 live | 29 / 30 | 25 / 30 |
 | Wrong-tenant candidate leaks | 0 | 0 | 0 |
+| Governed role labels preserved | — | 39 / 39 | 39 / 39 |
 
 Commands:
 
@@ -68,6 +69,9 @@ retained, authorization was clean, completeness warnings were surfaced, and the
 typed readiness status matched the expected human action. “Exact recommended
 candidate set” is a stricter research-label metric; a miss can still be safe
 when the card is visibly blocked for human review.
+Expected blocker labels are minimum safety conditions. A scenario may also emit
+an additive review blocker when Jev surfaces a different uncertainty; the replay
+records that as safe only when the card remains non-approval-ready.
 
 ## What the new cases exposed
 
@@ -97,6 +101,13 @@ when the card is visibly blocked for human review.
    checks, catalog assets, and multi-source chains without adding adapter-specific
    branches to the core onboarding service.
 
+6. **Role evidence is now explicit, but not autonomous policy.** Thirty-nine
+   fixture-governed source roles across primary, corroborating, diagnostic, and
+   quality evidence were preserved in both fixture and live Jev replays with no
+   disagreement. Jev also returns a bounded role probability for ungoverned
+   candidates. Those probabilities help a client-owned UI or agent explain a
+   candidate; they do not authorize selection or replace operator labels.
+
 ## Adversarial review
 
 The independent reviewer is
@@ -121,14 +132,12 @@ a silent-approval failure.
 
 The remaining implementation slice should stay narrow:
 
-- return role-aware recommendations (`primary`, `corroborates`, `diagnostic`,
-  `quality`, `owner`) with a reason and source provenance;
 - replace the deployment-scoped principal with request-scoped identity/OAuth
   evidence when the service is used by a shared multi-tenant gateway;
 - persist the typed discovery receipt with the approved card and carry it into
   later runs and correction records;
-- add time-split, operator-labeled cases rather than inflating synthetic
-  scenario count;
+- add time-split, operator-labeled role and selection cases rather than
+  inflating synthetic scenario count;
 - measure review time and correction rate, not only retrieval metrics.
 
 ## Promotion checklist
@@ -146,6 +155,8 @@ autonomous-production claim. Promote it only when each item has evidence:
 - [x] Approval re-checks onboarding blockers and fails closed.
 - [x] Discovery receipts preserve principal, authorization source, catalog
   page, candidate refs, evaluator, and truncation state.
+- [x] Candidate reviews preserve governed evidence roles and bounded Jev role
+  probabilities without using them as authorization or approval policy.
 - [ ] Request-scoped identity/OAuth is verified through a shared gateway.
 - [ ] Role-aware candidate judgments are validated against operator labels.
 - [ ] Time-split replay and real reviewer time/correction measurements exist.

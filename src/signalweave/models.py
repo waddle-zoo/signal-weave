@@ -259,6 +259,15 @@ class ResourceMatch(BaseModel):
     source_url: str | None = None
     relevance: float = Field(ge=0.0, le=1.0)
     recommended: bool = False
+    suggested_role: Literal[
+        "primary",
+        "corroborates",
+        "diagnostic",
+        "quality",
+        "owner",
+        "unknown",
+    ] = "unknown"
+    role_probability: float = Field(default=0.0, ge=0.0, le=1.0)
     retrieval_signals: list[str] = Field(default_factory=list, max_length=20)
     contract: ResourceContract = Field(default_factory=ResourceContract)
 
@@ -339,6 +348,15 @@ class OnboardingSourceReview(BaseModel):
     selected: bool = False
     recommended: bool = False
     relevance: float = Field(ge=0.0, le=1.0)
+    suggested_role: Literal[
+        "primary",
+        "corroborates",
+        "diagnostic",
+        "quality",
+        "owner",
+        "unknown",
+    ] = "unknown"
+    role_probability: float = Field(default=0.0, ge=0.0, le=1.0)
     reason: str = Field(min_length=1, max_length=2000)
     retrieval_signals: list[str] = Field(default_factory=list, max_length=20)
 

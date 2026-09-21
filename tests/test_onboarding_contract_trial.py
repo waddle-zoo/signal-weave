@@ -41,6 +41,7 @@ async def test_generalized_onboarding_matrix_runs_without_source_specific_core_b
         "media",
     } <= {result.domain for result in results}
     assert len({scenario["principal"]["tenant_id"] for scenario in json.loads(CASES.read_text())}) == 7
+    assert sum(result.role_labels_checked for result in results) == 39
     assert {
         "seedless-executive-pulse",
         "airflow-only-freshness",
@@ -83,6 +84,7 @@ async def test_readiness_pattern_catches_expected_human_and_enterprise_blockers(
 
     assert all(result.readiness_passed for result in results)
     assert all(result.safe for result in results)
+    assert all(not result.role_mismatches for result in results)
     assert any("definition-conflict" in result.readiness_codes for result in results)
     assert any("source-health-review" in result.readiness_codes for result in results)
     assert any("catalog-incomplete" in result.readiness_codes for result in results)

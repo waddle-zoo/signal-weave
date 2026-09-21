@@ -61,6 +61,12 @@ class FakeResponse:
             if key == "need_investigation":
                 self.nouls[key] = SimpleNamespace(noul=0.94)
                 continue
+            if key.startswith("role_"):
+                self.choices[key] = SimpleNamespace(
+                    choice="diagnostic",
+                    probabilities={"diagnostic": 0.88, "unknown": 0.04},
+                )
+                continue
             if key.startswith("candidate_"):
                 self.scores[key] = SimpleNamespace(score=3.6, confidence=0.91)
                 continue
@@ -146,6 +152,36 @@ async def test_jev_rank_resources_uses_typed_questions_and_returns_probabilities
     assert judger.metrics.requests == 1
     assert judger.metrics.input_tokens == 41
     assert judger.metrics.output_tokens == 7
+
+
+@pytest.mark.asyncio
+async def test_jev_classifies_bounded_resource_roles_with_probabilities(monkeypatch):
+    FakeClient.calls = []
+    monkeypatch.setattr(typesafe_sdk, "AsyncTypeSafeClient", FakeClient)
+    monkeypatch.setattr(typesafe_sdk, "Choice", FakeScore)
+    judger = JevJudger(api_key="synthetic-test-key", timeout=3)
+    resources = [
+        ResourceDescriptor(
+            adapter="superset",
+            resource="dashboard:growth",
+            kind="dashboard",
+            title="Growth funnel",
+        ),
+        ResourceDescriptor(
+            adapter="trino",
+            resource="table:events",
+            kind="table",
+            title="Raw events",
+        ),
+    ]
+
+    roles = await judger.classify_resource_roles("Understand revenue risk", resources)
+
+    assert roles == {
+        "superset|dashboard:growth": {"role": "diagnostic", "probability": 0.88},
+        "trino|table:events": {"role": "diagnostic", "probability": 0.88},
+    }
+    assert set(FakeClient.calls[-1]["questions"]) == {"role_0", "role_1"}
 
 
 @pytest.mark.asyncio

@@ -11,8 +11,8 @@
     "seeds": ["superset|dashboard:growth"],
     "expected": {"relevant": ["superset|dashboard:growth", "superset|chart:activation-funnel"], "recommended": ["superset|dashboard:growth", "superset|chart:activation-funnel"], "review": "needs_human_input", "blockers": ["candidate-selection-review"]},
     "resources": [
-      {"adapter": "superset", "resource": "dashboard:growth", "kind": "dashboard", "title": "Growth overview", "description": "Activation, signup conversion, and retention.", "tenant_id": "northstar", "domain": "growth", "related_refs": ["superset|chart:activation-funnel"]},
-      {"adapter": "superset", "resource": "chart:activation-funnel", "kind": "chart", "title": "Activation funnel", "description": "New user activation by cohort.", "tenant_id": "northstar", "domain": "growth", "related_refs": ["superset|dashboard:growth"]},
+      {"adapter": "superset", "resource": "dashboard:growth", "kind": "dashboard", "title": "Growth overview", "description": "Activation, signup conversion, and retention.", "tenant_id": "northstar", "domain": "growth", "related_refs": ["superset|chart:activation-funnel"], "roles": ["primary"]},
+      {"adapter": "superset", "resource": "chart:activation-funnel", "kind": "chart", "title": "Activation funnel", "description": "New user activation by cohort.", "tenant_id": "northstar", "domain": "growth", "related_refs": ["superset|dashboard:growth"], "roles": ["corroborates"]},
       {"adapter": "superset", "resource": "dashboard:people", "kind": "dashboard", "title": "People operations", "description": "Hiring and retention.", "tenant_id": "northstar", "domain": "people"}
     ],
     "jev_scores": {"superset|dashboard:growth": 0.96, "superset|chart:activation-funnel": 0.89, "superset|dashboard:people": 0.13}
@@ -29,9 +29,9 @@
     "seeds": ["looker|dashboard:growth-plan"],
     "expected": {"relevant": ["looker|dashboard:growth-plan", "superset|dashboard:activation", "hex|project:retention-review"], "recommended": ["looker|dashboard:growth-plan", "superset|dashboard:activation", "hex|project:retention-review"], "review": "needs_human_input", "blockers": ["candidate-selection-review"]},
     "resources": [
-      {"adapter": "looker", "resource": "dashboard:growth-plan", "kind": "dashboard", "title": "Growth plan", "description": "Acquisition and pipeline health.", "tenant_id": "northstar", "domain": "growth", "related_refs": ["superset|dashboard:activation", "hex|project:retention-review"]},
-      {"adapter": "superset", "resource": "dashboard:activation", "kind": "dashboard", "title": "Activation health", "description": "Activation and onboarding cohorts.", "tenant_id": "northstar", "domain": "growth", "related_refs": ["looker|dashboard:growth-plan"]},
-      {"adapter": "hex", "resource": "project:retention-review", "kind": "project", "title": "Retention review", "description": "Retention cohort analysis and commentary.", "tenant_id": "northstar", "domain": "growth", "related_refs": ["looker|dashboard:growth-plan"]},
+      {"adapter": "looker", "resource": "dashboard:growth-plan", "kind": "dashboard", "title": "Growth plan", "description": "Acquisition and pipeline health.", "tenant_id": "northstar", "domain": "growth", "related_refs": ["superset|dashboard:activation", "hex|project:retention-review"], "roles": ["primary"]},
+      {"adapter": "superset", "resource": "dashboard:activation", "kind": "dashboard", "title": "Activation health", "description": "Activation and onboarding cohorts.", "tenant_id": "northstar", "domain": "growth", "related_refs": ["looker|dashboard:growth-plan"], "roles": ["corroborates"]},
+      {"adapter": "hex", "resource": "project:retention-review", "kind": "project", "title": "Retention review", "description": "Retention cohort analysis and commentary.", "tenant_id": "northstar", "domain": "growth", "related_refs": ["looker|dashboard:growth-plan"], "roles": ["diagnostic"]},
       {"adapter": "looker", "resource": "dashboard:finance", "kind": "dashboard", "title": "Finance plan", "description": "Forecast variance.", "tenant_id": "northstar", "domain": "finance"}
     ],
     "jev_scores": {"looker|dashboard:growth-plan": 0.95, "superset|dashboard:activation": 0.87, "hex|project:retention-review": 0.82, "looker|dashboard:finance": 0.18}
@@ -48,9 +48,9 @@
     "seeds": ["superset|dashboard:commerce"],
     "expected": {"relevant": ["superset|dashboard:commerce", "trino|query:revenue-drivers", "airflow|dag:warehouse-load"], "recommended": ["superset|dashboard:commerce", "trino|query:revenue-drivers", "airflow|dag:warehouse-load"], "review": "needs_human_input", "blockers": ["candidate-selection-review"]},
     "resources": [
-      {"adapter": "superset", "resource": "dashboard:commerce", "kind": "dashboard", "title": "Commerce pulse", "description": "Revenue, orders, and margin.", "tenant_id": "northstar", "domain": "commerce", "related_refs": ["trino|query:revenue-drivers", "airflow|dag:warehouse-load"]},
-      {"adapter": "trino", "resource": "query:revenue-drivers", "kind": "saved_query", "title": "Revenue drivers", "description": "Approved driver decomposition query.", "tenant_id": "northstar", "domain": "commerce", "related_refs": ["superset|dashboard:commerce"]},
-      {"adapter": "airflow", "resource": "dag:warehouse-load", "kind": "workflow", "title": "Warehouse daily load", "description": "Freshness and completion status.", "tenant_id": "northstar", "domain": "data-platform", "related_refs": ["superset|dashboard:commerce"]},
+      {"adapter": "superset", "resource": "dashboard:commerce", "kind": "dashboard", "title": "Commerce pulse", "description": "Revenue, orders, and margin.", "tenant_id": "northstar", "domain": "commerce", "related_refs": ["trino|query:revenue-drivers", "airflow|dag:warehouse-load"], "roles": ["primary"]},
+      {"adapter": "trino", "resource": "query:revenue-drivers", "kind": "saved_query", "title": "Revenue drivers", "description": "Approved driver decomposition query.", "tenant_id": "northstar", "domain": "commerce", "related_refs": ["superset|dashboard:commerce"], "roles": ["diagnostic"]},
+      {"adapter": "airflow", "resource": "dag:warehouse-load", "kind": "workflow", "title": "Warehouse daily load", "description": "Freshness and completion status.", "tenant_id": "northstar", "domain": "data-platform", "related_refs": ["superset|dashboard:commerce"], "roles": ["quality"]},
       {"adapter": "superset", "resource": "dashboard:hr", "kind": "dashboard", "title": "Workforce pulse", "description": "Headcount and attrition.", "tenant_id": "northstar", "domain": "people"}
     ],
     "jev_scores": {"superset|dashboard:commerce": 0.94, "trino|query:revenue-drivers": 0.88, "airflow|dag:warehouse-load": 0.81, "superset|dashboard:hr": 0.11}
@@ -67,9 +67,9 @@
     "seeds": ["looker|explore:net-revenue"],
     "expected": {"relevant": ["looker|explore:net-revenue", "dbt|metric:net-revenue", "trino|table:payments"], "recommended": ["looker|explore:net-revenue", "dbt|metric:net-revenue", "dbt|metric:revenue-after-refunds"], "review": "needs_human_input", "blockers": ["candidate-selection-review", "definition-conflict"]},
     "resources": [
-      {"adapter": "looker", "resource": "explore:net-revenue", "kind": "explore", "title": "Net revenue Explore", "description": "Revenue after refunds by user type.", "tenant_id": "northstar", "domain": "finance", "related_refs": ["dbt|metric:net-revenue", "trino|table:payments"]},
-      {"adapter": "dbt", "resource": "metric:net-revenue", "kind": "metric", "title": "Net revenue", "description": "Governed net revenue definition.", "tenant_id": "northstar", "domain": "finance", "related_refs": ["trino|table:payments"]},
-      {"adapter": "trino", "resource": "table:payments", "kind": "table", "title": "Payments", "description": "Payment events and refunds.", "tenant_id": "northstar", "domain": "finance"},
+      {"adapter": "looker", "resource": "explore:net-revenue", "kind": "explore", "title": "Net revenue Explore", "description": "Revenue after refunds by user type.", "tenant_id": "northstar", "domain": "finance", "related_refs": ["dbt|metric:net-revenue", "trino|table:payments"], "roles": ["primary"]},
+      {"adapter": "dbt", "resource": "metric:net-revenue", "kind": "metric", "title": "Net revenue", "description": "Governed net revenue definition.", "tenant_id": "northstar", "domain": "finance", "related_refs": ["trino|table:payments"], "roles": ["primary"]},
+      {"adapter": "trino", "resource": "table:payments", "kind": "table", "title": "Payments", "description": "Payment events and refunds.", "tenant_id": "northstar", "domain": "finance", "roles": ["diagnostic"]},
       {"adapter": "dbt", "resource": "metric:revenue-after-refunds", "kind": "metric", "title": "Net revenue", "description": "Legacy finance definition with a different refund window.", "tenant_id": "northstar", "domain": "finance"}
     ],
     "jev_scores": {"looker|explore:net-revenue": 0.95, "dbt|metric:net-revenue": 0.91, "trino|table:payments": 0.74, "dbt|metric:revenue-after-refunds": 0.79}
@@ -86,9 +86,9 @@
     "seeds": ["hex|project:marketplace-forecast"],
     "expected": {"relevant": ["hex|project:marketplace-forecast", "hex|run:marketplace-forecast-latest", "airflow|dag:marketplace-load"], "recommended": ["hex|project:marketplace-forecast", "hex|run:marketplace-forecast-latest", "airflow|dag:marketplace-load"], "review": "needs_human_input", "blockers": ["candidate-selection-review", "source-health-review"]},
     "resources": [
-      {"adapter": "hex", "resource": "project:marketplace-forecast", "kind": "project", "title": "Marketplace forecast", "description": "Published forecast notebook.", "tenant_id": "northstar", "domain": "marketplace", "related_refs": ["hex|run:marketplace-forecast-latest"]},
-      {"adapter": "hex", "resource": "run:marketplace-forecast-latest", "kind": "run", "title": "Marketplace forecast latest run", "description": "Latest published run status and timestamp.", "tenant_id": "northstar", "domain": "marketplace", "related_refs": ["hex|project:marketplace-forecast", "airflow|dag:marketplace-load"], "source_status": "stale"},
-      {"adapter": "airflow", "resource": "dag:marketplace-load", "kind": "workflow", "title": "Marketplace load", "description": "Upstream data refresh.", "tenant_id": "northstar", "domain": "data-platform"}
+      {"adapter": "hex", "resource": "project:marketplace-forecast", "kind": "project", "title": "Marketplace forecast", "description": "Published forecast notebook.", "tenant_id": "northstar", "domain": "marketplace", "related_refs": ["hex|run:marketplace-forecast-latest"], "roles": ["primary"]},
+      {"adapter": "hex", "resource": "run:marketplace-forecast-latest", "kind": "run", "title": "Marketplace forecast latest run", "description": "Latest published run status and timestamp.", "tenant_id": "northstar", "domain": "marketplace", "related_refs": ["hex|project:marketplace-forecast", "airflow|dag:marketplace-load"], "source_status": "stale", "roles": ["quality"]},
+      {"adapter": "airflow", "resource": "dag:marketplace-load", "kind": "workflow", "title": "Marketplace load", "description": "Upstream data refresh.", "tenant_id": "northstar", "domain": "data-platform", "roles": ["quality"]}
     ],
     "jev_scores": {"hex|project:marketplace-forecast": 0.96, "hex|run:marketplace-forecast-latest": 0.90, "airflow|dag:marketplace-load": 0.84}
   },
@@ -104,9 +104,9 @@
     "seeds": ["superset|dashboard:delivery"],
     "expected": {"relevant": ["superset|dashboard:delivery", "datahub|test:shipment-completeness", "trino|table:shipments"], "recommended": ["superset|dashboard:delivery", "datahub|test:shipment-completeness", "trino|table:shipments"], "review": "needs_human_input", "blockers": ["candidate-selection-review"]},
     "resources": [
-      {"adapter": "superset", "resource": "dashboard:delivery", "kind": "dashboard", "title": "Delivery performance", "description": "On-time delivery by region.", "tenant_id": "northstar", "domain": "logistics", "related_refs": ["datahub|test:shipment-completeness", "trino|table:shipments"]},
-      {"adapter": "datahub", "resource": "test:shipment-completeness", "kind": "quality_check", "title": "Shipment completeness", "description": "Completeness test for shipment events.", "tenant_id": "northstar", "domain": "data-quality", "related_refs": ["trino|table:shipments"]},
-      {"adapter": "trino", "resource": "table:shipments", "kind": "table", "title": "Shipments", "description": "Shipment events by region and carrier.", "tenant_id": "northstar", "domain": "logistics"}
+      {"adapter": "superset", "resource": "dashboard:delivery", "kind": "dashboard", "title": "Delivery performance", "description": "On-time delivery by region.", "tenant_id": "northstar", "domain": "logistics", "related_refs": ["datahub|test:shipment-completeness", "trino|table:shipments"], "roles": ["primary"]},
+      {"adapter": "datahub", "resource": "test:shipment-completeness", "kind": "quality_check", "title": "Shipment completeness", "description": "Completeness test for shipment events.", "tenant_id": "northstar", "domain": "data-quality", "related_refs": ["trino|table:shipments"], "roles": ["quality"]},
+      {"adapter": "trino", "resource": "table:shipments", "kind": "table", "title": "Shipments", "description": "Shipment events by region and carrier.", "tenant_id": "northstar", "domain": "logistics", "roles": ["diagnostic"]}
     ],
     "jev_scores": {"superset|dashboard:delivery": 0.95, "datahub|test:shipment-completeness": 0.86, "trino|table:shipments": 0.84}
   },
@@ -141,8 +141,8 @@
     "seeds": ["superset|dashboard:exec-growth"],
     "expected": {"relevant": ["superset|dashboard:exec-growth", "trino|table:fct_activation_v2"], "recommended": ["superset|dashboard:exec-growth", "trino|table:fct_activation_v2"], "review": "needs_human_input", "blockers": ["candidate-selection-review"]},
     "resources": [
-      {"adapter": "superset", "resource": "dashboard:exec-growth", "kind": "dashboard", "title": "Executive growth", "description": "Paid conversion and growth health.", "tenant_id": "northstar", "domain": "growth", "related_refs": ["trino|table:fct_activation_v2"]},
-      {"adapter": "trino", "resource": "table:fct_activation_v2", "kind": "table", "title": "fct_activation_v2", "description": "", "tenant_id": "northstar", "domain": "warehouse", "related_refs": ["superset|dashboard:exec-growth"]},
+      {"adapter": "superset", "resource": "dashboard:exec-growth", "kind": "dashboard", "title": "Executive growth", "description": "Paid conversion and growth health.", "tenant_id": "northstar", "domain": "growth", "related_refs": ["trino|table:fct_activation_v2"], "roles": ["primary"]},
+      {"adapter": "trino", "resource": "table:fct_activation_v2", "kind": "table", "title": "fct_activation_v2", "description": "", "tenant_id": "northstar", "domain": "warehouse", "related_refs": ["superset|dashboard:exec-growth"], "roles": ["diagnostic"]},
       {"adapter": "trino", "resource": "table:events", "kind": "table", "title": "events", "description": "Raw events.", "tenant_id": "northstar", "domain": "warehouse"}
     ],
     "jev_scores": {"superset|dashboard:exec-growth": 0.95, "trino|table:fct_activation_v2": 0.83, "trino|table:events": 0.23}
@@ -159,8 +159,8 @@
     "seeds": ["looker|dashboard:appointments", "airflow|dag:capacity-extract"],
     "expected": {"relevant": ["looker|dashboard:appointments", "airflow|dag:capacity-extract"], "recommended": ["looker|dashboard:appointments", "airflow|dag:capacity-extract"], "review": "needs_human_input", "blockers": ["source-health-review"]},
     "resources": [
-      {"adapter": "looker", "resource": "dashboard:appointments", "kind": "dashboard", "title": "Appointment availability", "description": "Open appointments by clinic.", "tenant_id": "northstar", "domain": "operations", "related_refs": ["airflow|dag:capacity-extract"]},
-      {"adapter": "airflow", "resource": "dag:capacity-extract", "kind": "workflow", "title": "Capacity extract", "description": "Upstream extract is stale.", "tenant_id": "northstar", "domain": "data-quality", "source_status": "stale"}
+      {"adapter": "looker", "resource": "dashboard:appointments", "kind": "dashboard", "title": "Appointment availability", "description": "Open appointments by clinic.", "tenant_id": "northstar", "domain": "operations", "related_refs": ["airflow|dag:capacity-extract"], "roles": ["primary"]},
+      {"adapter": "airflow", "resource": "dag:capacity-extract", "kind": "workflow", "title": "Capacity extract", "description": "Upstream extract is stale.", "tenant_id": "northstar", "domain": "data-quality", "source_status": "stale", "roles": ["quality"]}
     ],
     "jev_scores": {"looker|dashboard:appointments": 0.95, "airflow|dag:capacity-extract": 0.89}
   },
@@ -193,7 +193,7 @@
     "seeds": ["catalog|dashboard:customer-health"],
     "expected": {"relevant": ["catalog|dashboard:customer-health"], "recommended": ["catalog|dashboard:customer-health"], "review": "needs_human_input", "blockers": ["catalog-incomplete"], "requires_truncation_warning": true, "server_search_only": true},
     "resources": [
-      {"adapter": "catalog", "resource": "dashboard:customer-health", "kind": "dashboard", "title": "Customer health", "description": "Governed health overview.", "tenant_id": "northstar", "domain": "customer-success"}
+      {"adapter": "catalog", "resource": "dashboard:customer-health", "kind": "dashboard", "title": "Customer health", "description": "Governed health overview.", "tenant_id": "northstar", "domain": "customer-success", "roles": ["primary"]}
     ],
     "catalog_total_count": 100000,
     "catalog_has_more": true,
@@ -230,9 +230,9 @@
     "seeds": ["tableau|dashboard:service-health"],
     "expected": {"relevant": ["tableau|dashboard:service-health", "dbt|metric:customer-wait-time", "airflow|dag:service-events"], "recommended": ["tableau|dashboard:service-health", "dbt|metric:customer-wait-time", "airflow|dag:service-events"], "review": "needs_human_input", "blockers": ["candidate-selection-review"]},
     "resources": [
-      {"adapter": "tableau", "resource": "dashboard:service-health", "kind": "dashboard", "title": "Service health", "description": "Customer wait time and service levels.", "tenant_id": "northstar", "domain": "operations", "related_refs": ["dbt|metric:customer-wait-time", "airflow|dag:service-events"]},
-      {"adapter": "dbt", "resource": "metric:customer-wait-time", "kind": "metric", "title": "Customer wait time", "description": "Governed wait-time metric.", "tenant_id": "northstar", "domain": "operations"},
-      {"adapter": "airflow", "resource": "dag:service-events", "kind": "workflow", "title": "Service events pipeline", "description": "Service event freshness.", "tenant_id": "northstar", "domain": "data-quality"}
+      {"adapter": "tableau", "resource": "dashboard:service-health", "kind": "dashboard", "title": "Service health", "description": "Customer wait time and service levels.", "tenant_id": "northstar", "domain": "operations", "related_refs": ["dbt|metric:customer-wait-time", "airflow|dag:service-events"], "roles": ["primary"]},
+      {"adapter": "dbt", "resource": "metric:customer-wait-time", "kind": "metric", "title": "Customer wait time", "description": "Governed wait-time metric.", "tenant_id": "northstar", "domain": "operations", "roles": ["primary"]},
+      {"adapter": "airflow", "resource": "dag:service-events", "kind": "workflow", "title": "Service events pipeline", "description": "Service event freshness.", "tenant_id": "northstar", "domain": "data-quality", "roles": ["quality"]}
     ],
     "jev_scores": {"tableau|dashboard:service-health": 0.96, "dbt|metric:customer-wait-time": 0.86, "airflow|dag:service-events": 0.77}
   },
@@ -266,9 +266,9 @@
     "seeds": ["looker|dashboard:checkout"],
     "expected": {"relevant": ["looker|dashboard:checkout", "zendesk|view:payment-contacts", "trino|table:payment-failures"], "recommended": ["looker|dashboard:checkout", "zendesk|view:payment-contacts", "trino|table:payment-failures"], "review": "needs_human_input", "blockers": ["candidate-selection-review"]},
     "resources": [
-      {"adapter": "looker", "resource": "dashboard:checkout", "kind": "dashboard", "title": "Checkout conversion", "description": "Checkout funnel and conversion.", "tenant_id": "northstar", "domain": "growth", "related_refs": ["zendesk|view:payment-contacts", "trino|table:payment-failures"]},
-      {"adapter": "zendesk", "resource": "view:payment-contacts", "kind": "saved_view", "title": "Payment contacts", "description": "Customer contacts mentioning payment failures.", "tenant_id": "northstar", "domain": "support"},
-      {"adapter": "trino", "resource": "table:payment-failures", "kind": "table", "title": "Payment failures", "description": "Payment authorization failures by gateway.", "tenant_id": "northstar", "domain": "payments"}
+      {"adapter": "looker", "resource": "dashboard:checkout", "kind": "dashboard", "title": "Checkout conversion", "description": "Checkout funnel and conversion.", "tenant_id": "northstar", "domain": "growth", "related_refs": ["zendesk|view:payment-contacts", "trino|table:payment-failures"], "roles": ["primary"]},
+      {"adapter": "zendesk", "resource": "view:payment-contacts", "kind": "saved_view", "title": "Payment contacts", "description": "Customer contacts mentioning payment failures.", "tenant_id": "northstar", "domain": "support", "roles": ["diagnostic"]},
+      {"adapter": "trino", "resource": "table:payment-failures", "kind": "table", "title": "Payment failures", "description": "Payment authorization failures by gateway.", "tenant_id": "northstar", "domain": "payments", "roles": ["diagnostic"]}
     ],
     "jev_scores": {"looker|dashboard:checkout": 0.95, "zendesk|view:payment-contacts": 0.83, "trino|table:payment-failures": 0.89}
   },
@@ -402,9 +402,9 @@
     "seeds": ["hex|project:fraud-review"],
     "expected": {"relevant": ["hex|project:fraud-review", "trino|query:fraud-volume", "datahub|test:fraud-events-quality"], "recommended": ["hex|project:fraud-review", "trino|query:fraud-volume", "datahub|test:fraud-events-quality"], "review": "needs_human_input", "blockers": ["candidate-selection-review"]},
     "resources": [
-      {"adapter": "hex", "resource": "project:fraud-review", "kind": "project", "title": "Fraud review", "description": "Published fraud analysis notebook.", "tenant_id": "northstar", "domain": "risk", "related_refs": ["trino|query:fraud-volume", "datahub|test:fraud-events-quality"]},
-      {"adapter": "trino", "resource": "query:fraud-volume", "kind": "saved_query", "title": "Fraud volume", "description": "Approved fraud volume query.", "tenant_id": "northstar", "domain": "risk"},
-      {"adapter": "datahub", "resource": "test:fraud-events-quality", "kind": "quality_check", "title": "Fraud events quality", "description": "Quality check for fraud events.", "tenant_id": "northstar", "domain": "data-quality"}
+      {"adapter": "hex", "resource": "project:fraud-review", "kind": "project", "title": "Fraud review", "description": "Published fraud analysis notebook.", "tenant_id": "northstar", "domain": "risk", "related_refs": ["trino|query:fraud-volume", "datahub|test:fraud-events-quality"], "roles": ["primary"]},
+      {"adapter": "trino", "resource": "query:fraud-volume", "kind": "saved_query", "title": "Fraud volume", "description": "Approved fraud volume query.", "tenant_id": "northstar", "domain": "risk", "roles": ["diagnostic"]},
+      {"adapter": "datahub", "resource": "test:fraud-events-quality", "kind": "quality_check", "title": "Fraud events quality", "description": "Quality check for fraud events.", "tenant_id": "northstar", "domain": "data-quality", "roles": ["quality"]}
     ],
     "jev_scores": {"hex|project:fraud-review": 0.95, "trino|query:fraud-volume": 0.86, "datahub|test:fraud-events-quality": 0.81}
   },
@@ -438,9 +438,9 @@
     "seeds": [],
     "expected": {"relevant": ["superset|dashboard:clinical-ops", "datahub|test:encounters-quality", "airflow|dag:encounters-refresh"], "recommended": ["superset|dashboard:clinical-ops", "datahub|test:encounters-quality", "airflow|dag:encounters-refresh"], "review": "needs_human_input", "blockers": ["anchor-required", "candidate-selection-review"]},
     "resources": [
-      {"adapter": "superset", "resource": "dashboard:clinical-ops", "kind": "dashboard", "title": "Clinical operations", "description": "Readmission and encounter health.", "tenant_id": "acme-health", "domain": "care-ops", "related_refs": ["datahub|test:encounters-quality", "airflow|dag:encounters-refresh"]},
-      {"adapter": "datahub", "resource": "test:encounters-quality", "kind": "quality_check", "title": "Encounters quality", "description": "Completeness and freshness checks for encounters.", "tenant_id": "acme-health", "domain": "data-quality", "related_refs": ["superset|dashboard:clinical-ops"]},
-      {"adapter": "airflow", "resource": "dag:encounters-refresh", "kind": "workflow", "title": "Encounters refresh", "description": "Refreshes the clinical warehouse tables.", "tenant_id": "acme-health", "domain": "data-platform", "related_refs": ["datahub|test:encounters-quality"]},
+      {"adapter": "superset", "resource": "dashboard:clinical-ops", "kind": "dashboard", "title": "Clinical operations", "description": "Readmission and encounter health.", "tenant_id": "acme-health", "domain": "care-ops", "related_refs": ["datahub|test:encounters-quality", "airflow|dag:encounters-refresh"], "roles": ["primary"]},
+      {"adapter": "datahub", "resource": "test:encounters-quality", "kind": "quality_check", "title": "Encounters quality", "description": "Completeness and freshness checks for encounters.", "tenant_id": "acme-health", "domain": "data-quality", "related_refs": ["superset|dashboard:clinical-ops"], "roles": ["quality"]},
+      {"adapter": "airflow", "resource": "dag:encounters-refresh", "kind": "workflow", "title": "Encounters refresh", "description": "Refreshes the clinical warehouse tables.", "tenant_id": "acme-health", "domain": "data-platform", "related_refs": ["datahub|test:encounters-quality"], "roles": ["quality"]},
       {"adapter": "superset", "resource": "dashboard:clinical-ops", "kind": "dashboard", "title": "Clinical operations", "description": "Other tenant decoy.", "tenant_id": "northstar", "domain": "care-ops"}
     ],
     "jev_scores": {"superset|dashboard:clinical-ops": 0.96, "datahub|test:encounters-quality": 0.91, "airflow|dag:encounters-refresh": 0.84}
@@ -477,9 +477,9 @@
     "seeds": ["tableau|workbook:store-fulfillment"],
     "expected": {"relevant": ["tableau|workbook:store-fulfillment", "trino|query:fulfillment-delay", "airflow|dag:store-fulfillment-refresh"], "recommended": ["tableau|workbook:store-fulfillment", "trino|query:fulfillment-delay", "airflow|dag:store-fulfillment-refresh"], "review": "needs_human_input", "blockers": ["candidate-selection-review"]},
     "resources": [
-      {"adapter": "tableau", "resource": "workbook:store-fulfillment", "kind": "workbook", "title": "Store fulfillment", "description": "Published fulfillment operations workbook.", "tenant_id": "brightline-retail", "domain": "operations", "related_refs": ["trino|query:fulfillment-delay", "airflow|dag:store-fulfillment-refresh"]},
-      {"adapter": "trino", "resource": "query:fulfillment-delay", "kind": "saved_query", "title": "Fulfillment delay", "description": "Approved store delay query.", "tenant_id": "brightline-retail", "domain": "operations", "related_refs": ["tableau|workbook:store-fulfillment"]},
-      {"adapter": "airflow", "resource": "dag:store-fulfillment-refresh", "kind": "workflow", "title": "Store fulfillment refresh", "description": "Refresh workflow for operations data.", "tenant_id": "brightline-retail", "domain": "data-platform", "related_refs": ["trino|query:fulfillment-delay"]}
+      {"adapter": "tableau", "resource": "workbook:store-fulfillment", "kind": "workbook", "title": "Store fulfillment", "description": "Published fulfillment operations workbook.", "tenant_id": "brightline-retail", "domain": "operations", "related_refs": ["trino|query:fulfillment-delay", "airflow|dag:store-fulfillment-refresh"], "roles": ["primary"]},
+      {"adapter": "trino", "resource": "query:fulfillment-delay", "kind": "saved_query", "title": "Fulfillment delay", "description": "Approved store delay query.", "tenant_id": "brightline-retail", "domain": "operations", "related_refs": ["tableau|workbook:store-fulfillment"], "roles": ["diagnostic"]},
+      {"adapter": "airflow", "resource": "dag:store-fulfillment-refresh", "kind": "workflow", "title": "Store fulfillment refresh", "description": "Refresh workflow for operations data.", "tenant_id": "brightline-retail", "domain": "data-platform", "related_refs": ["trino|query:fulfillment-delay"], "roles": ["quality"]}
     ],
     "jev_scores": {"tableau|workbook:store-fulfillment": 0.95, "trino|query:fulfillment-delay": 0.89, "airflow|dag:store-fulfillment-refresh": 0.81}
   },
@@ -510,10 +510,10 @@
     "questions": ["Can this catalog result be considered complete?"],
     "principal": {"tenant_id": "cobalt-media", "principal_id": "subscriber-growth"},
     "seeds": ["looker|dashboard:subscriber-health"],
-    "expected": {"relevant": ["looker|dashboard:subscriber-health", "trino|table:subscriber_events"], "recommended": ["looker|dashboard:subscriber-health", "trino|table:subscriber_events"], "review": "needs_human_input", "blockers": ["candidate-selection-review", "catalog-incomplete"], "requires_truncation_warning": true, "server_search_only": true},
+    "expected": {"relevant": ["looker|dashboard:subscriber-health", "trino|table:subscriber_events"], "recommended": ["looker|dashboard:subscriber-health", "trino|table:subscriber_events"], "review": "needs_human_input", "blockers": ["catalog-incomplete"], "optional_blockers": ["candidate-selection-review"], "requires_truncation_warning": true, "server_search_only": true},
     "resources": [
-      {"adapter": "looker", "resource": "dashboard:subscriber-health", "kind": "dashboard", "title": "Subscriber health", "description": "Canonical subscriber health dashboard.", "tenant_id": "cobalt-media", "domain": "growth", "related_refs": ["trino|table:subscriber_events"]},
-      {"adapter": "trino", "resource": "table:subscriber_events", "kind": "table", "title": "subscriber_events", "description": "Subscriber event fact table.", "tenant_id": "cobalt-media", "domain": "warehouse", "related_refs": ["looker|dashboard:subscriber-health"]}
+      {"adapter": "looker", "resource": "dashboard:subscriber-health", "kind": "dashboard", "title": "Subscriber health", "description": "Canonical subscriber health dashboard.", "tenant_id": "cobalt-media", "domain": "growth", "related_refs": ["trino|table:subscriber_events"], "roles": ["primary"]},
+      {"adapter": "trino", "resource": "table:subscriber_events", "kind": "table", "title": "subscriber_events", "description": "Subscriber event fact table.", "tenant_id": "cobalt-media", "domain": "warehouse", "related_refs": ["looker|dashboard:subscriber-health"], "roles": ["diagnostic"]}
     ],
     "catalog_total_count": 50000,
     "catalog_has_more": true,

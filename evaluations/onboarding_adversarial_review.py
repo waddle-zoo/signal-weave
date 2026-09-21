@@ -117,6 +117,13 @@ def audit_matrix(
                 "the scenario did not satisfy the safe onboarding outcome gate",
                 scenario_id=result.scenario_id,
             )
+        if result.role_mismatches:
+            add(
+                "correctness",
+                "a governed resource role was not preserved in the onboarding review: "
+                + ", ".join(result.role_mismatches),
+                scenario_id=result.scenario_id,
+            )
         if expected.get("requires_truncation_warning") and not result.truncated:
             add(
                 "correctness",
@@ -192,6 +199,17 @@ def audit_matrix(
                     "resource fixture is missing generic adapter metadata",
                     scenario_id=scenario.get("scenario_id"),
                 )
+            invalid_roles = sorted(
+                set(resource.get("roles", []))
+                - {"primary", "corroborates", "diagnostic", "quality", "owner", "unknown"}
+            )
+            if invalid_roles:
+                add(
+                    "generalization",
+                    "resource fixture contains unsupported evidence roles: "
+                    + ", ".join(invalid_roles),
+                    scenario_id=scenario.get("scenario_id"),
+                )
 
     adapters = {
         resource["adapter"] for scenario in scenarios for resource in scenario.get("resources", [])
@@ -210,6 +228,25 @@ def audit_matrix(
         add("generalization", f"only {len(company_shapes)} company shapes are covered")
     if multi_adapter_cases < 5:
         add("generalization", f"only {multi_adapter_cases} cases compose multiple adapters")
+    role_labeled_resources = [
+        resource
+        for scenario in scenarios
+        for resource in scenario.get("resources", [])
+        if resource.get("roles")
+    ]
+    role_vocabulary = {
+        role for resource in role_labeled_resources for role in resource.get("roles", [])
+    }
+    if len(role_labeled_resources) < 20:
+        add(
+            "generalization",
+            "fewer than 20 resources carry governed role labels for validation",
+        )
+    if not {"primary", "corroborates", "diagnostic", "quality"} <= role_vocabulary:
+        add(
+            "generalization",
+            "role fixtures do not cover primary, corroborates, diagnostic, and quality",
+        )
 
     production_source = PRODUCTION_ONBOARDING.read_text().lower()
     vendor_names = {"superset", "looker", "hex", "trino", "airflow", "tableau"}

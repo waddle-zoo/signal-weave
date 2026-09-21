@@ -78,6 +78,29 @@ class InsightAuthoringService:
     principal: PrincipalContext | None = None
 
     @staticmethod
+    def _role_judgment(
+        resource: ResourceDescriptor, judgments: dict[str, dict[str, Any]]
+    ) -> dict[str, Any]:
+        """Prefer governed adapter roles, then fall back to Jev's advisory role."""
+        allowed_roles = {"primary", "corroborates", "diagnostic", "quality", "owner"}
+        for role in resource.contract.roles:
+            normalized = role.strip().lower()
+            if normalized in allowed_roles:
+                return {"role": normalized, "probability": 1.0}
+        judgment = judgments.get(resource_ref(resource), {})
+        role = str(judgment.get("role", "unknown"))
+        if role not in allowed_roles:
+            role = "unknown"
+        try:
+            probability = float(judgment.get("probability", 0.0))
+        except (TypeError, ValueError):
+            probability = 0.0
+        return {
+            "role": role,
+            "probability": max(0.0, min(1.0, probability)),
+        }
+
+    @staticmethod
     def _source_reason(match: ResourceMatch) -> str:
         """Explain a candidate without pretending ranking proves ownership."""
         reasons: list[str] = []
@@ -93,6 +116,11 @@ class InsightAuthoringService:
             reasons.append("the supplied context references it")
         if match.contract.domain and match.contract.domain != "unknown":
             reasons.append(f"its catalog domain is {match.contract.domain}")
+        if match.suggested_role != "unknown":
+            reasons.append(
+                f"Jev classified its evidence role as {match.suggested_role} "
+                f"({match.role_probability:.2f})"
+            )
         return "; ".join(reasons) + "."
 
     @classmethod
@@ -144,6 +172,8 @@ class InsightAuthoringService:
                 selected=match.ref in selected_refs,
                 recommended=match.recommended,
                 relevance=match.relevance,
+                suggested_role=match.suggested_role,
+                role_probability=match.role_probability,
                 reason=cls._source_reason(match),
                 retrieval_signals=match.retrieval_signals,
             )
@@ -432,21 +462,31 @@ class InsightAuthoringService:
         candidates = pool.resources
         judger = self._relevance_judger()
         scores = await judger.rank_resources(goal, candidates)
-        matches = [
-            ResourceMatch(
-                ref=resource_ref(resource),
-                adapter=resource.adapter,
-                resource=resource.resource,
-                kind=resource.kind,
-                title=resource.title,
-                description=resource.description,
-                source_url=resource.source_url,
-                relevance=max(0.0, min(1.0, float(scores.get(resource_ref(resource), 0.0)))),
-                contract=resource.contract,
-                retrieval_signals=pool.signals.get(resource_ref(resource), []),
+        role_judgments: dict[str, dict[str, Any]] = {}
+        role_classifier = getattr(judger, "classify_resource_roles", None)
+        if callable(role_classifier):
+            role_judgments = await role_classifier(goal, candidates)
+        matches: list[ResourceMatch] = []
+        for resource in candidates:
+            role_judgment = self._role_judgment(resource, role_judgments)
+            matches.append(
+                ResourceMatch(
+                    ref=resource_ref(resource),
+                    adapter=resource.adapter,
+                    resource=resource.resource,
+                    kind=resource.kind,
+                    title=resource.title,
+                    description=resource.description,
+                    source_url=resource.source_url,
+                    relevance=max(
+                        0.0, min(1.0, float(scores.get(resource_ref(resource), 0.0)))
+                    ),
+                    suggested_role=role_judgment["role"],
+                    role_probability=role_judgment["probability"],
+                    contract=resource.contract,
+                    retrieval_signals=pool.signals.get(resource_ref(resource), []),
+                )
             )
-            for resource in candidates
-        ]
         matches.sort(key=lambda match: (-match.relevance, match.title.lower(), match.ref))
         visible = matches[:limit]
         no_match = not any(

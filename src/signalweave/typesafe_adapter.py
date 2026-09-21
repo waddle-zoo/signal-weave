@@ -145,6 +145,82 @@ class JevJudger:
             for index, resource in enumerate(resources)
         }
 
+    async def classify_resource_roles(
+        self, goal: str, resources: list[ResourceDescriptor]
+    ) -> dict[str, dict[str, Any]]:
+        """Classify how each bounded candidate could contribute to an insight.
+
+        This is advisory evidence, not an authorization or execution decision.
+        The caller still owns source selection and approval.
+        """
+        from typesafe_sdk import Choice
+
+        if not resources:
+            return {}
+        state = {
+            "goal": goal,
+            "candidate_resources": [
+                {
+                    "ref": f"{resource.adapter}|{resource.resource}",
+                    "adapter": resource.adapter,
+                    "resource": resource.resource,
+                    "kind": resource.kind,
+                    "title": resource.title,
+                    "description": resource.description,
+                    "metadata": resource.metadata,
+                    "contract": resource.contract.model_dump(mode="json"),
+                }
+                for resource in resources[:40]
+            ],
+        }
+        allowed_roles = {
+            "primary",
+            "corroborates",
+            "diagnostic",
+            "quality",
+            "owner",
+            "unknown",
+        }
+        questions = {
+            f"role_{index}": Choice(
+                instructions=(
+                    f"Classify candidate_resources[{index}] by the role it could play "
+                    "in a workflow for the user's goal. Use the candidate's metadata, "
+                    "lineage, kind, and description. Do not infer authorization, "
+                    "ownership, or causation from relevance alone."
+                ),
+                criteria={
+                    "primary": "The canonical source directly measures or anchors what the user wants to watch.",
+                    "corroborates": "An independent source that supports or cross-checks the primary signal.",
+                    "diagnostic": "A source that could help explain why the watched signal moved.",
+                    "quality": "A source that qualifies freshness, completeness, definition, or trustworthiness.",
+                    "owner": "A source that primarily identifies an accountable owner or delivery context.",
+                    "unknown": "The candidate role cannot be established from the available metadata.",
+                },
+            )
+            for index in range(min(len(resources), 40))
+        }
+        async with self._client_type(api_key=self._api_key, timeout=self._timeout) as client:
+            response = await client.system_one(state=state, questions=questions)
+        self.metrics.record(response)
+        judgments: dict[str, dict[str, Any]] = {}
+        for index, resource in enumerate(resources[:40]):
+            answer = response.choices.get(f"role_{index}")
+            if answer is None:
+                continue
+            role = str(answer.choice)
+            if role not in allowed_roles:
+                role = "unknown"
+            probabilities = getattr(answer, "probabilities", {})
+            probability = max(0.0, min(1.0, float(probabilities.get(role, 0.0))))
+            if probability < self.item_threshold:
+                role = "unknown"
+            judgments[f"{resource.adapter}|{resource.resource}"] = {
+                "role": role,
+                "probability": probability,
+            }
+        return judgments
+
     async def select_investigation_sources(
         self,
         state: dict[str, Any],

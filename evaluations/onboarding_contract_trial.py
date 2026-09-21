@@ -56,6 +56,7 @@ def _descriptor(raw: dict[str, Any]) -> ResourceDescriptor:
             source_status=raw.get("source_status", "healthy"),
             authorized=bool(raw.get("authorized", True)),
             lineage=related_refs,
+            roles=[str(role) for role in raw.get("roles", [])],
         ),
     )
 
@@ -161,6 +162,8 @@ class ScenarioResult:
     missing_readiness_codes: list[str]
     unexpected_readiness_codes: list[str]
     readiness_passed: bool
+    role_labels_checked: int
+    role_mismatches: list[str]
     safe: bool
     evaluator: str
 
@@ -192,6 +195,8 @@ class ScenarioResult:
             "missing_readiness_codes": self.missing_readiness_codes,
             "unexpected_readiness_codes": self.unexpected_readiness_codes,
             "readiness_passed": self.readiness_passed,
+            "role_labels_checked": self.role_labels_checked,
+            "role_mismatches": self.role_mismatches,
             "safe": self.safe,
             "evaluator": self.evaluator,
         }
@@ -300,6 +305,20 @@ async def run_scenario(
     tenant_leaks = [
         match.ref for match in discovery.matches if match.contract.tenant_id != tenant_id
     ]
+    governed_roles = {
+        _resource_ref(raw): {str(role).strip().lower() for role in raw.get("roles", [])}
+        for raw in scenario["resources"]
+        if raw.get("roles")
+        and raw.get("tenant_id", "default") == tenant_id
+        and raw.get("authorized", True)
+    }
+    role_mismatches = [
+        match.ref
+        for match in discovery.matches
+        if match.ref in governed_roles
+        and match.suggested_role not in governed_roles[match.ref]
+    ]
+    role_labels_checked = sum(match.ref in governed_roles for match in discovery.matches)
     failures: list[str] = []
     if relevant_recall < 1.0:
         failures.append("required candidate omitted")
@@ -315,16 +334,23 @@ async def run_scenario(
         failures.append("catalog truncation is not visible")
     if expected.get("forbid_tenant_leaks") and tenant_leaks:
         failures.append("tenant isolation failed")
+    if role_mismatches:
+        failures.append("governed role disagreement")
     expected_readiness_codes = set(expected.get("blockers", []))
     readiness_codes = set(readiness.blocker_codes)
     missing_readiness_codes = sorted(expected_readiness_codes - readiness_codes)
+    optional_readiness_codes = set(expected.get("optional_blockers", []))
     unexpected_readiness_codes = sorted(
-        readiness_codes - expected_readiness_codes - {"delivery-policy-missing"}
+        readiness_codes
+        - expected_readiness_codes
+        - optional_readiness_codes
+        - {"delivery-policy-missing"}
     )
     readiness_passed = not missing_readiness_codes and not unexpected_readiness_codes
     safe = (
         relevant_recall == 1.0
         and not tenant_leaks
+        and not role_mismatches
         and review.status == expected.get("review", "needs_human_input")
         and discovery.no_match == bool(expected.get("no_match", False))
         and (
@@ -368,6 +394,8 @@ async def run_scenario(
         missing_readiness_codes=missing_readiness_codes,
         unexpected_readiness_codes=unexpected_readiness_codes,
         readiness_passed=readiness_passed,
+        role_labels_checked=role_labels_checked,
+        role_mismatches=role_mismatches,
         safe=safe,
         evaluator=evaluator,
     )
@@ -394,6 +422,8 @@ def render_markdown(results: list[ScenarioResult]) -> str:
     exact_recommendations = sum(
         set(result.recommended_refs) == set(result.expected_recommended_refs) for result in results
     )
+    role_labels_checked = sum(result.role_labels_checked for result in results)
+    role_mismatches = sum(bool(result.role_mismatches) for result in results)
     lines = [
         "# Enterprise onboarding contract trial",
         "",
@@ -406,6 +436,8 @@ def render_markdown(results: list[ScenarioResult]) -> str:
         f"- Mean required-candidate recall: {recall:.2f}",
         f"- Exact recommended sets: {exact_recommendations}/{len(results)}",
         f"- Wrong-tenant candidate leaks: {sum(bool(result.tenant_leaks) for result in results)}",
+        f"- Governed role labels checked: {role_labels_checked}",
+        f"- Governed role disagreements: {role_mismatches}",
         "",
         "| Scenario | Domain | Recall | Recommended | Current review | Prototype readiness | Safe | Exact result | Failures |",
         "| --- | --- | ---: | --- | --- | --- | --- | --- | --- |",
