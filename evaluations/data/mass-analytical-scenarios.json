@@ -3,6 +3,20 @@
   "name": "northstar-mass-analytical-insights",
   "population": 10000,
   "jev_sample_per_scenario": 2,
+  "shared_input": {
+    "tenant_scope": "northstar-outfitters",
+    "snapshot_version": "northstar-cache-2026-09-20",
+    "cached_charts_per_workflow": 8,
+    "authorized_candidate_sources": 24,
+    "context_fields": [
+      "human-authored-card",
+      "cached-chart-observations",
+      "authorized-source-catalog",
+      "source-contracts",
+      "tenant-and-permission-scope",
+      "snapshot-version"
+    ]
+  },
   "cost_model": {
     "trino_query_units": 100.0,
     "general_agent_units": 5.0,

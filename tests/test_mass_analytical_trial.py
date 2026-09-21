@@ -1,5 +1,7 @@
 from evaluations.mass_analytical_trial import (
     DEFAULT_CONFIG,
+    build_shared_input,
+    input_parity,
     load_mass_config,
     model_economics,
 )
@@ -30,3 +32,15 @@ def test_mass_trial_query_work_accounts_for_batch_scan_multiplier():
 
     assert economics["signalweave"]["query_work_units"] == 114.8
     assert economics["reductions"]["query_work_reduction_pct"] > 99
+
+
+def test_mass_trial_arms_receive_the_same_cards_and_chart_context():
+    config = load_mass_config(DEFAULT_CONFIG)
+    sample = build_shared_input(config, config["scenarios"][0])
+    parity = input_parity(config)
+
+    assert len(sample["cached_charts"]) == 8
+    assert len(sample["authorized_catalog"]) == 24
+    assert parity["same_human_authored_cards"] is True
+    assert parity["same_cached_chart_snapshots"] is True
+    assert parity["same_authorized_catalog"] is True

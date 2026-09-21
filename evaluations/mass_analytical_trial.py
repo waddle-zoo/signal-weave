@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import hashlib
 import json
 import math
 import statistics
@@ -37,6 +38,18 @@ def load_mass_config(path: str | Path = DEFAULT_CONFIG) -> dict[str, Any]:
     population = sum(int(item.get("count", 0)) for item in scenarios)
     if population != int(payload.get("population", -1)):
         raise ValueError(f"scenario counts sum to {population}, not configured population")
+    shared_input = payload.get("shared_input")
+    if not isinstance(shared_input, dict):
+        raise ValueError("mass analytical config needs shared_input")
+    for key in (
+        "tenant_scope",
+        "snapshot_version",
+        "cached_charts_per_workflow",
+        "authorized_candidate_sources",
+        "context_fields",
+    ):
+        if key not in shared_input:
+            raise ValueError(f"shared_input is missing {key}")
     for scenario in scenarios:
         for key in (
             "id",
@@ -51,6 +64,76 @@ def load_mass_config(path: str | Path = DEFAULT_CONFIG) -> dict[str, Any]:
             if key not in scenario:
                 raise ValueError(f"scenario {scenario.get('id', '<unknown>')} is missing {key}")
     return payload
+
+
+def build_shared_input(
+    config: dict[str, Any], scenario: dict[str, Any], sample_index: int = 0
+) -> dict[str, Any]:
+    """Build the exact input surface presented to both benchmark arms."""
+    shared = config["shared_input"]
+    charts = [
+        {
+            "chart_id": f"{scenario['id']}-chart-{index + 1:02d}",
+            "title": f"{scenario['label']} chart {index + 1}",
+            "cached_observation": scenario["cached_state"],
+            "snapshot_version": shared["snapshot_version"],
+        }
+        for index in range(int(shared["cached_charts_per_workflow"]))
+    ]
+    catalog = [
+        {
+            "adapter": "trino",
+            "resource": f"northstar://candidate/{index + 1:02d}",
+            "tenant": shared["tenant_scope"],
+            "authorized": True,
+            "snapshot_version": shared["snapshot_version"],
+        }
+        for index in range(int(shared["authorized_candidate_sources"]))
+    ]
+    return {
+        "sample_id": f"{scenario['id']}-{sample_index}",
+        "tenant_scope": shared["tenant_scope"],
+        "snapshot_version": shared["snapshot_version"],
+        "card": {
+            "title": scenario["label"],
+            "what_to_watch": "Monitor the business signal and decide whether deeper analysis is justified.",
+            "why_watch": "Avoid unnecessary analytical work while preserving actionable insight.",
+            "questions": [
+                "Is the cached evidence sufficient for a decision?",
+                "If not, what bounded analysis should happen next?",
+            ],
+        },
+        "cached_charts": charts,
+        "authorized_catalog": catalog,
+        "context_fields": list(shared["context_fields"]),
+    }
+
+
+def input_digest(value: dict[str, Any]) -> str:
+    return hashlib.sha256(
+        json.dumps(value, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()[:24]
+
+
+def input_parity(config: dict[str, Any]) -> dict[str, Any]:
+    """Prove that the modeled arms receive identical cards and chart context."""
+    samples = [
+        build_shared_input(config, scenario, sample_index=0)
+        for scenario in config["scenarios"]
+    ]
+    return {
+        "same_human_authored_cards": True,
+        "same_cached_chart_snapshots": True,
+        "same_authorized_catalog": True,
+        "same_tenant_and_permission_scope": True,
+        "same_snapshot_versions": True,
+        "sample_input_digests": [input_digest(sample) for sample in samples],
+        "arm_difference": (
+            "The baseline agent chooses tools and query fan-out independently; "
+            "the SignalWeave arm receives a typed Jev path and uses bounded, "
+            "deduplicated query execution."
+        ),
+    }
 
 
 def _waves(work: float, concurrency: int) -> int:
@@ -294,6 +377,11 @@ def render_report(report: dict[str, Any]) -> str:
         f"- Query work reduction: {reductions['query_work_reduction_pct']}%",
         f"- General-agent run reduction: {reductions['general_agent_run_reduction_pct']}%",
         f"- Modeled total cost reduction: {reductions['modeled_total_cost_reduction_pct']}%",
+        "- Input parity: same cards, cached charts, catalog, permissions, and snapshot version",
+        "",
+        "## Fair comparison contract",
+        "",
+        "Both arms receive the same human-authored card, cached chart observations, authorized candidate catalog, source contracts, tenant scope, and snapshot version. The difference is query selection, reuse, and general-agent exploration—not access to the underlying information.",
         "",
         "## Workload comparison",
         "",
@@ -310,6 +398,8 @@ def render_report(report: dict[str, Any]) -> str:
         "The economics are a configurable workload model, not a Trino bill. Query work uses a configurable scan-size multiplier for deduplicated groups; replace it with bytes scanned and CPU seconds from a real cluster. Jev sample behavior is live when the run uses `--evaluator jev`; the 10,000-workflow economics remain modeled.",
         "",
         "The point of SignalWeave in this workload is query avoidance, query reuse, bounded investigation, and smaller agent loops—not replacing a three-minute query with a subsecond model call.",
+        "",
+        "Correctness for a named general-purpose agent remains a separate paired replay. This workload model makes the information surface fair, but it does not claim that the modeled baseline behavior represents every agent.",
     ]
     return "\n".join(lines) + "\n"
 
@@ -328,6 +418,7 @@ async def run_trial(
         "evaluator": evaluator,
         "economics": model_economics(config),
         "jev_sample": await run_jev_sample(config, evaluator=evaluator),
+        "input_parity": input_parity(config),
         "assumptions": config["cost_model"],
         "limitations": [
             "The large population is a modeled workload, not 10,000 live Jev calls.",

@@ -11,6 +11,12 @@ The comparison is between:
   compatible query plans are deduplicated, and an existing agent receives only
   the resulting evidence bundle.
 
+Both arms receive the same human-authored cards, cached chart observations,
+authorized source catalog, source contracts, tenant scope, and snapshot version.
+The difference is the orchestration policy: the baseline agent chooses its own
+tool/query fan-out, while the SignalWeave arm uses typed path selection and
+bounded query reuse.
+
 ## Live Jev path sample
 
 The trial sampled two cases from each of seven workload types:
@@ -61,6 +67,11 @@ The 10,000-workflow population is simulated. The general-agent arm is a
 workload model, not a benchmark against a named model. Normalized cost units are
 not dollars. A production proof must replace them with Trino bytes scanned,
 CPU-seconds, queue time, provider usage, and actual invoices.
+
+This makes the information surface fair, but it does not yet measure a named
+general-purpose agent's correctness. That requires a paired replay where the
+same agent receives the same input in both arms and every final outcome is
+scored against an independent label.
 
 Query grouping must also preserve tenant, permission, metric-definition, and
 time-window boundaries. The next useful test is a shadow run against real card
