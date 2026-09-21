@@ -53,6 +53,7 @@ def _descriptor(raw: dict[str, Any]) -> ResourceDescriptor:
             tenant_id=raw.get("tenant_id", "default"),
             domain=raw.get("domain", "unknown"),
             source_status=raw.get("source_status", "healthy"),
+            authorized=bool(raw.get("authorized", True)),
             lineage=related_refs,
         ),
     )

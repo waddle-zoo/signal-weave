@@ -107,7 +107,13 @@ failure cannot be expressed by the current result types.
 
 The fixture in
 [`evaluations/data/onboarding-scenarios.json`](../evaluations/data/onboarding-scenarios.json)
-covers these cases:
+covers 24 cases across nine domains and five company shapes. The original
+11-case baseline remains useful for comparison; the expanded cases deliberately
+stress seedless onboarding, non-BI assets, workflow composition, lifecycle
+changes, authorization drift, semantic aliases, quality failures, and very
+large paginated catalogs.
+
+The original baseline cases were:
 
 | Case | Shape being tested | Expected onboarding pressure |
 | --- | --- | --- |
@@ -157,8 +163,10 @@ and is run with:
 .venv/bin/python evaluations/onboarding_contract_trial.py --format markdown
 ```
 
-The fixture contains 11 cases. It uses a deterministic Jev-shaped ranking
-double so this run tests the onboarding contract, not live model accuracy.
+The baseline fixture contains 11 cases. It uses a deterministic Jev-shaped
+ranking double so that the run tests the onboarding contract, not live model
+accuracy. The expanded 24-case fixture and live replay are documented in
+[`enterprise-onboarding-expanded-replay.md`](enterprise-onboarding-expanded-replay.md).
 
 | Measure | Result |
 | --- | ---: |

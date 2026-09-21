@@ -22,9 +22,10 @@ CASES = Path(__file__).parents[1] / "evaluations" / "data" / "onboarding-scenari
 @pytest.mark.asyncio
 async def test_generalized_onboarding_matrix_runs_without_source_specific_core_branches():
     results = await run_trial(CASES)
+    scenario_ids = {result.scenario_id for result in results}
 
-    assert len(results) == 11
-    assert {result.domain for result in results} == {
+    assert len(results) == 24
+    assert {
         "saas",
         "retail",
         "fintech",
@@ -33,7 +34,15 @@ async def test_generalized_onboarding_matrix_runs_without_source_specific_core_b
         "healthcare",
         "manufacturing",
         "multi-domain",
-    }
+        "data-platform",
+    } <= {result.domain for result in results}
+    assert {
+        "seedless-executive-pulse",
+        "airflow-only-freshness",
+        "permission-revoked-after-card-draft",
+        "fiscal-calendar-definition-conflict",
+        "paginated-catalog-resume",
+    } <= scenario_ids
     assert all(result.candidate_count >= 0 for result in results)
 
 

@@ -198,5 +198,232 @@
     "catalog_total_count": 100000,
     "catalog_has_more": true,
     "jev_scores": {"catalog|dashboard:customer-health": 0.96}
+  },
+  {
+    "scenario_id": "seedless-executive-pulse",
+    "domain": "saas",
+    "company_shape": "enterprise",
+    "goal": "Tell the executive team if anything important changed across acquisition, activation, retention, or data freshness this week.",
+    "why_watch": "Start from the business goal without requiring an analyst to know which dashboard is canonical.",
+    "watch_for": ["Material movement in a business stage", "A source freshness issue that invalidates the conclusion"],
+    "questions": ["Which assets should anchor this goal?", "Is the evidence complete enough to summarize?"],
+    "principal": {"tenant_id": "northstar", "principal_id": "exec-ops"},
+    "seeds": [],
+    "expected": {"relevant": ["looker|dashboard:acquisition", "superset|dashboard:activation", "hex|project:retention", "airflow|dag:warehouse-refresh"], "recommended": ["looker|dashboard:acquisition", "superset|dashboard:activation", "hex|project:retention", "airflow|dag:warehouse-refresh"], "review": "needs_human_input", "blockers": ["anchor-required", "candidate-selection-review"]},
+    "resources": [
+      {"adapter": "looker", "resource": "dashboard:acquisition", "kind": "dashboard", "title": "Acquisition", "description": "Pipeline and new demand.", "tenant_id": "northstar", "domain": "growth"},
+      {"adapter": "superset", "resource": "dashboard:activation", "kind": "dashboard", "title": "Activation", "description": "Activation funnel.", "tenant_id": "northstar", "domain": "growth"},
+      {"adapter": "hex", "resource": "project:retention", "kind": "project", "title": "Retention cohorts", "description": "Retention and churn analysis.", "tenant_id": "northstar", "domain": "growth"},
+      {"adapter": "airflow", "resource": "dag:warehouse-refresh", "kind": "workflow", "title": "Warehouse refresh", "description": "Daily freshness and completion.", "tenant_id": "northstar", "domain": "data-quality"}
+    ],
+    "jev_scores": {"looker|dashboard:acquisition": 0.91, "superset|dashboard:activation": 0.88, "hex|project:retention": 0.84, "airflow|dag:warehouse-refresh": 0.79}
+  },
+  {
+    "scenario_id": "tableau-service-health",
+    "domain": "retail",
+    "company_shape": "enterprise",
+    "goal": "Monitor the service health board and tell Operations when customer wait time is materially off course.",
+    "why_watch": "Support companies whose primary BI surface is not Superset or Looker.",
+    "watch_for": ["Wait time moves", "The service-level metric is governed", "The source job is current"],
+    "questions": ["Which service metric is canonical?"],
+    "principal": {"tenant_id": "northstar", "principal_id": "operations-lead"},
+    "seeds": ["tableau|dashboard:service-health"],
+    "expected": {"relevant": ["tableau|dashboard:service-health", "dbt|metric:customer-wait-time", "airflow|dag:service-events"], "recommended": ["tableau|dashboard:service-health", "dbt|metric:customer-wait-time", "airflow|dag:service-events"], "review": "needs_human_input", "blockers": ["candidate-selection-review"]},
+    "resources": [
+      {"adapter": "tableau", "resource": "dashboard:service-health", "kind": "dashboard", "title": "Service health", "description": "Customer wait time and service levels.", "tenant_id": "northstar", "domain": "operations", "related_refs": ["dbt|metric:customer-wait-time", "airflow|dag:service-events"]},
+      {"adapter": "dbt", "resource": "metric:customer-wait-time", "kind": "metric", "title": "Customer wait time", "description": "Governed wait-time metric.", "tenant_id": "northstar", "domain": "operations"},
+      {"adapter": "airflow", "resource": "dag:service-events", "kind": "workflow", "title": "Service events pipeline", "description": "Service event freshness.", "tenant_id": "northstar", "domain": "data-quality"}
+    ],
+    "jev_scores": {"tableau|dashboard:service-health": 0.96, "dbt|metric:customer-wait-time": 0.86, "airflow|dag:service-events": 0.77}
+  },
+  {
+    "scenario_id": "fiscal-calendar-definition-conflict",
+    "domain": "fintech",
+    "company_shape": "enterprise",
+    "goal": "Monitor quarterly net revenue against the finance plan using the governed fiscal calendar.",
+    "why_watch": "Prevent a calendar-year metric from being mistaken for the finance team's fiscal-quarter metric.",
+    "watch_for": ["Quarterly net revenue moves", "Fiscal and calendar definitions disagree"],
+    "questions": ["Which time calendar is governed for this decision?"],
+    "principal": {"tenant_id": "northstar", "principal_id": "finance-controller"},
+    "seeds": ["looker|explore:quarterly-revenue"],
+    "expected": {"relevant": ["looker|explore:quarterly-revenue", "dbt|metric:fiscal-net-revenue", "dbt|metric:calendar-net-revenue"], "recommended": ["looker|explore:quarterly-revenue", "dbt|metric:fiscal-net-revenue", "dbt|metric:calendar-net-revenue"], "review": "needs_human_input", "blockers": ["candidate-selection-review", "definition-conflict"]},
+    "resources": [
+      {"adapter": "looker", "resource": "explore:quarterly-revenue", "kind": "explore", "title": "Quarterly revenue", "description": "Finance Explore with fiscal periods.", "tenant_id": "northstar", "domain": "finance", "related_refs": ["dbt|metric:fiscal-net-revenue", "dbt|metric:calendar-net-revenue"]},
+      {"adapter": "dbt", "resource": "metric:fiscal-net-revenue", "kind": "metric", "title": "Net revenue", "description": "Fiscal-quarter definition.", "tenant_id": "northstar", "domain": "finance"},
+      {"adapter": "dbt", "resource": "metric:calendar-net-revenue", "kind": "metric", "title": "Net revenue", "description": "Calendar-quarter definition.", "tenant_id": "northstar", "domain": "finance"}
+    ],
+    "jev_scores": {"looker|explore:quarterly-revenue": 0.95, "dbt|metric:fiscal-net-revenue": 0.91, "dbt|metric:calendar-net-revenue": 0.86}
+  },
+  {
+    "scenario_id": "support-root-cause",
+    "domain": "marketplace",
+    "company_shape": "midmarket",
+    "goal": "Monitor checkout conversion and investigate whether support volume or payment failures explain a movement.",
+    "why_watch": "Combine BI, support, and warehouse evidence without making the analyst manually join systems.",
+    "watch_for": ["Conversion changes", "Support contacts corroborate the movement", "Payment failures explain the movement"],
+    "questions": ["What is the most likely driver?", "Which team should investigate?"],
+    "principal": {"tenant_id": "northstar", "principal_id": "growth-ops"},
+    "seeds": ["looker|dashboard:checkout"],
+    "expected": {"relevant": ["looker|dashboard:checkout", "zendesk|view:payment-contacts", "trino|table:payment-failures"], "recommended": ["looker|dashboard:checkout", "zendesk|view:payment-contacts", "trino|table:payment-failures"], "review": "needs_human_input", "blockers": ["candidate-selection-review"]},
+    "resources": [
+      {"adapter": "looker", "resource": "dashboard:checkout", "kind": "dashboard", "title": "Checkout conversion", "description": "Checkout funnel and conversion.", "tenant_id": "northstar", "domain": "growth", "related_refs": ["zendesk|view:payment-contacts", "trino|table:payment-failures"]},
+      {"adapter": "zendesk", "resource": "view:payment-contacts", "kind": "saved_view", "title": "Payment contacts", "description": "Customer contacts mentioning payment failures.", "tenant_id": "northstar", "domain": "support"},
+      {"adapter": "trino", "resource": "table:payment-failures", "kind": "table", "title": "Payment failures", "description": "Payment authorization failures by gateway.", "tenant_id": "northstar", "domain": "payments"}
+    ],
+    "jev_scores": {"looker|dashboard:checkout": 0.95, "zendesk|view:payment-contacts": 0.83, "trino|table:payment-failures": 0.89}
+  },
+  {
+    "scenario_id": "quality-failure-blocks-alert",
+    "domain": "logistics",
+    "company_shape": "enterprise",
+    "goal": "Monitor on-time delivery but suppress operational notifications when shipment completeness is failing.",
+    "why_watch": "Avoid escalating a data pipeline failure as if it were a real delivery regression.",
+    "watch_for": ["On-time delivery moves", "Shipment completeness fails"],
+    "questions": ["Is the delivery signal trustworthy enough to notify Operations?"],
+    "principal": {"tenant_id": "northstar", "principal_id": "operations-lead"},
+    "seeds": ["superset|dashboard:on-time-delivery", "datahub|test:shipment-completeness-failed"],
+    "expected": {"relevant": ["superset|dashboard:on-time-delivery", "datahub|test:shipment-completeness-failed"], "recommended": ["superset|dashboard:on-time-delivery", "datahub|test:shipment-completeness-failed"], "review": "needs_human_input", "blockers": ["source-health-review"]},
+    "resources": [
+      {"adapter": "superset", "resource": "dashboard:on-time-delivery", "kind": "dashboard", "title": "On-time delivery", "description": "Delivery performance by region.", "tenant_id": "northstar", "domain": "logistics", "related_refs": ["datahub|test:shipment-completeness-failed"]},
+      {"adapter": "datahub", "resource": "test:shipment-completeness-failed", "kind": "quality_check", "title": "Shipment completeness", "description": "Completeness test is failing.", "tenant_id": "northstar", "domain": "data-quality", "source_status": "failed"}
+    ],
+    "jev_scores": {"superset|dashboard:on-time-delivery": 0.94, "datahub|test:shipment-completeness-failed": 0.92}
+  },
+  {
+    "scenario_id": "permission-revoked-after-card-draft",
+    "domain": "healthcare",
+    "company_shape": "enterprise",
+    "goal": "Monitor appointment availability from the clinic dashboard.",
+    "why_watch": "The user had access when drafting the card but no longer has access at approval time.",
+    "watch_for": ["Appointment availability changes"],
+    "questions": ["Is the source still authorized for this principal?"],
+    "principal": {"tenant_id": "northstar", "principal_id": "clinic-ops"},
+    "seeds": ["looker|dashboard:appointments-revoked"],
+    "expected": {"relevant": [], "recommended": [], "review": "needs_human_input", "blockers": ["selection-outside-discovery"], "no_match": true},
+    "resources": [
+      {"adapter": "looker", "resource": "dashboard:appointments-revoked", "kind": "dashboard", "title": "Appointment availability", "description": "Access revoked after draft creation.", "tenant_id": "northstar", "domain": "operations", "authorized": false}
+    ],
+    "jev_scores": {"looker|dashboard:appointments-revoked": 0.95}
+  },
+  {
+    "scenario_id": "multi-card-growth-cluster",
+    "domain": "saas",
+    "company_shape": "enterprise",
+    "goal": "Monitor a growth cluster spanning acquisition, activation, paid delivery, and signup quality.",
+    "why_watch": "A workflow may need several existing cards and dashboards to identify a shared driver.",
+    "watch_for": ["Two or more growth signals move together", "A shared delivery or data issue explains them"],
+    "questions": ["Are these movements part of one incident or separate issues?"],
+    "principal": {"tenant_id": "northstar", "principal_id": "growth-lead"},
+    "seeds": ["superset|dashboard:growth", "superset|dashboard:paid"],
+    "expected": {"relevant": ["superset|dashboard:growth", "superset|dashboard:paid", "superset|dashboard:activation", "trino|table:campaign-delivery"], "recommended": ["superset|dashboard:growth", "superset|dashboard:paid", "superset|dashboard:activation", "trino|table:campaign-delivery"], "review": "needs_human_input", "blockers": ["candidate-selection-review"]},
+    "resources": [
+      {"adapter": "superset", "resource": "dashboard:growth", "kind": "dashboard", "title": "Growth overview", "description": "Signup and growth signals.", "tenant_id": "northstar", "domain": "growth", "related_refs": ["superset|dashboard:activation", "superset|dashboard:paid", "trino|table:campaign-delivery"]},
+      {"adapter": "superset", "resource": "dashboard:paid", "kind": "dashboard", "title": "Paid acquisition", "description": "Paid campaign delivery.", "tenant_id": "northstar", "domain": "growth"},
+      {"adapter": "superset", "resource": "dashboard:activation", "kind": "dashboard", "title": "Activation", "description": "Activation funnel.", "tenant_id": "northstar", "domain": "growth"},
+      {"adapter": "trino", "resource": "table:campaign-delivery", "kind": "table", "title": "Campaign delivery", "description": "Campaign delivery and spend.", "tenant_id": "northstar", "domain": "growth"}
+    ],
+    "jev_scores": {"superset|dashboard:growth": 0.95, "superset|dashboard:paid": 0.91, "superset|dashboard:activation": 0.87, "trino|table:campaign-delivery": 0.81}
+  },
+  {
+    "scenario_id": "stable-no-change",
+    "domain": "manufacturing",
+    "company_shape": "midmarket",
+    "goal": "Monitor production yield and do nothing when the signal remains within the expected range.",
+    "why_watch": "A useful onboarding path must support quiet cards, not only alerts.",
+    "watch_for": ["Production yield moves outside the expected range"],
+    "questions": ["Is the current signal stable?"],
+    "principal": {"tenant_id": "northstar", "principal_id": "plant-ops"},
+    "seeds": ["tableau|dashboard:production-yield"],
+    "expected": {"relevant": ["tableau|dashboard:production-yield"], "recommended": ["tableau|dashboard:production-yield"], "review": "ready_for_approval", "blockers": []},
+    "resources": [
+      {"adapter": "tableau", "resource": "dashboard:production-yield", "kind": "dashboard", "title": "Production yield", "description": "Stable yield by plant.", "tenant_id": "northstar", "domain": "operations"}
+    ],
+    "jev_scores": {"tableau|dashboard:production-yield": 0.95}
+  },
+  {
+    "scenario_id": "retired-source",
+    "domain": "retail",
+    "company_shape": "midmarket",
+    "goal": "Monitor the retired inventory dashboard until its replacement is confirmed.",
+    "why_watch": "A card should not quietly keep running against a retired source.",
+    "watch_for": ["Inventory coverage changes"],
+    "questions": ["What replaces this retired source?"],
+    "principal": {"tenant_id": "northstar", "principal_id": "supply-chain"},
+    "seeds": ["superset|dashboard:inventory-retired"],
+    "expected": {"relevant": ["superset|dashboard:inventory-retired"], "recommended": ["superset|dashboard:inventory-retired"], "review": "needs_human_input", "blockers": ["source-health-review"]},
+    "resources": [
+      {"adapter": "superset", "resource": "dashboard:inventory-retired", "kind": "dashboard", "title": "Inventory coverage", "description": "Retired dashboard with no supported replacement yet.", "tenant_id": "northstar", "domain": "supply-chain", "source_status": "failed"}
+    ],
+    "jev_scores": {"superset|dashboard:inventory-retired": 0.95}
+  },
+  {
+    "scenario_id": "sparse-semantic-alias",
+    "domain": "saas",
+    "company_shape": "startup",
+    "goal": "Monitor paid conversion even though the source uses an internal warehouse name.",
+    "why_watch": "The useful match is carried by lineage and semantic metadata, not the title.",
+    "watch_for": ["Paid conversion changes"],
+    "questions": ["Which internal asset feeds the executive metric?"],
+    "principal": {"tenant_id": "northstar", "principal_id": "growth-lead"},
+    "seeds": ["looker|dashboard:exec-growth-alias"],
+    "expected": {"relevant": ["looker|dashboard:exec-growth-alias", "trino|table:fct_cust_state"], "recommended": ["looker|dashboard:exec-growth-alias", "trino|table:fct_cust_state"], "review": "needs_human_input", "blockers": ["candidate-selection-review"]},
+    "resources": [
+      {"adapter": "looker", "resource": "dashboard:exec-growth-alias", "kind": "dashboard", "title": "KPI board", "description": "Executive paid conversion view.", "tenant_id": "northstar", "domain": "growth", "related_refs": ["trino|table:fct_cust_state"]},
+      {"adapter": "trino", "resource": "table:fct_cust_state", "kind": "table", "title": "fct_cust_state", "description": "", "tenant_id": "northstar", "domain": "warehouse", "related_refs": ["looker|dashboard:exec-growth-alias"]},
+      {"adapter": "trino", "resource": "table:raw_events", "kind": "table", "title": "raw_events", "description": "Unmodeled source events.", "tenant_id": "northstar", "domain": "warehouse"}
+    ],
+    "jev_scores": {"looker|dashboard:exec-growth-alias": 0.95, "trino|table:fct_cust_state": 0.85, "trino|table:raw_events": 0.19}
+  },
+  {
+    "scenario_id": "airflow-only-freshness",
+    "domain": "data-platform",
+    "company_shape": "midmarket",
+    "goal": "Monitor the warehouse refresh job and notify the data platform team only when the latest run is late or failed.",
+    "why_watch": "Not every useful insight begins with a dashboard.",
+    "watch_for": ["Latest run is late", "Latest run failed"],
+    "questions": ["Is the warehouse current enough for downstream analysis?"],
+    "principal": {"tenant_id": "northstar", "principal_id": "data-platform"},
+    "seeds": ["airflow|dag:warehouse-refresh-critical"],
+    "expected": {"relevant": ["airflow|dag:warehouse-refresh-critical"], "recommended": ["airflow|dag:warehouse-refresh-critical"], "review": "ready_for_approval", "blockers": []},
+    "resources": [
+      {"adapter": "airflow", "resource": "dag:warehouse-refresh-critical", "kind": "workflow", "title": "Warehouse refresh critical", "description": "Latest run status and freshness SLA.", "tenant_id": "northstar", "domain": "data-platform"}
+    ],
+    "jev_scores": {"airflow|dag:warehouse-refresh-critical": 0.96}
+  },
+  {
+    "scenario_id": "notebook-query-quality-chain",
+    "domain": "fintech",
+    "company_shape": "enterprise",
+    "goal": "Monitor the fraud review notebook and include the approved query and data-quality check before notifying Risk.",
+    "why_watch": "A multi-step analytical workflow can begin from a notebook rather than a dashboard.",
+    "watch_for": ["Fraud review volume changes", "The query is current", "The input table passes quality checks"],
+    "questions": ["Is the evidence complete and trustworthy enough for Risk?"],
+    "principal": {"tenant_id": "northstar", "principal_id": "risk-ops"},
+    "seeds": ["hex|project:fraud-review"],
+    "expected": {"relevant": ["hex|project:fraud-review", "trino|query:fraud-volume", "datahub|test:fraud-events-quality"], "recommended": ["hex|project:fraud-review", "trino|query:fraud-volume", "datahub|test:fraud-events-quality"], "review": "needs_human_input", "blockers": ["candidate-selection-review"]},
+    "resources": [
+      {"adapter": "hex", "resource": "project:fraud-review", "kind": "project", "title": "Fraud review", "description": "Published fraud analysis notebook.", "tenant_id": "northstar", "domain": "risk", "related_refs": ["trino|query:fraud-volume", "datahub|test:fraud-events-quality"]},
+      {"adapter": "trino", "resource": "query:fraud-volume", "kind": "saved_query", "title": "Fraud volume", "description": "Approved fraud volume query.", "tenant_id": "northstar", "domain": "risk"},
+      {"adapter": "datahub", "resource": "test:fraud-events-quality", "kind": "quality_check", "title": "Fraud events quality", "description": "Quality check for fraud events.", "tenant_id": "northstar", "domain": "data-quality"}
+    ],
+    "jev_scores": {"hex|project:fraud-review": 0.95, "trino|query:fraud-volume": 0.86, "datahub|test:fraud-events-quality": 0.81}
+  },
+  {
+    "scenario_id": "paginated-catalog-resume",
+    "domain": "multi-domain",
+    "company_shape": "enterprise",
+    "goal": "Find the canonical customer health asset in a catalog that requires pagination.",
+    "why_watch": "A good first page must not be mistaken for complete enterprise coverage.",
+    "watch_for": ["Customer health changes"],
+    "questions": ["Can the catalog result be considered complete?"],
+    "principal": {"tenant_id": "northstar", "principal_id": "customer-success"},
+    "seeds": ["catalog|dashboard:customer-health-canonical"],
+    "expected": {"relevant": ["catalog|dashboard:customer-health-canonical"], "recommended": ["catalog|dashboard:customer-health-canonical"], "review": "needs_human_input", "blockers": ["catalog-incomplete"], "requires_truncation_warning": true, "server_search_only": true},
+    "resources": [
+      {"adapter": "catalog", "resource": "dashboard:customer-health-canonical", "kind": "dashboard", "title": "Customer health canonical", "description": "Canonical customer health asset on the first search page.", "tenant_id": "northstar", "domain": "customer-success"}
+    ],
+    "catalog_total_count": 100000,
+    "catalog_has_more": true,
+    "jev_scores": {"catalog|dashboard:customer-health-canonical": 0.96}
   }
 ]
