@@ -26,7 +26,7 @@ async def test_generalized_onboarding_matrix_runs_without_source_specific_core_b
     results = await run_trial(CASES)
     scenario_ids = {result.scenario_id for result in results}
 
-    assert len(results) == 24
+    assert len(results) == 30
     assert {
         "saas",
         "retail",
@@ -37,7 +37,9 @@ async def test_generalized_onboarding_matrix_runs_without_source_specific_core_b
         "manufacturing",
         "multi-domain",
         "data-platform",
+        "media",
     } <= {result.domain for result in results}
+    assert len({scenario["principal"]["tenant_id"] for scenario in json.loads(CASES.read_text())}) == 7
     assert {
         "seedless-executive-pulse",
         "airflow-only-freshness",

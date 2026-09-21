@@ -425,5 +425,115 @@
     "catalog_total_count": 100000,
     "catalog_has_more": true,
     "jev_scores": {"catalog|dashboard:customer-health-canonical": 0.96}
+  },
+  {
+    "scenario_id": "acme-health-quality-seedless",
+    "domain": "healthcare",
+    "company_shape": "regulated-enterprise",
+    "goal": "Monitor readmission rate and only notify Clinical Operations when the metric moves and the encounters data passes quality checks.",
+    "why_watch": "A healthcare operator needs a trustworthy signal without knowing the warehouse and pipeline identifiers.",
+    "watch_for": ["Readmission rate changes", "Encounter data quality fails"],
+    "questions": ["Is the movement real enough to investigate?", "Is the source data current and complete?"],
+    "principal": {"tenant_id": "acme-health", "principal_id": "clinical-ops"},
+    "seeds": [],
+    "expected": {"relevant": ["superset|dashboard:clinical-ops", "datahub|test:encounters-quality", "airflow|dag:encounters-refresh"], "recommended": ["superset|dashboard:clinical-ops", "datahub|test:encounters-quality", "airflow|dag:encounters-refresh"], "review": "needs_human_input", "blockers": ["anchor-required", "candidate-selection-review"]},
+    "resources": [
+      {"adapter": "superset", "resource": "dashboard:clinical-ops", "kind": "dashboard", "title": "Clinical operations", "description": "Readmission and encounter health.", "tenant_id": "acme-health", "domain": "care-ops", "related_refs": ["datahub|test:encounters-quality", "airflow|dag:encounters-refresh"]},
+      {"adapter": "datahub", "resource": "test:encounters-quality", "kind": "quality_check", "title": "Encounters quality", "description": "Completeness and freshness checks for encounters.", "tenant_id": "acme-health", "domain": "data-quality", "related_refs": ["superset|dashboard:clinical-ops"]},
+      {"adapter": "airflow", "resource": "dag:encounters-refresh", "kind": "workflow", "title": "Encounters refresh", "description": "Refreshes the clinical warehouse tables.", "tenant_id": "acme-health", "domain": "data-platform", "related_refs": ["datahub|test:encounters-quality"]},
+      {"adapter": "superset", "resource": "dashboard:clinical-ops", "kind": "dashboard", "title": "Clinical operations", "description": "Other tenant decoy.", "tenant_id": "northstar", "domain": "care-ops"}
+    ],
+    "jev_scores": {"superset|dashboard:clinical-ops": 0.96, "datahub|test:encounters-quality": 0.91, "airflow|dag:encounters-refresh": 0.84}
+  },
+  {
+    "scenario_id": "meridian-bank-competing-risk",
+    "domain": "fintech",
+    "company_shape": "regulated-enterprise",
+    "goal": "Monitor chargeoff rate for the risk committee and distinguish the governed definition from the legacy fiscal definition.",
+    "why_watch": "A regulated bank cannot alert executives from a plausible metric with the wrong population or fiscal calendar.",
+    "watch_for": ["Chargeoff rate moves materially", "The selected definition is governed"],
+    "questions": ["Which definition is approved for the risk committee?", "Does the source population match the committee's scope?"],
+    "principal": {"tenant_id": "meridian-bank", "principal_id": "risk-committee"},
+    "seeds": ["looker|dashboard:risk-committee"],
+    "expected": {"relevant": ["looker|dashboard:risk-committee", "dbt|metric:chargeoff-rate", "dbt|metric:chargeoff-rate-legacy", "trino|table:loan_events"], "recommended": ["looker|dashboard:risk-committee", "dbt|metric:chargeoff-rate", "dbt|metric:chargeoff-rate-legacy", "trino|table:loan_events"], "review": "needs_human_input", "blockers": ["candidate-selection-review", "definition-conflict"]},
+    "resources": [
+      {"adapter": "looker", "resource": "dashboard:risk-committee", "kind": "dashboard", "title": "Risk committee", "description": "Chargeoff and delinquency reporting.", "tenant_id": "meridian-bank", "domain": "risk", "related_refs": ["dbt|metric:chargeoff-rate", "dbt|metric:chargeoff-rate-legacy", "trino|table:loan_events"]},
+      {"adapter": "dbt", "resource": "metric:chargeoff-rate", "kind": "metric", "title": "Chargeoff rate", "description": "Governed chargeoff definition for the risk committee.", "tenant_id": "meridian-bank", "domain": "risk", "related_refs": ["looker|dashboard:risk-committee"]},
+      {"adapter": "dbt", "resource": "metric:chargeoff-rate-legacy", "kind": "metric", "title": "Chargeoff rate", "description": "Legacy fiscal definition retained for comparison.", "tenant_id": "meridian-bank", "domain": "risk", "related_refs": ["looker|dashboard:risk-committee"]},
+      {"adapter": "trino", "resource": "table:loan_events", "kind": "table", "title": "loan_events", "description": "Approved loan event source.", "tenant_id": "meridian-bank", "domain": "warehouse"},
+      {"adapter": "looker", "resource": "dashboard:risk-committee", "kind": "dashboard", "title": "Risk committee", "description": "Other tenant decoy.", "tenant_id": "northstar", "domain": "risk"}
+    ],
+    "jev_scores": {"looker|dashboard:risk-committee": 0.95, "dbt|metric:chargeoff-rate": 0.92, "dbt|metric:chargeoff-rate-legacy": 0.86, "trino|table:loan_events": 0.82}
+  },
+  {
+    "scenario_id": "brightline-retail-dashboardless",
+    "domain": "retail",
+    "company_shape": "public-company",
+    "goal": "Monitor store fulfillment delays across the published Tableau workbook, the approved warehouse query, and the refresh workflow.",
+    "why_watch": "Operations needs one workflow over assets owned by different teams, not another dashboard-specific integration.",
+    "watch_for": ["Fulfillment delay changes", "The warehouse query is current", "The refresh workflow completed"],
+    "questions": ["What changed in store fulfillment?", "Is the evidence complete enough to notify Operations?"],
+    "principal": {"tenant_id": "brightline-retail", "principal_id": "store-ops"},
+    "seeds": ["tableau|workbook:store-fulfillment"],
+    "expected": {"relevant": ["tableau|workbook:store-fulfillment", "trino|query:fulfillment-delay", "airflow|dag:store-fulfillment-refresh"], "recommended": ["tableau|workbook:store-fulfillment", "trino|query:fulfillment-delay", "airflow|dag:store-fulfillment-refresh"], "review": "needs_human_input", "blockers": ["candidate-selection-review"]},
+    "resources": [
+      {"adapter": "tableau", "resource": "workbook:store-fulfillment", "kind": "workbook", "title": "Store fulfillment", "description": "Published fulfillment operations workbook.", "tenant_id": "brightline-retail", "domain": "operations", "related_refs": ["trino|query:fulfillment-delay", "airflow|dag:store-fulfillment-refresh"]},
+      {"adapter": "trino", "resource": "query:fulfillment-delay", "kind": "saved_query", "title": "Fulfillment delay", "description": "Approved store delay query.", "tenant_id": "brightline-retail", "domain": "operations", "related_refs": ["tableau|workbook:store-fulfillment"]},
+      {"adapter": "airflow", "resource": "dag:store-fulfillment-refresh", "kind": "workflow", "title": "Store fulfillment refresh", "description": "Refresh workflow for operations data.", "tenant_id": "brightline-retail", "domain": "data-platform", "related_refs": ["trino|query:fulfillment-delay"]}
+    ],
+    "jev_scores": {"tableau|workbook:store-fulfillment": 0.95, "trino|query:fulfillment-delay": 0.89, "airflow|dag:store-fulfillment-refresh": 0.81}
+  },
+  {
+    "scenario_id": "orbit-logistics-revoked",
+    "domain": "logistics",
+    "company_shape": "enterprise",
+    "goal": "Monitor route exceptions from the operations project, but stop if the project access was revoked after the card was drafted.",
+    "why_watch": "A stale approval must not preserve access to a source that the current operator can no longer use.",
+    "watch_for": ["Route exceptions change"],
+    "questions": ["Does the current principal still have access to the evidence?"],
+    "principal": {"tenant_id": "orbit-logistics", "principal_id": "network-control"},
+    "seeds": ["hex|project:route-ops"],
+    "expected": {"relevant": [], "recommended": [], "review": "needs_human_input", "blockers": ["selection-outside-discovery"], "no_match": true},
+    "resources": [
+      {"adapter": "hex", "resource": "project:route-ops", "kind": "project", "title": "Route operations", "description": "Access revoked after the card draft.", "tenant_id": "orbit-logistics", "domain": "operations", "authorized": false},
+      {"adapter": "hex", "resource": "project:route-ops", "kind": "project", "title": "Route operations", "description": "Other tenant decoy.", "tenant_id": "northstar", "domain": "operations"}
+    ],
+    "jev_scores": {"hex|project:route-ops": 0.95}
+  },
+  {
+    "scenario_id": "cobalt-media-paginated",
+    "domain": "media",
+    "company_shape": "startup",
+    "goal": "Find the canonical subscriber health asset in a large catalog and verify that the first page is not the whole universe.",
+    "why_watch": "A fast search result is useful only if its coverage and continuation state are visible to the reviewer.",
+    "watch_for": ["Subscriber health changes"],
+    "questions": ["Can this catalog result be considered complete?"],
+    "principal": {"tenant_id": "cobalt-media", "principal_id": "subscriber-growth"},
+    "seeds": ["looker|dashboard:subscriber-health"],
+    "expected": {"relevant": ["looker|dashboard:subscriber-health", "trino|table:subscriber_events"], "recommended": ["looker|dashboard:subscriber-health", "trino|table:subscriber_events"], "review": "needs_human_input", "blockers": ["candidate-selection-review", "catalog-incomplete"], "requires_truncation_warning": true, "server_search_only": true},
+    "resources": [
+      {"adapter": "looker", "resource": "dashboard:subscriber-health", "kind": "dashboard", "title": "Subscriber health", "description": "Canonical subscriber health dashboard.", "tenant_id": "cobalt-media", "domain": "growth", "related_refs": ["trino|table:subscriber_events"]},
+      {"adapter": "trino", "resource": "table:subscriber_events", "kind": "table", "title": "subscriber_events", "description": "Subscriber event fact table.", "tenant_id": "cobalt-media", "domain": "warehouse", "related_refs": ["looker|dashboard:subscriber-health"]}
+    ],
+    "catalog_total_count": 50000,
+    "catalog_has_more": true,
+    "jev_scores": {"looker|dashboard:subscriber-health": 0.96, "trino|table:subscriber_events": 0.88}
+  },
+  {
+    "scenario_id": "redwood-manufacturing-no-match",
+    "domain": "manufacturing",
+    "company_shape": "midmarket",
+    "goal": "Monitor a production yield question that is not represented in the currently authorized catalog.",
+    "why_watch": "The system must abstain cleanly instead of turning a vaguely related asset into a false workflow.",
+    "watch_for": ["Production yield changes"],
+    "questions": ["Which authorized source should anchor this goal?"],
+    "principal": {"tenant_id": "redwood-manufacturing", "principal_id": "plant-analytics"},
+    "seeds": [],
+    "expected": {"relevant": [], "recommended": [], "review": "needs_human_input", "blockers": ["anchor-required", "no-authorized-candidate"], "no_match": true},
+    "resources": [
+      {"adapter": "superset", "resource": "dashboard:warehouse-throughput", "kind": "dashboard", "title": "Warehouse throughput", "description": "Unrelated warehouse throughput view.", "tenant_id": "redwood-manufacturing", "domain": "operations"},
+      {"adapter": "trino", "resource": "table:inventory_snapshots", "kind": "table", "title": "inventory_snapshots", "description": "Unrelated inventory snapshots.", "tenant_id": "redwood-manufacturing", "domain": "warehouse"}
+    ],
+    "jev_scores": {"superset|dashboard:warehouse-throughput": 0.12, "trino|table:inventory_snapshots": 0.18}
   }
 ]

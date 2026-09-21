@@ -107,7 +107,7 @@ failure cannot be expressed by the current result types.
 
 The fixture in
 [`evaluations/data/onboarding-scenarios.json`](../evaluations/data/onboarding-scenarios.json)
-covers 24 cases across nine domains and five company shapes. The original
+covers 30 cases across seven fictional tenants, ten domains, and five company shapes. The original
 11-case baseline remains useful for comparison; the expanded cases deliberately
 stress seedless onboarding, non-BI assets, workflow composition, lifecycle
 changes, authorization drift, semantic aliases, quality failures, and very

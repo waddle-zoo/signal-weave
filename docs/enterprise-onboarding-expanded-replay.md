@@ -11,7 +11,8 @@ happy path. This replay adds cases where the user has no seed asset, the best
 evidence is not a dashboard, metadata is sparse, a source is retired or
 revoked, multiple cards form a workflow, and the catalog is too large to scan.
 
-The 24 cases cover nine domains and five company shapes:
+The expanded matrix contains 30 cases across seven fictional tenants, ten
+domains, and five company shapes:
 
 | Pressure | Cases |
 | --- | --- |
@@ -20,6 +21,7 @@ The 24 cases cover nine domains and five company shapes:
 | Meaning and semantic ambiguity | `fintech-definition-ambiguity`, `fiscal-calendar-definition-conflict`, `sparse-lineage-catalog`, `sparse-semantic-alias` |
 | Trust and lifecycle | `hex-published-run-freshness`, `logistics-quality-first`, `quality-failure-blocks-alert`, `stale-source-review`, `retired-source`, `stable-no-change` |
 | Authorization and catalog scale | `tenant-decoy`, `permission-revoked-after-card-draft`, `no-match-abstention`, `large-bounded-catalog`, `paginated-catalog-resume` |
+| Multi-enterprise transfer | `acme-health-quality-seedless`, `meridian-bank-competing-risk`, `brightline-retail-dashboardless`, `orbit-logistics-revoked`, `cobalt-media-paginated`, `redwood-manufacturing-no-match` |
 
 The full fixtures remain in
 [`evaluations/data/onboarding-scenarios.json`](../evaluations/data/onboarding-scenarios.json).
@@ -31,14 +33,13 @@ The fixture replay uses opaque, deterministic Jev-shaped scores to isolate the
 onboarding contract. The live replay changes only the ranking evaluator; hidden
 expected labels are not sent to Jev.
 
-| Measure | Before: fixture | Before: live Jev | After: fixture | After: live Jev |
-| --- | ---: | ---: | ---: | ---: |
-| Scenarios | 24 | 24 | 24 | 24 |
-| Current contract passes | 18 / 24 | 16 / 24 | 23 / 24 | 22 / 24 |
-| Typed readiness gates satisfied | 24 / 24 | 24 / 24 | 24 / 24 | 24 / 24 |
-| Mean required-candidate recall | 1.00 | 1.00 | 1.00 | 1.00 |
-| Exact recommended candidate sets | 23 / 24 | 20 / 24 | 23 / 24 | 22 / 24 |
-| Wrong-tenant candidate leaks | 0 | 0 | 0 | 0 |
+| Measure | Original 24: before hardening | Expanded 30: fixture | Expanded 30: live Jev |
+| --- | ---: | ---: | ---: |
+| Current contract passes | 16 / 24 live | 29 / 30 | 26 / 30 |
+| Typed readiness gates satisfied | 24 / 24 | 30 / 30 | 30 / 30 |
+| Mean required-candidate recall | 1.00 | 1.00 | 1.00 |
+| Exact recommended candidate sets | 20 / 24 live | 29 / 30 | 26 / 30 |
+| Wrong-tenant candidate leaks | 0 | 0 | 0 |
 
 Commands:
 
@@ -55,15 +56,15 @@ The recall result is conditional: the harness supplies a fixture-backed bounded
 candidate page and evaluates ranking over that page. It does not prove that a
 real enterprise catalog will return every relevant asset.
 
-The “before” columns are the replay captured before the typed readiness
-hardening. The “after” columns include typed blockers in the review response and
-a fail-closed approval check. Live Jev is nondeterministic across runs; the
-latest replay is the authoritative “after” row, while the earlier row remains
-useful as a variability observation.
+The original result is the live 24-case replay captured before typed readiness
+hardening. The expanded rows include typed blockers in the review response, a
+fail-closed approval check, and six new tenants. Live Jev is nondeterministic
+across runs; the latest replay is the authoritative expanded row, while
+recommendation-set misses remain visible for review.
 
 ## What the new cases exposed
 
-1. **Retrieval is not the largest remaining risk.** Across the 24 fixture
+1. **Retrieval is not the largest remaining risk.** Across the 30-case
    candidates, live Jev retained every labeled required asset in the bounded
    result and leaked no tenant. That is encouraging for a retrieval layer, but
    it is not enough to approve a workflow.
@@ -104,9 +105,10 @@ coverage. It separately audits:
   branches in production onboarding.
 
 The fixture and latest live Jev runs both pass all three reviewer dimensions.
-The fixture reviewer retains one warning for a competing definition being
-recommended as a review candidate; because the scenario also emits a typed
-`definition-conflict` blocker, this is not a silent-approval failure.
+The fixture reviewer retains one warning for a competing definition, while the
+live reviewer retains one warning for a raw events candidate in the sparse
+lineage case. Both scenarios emit typed review blockers, so neither warning is
+a silent-approval failure.
 
 ## Gaps to close next
 
