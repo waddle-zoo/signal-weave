@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "company": {
+    "id": "northstar-outfitters",
+    "name": "Northstar Outfitters Co.",
+    "base_config": "northstar-company.json",
+    "seed": 20260920,
+    "description": "A small omnichannel company with a shared analytical operating model across commercial, operations, product, and data teams."
+  },
+  "monitor_variants": [
+    "corroborated_notify",
+    "explained_ignore",
+    "contradictory_investigate",
+    "stale_escalation"
+  ],
+  "role_groups": {
+    "enterprise_operations": [
+      {"id": "chief-of-staff", "name": "Chief of Staff", "expertise": "cross-functional operating reviews and decision follow-through"},
+      {"id": "data-governance-lead", "name": "Data Governance Lead", "expertise": "metric definitions, ownership, and evidence trust"},
+      {"id": "platform-reliability-lead", "name": "Platform Reliability Lead", "expertise": "service health, incidents, and technical follow-up"},
+      {"id": "analytics-engineering-lead", "name": "Analytics Engineering Lead", "expertise": "semantic consistency, lineage, and reproducible analysis"},
+      {"id": "business-operations-lead", "name": "Business Operations Lead", "expertise": "cross-domain operating cadence and escalation policy"},
+      {"id": "customer-insights-lead", "name": "Customer Insights Lead", "expertise": "customer behavior, experience signals, and qualitative context"}
+    ],
+    "executives": [
+      {"id": "ceo", "name": "Chief Executive Officer", "expertise": "company-level priorities and material business risk"},
+      {"id": "cfo", "name": "Chief Financial Officer", "expertise": "revenue, margin, cash, and financial operating risk"},
+      {"id": "coo", "name": "Chief Operating Officer", "expertise": "fulfillment, service levels, and operating capacity"},
+      {"id": "cmo", "name": "Chief Marketing Officer", "expertise": "demand, acquisition, conversion, and brand performance"},
+      {"id": "cpo", "name": "Chief Product Officer", "expertise": "product adoption, customer value, and experience"},
+      {"id": "cio", "name": "Chief Information Officer", "expertise": "technology reliability, data trust, and enterprise systems"}
+    ],
+    "communications": [
+      {"id": "exec-briefing-editor", "name": "Executive Briefing Editor", "expertise": "turning evidence receipts into concise decision briefs"},
+      {"id": "revenue-comms-partner", "name": "Revenue Communications Partner", "expertise": "routing commercial signals to the right leadership audience"},
+      {"id": "operations-comms-partner", "name": "Operations Communications Partner", "expertise": "routing service and fulfillment signals to operators"},
+      {"id": "technology-comms-partner", "name": "Technology Communications Partner", "expertise": "routing data and platform trust signals to technical owners"}
+    ]
+  },
+  "automation_policy": {
+    "ignore": "suppress_duplicate_or_explainable_movement",
+    "notify": "shadow_then_push_to_approved_owner",
+    "investigate": "create_human_review_queue_with_evidence",
+    "escalate": "route_data_or_operational_trust_issue_to_owner"
+  }
+}

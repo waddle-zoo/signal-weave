@@ -90,6 +90,17 @@ contract, not a production accuracy claim. Supplying `--openai-dotenv` enables
 the optional embedding-plus-reasoning baseline. Only normalized aggregates are
 sent to external providers; raw seed rows are not.
 
+For the organization-level Northstar case study—40 role agents, 48 workflows,
+and live Jev-backed routing across all 12 domains—see
+[`northstar-corporation-trial.md`](northstar-corporation-trial.md) and run:
+
+```bash
+TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
+PYTHONPATH=src:. \
+.venv/bin/python -m evaluations.northstar_corporation_trial \
+  --evaluator jev
+```
+
 Unit tests use injected doubles and do not replace live Jev or Superset proofs.
 The heterogeneous contract tests combine multiple source shapes without
 requiring those services to be installed. The connector-neutral artifact test
