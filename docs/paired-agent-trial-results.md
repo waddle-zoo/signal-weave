@@ -13,7 +13,8 @@ has the same raw chart, source, and query tools for verification.
 - 7 analytical workflow types;
 - 4 repetitions per type;
 - 28 paired cases per replay, 56 agent runs;
-- two independent randomized replays with different seeds;
+- three independent randomized replays with different seeds: two pooled quality
+  replays and one timing-corrected replay reported separately;
 - same `gpt-5.6-luna` model in both arms;
 - identical cards, cached charts, authorized source catalog, tenant, principal,
   authorization scope, snapshot version, tool submission schema, and query
