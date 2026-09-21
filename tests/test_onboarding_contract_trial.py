@@ -16,6 +16,7 @@ from signalweave.models import (
     ResourceMatch,
     SourceRef,
 )
+from signalweave.onboarding import InsightAuthoringService
 
 CASES = Path(__file__).parents[1] / "evaluations" / "data" / "onboarding-scenarios.json"
 
@@ -131,6 +132,49 @@ def test_missing_principal_is_a_hard_readiness_block():
     assert "principal-required" in readiness.blocker_codes
     assert "anchor-required" in readiness.blocker_codes
     assert "intent-detail-required" in readiness.blocker_codes
+
+
+def test_production_onboarding_review_blocks_missing_principal_boundary():
+    card = InsightCard(
+        id="card-production-principal",
+        title="Principal boundary",
+        what_to_watch="Revenue movement",
+        why_watch="Decide whether Finance should act.",
+        watch_for=["Revenue is materially down."],
+        sources=[
+            SourceRef(
+                key="revenue",
+                adapter="looker",
+                resource="dashboard:revenue",
+                label="Revenue",
+            )
+        ],
+    )
+    discovery = ResourceDiscovery(
+        goal="Revenue movement",
+        matches=[
+            ResourceMatch(
+                ref="looker|dashboard:revenue",
+                adapter="looker",
+                resource="dashboard:revenue",
+                kind="dashboard",
+                title="Revenue",
+                recommended=True,
+                relevance=0.95,
+                contract=ResourceContract(tenant_id="northstar"),
+            )
+        ],
+        candidate_count=1,
+        candidate_limit=10,
+        evaluator="test-jev",
+    )
+
+    review = InsightAuthoringService.build_onboarding_review(card, discovery)
+
+    assert review.readiness_status == "blocked"
+    assert review.principal_id is None
+    assert review.authorization_evidence == "not-provided"
+    assert any(blocker.code.value == "principal-required" for blocker in review.blockers)
 
 
 def test_readiness_defense_in_depth_blocks_a_post_discovery_permission_drift():

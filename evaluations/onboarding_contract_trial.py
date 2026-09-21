@@ -20,6 +20,7 @@ from typing import Any
 from signalweave.models import (
     CatalogSearchPage,
     InsightCard,
+    PrincipalContext,
     ResourceContract,
     ResourceDescriptor,
     ResourceSnapshot,
@@ -245,6 +246,10 @@ async def run_scenario(
         engine=SimpleNamespace(judger=active_judger),
         max_candidates=40,
         recommendation_threshold=0.60,
+        principal=PrincipalContext(
+            principal_id=scenario["principal"]["principal_id"],
+            tenant_id=tenant_id,
+        ),
     )
     discovery = await service.discover(scenario["goal"], limit=10)
 

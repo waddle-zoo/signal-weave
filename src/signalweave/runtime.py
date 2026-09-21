@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .engine import InsightEngine
-from .models import ResourceDescriptor
+from .models import PrincipalContext, ResourceDescriptor
 from .sources import SourceAdapter, SourceRegistry
 from .store import (
     DecisionReceiptStore,
@@ -33,6 +33,7 @@ class Runtime:
     engine: InsightEngine
     metric_query_store: MetricQueryCardStore | None = None
     decision_receipts: DecisionReceiptStore | None = None
+    principal: PrincipalContext | None = None
 
 
 def build_runtime(
@@ -71,6 +72,11 @@ def build_runtime(
             )
         )
     tenant_id = os.getenv("SIGNALWEAVE_TENANT_ID")
+    principal_id = os.getenv("SIGNALWEAVE_PRINCIPAL_ID")
+    if bool(tenant_id) != bool(principal_id):
+        raise RuntimeError(
+            "SIGNALWEAVE_TENANT_ID and SIGNALWEAVE_PRINCIPAL_ID must be configured together"
+        )
     registry = SourceRegistry(
         configured_adapters,
         authorized_tenants=[tenant_id] if tenant_id else None,
@@ -123,4 +129,9 @@ def build_runtime(
         engine=InsightEngine(judger=judger, registry=registry),
         metric_query_store=metric_query_store,
         decision_receipts=decision_receipts,
+        principal=(
+            PrincipalContext(principal_id=principal_id, tenant_id=tenant_id)
+            if principal_id and tenant_id
+            else None
+        ),
     )

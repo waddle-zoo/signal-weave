@@ -31,6 +31,16 @@ def test_runtime_requires_a_source_adapter_after_jev_credentials(monkeypatch):
         build_runtime()
 
 
+def test_runtime_requires_principal_with_tenant_scope(monkeypatch):
+    monkeypatch.setenv("TYPESAFE_API_KEY", "test-key")
+    monkeypatch.delenv("TYPESAFE_API_KEY_FILE", raising=False)
+    monkeypatch.setenv("SIGNALWEAVE_TENANT_ID", "acme")
+    monkeypatch.delenv("SIGNALWEAVE_PRINCIPAL_ID", raising=False)
+
+    with pytest.raises(RuntimeError, match="must be configured together"):
+        build_runtime(adapters=[])
+
+
 def test_runtime_accepts_an_embedded_non_superset_adapter(monkeypatch, tmp_path):
     class InternalArtifacts:
         name = "internal-analytics"

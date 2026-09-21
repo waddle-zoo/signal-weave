@@ -118,6 +118,15 @@ class ResourceContract(BaseModel):
     authorized: bool = True
 
 
+class PrincipalContext(BaseModel):
+    """Deployment-authenticated identity used to scope onboarding evidence."""
+
+    principal_id: str = Field(min_length=1, max_length=240)
+    tenant_id: str = Field(min_length=1, max_length=160)
+    scopes: list[str] = Field(default_factory=list, max_length=100)
+    authorization_source: str = Field(default="deployment", max_length=160)
+
+
 class MetricQueryPlan(BaseModel):
     """A fully resolved query plan made only from an approved metric definition."""
 
@@ -343,6 +352,7 @@ class OnboardingBlockerCode(StrEnum):
     """Stable codes for machine-readable onboarding questions."""
 
     ANCHOR_REQUIRED = "anchor-required"
+    PRINCIPAL_REQUIRED = "principal-required"
     NO_AUTHORIZED_CANDIDATE = "no-authorized-candidate"
     UNAUTHORIZED_CANDIDATE = "unauthorized-candidate"
     SELECTION_OUTSIDE_DISCOVERY = "selection-outside-discovery"
@@ -374,6 +384,9 @@ class InsightCardOnboardingReview(BaseModel):
         "ready_for_approval"
     )
     blockers: list[OnboardingBlocker] = Field(default_factory=list, max_length=50)
+    principal_id: str | None = Field(default=None, max_length=240)
+    principal_tenant: str | None = Field(default=None, max_length=160)
+    authorization_evidence: str = Field(default="not-provided", max_length=240)
     selected_source_refs: list[str] = Field(default_factory=list, max_length=200)
     recommended_source_refs: list[str] = Field(default_factory=list, max_length=200)
     missing_recommended_refs: list[str] = Field(default_factory=list, max_length=200)

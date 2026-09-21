@@ -114,8 +114,8 @@ The remaining implementation slice should stay narrow:
 
 - return role-aware recommendations (`primary`, `corroborates`, `diagnostic`,
   `quality`, `owner`) with a reason and source provenance;
-- carry an explicit caller principal and authorization evidence through the
-  production MCP review contract, not only the evaluation fixtures;
+- replace the deployment-scoped principal with request-scoped identity/OAuth
+  evidence when the service is used by a shared multi-tenant gateway;
 - carry a discovery receipt containing principal, cursor/version, candidate set,
   Jev evaluator, and card version into later runs;
 - add time-split, operator-labeled cases rather than inflating synthetic

@@ -102,7 +102,7 @@ def audit_matrix(
                 + ", ".join(unexpected_recommendations),
                 scenario_id=result.scenario_id,
                 severity=(
-                    "warning" if "definition-conflict" in expected.get("blockers", []) else "error"
+                    "warning" if result.readiness_status != "ready_for_approval" else "error"
                 ),
             )
         if expected.get("blockers") and result.readiness_status == "ready_for_approval":

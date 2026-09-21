@@ -57,7 +57,9 @@ def _evaluation_fingerprint(
 
 def create_mcp(runtime: Runtime | None = None) -> FastMCP:
     runtime = runtime or build_runtime()
-    authoring = InsightAuthoringService(runtime.sources, runtime.engine)
+    authoring = InsightAuthoringService(
+        runtime.sources, runtime.engine, principal=runtime.principal
+    )
     metric_query_store = runtime.metric_query_store or JsonMetricQueryCardStore(
         os.getenv("METRIC_QUERY_CARD_STORE", "data/metric-query-cards.json")
     )

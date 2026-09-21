@@ -10,6 +10,7 @@ from signalweave.models import (
     InsightResult,
     Observation,
     Outcome,
+    PrincipalContext,
     ResourceContract,
     ResourceDescriptor,
     ResourceSnapshot,
@@ -167,7 +168,7 @@ class AmbiguousCatalogJevDouble(OnboardingJevDouble):
 
 
 def make_server(tmp_path, judger=None, *, sqlite=False, catalog=None):
-    registry = SourceRegistry([catalog or SupersetCatalogDouble()])
+    registry = SourceRegistry([catalog or SupersetCatalogDouble()], authorized_tenants=["default"])
     engine = InsightEngine(judger or OnboardingJevDouble(), registry=registry)
     card_store = (
         SQLiteInsightCardStore(tmp_path / "signalweave.db")
@@ -182,6 +183,7 @@ def make_server(tmp_path, judger=None, *, sqlite=False, catalog=None):
             decision_receipts=(
                 SQLiteDecisionReceiptStore(tmp_path / "signalweave.db") if sqlite else None
             ),
+            principal=PrincipalContext(principal_id="test-principal", tenant_id="default"),
         )
     )
 
@@ -237,6 +239,8 @@ async def test_generic_card_flow_discovers_proposes_previews_and_requires_approv
         "chart_ids": ["62", "64"]
     }
     assert proposal["proposal"]["onboarding_review"]["status"] == "ready_for_approval"
+    assert proposal["proposal"]["onboarding_review"]["principal_id"] == "test-principal"
+    assert proposal["proposal"]["onboarding_review"]["principal_tenant"] == "default"
     assert proposal["proposal"]["onboarding_review"]["source_candidates"][0]["selected"] is True
     assert proposal["proposal"]["setup_questions"]
 

@@ -18,6 +18,7 @@ from .models import (
     OnboardingBlockerCode,
     OnboardingBlockerSeverity,
     OnboardingSourceReview,
+    PrincipalContext,
     ResourceDescriptor,
     ResourceDiscovery,
     ResourceMatch,
@@ -73,6 +74,7 @@ class InsightAuthoringService:
     max_candidates: int = 40
     recommendation_threshold: float = 0.60
     related_source_limit: int = 6
+    principal: PrincipalContext | None = None
 
     @staticmethod
     def _source_reason(match: ResourceMatch) -> str:
@@ -94,7 +96,11 @@ class InsightAuthoringService:
 
     @classmethod
     def build_onboarding_review(
-        cls, card: InsightCard, discovery: ResourceDiscovery
+        cls,
+        card: InsightCard,
+        discovery: ResourceDiscovery,
+        *,
+        principal: PrincipalContext | None = None,
     ) -> InsightCardOnboardingReview:
         selected_refs = {
             resource_ref(
@@ -163,6 +169,33 @@ class InsightAuthoringService:
                     question=question,
                     refs=sorted(set(refs or [])),
                 )
+            )
+
+        principal_tenant = principal.tenant_id if principal else discovery.authorized_tenant
+        principal_id = principal.principal_id if principal else None
+        authorization_evidence = (
+            principal.authorization_source if principal else "catalog-tenant-filter"
+            if discovery.authorized_tenant
+            else "not-provided"
+        )
+        if principal is None and discovery.authorized_tenant is None:
+            add_blocker(
+                OnboardingBlockerCode.PRINCIPAL_REQUIRED,
+                OnboardingBlockerSeverity.BLOCK,
+                "authorization",
+                "The onboarding request has no authenticated principal or tenant boundary.",
+                "Provide an authenticated principal and tenant scope before approval.",
+            )
+        elif principal is not None and discovery.authorized_tenant not in {
+            None,
+            principal.tenant_id,
+        }:
+            add_blocker(
+                OnboardingBlockerCode.UNAUTHORIZED_CANDIDATE,
+                OnboardingBlockerSeverity.BLOCK,
+                "authorization",
+                "The discovery tenant does not match the authenticated principal tenant.",
+                "Re-run discovery with the authenticated principal's tenant scope.",
             )
 
         if not card.sources:
@@ -339,6 +372,9 @@ class InsightAuthoringService:
             status="needs_human_input" if questions else "ready_for_approval",
             readiness_status=readiness_status,
             blockers=blockers,
+            principal_id=principal_id,
+            principal_tenant=principal_tenant,
+            authorization_evidence=authorization_evidence,
             selected_source_refs=sorted(selected_refs),
             recommended_source_refs=sorted(recommended_refs),
             missing_recommended_refs=missing_recommended,
@@ -360,7 +396,7 @@ class InsightAuthoringService:
             card.what_to_watch, card.why_watch, card.watch_for, card.questions
         )
         discovery = await self.discover(goal, adapter=adapter, limit=limit)
-        return self.build_onboarding_review(card, discovery)
+        return self.build_onboarding_review(card, discovery, principal=self.principal)
 
     async def discover(
         self,
@@ -517,7 +553,7 @@ class InsightAuthoringService:
             investigation_threshold=investigation_threshold,
         )
         plan = await self.engine.compile(card)
-        onboarding_review = self.build_onboarding_review(card, discovery)
+        onboarding_review = self.build_onboarding_review(card, discovery, principal=self.principal)
         setup_questions: list[str] = list(onboarding_review.questions)
         if plan.comparison_windows:
             setup_questions.append(
