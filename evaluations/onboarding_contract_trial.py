@@ -29,6 +29,11 @@ from signalweave.onboarding import InsightAuthoringService
 from signalweave.retrieval import resource_ref
 from signalweave.sources import SourceRegistry
 
+try:
+    from evaluations.onboarding_readiness import assess_readiness
+except ModuleNotFoundError:  # Running the file directly from the evaluations directory.
+    from onboarding_readiness import assess_readiness
+
 DEFAULT_CASES = Path(__file__).parent / "data" / "onboarding-scenarios.json"
 
 
@@ -148,6 +153,12 @@ class ScenarioResult:
     warnings: list[str]
     failures: list[str]
     passed: bool
+    readiness_status: str
+    readiness_codes: list[str]
+    expected_readiness_codes: list[str]
+    missing_readiness_codes: list[str]
+    unexpected_readiness_codes: list[str]
+    readiness_passed: bool
 
     def as_json(self) -> dict[str, Any]:
         return {
@@ -171,6 +182,12 @@ class ScenarioResult:
             "warnings": self.warnings,
             "failures": self.failures,
             "passed": self.passed,
+            "readiness_status": self.readiness_status,
+            "readiness_codes": self.readiness_codes,
+            "expected_readiness_codes": self.expected_readiness_codes,
+            "missing_readiness_codes": self.missing_readiness_codes,
+            "unexpected_readiness_codes": self.unexpected_readiness_codes,
+            "readiness_passed": self.readiness_passed,
         }
 
 
@@ -236,6 +253,12 @@ async def run_scenario(scenario: dict[str, Any]) -> ScenarioResult:
         sources=[_source_ref(ref, descriptors) for ref in seed_refs],
     )
     review = InsightAuthoringService.build_onboarding_review(card, discovery)
+    readiness = assess_readiness(
+        card,
+        discovery,
+        review,
+        principal_tenant=tenant_id,
+    )
 
     returned_refs = [match.ref for match in discovery.matches]
     recommended_refs = [match.ref for match in discovery.matches if match.recommended]
@@ -279,6 +302,13 @@ async def run_scenario(scenario: dict[str, Any]) -> ScenarioResult:
         failures.append("catalog truncation is not visible")
     if expected.get("forbid_tenant_leaks") and tenant_leaks:
         failures.append("tenant isolation failed")
+    expected_readiness_codes = set(expected.get("blockers", []))
+    readiness_codes = set(readiness.blocker_codes)
+    missing_readiness_codes = sorted(expected_readiness_codes - readiness_codes)
+    unexpected_readiness_codes = sorted(
+        readiness_codes - expected_readiness_codes - {"delivery-policy-missing"}
+    )
+    readiness_passed = not missing_readiness_codes and not unexpected_readiness_codes
     return ScenarioResult(
         scenario_id=scenario["scenario_id"],
         domain=scenario["domain"],
@@ -300,6 +330,12 @@ async def run_scenario(scenario: dict[str, Any]) -> ScenarioResult:
         warnings=discovery.warnings + review.warnings,
         failures=failures,
         passed=not failures,
+        readiness_status=readiness.status.value,
+        readiness_codes=sorted(readiness_codes),
+        expected_readiness_codes=sorted(expected_readiness_codes),
+        missing_readiness_codes=missing_readiness_codes,
+        unexpected_readiness_codes=unexpected_readiness_codes,
+        readiness_passed=readiness_passed,
     )
 
 
@@ -314,6 +350,7 @@ async def run_trial(path: Path = DEFAULT_CASES) -> list[ScenarioResult]:
 
 def render_markdown(results: list[ScenarioResult]) -> str:
     passed = sum(result.passed for result in results)
+    readiness_passed = sum(result.readiness_passed for result in results)
     recall = sum(result.relevant_recall for result in results) / len(results)
     exact_recommendations = sum(
         set(result.recommended_refs) == set(result.expected_recommended_refs) for result in results
@@ -325,12 +362,13 @@ def render_markdown(results: list[ScenarioResult]) -> str:
         "",
         f"- Scenarios: {len(results)}",
         f"- Contract passes: {passed}/{len(results)}",
+        f"- Prototype readiness gates satisfied: {readiness_passed}/{len(results)}",
         f"- Mean required-candidate recall: {recall:.2f}",
         f"- Exact recommended sets: {exact_recommendations}/{len(results)}",
         f"- Wrong-tenant candidate leaks: {sum(bool(result.tenant_leaks) for result in results)}",
         "",
-        "| Scenario | Domain | Recall | Recommended | Review | Result | Failures |",
-        "| --- | --- | ---: | --- | --- | --- | --- |",
+        "| Scenario | Domain | Recall | Recommended | Current review | Prototype readiness | Result | Failures |",
+        "| --- | --- | ---: | --- | --- | --- | --- | --- |",
     ]
     for result in results:
         recommendation = f"{result.recommended_recall:.2f}/{result.recommended_precision:.2f}"
@@ -338,6 +376,7 @@ def render_markdown(results: list[ScenarioResult]) -> str:
         lines.append(
             f"| {result.scenario_id} | {result.domain} | {result.relevant_recall:.2f} | "
             f"{recommendation} | {result.review_status} | "
+            f"{result.readiness_status} ({','.join(result.readiness_codes) or 'none'}) | "
             f"{'PASS' if result.passed else 'FAIL'} | {failures} |"
         )
     return "\n".join(lines) + "\n"
