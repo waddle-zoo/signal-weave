@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "name": "northstar-mass-analytical-insights",
+  "population": 10000,
+  "jev_sample_per_scenario": 2,
+  "cost_model": {
+    "trino_query_units": 100.0,
+    "general_agent_units": 5.0,
+    "jev_units": 1.0,
+    "trino_query_seconds": 180.0,
+    "general_agent_seconds": 2.5,
+    "jev_seconds": 0.75,
+    "trino_concurrency": 32,
+    "general_agent_concurrency": 64,
+    "jev_concurrency": 64,
+    "signalweave_query_size_multiplier": 1.4
+  },
+  "scenarios": [
+    {
+      "id": "stable_cache",
+      "label": "Stable cached dashboard",
+      "count": 3500,
+      "expected_path": "reuse",
+      "expected_outcome": "ignore",
+      "baseline_queries_per_card": 0,
+      "signalweave_query_groups": 0,
+      "signalweave_agent_followup": 0,
+      "cached_state": "Fresh cached observations match the approved baseline and show no meaningful movement."
+    },
+    {
+      "id": "explainable_change",
+      "label": "Explainable movement",
+      "count": 1800,
+      "expected_path": "reuse",
+      "expected_outcome": "ignore",
+      "baseline_queries_per_card": 1,
+      "signalweave_query_groups": 0,
+      "signalweave_agent_followup": 0,
+      "cached_state": "A material movement is present, but the approved seasonal or operating context already explains it."
+    },
+    {
+      "id": "actionable_change",
+      "label": "Corroborated actionable movement",
+      "count": 1500,
+      "expected_path": "reuse",
+      "expected_outcome": "notify",
+      "baseline_queries_per_card": 2,
+      "signalweave_query_groups": 0,
+      "signalweave_agent_followup": 1,
+      "cached_state": "A material movement is corroborated by fresh related signals and the cached evidence supports a notification."
+    },
+    {
+      "id": "ambiguous_root_cause",
+      "label": "Ambiguous movement requiring diagnosis",
+      "count": 1500,
+      "expected_path": "query",
+      "expected_outcome": "investigate",
+      "baseline_queries_per_card": 3,
+      "signalweave_query_groups": 60,
+      "signalweave_agent_followup": 1,
+      "group_size": 25,
+      "cached_state": "A material movement is real, but the cached evidence does not identify the likely driver. A bounded diagnostic query could explain it."
+    },
+    {
+      "id": "freshness_failure",
+      "label": "Stale or failed source",
+      "count": 800,
+      "expected_path": "escalate",
+      "expected_outcome": "escalate",
+      "baseline_queries_per_card": 1,
+      "signalweave_query_groups": 0,
+      "signalweave_agent_followup": 1,
+      "cached_state": "The source is stale or failed its freshness contract, so business interpretation is unsafe."
+    },
+    {
+      "id": "definition_conflict",
+      "label": "Metric definition or grain conflict",
+      "count": 600,
+      "expected_path": "query",
+      "expected_outcome": "investigate",
+      "baseline_queries_per_card": 2,
+      "signalweave_query_groups": 12,
+      "signalweave_agent_followup": 1,
+      "group_size": 50,
+      "cached_state": "Two related charts disagree on population or grain. A governed definition and bounded quality query are needed before action."
+    },
+    {
+      "id": "cross_card_cluster",
+      "label": "Cross-card diagnostic cluster",
+      "count": 300,
+      "expected_path": "query",
+      "expected_outcome": "investigate",
+      "baseline_queries_per_card": 2,
+      "signalweave_query_groups": 10,
+      "signalweave_agent_followup": 1,
+      "group_size": 30,
+      "cached_state": "Several cards share a suspected driver. One shared diagnostic query can serve the cluster instead of each agent exploring independently."
+    }
+  ]
+}

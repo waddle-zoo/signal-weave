@@ -101,6 +101,10 @@ PYTHONPATH=src:. \
   --evaluator jev
 ```
 
+For the mass analytical insights workload—cached dashboard evidence, expensive
+Trino follow-up queries, query deduplication, and general-agent workload
+comparison—see [`mass-analytical-trial.md`](mass-analytical-trial.md).
+
 Unit tests use injected doubles and do not replace live Jev or Superset proofs.
 The heterogeneous contract tests combine multiple source shapes without
 requiring those services to be installed. The connector-neutral artifact test
