@@ -14,6 +14,9 @@ from .models import (
     InsightCardOnboardingReview,
     InsightCardProposal,
     InvestigationMode,
+    OnboardingBlocker,
+    OnboardingBlockerCode,
+    OnboardingBlockerSeverity,
     OnboardingSourceReview,
     ResourceDescriptor,
     ResourceDiscovery,
@@ -141,11 +144,48 @@ class InsightAuthoringService:
         ]
         questions: list[str] = []
         warnings: list[str] = []
+        blockers: list[OnboardingBlocker] = []
+
+        def add_blocker(
+            code: OnboardingBlockerCode,
+            severity: OnboardingBlockerSeverity,
+            layer: str,
+            message: str,
+            question: str,
+            refs: list[str] | None = None,
+        ) -> None:
+            blockers.append(
+                OnboardingBlocker(
+                    code=code,
+                    severity=severity,
+                    layer=layer,
+                    message=message,
+                    question=question,
+                    refs=sorted(set(refs or [])),
+                )
+            )
+
         if not card.sources:
-            questions.append("Select at least one authorized source before approval.")
+            question = "Select at least one authorized source before approval."
+            questions.append(question)
+            add_blocker(
+                OnboardingBlockerCode.ANCHOR_REQUIRED,
+                OnboardingBlockerSeverity.BLOCK,
+                "evidence",
+                "The card has no human-approved anchor source.",
+                question,
+            )
         if not card.watch_for and not card.questions:
-            questions.append(
+            question = (
                 "Add at least one concrete thing to look for or one question the evidence should answer."
+            )
+            questions.append(question)
+            add_blocker(
+                OnboardingBlockerCode.INTENT_DETAIL_REQUIRED,
+                OnboardingBlockerSeverity.REVIEW,
+                "human-intent",
+                "The card does not describe a concrete watch-out or question to answer.",
+                question,
             )
         if missing_recommended:
             labels = [
@@ -153,32 +193,152 @@ class InsightAuthoringService:
                 for match in discovery.matches
                 if match.ref in missing_recommended
             ]
-            questions.append(
+            question = (
                 "Review the suggested sources before approval; the draft omitted: "
                 + ", ".join(labels)
                 + "."
             )
+            # Expand mode is an explicit request for caller-owned dynamic
+            # related-source retrieval. Fixed cards must resolve proposed scope.
+            if card.retrieval_mode == RetrievalMode.FIXED:
+                questions.append(question)
+                add_blocker(
+                    OnboardingBlockerCode.CANDIDATE_SELECTION_REVIEW,
+                    OnboardingBlockerSeverity.REVIEW,
+                    "human-intent",
+                    "Jev found related candidates that the fixed card has not accepted.",
+                    question,
+                    missing_recommended,
+                )
+            else:
+                warnings.append(
+                    "Expand mode will inspect related Jev-recommended sources at run time; "
+                    "the caller owns the dynamic-source policy."
+                )
         if selected_outside:
-            questions.append(
+            question = (
                 "Confirm the explicitly selected source(s) outside this bounded candidate set: "
                 + ", ".join(selected_outside)
                 + "."
             )
+            questions.append(question)
+            add_blocker(
+                OnboardingBlockerCode.SELECTION_OUTSIDE_DISCOVERY,
+                OnboardingBlockerSeverity.BLOCK,
+                "retrieval",
+                "A selected source was not present in the authorized candidate set.",
+                question,
+                selected_outside,
+            )
         if ambiguous_groups:
-            questions.append(
-                "Disambiguate repeated catalog candidates before approval using owner, lineage, freshness, or relationship metadata."
+            question = (
+                "Disambiguate repeated catalog candidates before approval using owner, "
+                "lineage, freshness, or relationship metadata."
+            )
+            questions.append(question)
+            add_blocker(
+                OnboardingBlockerCode.DEFINITION_CONFLICT,
+                OnboardingBlockerSeverity.REVIEW,
+                "meaning",
+                "Multiple candidates share a visible identity and may define different things.",
+                question,
+                [ref for refs in ambiguous_groups for ref in refs],
             )
         if discovery.truncated:
+            question = (
+                "Confirm the catalog search scope or provide another seed before approval; "
+                "an omitted source is not proof that the catalog lacks it."
+            )
+            questions.append(question)
             warnings.append(
                 "Discovery was bounded; an omitted source is not proof that the catalog lacks it."
             )
-        if discovery.no_match:
-            warnings.append(
-                "No candidate cleared the Jev relevance threshold; source selection needs explicit human confirmation."
+            add_blocker(
+                OnboardingBlockerCode.CATALOG_INCOMPLETE,
+                OnboardingBlockerSeverity.REVIEW,
+                "retrieval",
+                "The candidate catalog is bounded or paginated.",
+                question,
             )
+        if discovery.no_match:
+            warning = (
+                "No candidate cleared the Jev relevance threshold; source selection needs "
+                "explicit human confirmation."
+            )
+            warnings.append(warning)
+            if not card.sources:
+                add_blocker(
+                    OnboardingBlockerCode.NO_AUTHORIZED_CANDIDATE,
+                    OnboardingBlockerSeverity.BLOCK,
+                    "retrieval",
+                    "No authorized candidate cleared the Jev relevance threshold.",
+                    "Provide an authorized seed asset or refine the goal.",
+                )
+        unauthorized = [
+            match.ref
+            for match in discovery.matches
+            if not match.contract.authorized
+            or (
+                discovery.authorized_tenant is not None
+                and match.contract.tenant_id != discovery.authorized_tenant
+            )
+        ]
+        if unauthorized:
+            question = "Re-run discovery through the source authorization boundary before approval."
+            questions.append(question)
+            add_blocker(
+                OnboardingBlockerCode.UNAUTHORIZED_CANDIDATE,
+                OnboardingBlockerSeverity.BLOCK,
+                "authorization",
+                "Discovery contains a candidate outside the caller's authorization boundary.",
+                question,
+                unauthorized,
+            )
+        unhealthy = [
+            match.ref
+            for match in discovery.matches
+            if (match.ref in selected_refs or match.recommended)
+            and match.contract.source_status != "healthy"
+        ]
+        if unhealthy:
+            question = "Confirm the unhealthy source is trustworthy for this run or choose a healthy replacement."
+            questions.append(question)
+            add_blocker(
+                OnboardingBlockerCode.SOURCE_HEALTH_REVIEW,
+                OnboardingBlockerSeverity.REVIEW,
+                "freshness",
+                "A selected or recommended source is stale, failed, ambiguous, or otherwise not healthy.",
+                question,
+                unhealthy,
+            )
+        if not card.delivery_methods:
+            add_blocker(
+                OnboardingBlockerCode.DELIVERY_POLICY_MISSING,
+                OnboardingBlockerSeverity.WARNING,
+                "operations",
+                "No card-owned delivery method is configured.",
+                "Will an external agent or scheduler own delivery for this card?",
+            )
+        severity_order = {
+            OnboardingBlockerSeverity.BLOCK: 2,
+            OnboardingBlockerSeverity.REVIEW: 1,
+            OnboardingBlockerSeverity.WARNING: 0,
+        }
+        highest = max(
+            (severity_order[blocker.severity] for blocker in blockers), default=-1
+        )
+        readiness_status = (
+            "blocked"
+            if highest == 2
+            else "needs_human_review"
+            if highest == 1
+            else "ready_for_approval"
+        )
         return InsightCardOnboardingReview(
             card_id=card.id,
             status="needs_human_input" if questions else "ready_for_approval",
+            readiness_status=readiness_status,
+            blockers=blockers,
             selected_source_refs=sorted(selected_refs),
             recommended_source_refs=sorted(recommended_refs),
             missing_recommended_refs=missing_recommended,

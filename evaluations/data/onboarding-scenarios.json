@@ -58,7 +58,7 @@
   {
     "scenario_id": "fintech-definition-ambiguity",
     "domain": "fintech",
-    "company_shape": "enterprise",
+    "company_shape": "regulated-enterprise",
     "goal": "Monitor monthly net revenue per user type and surface movement only when the governed definition is clear.",
     "why_watch": "Prevent an executive alert based on the wrong revenue population or aggregation.",
     "watch_for": ["Net revenue per user type changes", "Two metric definitions disagree"],
@@ -292,7 +292,7 @@
   {
     "scenario_id": "permission-revoked-after-card-draft",
     "domain": "healthcare",
-    "company_shape": "enterprise",
+    "company_shape": "public-company",
     "goal": "Monitor appointment availability from the clinic dashboard.",
     "why_watch": "The user had access when drafting the card but no longer has access at approval time.",
     "watch_for": ["Appointment availability changes"],

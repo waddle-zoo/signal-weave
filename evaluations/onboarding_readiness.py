@@ -114,6 +114,17 @@ def assess_readiness(
             )
         )
 
+    if not card.watch_for and not card.questions:
+        blockers.append(
+            ReadinessBlocker(
+                code="intent-detail-required",
+                severity=BlockerSeverity.REVIEW,
+                layer="human-intent",
+                message="The card does not describe a concrete watch-out or question to answer.",
+                question="Add at least one concrete thing to look for or one question the evidence should answer.",
+            )
+        )
+
     if discovery.no_match and not card.sources:
         blockers.append(
             ReadinessBlocker(

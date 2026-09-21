@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+from evaluations.onboarding_adversarial_review import audit_matrix
 from evaluations.onboarding_contract_trial import run_scenario, run_trial
 from evaluations.onboarding_readiness import assess_readiness
 from signalweave.models import (
@@ -67,10 +68,9 @@ async def test_large_catalog_uses_server_search_and_exposes_incompleteness():
 
     assert result.candidate_count == 100_000
     assert result.truncated is True
-    # This is an intentionally visible red case: the current review contract
-    # can still approve a selected anchor despite an incomplete catalog.
-    assert result.review_status == "ready_for_approval"
-    assert "human-review gate differs" in result.failures
+    assert result.review_status == "needs_human_input"
+    assert result.passed is True
+    assert result.readiness_status == "needs_human_review"
 
 
 @pytest.mark.asyncio
@@ -82,6 +82,22 @@ async def test_readiness_pattern_catches_expected_human_and_enterprise_blockers(
     assert any("source-health-review" in result.readiness_codes for result in results)
     assert any("catalog-incomplete" in result.readiness_codes for result in results)
     assert any(result.readiness_status == "blocked" for result in results)
+
+
+@pytest.mark.asyncio
+async def test_independent_adversarial_review_passes_scope_and_generalization_gates():
+    scenarios = json.loads(CASES.read_text())
+    report = audit_matrix(scenarios, await run_trial(CASES), evaluator="fixture-jev")
+
+    assert report.passed is True
+    assert not any(
+        finding.reviewer in {"scope", "generalization"} and finding.severity == "error"
+        for finding in report.findings
+    )
+    assert any(
+        finding.reviewer == "correctness" and finding.severity == "warning"
+        for finding in report.findings
+    )
 
 
 def test_missing_principal_is_a_hard_readiness_block():
@@ -114,6 +130,7 @@ def test_missing_principal_is_a_hard_readiness_block():
     assert readiness.status.value == "blocked"
     assert "principal-required" in readiness.blocker_codes
     assert "anchor-required" in readiness.blocker_codes
+    assert "intent-detail-required" in readiness.blocker_codes
 
 
 def test_readiness_defense_in_depth_blocks_a_post_discovery_permission_drift():
@@ -169,7 +186,7 @@ def test_readiness_defense_in_depth_blocks_a_post_discovery_permission_drift():
 
 
 @pytest.mark.asyncio
-async def test_stale_and_truncated_cases_remain_red_in_the_current_review_contract():
+async def test_stale_and_truncated_cases_are_blocked_by_the_hardened_review_contract():
     scenarios = json.loads(CASES.read_text())
     stale = deepcopy(
         next(item for item in scenarios if item["scenario_id"] == "stale-source-review")
@@ -182,7 +199,9 @@ async def test_stale_and_truncated_cases_remain_red_in_the_current_review_contra
 
     assert stale_result.readiness_status == "needs_human_review"
     assert "source-health-review" in stale_result.readiness_codes
-    assert stale_result.passed is False
+    assert stale_result.review_status == "needs_human_input"
+    assert stale_result.passed is True
     assert large_result.readiness_status == "needs_human_review"
     assert "catalog-incomplete" in large_result.readiness_codes
-    assert large_result.passed is False
+    assert large_result.review_status == "needs_human_input"
+    assert large_result.passed is True

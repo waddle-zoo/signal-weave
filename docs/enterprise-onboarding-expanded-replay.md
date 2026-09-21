@@ -25,20 +25,20 @@ The full fixtures remain in
 [`evaluations/data/onboarding-scenarios.json`](../evaluations/data/onboarding-scenarios.json).
 They are data, not production branches or demo logic.
 
-## Results
+## Results before and after the readiness hardening
 
 The fixture replay uses opaque, deterministic Jev-shaped scores to isolate the
 onboarding contract. The live replay changes only the ranking evaluator; hidden
 expected labels are not sent to Jev.
 
-| Measure | Fixture Jev-shaped | Live Jev |
-| --- | ---: | ---: |
-| Scenarios | 24 | 24 |
-| Current contract passes | 18 / 24 | 16 / 24 |
-| Prototype readiness gates satisfied | 24 / 24 | 24 / 24 |
-| Mean required-candidate recall | 1.00 | 1.00 |
-| Exact recommended candidate sets | 23 / 24 | 20 / 24 |
-| Wrong-tenant candidate leaks | 0 | 0 |
+| Measure | Before: fixture | Before: live Jev | After: fixture | After: live Jev |
+| --- | ---: | ---: | ---: | ---: |
+| Scenarios | 24 | 24 | 24 | 24 |
+| Current contract passes | 18 / 24 | 16 / 24 | 23 / 24 | 22 / 24 |
+| Typed readiness gates satisfied | 24 / 24 | 24 / 24 | 24 / 24 | 24 / 24 |
+| Mean required-candidate recall | 1.00 | 1.00 | 1.00 | 1.00 |
+| Exact recommended candidate sets | 23 / 24 | 20 / 24 | 23 / 24 | 22 / 24 |
+| Wrong-tenant candidate leaks | 0 | 0 | 0 | 0 |
 
 Commands:
 
@@ -55,6 +55,12 @@ The recall result is conditional: the harness supplies a fixture-backed bounded
 candidate page and evaluates ranking over that page. It does not prove that a
 real enterprise catalog will return every relevant asset.
 
+The “before” columns are the replay captured before the typed readiness
+hardening. The “after” columns include typed blockers in the review response and
+a fail-closed approval check. Live Jev is nondeterministic across runs; the
+latest replay is the authoritative “after” row, while the earlier row remains
+useful as a variability observation.
+
 ## What the new cases exposed
 
 1. **Retrieval is not the largest remaining risk.** Across the 24 fixture
@@ -68,11 +74,11 @@ real enterprise catalog will return every relevant asset.
    card must show candidate roles, reasons, and omissions so an agent or human
    can accept, reject, or downgrade each one.
 
-3. **The existing review contract is too optimistic.** The current review
-   marked stale, failed, retired, and paginated cases `ready_for_approval` in
-   several permutations. It also cannot independently express a definition
-   conflict. The exploratory readiness assessor classified all 24 cases, which
-   is evidence that these gaps are expressible as code-owned gates.
+3. **The original review contract was too optimistic.** It marked stale,
+   failed, retired, and paginated cases `ready_for_approval` in several
+   permutations. The hardened review now emits typed source-health and
+   catalog-completeness blockers and approval re-runs the review before changing
+   card state. All known unsafe approval cases are now blocked in the matrix.
 
 4. **Seedless onboarding is viable but not approval-free.** A goal can find a
    useful candidate without a seed. The prototype correctly blocks approval
@@ -83,14 +89,33 @@ real enterprise catalog will return every relevant asset.
    checks, catalog assets, and multi-source chains without adding adapter-specific
    branches to the core onboarding service.
 
+## Adversarial review
+
+The independent reviewer is
+[`evaluations/onboarding_adversarial_review.py`](../evaluations/onboarding_adversarial_review.py).
+It does not use the readiness implementation to decide whether the fixture has
+coverage. It separately audits:
+
+- correctness: required-candidate recall, recommendation scope, and explicit
+  blockers for unsafe approval;
+- scope: tenant and authorization isolation plus catalog completeness warnings;
+- generalization: schema coverage, adapter/domain/company-shape diversity,
+  multi-adapter composition, and absence of vendor- or scenario-specific
+  branches in production onboarding.
+
+The fixture and latest live Jev runs both pass all three reviewer dimensions.
+The fixture reviewer retains one warning for a competing definition being
+recommended as a review candidate; because the scenario also emits a typed
+`definition-conflict` blocker, this is not a silent-approval failure.
+
 ## Gaps to close next
 
-The next implementation slice should stay narrow:
+The remaining implementation slice should stay narrow:
 
-- make catalog completeness, source health, authorization drift, and definition
-  conflict first-class approval gates in the onboarding result;
 - return role-aware recommendations (`primary`, `corroborates`, `diagnostic`,
   `quality`, `owner`) with a reason and source provenance;
+- carry an explicit caller principal and authorization evidence through the
+  production MCP review contract, not only the evaluation fixtures;
 - carry a discovery receipt containing principal, cursor/version, candidate set,
   Jev evaluator, and card version into later runs;
 - add time-split, operator-labeled cases rather than inflating synthetic

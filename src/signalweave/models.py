@@ -331,11 +331,49 @@ class OnboardingSourceReview(BaseModel):
     retrieval_signals: list[str] = Field(default_factory=list, max_length=20)
 
 
+class OnboardingBlockerSeverity(StrEnum):
+    """How strongly a typed onboarding condition constrains approval."""
+
+    BLOCK = "block"
+    REVIEW = "review"
+    WARNING = "warning"
+
+
+class OnboardingBlockerCode(StrEnum):
+    """Stable codes for machine-readable onboarding questions."""
+
+    ANCHOR_REQUIRED = "anchor-required"
+    NO_AUTHORIZED_CANDIDATE = "no-authorized-candidate"
+    UNAUTHORIZED_CANDIDATE = "unauthorized-candidate"
+    SELECTION_OUTSIDE_DISCOVERY = "selection-outside-discovery"
+    CANDIDATE_SELECTION_REVIEW = "candidate-selection-review"
+    CATALOG_INCOMPLETE = "catalog-incomplete"
+    SOURCE_HEALTH_REVIEW = "source-health-review"
+    DEFINITION_CONFLICT = "definition-conflict"
+    INTENT_DETAIL_REQUIRED = "intent-detail-required"
+    DELIVERY_POLICY_MISSING = "delivery-policy-missing"
+
+
+class OnboardingBlocker(BaseModel):
+    """One explicit condition a caller must resolve before safe approval."""
+
+    code: OnboardingBlockerCode
+    severity: OnboardingBlockerSeverity
+    layer: str = Field(min_length=1, max_length=80)
+    message: str = Field(min_length=1, max_length=2000)
+    question: str = Field(min_length=1, max_length=2000)
+    refs: list[str] = Field(default_factory=list, max_length=200)
+
+
 class InsightCardOnboardingReview(BaseModel):
     """The confirmation boundary between an agent-drafted card and approval."""
 
     card_id: str
     status: Literal["needs_human_input", "ready_for_approval"]
+    readiness_status: Literal["blocked", "needs_human_review", "ready_for_approval"] = (
+        "ready_for_approval"
+    )
+    blockers: list[OnboardingBlocker] = Field(default_factory=list, max_length=50)
     selected_source_refs: list[str] = Field(default_factory=list, max_length=200)
     recommended_source_refs: list[str] = Field(default_factory=list, max_length=200)
     missing_recommended_refs: list[str] = Field(default_factory=list, max_length=200)

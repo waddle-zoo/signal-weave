@@ -538,6 +538,13 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
         card = runtime.card_store.get_card(card_id)
         if not card.sources:
             raise ValueError("an insight card needs at least one selected source before approval")
+        onboarding_review = await authoring.review(card)
+        if onboarding_review.readiness_status != "ready_for_approval":
+            codes = ", ".join(blocker.code.value for blocker in onboarding_review.blockers)
+            raise ValueError(
+                "insight card is not ready for approval; resolve onboarding blockers: "
+                + (codes or "human review required")
+            )
         if card.compiled_plan is None:
             plan = await runtime.engine.compile(card)
             card = card.model_copy(update={"compiled_plan": plan})
@@ -550,6 +557,7 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
         return {
             "status": approved.status.value,
             "card": approved.model_dump(mode="json"),
+            "onboarding_review": onboarding_review.model_dump(mode="json"),
         }
 
     @mcp.tool()

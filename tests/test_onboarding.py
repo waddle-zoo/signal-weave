@@ -10,6 +10,7 @@ from signalweave.models import (
     InsightResult,
     Observation,
     Outcome,
+    ResourceContract,
     ResourceDescriptor,
     ResourceSnapshot,
 )
@@ -77,6 +78,14 @@ class AmbiguousSupersetCatalogDouble(SupersetCatalogDouble):
     def __init__(self):
         super().__init__()
         self.resources[1] = self.resources[1].model_copy(update={"title": "Growth overview"})
+
+
+class StaleSupersetCatalogDouble(SupersetCatalogDouble):
+    def __init__(self):
+        super().__init__()
+        self.resources[0] = self.resources[0].model_copy(
+            update={"contract": ResourceContract(source_status="stale")}
+        )
 
 
 class OnboardingJevDouble:
@@ -424,7 +433,36 @@ async def test_review_insight_card_surfaces_ambiguous_candidates(tmp_path):
     assert review["review"]["ambiguous_candidate_groups"] == [
         ["superset|dashboard:7", "superset|dashboard:8"]
     ]
+    assert review["review"]["readiness_status"] == "needs_human_review"
+    assert any(
+        blocker["code"] == "definition-conflict"
+        for blocker in review["review"]["blockers"]
+    )
     assert any("Disambiguate" in question for question in review["review"]["questions"])
+
+
+@pytest.mark.asyncio
+async def test_approval_fails_closed_on_source_health_blocker(tmp_path):
+    server = make_server(tmp_path, catalog=StaleSupersetCatalogDouble())
+    drafted = await tool(server, "draft_insight_card")(
+        title="Stale growth source",
+        what_to_watch="Checkout conversion.",
+        why_watch="Decide whether Growth should act.",
+        sources=[
+            {
+                "key": "growth",
+                "adapter": "superset",
+                "resource": "dashboard:7",
+                "label": "Growth overview",
+            }
+        ],
+    )
+
+    card_id = drafted["card"]["id"]
+    review = await tool(server, "review_insight_card")(card_id)
+    assert review["review"]["readiness_status"] == "needs_human_review"
+    with pytest.raises(ValueError, match="source-health-review"):
+        await tool(server, "approve_insight_card")(card_id)
 
 
 @pytest.mark.asyncio
@@ -480,6 +518,7 @@ async def test_dynamic_bundle_keeps_anchors_and_adds_jev_related_sources(tmp_pat
                 "label": "Growth overview",
             }
         ],
+        questions=["What context explains a conversion movement?"],
         retrieval_mode="expand",
         card_id="dynamic-bundle",
     )
@@ -546,6 +585,7 @@ async def test_sqlite_runtime_replays_completed_evaluation_after_restart(tmp_pat
                 "label": "Growth overview",
             }
         ],
+        questions=["Should this run use the latest available snapshot?"],
         card_id="restart-safe",
     )
     await tool(server, "approve_insight_card")("restart-safe")
