@@ -88,6 +88,22 @@ whether the layer can avoid a physical Trino query when cached evidence already
 supports a decision, rather than merely returning a better bundle after the
 agent has already decided to investigate.
 
+A third replay (seed `20260923`) corrected the timing instrumentation so Jev is
+inside the critical path:
+
+| Metric | Agent-only | SignalWeave-mediated |
+| --- | ---: | ---: |
+| Exact decisions | 12 / 28 (42.9%) | 24 / 28 (85.7%) |
+| Unsafe automatic actions | 16 / 28 (57.1%) | 4 / 28 (14.3%) |
+| Median end-to-end latency | 7.38s | 6.89s |
+| P95 end-to-end latency | 10.14s | 9.82s |
+| Logical diagnostic queries | 13 | 24 |
+| Physical query executions | 4 | 5 |
+
+This single timing-corrected replay is encouraging but not enough to establish
+a speed advantage. It shows why the next efficiency test needs real query
+queueing, provider pricing, and a suppression/cache ablation.
+
 The old 10,000-workflow mass-economics report remains a model. These paired
 results do not validate its 99% query-reduction or 96% normalized-cost claims.
 
@@ -97,6 +113,7 @@ The integrity review found:
 
 - replay 1: 28 / 28 complete pairs;
 - replay 2: 27 / 28 complete pairs and one treatment `ReadTimeout`;
+- replay 3 (timing-corrected): 28 / 28 complete pairs;
 - zero silently excluded failures; the timeout remains in the denominator;
 - zero detected model-visible oracle fields;
 - tenant and authorization scope fixed to the same Northstar snapshot; and
@@ -116,6 +133,7 @@ Raw JSON reports and traces are generated under `artifacts/paired-agent-trial/`:
 
 - `report-final2.json` and `trace-final2.jsonl`;
 - `report-replicate2.json` and `trace-replicate2.jsonl`.
+- `report-timed.json` and `trace-timed.jsonl`.
 
 ## Interpretation boundary
 
