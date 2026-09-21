@@ -161,6 +161,7 @@ class ScenarioResult:
     missing_readiness_codes: list[str]
     unexpected_readiness_codes: list[str]
     readiness_passed: bool
+    safe: bool
     evaluator: str
 
     def as_json(self) -> dict[str, Any]:
@@ -191,6 +192,7 @@ class ScenarioResult:
             "missing_readiness_codes": self.missing_readiness_codes,
             "unexpected_readiness_codes": self.unexpected_readiness_codes,
             "readiness_passed": self.readiness_passed,
+            "safe": self.safe,
             "evaluator": self.evaluator,
         }
 
@@ -320,6 +322,25 @@ async def run_scenario(
         readiness_codes - expected_readiness_codes - {"delivery-policy-missing"}
     )
     readiness_passed = not missing_readiness_codes and not unexpected_readiness_codes
+    safe = (
+        relevant_recall == 1.0
+        and not tenant_leaks
+        and review.status == expected.get("review", "needs_human_input")
+        and discovery.no_match == bool(expected.get("no_match", False))
+        and (
+            not expected.get("requires_truncation_warning") or discovery.truncated
+        )
+        and (
+            (
+                bool(expected.get("blockers"))
+                and readiness.status.value != "ready_for_approval"
+            )
+            or (
+                not expected.get("blockers")
+                and readiness.status.value == "ready_for_approval"
+            )
+        )
+    )
     return ScenarioResult(
         scenario_id=scenario["scenario_id"],
         domain=scenario["domain"],
@@ -347,6 +368,7 @@ async def run_scenario(
         missing_readiness_codes=missing_readiness_codes,
         unexpected_readiness_codes=unexpected_readiness_codes,
         readiness_passed=readiness_passed,
+        safe=safe,
         evaluator=evaluator,
     )
 
@@ -367,6 +389,7 @@ async def run_trial(
 def render_markdown(results: list[ScenarioResult]) -> str:
     passed = sum(result.passed for result in results)
     readiness_passed = sum(result.readiness_passed for result in results)
+    safe = sum(result.safe for result in results)
     recall = sum(result.relevant_recall for result in results) / len(results)
     exact_recommendations = sum(
         set(result.recommended_refs) == set(result.expected_recommended_refs) for result in results
@@ -379,12 +402,13 @@ def render_markdown(results: list[ScenarioResult]) -> str:
         f"- Scenarios: {len(results)}",
         f"- Contract passes: {passed}/{len(results)}",
         f"- Prototype readiness gates satisfied: {readiness_passed}/{len(results)}",
+        f"- Safe onboarding outcomes: {safe}/{len(results)}",
         f"- Mean required-candidate recall: {recall:.2f}",
         f"- Exact recommended sets: {exact_recommendations}/{len(results)}",
         f"- Wrong-tenant candidate leaks: {sum(bool(result.tenant_leaks) for result in results)}",
         "",
-        "| Scenario | Domain | Recall | Recommended | Current review | Prototype readiness | Result | Failures |",
-        "| --- | --- | ---: | --- | --- | --- | --- | --- |",
+        "| Scenario | Domain | Recall | Recommended | Current review | Prototype readiness | Safe | Exact result | Failures |",
+        "| --- | --- | ---: | --- | --- | --- | --- | --- | --- |",
     ]
     for result in results:
         recommendation = f"{result.recommended_recall:.2f}/{result.recommended_precision:.2f}"
@@ -393,7 +417,7 @@ def render_markdown(results: list[ScenarioResult]) -> str:
             f"| {result.scenario_id} | {result.domain} | {result.relevant_recall:.2f} | "
             f"{recommendation} | {result.review_status} | "
             f"{result.readiness_status} ({','.join(result.readiness_codes) or 'none'}) | "
-            f"{'PASS' if result.passed else 'FAIL'} | {failures} |"
+            f"{'PASS' if result.safe else 'FAIL'} | {'PASS' if result.passed else 'FAIL'} | {failures} |"
         )
     return "\n".join(lines) + "\n"
 

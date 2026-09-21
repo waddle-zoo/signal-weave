@@ -37,6 +37,7 @@ expected labels are not sent to Jev.
 | --- | ---: | ---: | ---: |
 | Current contract passes | 16 / 24 live | 29 / 30 | 26 / 30 |
 | Typed readiness gates satisfied | 24 / 24 | 30 / 30 | 30 / 30 |
+| Safe onboarding outcomes | — | 30 / 30 | 30 / 30 |
 | Mean required-candidate recall | 1.00 | 1.00 | 1.00 |
 | Exact recommended candidate sets | 20 / 24 live | 29 / 30 | 26 / 30 |
 | Wrong-tenant candidate leaks | 0 | 0 | 0 |
@@ -61,6 +62,12 @@ hardening. The expanded rows include typed blockers in the review response, a
 fail-closed approval check, and six new tenants. Live Jev is nondeterministic
 across runs; the latest replay is the authoritative expanded row, while
 recommendation-set misses remain visible for review.
+
+“Safe onboarding outcome” is the product-level gate: required candidates were
+retained, authorization was clean, completeness warnings were surfaced, and the
+typed readiness status matched the expected human action. “Exact recommended
+candidate set” is a stricter research-label metric; a miss can still be safe
+when the card is visibly blocked for human review.
 
 ## What the new cases exposed
 

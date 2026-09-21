@@ -111,6 +111,12 @@ def audit_matrix(
                 "expected onboarding blockers were silently treated as approval-ready",
                 scenario_id=result.scenario_id,
             )
+        if not result.safe:
+            add(
+                "correctness",
+                "the scenario did not satisfy the safe onboarding outcome gate",
+                scenario_id=result.scenario_id,
+            )
         if expected.get("requires_truncation_warning") and not result.truncated:
             add(
                 "correctness",

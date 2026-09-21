@@ -82,6 +82,7 @@ async def test_readiness_pattern_catches_expected_human_and_enterprise_blockers(
     results = await run_trial(CASES)
 
     assert all(result.readiness_passed for result in results)
+    assert all(result.safe for result in results)
     assert any("definition-conflict" in result.readiness_codes for result in results)
     assert any("source-health-review" in result.readiness_codes for result in results)
     assert any("catalog-incomplete" in result.readiness_codes for result in results)
