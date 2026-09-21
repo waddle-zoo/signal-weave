@@ -49,6 +49,51 @@ def test_query_executor_records_expensive_work_without_sleeping():
     assert executor.calls[0]["fingerprint"]
 
 
+def test_query_ledger_reuses_only_within_the_same_tenant_snapshot_scope():
+    cases = _load_cases(DEFAULT_CASES)
+    first = next(case for case in cases if case["scenario"] == "ambiguous_root_cause")
+    second = next(case for case in cases if case["scenario"] == "ambiguous_root_cause" and case["case_id"] != first["case_id"])
+    ledger = QueryLedger()
+
+    import asyncio
+
+    first_executor = QueryExecutor(first, "baseline", ledger)
+    second_executor = QueryExecutor(second, "baseline", ledger)
+    asyncio.run(first_executor.execute(reason="first request"))
+    asyncio.run(second_executor.execute(reason="same scoped request"))
+
+    assert first_executor.calls[0]["cache_hit"] is False
+    assert second_executor.calls[0]["cache_hit"] is True
+    assert second_executor.calls[0]["bytes_scanned"] == 0
+
+
+def test_failed_inspection_cannot_establish_provenance_and_ignore_is_unsafe():
+    case = next(case for case in _load_cases(DEFAULT_CASES) if case["scenario"] == "freshness_failure")
+    run = {
+        "case_id": case["case_id"],
+        "arm": "baseline",
+        "submission": {
+            "outcome": "ignore",
+            "delivery": "none",
+            "reason": "No movement.",
+            "evidence_refs": ["airflow|dag:signup-refresh"],
+            "query_justified": False,
+            "confidence": 0.9,
+        },
+        "events": [{"tool": "inspect_source", "arguments": {"source_ref": "airflow|dag:signup-refresh"}, "error": True}],
+        "query_calls": [],
+        "tool_calls": 1,
+        "api_requests": 1,
+        "elapsed_ms": 100,
+    }
+
+    scored = score_run(case, run)
+
+    assert scored["provenance_complete"] is False
+    assert scored["exact"] is False
+    assert scored["unsafe_automatic_action"] is True
+
+
 def test_scoring_rejects_unsafe_notification_and_missing_evidence():
     case = next(case for case in _load_cases(DEFAULT_CASES) if case["scenario"] == "freshness_failure")
     run = {

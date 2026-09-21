@@ -38,8 +38,8 @@ def _digest(value: Any) -> str:
     ).hexdigest()[:24]
 
 
-def _load_dotenv_key(path: str | Path | None) -> str:
-    if os.getenv("OPENAI_API_KEY"):
+def _load_dotenv_key(path: str | Path | None, *, prefer_file: bool = False) -> str:
+    if os.getenv("OPENAI_API_KEY") and not prefer_file:
         return str(os.environ["OPENAI_API_KEY"])
     if path:
         for line in Path(path).read_text().splitlines():
@@ -71,6 +71,8 @@ def _load_cases(path: str | Path = DEFAULT_CASES) -> list[dict[str, Any]]:
             shared_input = {
                 "case_id": case_id,
                 "tenant": payload["tenant"],
+                "principal": payload["principal"],
+                "authorization_scope": payload["authorization_scope"],
                 "snapshot_version": payload["snapshot_version"],
                 "card": template["card"],
                 "cached_charts": template["charts"],
@@ -90,6 +92,11 @@ def _load_cases(path: str | Path = DEFAULT_CASES) -> list[dict[str, Any]]:
     if len(cases) != len(payload["templates"]) * int(payload.get("replicates", 1)):
         raise ValueError("paired case expansion did not produce the configured sample")
     return cases
+
+
+def _public_case(case: dict[str, Any]) -> dict[str, Any]:
+    """Return the fixture view allowed to agent/tool execution; omit scorer labels."""
+    return {key: case[key] for key in ("case_id", "scenario", "shared_input", "sources", "query")}
 
 
 class QueryLedger:
@@ -114,6 +121,8 @@ class QueryExecutor:
         fingerprint = _digest(
             {
                 "tenant": self.case["shared_input"]["tenant"],
+                "principal": self.case["shared_input"]["principal"],
+                "authorization_scope": self.case["shared_input"]["authorization_scope"],
                 "snapshot": self.case["shared_input"]["snapshot_version"],
                 "group": query["group"],
             }
@@ -413,6 +422,20 @@ class ResponsesAgent:
                     except Exception as error:  # noqa: BLE001 - agent receives tool failures
                         result = {"error": f"{type(error).__name__}: {error}"}
                     oracle_leaks += sum(field in json.dumps(result, default=str) for field in ORACLE_FIELDS)
+                    successful_source_ref = (
+                        arguments.get("source_ref")
+                        if name == "inspect_source" and isinstance(result.get("source"), dict)
+                        else None
+                    )
+                    result_summary = None
+                    if name == "signalweave_retrieve":
+                        result_summary = {
+                            "path": result.get("path"),
+                            "probabilities": result.get("probabilities"),
+                            "query_cache_hit": (result.get("query") or {}).get("cache_hit")
+                            if isinstance(result.get("query"), dict)
+                            else None,
+                        }
                     events.append(
                         {
                             "turn": turn + 1,
@@ -420,6 +443,8 @@ class ResponsesAgent:
                             "arguments": arguments if "arguments" in locals() else {},
                             "result_digest": _digest(result),
                             "error": "error" in result,
+                            "successful_source_ref": successful_source_ref,
+                            "result_summary": result_summary,
                         }
                     )
                     outputs.append(
@@ -469,19 +494,16 @@ def score_run(case: dict[str, Any], run: dict[str, Any]) -> dict[str, Any]:
     required = set(label["required_evidence"])
     evidence_recall = len(evidence & required) / len(required) if required else 1.0
     query_calls = run.get("query_calls", [])
-    exact = bool(
-        actual_outcome == label["outcome"]
-        and actual_delivery == label["delivery"]
-        and required <= evidence
-        and bool(submission)
-        and (not label["query_required"] or bool(query_calls))
-    )
-    automatic = actual_outcome in {"notify", "escalate"}
-    unsafe = automatic and not exact
+    allowed_refs = {
+        *{chart["id"] for chart in case["shared_input"]["cached_charts"]},
+        *{source["ref"] for source in case["sources"]},
+    }
+    unknown_evidence_refs = evidence - allowed_refs
+    query_justified = bool(submission.get("query_justified"))
     inspected = {
-        event["arguments"].get("source_ref")
+        event.get("successful_source_ref")
         for event in run.get("events", [])
-        if event.get("tool") == "inspect_source"
+        if event.get("successful_source_ref")
     }
     provenance = bool(evidence) and all(
         ref in inspected
@@ -489,6 +511,18 @@ def score_run(case: dict[str, Any], run: dict[str, Any]) -> dict[str, Any]:
         or any(ref in call.get("evidence_refs", []) for call in query_calls)
         for ref in evidence
     )
+    exact = bool(
+        actual_outcome == label["outcome"]
+        and actual_delivery == label["delivery"]
+        and required <= evidence
+        and not unknown_evidence_refs
+        and bool(submission)
+        and provenance
+        and query_justified == bool(query_calls)
+        and (not label["query_required"] or bool(query_calls))
+    )
+    automatic = actual_outcome in {"ignore", "notify", "escalate"}
+    unsafe = automatic and not exact
     return {
         "case_id": case["case_id"],
         "arm": run["arm"],
@@ -510,7 +544,9 @@ def score_run(case: dict[str, Any], run: dict[str, Any]) -> dict[str, Any]:
         "api_requests": run["api_requests"],
         "elapsed_ms": run["elapsed_ms"],
         "submission_present": bool(submission),
+        "unsupported_evidence_refs": sorted(unknown_evidence_refs),
         "oracle_leaks": run.get("oracle_leaks", 0),
+        "jev": run.get("jev", {"requests": 0, "input_tokens": 0, "output_tokens": 0}),
     }
 
 
@@ -561,6 +597,9 @@ def summarize(rows: list[dict[str, Any]], arm: str) -> dict[str, Any]:
         "bytes_scanned": sum(row["bytes_scanned"] for row in selected),
         "cpu_seconds": sum(row["cpu_seconds"] for row in selected),
         "oracle_leaks": sum(row["oracle_leaks"] for row in selected),
+        "jev_requests": sum(row["jev"]["requests"] for row in selected),
+        "jev_input_tokens": sum(row["jev"]["input_tokens"] for row in selected),
+        "jev_output_tokens": sum(row["jev"]["output_tokens"] for row in selected),
     }
 
 
@@ -570,7 +609,7 @@ async def run_trial(args: argparse.Namespace) -> dict[str, Any]:
         cases = cases[: args.limit]
     if not cases:
         raise ValueError("paired trial has no cases")
-    openai_key = _load_dotenv_key(args.dotenv)
+    openai_key = _load_dotenv_key(args.dotenv, prefer_file=args.prefer_dotenv)
     typesafe_key = load_api_key(args.typesafe_key_file)
     if not typesafe_key:
         raise RuntimeError("paired trial requires a TypeSafe API key")
@@ -584,11 +623,12 @@ async def run_trial(args: argparse.Namespace) -> dict[str, Any]:
     async def one(case: dict[str, Any], arm: str) -> dict[str, Any]:
         async with semaphore:
             treatment = arm == "treatment"
+            public_case = _public_case(case)
             retriever = JevRetriever(typesafe_key) if treatment else None
-            executor = QueryExecutor(case, arm, ledgers[arm])
+            executor = QueryExecutor(public_case, arm, ledgers[arm])
             try:
                 return await agent.run(
-                    case,
+                    public_case,
                     arm=arm,
                     treatment=treatment,
                     retriever=retriever,
@@ -606,6 +646,9 @@ async def run_trial(args: argparse.Namespace) -> dict[str, Any]:
                     "input_tokens": 0,
                     "output_tokens": 0,
                     "oracle_leaks": 0,
+                    "shared_input_digest": _digest(case["shared_input"]),
+                    "prompt_digest": _digest(_agent_prompt(public_case, treatment)),
+                    "tool_schema_digest": _digest(_tool_specs(treatment)),
                     "elapsed_ms": 0.0,
                     "query_calls": executor.calls,
                     "jev": {
@@ -627,12 +670,11 @@ async def run_trial(args: argparse.Namespace) -> dict[str, Any]:
         row["query_call_details"] = run.get("query_calls", [])
         row["error"] = run.get("error")
         scored.append(row)
-    rows = [row for row in scored if row["error"] is None]
     failures = [row for row in scored if row["error"] is not None]
     by_case = {case["case_id"]: case for case in cases}
     pairs = []
     for case_id in sorted(by_case):
-        pair = {row["arm"]: row for row in rows if row["case_id"] == case_id}
+        pair = {row["arm"]: row for row in scored if row["case_id"] == case_id}
         if len(pair) != 2:
             continue
         pairs.append(
@@ -656,6 +698,7 @@ async def run_trial(args: argparse.Namespace) -> dict[str, Any]:
         "seed": args.seed,
         "cases": len(cases),
         "paired_cases_scored": len(pairs),
+        "complete_pairs": sum(not any(row.get("error") for row in scored if row["case_id"] == pair["case_id"]) for pair in pairs),
         "input_parity": {
             "same_shared_input_digest_per_case": all(
                 next((run for run in raw_runs if run["case_id"] == case["case_id"] and run["arm"] == "baseline"), {}).get("shared_input_digest")
@@ -722,6 +765,7 @@ def render_report(report: dict[str, Any]) -> str:
         ("P95 end-to-end latency", "p95_elapsed_ms", " ms"),
         ("Mean model/API tool calls", "mean_tool_calls", ""),
         ("Diagnostic query calls", "diagnostic_query_calls", ""),
+        ("Physical query executions", "physical_query_executions", ""),
         ("Bytes scanned", "bytes_scanned", ""),
         ("CPU seconds", "cpu_seconds", ""),
     ]:
@@ -754,6 +798,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--dotenv", type=Path)
     parser.add_argument("--typesafe-key-file", type=Path)
     parser.add_argument("--model", default="gpt-5.6-luna")
+    parser.add_argument("--prefer-dotenv", action="store_true")
     parser.add_argument("--seed", type=int, default=20260921)
     parser.add_argument("--limit", type=int)
     parser.add_argument("--concurrency", type=int, default=2)

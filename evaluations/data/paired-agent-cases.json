@@ -2,6 +2,8 @@
   "schema_version": 1,
   "name": "northstar-paired-agent-retrieval-trial",
   "tenant": "northstar-outfitters",
+  "principal": "growth-monitoring-agent",
+  "authorization_scope": "northstar-outfitters:analytics",
   "snapshot_version": "northstar-analytics-2026-09-20",
   "replicates": 4,
   "shared_context": [
@@ -52,7 +54,7 @@
         {"ref": "trino|table:campaign_calendar", "adapter": "trino", "resource": "table:campaign_calendar", "kind": "table", "title": "Campaign calendar", "description": "Approved campaigns and expected signup lift.", "contract": {"grain": "campaign-day", "freshness": "fresh", "owner": "growth-ops"}, "evidence": "The approved launch campaign is scheduled for this period and predicts a 25 to 35 percent signup lift."},
         {"ref": "airflow|dag:signup-refresh", "adapter": "airflow", "resource": "dag:signup-refresh", "kind": "workflow", "title": "Signup refresh", "description": "Refreshes the signup facts table.", "contract": {"grain": "run", "freshness": "fresh", "owner": "data-platform"}, "evidence": "The latest refresh completed successfully."}
       ],
-      "query": {"group": "growth-seasonality", "bytes_scanned": 0, "cpu_seconds": 0, "evidence_refs": ["superset|dashboard:growth", "trino|table:campaign_calendar"], "finding": "The approved campaign explains the movement; no further query is justified."},
+      "query": {"group": "growth-seasonality", "bytes_scanned": 0, "cpu_seconds": 0, "evidence_refs": ["superset|dashboard:growth", "trino|table:campaign_calendar"], "finding": "Campaign calendar rows for the current period include an approved launch with an expected lift range of 25 to 35 percent."},
       "label": {"outcome": "ignore", "delivery": "none", "required_evidence": ["superset|dashboard:growth", "trino|table:campaign_calendar"], "query_required": false}
     },
     {
@@ -74,8 +76,8 @@
         {"ref": "trino|table:conversion_events", "adapter": "trino", "resource": "table:conversion_events", "kind": "table", "title": "Conversion events", "description": "Conversion events by channel and day.", "contract": {"grain": "event-day", "freshness": "fresh", "owner": "growth-data"}, "evidence": "Conversion events are available by channel and day."},
         {"ref": "slack|channel:growth-leadership", "adapter": "slack", "resource": "channel:growth-leadership", "kind": "delivery", "title": "Growth leadership", "description": "Approved destination for material growth movements.", "contract": {"grain": "message", "freshness": "live", "owner": "growth-leadership"}, "evidence": "The card permits notification to growth leadership."}
       ],
-      "query": {"group": "growth-actionable", "bytes_scanned": 0, "cpu_seconds": 0, "evidence_refs": ["superset|dashboard:growth", "trino|table:conversion_events", "slack|channel:growth-leadership"], "finding": "The movement is corroborated by independent conversion events; notify growth leadership."},
-      "label": {"outcome": "notify", "delivery": "growth-leadership", "required_evidence": ["superset|dashboard:growth", "trino|table:conversion_events", "slack|channel:growth-leadership"], "query_required": false}
+      "query": {"group": "growth-actionable", "bytes_scanned": 0, "cpu_seconds": 0, "evidence_refs": ["superset|dashboard:growth", "trino|table:conversion_events"], "finding": "Current-period conversion event rows are 0.17 versus 0.24 in the comparison period."},
+      "label": {"outcome": "notify", "delivery": "growth-leadership", "required_evidence": ["superset|dashboard:growth", "trino|table:conversion_events"], "query_required": false}
     },
     {
       "id": "ambiguous_root_cause",
@@ -96,7 +98,7 @@
         {"ref": "trino|table:activation_events", "adapter": "trino", "resource": "table:activation_events", "kind": "table", "title": "Activation events", "description": "Activation completion by channel and cohort.", "contract": {"grain": "event-day", "freshness": "fresh", "owner": "growth-data"}, "evidence": "Available to test whether downstream activation changed with signups."},
         {"ref": "trino|table:paid_campaigns", "adapter": "trino", "resource": "table:paid_campaigns", "kind": "table", "title": "Paid campaigns", "description": "Spend, delivery, and conversion by campaign.", "contract": {"grain": "campaign-day", "freshness": "fresh", "owner": "growth-ops"}, "evidence": "Available to test campaign delivery as a driver."}
       ],
-      "query": {"group": "growth-diagnosis", "bytes_scanned": 480000000000, "cpu_seconds": 720, "evidence_refs": ["superset|dashboard:growth", "trino|table:paid_campaigns"], "finding": "The decline is concentrated in paid acquisition after a campaign delivery drop; investigate before notifying."},
+      "query": {"group": "growth-diagnosis", "bytes_scanned": 480000000000, "cpu_seconds": 720, "evidence_refs": ["superset|dashboard:growth", "trino|table:paid_campaigns"], "finding": "Paid campaign delivery is 0.61 in the current period versus 0.90 in the comparison period; signup change is -20 percent."},
       "label": {"outcome": "investigate", "delivery": "none", "required_evidence": ["superset|dashboard:growth", "trino|table:paid_campaigns"], "query_required": true}
     },
     {
@@ -117,7 +119,7 @@
         {"ref": "airflow|dag:signup-refresh", "adapter": "airflow", "resource": "dag:signup-refresh", "kind": "workflow", "title": "Signup refresh", "description": "Refreshes the signup facts table.", "contract": {"grain": "run", "freshness": "failed", "owner": "data-platform"}, "evidence": "The latest scheduled refresh failed."},
         {"ref": "trino|table:signup_facts", "adapter": "trino", "resource": "table:signup_facts", "kind": "table", "title": "Signup facts", "description": "Daily qualified signup facts.", "contract": {"grain": "user-day", "freshness": "stale", "owner": "growth-data"}, "evidence": "The source has not refreshed within its SLA."}
       ],
-      "query": {"group": "growth-freshness", "bytes_scanned": 0, "cpu_seconds": 0, "evidence_refs": ["airflow|dag:signup-refresh", "superset|dashboard:growth"], "finding": "Do not interpret the movement; escalate the failed freshness contract to data-platform."},
+      "query": {"group": "growth-freshness", "bytes_scanned": 0, "cpu_seconds": 0, "evidence_refs": ["airflow|dag:signup-refresh", "superset|dashboard:growth"], "finding": "Refresh status is failed and snapshot age is 31 hours against the configured freshness contract."},
       "label": {"outcome": "escalate", "delivery": "data-platform", "required_evidence": ["airflow|dag:signup-refresh", "superset|dashboard:growth"], "query_required": false}
     },
     {
@@ -138,7 +140,7 @@
         {"ref": "superset|chart:signup-funnel", "adapter": "superset", "resource": "chart:signup-funnel", "kind": "chart", "title": "Signup funnel", "description": "Funnel conversion chart.", "contract": {"grain": "visitor-day", "population": "all visitors", "freshness": "fresh", "owner": "growth-analytics"}, "evidence": "The funnel chart uses all visitors, so its denominator differs."},
         {"ref": "trino|table:signup_facts", "adapter": "trino", "resource": "table:signup_facts", "kind": "table", "title": "Signup facts", "description": "Governed signup definition and population.", "contract": {"grain": "user-day", "population": "eligible users", "freshness": "fresh", "owner": "growth-data"}, "evidence": "The governed definition requires a population and grain reconciliation before action."}
       ],
-      "query": {"group": "growth-definition", "bytes_scanned": 320000000000, "evidence_refs": ["superset|dashboard:growth", "superset|chart:signup-funnel", "trino|table:signup_facts"], "finding": "The charts use different populations; reconcile definitions before interpreting the movement."},
+      "query": {"group": "growth-definition", "bytes_scanned": 320000000000, "evidence_refs": ["superset|dashboard:growth", "superset|chart:signup-funnel", "trino|table:signup_facts"], "finding": "Observed populations are eligible-users at user-day grain and all-visitors at visitor-day grain."},
       "label": {"outcome": "investigate", "delivery": "none", "required_evidence": ["superset|dashboard:growth", "superset|chart:signup-funnel", "trino|table:signup_facts"], "query_required": true}
     },
     {
@@ -161,7 +163,7 @@
         {"ref": "superset|dashboard:paid", "adapter": "superset", "resource": "dashboard:paid", "kind": "dashboard", "title": "Paid acquisition", "description": "Paid delivery signal in the current period.", "contract": {"grain": "campaign-day", "freshness": "fresh", "owner": "growth-ops"}, "evidence": "Paid delivery observation for the current period."},
         {"ref": "trino|table:campaign_delivery", "adapter": "trino", "resource": "table:campaign_delivery", "kind": "table", "title": "Campaign delivery", "description": "Campaign delivery and spend across channels.", "contract": {"grain": "campaign-day", "freshness": "fresh", "owner": "growth-ops"}, "evidence": "A shared delivery incident may explain the cross-dashboard movement."}
       ],
-      "query": {"group": "growth-cluster", "bytes_scanned": 560000000000, "cpu_seconds": 900, "evidence_refs": ["superset|dashboard:growth", "superset|dashboard:activation", "superset|dashboard:paid", "trino|table:campaign_delivery"], "finding": "A shared paid-campaign delivery incident is the likely common driver; investigate before notifying."},
+      "query": {"group": "growth-cluster", "bytes_scanned": 560000000000, "cpu_seconds": 900, "evidence_refs": ["superset|dashboard:growth", "superset|dashboard:activation", "superset|dashboard:paid", "trino|table:campaign_delivery"], "finding": "Growth, activation, and paid delivery moved in the same period; campaign delivery is 0.61 versus 0.90."},
       "label": {"outcome": "investigate", "delivery": "none", "required_evidence": ["superset|dashboard:growth", "superset|dashboard:activation", "superset|dashboard:paid", "trino|table:campaign_delivery"], "query_required": true}
     }
   ]
