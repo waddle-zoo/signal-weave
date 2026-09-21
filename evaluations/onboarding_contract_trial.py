@@ -159,6 +159,7 @@ class ScenarioResult:
     missing_readiness_codes: list[str]
     unexpected_readiness_codes: list[str]
     readiness_passed: bool
+    evaluator: str
 
     def as_json(self) -> dict[str, Any]:
         return {
@@ -188,6 +189,7 @@ class ScenarioResult:
             "missing_readiness_codes": self.missing_readiness_codes,
             "unexpected_readiness_codes": self.unexpected_readiness_codes,
             "readiness_passed": self.readiness_passed,
+            "evaluator": self.evaluator,
         }
 
 
@@ -202,7 +204,9 @@ def _source_ref(raw_ref: str, descriptors: dict[str, ResourceDescriptor]) -> Sou
     )
 
 
-async def run_scenario(scenario: dict[str, Any]) -> ScenarioResult:
+async def run_scenario(
+    scenario: dict[str, Any], *, judger: Any | None = None, evaluator: str = "fixture-jev"
+) -> ScenarioResult:
     tenant_id = scenario["principal"]["tenant_id"]
     descriptors: dict[str, ResourceDescriptor] = {}
     for raw in scenario["resources"]:
@@ -234,9 +238,10 @@ async def run_scenario(scenario: dict[str, Any]) -> ScenarioResult:
         )
 
     registry = SourceRegistry(adapters, authorized_tenants={tenant_id})
+    active_judger = judger or ScenarioJev(scenario["jev_scores"])
     service = InsightAuthoringService(
         registry=registry,
-        engine=SimpleNamespace(judger=ScenarioJev(scenario["jev_scores"])),
+        engine=SimpleNamespace(judger=active_judger),
         max_candidates=40,
         recommendation_threshold=0.60,
     )
@@ -336,6 +341,7 @@ async def run_scenario(scenario: dict[str, Any]) -> ScenarioResult:
         missing_readiness_codes=missing_readiness_codes,
         unexpected_readiness_codes=unexpected_readiness_codes,
         readiness_passed=readiness_passed,
+        evaluator=evaluator,
     )
 
 
@@ -343,9 +349,13 @@ def _resource_ref(raw: dict[str, Any]) -> str:
     return f"{raw['adapter']}|{raw['resource']}"
 
 
-async def run_trial(path: Path = DEFAULT_CASES) -> list[ScenarioResult]:
+async def run_trial(
+    path: Path = DEFAULT_CASES, *, judger: Any | None = None, evaluator: str = "fixture-jev"
+) -> list[ScenarioResult]:
     scenarios = json.loads(path.read_text())
-    return [await run_scenario(scenario) for scenario in scenarios]
+    return [
+        await run_scenario(scenario, judger=judger, evaluator=evaluator) for scenario in scenarios
+    ]
 
 
 def render_markdown(results: list[ScenarioResult]) -> str:
@@ -358,7 +368,7 @@ def render_markdown(results: list[ScenarioResult]) -> str:
     lines = [
         "# Enterprise onboarding contract trial",
         "",
-        "Fixture-backed contract exploration; not a live Jev accuracy benchmark.",
+        f"Evaluator: {results[0].evaluator if results else 'unknown'}.",
         "",
         f"- Scenarios: {len(results)}",
         f"- Contract passes: {passed}/{len(results)}",
@@ -385,6 +395,8 @@ def render_markdown(results: list[ScenarioResult]) -> str:
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--cases", type=Path, default=DEFAULT_CASES)
+    parser.add_argument("--evaluator", choices=("fixture", "live"), default="fixture")
+    parser.add_argument("--typesafe-key-file", type=Path)
     parser.add_argument("--format", choices=("markdown", "json"), default="markdown")
     parser.add_argument("--output", type=Path)
     return parser.parse_args()
@@ -392,7 +404,19 @@ def _parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = _parse_args()
-    results = asyncio.run(run_trial(args.cases))
+    judger = None
+    evaluator = "fixture-jev"
+    if args.evaluator == "live":
+        from signalweave.typesafe_adapter import JevJudger, load_api_key
+
+        key = load_api_key(str(args.typesafe_key_file) if args.typesafe_key_file else None)
+        if not key:
+            raise SystemExit(
+                "live onboarding replay requires TYPESAFE_API_KEY or --typesafe-key-file"
+            )
+        judger = JevJudger(api_key=key, timeout=60)
+        evaluator = "jev-live"
+    results = asyncio.run(run_trial(args.cases, judger=judger, evaluator=evaluator))
     if args.format == "json":
         rendered = json.dumps([result.as_json() for result in results], indent=2) + "\n"
     else:

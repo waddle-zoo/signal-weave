@@ -358,9 +358,12 @@ count, replay stability, and whether an automatic delivery was suppressed.
 The current prototype catches the expected readiness blockers in all 11 cases,
 while the existing production review status misses the stale-source and
 incomplete-catalog gates. That is promising as a pattern, not proof that the
-pattern belongs in the service yet. The next step is to adversarially mutate
-these cases and run a live Jev replay before promoting the readiness envelope
-into `src/`.
+pattern belongs in the service yet. The live replay is recorded in
+[`enterprise-onboarding-live-replay.md`](enterprise-onboarding-live-replay.md):
+Jev produced 8/11 exact recommended sets, while the code-owned readiness
+pattern caught all expected blockers. The next step is to adversarially mutate
+these cases and validate the readiness envelope against operator decisions
+before promoting it into `src/`.
 
 ## What this branch will not build
 
