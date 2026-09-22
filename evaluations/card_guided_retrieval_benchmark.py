@@ -132,14 +132,19 @@ def _load_config(path: Path) -> dict[str, Any]:
 def _description(title: str, metric: str, scenario: dict[str, Any], group: str) -> str:
     """Create catalog metadata a real BI adapter could expose without labels."""
     return (
-        f"Chart definition for the {scenario['id']} operating catalog. It measures {title.lower()} "
+        "Chart definition from the operating catalog. It measures "
+        f"{title.lower()} "
         f"({metric.replace('_', ' ')}) for the {group} operating area. "
         "Use the chart definition, related charts, freshness, and values to judge "
         "whether it helps answer the approved monitoring card."
     )
 
 
-def build_cases(config: dict[str, Any], repeats: int = 1) -> list[ChartCase]:
+def build_cases(
+    config: dict[str, Any],
+    repeats: int = 1,
+    action_confidence_threshold: float | None = None,
+) -> list[ChartCase]:
     chart_count = int(config["chart_count"])
     cases: list[ChartCase] = []
     for repeat in range(1, repeats + 1):
@@ -164,6 +169,11 @@ def build_cases(config: dict[str, Any], repeats: int = 1) -> list[ChartCase]:
                 delivery_methods=_delivery_methods(expected),
                 investigation_mode="bounded",
                 max_investigation_sources=3,
+                **(
+                    {"action_confidence_threshold": action_confidence_threshold}
+                    if action_confidence_threshold is not None
+                    else {}
+                ),
                 **card_payload,
             )
             overrides = {int(item["index"]): dict(item) for item in scenario.get("overrides", [])}
@@ -280,8 +290,14 @@ def build_cases(config: dict[str, Any], repeats: int = 1) -> list[ChartCase]:
                     metadata={"dashboard_id": scenario_id, "chart_count": chart_count},
                     contract=descriptor.contract,
                 )
-                if str(override.get("signal_class", "noise")) == "meaningful":
-                    gold_roles[chart_id] = str(override.get("gold_role", "unknown"))
+                # Every authored override is part of the card's retrieval gold
+                # set.  Some are expected/benign context rather than alert
+                # signals, but the card still needs them to interpret the run.
+                gold_role = str(override.get("gold_role", "unknown"))
+                if gold_role == "context":
+                    gold_role = "contradicts"
+                if gold_role in ROLE_VALUES:
+                    gold_roles[chart_id] = gold_role
             cases.append(
                 ChartCase(
                     case_id=f"{scenario_id}:r{repeat}",
@@ -314,19 +330,37 @@ class DashboardChartAdapter:
     ) -> CatalogSearchPage:
         del cursor
         query_terms = _terms(query)
+        semantic_terms = query_terms - {
+            "chart",
+            "charts",
+            "dashboard",
+            "data",
+            "decision",
+            "evidence",
+            "metric",
+            "metrics",
+            "operating",
+            "purpose",
+            "questions",
+            "result",
+            "scan",
+            "signals",
+            "source",
+            "sources",
+        }
 
         def score(resource: ResourceDescriptor) -> tuple[int, int, int, str]:
-            title_overlap = len(query_terms & _terms(resource.title))
+            title_overlap = len(semantic_terms & _terms(resource.title))
             text_overlap = len(
-                query_terms
+                semantic_terms
                 & _terms(
                     " ".join(
                         [
                             resource.title,
-                            resource.description,
                             resource.contract.domain,
                             " ".join(resource.contract.metric_names),
-                            " ".join(str(value) for value in resource.metadata.values()),
+                            str(resource.metadata.get("metric", "")),
+                            str(resource.metadata.get("operating_area", "")),
                         ]
                     )
                 )
@@ -410,7 +444,8 @@ def _lexical_ids(case: ChartCase, cap: int = 8) -> list[str]:
                 descriptor.description,
                 descriptor.contract.domain,
                 " ".join(descriptor.contract.metric_names),
-                " ".join(str(value) for value in descriptor.metadata.values()),
+                str(descriptor.metadata.get("metric", "")),
+                str(descriptor.metadata.get("operating_area", "")),
             ]
         )
         scored.append(
@@ -579,7 +614,11 @@ async def run_benchmark(args: argparse.Namespace) -> dict[str, Any]:
     if args.chart_count is not None:
         config = dict(config)
         config["chart_count"] = args.chart_count
-    cases = build_cases(config, repeats=args.repeats)
+    cases = build_cases(
+        config,
+        repeats=args.repeats,
+        action_confidence_threshold=args.action_confidence_threshold,
+    )
     if args.limit:
         cases = cases[: args.limit]
     key = load_api_key(str(args.typesafe_key_file) if args.typesafe_key_file else None)
@@ -672,6 +711,7 @@ async def run_benchmark(args: argparse.Namespace) -> dict[str, Any]:
         "retrieval_limit": args.retrieval_limit,
         "selection_cap": args.selection_cap,
         "recommendation_threshold": args.recommendation_threshold,
+        "action_confidence_threshold": args.action_confidence_threshold,
         "arms": arms,
         "estimated_costs_usd": costs,
         "rows": rows,
@@ -749,6 +789,7 @@ def main() -> None:
     parser.add_argument("--retrieval-limit", type=int, default=12)
     parser.add_argument("--selection-cap", type=int, default=8)
     parser.add_argument("--recommendation-threshold", type=float, default=0.60)
+    parser.add_argument("--action-confidence-threshold", type=float, default=None)
     parser.add_argument("--timeout", type=float, default=90.0)
     parser.add_argument("--typesafe-input-price-per-mtok", type=float, default=0.042)
     parser.add_argument("--typesafe-output-price-per-mtok", type=float, default=0.0)
@@ -761,6 +802,8 @@ def main() -> None:
         raise SystemExit("retrieval-limit must be <= 25")
     if not 0.0 <= args.recommendation_threshold <= 1.0:
         raise SystemExit("recommendation-threshold must be between 0 and 1")
+    if args.action_confidence_threshold is not None and not 0.0 <= args.action_confidence_threshold <= 1.0:
+        raise SystemExit("action-confidence-threshold must be between 0 and 1")
     report = asyncio.run(run_benchmark(args))
     print(render_markdown(report))
 
