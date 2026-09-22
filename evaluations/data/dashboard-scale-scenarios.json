@@ -1,0 +1,157 @@
+{
+  "schema_version": 1,
+  "chart_count": 1000,
+  "batch_size": 20,
+  "scenarios": [
+    {
+      "id": "growth-funnel-break",
+      "dashboard_title": "Growth command center",
+      "card": {
+        "title": "Find meaningful growth movement",
+        "what_to_watch": "Scan the full dashboard and identify meaningful changes to qualified growth, then explain which connected signals matter for the operating decision.",
+        "why_watch": "Growth leadership should hear about a broad change in qualified growth, not every noisy chart movement.",
+        "watch_for": [
+          "A meaningful movement in qualified growth is identified.",
+          "The evidence distinguishes a broad growth problem from a local or expected change.",
+          "The result names the strongest related signals without claiming unsupported causation."
+        ],
+        "questions": [
+          "Which charts show the meaningful change?",
+          "What related evidence best explains why it matters?"
+        ],
+        "decision_guidance": "Ignore normal or isolated movement. Investigate when qualified growth is materially off course and the evidence is ambiguous. Notify growth leadership when the movement is broad and corroborated.",
+        "expected_outcome": "notify"
+      },
+      "overrides": [
+        {"index": 3, "chart_id": "qualified-growth", "title": "Qualified growth", "metric": "qualified_growth", "current": 780, "baseline": 1000, "change_pct": -22.0, "gold_role": "driver", "signal_class": "meaningful", "group": "growth"},
+        {"index": 4, "chart_id": "activation-rate", "title": "Activation rate", "metric": "activation_rate", "current": 66, "baseline": 80, "change_pct": -17.5, "gold_role": "corroborates", "signal_class": "meaningful", "group": "growth"},
+        {"index": 5, "chart_id": "paid-traffic", "title": "Paid traffic", "metric": "paid_sessions", "current": 11200, "baseline": 10000, "change_pct": 12.0, "gold_role": "contradicts", "signal_class": "meaningful", "group": "growth"},
+        {"index": 6, "chart_id": "campaign-calendar", "title": "Campaign calendar", "metric": "campaign_status", "current": 1, "baseline": 1, "change_pct": 0.0, "gold_role": "quality", "signal_class": "meaningful", "group": "growth"}
+      ]
+    },
+    {
+      "id": "fulfillment-service-risk",
+      "dashboard_title": "Delivery promise board",
+      "card": {
+        "title": "Find customer-impacting delivery risk",
+        "what_to_watch": "Scan all delivery charts and identify whether the customer-facing delivery promise is materially off course.",
+        "why_watch": "Operations should act on broad service risk supported by warehouse, carrier, or inventory evidence rather than isolated late orders.",
+        "watch_for": [
+          "Customer-facing delivery reliability is materially worse than baseline.",
+          "At least one operational signal corroborates or explains the movement.",
+          "Data freshness is sufficient for an operating decision."
+        ],
+        "questions": [
+          "Is the delivery problem broad enough to act on?",
+          "Which connected operational signal should be investigated first?"
+        ],
+        "decision_guidance": "Ignore isolated order noise. Investigate ambiguous movement. Notify operations when delivery reliability is materially off course and supported by connected evidence.",
+        "expected_outcome": "notify"
+      },
+      "overrides": [
+        {"index": 11, "chart_id": "on-time-delivery", "title": "On-time delivery", "metric": "on_time_delivery", "current": 81, "baseline": 100, "change_pct": -19.0, "gold_role": "driver", "signal_class": "meaningful", "group": "fulfillment"},
+        {"index": 12, "chart_id": "warehouse-backlog", "title": "Warehouse backlog", "metric": "warehouse_backlog", "current": 1310, "baseline": 1000, "change_pct": 31.0, "gold_role": "diagnostic", "signal_class": "meaningful", "group": "fulfillment"},
+        {"index": 13, "chart_id": "carrier-service", "title": "Carrier service level", "metric": "carrier_on_time", "current": 86, "baseline": 98, "change_pct": -12.2, "gold_role": "corroborates", "signal_class": "meaningful", "group": "fulfillment"},
+        {"index": 14, "chart_id": "inventory-availability", "title": "Inventory availability", "metric": "inventory_availability", "current": 99, "baseline": 100, "change_pct": -1.0, "gold_role": "contradicts", "signal_class": "meaningful", "group": "fulfillment"}
+      ]
+    },
+    {
+      "id": "expected-rollout-noise",
+      "dashboard_title": "Product adoption review",
+      "card": {
+        "title": "Separate rollout effects from adoption risk",
+        "what_to_watch": "Scan the dashboard for adoption changes that are meaningfully off the planned rollout path.",
+        "why_watch": "Product leadership needs to avoid escalating planned cohort and release effects as product failures.",
+        "watch_for": [
+          "Adoption is materially different from the expected rollout path.",
+          "Release and experiment context distinguishes planned movement from a real adoption problem.",
+          "Instrumentation quality is sufficient before action."
+        ],
+        "questions": [
+          "Is the movement an adoption problem or an expected rollout effect?",
+          "What evidence should product inspect next?"
+        ],
+        "decision_guidance": "Ignore movement explained by the planned rollout calendar or expected cohort mix. Investigate only contradictory or unsupported adoption movement.",
+        "expected_outcome": "ignore"
+      },
+      "overrides": [
+        {"index": 21, "chart_id": "feature-adoption", "title": "Feature adoption", "metric": "feature_adoption", "current": 620, "baseline": 1000, "change_pct": -38.0, "gold_role": "context", "signal_class": "expected", "group": "rollout"},
+        {"index": 22, "chart_id": "release-cohort", "title": "Release cohort coverage", "metric": "release_cohort_coverage", "current": 64, "baseline": 100, "change_pct": -36.0, "gold_role": "contradicts", "signal_class": "expected", "group": "rollout"},
+        {"index": 23, "chart_id": "experiment-control", "title": "Experiment control", "metric": "experiment_control", "current": 101, "baseline": 100, "change_pct": 1.0, "gold_role": "corroborates", "signal_class": "expected", "group": "rollout"},
+        {"index": 24, "chart_id": "event-pipeline-freshness", "title": "Event pipeline freshness", "metric": "event_freshness_hours", "current": 1, "baseline": 1, "change_pct": 0.0, "gold_role": "quality", "signal_class": "meaningful", "group": "rollout"}
+      ]
+    },
+    {
+      "id": "payment-data-trust",
+      "dashboard_title": "Payment trust overview",
+      "card": {
+        "title": "Detect payment risk without trusting broken data",
+        "what_to_watch": "Scan payment, issuer, fraud, and control charts for a meaningful customer or risk movement.",
+        "why_watch": "Payments leadership needs a trustworthy signal before intervening in revenue or risk controls.",
+        "watch_for": [
+          "Payment completion or loss changes materially across the customer population.",
+          "Issuer or fraud evidence helps distinguish a recoverable issue from a risk event.",
+          "Freshness and comparability are sufficient before automatic delivery."
+        ],
+        "questions": [
+          "Is this a payment problem or a data trust problem?",
+          "Which connected evidence should the payments team inspect?"
+        ],
+        "decision_guidance": "Escalate a severe payment trust failure. Do not notify on a large movement when the source is stale, incomplete, or not comparable.",
+        "expected_outcome": "insufficient_data"
+      },
+      "overrides": [
+        {"index": 31, "chart_id": "payment-completion", "title": "Payment completion", "metric": "payment_completion", "current": 70, "baseline": 96, "change_pct": -27.1, "gold_role": "driver", "signal_class": "meaningful", "group": "payments"},
+        {"index": 32, "chart_id": "issuer-declines", "title": "Issuer declines", "metric": "issuer_declines", "current": 140, "baseline": 100, "change_pct": 40.0, "gold_role": "corroborates", "signal_class": "meaningful", "group": "payments"},
+        {"index": 33, "chart_id": "fraud-pressure", "title": "Fraud pressure", "metric": "fraud_pressure", "current": 128, "baseline": 100, "change_pct": 28.0, "gold_role": "diagnostic", "signal_class": "meaningful", "group": "payments"},
+        {"index": 34, "chart_id": "payment-data-freshness", "title": "Payment data freshness", "metric": "freshness_hours", "current": 30, "baseline": 1, "change_pct": 2900.0, "gold_role": "quality", "signal_class": "meaningful", "group": "payments", "freshness": "stale by 29 hours"}
+      ]
+    },
+    {
+      "id": "platform-incident-cluster",
+      "dashboard_title": "Platform health",
+      "card": {
+        "title": "Find customer-impacting reliability incidents",
+        "what_to_watch": "Scan the platform dashboard and identify whether a customer-impacting reliability change needs escalation.",
+        "why_watch": "Platform leaders should receive a concise incident signal with the relevant service, deploy, and capacity evidence.",
+        "watch_for": [
+          "Customer error rate or latency is materially worse than the operating baseline.",
+          "A deploy, incident, or capacity signal forms a coherent explanation.",
+          "The signal is severe enough to require platform leadership attention."
+        ],
+        "questions": [
+          "Is there a customer-impacting incident?",
+          "Which operational evidence best explains the change?"
+        ],
+        "decision_guidance": "Escalate only when customer impact is corroborated by operational evidence. Ignore isolated host noise.",
+        "expected_outcome": "escalate"
+      },
+      "overrides": [
+        {"index": 41, "chart_id": "customer-error-rate", "title": "Customer error rate", "metric": "customer_error_rate", "current": 240, "baseline": 100, "change_pct": 140.0, "gold_role": "driver", "signal_class": "meaningful", "group": "platform"},
+        {"index": 42, "chart_id": "incident-timeline", "title": "Incident timeline", "metric": "open_customer_incidents", "current": 4, "baseline": 0, "change_pct": 400.0, "gold_role": "corroborates", "signal_class": "meaningful", "group": "platform"},
+        {"index": 43, "chart_id": "recent-deploys", "title": "Recent deploys", "metric": "deploys_last_24h", "current": 3, "baseline": 1, "change_pct": 200.0, "gold_role": "diagnostic", "signal_class": "meaningful", "group": "platform"},
+        {"index": 44, "chart_id": "capacity-pressure", "title": "Capacity pressure", "metric": "capacity_utilization", "current": 98, "baseline": 70, "change_pct": 40.0, "gold_role": "diagnostic", "signal_class": "meaningful", "group": "platform"}
+      ]
+    },
+    {
+      "id": "all-noise",
+      "dashboard_title": "Executive operating pulse",
+      "card": {
+        "title": "Do not alert on normal dashboard noise",
+        "what_to_watch": "Scan the complete dashboard and identify only changes that are meaningful for the stated operating objective.",
+        "why_watch": "Leadership attention is scarce and normal chart variation should not create a notification.",
+        "watch_for": [
+          "A movement is materially outside the normal operating pattern.",
+          "The evidence is sufficient to distinguish signal from ordinary noise."
+        ],
+        "questions": [
+          "Did anything meaningful change?",
+          "If not, should this run produce no delivery?"
+        ],
+        "decision_guidance": "Ignore ordinary variation, small movements, and isolated charts. Notify only when a material movement is corroborated by related evidence.",
+        "expected_outcome": "ignore"
+      },
+      "overrides": []
+    }
+  ]
+}
