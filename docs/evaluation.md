@@ -101,6 +101,9 @@ contract, not a production accuracy claim. Supplying `--openai-dotenv` enables
 the optional embedding-plus-reasoning baseline. Only normalized aggregates are
 sent to external providers; raw seed rows are not.
 
+The recorded result and promotion interpretation are summarized in
+[`northstar-shadow-trial.md`](northstar-shadow-trial.md).
+
 For the organization-level Northstar case study—40 role agents, 48 workflows,
 and live Jev-backed routing across all 12 domains—see
 [`northstar-corporation-trial.md`](northstar-corporation-trial.md) and run:

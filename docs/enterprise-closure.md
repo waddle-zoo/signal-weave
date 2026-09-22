@@ -18,6 +18,7 @@ It is intentionally explicit about synthetic evidence versus production proof.
 | Metric planning | Live Jev, 24 held-out metric labels | 24/24 metric, dimension, and grain selections |
 | SQL safety | Same metric trial | 24/24 partition-bounded, SELECT-only, semicolon-free |
 | Receipt durability | SQLite restart and two-store claim tests | persisted cards and one atomic claim per key |
+| Real-row shadow replay | Northstar Superset seed rows, six counterfactual cases | Jev 4/6, 0 false notifications, 0 missed notifications; shadow only |
 
 ## Post-fix general-agent trial
 
