@@ -42,6 +42,10 @@ deployment must establish a data policy before using company data.
   enforce the source's own credential or identity boundary.
 - Follow-up source selection is checked against the already authorized catalog in
   code; Jev cannot cause an opaque or cross-tenant source to be inspected.
+- Insight cards created through a scoped request retain the principal tenant and
+  onboarding receipt. Card listing, lookup, review, approval, simulation, and
+  evaluation reject a card outside the current principal tenant; this is a
+  tenant boundary, not a replacement for gateway roles or source RBAC.
 - Context snapshots supplied through MCP are marked `unverified` and are visible
   in result provenance. A deployment-owned `ContextProvider` is the path for
   trusted graph or catalog context.

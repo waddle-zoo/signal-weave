@@ -542,7 +542,10 @@ class InsightCard(BaseModel):
     investigation_mode: InvestigationMode = InvestigationMode.NONE
     max_investigation_sources: int = Field(default=3, ge=0, le=10)
     investigation_threshold: float = Field(default=0.60, ge=0.0, le=1.0)
+    principal_id: str | None = Field(default=None, max_length=240)
+    principal_tenant: str | None = Field(default=None, max_length=160)
     compiled_plan: InsightPlan | None = None
+    onboarding_review: InsightCardOnboardingReview | None = None
     status: InsightCardStatus = InsightCardStatus.DRAFT
     approved_by: str | None = Field(default=None, max_length=240)
     approved_at: datetime | None = None

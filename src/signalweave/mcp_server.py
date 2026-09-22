@@ -86,6 +86,20 @@ def create_mcp(
             raise RuntimeError("the identity gateway did not provide a principal")
         return principal
 
+    def assert_card_scope(card: InsightCard, principal: PrincipalContext | None) -> None:
+        if principal is None:
+            return
+        if card.principal_tenant != principal.tenant_id:
+            raise ValueError(
+                "insight card is outside the authenticated principal tenant; "
+                "rediscover or create it under the current principal"
+            )
+
+    def get_scoped_card(card_id: str, principal: PrincipalContext | None) -> InsightCard:
+        card = runtime.card_store.get_card(card_id)
+        assert_card_scope(card, principal)
+        return card
+
     async def prepare_insight_card(
         card: InsightCard,
         context: ContextSnapshot | None = None,
@@ -112,6 +126,7 @@ def create_mcp(
         principal: PrincipalContext | None = None,
     ) -> dict[str, Any]:
         card = runtime.card_store.get_card(card_id)
+        assert_card_scope(card, principal)
         if card.status != InsightCardStatus.APPROVED:
             raise ValueError(
                 f"Insight card {card_id} is a draft; simulate it, then approve it before evaluation"
@@ -381,10 +396,12 @@ def create_mcp(
         investigation_mode: str = "none",
         max_investigation_sources: int = 3,
         investigation_threshold: float = 0.60,
+        ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Draft a card over explicit source resources; no push is sent."""
         if not sources:
             raise ValueError("at least one source reference is required")
+        principal = request_principal(ctx)
         source_refs = [SourceRef.model_validate(source) for source in sources]
         card = InsightCard(
             id=card_id or f"card-{_slug(title)}",
@@ -406,6 +423,8 @@ def create_mcp(
             investigation_mode=InvestigationMode(investigation_mode),
             max_investigation_sources=max_investigation_sources,
             investigation_threshold=investigation_threshold,
+            principal_id=principal.principal_id if principal else None,
+            principal_tenant=principal.tenant_id if principal else None,
         )
         plan = await runtime.engine.compile(card)
         card = card.model_copy(update={"compiled_plan": plan})
@@ -535,13 +554,13 @@ def create_mcp(
         ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Preview the bounded Jev-ranked evidence bundle for a stored card."""
-        card = runtime.card_store.get_card(card_id)
+        principal = request_principal(ctx)
+        card = get_scoped_card(card_id, principal)
         context_snapshot = (
             ContextSnapshot.model_validate(context).model_copy(update={"trust": "unverified"})
             if context
             else None
         )
-        principal = request_principal(ctx)
         bundle = await authoring.resolve_bundle(
             card, context_snapshot, principal=principal
         )
@@ -564,13 +583,16 @@ def create_mcp(
         recommendations the draft omitted so a client-owned UI or agent can ask
         for confirmation or revise the card.
         """
-        card = runtime.card_store.get_card(card_id)
+        principal = request_principal(ctx)
+        card = get_scoped_card(card_id, principal)
         review = await authoring.review(
             card,
             adapter=adapter,
             limit=limit,
-            principal=request_principal(ctx),
+            principal=principal,
         )
+        card = card.model_copy(update={"onboarding_review": review})
+        runtime.card_store.save_card(card)
         return {
             "card": card.model_dump(mode="json"),
             "review": review.model_dump(mode="json"),
@@ -583,13 +605,13 @@ def create_mcp(
         ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Evaluate a draft without treating the result as an approved push action."""
-        card = runtime.card_store.get_card(card_id)
+        principal = request_principal(ctx)
+        card = get_scoped_card(card_id, principal)
         context_snapshot = (
             ContextSnapshot.model_validate(context).model_copy(update={"trust": "unverified"})
             if context
             else None
         )
-        principal = request_principal(ctx)
         evaluation_card, bundle = await prepare_insight_card(
             card, context_snapshot, principal=principal
         )
@@ -616,22 +638,22 @@ def create_mcp(
         ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Approve a draft card for later scheduler or webhook evaluation."""
-        card = runtime.card_store.get_card(card_id)
+        principal = request_principal(ctx)
+        card = get_scoped_card(card_id, principal)
         if not card.sources:
             raise ValueError("an insight card needs at least one selected source before approval")
-        onboarding_review = await authoring.review(
-            card, principal=request_principal(ctx)
-        )
+        onboarding_review = await authoring.review(card, principal=principal)
         if onboarding_review.readiness_status != "ready_for_approval":
             codes = ", ".join(blocker.code.value for blocker in onboarding_review.blockers)
             raise ValueError(
                 "insight card is not ready for approval; resolve onboarding blockers: "
                 + (codes or "human review required")
             )
+        card = card.model_copy(update={"onboarding_review": onboarding_review})
         if card.compiled_plan is None:
             plan = await runtime.engine.compile(card)
             card = card.model_copy(update={"compiled_plan": plan})
-            runtime.card_store.save_card(card)
+        runtime.card_store.save_card(card)
         approved = runtime.card_store.set_card_status(card_id, InsightCardStatus.APPROVED)
         approved = approved.model_copy(
             update={"approved_by": actor, "approved_at": datetime.now(timezone.utc)}
@@ -644,12 +666,16 @@ def create_mcp(
         }
 
     @mcp.tool()
-    def list_insight_cards(status: str | None = None) -> dict[str, Any]:
+    def list_insight_cards(
+        status: str | None = None, ctx: Context | None = None
+    ) -> dict[str, Any]:
         """List stored cards for a client-owned UI or agent."""
+        principal = request_principal(ctx)
         selected_status = InsightCardStatus(status) if status else None
         cards = [
             card
             for card in runtime.card_store.list_cards()
+            if principal is None or card.principal_tenant == principal.tenant_id
             if selected_status is None or card.status == selected_status
         ]
         return {
@@ -658,17 +684,23 @@ def create_mcp(
         }
 
     @mcp.tool()
-    def get_insight_card(card_id: str) -> dict[str, Any]:
+    def get_insight_card(
+        card_id: str, ctx: Context | None = None
+    ) -> dict[str, Any]:
         """Return one stored insight card by its stable ID."""
-        return runtime.card_store.get_card(card_id).model_dump(mode="json")
+        principal = request_principal(ctx)
+        return get_scoped_card(card_id, principal).model_dump(mode="json")
 
     @mcp.resource("insight://catalog")
-    def insight_catalog() -> str:
+    def insight_catalog(ctx: Context | None = None) -> str:
         """Human-readable catalog for an MCP client."""
+        principal = request_principal(ctx)
         return json.dumps(
             {
                 "cards": [
-                    card.model_dump(mode="json") for card in runtime.card_store.list_cards()
+                    card.model_dump(mode="json")
+                    for card in runtime.card_store.list_cards()
+                    if principal is None or card.principal_tenant == principal.tenant_id
                 ]
             },
             indent=2,

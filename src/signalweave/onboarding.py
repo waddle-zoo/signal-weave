@@ -633,11 +633,14 @@ class InsightAuthoringService:
             investigation_mode=investigation_mode,
             max_investigation_sources=max_investigation_sources,
             investigation_threshold=investigation_threshold,
+            principal_id=effective_principal.principal_id if effective_principal else None,
+            principal_tenant=effective_principal.tenant_id if effective_principal else None,
         )
         plan = await self.engine.compile(card)
         onboarding_review = self.build_onboarding_review(
             card, discovery, principal=effective_principal
         )
+        card = card.model_copy(update={"onboarding_review": onboarding_review})
         setup_questions: list[str] = list(onboarding_review.questions)
         if plan.comparison_windows:
             setup_questions.append(

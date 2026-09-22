@@ -8,6 +8,7 @@ from signalweave.engine import InsightEngine
 from signalweave.mcp_server import create_mcp
 from signalweave.models import (
     Evidence,
+    InsightCard,
     InsightResult,
     Observation,
     Outcome,
@@ -211,12 +212,13 @@ async def test_mcp_can_use_trusted_request_principal_for_shared_catalog(tmp_path
     shared_catalog = SupersetCatalogDouble()
     shared_catalog.resources = tenant_resources
     registry = SourceRegistry([shared_catalog])
+    runtime = Runtime(
+        card_store=JsonInsightCardStore(tmp_path / "cards.json"),
+        sources=registry,
+        engine=InsightEngine(OnboardingJevDouble(), registry=registry),
+    )
     server = create_mcp(
-        Runtime(
-            card_store=JsonInsightCardStore(tmp_path / "cards.json"),
-            sources=registry,
-            engine=InsightEngine(OnboardingJevDouble(), registry=registry),
-        ),
+        runtime,
         principal_resolver=lambda context: PrincipalContext(
             principal_id=context.principal_id,
             tenant_id=context.tenant_id,
@@ -235,6 +237,22 @@ async def test_mcp_can_use_trusted_request_principal_for_shared_catalog(tmp_path
         "tenant-b"
     }
     assert discovery["authorized_tenant"] == "tenant-b"
+
+    runtime.card_store.save_card(
+        InsightCard(
+            id="tenant-a-card",
+            title="Tenant A",
+            what_to_watch="Tenant A conversion",
+            why_watch="Keep tenant A isolated",
+            principal_id="a-user",
+            principal_tenant="tenant-a",
+        )
+    )
+    with pytest.raises(ValueError, match="outside the authenticated principal tenant"):
+        await tool(server, "get_insight_card")(
+            "tenant-a-card",
+            ctx=SimpleNamespace(principal_id="b-user", tenant_id="tenant-b"),
+        )
 
 
 @pytest.mark.asyncio
@@ -293,6 +311,8 @@ async def test_generic_card_flow_discovers_proposes_previews_and_requires_approv
 
     stored = tool(server, "get_insight_card")(card_id)
     assert stored["status"] == "draft"
+    assert stored["principal_tenant"] == "default"
+    assert stored["onboarding_review"]["discovery_receipt"]["principal_tenant"] == "default"
     assert tool(server, "list_insight_cards")(status="draft")["count"] == 1
 
     with pytest.raises(ValueError, match="draft"):

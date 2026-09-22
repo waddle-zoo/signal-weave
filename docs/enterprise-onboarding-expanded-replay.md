@@ -134,8 +134,8 @@ The remaining implementation slice should stay narrow:
 
 - replace the deployment-scoped principal with request-scoped identity/OAuth
   evidence when the service is used by a shared multi-tenant gateway;
-- persist the typed discovery receipt with the approved card and carry it into
-  later runs and correction records;
+- add a stable card-version and correction diff around the persisted discovery
+  receipt so operators can audit what changed between onboarding attempts;
 - add time-split, operator-labeled role and selection cases rather than
   inflating synthetic scenario count;
 - measure review time and correction rate, not only retrieval metrics.
@@ -154,7 +154,8 @@ autonomous-production claim. Promote it only when each item has evidence:
   typed and reproducible.
 - [x] Approval re-checks onboarding blockers and fails closed.
 - [x] Discovery receipts preserve principal, authorization source, catalog
-  page, candidate refs, evaluator, and truncation state.
+  page, candidate refs, evaluator, and truncation state, and are persisted on
+  the proposed/approved card.
 - [x] Candidate reviews preserve governed evidence roles and bounded Jev role
   probabilities without using them as authorization or approval policy.
 - [x] A trusted request principal can be injected into MCP and is propagated
