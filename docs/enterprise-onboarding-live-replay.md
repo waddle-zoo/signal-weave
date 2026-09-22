@@ -1,7 +1,9 @@
-# Enterprise onboarding live Jev replay
+# Historical enterprise onboarding live Jev replay
 
-Status: exploratory branch evidence. This is an 11-case live TypeSafe replay,
-not an external or production benchmark.
+Status: superseded exploratory evidence. This was an 11-case live TypeSafe
+replay, not an external or production benchmark. The current 30-case fixture
+and live replay is documented in
+[`enterprise-onboarding-expanded-replay.md`](enterprise-onboarding-expanded-replay.md).
 
 Command:
 
