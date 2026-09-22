@@ -22,6 +22,8 @@ from .models import (
     InsightCardStatus,
     InvestigationMode,
     MetricQueryCard,
+    OnboardingCorrection,
+    OnboardingCorrectionKind,
     Outcome,
     PrincipalContext,
     QueryCardStatus,
@@ -629,6 +631,42 @@ def create_mcp(
             "plan": run.plan.model_dump(mode="json"),
             "retrieval": bundle.model_dump(mode="json"),
             "result": result.model_dump(mode="json"),
+        }
+
+    @mcp.tool()
+    def record_insight_card_correction(
+        card_id: str,
+        kind: str,
+        source_ref: str | None = None,
+        note: str = "",
+        ctx: Context | None = None,
+    ) -> dict[str, Any]:
+        """Record caller-owned onboarding feedback without changing card policy.
+
+        An external agent or knowledge graph can consume this append-only signal
+        on a later onboarding attempt. SignalWeave does not silently alter the
+        selected sources, thresholds, or delivery policy from feedback alone.
+        """
+        principal = request_principal(ctx)
+        card = get_scoped_card(card_id, principal)
+        correction = OnboardingCorrection(
+            correction_id=f"correction-{uuid4().hex}",
+            card_id=card.id,
+            card_version=card.version,
+            kind=OnboardingCorrectionKind(kind),
+            source_ref=source_ref,
+            note=note.strip(),
+            principal_id=principal.principal_id if principal else None,
+            principal_tenant=principal.tenant_id if principal else None,
+        )
+        updated = card.model_copy(
+            update={"onboarding_corrections": [*card.onboarding_corrections, correction]}
+        )
+        runtime.card_store.save_card(updated)
+        return {
+            "status": "recorded",
+            "correction": correction.model_dump(mode="json"),
+            "card": updated.model_dump(mode="json"),
         }
 
     @mcp.tool()

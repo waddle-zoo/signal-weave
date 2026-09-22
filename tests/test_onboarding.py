@@ -315,6 +315,18 @@ async def test_generic_card_flow_discovers_proposes_previews_and_requires_approv
     assert stored["onboarding_review"]["discovery_receipt"]["principal_tenant"] == "default"
     assert tool(server, "list_insight_cards")(status="draft")["count"] == 1
 
+    correction = tool(server, "record_insight_card_correction")(
+        card_id,
+        kind="candidate-rejected",
+        source_ref="superset|dashboard:8",
+        note="Finance close is not part of this growth workflow.",
+    )
+    assert correction["status"] == "recorded"
+    assert correction["correction"]["principal_tenant"] == "default"
+    assert tool(server, "get_insight_card")(card_id)["onboarding_corrections"][0]["kind"] == (
+        "candidate-rejected"
+    )
+
     with pytest.raises(ValueError, match="draft"):
         await tool(server, "evaluate_insight_card")(card_id)
 
@@ -682,6 +694,7 @@ def test_mcp_exposes_generic_authoring_tools(tmp_path):
         "discover_insight_sources",
         "resolve_insight_sources",
         "review_insight_card",
+        "record_insight_card_correction",
         "propose_insight_card",
         "draft_insight_card",
         "simulate_insight_card",

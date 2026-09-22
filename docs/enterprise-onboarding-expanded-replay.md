@@ -162,6 +162,8 @@ autonomous-production claim. Promote it only when each item has evidence:
 - [x] A trusted request principal can be injected into MCP and is propagated
   through discovery, inspection, approval review, bounded investigation, and
   evaluation; shared-catalog collision tests pass.
+- [x] Caller-owned onboarding corrections persist with card version and
+  principal provenance without silently changing policy.
 - [ ] Request-scoped identity/OAuth is verified through a shared gateway.
 - [ ] Role-aware candidate judgments are validated against operator labels.
 - [ ] Time-split replay and real reviewer time/correction measurements exist.

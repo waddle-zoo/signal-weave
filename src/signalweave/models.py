@@ -412,6 +412,30 @@ class OnboardingDiscoveryReceipt(BaseModel):
     evaluator: str = Field(min_length=1, max_length=160)
 
 
+class OnboardingCorrectionKind(StrEnum):
+    """Caller-owned feedback about one onboarding decision."""
+
+    CANDIDATE_ACCEPTED = "candidate-accepted"
+    CANDIDATE_REJECTED = "candidate-rejected"
+    DEFINITION_CONFIRMED = "definition-confirmed"
+    INTENT_CLARIFIED = "intent-clarified"
+    OTHER = "other"
+
+
+class OnboardingCorrection(BaseModel):
+    """Durable feedback for an external agent or knowledge graph to consume."""
+
+    correction_id: str = Field(min_length=1, max_length=160)
+    card_id: str = Field(min_length=1, max_length=160)
+    card_version: int = Field(ge=1)
+    kind: OnboardingCorrectionKind
+    source_ref: str | None = Field(default=None, max_length=500)
+    note: str = Field(default="", max_length=4000)
+    principal_id: str | None = Field(default=None, max_length=240)
+    principal_tenant: str | None = Field(default=None, max_length=160)
+    recorded_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
 class InsightCardOnboardingReview(BaseModel):
     """The confirmation boundary between an agent-drafted card and approval."""
 
@@ -546,6 +570,9 @@ class InsightCard(BaseModel):
     principal_tenant: str | None = Field(default=None, max_length=160)
     compiled_plan: InsightPlan | None = None
     onboarding_review: InsightCardOnboardingReview | None = None
+    onboarding_corrections: list[OnboardingCorrection] = Field(
+        default_factory=list, max_length=100
+    )
     status: InsightCardStatus = InsightCardStatus.DRAFT
     approved_by: str | None = Field(default=None, max_length=240)
     approved_at: datetime | None = None
