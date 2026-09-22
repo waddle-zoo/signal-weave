@@ -1,0 +1,19 @@
+{
+  "name": "Northstar analytics boundary",
+  "tenant_id": "northstar",
+  "adapters": [
+    {
+      "adapter": "superset",
+      "probe_goal": "growth conversion and acquisition health",
+      "required_capabilities": [
+        "catalog",
+        "search",
+        "inspect",
+        "tenant_scope",
+        "freshness",
+        "lineage"
+      ],
+      "minimum_resources": 1
+    }
+  ]
+}

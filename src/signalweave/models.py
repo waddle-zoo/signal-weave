@@ -318,6 +318,14 @@ class ResourceDiscovery(BaseModel):
 
     goal: str
     matches: list[ResourceMatch] = Field(default_factory=list)
+    candidate_refs: list[str] = Field(
+        default_factory=list,
+        max_length=200,
+        description=(
+            "The bounded adapter-owned candidate pool that Jev ranked. This is "
+            "diagnostic retrieval evidence, not a relevance judgment."
+        ),
+    )
     candidate_count: int = Field(ge=0)
     candidate_limit: int = Field(ge=1)
     truncated: bool = False

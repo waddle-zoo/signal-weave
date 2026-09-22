@@ -569,6 +569,7 @@ class InsightAuthoringService:
         return ResourceDiscovery(
             goal=goal,
             matches=visible,
+            candidate_refs=[resource_ref(resource) for resource in candidates],
             candidate_count=catalog.total_count,
             candidate_limit=self.max_candidates,
             truncated=pool.truncated or catalog.has_more,

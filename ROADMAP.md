@@ -45,6 +45,11 @@ card and per source domain.
 
 ### Bootstrap a company
 
+- [x] Add a portable `BootstrapManifest` and read-only `BootstrapReport` that
+      checks authorized catalog coverage, native bounded search, sample
+      inspection, tenant scope, and optional metadata capabilities.
+- [x] Expose bootstrap assessment through the MCP boundary without adding a
+      SignalWeave-owned UI or changing source permissions.
 - [ ] Define an adapter onboarding manifest covering credentials, tenant scope,
       native permissions, catalog search, inspection, freshness, lineage, and
       query-cost telemetry.
@@ -61,7 +66,14 @@ card and per source domain.
 
 ### Evaluate cards and workflows
 
-- [ ] Add a reusable card-evaluation fixture format for owner labels, source
+- [x] Add reusable `CardEvaluationCase`, `CardWorkflowEvaluator`, and a
+      per-card/workflow promotion report with blocked/shadow/approved states.
+- [x] Measure outcome accuracy, delivery exactness, evidence recall, retrieval
+      precision/recall, unsafe-action rate, runtime failures, and latency while
+      keeping owner labels outside Jev state.
+- [x] Add a retrieval-quality evaluator that separates adapter candidate recall
+      from Jev recommended-set precision/recall.
+- [x] Add a reusable card-evaluation fixture format for owner labels, source
       snapshots, graph/context versions, expected evidence, expected outcome,
       and allowed delivery methods.
 - [ ] Support historical replay with time-split holdouts, not only synthetic

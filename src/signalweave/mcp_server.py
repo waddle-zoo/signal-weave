@@ -14,6 +14,12 @@ from mcp.server.fastmcp import Context, FastMCP
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
+from .bootstrap import BootstrapManifest, BootstrapService
+from .evaluation import (
+    CardEvaluationCase,
+    CardEvaluationThresholds,
+    CardWorkflowEvaluator,
+)
 from .models import (
     ContextSnapshot,
     DecisionReceipt,
@@ -332,6 +338,57 @@ def create_mcp(
             principal=request_principal(ctx),
         )
         return discovery.model_dump(mode="json")
+
+    @mcp.tool()
+    async def assess_bootstrap(
+        manifest: dict[str, Any], ctx: Context | None = None
+    ) -> dict[str, Any]:
+        """Check whether installed adapters are ready for bounded card onboarding.
+
+        The caller supplies real probe goals and capability requirements. This
+        performs read-only catalog and sample-inspection checks; it does not
+        import data, create cards, or change adapter permissions.
+        """
+        principal = request_principal(ctx)
+        bootstrap_manifest = BootstrapManifest.model_validate(manifest)
+        report = await BootstrapService(runtime.sources).assess(
+            bootstrap_manifest, principal=principal
+        )
+        return report.model_dump(mode="json")
+
+    @mcp.tool()
+    async def evaluate_card_workflow(
+        card_id: str,
+        cases: list[dict[str, Any]],
+        thresholds: dict[str, Any] | None = None,
+        max_concurrency: int = 8,
+        ctx: Context | None = None,
+    ) -> dict[str, Any]:
+        """Replay one stored card against owner-labeled snapshots before promotion.
+
+        Each case contains ``id``, ``resources``, ``expected_outcome`` and any
+        optional evidence/retrieval labels. Labels stay in the evaluator and
+        are never included in the Jev state. Historical snapshots are supplied
+        by the caller; production delivery is not performed by this tool.
+        """
+        principal = request_principal(ctx)
+        card = get_scoped_card(card_id, principal)
+        if not cases:
+            raise ValueError("at least one labeled evaluation case is required")
+        parsed_cases = [
+            CardEvaluationCase.model_validate({**case, "card": card}) for case in cases
+        ]
+        report = await CardWorkflowEvaluator(
+            runtime.engine, max_concurrency=max_concurrency
+        ).evaluate(
+            parsed_cases,
+            thresholds=(
+                CardEvaluationThresholds.model_validate(thresholds)
+                if thresholds is not None
+                else None
+            ),
+        )
+        return report.model_dump(mode="json")
 
     @mcp.tool()
     async def propose_insight_card(

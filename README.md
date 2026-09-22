@@ -188,6 +188,29 @@ automatic `notify` or `escalate`, the result is downgraded to `investigate`. A
 server-side `ContextProvider` can supply trusted context from a deployment-owned
 system. Cards and graph changes remain caller-owned and reviewable.
 
+## Bootstrap and certify before push
+
+SignalWeave includes a read-only bootstrap check for each installed adapter. A
+deployment supplies a real probe goal and the capabilities it requires; the
+`assess_bootstrap` MCP tool reports authorized catalog coverage, native bounded
+search, sample inspection, tenant scope, and optional freshness/lineage metadata.
+It reports a local catalog scan as a review warning instead of presenting it as
+large-catalog readiness.
+
+Before activating a card, replay owner-labeled snapshots through the same Jev
+engine with `evaluate_card_workflow`. The report keeps labels outside Jev and
+measures outcome accuracy, delivery exactness, evidence recall, retrieval
+precision/recall, unsafe-action rate, errors, and latency. Its `blocked`,
+`shadow`, or `approved` status is a promotion signal, not a claim that Jev is
+universally correct.
+
+For onboarding retrieval, `RetrievalQualityEvaluator` reports candidate-pool
+recall separately from Jev's recommended-set precision and recall. That makes a
+missing catalog relationship, an incorrect Jev ranking, and a downstream card
+decision three different failures to fix. The reusable contracts and example
+fixture shape are documented in
+[`docs/bootstrap-and-certification.md`](docs/bootstrap-and-certification.md).
+
 ## Plain-language metric queries
 
 For data-lake questions, use a metric query card over an approved Trino catalog:

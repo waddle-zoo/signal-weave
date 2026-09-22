@@ -725,7 +725,9 @@ def test_mcp_exposes_generic_authoring_tools(tmp_path):
     server = make_server(tmp_path)
     names = set(server._tool_manager._tools)
     assert {
+        "assess_bootstrap",
         "discover_insight_sources",
+        "evaluate_card_workflow",
         "resolve_insight_sources",
         "review_insight_card",
         "record_insight_card_correction",
@@ -737,6 +739,29 @@ def test_mcp_exposes_generic_authoring_tools(tmp_path):
         "list_insight_cards",
         "get_insight_card",
     } <= names
+
+
+@pytest.mark.asyncio
+async def test_mcp_bootstrap_reports_local_catalog_fallback_honestly(tmp_path):
+    server = make_server(tmp_path)
+
+    report = await tool(server, "assess_bootstrap")(
+        manifest={
+            "tenant_id": "default",
+            "adapters": [
+                {
+                    "adapter": "superset",
+                    "probe_goal": "growth dashboard",
+                    "required_capabilities": ["catalog", "inspect"],
+                }
+            ],
+        }
+    )
+
+    assert report["status"] == "needs_review"
+    assert report["adapters"][0]["capabilities"]["catalog"] is True
+    assert report["adapters"][0]["capabilities"]["inspect"] is True
+    assert any("local-scan-fallback" in warning for warning in report["warnings"])
 
 
 @pytest.mark.asyncio
