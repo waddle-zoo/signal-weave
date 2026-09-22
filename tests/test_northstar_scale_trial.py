@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import json
+from collections import Counter
+
 import pytest
 
 from evaluations.northstar_scale_adversarial_review import review
 from evaluations.northstar_scale_trial import (
     _build_cases,
     _descriptors_and_records,
+    _load_reused_workflow_evidence,
     build_scale_fixtures,
 )
 from signalweave.retrieval import build_candidate_pool
@@ -153,3 +157,65 @@ def test_northstar_scale_adversarial_gate_rejects_unsafe_report():
     failed = review(report)
     assert failed["passed"] is False
     assert "workflow emitted at least one unsafe automatic action" in failed["failures"]
+
+
+def test_northstar_scale_reused_workflow_requires_matching_fixture_identity(tmp_path):
+    config, fixtures, roster = build_scale_fixtures(output_dir=tmp_path)
+    workflow_cases, _retrieval_cases, cards = _build_cases(
+        config, fixtures, tenant_id="northstar-outfitters"
+    )
+    source_adapters = {source.adapter for case in workflow_cases for source in case.card.sources}
+    workflow = {
+        "status": "approved",
+        "case_count": len(workflow_cases),
+        "error_rate": 0.0,
+        "dataset_ids": sorted(case.dataset.dataset_id for case in workflow_cases),
+        "card_ids": sorted(cards),
+        "splits": ["adversarial", "holdout", "train", "validation"],
+        "jev_requests": 336,
+    }
+    payload = {
+        "evaluator": "jev-latest",
+        "jev_only_product_path": True,
+        "scale": {
+            "company": config["company"],
+            "domains": len(config["domains"]),
+            "owner_personas": len(config["personas"]),
+            "role_agents": len(roster),
+            "workflow_case_count": len(workflow_cases),
+            "variant_counts": {},
+            "expected_outcome_counts": {},
+            "source_adapters": sorted(source_adapters),
+        },
+        "workflow": workflow,
+    }
+    # Use the real distributions rather than relying on the minimal payload's
+    # placeholder, keeping the identity check itself under test.
+    payload["scale"]["variant_counts"] = dict(Counter(case.tags[-1] for case in workflow_cases))
+    payload["scale"]["expected_outcome_counts"] = dict(
+        Counter(case.expected_outcome.value for case in workflow_cases)
+    )
+    report_path = tmp_path / "workflow.json"
+    report_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    loaded = _load_reused_workflow_evidence(
+        report_path,
+        workflow_cases=workflow_cases,
+        cards=cards,
+        config=config,
+        roster=roster,
+        source_adapters=source_adapters,
+    )
+    assert loaded["workflow"]["status"] == "approved"
+
+    payload["workflow"]["dataset_ids"][0] = "wrong-dataset"
+    report_path.write_text(json.dumps(payload), encoding="utf-8")
+    with pytest.raises(ValueError, match="dataset IDs"):
+        _load_reused_workflow_evidence(
+            report_path,
+            workflow_cases=workflow_cases,
+            cards=cards,
+            config=config,
+            roster=roster,
+            source_adapters=source_adapters,
+        )

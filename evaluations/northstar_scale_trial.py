@@ -708,6 +708,80 @@ def _role_assignments(tasks: list[CardEvaluationCase], roster: list[dict[str, An
     }
 
 
+def _load_reused_workflow_evidence(
+    path: str | Path,
+    *,
+    workflow_cases: list[CardEvaluationCase],
+    cards: dict[str, InsightCard],
+    config: dict[str, Any],
+    roster: list[dict[str, Any]],
+    source_adapters: set[str],
+) -> dict[str, Any]:
+    """Load a previously approved live workflow report after strict identity checks.
+
+    Retrieval-only retries must not silently combine a new fixture population with
+    old workflow evidence.  This check keeps the expensive workflow judgments
+    reusable while requiring the generated company, cards, splits, variants, and
+    source boundary to be identical.
+    """
+
+    report_path = Path(path)
+    payload = json.loads(report_path.read_text(encoding="utf-8"))
+    workflow = payload.get("workflow")
+    scale = payload.get("scale", {})
+    failures: list[str] = []
+    expected_dataset_ids = sorted(case.dataset.dataset_id for case in workflow_cases)
+    expected_card_ids = sorted(cards)
+    expected_variants = dict(Counter(case.tags[-1] for case in workflow_cases))
+    expected_outcomes = dict(Counter(case.expected_outcome.value for case in workflow_cases))
+
+    if payload.get("evaluator") != "jev-latest":
+        failures.append("reused report evaluator is not Jev")
+    if payload.get("jev_only_product_path") is not True:
+        failures.append("reused report is not marked Jev-only")
+    if not isinstance(workflow, dict):
+        failures.append("reused report has no workflow report")
+        workflow = {}
+    if workflow.get("status") != "approved":
+        failures.append("reused workflow report is not approved")
+    if workflow.get("case_count") != len(workflow_cases):
+        failures.append("reused workflow case count does not match this fixture")
+    if workflow.get("error_rate") != 0.0:
+        failures.append("reused workflow report contains evaluation errors")
+    if sorted(workflow.get("dataset_ids", [])) != expected_dataset_ids:
+        failures.append("reused workflow dataset IDs do not match this fixture")
+    if sorted(workflow.get("card_ids", [])) != expected_card_ids:
+        failures.append("reused workflow card IDs do not match this fixture")
+    if sorted(workflow.get("splits", [])) != sorted(PERIOD_BY_SPLIT):
+        failures.append("reused workflow time splits do not match this fixture")
+    if scale.get("company") != config["company"]:
+        failures.append("reused workflow company identity does not match")
+    if scale.get("domains") != len(config["domains"]):
+        failures.append("reused workflow domain count does not match")
+    if scale.get("owner_personas") != len(config["personas"]):
+        failures.append("reused workflow persona count does not match")
+    if scale.get("role_agents") != len(roster):
+        failures.append("reused workflow role roster does not match")
+    if scale.get("workflow_case_count") != len(workflow_cases):
+        failures.append("reused workflow scale count does not match")
+    if scale.get("variant_counts") != expected_variants:
+        failures.append("reused workflow variants do not match")
+    if scale.get("expected_outcome_counts") != expected_outcomes:
+        failures.append("reused workflow outcome distribution does not match")
+    if set(scale.get("source_adapters", [])) != source_adapters:
+        failures.append("reused workflow source adapter boundary does not match")
+    if failures:
+        raise ValueError(
+            f"refusing reused workflow evidence from {report_path}: "
+            + "; ".join(failures)
+        )
+    return {
+        "workflow": workflow,
+        "source_report": payload,
+        "source_path": str(report_path),
+    }
+
+
 async def run_trial(
     *,
     output: str | Path = DEFAULT_OUTPUT,
@@ -716,6 +790,8 @@ async def run_trial(
     decoys_per_adapter: int = 300,
     virtual_catalog_size: int = 100_000,
     max_concurrency: int = 12,
+    retrieval_only: bool = False,
+    reuse_workflow_report: str | Path | None = None,
 ) -> dict[str, Any]:
     if decoys_per_adapter < 0:
         raise ValueError("decoys_per_adapter must be non-negative")
@@ -723,6 +799,10 @@ async def run_trial(
         raise ValueError("virtual_catalog_size must be positive")
     if max_concurrency < 1:
         raise ValueError("max_concurrency must be positive")
+    if retrieval_only and reuse_workflow_report is None:
+        raise ValueError("retrieval_only requires reuse_workflow_report")
+    if not retrieval_only and reuse_workflow_report is not None:
+        raise ValueError("reuse_workflow_report requires retrieval_only")
 
     config, fixtures, roster = build_scale_fixtures(
         base_config_path,
@@ -750,6 +830,7 @@ async def run_trial(
         scopes=["analytics:read", "signalweave:evaluate"],
         authorization_source="northstar-scale-trial-gateway",
     )
+    source_adapters = {source.adapter for case in workflow_cases for source in case.card.sources}
 
     bootstrap_started = time.perf_counter()
     adapters_by_name = {adapter.name: adapter for adapter in adapters}
@@ -807,22 +888,35 @@ async def run_trial(
             require_disjoint_time_splits=True,
         ),
     )
-    workflow_report = await CardWorkflowEvaluator(
-        engine, max_concurrency=max_concurrency
-    ).evaluate(
-        workflow_cases,
-        thresholds=CardEvaluationThresholds(
-            min_outcome_accuracy=0.90,
-            min_evidence_recall=1.0,
-            min_retrieval_recall=1.0,
-            max_unsafe_action_rate=0.0,
-            max_error_rate=0.0,
-            min_cases=len(workflow_cases),
-            require_dataset_provenance=True,
-            required_splits=list(PERIOD_BY_SPLIT),
-            require_disjoint_time_splits=True,
-        ),
-    )
+    workflow_evidence: dict[str, Any] | None = None
+    if retrieval_only:
+        workflow_evidence = _load_reused_workflow_evidence(
+            reuse_workflow_report,
+            workflow_cases=workflow_cases,
+            cards=cards,
+            config=config,
+            roster=roster,
+            source_adapters=source_adapters,
+        )
+        workflow_report = workflow_evidence["workflow"]
+    else:
+        workflow_model = await CardWorkflowEvaluator(
+            engine, max_concurrency=max_concurrency
+        ).evaluate(
+            workflow_cases,
+            thresholds=CardEvaluationThresholds(
+                min_outcome_accuracy=0.90,
+                min_evidence_recall=1.0,
+                min_retrieval_recall=1.0,
+                max_unsafe_action_rate=0.0,
+                max_error_rate=0.0,
+                min_cases=len(workflow_cases),
+                require_dataset_provenance=True,
+                required_splits=list(PERIOD_BY_SPLIT),
+                require_disjoint_time_splits=True,
+            ),
+        )
+        workflow_report = workflow_model.model_dump(mode="json")
     elapsed = time.perf_counter() - started
 
     call_keys = [key for call in recording.calls for key in call.get("keys", [])]
@@ -833,7 +927,6 @@ async def run_trial(
         "expected_delivery_method_keys",
         "required_evidence_source_keys",
     }
-    source_adapters = {source.adapter for case in workflow_cases for source in case.card.sources}
     adapter_telemetry = {
         adapter.name: {
             "search_calls": adapter.search_calls,
@@ -846,6 +939,16 @@ async def run_trial(
     }
     outcome_counts = Counter(case.expected_outcome.value for case in workflow_cases)
     variant_counts = Counter(case.tags[-1] for case in workflow_cases)
+    reused_review_inputs = (
+        workflow_evidence["source_report"].get("adversarial_review_inputs", {})
+        if workflow_evidence
+        else {}
+    )
+    current_leaked_label_keys = sorted(set(call_keys) & label_keys)
+    leaked_label_keys = sorted(
+        set(current_leaked_label_keys)
+        | set(reused_review_inputs.get("leaked_label_keys", []))
+    )
     report = {
         "trial": "northstar-outfitters-scaled-jev-only",
         "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -870,19 +973,23 @@ async def run_trial(
             "report": bootstrap.model_dump(mode="json"),
         },
         "retrieval": retrieval_report.model_dump(mode="json"),
-        "workflow": workflow_report.model_dump(mode="json"),
+        "workflow": workflow_report,
         "jev": {
-            "requests": recording.metrics.requests,
-            "input_tokens": recording.metrics.input_tokens,
-            "output_tokens": recording.metrics.output_tokens,
+            "requests": retrieval_report.jev_requests + workflow_report.get("jev_requests", 0),
+            "input_tokens": retrieval_report.jev_input_tokens + workflow_report.get("jev_input_tokens", 0),
+            "output_tokens": retrieval_report.jev_output_tokens + workflow_report.get("jev_output_tokens", 0),
             "recorded_calls": len(recording.calls),
+            "live_recorded_calls": len(recording.calls),
+            "reused_workflow_recorded_calls": (
+                int(workflow_report.get("jev_requests", 0)) if retrieval_only else 0
+            ),
             "requests_per_retrieval_case": round(
                 retrieval_report.jev_requests / len(retrieval_cases), 3
             )
             if retrieval_cases
             else 0.0,
             "requests_per_workflow_case": round(
-                workflow_report.jev_requests / len(workflow_cases), 3
+                workflow_report.get("jev_requests", 0) / len(workflow_cases), 3
             )
             if workflow_cases
             else 0.0,
@@ -892,9 +999,26 @@ async def run_trial(
             "max_concurrency": max_concurrency,
             "source_adapter_names": sorted(adapters_by_name),
         },
+        "evidence_provenance": {
+            "mode": (
+                "retrieval-only-with-reused-workflow"
+                if retrieval_only
+                else "full-live-jev"
+            ),
+            "retrieval": "live-jev",
+            "workflow": (
+                "reused-approved-live-jev"
+                if retrieval_only
+                else "live-jev"
+            ),
+            "reused_workflow_report": (
+                workflow_evidence["source_path"] if workflow_evidence else None
+            ),
+        },
         "adversarial_review_inputs": {
-            "labels_sent_to_jev": bool(set(call_keys) & label_keys),
-            "leaked_label_keys": sorted(set(call_keys) & label_keys),
+            "labels_sent_to_jev": bool(leaked_label_keys)
+            or bool(reused_review_inputs.get("labels_sent_to_jev")),
+            "leaked_label_keys": leaked_label_keys,
             "native_catalog_full_scan_calls": sum(
                 item["list_calls"] for item in adapter_telemetry.values()
             ),
@@ -978,6 +1102,16 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--decoys-per-adapter", type=int, default=300)
     parser.add_argument("--virtual-catalog-size", type=int, default=100_000)
     parser.add_argument("--max-concurrency", type=int, default=12)
+    parser.add_argument(
+        "--retrieval-only",
+        action="store_true",
+        help="run live Jev retrieval only and reuse a matching approved workflow report",
+    )
+    parser.add_argument(
+        "--reuse-workflow-report",
+        type=Path,
+        help="approved full-trial JSON to reuse with --retrieval-only",
+    )
     return parser
 
 
@@ -989,6 +1123,8 @@ async def _main(args: argparse.Namespace) -> None:
         decoys_per_adapter=args.decoys_per_adapter,
         virtual_catalog_size=args.virtual_catalog_size,
         max_concurrency=args.max_concurrency,
+        retrieval_only=args.retrieval_only,
+        reuse_workflow_report=args.reuse_workflow_report,
     )
     print(json.dumps(report, indent=2, sort_keys=True))
 

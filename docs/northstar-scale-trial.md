@@ -53,6 +53,26 @@ PYTHONPATH=src:. \
   --output artifacts/northstar-scale/adversarial-review.json
 ```
 
+If a full run has already completed and only the retrieval harness changed, do
+not pay for the 336 workflow judgments again. The retrieval-only retry below
+runs the 169 live Jev retrieval cases and reuses the prior workflow report only
+after checking the generated cards, dataset IDs, role roster, variants, source
+adapters, and approval status match exactly:
+
+```bash
+TYPESAFE_API_KEY_FILE=/path/to/apikey_typesafe \
+PYTHONPATH=src:. \
+.venv/bin/python -m evaluations.northstar_scale_trial \
+  --retrieval-only \
+  --reuse-workflow-report /path/to/prior-full-run/report.json \
+  --output artifacts/northstar-scale/retrieval-retry/report.json \
+  --fixture-dir artifacts/northstar-scale/retrieval-retry/fixtures
+```
+
+This is still a Jev-only trial: the retrieval report is live, while the
+workflow section is explicitly marked as reused approved Jev evidence. It is
+not a fresh workflow benchmark.
+
 The gate requires Jev, all seven messy workflow variants, all four time splits,
 ready source bootstrap, full primary-anchor and related-source-group recall, at
 least 90% recommended precision/recall, zero unauthorized references, zero
@@ -64,27 +84,32 @@ context. The workflow path still evaluates the exact human-selected sources.
 
 ## Evidence and current gap
 
-The completed live Jev run on 2026-09-22 exercised the full population before
-the bounded overfetch and related-source-group scorer changes:
+The final credit-conserving live run on 2026-09-22 exercised all 169 retrieval
+cases with Jev. It reused the previously completed 168-case workflow replay
+only after strict fixture, card, dataset, roster, variant, and source-boundary
+identity checks:
 
 | Layer | Result |
 | --- | --- |
 | Bootstrap | 6/6 adapters ready; six native authorization calls; zero full-catalog scans |
 | Workflows | 168 cases; 96.43% exact outcome accuracy; 100% evidence and exact-source retrieval recall; 0 unsafe actions; 0 errors |
-| Retrieval | 169 cases; 99.41% candidate recall; 96.47% approved-bundle precision; 94.05% primary-anchor recall; 29.17% exact secondary-source recall |
+| Retrieval | 169 cases; 100% candidate recall; 93.87% recommended precision; 100% primary-anchor recall; 54.44% related-context-group recall; 100% no-match accuracy |
 | Scale | 40 role agents; 24 owner personas; 12 domains; 1860 materialized descriptors over six virtual 100k-resource catalogs |
-| Jev usage | 505 calls: 169 retrieval and 336 workflow judgments; median retrieval latency about 651 ms; median workflow latency about 853 ms |
+| Jev usage | 169 live retrieval calls plus 336 reused workflow calls; 4,849,696 recorded input tokens and 187,872 output tokens in the combined evidence; median live retrieval latency about 667 ms |
 
-The independent adversarial gate correctly failed this run because exact
-cross-system retrieval was not reliable enough. Investigation found two gaps:
-the old scorer treated one arbitrary adapter as the only valid representation
-of a cross-system context, and the multi-adapter search frontier could drop a
-relevant seventh result before Jev saw it. The branch now models owner-approved
-related-source groups and overfetches by the number of adapters while keeping
-the Jev candidate budget at 40. The fix has passing unit tests and local
-candidate-bound checks, but it still needs a fresh live Jev run after TypeSafe
-credits are restored. The attempted rerun returned HTTP 402 before any Jev
-judgment, so this branch does not claim the retrieval gate is proven yet.
+The independent adversarial gate therefore remains **shadow**, failing only the
+1.0 related-context-group gate. Jev reliably found the primary source in the
+bounded pool and recommended it, but only about half of the owner-labeled
+cross-domain context groups had at least one member recommended. The workflow
+path itself remained approved, so this is specifically a discovery/expansion
+gap rather than a typed decision-safety failure. It means SignalWeave can
+currently certify human-anchored workflows at this scale, but should not claim
+that it will automatically discover every related diagnostic source from a
+free-form goal.
+
+The branch also records a retrieval-only retry mode so future runs do not pay
+for another 336 workflow judgments when only retrieval changes. It refuses to
+reuse workflow evidence unless the fixture and approval identity checks match.
 
 ## What success means
 

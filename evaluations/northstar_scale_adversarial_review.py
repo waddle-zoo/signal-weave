@@ -27,6 +27,7 @@ def review(report: dict[str, Any]) -> dict[str, Any]:
     workflow = report.get("workflow", {})
     bootstrap = report.get("bootstrap", {}).get("report", {})
     review_inputs = report.get("adversarial_review_inputs", {})
+    provenance = report.get("evidence_provenance", {})
     variants = set(scale.get("variant_counts", {}))
     splits = set(review_inputs.get("dataset_splits", []))
 
@@ -34,6 +35,13 @@ def review(report: dict[str, Any]) -> dict[str, Any]:
         failures.append("the recorded evaluator is not Jev")
     if report.get("jev_only_product_path") is not True:
         failures.append("the report does not identify a Jev-only product path")
+    if provenance.get("mode") == "retrieval-only-with-reused-workflow":
+        if provenance.get("retrieval") != "live-jev":
+            failures.append("retrieval-only report does not identify live Jev retrieval")
+        if provenance.get("workflow") != "reused-approved-live-jev":
+            failures.append("retrieval-only report does not identify approved Jev workflow evidence")
+        if not provenance.get("reused_workflow_report"):
+            failures.append("retrieval-only report has no workflow evidence provenance")
     if scale.get("role_agents", 0) < 40:
         failures.append("the role graph is smaller than the 40-agent Northstar roster")
     if scale.get("workflow_case_count", 0) < 150:
@@ -105,6 +113,7 @@ def review(report: dict[str, Any]) -> dict[str, Any]:
             "error_rate": workflow.get("error_rate"),
             "full_catalog_scans": review_inputs.get("native_catalog_full_scan_calls"),
             "label_leak": review_inputs.get("labels_sent_to_jev"),
+            "evidence_mode": provenance.get("mode"),
         },
     }
 
