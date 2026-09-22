@@ -640,7 +640,12 @@ class InsightAuthoringService:
         onboarding_review = self.build_onboarding_review(
             card, discovery, principal=effective_principal
         )
-        card = card.model_copy(update={"onboarding_review": onboarding_review})
+        card = card.model_copy(
+            update={
+                "onboarding_review": onboarding_review,
+                "onboarding_review_history": [onboarding_review],
+            }
+        )
         setup_questions: list[str] = list(onboarding_review.questions)
         if plan.comparison_windows:
             setup_questions.append(

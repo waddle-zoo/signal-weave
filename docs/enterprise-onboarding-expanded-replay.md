@@ -156,7 +156,7 @@ autonomous-production claim. Promote it only when each item has evidence:
 - [x] Approval re-checks onboarding blockers and fails closed.
 - [x] Discovery receipts preserve principal, authorization source, catalog
   page, candidate refs, evaluator, and truncation state, and are persisted on
-  the proposed/approved card.
+  the proposed/approved card with a bounded review history.
 - [x] Candidate reviews preserve governed evidence roles and bounded Jev role
   probabilities without using them as authorization or approval policy.
 - [x] A trusted request principal can be injected into MCP and is propagated

@@ -49,6 +49,9 @@ deployment must establish a data policy before using company data.
 - `record_insight_card_correction` stores caller-owned, append-only onboarding
   feedback with card version and principal provenance. It does not mutate
   source selection, thresholds, delivery, or Jev policy by itself.
+- Each card retains a bounded history of onboarding reviews, so a later
+  correction can be compared with the receipt that preceded it; a separate
+  external audit store is still required for unlimited retention.
 - Context snapshots supplied through MCP are marked `unverified` and are visible
   in result provenance. A deployment-owned `ContextProvider` is the path for
   trusted graph or catalog context.

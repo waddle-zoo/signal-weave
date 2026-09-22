@@ -313,6 +313,7 @@ async def test_generic_card_flow_discovers_proposes_previews_and_requires_approv
     assert stored["status"] == "draft"
     assert stored["principal_tenant"] == "default"
     assert stored["onboarding_review"]["discovery_receipt"]["principal_tenant"] == "default"
+    assert len(stored["onboarding_review_history"]) == 1
     assert tool(server, "list_insight_cards")(status="draft")["count"] == 1
 
     correction = tool(server, "record_insight_card_correction")(
@@ -353,7 +354,9 @@ async def test_generic_card_flow_discovers_proposes_previews_and_requires_approv
 
     approved = await tool(server, "approve_insight_card")(card_id)
     assert approved["status"] == "approved"
-    assert tool(server, "get_insight_card")(card_id)["status"] == "approved"
+    approved_card = tool(server, "get_insight_card")(card_id)
+    assert approved_card["status"] == "approved"
+    assert len(approved_card["onboarding_review_history"]) == 2
     assert tool(server, "list_insight_cards")(status="approved")["count"] == 1
     evaluated = await tool(server, "evaluate_insight_card")(card_id)
     assert evaluated["result"]["delivery_methods"][0]["key"] == "growth-ops"

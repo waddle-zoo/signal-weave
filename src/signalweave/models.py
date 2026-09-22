@@ -570,6 +570,9 @@ class InsightCard(BaseModel):
     principal_tenant: str | None = Field(default=None, max_length=160)
     compiled_plan: InsightPlan | None = None
     onboarding_review: InsightCardOnboardingReview | None = None
+    onboarding_review_history: list[InsightCardOnboardingReview] = Field(
+        default_factory=list, max_length=20
+    )
     onboarding_corrections: list[OnboardingCorrection] = Field(
         default_factory=list, max_length=100
     )

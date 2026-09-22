@@ -102,6 +102,17 @@ def create_mcp(
         assert_card_scope(card, principal)
         return card
 
+    def append_onboarding_review(
+        card: InsightCard, review: Any
+    ) -> InsightCard:
+        history = [*card.onboarding_review_history, review][-20:]
+        return card.model_copy(
+            update={
+                "onboarding_review": review,
+                "onboarding_review_history": history,
+            }
+        )
+
     async def prepare_insight_card(
         card: InsightCard,
         context: ContextSnapshot | None = None,
@@ -593,7 +604,7 @@ def create_mcp(
             limit=limit,
             principal=principal,
         )
-        card = card.model_copy(update={"onboarding_review": review})
+        card = append_onboarding_review(card, review)
         runtime.card_store.save_card(card)
         return {
             "card": card.model_dump(mode="json"),
@@ -687,7 +698,7 @@ def create_mcp(
                 "insight card is not ready for approval; resolve onboarding blockers: "
                 + (codes or "human review required")
             )
-        card = card.model_copy(update={"onboarding_review": onboarding_review})
+        card = append_onboarding_review(card, onboarding_review)
         if card.compiled_plan is None:
             plan = await runtime.engine.compile(card)
             card = card.model_copy(update={"compiled_plan": plan})
