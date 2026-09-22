@@ -382,6 +382,7 @@ class OnboardingBlockerCode(StrEnum):
     SOURCE_HEALTH_REVIEW = "source-health-review"
     DEFINITION_CONFLICT = "definition-conflict"
     INTENT_DETAIL_REQUIRED = "intent-detail-required"
+    DECISION_GUIDANCE_REQUIRED = "decision-guidance-required"
     DELIVERY_POLICY_MISSING = "delivery-policy-missing"
 
 
@@ -552,6 +553,14 @@ class InsightCard(BaseModel):
     why_watch: str = Field(min_length=1, max_length=4000)
     watch_for: list[str] = Field(default_factory=list, max_length=100)
     questions: list[str] = Field(default_factory=list, max_length=100)
+    decision_guidance: str = Field(
+        default="",
+        max_length=8000,
+        description=(
+            "Human-authored guidance describing what ignore, investigate, notify, "
+            "escalate, and insufficient_data mean for this card."
+        ),
+    )
     sources: list[SourceRef] = Field(default_factory=list, max_length=200)
     comparison_windows: list[str] = Field(
         default_factory=lambda: ["previous_period", "trailing_4_period_average"],

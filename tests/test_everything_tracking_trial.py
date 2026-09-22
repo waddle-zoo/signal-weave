@@ -33,6 +33,19 @@ def test_everything_tracking_fixture_is_messy_and_cross_enterprise():
         any(resource.metadata.get("required") is False for resource in case.resources)
         for case in cases
     )
+    assert all(case.card.decision_guidance.strip() not in {"", "None"} for case in cases)
+
+
+def test_workflow_policy_overrides_are_used_when_present():
+    cases = build_cases(load_config(DEFAULT_CONFIG))
+
+    growth = next(case for case in cases if case.workflow_id == "growth-health")
+    fulfillment = next(
+        case for case in cases if case.workflow_id == "fulfillment-reliability"
+    )
+
+    assert "Qualified pipeline" in growth.card.decision_guidance
+    assert "Carrier service levels" in fulfillment.card.decision_guidance
 
 
 def test_every_trust_failure_has_a_required_failed_trust_source():

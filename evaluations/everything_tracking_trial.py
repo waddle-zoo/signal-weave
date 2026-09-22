@@ -370,6 +370,9 @@ def build_cases(config: dict[str, Any], *, repeats: int = 1) -> list[TrackingCas
                                 required=required,
                             )
                         )
+                    decision_guidance = workflow.get("decision_guidance") or config.get(
+                        "default_decision_guidance", ""
+                    )
                     card = InsightCard(
                         id=f"card-{case_id}",
                         title=f"{company_id} {workflow['title']}",
@@ -377,6 +380,7 @@ def build_cases(config: dict[str, Any], *, repeats: int = 1) -> list[TrackingCas
                         why_watch=str(workflow["why_watch"]),
                         watch_for=list(workflow["watch_for"]),
                         questions=list(workflow["questions"]),
+                        decision_guidance=str(decision_guidance),
                         sources=sources,
                         comparison_windows=["previous_period", "trailing_4_period_average"],
                         action_confidence_threshold=0.70,

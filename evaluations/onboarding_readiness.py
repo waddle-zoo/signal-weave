@@ -125,6 +125,20 @@ def assess_readiness(
             )
         )
 
+    if card.delivery_methods and not card.decision_guidance.strip():
+        blockers.append(
+            ReadinessBlocker(
+                code="decision-guidance-required",
+                severity=BlockerSeverity.BLOCK,
+                layer="decision-policy",
+                message="Push delivery requires a human-authored decision boundary.",
+                question=(
+                    "Describe what should be ignored, investigated, notified, escalated, "
+                    "or treated as insufficient data."
+                ),
+            )
+        )
+
     if discovery.no_match and not card.sources:
         blockers.append(
             ReadinessBlocker(

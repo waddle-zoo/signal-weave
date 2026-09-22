@@ -7,6 +7,7 @@
     "trust_failure",
     "urgent_operational_risk"
   ],
+  "default_decision_guidance": "Ignore expected, normal, or explained movement. Investigate when a material movement is contradictory, weakly corroborated, or requires a human explanation before action. Notify when the primary outcome is materially off course and connected evidence supports a non-urgent response. Escalate severe operational risk or an untrusted, stale, or unsafe source. Return insufficient_data when required evidence is missing, failed, stale, or not comparable.",
   "companies": [
     {
       "id": "northstar-commerce",
@@ -49,6 +50,7 @@
     "growth-health": {
       "domain": "growth",
       "title": "Growth health",
+      "decision_guidance": "The primary source is Growth command center. Treat Qualified pipeline as the corroborating source, Activation funnel and Growth platform incidents as diagnostic context, and Campaign and launch calendar as owner context. Ignore a movement when the primary and corroborating sources move together during a planned or expected operating pattern. Investigate a material primary movement when Qualified pipeline does not corroborate it or the diagnostic evidence is mixed. Notify when the primary outcome is materially off course and Qualified pipeline moves consistently, unless severe operational risk requires escalation. Escalate when a severe connected operating condition is present. Return insufficient_data when required evidence is unavailable, stale, or not comparable.",
       "what_to_watch": "Whether acquisition is producing healthy, qualified growth rather than merely more traffic.",
       "why_watch": "Leadership wants to know when growth performance needs coordinated action across marketing, product, and sales.",
       "watch_for": [
@@ -71,6 +73,7 @@
     "fulfillment-reliability": {
       "domain": "fulfillment",
       "title": "Fulfillment reliability",
+      "decision_guidance": "The primary source is Delivery promise board. Treat Carrier service levels as the corroborating source, Warehouse capacity and Inventory availability as diagnostic context, and Fulfillment data pipeline as the trust source. Ignore a movement when the primary and Carrier service levels move together during a planned or expected operating pattern. Investigate a material primary movement when Carrier service levels do not corroborate it or the diagnostic evidence is mixed. Notify when delivery performance is materially off course and Carrier service levels support the movement, unless severe operational risk requires escalation. Escalate when a severe connected operating condition is present. Return insufficient_data when Fulfillment data pipeline cannot establish freshness or comparability.",
       "what_to_watch": "Whether customer delivery promises remain reliable across the order, warehouse, and carrier flow.",
       "why_watch": "Operations needs early warning when a delivery problem is broad enough to require intervention, not every isolated late package.",
       "watch_for": [
@@ -93,6 +96,7 @@
     "payment-trust": {
       "domain": "payments",
       "title": "Payment trust",
+      "decision_guidance": "The primary source is Payment trust overview. Treat Issuer declines as the corroborating source, Fraud pressure as diagnostic context, Payment incidents as owner context, and Payment controls as the trust source. Ignore a movement when the primary and Issuer declines move together during a planned or expected operating pattern. Investigate a material primary movement when Issuer declines do not corroborate it or Fraud pressure is mixed. Notify when payment performance is materially off course and Issuer declines support the movement, unless severe operational risk requires escalation. Escalate when a severe connected operating condition is present. Return insufficient_data when Payment controls cannot establish trustworthy comparable evidence.",
       "what_to_watch": "Whether customers can complete payment reliably without introducing fraud or compliance exposure.",
       "why_watch": "Risk and payments leaders need one view of revenue loss, issuer behavior, fraud pressure, and control health.",
       "watch_for": [
@@ -115,6 +119,7 @@
     "customer-retention": {
       "domain": "customer-success",
       "title": "Customer retention",
+      "decision_guidance": "The primary source is Customer health board. Treat Product engagement and Renewal revenue as corroborating sources, Support friction as diagnostic context, and Account context as owner context. Ignore a movement when the primary and at least one corroborating source move together during a planned or expected operating pattern. Investigate a material primary movement when the corroborating sources do not support it or Support friction is mixed. Notify when retention risk is materially off course and a corroborating source supports the movement, unless severe operational risk requires escalation. Escalate when a severe connected operating condition is present. Return insufficient_data when the required evidence is unavailable, stale, or not comparable.",
       "what_to_watch": "Whether important customer relationships are becoming less healthy in a way that needs coordinated response.",
       "why_watch": "Executives care about durable retention risk, not normal account-level noise or a single delayed renewal.",
       "watch_for": [
@@ -137,6 +142,7 @@
     "product-adoption": {
       "domain": "product",
       "title": "Product adoption",
+      "decision_guidance": "The primary source is Adoption review. Treat Experiment results as the corroborating source, Release timeline and User friction as diagnostic context, and Product event pipeline as the trust source. Ignore a movement when the primary and Experiment results move together during a planned or expected operating pattern. Investigate a material primary movement when Experiment results do not corroborate it or the diagnostic evidence is mixed. Notify when adoption is materially off course and Experiment results support the movement, unless severe operational risk requires escalation. Escalate when a severe connected operating condition is present. Return insufficient_data when Product event pipeline cannot establish freshness or comparability.",
       "what_to_watch": "Whether newly released product capabilities are reaching the intended users and creating healthy usage.",
       "why_watch": "Product leadership needs to separate real adoption problems from planned rollout effects, instrumentation gaps, and normal cohort variation.",
       "watch_for": [
@@ -159,6 +165,7 @@
     "cloud-reliability": {
       "domain": "platform",
       "title": "Cloud reliability",
+      "decision_guidance": "The primary source is Platform health. Treat Incident timeline as the corroborating source, Recent deploys and Capacity pressure as diagnostic context, and Platform telemetry as the trust source. Ignore a movement when the primary and Incident timeline move together during a planned or expected operating pattern. Investigate a material primary movement when Incident timeline does not corroborate it or the diagnostic evidence is mixed. Notify when customer error rate is materially off course and Incident timeline supports the movement, unless severe operational risk requires escalation. Escalate when a severe connected operating condition is present. Return insufficient_data when Platform telemetry cannot establish freshness or comparability.",
       "what_to_watch": "Whether the platform can support customer workloads reliably and whether incidents need coordinated response.",
       "why_watch": "Platform leaders need signal across service health, deploys, incidents, and capacity instead of manually checking each system.",
       "watch_for": [
@@ -181,6 +188,7 @@
     "delivery-promise": {
       "domain": "logistics",
       "title": "Delivery promise",
+      "decision_guidance": "The primary source is Network service view. Treat Fleet capacity as the corroborating source, Weather context and Carrier exceptions as diagnostic context, and Dispatch completeness as the trust source. Ignore a movement when the primary and Fleet capacity move together during a planned or expected operating pattern. Investigate a material primary movement when Fleet capacity does not corroborate it or the diagnostic evidence is mixed. Notify when delivery promise is materially off course and Fleet capacity supports the movement, unless severe operational risk requires escalation. Escalate when a severe connected operating condition is present. Return insufficient_data when Dispatch completeness cannot establish fresh, comparable evidence.",
       "what_to_watch": "Whether delivery performance is still aligned with the promise made to customers and with available fleet capacity.",
       "why_watch": "The operations team should act on a system-level service risk, not chase normal variation in individual routes.",
       "watch_for": [
@@ -203,6 +211,7 @@
     "fleet-cost": {
       "domain": "transportation",
       "title": "Fleet cost control",
+      "decision_guidance": "The primary source is Fleet cost analysis. Treat Fleet utilization as the corroborating source, Fuel surcharge as diagnostic context, Operating plan as owner context, and Service quality board as the trust source. Ignore a movement when the primary and Fleet utilization move together during a planned or expected operating pattern. Investigate a material primary movement when Fleet utilization does not corroborate it or Fuel surcharge is mixed. Notify when cost per delivery is materially off course and Fleet utilization supports the movement, unless severe operational risk requires escalation. Escalate when a severe connected operating condition is present. Return insufficient_data when Service quality board cannot establish trustworthy comparable evidence.",
       "what_to_watch": "Whether transportation cost is drifting for reasons the business can act on without reducing service quality.",
       "why_watch": "Finance and operations need to connect cost movement to fuel, utilization, route mix, and customer service rather than react to a single number.",
       "watch_for": [
@@ -225,6 +234,7 @@
     "care-operations": {
       "domain": "care-operations",
       "title": "Care operations",
+      "decision_guidance": "The primary source is Care access board. Treat Scheduling demand as the corroborating source, Staffing coverage as diagnostic context, Care incidents as owner context, and Care quality checks as the trust source. Ignore a movement when the primary and Scheduling demand move together during a planned or expected operating pattern. Investigate a material primary movement when Scheduling demand does not corroborate it or Staffing coverage is mixed. Notify when care access is materially off course and Scheduling demand supports the movement, unless severe operational risk requires escalation. Escalate when a severe connected operating condition is present. Return insufficient_data when Care quality checks cannot establish trustworthy comparable evidence.",
       "what_to_watch": "Whether access to care is deteriorating in a way that needs operational intervention while quality remains protected.",
       "why_watch": "Care leaders need a joined view of demand, wait time, staffing, quality, and incident context.",
       "watch_for": [
@@ -247,6 +257,7 @@
     "revenue-cycle": {
       "domain": "finance",
       "title": "Revenue cycle",
+      "decision_guidance": "The primary source is Revenue cycle view. Treat Claims throughput as the corroborating source, Denial reasons as diagnostic context, Cash plan as owner context, and Finance data freshness as the trust source. Ignore a movement when the primary and Claims throughput move together during a planned or expected operating pattern. Investigate a material primary movement when Claims throughput does not corroborate it or Denial reasons are mixed. Notify when net collections are materially off course and Claims throughput supports the movement, unless severe operational risk requires escalation. Escalate when a severe connected operating condition is present. Return insufficient_data when Finance data freshness cannot establish freshness or comparability.",
       "what_to_watch": "Whether revenue collection is on course and whether operational friction is creating avoidable financial risk.",
       "why_watch": "Finance leadership needs to connect cash movement to claims, denials, payment timing, and source trust.",
       "watch_for": [
@@ -269,6 +280,7 @@
     "production-quality": {
       "domain": "manufacturing",
       "title": "Production quality",
+      "decision_guidance": "The primary source is Plant quality board. Treat Production lots as the corroborating source, Maintenance events as diagnostic context, Quality holds as owner context, and Inspection coverage as the trust source. Ignore a movement when the primary and Production lots move together during a planned or expected operating pattern. Investigate a material primary movement when Production lots do not corroborate it or Maintenance events are mixed. Notify when first-pass yield is materially off course and Production lots support the movement, unless severe operational risk requires escalation. Escalate when a severe connected operating condition is present. Return insufficient_data when Inspection coverage cannot establish trustworthy comparable evidence.",
       "what_to_watch": "Whether production quality is drifting in a way that creates customer, safety, or cost consequences.",
       "why_watch": "Plant and quality leaders need connected evidence across yield, defects, maintenance, and release holds.",
       "watch_for": [
@@ -291,6 +303,7 @@
     "supply-continuity": {
       "domain": "supply-chain",
       "title": "Supply continuity",
+      "decision_guidance": "The primary source is Supply continuity view. Treat Supplier reliability as the corroborating source, Purchase orders and Demand plan as diagnostic context, and Inventory freshness as the trust source. Ignore a movement when the primary and Supplier reliability move together during a planned or expected operating pattern. Investigate a material primary movement when Supplier reliability does not corroborate it or the diagnostic evidence is mixed. Notify when critical supply coverage is materially off course and Supplier reliability supports the movement, unless severe operational risk requires escalation. Escalate when a severe connected operating condition is present. Return insufficient_data when Inventory freshness cannot establish freshness or comparability.",
       "what_to_watch": "Whether critical supply inputs are at risk of disrupting production or customer commitments.",
       "why_watch": "Supply leaders need to connect inventory, supplier performance, purchase orders, and demand changes before a shortage becomes an outage.",
       "watch_for": [

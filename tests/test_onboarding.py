@@ -275,6 +275,10 @@ async def test_generic_card_flow_discovers_proposes_previews_and_requires_approv
         why_watch="Help Growth decide whether a conversion movement needs action.",
         watch_for=["Checkout conversion is materially down.", "Mobile errors corroborate the movement."],
         questions=["Is mobile the likely source of the regression?"],
+        decision_guidance=(
+            "Ignore normal variation; investigate when the primary movement lacks support; "
+            "notify Growth Ops when the movement is corroborated by mobile errors."
+        ),
         selected_sources=[
             {
                 "ref": "superset|dashboard:7",
@@ -385,6 +389,7 @@ async def test_generic_card_flow_discovers_proposes_previews_and_requires_approv
             headers={"Authorization": "Bearer test-webhook-token"},
         )
     assert response.status_code == 200
+
     assert response.json()["result"]["delivery_methods"][0]["key"] == "growth-ops"
 
     async with httpx.AsyncClient(
@@ -398,6 +403,32 @@ async def test_generic_card_flow_discovers_proposes_previews_and_requires_approv
     assert replay.status_code == 200
     assert replay.json()["replayed"] is True
     assert replay.json()["receipt"]["status"] == "replayed"
+
+
+@pytest.mark.asyncio
+async def test_push_card_onboarding_blocks_without_human_decision_guidance(tmp_path):
+    server = make_server(tmp_path)
+
+    proposal = await tool(server, "propose_insight_card")(
+        what_to_watch="Checkout conversion.",
+        why_watch="Decide whether Growth should respond.",
+        selected_sources=[{"ref": "superset|dashboard:7"}],
+        delivery_methods=[
+            {
+                "key": "growth-ops",
+                "outcome": "notify",
+                "label": "Growth Ops",
+                "destination": "slack://growth-ops",
+            }
+        ],
+    )
+
+    review = proposal["proposal"]["onboarding_review"]
+    assert review["status"] == "needs_human_input"
+    assert any(
+        blocker["code"] == "decision-guidance-required"
+        for blocker in review["blockers"]
+    )
 
 
 @pytest.mark.asyncio

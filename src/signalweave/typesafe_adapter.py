@@ -549,7 +549,9 @@ class JevJudger:
         questions["outcome"] = Choice(
             instructions=(
                 "Which single outcome best fits the current evidence and the owner's "
-                "card purpose? Choose only from the allowed outcomes. Treat an outcome "
+                "card purpose and decision guidance? The card's decision_guidance is "
+                "human-authored policy: apply it, do not invent missing business rules. "
+                "Choose only from the allowed outcomes. Treat an outcome "
                 "as unavailable if its delivery route is not configured. Do not invent "
                 "facts, sources, or destinations."
             ),

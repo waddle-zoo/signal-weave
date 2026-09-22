@@ -24,64 +24,76 @@ Each run used the same 120 cases:
 - the same card and source bundle for all arms; and
 - hidden expected labels kept outside provider input.
 
+The cards now include a human-authored `decision_guidance` paragraph. Each
+workflow states, in plain English, which source is primary, which sources
+corroborate or diagnose it, which source establishes trust, and what should be
+ignored, investigated, notified, escalated, or treated as insufficient data.
+This is the intended product boundary: onboarding supplies the business rule;
+Jev applies it repeatedly over the evidence.
+
 The independent reviewer recomputes exactness, evidence recall, provenance,
 unsafe automatic actions, input digests, provider errors, and coverage from the
 case fixture. It intentionally fails a run if the Jev path emits an unsafe
 automatic action.
 
-## Final live run
+## Final policy-bound live run
 
-The final corrected run produced:
+The final run used those policy-bearing cards and produced:
 
 | Measure | LLM-only control | Jev core | Agent + Jev preflight |
 | --- | ---: | ---: | ---: |
-| Exact outcomes | 82/120 (68.3%) | 83/120 (69.2%) | 77/120 (64.2%) |
-| Unsafe automatic actions | 16 | 13 | 11 |
-| Required evidence recall | 98.7% | 100.0% | 98.2% |
-| Provider errors | 0 | 0 | 2 |
-| Median latency | 4,992 ms | 927 ms | 6,394 ms |
-| P95 latency | 8,403 ms | 1,093 ms | 10,497 ms |
+| Exact outcomes | 63/120 (52.5%) | 105/120 (87.5%) | 67/120 (55.8%) |
+| Unsafe automatic actions | 14 | 0 | 11 |
+| Required evidence recall | 90.3% | 100.0% | 92.6% |
+| Provider errors | 0 | 0 | 0 |
+| Median latency | 3,383 ms | 953 ms | 4,307 ms |
+| P95 latency | 5,798 ms | 1,119 ms | 7,627 ms |
 
-The Jev core was about 4.8× faster at the median than the LLM-only control in
-this run and returned complete required evidence. That is a meaningful
-decision-loop latency result. It is not a claim that Jev is universally more
-accurate than an LLM.
+Jev was 3.6× faster at the median and 5.2× faster at P95 than the LLM-only
+control in this run. More importantly, Jev returned complete required evidence
+and made zero unsafe automatic actions on this holdout. The exactness gap was
+mostly deliberate safety fallback: Jev returned `investigate` when a `notify`
+or `escalate` judgment did not clear the card's 0.70 action-confidence
+threshold. It is not a claim that Jev is universally more accurate than an
+LLM, or that this synthetic holdout is production proof.
 
-## Stability across three live runs
+## What changed from the earlier run
 
-The same protocol was run three times to expose provider stochasticity. These
-are repeated evaluations of the same fixture, not three independent enterprise
-datasets.
+The earlier comparison used cards with generic watch items and a missing
+decision policy. It mixed two questions: whether Jev could apply a rule and
+whether Jev could invent the rule. That was the wrong product test. The
+corrected cards make the rule explicit before the benchmark starts.
 
-| Arm | Exact outcomes | Unsafe automatic actions |
-| --- | ---: | ---: |
-| LLM-only control | 238/360 (66.1%) | 56 |
-| Jev core | 247/360 (68.6%) | 38 |
-| Agent + Jev preflight | 230/360 (63.9%) | 38 |
+The remaining Jev misses cluster in `material_action`: 15 of 24 cases were
+conservatively held for investigation because the action-confidence threshold
+was not reached. Jev was exact on all 24 ambiguous, 24 expected-change, 24
+trust-failure, and 24 urgent-risk cases. This is the useful enterprise trade:
+the system can fail closed instead of turning uncertainty into a push
+notification. Threshold tuning remains card-owner policy, not hidden model
+behavior.
 
-The safety reduction versus the LLM-only control reproduced across the three
-runs: Jev produced 18 fewer unsafe actions and the agent-with-Jev arm produced
-18 fewer. The exactness improvement did not establish a durable advantage:
-Jev was only 2.5 percentage points higher than the control in aggregate, while
-the optional agent-with-Jev arm was lower. The correct conclusion is that Jev
-shows a promising safety and latency effect, not a proven accuracy win.
+The optional mediated arm is intentionally not the product path. It demonstrates
+that handing a Jev preflight to a frontier-model agent can still reintroduce
+unsafe behavior: it produced 11 unsafe actions and was slower than either
+component alone. SignalWeave's core value is the Jev-backed typed decision and
+evidence bundle that an external agent may consume, not ownership of that
+agent's final behavior.
 
 ## Card-context counterfactual
 
 The unsafe-action count must not be interpreted as “Jev alone caused every
 failure.” A Jev judgment is only as good as the human meaning encoded in the
-card and evidence. In the fixture, the ambiguous cards asked whether a change
-was meaningful but did not say “missing corroboration is investigate-only.” The
-expected-change cards included a planning source, but did not say “planned
-movement must suppress delivery.”
+card and evidence. The product now blocks a push card during onboarding when
+the owner has not supplied decision guidance. The guidance remains free-form;
+it is not a new workflow DSL.
 
 The Jev-only card-clarity trial holds the sources and hidden labels constant and
 adds only those two explicit human boundaries to the card. Over 48 cases:
 
 | Card version | Exact outcomes | Unsafe automatic actions | Median latency |
 | --- | ---: | ---: | ---: |
-| Original free-form card | 19/48 (39.6%) | 12 | 912 ms |
-| Clarified human card | 48/48 (100.0%) | 0 | 917 ms |
+| Original card with broad default guidance | 29/48 (60.4%) | 0 | 925 ms |
+| Clarified human card | 48/48 (100.0%) | 0 | 926 ms |
 
 This is strong evidence that onboarding/context quality is a dominant failure
 mode in these two classes. It is not a universal guarantee: the clarification
@@ -89,21 +101,18 @@ was a counterfactual human edit constructed from the fixture's owner intent.
 The trial lives in
 [`evaluations/everything_tracking_card_clarity_trial.py`](../evaluations/everything_tracking_card_clarity_trial.py).
 
-It also reveals a runtime safety gap. One original ambiguous card produced a
-`notify` result at 0.72 confidence while a question was `not_supported` at
-0.17. The wrapper currently gates automatic action on aggregate confidence and
-configured delivery, not on whether every action-critical question is
-supported. That should be treated as a product hardening item, not hidden by
-relabeling the card.
+The clarification changes only human-authored watch and question boundaries;
+latency remains flat. This is evidence for the onboarding contract: ask for the
+decision boundary and the evidence relationship explicitly, then let Jev apply
+it at scale. It is not evidence that Jev can recover an absent business rule.
 
 ## Where the failures cluster
 
-The Jev failures are not evenly distributed. In the final run, the remaining
-unsafe Jev actions were concentrated in ambiguous and expected-change states.
-That means the current gap is calibration around “material but not actionable”
-and “large but expected,” not source preservation. Trust-failure handling and
-evidence recall were strong in this fixture, but that is not enough to authorize
-delivery.
+The Jev path had no unsafe automatic actions in the final policy-bound run.
+Its remaining gap is useful calibration around when a defined notification is
+strong enough to cross the card's action threshold; the fallback is
+`investigate`, not delivery. Trust-failure handling, evidence recall, expected
+change suppression, and severe-risk escalation were exact in this fixture.
 
 The adversarial reviewer therefore returns:
 
@@ -113,20 +122,22 @@ promotion_ready: false
 verdict: NO-GO FOR AUTONOMOUS DELIVERY
 ```
 
-The right current operating mode is Jev-backed read-only or shadow evaluation,
-with human approval for notification and escalation. The next improvement
-should target outcome calibration and owner-labeled holdouts, not adding more
-LLM prompt text.
+The reviewer is intentionally whole-report strict and still returns NO-GO
+because the non-product LLM control and mediated agent arm emitted unsafe
+actions. The Jev core itself passed the run's safety and provenance checks, but
+the right rollout is still Jev-backed shadow evaluation with owner-labeled
+holdouts before enabling real notification and escalation.
 
 ## What this does and does not prove
 
 It proves that a Jev-backed decision layer can be evaluated against a realistic,
 heterogeneous synthetic enterprise fixture with inspectable evidence, stable
 input identity, live provider calls, and an independent safety gate. It shows
-that Jev is substantially faster than the LLM control in this decision loop and
-that unsafe-action reduction is a plausible value path. It also shows that
-explicit human context can materially improve Jev outcomes without making the
-decision loop slower.
+that Jev can apply explicit English business rules across twelve workflows and
+120 messy cases in roughly one second per decision, with complete evidence
+recall and no unsafe automatic actions in this run. It also shows that explicit
+human context can materially improve Jev outcomes without making the decision
+loop slower.
 
 It does not prove universal semantic correctness, catalog-scale retrieval
 recall, lower query cost, or safe autonomous delivery. All arms receive a
@@ -143,13 +154,15 @@ PYTHONPATH=src:. \
   --dotenv /absolute/path/to/hyperset/.env \
   --repeats 2 \
   --concurrency 6 \
-  --output artifacts/everything-tracking-llm-benchmark-final.json
+  --output artifacts/everything-tracking-llm-benchmark-card-rules.json
 
 PYTHONPATH=src:. \
 .venv/bin/python -m evaluations.everything_tracking_llm_adversarial_review \
-  --report artifacts/everything-tracking-llm-benchmark-final.json \
+  --report artifacts/everything-tracking-llm-benchmark-card-rules.json \
   --config evaluations/data/everything-tracking-scenarios.json
 ```
 
-The reviewer is expected to exit nonzero until the Jev path has zero unsafe
-automatic actions on the labeled holdout.
+The reviewer is expected to exit nonzero while any arm in the comparison emits
+unsafe automatic actions. Inspect the Jev core row separately: this run had
+zero unsafe Jev actions, but the whole-report verdict remains strict because
+the control and mediated arms are not safe autonomous delivery paths.

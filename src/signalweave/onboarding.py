@@ -51,6 +51,7 @@ def insight_goal(
     why_watch: str,
     watch_for: list[str] | None = None,
     questions: list[str] | None = None,
+    decision_guidance: str | None = None,
 ) -> str:
     """Create the discovery query without adding another card concept."""
     parts = [what_to_watch.strip(), f"Purpose: {why_watch.strip()}"]
@@ -58,6 +59,8 @@ def insight_goal(
         parts.append("Look for: " + "; ".join(watch_for))
     if questions:
         parts.append("Questions: " + "; ".join(questions))
+    if decision_guidance and decision_guidance.strip():
+        parts.append("Decision guidance: " + decision_guidance.strip())
     return "\n".join(parts)
 
 
@@ -254,6 +257,22 @@ class InsightAuthoringService:
                 "The card does not describe a concrete watch-out or question to answer.",
                 question,
             )
+        if card.delivery_methods and not card.decision_guidance.strip():
+            question = (
+                "Describe in plain English what should be ignored, investigated, notified, "
+                "escalated, or treated as insufficient data."
+            )
+            questions.append(question)
+            add_blocker(
+                OnboardingBlockerCode.DECISION_GUIDANCE_REQUIRED,
+                OnboardingBlockerSeverity.BLOCK,
+                "decision-policy",
+                (
+                    "The card has push delivery but does not define the human decision "
+                    "boundary for expected, ambiguous, actionable, and untrusted states."
+                ),
+                question,
+            )
         if missing_recommended:
             labels = [
                 match.title
@@ -442,7 +461,11 @@ class InsightAuthoringService:
         principal: PrincipalContext | None = None,
     ) -> InsightCardOnboardingReview:
         goal = insight_goal(
-            card.what_to_watch, card.why_watch, card.watch_for, card.questions
+            card.what_to_watch,
+            card.why_watch,
+            card.watch_for,
+            card.questions,
+            card.decision_guidance,
         )
         effective_principal = self._effective_principal(principal)
         discovery = await self.discover(
@@ -566,6 +589,7 @@ class InsightAuthoringService:
         *,
         watch_for: list[str] | None = None,
         questions: list[str] | None = None,
+        decision_guidance: str | None = None,
         selected_sources: list[dict[str, Any]] | None = None,
         adapter: str | None = None,
         limit: int = 10,
@@ -588,7 +612,10 @@ class InsightAuthoringService:
         watch_for = list(watch_for or [])
         questions = list(questions or [])
         delivery_methods = list(delivery_methods or [])
-        goal = insight_goal(what_to_watch, why_watch, watch_for, questions)
+        decision_guidance = (decision_guidance or "").strip()
+        goal = insight_goal(
+            what_to_watch, why_watch, watch_for, questions, decision_guidance
+        )
         effective_principal = self._effective_principal(principal)
         discovery = await self.discover(
             goal, adapter=adapter, limit=limit, principal=effective_principal
@@ -622,6 +649,7 @@ class InsightAuthoringService:
             why_watch=why_watch,
             watch_for=watch_for,
             questions=questions,
+            decision_guidance=decision_guidance,
             sources=source_refs,
             comparison_windows=comparison_windows
             or ["previous_period", "trailing_4_period_average"],
@@ -677,7 +705,13 @@ class InsightAuthoringService:
         optional catalog resources above the configured relevance threshold;
         missing or weakly related candidates never replace an anchor.
         """
-        goal = insight_goal(card.what_to_watch, card.why_watch, card.watch_for, card.questions)
+        goal = insight_goal(
+            card.what_to_watch,
+            card.why_watch,
+            card.watch_for,
+            card.questions,
+            card.decision_guidance,
+        )
         effective_principal = self._effective_principal(principal)
         anchors = list(card.sources)
         if card.retrieval_mode == RetrievalMode.FIXED:
