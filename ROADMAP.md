@@ -33,6 +33,69 @@ The current review is recorded in [`docs/adversarial-review.md`](docs/adversaria
 it supports a **public technical-alpha** posture while keeping the listed
 production-control gaps explicit.
 
+## Enterprise readiness: bootstrap and certify every card
+
+The onboarding finish line is not “a card was saved.” It is “a human can see
+what context the card will retrieve, replay the workflow against labeled
+history, understand the evidence bundle, and approve it for shadow or push
+delivery.” The current card-guided 1,000-chart trial showed better retrieval
+precision than lexical selection, but final outcome accuracy remains a gap. Do
+not treat the system as enterprise-ready until these checks are visible per
+card and per source domain.
+
+### Bootstrap a company
+
+- [ ] Define an adapter onboarding manifest covering credentials, tenant scope,
+      native permissions, catalog search, inspection, freshness, lineage, and
+      query-cost telemetry.
+- [ ] Add a guided bootstrap flow that imports catalog metadata and graph
+      relationships, shows coverage and permission warnings, and helps a human
+      create the first cards without requiring a new SignalWeave UI product.
+- [ ] Add a card context-completeness review that checks purpose, decision
+      guidance, required evidence, expected/contradictory states, delivery
+      routes, owners, and freshness requirements.
+- [ ] Show the candidate set and selected evidence before activation, including
+      why each source was retrieved and which relevant candidates were omitted.
+- [ ] Define explicit no-candidate, insufficient-data, and stale-context
+      behavior so an empty retrieval cannot become a misleading alert.
+
+### Evaluate cards and workflows
+
+- [ ] Add a reusable card-evaluation fixture format for owner labels, source
+      snapshots, graph/context versions, expected evidence, expected outcome,
+      and allowed delivery methods.
+- [ ] Support historical replay with time-split holdouts, not only synthetic
+      examples or same-period replay.
+- [ ] Support live shadow mode that records what would have been delivered
+      without sending it to production destinations.
+- [ ] Measure retrieval candidate recall/precision, evidence recall, decision
+      exactness, useful-alert precision, missed-action rate, investigate rate,
+      unsafe-action rate, and owner corrections separately.
+- [ ] Measure scale economics: candidates considered, sources materialized,
+      queries executed, bytes scanned, query time, Jev time, total latency, and
+      estimated cost per run.
+- [ ] Add adversarial scenario packs for expected movement, contradictory
+      evidence, missing/stale sources, definition conflicts, permission changes,
+      duplicate assets, aliases, and graph drift.
+- [ ] Generate a per-card certification report with configurable promotion
+      thresholds and a clear shadow/approved/blocked status.
+- [ ] Add regression checks so a card, adapter, graph, or Jev-version change
+      automatically replays its certification set before promotion.
+
+### Operate and improve safely
+
+- [ ] Version cards, source selections, graph snapshots, prompts/plans, and
+      decision receipts together so every result is replayable.
+- [ ] Add append-only human feedback linked to the result and context version,
+      with agent-proposed changes requiring human approval.
+- [ ] Detect source/schema/ownership/lineage drift and invalidate or pause
+      affected cards rather than silently weakening retrieval.
+- [ ] Add per-card query, payload, latency, concurrency, and Jev-cost budgets
+      with visible truncation and fail-closed behavior.
+- [ ] Add a company-level readiness report showing which domains, sources, and
+      cards are certified, weakly covered, stale, or still relying on lexical
+      fallback.
+
 ## Next: prove the narrow wedge
 
 - [x] Publish a small, reproducible labeled benchmark with documented limits and
