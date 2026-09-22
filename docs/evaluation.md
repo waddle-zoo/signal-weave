@@ -30,6 +30,12 @@ Jev-only trial and its independent adversarial gate documented in
 [`generalized-readiness-trial.md`](generalized-readiness-trial.md). The older
 representative-case commands below remain useful for focused regressions.
 
+For the focused enterprise-scale omission proof, see
+[`northstar-relationship-expansion-trial.md`](northstar-relationship-expansion-trial.md).
+It tests the adapter-owned relationship-expansion contract against a virtual
+100,000-resource-per-adapter catalog and records the boundary between candidate
+recall and workflow-bundle completeness.
+
 ```bash
 TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
   uv run python -m evaluations.cli prove

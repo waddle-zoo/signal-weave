@@ -41,27 +41,54 @@ The research supports two conclusions:
    hard product problem is the contract between an enterprise catalog/graph and
    Jev: completeness, authorization, freshness, and bounded context.
 
+## Readiness status after the latest proof
+
+The branch now has a production-shaped retrieval path for the highest-risk
+omission case: an important artifact can be related to a card without sharing
+its words, so an adapter can expose that neighborhood directly to SignalWeave
+before Jev ranks it. The path is bounded, tenant-filtered, receipt-visible, and
+does not fall back to a full catalog scan.
+
+The focused Northstar trial recovered all six hidden Fulfillment projections
+from a 100,000-resource-per-adapter virtual catalog with zero full scans and one
+Jev request. That is meaningful progress, but it is not a claim that SignalWeave
+can infer every workflow's required bundle. The trial selected one of the six
+projections because the fixture declared one context obligation. Distinct
+diagnostic, quality, owner, or delivery obligations still need to be declared by
+the card or trusted graph and checked independently.
+
+| Readiness area | Status | Evidence or remaining gate |
+| --- | --- | --- |
+| Bounded catalog search | Implemented | Adapter-owned search, cursor/total metadata, bounded Jev state, 100k virtual-catalog proof. |
+| Relationship-aware candidate coverage | Implemented in the branch | Hidden cross-domain candidates recovered 6/6 without a full scan; needs connector replay against real enterprise graph indexes. |
+| Authorization isolation | Local contract proven | Tenant filtering and request principal propagation exist; production gate is an OIDC/shared-gateway replay with real adapter credentials. |
+| Trusted context | Local safety behavior proven | Trusted context can expand/rank; unverified context is receipt-only and cannot widen retrieval or create obligations. A real graph provider still must publish freshness, completeness, and provenance. |
+| Workflow bundle completeness | Deliberately bounded | Explicit `requires_*` relationships preserve at least one candidate per obligation; role-level completeness needs human/graph labels, not a guessed global threshold. |
+| Cost and latency budgets | Remaining P1 | Candidate, payload, source-fetch, and follow-up budgets need one shared receipt and abstention proof. |
+| Outcome quality | Remaining P1 | Needs operator-labeled historical replay or shadow traffic; synthetic Jev labels are not enough. |
+
 ## Highest-confidence gaps
 
 ### 1. Candidate coverage at enterprise scale — P0
 
-The current implementation loads an entire adapter catalog into memory and then
-keeps a bounded pool before Jev. That works for a local Superset demo but fails
-as the default contract for a catalog with tens of thousands of dashboards,
-charts, tables, jobs, and documents. It can silently omit the only relevant
-asset.
-
-The smallest useful fix is an adapter-owned search boundary:
+This was the largest omission risk, and the branch now has the smallest useful
+fix: an adapter-owned search boundary plus an optional relationship-expansion
+boundary:
 
 - adapters may implement server-side, permission-aware search;
+- graph- or lineage-aware adapters may expand a bounded neighborhood from
+  approved anchors and trusted context endpoints;
 - the registry returns `total_count`, `has_more`, a cursor, and warnings;
 - the engine records whether Jev saw a complete catalog or a bounded result;
 - legacy adapters retain a clearly marked local fallback rather than pretending
   to solve scale.
 
-Proof target: a 100,000-resource fake adapter must make one bounded search call,
-return the relevant resource, and never materialize the full catalog in the
-registry or Jev request.
+The focused proof is complete for the omission case: a 100,000-resource-per-
+adapter fake environment made one bounded lexical call plus one bounded
+relationship call, recovered all six hidden related candidates, and never
+materialized the catalog. The remaining gate is connector replay: Superset,
+Looker, Hex, Trino/catalog, and company graph integrations must expose the same
+contract without SignalWeave knowing their internal schemas.
 
 ### 2. Connector authorization is explicit — P0
 
@@ -86,9 +113,13 @@ or reuse each other’s cards or receipts, including through bounded investigati
 
 The current context provider is intentionally small, but an MCP caller can still
 pass an unverified snapshot. That is useful for experiments and unsafe as a trust
-boundary. A production graph connector should answer a versioned query with
-authorization, freshness, completeness, and provenance status; SignalWeave should
-consume that result and abstain when required graph context is unavailable.
+boundary. The branch now treats that distinction explicitly: trusted snapshots
+can seed relationship expansion and Jev ranking; unverified snapshots remain in
+the receipt but cannot widen retrieval, create required bundle coverage, or
+change the Jev request. A production graph connector should answer a versioned
+query with authorization, freshness, completeness, and provenance status;
+SignalWeave should consume that result and abstain when required graph context is
+unavailable.
 
 SignalWeave should define the interface and receipt, not own a new knowledge
 graph. This is the differentiator: making graph facts operationally usable by a
@@ -121,13 +152,24 @@ workflow being evaluated.
 
 ## Sequence
 
-1. Ship the bounded catalog-search contract and 100k-artifact stress proof.
-2. Add request-scoped principal/tenant propagation and cross-source tests.
-3. Replace unverified context input with a connector contract carrying
-   authorization, freshness, and completeness.
-4. Add explicit payload/time budgets and benchmark abstention under truncation.
-5. Run replay evaluation with operator labels before making automatic delivery a
-   production recommendation.
+Completed on this branch:
+
+1. Bounded catalog search, relationship expansion, tenant filtering, and the
+   100k-artifact omission proof.
+2. Request-scoped principal propagation and cross-source isolation tests.
+3. Trusted-context gating, explicit `requires_*` coverage, and an unverified-
+   context adversarial test.
+
+Remaining enterprise gates:
+
+4. Replay the contract through real OIDC/shared-gateway and connector adapters.
+5. Add one shared set of payload, source-fetch, wall-clock, and follow-up
+   budgets, with explicit abstention and receipt fields.
+6. Add operator-labeled historical replay or shadow traffic to measure whether
+   the selected evidence and route would have produced the right business
+   outcome.
+7. Only then make automatic delivery a production recommendation for a given
+   connector and card family.
 
 ## Sources
 

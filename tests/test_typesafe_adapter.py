@@ -5,6 +5,8 @@ import typesafe_sdk
 
 from signalweave.compiler import base_plan
 from signalweave.models import (
+    ContextFact,
+    ContextSnapshot,
     DeliveryMethod,
     Evidence,
     InsightCard,
@@ -152,6 +154,44 @@ async def test_jev_rank_resources_uses_typed_questions_and_returns_probabilities
     assert judger.metrics.requests == 1
     assert judger.metrics.input_tokens == 41
     assert judger.metrics.output_tokens == 7
+
+
+@pytest.mark.asyncio
+async def test_jev_context_rank_includes_versioned_graph_facts(monkeypatch):
+    FakeClient.calls = []
+    monkeypatch.setattr(typesafe_sdk, "AsyncTypeSafeClient", FakeClient)
+    monkeypatch.setattr(typesafe_sdk, "Noul", FakeNoul)
+    judger = JevJudger(api_key="synthetic-test-key", timeout=3)
+    resource = ResourceDescriptor(
+        adapter="trino",
+        resource="query:fulfillment",
+        kind="query",
+        title="Fulfillment context",
+    )
+    context = ContextSnapshot(
+        provider="company-graph",
+        version="graph-v2",
+        facts=[
+            ContextFact(
+                fact_id="edge-1",
+                subject_ref="superset|dashboard:payments",
+                relation="requires_related_context",
+                object_ref="superset|dashboard:fulfillment",
+                statement="Payments uses Fulfillment context.",
+            )
+        ],
+    )
+
+    scores = await judger.rank_resources_with_context(
+        "Monitor authorization rate", [resource], context
+    )
+
+    assert scores == {"trino|query:fulfillment": 0.91}
+    assert FakeClient.calls[0]["state"]["context"]["version"] == "graph-v2"
+    assert FakeClient.calls[0]["state"]["context"]["facts"][0]["object_ref"] == (
+        "superset|dashboard:fulfillment"
+    )
+    assert "context" in FakeClient.calls[0]["state"]
 
 
 @pytest.mark.asyncio

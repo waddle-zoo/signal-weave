@@ -103,12 +103,21 @@ def build_candidate_pool(
         resource.contract.domain for resource in (anchors or []) if resource.contract.domain
     }
     context_refs = set()
+    context_target_refs = set()
     if context is not None:
         context_refs = {
             ref
             for fact in context.facts
             for ref in (fact.subject_ref, fact.object_ref)
             if ref
+        }
+        anchor_ref_set = {resource_ref(anchor) for anchor in (anchors or [])}
+        context_target_refs = {
+            fact.object_ref
+            for fact in context.facts
+            if fact.object_ref
+            and fact.subject_ref in anchor_ref_set
+            and fact.relation.lower().startswith("requires_")
         }
 
     scored: list[tuple[tuple[int, int, int, int, int, str], ResourceDescriptor, list[str]]] = []
@@ -129,12 +138,21 @@ def build_candidate_pool(
         )
         if anchor_related:
             signals.append("anchor-relationship")
+        context_related = bool(related_refs & context_refs)
+        if context_related:
+            signals.append("context-relationship")
+        required_context_related = bool(related_refs & context_target_refs) or ref in context_target_refs
+        if required_context_related:
+            signals.append("required-context-relationship")
         if ref in context_refs:
             signals.append("context-reference")
         if not signals:
             signals.append("catalog-fallback")
-        relationship_score = int("anchor-relationship" in signals) + int(
-            "context-reference" in signals
+        relationship_score = (
+            int("anchor-relationship" in signals)
+            + int("context-relationship" in signals)
+            + (2 * int("required-context-relationship" in signals))
+            + int("context-reference" in signals)
         )
         title_score = int("title-match" in signals)
         domain_score = int("anchor-domain" in signals)

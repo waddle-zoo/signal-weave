@@ -1,22 +1,21 @@
 # Adversarial public-readiness review
 
 This review treats SignalWeave as an alpha open-source result layer, not as a
-complete enterprise control plane. It was refreshed after three independent
-adversarial reviews, the retrieval/explanation trial, and the local Superset
-round trip on 2026-09-18.
+complete enterprise control plane. It was refreshed after the retrieval
+ablation, relationship-expansion proof, and local connector tests on 2026-09-22.
 
 ## Verdict
 
 **Ready to present as a technical alpha; not ready to present as production-ready.**
 The repository now has a coherent wedge, a runnable onboarding path, a Jev-backed
-card/result contract, bounded follow-up retrieval, provenance, and fail-closed
-tests. It still needs request-scoped identity, indexed catalog retrieval, payload
-budgets, and customer-owned shadow labels before a deployment can imply dependable
-automatic operations.
+card/result contract, adapter-owned bounded retrieval, relationship expansion,
+provenance, and fail-closed tests. It still needs production connector/OIDC
+replays, payload budgets, and customer-owned shadow labels before a deployment
+can imply dependable automatic operations.
 
 ## What passed
 
-- Local lint and tests: `94 passed, 1 skipped`.
+- Local lint and tests: `175 passed, 1 skipped`.
 - The feature branch is verified locally and GitHub Actions checks for PR #1
   pass on Python 3.11 and 3.12.
 - The package builds successfully and declares Apache 2.0 metadata.
@@ -94,22 +93,24 @@ automatic operations.
   are separately covered by synthetic held-out trials. There are still no
   independent domain-owner labels, historical holdout data, or real delivery
   outcomes. These are bounded technical-alpha results, not a production claim.
-- **The catalog retrieval path is still bounded in-process.** It preserves
-  relationship and context signals before Jev ranking, but it still loads the
-  adapter catalog and truncates the candidate pool. A 100k-resource deployment
-  needs a permission-aware `search`/pagination interface supplied by the catalog
-  or graph system; Jev cannot recover a source that never enters the pool.
-- **Identity is still a deployment boundary.** The local bearer token protects
-  the HTTP surface, but cards, actors, graph facts, and source ACLs are not yet
-  request-scoped inside SignalWeave. Shared multi-tenant service deployments need
-  an identity-aware gateway plus tenant-qualified resource references and stores.
+- **Production connector replay is still open.** The branch now uses a
+  permission-aware adapter `search` boundary and optional relationship expansion;
+  the focused 100k-resource-per-adapter proof recovered 6/6 hidden related
+  candidates with zero full scans. A real deployment still needs Superset,
+  Looker, Hex, Trino/catalog, and company-graph adapters to implement that
+  contract against their own indexes and credentials.
+- **Identity remains a deployment boundary.** The local service now propagates a
+  trusted request principal and tenant-filters catalog/inspection paths, but it
+  does not implement an IdP. Shared multi-tenant deployments still need an
+  identity-aware gateway replay plus tenant-qualified card and receipt stores.
 
 ### Medium priority
 
 - Keep source and delivery-method allowlists documented as deployment
   configuration, not organization-wide authorization provided by SignalWeave.
 - Add catalog-size and rate limits at the HTTP boundary; push request-size
-  limits now exist, while aggregate Jev payload budgets remain open.
+  limits now exist, while aggregate Jev payload/source-fetch budgets remain
+  open.
 - Make dependency and container builds reproducible beyond the current CI matrix.
 - Add runtime adapter-registration tests, not only heterogeneous engine tests.
 - Keep the JSON store explicitly limited to local fixtures; do not use it as a
@@ -133,7 +134,7 @@ evidence sent to TypeSafe Jev. See [`SECURITY.md`](../SECURITY.md) and
 
 ```text
 ruff check src tests evaluations       passed
-Python 3.12 + pytest -q                 85 passed, 1 skipped
+Python 3.12 + pytest -q                 175 passed, 1 skipped
 Local Superset integration               1 passed
 GitHub Actions PR #1                   test (3.11), test (3.12) passed
 SVG XML validation and rendering       passed

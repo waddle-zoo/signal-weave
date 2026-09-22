@@ -28,6 +28,7 @@ from signalweave.evaluation import (
 )
 from signalweave.models import (
     CatalogSearchPage,
+    ContextSnapshot,
     DeliveryMethod,
     InsightCard,
     InsightPlan,
@@ -89,8 +90,19 @@ class NativeCatalogAdapter:
         self.name = name
         self._descriptors = descriptors
         self._by_resource = {}
+        self._related_index: dict[str, list[ResourceDescriptor]] = {}
         for descriptor in descriptors:
             self._by_resource.setdefault(descriptor.resource, []).append(descriptor)
+            refs = [
+                *descriptor.contract.lineage,
+                *(
+                    descriptor.metadata.get("related_refs", [])
+                    if isinstance(descriptor.metadata.get("related_refs", []), list)
+                    else []
+                ),
+            ]
+            for ref in refs:
+                self._related_index.setdefault(str(ref), []).append(descriptor)
         self.total_count = total_count
         self.search_calls = 0
         self.authorize_calls = 0
@@ -140,6 +152,37 @@ class NativeCatalogAdapter:
                 return descriptor
         return None
 
+    async def expand_related_resources(
+        self,
+        related_refs: list[str],
+        *,
+        limit: int,
+        authorized_tenants: Any = None,
+    ) -> CatalogSearchPage:
+        allowed = set(authorized_tenants or [])
+        resources: list[ResourceDescriptor] = []
+        seen: set[tuple[str, str]] = set()
+        for related_ref in related_refs:
+            for descriptor in self._related_index.get(related_ref, []):
+                identity = (descriptor.adapter, descriptor.resource)
+                if identity in seen or (
+                    allowed and descriptor.contract.tenant_id not in allowed
+                ):
+                    continue
+                seen.add(identity)
+                resources.append(descriptor)
+                if len(resources) >= limit:
+                    break
+            if len(resources) >= limit:
+                break
+        return CatalogSearchPage(
+            resources=resources,
+            total_count=len(resources),
+            has_more=False,
+            provider=f"{self.name}-native-related-index",
+            strategy="native-related-index",
+        )
+
     async def inspect(self, source: SourceRef) -> ResourceSnapshot:
         return ResourceSnapshot(
             source_key=source.key,
@@ -167,6 +210,26 @@ class RecordingJev:
                 "keys": ["goal", "candidate_resources"],
             }
         )
+        return await self.delegate.rank_resources(goal, resources)
+
+    async def rank_resources_with_context(
+        self,
+        goal: str,
+        resources: list[ResourceDescriptor],
+        context: ContextSnapshot,
+    ) -> dict[str, float]:
+        self.calls.append(
+            {
+                "method": "rank_resources_with_context",
+                "goal": goal,
+                "refs": [_ref(resource.adapter, resource.resource) for resource in resources],
+                "keys": ["goal", "candidate_resources", "context"],
+                "context_version": context.version,
+            }
+        )
+        rank_with_context = getattr(self.delegate, "rank_resources_with_context", None)
+        if callable(rank_with_context):
+            return await rank_with_context(goal, resources, context)
         return await self.delegate.rank_resources(goal, resources)
 
     async def compile_plan(self, state: dict[str, Any], card: InsightCard) -> dict[str, Any]:

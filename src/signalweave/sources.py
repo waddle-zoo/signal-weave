@@ -81,6 +81,18 @@ class SourceAdapter(Protocol):
         authorized_tenants: Iterable[str] | None = None,
     ) -> ResourceDescriptor | None: ...
 
+    # Optional relationship-aware expansion. Adapters that own a graph or
+    # native lineage index can return a bounded neighborhood around approved
+    # card sources without forcing SignalWeave to scan their catalog. The
+    # method is intentionally optional so existing adapters remain valid.
+    async def expand_related_resources(
+        self,
+        related_refs: list[str],
+        *,
+        limit: int,
+        authorized_tenants: Iterable[str] | None = None,
+    ) -> CatalogSearchPage: ...
+
 
 class SourceRegistry:
     """Resolve insight-card source refs through explicitly installed adapters."""
@@ -227,6 +239,90 @@ class SourceRegistry:
             provider=(page.provider if page is not None else "signalweave"),
             strategy=(page.strategy if page is not None else "multi-adapter-search"),
             warnings=[warning for page_item in pages for warning in page_item.warnings],
+        )
+
+    async def expand_related_resources(
+        self,
+        related_refs: Iterable[str],
+        *,
+        limit: int = 40,
+        authorized_tenants: Iterable[str] | None = None,
+    ) -> CatalogSearchPage:
+        """Ask installed adapters for a bounded relationship neighborhood.
+
+        This is deliberately separate from lexical catalog search. A graph or
+        native lineage index may know that a deployment, query, dashboard, or
+        ownership record is related to an approved source even when none of
+        their names overlap. Adapters that do not implement the optional
+        method contribute no candidates and never trigger a local full scan.
+        """
+        if not 1 <= limit <= 500:
+            raise ValueError("related-resource limit must be between 1 and 500")
+        seeds = sorted({str(ref) for ref in related_refs if str(ref).strip()})
+        if not seeds:
+            return CatalogSearchPage(
+                total_count=0,
+                provider="signalweave",
+                strategy="no-related-expansion",
+            )
+        tenant_scope = self._tenant_scope(authorized_tenants)
+        adapters = [self._adapters[name] for name in sorted(self._adapters)]
+        if not adapters:
+            return CatalogSearchPage(
+                total_count=0,
+                provider="signalweave",
+                strategy="empty-catalog",
+            )
+        per_adapter_limit = max(1, (limit + len(adapters) - 1) // len(adapters))
+        pages: list[CatalogSearchPage] = []
+        warnings: list[str] = []
+        for adapter in adapters:
+            expand = getattr(adapter, "expand_related_resources", None)
+            if not callable(expand):
+                continue
+            try:
+                page = await expand(
+                    seeds,
+                    limit=per_adapter_limit,
+                    authorized_tenants=authorized_tenants,
+                )
+                page = (
+                    page
+                    if isinstance(page, CatalogSearchPage)
+                    else CatalogSearchPage.model_validate(page)
+                )
+            except Exception as error:  # noqa: BLE001 - isolate optional graph outages
+                warnings.append(
+                    f"Adapter {adapter.name} related expansion failed: "
+                    f"{type(error).__name__}: {error}"
+                )
+                continue
+            visible = [
+                resource
+                for resource in page.resources
+                if self._is_authorized(resource, tenant_scope)
+            ]
+            pages.append(page.model_copy(update={"resources": visible[:per_adapter_limit]}))
+            warnings.extend(page.warnings)
+        resources: list[ResourceDescriptor] = []
+        seen: set[tuple[str, str]] = set()
+        for index in range(per_adapter_limit):
+            for page in pages:
+                if index >= len(page.resources):
+                    continue
+                resource = page.resources[index]
+                identity = (resource.adapter, resource.resource)
+                if identity in seen or len(resources) >= limit:
+                    continue
+                seen.add(identity)
+                resources.append(resource)
+        return CatalogSearchPage(
+            resources=resources,
+            total_count=sum(page.total_count for page in pages),
+            has_more=any(page.has_more for page in pages),
+            provider="signalweave-related-expansion",
+            strategy="multi-adapter-related-expansion",
+            warnings=warnings,
         )
 
     async def inspect(

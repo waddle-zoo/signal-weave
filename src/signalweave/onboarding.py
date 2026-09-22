@@ -84,6 +84,74 @@ class InsightAuthoringService:
         return principal or self.principal
 
     @staticmethod
+    def _relationship_seed_refs(
+        anchors: list[SourceRef], context: ContextSnapshot | None
+    ) -> list[str]:
+        """Return approved anchors plus graph endpoints directly connected to them."""
+        anchor_refs = {f"{source.adapter}|{source.resource}" for source in anchors}
+        seeds = set(anchor_refs)
+        # Caller-supplied context is useful evidence, but it must not widen the
+        # retrieval neighborhood until an external provider has marked it trusted.
+        if context is not None and context.trust == "trusted":
+            for fact in context.facts:
+                endpoints = {fact.subject_ref}
+                if fact.object_ref:
+                    endpoints.add(fact.object_ref)
+                if endpoints & anchor_refs:
+                    seeds.update(endpoints)
+        return sorted(seeds)
+
+    @staticmethod
+    def _required_relationship_groups(
+        anchors: list[SourceRef],
+        context: ContextSnapshot | None,
+        resources: list[ResourceDescriptor],
+    ) -> list[tuple[str, set[str]]]:
+        """Map explicit card-context edges to candidate reference groups.
+
+        A context edge is an obligation to preserve at least one authorized,
+        Jev-supported neighbor for the referenced object. It is intentionally
+        not a requirement to select every representation returned by an
+        adapter; one graph node may have dashboard, query, quality, and owner
+        projections.
+        """
+        if context is None or context.trust != "trusted":
+            return []
+        anchor_refs = {f"{source.adapter}|{source.resource}" for source in anchors}
+        targets = {
+            fact.object_ref
+            for fact in context.facts
+            if (
+                fact.object_ref
+                and fact.subject_ref in anchor_refs
+                and fact.relation.lower().startswith("requires_")
+            )
+        }
+        groups: list[tuple[str, set[str]]] = []
+        for target in sorted(targets):
+            refs: set[str] = set()
+            for resource in resources:
+                related_refs = {
+                    *resource.contract.lineage,
+                    *(
+                        resource.metadata.get("related_refs", [])
+                        if isinstance(resource.metadata.get("related_refs", []), list)
+                        else []
+                    ),
+                    *(
+                        resource.metadata.get("related_resources", [])
+                        if isinstance(resource.metadata.get("related_resources", []), list)
+                        else []
+                    ),
+                }
+                ref = resource_ref(resource)
+                if ref == target or target in related_refs:
+                    refs.add(ref)
+            if refs:
+                groups.append((target, refs))
+        return groups
+
+    @staticmethod
     def _role_judgment(
         resource: ResourceDescriptor, judgments: dict[str, dict[str, Any]]
     ) -> dict[str, Any]:
@@ -720,6 +788,7 @@ class InsightAuthoringService:
         )
         effective_principal = self._effective_principal(principal)
         anchors = list(card.sources)
+        retrieval_context = context if context is not None and context.trust == "trusted" else None
         if card.retrieval_mode == RetrievalMode.FIXED:
             return EvidenceBundle(
                 card_id=card.id,
@@ -741,7 +810,18 @@ class InsightAuthoringService:
                 [effective_principal.tenant_id] if effective_principal else None
             ),
         )
-        resources = catalog.resources
+        relationship_catalog = await self.registry.expand_related_resources(
+            self._relationship_seed_refs(anchors, retrieval_context),
+            limit=self.max_candidates,
+            authorized_tenants=(
+                [effective_principal.tenant_id] if effective_principal else None
+            ),
+        )
+        resources_by_ref = {
+            resource_ref(resource): resource
+            for resource in [*catalog.resources, *relationship_catalog.resources]
+        }
+        resources = list(resources_by_ref.values())
         anchor_refs = {f"{source.adapter}|{source.resource}" for source in anchors}
         anchor_descriptors = {
             resource_ref(resource): resource
@@ -754,12 +834,17 @@ class InsightAuthoringService:
             ranked_goal,
             resources,
             anchors=list(anchor_descriptors.values()),
-            context=context,
+            context=retrieval_context,
             limit=self.max_candidates,
         )
         candidates = pool.resources
+        required_groups = self._required_relationship_groups(anchors, retrieval_context, candidates)
         judger = self._relevance_judger()
-        scores = await judger.rank_resources(ranked_goal, candidates)
+        rank_with_context = getattr(judger, "rank_resources_with_context", None)
+        if retrieval_context is not None and callable(rank_with_context):
+            scores = await rank_with_context(ranked_goal, candidates, retrieval_context)
+        else:
+            scores = await judger.rank_resources(ranked_goal, candidates)
         matches = [
             ResourceMatch(
                 ref=resource_ref(resource),
@@ -778,11 +863,40 @@ class InsightAuthoringService:
             if resource_ref(resource) not in anchor_refs
         ]
         matches.sort(key=lambda match: (-match.relevance, match.title.lower(), match.ref))
-        selected_matches = [
-            match
-            for match in matches
-            if match.relevance >= self.recommendation_threshold
-        ][: self.related_source_limit]
+        eligible = [
+            match for match in matches if match.relevance >= self.recommendation_threshold
+        ]
+        selected_matches: list[ResourceMatch] = []
+        covered_targets: set[str] = set()
+        coverage_warnings: list[str] = []
+        for target, group in required_groups:
+            if any(match.ref in group for match in selected_matches):
+                covered_targets.add(target)
+                continue
+            group_matches = [match for match in eligible if match.ref in group]
+            if not group_matches:
+                coverage_warnings.append(
+                    "No Jev-supported candidate cleared the threshold for required "
+                    f"context relationship {target}."
+                )
+                continue
+            selected = group_matches[0]
+            if selected.ref not in {match.ref for match in selected_matches}:
+                if len(selected_matches) < self.related_source_limit:
+                    selected_matches.append(selected)
+                    covered_targets.add(target)
+        selected_refs = {match.ref for match in selected_matches}
+        for match in eligible:
+            if len(selected_matches) >= self.related_source_limit:
+                break
+            if match.ref not in selected_refs:
+                selected_matches.append(match)
+                selected_refs.add(match.ref)
+        if required_groups and len(covered_targets) < len(required_groups):
+            coverage_warnings.append(
+                "The resolved bundle is missing one or more explicit graph-context "
+                "relationships; approval should remain human-reviewed."
+            )
         selected_refs = {match.ref for match in selected_matches}
         selected_matches = [match.model_copy(update={"recommended": True}) for match in selected_matches]
         omitted_matches = [match for match in matches if match.ref not in selected_refs]
@@ -806,11 +920,17 @@ class InsightAuthoringService:
                 )
             )
         warnings: list[str] = []
+        if context is not None and context.trust != "trusted":
+            warnings.append(
+                "The context snapshot is unverified; it was retained for the receipt but "
+                "not used for relationship expansion, required bundle coverage, or Jev ranking."
+            )
         if pool.truncated or catalog.has_more:
             warnings.append(
                 "The catalog was bounded before Jev ranking; related-source recall depends "
                 "on adapter metadata and lexical candidate coverage."
             )
+        warnings.extend(coverage_warnings)
         if not selected_matches:
             warnings.append(
                 "Jev found no related source above the expansion threshold; the card will "
@@ -829,13 +949,26 @@ class InsightAuthoringService:
             selected_sources=selected_sources,
             related_matches=selected_matches,
             omitted_matches=omitted_matches,
-            candidate_count=catalog.total_count,
+            candidate_count=catalog.total_count + relationship_catalog.total_count,
             candidate_limit=self.max_candidates,
-            candidate_strategy=f"{catalog.strategy}+{pool.strategy}",
-            truncated=pool.truncated or catalog.has_more,
+            candidate_strategy=(
+                f"{catalog.strategy}+{relationship_catalog.strategy}+{pool.strategy}"
+            ),
+            truncated=pool.truncated or catalog.has_more or relationship_catalog.has_more,
             context_version=context.version if context else None,
             evaluator=judger.name,
-            warnings=warnings,
+            warnings=[
+                *warnings,
+                *relationship_catalog.warnings,
+                *(
+                    [
+                        "The adapter supplied a relationship-aware expansion neighborhood; "
+                        "catalog and expansion counts may overlap."
+                    ]
+                    if relationship_catalog.resources
+                    else []
+                ),
+            ],
         )
 
     def _relevance_judger(self) -> ResourceRelevanceJudger:
