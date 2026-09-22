@@ -39,6 +39,11 @@ from .models import (
 )
 from .onboarding import InsightAuthoringService, proposal_summary
 from .query_planner import QueryWindow, compile_query, plan_query
+from .retrieval_quality import (
+    RetrievalQualityCase,
+    RetrievalQualityEvaluator,
+    RetrievalQualityThresholds,
+)
 from .runtime import Runtime, build_runtime
 from .store import InMemoryDecisionReceiptStore, JsonMetricQueryCardStore
 
@@ -384,6 +389,38 @@ def create_mcp(
             parsed_cases,
             thresholds=(
                 CardEvaluationThresholds.model_validate(thresholds)
+                if thresholds is not None
+                else None
+            ),
+        )
+        return report.model_dump(mode="json")
+
+    @mcp.tool()
+    async def evaluate_retrieval_quality(
+        cases: list[dict[str, Any]],
+        thresholds: dict[str, Any] | None = None,
+        max_concurrency: int = 8,
+        ctx: Context | None = None,
+    ) -> dict[str, Any]:
+        """Measure adapter candidate recall and Jev source recommendations.
+
+        ``expected_resource_refs`` are evaluator-only owner labels. They are
+        never copied into the discovery goal or candidate state sent to Jev.
+        """
+        principal = request_principal(ctx)
+        if not cases:
+            raise ValueError("at least one labeled retrieval case is required")
+        principal_payload = principal.model_dump(mode="json") if principal else None
+        parsed_cases = [
+            RetrievalQualityCase.model_validate({**case, "principal": principal_payload})
+            for case in cases
+        ]
+        report = await RetrievalQualityEvaluator(
+            authoring, max_concurrency=max_concurrency
+        ).evaluate(
+            parsed_cases,
+            thresholds=(
+                RetrievalQualityThresholds.model_validate(thresholds)
                 if thresholds is not None
                 else None
             ),

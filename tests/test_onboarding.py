@@ -728,6 +728,7 @@ def test_mcp_exposes_generic_authoring_tools(tmp_path):
         "assess_bootstrap",
         "discover_insight_sources",
         "evaluate_card_workflow",
+        "evaluate_retrieval_quality",
         "resolve_insight_sources",
         "review_insight_card",
         "record_insight_card_correction",
@@ -762,6 +763,30 @@ async def test_mcp_bootstrap_reports_local_catalog_fallback_honestly(tmp_path):
     assert report["adapters"][0]["capabilities"]["catalog"] is True
     assert report["adapters"][0]["capabilities"]["inspect"] is True
     assert any("local-scan-fallback" in warning for warning in report["warnings"])
+
+
+@pytest.mark.asyncio
+async def test_mcp_retrieval_quality_keeps_owner_labels_outside_discovery(tmp_path):
+    server = make_server(tmp_path)
+
+    report = await tool(server, "evaluate_retrieval_quality")(
+        cases=[
+            {
+                "id": "growth-dashboard",
+                "goal": "Checkout conversion and mobile revenue risk",
+                "expected_resource_refs": ["superset|dashboard:7"],
+            }
+        ],
+        thresholds={
+            "min_candidate_recall": 1,
+            "min_recommended_precision": 1,
+            "min_recommended_recall": 1,
+        },
+    )
+
+    assert report["status"] == "approved"
+    assert report["candidate_recall"] == 1
+    assert report["recommended_recall"] == 1
 
 
 @pytest.mark.asyncio
