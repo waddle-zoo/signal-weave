@@ -35,11 +35,11 @@ expected labels are not sent to Jev.
 
 | Measure | Original 24: before hardening | Expanded 30: fixture | Expanded 30: live Jev |
 | --- | ---: | ---: | ---: |
-| Current contract passes | 16 / 24 live | 29 / 30 | 27 / 30 latest |
+| Current contract passes | 16 / 24 live | 29 / 30 | 25–27 / 30 recent |
 | Typed readiness gates satisfied | 24 / 24 | 30 / 30 | 30 / 30 |
 | Safe onboarding outcomes | — | 30 / 30 | 30 / 30 |
 | Mean required-candidate recall | 1.00 | 1.00 | 1.00 |
-| Exact recommended candidate sets | 20 / 24 live | 29 / 30 | 27 / 30 latest |
+| Exact recommended candidate sets | 20 / 24 live | 29 / 30 | 25–27 / 30 recent |
 | Wrong-tenant candidate leaks | 0 | 0 | 0 |
 | Governed role labels preserved | — | 39 / 39 | 39 / 39 |
 
@@ -61,9 +61,9 @@ real enterprise catalog will return every relevant asset.
 The original result is the live 24-case replay captured before typed readiness
 hardening. The expanded rows include typed blockers in the review response, a
 fail-closed approval check, and six new tenants. Live Jev is nondeterministic
-across runs: the latest replay produced 27/30 exact recommendation sets, while
-an immediately preceding replay produced 25/30. Recommendation-set misses
-remain visible for review and do not become silent approvals.
+across runs: recent current-branch replays ranged from 25/30 to 27/30 exact
+recommendation sets. Recommendation-set misses remain visible for review and
+do not become silent approvals.
 
 “Safe onboarding outcome” is the product-level gate: required candidates were
 retained, authorization was clean, completeness warnings were surfaced, and the
