@@ -105,6 +105,11 @@ For the mass analytical insights workload—cached dashboard evidence, expensive
 Trino follow-up queries, query deduplication, and general-agent workload
 comparison—see [`mass-analytical-trial.md`](mass-analytical-trial.md).
 
+For the broader outcome-level “everything tracking” replay—heterogeneous
+business context, unrelated decoys, repeated enterprise-shaped cases, a
+movement-only baseline, and an independent safety reviewer—see
+[`everything-tracking-trial.md`](everything-tracking-trial.md).
+
 Unit tests use injected doubles and do not replace live Jev or Superset proofs.
 The heterogeneous contract tests combine multiple source shapes without
 requiring those services to be installed. The connector-neutral artifact test

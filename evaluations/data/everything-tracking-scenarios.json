@@ -1,0 +1,314 @@
+{
+  "schema_version": 1,
+  "variant_order": [
+    "material_action",
+    "expected_change",
+    "ambiguous_state",
+    "trust_failure",
+    "urgent_operational_risk"
+  ],
+  "companies": [
+    {
+      "id": "northstar-commerce",
+      "tenant_id": "northstar",
+      "shape": "commerce",
+      "workflows": ["growth-health", "fulfillment-reliability"]
+    },
+    {
+      "id": "harbor-bank",
+      "tenant_id": "harbor",
+      "shape": "regulated-finance",
+      "workflows": ["payment-trust", "customer-retention"]
+    },
+    {
+      "id": "orbit-saas",
+      "tenant_id": "orbit",
+      "shape": "subscription-software",
+      "workflows": ["product-adoption", "cloud-reliability"]
+    },
+    {
+      "id": "clearpath-logistics",
+      "tenant_id": "clearpath",
+      "shape": "logistics",
+      "workflows": ["delivery-promise", "fleet-cost"]
+    },
+    {
+      "id": "brightline-health",
+      "tenant_id": "brightline",
+      "shape": "health-services",
+      "workflows": ["care-operations", "revenue-cycle"]
+    },
+    {
+      "id": "forge-manufacturing",
+      "tenant_id": "forge",
+      "shape": "manufacturing",
+      "workflows": ["production-quality", "supply-continuity"]
+    }
+  ],
+  "workflows": {
+    "growth-health": {
+      "domain": "growth",
+      "title": "Growth health",
+      "what_to_watch": "Whether acquisition is producing healthy, qualified growth rather than merely more traffic.",
+      "why_watch": "Leadership wants to know when growth performance needs coordinated action across marketing, product, and sales.",
+      "watch_for": [
+        "The qualified acquisition outcome is moving materially relative to its normal baseline.",
+        "A related funnel, product, or campaign signal helps explain whether the movement matters.",
+        "Data freshness and comparability are sufficient for an operating decision."
+      ],
+      "questions": [
+        "Is this a meaningful change in the growth outcome or an expected operating pattern?",
+        "Which connected signal best explains what the growth team should do next?"
+      ],
+      "primary": {"adapter": "superset", "kind": "dashboard", "label": "Growth command center", "metric": "qualified_growth"},
+      "related": [
+        {"adapter": "crm", "kind": "pipeline", "role": "corroborates", "label": "Qualified pipeline"},
+        {"adapter": "product", "kind": "funnel", "role": "diagnostic", "label": "Activation funnel"},
+        {"adapter": "incident", "kind": "incident", "role": "diagnostic", "label": "Growth platform incidents"},
+        {"adapter": "docs", "kind": "operating_note", "role": "owner", "label": "Campaign and launch calendar"}
+      ]
+    },
+    "fulfillment-reliability": {
+      "domain": "fulfillment",
+      "title": "Fulfillment reliability",
+      "what_to_watch": "Whether customer delivery promises remain reliable across the order, warehouse, and carrier flow.",
+      "why_watch": "Operations needs early warning when a delivery problem is broad enough to require intervention, not every isolated late package.",
+      "watch_for": [
+        "The delivery promise is materially off course across more than one operational signal.",
+        "Warehouse, carrier, or inventory evidence identifies a plausible source of the movement.",
+        "The source data is complete enough to distinguish a real service problem from a reporting gap."
+      ],
+      "questions": [
+        "Is the customer-facing delivery risk broad enough to act on now?",
+        "Is the strongest explanation in warehouse capacity, carrier performance, or inventory availability?"
+      ],
+      "primary": {"adapter": "superset", "kind": "dashboard", "label": "Delivery promise board", "metric": "on_time_delivery"},
+      "related": [
+        {"adapter": "warehouse", "kind": "capacity", "role": "diagnostic", "label": "Warehouse capacity"},
+        {"adapter": "carrier", "kind": "service", "role": "corroborates", "label": "Carrier service levels"},
+        {"adapter": "inventory", "kind": "availability", "role": "diagnostic", "label": "Inventory availability"},
+        {"adapter": "airflow", "kind": "freshness", "role": "quality", "label": "Fulfillment data pipeline"}
+      ]
+    },
+    "payment-trust": {
+      "domain": "payments",
+      "title": "Payment trust",
+      "what_to_watch": "Whether customers can complete payment reliably without introducing fraud or compliance exposure.",
+      "why_watch": "Risk and payments leaders need one view of revenue loss, issuer behavior, fraud pressure, and control health.",
+      "watch_for": [
+        "Payment completion or loss is moving materially across a meaningful customer population.",
+        "Issuer, fraud, or control signals distinguish a recoverable payment issue from a risk event.",
+        "Authorization and data-quality evidence are trustworthy before action is taken."
+      ],
+      "questions": [
+        "Should the payments team intervene, investigate, or leave the movement alone?",
+        "What connected evidence best explains the change without overstating causation?"
+      ],
+      "primary": {"adapter": "looker", "kind": "explore", "label": "Payment trust overview", "metric": "payment_completion"},
+      "related": [
+        {"adapter": "risk", "kind": "fraud", "role": "diagnostic", "label": "Fraud pressure"},
+        {"adapter": "issuer", "kind": "authorization", "role": "corroborates", "label": "Issuer declines"},
+        {"adapter": "compliance", "kind": "control", "role": "quality", "label": "Payment controls"},
+        {"adapter": "incident", "kind": "incident", "role": "owner", "label": "Payment incidents"}
+      ]
+    },
+    "customer-retention": {
+      "domain": "customer-success",
+      "title": "Customer retention",
+      "what_to_watch": "Whether important customer relationships are becoming less healthy in a way that needs coordinated response.",
+      "why_watch": "Executives care about durable retention risk, not normal account-level noise or a single delayed renewal.",
+      "watch_for": [
+        "Retention risk is visible in both customer behavior and commercial signals.",
+        "Support, product usage, or account context helps distinguish a real relationship risk.",
+        "The account and revenue sources use comparable definitions and current data."
+      ],
+      "questions": [
+        "Is the retention signal broad and important enough for leadership attention?",
+        "Which customer-facing signal should the account team investigate first?"
+      ],
+      "primary": {"adapter": "looker", "kind": "dashboard", "label": "Customer health board", "metric": "retention_risk"},
+      "related": [
+        {"adapter": "product", "kind": "usage", "role": "corroborates", "label": "Product engagement"},
+        {"adapter": "support", "kind": "tickets", "role": "diagnostic", "label": "Support friction"},
+        {"adapter": "crm", "kind": "account", "role": "owner", "label": "Account context"},
+        {"adapter": "billing", "kind": "revenue", "role": "corroborates", "label": "Renewal revenue"}
+      ]
+    },
+    "product-adoption": {
+      "domain": "product",
+      "title": "Product adoption",
+      "what_to_watch": "Whether newly released product capabilities are reaching the intended users and creating healthy usage.",
+      "why_watch": "Product leadership needs to separate real adoption problems from planned rollout effects, instrumentation gaps, and normal cohort variation.",
+      "watch_for": [
+        "Adoption is materially different from the expected rollout path.",
+        "Usage, experiment, and release evidence agree on whether the movement is meaningful.",
+        "Instrumentation or data freshness problems are not being mistaken for product behavior."
+      ],
+      "questions": [
+        "Is this an adoption problem, a rollout effect, or an instrumentation problem?",
+        "What should the product team inspect before changing the plan?"
+      ],
+      "primary": {"adapter": "hex", "kind": "notebook", "label": "Adoption review", "metric": "feature_adoption"},
+      "related": [
+        {"adapter": "experiments", "kind": "experiment", "role": "corroborates", "label": "Experiment results"},
+        {"adapter": "release", "kind": "deployment", "role": "diagnostic", "label": "Release timeline"},
+        {"adapter": "support", "kind": "tickets", "role": "diagnostic", "label": "User friction"},
+        {"adapter": "airflow", "kind": "freshness", "role": "quality", "label": "Product event pipeline"}
+      ]
+    },
+    "cloud-reliability": {
+      "domain": "platform",
+      "title": "Cloud reliability",
+      "what_to_watch": "Whether the platform can support customer workloads reliably and whether incidents need coordinated response.",
+      "why_watch": "Platform leaders need signal across service health, deploys, incidents, and capacity instead of manually checking each system.",
+      "watch_for": [
+        "Customer-impacting reliability is meaningfully worse than the operating baseline.",
+        "A deploy, incident, or capacity signal supports a plausible explanation.",
+        "The monitoring and incident data is fresh and complete enough to act."
+      ],
+      "questions": [
+        "Is there a customer-impacting platform issue that needs escalation?",
+        "What operational evidence should the on-call team inspect first?"
+      ],
+      "primary": {"adapter": "superset", "kind": "dashboard", "label": "Platform health", "metric": "customer_error_rate"},
+      "related": [
+        {"adapter": "incident", "kind": "incident", "role": "corroborates", "label": "Incident timeline"},
+        {"adapter": "release", "kind": "deployment", "role": "diagnostic", "label": "Recent deploys"},
+        {"adapter": "cloud", "kind": "capacity", "role": "diagnostic", "label": "Capacity pressure"},
+        {"adapter": "airflow", "kind": "freshness", "role": "quality", "label": "Platform telemetry"}
+      ]
+    },
+    "delivery-promise": {
+      "domain": "logistics",
+      "title": "Delivery promise",
+      "what_to_watch": "Whether delivery performance is still aligned with the promise made to customers and with available fleet capacity.",
+      "why_watch": "The operations team should act on a system-level service risk, not chase normal variation in individual routes.",
+      "watch_for": [
+        "Customer delivery performance and route capacity indicate a broad service risk.",
+        "Carrier, weather, or warehouse context explains or contradicts the movement.",
+        "The operational data is current and comparable across regions."
+      ],
+      "questions": [
+        "Is the delivery promise at risk across the network or only in one pocket?",
+        "Which operational owner should investigate first?"
+      ],
+      "primary": {"adapter": "tableau", "kind": "workbook", "label": "Network service view", "metric": "delivery_promise"},
+      "related": [
+        {"adapter": "fleet", "kind": "capacity", "role": "corroborates", "label": "Fleet capacity"},
+        {"adapter": "weather", "kind": "external", "role": "diagnostic", "label": "Weather context"},
+        {"adapter": "carrier", "kind": "service", "role": "diagnostic", "label": "Carrier exceptions"},
+        {"adapter": "inventory", "kind": "availability", "role": "quality", "label": "Dispatch completeness"}
+      ]
+    },
+    "fleet-cost": {
+      "domain": "transportation",
+      "title": "Fleet cost control",
+      "what_to_watch": "Whether transportation cost is drifting for reasons the business can act on without reducing service quality.",
+      "why_watch": "Finance and operations need to connect cost movement to fuel, utilization, route mix, and customer service rather than react to a single number.",
+      "watch_for": [
+        "Cost is materially off plan and the movement is not explained by an expected route or fuel effect.",
+        "Utilization, fuel, or service evidence identifies a likely operational driver.",
+        "The cost and service views use the same period and population."
+      ],
+      "questions": [
+        "Is the cost movement actionable without creating a service problem?",
+        "What connected operating signal should the team use to choose a response?"
+      ],
+      "primary": {"adapter": "trino", "kind": "query", "label": "Fleet cost analysis", "metric": "cost_per_delivery"},
+      "related": [
+        {"adapter": "fleet", "kind": "utilization", "role": "corroborates", "label": "Fleet utilization"},
+        {"adapter": "fuel", "kind": "price", "role": "diagnostic", "label": "Fuel surcharge"},
+        {"adapter": "superset", "kind": "dashboard", "role": "quality", "label": "Service quality board"},
+        {"adapter": "finance", "kind": "plan", "role": "owner", "label": "Operating plan"}
+      ]
+    },
+    "care-operations": {
+      "domain": "care-operations",
+      "title": "Care operations",
+      "what_to_watch": "Whether access to care is deteriorating in a way that needs operational intervention while quality remains protected.",
+      "why_watch": "Care leaders need a joined view of demand, wait time, staffing, quality, and incident context.",
+      "watch_for": [
+        "Access or wait-time performance is materially worse across the relevant care population.",
+        "Staffing, demand, or quality evidence explains whether the movement requires action.",
+        "Patient and operational data are complete and trustworthy enough to discuss."
+      ],
+      "questions": [
+        "Is this a real access problem or a data and scheduling artifact?",
+        "Which care-operations owner should respond first?"
+      ],
+      "primary": {"adapter": "superset", "kind": "dashboard", "label": "Care access board", "metric": "care_wait_time"},
+      "related": [
+        {"adapter": "scheduling", "kind": "capacity", "role": "corroborates", "label": "Scheduling demand"},
+        {"adapter": "staffing", "kind": "workforce", "role": "diagnostic", "label": "Staffing coverage"},
+        {"adapter": "quality", "kind": "quality", "role": "quality", "label": "Care quality checks"},
+        {"adapter": "incident", "kind": "incident", "role": "owner", "label": "Care incidents"}
+      ]
+    },
+    "revenue-cycle": {
+      "domain": "finance",
+      "title": "Revenue cycle",
+      "what_to_watch": "Whether revenue collection is on course and whether operational friction is creating avoidable financial risk.",
+      "why_watch": "Finance leadership needs to connect cash movement to claims, denials, payment timing, and source trust.",
+      "watch_for": [
+        "Cash or collection performance is materially off course relative to the operating plan.",
+        "Claims, denials, or payment timing provide a connected explanation.",
+        "The source definitions and data freshness support a responsible escalation."
+      ],
+      "questions": [
+        "Is the financial movement actionable now or does it require investigation first?",
+        "Which operational evidence best explains the collection gap?"
+      ],
+      "primary": {"adapter": "looker", "kind": "explore", "label": "Revenue cycle view", "metric": "net_collections"},
+      "related": [
+        {"adapter": "claims", "kind": "operations", "role": "corroborates", "label": "Claims throughput"},
+        {"adapter": "billing", "kind": "denials", "role": "diagnostic", "label": "Denial reasons"},
+        {"adapter": "finance", "kind": "plan", "role": "owner", "label": "Cash plan"},
+        {"adapter": "airflow", "kind": "freshness", "role": "quality", "label": "Finance data freshness"}
+      ]
+    },
+    "production-quality": {
+      "domain": "manufacturing",
+      "title": "Production quality",
+      "what_to_watch": "Whether production quality is drifting in a way that creates customer, safety, or cost consequences.",
+      "why_watch": "Plant and quality leaders need connected evidence across yield, defects, maintenance, and release holds.",
+      "watch_for": [
+        "Quality performance is materially outside the normal operating range.",
+        "Maintenance, material, or process evidence supports a likely explanation.",
+        "Inspection coverage and source freshness are sufficient before escalation."
+      ],
+      "questions": [
+        "Is this a plant-level quality issue or an isolated measurement problem?",
+        "What evidence should the quality owner investigate before changing production?"
+      ],
+      "primary": {"adapter": "superset", "kind": "dashboard", "label": "Plant quality board", "metric": "first_pass_yield"},
+      "related": [
+        {"adapter": "mes", "kind": "production", "role": "corroborates", "label": "Production lots"},
+        {"adapter": "maintenance", "kind": "maintenance", "role": "diagnostic", "label": "Maintenance events"},
+        {"adapter": "quality", "kind": "inspection", "role": "quality", "label": "Inspection coverage"},
+        {"adapter": "incident", "kind": "incident", "role": "owner", "label": "Quality holds"}
+      ]
+    },
+    "supply-continuity": {
+      "domain": "supply-chain",
+      "title": "Supply continuity",
+      "what_to_watch": "Whether critical supply inputs are at risk of disrupting production or customer commitments.",
+      "why_watch": "Supply leaders need to connect inventory, supplier performance, purchase orders, and demand changes before a shortage becomes an outage.",
+      "watch_for": [
+        "Critical supply coverage is materially below the expected operating position.",
+        "Supplier, demand, or purchase-order evidence distinguishes a real risk from a planning artifact.",
+        "Inventory and supplier data are fresh and comparable."
+      ],
+      "questions": [
+        "Is there a supply risk that needs intervention before the next planning cycle?",
+        "Which supplier or demand signal should the operating team investigate first?"
+      ],
+      "primary": {"adapter": "tableau", "kind": "workbook", "label": "Supply continuity view", "metric": "critical_supply_coverage"},
+      "related": [
+        {"adapter": "supplier", "kind": "performance", "role": "corroborates", "label": "Supplier reliability"},
+        {"adapter": "erp", "kind": "purchase_orders", "role": "diagnostic", "label": "Purchase orders"},
+        {"adapter": "planning", "kind": "demand", "role": "diagnostic", "label": "Demand plan"},
+        {"adapter": "inventory", "kind": "availability", "role": "quality", "label": "Inventory freshness"}
+      ]
+    }
+  }
+}
