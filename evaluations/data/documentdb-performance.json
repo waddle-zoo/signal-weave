@@ -1,0 +1,426 @@
+{
+  "schema_version": 1,
+  "tenant_id": "documentdb-demo",
+  "principal": {
+    "principal_id": "documentdb-analytics-agent",
+    "tenant_id": "documentdb-demo",
+    "scopes": ["analytics:read", "signalweave:evaluate"],
+    "authorization_source": "documentdb-demo-gateway"
+  },
+  "expected_outcome": "investigate",
+  "expected_related_refs": [
+    "deployments|deployment:docdb-perf-2026-09-22-1130",
+    "incidents|incident:docdb-rollout-pattern",
+    "runbooks|runbook:docdb-performance-regression",
+    "ownership|owner:docdb-performance"
+  ],
+  "card": {
+    "id": "documentdb-customer-performance",
+    "title": "Customer-impacting DocumentDB performance regressions",
+    "what_to_watch": "Customer-impacting Amazon DocumentDB performance regressions",
+    "why_watch": "Decide whether a broad database performance movement needs the DocumentDB service owner's attention.",
+    "watch_for": [
+      "p95 query latency is elevated across multiple regions or clusters",
+      "replication lag, throttled requests, and storage pressure move with latency",
+      "a recent deployment temporally precedes the correlated movement",
+      "an isolated CPU spike is not sufficient evidence of broad customer impact"
+    ],
+    "questions": [
+      "Is the impact broad across regions or clusters?",
+      "Is the recent deployment a plausible common cause?",
+      "Which service owner should receive the investigation?"
+    ],
+    "decision_guidance": "Ignore isolated CPU-only spikes or single-cluster changes. Investigate when multiple customer-impact signals move together but causation is uncertain. Notify the DocumentDB performance owner when broad impact is supported. Escalate only for confirmed widespread customer impact or failed evidence.",
+    "sources": [
+      {
+        "key": "cloudwatch-performance",
+        "adapter": "cloudwatch",
+        "resource": "metric-group:docdb-performance",
+        "label": "DocumentDB customer performance metrics",
+        "required": true
+      }
+    ],
+    "comparison_windows": ["previous_period", "same_period_previous_day"],
+    "action_confidence_threshold": 0.7,
+    "owner": "documentdb-demo-owner",
+    "delivery_methods": [
+      {
+        "key": "notify-documentdb-owner",
+        "outcome": "notify",
+        "label": "DocumentDB performance on-call",
+        "destination": "service-owner:documentdb-performance-oncall",
+        "instructions": "Include the evidence bundle, affected regions, deployment timing, and confidence."
+      }
+    ],
+    "retrieval_mode": "expand",
+    "investigation_mode": "none",
+    "principal_id": "documentdb-analytics-agent",
+    "principal_tenant": "documentdb-demo"
+  },
+  "context": {
+    "provider": "documentdb-ownership-graph",
+    "version": "documentdb-graph-2026-09-22",
+    "trust": "trusted",
+    "facts": [
+      {
+        "fact_id": "owner-edge-1",
+        "subject_ref": "cloudwatch|metric-group:docdb-performance",
+        "relation": "owned_by",
+        "object_ref": "ownership|owner:docdb-performance",
+        "statement": "DocumentDB performance metrics are owned by the DocumentDB performance on-call.",
+        "provenance": ["service-catalog", "owner:documentdb-platform"]
+      },
+      {
+        "fact_id": "runbook-edge-1",
+        "subject_ref": "cloudwatch|metric-group:docdb-performance",
+        "relation": "diagnosed_with",
+        "object_ref": "runbooks|runbook:docdb-performance-regression",
+        "statement": "The DocumentDB performance regression runbook explains correlated latency, lag, throttling, and storage pressure.",
+        "provenance": ["runbook-catalog"]
+      }
+    ]
+  },
+  "resources": [
+    {
+      "descriptor": {
+        "adapter": "cloudwatch",
+        "resource": "metric-group:docdb-performance",
+        "kind": "metric_group",
+        "title": "DocumentDB customer performance metrics",
+        "description": "CloudWatch metrics for DocumentDB latency, replication lag, throttling, storage pressure, regions, and clusters.",
+        "metadata": {
+          "related_refs": [
+            "deployments|deployment:docdb-perf-2026-09-22-1130",
+            "incidents|incident:docdb-rollout-pattern",
+            "runbooks|runbook:docdb-performance-regression",
+            "ownership|owner:docdb-performance"
+          ]
+        },
+        "contract": {
+          "tenant_id": "documentdb-demo",
+          "domain": "documentdb",
+          "scope": "production database performance",
+          "metric_names": ["p95 query latency", "replication lag", "throttled requests", "storage queue depth", "affected regions"],
+          "population": "DocumentDB production clusters",
+          "grain": "five minutes",
+          "freshness_sla_hours": 1,
+          "lineage": ["cloudwatch|metric-group:docdb-performance"],
+          "roles": ["primary"],
+          "source_status": "healthy",
+          "authorized": true
+        }
+      },
+      "snapshot": {
+        "source_key": "cloudwatch-performance",
+        "adapter": "cloudwatch",
+        "resource": "metric-group:docdb-performance",
+        "title": "DocumentDB customer performance metrics",
+        "observations": [
+          {
+            "source_key": "cloudwatch-performance",
+            "subject_id": "p95-query-latency",
+            "subject_label": "p95 query latency",
+            "metric": "p95 query latency",
+            "unit": "milliseconds",
+            "current": 134,
+            "baseline": 100,
+            "change_pct": 34,
+            "dimensions": {"regions": ["us-east-1", "us-west-2", "eu-west-1"], "clusters": 8},
+            "freshness": "2026-09-22T11:58:00Z"
+          },
+          {
+            "source_key": "cloudwatch-performance",
+            "subject_id": "replication-lag",
+            "subject_label": "replication lag",
+            "metric": "replication lag",
+            "unit": "seconds",
+            "current": 7.8,
+            "baseline": 2.4,
+            "change_pct": 225,
+            "dimensions": {"regions": ["us-east-1", "us-west-2", "eu-west-1"], "clusters": 8},
+            "freshness": "2026-09-22T11:58:00Z"
+          },
+          {
+            "source_key": "cloudwatch-performance",
+            "subject_id": "throttled-requests",
+            "subject_label": "throttled requests",
+            "metric": "throttled requests",
+            "unit": "requests",
+            "current": 1410,
+            "baseline": 520,
+            "change_pct": 171.15,
+            "dimensions": {"regions": ["us-east-1", "us-west-2", "eu-west-1"]},
+            "freshness": "2026-09-22T11:58:00Z"
+          },
+          {
+            "source_key": "cloudwatch-performance",
+            "subject_id": "storage-queue-depth",
+            "subject_label": "storage queue depth",
+            "metric": "storage queue depth",
+            "unit": "operations",
+            "current": 18.2,
+            "baseline": 11.0,
+            "change_pct": 65.45,
+            "dimensions": {"regions": ["us-east-1", "us-west-2", "eu-west-1"]},
+            "freshness": "2026-09-22T11:58:00Z"
+          }
+        ],
+        "evidence": [
+          {
+            "source_key": "cloudwatch-performance",
+            "subject_id": "regional-concentration",
+            "subject_label": "regional concentration",
+            "statement": "The movement is present across three regions and eight production clusters.",
+            "values": {"regions": 3, "clusters": 8},
+            "origin": "source",
+            "provenance": ["cloudwatch"]
+          }
+        ],
+        "contract": {
+          "tenant_id": "documentdb-demo",
+          "domain": "documentdb",
+          "scope": "production database performance",
+          "metric_names": ["p95 query latency", "replication lag", "throttled requests", "storage queue depth"],
+          "freshness_sla_hours": 1,
+          "roles": ["primary"],
+          "source_status": "healthy",
+          "authorized": true
+        }
+      }
+    },
+    {
+      "descriptor": {
+        "adapter": "cloudwatch",
+        "resource": "metric:docdb-cpu-local-spike",
+        "kind": "metric",
+        "title": "DocumentDB CPU utilization isolated cluster",
+        "description": "A CPU spike on one cluster; it is not a customer-impact signal by itself.",
+        "metadata": {},
+        "contract": {
+          "tenant_id": "documentdb-demo",
+          "domain": "documentdb",
+          "scope": "single cluster health",
+          "metric_names": ["CPU utilization"],
+          "freshness_sla_hours": 1,
+          "roles": ["quality"],
+          "source_status": "healthy",
+          "authorized": true
+        }
+      },
+      "snapshot": {
+        "source_key": "cloudwatch-cpu-local",
+        "adapter": "cloudwatch",
+        "resource": "metric:docdb-cpu-local-spike",
+        "title": "DocumentDB CPU utilization isolated cluster",
+        "observations": [
+          {
+            "source_key": "cloudwatch-cpu-local",
+            "subject_id": "cpu-utilization",
+            "subject_label": "CPU utilization",
+            "metric": "CPU utilization",
+            "unit": "percent",
+            "current": 81,
+            "baseline": 62,
+            "change_pct": 30.65,
+            "dimensions": {"regions": ["us-east-1"], "clusters": 1},
+            "freshness": "2026-09-22T11:58:00Z"
+          }
+        ],
+        "contract": {
+          "tenant_id": "documentdb-demo",
+          "domain": "documentdb",
+          "scope": "single cluster health",
+          "metric_names": ["CPU utilization"],
+          "freshness_sla_hours": 1,
+          "roles": ["quality"],
+          "source_status": "healthy",
+          "authorized": true
+        }
+      }
+    },
+    {
+      "descriptor": {
+        "adapter": "deployments",
+        "resource": "deployment:docdb-perf-2026-09-22-1130",
+        "kind": "deployment",
+        "title": "DocumentDB storage engine rollout 2026-09-22",
+        "description": "Production deployment to DocumentDB clusters completed 12 minutes before the correlated performance movement.",
+        "metadata": {"service": "documentdb", "environment": "production"},
+        "contract": {
+          "tenant_id": "documentdb-demo",
+          "domain": "documentdb",
+          "scope": "production deployment history",
+          "metric_names": ["deployment time", "version"],
+          "freshness_sla_hours": 24,
+          "roles": ["diagnostic"],
+          "source_status": "healthy",
+          "authorized": true
+        }
+      },
+      "snapshot": {
+        "source_key": "deployment-docdb-rollout",
+        "adapter": "deployments",
+        "resource": "deployment:docdb-perf-2026-09-22-1130",
+        "title": "DocumentDB storage engine rollout 2026-09-22",
+        "evidence": [
+          {
+            "source_key": "deployment-docdb-rollout",
+            "subject_id": "deployment-time",
+            "subject_label": "deployment timing",
+            "statement": "The storage engine rollout completed at 11:46 UTC, twelve minutes before the metrics were captured.",
+            "values": {"completed_at": "2026-09-22T11:46:00Z", "affected_clusters": 8},
+            "origin": "source",
+            "provenance": ["deployment-registry"]
+          }
+        ],
+        "contract": {
+          "tenant_id": "documentdb-demo",
+          "domain": "documentdb",
+          "scope": "production deployment history",
+          "freshness_sla_hours": 24,
+          "roles": ["diagnostic"],
+          "source_status": "healthy",
+          "authorized": true
+        }
+      }
+    },
+    {
+      "descriptor": {
+        "adapter": "incidents",
+        "resource": "incident:docdb-rollout-pattern",
+        "kind": "incident",
+        "title": "Prior DocumentDB rollout latency incident",
+        "description": "Incident history for the same storage engine rollout pattern, including customer impact and mitigations.",
+        "metadata": {"related_refs": ["deployments|deployment:docdb-perf-2026-09-22-1130"]},
+        "contract": {
+          "tenant_id": "documentdb-demo",
+          "domain": "documentdb",
+          "scope": "production incident history",
+          "metric_names": ["impact", "mitigation"],
+          "freshness_sla_hours": 168,
+          "roles": ["diagnostic"],
+          "source_status": "healthy",
+          "authorized": true
+        }
+      },
+      "snapshot": {
+        "source_key": "incident-docdb-rollout",
+        "adapter": "incidents",
+        "resource": "incident:docdb-rollout-pattern",
+        "title": "Prior DocumentDB rollout latency incident",
+        "evidence": [
+          {
+            "source_key": "incident-docdb-rollout",
+            "subject_id": "prior-pattern",
+            "subject_label": "prior incident pattern",
+            "statement": "A prior storage engine rollout produced the same latency and replication-lag pattern and was mitigated by pausing the rollout.",
+            "values": {"similarity": "same rollout family", "mitigation": "pause rollout"},
+            "origin": "source",
+            "provenance": ["incident-management"]
+          }
+        ],
+        "contract": {
+          "tenant_id": "documentdb-demo",
+          "domain": "documentdb",
+          "scope": "production incident history",
+          "freshness_sla_hours": 168,
+          "roles": ["diagnostic"],
+          "source_status": "healthy",
+          "authorized": true
+        }
+      }
+    },
+    {
+      "descriptor": {
+        "adapter": "runbooks",
+        "resource": "runbook:docdb-performance-regression",
+        "kind": "runbook",
+        "title": "DocumentDB performance regression response",
+        "description": "Runbook for distinguishing broad customer-impacting regressions from isolated CPU or single-cluster noise.",
+        "metadata": {"related_refs": ["ownership|owner:docdb-performance"]},
+        "contract": {
+          "tenant_id": "documentdb-demo",
+          "domain": "documentdb",
+          "scope": "production operational response",
+          "metric_names": ["latency", "replication lag", "throttling", "storage pressure"],
+          "freshness_sla_hours": 720,
+          "roles": ["diagnostic", "quality"],
+          "source_status": "healthy",
+          "authorized": true
+        }
+      },
+      "snapshot": {
+        "source_key": "runbook-docdb-performance",
+        "adapter": "runbooks",
+        "resource": "runbook:docdb-performance-regression",
+        "title": "DocumentDB performance regression response",
+        "evidence": [
+          {
+            "source_key": "runbook-docdb-performance",
+            "subject_id": "regression-rule",
+            "subject_label": "runbook decision rule",
+            "statement": "Treat latency plus replication lag and throttling across multiple regions as broad impact; do not page on CPU alone.",
+            "values": {"minimum_regions": 2, "required_correlated_signals": 2},
+            "origin": "source",
+            "provenance": ["runbook-catalog"]
+          }
+        ],
+        "contract": {
+          "tenant_id": "documentdb-demo",
+          "domain": "documentdb",
+          "scope": "production operational response",
+          "freshness_sla_hours": 720,
+          "roles": ["diagnostic", "quality"],
+          "source_status": "healthy",
+          "authorized": true
+        }
+      }
+    },
+    {
+      "descriptor": {
+        "adapter": "ownership",
+        "resource": "owner:docdb-performance",
+        "kind": "service_owner",
+        "title": "DocumentDB performance on-call",
+        "description": "The accountable service owner and escalation destination for DocumentDB performance regressions.",
+        "metadata": {"team": "DocumentDB Performance", "channel": "#documentdb-performance"},
+        "contract": {
+          "tenant_id": "documentdb-demo",
+          "domain": "documentdb",
+          "scope": "service ownership graph",
+          "metric_names": ["owner", "escalation"],
+          "freshness_sla_hours": 24,
+          "roles": ["owner"],
+          "source_status": "healthy",
+          "authorized": true
+        }
+      },
+      "snapshot": {
+        "source_key": "owner-docdb-performance",
+        "adapter": "ownership",
+        "resource": "owner:docdb-performance",
+        "title": "DocumentDB performance on-call",
+        "evidence": [
+          {
+            "source_key": "owner-docdb-performance",
+            "subject_id": "service-owner",
+            "subject_label": "service owner",
+            "statement": "DocumentDB Performance owns customer-impacting database performance regressions.",
+            "values": {"destination": "service-owner:documentdb-performance-oncall"},
+            "origin": "source",
+            "provenance": ["service-catalog"]
+          }
+        ],
+        "contract": {
+          "tenant_id": "documentdb-demo",
+          "domain": "documentdb",
+          "scope": "service ownership graph",
+          "freshness_sla_hours": 24,
+          "roles": ["owner"],
+          "source_status": "healthy",
+          "authorized": true
+        }
+      }
+    }
+  ]
+}
