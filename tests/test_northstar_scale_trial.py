@@ -142,6 +142,13 @@ def test_northstar_scale_adversarial_gate_rejects_unsafe_report():
     }
 
     assert review(report)["passed"] is True
+    report["retrieval"]["required_group_recall"] = 0.5
+    group_failed = review(report)
+    assert group_failed["passed"] is False
+    assert "retrieval missed at least one required related-source group" in group_failed[
+        "failures"
+    ]
+    report["retrieval"]["required_group_recall"] = 1.0
     report["workflow"]["unsafe_action_rate"] = 0.01
     failed = review(report)
     assert failed["passed"] is False
