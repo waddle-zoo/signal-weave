@@ -1,6 +1,7 @@
 import asyncio
 import json
 from copy import deepcopy
+from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -167,6 +168,33 @@ async def test_independent_adversarial_review_passes_scope_and_generalization_ga
         finding.reviewer == "correctness" and finding.severity == "warning"
         for finding in report.findings
     )
+
+
+@pytest.mark.asyncio
+async def test_adversarial_reviewer_catches_silent_approval_scope_and_recall_mutations():
+    scenarios = json.loads(CASES.read_text())
+    results = await run_trial(CASES)
+    by_id = {result.scenario_id: result for result in results}
+
+    silent_approval = replace(
+        by_id["no-match-abstention"], readiness_status="ready_for_approval"
+    )
+    scope_leak = replace(by_id["tenant-decoy"], tenant_leaks=["looker|dashboard:conversion"])
+    recall_drop = replace(by_id["saas-single-bi-anchor"], relevant_recall=0.5)
+
+    for mutated in (silent_approval, scope_leak, recall_drop):
+        mutated_results = [
+            mutated if result.scenario_id == mutated.scenario_id else result
+            for result in results
+        ]
+        report = audit_matrix(scenarios, mutated_results, evaluator="mutation-test")
+        assert report.passed is False
+        assert any(
+            finding.reviewer in {"correctness", "scope"}
+            and finding.severity == "error"
+            and finding.scenario_id == mutated.scenario_id
+            for finding in report.findings
+        )
 
 
 def test_missing_principal_is_a_hard_readiness_block():
