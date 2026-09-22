@@ -174,3 +174,18 @@ async def test_card_workflow_evaluator_blocks_push_card_without_human_guidance()
     assert report.preflight_blockers == [
         "orders-good: push-capable card is missing human decision guidance"
     ]
+
+
+@pytest.mark.asyncio
+async def test_card_workflow_evaluator_does_not_mix_card_versions():
+    first = card("orders-good")
+    second = first.model_copy(update={"version": 2})
+    cases = [
+        CardEvaluationCase(id="v1", card=first, expected_outcome=Outcome.NOTIFY),
+        CardEvaluationCase(id="v2", card=second, expected_outcome=Outcome.NOTIFY),
+    ]
+
+    report = await CardWorkflowEvaluator(InsightEngine(JevFixture())).evaluate(cases)
+
+    assert report.status == "blocked"
+    assert report.preflight_blockers == ["orders-good: evaluation mixes card versions 1, 2"]

@@ -168,6 +168,15 @@ class CardWorkflowEvaluator:
     @staticmethod
     def _preflight(cases: list[CardEvaluationCase]) -> list[str]:
         blockers: list[str] = []
+        versions: dict[str, set[int]] = {}
+        for case in cases:
+            versions.setdefault(case.card.id, set()).add(case.card.version)
+        for card_id, card_versions in versions.items():
+            if len(card_versions) > 1:
+                blockers.append(
+                    f"{card_id}: evaluation mixes card versions "
+                    + ", ".join(str(version) for version in sorted(card_versions))
+                )
         for card in {case.card.id: case.card for case in cases}.values():
             if not card.sources:
                 blockers.append(f"{card.id}: card declares no source references")
