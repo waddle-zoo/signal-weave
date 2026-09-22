@@ -488,10 +488,15 @@ class InsightAuthoringService:
         if not 1 <= limit <= 25:
             raise ValueError("limit must be between 1 and 25")
         effective_principal = self._effective_principal(principal)
+        # Fetch a small bounded overage before the hybrid pool trims to the Jev
+        # budget. Without this, round-robin fan-in can systematically drop an
+        # adapter's final result when the global limit is not divisible by the
+        # number of installed adapters.
+        search_limit = self.max_candidates + max(1, len(self.registry.adapter_names()))
         catalog = await self.registry.search_resources(
             goal,
             adapter_name=adapter,
-            limit=self.max_candidates,
+            limit=search_limit,
             authorized_tenants=(
                 [effective_principal.tenant_id] if effective_principal else None
             ),

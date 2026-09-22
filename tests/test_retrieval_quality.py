@@ -85,6 +85,16 @@ async def test_retrieval_quality_separates_candidate_coverage_from_jev_selection
                 "catalog|query:quality",
             ],
         ),
+        RetrievalQualityCase(
+            id="revenue-related-source-group",
+            goal="revenue movement and quality",
+            expected_resource_refs=["catalog|dashboard:revenue"],
+            acceptable_resource_refs=[
+                "catalog|dashboard:revenue",
+                "catalog|query:quality",
+            ],
+            required_resource_groups=[["catalog|query:quality"]],
+        ),
         RetrievalQualityCase(id="no-match", goal="nothing relevant"),
     ]
 
@@ -94,7 +104,7 @@ async def test_retrieval_quality_separates_candidate_coverage_from_jev_selection
             min_candidate_recall=1,
             min_recommended_precision=1,
             min_recommended_recall=1,
-            min_cases=2,
+            min_cases=3,
         ),
     )
 
@@ -102,6 +112,7 @@ async def test_retrieval_quality_separates_candidate_coverage_from_jev_selection
     assert report.candidate_recall == 1
     assert report.recommended_precision == 1
     assert report.recommended_recall == 1
+    assert report.required_group_recall == 1
     assert report.no_match_accuracy == 1
     assert report.cases[0].candidate_refs == [
         "catalog|dashboard:revenue",

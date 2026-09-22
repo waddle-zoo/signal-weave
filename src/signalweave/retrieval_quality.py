@@ -21,6 +21,22 @@ class RetrievalQualityCase(BaseModel):
     id: str = Field(min_length=1, max_length=200)
     goal: str = Field(min_length=1, max_length=8000)
     expected_resource_refs: list[str] = Field(default_factory=list, max_length=500)
+    acceptable_resource_refs: list[str] = Field(
+        default_factory=list,
+        max_length=500,
+        description=(
+            "Owner-approved related resources that may be recommended without being "
+            "required for coverage. If empty, expected_resource_refs is the allowed set."
+        ),
+    )
+    required_resource_groups: list[list[str]] = Field(
+        default_factory=list,
+        max_length=100,
+        description=(
+            "Owner-labeled alternative resources for a required concept. At least one "
+            "resource in each group must be recommended."
+        ),
+    )
     adapter: str | None = None
     limit: int = Field(default=10, ge=1, le=25)
     principal: PrincipalContext | None = None
@@ -33,6 +49,17 @@ class RetrievalQualityCase(BaseModel):
     def validate_unique_refs(self) -> RetrievalQualityCase:
         if len(self.expected_resource_refs) != len(set(self.expected_resource_refs)):
             raise ValueError("expected_resource_refs must be unique")
+        if len(self.acceptable_resource_refs) != len(set(self.acceptable_resource_refs)):
+            raise ValueError("acceptable_resource_refs must be unique")
+        if not set(self.expected_resource_refs) <= set(
+            self.acceptable_resource_refs or self.expected_resource_refs
+        ):
+            raise ValueError("acceptable_resource_refs must include every expected resource")
+        flattened = [ref for group in self.required_resource_groups for ref in group]
+        if any(not group for group in self.required_resource_groups):
+            raise ValueError("required_resource_groups must not contain empty groups")
+        if len(flattened) != len(set(flattened)):
+            raise ValueError("required_resource_groups must not repeat resources")
         return self
 
 
@@ -52,6 +79,7 @@ class RetrievalQualityThresholds(BaseModel):
     min_candidate_recall: float = Field(default=0.95, ge=0.0, le=1.0)
     min_recommended_precision: float = Field(default=0.90, ge=0.0, le=1.0)
     min_recommended_recall: float = Field(default=0.90, ge=0.0, le=1.0)
+    min_required_group_recall: float = Field(default=0.90, ge=0.0, le=1.0)
     max_error_rate: float = Field(default=0.0, ge=0.0, le=1.0)
     min_cases: int = Field(default=1, ge=1, le=1_000_000)
     require_dataset_provenance: bool = False
@@ -71,6 +99,7 @@ class RetrievalQualityCaseResult(BaseModel):
     candidate_recall: float = Field(ge=0.0, le=1.0)
     recommended_precision: float = Field(ge=0.0, le=1.0)
     recommended_recall: float = Field(ge=0.0, le=1.0)
+    required_group_recall: float = Field(ge=0.0, le=1.0)
     reciprocal_rank: float = Field(ge=0.0, le=1.0)
     no_match_correct: bool = True
     latency_ms: float = Field(ge=0.0)
@@ -91,6 +120,7 @@ class RetrievalQualityReport(BaseModel):
     candidate_recall: float = Field(ge=0.0, le=1.0)
     recommended_precision: float = Field(ge=0.0, le=1.0)
     recommended_recall: float = Field(ge=0.0, le=1.0)
+    required_group_recall: float = Field(ge=0.0, le=1.0)
     mean_reciprocal_rank: float = Field(ge=0.0, le=1.0)
     no_match_accuracy: float = Field(ge=0.0, le=1.0)
     error_rate: float = Field(ge=0.0, le=1.0)
@@ -184,6 +214,7 @@ class RetrievalQualityEvaluator:
     async def _evaluate_case(self, case: RetrievalQualityCase) -> RetrievalQualityCaseResult:
         started = time.perf_counter()
         expected = set(case.expected_resource_refs)
+        acceptable = set(case.acceptable_resource_refs or case.expected_resource_refs)
         try:
             discovery = await self.authoring.discover(
                 case.goal,
@@ -198,8 +229,9 @@ class RetrievalQualityEvaluator:
                 candidate_recall=0.0 if expected else 1.0,
                 recommended_precision=0.0 if expected else 1.0,
                 recommended_recall=0.0 if expected else 1.0,
+                required_group_recall=0.0 if case.required_resource_groups else 1.0,
                 reciprocal_rank=0.0,
-                no_match_correct=False if expected else False,
+                no_match_correct=True if expected else False,
                 latency_ms=(time.perf_counter() - started) * 1000,
                 error=f"{type(error).__name__}: {error}",
                 tags=case.tags,
@@ -222,7 +254,7 @@ class RetrievalQualityEvaluator:
             len(expected & candidate_set) / len(expected) if expected else 1.0
         )
         recommended_precision = (
-            len(expected & recommended_set) / len(recommended_set)
+            len(acceptable & recommended_set) / len(recommended_set)
             if recommended_set
             else 1.0
             if not expected
@@ -235,14 +267,21 @@ class RetrievalQualityEvaluator:
             if not recommended_set
             else 0.0
         )
+        required_group_recall = (
+            sum(
+                bool(set(group) & recommended_set)
+                for group in case.required_resource_groups
+            )
+            / len(case.required_resource_groups)
+            if case.required_resource_groups
+            else 1.0
+        )
         reciprocal_rank = 0.0
         for index, ref in enumerate(ranked_refs, start=1):
             if ref in expected:
                 reciprocal_rank = 1.0 / index
                 break
-        no_match_correct = (not expected and discovery.no_match) or bool(
-            expected & recommended_set
-        )
+        no_match_correct = (not expected and discovery.no_match) if not expected else True
         return RetrievalQualityCaseResult(
             case_id=case.id,
             expected_resource_refs=sorted(expected),
@@ -252,6 +291,7 @@ class RetrievalQualityEvaluator:
             candidate_recall=candidate_recall,
             recommended_precision=recommended_precision,
             recommended_recall=recommended_recall,
+            required_group_recall=required_group_recall,
             reciprocal_rank=reciprocal_rank,
             no_match_correct=no_match_correct,
             latency_ms=(time.perf_counter() - started) * 1000,
@@ -280,9 +320,15 @@ class RetrievalQualityEvaluator:
             sum(case.recommended_precision for case in successful) / denominator
         )
         recommended_recall = sum(case.recommended_recall for case in successful) / denominator
+        required_group_recall = (
+            sum(case.required_group_recall for case in successful) / denominator
+        )
         reciprocal_rank = sum(case.reciprocal_rank for case in successful) / denominator
+        no_match_cases = [case for case in successful if not case.expected_resource_refs]
         no_match_accuracy = (
-            sum(case.no_match_correct for case in successful) / denominator
+            sum(case.no_match_correct for case in no_match_cases) / len(no_match_cases)
+            if no_match_cases
+            else 1.0
         )
         latencies = sorted(case.latency_ms for case in successful)
         median_latency = (
@@ -298,6 +344,7 @@ class RetrievalQualityEvaluator:
             and candidate_recall >= thresholds.min_candidate_recall
             and recommended_precision >= thresholds.min_recommended_precision
             and recommended_recall >= thresholds.min_recommended_recall
+            and required_group_recall >= thresholds.min_required_group_recall
             and error_rate <= thresholds.max_error_rate
         )
         status = PromotionStatus.APPROVED if meets else PromotionStatus.SHADOW
@@ -314,7 +361,12 @@ class RetrievalQualityEvaluator:
             for case in (cases or [])
         ]
         case_labels = [
-            {"id": case.id, "expected_resource_refs": case.expected_resource_refs}
+            {
+                "id": case.id,
+                "expected_resource_refs": case.expected_resource_refs,
+                "acceptable_resource_refs": case.acceptable_resource_refs,
+                "required_resource_groups": case.required_resource_groups,
+            }
             for case in (cases or [])
         ]
         metrics = getattr(self, "_metrics_delta", {})
@@ -328,6 +380,7 @@ class RetrievalQualityEvaluator:
             candidate_recall=candidate_recall,
             recommended_precision=recommended_precision,
             recommended_recall=recommended_recall,
+            required_group_recall=required_group_recall,
             mean_reciprocal_rank=reciprocal_rank,
             no_match_accuracy=no_match_accuracy,
             error_rate=error_rate,

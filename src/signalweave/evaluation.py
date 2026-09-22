@@ -179,7 +179,7 @@ class CardEvaluationCaseResult(BaseModel):
 class CardEvaluationReport(BaseModel):
     """Aggregate certification report for a card/workflow replay set."""
 
-    card_ids: list[str] = Field(default_factory=list, max_length=100)
+    card_ids: list[str] = Field(default_factory=list, max_length=10_000)
     card_versions: dict[str, int] = Field(default_factory=dict)
     case_count: int = Field(ge=0)
     successful_case_count: int = Field(ge=0)
