@@ -1,4 +1,5 @@
 import asyncio
+from types import SimpleNamespace
 
 import httpx
 import pytest
@@ -190,6 +191,50 @@ def make_server(tmp_path, judger=None, *, sqlite=False, catalog=None):
 
 def tool(server, name):
     return server._tool_manager.get_tool(name).fn
+
+
+@pytest.mark.asyncio
+async def test_mcp_can_use_trusted_request_principal_for_shared_catalog(tmp_path):
+    catalog = SupersetCatalogDouble()
+    tenant_resources = []
+    for tenant_id in ("tenant-a", "tenant-b"):
+        tenant_resources.extend(
+            resource.model_copy(
+                update={
+                    "contract": resource.contract.model_copy(
+                        update={"tenant_id": tenant_id}
+                    )
+                }
+            )
+            for resource in catalog.resources
+        )
+    shared_catalog = SupersetCatalogDouble()
+    shared_catalog.resources = tenant_resources
+    registry = SourceRegistry([shared_catalog])
+    server = create_mcp(
+        Runtime(
+            card_store=JsonInsightCardStore(tmp_path / "cards.json"),
+            sources=registry,
+            engine=InsightEngine(OnboardingJevDouble(), registry=registry),
+        ),
+        principal_resolver=lambda context: PrincipalContext(
+            principal_id=context.principal_id,
+            tenant_id=context.tenant_id,
+            authorization_source="test-gateway",
+        ),
+    )
+
+    discovery = await tool(server, "discover_insight_sources")(
+        goal="Checkout conversion risk.",
+        adapter="superset",
+        ctx=SimpleNamespace(principal_id="b-user", tenant_id="tenant-b"),
+    )
+
+    assert discovery["matches"]
+    assert {match["contract"]["tenant_id"] for match in discovery["matches"]} == {
+        "tenant-b"
+    }
+    assert discovery["authorized_tenant"] == "tenant-b"
 
 
 @pytest.mark.asyncio

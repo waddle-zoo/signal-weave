@@ -71,11 +71,13 @@ safely behind a trusted gateway, and each adapter can enforce its own credential
 or principal boundary, but shared deployments still need request-scoped identity
 and card/receipt isolation.
 
-The next design should accept a caller principal from the deployment boundary and
-make it available to every catalog search, source inspection, context lookup, and
-receipt. The service should not invent an identity provider or a universal ACL;
-it should fail closed when a deployment claims shared-tenant operation without
-supplying one, and adapters must return only resources visible to that principal.
+The service now accepts a trusted request principal from the deployment boundary
+through `principal_resolver` and propagates it through catalog search, source
+inspection, approval, bounded investigation, and evaluation. It still does not
+invent an identity provider or universal ACL: a shared deployment must verify
+the principal at its gateway, and adapters must return only resources visible to
+that principal. The remaining proof target is an actual OIDC/shared-gateway
+staging replay rather than the local resolver double.
 
 Proof target: two tenants with colliding resource names cannot discover, inspect,
 or reuse each other’s cards or receipts, including through bounded investigation.

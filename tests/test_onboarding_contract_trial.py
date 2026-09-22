@@ -2,22 +2,32 @@ import asyncio
 import json
 from copy import deepcopy
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
 from evaluations.onboarding_adversarial_review import audit_matrix
-from evaluations.onboarding_contract_trial import run_scenario, run_trial
+from evaluations.onboarding_contract_trial import (
+    ScenarioAdapter,
+    ScenarioJev,
+    _descriptor,
+    run_scenario,
+    run_trial,
+)
 from evaluations.onboarding_readiness import assess_readiness
 from signalweave.models import (
     InsightCard,
     InsightCardOnboardingReview,
     OnboardingDiscoveryReceipt,
+    PrincipalContext,
     ResourceContract,
+    ResourceDescriptor,
     ResourceDiscovery,
     ResourceMatch,
     SourceRef,
 )
 from signalweave.onboarding import InsightAuthoringService
+from signalweave.sources import SourceRegistry
 
 CASES = Path(__file__).parents[1] / "evaluations" / "data" / "onboarding-scenarios.json"
 
@@ -62,6 +72,58 @@ async def test_tenant_decoy_is_filtered_before_jev_sees_candidates():
     assert result.tenant_leaks == []
     assert result.relevant_recall == 1.0
     assert result.passed is True
+
+
+@pytest.mark.asyncio
+async def test_request_principal_scopes_shared_catalog_search_and_inspection():
+    scenarios = json.loads(CASES.read_text())
+    scenario = next(item for item in scenarios if item["scenario_id"] == "tenant-decoy")
+    resources = [_descriptor(raw) for raw in scenario["resources"]]
+    resources.append(
+        ResourceDescriptor(
+            adapter="looker",
+            resource="dashboard:other-only",
+            kind="dashboard",
+            title="Other-only dashboard",
+            contract=ResourceContract(tenant_id="otherco", domain="growth"),
+        )
+    )
+    adapters = [
+        ScenarioAdapter(
+            adapter,
+            [resource for resource in resources if resource.adapter == adapter],
+            server_search=False,
+            total_count=len(resources),
+            has_more=False,
+        )
+        for adapter in sorted({resource.adapter for resource in resources})
+    ]
+    registry = SourceRegistry(adapters)
+    service = InsightAuthoringService(
+        registry=registry,
+        engine=SimpleNamespace(judger=ScenarioJev(scenario["jev_scores"])),
+    )
+
+    for tenant_id in ("northstar", "otherco"):
+        discovery = await service.discover(
+            scenario["goal"],
+            principal=PrincipalContext(
+                principal_id=f"{tenant_id}-reviewer", tenant_id=tenant_id
+            ),
+        )
+        assert discovery.matches
+        assert {match.contract.tenant_id for match in discovery.matches} == {tenant_id}
+
+    other_source = SourceRef(
+        key="other-conversion",
+        adapter="looker",
+        resource="dashboard:other-only",
+        label="Other-only dashboard",
+    )
+    blocked = await registry.inspect(other_source, authorized_tenants=["northstar"])
+    assert blocked.error and "authorized adapter catalog" in blocked.error
+    visible = await registry.inspect(other_source, authorized_tenants=["otherco"])
+    assert visible.error is None
 
 
 @pytest.mark.asyncio

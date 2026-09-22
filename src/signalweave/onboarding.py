@@ -77,6 +77,9 @@ class InsightAuthoringService:
     related_source_limit: int = 6
     principal: PrincipalContext | None = None
 
+    def _effective_principal(self, principal: PrincipalContext | None) -> PrincipalContext | None:
+        return principal or self.principal
+
     @staticmethod
     def _role_judgment(
         resource: ResourceDescriptor, judgments: dict[str, dict[str, Any]]
@@ -436,12 +439,18 @@ class InsightAuthoringService:
         *,
         adapter: str | None = None,
         limit: int = 10,
+        principal: PrincipalContext | None = None,
     ) -> InsightCardOnboardingReview:
         goal = insight_goal(
             card.what_to_watch, card.why_watch, card.watch_for, card.questions
         )
-        discovery = await self.discover(goal, adapter=adapter, limit=limit)
-        return self.build_onboarding_review(card, discovery, principal=self.principal)
+        effective_principal = self._effective_principal(principal)
+        discovery = await self.discover(
+            goal, adapter=adapter, limit=limit, principal=effective_principal
+        )
+        return self.build_onboarding_review(
+            card, discovery, principal=effective_principal
+        )
 
     async def discover(
         self,
@@ -449,13 +458,20 @@ class InsightAuthoringService:
         *,
         adapter: str | None = None,
         limit: int = 10,
+        principal: PrincipalContext | None = None,
     ) -> ResourceDiscovery:
         if not goal.strip():
             raise ValueError("insight goal must not be empty")
         if not 1 <= limit <= 25:
             raise ValueError("limit must be between 1 and 25")
+        effective_principal = self._effective_principal(principal)
         catalog = await self.registry.search_resources(
-            goal, adapter_name=adapter, limit=self.max_candidates
+            goal,
+            adapter_name=adapter,
+            limit=self.max_candidates,
+            authorized_tenants=(
+                [effective_principal.tenant_id] if effective_principal else None
+            ),
         )
         resources = catalog.resources
         pool = build_candidate_pool(goal, resources, limit=self.max_candidates)
@@ -519,7 +535,11 @@ class InsightAuthoringService:
                 "deployments should configure tenant-aware adapter metadata."
             )
         warnings.extend(catalog.warnings)
-        authorized_tenants = self.registry.authorized_tenants
+        authorized_tenants = (
+            {effective_principal.tenant_id}
+            if effective_principal
+            else self.registry.authorized_tenants
+        )
         authorized_tenant = (
             next(iter(authorized_tenants)) if authorized_tenants and len(authorized_tenants) == 1 else None
         )
@@ -559,6 +579,7 @@ class InsightAuthoringService:
         investigation_mode: InvestigationMode = InvestigationMode.BOUNDED,
         max_investigation_sources: int = 3,
         investigation_threshold: float = 0.60,
+        principal: PrincipalContext | None = None,
     ) -> InsightCardProposal:
         if not what_to_watch.strip():
             raise ValueError("what_to_watch must not be empty")
@@ -568,7 +589,10 @@ class InsightAuthoringService:
         questions = list(questions or [])
         delivery_methods = list(delivery_methods or [])
         goal = insight_goal(what_to_watch, why_watch, watch_for, questions)
-        discovery = await self.discover(goal, adapter=adapter, limit=limit)
+        effective_principal = self._effective_principal(principal)
+        discovery = await self.discover(
+            goal, adapter=adapter, limit=limit, principal=effective_principal
+        )
         matches = {match.ref: match for match in discovery.matches}
         requested = selected_sources
         if requested is None:
@@ -611,7 +635,9 @@ class InsightAuthoringService:
             investigation_threshold=investigation_threshold,
         )
         plan = await self.engine.compile(card)
-        onboarding_review = self.build_onboarding_review(card, discovery, principal=self.principal)
+        onboarding_review = self.build_onboarding_review(
+            card, discovery, principal=effective_principal
+        )
         setup_questions: list[str] = list(onboarding_review.questions)
         if plan.comparison_windows:
             setup_questions.append(
@@ -631,7 +657,11 @@ class InsightAuthoringService:
         )
 
     async def resolve_bundle(
-        self, card: InsightCard, context: ContextSnapshot | None = None
+        self,
+        card: InsightCard,
+        context: ContextSnapshot | None = None,
+        *,
+        principal: PrincipalContext | None = None,
     ) -> EvidenceBundle:
         """Resolve a bounded Jev-ranked source bundle for one card evaluation.
 
@@ -640,6 +670,7 @@ class InsightAuthoringService:
         missing or weakly related candidates never replace an anchor.
         """
         goal = insight_goal(card.what_to_watch, card.why_watch, card.watch_for, card.questions)
+        effective_principal = self._effective_principal(principal)
         anchors = list(card.sources)
         if card.retrieval_mode == RetrievalMode.FIXED:
             return EvidenceBundle(
@@ -655,7 +686,13 @@ class InsightAuthoringService:
                 warnings=["Card retrieval_mode is fixed; no related source expansion was requested."],
             )
 
-        catalog = await self.registry.search_resources(goal, limit=self.max_candidates)
+        catalog = await self.registry.search_resources(
+            goal,
+            limit=self.max_candidates,
+            authorized_tenants=(
+                [effective_principal.tenant_id] if effective_principal else None
+            ),
+        )
         resources = catalog.resources
         anchor_refs = {f"{source.adapter}|{source.resource}" for source in anchors}
         anchor_descriptors = {

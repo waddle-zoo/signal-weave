@@ -111,7 +111,13 @@ class SourceRegistry:
     def authorized_tenants(self) -> frozenset[str] | None:
         return self._authorized_tenants
 
-    async def list_resources(self, adapter_name: str | None = None) -> list[ResourceDescriptor]:
+    async def list_resources(
+        self,
+        adapter_name: str | None = None,
+        *,
+        authorized_tenants: Iterable[str] | None = None,
+    ) -> list[ResourceDescriptor]:
+        tenant_scope = self._tenant_scope(authorized_tenants)
         adapters = (
             [self._get(adapter_name)]
             if adapter_name
@@ -120,7 +126,7 @@ class SourceRegistry:
         resources: list[ResourceDescriptor] = []
         for adapter in adapters:
             resources.extend(await adapter.list_resources())
-        return [resource for resource in resources if self._is_authorized(resource)]
+        return [resource for resource in resources if self._is_authorized(resource, tenant_scope)]
 
     async def search_resources(
         self,
@@ -129,6 +135,7 @@ class SourceRegistry:
         adapter_name: str | None = None,
         limit: int = 40,
         cursor: str | None = None,
+        authorized_tenants: Iterable[str] | None = None,
     ) -> CatalogSearchPage:
         """Search the authorized catalog without forcing a full materialization.
 
@@ -143,6 +150,7 @@ class SourceRegistry:
             raise ValueError("catalog search limit must be between 1 and 500")
         if cursor and not adapter_name:
             raise ValueError("a catalog cursor requires an explicit adapter name")
+        tenant_scope = self._tenant_scope(authorized_tenants)
         adapters = (
             [self._get(adapter_name)]
             if adapter_name
@@ -168,7 +176,7 @@ class SourceRegistry:
             else:
                 resources = await adapter.list_resources()
                 authorized = [
-                    resource for resource in resources if self._is_authorized(resource)
+                    resource for resource in resources if self._is_authorized(resource, tenant_scope)
                 ]
                 visible = _bounded_local_search(query, authorized, per_adapter_limit)
                 page = CatalogSearchPage(
@@ -182,7 +190,10 @@ class SourceRegistry:
                         "the catalog was locally scanned and lexically bounded before Jev ranking."
                     ],
                 )
-            visible = [resource for resource in page.resources if self._is_authorized(resource)]
+            visible = [
+                resource for resource in page.resources
+                if self._is_authorized(resource, tenant_scope)
+            ]
             pages.append(page.model_copy(update={"resources": visible[:per_adapter_limit]}))
         if len(adapters) > 1:
             # Give every installed adapter a chance to contribute candidates.  A
@@ -207,12 +218,19 @@ class SourceRegistry:
             warnings=[warning for page_item in pages for warning in page_item.warnings],
         )
 
-    async def inspect(self, source: SourceRef) -> ResourceSnapshot:
+    async def inspect(
+        self,
+        source: SourceRef,
+        *,
+        authorized_tenants: Iterable[str] | None = None,
+    ) -> ResourceSnapshot:
         adapter = self._get(source.adapter)
         if self._enforce_catalog:
             catalog = {
                 resource.resource: resource
-                for resource in await self.list_resources(source.adapter)
+                for resource in await self.list_resources(
+                    source.adapter, authorized_tenants=authorized_tenants
+                )
             }
             descriptor = catalog.get(source.resource)
             if descriptor is None:
@@ -261,14 +279,21 @@ class SourceRegistry:
             }
         )
 
-    async def resolve(self, sources: Iterable[SourceRef]) -> list[ResourceSnapshot]:
+    async def resolve(
+        self,
+        sources: Iterable[SourceRef],
+        *,
+        authorized_tenants: Iterable[str] | None = None,
+    ) -> list[ResourceSnapshot]:
         """Fetch sources independently so one broken source is visible to the engine."""
         source_list = list(sources)
         catalog: dict[tuple[str, str], ResourceDescriptor] = {}
         catalog_errors: dict[str, str] = {}
         for adapter_name in sorted({source.adapter for source in source_list}):
             try:
-                for resource in await self.list_resources(adapter_name):
+                for resource in await self.list_resources(
+                    adapter_name, authorized_tenants=authorized_tenants
+                ):
                     catalog[(resource.adapter, resource.resource)] = resource
             except Exception as error:  # noqa: BLE001 - isolate one catalog outage
                 catalog_errors[adapter_name] = f"{type(error).__name__}: {error}"
@@ -310,7 +335,9 @@ class SourceRegistry:
                 )
             try:
                 async with semaphore:
-                    snapshot = await self.inspect(source)
+                    snapshot = await self.inspect(
+                        source, authorized_tenants=authorized_tenants
+                    )
             except Exception as error:  # noqa: BLE001 - source failure becomes typed evidence
                 return ResourceSnapshot(
                     source_key=source.key,
@@ -344,13 +371,20 @@ class SourceRegistry:
 
         return list(await asyncio.gather(*(resolve_one(source) for source in source_list)))
 
-    def _is_authorized(self, resource: ResourceDescriptor) -> bool:
+    def _tenant_scope(
+        self, authorized_tenants: Iterable[str] | None
+    ) -> frozenset[str] | None:
+        if authorized_tenants is None:
+            return self._authorized_tenants
+        return frozenset(authorized_tenants)
+
+    @staticmethod
+    def _is_authorized(
+        resource: ResourceDescriptor, tenant_scope: frozenset[str] | None
+    ) -> bool:
         if not resource.contract.authorized:
             return False
-        if (
-            self._authorized_tenants is not None
-            and resource.contract.tenant_id not in self._authorized_tenants
-        ):
+        if tenant_scope is not None and resource.contract.tenant_id not in tenant_scope:
             return False
         return True
 

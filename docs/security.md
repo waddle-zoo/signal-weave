@@ -30,10 +30,14 @@ deployment must establish a data policy before using company data.
 - Stale data escalates only when a configured escalation delivery method exists; otherwise it becomes `investigate`.
 - Low-confidence automatic outcomes are downgraded to `investigate`.
 - The source registry resolves refs independently, so a mixed card can show which dashboard/query/DAG/table failed.
-- `SIGNALWEAVE_TENANT_ID` and `SIGNALWEAVE_PRINCIPAL_ID` configure the
-  deployment principal used to scope onboarding and evaluation; they must be
-  supplied together. Discovery and evaluation are restricted to resources whose
-  typed catalog contract belongs to the configured tenant; missing or foreign
+- `SIGNALWEAVE_TENANT_ID` and `SIGNALWEAVE_PRINCIPAL_ID` configure the default
+  sidecar principal used to scope onboarding and evaluation; they must be
+  supplied together. A shared MCP gateway may instead pass a trusted
+  `principal_resolver` to `create_mcp`; the resolver receives the MCP request
+  context and returns a verified `PrincipalContext` for that request. Raw tool
+  arguments cannot set identity. Discovery, inspection, approval re-checks,
+  bounded investigation, and evaluation are restricted to resources whose
+  typed catalog contract belongs to the resolved tenant; missing or foreign
   resources fail closed. This is not a universal RBAC layer: each adapter must
   enforce the source's own credential or identity boundary.
 - Follow-up source selection is checked against the already authorized catalog in

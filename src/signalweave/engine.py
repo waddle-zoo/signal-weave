@@ -19,6 +19,7 @@ from .models import (
     InvestigationTrace,
     Observation,
     Outcome,
+    PrincipalContext,
     ResourceSnapshot,
     SourceRef,
 )
@@ -84,23 +85,29 @@ class InsightEngine:
         card: InsightCard,
         resources: list[ResourceSnapshot] | None = None,
         context_override: ContextSnapshot | None = None,
+        principal: PrincipalContext | None = None,
     ) -> InsightRun:
+        authorized_tenants = [principal.tenant_id] if principal else None
         if resources is None:
             if self.registry is None:
                 raise ValueError("InsightEngine needs resources or a SourceRegistry")
-            resources = await self.registry.resolve(card.sources)
+            resources = await self.registry.resolve(
+                card.sources, authorized_tenants=authorized_tenants
+            )
         else:
             resources = list(resources)
 
         context = context_override or await self._load_context(card, resources)
         plan = await self.compile(card, resources)
         investigation = await self._select_investigation(
-            card, plan, resources, context
+            card, plan, resources, context, authorized_tenants=authorized_tenants
         )
         evaluation_card = card
         if investigation is not None and investigation.selected and self.registry is not None:
             selected_sources = [selection.source for selection in investigation.selected]
-            selected_resources = await self.registry.resolve(selected_sources)
+            selected_resources = await self.registry.resolve(
+                selected_sources, authorized_tenants=authorized_tenants
+            )
             selected_by_key = {resource.source_key: resource for resource in selected_resources}
             updated_selections: list[InvestigationSelection] = []
             investigation_failed = investigation.failed
@@ -200,6 +207,8 @@ class InsightEngine:
         plan: InsightPlan,
         resources: list[ResourceSnapshot],
         context: ContextSnapshot | None,
+        *,
+        authorized_tenants: list[str] | None = None,
     ) -> InvestigationTrace | None:
         if card.investigation_mode != InvestigationMode.BOUNDED:
             return None
@@ -220,7 +229,9 @@ class InsightEngine:
         goal = f"{card.what_to_watch}\nPurpose: {card.why_watch}"
         try:
             catalog_page = await self.registry.search_resources(
-                goal, limit=self.investigation_candidate_limit
+                goal,
+                limit=self.investigation_candidate_limit,
+                authorized_tenants=authorized_tenants,
             )
         except Exception as error:  # noqa: BLE001 - optional investigation fails closed
             return InvestigationTrace(

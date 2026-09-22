@@ -5,11 +5,12 @@ import hashlib
 import json
 import os
 import re
+from collections.abc import Callable
 from datetime import datetime, timezone
 from typing import Any
 from uuid import uuid4
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp import Context, FastMCP
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
@@ -22,6 +23,7 @@ from .models import (
     InvestigationMode,
     MetricQueryCard,
     Outcome,
+    PrincipalContext,
     QueryCardStatus,
     ReceiptStatus,
     RetrievalMode,
@@ -55,7 +57,11 @@ def _evaluation_fingerprint(
     return hashlib.sha256(encoded).hexdigest()
 
 
-def create_mcp(runtime: Runtime | None = None) -> FastMCP:
+def create_mcp(
+    runtime: Runtime | None = None,
+    *,
+    principal_resolver: Callable[[Context], PrincipalContext] | None = None,
+) -> FastMCP:
     runtime = runtime or build_runtime()
     authoring = InsightAuthoringService(
         runtime.sources, runtime.engine, principal=runtime.principal
@@ -67,11 +73,27 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
     idempotency_locks: dict[str, asyncio.Lock] = {}
     mcp = FastMCP("signal-weave")
 
+    def request_principal(ctx: Context | None) -> PrincipalContext | None:
+        """Resolve a trusted gateway principal without accepting tool input as identity."""
+        if principal_resolver is None:
+            return runtime.principal
+        if ctx is None:
+            raise RuntimeError(
+                "request-scoped principal resolution requires an MCP request context"
+            )
+        principal = principal_resolver(ctx)
+        if principal is None:
+            raise RuntimeError("the identity gateway did not provide a principal")
+        return principal
+
     async def prepare_insight_card(
-        card: InsightCard, context: ContextSnapshot | None = None
+        card: InsightCard,
+        context: ContextSnapshot | None = None,
+        *,
+        principal: PrincipalContext | None = None,
     ) -> tuple[InsightCard, Any]:
         """Resolve optional related sources without mutating the stored card."""
-        bundle = await authoring.resolve_bundle(card, context)
+        bundle = await authoring.resolve_bundle(card, context, principal=principal)
         expanded = card
         if [source.model_dump(mode="json") for source in bundle.selected_sources] != [
             source.model_dump(mode="json") for source in card.sources
@@ -87,6 +109,7 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
         idempotency_key: str | None,
         actor: str,
         context: ContextSnapshot | None = None,
+        principal: PrincipalContext | None = None,
     ) -> dict[str, Any]:
         card = runtime.card_store.get_card(card_id)
         if card.status != InsightCardStatus.APPROVED:
@@ -141,8 +164,12 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
                 "result": existing.result,
             }
         try:
-            evaluation_card, bundle = await prepare_insight_card(card, context)
-            run = await runtime.engine.evaluate(evaluation_card, context_override=context)
+            evaluation_card, bundle = await prepare_insight_card(
+                card, context, principal=principal
+            )
+            run = await runtime.engine.evaluate(
+                evaluation_card, context_override=context, principal=principal
+            )
             evaluated_result = run.result.model_copy(update={"retrieval": bundle})
             result = evaluated_result.model_dump(mode="json")
         except Exception as error:  # noqa: BLE001 - persist failed claims for replay safety
@@ -182,6 +209,7 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
         idempotency_key: str | None,
         actor: str,
         context: ContextSnapshot | None = None,
+        principal: PrincipalContext | None = None,
     ) -> dict[str, Any]:
         key = (idempotency_key or f"manual:{card_id}:{uuid4().hex}").strip()
         if not key:
@@ -189,7 +217,11 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
         lock = idempotency_locks.setdefault(key, asyncio.Lock())
         async with lock:
             return await evaluate_approved_card_once(
-                card_id, idempotency_key=key, actor=actor, context=context
+                card_id,
+                idempotency_key=key,
+                actor=actor,
+                context=context,
+                principal=principal,
             )
 
     async def selected_query_sources(selected_sources: list[dict[str, Any]]) -> list[SourceRef]:
@@ -223,9 +255,15 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
         return refs
 
     @mcp.tool()
-    async def list_resources(adapter: str | None = None) -> list[dict[str, Any]]:
+    async def list_resources(
+        adapter: str | None = None, ctx: Context | None = None
+    ) -> list[dict[str, Any]]:
         """List safe, inspectable resources exposed by installed source adapters."""
-        resources = await runtime.sources.list_resources(adapter)
+        principal = request_principal(ctx)
+        resources = await runtime.sources.list_resources(
+            adapter,
+            authorized_tenants=[principal.tenant_id] if principal else None,
+        )
         return [resource.model_dump(mode="json") for resource in resources]
 
     @mcp.tool()
@@ -234,6 +272,7 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
         resource: str,
         label: str | None = None,
         parameters: dict[str, Any] | None = None,
+        ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Inspect one source resource without making an insight decision."""
         source = SourceRef(
@@ -243,7 +282,11 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
             label=label or resource,
             parameters=parameters or {},
         )
-        snapshot = await runtime.sources.inspect(source)
+        principal = request_principal(ctx)
+        snapshot = await runtime.sources.inspect(
+            source,
+            authorized_tenants=[principal.tenant_id] if principal else None,
+        )
         return snapshot.model_dump(mode="json")
 
     @mcp.tool()
@@ -251,9 +294,15 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
         goal: str,
         adapter: str | None = None,
         limit: int = 10,
+        ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Find bounded, Jev-ranked source candidates for an insight goal."""
-        discovery = await authoring.discover(goal, adapter=adapter, limit=limit)
+        discovery = await authoring.discover(
+            goal,
+            adapter=adapter,
+            limit=limit,
+            principal=request_principal(ctx),
+        )
         return discovery.model_dump(mode="json")
 
     @mcp.tool()
@@ -275,6 +324,7 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
         investigation_mode: str = "bounded",
         max_investigation_sources: int = 3,
         investigation_threshold: float = 0.60,
+        ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Propose and save a draft free-form insight card.
 
@@ -303,6 +353,7 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
             investigation_mode=InvestigationMode(investigation_mode),
             max_investigation_sources=max_investigation_sources,
             investigation_threshold=investigation_threshold,
+            principal=request_principal(ctx),
         )
         stored_card = proposal.card.model_copy(update={"compiled_plan": proposal.plan})
         runtime.card_store.save_card(stored_card)
@@ -461,6 +512,7 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
         idempotency_key: str | None = None,
         actor: str = "mcp-client",
         context: dict[str, Any] | None = None,
+        ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Evaluate an approved card, optionally with a versioned external context view."""
         context_snapshot = (
@@ -473,11 +525,14 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
             idempotency_key=idempotency_key,
             actor=actor,
             context=context_snapshot,
+            principal=request_principal(ctx),
         )
 
     @mcp.tool()
     async def resolve_insight_sources(
-        card_id: str, context: dict[str, Any] | None = None
+        card_id: str,
+        context: dict[str, Any] | None = None,
+        ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Preview the bounded Jev-ranked evidence bundle for a stored card."""
         card = runtime.card_store.get_card(card_id)
@@ -486,7 +541,10 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
             if context
             else None
         )
-        bundle = await authoring.resolve_bundle(card, context_snapshot)
+        principal = request_principal(ctx)
+        bundle = await authoring.resolve_bundle(
+            card, context_snapshot, principal=principal
+        )
         return {
             "card": card.model_dump(mode="json"),
             "bundle": bundle.model_dump(mode="json"),
@@ -494,7 +552,10 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
 
     @mcp.tool()
     async def review_insight_card(
-        card_id: str, adapter: str | None = None, limit: int = 10
+        card_id: str,
+        adapter: str | None = None,
+        limit: int = 10,
+        ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Review a draft's source coverage before a human approves it.
 
@@ -504,7 +565,12 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
         for confirmation or revise the card.
         """
         card = runtime.card_store.get_card(card_id)
-        review = await authoring.review(card, adapter=adapter, limit=limit)
+        review = await authoring.review(
+            card,
+            adapter=adapter,
+            limit=limit,
+            principal=request_principal(ctx),
+        )
         return {
             "card": card.model_dump(mode="json"),
             "review": review.model_dump(mode="json"),
@@ -512,7 +578,9 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
 
     @mcp.tool()
     async def simulate_insight_card(
-        card_id: str, context: dict[str, Any] | None = None
+        card_id: str,
+        context: dict[str, Any] | None = None,
+        ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Evaluate a draft without treating the result as an approved push action."""
         card = runtime.card_store.get_card(card_id)
@@ -521,8 +589,15 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
             if context
             else None
         )
-        evaluation_card, bundle = await prepare_insight_card(card, context_snapshot)
-        run = await runtime.engine.evaluate(evaluation_card, context_override=context_snapshot)
+        principal = request_principal(ctx)
+        evaluation_card, bundle = await prepare_insight_card(
+            card, context_snapshot, principal=principal
+        )
+        run = await runtime.engine.evaluate(
+            evaluation_card,
+            context_override=context_snapshot,
+            principal=principal,
+        )
         result = run.result.model_copy(update={"retrieval": bundle})
         return {
             "status": "preview",
@@ -535,12 +610,18 @@ def create_mcp(runtime: Runtime | None = None) -> FastMCP:
         }
 
     @mcp.tool()
-    async def approve_insight_card(card_id: str, actor: str = "mcp-client") -> dict[str, Any]:
+    async def approve_insight_card(
+        card_id: str,
+        actor: str = "mcp-client",
+        ctx: Context | None = None,
+    ) -> dict[str, Any]:
         """Approve a draft card for later scheduler or webhook evaluation."""
         card = runtime.card_store.get_card(card_id)
         if not card.sources:
             raise ValueError("an insight card needs at least one selected source before approval")
-        onboarding_review = await authoring.review(card)
+        onboarding_review = await authoring.review(
+            card, principal=request_principal(ctx)
+        )
         if onboarding_review.readiness_status != "ready_for_approval":
             codes = ", ".join(blocker.code.value for blocker in onboarding_review.blockers)
             raise ValueError(

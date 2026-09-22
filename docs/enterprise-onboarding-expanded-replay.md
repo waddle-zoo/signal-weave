@@ -157,6 +157,9 @@ autonomous-production claim. Promote it only when each item has evidence:
   page, candidate refs, evaluator, and truncation state.
 - [x] Candidate reviews preserve governed evidence roles and bounded Jev role
   probabilities without using them as authorization or approval policy.
+- [x] A trusted request principal can be injected into MCP and is propagated
+  through discovery, inspection, approval review, bounded investigation, and
+  evaluation; shared-catalog collision tests pass.
 - [ ] Request-scoped identity/OAuth is verified through a shared gateway.
 - [ ] Role-aware candidate judgments are validated against operator labels.
 - [ ] Time-split replay and real reviewer time/correction measurements exist.

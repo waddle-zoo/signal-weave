@@ -119,7 +119,7 @@ class ResourceContract(BaseModel):
 
 
 class PrincipalContext(BaseModel):
-    """Deployment-authenticated identity used to scope onboarding evidence."""
+    """Trusted request or deployment identity used to scope onboarding evidence."""
 
     principal_id: str = Field(min_length=1, max_length=240)
     tenant_id: str = Field(min_length=1, max_length=160)
