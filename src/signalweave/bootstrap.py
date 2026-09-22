@@ -49,6 +49,13 @@ class AdapterBootstrapSpec(BaseModel):
         max_length=20,
     )
     minimum_resources: int = Field(default=1, ge=1, le=1_000_000_000)
+    allow_paginated_search: bool = Field(
+        default=True,
+        description=(
+            "A bounded native search may truthfully expose has_more; set false only "
+            "when this deployment requires a complete materialized catalog."
+        ),
+    )
 
     @model_validator(mode="after")
     def validate_unique_capabilities(self) -> AdapterBootstrapSpec:
@@ -250,7 +257,9 @@ class BootstrapService:
                 "adapter is using local-scan-fallback; install a bounded native catalog "
                 "search before claiming large-catalog readiness"
             )
-        if page.has_more:
+        if page.has_more and not (
+            spec.allow_paginated_search and page.strategy not in {"local-scan-fallback", "unknown"}
+        ):
             warnings.append("catalog probe was paginated; complete coverage is not represented by this page")
 
         if not spec.required and blockers:

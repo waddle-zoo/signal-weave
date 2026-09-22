@@ -70,6 +70,17 @@ class SourceAdapter(Protocol):
 
     async def inspect(self, source: SourceRef) -> ResourceSnapshot: ...
 
+    # Optional native authorization lookup. Adapters with server-side search
+    # should implement this so inspecting one discovered source does not force
+    # a full catalog scan. SourceRegistry uses a safe list fallback for older
+    # adapters that do not expose it yet.
+    async def authorize(
+        self,
+        source: SourceRef,
+        *,
+        authorized_tenants: Iterable[str] | None = None,
+    ) -> ResourceDescriptor | None: ...
+
 
 class SourceRegistry:
     """Resolve insight-card source refs through explicitly installed adapters."""
@@ -225,14 +236,11 @@ class SourceRegistry:
         authorized_tenants: Iterable[str] | None = None,
     ) -> ResourceSnapshot:
         adapter = self._get(source.adapter)
+        descriptor: ResourceDescriptor | None = None
         if self._enforce_catalog:
-            catalog = {
-                resource.resource: resource
-                for resource in await self.list_resources(
-                    source.adapter, authorized_tenants=authorized_tenants
-                )
-            }
-            descriptor = catalog.get(source.resource)
+            descriptor = await self._authorize_descriptor(
+                adapter, source, authorized_tenants=authorized_tenants
+            )
             if descriptor is None:
                 return ResourceSnapshot(
                     source_key=source.key,
@@ -245,8 +253,7 @@ class SourceRegistry:
                     ),
                 )
         snapshot = await adapter.inspect(source)
-        if self._enforce_catalog:
-            descriptor = catalog[source.resource]
+        if self._enforce_catalog and descriptor is not None:
             snapshot = snapshot.model_copy(
                 update={
                     "contract": descriptor.contract,
@@ -291,12 +298,20 @@ class SourceRegistry:
         catalog_errors: dict[str, str] = {}
         for adapter_name in sorted({source.adapter for source in source_list}):
             try:
-                for resource in await self.list_resources(
-                    adapter_name, authorized_tenants=authorized_tenants
-                ):
-                    catalog[(resource.adapter, resource.resource)] = resource
-            except Exception as error:  # noqa: BLE001 - isolate one catalog outage
+                adapter = self._get(adapter_name)
+            except Exception as error:  # noqa: BLE001 - preserve missing adapter per source
                 catalog_errors[adapter_name] = f"{type(error).__name__}: {error}"
+                continue
+            for source in [item for item in source_list if item.adapter == adapter_name]:
+                try:
+                    descriptor = await self._authorize_descriptor(
+                        adapter, source, authorized_tenants=authorized_tenants
+                    )
+                    if descriptor is not None:
+                        catalog[(descriptor.adapter, descriptor.resource)] = descriptor
+                except Exception as error:  # noqa: BLE001 - isolate one catalog outage
+                    catalog_errors[adapter_name] = f"{type(error).__name__}: {error}"
+                    break
         semaphore = asyncio.Semaphore(self._max_concurrency)
 
         async def resolve_one(source: SourceRef) -> ResourceSnapshot:
@@ -377,6 +392,32 @@ class SourceRegistry:
         if authorized_tenants is None:
             return self._authorized_tenants
         return frozenset(authorized_tenants)
+
+    async def _authorize_descriptor(
+        self,
+        adapter: SourceAdapter,
+        source: SourceRef,
+        *,
+        authorized_tenants: Iterable[str] | None = None,
+    ) -> ResourceDescriptor | None:
+        """Authorize one opaque source ref with a bounded adapter operation."""
+
+        tenant_scope = self._tenant_scope(authorized_tenants)
+        authorize = getattr(adapter, "authorize", None)
+        if callable(authorize):
+            descriptor = await authorize(source, authorized_tenants=tenant_scope)
+            if descriptor is None:
+                return None
+            if not self._is_authorized(descriptor, tenant_scope):
+                return None
+            return descriptor
+        catalog = {
+            resource.resource: resource
+            for resource in await self.list_resources(
+                adapter.name, authorized_tenants=authorized_tenants
+            )
+        }
+        return catalog.get(source.resource)
 
     @staticmethod
     def _is_authorized(

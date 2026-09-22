@@ -21,6 +21,7 @@ from .evaluation import (
     CardWorkflowEvaluator,
 )
 from .models import (
+    CertificationRecord,
     ContextSnapshot,
     DecisionReceipt,
     DeliveryMethod,
@@ -45,7 +46,11 @@ from .retrieval_quality import (
     RetrievalQualityThresholds,
 )
 from .runtime import Runtime, build_runtime
-from .store import InMemoryDecisionReceiptStore, JsonMetricQueryCardStore
+from .store import (
+    InMemoryCertificationReportStore,
+    InMemoryDecisionReceiptStore,
+    JsonMetricQueryCardStore,
+)
 
 
 def _slug(value: str) -> str:
@@ -83,6 +88,7 @@ def create_mcp(
         os.getenv("METRIC_QUERY_CARD_STORE", "data/metric-query-cards.json")
     )
     decision_receipts = runtime.decision_receipts or InMemoryDecisionReceiptStore()
+    certification_reports = runtime.certification_reports or InMemoryCertificationReportStore()
     idempotency_locks: dict[str, asyncio.Lock] = {}
     mcp = FastMCP("signal-weave")
 
@@ -112,6 +118,30 @@ def create_mcp(
         card = runtime.card_store.get_card(card_id)
         assert_card_scope(card, principal)
         return card
+
+    def persist_certification(
+        *,
+        kind: str,
+        subject_id: str,
+        tenant_id: str,
+        subject_version: str,
+        report: dict[str, Any],
+    ) -> CertificationRecord:
+        report_id = str(report.get("evaluation_id") or report.get("manifest_name") or uuid4().hex)
+        record = CertificationRecord(
+            report_id=f"{kind}:{subject_id}:{report_id}:{uuid4().hex[:12]}",
+            kind=kind,  # type: ignore[arg-type]
+            subject_id=subject_id,
+            tenant_id=tenant_id,
+            subject_version=subject_version,
+            status=str(report.get("status", "blocked")),  # type: ignore[arg-type]
+            dataset_ids=[str(item) for item in report.get("dataset_ids", [])],
+            input_digest=str(report.get("input_digest", "")),
+            label_digest=str(report.get("label_digest", "")),
+            report=report,
+        )
+        certification_reports.save(record)
+        return record
 
     def append_onboarding_review(
         card: InsightCard, review: Any
@@ -359,7 +389,15 @@ def create_mcp(
         report = await BootstrapService(runtime.sources).assess(
             bootstrap_manifest, principal=principal
         )
-        return report.model_dump(mode="json")
+        payload = report.model_dump(mode="json")
+        record = persist_certification(
+            kind="bootstrap",
+            subject_id=bootstrap_manifest.tenant_id,
+            tenant_id=bootstrap_manifest.tenant_id,
+            subject_version=bootstrap_manifest.name,
+            report=payload,
+        )
+        return {**payload, "certification_report_id": record.report_id}
 
     @mcp.tool()
     async def evaluate_card_workflow(
@@ -393,7 +431,15 @@ def create_mcp(
                 else None
             ),
         )
-        return report.model_dump(mode="json")
+        payload = report.model_dump(mode="json")
+        record = persist_certification(
+            kind="card_workflow",
+            subject_id=card.id,
+            tenant_id=card.principal_tenant or (principal.tenant_id if principal else "deployment"),
+            subject_version=str(card.version),
+            report=payload,
+        )
+        return {**payload, "certification_report_id": record.report_id}
 
     @mcp.tool()
     async def evaluate_retrieval_quality(
@@ -425,7 +471,40 @@ def create_mcp(
                 else None
             ),
         )
-        return report.model_dump(mode="json")
+        payload = report.model_dump(mode="json")
+        record = persist_certification(
+            kind="retrieval_quality",
+            subject_id="retrieval-catalog",
+            tenant_id=principal.tenant_id if principal else "deployment",
+            subject_version=principal.tenant_id if principal else "deployment",
+            report=payload,
+        )
+        return {**payload, "certification_report_id": record.report_id}
+
+    @mcp.tool()
+    def get_certification_report(
+        report_id: str, ctx: Context | None = None
+    ) -> dict[str, Any]:
+        """Return one durable bootstrap or evaluation report by ID."""
+        record = certification_reports.get(report_id)
+        principal = request_principal(ctx)
+        if principal is not None and record.tenant_id != principal.tenant_id:
+            raise ValueError("certification report is outside the authenticated principal tenant")
+        return record.model_dump(mode="json")
+
+    @mcp.tool()
+    def list_certification_reports(
+        subject_id: str | None = None, ctx: Context | None = None
+    ) -> dict[str, Any]:
+        """List durable certification evidence for an optional card or tenant."""
+        principal = request_principal(ctx)
+        records = certification_reports.list(subject_id=subject_id)
+        if principal is not None:
+            records = [record for record in records if record.tenant_id == principal.tenant_id]
+        return {
+            "reports": [record.model_dump(mode="json") for record in records],
+            "count": len(records),
+        }
 
     @mcp.tool()
     async def propose_insight_card(

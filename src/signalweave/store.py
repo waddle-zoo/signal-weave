@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Protocol
 
 from .models import (
+    CertificationRecord,
     DecisionReceipt,
     InsightCard,
     InsightCardStatus,
@@ -43,6 +44,42 @@ class DecisionReceiptStore(Protocol):
     def claim(self, receipt: DecisionReceipt) -> bool: ...
 
     def save(self, receipt: DecisionReceipt) -> None: ...
+
+
+class CertificationReportStore(Protocol):
+    """Durable append-only lookup for bootstrap and evaluation evidence."""
+
+    def save(self, record: CertificationRecord) -> None: ...
+
+    def get(self, report_id: str) -> CertificationRecord: ...
+
+    def list(self, *, subject_id: str | None = None) -> list[CertificationRecord]: ...
+
+
+class InMemoryCertificationReportStore:
+    """Test and embedded-runtime implementation of the certification store."""
+
+    def __init__(self) -> None:
+        self._records: dict[str, CertificationRecord] = {}
+
+    def save(self, record: CertificationRecord) -> None:
+        existing = self._records.get(record.report_id)
+        if existing is not None and existing != record:
+            raise ValueError(f"certification report already exists: {record.report_id}")
+        self._records[record.report_id] = record
+
+    def get(self, report_id: str) -> CertificationRecord:
+        try:
+            return self._records[report_id]
+        except KeyError as error:
+            raise KeyError(f"Unknown certification report: {report_id}") from error
+
+    def list(self, *, subject_id: str | None = None) -> list[CertificationRecord]:
+        return [
+            record
+            for record in self._records.values()
+            if subject_id is None or record.subject_id == subject_id
+        ]
 
 
 class JsonInsightCardStore:
@@ -231,6 +268,57 @@ class JsonDecisionReceiptStore:
         return payload
 
 
+class JsonCertificationReportStore:
+    """Atomic JSON store for small local certification histories."""
+
+    def __init__(self, path: str | Path) -> None:
+        self.path = Path(path)
+
+    def save(self, record: CertificationRecord) -> None:
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        records = self._load()
+        existing = records.get(record.report_id)
+        if existing is not None and existing != record.model_dump(mode="json"):
+            raise ValueError(f"certification report already exists: {record.report_id}")
+        records[record.report_id] = record.model_dump(mode="json")
+        temporary_path: str | None = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                mode="w",
+                encoding="utf-8",
+                dir=self.path.parent,
+                prefix=f".{self.path.name}.",
+                suffix=".tmp",
+                delete=False,
+            ) as temporary:
+                temporary_path = temporary.name
+                temporary.write(json.dumps(records, indent=2) + "\n")
+                temporary.flush()
+                os.fsync(temporary.fileno())
+            os.replace(temporary_path, self.path)
+        finally:
+            if temporary_path and os.path.exists(temporary_path):
+                os.unlink(temporary_path)
+
+    def get(self, report_id: str) -> CertificationRecord:
+        item = self._load().get(report_id)
+        if item is None:
+            raise KeyError(f"Unknown certification report: {report_id}")
+        return CertificationRecord.model_validate(item)
+
+    def list(self, *, subject_id: str | None = None) -> list[CertificationRecord]:
+        records = [CertificationRecord.model_validate(item) for item in self._load().values()]
+        return [record for record in records if subject_id is None or record.subject_id == subject_id]
+
+    def _load(self) -> dict[str, dict[str, object]]:
+        if not self.path.exists():
+            return {}
+        payload = json.loads(self.path.read_text())
+        if not isinstance(payload, dict):
+            raise ValueError(f"Certification report catalog must contain a JSON object: {self.path}")
+        return payload
+
+
 class SQLiteInsightCardStore:
     """Durable single-file card store with transactional updates."""
 
@@ -388,3 +476,62 @@ class SQLiteDecisionReceiptStore:
                 "ON CONFLICT(idempotency_key) DO UPDATE SET payload = excluded.payload",
                 (receipt.idempotency_key, json.dumps(receipt.model_dump(mode="json"))),
             )
+
+
+class SQLiteCertificationReportStore:
+    """Durable append-only SQLite store for certification evidence."""
+
+    def __init__(self, path: str | Path) -> None:
+        self.path = Path(path)
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        with self._connect() as connection:
+            connection.execute(
+                "CREATE TABLE IF NOT EXISTS certification_reports ("
+                "report_id TEXT PRIMARY KEY, payload TEXT NOT NULL"
+                ")"
+            )
+
+    def _connect(self) -> sqlite3.Connection:
+        connection = sqlite3.connect(self.path, timeout=30)
+        connection.execute("PRAGMA busy_timeout = 30000")
+        connection.execute("PRAGMA journal_mode = WAL")
+        connection.execute("PRAGMA synchronous = NORMAL")
+        return connection
+
+    def save(self, record: CertificationRecord) -> None:
+        payload = json.dumps(record.model_dump(mode="json"), sort_keys=True)
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT payload FROM certification_reports WHERE report_id = ?",
+                (record.report_id,),
+            ).fetchone()
+            if row is not None and row[0] != payload:
+                raise ValueError(f"certification report already exists: {record.report_id}")
+            connection.execute(
+                "INSERT INTO certification_reports (report_id, payload) VALUES (?, ?) "
+                "ON CONFLICT(report_id) DO UPDATE SET payload = excluded.payload",
+                (record.report_id, payload),
+            )
+
+    def get(self, report_id: str) -> CertificationRecord:
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT payload FROM certification_reports WHERE report_id = ?", (report_id,)
+            ).fetchone()
+        if row is None:
+            raise KeyError(f"Unknown certification report: {report_id}")
+        return CertificationRecord.model_validate(json.loads(row[0]))
+
+    def list(self, *, subject_id: str | None = None) -> list[CertificationRecord]:
+        with self._connect() as connection:
+            if subject_id is None:
+                rows = connection.execute(
+                    "SELECT payload FROM certification_reports ORDER BY report_id"
+                ).fetchall()
+            else:
+                rows = connection.execute(
+                    "SELECT payload FROM certification_reports "
+                    "WHERE json_extract(payload, '$.subject_id') = ? ORDER BY report_id",
+                    (subject_id,),
+                ).fetchall()
+        return [CertificationRecord.model_validate(json.loads(row[0])) for row in rows]

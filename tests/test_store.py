@@ -1,6 +1,7 @@
 import json
 
 from signalweave.models import (
+    CertificationRecord,
     DecisionReceipt,
     InsightCard,
     Outcome,
@@ -9,6 +10,7 @@ from signalweave.models import (
 )
 from signalweave.store import (
     JsonInsightCardStore,
+    SQLiteCertificationReportStore,
     SQLiteDecisionReceiptStore,
     SQLiteInsightCardStore,
     SQLiteMetricQueryCardStore,
@@ -95,3 +97,24 @@ def test_sqlite_metric_query_store_survives_a_new_store_instance(tmp_path):
 
     reopened = SQLiteMetricQueryCardStore(path)
     assert reopened.get_card(card.id).question == card.question
+
+
+def test_sqlite_certification_report_store_is_durable_and_append_only(tmp_path):
+    path = tmp_path / "signalweave.db"
+    record = CertificationRecord(
+        report_id="card_workflow:orders:run-1",
+        kind="card_workflow",
+        subject_id="orders",
+        subject_version="3",
+        status="approved",
+        dataset_ids=["northstar-holdout-v1"],
+        input_digest="input-digest",
+        label_digest="label-digest",
+        report={"outcome_accuracy": 1.0},
+    )
+
+    SQLiteCertificationReportStore(path).save(record)
+    reopened = SQLiteCertificationReportStore(path)
+
+    assert reopened.get(record.report_id).report["outcome_accuracy"] == 1.0
+    assert reopened.list(subject_id="orders")[0].dataset_ids == ["northstar-holdout-v1"]

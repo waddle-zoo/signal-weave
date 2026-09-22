@@ -25,6 +25,11 @@ The four labeled evaluation cases exercise different failure modes:
 
 ## Reproduce
 
+For the current generalized bootstrap/retrieval/workflow proof, run the
+Jev-only trial and its independent adversarial gate documented in
+[`generalized-readiness-trial.md`](generalized-readiness-trial.md). The older
+representative-case commands below remain useful for focused regressions.
+
 ```bash
 TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
   uv run python -m evaluations.cli prove

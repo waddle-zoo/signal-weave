@@ -10,7 +10,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 
-from .evaluation import PromotionStatus
+from .evaluation import EvaluationDataset, PromotionStatus, _stable_digest, _time_split_overlaps
 from .models import PrincipalContext
 from .onboarding import InsightAuthoringService
 
@@ -25,6 +25,9 @@ class RetrievalQualityCase(BaseModel):
     limit: int = Field(default=10, ge=1, le=25)
     principal: PrincipalContext | None = None
     tags: list[str] = Field(default_factory=list, max_length=50)
+    dataset: EvaluationDataset = Field(
+        default_factory=lambda: EvaluationDataset(dataset_id="unspecified")
+    )
 
     @model_validator(mode="after")
     def validate_unique_refs(self) -> RetrievalQualityCase:
@@ -51,6 +54,10 @@ class RetrievalQualityThresholds(BaseModel):
     min_recommended_recall: float = Field(default=0.90, ge=0.0, le=1.0)
     max_error_rate: float = Field(default=0.0, ge=0.0, le=1.0)
     min_cases: int = Field(default=1, ge=1, le=1_000_000)
+    require_dataset_provenance: bool = False
+    required_splits: list[str] = Field(default_factory=list, max_length=10)
+    max_unauthorized_refs: int = Field(default=0, ge=0)
+    require_disjoint_time_splits: bool = False
 
 
 class RetrievalQualityCaseResult(BaseModel):
@@ -70,6 +77,9 @@ class RetrievalQualityCaseResult(BaseModel):
     evaluator: str = "unknown"
     error: str | None = None
     tags: list[str] = Field(default_factory=list)
+    dataset_id: str = ""
+    split: str = "unspecified"
+    unauthorized_refs: list[str] = Field(default_factory=list, max_length=500)
 
 
 class RetrievalQualityReport(BaseModel):
@@ -87,7 +97,18 @@ class RetrievalQualityReport(BaseModel):
     median_latency_ms: float = Field(ge=0.0)
     status: Literal["blocked", "shadow", "approved"]
     thresholds: RetrievalQualityThresholds
+    preflight_blockers: list[str] = Field(default_factory=list, max_length=100)
     cases: list[RetrievalQualityCaseResult] = Field(default_factory=list, max_length=1_000_000)
+    evaluation_id: str = ""
+    input_digest: str = ""
+    label_digest: str = ""
+    dataset_ids: list[str] = Field(default_factory=list, max_length=200)
+    splits: list[str] = Field(default_factory=list, max_length=10)
+    time_split_disjoint: bool = True
+    jev_requests: int = Field(default=0, ge=0)
+    jev_input_tokens: int = Field(default=0, ge=0)
+    jev_output_tokens: int = Field(default=0, ge=0)
+    unauthorized_ref_count: int = Field(default=0, ge=0)
 
 
 class RetrievalQualityEvaluator:
@@ -106,6 +127,13 @@ class RetrievalQualityEvaluator:
         thresholds: RetrievalQualityThresholds | None = None,
     ) -> RetrievalQualityReport:
         thresholds = thresholds or RetrievalQualityThresholds()
+        preflight_blockers = self._preflight(cases, thresholds)
+        if preflight_blockers:
+            self._metrics_delta = {}
+            return self._report(
+                [], thresholds, cases=cases, preflight_blockers=preflight_blockers
+            )
+        metrics_before = self._judger_metrics()
         semaphore = asyncio.Semaphore(self.max_concurrency)
 
         async def run_one(case: RetrievalQualityCase) -> RetrievalQualityCaseResult:
@@ -113,7 +141,45 @@ class RetrievalQualityEvaluator:
                 return await self._evaluate_case(case)
 
         results = list(await asyncio.gather(*(run_one(case) for case in cases)))
-        return self._report(results, thresholds)
+        self._metrics_delta = self._metrics_delta_from(metrics_before)
+        return self._report(results, thresholds, cases=cases)
+
+    @staticmethod
+    def _preflight(
+        cases: list[RetrievalQualityCase], thresholds: RetrievalQualityThresholds
+    ) -> list[str]:
+        blockers: list[str] = []
+        if thresholds.require_dataset_provenance:
+            missing = [case.id for case in cases if case.dataset.split == "unspecified"]
+            if missing:
+                blockers.append(
+                    "dataset provenance is required; unspecified cases: " + ", ".join(missing)
+                )
+        if thresholds.required_splits:
+            observed = {case.dataset.split for case in cases}
+            missing_splits = sorted(set(thresholds.required_splits) - observed)
+            if missing_splits:
+                blockers.append(
+                    "required evaluation splits are missing: " + ", ".join(missing_splits)
+                )
+        if thresholds.require_disjoint_time_splits and _time_split_overlaps(
+            [case.dataset for case in cases]
+        ):
+            blockers.append("evaluation dataset time partitions overlap across splits")
+        return blockers
+
+    def _judger_metrics(self) -> dict[str, int]:
+        judger = getattr(self.authoring.engine, "judger", None)
+        metrics = getattr(judger, "metrics", None)
+        return {
+            "requests": int(getattr(metrics, "requests", 0)),
+            "input_tokens": int(getattr(metrics, "input_tokens", 0)),
+            "output_tokens": int(getattr(metrics, "output_tokens", 0)),
+        }
+
+    def _metrics_delta_from(self, before: dict[str, int]) -> dict[str, int]:
+        after = self._judger_metrics()
+        return {key: max(0, after[key] - before[key]) for key in before}
 
     async def _evaluate_case(self, case: RetrievalQualityCase) -> RetrievalQualityCaseResult:
         started = time.perf_counter()
@@ -137,11 +203,19 @@ class RetrievalQualityEvaluator:
                 latency_ms=(time.perf_counter() - started) * 1000,
                 error=f"{type(error).__name__}: {error}",
                 tags=case.tags,
+                dataset_id=case.dataset.dataset_id,
+                split=case.dataset.split,
             )
 
         candidate_refs = list(discovery.candidate_refs)
         ranked_refs = [match.ref for match in discovery.matches]
         recommended_refs = [match.ref for match in discovery.matches if match.recommended]
+        unauthorized_refs = sorted(
+            match.ref
+            for match in discovery.matches
+            if case.principal is not None
+            and match.contract.tenant_id != case.principal.tenant_id
+        )
         candidate_set = set(candidate_refs)
         recommended_set = set(recommended_refs)
         candidate_recall = (
@@ -183,12 +257,20 @@ class RetrievalQualityEvaluator:
             latency_ms=(time.perf_counter() - started) * 1000,
             evaluator=discovery.evaluator,
             tags=case.tags,
+            dataset_id=case.dataset.dataset_id,
+            split=case.dataset.split,
+            unauthorized_refs=unauthorized_refs,
         )
 
-    @staticmethod
     def _report(
-        results: list[RetrievalQualityCaseResult], thresholds: RetrievalQualityThresholds
+        self,
+        results: list[RetrievalQualityCaseResult],
+        thresholds: RetrievalQualityThresholds,
+        *,
+        cases: list[RetrievalQualityCase] | None = None,
+        preflight_blockers: list[str] | None = None,
     ) -> RetrievalQualityReport:
+        preflight_blockers = preflight_blockers or []
         successful = [case for case in results if case.error is None]
         errors = len(results) - len(successful)
         denominator = len(successful) or 1
@@ -219,7 +301,25 @@ class RetrievalQualityEvaluator:
             and error_rate <= thresholds.max_error_rate
         )
         status = PromotionStatus.APPROVED if meets else PromotionStatus.SHADOW
-        if not results or errors and error_rate > thresholds.max_error_rate:
+        if preflight_blockers or not results or errors and error_rate > thresholds.max_error_rate:
+            status = PromotionStatus.BLOCKED
+        case_inputs = [
+            {
+                "goal": case.goal,
+                "adapter": case.adapter,
+                "limit": case.limit,
+                "principal": case.principal.model_dump(mode="json") if case.principal else None,
+                "dataset": case.dataset.model_dump(mode="json"),
+            }
+            for case in (cases or [])
+        ]
+        case_labels = [
+            {"id": case.id, "expected_resource_refs": case.expected_resource_refs}
+            for case in (cases or [])
+        ]
+        metrics = getattr(self, "_metrics_delta", {})
+        unauthorized_ref_count = sum(len(case.unauthorized_refs) for case in results)
+        if unauthorized_ref_count > thresholds.max_unauthorized_refs:
             status = PromotionStatus.BLOCKED
         return RetrievalQualityReport(
             case_count=len(results),
@@ -234,5 +334,18 @@ class RetrievalQualityEvaluator:
             median_latency_ms=median_latency,
             status=status,
             thresholds=thresholds,
+            preflight_blockers=preflight_blockers,
             cases=results,
+            evaluation_id=_stable_digest(case_inputs)[:24] if case_inputs else "",
+            input_digest=_stable_digest(case_inputs) if case_inputs else "",
+            label_digest=_stable_digest(case_labels) if case_labels else "",
+            dataset_ids=sorted({case.dataset.dataset_id for case in (cases or [])}),
+            splits=sorted({case.dataset.split for case in (cases or [])}),
+            time_split_disjoint=not _time_split_overlaps(
+                [case.dataset for case in (cases or [])]
+            ),
+            jev_requests=int(metrics.get("requests", 0)),
+            jev_input_tokens=int(metrics.get("input_tokens", 0)),
+            jev_output_tokens=int(metrics.get("output_tokens", 0)),
+            unauthorized_ref_count=unauthorized_ref_count,
         )

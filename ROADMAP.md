@@ -76,8 +76,8 @@ card and per source domain.
 - [x] Add a reusable card-evaluation fixture format for owner labels, source
       snapshots, graph/context versions, expected evidence, expected outcome,
       and allowed delivery methods.
-- [ ] Support historical replay with time-split holdouts, not only synthetic
-      examples or same-period replay.
+- [x] Support historical replay with time-split holdouts in the evaluator and
+      generalized Jev trial; customer-owned holdouts remain a deployment gate.
 - [ ] Support live shadow mode that records what would have been delivered
       without sending it to production destinations.
 - [ ] Measure retrieval candidate recall/precision, evidence recall, decision
@@ -86,11 +86,12 @@ card and per source domain.
 - [ ] Measure scale economics: candidates considered, sources materialized,
       queries executed, bytes scanned, query time, Jev time, total latency, and
       estimated cost per run.
-- [ ] Add adversarial scenario packs for expected movement, contradictory
-      evidence, missing/stale sources, definition conflicts, permission changes,
-      duplicate assets, aliases, and graph drift.
-- [ ] Generate a per-card certification report with configurable promotion
-      thresholds and a clear shadow/approved/blocked status.
+- [x] Add a generalized adversarial scenario pack for expected movement,
+      missing/stale sources, no-match retrieval, multi-source evidence,
+      tenant boundaries, and native large-catalog search.
+- [x] Generate and durably store per-card/workflow and retrieval certification
+      reports with configurable promotion thresholds and clear
+      shadow/approved/blocked status.
 - [ ] Add regression checks so a card, adapter, graph, or Jev-version change
       automatically replays its certification set before promotion.
 
@@ -106,7 +107,8 @@ card and per source domain.
       with visible truncation and fail-closed behavior.
 - [ ] Add a company-level readiness report showing which domains, sources, and
       cards are certified, weakly covered, stale, or still relying on lexical
-      fallback.
+      fallback. The synthetic generalized trial now provides the initial report
+      shape; production aggregation remains open.
 
 ## Next: prove the narrow wedge
 

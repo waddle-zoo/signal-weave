@@ -10,12 +10,15 @@ from .engine import InsightEngine
 from .models import PrincipalContext, ResourceDescriptor
 from .sources import SourceAdapter, SourceRegistry
 from .store import (
+    CertificationReportStore,
     DecisionReceiptStore,
     InsightCardStore,
+    JsonCertificationReportStore,
     JsonDecisionReceiptStore,
     JsonInsightCardStore,
     JsonMetricQueryCardStore,
     MetricQueryCardStore,
+    SQLiteCertificationReportStore,
     SQLiteDecisionReceiptStore,
     SQLiteInsightCardStore,
     SQLiteMetricQueryCardStore,
@@ -33,6 +36,7 @@ class Runtime:
     engine: InsightEngine
     metric_query_store: MetricQueryCardStore | None = None
     decision_receipts: DecisionReceiptStore | None = None
+    certification_reports: CertificationReportStore | None = None
     principal: PrincipalContext | None = None
 
 
@@ -110,6 +114,7 @@ def build_runtime(
         store_path = os.getenv("SIGNALWEAVE_STORE_PATH", "data/signalweave.db")
         card_store = SQLiteInsightCardStore(store_path)
         decision_receipts: DecisionReceiptStore = SQLiteDecisionReceiptStore(store_path)
+        certification_reports: CertificationReportStore = SQLiteCertificationReportStore(store_path)
         metric_query_store: MetricQueryCardStore = SQLiteMetricQueryCardStore(store_path)
     elif store_backend == "json":
         card_store = JsonInsightCardStore(
@@ -117,6 +122,9 @@ def build_runtime(
         )
         decision_receipts = JsonDecisionReceiptStore(
             os.getenv("DECISION_RECEIPT_STORE", "data/decision-receipts.json")
+        )
+        certification_reports = JsonCertificationReportStore(
+            os.getenv("CERTIFICATION_REPORT_STORE", "data/certification-reports.json")
         )
         metric_query_store = JsonMetricQueryCardStore(
             os.getenv("METRIC_QUERY_CARD_STORE", "data/metric-query-cards.json")
@@ -129,6 +137,7 @@ def build_runtime(
         engine=InsightEngine(judger=judger, registry=registry),
         metric_query_store=metric_query_store,
         decision_receipts=decision_receipts,
+        certification_reports=certification_reports,
         principal=(
             PrincipalContext(principal_id=principal_id, tenant_id=tenant_id)
             if principal_id and tenant_id

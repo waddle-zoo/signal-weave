@@ -9,6 +9,7 @@ because Jev returned a confident answer.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import time
 from enum import StrEnum
@@ -19,6 +20,75 @@ from pydantic import BaseModel, Field, model_validator
 
 from .engine import InsightEngine
 from .models import ContextSnapshot, InsightCard, Outcome, ResourceSnapshot
+
+
+class EvaluationDataset(BaseModel):
+    """Identity of the immutable snapshot used for a labeled replay.
+
+    A dataset identity is deliberately separate from the expected labels. It
+    lets a report prove which source/context/time partition was evaluated while
+    keeping owner judgments outside the Jev request.
+    """
+
+    dataset_id: str = Field(min_length=1, max_length=240)
+    split: Literal["train", "validation", "holdout", "adversarial", "live_shadow", "unspecified"] = "unspecified"
+    observed_from: str = Field(default="", max_length=80)
+    observed_to: str = Field(default="", max_length=80)
+    source_catalog_version: str = Field(default="", max_length=240)
+    context_version: str = Field(default="", max_length=240)
+    digest: str = Field(default="", max_length=128)
+    label_source: str = Field(default="owner-reviewed", max_length=240)
+
+    @model_validator(mode="after")
+    def validate_identity(self) -> EvaluationDataset:
+        if self.split != "unspecified" and not self.digest:
+            raise ValueError("non-unspecified evaluation datasets require a snapshot digest")
+        if self.observed_from and self.observed_to and self.observed_from > self.observed_to:
+            raise ValueError("evaluation dataset observed_from must not be after observed_to")
+        return self
+
+
+def _time_split_overlaps(datasets: list[EvaluationDataset]) -> bool:
+    """Return whether differently labeled splits overlap in observed time."""
+
+    for index, left in enumerate(datasets):
+        if not left.observed_from or not left.observed_to:
+            continue
+        for right in datasets[index + 1 :]:
+            if left.split == right.split or not right.observed_from or not right.observed_to:
+                continue
+            if left.observed_from <= right.observed_to and right.observed_from <= left.observed_to:
+                return True
+    return False
+
+
+def _stable_digest(payload: object) -> str:
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str).encode()
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _case_input(case: CardEvaluationCase) -> dict[str, object]:
+    """Return exactly the material allowed into the production evaluation path."""
+
+    return {
+        "card": case.card.model_dump(mode="json"),
+        "resources": [resource.model_dump(mode="json") for resource in case.resources],
+        "context": case.context.model_dump(mode="json") if case.context else None,
+        "dataset": case.dataset.model_dump(mode="json"),
+    }
+
+
+def _case_labels(case: CardEvaluationCase) -> dict[str, object]:
+    """Labels are report-only and must never be sent to Jev."""
+
+    return {
+        "case_id": case.id,
+        "expected_outcome": case.expected_outcome,
+        "allowed_outcomes": case.allowed_outcomes,
+        "expected_delivery_method_keys": case.expected_delivery_method_keys,
+        "required_evidence_source_keys": case.required_evidence_source_keys,
+        "expected_retrieval_refs": case.expected_retrieval_refs,
+    }
 
 
 class PromotionStatus(StrEnum):
@@ -42,6 +112,7 @@ class CardEvaluationCase(BaseModel):
     required_evidence_source_keys: list[str] = Field(default_factory=list, max_length=500)
     expected_retrieval_refs: list[str] = Field(default_factory=list, max_length=500)
     tags: list[str] = Field(default_factory=list, max_length=50)
+    dataset: EvaluationDataset = Field(default_factory=lambda: EvaluationDataset(dataset_id="unspecified"))
 
     @model_validator(mode="after")
     def validate_labels(self) -> CardEvaluationCase:
@@ -67,6 +138,9 @@ class CardEvaluationThresholds(BaseModel):
     max_unsafe_action_rate: float = Field(default=0.0, ge=0.0, le=1.0)
     max_error_rate: float = Field(default=0.0, ge=0.0, le=1.0)
     min_cases: int = Field(default=1, ge=1, le=1_000_000)
+    require_dataset_provenance: bool = False
+    required_splits: list[str] = Field(default_factory=list, max_length=10)
+    require_disjoint_time_splits: bool = False
 
 
 class CardEvaluationCaseResult(BaseModel):
@@ -98,6 +172,8 @@ class CardEvaluationCaseResult(BaseModel):
     evaluator: str = "unknown"
     error: str | None = None
     tags: list[str] = Field(default_factory=list)
+    dataset_id: str = ""
+    split: str = "unspecified"
 
 
 class CardEvaluationReport(BaseModel):
@@ -119,6 +195,15 @@ class CardEvaluationReport(BaseModel):
     thresholds: CardEvaluationThresholds
     preflight_blockers: list[str] = Field(default_factory=list, max_length=100)
     cases: list[CardEvaluationCaseResult] = Field(default_factory=list, max_length=1_000_000)
+    evaluation_id: str = ""
+    input_digest: str = ""
+    label_digest: str = ""
+    dataset_ids: list[str] = Field(default_factory=list, max_length=200)
+    splits: list[str] = Field(default_factory=list, max_length=10)
+    time_split_disjoint: bool = True
+    jev_requests: int = Field(default=0, ge=0)
+    jev_input_tokens: int = Field(default=0, ge=0)
+    jev_output_tokens: int = Field(default=0, ge=0)
 
 
 def load_card_evaluation_cases(path: str | Path) -> list[CardEvaluationCase]:
@@ -147,14 +232,17 @@ class CardWorkflowEvaluator:
         thresholds: CardEvaluationThresholds | None = None,
     ) -> CardEvaluationReport:
         thresholds = thresholds or CardEvaluationThresholds()
-        preflight_blockers = self._preflight(cases)
+        metrics_before = self._judger_metrics()
+        preflight_blockers = self._preflight(cases, thresholds)
         if preflight_blockers:
+            self._metrics_delta = self._metrics_delta_from(metrics_before)
             return self._report(
                 [],
                 thresholds,
                 preflight_blockers=preflight_blockers,
                 card_ids=sorted({case.card.id for case in cases}),
                 card_versions={case.card.id: case.card.version for case in cases},
+                cases=cases,
             )
         semaphore = asyncio.Semaphore(self.max_concurrency)
 
@@ -163,10 +251,25 @@ class CardWorkflowEvaluator:
                 return await self._evaluate_case(case)
 
         results = list(await asyncio.gather(*(run_one(case) for case in cases)))
-        return self._report(results, thresholds)
+        self._metrics_delta = self._metrics_delta_from(metrics_before)
+        return self._report(results, thresholds, cases=cases)
+
+    def _judger_metrics(self) -> dict[str, int]:
+        metrics = getattr(getattr(self.engine, "judger", None), "metrics", None)
+        return {
+            "requests": int(getattr(metrics, "requests", 0)),
+            "input_tokens": int(getattr(metrics, "input_tokens", 0)),
+            "output_tokens": int(getattr(metrics, "output_tokens", 0)),
+        }
+
+    def _metrics_delta_from(self, before: dict[str, int]) -> dict[str, int]:
+        after = self._judger_metrics()
+        return {key: max(0, after[key] - before[key]) for key in before}
 
     @staticmethod
-    def _preflight(cases: list[CardEvaluationCase]) -> list[str]:
+    def _preflight(
+        cases: list[CardEvaluationCase], thresholds: CardEvaluationThresholds
+    ) -> list[str]:
         blockers: list[str] = []
         versions: dict[str, set[int]] = {}
         for case in cases:
@@ -184,6 +287,21 @@ class CardWorkflowEvaluator:
                 blockers.append(
                     f"{card.id}: push-capable card is missing human decision guidance"
                 )
+        if thresholds.require_dataset_provenance:
+            missing = [case.id for case in cases if case.dataset.split == "unspecified"]
+            if missing:
+                blockers.append(
+                    "dataset provenance is required; unspecified cases: " + ", ".join(missing)
+                )
+        if thresholds.required_splits:
+            observed = {case.dataset.split for case in cases}
+            missing_splits = sorted(set(thresholds.required_splits) - observed)
+            if missing_splits:
+                blockers.append("required evaluation splits are missing: " + ", ".join(missing_splits))
+        if thresholds.require_disjoint_time_splits and _time_split_overlaps(
+            [case.dataset for case in cases]
+        ):
+            blockers.append("evaluation dataset time partitions overlap across splits")
         return blockers
 
     async def _evaluate_case(self, case: CardEvaluationCase) -> CardEvaluationCaseResult:
@@ -203,6 +321,8 @@ class CardWorkflowEvaluator:
                 latency_ms=(time.perf_counter() - started) * 1000,
                 error=f"{type(error).__name__}: {error}",
                 tags=case.tags,
+                dataset_id=case.dataset.dataset_id,
+                split=case.dataset.split,
             )
 
         result = run.result
@@ -268,16 +388,19 @@ class CardWorkflowEvaluator:
             latency_ms=(time.perf_counter() - started) * 1000,
             evaluator=result.evaluator,
             tags=case.tags,
+            dataset_id=case.dataset.dataset_id,
+            split=case.dataset.split,
         )
 
-    @staticmethod
     def _report(
+        self,
         results: list[CardEvaluationCaseResult],
         thresholds: CardEvaluationThresholds,
         *,
         preflight_blockers: list[str] | None = None,
         card_ids: list[str] | None = None,
         card_versions: dict[str, int] | None = None,
+        cases: list[CardEvaluationCase] | None = None,
     ) -> CardEvaluationReport:
         preflight_blockers = preflight_blockers or []
         successful = [case for case in results if case.error is None]
@@ -313,6 +436,9 @@ class CardWorkflowEvaluator:
             or errors and error_rate > thresholds.max_error_rate
         ):
             status = PromotionStatus.BLOCKED
+        case_inputs = [_case_input(case) for case in (cases or [])]
+        case_labels = [_case_labels(case) for case in (cases or [])]
+        metrics = getattr(self, "_metrics_delta", {})
         return CardEvaluationReport(
             card_ids=card_ids or sorted({case.card_id for case in results}),
             card_versions=card_versions
@@ -331,4 +457,15 @@ class CardWorkflowEvaluator:
             thresholds=thresholds,
             preflight_blockers=preflight_blockers,
             cases=results,
+            evaluation_id=_stable_digest(case_inputs)[:24] if case_inputs else "",
+            input_digest=_stable_digest(case_inputs) if case_inputs else "",
+            label_digest=_stable_digest(case_labels) if case_labels else "",
+            dataset_ids=sorted({case.dataset.dataset_id for case in (cases or [])}),
+            splits=sorted({case.dataset.split for case in (cases or [])}),
+            time_split_disjoint=not _time_split_overlaps(
+                [case.dataset for case in (cases or [])]
+            ),
+            jev_requests=int(metrics.get("requests", 0)),
+            jev_input_tokens=int(metrics.get("input_tokens", 0)),
+            jev_output_tokens=int(metrics.get("output_tokens", 0)),
         )

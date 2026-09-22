@@ -121,9 +121,18 @@ policy.
 
 ## What this does not certify yet
 
-These checks are the promotion seam, not proof of universal enterprise
-readiness. A deployment still needs customer-owned time-split holdouts, native
-permission-aware catalog search, source freshness/lineage coverage, query-cost
-telemetry, and shadow traces from real workflows. SignalWeave should remain
-shadow-only until those labels exist and the report is approved for that card
-version and source boundary.
+Certification reports are durable in the configured JSON or SQLite store and
+can be retrieved through `get_certification_report` and
+`list_certification_reports`. Reports include the evaluated card version,
+tenant scope, dataset IDs, source/context digests, Jev request counters, and the
+owner-label digest. A later report therefore cannot silently be treated as proof
+for a different tenant, card, or snapshot.
+
+The repository also includes a generalized Jev-only synthetic trial with
+disjoint train/holdout/adversarial partitions and a separate adversarial
+reviewer; see [`generalized-readiness-trial.md`](generalized-readiness-trial.md).
+That trial proves the contracts compose over several BI and data-platform
+shapes. It is not proof of universal enterprise readiness. A deployment still
+needs customer-owned labels, real permission-aware catalog search, source
+freshness/lineage coverage, query-cost telemetry, and live shadow traces before
+production push.

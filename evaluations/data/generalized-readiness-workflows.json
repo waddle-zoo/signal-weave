@@ -1,0 +1,145 @@
+{
+  "schema_version": 1,
+  "catalog_version": "generalized-readiness-catalog-v1",
+  "synthetic_catalog_size": 100000,
+  "companies": [
+    {
+      "company_id": "northstar-outfitters",
+      "tenant_id": "northstar",
+      "shape": "saas-growth",
+      "workflows": [
+        {
+          "workflow_id": "growth-pulse",
+          "goal": "Monitor activation and acquisition movement across the growth dashboard and its driver query.",
+          "card": {
+            "title": "Growth pulse",
+            "what_to_watch": "Activation and acquisition movement across the growth dashboard and driver query.",
+            "why_watch": "Growth leadership should hear about a meaningful, corroborated change without checking dashboards every morning.",
+            "watch_for": ["Activation moves materially off course", "The driver query corroborates the movement"],
+            "questions": ["Is this a meaningful change rather than ordinary variation?", "What should Growth inspect first?"],
+            "decision_guidance": "Ignore ordinary variation. Notify Growth when activation movement is large and corroborated by the driver query. Investigate when movement is meaningful but evidence is incomplete. Do not notify when a required source is stale or failed.",
+            "delivery": {"key": "growth-leadership", "outcome": "notify", "label": "Growth leadership", "destination": "slack://growth-leadership", "instructions": "Send the evidence bundle and the first investigation question."}
+          },
+          "sources": [
+            {"key": "growth-dashboard", "adapter": "superset", "resource": "dashboard:growth", "kind": "dashboard", "title": "Growth overview", "description": "Activation, signup conversion, acquisition, and funnel health.", "domain": "growth", "roles": ["primary"], "metric_names": ["activation", "acquisition", "conversion"], "related_refs": ["trino|query:activation-drivers"]},
+            {"key": "activation-drivers", "adapter": "trino", "resource": "query:activation-drivers", "kind": "saved_query", "title": "Activation driver decomposition", "description": "Approved driver query for activation and signup movement by cohort.", "domain": "growth", "roles": ["diagnostic"], "metric_names": ["activation", "signup conversion"], "related_refs": ["superset|dashboard:growth"]}
+          ],
+          "cases": [
+            {"case_id": "growth-train", "split": "train", "period": "2026-01", "expected_outcome": "notify", "observations": {"growth-dashboard": {"metric": "activation", "current": 0.71, "baseline": 0.86, "change_pct": -17.44}, "activation-drivers": {"metric": "activation", "current": 0.70, "baseline": 0.85, "change_pct": -17.65}}},
+            {"case_id": "growth-holdout", "split": "holdout", "period": "2026-02", "expected_outcome": "notify", "observations": {"growth-dashboard": {"metric": "activation", "current": 0.68, "baseline": 0.84, "change_pct": -19.05}, "activation-drivers": {"metric": "activation", "current": 0.67, "baseline": 0.83, "change_pct": -19.28}}},
+            {"case_id": "growth-adversarial-stale", "split": "adversarial", "period": "2026-03", "expected_outcome": "investigate", "source_status": {"activation-drivers": "stale"}, "observations": {"growth-dashboard": {"metric": "activation", "current": 0.65, "baseline": 0.83, "change_pct": -21.69}, "activation-drivers": {"metric": "activation", "current": 0.64, "baseline": 0.82, "change_pct": -21.95}}}
+          ]
+        },
+        {
+          "workflow_id": "growth-normal-variation",
+          "goal": "Only watch the Growth overview dashboard for meaningful activation movement and distinguish normal weekly variation from an alert; do not recommend related driver queries for this card.",
+          "card": {
+            "title": "Growth normal variation",
+            "what_to_watch": "Activation movement and its weekly variance.",
+            "why_watch": "Avoid noisy push notifications for changes that are inside the agreed operating range.",
+            "watch_for": ["Activation moves outside the normal operating range"],
+            "questions": ["Is this movement actionable?"],
+            "decision_guidance": "Ignore movement inside the normal operating range of plus or minus 5 percent. Investigate movement outside that range when no corroborating source is present. Do not notify from this card.",
+            "delivery": {"key": "growth-analyst", "outcome": "investigate", "label": "Growth analyst", "destination": "slack://growth-analyst", "instructions": "Ask the analyst to inspect the next available cohort breakdown."}
+          },
+          "sources": [
+            {"key": "growth-dashboard", "adapter": "superset", "resource": "dashboard:growth", "kind": "dashboard", "title": "Growth overview", "description": "Activation, signup conversion, acquisition, and funnel health.", "domain": "growth", "roles": ["primary"], "metric_names": ["activation", "acquisition", "conversion"]}
+          ],
+          "cases": [
+            {"case_id": "growth-normal-train", "split": "train", "period": "2026-01", "expected_outcome": "ignore", "observations": {"growth-dashboard": {"metric": "activation", "current": 0.852, "baseline": 0.86, "change_pct": -0.93}}},
+            {"case_id": "growth-normal-holdout", "split": "holdout", "period": "2026-02", "expected_outcome": "ignore", "observations": {"growth-dashboard": {"metric": "activation", "current": 0.873, "baseline": 0.86, "change_pct": 1.51}}}
+          ]
+        }
+      ]
+    },
+    {
+      "company_id": "harbor-bank",
+      "tenant_id": "harbor",
+      "shape": "regulated-finance",
+      "workflows": [
+        {
+          "workflow_id": "liquidity-pulse",
+          "goal": "Monitor the liquidity dashboard and settlement pipeline for a meaningful liquidity movement that Finance should review.",
+          "card": {
+            "title": "Liquidity pulse",
+            "what_to_watch": "Liquidity movement and settlement pipeline health.",
+            "why_watch": "Finance needs a trustworthy signal and should not be alerted from a stale settlement feed.",
+            "watch_for": ["Liquidity moves materially", "Settlement pipeline is healthy enough to trust"],
+            "questions": ["Is the movement actionable or a pipeline artifact?"],
+            "decision_guidance": "Ignore movement inside 1 percent when settlement is healthy. Notify Finance when liquidity moves beyond 5 percent and settlement is healthy. Use insufficient_data when settlement is stale or failed. Do not infer a safe action from the dashboard alone.",
+            "delivery": {"key": "finance-control", "outcome": "notify", "label": "Finance control", "destination": "slack://finance-control", "instructions": "Send the liquidity evidence and settlement freshness."}
+          },
+          "sources": [
+            {"key": "liquidity-dashboard", "adapter": "looker", "resource": "dashboard:liquidity", "kind": "dashboard", "title": "Liquidity command center", "description": "Liquidity coverage, settlement, and funding movements.", "domain": "treasury", "roles": ["primary"], "metric_names": ["liquidity", "coverage"], "related_refs": ["airflow|dag:settlement"]},
+            {"key": "settlement-pipeline", "adapter": "airflow", "resource": "dag:settlement", "kind": "workflow", "title": "Settlement pipeline", "description": "Settlement completion and freshness status for the liquidity dashboard.", "domain": "treasury", "roles": ["quality"], "metric_names": ["freshness", "settlement"], "related_refs": ["looker|dashboard:liquidity"]}
+          ],
+          "cases": [
+            {"case_id": "liquidity-train", "split": "train", "period": "2026-01", "expected_outcome": "ignore", "observations": {"liquidity-dashboard": {"metric": "liquidity", "current": 100.4, "baseline": 100.0, "change_pct": 0.4}, "settlement-pipeline": {"metric": "settlement_freshness", "current": 99.9, "baseline": 99.0, "change_pct": 0.91, "freshness": "fresh"}}},
+            {"case_id": "liquidity-holdout", "split": "holdout", "period": "2026-02", "expected_outcome": "notify", "observations": {"liquidity-dashboard": {"metric": "liquidity", "current": 93.2, "baseline": 100.0, "change_pct": -6.8}, "settlement-pipeline": {"metric": "settlement_freshness", "current": 99.8, "baseline": 99.0, "change_pct": 0.81, "freshness": "fresh"}}},
+            {"case_id": "liquidity-adversarial-failed", "split": "adversarial", "period": "2026-03", "expected_outcome": "insufficient_data", "source_status": {"settlement-pipeline": "failed"}, "observations": {"liquidity-dashboard": {"metric": "liquidity", "current": 92.0, "baseline": 100.0, "change_pct": -8.0}, "settlement-pipeline": {"metric": "settlement_freshness", "current": 0.0, "baseline": 99.0, "change_pct": -100.0, "freshness": "failed"}}}
+          ]
+        }
+      ]
+    },
+    {
+      "company_id": "orbitworks-marketplace",
+      "tenant_id": "orbit",
+      "shape": "data-platform-heavy-marketplace",
+      "workflows": [
+        {
+          "workflow_id": "marketplace-diagnosis",
+          "goal": "When marketplace conversion moves, connect the Hex review, governed dbt metric, and latency query to decide what the product team should investigate.",
+          "card": {
+            "title": "Marketplace diagnosis",
+            "what_to_watch": "Marketplace conversion movement and its product or latency drivers.",
+            "why_watch": "Product leadership needs a compact evidence bundle that points to the next investigation instead of reading three systems.",
+            "watch_for": ["Marketplace conversion moves materially", "A related driver can explain the movement"],
+            "questions": ["Is this a product problem or a latency problem?", "Which source should Product inspect first?"],
+            "decision_guidance": "Investigate when conversion moves more than 10 percent or when the evidence conflicts. Do not notify automatically from this card. The result must identify the strongest evidence source and its limitations.",
+            "delivery": {"key": "product-ops", "outcome": "investigate", "label": "Product operations", "destination": "slack://product-ops", "instructions": "Open the evidence bundle and assign the first investigation."}
+          },
+          "sources": [
+            {"key": "marketplace-hex", "adapter": "hex", "resource": "project:marketplace-health", "kind": "project", "title": "Marketplace health review", "description": "Published marketplace conversion and product funnel analysis.", "domain": "marketplace", "roles": ["primary"], "metric_names": ["conversion", "orders"], "related_refs": ["dbt|metric:marketplace-conversion", "trino|query:latency-drivers"]},
+            {"key": "marketplace-metric", "adapter": "dbt", "resource": "metric:marketplace-conversion", "kind": "metric", "title": "Governed marketplace conversion", "description": "Governed conversion definition by marketplace and device.", "domain": "marketplace", "roles": ["corroborates"], "metric_names": ["conversion"], "related_refs": ["hex|project:marketplace-health"]},
+            {"key": "latency-drivers", "adapter": "trino", "resource": "query:latency-drivers", "kind": "saved_query", "title": "Marketplace latency drivers", "description": "Approved query for latency and checkout failure drivers.", "domain": "marketplace", "roles": ["diagnostic"], "metric_names": ["latency", "checkout failures"], "related_refs": ["hex|project:marketplace-health"]}
+          ],
+          "cases": [
+            {"case_id": "marketplace-train", "split": "train", "period": "2026-01", "expected_outcome": "investigate", "observations": {"marketplace-hex": {"metric": "conversion", "current": 0.31, "baseline": 0.40, "change_pct": -22.5}, "marketplace-metric": {"metric": "conversion", "current": 0.30, "baseline": 0.39, "change_pct": -23.08}, "latency-drivers": {"metric": "p95_latency_ms", "current": 540, "baseline": 500, "change_pct": 8.0}}},
+            {"case_id": "marketplace-holdout", "split": "holdout", "period": "2026-02", "expected_outcome": "investigate", "observations": {"marketplace-hex": {"metric": "conversion", "current": 0.28, "baseline": 0.39, "change_pct": -28.21}, "marketplace-metric": {"metric": "conversion", "current": 0.27, "baseline": 0.38, "change_pct": -28.95}, "latency-drivers": {"metric": "p95_latency_ms", "current": 620, "baseline": 500, "change_pct": 24.0}}},
+            {"case_id": "marketplace-adversarial-stale", "split": "adversarial", "period": "2026-03", "expected_outcome": "investigate", "source_status": {"marketplace-metric": "stale"}, "observations": {"marketplace-hex": {"metric": "conversion", "current": 0.25, "baseline": 0.38, "change_pct": -34.21}, "marketplace-metric": {"metric": "conversion", "current": 0.25, "baseline": 0.37, "change_pct": -32.43}, "latency-drivers": {"metric": "p95_latency_ms", "current": 700, "baseline": 500, "change_pct": 40.0}}}
+          ]
+        }
+      ]
+    },
+    {
+      "company_id": "pine-retail",
+      "tenant_id": "pine",
+      "shape": "multi-bi-retail",
+      "workflows": [
+        {
+          "workflow_id": "commerce-quality",
+          "goal": "Monitor commerce revenue across the dashboard, Trino freshness query, and Airflow load to decide whether Finance should be notified.",
+          "card": {
+            "title": "Commerce quality",
+            "what_to_watch": "Commerce revenue movement and the freshness of its warehouse inputs.",
+            "why_watch": "Finance should receive pushed analytics only when the revenue signal is both meaningful and trustworthy.",
+            "watch_for": ["Revenue moves materially", "Warehouse freshness supports trusting the movement"],
+            "questions": ["Is the revenue change real enough to act on?", "Is the data pipeline healthy?"],
+            "decision_guidance": "Ignore ordinary movement below 3 percent. Notify Finance for a revenue movement above 8 percent when Trino and Airflow are healthy. Use insufficient_data when either quality source is stale or failed. Do not notify from a dashboard without its quality evidence.",
+            "delivery": {"key": "finance-ops", "outcome": "notify", "label": "Finance operations", "destination": "slack://finance-ops", "instructions": "Send revenue, freshness, and the first validation action."}
+          },
+          "sources": [
+            {"key": "commerce-dashboard", "adapter": "superset", "resource": "dashboard:commerce", "kind": "dashboard", "title": "Commerce pulse", "description": "Revenue, orders, margin, and regional commerce movement.", "domain": "commerce", "roles": ["primary"], "metric_names": ["revenue", "orders", "margin"], "related_refs": ["trino|query:commerce-freshness", "airflow|dag:commerce-load"]},
+            {"key": "commerce-freshness", "adapter": "trino", "resource": "query:commerce-freshness", "kind": "saved_query", "title": "Commerce freshness checks", "description": "Approved freshness and completeness checks for commerce tables.", "domain": "data-quality", "roles": ["quality"], "metric_names": ["freshness", "completeness"], "related_refs": ["superset|dashboard:commerce"]},
+            {"key": "commerce-load", "adapter": "airflow", "resource": "dag:commerce-load", "kind": "workflow", "title": "Commerce warehouse load", "description": "Daily commerce load completion and freshness status.", "domain": "data-platform", "roles": ["quality"], "metric_names": ["freshness", "load status"], "related_refs": ["superset|dashboard:commerce"]}
+          ],
+          "cases": [
+            {"case_id": "commerce-train", "split": "train", "period": "2026-01", "expected_outcome": "notify", "observations": {"commerce-dashboard": {"metric": "revenue", "current": 109, "baseline": 100, "change_pct": 9.0}, "commerce-freshness": {"metric": "freshness_hours", "current": 1, "baseline": 2, "change_pct": -50.0, "freshness": "fresh"}, "commerce-load": {"metric": "load_success", "current": 1, "baseline": 1, "change_pct": 0.0, "freshness": "fresh"}}},
+            {"case_id": "commerce-holdout", "split": "holdout", "period": "2026-02", "expected_outcome": "notify", "observations": {"commerce-dashboard": {"metric": "revenue", "current": 91, "baseline": 100, "change_pct": -9.0}, "commerce-freshness": {"metric": "freshness_hours", "current": 1, "baseline": 2, "change_pct": -50.0, "freshness": "fresh"}, "commerce-load": {"metric": "load_success", "current": 1, "baseline": 1, "change_pct": 0.0, "freshness": "fresh"}}},
+            {"case_id": "commerce-adversarial-stale", "split": "adversarial", "period": "2026-03", "expected_outcome": "investigate", "source_status": {"commerce-load": "stale"}, "observations": {"commerce-dashboard": {"metric": "revenue", "current": 88, "baseline": 100, "change_pct": -12.0}, "commerce-freshness": {"metric": "freshness_hours", "current": 1, "baseline": 2, "change_pct": -50.0, "freshness": "fresh"}, "commerce-load": {"metric": "load_success", "current": 0, "baseline": 1, "change_pct": -100.0, "freshness": "stale"}}}
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -96,6 +96,47 @@ class BoundedSearchAdapter:
         )
 
 
+class NativeAuthorizeAdapter(BoundedSearchAdapter):
+    name = "native"
+
+    def __init__(self):
+        self.authorize_called = 0
+        self.inspect_called = 0
+
+    async def authorize(self, source, *, authorized_tenants=None):
+        del authorized_tenants
+        self.authorize_called += 1
+        if source.resource != "dashboard:revenue":
+            return None
+        return ResourceDescriptor(
+            adapter=self.name,
+            resource=source.resource,
+            kind="dashboard",
+            title="Revenue movement",
+            contract=ResourceContract(tenant_id="tenant-a"),
+        )
+
+    async def inspect(self, source):
+        self.inspect_called += 1
+        return ResourceSnapshot(
+            source_key=source.key,
+            adapter=self.name,
+            resource=source.resource,
+            title=source.label,
+            observations=[
+                Observation(
+                    source_key=source.key,
+                    subject_id="revenue",
+                    subject_label="Revenue",
+                    metric="revenue",
+                    current=110,
+                    baseline=100,
+                    change_pct=10,
+                )
+            ],
+        )
+
+
 class LocalScanAdapter:
     name = "local"
 
@@ -256,6 +297,24 @@ async def test_source_registry_preserves_bounded_search_coverage_without_full_sc
     assert page.has_more is True
     assert page.next_cursor == "page-2"
     assert page.strategy == "server-search"
+
+
+@pytest.mark.asyncio
+async def test_source_registry_inspects_native_search_result_without_full_catalog_scan():
+    adapter = NativeAuthorizeAdapter()
+    registry = SourceRegistry([adapter], authorized_tenants={"tenant-a"})
+    source = SourceRef(
+        key="revenue",
+        adapter="native",
+        resource="dashboard:revenue",
+        label="Revenue movement",
+    )
+
+    snapshot = await registry.inspect(source)
+
+    assert snapshot.error is None
+    assert adapter.authorize_called == 1
+    assert adapter.inspect_called == 1
 
 
 @pytest.mark.asyncio

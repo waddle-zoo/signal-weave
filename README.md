@@ -210,6 +210,8 @@ missing catalog relationship, an incorrect Jev ranking, and a downstream card
 decision three different failures to fix. The reusable contracts and example
 fixture shape are documented in
 [`docs/bootstrap-and-certification.md`](docs/bootstrap-and-certification.md).
+The full synthetic Jev-only enterprise trial and its adversarial gate are in
+[`docs/generalized-readiness-trial.md`](docs/generalized-readiness-trial.md).
 
 ## Plain-language metric queries
 

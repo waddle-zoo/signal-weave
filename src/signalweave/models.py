@@ -186,6 +186,27 @@ class DecisionReceipt(BaseModel):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
+class CertificationRecord(BaseModel):
+    """Durable, immutable record of a bootstrap or evaluation claim.
+
+    The report body is intentionally opaque to the store.  The record carries
+    the identity and input digest needed to determine whether a later lookup
+    still refers to the same card, source snapshot, and context view.
+    """
+
+    report_id: str = Field(min_length=1, max_length=200)
+    kind: Literal["bootstrap", "card_workflow", "retrieval_quality"]
+    subject_id: str = Field(min_length=1, max_length=240)
+    tenant_id: str = Field(default="deployment", min_length=1, max_length=160)
+    subject_version: str = Field(default="", max_length=240)
+    status: Literal["ready", "needs_review", "blocked", "shadow", "approved"]
+    dataset_ids: list[str] = Field(default_factory=list, max_length=200)
+    input_digest: str = Field(default="", min_length=0, max_length=128)
+    label_digest: str = Field(default="", min_length=0, max_length=128)
+    report: dict[str, Any] = Field(default_factory=dict)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
 class MetricQueryCard(BaseModel):
     """A plain-language metric request resolved into an approved query plan."""
 

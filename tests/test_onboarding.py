@@ -739,6 +739,8 @@ def test_mcp_exposes_generic_authoring_tools(tmp_path):
         "evaluate_insight_card",
         "list_insight_cards",
         "get_insight_card",
+        "get_certification_report",
+        "list_certification_reports",
     } <= names
 
 
@@ -787,6 +789,12 @@ async def test_mcp_retrieval_quality_keeps_owner_labels_outside_discovery(tmp_pa
     assert report["status"] == "approved"
     assert report["candidate_recall"] == 1
     assert report["recommended_recall"] == 1
+    assert report["certification_report_id"]
+    stored_report = tool(server, "get_certification_report")(
+        report["certification_report_id"]
+    )
+    assert stored_report["kind"] == "retrieval_quality"
+    assert tool(server, "list_certification_reports")()["count"] == 1
 
 
 @pytest.mark.asyncio
