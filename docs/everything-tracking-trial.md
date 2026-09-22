@@ -3,6 +3,11 @@
 Status: exploratory branch evidence. This is a live Jev replay over synthetic
 enterprise scenarios, not a production reliability claim.
 
+The companion LLM comparison is documented in
+[`everything-tracking-llm-benchmark.md`](everything-tracking-llm-benchmark.md).
+The LLM-only arm there is a control only; SignalWeave's product path requires
+Jev.
+
 The trial tests a broader claim than metric alerting:
 
 > Given a human-authored operating concern and a messy bundle of connected

@@ -110,6 +110,21 @@ business context, unrelated decoys, repeated enterprise-shaped cases, a
 movement-only baseline, and an independent safety reviewer—see
 [`everything-tracking-trial.md`](everything-tracking-trial.md).
 
+For the live comparative benchmark against an LLM-only control, including the
+Jev-first product interpretation and independent input-integrity/safety audit,
+see [`everything-tracking-llm-benchmark.md`](everything-tracking-llm-benchmark.md).
+
+The Jev-only card-context counterfactual is included in that report and can be
+replayed with:
+
+```bash
+TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
+PYTHONPATH=src:. \
+.venv/bin/python -m evaluations.everything_tracking_card_clarity_trial \
+  --typesafe-key-file /absolute/path/to/apikey_typesafe \
+  --repeats 2
+```
+
 Unit tests use injected doubles and do not replace live Jev or Superset proofs.
 The heterogeneous contract tests combine multiple source shapes without
 requiring those services to be installed. The connector-neutral artifact test
