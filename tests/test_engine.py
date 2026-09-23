@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from types import SimpleNamespace
 
 import pytest
 
@@ -127,6 +128,78 @@ async def test_seasonal_movement_is_ignored():
     run = await evaluate("seasonal_normal")
     assert run.result.outcome == Outcome.IGNORE
     assert run.result.delivery_methods == []
+
+
+async def test_evaluation_emits_shadow_telemetry_for_jev_and_source_work():
+    class MeteredJev(SafetyTestDouble):
+        def __init__(self):
+            self.metrics = SimpleNamespace(requests=0, input_tokens=0, output_tokens=0)
+
+        async def compile_plan(self, state, card):
+            self.metrics.requests += 1
+            self.metrics.input_tokens += 120
+            self.metrics.output_tokens += 8
+            return await super().compile_plan(state, card)
+
+        async def judge(self, state, card, plan, observations):
+            self.metrics.requests += 1
+            self.metrics.input_tokens += 240
+            self.metrics.output_tokens += 16
+            return await super().judge(state, card, plan, observations)
+
+    source = SourceRef(
+        key="telemetry-source",
+        adapter="trino",
+        resource="query:revenue",
+        label="Revenue query",
+    )
+    card = card_for(
+        card_id="card-telemetry",
+        title="Telemetry card",
+        source=source,
+    )
+    resource = ResourceSnapshot(
+        source_key=source.key,
+        adapter=source.adapter,
+        resource=source.resource,
+        title=source.label,
+        metadata={
+            "telemetry": {
+                "fetch_ms": 12.5,
+                "query_calls": 2,
+                "query_bytes_scanned": 4096,
+                "cache_hits": 1,
+                "cache_misses": 1,
+            }
+        },
+        observations=[
+            Observation(
+                source_key=source.key,
+                subject_id="revenue",
+                subject_label="Revenue",
+                metric="revenue",
+                current=110,
+                baseline=100,
+                change_pct=10,
+            )
+        ],
+    )
+
+    run = await InsightEngine(MeteredJev()).evaluate(card, [resource])
+
+    telemetry = run.result.telemetry
+    assert telemetry.wall_time_ms >= 0
+    assert telemetry.source_fetch_ms == 12.5
+    assert telemetry.source_count == 1
+    assert telemetry.observation_count == 1
+    assert telemetry.evidence_count >= 1
+    assert telemetry.jev_requests == 2
+    assert telemetry.jev_input_tokens == 360
+    assert telemetry.jev_output_tokens == 24
+    assert telemetry.query_calls == 2
+    assert telemetry.query_bytes_scanned == 4096
+    assert telemetry.query_cache_hits == 1
+    assert telemetry.query_cache_misses == 1
 
 
 async def test_mobile_issue_delivers_to_all_matching_methods():

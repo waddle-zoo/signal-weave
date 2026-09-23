@@ -51,6 +51,29 @@ and returned as a typed source error. Required sources therefore route to
 `insufficient_data` instead of silently sending an unbounded payload to Jev.
 Deployments can lower the budget with `SourceRegistry(max_snapshot_bytes=...)`.
 
+### Shadow telemetry
+
+Adapters may attach provider measurements under
+`ResourceSnapshot.metadata["telemetry"]`. SignalWeave carries these measurements
+into `InsightResult.telemetry` for shadow comparisons; they are operational
+measurements, not semantic evidence and never change the Jev judgment. Supported
+fields are:
+
+```json
+{
+  "fetch_ms": 1830.0,
+  "query_calls": 1,
+  "query_bytes_scanned": 52428800,
+  "cache_hits": 1,
+  "cache_misses": 0
+}
+```
+
+The result also records wall time, source/observation/evidence counts, and Jev
+request/token usage. This gives a caller enough information to compare a
+delivery-disabled SignalWeave shadow run with an existing agent or scheduled
+query path without making SignalWeave own billing, query execution, or delivery.
+
 For catalogs that are too large to materialize, implement `search_resources`.
 It should apply the caller's authorization at the source, return only a bounded
 page of descriptors, and report the authorized `total_count`, `has_more`, and a

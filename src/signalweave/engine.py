@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from time import perf_counter
 from typing import Any
 
 from .analysis import candidate_observations, evidence_statements, observations_for_plan
@@ -21,6 +22,7 @@ from .models import (
     Outcome,
     PrincipalContext,
     ResourceSnapshot,
+    RunTelemetry,
     SourceRef,
 )
 from .retrieval import build_candidate_pool, resource_ref
@@ -64,6 +66,102 @@ class InsightEngine:
         self.context_provider = context_provider
         self.investigation_candidate_limit = investigation_candidate_limit
 
+    def _judger_metrics(self) -> dict[str, int]:
+        metrics = getattr(self.judger, "metrics", None)
+        return {
+            "requests": max(0, int(getattr(metrics, "requests", 0) or 0)),
+            "input_tokens": max(0, int(getattr(metrics, "input_tokens", 0) or 0)),
+            "output_tokens": max(0, int(getattr(metrics, "output_tokens", 0) or 0)),
+        }
+
+    @staticmethod
+    def _source_telemetry(resources: list[ResourceSnapshot]) -> dict[str, int | float]:
+        """Collect optional adapter measurements without treating them as facts."""
+        totals: dict[str, int | float] = {
+            "source_fetch_ms": 0.0,
+            "query_calls": 0,
+            "query_bytes_scanned": 0,
+            "query_cache_hits": 0,
+            "query_cache_misses": 0,
+        }
+        for resource in resources:
+            telemetry = resource.metadata.get("telemetry")
+            if not isinstance(telemetry, dict):
+                continue
+            try:
+                totals["source_fetch_ms"] += max(
+                    0.0,
+                    float(telemetry.get("fetch_ms", telemetry.get("latency_ms", 0)) or 0),
+                )
+                totals["query_calls"] += max(0, int(telemetry.get("query_calls", 0) or 0))
+                totals["query_bytes_scanned"] += max(
+                    0,
+                    int(
+                        telemetry.get(
+                            "query_bytes_scanned", telemetry.get("bytes_scanned", 0)
+                        )
+                        or 0
+                    ),
+                )
+                totals["query_cache_hits"] += max(
+                    0,
+                    int(
+                        telemetry.get(
+                            "query_cache_hits",
+                            telemetry.get(
+                                "cache_hits", 1 if telemetry.get("cache_hit") is True else 0
+                            ),
+                        )
+                        or 0
+                    ),
+                )
+                totals["query_cache_misses"] += max(
+                    0,
+                    int(
+                        telemetry.get(
+                            "query_cache_misses",
+                            telemetry.get(
+                                "cache_misses", 1 if telemetry.get("cache_hit") is False else 0
+                            ),
+                        )
+                        or 0
+                    ),
+                )
+            except (TypeError, ValueError):
+                # A malformed optional measurement must not fail an evaluation.
+                continue
+        return totals
+
+    def _run_telemetry(
+        self,
+        *,
+        started: float,
+        source_fetch_ms: float,
+        metrics_before: dict[str, int],
+        resources: list[ResourceSnapshot],
+        result: InsightResult,
+    ) -> RunTelemetry:
+        metrics_after = self._judger_metrics()
+        provider = {
+            key: max(0, metrics_after[key] - metrics_before[key])
+            for key in metrics_after
+        }
+        source = self._source_telemetry(resources)
+        return RunTelemetry(
+            wall_time_ms=max(0.0, (perf_counter() - started) * 1000),
+            source_fetch_ms=max(float(source_fetch_ms), float(source["source_fetch_ms"])),
+            source_count=len(resources),
+            observation_count=len(result.observations),
+            evidence_count=len(result.evidence),
+            jev_requests=provider["requests"],
+            jev_input_tokens=provider["input_tokens"],
+            jev_output_tokens=provider["output_tokens"],
+            query_calls=int(source["query_calls"]),
+            query_bytes_scanned=int(source["query_bytes_scanned"]),
+            query_cache_hits=int(source["query_cache_hits"]),
+            query_cache_misses=int(source["query_cache_misses"]),
+        )
+
     async def compile(
         self,
         card: InsightCard,
@@ -87,13 +185,18 @@ class InsightEngine:
         context_override: ContextSnapshot | None = None,
         principal: PrincipalContext | None = None,
     ) -> InsightRun:
+        started = perf_counter()
+        metrics_before = self._judger_metrics()
+        source_fetch_ms = 0.0
         authorized_tenants = [principal.tenant_id] if principal else None
         if resources is None:
             if self.registry is None:
                 raise ValueError("InsightEngine needs resources or a SourceRegistry")
+            source_started = perf_counter()
             resources = await self.registry.resolve(
                 card.sources, authorized_tenants=authorized_tenants
             )
+            source_fetch_ms += (perf_counter() - source_started) * 1000
         else:
             resources = list(resources)
 
@@ -105,9 +208,11 @@ class InsightEngine:
         evaluation_card = card
         if investigation is not None and investigation.selected and self.registry is not None:
             selected_sources = [selection.source for selection in investigation.selected]
+            source_started = perf_counter()
             selected_resources = await self.registry.resolve(
                 selected_sources, authorized_tenants=authorized_tenants
             )
+            source_fetch_ms += (perf_counter() - source_started) * 1000
             selected_by_key = {resource.source_key: resource for resource in selected_resources}
             updated_selections: list[InvestigationSelection] = []
             investigation_failed = investigation.failed
@@ -179,6 +284,17 @@ class InsightEngine:
             materials.blocking_partial_source_errors,
             materials.source_error_evidence,
             materials.source_errors,
+        )
+        result = result.model_copy(
+            update={
+                "telemetry": self._run_telemetry(
+                    started=started,
+                    source_fetch_ms=source_fetch_ms,
+                    metrics_before=metrics_before,
+                    resources=resources,
+                    result=result,
+                )
+            }
         )
         return InsightRun(
             card=card,

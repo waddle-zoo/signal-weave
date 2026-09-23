@@ -724,6 +724,30 @@ class InvestigationTrace(BaseModel):
     warnings: list[str] = Field(default_factory=list, max_length=50)
 
 
+class RunTelemetry(BaseModel):
+    """Provider-neutral measurements attached to one evaluated decision.
+
+    Adapters may publish optional query measurements under
+    ``ResourceSnapshot.metadata['telemetry']``. SignalWeave records those
+    measurements without interpreting them as correctness evidence, so a
+    caller can compare shadow runs on usefulness, latency, and cost.
+    """
+
+    wall_time_ms: float = Field(default=0.0, ge=0.0)
+    source_fetch_ms: float = Field(default=0.0, ge=0.0)
+    source_count: int = Field(default=0, ge=0)
+    observation_count: int = Field(default=0, ge=0)
+    evidence_count: int = Field(default=0, ge=0)
+    jev_requests: int = Field(default=0, ge=0)
+    jev_input_tokens: int = Field(default=0, ge=0)
+    jev_output_tokens: int = Field(default=0, ge=0)
+    query_calls: int = Field(default=0, ge=0)
+    query_bytes_scanned: int = Field(default=0, ge=0)
+    query_cache_hits: int = Field(default=0, ge=0)
+    query_cache_misses: int = Field(default=0, ge=0)
+    warnings: list[str] = Field(default_factory=list, max_length=50)
+
+
 class InsightResult(BaseModel):
     """Typed outcome plus the evidence and per-item judgments behind it."""
 
@@ -743,5 +767,6 @@ class InsightResult(BaseModel):
     retrieval: EvidenceBundle | None = None
     context: ContextSnapshot | None = None
     investigation: InvestigationTrace | None = None
+    telemetry: RunTelemetry = Field(default_factory=RunTelemetry)
     evaluated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     evaluator: str
