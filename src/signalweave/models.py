@@ -178,6 +178,8 @@ class DecisionReceipt(BaseModel):
     card_id: str = Field(min_length=1, max_length=160)
     card_version: int = Field(ge=1)
     actor: str = Field(min_length=1, max_length=240)
+    context_provider: str | None = Field(default=None, max_length=160)
+    context_version: str | None = Field(default=None, max_length=240)
     status: ReceiptStatus
     outcome: Outcome | None = None
     delivery_enabled: bool = False
@@ -205,6 +207,8 @@ class DecisionFeedback(BaseModel):
     card_id: str = Field(min_length=1, max_length=160)
     card_version: int = Field(ge=1)
     kind: DecisionFeedbackKind
+    context_provider: str | None = Field(default=None, max_length=160)
+    context_version: str | None = Field(default=None, max_length=240)
     expected_outcome: Outcome | None = None
     expected_delivery_method_keys: list[str] = Field(default_factory=list, max_length=100)
     note: str = Field(default="", max_length=4000)

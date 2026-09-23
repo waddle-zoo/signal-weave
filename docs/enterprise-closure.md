@@ -19,6 +19,7 @@ It is intentionally explicit about synthetic evidence versus production proof.
 | SQL safety | Same metric trial | 24/24 partition-bounded, SELECT-only, semicolon-free |
 | Receipt durability | SQLite restart and two-store claim tests | persisted cards and one atomic claim per key |
 | Operator feedback contract | MCP receipt-linked labels, tenant scoping, SQLite restart test | append-only labels survive restart; no automatic card/Jev mutation |
+| Company context provider | Trusted graph double, related-source expansion, receipt/feedback assertions | graph version reaches Jev bundle, receipt, and feedback; provider failure is unverified |
 | Real-row shadow replay | Northstar Superset seed rows, six counterfactual cases | Jev 4/6, 0 false notifications, 0 missed notifications; shadow only |
 
 ## Post-fix general-agent trial
@@ -57,6 +58,8 @@ than above one BI vendor.
 - Reliable autonomous onboarding by a general-purpose MCP agent.
 - Independent operator labels from a real operating team, including time-split
   replay and agreement on what counts as useful, late, incomplete, or unsafe.
+- A production graph provider with real authorization, freshness, completeness,
+  and provenance guarantees; the injectable contract is proven locally only.
 
 ## Next closure gate
 

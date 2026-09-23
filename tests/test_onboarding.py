@@ -7,6 +7,8 @@ import pytest
 from signalweave.engine import InsightEngine
 from signalweave.mcp_server import create_mcp
 from signalweave.models import (
+    ContextFact,
+    ContextSnapshot,
     Evidence,
     InsightCard,
     InsightResult,
@@ -149,6 +151,27 @@ class BundleJevDouble(OnboardingJevDouble):
         }
 
 
+class CompanyGraphContextDouble:
+    name = "company-graph"
+
+    async def get_context(self, card, resources):
+        del card, resources
+        return ContextSnapshot(
+            provider=self.name,
+            version="graph-v7",
+            facts=[
+                ContextFact(
+                    fact_id="growth-diagnostic",
+                    subject_ref="superset|dashboard:7",
+                    relation="requires_diagnostic_context",
+                    object_ref="superset|dashboard:8",
+                    statement="Finance context is required to interpret growth movement.",
+                    provenance=["owner:growth-ops"],
+                )
+            ],
+        )
+
+
 class NoResourceRankingJudger:
     name = "non-jev-test-judger"
 
@@ -170,9 +193,13 @@ class AmbiguousCatalogJevDouble(OnboardingJevDouble):
         }
 
 
-def make_server(tmp_path, judger=None, *, sqlite=False, catalog=None):
+def make_server(tmp_path, judger=None, *, sqlite=False, catalog=None, context_provider=None):
     registry = SourceRegistry([catalog or SupersetCatalogDouble()], authorized_tenants=["default"])
-    engine = InsightEngine(judger or OnboardingJevDouble(), registry=registry)
+    engine = InsightEngine(
+        judger or OnboardingJevDouble(),
+        registry=registry,
+        context_provider=context_provider,
+    )
     card_store = (
         SQLiteInsightCardStore(tmp_path / "signalweave.db")
         if sqlite
@@ -189,6 +216,7 @@ def make_server(tmp_path, judger=None, *, sqlite=False, catalog=None):
             decision_feedback=(
                 SQLiteDecisionFeedbackStore(tmp_path / "signalweave.db") if sqlite else None
             ),
+            context_provider=context_provider,
             principal=PrincipalContext(principal_id="test-principal", tenant_id="default"),
         )
     )
@@ -780,6 +808,52 @@ async def test_decision_feedback_is_scoped_and_survives_restart(tmp_path):
             idempotency_key="daily:missing",
             kind="useful",
         )
+
+
+@pytest.mark.asyncio
+async def test_runtime_context_provider_expands_bundle_and_is_receipt_visible(tmp_path):
+    server = make_server(
+        tmp_path,
+        judger=BundleJevDouble(),
+        sqlite=True,
+        context_provider=CompanyGraphContextDouble(),
+    )
+    drafted = await tool(server, "draft_insight_card")(
+        title="Graph-backed growth pulse",
+        what_to_watch="Growth movement.",
+        why_watch="Decide whether Growth should act.",
+        questions=["What related evidence explains the movement?"],
+        sources=[
+            {
+                "key": "growth",
+                "adapter": "superset",
+                "resource": "dashboard:7",
+                "label": "Growth overview",
+            }
+        ],
+        retrieval_mode="expand",
+        card_id="graph-backed-card",
+    )
+
+    preview = await tool(server, "simulate_insight_card")(drafted["card"]["id"])
+    assert preview["result"]["context"]["provider"] == "company-graph"
+    assert preview["result"]["context"]["version"] == "graph-v7"
+    assert "dashboard:8" in {source["resource"] for source in preview["retrieval"]["selected_sources"]}
+
+    await tool(server, "approve_insight_card")("graph-backed-card")
+    evaluated = await tool(server, "evaluate_insight_card")(
+        "graph-backed-card", idempotency_key="daily:graph-backed"
+    )
+    assert evaluated["receipt"]["context_provider"] == "company-graph"
+    assert evaluated["receipt"]["context_version"] == "graph-v7"
+
+    feedback = tool(server, "record_decision_feedback")(
+        idempotency_key="daily:graph-backed",
+        kind="useful",
+        expected_outcome="notify",
+    )
+    assert feedback["feedback"]["context_provider"] == "company-graph"
+    assert feedback["feedback"]["context_version"] == "graph-v7"
 
 
 def test_mcp_exposes_generic_authoring_tools(tmp_path):

@@ -20,6 +20,7 @@ evidence into a bounded, explainable result that an existing system can act on.
 - [x] Hybrid metadata/context candidate pools that preserve relationship-linked sources before Jev ranking
 - [x] One bounded Jev-selected follow-up investigation stage with typed evidence roles and abstention
 - [x] Versioned external context snapshots with provenance through MCP and the engine boundary
+- [x] Injectable company-owned context provider with trusted retrieval expansion and receipt-visible graph versions
 - [x] Explicit no-match discovery and fail-closed bounded-investigation abstention
 - [x] Stale contract, unverified-context, idempotency-collision, and webhook-boundary gates
 - [x] Durable SQLite cards, metric cards, and receipt claims for a single-process deployment
@@ -139,7 +140,7 @@ card and per source domain.
 
 - [x] Add a versioned knowledge-context provider boundary for definitions,
       ownership, relationships, precedents, conflicts, and provenance
-- [ ] Record human feedback as append-only, provenance-bearing events linked to a
+- [x] Record human feedback as append-only, provenance-bearing events linked to a
       decision and context version
 - [ ] Let agents propose card or graph changes for human approval; never let raw
       feedback silently rewrite policy

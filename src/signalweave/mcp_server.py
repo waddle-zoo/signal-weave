@@ -123,6 +123,31 @@ def create_mcp(
         assert_card_scope(card, principal)
         return card
 
+    async def context_for_card(
+        card: InsightCard,
+        context: ContextSnapshot | None,
+        principal: PrincipalContext | None,
+    ) -> ContextSnapshot | None:
+        """Resolve trusted deployment context without trusting tool payloads."""
+        if context is not None:
+            return context
+        provider = runtime.context_provider or runtime.engine.context_provider
+        if provider is None:
+            return None
+        try:
+            resources = await runtime.sources.resolve(
+                card.sources,
+                authorized_tenants=[principal.tenant_id] if principal else None,
+            )
+            return await provider.get_context(card, resources)
+        except Exception as error:  # noqa: BLE001 - context is visible but optional
+            return ContextSnapshot(
+                provider=provider.name,
+                version="unavailable",
+                trust="unverified",
+                warnings=[f"Context provider failed: {type(error).__name__}: {error}"],
+            )
+
     def persist_certification(
         *,
         kind: str,
@@ -192,6 +217,7 @@ def create_mcp(
         key = (idempotency_key or f"manual:{card_id}:{uuid4().hex}").strip()
         if not key:
             raise ValueError("idempotency_key must not be empty")
+        context = await context_for_card(card, context, principal)
         fingerprint = _evaluation_fingerprint(card, actor=actor, context=context)
         existing = decision_receipts.get_by_idempotency_key(key)
         if existing is not None:
@@ -216,6 +242,8 @@ def create_mcp(
             card_id=card.id,
             card_version=card.version,
             actor=actor or "mcp-client",
+            context_provider=context.provider if context else None,
+            context_version=context.version if context else None,
             status=ReceiptStatus.PREPARED,
         )
         if not decision_receipts.claim(prepared):
@@ -755,6 +783,8 @@ def create_mcp(
             if context
             else None
         )
+        if context_snapshot is None:
+            context_snapshot = await context_for_card(card, None, principal)
         bundle = await authoring.resolve_bundle(
             card, context_snapshot, principal=principal
         )
@@ -806,6 +836,8 @@ def create_mcp(
             if context
             else None
         )
+        if context_snapshot is None:
+            context_snapshot = await context_for_card(card, None, principal)
         evaluation_card, bundle = await prepare_insight_card(
             card, context_snapshot, principal=principal
         )
@@ -897,6 +929,8 @@ def create_mcp(
             note=note.strip(),
             actor=principal.principal_id if principal else "mcp-client",
             principal_tenant=principal.tenant_id if principal else None,
+            context_provider=receipt.context_provider,
+            context_version=receipt.context_version,
         )
         decision_feedback.save(feedback)
         return {

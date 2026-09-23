@@ -326,6 +326,57 @@ async def test_investigation_provider_failure_cannot_auto_notify():
 
 
 @pytest.mark.asyncio
+async def test_context_provider_failure_is_unverified_and_visible():
+    class BrokenContext:
+        name = "company-graph"
+
+        async def get_context(self, card, resources):
+            del card, resources
+            raise TimeoutError("graph unavailable")
+
+    class FailureJudger:
+        name = "jev-context-failure"
+
+        async def compile_plan(self, state, card):
+            del state
+            return {"capabilities": ["percent_change"], "baseline": card.comparison_windows[0]}
+
+        async def judge(self, state, card, plan, observations):
+            del plan
+            return InsightResult(
+                card_id=card.id,
+                outcome=Outcome.INVESTIGATE,
+                summary="Context was unavailable.",
+                rationale="The graph provider failed and the result should be reviewed.",
+                confidence=0.5,
+                probabilities={"investigate": 0.5},
+                evidence=state["evidence"],
+                observations=observations,
+                source_keys=[source.source_key for source in observations],
+                evaluator=self.name,
+            )
+
+    source = SourceRef(
+        key="anchor", adapter="superset", resource="dashboard:exec", label="Executive pulse"
+    )
+    card = InsightCard(
+        id="card-context-failure",
+        title="Executive pulse",
+        what_to_watch="Revenue movement",
+        why_watch="Support an operating decision.",
+        sources=[source],
+    )
+
+    run = await InsightEngine(
+        FailureJudger(), context_provider=BrokenContext()
+    ).evaluate(card, [snapshot(source, observation(source.key, "revenue", 80, 100))])
+
+    assert run.result.context is not None
+    assert run.result.context.trust == "unverified"
+    assert "graph unavailable" in run.result.context.warnings[0]
+
+
+@pytest.mark.asyncio
 async def test_bounded_investigation_abstains_when_selector_is_not_available():
     class NoInvestigationJudger:
         name = "no-investigation-judger"

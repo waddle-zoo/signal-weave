@@ -63,9 +63,15 @@ def test_runtime_accepts_an_embedded_non_superset_adapter(monkeypatch, tmp_path)
     monkeypatch.setenv("SIGNALWEAVE_STORE_BACKEND", "sqlite")
     monkeypatch.setenv("SIGNALWEAVE_STORE_PATH", str(tmp_path / "signalweave.db"))
 
-    runtime = build_runtime(adapters=[InternalArtifacts()])
+    context_provider = object()
+    runtime = build_runtime(
+        adapters=[InternalArtifacts()],
+        context_provider=context_provider,  # type: ignore[arg-type]
+    )
 
     assert runtime.sources.adapter_names() == ["internal-analytics"]
+    assert runtime.context_provider is context_provider
+    assert runtime.engine.context_provider is context_provider
 
 
 def test_runtime_defaults_all_card_and_receipt_stores_to_sqlite(monkeypatch, tmp_path):

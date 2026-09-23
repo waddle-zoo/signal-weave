@@ -171,3 +171,25 @@ model: SignalWeave does not assume Superset RBAC, and it does not synthesize a
 universal ACL for systems that do not provide one. A connector must enforce its
 approved credential or identity boundary before returning catalog entries or
 snapshots.
+
+## Company-owned context provider
+
+Deployments can inject a read-only `ContextProvider` alongside their adapters.
+It receives the approved card and resolved anchor snapshots, then returns a
+versioned `ContextSnapshot` containing graph facts, ownership, definitions,
+precedents, or other company-owned context. A trusted provider snapshot can
+participate in related-source expansion and Jev ranking; a caller-supplied MCP
+snapshot is always marked unverified and is retained as evidence without being
+allowed to widen retrieval.
+
+The provider's name and version are copied onto the decision receipt and any
+operator feedback attached to that receipt. A provider failure becomes an
+unverified `unavailable` snapshot and the engine's existing safety gates decide
+whether the workflow can proceed.
+
+```python
+runtime = build_runtime(
+    adapters=[SupersetAdapter(superset_client), LookerArtifactAdapter(looker_client)],
+    context_provider=CompanyGraphContextProvider(graph_client),
+)
+```

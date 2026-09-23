@@ -6,6 +6,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 
+from .context import ContextProvider
 from .engine import InsightEngine
 from .models import PrincipalContext, ResourceDescriptor
 from .sources import SourceAdapter, SourceRegistry
@@ -41,6 +42,7 @@ class Runtime:
     decision_receipts: DecisionReceiptStore | None = None
     decision_feedback: DecisionFeedbackStore | None = None
     certification_reports: CertificationReportStore | None = None
+    context_provider: ContextProvider | None = None
     principal: PrincipalContext | None = None
 
 
@@ -48,6 +50,7 @@ def build_runtime(
     mode: str | None = None,
     *,
     adapters: Iterable[SourceAdapter] = (),
+    context_provider: ContextProvider | None = None,
 ) -> Runtime:
     """Build the Jev runtime around the source adapters a deployment installs.
 
@@ -142,11 +145,16 @@ def build_runtime(
     return Runtime(
         card_store=card_store,
         sources=registry,
-        engine=InsightEngine(judger=judger, registry=registry),
+        engine=InsightEngine(
+            judger=judger,
+            registry=registry,
+            context_provider=context_provider,
+        ),
         metric_query_store=metric_query_store,
         decision_receipts=decision_receipts,
         decision_feedback=decision_feedback,
         certification_reports=certification_reports,
+        context_provider=context_provider,
         principal=(
             PrincipalContext(principal_id=principal_id, tenant_id=tenant_id)
             if principal_id and tenant_id

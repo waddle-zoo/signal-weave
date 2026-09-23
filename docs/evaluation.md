@@ -202,6 +202,13 @@ This keeps human context in the product boundary while leaving the decision
 itself to Jev and the deterministic workflow code. It also prevents an agent
 from treating an unverified feedback note as new operational truth.
 
+For company-owned graph context, inject a read-only `ContextProvider` into the
+runtime. Its trusted, versioned snapshot is used for related-source expansion,
+Jev state, and evidence; the provider/version are copied to the decision
+receipt and any feedback label. MCP payload context remains unverified by
+design, so an agent can contribute useful evidence without being able to grant
+itself permission to retrieve additional sources.
+
 The thresholds in this repository are proof starting points, not universal
 calibration. Production thresholds should be set from the company’s consequences
 and feedback.

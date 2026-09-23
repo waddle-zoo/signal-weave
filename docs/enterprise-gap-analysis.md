@@ -62,7 +62,7 @@ the card or trusted graph and checked independently.
 | Bounded catalog search | Implemented | Adapter-owned search, cursor/total metadata, bounded Jev state, 100k virtual-catalog proof. |
 | Relationship-aware candidate coverage | Implemented in the branch | Hidden cross-domain candidates recovered 6/6 without a full scan; needs connector replay against real enterprise graph indexes. |
 | Authorization isolation | Local contract proven | Tenant filtering and request principal propagation exist; production gate is an OIDC/shared-gateway replay with real adapter credentials. |
-| Trusted context | Local safety behavior proven | Trusted context can expand/rank; unverified context is receipt-only and cannot widen retrieval or create obligations. A real graph provider still must publish freshness, completeness, and provenance. |
+| Trusted context | Runtime-injectable contract proven locally | A deployment-owned provider can expand/rank with trusted context; provider/version are recorded on receipts and feedback, while unverified context cannot widen retrieval. A real graph provider still must publish freshness, completeness, and provenance. |
 | Workflow bundle completeness | Deliberately bounded | Explicit `requires_*` relationships preserve at least one candidate per obligation; role-level completeness needs human/graph labels, not a guessed global threshold. |
 | Cost and latency budgets | Remaining P1 | Candidate, payload, source-fetch, and follow-up budgets need one shared receipt and abstention proof. |
 | Outcome quality | Remaining P1 | Needs operator-labeled historical replay or shadow traffic; synthetic Jev labels are not enough. |
@@ -157,7 +157,8 @@ Completed on this branch:
 1. Bounded catalog search, relationship expansion, tenant filtering, and the
    100k-artifact omission proof.
 2. Request-scoped principal propagation and cross-source isolation tests.
-3. Trusted-context gating, explicit `requires_*` coverage, and an unverified-
+3. Trusted-context gating, an injectable company-owned provider, explicit
+   `requires_*` coverage, receipt-linked graph versions, and an unverified-
    context adversarial test.
 
 Remaining enterprise gates:

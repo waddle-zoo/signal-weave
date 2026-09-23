@@ -314,6 +314,7 @@ class InsightEngine:
             return ContextSnapshot(
                 provider=self.context_provider.name,
                 version="unavailable",
+                trust="unverified",
                 warnings=[f"Context provider failed: {type(error).__name__}: {error}"],
             )
 
