@@ -29,6 +29,11 @@ class SourceAdapter:
 
     async def inspect(self, source: SourceRef) -> ResourceSnapshot:
         ...
+
+    async def authorize(
+        self, source: SourceRef, *, authorized_tenants: set[str] | None = None
+    ) -> ResourceDescriptor | None:
+        ...
 ```
 
 The adapter should:
@@ -44,6 +49,13 @@ The adapter should:
 - set `captured_at` to the source snapshot time rather than process time when possible;
 - include a source URL/run ID when possible; and
 - return a `ResourceSnapshot(error=...)` through the registry path when the source cannot be trusted.
+
+Adapters may implement `authorize` when cards can name a source that is not on
+the first bounded discovery page. It must validate the opaque source identity
+and tenant scope without fetching query results, then return its descriptor (or
+`None` when unauthorized). Onboarding uses this for explicit human anchors;
+runtime evaluation still calls `inspect` and applies freshness, health, and
+payload-budget gates.
 
 The registry also enforces a serialized snapshot byte budget (1 MiB by default).
 An oversized adapter result is stripped of observations, evidence, and metadata

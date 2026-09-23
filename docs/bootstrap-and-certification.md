@@ -46,6 +46,15 @@ manifest tenant and can be inspected through the adapter boundary.
 Bootstrap does not prove that a card is semantically correct. It proves that
 the deployment can provide the bounded, authorized inputs needed to test one.
 
+For a `fixed` card, an explicitly supplied source is a human anchor, not merely
+the top result on the current search page. Review revalidates that anchor through
+the adapter's authorization boundary and keeps it visible when pagination or a
+bounded relevance pool would otherwise omit it. This authorization check does
+not fetch the source data. The later workflow evaluation resolves the source
+again and fails closed if it is stale, unavailable, unauthorized, or over budget.
+Cards in `expand` mode still require review when bounded discovery leaves their
+dynamic context incomplete.
+
 For a tenant-level view across the bootstrap report, stored cards, workflow
 certifications, retrieval certification, installed adapters, and configured
 company context provider, call `get_enterprise_readiness`. It returns explicit

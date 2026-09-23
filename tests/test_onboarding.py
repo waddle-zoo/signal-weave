@@ -89,6 +89,30 @@ class AmbiguousSupersetCatalogDouble(SupersetCatalogDouble):
         self.resources[1] = self.resources[1].model_copy(update={"title": "Growth overview"})
 
 
+class BoundedAnchorCatalogDouble(SupersetCatalogDouble):
+    def __init__(self):
+        super().__init__()
+        self.resources.extend(
+            ResourceDescriptor(
+                adapter=self.name,
+                resource=f"dashboard:{index}",
+                kind="dashboard",
+                title=f"A decoy growth asset {index}",
+                description="A distractor that is not the selected operating asset.",
+            )
+            for index in range(10, 30)
+        )
+        self.resources.append(
+            ResourceDescriptor(
+                adapter=self.name,
+                resource="dashboard:42",
+                kind="dashboard",
+                title="Z canonical growth asset",
+                description="The human-selected growth asset.",
+            )
+        )
+
+
 class StaleSupersetCatalogDouble(SupersetCatalogDouble):
     def __init__(self):
         super().__init__()
@@ -139,6 +163,12 @@ class OnboardingJevDouble:
             source_keys=[source["source_key"] for source in state["sources"]],
             evaluator=self.name,
         )
+
+
+class ExplicitAnchorJevDouble(OnboardingJevDouble):
+    async def rank_resources(self, goal, resources):
+        del goal
+        return {f"{resource.adapter}|{resource.resource}": 0.20 for resource in resources}
 
 
 class BundleJevDouble(OnboardingJevDouble):
@@ -874,6 +904,53 @@ def test_enterprise_readiness_blocks_stale_workflow_certification(tmp_path):
     assert "workflow-certification-stale" in {gate["code"] for gate in report["gates"]}
     summary = report["cards"][0]["workflow_certification"]
     assert summary["stale"] is True
+
+
+@pytest.mark.asyncio
+async def test_approval_retains_authorized_anchor_omitted_from_bounded_review(tmp_path):
+    server = make_server(
+        tmp_path,
+        judger=ExplicitAnchorJevDouble(),
+        catalog=BoundedAnchorCatalogDouble(),
+    )
+    drafted = await tool(server, "draft_insight_card")(
+        title="Growth anchor",
+        what_to_watch="Monitor growth movement.",
+        why_watch="Decide whether the growth team needs to act.",
+        watch_for=["Material movement in the selected growth asset."],
+        questions=["Does the selected asset support action?"],
+        decision_guidance="Ignore normal movement; investigate or notify only when evidence supports action.",
+        sources=[
+            {
+                "key": "growth-anchor",
+                "adapter": "superset",
+                "resource": "dashboard:42",
+                "label": "Z canonical growth asset",
+            }
+        ],
+        delivery_methods=[
+            {
+                "key": "growth-ops",
+                "outcome": "notify",
+                "label": "Growth Ops",
+                "destination": "slack://growth-ops",
+            }
+        ],
+        card_id="bounded-anchor-card",
+    )
+
+    reviewed = await tool(server, "review_insight_card")(drafted["card"]["id"], limit=10)
+    review = reviewed["review"]
+
+    assert review["selected_outside_bounded_candidates"] == []
+    assert "explicit-card-anchor" in {
+        signal
+        for candidate in review["source_candidates"]
+        for signal in candidate["retrieval_signals"]
+        if candidate["resource"] == "dashboard:42"
+    }
+    approved = await tool(server, "approve_insight_card")(drafted["card"]["id"])
+    assert approved["status"] == "approved"
 
 
 @pytest.mark.asyncio

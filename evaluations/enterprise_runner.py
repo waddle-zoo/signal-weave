@@ -142,6 +142,12 @@ async def run_scripted_matrix(
                 "why_watch": brief["why_watch"],
                 "watch_for": brief["watch_for"],
                 "questions": brief["questions"],
+                "decision_guidance": (
+                    "Ignore expected or explainable movement. Investigate when the evidence is "
+                    "ambiguous or incomplete. Notify or escalate only when fresh evidence and "
+                    "the configured delivery policy support it. Treat stale, failed, or missing "
+                    "sources as insufficient data rather than as a business signal."
+                ),
                 "comparison_windows": brief["comparison_windows"],
                 "sources": task["source_refs"],
                 "delivery_methods": brief["delivery_context"],

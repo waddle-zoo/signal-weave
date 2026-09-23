@@ -86,6 +86,25 @@ def test_trace_is_hash_chained_and_fsync_backed(tmp_path):
     assert all(event["event_hash"] for event in events)
 
 
+def test_trace_cache_preserves_chain_across_session_sinks(tmp_path):
+    trace_path = tmp_path / "multi-session-trace.jsonl"
+    for index in range(3):
+        trace = TraceSink(trace_path, experiment_id="test-enterprise", run_id=f"run-{index}")
+        trace.emit(
+            "session.started",
+            actor=f"persona:{index}",
+            session_id=f"session-{index}",
+            payload={"index": index},
+        )
+
+    audit = audit_trace(trace_path)
+    events = [json.loads(line) for line in trace_path.read_text().splitlines()]
+    assert audit["valid"] is True
+    assert [event["sequence"] for event in events] == [1, 2, 3]
+    assert events[1]["previous_event_hash"] == events[0]["event_hash"]
+    assert events[2]["previous_event_hash"] == events[1]["event_hash"]
+
+
 @pytest.mark.asyncio
 async def test_enterprise_fixture_is_reachable_through_mcp_and_trace(tmp_path):
     fixture = generate_fixture(output_path=tmp_path / "northstar.json", seed=23)

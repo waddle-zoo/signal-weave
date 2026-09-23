@@ -6,7 +6,13 @@ import re
 from collections.abc import Iterable
 from typing import Protocol
 
-from .models import CatalogSearchPage, ResourceDescriptor, ResourceSnapshot, SourceRef
+from .models import (
+    CatalogSearchPage,
+    ResourceContract,
+    ResourceDescriptor,
+    ResourceSnapshot,
+    SourceRef,
+)
 
 
 def _catalog_terms(resource: ResourceDescriptor) -> set[str]:
@@ -358,6 +364,33 @@ class SourceRegistry:
             )
         return self._enforce_snapshot_budget(snapshot)
 
+    async def authorize(
+        self,
+        source: SourceRef,
+        *,
+        authorized_tenants: Iterable[str] | None = None,
+    ) -> ResourceDescriptor | None:
+        """Authorize one source ref without fetching its data snapshot.
+
+        Onboarding uses this path to retain an explicit human anchor in a
+        bounded review. It verifies identity and tenant scope while avoiding a
+        live query or inspection, so a temporary source outage is handled by
+        the later workflow evaluation gate instead of corrupting card setup.
+        """
+        adapter = self._get(source.adapter)
+        if not self._enforce_catalog:
+            return ResourceDescriptor(
+                adapter=source.adapter,
+                resource=source.resource,
+                kind="explicit-card-anchor",
+                title=source.label,
+            )
+        return await self._authorize_descriptor(
+            adapter,
+            source,
+            authorized_tenants=authorized_tenants,
+        )
+
     def _enforce_snapshot_budget(self, snapshot: ResourceSnapshot) -> ResourceSnapshot:
         """Keep oversized adapter payloads out of Jev and fail them closed."""
         encoded = json.dumps(snapshot.model_dump(mode="json"), separators=(",", ":"))
@@ -427,6 +460,12 @@ class SourceRegistry:
                     adapter=source.adapter,
                     resource=source.resource,
                     title=source.label,
+                    metadata={
+                        "signalweave_resolution": {
+                            "authorized": False,
+                            "reason": "catalog-unavailable",
+                        }
+                    },
                     error=(
                         "authorized source catalog unavailable for adapter "
                         f"{source.adapter}: {catalog_errors[source.adapter]}"
@@ -439,6 +478,12 @@ class SourceRegistry:
                     adapter=source.adapter,
                     resource=source.resource,
                     title=source.label,
+                    metadata={
+                        "signalweave_resolution": {
+                            "authorized": False,
+                            "reason": "not-in-authorized-catalog",
+                        }
+                    },
                     error=(
                         "source is not present in the authorized adapter catalog; "
                         "rediscover it before evaluation"
@@ -455,15 +500,29 @@ class SourceRegistry:
                     adapter=source.adapter,
                     resource=source.resource,
                     title=source.label,
+                    source_url=descriptor.source_url if descriptor is not None else None,
+                    contract=descriptor.contract if descriptor is not None else ResourceContract(),
+                    metadata={
+                        "signalweave_resolution": {
+                            "authorized": descriptor is not None,
+                            "reason": "inspection-failed",
+                        }
+                    },
                     error=f"{type(error).__name__}: {error}",
                 )
             if snapshot.source_key != source.key:
                 snapshot = snapshot.model_copy(update={"source_key": source.key})
             if descriptor is not None:
+                metadata = dict(snapshot.metadata)
+                metadata["signalweave_resolution"] = {
+                    "authorized": True,
+                    "reason": "authorized",
+                }
                 snapshot = snapshot.model_copy(
                     update={
                         "contract": descriptor.contract,
                         "source_url": snapshot.source_url or descriptor.source_url,
+                        "metadata": metadata,
                     }
                 )
             if snapshot.adapter != source.adapter or snapshot.resource != source.resource:

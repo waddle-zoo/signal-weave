@@ -361,6 +361,13 @@ async def run_trial(
                 "why_watch": brief["why_watch"],
                 "watch_for": brief["watch_for"],
                 "questions": brief["questions"],
+                "decision_guidance": (
+                    "Ignore explainable or expected movement. Investigate when the evidence is "
+                    "ambiguous or definitions do not align. Notify the approved owner only when "
+                    "fresh corroborating evidence supports action. Escalate stale or failed data "
+                    "instead of interpreting it as a business movement. Treat missing baselines "
+                    "as insufficient data."
+                ),
                 "comparison_windows": brief["comparison_windows"],
                 "sources": task["source_refs"],
                 "delivery_methods": brief["delivery_context"],

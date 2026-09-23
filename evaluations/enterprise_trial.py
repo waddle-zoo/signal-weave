@@ -36,6 +36,7 @@ from signalweave.models import (
     InsightResult,
     Observation,
     Outcome,
+    PrincipalContext,
     QuestionResult,
     QuestionStatus,
     ResourceDescriptor,
@@ -100,6 +101,12 @@ def load_config(path: str | Path | dict[str, Any] = DEFAULT_CONFIG) -> dict[str,
 class TraceSink:
     """Append-only, hash-chained JSONL trace sink shared by experiment actors."""
 
+    # Enterprise matrix runs create a fresh sink per session while appending to
+    # one trace file.  Keep the last known offset/hash in-process so each event
+    # only parses bytes appended since the previous event instead of rescanning
+    # the complete trace (which made a large evaluation accidentally O(events²)).
+    _state_by_path: dict[Path, tuple[int, int, int, str]] = {}
+
     def __init__(self, path: str | Path, *, experiment_id: str, run_id: str) -> None:
         self.path = Path(path)
         self.experiment_id = experiment_id
@@ -119,15 +126,29 @@ class TraceSink:
             if fcntl is not None:
                 fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
             try:
-                handle.seek(0)
-                sequence = 0
-                previous_hash = TRACE_ZERO_HASH
-                for line in handle:
-                    if not line.strip():
-                        continue
-                    previous = json.loads(line)
-                    sequence = int(previous.get("sequence", sequence + 1))
-                    previous_hash = str(previous.get("event_hash", _trace_digest(previous)))
+                cache_key = self.path.absolute()
+                file_stat = self.path.stat()
+                current_offset = handle.seek(0, os.SEEK_END)
+                cached = self._state_by_path.get(cache_key)
+                if (
+                    cached is None
+                    or cached[0] != getattr(file_stat, "st_ino", 0)
+                    or current_offset < cached[1]
+                ):
+                    sequence = 0
+                    previous_hash = TRACE_ZERO_HASH
+                    read_from = 0
+                else:
+                    _, read_from, sequence, previous_hash = cached
+
+                if current_offset > read_from:
+                    handle.seek(read_from)
+                    for line in handle:
+                        if not line.strip():
+                            continue
+                        previous = json.loads(line)
+                        sequence = int(previous.get("sequence", sequence + 1))
+                        previous_hash = str(previous.get("event_hash", _trace_digest(previous)))
                 event = {
                     "timestamp": datetime.now(timezone.utc).isoformat(),
                     "experiment_id": self.experiment_id,
@@ -145,6 +166,12 @@ class TraceSink:
                 handle.write(json.dumps(event, sort_keys=True, default=str) + "\n")
                 handle.flush()
                 os.fsync(handle.fileno())
+                self._state_by_path[cache_key] = (
+                    getattr(file_stat, "st_ino", 0),
+                    handle.tell(),
+                    event["sequence"],
+                    event["event_hash"],
+                )
             finally:
                 if fcntl is not None:
                     fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
@@ -1299,6 +1326,7 @@ def build_experiment_runtime(
     actor: str,
     session_id: str,
     evaluator: str = "research",
+    principal: PrincipalContext | None = None,
 ) -> Runtime:
     records = fixture["resources"]
     adapters = [
@@ -1320,6 +1348,7 @@ def build_experiment_runtime(
         card_store=JsonInsightCardStore(store_path),
         sources=registry,
         engine=InsightEngine(judger=judger, registry=registry),
+        principal=principal or PrincipalContext(principal_id=actor, tenant_id="default"),
     )
 
 

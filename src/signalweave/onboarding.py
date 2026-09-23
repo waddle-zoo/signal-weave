@@ -204,6 +204,7 @@ class InsightAuthoringService:
         discovery: ResourceDiscovery,
         *,
         principal: PrincipalContext | None = None,
+        explicit_anchors_revalidated: bool = False,
     ) -> InsightCardOnboardingReview:
         selected_refs = {
             resource_ref(
@@ -230,6 +231,20 @@ class InsightAuthoringService:
         ambiguous_groups = [
             sorted(refs) for refs in by_identity.values() if len(refs) > 1
         ]
+        ambiguous_relevant_groups = (
+            [
+                refs
+                for refs in ambiguous_groups
+                if set(refs)
+                & (
+                    recommended_refs
+                    if explicit_anchors_revalidated
+                    else selected_refs | recommended_refs
+                )
+            ]
+            if explicit_anchors_revalidated
+            else ambiguous_groups
+        )
         candidates = [
             OnboardingSourceReview(
                 ref=match.ref,
@@ -384,7 +399,7 @@ class InsightAuthoringService:
                 question,
                 selected_outside,
             )
-        if ambiguous_groups:
+        if ambiguous_relevant_groups:
             question = (
                 "Disambiguate repeated catalog candidates before approval using owner, "
                 "lineage, freshness, or relationship metadata."
@@ -396,24 +411,40 @@ class InsightAuthoringService:
                 "meaning",
                 "Multiple candidates share a visible identity and may define different things.",
                 question,
-                [ref for refs in ambiguous_groups for ref in refs],
+                [ref for refs in ambiguous_relevant_groups for ref in refs],
+            )
+        elif ambiguous_groups:
+            warnings.append(
+                "The bounded candidate set contains ambiguous omitted assets; the ambiguity "
+                "does not affect the card's explicit or Jev-recommended sources."
             )
         if discovery.truncated:
             question = (
                 "Confirm the catalog search scope or provide another seed before approval; "
                 "an omitted source is not proof that the catalog lacks it."
             )
-            questions.append(question)
             warnings.append(
                 "Discovery was bounded; an omitted source is not proof that the catalog lacks it."
             )
-            add_blocker(
-                OnboardingBlockerCode.CATALOG_INCOMPLETE,
-                OnboardingBlockerSeverity.REVIEW,
-                "retrieval",
-                "The candidate catalog is bounded or paginated.",
-                question,
-            )
+            # Fixed cards already carry human-selected anchors. Once those
+            # anchors have been revalidated, pagination is a warning about
+            # omitted alternatives rather than a reason to reject the card.
+            # Expand-mode cards still need a human review of the bounded
+            # dynamic scope because their runtime evidence may widen.
+            if (
+                not explicit_anchors_revalidated
+                or card.retrieval_mode != RetrievalMode.FIXED
+                or not card.sources
+                or selected_outside
+            ):
+                questions.append(question)
+                add_blocker(
+                    OnboardingBlockerCode.CATALOG_INCOMPLETE,
+                    OnboardingBlockerSeverity.REVIEW,
+                    "retrieval",
+                    "The candidate catalog is bounded or paginated.",
+                    question,
+                )
         if discovery.no_match:
             warning = (
                 "No candidate cleared the Jev relevance threshold; source selection needs "
@@ -539,8 +570,86 @@ class InsightAuthoringService:
         discovery = await self.discover(
             goal, adapter=adapter, limit=limit, principal=effective_principal
         )
-        return self.build_onboarding_review(
+        discovery = await self._retain_explicit_anchors(
             card, discovery, principal=effective_principal
+        )
+        selected_refs = {
+            f"{source.adapter}|{source.resource}" for source in card.sources
+        }
+        explicit_anchors_revalidated = bool(selected_refs) and selected_refs.issubset(
+            {match.ref for match in discovery.matches}
+        )
+        return self.build_onboarding_review(
+            card,
+            discovery,
+            principal=effective_principal,
+            explicit_anchors_revalidated=explicit_anchors_revalidated,
+        )
+
+    async def _retain_explicit_anchors(
+        self,
+        card: InsightCard,
+        discovery: ResourceDiscovery,
+        *,
+        principal: PrincipalContext | None,
+    ) -> ResourceDiscovery:
+        """Keep authorized human anchors visible even when discovery is bounded.
+
+        A bounded search result is a recall pool, not the definition of an
+        already-selected source. An owner may have supplied a valid source that
+        ranked below the review page or was omitted by pagination. Revalidate
+        those explicit anchors through the adapter boundary and append them to
+        the review evidence. Unauthorized or unavailable anchors remain absent
+        and are still blocked by the normal onboarding checks.
+        """
+        visible_refs = {match.ref for match in discovery.matches}
+        missing = [
+            source
+            for source in card.sources
+            if f"{source.adapter}|{source.resource}" not in visible_refs
+        ]
+        if not missing:
+            return discovery
+        appended: list[ResourceMatch] = []
+        for source in missing:
+            try:
+                descriptor = await self.registry.authorize(
+                    source,
+                    authorized_tenants=[principal.tenant_id] if principal else None,
+                )
+            except Exception:  # noqa: BLE001 - unavailable anchors remain blocked
+                descriptor = None
+            if descriptor is None:
+                continue
+            ref = f"{source.adapter}|{source.resource}"
+            appended.append(
+                ResourceMatch(
+                    ref=ref,
+                    adapter=source.adapter,
+                    resource=source.resource,
+                    kind=descriptor.kind,
+                    title=descriptor.title or source.label,
+                    description=descriptor.description,
+                    source_url=descriptor.source_url,
+                    relevance=1.0,
+                    recommended=False,
+                    retrieval_signals=["explicit-card-anchor", "authorized-revalidation"],
+                    contract=descriptor.contract,
+                )
+            )
+        if not appended:
+            return discovery
+        refs = [*discovery.candidate_refs, *(match.ref for match in appended)]
+        warnings = [
+            *discovery.warnings,
+            "Explicit card anchors were revalidated and retained despite bounded discovery.",
+        ]
+        return discovery.model_copy(
+            update={
+                "matches": [*discovery.matches, *appended],
+                "candidate_refs": sorted(set(refs)),
+                "warnings": warnings,
+            }
         )
 
     async def discover(
@@ -623,7 +732,7 @@ class InsightAuthoringService:
         if pool.truncated or catalog.has_more:
             warnings.append(
                 "The catalog was bounded before Jev ranking; verify that the selected "
-                "source is present in the returned candidate set."
+                "source is authorized; card review revalidates explicit anchors."
             )
         if any(resource.contract.tenant_id == "default" for resource in candidates):
             warnings.append(
