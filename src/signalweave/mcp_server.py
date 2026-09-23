@@ -612,6 +612,8 @@ def create_mcp(
                         "report_id": workflow.report_id,
                         "status": workflow.status,
                         "created_at": workflow.created_at.isoformat(),
+                        "subject_version": workflow.subject_version,
+                        "stale": workflow.subject_version != str(card.version),
                     }
                     if workflow
                     else None
@@ -640,6 +642,18 @@ def create_mcp(
                         "code": "workflow-certification-missing",
                         "severity": "review",
                         "message": f"Card {card.id} has no owner-labeled workflow certification.",
+                    }
+                )
+            elif workflow.subject_version != str(card.version):
+                gates.append(
+                    {
+                        "code": "workflow-certification-stale",
+                        "severity": "blocked",
+                        "message": (
+                            f"Card {card.id} is version {card.version}, but its latest "
+                            f"workflow certification covers version {workflow.subject_version}. "
+                            "Replay the certification set before shadow evaluation."
+                        ),
                     }
                 )
             elif workflow.status != "approved":

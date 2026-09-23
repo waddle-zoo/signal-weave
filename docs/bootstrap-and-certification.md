@@ -52,6 +52,11 @@ company context provider, call `get_enterprise_readiness`. It returns explicit
 open gates and only reports `ready_for_shadow` when the minimum evidence exists;
 it never means production delivery is safe by itself.
 
+The readiness index compares each card's current version with the version
+covered by its latest workflow certification. If the card changed after the
+certification, the card is blocked until its labeled cases are replayed. This
+prevents an old green report from being mistaken for proof about a newer card.
+
 ## 2. Certify a card/workflow
 
 Use `CardWorkflowEvaluator` directly or the MCP tool `evaluate_card_workflow`.

@@ -7,10 +7,12 @@ import pytest
 from signalweave.engine import InsightEngine
 from signalweave.mcp_server import create_mcp
 from signalweave.models import (
+    CertificationRecord,
     ContextFact,
     ContextSnapshot,
     Evidence,
     InsightCard,
+    InsightCardStatus,
     InsightResult,
     Observation,
     Outcome,
@@ -22,6 +24,7 @@ from signalweave.models import (
 from signalweave.runtime import Runtime
 from signalweave.sources import SourceRegistry
 from signalweave.store import (
+    InMemoryCertificationReportStore,
     JsonInsightCardStore,
     SQLiteDecisionFeedbackStore,
     SQLiteDecisionReceiptStore,
@@ -829,6 +832,48 @@ def test_enterprise_readiness_reports_open_gates(tmp_path):
         "no-cards",
         "retrieval-certification-missing",
     }
+
+
+def test_enterprise_readiness_blocks_stale_workflow_certification(tmp_path):
+    registry = SourceRegistry([SupersetCatalogDouble()], authorized_tenants=["default"])
+    reports = InMemoryCertificationReportStore()
+    runtime = Runtime(
+        card_store=JsonInsightCardStore(tmp_path / "cards.json"),
+        sources=registry,
+        engine=InsightEngine(OnboardingJevDouble(), registry=registry),
+        certification_reports=reports,
+        principal=PrincipalContext(principal_id="test-principal", tenant_id="default"),
+    )
+    server = create_mcp(runtime)
+    runtime.card_store.save_card(
+        InsightCard(
+            id="stale-card",
+            title="Stale certification",
+            what_to_watch="Growth movement",
+            why_watch="Decide whether growth needs action",
+            status=InsightCardStatus.APPROVED,
+            principal_id="test-principal",
+            principal_tenant="default",
+            version=2,
+        )
+    )
+    reports.save(
+        CertificationRecord(
+            report_id="workflow:stale-card:v1",
+            kind="card_workflow",
+            subject_id="stale-card",
+            tenant_id="default",
+            subject_version="1",
+            status="approved",
+        )
+    )
+
+    report = tool(server, "get_enterprise_readiness")()
+
+    assert report["status"] == "blocked"
+    assert "workflow-certification-stale" in {gate["code"] for gate in report["gates"]}
+    summary = report["cards"][0]["workflow_certification"]
+    assert summary["stale"] is True
 
 
 @pytest.mark.asyncio
