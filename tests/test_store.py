@@ -1,7 +1,11 @@
 import json
 
+import pytest
+
 from signalweave.models import (
     CertificationRecord,
+    DecisionFeedback,
+    DecisionFeedbackKind,
     DecisionReceipt,
     InsightCard,
     Outcome,
@@ -11,6 +15,7 @@ from signalweave.models import (
 from signalweave.store import (
     JsonInsightCardStore,
     SQLiteCertificationReportStore,
+    SQLiteDecisionFeedbackStore,
     SQLiteDecisionReceiptStore,
     SQLiteInsightCardStore,
     SQLiteMetricQueryCardStore,
@@ -80,6 +85,30 @@ def test_sqlite_receipt_claim_is_atomic_across_store_instances(tmp_path):
     )
     first.save(completed)
     assert second.get_by_idempotency_key("daily:1").status == ReceiptStatus.DELIVERY_DISABLED
+
+
+def test_sqlite_decision_feedback_is_append_only_and_durable(tmp_path):
+    path = tmp_path / "signalweave.db"
+    feedback = DecisionFeedback(
+        feedback_id="feedback-1",
+        receipt_id="receipt-1",
+        idempotency_key="daily:1",
+        card_id="card-1",
+        card_version=1,
+        kind=DecisionFeedbackKind.NOISY,
+        expected_outcome=Outcome.IGNORE,
+        note="This was an expected seasonal movement.",
+        actor="growth-lead",
+        principal_tenant="tenant-a",
+    )
+
+    first = SQLiteDecisionFeedbackStore(path)
+    first.save(feedback)
+    reopened = SQLiteDecisionFeedbackStore(path)
+
+    assert reopened.list(card_id="card-1")[0] == feedback
+    with pytest.raises(ValueError, match="already exists"):
+        reopened.save(feedback.model_copy(update={"note": "changed label"}))
 
 
 def test_sqlite_metric_query_store_survives_a_new_store_instance(tmp_path):

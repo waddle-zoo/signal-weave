@@ -3,6 +3,7 @@ import pytest
 from signalweave.models import ResourceSnapshot
 from signalweave.runtime import build_runtime
 from signalweave.store import (
+    SQLiteDecisionFeedbackStore,
     SQLiteDecisionReceiptStore,
     SQLiteInsightCardStore,
     SQLiteMetricQueryCardStore,
@@ -78,3 +79,4 @@ def test_runtime_defaults_all_card_and_receipt_stores_to_sqlite(monkeypatch, tmp
     assert isinstance(runtime.card_store, SQLiteInsightCardStore)
     assert isinstance(runtime.metric_query_store, SQLiteMetricQueryCardStore)
     assert isinstance(runtime.decision_receipts, SQLiteDecisionReceiptStore)
+    assert isinstance(runtime.decision_feedback, SQLiteDecisionFeedbackStore)

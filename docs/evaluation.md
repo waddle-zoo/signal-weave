@@ -176,6 +176,32 @@ Track at least:
 - percentage of results with complete evidence; and
 - delivery-method corrections and card revision rate.
 
+## Capture operator feedback without changing the decision contract
+
+The MCP runtime exposes `record_decision_feedback` and
+`list_decision_feedback` for the operating team's review loop. A caller can
+attach one of five labels—`useful`, `noisy`, `late`, `incomplete`, or
+`unsafe`—to a completed decision receipt, along with the outcome and delivery
+route the operator expected. The feedback record includes the immutable card
+version and receipt identity, so a later review can distinguish a bad decision
+from a card that was revised after the decision ran.
+
+Feedback is deliberately append-only and tenant-scoped. It is evidence for a
+future evaluation or card revision; it does not mutate the card, alter Jev
+state, change thresholds, or silently retrain routing. The safest promotion
+loop is:
+
+1. run a reviewed card in shadow mode with delivery disabled;
+2. present the receipt's result, evidence, telemetry, and intended route to an
+   operator or caller-owned agent;
+3. record the operator's label and expected outcome/route;
+4. replay those labels in a time-split evaluation before changing the card; and
+5. approve a new card version explicitly, then rerun the workflow gate.
+
+This keeps human context in the product boundary while leaving the decision
+itself to Jev and the deterministic workflow code. It also prevents an agent
+from treating an unverified feedback note as new operational truth.
+
 The thresholds in this repository are proof starting points, not universal
 calibration. Production thresholds should be set from the company’s consequences
 and feedback.

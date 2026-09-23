@@ -21,6 +21,7 @@ from signalweave.runtime import Runtime
 from signalweave.sources import SourceRegistry
 from signalweave.store import (
     JsonInsightCardStore,
+    SQLiteDecisionFeedbackStore,
     SQLiteDecisionReceiptStore,
     SQLiteInsightCardStore,
 )
@@ -184,6 +185,9 @@ def make_server(tmp_path, judger=None, *, sqlite=False, catalog=None):
             engine=engine,
             decision_receipts=(
                 SQLiteDecisionReceiptStore(tmp_path / "signalweave.db") if sqlite else None
+            ),
+            decision_feedback=(
+                SQLiteDecisionFeedbackStore(tmp_path / "signalweave.db") if sqlite else None
             ),
             principal=PrincipalContext(principal_id="test-principal", tenant_id="default"),
         )
@@ -721,6 +725,63 @@ async def test_sqlite_runtime_replays_completed_evaluation_after_restart(tmp_pat
     assert replay["result"] == first["result"]
 
 
+@pytest.mark.asyncio
+async def test_decision_feedback_is_scoped_and_survives_restart(tmp_path):
+    server = make_server(tmp_path, sqlite=True)
+    drafted = await tool(server, "draft_insight_card")(
+        title="Feedback card",
+        what_to_watch="Checkout conversion.",
+        why_watch="Decide whether Growth should act.",
+        decision_guidance="Ignore ordinary movement and investigate a material conversion change.",
+        watch_for=["Conversion drops materially."],
+        questions=["Is this a meaningful movement?"],
+        sources=[
+            {
+                "key": "growth",
+                "adapter": "superset",
+                "resource": "dashboard:7",
+                "label": "Growth overview",
+            }
+        ],
+        delivery_methods=[
+            {
+                "key": "growth-ops",
+                "outcome": "notify",
+                "label": "Growth Ops",
+                "destination": "slack://growth-ops",
+            }
+        ],
+        card_id="feedback-card",
+    )
+    await tool(server, "approve_insight_card")("feedback-card")
+    await tool(server, "evaluate_insight_card")(
+        drafted["card"]["id"], idempotency_key="daily:feedback-card"
+    )
+
+    recorded = tool(server, "record_decision_feedback")(
+        idempotency_key="daily:feedback-card",
+        kind="noisy",
+        expected_outcome="ignore",
+        note="The movement was expected seasonality.",
+    )
+
+    assert recorded["status"] == "recorded"
+    assert recorded["feedback"]["principal_tenant"] == "default"
+    assert recorded["feedback"]["expected_outcome"] == "ignore"
+    assert tool(server, "list_decision_feedback")(card_id="feedback-card")["count"] == 1
+
+    restarted = make_server(tmp_path, sqlite=True)
+    listed = tool(restarted, "list_decision_feedback")(idempotency_key="daily:feedback-card")
+    assert listed["count"] == 1
+    assert listed["feedback"][0]["note"] == "The movement was expected seasonality."
+
+    with pytest.raises(ValueError, match="unknown decision receipt"):
+        tool(restarted, "record_decision_feedback")(
+            idempotency_key="daily:missing",
+            kind="useful",
+        )
+
+
 def test_mcp_exposes_generic_authoring_tools(tmp_path):
     server = make_server(tmp_path)
     names = set(server._tool_manager._tools)
@@ -732,6 +793,8 @@ def test_mcp_exposes_generic_authoring_tools(tmp_path):
         "resolve_insight_sources",
         "review_insight_card",
         "record_insight_card_correction",
+        "record_decision_feedback",
+        "list_decision_feedback",
         "propose_insight_card",
         "draft_insight_card",
         "simulate_insight_card",

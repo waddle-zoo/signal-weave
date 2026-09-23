@@ -186,6 +186,33 @@ class DecisionReceipt(BaseModel):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
+class DecisionFeedbackKind(StrEnum):
+    """Caller-owned labels used to evaluate a completed decision."""
+
+    USEFUL = "useful"
+    NOISY = "noisy"
+    LATE = "late"
+    INCOMPLETE = "incomplete"
+    UNSAFE = "unsafe"
+
+
+class DecisionFeedback(BaseModel):
+    """An append-only human or agent label attached to one decision receipt."""
+
+    feedback_id: str = Field(min_length=1, max_length=160)
+    receipt_id: str = Field(min_length=1, max_length=160)
+    idempotency_key: str = Field(min_length=1, max_length=240)
+    card_id: str = Field(min_length=1, max_length=160)
+    card_version: int = Field(ge=1)
+    kind: DecisionFeedbackKind
+    expected_outcome: Outcome | None = None
+    expected_delivery_method_keys: list[str] = Field(default_factory=list, max_length=100)
+    note: str = Field(default="", max_length=4000)
+    actor: str = Field(min_length=1, max_length=240)
+    principal_tenant: str | None = Field(default=None, max_length=160)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
 class CertificationRecord(BaseModel):
     """Durable, immutable record of a bootstrap or evaluation claim.
 

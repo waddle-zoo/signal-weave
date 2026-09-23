@@ -18,6 +18,7 @@ It is intentionally explicit about synthetic evidence versus production proof.
 | Metric planning | Live Jev, 24 held-out metric labels | 24/24 metric, dimension, and grain selections |
 | SQL safety | Same metric trial | 24/24 partition-bounded, SELECT-only, semicolon-free |
 | Receipt durability | SQLite restart and two-store claim tests | persisted cards and one atomic claim per key |
+| Operator feedback contract | MCP receipt-linked labels, tenant scoping, SQLite restart test | append-only labels survive restart; no automatic card/Jev mutation |
 | Real-row shadow replay | Northstar Superset seed rows, six counterfactual cases | Jev 4/6, 0 false notifications, 0 missed notifications; shadow only |
 
 ## Post-fix general-agent trial
@@ -54,15 +55,19 @@ than above one BI vendor.
 - OS-level sandboxing for agents that are supposed to use MCP only.
 - Broad superiority over a well-tuned model/RAG system.
 - Reliable autonomous onboarding by a general-purpose MCP agent.
+- Independent operator labels from a real operating team, including time-split
+  replay and agreement on what counts as useful, late, incomplete, or unsafe.
 
 ## Next closure gate
 
 Run SignalWeave in shadow mode for one real team. Export card versions, source
 metadata, evidence shown, expected outcome, expected delivery method, human
-correction, latency, and eventual operational result. Split labels by time,
-measure false automatic actions and useful-alert rate, and require the same
-tenant/source/query safety gates before enabling delivery. Until that gate is
-passed, public language should say “technical alpha,” not “enterprise-ready.”
+correction, operator feedback, latency, and eventual operational result. Use
+the receipt-linked feedback contract to collect labels without mutating the
+running card, split labels by time, measure false automatic actions and
+useful-alert rate, and require the same tenant/source/query safety gates before
+enabling delivery. Until that gate is passed, public language should say
+“technical alpha,” not “enterprise-ready.”
 
 Generated traces and reports remain in ignored `artifacts/` and must never
 contain the TypeSafe API key.

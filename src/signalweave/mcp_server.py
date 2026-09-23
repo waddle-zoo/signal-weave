@@ -23,6 +23,8 @@ from .evaluation import (
 from .models import (
     CertificationRecord,
     ContextSnapshot,
+    DecisionFeedback,
+    DecisionFeedbackKind,
     DecisionReceipt,
     DeliveryMethod,
     InsightCard,
@@ -48,6 +50,7 @@ from .retrieval_quality import (
 from .runtime import Runtime, build_runtime
 from .store import (
     InMemoryCertificationReportStore,
+    InMemoryDecisionFeedbackStore,
     InMemoryDecisionReceiptStore,
     JsonMetricQueryCardStore,
 )
@@ -88,6 +91,7 @@ def create_mcp(
         os.getenv("METRIC_QUERY_CARD_STORE", "data/metric-query-cards.json")
     )
     decision_receipts = runtime.decision_receipts or InMemoryDecisionReceiptStore()
+    decision_feedback = runtime.decision_feedback or InMemoryDecisionFeedbackStore()
     certification_reports = runtime.certification_reports or InMemoryCertificationReportStore()
     idempotency_locks: dict[str, asyncio.Lock] = {}
     mcp = FastMCP("signal-weave")
@@ -855,6 +859,79 @@ def create_mcp(
             "status": "recorded",
             "correction": correction.model_dump(mode="json"),
             "card": updated.model_dump(mode="json"),
+        }
+
+    @mcp.tool()
+    def record_decision_feedback(
+        idempotency_key: str,
+        kind: str,
+        expected_outcome: str | None = None,
+        expected_delivery_method_keys: list[str] | None = None,
+        note: str = "",
+        ctx: Context | None = None,
+    ) -> dict[str, Any]:
+        """Append an operator label to a completed decision receipt.
+
+        Feedback is caller-owned evaluation data. It never changes a card,
+        thresholds, Jev state, or delivery policy automatically.
+        """
+        principal = request_principal(ctx)
+        key = idempotency_key.strip()
+        if not key:
+            raise ValueError("idempotency_key must not be empty")
+        receipt = decision_receipts.get_by_idempotency_key(key)
+        if receipt is None:
+            raise ValueError("unknown decision receipt for idempotency_key")
+        if receipt.status == ReceiptStatus.PREPARED:
+            raise ValueError("decision is not complete; feedback can be recorded after evaluation")
+        card = get_scoped_card(receipt.card_id, principal)
+        feedback = DecisionFeedback(
+            feedback_id=f"feedback-{uuid4().hex}",
+            receipt_id=receipt.receipt_id,
+            idempotency_key=receipt.idempotency_key,
+            card_id=card.id,
+            card_version=card.version,
+            kind=DecisionFeedbackKind(kind),
+            expected_outcome=Outcome(expected_outcome) if expected_outcome else None,
+            expected_delivery_method_keys=expected_delivery_method_keys or [],
+            note=note.strip(),
+            actor=principal.principal_id if principal else "mcp-client",
+            principal_tenant=principal.tenant_id if principal else None,
+        )
+        decision_feedback.save(feedback)
+        return {
+            "status": "recorded",
+            "feedback": feedback.model_dump(mode="json"),
+            "receipt_id": receipt.receipt_id,
+        }
+
+    @mcp.tool()
+    def list_decision_feedback(
+        card_id: str | None = None,
+        idempotency_key: str | None = None,
+        ctx: Context | None = None,
+    ) -> dict[str, Any]:
+        """Read caller-owned labels for a card or one decision receipt."""
+        principal = request_principal(ctx)
+        if idempotency_key:
+            receipt = decision_receipts.get_by_idempotency_key(idempotency_key.strip())
+            if receipt is None:
+                raise ValueError("unknown decision receipt for idempotency_key")
+            scoped_card = get_scoped_card(receipt.card_id, principal)
+            if card_id and card_id != scoped_card.id:
+                raise ValueError("card_id does not match the decision receipt")
+            card_id = scoped_card.id
+            feedback = decision_feedback.list(idempotency_key=receipt.idempotency_key)
+        elif card_id:
+            scoped_card = get_scoped_card(card_id, principal)
+            feedback = decision_feedback.list(card_id=scoped_card.id)
+        else:
+            if principal is not None:
+                raise ValueError("card_id or idempotency_key is required for a scoped request")
+            feedback = decision_feedback.list()
+        return {
+            "feedback": [item.model_dump(mode="json") for item in feedback],
+            "count": len(feedback),
         }
 
     @mcp.tool()

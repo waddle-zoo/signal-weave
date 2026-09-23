@@ -11,14 +11,17 @@ from .models import PrincipalContext, ResourceDescriptor
 from .sources import SourceAdapter, SourceRegistry
 from .store import (
     CertificationReportStore,
+    DecisionFeedbackStore,
     DecisionReceiptStore,
     InsightCardStore,
     JsonCertificationReportStore,
+    JsonDecisionFeedbackStore,
     JsonDecisionReceiptStore,
     JsonInsightCardStore,
     JsonMetricQueryCardStore,
     MetricQueryCardStore,
     SQLiteCertificationReportStore,
+    SQLiteDecisionFeedbackStore,
     SQLiteDecisionReceiptStore,
     SQLiteInsightCardStore,
     SQLiteMetricQueryCardStore,
@@ -36,6 +39,7 @@ class Runtime:
     engine: InsightEngine
     metric_query_store: MetricQueryCardStore | None = None
     decision_receipts: DecisionReceiptStore | None = None
+    decision_feedback: DecisionFeedbackStore | None = None
     certification_reports: CertificationReportStore | None = None
     principal: PrincipalContext | None = None
 
@@ -114,6 +118,7 @@ def build_runtime(
         store_path = os.getenv("SIGNALWEAVE_STORE_PATH", "data/signalweave.db")
         card_store = SQLiteInsightCardStore(store_path)
         decision_receipts: DecisionReceiptStore = SQLiteDecisionReceiptStore(store_path)
+        decision_feedback: DecisionFeedbackStore = SQLiteDecisionFeedbackStore(store_path)
         certification_reports: CertificationReportStore = SQLiteCertificationReportStore(store_path)
         metric_query_store: MetricQueryCardStore = SQLiteMetricQueryCardStore(store_path)
     elif store_backend == "json":
@@ -122,6 +127,9 @@ def build_runtime(
         )
         decision_receipts = JsonDecisionReceiptStore(
             os.getenv("DECISION_RECEIPT_STORE", "data/decision-receipts.json")
+        )
+        decision_feedback = JsonDecisionFeedbackStore(
+            os.getenv("DECISION_FEEDBACK_STORE", "data/decision-feedback.json")
         )
         certification_reports = JsonCertificationReportStore(
             os.getenv("CERTIFICATION_REPORT_STORE", "data/certification-reports.json")
@@ -137,6 +145,7 @@ def build_runtime(
         engine=InsightEngine(judger=judger, registry=registry),
         metric_query_store=metric_query_store,
         decision_receipts=decision_receipts,
+        decision_feedback=decision_feedback,
         certification_reports=certification_reports,
         principal=(
             PrincipalContext(principal_id=principal_id, tenant_id=tenant_id)

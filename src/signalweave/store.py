@@ -10,6 +10,7 @@ from typing import Protocol
 
 from .models import (
     CertificationRecord,
+    DecisionFeedback,
     DecisionReceipt,
     InsightCard,
     InsightCardStatus,
@@ -44,6 +45,104 @@ class DecisionReceiptStore(Protocol):
     def claim(self, receipt: DecisionReceipt) -> bool: ...
 
     def save(self, receipt: DecisionReceipt) -> None: ...
+
+
+class DecisionFeedbackStore(Protocol):
+    def save(self, feedback: DecisionFeedback) -> None: ...
+
+    def list(
+        self,
+        *,
+        card_id: str | None = None,
+        receipt_id: str | None = None,
+        idempotency_key: str | None = None,
+    ) -> list[DecisionFeedback]: ...
+
+
+class InMemoryDecisionFeedbackStore:
+    """Test and embedded-runtime implementation for append-only feedback."""
+
+    def __init__(self) -> None:
+        self._feedback: dict[str, DecisionFeedback] = {}
+
+    def save(self, feedback: DecisionFeedback) -> None:
+        existing = self._feedback.get(feedback.feedback_id)
+        if existing is not None and existing != feedback:
+            raise ValueError(f"decision feedback already exists: {feedback.feedback_id}")
+        self._feedback[feedback.feedback_id] = feedback
+
+    def list(
+        self,
+        *,
+        card_id: str | None = None,
+        receipt_id: str | None = None,
+        idempotency_key: str | None = None,
+    ) -> list[DecisionFeedback]:
+        return [
+            item
+            for item in self._feedback.values()
+            if (card_id is None or item.card_id == card_id)
+            and (receipt_id is None or item.receipt_id == receipt_id)
+            and (idempotency_key is None or item.idempotency_key == idempotency_key)
+        ]
+
+
+class JsonDecisionFeedbackStore:
+    """Atomic JSON store for local shadow feedback fixtures."""
+
+    def __init__(self, path: str | Path) -> None:
+        self.path = Path(path)
+
+    def save(self, feedback: DecisionFeedback) -> None:
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        records = self._load()
+        payload = feedback.model_dump(mode="json")
+        existing = records.get(feedback.feedback_id)
+        if existing is not None and existing != payload:
+            raise ValueError(f"decision feedback already exists: {feedback.feedback_id}")
+        records[feedback.feedback_id] = payload
+        temporary_path: str | None = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                mode="w",
+                encoding="utf-8",
+                dir=self.path.parent,
+                prefix=f".{self.path.name}.",
+                suffix=".tmp",
+                delete=False,
+            ) as temporary:
+                temporary_path = temporary.name
+                temporary.write(json.dumps(records, indent=2) + "\n")
+                temporary.flush()
+                os.fsync(temporary.fileno())
+            os.replace(temporary_path, self.path)
+        finally:
+            if temporary_path and os.path.exists(temporary_path):
+                os.unlink(temporary_path)
+
+    def list(
+        self,
+        *,
+        card_id: str | None = None,
+        receipt_id: str | None = None,
+        idempotency_key: str | None = None,
+    ) -> list[DecisionFeedback]:
+        items = [DecisionFeedback.model_validate(item) for item in self._load().values()]
+        return [
+            item
+            for item in items
+            if (card_id is None or item.card_id == card_id)
+            and (receipt_id is None or item.receipt_id == receipt_id)
+            and (idempotency_key is None or item.idempotency_key == idempotency_key)
+        ]
+
+    def _load(self) -> dict[str, dict[str, object]]:
+        if not self.path.exists():
+            return {}
+        payload = json.loads(self.path.read_text())
+        if not isinstance(payload, dict):
+            raise ValueError(f"Decision feedback catalog must contain a JSON object: {self.path}")
+        return payload
 
 
 class CertificationReportStore(Protocol):
@@ -476,6 +575,62 @@ class SQLiteDecisionReceiptStore:
                 "ON CONFLICT(idempotency_key) DO UPDATE SET payload = excluded.payload",
                 (receipt.idempotency_key, json.dumps(receipt.model_dump(mode="json"))),
             )
+
+
+class SQLiteDecisionFeedbackStore:
+    """Durable append-only feedback store sharing the runtime SQLite database."""
+
+    def __init__(self, path: str | Path) -> None:
+        self.path = Path(path)
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        with self._connect() as connection:
+            connection.execute(
+                "CREATE TABLE IF NOT EXISTS decision_feedback ("
+                "feedback_id TEXT PRIMARY KEY, payload TEXT NOT NULL"
+                ")"
+            )
+
+    def _connect(self) -> sqlite3.Connection:
+        connection = sqlite3.connect(self.path, timeout=30)
+        connection.execute("PRAGMA busy_timeout = 30000")
+        connection.execute("PRAGMA journal_mode = WAL")
+        connection.execute("PRAGMA synchronous = NORMAL")
+        return connection
+
+    def save(self, feedback: DecisionFeedback) -> None:
+        payload = json.dumps(feedback.model_dump(mode="json"), sort_keys=True)
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT payload FROM decision_feedback WHERE feedback_id = ?",
+                (feedback.feedback_id,),
+            ).fetchone()
+            if row is not None and row[0] != payload:
+                raise ValueError(f"decision feedback already exists: {feedback.feedback_id}")
+            connection.execute(
+                "INSERT INTO decision_feedback (feedback_id, payload) VALUES (?, ?) "
+                "ON CONFLICT(feedback_id) DO UPDATE SET payload = excluded.payload",
+                (feedback.feedback_id, payload),
+            )
+
+    def list(
+        self,
+        *,
+        card_id: str | None = None,
+        receipt_id: str | None = None,
+        idempotency_key: str | None = None,
+    ) -> list[DecisionFeedback]:
+        with self._connect() as connection:
+            rows = connection.execute(
+                "SELECT payload FROM decision_feedback ORDER BY feedback_id"
+            ).fetchall()
+        items = [DecisionFeedback.model_validate(json.loads(row[0])) for row in rows]
+        return [
+            item
+            for item in items
+            if (card_id is None or item.card_id == card_id)
+            and (receipt_id is None or item.receipt_id == receipt_id)
+            and (idempotency_key is None or item.idempotency_key == idempotency_key)
+        ]
 
 
 class SQLiteCertificationReportStore:
