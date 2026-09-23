@@ -539,6 +539,158 @@ def create_mcp(
         }
 
     @mcp.tool()
+    def get_enterprise_readiness(ctx: Context | None = None) -> dict[str, Any]:
+        """Summarize the tenant's bootstrap, card, and certification gates.
+
+        This is an evidence index for a caller-owned UI or agent, not a claim
+        that SignalWeave is enterprise-ready. A clean result means the tenant
+        has the minimum proof to begin a controlled shadow deployment.
+        """
+        principal = request_principal(ctx)
+        tenant_id = principal.tenant_id if principal else "deployment"
+        records = certification_reports.list()
+        if principal is not None:
+            records = [record for record in records if record.tenant_id == tenant_id]
+        cards = [
+            card
+            for card in runtime.card_store.list_cards()
+            if principal is None or card.principal_tenant == tenant_id
+        ]
+
+        def latest(*, kind: str, subject_id: str | None = None) -> CertificationRecord | None:
+            matching = [
+                record
+                for record in records
+                if record.kind == kind
+                and (subject_id is None or record.subject_id == subject_id)
+            ]
+            return max(matching, key=lambda record: record.created_at) if matching else None
+
+        gates: list[dict[str, str]] = []
+        bootstrap = latest(kind="bootstrap", subject_id=tenant_id)
+        if bootstrap is None:
+            gates.append(
+                {
+                    "code": "bootstrap-certification-missing",
+                    "severity": "blocked",
+                    "message": "No source-boundary bootstrap report exists for this tenant.",
+                }
+            )
+        elif bootstrap.status != "approved" and bootstrap.report.get("status") != "ready":
+            gates.append(
+                {
+                    "code": "bootstrap-needs-review",
+                    "severity": "blocked" if bootstrap.status == "blocked" else "review",
+                    "message": f"Bootstrap report is {bootstrap.status}; resolve its warnings or blockers.",
+                }
+            )
+
+        if not cards:
+            gates.append(
+                {
+                    "code": "no-cards",
+                    "severity": "review",
+                    "message": "Create and review at least one insight card before shadow deployment.",
+                }
+            )
+
+        card_summaries: list[dict[str, Any]] = []
+        for card in sorted(cards, key=lambda item: item.id):
+            review_status = (
+                card.onboarding_review.readiness_status
+                if card.onboarding_review is not None
+                else "missing"
+            )
+            workflow = latest(kind="card_workflow", subject_id=card.id)
+            summary = {
+                "card_id": card.id,
+                "version": card.version,
+                "status": card.status.value,
+                "onboarding_status": review_status,
+                "workflow_certification": (
+                    {
+                        "report_id": workflow.report_id,
+                        "status": workflow.status,
+                        "created_at": workflow.created_at.isoformat(),
+                    }
+                    if workflow
+                    else None
+                ),
+            }
+            card_summaries.append(summary)
+            if review_status == "blocked":
+                gates.append(
+                    {
+                        "code": "card-onboarding-blocked",
+                        "severity": "blocked",
+                        "message": f"Card {card.id} has blocking onboarding conditions.",
+                    }
+                )
+            elif card.status != InsightCardStatus.APPROVED or review_status != "ready_for_approval":
+                gates.append(
+                    {
+                        "code": "card-needs-approval",
+                        "severity": "review",
+                        "message": f"Card {card.id} is not approved for shadow evaluation.",
+                    }
+                )
+            if workflow is None:
+                gates.append(
+                    {
+                        "code": "workflow-certification-missing",
+                        "severity": "review",
+                        "message": f"Card {card.id} has no owner-labeled workflow certification.",
+                    }
+                )
+            elif workflow.status != "approved":
+                gates.append(
+                    {
+                        "code": "workflow-certification-needs-review",
+                        "severity": "review",
+                        "message": f"Card {card.id} workflow certification is {workflow.status}.",
+                    }
+                )
+
+        retrieval = latest(kind="retrieval_quality", subject_id="retrieval-catalog")
+        if retrieval is None:
+            gates.append(
+                {
+                    "code": "retrieval-certification-missing",
+                    "severity": "review",
+                    "message": "No tenant retrieval-quality certification exists.",
+                }
+            )
+        elif retrieval.status != "approved":
+            gates.append(
+                {
+                    "code": "retrieval-certification-needs-review",
+                    "severity": "review",
+                    "message": f"Retrieval certification is {retrieval.status}.",
+                }
+            )
+
+        status = (
+            "blocked"
+            if any(gate["severity"] == "blocked" for gate in gates)
+            else "needs_review"
+            if gates
+            else "ready_for_shadow"
+        )
+        return {
+            "tenant_id": tenant_id,
+            "status": status,
+            "context_provider": {
+                "configured": runtime.context_provider is not None
+                or runtime.engine.context_provider is not None,
+            },
+            "source_adapters": runtime.sources.adapter_names(),
+            "bootstrap": bootstrap.model_dump(mode="json") if bootstrap else None,
+            "cards": card_summaries,
+            "retrieval_certification": retrieval.model_dump(mode="json") if retrieval else None,
+            "gates": gates,
+        }
+
+    @mcp.tool()
     async def propose_insight_card(
         what_to_watch: str,
         why_watch: str,

@@ -286,6 +286,12 @@ async def test_mcp_can_use_trusted_request_principal_for_shared_catalog(tmp_path
             ctx=SimpleNamespace(principal_id="b-user", tenant_id="tenant-b"),
         )
 
+    readiness = tool(server, "get_enterprise_readiness")(
+        ctx=SimpleNamespace(principal_id="b-user", tenant_id="tenant-b")
+    )
+    assert readiness["tenant_id"] == "tenant-b"
+    assert readiness["cards"] == []
+
 
 @pytest.mark.asyncio
 async def test_generic_card_flow_discovers_proposes_previews_and_requires_approval(
@@ -810,6 +816,21 @@ async def test_decision_feedback_is_scoped_and_survives_restart(tmp_path):
         )
 
 
+def test_enterprise_readiness_reports_open_gates(tmp_path):
+    server = make_server(tmp_path)
+
+    report = tool(server, "get_enterprise_readiness")()
+
+    assert report["status"] == "blocked"
+    assert report["tenant_id"] == "default"
+    assert report["context_provider"]["configured"] is False
+    assert {gate["code"] for gate in report["gates"]} >= {
+        "bootstrap-certification-missing",
+        "no-cards",
+        "retrieval-certification-missing",
+    }
+
+
 @pytest.mark.asyncio
 async def test_runtime_context_provider_expands_bundle_and_is_receipt_visible(tmp_path):
     server = make_server(
@@ -869,6 +890,7 @@ def test_mcp_exposes_generic_authoring_tools(tmp_path):
         "record_insight_card_correction",
         "record_decision_feedback",
         "list_decision_feedback",
+        "get_enterprise_readiness",
         "propose_insight_card",
         "draft_insight_card",
         "simulate_insight_card",

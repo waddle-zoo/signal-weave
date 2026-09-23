@@ -106,10 +106,11 @@ card and per source domain.
       affected cards rather than silently weakening retrieval.
 - [ ] Add per-card query, payload, latency, concurrency, and Jev-cost budgets
       with visible truncation and fail-closed behavior.
-- [ ] Add a company-level readiness report showing which domains, sources, and
-      cards are certified, weakly covered, stale, or still relying on lexical
-      fallback. The synthetic generalized trial now provides the initial report
-      shape; production aggregation remains open.
+- [x] Add a company-level readiness report showing which domains, sources, and
+-      cards are certified, weakly covered, stale, or still relying on lexical
+      fallback. The MCP `get_enterprise_readiness` index now aggregates the
+      bootstrap, card, retrieval, and context-provider gates; domain-specific
+      freshness and drift aggregation remain open.
 
 ## Next: prove the narrow wedge
 

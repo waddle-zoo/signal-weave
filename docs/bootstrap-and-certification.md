@@ -46,6 +46,12 @@ manifest tenant and can be inspected through the adapter boundary.
 Bootstrap does not prove that a card is semantically correct. It proves that
 the deployment can provide the bounded, authorized inputs needed to test one.
 
+For a tenant-level view across the bootstrap report, stored cards, workflow
+certifications, retrieval certification, installed adapters, and configured
+company context provider, call `get_enterprise_readiness`. It returns explicit
+open gates and only reports `ready_for_shadow` when the minimum evidence exists;
+it never means production delivery is safe by itself.
+
 ## 2. Certify a card/workflow
 
 Use `CardWorkflowEvaluator` directly or the MCP tool `evaluate_card_workflow`.
