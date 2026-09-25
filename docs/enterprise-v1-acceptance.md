@@ -26,7 +26,7 @@ returns an inspectable evidence bundle and receipt.
 | Gate | Evidence | Result |
 | --- | --- | --- |
 | Jev is the production decision path | Runtime rejects non-Jev mode; no local heuristic fallback exists. | Pass |
-| Request identity reaches every sensitive operation | OIDC JWT verifier plus MCP-native bearer middleware; tenant/principal are derived from verified claims, never tool arguments. | Pass locally; external IdP replay remains a deployment gate |
+| Request identity reaches every sensitive operation | OIDC JWT verifier plus MCP-native bearer middleware; tenant/principal are derived from verified claims, never tool arguments. Metric-query cards and workflow replay snapshots are tenant-scoped too; OIDC webhook requests use the verified bearer principal. | Pass locally; external IdP replay remains a deployment gate |
 | Invalid or incomplete identity fails closed | Wrong signature/issuer/audience, expired tokens, malformed JWTs, missing tenant claims, and unauthorized MCP requests are tested. | Pass |
 | Health checks do not expose MCP | `/healthz` is public; `/mcp` requires a valid bearer token in native MCP auth mode. | Pass |
 | Onboarding is usable without SignalWeave owning a UI | `onboard_insight_card` is one call from free-form intent to persisted draft plus Jev plan, candidates, blockers, questions, and next action. | Pass |
@@ -35,7 +35,7 @@ returns an inspectable evidence bundle and receipt.
 | Authorized retrieval works across messy shapes | 30 onboarding scenarios across BI, metric, notebook, workflow, quality, ownership, stale, revoked, paginated, and no-match cases. | 30/30 safe; 1.00 required-candidate recall; 0 leaks |
 | Jev result provenance is inspectable | Discovery receipts, source candidates, roles, probabilities, plan evaluator, context version, and decision receipts are persisted or returned. | Pass |
 | Existing enterprise workflows remain the owner | MCP tools return typed decisions and evidence; SignalWeave does not execute arbitrary SQL, tools, DAGs, or notifications. | Pass |
-| Regression safety | Full repository tests and lint. | 191 passed, 1 skipped; Ruff clean |
+| Regression safety | Full repository tests and lint. | 196 passed, 1 skipped; Ruff clean |
 
 ## Reproduction
 
@@ -90,6 +90,8 @@ issuer, audience, expiry, and subject. The MCP request principal then requires
 the configured tenant claim. Signing-key rotation is handled by bounded JWKS
 caching and refresh. TLS, secret injection, the identity provider, source
 credentials, and external audit retention remain deployment responsibilities.
+The push webhook uses the same verified principal and required scopes in OIDC
+mode; a static `PUSH_WEBHOOK_TOKEN` is only the single-tenant sidecar mode.
 
 ## What this proves — and what it does not
 

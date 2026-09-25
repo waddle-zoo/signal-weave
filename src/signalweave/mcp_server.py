@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import hmac
 import json
 import os
 import re
@@ -1367,7 +1368,9 @@ def create_mcp(
                 return JSONResponse(
                     {"error": "push webhook authentication is not configured"}, status_code=503
                 )
-            if request.headers.get("authorization") != f"Bearer {expected_token}":
+            if not hmac.compare_digest(
+                request.headers.get("authorization", ""), f"Bearer {expected_token}"
+            ):
                 return JSONResponse({"error": "unauthorized"}, status_code=401)
         try:
             max_body_bytes = int(os.getenv("SIGNALWEAVE_MAX_HTTP_BODY_BYTES", "1048576"))

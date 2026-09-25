@@ -76,7 +76,7 @@ collapsed into one headline number.
 
 | Evidence | Result | What it supports | Important limitation |
 | --- | ---: | --- | --- |
-| Full regression suite | **191 passed, 1 skipped** | The current contracts, adapters, auth boundary, onboarding packet, gates, receipts, and evaluation harness remain internally consistent. | Unit tests are not production evidence. |
+| Full regression suite | **196 passed, 1 skipped** | The current contracts, adapters, auth boundary, onboarding packet, gates, receipts, and evaluation harness remain internally consistent. | Unit tests are not production evidence. |
 | Live Jev enterprise matrix | **130/144 exact outcomes**, 0 unsafe automatic actions, complete workflow/card/provenance/source-selection contracts | Jev can apply explicit card rules across 3 synthetic companies, 22 personas, and 1,664 heterogeneous resources. | The runner supplied hidden source refs, so this is not a discovery benchmark. The 14 misses were conservative `notify -> investigate` routes. |
 | Live Jev large-scale matrix | **144/144 exact**, 0 wrong actions, 288 requests, median 856 ms, p95 1,111 ms | Stable execution across 72 generated cases, 12 domains, and six decision classes. | Historical pre-refactor baseline; synthetic labels and repeated fixture structure. |
 | Northstar corporation Jev run | **48/48 exact**, 0 unsafe actions, 48/48 provenance-complete, 36/48 fully automatable | A multi-role, multi-domain organization-shaped workflow can run through the same MCP path. | 40 role agents, cards, labels, and handoffs are simulated; delivery was disabled. |
