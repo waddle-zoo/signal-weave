@@ -80,7 +80,9 @@ class OIDCSettings:
 
     @classmethod
     def from_env(cls) -> OIDCSettings:
-        issuer = os.getenv("SIGNALWEAVE_OIDC_ISSUER_URL", "").strip().rstrip("/")
+        # Preserve the issuer exactly for JWT validation. OIDC issuers may
+        # legitimately end in '/', while discovery URLs need a normalized join.
+        issuer = os.getenv("SIGNALWEAVE_OIDC_ISSUER_URL", "").strip()
         audience = os.getenv("SIGNALWEAVE_OIDC_AUDIENCE", "").strip()
         if not issuer or not audience:
             raise RuntimeError(
@@ -158,7 +160,7 @@ class OIDCJWTVerifier:
                 return self._keys
             if not self._jwks_uri:
                 response = await self._http.get(
-                    f"{self.settings.issuer_url}/.well-known/openid-configuration"
+                    f"{self.settings.issuer_url.rstrip('/')}/.well-known/openid-configuration"
                 )
                 response.raise_for_status()
                 metadata = response.json()
@@ -257,11 +259,18 @@ def principal_from_access_token(
     *,
     tenant_claim: str = "tenant_id",
     authorization_source: str = "oidc",
+    required_scopes: Iterable[str] = (),
 ) -> PrincipalContext:
     """Convert a verified MCP token into the tenant-scoped SignalWeave principal."""
 
     if access_token is None:
         raise RuntimeError("the MCP request has no authenticated access token")
+    missing_scopes = set(required_scopes) - set(access_token.scopes)
+    if missing_scopes:
+        raise RuntimeError(
+            "authenticated token is missing required scopes: "
+            + ", ".join(sorted(missing_scopes))
+        )
     claims = access_token.claims or {}
     tenant = _claim(claims, tenant_claim)
     if not isinstance(tenant, str) or not tenant.strip():

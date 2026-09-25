@@ -253,6 +253,8 @@ class MetricQueryCard(BaseModel):
     version: int = Field(default=1, ge=1)
     approved_by: str | None = Field(default=None, max_length=240)
     approved_at: datetime | None = None
+    principal_id: str | None = Field(default=None, max_length=240)
+    principal_tenant: str | None = Field(default=None, max_length=160)
 
     @model_validator(mode="after")
     def validate_query_card(self) -> MetricQueryCard:

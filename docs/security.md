@@ -26,9 +26,11 @@ deployment must establish a data policy before using company data.
   closed. JWKS responses are cached and refreshed when a signing key rotates.
   The deployment may set `SIGNALWEAVE_OIDC_REQUIRED_SCOPES` for MCP-level
   authorization. `SIGNALWEAVE_ALLOW_INSECURE_OIDC=1` is local-test-only.
-- Set `PUSH_WEBHOOK_TOKEN` for the webhook bearer check. The webhook fails closed
-  with `503` when it is not configured and uses only the authenticated
-  `X-SignalWeave-Actor` header for actor attribution.
+- In a static-token sidecar, set `PUSH_WEBHOOK_TOKEN` for the webhook bearer
+  check. The webhook fails closed with `503` when it is not configured or when
+  the sidecar principal is absent. In OIDC mode, the webhook uses the verified
+  OIDC bearer token instead of a shared webhook token and derives the tenant
+  from that token; `X-SignalWeave-Actor` is only an attribution label.
 - Source adapters own authentication and execution. The Superset adapter executes saved chart definitions only; it does not accept arbitrary SQL from an MCP caller. The same boundary applies to every connector: SignalWeave does not turn a BI, notebook, query, or workflow API into an unrestricted tool surface.
 - Source-specific row and series limits are bounded, catalog pagination is capped, and source fetches have timeouts.
 - A required source timeout, missing resource, stale contract, or partial result

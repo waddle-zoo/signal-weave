@@ -17,6 +17,7 @@ from signalweave.auth import (
     OIDCSettings,
     principal_from_access_token,
 )
+from signalweave.cli import _is_loopback_host
 
 
 async def ok(request):
@@ -27,6 +28,14 @@ def make_app():
     app = Starlette(routes=[Route("/healthz", ok), Route("/private", ok)])
     app.add_middleware(BearerTokenMiddleware, token="local-test-token")
     return app
+
+
+def test_insecure_http_is_only_allowed_on_loopback_hosts():
+    assert _is_loopback_host("127.0.0.1") is True
+    assert _is_loopback_host("::1") is True
+    assert _is_loopback_host("localhost") is True
+    assert _is_loopback_host("0.0.0.0") is False
+    assert _is_loopback_host("10.0.0.4") is False
 
 
 @pytest.mark.asyncio
@@ -95,6 +104,8 @@ async def test_oidc_verifier_validates_signature_issuer_audience_and_refreshes_j
         assert principal.principal_id == "user-123"
         assert principal.tenant_id == "tenant-a"
         assert principal.authorization_source == "oidc"
+        with pytest.raises(RuntimeError, match="missing required scopes"):
+            principal_from_access_token(access_token, required_scopes=["admin"])
         assert await verifier.verify_token(token(aud="other-service")) is None
         assert await verifier.verify_token(token(iss="https://other-issuer.example.test")) is None
         assert await verifier.verify_token(token(exp=int(time.time()) - 1)) is None
@@ -158,3 +169,19 @@ def test_oidc_settings_require_tls_and_explicit_identity_configuration(monkeypat
     monkeypatch.setenv("SIGNALWEAVE_ALLOW_INSECURE_OIDC", "1")
     settings = OIDCSettings.from_env()
     assert settings.issuer_url == "http://issuer.example.test"
+
+
+@pytest.mark.asyncio
+async def test_oidc_verifier_preserves_a_trailing_slash_issuer():
+    client, verifier, token = oidc_fixture()
+    verifier.settings = OIDCSettings(
+        issuer_url="https://issuer.example.test/",
+        audience="signalweave",
+        tenant_claim="tenant_id",
+        jwks_ttl_seconds=300,
+    )
+    try:
+        access_token = await verifier.verify_token(token(iss="https://issuer.example.test/"))
+        assert access_token is not None
+    finally:
+        await client.aclose()

@@ -615,6 +615,91 @@ async def test_webhook_fails_closed_and_rejects_oversized_or_invalid_payloads(
 
 
 @pytest.mark.asyncio
+async def test_oidc_style_webhook_resolver_scopes_card_evaluation_without_shared_secret(tmp_path):
+    registry = SourceRegistry([SupersetCatalogDouble()], authorized_tenants=["default"])
+    runtime = Runtime(
+        card_store=JsonInsightCardStore(tmp_path / "cards.json"),
+        sources=registry,
+        engine=InsightEngine(OnboardingJevDouble(), registry=registry),
+    )
+    runtime.card_store.save_card(
+        InsightCard(
+            id="tenant-a-webhook-card",
+            title="Tenant A",
+            what_to_watch="Tenant A metric",
+            why_watch="Keep tenant A isolated",
+            status=InsightCardStatus.APPROVED,
+            principal_id="a-user",
+            principal_tenant="tenant-a",
+        )
+    )
+    server = create_mcp(
+        runtime,
+        http_principal_resolver=lambda: PrincipalContext(
+            principal_id="b-user", tenant_id="tenant-b", authorization_source="oidc:test"
+        ),
+    )
+    app = server.streamable_http_app()
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        response = await client.post(
+            "/webhooks/evaluate",
+            json={"card_id": "tenant-a-webhook-card", "idempotency_key": "cross-tenant"},
+        )
+    assert response.status_code == 404
+    assert "outside the authenticated principal tenant" in response.json()["error"]
+
+
+@pytest.mark.asyncio
+async def test_scoped_workflow_evaluation_rejects_foreign_snapshot_contract(tmp_path):
+    server = make_server(tmp_path)
+    card = InsightCard(
+        id="scoped-eval-card",
+        title="Scoped evaluation",
+        what_to_watch="A tenant-owned metric",
+        why_watch="Keep the evaluation dataset isolated.",
+        sources=[
+            {
+                "key": "source-1",
+                "adapter": "superset",
+                "resource": "dashboard:7",
+                "label": "Growth overview",
+            }
+        ],
+        principal_id="test-principal",
+        principal_tenant="default",
+    )
+    # The MCP factory owns the store closure; create the card through its
+    # public draft tool so this test exercises the same production path.
+    draft = await tool(server, "draft_insight_card")(
+        title=card.title,
+        what_to_watch=card.what_to_watch,
+        why_watch=card.why_watch,
+        sources=[source.model_dump(mode="json") for source in card.sources],
+    )
+    with pytest.raises(ValueError, match="outside the authenticated principal tenant"):
+        await tool(server, "evaluate_card_workflow")(
+            draft["card"]["id"],
+            cases=[
+                {
+                    "id": "foreign-snapshot",
+                    "resources": [
+                        {
+                            "source_key": "source-1",
+                            "adapter": "superset",
+                            "resource": "dashboard:7",
+                            "title": "Foreign dashboard",
+                            "contract": {"tenant_id": "other-tenant", "authorized": True},
+                        }
+                    ],
+                    "expected_outcome": "investigate",
+                }
+            ],
+        )
+
+
+@pytest.mark.asyncio
 async def test_proposal_rejects_source_not_returned_by_discovery(tmp_path):
     server = make_server(tmp_path)
 

@@ -1,9 +1,19 @@
 from __future__ import annotations
 
 import argparse
+import ipaddress
 import os
 
 from .runtime import build_runtime
+
+
+def _is_loopback_host(host: str) -> bool:
+    if host.strip().lower() == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
 
 
 def main() -> None:
@@ -60,6 +70,12 @@ def main() -> None:
                 tenant_claim=oidc.tenant_claim,
                 authorization_source=f"oidc:{oidc.issuer_url}",
             ),
+            http_principal_resolver=lambda: principal_from_access_token(
+                get_access_token(),
+                tenant_claim=oidc.tenant_claim,
+                authorization_source=f"oidc:{oidc.issuer_url}",
+                required_scopes=required_scopes,
+            ),
             auth_settings=auth_settings,
             token_verifier=verifier,
         )
@@ -79,6 +95,10 @@ def main() -> None:
             raise RuntimeError(
                 "streamable HTTP requires SIGNALWEAVE_API_TOKEN; set "
                 "SIGNALWEAVE_ALLOW_INSECURE_HTTP=1 only for an isolated local test"
+            )
+        if not api_token and not _is_loopback_host(args.host):
+            raise RuntimeError(
+                "SIGNALWEAVE_ALLOW_INSECURE_HTTP=1 is only permitted on a loopback host"
             )
         if api_token:
             app.add_middleware(BearerTokenMiddleware, token=api_token)

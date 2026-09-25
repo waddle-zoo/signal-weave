@@ -82,6 +82,7 @@ def create_mcp(
     runtime: Runtime | None = None,
     *,
     principal_resolver: Callable[[Context], PrincipalContext] | None = None,
+    http_principal_resolver: Callable[[], PrincipalContext] | None = None,
     auth_settings: Any | None = None,
     token_verifier: Any | None = None,
 ) -> FastMCP:
@@ -128,6 +129,42 @@ def create_mcp(
         card = runtime.card_store.get_card(card_id)
         assert_card_scope(card, principal)
         return card
+
+    def assert_metric_card_scope(
+        card: MetricQueryCard, principal: PrincipalContext | None
+    ) -> None:
+        if principal is None:
+            return
+        if card.principal_tenant != principal.tenant_id:
+            raise ValueError(
+                "metric query card is outside the authenticated principal tenant; "
+                "rediscover or create it under the current principal"
+            )
+
+    def get_scoped_metric_card(
+        card_id: str, principal: PrincipalContext | None
+    ) -> MetricQueryCard:
+        card = metric_query_store.get_card(card_id)
+        assert_metric_card_scope(card, principal)
+        return card
+
+    def assert_evaluation_case_scope(
+        cases: list[CardEvaluationCase], principal: PrincipalContext | None
+    ) -> None:
+        if principal is None:
+            return
+        for case in cases:
+            foreign = [
+                f"{resource.adapter}|{resource.resource}"
+                for resource in case.resources
+                if resource.contract.tenant_id != principal.tenant_id
+                or not resource.contract.authorized
+            ]
+            if foreign:
+                raise ValueError(
+                    "evaluation case contains resources outside the authenticated principal "
+                    f"tenant: {', '.join(sorted(foreign))}"
+                )
 
     async def context_for_card(
         card: InsightCard,
@@ -331,12 +368,17 @@ def create_mcp(
                 principal=principal,
             )
 
-    async def selected_query_sources(selected_sources: list[dict[str, Any]]) -> list[SourceRef]:
+    async def selected_query_sources(
+        selected_sources: list[dict[str, Any]],
+        principal: PrincipalContext | None,
+    ) -> list[SourceRef]:
         if not selected_sources:
             raise ValueError("metric query cards require at least one selected source")
         catalog = {
             f"{resource.adapter}|{resource.resource}": resource
-            for resource in await runtime.sources.list_resources()
+            for resource in await runtime.sources.list_resources(
+                authorized_tenants=[principal.tenant_id] if principal else None
+            )
         }
         refs: list[SourceRef] = []
         for index, item in enumerate(selected_sources):
@@ -459,6 +501,7 @@ def create_mcp(
         parsed_cases = [
             CardEvaluationCase.model_validate({**case, "card": card}) for case in cases
         ]
+        assert_evaluation_case_scope(parsed_cases, principal)
         report = await CardWorkflowEvaluator(
             runtime.engine, max_concurrency=max_concurrency
         ).evaluate(
@@ -910,6 +953,7 @@ def create_mcp(
         requested_time_grain: str | None = None,
         title: str | None = None,
         card_id: str | None = None,
+        ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Create a draft plain-language metric card over approved definitions.
 
@@ -919,7 +963,8 @@ def create_mcp(
         """
         if not question.strip() or not why.strip():
             raise ValueError("question and why are required")
-        source_refs = await selected_query_sources(selected_sources)
+        principal = request_principal(ctx)
+        source_refs = await selected_query_sources(selected_sources, principal)
         selector = getattr(runtime.engine.judger, "select_metric_plan", None)
         if not callable(selector):
             raise RuntimeError("the configured Jev judger does not support metric planning")
@@ -941,6 +986,8 @@ def create_mcp(
             requested_dimensions=requested_dimensions or [],
             requested_time_grain=requested_time_grain,
             query_plan=plan,
+            principal_id=principal.principal_id if principal else None,
+            principal_tenant=principal.tenant_id if principal else None,
         )
         metric_query_store.save_card(card)
         return {"card": card.model_dump(mode="json"), "status": card.status.value}
@@ -950,9 +997,10 @@ def create_mcp(
         card_id: str,
         window_start: str,
         window_end: str,
+        ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Compile a stored metric card into deterministic, bounded SQL."""
-        card = metric_query_store.get_card(card_id)
+        card = get_scoped_metric_card(card_id, request_principal(ctx))
         if card.query_plan is None:
             raise ValueError("metric query card has no approved metric plan")
         compiled = compile_query(card.query_plan, QueryWindow(window_start, window_end))
@@ -963,33 +1011,45 @@ def create_mcp(
         }
 
     @mcp.tool()
-    def approve_metric_query_card(card_id: str, actor: str = "mcp-client") -> dict[str, Any]:
+    def approve_metric_query_card(
+        card_id: str, actor: str = "mcp-client", ctx: Context | None = None
+    ) -> dict[str, Any]:
         """Approve a metric card for a caller-owned Trino or SQL executor."""
-        card = metric_query_store.get_card(card_id)
+        principal = request_principal(ctx)
+        card = get_scoped_metric_card(card_id, principal)
         if card.query_plan is None:
             raise ValueError("metric query card needs a resolved metric plan before approval")
         approved = metric_query_store.set_card_status(card_id, QueryCardStatus.APPROVED)
         approved = approved.model_copy(
-            update={"approved_by": actor, "approved_at": datetime.now(timezone.utc)}
+            update={
+                "approved_by": principal.principal_id if principal else actor,
+                "approved_at": datetime.now(timezone.utc),
+            }
         )
         metric_query_store.save_card(approved)
         return {"status": approved.status.value, "card": approved.model_dump(mode="json")}
 
     @mcp.tool()
-    def list_metric_query_cards(status: str | None = None) -> dict[str, Any]:
+    def list_metric_query_cards(
+        status: str | None = None, ctx: Context | None = None
+    ) -> dict[str, Any]:
         """List stored metric query cards for a UI or agent."""
+        principal = request_principal(ctx)
         selected_status = QueryCardStatus(status) if status else None
         cards = [
             card
             for card in metric_query_store.list_cards()
+            if principal is None or card.principal_tenant == principal.tenant_id
             if selected_status is None or card.status == selected_status
         ]
         return {"cards": [card.model_dump(mode="json") for card in cards], "count": len(cards)}
 
     @mcp.tool()
-    def get_metric_query_card(card_id: str) -> dict[str, Any]:
+    def get_metric_query_card(
+        card_id: str, ctx: Context | None = None
+    ) -> dict[str, Any]:
         """Return one stored metric query card."""
-        return metric_query_store.get_card(card_id).model_dump(mode="json")
+        return get_scoped_metric_card(card_id, request_principal(ctx)).model_dump(mode="json")
 
     @mcp.tool()
     async def evaluate_insight_card(
@@ -1301,13 +1361,14 @@ def create_mcp(
     @mcp.custom_route("/webhooks/evaluate", methods=["POST"])
     async def evaluate_webhook(request: Request) -> JSONResponse:
         """Push-triggered card evaluation endpoint for schedulers and source alerts."""
-        expected_token = os.getenv("PUSH_WEBHOOK_TOKEN")
-        if not expected_token:
-            return JSONResponse(
-                {"error": "push webhook authentication is not configured"}, status_code=503
-            )
-        if request.headers.get("authorization") != f"Bearer {expected_token}":
-            return JSONResponse({"error": "unauthorized"}, status_code=401)
+        if http_principal_resolver is None:
+            expected_token = os.getenv("PUSH_WEBHOOK_TOKEN")
+            if not expected_token:
+                return JSONResponse(
+                    {"error": "push webhook authentication is not configured"}, status_code=503
+                )
+            if request.headers.get("authorization") != f"Bearer {expected_token}":
+                return JSONResponse({"error": "unauthorized"}, status_code=401)
         try:
             max_body_bytes = int(os.getenv("SIGNALWEAVE_MAX_HTTP_BODY_BYTES", "1048576"))
         except ValueError:
@@ -1337,6 +1398,16 @@ def create_mcp(
             return JSONResponse(
                 {"error": "idempotency_key is required for push evaluation"}, status_code=400
             )
+        try:
+            principal = (
+                http_principal_resolver() if http_principal_resolver else runtime.principal
+            )
+        except RuntimeError:
+            return JSONResponse({"error": "unauthorized"}, status_code=401)
+        if principal is None:
+            return JSONResponse(
+                {"error": "push webhook principal is not configured"}, status_code=503
+            )
         actor = str(request.headers.get("X-SignalWeave-Actor") or "webhook")
         try:
             context = (
@@ -1351,6 +1422,7 @@ def create_mcp(
                 idempotency_key=str(idempotency_key),
                 actor=actor,
                 context=context,
+                principal=principal,
             )
         except (KeyError, ValueError) as error:
             message = str(error)
