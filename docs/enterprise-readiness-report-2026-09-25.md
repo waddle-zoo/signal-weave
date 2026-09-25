@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-25
 **Branch reviewed:** `feat/decision-feedback-contract`
-**Current verdict:** technical alpha; credible shadow-mode product; not yet a production enterprise platform.
+**Current verdict:** controlled enterprise-pilot candidate; not yet a broad autonomous production platform.
 
 ## Executive readout
 
@@ -76,7 +76,7 @@ collapsed into one headline number.
 
 | Evidence | Result | What it supports | Important limitation |
 | --- | ---: | --- | --- |
-| Full regression suite | **185 passed, 1 skipped** | The current contracts, adapters, gates, receipts, and evaluation harness remain internally consistent. | Unit tests are not production evidence. |
+| Full regression suite | **191 passed, 1 skipped** | The current contracts, adapters, auth boundary, onboarding packet, gates, receipts, and evaluation harness remain internally consistent. | Unit tests are not production evidence. |
 | Live Jev enterprise matrix | **130/144 exact outcomes**, 0 unsafe automatic actions, complete workflow/card/provenance/source-selection contracts | Jev can apply explicit card rules across 3 synthetic companies, 22 personas, and 1,664 heterogeneous resources. | The runner supplied hidden source refs, so this is not a discovery benchmark. The 14 misses were conservative `notify -> investigate` routes. |
 | Live Jev large-scale matrix | **144/144 exact**, 0 wrong actions, 288 requests, median 856 ms, p95 1,111 ms | Stable execution across 72 generated cases, 12 domains, and six decision classes. | Historical pre-refactor baseline; synthetic labels and repeated fixture structure. |
 | Northstar corporation Jev run | **48/48 exact**, 0 unsafe actions, 48/48 provenance-complete, 36/48 fully automatable | A multi-role, multi-domain organization-shaped workflow can run through the same MCP path. | 40 role agents, cards, labels, and handoffs are simulated; delivery was disabled. |
@@ -204,9 +204,9 @@ vendor certification or a guarantee for arbitrary deployments.
 | Jev-backed typed judgment | **Strong alpha** | Live runs show fast, structured decisions over explicit card state, with probabilities, provenance, and conservative fallback. |
 | Cross-source evidence composition | **Strong alpha** | Superset, SQL, Airflow, table, and synthetic Looker/Hex-shaped resources are exercised. |
 | Bounded retrieval and related expansion | **Promising, not production-proven** | 48-task live discovery and 100k-resource virtual omission proof passed, but connector indexes and graph completeness are synthetic. |
-| Card onboarding | **Safe prototype** | Free-form cards, explicit anchors, review questions, bounded candidate review, and stale-certification gates exist. No first-class user UI or real operator onboarding study exists. |
+| Card onboarding | **Controlled-pilot ready** | Free-form cards, one-call onboarding, explicit anchors, review questions, bounded candidate review, and stale-certification gates exist. No first-class user UI or real operator onboarding study exists. |
 | Workflow certification | **Good local contract** | Owner labels remain outside Jev; card version, context version, and receipts are recorded. Real labels and time-split replay are missing. |
-| Tenant and source authorization | **Local proof only** | Principal propagation, tenant filtering, and fail-closed source resolution are tested. OIDC, gateway enforcement, and real connector credentials are not. |
+| Tenant and source authorization | **OIDC contract implemented; staging proof pending** | Signed JWT validation, request-scoped principal propagation, tenant filtering, and fail-closed source resolution are tested. A customer IdP, gateway, and real connector credentials still need replay. |
 | Data freshness and source failure | **Strong local safety** | Stale, unavailable, empty, oversized, or unauthorized evidence does not become an `ignore` or unsupported action. |
 | Persistence and idempotency | **Single-deployment alpha** | SQLite restart and idempotency tests pass. Shared multi-replica transactional storage and delivery claims are not delivered. |
 | Delivery and operations | **Not production-proven** | Delivery is caller-owned and disabled in trials. Retries, dead letters, recipient authorization, and sink reliability need a real integration. |
@@ -218,12 +218,13 @@ vendor certification or a guarantee for arbitrary deployments.
 
 ### P0 — real identity and connector boundary
 
-The repository has the right abstract boundary, but the customer must still
-provide a trusted identity path. A real deployment needs request-scoped user or
-service-agent identity, OIDC/OAuth or an approved gateway, adapter-enforced
-authorization, and tests with colliding resource names across tenants. MCP's
-current ecosystem is actively hardening enterprise authorization, which
-reinforces that this is not a detail to defer. [MCP 2026 authorization changes](https://blog.modelcontextprotocol.io/posts/2026-07-28/)
+The repository now includes a signed OIDC JWT resource-server path with explicit
+tenant and subject claims, scope enforcement through MCP's native middleware,
+JWKS caching, and fail-closed principal derivation. A real deployment must still
+provide the issuer or approved gateway, adapter-enforced authorization, and a
+staging replay with colliding resource names across tenants. MCP's current
+ecosystem is actively hardening enterprise authorization, which reinforces that
+this is not a detail to defer. [MCP 2026 authorization changes](https://blog.modelcontextprotocol.io/posts/2026-07-28/)
 
 SignalWeave should define and test the contract, not become an identity provider.
 

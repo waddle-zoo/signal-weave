@@ -17,6 +17,15 @@ deployment must establish a data policy before using company data.
   `/healthz` remains public for liveness. The CLI refuses unauthenticated
   streamable HTTP unless `SIGNALWEAVE_ALLOW_INSECURE_HTTP=1` is explicitly set
   for an isolated test.
+- For a shared deployment, set `SIGNALWEAVE_AUTH_MODE=oidc` and configure
+  `SIGNALWEAVE_OIDC_ISSUER_URL`, `SIGNALWEAVE_OIDC_AUDIENCE`, and an explicit
+  `SIGNALWEAVE_OIDC_TENANT_CLAIM` (default `tenant_id`). SignalWeave validates
+  signed asymmetric JWTs against OIDC discovery/JWKS, issuer, audience, expiry,
+  and the configured scope policy, then derives the request principal from the
+  verified subject and tenant claim. Missing or invalid tenant claims fail
+  closed. JWKS responses are cached and refreshed when a signing key rotates.
+  The deployment may set `SIGNALWEAVE_OIDC_REQUIRED_SCOPES` for MCP-level
+  authorization. `SIGNALWEAVE_ALLOW_INSECURE_OIDC=1` is local-test-only.
 - Set `PUSH_WEBHOOK_TOKEN` for the webhook bearer check. The webhook fails closed
   with `503` when it is not configured and uses only the authenticated
   `X-SignalWeave-Actor` header for actor attribution.
@@ -91,9 +100,10 @@ understand what was unavailable.
 ## Deployment responsibilities
 
 The repository intentionally does not pretend to be an identity provider or
-durable control plane. A production deployment should add:
+durable control plane. OIDC resource-server validation is included, but a
+production deployment still needs:
 
-- TLS and an identity-aware gateway or OIDC integration;
+- TLS and an organization-owned OIDC issuer or identity-aware gateway;
 - secret-manager injection and token rotation;
 - reviewed card storage with version history and source permissions;
 - an append-only decision/audit store and idempotent delivery worker;

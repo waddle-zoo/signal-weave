@@ -82,6 +82,8 @@ def create_mcp(
     runtime: Runtime | None = None,
     *,
     principal_resolver: Callable[[Context], PrincipalContext] | None = None,
+    auth_settings: Any | None = None,
+    token_verifier: Any | None = None,
 ) -> FastMCP:
     runtime = runtime or build_runtime()
     authoring = InsightAuthoringService(
@@ -94,7 +96,11 @@ def create_mcp(
     decision_feedback = runtime.decision_feedback or InMemoryDecisionFeedbackStore()
     certification_reports = runtime.certification_reports or InMemoryCertificationReportStore()
     idempotency_locks: dict[str, asyncio.Lock] = {}
-    mcp = FastMCP("signal-weave")
+    mcp = FastMCP(
+        "signal-weave",
+        auth=auth_settings,
+        token_verifier=token_verifier,
+    )
 
     def request_principal(ctx: Context | None) -> PrincipalContext | None:
         """Resolve a trusted gateway principal without accepting tool input as identity."""
@@ -762,6 +768,78 @@ def create_mcp(
         return {
             "proposal": proposal.model_dump(mode="json"),
             "summary": proposal_summary(proposal),
+        }
+
+    @mcp.tool()
+    async def onboard_insight_card(
+        what_to_watch: str,
+        why_watch: str,
+        watch_for: list[str] | None = None,
+        questions: list[str] | None = None,
+        decision_guidance: str | None = None,
+        selected_sources: list[dict[str, Any]] | None = None,
+        adapter: str | None = None,
+        limit: int = 10,
+        title: str | None = None,
+        comparison_windows: list[str] | None = None,
+        delivery_methods: list[dict[str, Any]] | None = None,
+        action_confidence_threshold: float = 0.70,
+        owner: str | None = None,
+        max_source_age_hours: float | None = 24.0,
+        retrieval_mode: str = "expand",
+        investigation_mode: str = "bounded",
+        max_investigation_sources: int = 3,
+        investigation_threshold: float = 0.60,
+        ctx: Context | None = None,
+    ) -> dict[str, Any]:
+        """Onboard one free-form card in a single human-reviewable call.
+
+        This is an ergonomic wrapper around the same Jev-backed proposal path;
+        it never approves a card, sends a push, or accepts identity from tool
+        arguments. The response is shaped for a caller-owned UI or agent:
+        draft card, bounded discovery, typed plan, blockers, questions, and the
+        exact next action needed to reach approval.
+        """
+        result = await propose_insight_card(
+            what_to_watch=what_to_watch,
+            why_watch=why_watch,
+            watch_for=watch_for,
+            questions=questions,
+            decision_guidance=decision_guidance,
+            selected_sources=selected_sources,
+            adapter=adapter,
+            limit=limit,
+            title=title,
+            comparison_windows=comparison_windows,
+            delivery_methods=delivery_methods,
+            action_confidence_threshold=action_confidence_threshold,
+            owner=owner,
+            max_source_age_hours=max_source_age_hours,
+            retrieval_mode=retrieval_mode,
+            investigation_mode=investigation_mode,
+            max_investigation_sources=max_investigation_sources,
+            investigation_threshold=investigation_threshold,
+            ctx=ctx,
+        )
+        proposal = result["proposal"]
+        review = proposal["onboarding_review"]
+        if review["readiness_status"] == "blocked":
+            next_action = "answer_setup_questions"
+        elif review["readiness_status"] == "needs_human_review":
+            next_action = "review_candidate_sources"
+        else:
+            next_action = "simulate_then_approve"
+        return {
+            "status": review["readiness_status"],
+            "next_action": next_action,
+            "approval_required": True,
+            "delivery_enabled": False,
+            "card": proposal["card"],
+            "plan": proposal["plan"],
+            "discovery": proposal["discovery"],
+            "review": review,
+            "setup_questions": proposal["setup_questions"],
+            "summary": result["summary"],
         }
 
     @mcp.tool()

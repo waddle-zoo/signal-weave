@@ -123,6 +123,7 @@ first for client rendering.
 An existing UI or agent can guide onboarding without SignalWeave owning the UI:
 
 ```text
+onboard_insight_card(what_to_watch, why_watch, watch_for?, questions?, ...)
 discover_insight_sources(goal, adapter?, limit?)
 propose_insight_card(what_to_watch, why_watch, watch_for?, questions?, ...)
 resolve_insight_sources(card_id)
@@ -130,6 +131,13 @@ simulate_insight_card(card_id)
 approve_insight_card(card_id)
 evaluate_insight_card(card_id)
 ```
+
+For the fastest path, `onboard_insight_card` is the single-call contract: it
+returns a Jev-ranked bounded catalog, a typed execution plan, a persisted draft,
+review blockers, setup questions, and the next action for the caller-owned UI or
+agent. It always returns `approval_required=true` and `delivery_enabled=false`.
+Use the lower-level calls when a UI wants to make discovery, source selection,
+simulation, or approval separate screens.
 
 Or, when source refs are already known:
 
@@ -337,6 +345,7 @@ accuracy claim.
 
 - [`docs/architecture.md`](docs/architecture.md) — contracts, pipeline, and boundaries
 - [`docs/demo.md`](docs/demo.md) — local setup and onboarding walkthrough
+- [`docs/enterprise-v1-acceptance.md`](docs/enterprise-v1-acceptance.md) — v1 acceptance gates, deployment modes, and evidence
 - [`docs/source-adapters.md`](docs/source-adapters.md) — adapter contract and security boundary
 - [`docs/metric-query-cards.md`](docs/metric-query-cards.md) — approved catalogs, Trino plans, and SQL bounds
 - [`docs/benchmark.md`](docs/benchmark.md) — comparison methodology

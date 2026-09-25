@@ -477,6 +477,71 @@ async def test_generic_card_flow_discovers_proposes_previews_and_requires_approv
 
 
 @pytest.mark.asyncio
+async def test_one_call_onboarding_returns_usable_human_review_packet_without_approval(tmp_path):
+    server = make_server(tmp_path)
+
+    onboarding = await tool(server, "onboard_insight_card")(
+        what_to_watch="Checkout conversion and the signals that explain a material movement.",
+        why_watch="Help Growth decide whether to investigate a customer-impacting regression.",
+        watch_for=["Conversion falls materially", "A related mobile signal corroborates it"],
+        questions=["What changed and what evidence explains it?"],
+        decision_guidance=(
+            "Ignore normal variation; investigate when evidence is incomplete; notify Growth "
+            "Ops when the movement is corroborated."
+        ),
+        delivery_methods=[
+            {
+                "key": "growth-ops",
+                "outcome": "notify",
+                "label": "Growth Ops",
+                "destination": "slack://growth-ops",
+            }
+        ],
+    )
+
+    assert onboarding["status"] == "ready_for_approval"
+    assert onboarding["next_action"] == "simulate_then_approve"
+    assert onboarding["approval_required"] is True
+    assert onboarding["delivery_enabled"] is False
+    assert onboarding["card"]["status"] == "draft"
+    assert onboarding["card"]["sources"]
+    assert onboarding["review"]["discovery_receipt"]["evaluator"] == (
+        "jev-onboarding-test-double"
+    )
+    assert onboarding["plan"]["compiled_by"] == "jev-onboarding-test-double"
+
+    stored = tool(server, "get_insight_card")(onboarding["card"]["id"])
+    assert stored["status"] == "draft"
+
+
+@pytest.mark.asyncio
+async def test_one_call_onboarding_surfaces_missing_human_context_instead_of_guessing(tmp_path):
+    server = make_server(tmp_path)
+
+    onboarding = await tool(server, "onboard_insight_card")(
+        what_to_watch="Checkout conversion.",
+        why_watch="Support a growth decision.",
+        delivery_methods=[
+            {
+                "key": "growth-ops",
+                "outcome": "notify",
+                "label": "Growth Ops",
+                "destination": "slack://growth-ops",
+            }
+        ],
+    )
+
+    assert onboarding["status"] == "blocked"
+    assert onboarding["next_action"] == "answer_setup_questions"
+    assert onboarding["approval_required"] is True
+    assert onboarding["delivery_enabled"] is False
+    assert any(
+        blocker["code"] == "decision-guidance-required"
+        for blocker in onboarding["review"]["blockers"]
+    )
+
+
+@pytest.mark.asyncio
 async def test_push_card_onboarding_blocks_without_human_decision_guidance(tmp_path):
     server = make_server(tmp_path)
 
