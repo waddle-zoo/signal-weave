@@ -353,6 +353,7 @@ accuracy claim.
 - [`docs/enterprise-experiment.md`](docs/enterprise-experiment.md) — MCP-only enterprise readiness experiment
 - [`docs/enterprise-closure.md`](docs/enterprise-closure.md) — current proof boundary and next gate
 - [`docs/enterprise-readiness-report-2026-09-25.md`](docs/enterprise-readiness-report-2026-09-25.md) — high-level product-value, landscape, evidence, and enterprise-readiness assessment
+- [`docs/adversarial-v1-review-2026-09-25.md`](docs/adversarial-v1-review-2026-09-25.md) — security, retrieval, packaging, and release verdict for the reviewed branch
 - [`docs/adversarial-review.md`](docs/adversarial-review.md) — public-readiness review and explicit gaps
 - [`docs/retrieval-explanation.md`](docs/retrieval-explanation.md) — bounded investigation contract and adversarial trial
 - [`docs/postfix-agent-trial.md`](docs/postfix-agent-trial.md) — live post-fix Luna agent trial
