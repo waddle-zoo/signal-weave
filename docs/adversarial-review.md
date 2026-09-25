@@ -1,5 +1,11 @@
 # Adversarial public-readiness review
 
+> Historical snapshot from 2026-09-22. The current authoritative review is
+> [`adversarial-v1-review-2026-09-25.md`](adversarial-v1-review-2026-09-25.md).
+> In particular, the older scripted `144/144` result predates the latest
+> tenant-scope hardening; the current rerun is `100/144` exact with zero unsafe
+> automatic actions. Do not combine the two snapshots into one headline.
+
 This review treats SignalWeave as an alpha open-source result layer, not as a
 complete enterprise control plane. It was refreshed after the retrieval
 ablation, relationship-expansion proof, and local connector tests on 2026-09-22.

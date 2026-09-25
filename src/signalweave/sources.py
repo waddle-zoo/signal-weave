@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 import json
 import re
 from collections.abc import Iterable
@@ -196,7 +197,16 @@ class SourceRegistry:
         for adapter in adapters:
             search = getattr(adapter, "search_resources", None)
             if callable(search):
-                page = await search(query, limit=per_adapter_limit, cursor=cursor)
+                supports_tenant_scope = tenant_scope is None or _accepts_keyword(
+                    search, "authorized_tenants"
+                )
+                search_kwargs: dict[str, object] = {
+                    "limit": per_adapter_limit,
+                    "cursor": cursor,
+                }
+                if tenant_scope is not None and supports_tenant_scope:
+                    search_kwargs["authorized_tenants"] = sorted(tenant_scope)
+                page = await search(query, **search_kwargs)
                 page = (
                     page
                     if isinstance(page, CatalogSearchPage)
@@ -223,6 +233,22 @@ class SourceRegistry:
                 resource for resource in page.resources
                 if self._is_authorized(resource, tenant_scope)
             ]
+            if tenant_scope is not None and callable(search) and not supports_tenant_scope:
+                # The provider returned an unscoped page. Filtering resources
+                # is necessary but not sufficient: total_count may still
+                # reveal another tenant's catalog size. A tenant-aware adapter
+                # must opt into the keyword before claiming complete coverage.
+                page = page.model_copy(
+                    update={
+                        "total_count": len(visible),
+                        "warnings": [
+                            *page.warnings,
+                            f"Adapter {adapter.name} did not accept authorized_tenants; "
+                            "catalog count was redacted and coverage requires a "
+                            "tenant-aware search implementation.",
+                        ],
+                    }
+                )
             pages.append(page.model_copy(update={"resources": visible[:per_adapter_limit]}))
         if len(adapters) > 1:
             # Give every installed adapter a chance to contribute candidates.  A
@@ -594,3 +620,16 @@ class SourceRegistry:
             raise ValueError(
                 f"source adapter is not installed: {name} (available: {available})"
             ) from error
+
+
+def _accepts_keyword(function: object, keyword: str) -> bool:
+    """Return whether an adapter search method can receive a scope keyword."""
+
+    try:
+        parameters = inspect.signature(function).parameters.values()
+    except (TypeError, ValueError):
+        return False
+    return any(
+        parameter.name == keyword or parameter.kind == inspect.Parameter.VAR_KEYWORD
+        for parameter in parameters
+    )

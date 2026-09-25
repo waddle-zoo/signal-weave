@@ -24,7 +24,8 @@ class NativeAdapter:
     async def list_resources(self):
         return [self.descriptor]
 
-    async def search_resources(self, query, *, limit, cursor=None):
+    async def search_resources(self, query, *, limit, cursor=None, authorized_tenants=None):
+        assert authorized_tenants == ["northstar"]
         del query, cursor
         return CatalogSearchPage(
             resources=[self.descriptor][:limit],
@@ -71,8 +72,15 @@ class NativeAdapter:
 class LocalScanAdapter(NativeAdapter):
     name = "local"
 
-    async def search_resources(self, query, *, limit, cursor=None):
-        page = await super().search_resources(query, limit=limit, cursor=cursor)
+    async def search_resources(
+        self, query, *, limit, cursor=None, authorized_tenants=None
+    ):
+        page = await super().search_resources(
+            query,
+            limit=limit,
+            cursor=cursor,
+            authorized_tenants=authorized_tenants,
+        )
         return page.model_copy(update={"strategy": "local-scan-fallback"})
 
 

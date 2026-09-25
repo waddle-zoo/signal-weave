@@ -33,6 +33,11 @@ Findings discovered and fixed in commit `905411d`:
 - Workflow certification accepted caller-supplied snapshots without checking
   their typed tenant contracts. Scoped replay now rejects foreign or explicitly
   unauthorized snapshots.
+- A native adapter search could return tenant-filtered resources with an
+  unfiltered provider-wide `total_count`. The registry now passes
+  `authorized_tenants` to adapters that support it, redacts the count when the
+  adapter does not, and keeps coverage incomplete/review-visible until the
+  adapter implements tenant-aware search.
 - `SIGNALWEAVE_ALLOW_INSECURE_HTTP=1` can no longer expose an unauthenticated
   HTTP server on a non-loopback host.
 
@@ -40,7 +45,8 @@ Targeted adversarial tests cover cross-tenant metric-card list/get/compile/
 approve, cross-tenant webhook evaluation, foreign evaluation snapshots,
 missing-tenant JWTs, issuer/audience/signature/expiry failures, required scopes,
 issuer trailing slashes, malformed payloads, oversized payloads, and the public
-health/private MCP distinction.
+health/private MCP distinction, plus redaction of unscoped native catalog
+counts.
 
 Verdict: **pass for the tested contract**. A real IdP, gateway, source
 credentials, and adapter-side authorization replay remain deployment gates.
@@ -63,6 +69,15 @@ The one recommendation mismatch is the intentional fintech definition ambiguity;
 the review marks it for human review rather than treating Jev’s alternative as
 truth. This is the correct behavior for a candidate recommender, not a reason
 to claim 30/30 semantic correctness.
+
+The stricter follow-up replay used the real Jev evaluator, with no expected
+labels in the evaluator state, over eight heterogeneous onboarding cases. It
+achieved 8/8 required-candidate recall, 8/8 safe onboarding outcomes, 7/8
+exact recommendation sets, zero wrong-tenant candidates, and zero governed
+role disagreements across 19 checked labels. The single mismatch was the
+same fintech definition ambiguity; the card remained in human review with a
+`definition-conflict` blocker. The complete run record and command are in
+[`docs/live-jev-onboarding-2026-09-25.md`](live-jev-onboarding-2026-09-25.md).
 
 The larger recorded live Jev evidence remains useful but bounded: the 144-task
 synthetic matrix achieved 130/144 exact outcomes, complete workflow/card/
@@ -91,7 +106,7 @@ MCP tools/list: 27 tools, including onboard_insight_card and metric-card tools
 read-only list_resources(adapter=superset): 9 real local dashboards
 ```
 
-The full repository gate is `196 passed, 1 skipped`; Ruff, `git diff --check`,
+The full repository gate is `198 passed, 1 skipped`; Ruff, `git diff --check`,
 and offline lockfile validation pass. The current research harness was also
 rerun over 144 generated enterprise tasks: all 144 workflows, cards,
 provenance records, and source-selection handoffs completed with zero unsafe

@@ -33,9 +33,10 @@ returns an inspectable evidence bundle and receipt.
 | Human intent is not guessed | Missing sources, decision guidance, ambiguity, stale sources, bounded catalogs, and absent candidates remain explicit review/block states. | Pass |
 | Approval and delivery remain separate | One-call onboarding always returns `approval_required=true` and `delivery_enabled=false`; approval re-checks the current review. | Pass |
 | Authorized retrieval works across messy shapes | 30 onboarding scenarios across BI, metric, notebook, workflow, quality, ownership, stale, revoked, paginated, and no-match cases. | 30/30 safe; 1.00 required-candidate recall; 0 leaks |
+| Tenant-aware native search is required for complete coverage | Adapters that accept `authorized_tenants` receive the scope at search time; older unscoped indexes have provider-wide counts redacted and remain review-visible. | Pass locally; adapter contract gate remains open per deployment |
 | Jev result provenance is inspectable | Discovery receipts, source candidates, roles, probabilities, plan evaluator, context version, and decision receipts are persisted or returned. | Pass |
 | Existing enterprise workflows remain the owner | MCP tools return typed decisions and evidence; SignalWeave does not execute arbitrary SQL, tools, DAGs, or notifications. | Pass |
-| Regression safety | Full repository tests and lint. | 196 passed, 1 skipped; Ruff clean |
+| Regression safety | Full repository tests and lint. | 198 passed, 1 skipped; Ruff clean |
 
 ## Reproduction
 
@@ -54,6 +55,13 @@ so the result tests authorization, candidate coverage, human-review behavior,
 and generalization rather than rewarding a fixture-specific implementation.
 Live Jev evidence is recorded separately in the enterprise, Northstar, paired
 agent, and retrieval reports under `docs/`.
+
+The stronger follow-up onboarding replay used eight real Jev requests with
+expected labels withheld from the evaluator state: 8/8 required-candidate
+recall, 8/8 safe outcomes, 7/8 exact recommendation sets, zero tenant leaks,
+and zero role-label disagreements. The one mismatch was held for human review
+as a definition conflict. See
+[`docs/live-jev-onboarding-2026-09-25.md`](live-jev-onboarding-2026-09-25.md).
 
 ## Deployment modes
 

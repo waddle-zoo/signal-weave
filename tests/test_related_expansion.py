@@ -162,7 +162,10 @@ async def test_relationship_expansion_finds_nonlexical_neighbor_without_full_sca
         "query:fulfillment-latency",
     ]
     assert "multi-adapter-related-expansion" in bundle.candidate_strategy
-    assert bundle.candidate_count == 3
+    # The native search result is not tenant-aware, so the registry redacts
+    # its provider-wide count while retaining the related expansion count.
+    assert bundle.candidate_count == 2
+    assert any("catalog count was redacted" in warning for warning in bundle.warnings)
     assert all("other-tenant" not in source.resource for source in bundle.selected_sources)
 
 

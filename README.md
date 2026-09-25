@@ -297,6 +297,16 @@ conservative
 `notify` → `investigate` routes. That runner supplied hidden source refs, so its
 source-selection result is not a discovery score.
 
+A stricter live onboarding replay withheld expected labels from Jev and covered
+eight heterogeneous cases: 8/8 required-candidate recall, 8/8 safe outcomes,
+7/8 exact recommendation sets, and 0 tenant leaks. The one mismatch was held
+for human review as a definition conflict. The current deterministic wiring
+rerun is deliberately reported separately: 100/144 exact decisions, with 0
+unsafe automatic actions and complete workflow/card/provenance/source-selection
+contracts. Its 44 mismatches are not Jev evidence; they are retained as a
+failed research baseline. See [`docs/live-jev-onboarding-2026-09-25.md`](docs/live-jev-onboarding-2026-09-25.md)
+and [`docs/adversarial-v1-review-2026-09-25.md`](docs/adversarial-v1-review-2026-09-25.md).
+
 The independent live discovery trial used 48 tasks, 576 resources before tenant
 filtering, same-name cross-tenant decoys, and two-source labels that were not sent
 to Jev. It achieved 48/48 exact top-2 sets, 48/48 top-10 coverage, and 0 wrong-

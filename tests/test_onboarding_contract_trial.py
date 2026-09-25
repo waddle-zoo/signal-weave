@@ -134,8 +134,13 @@ async def test_large_catalog_uses_server_search_and_exposes_incompleteness():
 
     result = await run_scenario(scenario)
 
-    assert result.candidate_count == 100_000
+    # The fixture adapter does not accept an authorized_tenants keyword, so
+    # the registry redacts its provider-wide count rather than exposing other
+    # tenants' catalog size. The pagination flag keeps the incomplete scope
+    # visible for human review.
+    assert result.candidate_count == 1
     assert result.truncated is True
+    assert any("catalog count was redacted" in warning for warning in result.warnings)
     assert result.review_status == "needs_human_input"
     assert result.passed is True
     assert result.readiness_status == "needs_human_review"

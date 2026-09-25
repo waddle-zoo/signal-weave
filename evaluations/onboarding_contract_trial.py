@@ -406,9 +406,17 @@ def _resource_ref(raw: dict[str, Any]) -> str:
 
 
 async def run_trial(
-    path: Path = DEFAULT_CASES, *, judger: Any | None = None, evaluator: str = "fixture-jev"
+    path: Path = DEFAULT_CASES,
+    *,
+    judger: Any | None = None,
+    evaluator: str = "fixture-jev",
+    limit: int | None = None,
 ) -> list[ScenarioResult]:
     scenarios = json.loads(path.read_text())
+    if limit is not None:
+        if limit < 1:
+            raise ValueError("limit must be positive")
+        scenarios = scenarios[:limit]
     return [
         await run_scenario(scenario, judger=judger, evaluator=evaluator) for scenario in scenarios
     ]
@@ -459,6 +467,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--cases", type=Path, default=DEFAULT_CASES)
     parser.add_argument("--evaluator", choices=("fixture", "live"), default="fixture")
     parser.add_argument("--typesafe-key-file", type=Path)
+    parser.add_argument("--limit", type=int, help="Run only the first N cases; useful for bounded live replays.")
     parser.add_argument("--format", choices=("markdown", "json"), default="markdown")
     parser.add_argument("--output", type=Path)
     return parser.parse_args()
@@ -478,7 +487,9 @@ def main() -> None:
             )
         judger = JevJudger(api_key=key, timeout=60)
         evaluator = "jev-live"
-    results = asyncio.run(run_trial(args.cases, judger=judger, evaluator=evaluator))
+    results = asyncio.run(
+        run_trial(args.cases, judger=judger, evaluator=evaluator, limit=args.limit)
+    )
     if args.format == "json":
         rendered = json.dumps([result.as_json() for result in results], indent=2) + "\n"
     else:

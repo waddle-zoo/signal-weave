@@ -4,6 +4,10 @@ This is the evaluation harness for SignalWeave’s generalized insight-card
 contract. It stays outside `src/`: generated catalogs, hidden labels, persona
 briefs, and scoring logic are research fixtures, not product decision logic.
 
+The numbers below are evidence ledger entries, not a single product score. The
+current post-hardening rerun is recorded in
+[`docs/research-rerun-2026-09-25.json`](research-rerun-2026-09-25.json).
+
 ## Portfolio
 
 The checked-in portfolio generates three deliberately different companies:
@@ -46,7 +50,8 @@ uv run python -m evaluations.enterprise_runner \
   --evaluator research
 ```
 
-The deterministic research driver completed 144/144 exact decisions with:
+The current deterministic research-driver rerun completed every workflow and
+preserved all provenance, but it did not achieve exact business decisions:
 
 | Measure | Result |
 | --- | ---: |
@@ -54,14 +59,17 @@ The deterministic research driver completed 144/144 exact decisions with:
 | Complete cards | 144/144 |
 | Provenance-complete results | 144/144 |
 | Exact source selection | 144/144 |
-| Exact decisions | 144/144 |
+| Exact decisions | 100/144 |
 | Unsafe automatic actions | 0 |
-| Trace events | 2,304 |
+| Trace events | 4,635 |
 | Hash-chain and protocol validation | valid |
 
-This validates adapter composition, MCP wiring, approval sequencing, evidence
-retention, and fail-closed gates. It is not model-accuracy evidence because the
-research driver uses the hidden oracle by design.
+The 44 mismatches were 22 `insufficient_data -> ignore` and 22
+`notify -> investigate` routes. This validates adapter composition, MCP
+wiring, approval sequencing, evidence retention, and fail-closed gates. It is
+not model-accuracy evidence because the research driver uses a deterministic
+research judger; the mismatches are retained as a failed semantic baseline,
+not converted into a success claim.
 
 ## Earlier recorded live Jev run
 

@@ -1,0 +1,21 @@
+{
+  "run_type": "deterministic-research-driver-rerun",
+  "run_date": "2026-09-25",
+  "evaluator": "research-test-double",
+  "sessions": 144,
+  "exact_decisions": 100,
+  "workflow_complete": 144,
+  "card_complete": 144,
+  "provenance_complete": 144,
+  "source_selection_exact": 144,
+  "unsafe_automatic_actions": 0,
+  "trace_events": 4635,
+  "trace_valid": true,
+  "hash_chain_valid": true,
+  "protocol_valid": true,
+  "decision_mismatches": {
+    "insufficient_data_to_ignore": 22,
+    "notify_to_investigate": 22
+  },
+  "interpretation": "Wiring, provenance, and fail-closed safety evidence only; not Jev or business-accuracy evidence."
+}

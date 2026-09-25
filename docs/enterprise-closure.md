@@ -1,5 +1,12 @@
 # Enterprise closure evidence
 
+> Historical closure snapshot. The current authoritative evidence is in
+> [`adversarial-v1-review-2026-09-25.md`](adversarial-v1-review-2026-09-25.md)
+> and [`enterprise-readiness-report-2026-09-25.md`](enterprise-readiness-report-2026-09-25.md).
+> The current deterministic research rerun is 100/144 exact with zero unsafe
+> automatic actions; historical 144/144 or 74-test figures below are retained
+> for provenance only.
+
 This page records the current boundary of what SignalWeave has proved locally.
 It is intentionally explicit about synthetic evidence versus production proof.
 

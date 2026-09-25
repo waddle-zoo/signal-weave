@@ -300,6 +300,49 @@ async def test_source_registry_preserves_bounded_search_coverage_without_full_sc
 
 
 @pytest.mark.asyncio
+async def test_source_registry_redacts_unscoped_native_catalog_counts():
+    class UnscopedTenantSearch:
+        name = "unscoped"
+
+        async def list_resources(self):
+            raise AssertionError("tenant-scoped search must not materialize the catalog")
+
+        async def search_resources(self, query, *, limit, cursor=None):
+            del query, limit, cursor
+            return CatalogSearchPage(
+                resources=[
+                    ResourceDescriptor(
+                        adapter=self.name,
+                        resource="dashboard:visible",
+                        kind="dashboard",
+                        title="Visible dashboard",
+                        contract=ResourceContract(tenant_id="tenant-a"),
+                    ),
+                    ResourceDescriptor(
+                        adapter=self.name,
+                        resource="dashboard:foreign",
+                        kind="dashboard",
+                        title="Foreign dashboard",
+                        contract=ResourceContract(tenant_id="tenant-b"),
+                    ),
+                ],
+                total_count=100_000,
+                has_more=True,
+                provider="unscoped-index",
+                strategy="server-search",
+            )
+
+    registry = SourceRegistry([UnscopedTenantSearch()], authorized_tenants={"tenant-a"})
+
+    page = await registry.search_resources("dashboard", limit=10)
+
+    assert [resource.resource for resource in page.resources] == ["dashboard:visible"]
+    assert page.total_count == 1
+    assert page.has_more is True
+    assert any("catalog count was redacted" in warning for warning in page.warnings)
+
+
+@pytest.mark.asyncio
 async def test_source_registry_inspects_native_search_result_without_full_catalog_scan():
     adapter = NativeAuthorizeAdapter()
     registry = SourceRegistry([adapter], authorized_tenants={"tenant-a"})
