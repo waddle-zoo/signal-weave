@@ -47,10 +47,11 @@ Every connection has an explicit `HostedDataPolicy`:
   existing cache or latest completed run; and
 - `live_query` requires the separate `allow_live_queries=true` guard.
 
-Raw results are not retained by the connector itself. A cloud deployment must
-enforce retention and encryption outside the adapter layer. `max_result_rows`
-and `max_snapshot_bytes` keep a provider response from becoming an unbounded
-Jev input.
+Raw results are never retained by the connector itself; only bounded normalized
+observations and evidence enter the decision receipt. A cloud deployment must
+enforce receipt retention, deletion, encryption, and data residency outside the
+adapter layer. `max_result_rows` and `max_snapshot_bytes` keep a provider
+response from becoming an unbounded Jev input.
 
 ## Provider coverage
 

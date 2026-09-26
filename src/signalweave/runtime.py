@@ -139,10 +139,8 @@ def _preset_from_environment() -> tuple[HostedConnection, HostedCredentialVault]
         mode=mode,
         allow_live_queries=_env_flag("PRESET_ALLOW_LIVE_QUERIES"),
         allow_refresh=_env_flag("PRESET_ALLOW_REFRESH"),
-        retain_raw_results=_env_flag("PRESET_RETAIN_RAW_RESULTS"),
         max_result_rows=_env_int("PRESET_MAX_RESULT_ROWS", 500),
         max_snapshot_bytes=_env_int("PRESET_MAX_SNAPSHOT_BYTES", 1_000_000),
-        retention_hours=_env_int("PRESET_RETENTION_HOURS", 24),
     )
     preset_tenant_id = os.getenv("PRESET_TENANT_ID", "").strip()
     signalweave_tenant_id = os.getenv("SIGNALWEAVE_TENANT_ID", "").strip()

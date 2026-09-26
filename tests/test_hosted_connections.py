@@ -118,7 +118,24 @@ async def test_preset_cloud_token_exchange_and_dashboard_snapshot():
         if request.url.path == "/api/v1/chart/data":
             return httpx.Response(
                 200,
-                json={"result": [{"data": [{"day": "2026-09-01", "revenue": 100}, {"day": "2026-09-02", "revenue": 120}]}]},
+                json={
+                    "result": [
+                        {
+                            "data": [
+                                {
+                                    "day": "2026-09-01",
+                                    "revenue": 100,
+                                    "provider_internal_note": "do-not-retain",
+                                },
+                                {
+                                    "day": "2026-09-02",
+                                    "revenue": 120,
+                                    "provider_internal_note": "do-not-retain",
+                                },
+                            ]
+                        }
+                    ]
+                },
             )
         raise AssertionError(f"unexpected Preset request: {request.method} {request.url}")
 
@@ -138,6 +155,7 @@ async def test_preset_cloud_token_exchange_and_dashboard_snapshot():
     assert snapshot.contract.tenant_id == "northstar"
     assert snapshot.observations[0].metric == "revenue"
     assert snapshot.observations[0].current == 120
+    assert "do-not-retain" not in json.dumps(snapshot.model_dump(mode="json"))
     assert len([call for call in calls if call[1].endswith("/v1/auth/")]) == 1
 
 

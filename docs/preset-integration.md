@@ -32,8 +32,9 @@ plan without API access can still use the interim dual-MCP pattern below, but
 cannot use this direct scheduled adapter until they have an approved API or
 bridge path.
 
-The default policy is `cached_results`, with live queries, refreshes, and raw
-result retention disabled. The card flow remains:
+The default policy is `cached_results`, with live queries and refreshes disabled.
+Raw provider rows are never retained by the connector; receipt retention and
+deletion are deployment responsibilities. The card flow remains:
 
 ```text
 onboard_insight_card

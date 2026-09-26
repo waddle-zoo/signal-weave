@@ -43,10 +43,8 @@ class HostedDataPolicy(BaseModel):
     mode: HostedDataMode = HostedDataMode.CACHED_RESULTS
     allow_live_queries: bool = False
     allow_refresh: bool = False
-    retain_raw_results: bool = False
     max_result_rows: int = Field(default=500, ge=1, le=10_000)
     max_snapshot_bytes: int = Field(default=1_000_000, ge=1_024, le=10_000_000)
-    retention_hours: int = Field(default=24, ge=0, le=8_760)
 
     @model_validator(mode="after")
     def validate_execution_policy(self) -> HostedDataPolicy:
@@ -54,8 +52,6 @@ class HostedDataPolicy(BaseModel):
             raise ValueError("live_query mode requires allow_live_queries=true")
         if self.mode == HostedDataMode.LIVE_QUERY and not self.allow_refresh:
             raise ValueError("live_query mode requires allow_refresh=true")
-        if self.retention_hours == 0 and self.retain_raw_results:
-            raise ValueError("raw results cannot be retained when retention_hours is zero")
         return self
 
 
