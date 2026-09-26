@@ -21,7 +21,7 @@ from signalweave.runtime import build_runtime
 
 async def run(
     *,
-    adapter_name: str,
+    adapter_name: str | None,
     page_size: int,
     dashboard_id: str | None = None,
     chart_id: str | None = None,
@@ -35,6 +35,19 @@ async def run(
             "Preset bootstrap requires SIGNALWEAVE_TENANT_ID and "
             "SIGNALWEAVE_PRINCIPAL_ID"
         )
+    if adapter_name is None:
+        names = runtime.sources.adapter_names()
+        candidates = [
+            name
+            for name in names
+            if isinstance(runtime.sources._get(name), PresetAdapter)
+        ]
+        if len(candidates) != 1:
+            raise RuntimeError(
+                "Preset bootstrap requires exactly one configured Preset adapter; "
+                "pass --adapter when multiple hosted connections are installed"
+            )
+        adapter_name = candidates[0]
     adapter = runtime.sources._get(adapter_name)
     if not isinstance(adapter, PresetAdapter):
         raise RuntimeError(f"{adapter_name!r} is not a Preset adapter")
@@ -120,7 +133,11 @@ async def run(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--adapter", default="preset__preset-env")
+    parser.add_argument(
+        "--adapter",
+        default=None,
+        help="Configured Preset adapter name; auto-detects the sole Preset adapter by default",
+    )
     parser.add_argument("--page-size", type=int, default=20)
     parser.add_argument("--dashboard-id")
     parser.add_argument("--chart-id")

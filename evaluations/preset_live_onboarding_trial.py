@@ -44,11 +44,40 @@ def _summary(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _resolve_preset_adapter(runtime: Any, requested: str | None) -> str:
+    """Resolve a configured Preset route without assuming its connection ID."""
+
+    names = runtime.sources.adapter_names()
+    if requested:
+        if requested not in names:
+            raise RuntimeError(
+                f"adapter {requested!r} is not installed; available adapters: "
+                + ", ".join(names)
+            )
+        candidates = [requested]
+    else:
+        candidates = [
+            name
+            for name in names
+            if isinstance(runtime.sources._get(name), PresetAdapter)
+        ]
+        if len(candidates) != 1:
+            raise RuntimeError(
+                "live Preset acceptance requires exactly one configured Preset adapter; "
+                "pass --adapter when multiple hosted connections are installed"
+            )
+    if not isinstance(runtime.sources._get(candidates[0]), PresetAdapter):
+        raise RuntimeError(
+            f"{candidates[0]!r} is not a hosted Preset adapter; use the Preset environment route"
+        )
+    return candidates[0]
+
+
 async def run_trial(
     *,
     goal: str,
     why: str,
-    adapter: str,
+    adapter: str | None,
     limit: int,
     destination: str,
     approve: bool,
@@ -64,15 +93,7 @@ async def run_trial(
         )
     if getattr(runtime.engine.judger, "name", None) != "jev-latest":
         raise RuntimeError("the live acceptance trial must run with the jev-latest judger")
-    if adapter not in runtime.sources.adapter_names():
-        raise RuntimeError(
-            f"adapter {adapter!r} is not installed; available adapters: "
-            + ", ".join(runtime.sources.adapter_names())
-        )
-    if not isinstance(runtime.sources._get(adapter), PresetAdapter):
-        raise RuntimeError(
-            f"{adapter!r} is not a hosted Preset adapter; use the Preset environment route"
-        )
+    adapter = _resolve_preset_adapter(runtime, adapter)
     server = create_mcp(runtime)
     onboarding = await _tool(server, "onboard_insight_card")(
         what_to_watch=goal,
@@ -186,7 +207,11 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--goal", required=True, help="What the owner wants monitored")
     parser.add_argument("--why", required=True, help="Why this monitoring matters")
-    parser.add_argument("--adapter", default="preset__preset-env")
+    parser.add_argument(
+        "--adapter",
+        default=None,
+        help="Configured Preset adapter name; auto-detects the sole Preset adapter by default",
+    )
     parser.add_argument("--limit", type=int, default=10)
     parser.add_argument("--destination", default="slack://replace-me")
     parser.add_argument(

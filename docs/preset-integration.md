@@ -59,7 +59,8 @@ mutually exclusive, and unexpected credential fields fail closed.
 When using the default token-authenticated HTTP deployment, both
 `SIGNALWEAVE_TENANT_ID` and `SIGNALWEAVE_PRINCIPAL_ID` are also required; an
 OIDC deployment instead resolves the principal from each verified request.
-The default route name is `preset__preset-env`; copy
+The default route name is `preset__preset-env`; custom connection IDs are also
+supported. Copy
 [`examples/preset/insight-card.example.json`](../examples/preset/insight-card.example.json),
 replace the dashboard/chart IDs, and use that route in the card's `sources`.
 
@@ -182,6 +183,10 @@ PRESET_TRIAL_WHY="Tell Growth leadership when the evidence warrants investigatio
 TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
   make preset-live-trial
 ```
+
+The live runner auto-detects the sole configured Preset adapter, so it does
+not assume the default connection ID. Pass `--adapter` when multiple Preset
+connections are installed and the operator has selected one explicitly.
 
 This is an acceptance test against a real workspace, not a synthetic benchmark;
 it consumes live Jev calls and must be run with a customer-approved shadow card

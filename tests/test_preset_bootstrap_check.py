@@ -46,6 +46,34 @@ async def test_bootstrap_preflight_reads_one_catalog_page_without_jev(monkeypatc
 
 
 @pytest.mark.asyncio
+async def test_bootstrap_preflight_auto_detects_custom_sole_preset_adapter(monkeypatch):
+    class Client:
+        async def list_dashboards_page(self, *, page, page_size, query=None):
+            return ([{"id": 7, "dashboard_title": "Growth"}], 1)
+
+    adapter = PresetAdapter.__new__(PresetAdapter)
+    adapter.client = Client()
+    adapter.policy = HostedDataPolicy()
+    adapter.name = "preset__customer-workspace"
+    runtime = SimpleNamespace(
+        principal=SimpleNamespace(tenant_id="northstar"),
+        sources=SimpleNamespace(
+            adapter_names=lambda: [adapter.name],
+            _get=lambda name: adapter if name == adapter.name else None,
+        ),
+        engine=SimpleNamespace(
+            judger=SimpleNamespace(name="jev-latest", metrics=SimpleNamespace(requests=0))
+        ),
+    )
+    monkeypatch.setattr(bootstrap, "build_runtime", lambda: runtime)
+
+    report = await bootstrap.run(adapter_name=None, page_size=20)
+
+    assert report["passed"] is True
+    assert report["adapter"] == "preset__customer-workspace"
+
+
+@pytest.mark.asyncio
 async def test_bootstrap_preflight_fails_empty_workspace(monkeypatch):
     class Client:
         async def list_dashboards_page(self, *, page, page_size, query=None):

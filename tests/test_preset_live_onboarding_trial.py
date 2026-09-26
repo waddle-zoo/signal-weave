@@ -179,6 +179,46 @@ async def test_live_trial_accepts_only_jev_delivery_disabled_shadow(monkeypatch)
 
 
 @pytest.mark.asyncio
+async def test_live_trial_auto_detects_custom_sole_preset_adapter(monkeypatch):
+    onboarded_adapter: list[str] = []
+
+    async def onboard(**kwargs):
+        onboarded_adapter.append(kwargs["adapter"])
+        return {"status": "needs_human_review", "card": {"id": "card-1"}}
+
+    monkeypatch.setattr(
+        trial,
+        "build_runtime",
+        lambda: SimpleNamespace(
+            sources=SimpleNamespace(
+                adapter_names=lambda: ["preset__customer-workspace"],
+                _get=lambda name: PresetAdapter.__new__(PresetAdapter),
+            ),
+            principal=SimpleNamespace(tenant_id="northstar"),
+            engine=SimpleNamespace(
+                judger=SimpleNamespace(name="jev-latest", metrics=SimpleNamespace(requests=0))
+            ),
+        ),
+    )
+    monkeypatch.setattr(
+        trial,
+        "create_mcp",
+        lambda runtime: FakeServer({"onboard_insight_card": onboard}),
+    )
+
+    await trial.run_trial(
+        goal="Monitor growth",
+        why="Support the growth team",
+        adapter=None,
+        limit=10,
+        destination="slack://growth",
+        approve=False,
+    )
+
+    assert onboarded_adapter == ["preset__customer-workspace"]
+
+
+@pytest.mark.asyncio
 async def test_live_trial_rejects_unscoped_or_non_jev_runtime(monkeypatch):
     monkeypatch.setattr(
         trial,
