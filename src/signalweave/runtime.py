@@ -92,6 +92,19 @@ def _env_int(name: str, default: int) -> int:
         raise RuntimeError(f"{name} must be an integer") from error
 
 
+def _require_secure_provider_url(name: str, value: str) -> None:
+    """Keep environment-injected hosted credentials on HTTPS by default."""
+
+    if value.startswith("https://"):
+        return
+    if os.getenv("SIGNALWEAVE_ALLOW_INSECURE_PROVIDER") == "1":
+        return
+    raise RuntimeError(
+        f"{name} must use https; set SIGNALWEAVE_ALLOW_INSECURE_PROVIDER=1 "
+        "only for an isolated local test"
+    )
+
+
 def _preset_from_environment() -> tuple[HostedConnection, HostedCredentialVault] | None:
     """Build one tenant-bound Preset connection from deployment secrets.
 
@@ -103,6 +116,7 @@ def _preset_from_environment() -> tuple[HostedConnection, HostedCredentialVault]
     base_url = os.getenv("PRESET_URL", "").strip()
     if not base_url:
         return None
+    _require_secure_provider_url("PRESET_URL", base_url)
     access_token = _env_secret("PRESET_ACCESS_TOKEN")
     token_name = _env_secret("PRESET_API_TOKEN_NAME")
     token_secret = _env_secret("PRESET_API_TOKEN_SECRET")
@@ -154,6 +168,7 @@ def _preset_from_environment() -> tuple[HostedConnection, HostedCredentialVault]
     )
     api_base_url = os.getenv("PRESET_API_BASE_URL", "").strip()
     if api_base_url:
+        _require_secure_provider_url("PRESET_API_BASE_URL", api_base_url)
         credentials["api_base_url"] = api_base_url
     return connection, InMemoryCredentialVault({"env://preset": credentials})
 

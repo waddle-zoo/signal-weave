@@ -47,7 +47,9 @@ Preset API credentials must be kept in an untracked secret file or deployment
 secret manager. They are loaded into memory only to construct the adapter and
 are never stored in cards, MCP payloads, or connection metadata. The customer
 should use the smallest Preset workspace permissions that allow the required
-read-only artifacts.
+read-only artifacts. Environment bootstrap requires HTTPS for both `PRESET_URL`
+and `PRESET_API_BASE_URL`; `SIGNALWEAVE_ALLOW_INSECURE_PROVIDER=1` is reserved
+for an isolated local test and should never be used in deployment.
 
 The connector enforces the configured `max_result_rows` and
 `max_snapshot_bytes` limits. It lowers the saved-chart row limit before calling

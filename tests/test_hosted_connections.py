@@ -655,6 +655,33 @@ def test_runtime_rejects_incomplete_preset_environment_bootstrap(monkeypatch, tm
         build_runtime()
 
 
+def test_runtime_rejects_insecure_preset_workspace_url(monkeypatch, tmp_path):
+    monkeypatch.setenv("TYPESAFE_API_KEY", "test-key")
+    monkeypatch.delenv("TYPESAFE_API_KEY_FILE", raising=False)
+    monkeypatch.delenv("SUPERSET_URL", raising=False)
+    monkeypatch.setenv("PRESET_URL", "http://workspace.local")
+    monkeypatch.setenv("PRESET_ACCESS_TOKEN", "bearer-token")
+    monkeypatch.setenv("SIGNALWEAVE_STORE_BACKEND", "sqlite")
+    monkeypatch.setenv("SIGNALWEAVE_STORE_PATH", str(tmp_path / "signalweave.db"))
+
+    with pytest.raises(RuntimeError, match="PRESET_URL must use https"):
+        build_runtime()
+
+
+def test_runtime_rejects_insecure_preset_auth_url(monkeypatch, tmp_path):
+    monkeypatch.setenv("TYPESAFE_API_KEY", "test-key")
+    monkeypatch.delenv("TYPESAFE_API_KEY_FILE", raising=False)
+    monkeypatch.delenv("SUPERSET_URL", raising=False)
+    monkeypatch.setenv("PRESET_URL", "https://workspace.app.preset.io")
+    monkeypatch.setenv("PRESET_ACCESS_TOKEN", "bearer-token")
+    monkeypatch.setenv("PRESET_API_BASE_URL", "http://api.local")
+    monkeypatch.setenv("SIGNALWEAVE_STORE_BACKEND", "sqlite")
+    monkeypatch.setenv("SIGNALWEAVE_STORE_PATH", str(tmp_path / "signalweave.db"))
+
+    with pytest.raises(RuntimeError, match="PRESET_API_BASE_URL must use https"):
+        build_runtime()
+
+
 def test_runtime_rejects_mixed_preset_credential_modes(monkeypatch, tmp_path):
     monkeypatch.setenv("TYPESAFE_API_KEY", "test-key")
     monkeypatch.delenv("TYPESAFE_API_KEY_FILE", raising=False)
