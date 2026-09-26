@@ -322,6 +322,8 @@ response limits—run `make preset-trial` and read
 [`docs/preset-integration-trial.md`](docs/preset-integration-trial.md).
 For a customer deployment, run `make preset-bootstrap-check` first; it validates
 the connection and one dashboard catalog page without making a Jev call.
+Then run `make preset-provider-smoke` with one real dashboard/chart ID to verify
+the filtered chart-data boundary without spending a Jev call.
 The real-account onboarding/shadow acceptance gate is `make preset-live-trial`;
 it requires tenant-scoped credentials, a live Jev key, and explicit human
 approval. Passing the fixture trial is not a substitute for that customer gate.

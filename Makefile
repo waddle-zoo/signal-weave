@@ -1,4 +1,4 @@
-.PHONY: install test lint prove benchmark daily-trial enterprise-trial discovery-trial bundle-trial query-trial retrieval-explanation-trial preset-trial preset-bootstrap-check preset-live-trial verify docker-up docker-down
+.PHONY: install test lint prove benchmark daily-trial enterprise-trial discovery-trial bundle-trial query-trial retrieval-explanation-trial preset-trial preset-bootstrap-check preset-provider-smoke preset-live-trial verify docker-up docker-down
 
 install:
 	uv sync --extra dev
@@ -41,6 +41,13 @@ preset-bootstrap-check:
 	TYPESAFE_API_KEY_FILE=$${TYPESAFE_API_KEY_FILE:?set a TypeSafe key file} \
 	uv run python scripts/preset_bootstrap_check.py \
 		--output artifacts/preset-bootstrap-check.json
+
+preset-provider-smoke:
+	TYPESAFE_API_KEY_FILE=$${TYPESAFE_API_KEY_FILE:?set a TypeSafe key file} \
+	uv run python scripts/preset_bootstrap_check.py \
+		--dashboard-id "$${PRESET_BOOTSTRAP_DASHBOARD_ID:?set a dashboard id}" \
+		--chart-id "$${PRESET_BOOTSTRAP_CHART_ID:?set a chart id}" \
+		--output artifacts/preset-provider-smoke.json
 
 preset-live-trial:
 	TYPESAFE_API_KEY_FILE=$${TYPESAFE_API_KEY_FILE:?set a live TypeSafe key file} \

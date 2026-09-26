@@ -57,6 +57,21 @@ the runtime is Jev-only, but makes zero Jev calls and never reads chart data.
 It fails for an empty workspace so a customer does not mistake a configured
 credential for a usable onboarding target.
 
+After choosing one real dashboard and chart, run the no-credit provider smoke
+probe before spending a Jev call:
+
+```bash
+PRESET_BOOTSTRAP_DASHBOARD_ID=123 \
+PRESET_BOOTSTRAP_CHART_ID=456 \
+TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
+  make preset-provider-smoke
+```
+
+This exercises the dashboard-scoped chart-data endpoint and fails unless it
+returns usable normalized observations. It does not create a card, call Jev,
+approve anything, or deliver a notification. A successful probe proves the
+provider boundary; it is still not proof that the business card is correct.
+
 Preset API credentials must be kept in an untracked secret file or deployment
 secret manager. They are loaded into memory only to construct the adapter and
 are never stored in cards, MCP payloads, or connection metadata. The customer

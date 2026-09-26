@@ -1,8 +1,9 @@
 """Run a bounded, no-Jev-call Preset connection preflight.
 
 The preflight authenticates the configured Preset connection and reads only one
-dashboard catalog page. It deliberately does not inspect chart data, create a
-card, call Jev, approve anything, or contact a delivery destination.
+dashboard catalog page by default. With ``--dashboard-id`` and ``--chart-id``
+it also probes one dashboard-scoped chart read. It never creates a card, calls
+Jev, approves anything, or contacts a delivery destination.
 """
 
 from __future__ import annotations
@@ -17,7 +18,16 @@ from signalweave.preset_adapter import PresetAdapter
 from signalweave.runtime import build_runtime
 
 
-async def run(*, adapter_name: str, page_size: int, output: Path | None = None) -> dict[str, Any]:
+async def run(
+    *,
+    adapter_name: str,
+    page_size: int,
+    dashboard_id: str | None = None,
+    chart_id: str | None = None,
+    output: Path | None = None,
+) -> dict[str, Any]:
+    if bool(dashboard_id) != bool(chart_id):
+        raise ValueError("dashboard_id and chart_id must be supplied together")
     runtime = build_runtime()
     if runtime.principal is None:
         raise RuntimeError(
@@ -34,6 +44,22 @@ async def run(*, adapter_name: str, page_size: int, output: Path | None = None) 
     )
     judger = runtime.engine.judger
     jev_requests = getattr(getattr(judger, "metrics", None), "requests", 0)
+    chart_probe: dict[str, Any] | None = None
+    if dashboard_id and chart_id:
+        snapshot = await adapter.client.dashboard_snapshot(
+            dashboard_id,
+            include_data=True,
+            chart_ids=[chart_id],
+        )
+        chart = snapshot.charts[0]
+        chart_probe = {
+            "dashboard_id": dashboard_id,
+            "chart_id": chart_id,
+            "semantic_status": chart.semantic_status,
+            "observation_count": len(chart.observations),
+            "error": chart.error,
+            "passed": chart.error is None and bool(chart.observations),
+        }
     report = {
         "trial": "preset-bootstrap-check",
         "adapter": adapter_name,
@@ -51,13 +77,18 @@ async def run(*, adapter_name: str, page_size: int, output: Path | None = None) 
             "preset_catalog_request_succeeded": True,
             "workspace_has_dashboard": bool(dashboards),
             "jev_calls_made": jev_requests == 0,
+            "dashboard_chart_probe": chart_probe is None or chart_probe["passed"],
         },
+        "chart_probe": chart_probe,
         "jev_requests": jev_requests,
         "passed": bool(dashboards)
         and getattr(judger, "name", None) == "jev-latest"
-        and jev_requests == 0,
+        and jev_requests == 0
+        and (chart_probe is None or chart_probe["passed"]),
         "not_proven": [
-            "chart-level permissions and semantic quality",
+            "chart-level permissions and semantic quality"
+            if chart_probe is None
+            else "business usefulness beyond the selected chart probe",
             "a human-approved card or Jev shadow decision",
             "managed SignalWeave hosting",
         ],
@@ -74,12 +105,20 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--adapter", default="preset__preset-env")
     parser.add_argument("--page-size", type=int, default=20)
+    parser.add_argument("--dashboard-id")
+    parser.add_argument("--chart-id")
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
     if not 1 <= args.page_size <= 100:
         parser.error("--page-size must be between 1 and 100")
     report = asyncio.run(
-        run(adapter_name=args.adapter, page_size=args.page_size, output=args.output)
+        run(
+            adapter_name=args.adapter,
+            page_size=args.page_size,
+            dashboard_id=args.dashboard_id,
+            chart_id=args.chart_id,
+            output=args.output,
+        )
     )
     if not report["passed"]:
         raise SystemExit("Preset bootstrap preflight did not pass")
