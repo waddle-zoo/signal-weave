@@ -143,7 +143,12 @@ class PresetAdapter(SupersetAdapter):
                     subject_id=chart.id,
                     subject_label=chart.title,
                     statement=f"Preset chart {chart.title} is present on the dashboard.",
-                    values={"metric": chart.metric},
+                    values={
+                        "metric": chart.metric,
+                        "metrics": chart.metrics,
+                        "viz_type": chart.viz_type,
+                        "semantic_status": chart.semantic_status,
+                    },
                     source_url=dashboard.source_url,
                 )
                 for chart in dashboard.charts

@@ -3,12 +3,32 @@ from __future__ import annotations
 import asyncio
 import json
 from collections.abc import Iterable
+from dataclasses import dataclass
 from typing import Any
 
 import httpx
 
 from .models import Observation
 from .superset_models import SupersetChartSnapshot, SupersetDashboardSnapshot
+
+
+@dataclass(frozen=True)
+class ChartObservationExtraction:
+    """Normalized chart evidence plus an explicit semantic quality result.
+
+    The extractor is intentionally chart-type agnostic.  It does not pretend
+    that every numeric field has the same meaning: when a chart omits an
+    explicit metric definition, all numeric fields are retained and the result
+    is marked ``partial`` so callers can require review instead of silently
+    losing a signal or inventing a total.
+    """
+
+    observations: list[Observation]
+    metrics: list[str]
+    semantic_status: str
+    notes: list[str]
+    row_count: int = 0
+    columns: list[str] | None = None
 
 
 class SupersetClient:
@@ -204,22 +224,107 @@ class SupersetClient:
             value = default
         return max(minimum, min(value, maximum))
 
+    @staticmethod
+    def _as_list(value: Any) -> list[Any]:
+        if value is None:
+            return []
+        return value if isinstance(value, list) else [value]
+
+    @staticmethod
+    def _dedupe_values(values: Iterable[Any]) -> list[Any]:
+        result: list[Any] = []
+        seen: set[str] = set()
+        for value in values:
+            if value is None or not isinstance(value, (str, dict)):
+                continue
+            key = json.dumps(value, sort_keys=True) if isinstance(value, dict) else str(value)
+            if key in seen:
+                continue
+            seen.add(key)
+            result.append(value)
+        return result
+
+    @classmethod
+    def _query_metrics(cls, params: dict[str, Any]) -> list[Any]:
+        """Recover metric expressions from Superset visualization-specific fields.
+
+        Superset's Explore form data does not use one universal metric field. For
+        example, bubble charts put measures in ``x``/``y``/``size`` while a
+        histogram may only specify a ``column`` and implicitly counts rows.
+        Keeping this translation here makes the downstream evidence contract
+        independent of the visualization plugin.
+        """
+        metrics = params.get("metrics")
+        if not metrics and params.get("metric") is not None:
+            metrics = [params["metric"]]
+        explicit = cls._as_list(metrics)
+        if not explicit:
+            explicit = [params[key] for key in ("x", "y", "size") if params.get(key) is not None]
+        if explicit:
+            return cls._dedupe_values(explicit)
+        # Superset accepts count as the implicit measure for dimension-only
+        # charts. This is also the useful row-count signal for histograms,
+        # geospatial plots, and Gantt charts.
+        if any(
+            params.get(key) is not None
+            for key in (
+                "column",
+                "groupby",
+                "series",
+                "entity",
+                "spatial",
+                "start_spatial",
+                "end_spatial",
+                "line_column",
+                "start_time",
+                "end_time",
+            )
+        ):
+            return ["count"]
+        return []
+
+    @classmethod
+    def _query_columns(cls, params: dict[str, Any], granularity: str | None) -> list[Any]:
+        columns: list[Any] = []
+        columns.extend(cls._as_list(params.get("columns")))
+        columns.extend(cls._as_list(params.get("groupby")))
+        for key in (
+            "x_axis",
+            "entity",
+            "series",
+            "column",
+            "line_column",
+            "start_time",
+            "end_time",
+        ):
+            value = params.get(key)
+            if isinstance(value, str) and value:
+                columns.append(value)
+        spatials = [params.get("spatial"), params.get("start_spatial"), params.get("end_spatial")]
+        for spatial in spatials:
+            if not isinstance(spatial, dict):
+                continue
+            columns.extend(
+                value
+                for key in ("latCol", "lonCol")
+                if isinstance(value := spatial.get(key), str) and value
+            )
+        if not columns:
+            columns.extend(cls._as_list(params.get("all_columns")))
+        columns = cls._dedupe_values(columns)
+        if params.get("time_grain_sqla") and granularity and granularity not in columns:
+            columns.insert(0, granularity)
+        return columns
+
     @classmethod
     def _query_context(cls, chart: dict[str, Any]) -> dict[str, Any]:
         """Build a bounded chart-data request from a saved chart definition."""
         params = cls._params(chart)
-        metrics = params.get("metrics")
-        if not metrics and params.get("metric"):
-            metrics = [params["metric"]]
-        groupby = params.get("groupby") or params.get("columns") or []
-        granularity = (
-            params.get("granularity")
-            or params.get("granularity_sqla")
-            or params.get("x_axis")
-        )
-        columns = list(params.get("columns") or groupby or params.get("all_columns") or [])
-        if params.get("time_grain_sqla") and granularity and granularity not in columns:
-            columns.insert(0, granularity)
+        metrics = cls._query_metrics(params)
+        granularity = params.get("granularity") or params.get("granularity_sqla")
+        if not isinstance(granularity, str):
+            granularity = None
+        columns = cls._query_columns(params, granularity)
         extras = {}
         if params.get("time_grain_sqla"):
             extras["time_grain_sqla"] = params["time_grain_sqla"]
@@ -289,7 +394,10 @@ class SupersetClient:
     async def chart_data(self, chart: dict[str, Any]) -> list[dict[str, Any]]:
         payload = self._saved_query_context(chart) or self._query_context(chart)
         response = await self._request("POST", "/api/v1/chart/data", timeout=60, json=payload)
-        return response.json().get("result", [])
+        result = response.json().get("result", [])
+        if isinstance(result, dict):
+            return [result]
+        return [item for item in result if isinstance(item, dict)] if isinstance(result, list) else []
 
     @staticmethod
     def _numeric_keys(rows: Iterable[dict[str, Any]]) -> list[str]:
@@ -301,24 +409,101 @@ class SupersetClient:
         return [key for key, _ in sorted(counts.items(), key=lambda item: -item[1])]
 
     @classmethod
-    def _metric_key(cls, chart: dict[str, Any], rows: list[dict[str, Any]]) -> str | None:
+    def _viz_type(cls, chart: dict[str, Any]) -> str:
         params = cls._params(chart)
-        candidates: list[str] = []
+        return str(chart.get("viz_type") or params.get("viz_type") or "unknown")
+
+    @staticmethod
+    def _normalized_key(value: Any) -> str:
+        return "".join(character for character in str(value).lower() if character.isalnum())
+
+    @classmethod
+    def _metric_specs(cls, chart: dict[str, Any]) -> list[Any]:
+        params = cls._params(chart)
         metrics = params.get("metrics") or ([params["metric"]] if params.get("metric") else [])
-        for metric in metrics:
-            if isinstance(metric, str):
-                candidates.append(metric)
-            elif isinstance(metric, dict):
-                label = metric.get("label")
-                column = metric.get("column", {})
-                if label:
-                    candidates.append(str(label))
-                if isinstance(column, dict) and column.get("column_name"):
-                    candidates.append(str(column["column_name"]))
-        numeric_keys = cls._numeric_keys(rows)
+        if isinstance(metrics, (str, dict)):
+            return [metrics]
+        if isinstance(metrics, list) and metrics:
+            return [metric for metric in metrics if isinstance(metric, (str, dict))]
+        visual_measures = [params[key] for key in ("x", "y", "size") if params.get(key) is not None]
+        if visual_measures:
+            return cls._dedupe_values(visual_measures)
+        if any(
+            params.get(key) is not None
+            for key in (
+                "column",
+                "spatial",
+                "start_spatial",
+                "end_spatial",
+                "line_column",
+                "start_time",
+                "end_time",
+            )
+        ):
+            return ["count"]
+        return []
+
+    @staticmethod
+    def _metric_candidates(spec: Any) -> list[str]:
+        if isinstance(spec, str):
+            candidates = [spec]
+        elif isinstance(spec, dict):
+            candidates = [
+                str(spec[key])
+                for key in ("label", "metric", "expression")
+                if spec.get(key) is not None
+            ]
+            column = spec.get("column")
+            if isinstance(column, dict) and column.get("column_name") is not None:
+                candidates.append(str(column["column_name"]))
+        else:
+            candidates = []
+        expanded = list(candidates)
         for candidate in candidates:
-            if candidate in numeric_keys:
-                return candidate
+            if "(" in candidate and candidate.endswith(")"):
+                expanded.append(candidate[candidate.find("(") + 1 : -1])
+        return list(dict.fromkeys(expanded))
+
+    @classmethod
+    def _metric_keys(
+        cls, chart: dict[str, Any], rows: list[dict[str, Any]], time_key: str | None
+    ) -> tuple[list[str], list[str]]:
+        params = cls._params(chart)
+        numeric_keys = cls._numeric_keys(rows)
+        row_keys = {str(key): key for row in rows for key in row}
+        normalized_row_keys = {
+            cls._normalized_key(key): key for key in row_keys
+        }
+        specs = cls._metric_specs(chart)
+        if specs:
+            selected: list[str] = []
+            missing: list[str] = []
+            for spec in specs:
+                candidates = cls._metric_candidates(spec)
+                match = next(
+                    (
+                        row_keys[candidate]
+                        for candidate in candidates
+                        if candidate in row_keys and candidate in numeric_keys
+                    ),
+                    None,
+                )
+                if match is None:
+                    match = next(
+                        (
+                            normalized_row_keys[cls._normalized_key(candidate)]
+                            for candidate in candidates
+                            if cls._normalized_key(candidate) in normalized_row_keys
+                            and normalized_row_keys[cls._normalized_key(candidate)] in numeric_keys
+                        ),
+                        None,
+                    )
+                if match is None:
+                    missing.append(str(candidates[0] if candidates else spec))
+                elif match not in selected:
+                    selected.append(str(match))
+            return selected, missing
+
         granularity = {
             params.get("granularity"),
             params.get("granularity_sqla"),
@@ -330,8 +515,37 @@ class SupersetClient:
             if isinstance(column, str)
             and any(token in column.lower() for token in ("date", "time", "timestamp"))
         )
-        fallback = [key for key in numeric_keys if key not in granularity]
-        return fallback[0] if len(fallback) == 1 else None
+        return [key for key in numeric_keys if key not in granularity and key != time_key], []
+
+    @classmethod
+    def _rows_from_result_item(cls, result: Any) -> list[dict[str, Any]]:
+        """Normalize common Superset tabular result envelopes.
+
+        Superset chart plugins can wrap the same query rows as ``data``,
+        ``records``, ``rows``, or columnar ``columns``/``data`` payloads.  The
+        chart adapter keeps this normalization generic and leaves visualization
+        semantics to the explicit metric/query definition.
+        """
+        payload = result.get("data") if isinstance(result, dict) and "data" in result else result
+        if isinstance(payload, list):
+            if all(isinstance(row, dict) for row in payload):
+                return payload
+            return []
+        if not isinstance(payload, dict):
+            return []
+        for key in ("records", "rows", "results", "values"):
+            rows = payload.get(key)
+            if isinstance(rows, list) and all(isinstance(row, dict) for row in rows):
+                return rows
+        columns = payload.get("columns")
+        values = payload.get("data")
+        if isinstance(columns, list) and isinstance(values, list):
+            return [
+                {str(column): value for column, value in zip(columns, row, strict=False)}
+                for row in values
+                if isinstance(row, list)
+            ]
+        return []
 
     @classmethod
     def _time_key(cls, chart: dict[str, Any], rows: list[dict[str, Any]]) -> str | None:
@@ -359,79 +573,130 @@ class SupersetClient:
         return (1, str(value))
 
     @classmethod
+    def extract_chart_data(
+        cls, chart: dict[str, Any], result: list[dict[str, Any]]
+    ) -> ChartObservationExtraction:
+        rows: list[dict[str, Any]] = []
+        for item in result:
+            rows.extend(cls._rows_from_result_item(item))
+        if not rows:
+            return ChartObservationExtraction([], [], "no_data", ["The chart query returned no tabular rows."])
+        columns = list(dict.fromkeys(str(key) for row in rows for key in row))
+        time_key = cls._time_key(chart, rows)
+        metric_keys, missing = cls._metric_keys(chart, rows, time_key)
+        notes = [f"Metric definition was not present in result rows: {item}." for item in missing]
+        explicit_metrics = bool(cls._metric_specs(chart))
+        if not metric_keys:
+            status = "unsupported" if explicit_metrics or cls._numeric_keys(rows) else "metadata_only"
+            message = (
+                "Declared metric columns could not be matched to numeric result fields."
+                if status == "unsupported"
+                else "The chart returned rows but no numeric metric columns."
+            )
+            return ChartObservationExtraction(
+                [],
+                [],
+                status,
+                [*notes, message],
+                row_count=len(rows),
+                columns=columns,
+            )
+        if not explicit_metrics and len(metric_keys) > 1:
+            notes.append(
+                "The chart returned multiple numeric columns without explicit metric semantics; "
+                "all were retained as separate observations and require review."
+            )
+
+        observations: list[Observation] = []
+        chart_id = str(chart.get("id"))
+        chart_title = str(chart.get("slice_name") or chart.get("id"))
+        for metric_key in metric_keys:
+            numeric_rows = [
+                row for row in rows if isinstance(row.get(metric_key), (int, float))
+            ]
+            if not numeric_rows:
+                continue
+            if time_key:
+                values_by_time: dict[Any, float] = {}
+                for row in numeric_rows:
+                    time_value = row.get(time_key)
+                    if time_value is not None:
+                        values_by_time[time_value] = values_by_time.get(time_value, 0.0) + float(row[metric_key])
+                ordered_values = [
+                    values_by_time[key] for key in sorted(values_by_time, key=cls._sort_value)
+                ]
+                current = float(ordered_values[-1]) if ordered_values else None
+                comparison_baselines: dict[str, float] = {}
+                if len(ordered_values) >= 2:
+                    comparison_baselines["previous_period"] = float(ordered_values[-2])
+                if len(ordered_values) >= 5:
+                    comparison_baselines["trailing_4_period_average"] = sum(ordered_values[-5:-1]) / 4
+                baseline = comparison_baselines.get("previous_period")
+                change_pct = (
+                    round((current - baseline) / abs(baseline) * 100, 3)
+                    if current is not None and baseline not in (None, 0)
+                    else None
+                )
+                observations.append(
+                    Observation(
+                        source_key=f"superset-chart:{chart_id}",
+                        subject_id=f"{chart_id}:{metric_key}",
+                        subject_label=chart_title,
+                        subject_type="superset_chart",
+                        metric=metric_key,
+                        current=current,
+                        baseline=baseline,
+                        change_pct=change_pct,
+                        comparison_baselines=comparison_baselines,
+                        attributes={"viz_type": cls._viz_type(chart)},
+                        source_url=chart.get("url"),
+                    )
+                )
+                continue
+
+            for index, row in enumerate(numeric_rows[:500]):
+                dimensions = {
+                    str(key): value
+                    for key, value in row.items()
+                    if key not in metric_keys
+                }
+                observations.append(
+                    Observation(
+                        source_key=f"superset-chart:{chart_id}",
+                        subject_id=f"{chart_id}:{metric_key}:{index}",
+                        subject_label=chart_title,
+                        subject_type="superset_chart",
+                        metric=metric_key,
+                        current=float(row[metric_key]),
+                        dimensions=dimensions,
+                        attributes={"viz_type": cls._viz_type(chart)},
+                        source_url=chart.get("url"),
+                    )
+                )
+        status = "partial" if notes else "extracted"
+        if not observations:
+            status = "unsupported"
+            notes.append("Metric columns were declared but no numeric values were returned.")
+        return ChartObservationExtraction(
+            observations,
+            metric_keys,
+            status,
+            notes,
+            row_count=len(rows),
+            columns=columns,
+        )
+
+    @classmethod
     def _observations_from_result(
         cls, chart: dict[str, Any], result: dict[str, Any]
     ) -> list[Observation]:
-        rows = [row for row in result.get("data", []) if isinstance(row, dict)]
-        if not rows:
-            return []
-        metric_key = cls._metric_key(chart, rows)
-        if metric_key is None:
-            return []
-        values = [row[metric_key] for row in rows if isinstance(row.get(metric_key), (int, float))]
-        time_key = cls._time_key(chart, rows)
-        values_by_time: dict[Any, float] = {}
-        if time_key:
-            for row in rows:
-                time_value = row.get(time_key)
-                metric_value = row.get(metric_key)
-                if time_value is not None and isinstance(metric_value, (int, float)):
-                    values_by_time[time_value] = values_by_time.get(time_value, 0.0) + float(metric_value)
-        ordered_values = [
-            values_by_time[key] for key in sorted(values_by_time, key=cls._sort_value)
-        ]
-        comparable_values = ordered_values if len(ordered_values) >= 2 else values
-        current = float(comparable_values[-1]) if comparable_values else None
-        comparison_baselines: dict[str, float] = {}
-        if len(ordered_values) >= 2:
-            comparison_baselines["previous_period"] = float(ordered_values[-2])
-        if len(ordered_values) >= 5:
-            comparison_baselines["trailing_4_period_average"] = sum(ordered_values[-5:-1]) / 4
-        baseline = comparison_baselines.get("previous_period")
-        change_pct = None
-        if current is not None and baseline not in (None, 0):
-            change_pct = round((current - baseline) / abs(baseline) * 100, 3)
-        dimensions: dict[str, float] = {}
-        if len(rows) > 1 and baseline is None:
-            dimension_candidates = [
-                key for key in rows[0] if key not in {metric_key, time_key}
-            ]
-            for row in rows[:25]:
-                label = next(
-                    (
-                        str(value)
-                        for key, value in row.items()
-                        if key in dimension_candidates
-                        and not isinstance(value, (int, float, bool))
-                    ),
-                    None,
-                )
-                if label is not None and isinstance(row.get(metric_key), (int, float)):
-                    dimensions[label] = float(row[metric_key])
-        return [
-            Observation(
-                source_key=f"superset-chart:{chart.get('id')}",
-                subject_id=str(chart.get("id")),
-                subject_label=str(chart.get("slice_name") or chart.get("id")),
-                subject_type="superset_chart",
-                metric=metric_key,
-                current=current,
-                baseline=baseline,
-                change_pct=change_pct,
-                comparison_baselines=comparison_baselines,
-                dimensions=dimensions,
-                source_url=chart.get("url"),
-            )
-        ]
+        return cls.extract_chart_data(chart, [result]).observations
 
     @classmethod
     def observations_from_chart_data(
         cls, chart: dict[str, Any], result: list[dict[str, Any]]
     ) -> list[Observation]:
-        observations: list[Observation] = []
-        for item in result:
-            observations.extend(cls._observations_from_result(chart, item))
-        return observations
+        return cls.extract_chart_data(chart, result).observations
 
     async def dashboard_snapshot(
         self,
@@ -463,17 +728,30 @@ class SupersetClient:
             async with semaphore:
                 try:
                     chart_metadata = await self.get_chart_metadata(chart.id)
-                    observations = self.observations_from_chart_data(
+                    extraction = self.extract_chart_data(
                         chart_metadata, await self.chart_data(chart_metadata)
                     )
-                    if not observations:
-                        raise ValueError("no unambiguous numeric metric observation was returned")
-                    return chart.model_copy(update={"observations": observations})
+                    updates: dict[str, Any] = {
+                        "observations": extraction.observations,
+                        "metrics": extraction.metrics,
+                        "metric": extraction.metrics[0] if extraction.metrics else "unknown",
+                        "viz_type": self._viz_type(chart_metadata),
+                        "semantic_status": extraction.semantic_status,
+                        "semantic_notes": extraction.notes,
+                        "result_row_count": extraction.row_count,
+                        "result_columns": extraction.columns or [],
+                    }
+                    if not extraction.observations:
+                        updates["error"] = "; ".join(extraction.notes)
+                        updates["description"] = updates["error"]
+                    return chart.model_copy(update=updates)
                 except (httpx.HTTPError, KeyError, TypeError, ValueError) as error:
                     return chart.model_copy(
                         update={
                             "error": f"Data unavailable from Superset: {error}",
                             "description": f"Data unavailable from Superset: {error}",
+                            "semantic_status": "unsupported",
+                            "semantic_notes": [f"Chart normalization failed: {error}"],
                         }
                     )
 
@@ -489,22 +767,41 @@ class SupersetClient:
                 position = json.loads(position)
             except json.JSONDecodeError:
                 position = {}
+        chart_items: list[dict[str, Any]] = []
+        if isinstance(position, dict):
+            chart_items.extend(item for item in position.values() if isinstance(item, dict))
+        elif isinstance(position, list):
+            chart_items.extend(item for item in position if isinstance(item, dict))
+        for key in ("charts", "slices"):
+            items = metadata.get(key)
+            if isinstance(items, list):
+                chart_items.extend(item for item in items if isinstance(item, dict))
+
         charts: list[SupersetChartSnapshot] = []
-        for item in position.values() if isinstance(position, dict) else []:
-            if not isinstance(item, dict) or item.get("type") != "CHART":
+        seen_chart_ids: set[str] = set()
+        for item in chart_items:
+            meta = item.get("meta") if isinstance(item.get("meta"), dict) else {}
+            item_type = str(item.get("type") or "CHART").upper()
+            chart_id = meta.get("chartId") or item.get("chartId") or item.get("slice_id")
+            chart_id = chart_id or item.get("id")
+            if chart_id is None or (item_type not in {"CHART", "SLICE"} and not meta.get("chartId")):
                 continue
-            chart_id = item.get("meta", {}).get("chartId")
-            if chart_id is None:
+            chart_id = str(chart_id)
+            if chart_id in seen_chart_ids:
                 continue
+            seen_chart_ids.add(chart_id)
             charts.append(
                 SupersetChartSnapshot(
-                    id=str(chart_id),
+                    id=chart_id,
                     title=str(
-                        item.get("meta", {}).get("sliceNameOverride")
-                        or item.get("meta", {}).get("sliceName")
+                        meta.get("sliceNameOverride")
+                        or meta.get("sliceName")
+                        or item.get("slice_name")
+                        or item.get("title")
                         or chart_id
                     ),
                     metric="unknown",
+                    viz_type=str(meta.get("viz_type") or item.get("viz_type") or "unknown"),
                 )
             )
         return SupersetDashboardSnapshot(

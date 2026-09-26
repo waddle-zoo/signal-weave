@@ -202,10 +202,15 @@ class SupersetAdapter:
                 subject_id=chart.id,
                 subject_label=chart.title,
                 statement=(
-                    f"Superset chart {chart.title} uses metric definition `{chart.metric}`."
+                    f"Superset chart {chart.title} ({chart.viz_type}) exposes "
+                    f"{', '.join(chart.metrics or [chart.metric])} as normalized evidence."
                 ),
                 values={
                     "metric": chart.metric,
+                    "metrics": chart.metrics,
+                    "viz_type": chart.viz_type,
+                    "semantic_status": chart.semantic_status,
+                    "semantic_notes": chart.semantic_notes,
                     "related_chart_ids": chart.related_chart_ids,
                     "description": chart.description,
                     "error": chart.error,
@@ -227,6 +232,12 @@ class SupersetAdapter:
         chart_errors = [
             f"{chart.title}: {chart.error}" for chart in dashboard.charts if chart.error
         ]
+        semantic_issues = [
+            f"{chart.title}: {note}"
+            for chart in dashboard.charts
+            if chart.semantic_status not in {"extracted", "metadata_only"}
+            for note in chart.semantic_notes
+        ]
         charts_with_observations = [chart for chart in dashboard.charts if chart.observations]
         missing_baseline_chart_ids = [
             chart.id
@@ -239,9 +250,15 @@ class SupersetAdapter:
         ]
         quality_status = (
             "failed"
-            if dashboard.charts and not charts_with_observations
+            if dashboard.charts
+            and not charts_with_observations
+            and all(
+                chart.semantic_status in {"unsupported", "no_data"}
+                or chart.error
+                for chart in dashboard.charts
+            )
             else "partial"
-            if chart_errors or missing_baseline_chart_ids
+            if chart_errors or semantic_issues or missing_baseline_chart_ids
             else "healthy"
         )
         metadata["data_quality"] = {
@@ -249,6 +266,7 @@ class SupersetAdapter:
             "chart_count": len(dashboard.charts),
             "charts_with_observations": len(charts_with_observations),
             "chart_errors": chart_errors,
+            "semantic_issues": semantic_issues,
             "missing_baseline_chart_ids": missing_baseline_chart_ids,
         }
         return ResourceSnapshot(
@@ -269,9 +287,8 @@ class SupersetAdapter:
 
     async def _inspect_chart(self, source: SourceRef, chart_id: str) -> ResourceSnapshot:
         chart = await self.client.get_chart_metadata(chart_id)
-        observations = self.client.observations_from_chart_data(
-            chart, await self.client.chart_data(chart)
-        )
+        extraction = self.client.extract_chart_data(chart, await self.client.chart_data(chart))
+        observations = extraction.observations
         observations = [
             observation.model_copy(update={"source_key": source.key})
             for observation in observations
@@ -290,15 +307,52 @@ class SupersetAdapter:
                     source_key=source.key,
                     subject_id=str(chart_id),
                     subject_label=title,
-                    statement=f"Superset chart {title} uses metric definition `{metric}`.",
-                    values={"metric": metric},
+                    statement=(
+                        f"Superset chart {title} ({self._chart_viz_type(chart)}) exposes "
+                        f"{', '.join(extraction.metrics or [metric])} as normalized evidence."
+                    ),
+                    values={
+                        "metric": metric,
+                        "metrics": extraction.metrics,
+                        "viz_type": self._chart_viz_type(chart),
+                        "semantic_status": extraction.semantic_status,
+                        "semantic_notes": extraction.notes,
+                        "result_row_count": extraction.row_count,
+                        "result_columns": extraction.columns or [],
+                    },
                     source_url=chart.get("url"),
                 )
             ],
             metadata={
                 "provider": self.provider_name,
                 "chart_id": str(chart_id),
+                "viz_type": self._chart_viz_type(chart),
+                "semantic_status": extraction.semantic_status,
+                "semantic_notes": extraction.notes,
+                "result_row_count": extraction.row_count,
+                "result_columns": extraction.columns or [],
                 "parameters": source.parameters,
             },
+            error=(
+                "; ".join(extraction.notes)
+                if extraction.semantic_status in {"unsupported", "no_data"}
+                else None
+            ),
             source_url=chart.get("url"),
+        )
+
+    @staticmethod
+    def _chart_viz_type(chart: dict[str, object]) -> str:
+        params = chart.get("params")
+        if isinstance(params, str):
+            import json
+
+            try:
+                params = json.loads(params)
+            except json.JSONDecodeError:
+                params = {}
+        return str(
+            chart.get("viz_type")
+            or (params.get("viz_type") if isinstance(params, dict) else None)
+            or "unknown"
         )

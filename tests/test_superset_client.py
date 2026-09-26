@@ -76,6 +76,90 @@ def test_query_context_uses_all_columns_for_saved_table_charts():
     assert query["queries"][0]["columns"] == ["order_date", "region", "net_sales"]
 
 
+@pytest.mark.parametrize(
+    ("params", "expected_metrics", "expected_columns"),
+    [
+        (
+            {
+                "viz_type": "bubble_v2",
+                "x": {"label": "SUM(quantity_ordered)"},
+                "y": {"label": "COUNT_DISTINCT(country)"},
+                "size": "count",
+                "entity": "deal_size",
+                "series": "product_line",
+            },
+            [
+                {"label": "SUM(quantity_ordered)"},
+                {"label": "COUNT_DISTINCT(country)"},
+                "count",
+            ],
+            ["deal_size", "product_line"],
+        ),
+        (
+            {
+                "viz_type": "histogram_v2",
+                "column": "expected_earn",
+            },
+            ["count"],
+            ["expected_earn"],
+        ),
+        (
+            {
+                "viz_type": "gantt_chart",
+                "series": "priority",
+                "start_time": "start_time",
+                "end_time": "end_time",
+            },
+            ["count"],
+            ["priority", "start_time", "end_time"],
+        ),
+        (
+            {
+                "viz_type": "deck_arc",
+                "start_spatial": {"latCol": "LATITUDE", "lonCol": "LONGITUDE"},
+                "end_spatial": {"latCol": "LATITUDE_DEST", "lonCol": "LONGITUDE_DEST"},
+            },
+            ["count"],
+            ["LATITUDE", "LONGITUDE", "LATITUDE_DEST", "LONGITUDE_DEST"],
+        ),
+        (
+            {
+                "viz_type": "deck_path",
+                "line_column": "path_json",
+            },
+            ["count"],
+            ["path_json"],
+        ),
+    ],
+)
+def test_query_context_recovers_visualization_specific_fields(
+    params, expected_metrics, expected_columns
+):
+    query = SupersetClient._query_context({"datasource_id": 3, "params": params})
+    query_object = query["queries"][0]
+
+    assert query_object["metrics"] == expected_metrics
+    assert query_object["columns"] == expected_columns
+
+
+def test_heatmap_x_axis_is_a_dimension_not_a_duplicate_time_grain():
+    query = SupersetClient._query_context(
+        {
+            "datasource_id": 3,
+            "params": {
+                "viz_type": "heatmap_v2",
+                "metric": "count",
+                "groupby": ["genre"],
+                "x_axis": "year",
+            },
+        }
+    )
+
+    query_object = query["queries"][0]
+    assert query_object["granularity"] is None
+    assert query_object["columns"] == ["genre", "year"]
+
+
 def test_query_context_bounds_saved_chart_limits():
     query = SupersetClient._query_context(
         {
@@ -228,6 +312,7 @@ async def test_partial_dashboard_preserves_good_charts_and_quality_metadata():
         "chart_count": 2,
         "charts_with_observations": 1,
         "chart_errors": ["43: Data unavailable from Superset: chart unavailable"],
+        "semantic_issues": ["43: Chart normalization failed: chart unavailable"],
         "missing_baseline_chart_ids": [],
     }
 
@@ -300,13 +385,57 @@ def test_time_series_rows_include_supported_comparison_baselines():
     }
 
 
-def test_ambiguous_numeric_result_is_rejected_instead_of_guessing_metric():
+def test_ambiguous_numeric_result_retains_all_metrics_and_marks_review_required():
     observations = SupersetClient.observations_from_chart_data(
         {"id": 42, "params": {}},
         [{"data": [{"revenue": 10, "orders": 2}, {"revenue": 12, "orders": 3}]}],
     )
 
-    assert observations == []
+    assert {item.metric for item in observations} == {"revenue", "orders"}
+    assert len(observations) == 4
+
+
+def test_chart_extraction_normalizes_columnar_and_nested_result_shapes():
+    extraction = SupersetClient.extract_chart_data(
+        {
+            "id": 42,
+            "viz_type": "custom_viz",
+            "params": {"metrics": [{"label": "Revenue"}]},
+        },
+        [{"data": {"columns": ["region", "Revenue"], "data": [["NA", 10], ["EU", 12]]}}],
+    )
+
+    assert [item.current for item in extraction.observations] == [10.0, 12.0]
+    assert extraction.metrics == ["Revenue"]
+    assert extraction.semantic_status == "extracted"
+
+
+def test_implicit_count_charts_keep_numeric_dimensions_out_of_metric_set():
+    extraction = SupersetClient.extract_chart_data(
+        {
+            "id": 42,
+            "viz_type": "histogram_v2",
+            "params": {"column": "quantity_ordered"},
+        },
+        [{"data": [{"quantity_ordered": 1, "count": 4}, {"quantity_ordered": 2, "count": 7}]}],
+    )
+
+    assert extraction.metrics == ["count"]
+    assert extraction.semantic_status == "extracted"
+    assert extraction.observations[0].dimensions == {"quantity_ordered": 1}
+
+
+def test_dashboard_chart_array_metadata_is_discovered_without_position_json():
+    snapshot = SupersetClient.metadata_to_snapshot(
+        {
+            "id": 42,
+            "dashboard_title": "Niche charts",
+            "charts": [{"id": 7, "title": "Custom visualization", "viz_type": "custom_viz"}],
+        }
+    )
+
+    assert [chart.id for chart in snapshot.charts] == ["7"]
+    assert snapshot.charts[0].viz_type == "custom_viz"
 
 
 def test_table_chart_uses_date_like_column_as_time_and_numeric_column_as_metric():

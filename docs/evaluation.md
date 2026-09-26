@@ -52,6 +52,21 @@ RUN_SUPERSET_INTEGRATION=1 \
   uv run python -m pytest -q tests/test_superset_integration.py
 ```
 
+For a chart-shape matrix rather than a single dashboard smoke test, run the
+same client path over every saved dashboard in the local Superset:
+
+```bash
+uv run python scripts/superset_chart_matrix.py
+```
+
+The harness reports chart-family coverage and fails on unclassified empty
+results, observations without metric labels, or observations whose metrics
+were silently dropped. In the local fixture on 2026-09-26 it traversed 9
+dashboards and 102 charts, produced 9,231 observations, classified 101 charts
+as `extracted`, and marked one raw multi-number table `partial` because its
+saved definition did not identify metric semantics. It reported zero
+unsupported charts and zero silent-loss issues.
+
 The live integration test is skipped unless explicitly enabled. The unlabeled
 external-source acceptance check is:
 
