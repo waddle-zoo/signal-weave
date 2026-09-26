@@ -74,7 +74,8 @@ Superset artifact normalization while reporting `adapter="preset"` and the
 customer tenant in the resource contract.
 
 Preset currently documents the direct Preset API as an Enterprise-plan
-capability. Preset's current MCP authentication documentation also describes
+capability; the [canonical API reference](https://api-docs.preset.io/) documents
+the `/v1/auth/` exchange and workspace API collection. Preset's current MCP authentication documentation also describes
 the MCP server as an Enterprise add-on. A customer must therefore have the
 relevant Preset entitlement for either direct unattended API access or the
 remote-MCP fallback; the remote-MCP path is not a universal workaround for a

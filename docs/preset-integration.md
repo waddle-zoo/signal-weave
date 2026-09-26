@@ -214,6 +214,7 @@ general cloud platform or a Preset UI plugin.
 ## Official Preset references
 
 - [Preset API](https://docs.preset.io/docs/the-preset-api)
+- [Preset API reference](https://api-docs.preset.io/)
 - [Preset MCP server authentication](https://docs.preset.io/docs/preset-mcp-server-authentication)
 - [Preset Alerts & Reports](https://docs.preset.io/docs/alerts-reports)
 - [Preset dashboard embedding](https://docs.preset.io/docs/dashboard-embedding)
