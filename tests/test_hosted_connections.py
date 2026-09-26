@@ -339,6 +339,45 @@ async def test_preset_metadata_only_never_fetches_chart_data():
 
 
 @pytest.mark.asyncio
+async def test_preset_explicit_dashboard_authorization_does_not_scan_catalog():
+    paths: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        paths.append(request.url.path)
+        if request.url.path == "/api/v1/dashboard/7":
+            return httpx.Response(
+                200,
+                json={
+                    "result": {
+                        "id": 7,
+                        "dashboard_title": "Growth",
+                        "description": "Executive growth view",
+                    }
+                },
+            )
+        raise AssertionError(f"explicit authorization must not scan Preset catalog: {request.url}")
+
+    adapter = PresetAdapter(
+        PresetCloudClient(
+            "https://workspace.app.preset.test",
+            access_token="preset-token",
+            transport=httpx.MockTransport(handler),
+        ),
+        tenant_id="northstar",
+    )
+
+    descriptor = await adapter.authorize(
+        SourceRef(key="growth", adapter="preset", resource="dashboard:7", label="Growth"),
+        authorized_tenants={"northstar"},
+    )
+
+    assert descriptor is not None
+    assert descriptor.resource == "dashboard:7"
+    assert descriptor.contract.tenant_id == "northstar"
+    assert paths == ["/api/v1/dashboard/7"]
+
+
+@pytest.mark.asyncio
 async def test_preset_metadata_only_honors_selected_chart_ids():
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path == "/api/v1/dashboard/7":
