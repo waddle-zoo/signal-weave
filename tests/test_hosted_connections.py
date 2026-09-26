@@ -921,6 +921,8 @@ def test_runtime_bootstraps_one_preset_connection_from_environment(monkeypatch, 
     monkeypatch.setenv("TYPESAFE_API_KEY", "test-key")
     monkeypatch.delenv("TYPESAFE_API_KEY_FILE", raising=False)
     monkeypatch.delenv("SUPERSET_URL", raising=False)
+    monkeypatch.delenv("SIGNALWEAVE_TENANT_ID", raising=False)
+    monkeypatch.delenv("SIGNALWEAVE_PRINCIPAL_ID", raising=False)
     monkeypatch.setenv("PRESET_URL", "https://workspace.us-east-1.app.preset.io")
     monkeypatch.setenv("PRESET_WORKSPACE", "workspace")
     monkeypatch.setenv("PRESET_TENANT_ID", "northstar")
@@ -939,6 +941,8 @@ def test_runtime_bootstraps_one_preset_connection_from_environment(monkeypatch, 
     assert adapter.policy.mode == HostedDataMode.METADATA_ONLY
     assert adapter.client._api_token_name == "preset-name"
     assert adapter.client._api_token_secret == "preset-secret"
+    assert runtime.principal is None
+    assert runtime.sources.authorized_tenants == frozenset({"northstar"})
 
 
 def test_runtime_rejects_incomplete_preset_environment_bootstrap(monkeypatch, tmp_path):
