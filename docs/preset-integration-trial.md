@@ -38,6 +38,7 @@ The trial currently proves:
 | Row limit enforcement | A provider response that exceeds the configured bound fails closed |
 | Byte limit enforcement | An oversized metadata response fails before parsing |
 | Token expiry | A 401 triggers exactly one API-token refresh and one retry |
+| Transient provider failure | 429/5xx responses retry within a bounded delay; ordinary client errors do not retry |
 
 The test is deliberately honest about what it does not prove. A mock cannot
 validate a customer's Preset plan, permissions, network path, rate limits, or

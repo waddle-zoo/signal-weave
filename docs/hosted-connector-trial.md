@@ -44,7 +44,7 @@ Before offering hosted access to customers we still need:
   credentials;
 - OAuth callbacks and token refresh;
 - a KMS-backed credential vault and shared transactional connection store;
-- provider-specific rate-limit/backoff and retry tests;
+- real provider rate-limit headers, quota behavior, and plan-specific retry semantics;
 - source-plan capability checks and explicit bootstrap reports;
 - per-tenant worker isolation and request-scoped authorization in the hosted
   control plane; and
