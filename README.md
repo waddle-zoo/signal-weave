@@ -322,6 +322,10 @@ For the Preset-specific integration proof—varied chart/result shapes, partial
 provider failures, token refresh, metadata-only behavior, and fail-closed
 response limits—run `make preset-trial` and read
 [`docs/preset-integration-trial.md`](docs/preset-integration-trial.md).
+For Docker deployments, use
+[`docker-compose.preset.secrets.yml`](docker-compose.preset.secrets.yml) as an
+override to mount the Preset API-token name and secret as Docker secrets rather
+than placing their values in `.env.preset`.
 For a customer deployment, run `make preset-bootstrap-check` first; it validates
 the connection and one dashboard catalog page without making a Jev call.
 Then run `make preset-provider-smoke` with one real dashboard/chart ID to verify

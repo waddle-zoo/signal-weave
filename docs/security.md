@@ -35,6 +35,9 @@ deployment must establish a data policy before using company data.
 - Hosted Preset, Hex, and Looker connection records require HTTPS endpoint URLs
   and reject inline URL credentials. The local development exception applies to
   the separate unmanaged Superset connector, not hosted connection bootstrap.
+- The Preset Docker deployment includes a secrets overlay that injects API-token
+  name and secret through mounted Docker secrets and clears direct token values
+  inherited from `.env.preset`; use that overlay for shared deployments.
 - Source-specific row and series limits are bounded, catalog pagination is capped, and source fetches have timeouts.
 - A required source timeout, missing resource, stale contract, or partial result
   becomes visible evidence and cannot silently become an automatic `ignore`.
