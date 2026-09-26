@@ -89,7 +89,9 @@ class PresetCloudClient(SupersetClient):
                 timeout=20,
                 transport=self._transport,
             ) as client:
-                response = await client.post(
+                response = await self._request_with_retries(
+                    client,
+                    "POST",
                     "/v1/auth/",
                     json={"name": self._api_token_name, "secret": self._api_token_secret},
                 )
@@ -120,35 +122,23 @@ class PresetCloudClient(SupersetClient):
             timeout=timeout,
             transport=self._transport,
         ) as client:
-            response = await client.request(method, path, headers=request_headers, **request_kwargs)
+            response = await self._request_with_retries(
+                client,
+                method,
+                path,
+                headers=request_headers,
+                **request_kwargs,
+            )
             if response.status_code == 401 and self._api_token_name:
                 self._token = None
                 request_headers = dict(await self._auth_headers(force_refresh=True))
-                response = await client.request(
+                response = await self._request_with_retries(
+                    client,
                     method,
                     path,
                     headers=request_headers,
                     **request_kwargs,
                 )
-            retries = 0
-            while response.status_code == 429 or 500 <= response.status_code <= 599:
-                if retries >= self.max_retries:
-                    break
-                retry_after = self._retry_after_seconds(response)
-                delay = (
-                    retry_after
-                    if retry_after is not None
-                    else min(self.retry_backoff_seconds * (2**retries), 5.0)
-                )
-                if delay:
-                    await asyncio.sleep(delay)
-                response = await client.request(
-                    method,
-                    path,
-                    headers=request_headers,
-                    **request_kwargs,
-                )
-                retries += 1
             response.raise_for_status()
             if (
                 self.max_snapshot_bytes is not None
@@ -169,6 +159,30 @@ class PresetCloudClient(SupersetClient):
         except ValueError:
             return None
         return min(max(seconds, 0.0), 5.0)
+
+    async def _request_with_retries(
+        self,
+        client: httpx.AsyncClient,
+        method: str,
+        path: str,
+        **kwargs: Any,
+    ) -> httpx.Response:
+        response = await client.request(method, path, **kwargs)
+        retries = 0
+        while response.status_code == 429 or 500 <= response.status_code <= 599:
+            if retries >= self.max_retries:
+                break
+            retry_after = self._retry_after_seconds(response)
+            delay = (
+                retry_after
+                if retry_after is not None
+                else min(self.retry_backoff_seconds * (2**retries), 5.0)
+            )
+            if delay:
+                await asyncio.sleep(delay)
+            response = await client.request(method, path, **kwargs)
+            retries += 1
+        return response
 
     async def chart_data(self, chart: dict[str, Any]) -> list[dict[str, Any]]:
         """Fetch saved chart results with a hard row bound and no forced refresh.

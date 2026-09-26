@@ -142,6 +142,36 @@ async def test_preset_cloud_token_exchange_and_dashboard_snapshot():
 
 
 @pytest.mark.asyncio
+async def test_preset_auth_exchange_retries_transient_provider_failure():
+    auth_calls = 0
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal auth_calls
+        if request.url.host == "api.app.preset.test":
+            auth_calls += 1
+            if auth_calls == 1:
+                return httpx.Response(503, headers={"Retry-After": "0"}, json={"message": "busy"})
+            return httpx.Response(200, json={"payload": {"access_token": "preset-jwt"}})
+        assert request.headers["authorization"] == "Bearer preset-jwt"
+        return httpx.Response(200, json={"result": {"id": 7, "dashboard_title": "Growth"}})
+
+    client = PresetCloudClient(
+        "https://workspace.app.preset.test",
+        api_token_name="preset-name",
+        api_token_secret="preset-secret",
+        api_base_url="https://api.app.preset.test",
+        max_retries=1,
+        retry_backoff_seconds=0,
+        transport=httpx.MockTransport(handler),
+    )
+
+    metadata = await client.get_dashboard_metadata(7)
+
+    assert metadata["id"] == 7
+    assert auth_calls == 2
+
+
+@pytest.mark.asyncio
 async def test_preset_metadata_only_never_fetches_chart_data():
     paths: list[str] = []
 
