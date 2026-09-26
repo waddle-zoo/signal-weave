@@ -21,6 +21,9 @@ Run it with:
 make preset-trial
 ```
 
+That command is also covered by `tests/test_preset_hosted_trial.py`, so a
+clean checkout can run the proof through the normal repository test gate.
+
 The trial currently proves:
 
 | Boundary | Observed result |

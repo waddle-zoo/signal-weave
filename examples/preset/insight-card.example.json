@@ -1,0 +1,36 @@
+{
+  "id": "preset-executive-pulse",
+  "title": "Executive pulse",
+  "what_to_watch": "The business signals represented by the selected Preset dashboard.",
+  "why_watch": "Help the executive team understand whether a material change needs attention.",
+  "watch_for": [
+    "Material movement supported by more than one related chart.",
+    "Unexpected data quality or freshness problems.",
+    "A clear owner or next investigation path in the available evidence."
+  ],
+  "questions": [
+    "What changed?",
+    "Is the movement corroborated or isolated?",
+    "Who should review it?"
+  ],
+  "sources": [
+    {
+      "key": "executive-dashboard",
+      "adapter": "preset__preset-env",
+      "resource": "dashboard:replace-with-dashboard-id",
+      "label": "Executive dashboard",
+      "parameters": {
+        "chart_ids": ["replace-with-chart-id"]
+      }
+    }
+  ],
+  "delivery_methods": [
+    {
+      "key": "executive-review",
+      "outcome": "notify",
+      "label": "Executive review",
+      "destination": "slack://replace-me",
+      "instructions": "Send the evidence bundle to the existing delivery agent."
+    }
+  ]
+}

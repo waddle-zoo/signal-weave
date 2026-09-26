@@ -22,6 +22,9 @@ The service listens on `http://127.0.0.1:18000` and exposes the MCP endpoint at
 `/mcp`. Connect the customer's agent through the existing identity-aware proxy,
 or use the local bearer token for an isolated test. The container automatically
 registers one `preset` adapter from `PRESET_URL` and the supplied credentials.
+The default route name is `preset__preset-env`; copy
+[`examples/preset/insight-card.example.json`](../examples/preset/insight-card.example.json),
+replace the dashboard/chart IDs, and use that route in the card's `sources`.
 
 This direct API path requires a Preset plan that includes the Preset API. The
 current Preset documentation lists that API as Enterprise-only. Customers on a
@@ -65,6 +68,19 @@ The repeatable source-boundary trial is documented in
 [`docs/preset-integration-trial.md`](preset-integration-trial.md). It is a
 fixture-backed transport proof, not a substitute for a customer-authorized
 Preset smoke test or a live Jev shadow run.
+
+For a real, delivery-disabled acceptance check after the service is running:
+
+```bash
+TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
+  PRESET_URL=https://your-workspace.<region>.app.preset.io \
+  uv run python scripts/live_card_check.py \
+  --card examples/preset/insight-card.example.json
+```
+
+The card must contain real IDs and the deployment must load its Preset and
+SignalWeave credentials. This command invokes the live Jev path and should be
+run only against an approved shadow card; it does not contact the destination.
 
 ## Can a hosted Preset customer use SignalWeave without hosting it?
 
