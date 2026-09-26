@@ -43,6 +43,19 @@ onboard_insight_card
   -> caller-owned delivery
 ```
 
+Start with the no-credit bootstrap preflight before onboarding a card:
+
+```bash
+TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
+  make preset-bootstrap-check
+```
+
+This authenticates the configured Preset connection and reads one bounded
+dashboard catalog page. It verifies tenant/principal configuration and that
+the runtime is Jev-only, but makes zero Jev calls and never reads chart data.
+It fails for an empty workspace so a customer does not mistake a configured
+credential for a usable onboarding target.
+
 Preset API credentials must be kept in an untracked secret file or deployment
 secret manager. They are loaded into memory only to construct the adapter and
 are never stored in cards, MCP payloads, or connection metadata. The customer
