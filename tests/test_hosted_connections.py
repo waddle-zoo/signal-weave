@@ -275,6 +275,28 @@ async def test_preset_auth_exchange_retries_transient_provider_failure():
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "payload",
+    [[], {"payload": []}, {"payload": {}}, {"payload": {"access_token": []}}],
+)
+async def test_preset_auth_exchange_rejects_malformed_token_shapes(payload):
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.host == "api.app.preset.test"
+        return httpx.Response(200, json=payload)
+
+    client = PresetCloudClient(
+        "https://workspace.app.preset.test",
+        api_token_name="preset-name",
+        api_token_secret="preset-secret",
+        api_base_url="https://api.app.preset.test",
+        transport=httpx.MockTransport(handler),
+    )
+
+    with pytest.raises(ValueError, match="payload.access_token"):
+        await client.get_dashboard_metadata(7)
+
+
+@pytest.mark.asyncio
 async def test_preset_standalone_chart_keeps_saved_query_post_path():
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.method == "POST"

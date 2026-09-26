@@ -127,10 +127,15 @@ class PresetCloudClient(SupersetClient):
             )
             response.raise_for_status()
             payload = response.json()
-            token = payload.get("payload", {}).get("access_token")
-            if not token:
+            auth_payload = payload.get("payload") if isinstance(payload, dict) else None
+            token = (
+                auth_payload.get("access_token")
+                if isinstance(auth_payload, dict)
+                else None
+            )
+            if not isinstance(token, str) or not token.strip():
                 raise ValueError("Preset auth response did not contain payload.access_token")
-            self._token = str(token)
+            self._token = token
 
     async def _refresh_after_401(self, stale_token: str | None) -> dict[str, str]:
         """Refresh once for all requests that observed the same stale token."""
