@@ -18,6 +18,24 @@ TYPESAFE_API_KEY_FILE=./secrets/typesafe_api_key \
   docker compose -f docker-compose.preset.yml up --build -d
 ```
 
+For a deployment that must not place the Preset token values in the Compose
+environment, leave the direct token fields empty and use the secrets overlay:
+
+```bash
+PRESET_API_TOKEN_NAME_HOST_FILE=/absolute/path/preset-token-name \
+PRESET_API_TOKEN_SECRET_HOST_FILE=/absolute/path/preset-token-secret \
+TYPESAFE_API_KEY_FILE=/absolute/path/apikey_typesafe \
+  docker compose \
+    -f docker-compose.preset.yml \
+    -f docker-compose.preset.secrets.yml \
+    up --build -d
+```
+
+The overlay mounts the two files as Docker secrets, sets the corresponding
+`*_FILE` variables inside the container, and clears any direct token values
+from `.env.preset`. The host paths are Compose inputs only and are not stored
+in the SignalWeave connection or card stores.
+
 The service listens on `http://127.0.0.1:18000` and exposes the MCP endpoint at
 `/mcp`. Connect the customer's agent through the existing identity-aware proxy,
 or use the local bearer token for an isolated test. The container automatically
