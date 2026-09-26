@@ -5,9 +5,11 @@ import os
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from .context import ContextProvider
 from .engine import InsightEngine
+from .hosted import HostedConnection, HostedCredentialVault, build_hosted_adapters
 from .models import PrincipalContext, ResourceDescriptor
 from .sources import SourceAdapter, SourceRegistry
 from .store import (
@@ -51,6 +53,9 @@ def build_runtime(
     *,
     adapters: Iterable[SourceAdapter] = (),
     context_provider: ContextProvider | None = None,
+    hosted_connections: Iterable[HostedConnection] = (),
+    credential_vault: HostedCredentialVault | None = None,
+    http_transport: Any | None = None,
 ) -> Runtime:
     """Build the Jev runtime around the source adapters a deployment installs.
 
@@ -70,6 +75,20 @@ def build_runtime(
     else:
         raise ValueError("SignalWeave production runtime only supports TYPESAFE_MODE=jev")
     configured_adapters = list(adapters)
+    hosted_connections = list(hosted_connections)
+    if hosted_connections:
+        if credential_vault is None:
+            raise RuntimeError(
+                "hosted_connections require a credential_vault; raw source credentials "
+                "must not be passed through the runtime configuration"
+            )
+        configured_adapters.extend(
+            build_hosted_adapters(
+                hosted_connections,
+                credential_vault,
+                transport=http_transport,
+            )
+        )
     url = os.getenv("SUPERSET_URL")
     configured_names = {adapter.name for adapter in configured_adapters}
     if url and "superset" not in configured_names:
@@ -88,9 +107,22 @@ def build_runtime(
         raise RuntimeError(
             "SIGNALWEAVE_TENANT_ID and SIGNALWEAVE_PRINCIPAL_ID must be configured together"
         )
+    hosted_tenants = {connection.tenant_id for connection in hosted_connections}
+    default_authorized_tenants: list[str] | None
+    if tenant_id:
+        default_authorized_tenants = [tenant_id]
+    elif len(hosted_tenants) == 1:
+        default_authorized_tenants = sorted(hosted_tenants)
+    elif len(hosted_tenants) > 1:
+        # A shared process must never expose every hosted tenant through an
+        # unscoped direct call. Request-scoped MCP principals can provide the
+        # explicit tenant later; deployment code must do the same.
+        default_authorized_tenants = []
+    else:
+        default_authorized_tenants = None
     registry = SourceRegistry(
         configured_adapters,
-        authorized_tenants=[tenant_id] if tenant_id else None,
+        authorized_tenants=default_authorized_tenants,
     )
     trino_url = os.getenv("TRINO_URL")
     trino_catalog_file = os.getenv("TRINO_CATALOG_FILE")

@@ -109,9 +109,9 @@ and keeps an Airflow adapter from becoming a DAG execution API.
 
 ## Example source shapes
 
-These are intended adapter contracts. Superset and the bounded Trino query path
-are shipped in this repository; the other examples are extension points, not
-claims that native connectors are already bundled:
+These are adapter contracts. Superset, Preset Cloud, Hex Cloud, Looker Cloud,
+and the bounded Trino query path are shipped in this repository. The remaining
+examples are extension points:
 
 ```text
 Superset   dashboard:7                 parameters.chart_ids=[62,64]
@@ -164,13 +164,14 @@ establish their state.
 
 The local runtime registers `SupersetAdapter` when `SUPERSET_URL` is configured.
 A deployment can add any connector at construction time; Superset is not a
-required runtime dependency:
+required runtime dependency. Hosted connections should be created through the
+credential-reference-only factory:
 
 ```python
+vault = KmsBackedCredentialVault(...)
+connections = load_tenant_connections(tenant_id="acme")
 registry = SourceRegistry([
-    SupersetAdapter(superset_client),
-    LookerArtifactAdapter(looker_client),
-    HexArtifactAdapter(hex_client),
+    *build_hosted_adapters(connections, vault),
     ApprovedQueryAdapter(query_catalog, warehouse),
     AirflowStatusAdapter(airflow_client),
 ])

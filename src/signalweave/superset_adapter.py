@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import re
+from collections.abc import Iterable
 
 from .models import (
     CatalogSearchPage,
@@ -25,15 +26,30 @@ class SupersetAdapter:
 
     name = "superset"
 
-    def __init__(self, client: SupersetClient) -> None:
+    def __init__(
+        self,
+        client: SupersetClient,
+        *,
+        adapter_name: str = "superset",
+        tenant_id: str | None = None,
+        provider_name: str | None = None,
+    ) -> None:
         self.client = client
+        self.name = adapter_name
+        self.tenant_id = tenant_id
+        self.provider_name = provider_name or adapter_name
 
     async def list_resources(self) -> list[ResourceDescriptor]:
         dashboards = await self.client.list_dashboards()
         return self._descriptors(dashboards)
 
     async def search_resources(
-        self, query: str, *, limit: int, cursor: str | None = None
+        self,
+        query: str,
+        *,
+        limit: int,
+        cursor: str | None = None,
+        authorized_tenants: Iterable[str] | None = None,
     ) -> CatalogSearchPage:
         """Use Superset search with a bounded natural-language fallback.
 
@@ -44,6 +60,13 @@ class SupersetAdapter:
         terms and union the permission-filtered results. Jev still performs the
         semantic ranking; this is recall only.
         """
+        if authorized_tenants is not None and self.tenant_id is not None:
+            if self.tenant_id not in set(authorized_tenants):
+                return CatalogSearchPage(
+                    provider=self.name,
+                    strategy=f"{self.name}-tenant-denied",
+                    total_count=0,
+                )
         page = 0
         if cursor:
             try:
@@ -132,7 +155,7 @@ class SupersetAdapter:
                     ]
                 },
                 contract=ResourceContract(
-                    tenant_id=str(item.get("tenant_id") or "default"),
+                    tenant_id=str(item.get("tenant_id") or self.tenant_id or "default"),
                     domain=str(item.get("domain") or "bi"),
                     metric_names=[str(metric) for metric in item.get("metric_names", [])],
                     population=str(item.get("population") or ""),
@@ -192,7 +215,7 @@ class SupersetAdapter:
             for chart in dashboard.charts
         ]
         metadata = {
-            "provider": "superset",
+            "provider": self.provider_name,
             "dashboard_id": dashboard.id,
             "owners": dashboard.owners,
             "charts": [
@@ -273,7 +296,7 @@ class SupersetAdapter:
                 )
             ],
             metadata={
-                "provider": "superset",
+                "provider": self.provider_name,
                 "chart_id": str(chart_id),
                 "parameters": source.parameters,
             },

@@ -29,6 +29,9 @@ evidence into a bounded, explainable result that an existing system can act on.
 - [x] Adversarial review of the public README, examples, security posture, and
       product claims
 - [x] Cross-enterprise adversarial retrieval/explanation fixture with live Jev coverage
+- [x] Tenant-scoped hosted connection contract with credential-reference-only persistence
+- [x] Preset Cloud adapter with API-token exchange and metadata/cached/live policy gates
+- [x] Read-only Hex project/run and Looker dashboard/Look adapters with hosted API contract tests
 
 The current review is recorded in [`docs/adversarial-review.md`](docs/adversarial-review.md);
 it supports a **public technical-alpha** posture while keeping the listed
@@ -126,8 +129,14 @@ card and per source domain.
 - [ ] Measure top-driver acceptance and diagnostic-source recall on a real
       multi-artifact catalog with same-name assets, aliases, lineage, and the
       source's own permission boundary
-- [ ] Ship read-only Looker and Hex adapters that map native dashboards,
+- [x] Ship read-only Looker and Hex adapters that map native dashboards,
       queries/projects, runs, and bounded result evidence to the generic contract
+- [ ] Add OAuth callback flows, KMS-backed credentials, and shared connection
+      persistence for the hosted cloud control plane
+- [ ] Add a hosted connection bootstrap endpoint/UI and per-tenant worker
+      isolation; the current adapter factory is the embedded foundation
+- [ ] Add managed polling and customer-configurable data retention in SignalWeave
+      Cloud without taking ownership of workflow orchestration or delivery
 - [ ] Add a permission-aware, paginated catalog-search interface so large deployments
       do not load every asset into SignalWeave before Jev ranking
 - [ ] Add tenant-qualified resource references and request-scoped identity/ACLs for

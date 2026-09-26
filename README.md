@@ -267,14 +267,13 @@ combine artifacts from different systems when that is what the owner's question
 requires. Jev ranks and judges the bounded evidence; code owns source execution,
 freshness, permissions, and side effects.
 
-The first shipped connector is Apache Superset. It preserves dashboard/chart
-metadata, relationships, saved definitions, dimensions, bounded series,
-baselines, and source URLs. Looker and Hex are compatible with the same adapter
-contract, but native connectors are not yet bundled: a deployment can provide a
-read-only adapter for Looker dashboards/saved queries or Hex projects/runs while
-the core remains vendor-neutral. See the official [Looker API](https://cloud.google.com/looker/docs/api-getting-started)
+The first shipped connector is Apache Superset. Hosted Preset, Hex, and Looker
+connectors now use the same adapter contract while the core remains
+vendor-neutral. They are read-only by default and keep provider credentials
+outside cards and MCP payloads. See [`docs/hosted-connectors.md`](docs/hosted-connectors.md)
+for the connection and data-policy boundary. See the official [Looker API](https://cloud.google.com/looker/docs/api-getting-started)
 and [Hex public API](https://learn.hex.tech/docs/api-integrations/api/overview)
-documentation for the source capabilities those adapters would map.
+documentation for the source capabilities those adapters map.
 
 SignalWeave does not assume Superset RBAC or impose a universal enterprise ACL.
 Each adapter runs under the deployment's approved credentials or identity
@@ -282,6 +281,25 @@ gateway and must return only the artifacts that caller is allowed to use. A
 source without native per-user permissions should be placed behind an approved
 gateway or isolated deployment; that security decision belongs to the source
 integration, not to a hidden SignalWeave default.
+
+## Hosted BI without self-hosting SignalWeave
+
+Customers can connect hosted Preset, Hex, or Looker workspaces to a separate
+SignalWeave deployment. The connection stores only a tenant-scoped credential
+reference; the source secret stays in the deployment's vault. The connector
+retrieves bounded metadata or cached results, Jev evaluates the approved card,
+and the customer's existing agent, scheduler, and delivery system owns the
+next action.
+
+```text
+hosted BI workspace -> SignalWeave adapter -> typed evidence -> Jev -> agent
+```
+
+The repository includes the provider clients, read-only adapters, explicit
+metadata/cached/live data policies, and contract tests using realistic hosted
+API responses. Cloud OAuth, KMS-backed secret storage, and managed polling are
+deployment work; they are intentionally outside the source adapter. See
+[`docs/hosted-connectors.md`](docs/hosted-connectors.md).
 
 SignalWeave is not a replacement for Temporal, Airflow, Dagster, a BI tool,
 Glean, a knowledge graph, or a general-purpose agent framework. It is the typed

@@ -148,6 +148,8 @@ class SourceRegistry:
         authorized_tenants: Iterable[str] | None = None,
     ) -> list[ResourceDescriptor]:
         tenant_scope = self._tenant_scope(authorized_tenants)
+        if tenant_scope is not None and not tenant_scope:
+            return []
         adapters = (
             [self._get(adapter_name)]
             if adapter_name
@@ -181,6 +183,12 @@ class SourceRegistry:
         if cursor and not adapter_name:
             raise ValueError("a catalog cursor requires an explicit adapter name")
         tenant_scope = self._tenant_scope(authorized_tenants)
+        if tenant_scope is not None and not tenant_scope:
+            return CatalogSearchPage(
+                total_count=0,
+                provider="signalweave",
+                strategy="tenant-scope-empty",
+            )
         adapters = (
             [self._get(adapter_name)]
             if adapter_name
@@ -298,6 +306,12 @@ class SourceRegistry:
                 strategy="no-related-expansion",
             )
         tenant_scope = self._tenant_scope(authorized_tenants)
+        if tenant_scope is not None and not tenant_scope:
+            return CatalogSearchPage(
+                total_count=0,
+                provider="signalweave",
+                strategy="tenant-scope-empty",
+            )
         adapters = [self._adapters[name] for name in sorted(self._adapters)]
         if not adapters:
             return CatalogSearchPage(
@@ -584,6 +598,8 @@ class SourceRegistry:
         """Authorize one opaque source ref with a bounded adapter operation."""
 
         tenant_scope = self._tenant_scope(authorized_tenants)
+        if tenant_scope is not None and not tenant_scope:
+            return None
         authorize = getattr(adapter, "authorize", None)
         if callable(authorize):
             descriptor = await authorize(source, authorized_tenants=tenant_scope)
