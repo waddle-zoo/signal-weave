@@ -190,6 +190,7 @@ async def _run_workspace(workspace: dict[str, Any], root: Path) -> dict[str, Any
                 {"onboarding": onboarding, "approved": approved, "evaluated": evaluated},
                 sort_keys=True,
             )
+            jev_state = json.dumps(ContractClient.calls[before_calls:], sort_keys=True)
             return {
                 "onboarding_status": onboarding["status"],
                 "approval_status": approved["status"],
@@ -212,6 +213,10 @@ async def _run_workspace(workspace: dict[str, Any], root: Path) -> dict[str, Any
                     if request["path"].endswith("/data")
                 ),
                 "secrets_absent_from_mcp_artifacts": "synthetic-secret" not in serialized,
+                "secrets_absent_from_jev_state": all(
+                    secret not in jev_state
+                    for secret in ("synthetic-secret", "synthetic-name")
+                ),
             }
 
         full = await run_card("full-dashboard", full_selection)
@@ -296,6 +301,11 @@ async def run_trial(output: Path | None = None) -> dict[str, Any]:
         ),
         "secrets_do_not_enter_mcp_artifacts": all(
             card["secrets_absent_from_mcp_artifacts"]
+            for result in results
+            for card in (result["full_dashboard"], result["focused_chart"])
+        ),
+        "secrets_do_not_enter_jev_state": all(
+            card["secrets_absent_from_jev_state"]
             for result in results
             for card in (result["full_dashboard"], result["focused_chart"])
         ),

@@ -155,6 +155,9 @@ class SourceRegistry:
             if adapter_name
             else [self._adapters[name] for name in sorted(self._adapters)]
         )
+        adapters = [
+            adapter for adapter in adapters if self._adapter_is_in_scope(adapter, tenant_scope)
+        ]
         resources: list[ResourceDescriptor] = []
         for adapter in adapters:
             resources.extend(await adapter.list_resources())
@@ -194,6 +197,9 @@ class SourceRegistry:
             if adapter_name
             else [self._adapters[name] for name in sorted(self._adapters)]
         )
+        adapters = [
+            adapter for adapter in adapters if self._adapter_is_in_scope(adapter, tenant_scope)
+        ]
         if not adapters:
             return CatalogSearchPage(
                 total_count=0,
@@ -312,7 +318,11 @@ class SourceRegistry:
                 provider="signalweave",
                 strategy="tenant-scope-empty",
             )
-        adapters = [self._adapters[name] for name in sorted(self._adapters)]
+        adapters = [
+            self._adapters[name]
+            for name in sorted(self._adapters)
+            if self._adapter_is_in_scope(self._adapters[name], tenant_scope)
+        ]
         if not adapters:
             return CatalogSearchPage(
                 total_count=0,
@@ -600,6 +610,8 @@ class SourceRegistry:
         tenant_scope = self._tenant_scope(authorized_tenants)
         if tenant_scope is not None and not tenant_scope:
             return None
+        if not self._adapter_is_in_scope(adapter, tenant_scope):
+            return None
         authorize = getattr(adapter, "authorize", None)
         if callable(authorize):
             descriptor = await authorize(source, authorized_tenants=tenant_scope)
@@ -625,6 +637,23 @@ class SourceRegistry:
         if tenant_scope is not None and resource.contract.tenant_id not in tenant_scope:
             return False
         return True
+
+    @staticmethod
+    def _adapter_is_in_scope(
+        adapter: SourceAdapter, tenant_scope: frozenset[str] | None
+    ) -> bool:
+        """Avoid contacting a tenant-bound adapter outside the request scope.
+
+        Filtering returned descriptors is not enough for a shared deployment:
+        calling a foreign adapter can still touch another tenant's provider,
+        consume credentials, or expose timing/error side channels. Shipped
+        hosted adapters publish ``tenant_id``; adapters without that optional
+        attribute retain the existing descriptor-level authorization path.
+        """
+        if tenant_scope is None:
+            return True
+        adapter_tenant = getattr(adapter, "tenant_id", None)
+        return adapter_tenant is None or str(adapter_tenant) in tenant_scope
 
     def _get(self, name: str | None) -> SourceAdapter:
         if not name:

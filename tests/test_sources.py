@@ -69,6 +69,48 @@ class TenantCatalogAdapter:
         )
 
 
+class TenantBoundAdapter:
+    """Provider double that records whether a foreign tenant was contacted."""
+
+    def __init__(self, tenant: str):
+        self.name = f"hosted__{tenant}"
+        self.tenant_id = tenant
+        self.list_calls = 0
+        self.search_calls = 0
+        self.inspect_calls = 0
+
+    async def list_resources(self):
+        self.list_calls += 1
+        return [
+            ResourceDescriptor(
+                adapter=self.name,
+                resource="dashboard:primary",
+                kind="dashboard",
+                title=f"{self.tenant_id} primary",
+                contract=ResourceContract(tenant_id=self.tenant_id),
+            )
+        ]
+
+    async def search_resources(self, query, *, limit, cursor=None, authorized_tenants=None):
+        del query, limit, cursor, authorized_tenants
+        self.search_calls += 1
+        return CatalogSearchPage(
+            resources=await self.list_resources(),
+            total_count=1,
+            provider=self.name,
+            strategy="tenant-bound-search",
+        )
+
+    async def inspect(self, source):
+        self.inspect_calls += 1
+        return ResourceSnapshot(
+            source_key=source.key,
+            adapter=self.name,
+            resource=source.resource,
+            title=source.label,
+        )
+
+
 class BoundedSearchAdapter:
     name = "catalog"
 
@@ -284,6 +326,48 @@ async def test_source_registry_blocks_direct_inspection_outside_authorized_catal
     assert snapshot.error == (
         "source is not present in the authorized adapter catalog; rediscover it before inspection"
     )
+
+
+@pytest.mark.asyncio
+async def test_source_registry_does_not_contact_foreign_tenant_adapters():
+    northstar = TenantBoundAdapter("northstar")
+    harbor = TenantBoundAdapter("harbor-bank")
+    registry = SourceRegistry([northstar, harbor])
+
+    resources = await registry.list_resources(authorized_tenants=["northstar"])
+    search = await registry.search_resources(
+        "primary", limit=10, authorized_tenants=["northstar"]
+    )
+    foreign_snapshot = await registry.inspect(
+        SourceRef(
+            key="foreign",
+            adapter=harbor.name,
+            resource="dashboard:primary",
+            label="Harbor primary",
+        ),
+        authorized_tenants=["northstar"],
+    )
+    foreign_resolved = await registry.resolve(
+        [
+            SourceRef(
+                key="foreign-resolve",
+                adapter=harbor.name,
+                resource="dashboard:primary",
+                label="Harbor primary",
+            )
+        ],
+        authorized_tenants=["northstar"],
+    )
+
+    assert {resource.contract.tenant_id for resource in resources} == {"northstar"}
+    assert {resource.contract.tenant_id for resource in search.resources} == {"northstar"}
+    assert foreign_snapshot.error is not None
+    assert foreign_resolved[0].error is not None
+    assert northstar.list_calls == 2
+    assert northstar.search_calls == 1
+    assert harbor.list_calls == 0
+    assert harbor.search_calls == 0
+    assert harbor.inspect_calls == 0
 
 
 @pytest.mark.asyncio
