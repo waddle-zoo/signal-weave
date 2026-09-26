@@ -41,6 +41,7 @@ The trial currently proves:
 | Byte limit enforcement | An oversized metadata response fails before parsing |
 | Token expiry | A 401 triggers exactly one API-token refresh and one retry |
 | Transient provider failure | Auth and workspace 429/5xx responses retry within a bounded delay; ordinary client errors do not retry |
+| Asynchronous provider response | HTTP 202 chart-data responses fail closed with an explicit pending/asynchronous error instead of becoming `no_data` |
 
 The test is deliberately honest about what it does not prove. A mock cannot
 validate a customer's Preset plan, permissions, network path, rate limits, or

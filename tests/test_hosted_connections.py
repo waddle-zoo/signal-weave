@@ -587,6 +587,25 @@ async def test_preset_dashboard_read_fails_closed_without_filter_metadata():
 
 
 @pytest.mark.asyncio
+async def test_preset_async_chart_response_fails_closed_instead_of_becoming_no_data():
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/api/v1/chart/101/data"
+        return httpx.Response(202, json={"job_id": "job-1", "status": "pending"})
+
+    client = PresetCloudClient(
+        "https://workspace.app.preset.test",
+        access_token="preset-token",
+        transport=httpx.MockTransport(handler),
+    )
+
+    with pytest.raises(PresetPolicyError, match="asynchronous chart response"):
+        await client.chart_data(
+            {"id": 101, "params": {"metrics": ["revenue"]}},
+            dashboard_id="7",
+        )
+
+
+@pytest.mark.asyncio
 async def test_preset_rejects_oversized_response_before_parsing():
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, content=b"{" + b"x" * 128 + b"}")

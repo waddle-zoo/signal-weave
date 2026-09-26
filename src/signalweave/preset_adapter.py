@@ -252,6 +252,11 @@ class PresetCloudClient(SupersetClient):
             response = await self._request(
                 "POST", "/api/v1/chart/data", timeout=60, json=payload
             )
+        if response.status_code == 202:
+            raise PresetPolicyError(
+                "Preset returned an asynchronous chart response; polling is not enabled "
+                "for this bounded connector"
+            )
         body = response.json()
         if not isinstance(body, dict):
             raise PresetPolicyError("Preset chart response was not a JSON object")

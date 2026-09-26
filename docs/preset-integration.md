@@ -124,7 +124,10 @@ The connector enforces the configured `max_result_rows` and
 limit before calling Preset; dashboard reads use Preset's chart-specific data
 endpoint so the provider can apply dashboard filter scope and access checks,
 then fail closed if the returned result exceeds the SignalWeave row or byte
-budget. It does not silently truncate a time series and invent a current value.
+budget. It also fails closed when Preset returns an asynchronous `202` chart
+response; this bounded connector does not pretend a pending job is an empty
+result or poll a provider-owned job queue. It does not silently truncate a time
+series and invent a current value.
 Transient rate limits and 5xx responses receive a bounded retry; ordinary
 client errors do not retry. Mounted secret files are supported with
 `PRESET_API_TOKEN_NAME_FILE` and `PRESET_API_TOKEN_SECRET_FILE`.
