@@ -330,6 +330,7 @@ def create_mcp(
             raise
         receipt = prepared.model_copy(
             update={
+                "delivery_mode": "shadow",
                 "status": ReceiptStatus.DELIVERY_DISABLED,
                 "outcome": run.result.outcome,
                 "delivery_enabled": False,
@@ -1060,7 +1061,12 @@ def create_mcp(
         context: dict[str, Any] | None = None,
         ctx: Context | None = None,
     ) -> dict[str, Any]:
-        """Evaluate an approved card, optionally with a versioned external context view."""
+        """Run an approved card in delivery-disabled shadow mode.
+
+        The result is Jev-backed and durable. SignalWeave never sends the
+        configured delivery methods; a caller-owned scheduler or agent may
+        inspect the receipt and decide what to do next.
+        """
         context_snapshot = (
             ContextSnapshot.model_validate(context).model_copy(update={"trust": "unverified"})
             if context
@@ -1073,6 +1079,43 @@ def create_mcp(
             context=context_snapshot,
             principal=request_principal(ctx),
         )
+
+    @mcp.tool()
+    def get_decision_receipt(
+        idempotency_key: str | None = None,
+        receipt_id: str | None = None,
+        ctx: Context | None = None,
+    ) -> dict[str, Any]:
+        """Recover one durable shadow result and its operator labels.
+
+        A caller can use either the scheduler's idempotency key or the
+        receipt id returned by ``evaluate_insight_card``. The card scope check
+        runs before any receipt data is returned.
+        """
+        principal = request_principal(ctx)
+        key = idempotency_key.strip() if idempotency_key else None
+        requested_receipt_id = receipt_id.strip() if receipt_id else None
+        if idempotency_key is not None and not key:
+            raise ValueError("idempotency_key must not be empty")
+        if receipt_id is not None and not requested_receipt_id:
+            raise ValueError("receipt_id must not be empty")
+        if bool(key) == bool(requested_receipt_id):
+            raise ValueError("provide exactly one of idempotency_key or receipt_id")
+        receipt = (
+            decision_receipts.get_by_idempotency_key(key)
+            if key
+            else decision_receipts.get_by_receipt_id(requested_receipt_id)
+        )
+        if receipt is None:
+            raise ValueError("unknown decision receipt")
+        get_scoped_card(receipt.card_id, principal)
+        feedback = decision_feedback.list(receipt_id=receipt.receipt_id)
+        return {
+            "status": "found",
+            "receipt": receipt.model_dump(mode="json"),
+            "result": receipt.result,
+            "feedback": [item.model_dump(mode="json") for item in feedback],
+        }
 
     @mcp.tool()
     async def resolve_insight_sources(
@@ -1202,6 +1245,7 @@ def create_mcp(
     def record_decision_feedback(
         idempotency_key: str,
         kind: str,
+        feedback_id: str | None = None,
         expected_outcome: str | None = None,
         expected_delivery_method_keys: list[str] | None = None,
         note: str = "",
@@ -1222,22 +1266,68 @@ def create_mcp(
         if receipt.status == ReceiptStatus.PREPARED:
             raise ValueError("decision is not complete; feedback can be recorded after evaluation")
         card = get_scoped_card(receipt.card_id, principal)
+        stable_feedback_id = feedback_id.strip() if feedback_id else None
+        if feedback_id is not None and not stable_feedback_id:
+            raise ValueError("feedback_id must not be empty")
+        actor = principal.principal_id if principal else "mcp-client"
+        expected_routes = expected_delivery_method_keys or []
         feedback = DecisionFeedback(
-            feedback_id=f"feedback-{uuid4().hex}",
+            feedback_id=stable_feedback_id or f"feedback-{uuid4().hex}",
             receipt_id=receipt.receipt_id,
             idempotency_key=receipt.idempotency_key,
             card_id=card.id,
-            card_version=card.version,
+            card_version=receipt.card_version,
             kind=DecisionFeedbackKind(kind),
             expected_outcome=Outcome(expected_outcome) if expected_outcome else None,
-            expected_delivery_method_keys=expected_delivery_method_keys or [],
+            expected_delivery_method_keys=expected_routes,
             note=note.strip(),
-            actor=principal.principal_id if principal else "mcp-client",
+            actor=actor,
             principal_tenant=principal.tenant_id if principal else None,
             context_provider=receipt.context_provider,
             context_version=receipt.context_version,
         )
-        decision_feedback.save(feedback)
+        comparable_fields = (
+            "receipt_id",
+            "idempotency_key",
+            "card_id",
+            "card_version",
+            "kind",
+            "context_provider",
+            "context_version",
+            "expected_outcome",
+            "expected_delivery_method_keys",
+            "note",
+            "actor",
+            "principal_tenant",
+        )
+
+        def replay_if_same(existing: DecisionFeedback | None) -> dict[str, Any] | None:
+            if existing is None:
+                return None
+            if any(
+                getattr(existing, field) != getattr(feedback, field)
+                for field in comparable_fields
+            ):
+                raise ValueError("feedback_id is already bound to different feedback")
+            return {
+                "status": "replayed",
+                "feedback": existing.model_dump(mode="json"),
+                "receipt_id": receipt.receipt_id,
+            }
+
+        if stable_feedback_id:
+            existing = decision_feedback.get(stable_feedback_id)
+            replay = replay_if_same(existing)
+            if replay is not None:
+                return replay
+        try:
+            decision_feedback.save(feedback)
+        except ValueError:
+            if stable_feedback_id:
+                replay = replay_if_same(decision_feedback.get(stable_feedback_id))
+                if replay is not None:
+                    return replay
+            raise
         return {
             "status": "recorded",
             "feedback": feedback.model_dump(mode="json"),

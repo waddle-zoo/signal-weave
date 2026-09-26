@@ -24,6 +24,7 @@ evidence into a bounded, explainable result that an existing system can act on.
 - [x] Explicit no-match discovery and fail-closed bounded-investigation abstention
 - [x] Stale contract, unverified-context, idempotency-collision, and webhook-boundary gates
 - [x] Durable SQLite cards, metric cards, and receipt claims for a single-process deployment
+- [x] Delivery-disabled Jev shadow receipts with durable lookup by scheduler key or receipt id
 - [x] Partial Superset evidence is visible and fails closed only when the affected source is required
 - [x] External-input evaluation and embedding/reasoning comparison harness
 - [x] Adversarial review of the public README, examples, security posture, and
@@ -82,7 +83,7 @@ card and per source domain.
       and allowed delivery methods.
 - [x] Support historical replay with time-split holdouts in the evaluator and
       generalized Jev trial; customer-owned holdouts remain a deployment gate.
-- [ ] Support live shadow mode that records what would have been delivered
+- [x] Support live shadow mode that records what would have been delivered
       without sending it to production destinations.
 - [ ] Measure retrieval candidate recall/precision, evidence recall, decision
       exactness, useful-alert precision, missed-action rate, investigate rate,

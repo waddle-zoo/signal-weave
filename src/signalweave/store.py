@@ -42,12 +42,16 @@ class MetricQueryCardStore(Protocol):
 class DecisionReceiptStore(Protocol):
     def get_by_idempotency_key(self, key: str) -> DecisionReceipt | None: ...
 
+    def get_by_receipt_id(self, receipt_id: str) -> DecisionReceipt | None: ...
+
     def claim(self, receipt: DecisionReceipt) -> bool: ...
 
     def save(self, receipt: DecisionReceipt) -> None: ...
 
 
 class DecisionFeedbackStore(Protocol):
+    def get(self, feedback_id: str) -> DecisionFeedback | None: ...
+
     def save(self, feedback: DecisionFeedback) -> None: ...
 
     def list(
@@ -70,6 +74,9 @@ class InMemoryDecisionFeedbackStore:
         if existing is not None and existing != feedback:
             raise ValueError(f"decision feedback already exists: {feedback.feedback_id}")
         self._feedback[feedback.feedback_id] = feedback
+
+    def get(self, feedback_id: str) -> DecisionFeedback | None:
+        return self._feedback.get(feedback_id)
 
     def list(
         self,
@@ -119,6 +126,10 @@ class JsonDecisionFeedbackStore:
         finally:
             if temporary_path and os.path.exists(temporary_path):
                 os.unlink(temporary_path)
+
+    def get(self, feedback_id: str) -> DecisionFeedback | None:
+        item = self._load().get(feedback_id)
+        return DecisionFeedback.model_validate(item) if item is not None else None
 
     def list(
         self,
@@ -297,6 +308,12 @@ class InMemoryDecisionReceiptStore:
     def get_by_idempotency_key(self, key: str) -> DecisionReceipt | None:
         return self._receipts.get(key)
 
+    def get_by_receipt_id(self, receipt_id: str) -> DecisionReceipt | None:
+        return next(
+            (receipt for receipt in self._receipts.values() if receipt.receipt_id == receipt_id),
+            None,
+        )
+
     def claim(self, receipt: DecisionReceipt) -> bool:
         with self._lock:
             if receipt.idempotency_key in self._receipts:
@@ -320,6 +337,13 @@ class JsonDecisionReceiptStore:
     def get_by_idempotency_key(self, key: str) -> DecisionReceipt | None:
         payload = self._load()
         item = payload.get(key)
+        return DecisionReceipt.model_validate(item) if item is not None else None
+
+    def get_by_receipt_id(self, receipt_id: str) -> DecisionReceipt | None:
+        item = next(
+            (payload for payload in self._load().values() if payload.get("receipt_id") == receipt_id),
+            None,
+        )
         return DecisionReceipt.model_validate(item) if item is not None else None
 
     def claim(self, receipt: DecisionReceipt) -> bool:
@@ -547,6 +571,14 @@ class SQLiteDecisionReceiptStore:
             ).fetchone()
         return DecisionReceipt.model_validate(json.loads(row[0])) if row else None
 
+    def get_by_receipt_id(self, receipt_id: str) -> DecisionReceipt | None:
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT payload FROM decision_receipts WHERE json_extract(payload, '$.receipt_id') = ?",
+                (receipt_id,),
+            ).fetchone()
+        return DecisionReceipt.model_validate(json.loads(row[0])) if row else None
+
     def claim(self, receipt: DecisionReceipt) -> bool:
         try:
             with self._connect() as connection:
@@ -611,6 +643,14 @@ class SQLiteDecisionFeedbackStore:
                 "ON CONFLICT(feedback_id) DO UPDATE SET payload = excluded.payload",
                 (feedback.feedback_id, payload),
             )
+
+    def get(self, feedback_id: str) -> DecisionFeedback | None:
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT payload FROM decision_feedback WHERE feedback_id = ?",
+                (feedback_id,),
+            ).fetchone()
+        return DecisionFeedback.model_validate(json.loads(row[0])) if row else None
 
     def list(
         self,

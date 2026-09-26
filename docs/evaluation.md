@@ -195,7 +195,9 @@ Track at least:
 ## Capture operator feedback without changing the decision contract
 
 The MCP runtime exposes `record_decision_feedback` and
-`list_decision_feedback` for the operating team's review loop. A caller can
+`list_decision_feedback` for the operating team's review loop, and
+`get_decision_receipt` for recovering the complete shadow result after an
+asynchronous scheduler call. A caller can
 attach one of five labels—`useful`, `noisy`, `late`, `incomplete`, or
 `unsafe`—to a completed decision receipt, along with the outcome and delivery
 route the operator expected. The feedback record includes the immutable card
@@ -213,6 +215,10 @@ loop is:
 3. record the operator's label and expected outcome/route;
 4. replay those labels in a time-split evaluation before changing the card; and
 5. approve a new card version explicitly, then rerun the workflow gate.
+
+For retrying a human or agent callback, pass a stable `feedback_id`. Repeating
+the same label is replayed; reusing that id for different content is rejected.
+This prevents a transient network retry from inflating useful/noisy counts.
 
 This keeps human context in the product boundary while leaving the decision
 itself to Jev and the deterministic workflow code. It also prevents an agent

@@ -180,6 +180,7 @@ class DecisionReceipt(BaseModel):
     actor: str = Field(min_length=1, max_length=240)
     context_provider: str | None = Field(default=None, max_length=160)
     context_version: str | None = Field(default=None, max_length=240)
+    delivery_mode: Literal["shadow", "live"] = "shadow"
     status: ReceiptStatus
     outcome: Outcome | None = None
     delivery_enabled: bool = False

@@ -290,8 +290,11 @@ delivery-disabled preview; approval is an explicit state transition; evaluation
 fetches fresh snapshots. The webhook accepts `{ "card_id": "..." }` for a
 caller-owned scheduler or push relay. Push evaluation requires an idempotency key
 and stores a decision receipt with card version, actor, outcome, selected delivery
-methods, and delivery state. Repeated keys replay the receipt instead of fetching
-sources again. The default runtime stores cards, metric cards, and receipts in a
+methods, delivery mode, and delivery state. Evaluation is currently an explicit
+delivery-disabled shadow run; SignalWeave never calls a destination. Repeated keys
+replay the receipt instead of fetching sources again. The `get_decision_receipt`
+tool recovers the durable result by idempotency key or receipt id and includes
+any linked operator labels. The default runtime stores cards, metric cards, and receipts in a
 single SQLite file with a uniqueness constraint on the idempotency key; JSON is
 available only as a small local/legacy backend and is not a multi-process claim
 protocol. Delivery remains disabled unless a deployment adds a reviewed delivery
@@ -306,4 +309,6 @@ relationships, precedents, conflicts, and human feedback as versioned,
 provenance-bearing input to the same card evaluation state. That can improve the
 Jev decision without turning SignalWeave into a graph store or agent runtime. Raw
 feedback must not silently rewrite a card or graph; proposed changes need review
-and a new version.
+and a new version. A caller-supplied feedback id makes retries idempotent, while
+the feedback record keeps the card version from the receipt rather than reading a
+later card revision.

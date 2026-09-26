@@ -130,6 +130,7 @@ resolve_insight_sources(card_id)
 simulate_insight_card(card_id)
 approve_insight_card(card_id)
 evaluate_insight_card(card_id)
+get_decision_receipt(idempotency_key? | receipt_id?)
 ```
 
 For the fastest path, `onboard_insight_card` is the single-call contract: it
@@ -158,8 +159,14 @@ After approval, an existing scheduler or alert relay posts:
 {"card_id": "card-sales-pulse"}
 ```
 
-The caller owns scheduling, delivery, retries around the sink, and side effects;
-SignalWeave records the evaluation idempotency key and replays completed results.
+The caller owns scheduling, delivery, retries around the sink, and side effects.
+SignalWeave records a durable `shadow` receipt with delivery disabled, and
+replays completed results for the same evaluation idempotency key. A caller can
+recover the full result later with `get_decision_receipt`, using either the
+scheduler key or the returned receipt id.
+
+The narrow shadow-pilot contract and its proof commands are documented in
+[`docs/shadow-pilot-contract.md`](docs/shadow-pilot-contract.md).
 
 Cards created through the proposal path also default to one bounded investigation
 stage. Jev first decides whether the initial evidence needs more context, then
@@ -358,6 +365,11 @@ one SQLite file. Its database uniqueness constraint makes a completed
 idempotency key replayable after restart. Multi-replica deployments should
 provide a shared transactional store through the store interfaces before routing
 traffic to more than one evaluator process.
+
+Operator labels are also durable and retry-safe when the caller supplies a
+stable `feedback_id` to `record_decision_feedback`. Labels are linked to the
+receipt's card and context versions; revising a card later cannot rewrite what
+the operator labeled about an earlier run.
 
 See [`docs/evidence-brief.md`](docs/evidence-brief.md) for the measured case and
 limitations.

@@ -971,13 +971,22 @@ async def test_decision_feedback_is_scoped_and_survives_restart(tmp_path):
         card_id="feedback-card",
     )
     await tool(server, "approve_insight_card")("feedback-card")
-    await tool(server, "evaluate_insight_card")(
+    evaluated = await tool(server, "evaluate_insight_card")(
         drafted["card"]["id"], idempotency_key="daily:feedback-card"
     )
+
+    recovered = tool(server, "get_decision_receipt")(
+        receipt_id=evaluated["receipt"]["receipt_id"]
+    )
+    assert recovered["receipt"]["delivery_mode"] == "shadow"
+    assert recovered["receipt"]["status"] == "delivery_disabled"
+    assert recovered["result"] == evaluated["result"]
+    assert recovered["feedback"] == []
 
     recorded = tool(server, "record_decision_feedback")(
         idempotency_key="daily:feedback-card",
         kind="noisy",
+        feedback_id="feedback:daily:feedback-card",
         expected_outcome="ignore",
         note="The movement was expected seasonality.",
     )
@@ -987,16 +996,79 @@ async def test_decision_feedback_is_scoped_and_survives_restart(tmp_path):
     assert recorded["feedback"]["expected_outcome"] == "ignore"
     assert tool(server, "list_decision_feedback")(card_id="feedback-card")["count"] == 1
 
+    replayed = tool(server, "record_decision_feedback")(
+        idempotency_key="daily:feedback-card",
+        kind="noisy",
+        feedback_id="feedback:daily:feedback-card",
+        expected_outcome="ignore",
+        note="The movement was expected seasonality.",
+    )
+    assert replayed["status"] == "replayed"
+    assert tool(server, "list_decision_feedback")(card_id="feedback-card")["count"] == 1
+
     restarted = make_server(tmp_path, sqlite=True)
     listed = tool(restarted, "list_decision_feedback")(idempotency_key="daily:feedback-card")
     assert listed["count"] == 1
     assert listed["feedback"][0]["note"] == "The movement was expected seasonality."
+    restarted_receipt = tool(restarted, "get_decision_receipt")(
+        idempotency_key="daily:feedback-card"
+    )
+    assert restarted_receipt["receipt"]["delivery_mode"] == "shadow"
+    assert len(restarted_receipt["feedback"]) == 1
 
     with pytest.raises(ValueError, match="unknown decision receipt"):
         tool(restarted, "record_decision_feedback")(
             idempotency_key="daily:missing",
             kind="useful",
         )
+
+
+@pytest.mark.asyncio
+async def test_feedback_keeps_the_receipt_card_version_after_a_card_revision(tmp_path):
+    server = make_server(tmp_path, sqlite=True)
+    await tool(server, "draft_insight_card")(
+        title="Versioned feedback card",
+        what_to_watch="Checkout conversion.",
+        why_watch="Decide whether Growth should act.",
+        decision_guidance="Ignore ordinary movement and notify Growth when conversion drops materially.",
+        watch_for=["Conversion drops materially."],
+        questions=["Is this a meaningful movement?"],
+        sources=[
+            {
+                "key": "growth",
+                "adapter": "superset",
+                "resource": "dashboard:7",
+                "label": "Growth overview",
+            }
+        ],
+        delivery_methods=[
+            {
+                "key": "growth-ops",
+                "outcome": "notify",
+                "label": "Growth Ops",
+                "destination": "slack://growth-ops",
+            }
+        ],
+        card_id="versioned-feedback",
+    )
+    await tool(server, "approve_insight_card")("versioned-feedback")
+    evaluated = await tool(server, "evaluate_insight_card")(
+        "versioned-feedback", idempotency_key="daily:versioned-feedback"
+    )
+
+    stored = tool(server, "get_insight_card")("versioned-feedback")
+    revised = InsightCard.model_validate(stored).model_copy(
+        update={"version": 2, "compiled_plan": None}
+    )
+    SQLiteInsightCardStore(tmp_path / "signalweave.db").save_card(revised)
+
+    feedback = tool(server, "record_decision_feedback")(
+        idempotency_key="daily:versioned-feedback",
+        feedback_id="feedback:versioned-feedback",
+        kind="useful",
+    )
+    assert evaluated["receipt"]["card_version"] == 1
+    assert feedback["feedback"]["card_version"] == 1
 
 
 def test_enterprise_readiness_reports_open_gates(tmp_path):
@@ -1168,6 +1240,7 @@ def test_mcp_exposes_generic_authoring_tools(tmp_path):
         "simulate_insight_card",
         "approve_insight_card",
         "evaluate_insight_card",
+        "get_decision_receipt",
         "list_insight_cards",
         "get_insight_card",
         "get_certification_report",
