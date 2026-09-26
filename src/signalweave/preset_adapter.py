@@ -49,6 +49,10 @@ class PresetCloudClient(SupersetClient):
                 raise ValueError(f"{field_name} must use https")
             if parsed.username or parsed.password:
                 raise ValueError(f"{field_name} must not contain credentials")
+            if parsed.query or parsed.fragment:
+                raise ValueError(
+                    f"{field_name} must be an origin without query or fragment"
+                )
         if access_token and (api_token_name or api_token_secret):
             raise ValueError("Preset requires exactly one authentication mode")
         if not access_token and not (api_token_name and api_token_secret):

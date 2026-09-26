@@ -58,6 +58,13 @@ def test_hosted_connection_requires_https_without_inline_credentials():
                 "base_url": "https://user:secret@preset.example",
             }
         )
+    with pytest.raises(ValueError, match="without query or fragment"):
+        HostedConnection.model_validate(
+            {
+                **connection(HostedProvider.PRESET).model_dump(),
+                "base_url": "https://preset.example/?access_token=leak",
+            }
+        )
 
 
 def test_hosted_connection_metadata_cannot_be_used_as_a_secret_store():
@@ -81,6 +88,17 @@ def test_preset_client_requires_secure_provider_urls():
             "https://workspace.preset.test",
             access_token="preset-token",
             api_base_url="http://api.preset.test",
+        )
+    with pytest.raises(ValueError, match="workspace_url must be an origin"):
+        PresetCloudClient(
+            "https://workspace.preset.test/?token=leak",
+            access_token="preset-token",
+        )
+    with pytest.raises(ValueError, match="api_base_url must be an origin"):
+        PresetCloudClient(
+            "https://workspace.preset.test",
+            access_token="preset-token",
+            api_base_url="https://api.preset.test/#token",
         )
 
 

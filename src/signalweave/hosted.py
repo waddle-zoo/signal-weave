@@ -84,6 +84,10 @@ class HostedConnection(BaseModel):
             raise ValueError("hosted connection base_url must use https")
         if parsed.username or parsed.password:
             raise ValueError("hosted connection base_url must not contain credentials")
+        if parsed.query or parsed.fragment:
+            raise ValueError(
+                "hosted connection base_url must be an origin without query or fragment"
+            )
         return self
 
     @model_validator(mode="after")
