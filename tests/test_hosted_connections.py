@@ -378,6 +378,33 @@ async def test_preset_explicit_dashboard_authorization_does_not_scan_catalog():
 
 
 @pytest.mark.asyncio
+async def test_preset_tenant_mismatch_abstains_before_provider_contact():
+    provider_calls = 0
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal provider_calls
+        provider_calls += 1
+        raise AssertionError(f"foreign-tenant authorization contacted Preset: {request.url}")
+
+    adapter = PresetAdapter(
+        PresetCloudClient(
+            "https://workspace.app.preset.test",
+            access_token="preset-token",
+            transport=httpx.MockTransport(handler),
+        ),
+        tenant_id="northstar",
+    )
+
+    descriptor = await adapter.authorize(
+        SourceRef(key="growth", adapter="preset", resource="dashboard:7", label="Growth"),
+        authorized_tenants={"harbor-bank"},
+    )
+
+    assert descriptor is None
+    assert provider_calls == 0
+
+
+@pytest.mark.asyncio
 async def test_preset_metadata_only_honors_selected_chart_ids():
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path == "/api/v1/dashboard/7":
