@@ -1,3 +1,4 @@
+import ssl
 from types import SimpleNamespace
 
 import pytest
@@ -114,6 +115,43 @@ class FakeClient:
     async def system_one(self, *, state, questions):
         self.calls.append({"state": state, "questions": questions})
         return FakeResponse(questions)
+
+
+@pytest.mark.asyncio
+async def test_jev_retries_transient_transport_failures(monkeypatch):
+    class FlakyClient(FakeClient):
+        attempts = 0
+
+        async def system_one(self, *, state, questions):
+            type(self).attempts += 1
+            if type(self).attempts == 1:
+                raise ssl.SSLError("transient test failure")
+            return await super().system_one(state=state, questions=questions)
+
+    FlakyClient.calls = []
+    monkeypatch.setattr(typesafe_sdk, "AsyncTypeSafeClient", FlakyClient)
+    monkeypatch.setattr(typesafe_sdk, "Noul", FakeNoul)
+    judger = JevJudger(
+        api_key="synthetic-test-key",
+        timeout=3,
+        max_retries=1,
+    )
+
+    scores = await judger.rank_resources(
+        "Understand revenue risk",
+        [
+            ResourceDescriptor(
+                adapter="superset",
+                resource="dashboard:growth",
+                kind="dashboard",
+                title="Growth funnel",
+            )
+        ],
+    )
+
+    assert scores == {"superset|dashboard:growth": 0.91}
+    assert FlakyClient.attempts == 2
+    assert len(FlakyClient.calls) == 1
 
 
 @pytest.mark.asyncio

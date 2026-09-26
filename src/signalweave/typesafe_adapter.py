@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -81,7 +82,12 @@ class JevJudger:
     name = "jev-latest"
     item_threshold = 0.70
 
-    def __init__(self, api_key: str | None = None, timeout: float | None = None) -> None:
+    def __init__(
+        self,
+        api_key: str | None = None,
+        timeout: float | None = None,
+        max_retries: int | None = None,
+    ) -> None:
         from typesafe_sdk import AsyncTypeSafeClient
 
         timeout_seconds = timeout
@@ -92,9 +98,25 @@ class JevJudger:
                 raise ValueError("TYPESAFE_TIMEOUT_SECONDS must be a positive number") from error
         if timeout_seconds <= 0:
             raise ValueError("TYPESAFE_TIMEOUT_SECONDS must be a positive number")
+        retry_value = max_retries
+        if retry_value is None:
+            try:
+                retry_value = int(os.getenv("TYPESAFE_MAX_RETRIES", "2"))
+            except ValueError as error:
+                raise ValueError("TYPESAFE_MAX_RETRIES must be a non-negative integer") from error
+        if retry_value < 0:
+            raise ValueError("TYPESAFE_MAX_RETRIES must be a non-negative integer")
+        try:
+            retry_backoff = float(os.getenv("TYPESAFE_RETRY_BACKOFF_SECONDS", "0.25"))
+        except ValueError as error:
+            raise ValueError("TYPESAFE_RETRY_BACKOFF_SECONDS must be non-negative") from error
+        if retry_backoff < 0:
+            raise ValueError("TYPESAFE_RETRY_BACKOFF_SECONDS must be non-negative")
         self._client_type = AsyncTypeSafeClient
         self._api_key = api_key
         self._timeout = timeout_seconds
+        self._max_retries = retry_value
+        self._retry_backoff = retry_backoff
         self.metrics = JudgerMetrics()
 
     async def rank_resources(
@@ -169,12 +191,43 @@ class JevJudger:
         }
         if not questions:
             return {}
-        async with self._client_type(api_key=self._api_key, timeout=self._timeout) as client:
-            response = await client.system_one(state=state, questions=questions)
+        response = await self._system_one_with_retry(state=state, questions=questions)
         self.metrics.record(response)
         return {
             f"{resource.adapter}|{resource.resource}": response.nouls[f"resource_{index}"].noul
             for index, resource in enumerate(resources)
+        }
+
+    async def _system_one_with_retry(
+        self, *, state: dict[str, Any], questions: dict[str, Any]
+    ) -> Any:
+        """Retry only idempotent transport failures around a Jev request.
+
+        Jev judgments do not mutate customer systems, so retrying a dropped
+        connection is safe. API validation and model errors are returned
+        immediately rather than being hidden behind repeated requests.
+        """
+        for attempt in range(self._max_retries + 1):
+            try:
+                async with self._client_type(
+                    api_key=self._api_key, timeout=self._timeout
+                ) as client:
+                    return await client.system_one(state=state, questions=questions)
+            except Exception as error:  # noqa: BLE001 - classify transport failures below
+                if not self._is_retryable_transport_error(error) or attempt >= self._max_retries:
+                    raise
+                delay = self._retry_backoff * (2**attempt)
+                if delay:
+                    await asyncio.sleep(delay)
+        raise RuntimeError("unreachable Jev retry state")
+
+    @staticmethod
+    def _is_retryable_transport_error(error: Exception) -> bool:
+        return isinstance(error, (TimeoutError, ConnectionError, OSError)) or error.__class__.__name__ in {
+            "APIConnectionError",
+            "ConnectError",
+            "ReadError",
+            "RemoteProtocolError",
         }
 
     async def classify_resource_roles(
@@ -232,8 +285,7 @@ class JevJudger:
             )
             for index in range(min(len(resources), 40))
         }
-        async with self._client_type(api_key=self._api_key, timeout=self._timeout) as client:
-            response = await client.system_one(state=state, questions=questions)
+        response = await self._system_one_with_retry(state=state, questions=questions)
         self.metrics.record(response)
         judgments: dict[str, dict[str, Any]] = {}
         for index, resource in enumerate(resources[:40]):
@@ -324,8 +376,7 @@ class JevJudger:
                 ),
                 criteria=score_criteria,
             )
-        async with self._client_type(api_key=self._api_key, timeout=self._timeout) as client:
-            response = await client.system_one(state=state, questions=questions)
+        response = await self._system_one_with_retry(state=state, questions=questions)
         self.metrics.record(response)
         probability = max(0.0, min(1.0, float(response.nouls["need_investigation"].noul)))
         scored: list[dict[str, Any]] = []
@@ -417,8 +468,7 @@ class JevJudger:
             "requested_time_grain": requested_time_grain,
             "metric_candidates": [dict(candidate) for candidate in candidates[:50]],
         }
-        async with self._client_type(api_key=self._api_key, timeout=self._timeout) as client:
-            response = await client.system_one(state=state, questions=questions)
+        response = await self._system_one_with_retry(state=state, questions=questions)
         self.metrics.record(response)
         metric_answer = response.choices["metric"]
         selected_dimensions = list(requested_dimensions)
@@ -465,8 +515,7 @@ class JevJudger:
             criteria={window: None for window in windows},
         )
 
-        async with self._client_type(api_key=self._api_key, timeout=self._timeout) as client:
-            response = await client.system_one(state=state, questions=questions)
+        response = await self._system_one_with_retry(state=state, questions=questions)
         self.metrics.record(response)
         capabilities = [
             capability["key"]
@@ -590,8 +639,7 @@ class JevJudger:
             criteria=outcome_criteria,
         )
 
-        async with self._client_type(api_key=self._api_key, timeout=self._timeout) as client:
-            response = await client.system_one(state=state, questions=questions)
+        response = await self._system_one_with_retry(state=state, questions=questions)
         self.metrics.record(response)
 
         def probability(key: str) -> float:

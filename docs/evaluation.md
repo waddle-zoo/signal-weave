@@ -130,9 +130,10 @@ PYTHONPATH=src:. \
   --evaluator jev
 ```
 
-For the higher-scale Northstar mock workload—168 workflows, 169 retrieval
-cases, 40 role agents, seven messy source states, disjoint time splits, and a
-virtual 100k-resource native catalog per adapter—see
+For the higher-scale Northstar mock workload—168 workflows, 169 anchor
+discovery cases plus 168 graph-assisted bundle cases, 40 role agents, seven
+messy source states, disjoint time splits, and a virtual 100k-resource native
+catalog per adapter—see
 [`northstar-scale-trial.md`](northstar-scale-trial.md).
 
 For the mass analytical insights workload—cached dashboard evidence, expensive

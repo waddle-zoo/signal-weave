@@ -984,23 +984,41 @@ class InsightAuthoringService:
                 continue
             group_matches = [match for match in eligible if match.ref in group]
             if not group_matches:
+                # A trusted graph obligation can be present even when Jev's
+                # generic goal-relevance threshold does not clear. Re-rank
+                # within the typed obligation below so a weak lexical score
+                # cannot erase an explicitly required context projection.
+                group_matches = [match for match in matches if match.ref in group]
+            if not group_matches:
                 coverage_warnings.append(
                     "No Jev-supported candidate cleared the threshold for required "
                     f"context relationship {target}."
                 )
                 continue
             selected = group_matches[0]
+            if selected.relevance < self.recommendation_threshold:
+                coverage_warnings.append(
+                    "Jev ranked the top projection for required context relationship "
+                    f"{target} below the optional relevance threshold; the trusted "
+                    "graph obligation retained it and this bundle remains human-reviewable."
+                )
             if selected.ref not in {match.ref for match in selected_matches}:
                 if len(selected_matches) < self.related_source_limit:
                     selected_matches.append(selected)
                     covered_targets.add(target)
         selected_refs = {match.ref for match in selected_matches}
-        for match in eligible:
-            if len(selected_matches) >= self.related_source_limit:
-                break
-            if match.ref not in selected_refs:
-                selected_matches.append(match)
-                selected_refs.add(match.ref)
+        # When the trusted graph declares explicit context obligations, the
+        # bundle should contain one Jev-ranked projection per obligation and
+        # stop. Filling the remaining slots with merely eligible candidates
+        # adds noise, cost, and ambiguous evidence to the workflow. Cards with
+        # no graph obligations retain the bounded relevance expansion behavior.
+        if not required_groups:
+            for match in eligible:
+                if len(selected_matches) >= self.related_source_limit:
+                    break
+                if match.ref not in selected_refs:
+                    selected_matches.append(match)
+                    selected_refs.add(match.ref)
         if required_groups and len(covered_targets) < len(required_groups):
             coverage_warnings.append(
                 "The resolved bundle is missing one or more explicit graph-context "

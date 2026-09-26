@@ -53,11 +53,12 @@ PYTHONPATH=src:. \
   --output artifacts/northstar-scale/adversarial-review.json
 ```
 
-If a full run has already completed and only the retrieval harness changed, do
-not pay for the 336 workflow judgments again. The retrieval-only retry below
-runs the 169 live Jev retrieval cases and reuses the prior workflow report only
-after checking the generated cards, dataset IDs, role roster, variants, source
-adapters, and approval status match exactly:
+If a full run has already completed and only retrieval changed, do not pay for
+the 336 workflow judgments again. The retrieval-only retry below runs the 169
+anchor-discovery cases and 168 graph-assisted bundle cases live with Jev, then
+reuses the prior workflow report only after checking the generated cards,
+dataset IDs, role roster, variants, source adapters, and approval status match
+exactly:
 
 ```bash
 TYPESAFE_API_KEY_FILE=/path/to/apikey_typesafe \
@@ -69,47 +70,52 @@ PYTHONPATH=src:. \
   --fixture-dir artifacts/northstar-scale/retrieval-retry/fixtures
 ```
 
-This is still a Jev-only trial: the retrieval report is live, while the
+This is still a Jev-only trial: both retrieval stages are live, while the
 workflow section is explicitly marked as reused approved Jev evidence. It is
 not a fresh workflow benchmark.
 
 The gate requires Jev, all seven messy workflow variants, all four time splits,
-ready source bootstrap, full primary-anchor and related-source-group recall, at
-least 90% recommended precision/recall, zero unauthorized references, zero
-unsafe automatic actions, zero workflow errors, full evidence/retrieval recall,
-no owner-label leakage, and zero native full-catalog scans. A related-source
-group is an owner-approved set of equivalent cross-system assets—for example,
-the SQL, Airflow, table, incident, or calendar representation of one business
-context. The workflow path still evaluates the exact human-selected sources.
+ready source bootstrap, full primary-anchor and graph-assisted related-source
+group recall, at least 90% recommended precision/recall, zero unauthorized
+references, zero unsafe automatic actions, zero workflow errors, full
+evidence/retrieval recall, no owner-label leakage, and zero native full-catalog
+scans. A related-source group is an owner-approved set of equivalent
+cross-system assets—for example, the SQL, Airflow, table, incident, or calendar
+representation of one business context. The workflow path still evaluates the
+exact human-selected sources.
 
 ## Evidence and current gap
 
-The final credit-conserving live run on 2026-09-22 exercised all 169 retrieval
-cases with Jev. It reused the previously completed 168-case workflow replay
+The final credit-conserving live run on 2026-09-26 exercised the two retrieval
+stages with Jev. It reused the previously completed 168-case workflow replay
 only after strict fixture, card, dataset, roster, variant, and source-boundary
-identity checks:
+identity checks. The independent report-only adversarial gate passed:
 
 | Layer | Result |
 | --- | --- |
-| Bootstrap | 6/6 adapters ready; six native authorization calls; zero full-catalog scans |
+| Bootstrap | 6/6 tenant-aware adapters ready; six native authorization calls; zero full-catalog scans |
 | Workflows | 168 cases; 96.43% exact outcome accuracy; 100% evidence and exact-source retrieval recall; 0 unsafe actions; 0 errors |
-| Retrieval | 169 cases; 100% candidate recall; 93.87% recommended precision; 100% primary-anchor recall; 54.44% related-context-group recall; 100% no-match accuracy |
+| Anchor discovery | 169 cases; 100% candidate recall; 93.80% recommended precision; 100% recommended recall; 100% primary-anchor recall; 100% no-match accuracy; 476 ms median Jev latency |
+| Graph-assisted bundles | 168 cases; 100% candidate group recall; 100% selected group recall; 100% selected precision; 0 unauthorized refs; 0 errors; 569 ms median Jev latency; 35 cases retained an explicit low-confidence review warning |
 | Scale | 40 role agents; 24 owner personas; 12 domains; 1860 materialized descriptors over six virtual 100k-resource catalogs |
-| Jev usage | 169 live retrieval calls plus 336 reused workflow calls; 4,849,696 recorded input tokens and 187,872 output tokens in the combined evidence; median live retrieval latency about 667 ms |
+| Jev usage | 337 live retrieval calls plus 336 reused workflow calls; 8,385,520 live/reused input tokens and 314,544 output tokens recorded in the final report |
 
-The independent adversarial gate therefore remains **shadow**, failing only the
-1.0 related-context-group gate. Jev reliably found the primary source in the
-bounded pool and recommended it, but only about half of the owner-labeled
-cross-domain context groups had at least one member recommended. The workflow
-path itself remained approved, so this is specifically a discovery/expansion
-gap rather than a typed decision-safety failure. It means SignalWeave can
-currently certify human-anchored workflows at this scale, but should not claim
-that it will automatically discover every related diagnostic source from a
-free-form goal.
+The result exposes an important product boundary. Seedless goal-only discovery
+still recovered only 53.25% of owner-labeled related-context groups. That is a
+real warning, not a hidden score: a free-form goal does not contain enough
+information to identify every cross-system relationship in a large catalog.
+The approved production path is therefore a human-approved card anchor plus a
+trusted context/relationship snapshot. Jev ranks the bounded projections, while
+SignalWeave requires one projection per explicit graph obligation, preserves
+low-confidence selections as review warnings, and does not fill the bundle
+with unrelated eligible sources. That graph-assisted path reached 100% group
+recall and 100% selected precision in all 168 cases.
 
 The branch also records a retrieval-only retry mode so future runs do not pay
 for another 336 workflow judgments when only retrieval changes. It refuses to
-reuse workflow evidence unless the fixture and approval identity checks match.
+reuse workflow evidence unless the fixture and approval identity checks match,
+and the TypeSafe adapter retries bounded transport failures without retrying
+validation or model errors.
 
 ## What success means
 

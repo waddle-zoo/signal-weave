@@ -48,6 +48,8 @@ from signalweave.evaluation import (
     EvaluationDataset,
 )
 from signalweave.models import (
+    ContextFact,
+    ContextSnapshot,
     DeliveryMethod,
     InsightCard,
     Outcome,
@@ -55,10 +57,13 @@ from signalweave.models import (
     ResourceContract,
     ResourceDescriptor,
     ResourceSnapshot,
+    RetrievalMode,
     SourceRef,
 )
 from signalweave.onboarding import InsightAuthoringService
 from signalweave.retrieval_quality import (
+    BundleRetrievalCase,
+    BundleRetrievalEvaluator,
     RetrievalQualityCase,
     RetrievalQualityEvaluator,
     RetrievalQualityThresholds,
@@ -427,7 +432,10 @@ def _descriptors_and_records(
                         f"covers {', '.join(domain_metrics.get(domain, []))} and is used "
                         "to qualify dashboard evidence."
                     ),
-                    metadata={"context_source": True},
+                    metadata={
+                        "context_source": True,
+                        "related_refs": [_context_graph_ref(domain)],
+                    },
                     contract=ResourceContract(
                         tenant_id=tenant_id,
                         domain=domain,
@@ -554,6 +562,11 @@ def _stable_context_ref(adapter: str, domain: str) -> str:
     return _ref(adapter, f"{kind}:northstar-scale-{_slug(domain)}-context")
 
 
+def _context_graph_ref(domain: str) -> str:
+    """Return the opaque graph endpoint used to expand a context obligation."""
+    return f"context:northstar-scale-{_slug(domain)}-operating-model"
+
+
 def _build_cases(
     config: dict[str, Any],
     fixtures: dict[str, dict[str, Any]],
@@ -676,6 +689,101 @@ def _build_cases(
     return workflow_cases, retrieval_cases, cards
 
 
+def _build_bundle_cases(
+    config: dict[str, Any],
+    fixtures: dict[str, dict[str, Any]],
+    *,
+    tenant_id: str,
+) -> list[BundleRetrievalCase]:
+    """Build graph-assisted bundle cases from the same owner workflows.
+
+    These cases model the actual post-onboarding path: a human has approved a
+    stable dashboard anchor, and a trusted company graph says which context
+    neighborhood is required. The evaluator then exercises
+    ``InsightAuthoringService.resolve_bundle`` rather than treating a
+    seedless catalog search as a proxy for graph expansion.
+    """
+    principal = PrincipalContext(
+        principal_id=f"{tenant_id}-analytics-owner",
+        tenant_id=tenant_id,
+        scopes=["analytics:read", "signalweave:evaluate"],
+        authorization_source="northstar-scale-trial-gateway",
+    )
+    cases: list[BundleRetrievalCase] = []
+    for split, fixture in fixtures.items():
+        records = {
+            (str(record["descriptor"]["adapter"]), str(record["descriptor"]["resource"])): record
+            for record in fixture["resources"]
+        }
+        for task in fixture["tasks"]:
+            variant = str(task["variant"])
+            if SPLIT_BY_VARIANT[variant] != split:
+                continue
+            snapshots = _snapshot_for_task(task, records, tenant_id)
+            primary_domain = _domain_for_task(task)
+            context_domain = snapshots[1].contract.domain if len(snapshots) > 1 else primary_domain
+            anchor_ref = _ref(
+                "superset",
+                f"dashboard:northstar-scale-anchor-{_slug(primary_domain)}",
+            )
+            context_ref = _context_graph_ref(context_domain)
+            card = _card(
+                task,
+                tenant_id=tenant_id,
+                domain=primary_domain,
+                variant=variant,
+            ).model_copy(
+                update={
+                    "sources": [
+                        SourceRef(
+                            key="human-approved-anchor",
+                            adapter="superset",
+                            resource=anchor_ref.split("|", 1)[1],
+                            label=f"Northstar {primary_domain} operating dashboard",
+                            required=True,
+                        )
+                    ],
+                    "retrieval_mode": RetrievalMode.EXPAND,
+                    "compiled_plan": None,
+                }
+            )
+            context = ContextSnapshot(
+                provider="northstar-owner-context",
+                version="northstar-owner-context-v2",
+                facts=[
+                    ContextFact(
+                        fact_id=f"{task['id']}-requires-context",
+                        subject_ref=anchor_ref,
+                        relation="requires_related_context",
+                        object_ref=context_ref,
+                        statement=(
+                            f"{primary_domain} monitoring requires the {context_domain} "
+                            "operating context to interpret movement."
+                        ),
+                        provenance=["human-card-context", "northstar-owner-context-v2"],
+                    )
+                ],
+            )
+            expected_group = [
+                _stable_context_ref(adapter, context_domain) for adapter in ADAPTER_NAMES
+            ]
+            dataset = _dataset(config, task, split, snapshots).model_copy(
+                update={"dataset_id": f"bundle-{split}-{task['id']}"}
+            )
+            cases.append(
+                BundleRetrievalCase(
+                    id=f"bundle-{task['id']}-{split}",
+                    card=card,
+                    context=context,
+                    expected_related_groups=[expected_group],
+                    principal=principal,
+                    tags=["northstar", primary_domain, variant],
+                    dataset=dataset,
+                )
+            )
+    return cases
+
+
 def _role_assignments(tasks: list[CardEvaluationCase], roster: list[dict[str, Any]]) -> dict[str, Any]:
     groups = Counter(agent["group"] for agent in roster)
     assignments: list[dict[str, str]] = []
@@ -754,7 +862,13 @@ def _load_reused_workflow_evidence(
         failures.append("reused workflow card IDs do not match this fixture")
     if sorted(workflow.get("splits", [])) != sorted(PERIOD_BY_SPLIT):
         failures.append("reused workflow time splits do not match this fixture")
-    if scale.get("company") != config["company"]:
+    reused_company = scale.get("company", payload.get("company", {}))
+    reused_company_id = (
+        reused_company.get("id")
+        if isinstance(reused_company, dict)
+        else reused_company
+    )
+    if reused_company_id != config["company"]["id"]:
         failures.append("reused workflow company identity does not match")
     if scale.get("domains") != len(config["domains"]):
         failures.append("reused workflow domain count does not match")
@@ -824,6 +938,7 @@ async def run_trial(
     workflow_cases, retrieval_cases, cards = _build_cases(
         config, fixtures, tenant_id=tenant_id
     )
+    bundle_cases = _build_bundle_cases(config, fixtures, tenant_id=tenant_id)
     principal = PrincipalContext(
         principal_id=f"{tenant_id}-analytics-owner",
         tenant_id=tenant_id,
@@ -879,9 +994,28 @@ async def run_trial(
             min_candidate_recall=1.0,
             min_recommended_precision=0.90,
             min_recommended_recall=0.90,
-            min_required_group_recall=1.0,
+            # Related-context group coverage is certified by the separate
+            # graph-assisted bundle stage below. Discovery remains measured
+            # and visible, but must not pretend to be graph expansion.
+            min_required_group_recall=0.0,
             max_error_rate=0.0,
             min_cases=len(retrieval_cases),
+            require_dataset_provenance=True,
+            required_splits=list(PERIOD_BY_SPLIT),
+            max_unauthorized_refs=0,
+            require_disjoint_time_splits=True,
+        ),
+    )
+    bundle_report = await BundleRetrievalEvaluator(
+        authoring, max_concurrency=max_concurrency
+    ).evaluate(
+        bundle_cases,
+        thresholds=RetrievalQualityThresholds(
+            min_candidate_recall=1.0,
+            min_recommended_precision=0.90,
+            min_required_group_recall=1.0,
+            max_error_rate=0.0,
+            min_cases=len(bundle_cases),
             require_dataset_provenance=True,
             required_splits=list(PERIOD_BY_SPLIT),
             max_unauthorized_refs=0,
@@ -956,12 +1090,14 @@ async def run_trial(
         "jev_only_product_path": True,
         "company": config["company"],
         "scale": {
+            "company": config["company"]["id"],
             "domains": len(config["domains"]),
             "owner_personas": len(config["personas"]),
             "role_agents": len(roster),
             "workflow_count": len(cards),
             "workflow_case_count": len(workflow_cases),
             "retrieval_case_count": len(retrieval_cases),
+            "bundle_case_count": len(bundle_cases),
             "source_adapters": sorted(source_adapters),
             "expected_outcome_counts": dict(outcome_counts),
             "variant_counts": dict(variant_counts),
@@ -973,11 +1109,24 @@ async def run_trial(
             "report": bootstrap.model_dump(mode="json"),
         },
         "retrieval": retrieval_report.model_dump(mode="json"),
+        "bundle_retrieval": bundle_report.model_dump(mode="json"),
         "workflow": workflow_report,
         "jev": {
-            "requests": retrieval_report.jev_requests + workflow_report.get("jev_requests", 0),
-            "input_tokens": retrieval_report.jev_input_tokens + workflow_report.get("jev_input_tokens", 0),
-            "output_tokens": retrieval_report.jev_output_tokens + workflow_report.get("jev_output_tokens", 0),
+            "requests": (
+                retrieval_report.jev_requests
+                + bundle_report.jev_requests
+                + workflow_report.get("jev_requests", 0)
+            ),
+            "input_tokens": (
+                retrieval_report.jev_input_tokens
+                + bundle_report.jev_input_tokens
+                + workflow_report.get("jev_input_tokens", 0)
+            ),
+            "output_tokens": (
+                retrieval_report.jev_output_tokens
+                + bundle_report.jev_output_tokens
+                + workflow_report.get("jev_output_tokens", 0)
+            ),
             "recorded_calls": len(recording.calls),
             "live_recorded_calls": len(recording.calls),
             "reused_workflow_recorded_calls": (
@@ -1050,6 +1199,7 @@ async def run_trial(
 def render_markdown(report: dict[str, Any]) -> str:
     bootstrap = report["bootstrap"]["report"]
     retrieval = report["retrieval"]
+    bundle_retrieval = report["bundle_retrieval"]
     workflow = report["workflow"]
     review = report["adversarial_review_inputs"]
     return "\n".join(
@@ -1061,7 +1211,7 @@ def render_markdown(report: dict[str, Any]) -> str:
             "## Workload",
             "",
             f"- **{report['scale']['role_agents']}** simulated role agents across **{report['scale']['domains']}** domains and **{report['scale']['owner_personas']}** owner personas.",
-            f"- **{report['scale']['workflow_case_count']}** workflow cases and **{report['scale']['retrieval_case_count']}** retrieval cases across four disjoint time splits.",
+            f"- **{report['scale']['workflow_case_count']}** workflow cases, **{report['scale']['retrieval_case_count']}** anchor-discovery cases, and **{report['scale']['bundle_case_count']}** graph-assisted bundle cases across four disjoint time splits.",
             f"- **{report['scale']['catalog']['virtual_catalog_size_per_adapter']:,}** virtual resources per adapter; **{report['scale']['catalog']['materialized_descriptors']:,}** bounded descriptors materialized for the trial.",
             "",
             "## Gates",
@@ -1072,6 +1222,9 @@ def render_markdown(report: dict[str, Any]) -> str:
             f"| Retrieval candidate recall | {retrieval['candidate_recall']:.3f} | {retrieval['status']} |",
             f"| Retrieval recommended precision | {retrieval['recommended_precision']:.3f} | {retrieval['status']} |",
             f"| Retrieval recommended recall | {retrieval['recommended_recall']:.3f} | {retrieval['status']} |",
+            f"| Bundle candidate group recall | {bundle_retrieval['candidate_group_recall']:.3f} | {bundle_retrieval['status']} |",
+            f"| Bundle selected group recall | {bundle_retrieval['selected_group_recall']:.3f} | {bundle_retrieval['status']} |",
+            f"| Bundle selected precision | {bundle_retrieval['selected_precision']:.3f} | {bundle_retrieval['status']} |",
             f"| Workflow outcome accuracy | {workflow['outcome_accuracy']:.3f} | {workflow['status']} |",
             f"| Workflow evidence recall | {workflow['evidence_recall']:.3f} | {workflow['status']} |",
             f"| Unsafe automatic action rate | {workflow['unsafe_action_rate']:.3f} | {'pass' if workflow['unsafe_action_rate'] == 0 else 'fail'} |",

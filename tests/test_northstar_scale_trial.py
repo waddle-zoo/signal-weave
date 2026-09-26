@@ -7,6 +7,7 @@ import pytest
 
 from evaluations.northstar_scale_adversarial_review import review
 from evaluations.northstar_scale_trial import (
+    _build_bundle_cases,
     _build_cases,
     _descriptors_and_records,
     _load_reused_workflow_evidence,
@@ -27,9 +28,11 @@ def test_northstar_scale_is_config_derived_and_covers_realistic_population():
     workflow_cases, retrieval_cases, cards = _build_cases(
         config, fixtures, tenant_id="northstar-outfitters"
     )
+    bundle_cases = _build_bundle_cases(config, fixtures, tenant_id="northstar-outfitters")
     assert len(workflow_cases) == 168
     assert len(retrieval_cases) == 169
     assert len(cards) == 168
+    assert len(bundle_cases) == 168
     assert {case.dataset.split for case in workflow_cases} == {
         "train",
         "validation",
@@ -52,6 +55,12 @@ def test_northstar_scale_is_config_derived_and_covers_realistic_population():
     assert all(card.principal_tenant == "northstar-outfitters" for card in cards.values())
     assert all(len(case.expected_resource_refs) == 1 for case in retrieval_cases[:-1])
     assert all(case.required_resource_groups for case in retrieval_cases[:-1])
+    assert all(case.context and case.context.trust == "trusted" for case in bundle_cases)
+    assert all(
+        case.card.sources[0].resource.startswith("dashboard:northstar-scale-anchor-")
+        for case in bundle_cases
+    )
+    assert all(len(case.expected_related_groups) == 1 for case in bundle_cases)
 
 
 def test_northstar_scale_native_catalog_is_virtual_and_bounded():
@@ -67,6 +76,14 @@ def test_northstar_scale_native_catalog_is_virtual_and_bounded():
     assert stats["materialized_descriptors"] > len(adapters)
     assert all(adapter.list_calls == 0 for adapter in adapters)
     assert all(adapter.total_count == 100_000 for adapter in adapters)
+    context_descriptors = [
+        descriptor
+        for adapter in adapters
+        for descriptor in adapter._descriptors
+        if descriptor.metadata.get("context_source")
+    ]
+    assert context_descriptors
+    assert all(descriptor.metadata.get("related_refs") for descriptor in context_descriptors)
 
 
 @pytest.mark.asyncio
@@ -103,6 +120,7 @@ def test_northstar_scale_adversarial_gate_rejects_unsafe_report():
             "role_agents": 40,
             "workflow_case_count": 168,
             "retrieval_case_count": 168,
+            "bundle_case_count": 168,
             "variant_counts": {
                 "corroborated_notify": 24,
                 "explained_ignore": 24,
@@ -128,6 +146,14 @@ def test_northstar_scale_adversarial_gate_rejects_unsafe_report():
             "required_group_recall": 1.0,
             "unauthorized_ref_count": 0,
         },
+        "bundle_retrieval": {
+            "status": "approved",
+            "candidate_group_recall": 1.0,
+            "selected_group_recall": 1.0,
+            "selected_precision": 0.95,
+            "error_rate": 0.0,
+            "unauthorized_ref_count": 0,
+        },
         "workflow": {
             "status": "approved",
             "outcome_accuracy": 0.95,
@@ -146,13 +172,13 @@ def test_northstar_scale_adversarial_gate_rejects_unsafe_report():
     }
 
     assert review(report)["passed"] is True
-    report["retrieval"]["required_group_recall"] = 0.5
+    report["bundle_retrieval"]["selected_group_recall"] = 0.5
     group_failed = review(report)
     assert group_failed["passed"] is False
-    assert "retrieval missed at least one required related-source group" in group_failed[
+    assert "Jev bundle selection missed a required related-source group" in group_failed[
         "failures"
     ]
-    report["retrieval"]["required_group_recall"] = 1.0
+    report["bundle_retrieval"]["selected_group_recall"] = 1.0
     report["workflow"]["unsafe_action_rate"] = 0.01
     failed = review(report)
     assert failed["passed"] is False

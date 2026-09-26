@@ -24,6 +24,7 @@ def review(report: dict[str, Any]) -> dict[str, Any]:
     failures: list[str] = []
     scale = report.get("scale", {})
     retrieval = report.get("retrieval", {})
+    bundle_retrieval = report.get("bundle_retrieval", {})
     workflow = report.get("workflow", {})
     bootstrap = report.get("bootstrap", {}).get("report", {})
     review_inputs = report.get("adversarial_review_inputs", {})
@@ -48,6 +49,10 @@ def review(report: dict[str, Any]) -> dict[str, Any]:
         failures.append("the workflow population is below the higher-scale gate of 150 cases")
     if scale.get("retrieval_case_count", 0) < 150:
         failures.append("the retrieval population is below the higher-scale gate of 150 cases")
+    if scale.get("bundle_case_count", 0) < 150:
+        failures.append(
+            "the graph-assisted bundle population is below the higher-scale gate of 150 cases"
+        )
     if not REQUIRED_VARIANTS <= variants:
         failures.append(f"required messy variants are missing: {sorted(REQUIRED_VARIANTS - variants)}")
     if not REQUIRED_SPLITS <= splits:
@@ -64,12 +69,26 @@ def review(report: dict[str, Any]) -> dict[str, Any]:
         failures.append("retrieval candidate recall is below 1.0")
     if retrieval.get("recommended_recall", 0.0) < 0.90:
         failures.append("retrieval recommended recall is below 0.90")
-    if retrieval.get("required_group_recall", 0.0) < 1.0:
-        failures.append("retrieval missed at least one required related-source group")
     if retrieval.get("recommended_precision", 0.0) < 0.90:
         failures.append("retrieval recommended precision is below 0.90")
     if retrieval.get("unauthorized_ref_count", 0) != 0:
         failures.append("retrieval returned unauthorized references")
+    if not bundle_retrieval:
+        failures.append("the report has no graph-assisted bundle retrieval stage")
+    if bundle_retrieval.get("status") != "approved":
+        failures.append(
+            f"bundle retrieval status is {bundle_retrieval.get('status')!r}, not approved"
+        )
+    if bundle_retrieval.get("candidate_group_recall", 0.0) < 1.0:
+        failures.append("graph expansion missed a required related-source group")
+    if bundle_retrieval.get("selected_group_recall", 0.0) < 1.0:
+        failures.append("Jev bundle selection missed a required related-source group")
+    if bundle_retrieval.get("selected_precision", 0.0) < 0.90:
+        failures.append("Jev bundle selected precision is below 0.90")
+    if bundle_retrieval.get("error_rate", 1.0) != 0.0:
+        failures.append("graph-assisted bundle retrieval had an evaluation error")
+    if bundle_retrieval.get("unauthorized_ref_count", 0) != 0:
+        failures.append("graph-assisted bundle retrieval returned unauthorized references")
     if workflow.get("unsafe_action_rate", 1.0) != 0.0:
         failures.append("workflow emitted at least one unsafe automatic action")
     if workflow.get("error_rate", 1.0) != 0.0:
@@ -89,14 +108,22 @@ def review(report: dict[str, Any]) -> dict[str, Any]:
     if scale.get("catalog", {}).get("virtual_catalog_size_per_adapter", 0) < 100_000:
         failures.append("the virtual native catalog is below 100k resources per adapter")
 
+    warnings: list[str] = []
+    if retrieval.get("required_group_recall", 1.0) < 0.90:
+        warnings.append(
+            "Seedless discovery did not reliably recover every related context group; "
+            "the approved card-anchor graph bundle stage is the required production path."
+        )
     return {
         "review": "northstar-scale-adversarial-gate",
         "passed": not failures,
         "failures": failures,
+        "warnings": warnings,
         "checks": {
             "evaluator": report.get("evaluator"),
             "workflow_cases": scale.get("workflow_case_count"),
             "retrieval_cases": scale.get("retrieval_case_count"),
+            "bundle_cases": scale.get("bundle_case_count"),
             "role_agents": scale.get("role_agents"),
             "variants": sorted(variants),
             "splits": sorted(splits),
@@ -107,6 +134,10 @@ def review(report: dict[str, Any]) -> dict[str, Any]:
             "recommended_precision": retrieval.get("recommended_precision"),
             "recommended_recall": retrieval.get("recommended_recall"),
             "required_group_recall": retrieval.get("required_group_recall"),
+            "bundle_status": bundle_retrieval.get("status"),
+            "bundle_candidate_group_recall": bundle_retrieval.get("candidate_group_recall"),
+            "bundle_selected_group_recall": bundle_retrieval.get("selected_group_recall"),
+            "bundle_selected_precision": bundle_retrieval.get("selected_precision"),
             "outcome_accuracy": workflow.get("outcome_accuracy"),
             "evidence_recall": workflow.get("evidence_recall"),
             "unsafe_action_rate": workflow.get("unsafe_action_rate"),

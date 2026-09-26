@@ -115,11 +115,22 @@ class NativeCatalogAdapter:
         )
 
     async def search_resources(
-        self, query: str, *, limit: int, cursor: str | None = None
+        self,
+        query: str,
+        *,
+        limit: int,
+        cursor: str | None = None,
+        authorized_tenants: Any = None,
     ) -> CatalogSearchPage:
         del cursor
         self.search_calls += 1
         terms = {term for term in query.lower().replace("/", " ").split() if len(term) > 2}
+        allowed_tenants = set(authorized_tenants or [])
+        descriptors = [
+            descriptor
+            for descriptor in self._descriptors
+            if not allowed_tenants or descriptor.contract.tenant_id in allowed_tenants
+        ]
 
         def score(descriptor: ResourceDescriptor) -> tuple[int, str]:
             text = " ".join(
@@ -129,10 +140,10 @@ class NativeCatalogAdapter:
             ).lower()
             return (sum(term in text for term in terms), descriptor.resource)
 
-        resources = sorted(self._descriptors, key=score, reverse=True)[:limit]
+        resources = sorted(descriptors, key=score, reverse=True)[:limit]
         return CatalogSearchPage(
             resources=resources,
-            total_count=self.total_count,
+            total_count=self.total_count if descriptors else 0,
             has_more=True,
             next_cursor="native-next",
             provider=f"{self.name}-native-index",
