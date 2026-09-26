@@ -530,6 +530,84 @@ class FakeSupersetClient:
 
 
 @pytest.mark.asyncio
+async def test_superset_authorizes_selected_dashboard_without_scanning_large_catalog():
+    class LargeCatalogClient(FakeSupersetClient):
+        def __init__(self):
+            self.list_calls = 0
+            self.metadata_calls = 0
+
+        async def list_dashboards(self):
+            self.list_calls += 1
+            raise AssertionError("explicit dashboard authorization must not scan the catalog")
+
+        async def get_dashboard_metadata(self, dashboard_id):
+            self.metadata_calls += 1
+            assert str(dashboard_id) == "7"
+            return {
+                "id": 7,
+                "dashboard_title": "Revenue",
+                "description": "Executive revenue view",
+                "owners": [{"username": "alice"}],
+            }
+
+    client = LargeCatalogClient()
+    registry = SourceRegistry(
+        [SupersetAdapter(client, tenant_id="northstar")],
+        authorized_tenants={"northstar"},
+    )
+
+    snapshot = await registry.inspect(
+        SourceRef(
+            key="revenue-dashboard",
+            adapter="superset",
+            resource="dashboard:7",
+            label="Revenue",
+        )
+    )
+
+    assert snapshot.error is None
+    assert snapshot.contract.tenant_id == "northstar"
+    assert client.metadata_calls == 1
+    assert client.list_calls == 0
+
+
+@pytest.mark.asyncio
+async def test_superset_authorizes_explicit_chart_without_scanning_catalog():
+    class ChartOnlyClient(FakeSupersetClient):
+        async def list_dashboards(self):
+            raise AssertionError("explicit chart authorization must not scan dashboards")
+
+        async def get_chart_metadata(self, chart_id):
+            assert str(chart_id) == "62"
+            return {
+                "id": 62,
+                "slice_name": "Revenue by region",
+                "description": "Regional revenue",
+                "viz_type": "table",
+                "metric_names": ["SUM(revenue)"],
+                "url": "https://superset.example/explore/62",
+            }
+
+    descriptor = await SupersetAdapter(
+        ChartOnlyClient(), tenant_id="northstar"
+    ).authorize(
+        SourceRef(
+            key="regional-revenue",
+            adapter="superset",
+            resource="chart:62",
+            label="Regional revenue",
+        ),
+        authorized_tenants={"northstar"},
+    )
+
+    assert descriptor is not None
+    assert descriptor.resource == "chart:62"
+    assert descriptor.kind == "chart"
+    assert descriptor.title == "Revenue by region"
+    assert descriptor.contract.metric_names == ["SUM(revenue)"]
+
+
+@pytest.mark.asyncio
 async def test_superset_adapter_uses_server_paged_catalog_search():
     class PaginatedClient(FakeSupersetClient):
         async def list_dashboards_page(self, *, page, page_size, query):

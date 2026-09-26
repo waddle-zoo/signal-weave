@@ -137,6 +137,70 @@ class SupersetAdapter:
             warnings=warnings,
         )
 
+    async def authorize(
+        self,
+        source: SourceRef,
+        *,
+        authorized_tenants: Iterable[str] | None = None,
+    ) -> ResourceDescriptor | None:
+        """Authorize one dashboard or chart without materializing the catalog.
+
+        A card can contain an explicit resource selected during onboarding.  A
+        large Superset workspace must not turn that one-resource check into a
+        full dashboard listing, both because that is slow and because the
+        provider catalog can be much larger than the card's scope.  The
+        provider metadata endpoint is the bounded identity/permission check;
+        data inspection remains a separate operation.
+        """
+
+        if (
+            authorized_tenants is not None
+            and self.tenant_id is not None
+            and self.tenant_id not in set(authorized_tenants)
+        ):
+            return None
+        resource_type, separator, resource_id = source.resource.partition(":")
+        if not separator or not resource_id:
+            raise ValueError("Superset resources must use dashboard:<id> or chart:<id>")
+        if resource_type == "dashboard":
+            metadata = await self.client.get_dashboard_metadata(resource_id)
+            if str(metadata.get("id")) != resource_id:
+                return None
+            return self._descriptors([metadata])[0]
+        if resource_type == "chart":
+            metadata = await self.client.get_chart_metadata(resource_id)
+            if str(metadata.get("id")) != resource_id:
+                return None
+            metric_names = metadata.get("metric_names", [])
+            return ResourceDescriptor(
+                adapter=self.name,
+                resource=source.resource,
+                kind="chart",
+                title=str(metadata.get("slice_name") or "Untitled chart"),
+                description=str(metadata.get("description") or ""),
+                source_url=metadata.get("url"),
+                metadata={"viz_type": self._chart_viz_type(metadata)},
+                contract=ResourceContract(
+                    tenant_id=str(metadata.get("tenant_id") or self.tenant_id or "default"),
+                    domain=str(metadata.get("domain") or "bi"),
+                    metric_names=(
+                        [str(metric) for metric in metric_names]
+                        if isinstance(metric_names, list)
+                        else []
+                    ),
+                    population=str(metadata.get("population") or ""),
+                    grain=str(metadata.get("grain") or ""),
+                    lineage=[str(value) for value in metadata.get("lineage", [])]
+                    if isinstance(metadata.get("lineage", []), list)
+                    else [],
+                    roles=[str(value) for value in metadata.get("roles", ["primary"])]
+                    if isinstance(metadata.get("roles", ["primary"]), list)
+                    else ["primary"],
+                    source_status=str(metadata.get("source_status") or "healthy"),
+                ),
+            )
+        raise ValueError("Superset resources must use dashboard:<id> or chart:<id>")
+
     def _descriptors(self, dashboards: list[dict[str, object]]) -> list[ResourceDescriptor]:
         return [
             ResourceDescriptor(
