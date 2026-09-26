@@ -1,4 +1,4 @@
-.PHONY: install test lint prove benchmark daily-trial enterprise-trial discovery-trial bundle-trial query-trial retrieval-explanation-trial preset-trial preset-jev-contract-trial preset-runtime-shadow-trial preset-bootstrap-check preset-provider-smoke preset-live-trial superset-chart-matrix verify docker-up docker-down
+.PHONY: install test lint prove benchmark daily-trial enterprise-trial discovery-trial bundle-trial query-trial retrieval-explanation-trial preset-trial preset-jev-contract-trial preset-runtime-shadow-trial preset-bootstrap-check preset-provider-smoke preset-live-trial preset-compose-check superset-chart-matrix verify docker-up docker-down
 
 install:
 	uv sync --extra dev
@@ -42,6 +42,12 @@ preset-jev-contract-trial:
 
 preset-runtime-shadow-trial:
 	uv run python -m evaluations.preset_runtime_shadow_trial --output artifacts/preset-runtime-shadow-trial.json
+
+preset-compose-check:
+	TYPESAFE_API_KEY_FILE=$${TYPESAFE_API_KEY_FILE:?set a TypeSafe key file} \
+	PRESET_API_TOKEN_NAME_HOST_FILE=$${PRESET_API_TOKEN_NAME_HOST_FILE:?set the Preset token-name file} \
+	PRESET_API_TOKEN_SECRET_HOST_FILE=$${PRESET_API_TOKEN_SECRET_HOST_FILE:?set the Preset token-secret file} \
+	docker compose -f docker-compose.preset.yml -f docker-compose.preset.secrets.yml config --quiet
 
 preset-bootstrap-check:
 	TYPESAFE_API_KEY_FILE=$${TYPESAFE_API_KEY_FILE:?set a TypeSafe key file} \
