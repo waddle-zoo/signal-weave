@@ -33,6 +33,7 @@ evidence into a bounded, explainable result that an existing system can act on.
 - [x] Tenant-scoped hosted connection contract with credential-reference-only persistence
 - [x] Preset Cloud adapter with API-token exchange and metadata/cached/live policy gates
 - [x] Read-only Hex project/run and Looker dashboard/Look adapters with hosted API contract tests
+- [x] One-command-style environment bootstrap and Docker example for a hosted Preset workspace
 
 The current review is recorded in [`docs/adversarial-review.md`](docs/adversarial-review.md);
 it supports a **public technical-alpha** posture while keeping the listed

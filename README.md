@@ -278,6 +278,8 @@ The first shipped connector is Apache Superset. Hosted Preset, Hex, and Looker
 connectors now use the same adapter contract while the core remains
 vendor-neutral. They are read-only by default and keep provider credentials
 outside cards and MCP payloads. See [`docs/hosted-connectors.md`](docs/hosted-connectors.md)
+and [`docs/preset-integration.md`](docs/preset-integration.md) for the Preset
+quickstart and hosted deployment boundary.
 for the connection and data-policy boundary. See the official [Looker API](https://cloud.google.com/looker/docs/api-getting-started)
 and [Hex public API](https://learn.hex.tech/docs/api-integrations/api/overview)
 documentation for the source capabilities those adapters map.

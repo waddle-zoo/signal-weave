@@ -1,0 +1,26 @@
+services:
+  signal-weave:
+    build: .
+    env_file:
+      - .env.preset
+    environment:
+      TYPESAFE_MODE: jev
+      TYPESAFE_API_KEY_FILE: /run/secrets/typesafe_api_key
+      SIGNALWEAVE_STORE_BACKEND: sqlite
+      SIGNALWEAVE_STORE_PATH: /app/data/signalweave.db
+      MCP_HOST: 0.0.0.0
+      MCP_PORT: 8000
+    volumes:
+      - ${TYPESAFE_API_KEY_FILE:?Set TYPESAFE_API_KEY_FILE to a local TypeSafe key file}:/run/secrets/typesafe_api_key:ro
+      - signalweave_preset_data:/app/data
+    ports:
+      - "127.0.0.1:${SIGNALWEAVE_PORT_HOST:-18000}:8000"
+    command: ["python", "-m", "signalweave.cli", "serve", "--transport", "streamable-http"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  signalweave_preset_data:

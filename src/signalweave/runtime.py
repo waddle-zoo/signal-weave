@@ -9,7 +9,16 @@ from typing import Any
 
 from .context import ContextProvider
 from .engine import InsightEngine
-from .hosted import HostedConnection, HostedCredentialVault, build_hosted_adapters
+from .hosted import (
+    HostedAuthMode,
+    HostedConnection,
+    HostedCredentialVault,
+    HostedDataMode,
+    HostedDataPolicy,
+    HostedProvider,
+    InMemoryCredentialVault,
+    build_hosted_adapters,
+)
 from .models import PrincipalContext, ResourceDescriptor
 from .sources import SourceAdapter, SourceRegistry
 from .store import (
@@ -48,6 +57,73 @@ class Runtime:
     principal: PrincipalContext | None = None
 
 
+def _env_flag(name: str, default: bool = False) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    normalized = value.strip().lower()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+    raise RuntimeError(f"{name} must be a boolean value")
+
+
+def _preset_from_environment() -> tuple[HostedConnection, HostedCredentialVault] | None:
+    """Build one tenant-bound Preset connection from deployment secrets.
+
+    This is deliberately an environment bootstrap, not a connection-control
+    plane. Secrets are read into an in-memory vault and never persisted in the
+    card or connection stores. Shared deployments should use the explicit
+    ``hosted_connections``/vault arguments backed by their own secret manager.
+    """
+    base_url = os.getenv("PRESET_URL", "").strip()
+    if not base_url:
+        return None
+    access_token = os.getenv("PRESET_ACCESS_TOKEN", "").strip() or None
+    token_name = os.getenv("PRESET_API_TOKEN_NAME", "").strip() or None
+    token_secret = os.getenv("PRESET_API_TOKEN_SECRET", "").strip() or None
+    if not access_token and not (token_name and token_secret):
+        raise RuntimeError(
+            "PRESET_URL requires PRESET_ACCESS_TOKEN or both "
+            "PRESET_API_TOKEN_NAME and PRESET_API_TOKEN_SECRET"
+        )
+    try:
+        mode = HostedDataMode(os.getenv("PRESET_DATA_MODE", "cached_results").strip())
+    except ValueError as error:
+        choices = ", ".join(item.value for item in HostedDataMode)
+        raise RuntimeError(f"PRESET_DATA_MODE must be one of: {choices}") from error
+    policy = HostedDataPolicy(
+        mode=mode,
+        allow_live_queries=_env_flag("PRESET_ALLOW_LIVE_QUERIES"),
+        allow_refresh=_env_flag("PRESET_ALLOW_REFRESH"),
+        retain_raw_results=_env_flag("PRESET_RETAIN_RAW_RESULTS"),
+        max_result_rows=int(os.getenv("PRESET_MAX_RESULT_ROWS", "500")),
+        max_snapshot_bytes=int(os.getenv("PRESET_MAX_SNAPSHOT_BYTES", "1000000")),
+        retention_hours=int(os.getenv("PRESET_RETENTION_HOURS", "24")),
+    )
+    tenant_id = os.getenv("PRESET_TENANT_ID", os.getenv("SIGNALWEAVE_TENANT_ID", "default"))
+    connection = HostedConnection(
+        id=os.getenv("PRESET_CONNECTION_ID", "preset-env"),
+        tenant_id=tenant_id,
+        provider=HostedProvider.PRESET,
+        base_url=base_url,
+        external_workspace=os.getenv("PRESET_WORKSPACE", "preset-workspace"),
+        credential_ref="env://preset",
+        auth_mode=(HostedAuthMode.BEARER if access_token else HostedAuthMode.API_TOKEN),
+        policy=policy,
+    )
+    credentials = (
+        {"access_token": access_token}
+        if access_token
+        else {"name": token_name, "secret": token_secret}
+    )
+    api_base_url = os.getenv("PRESET_API_BASE_URL", "").strip()
+    if api_base_url:
+        credentials["api_base_url"] = api_base_url
+    return connection, InMemoryCredentialVault({"env://preset": credentials})
+
+
 def build_runtime(
     mode: str | None = None,
     *,
@@ -76,6 +152,16 @@ def build_runtime(
         raise ValueError("SignalWeave production runtime only supports TYPESAFE_MODE=jev")
     configured_adapters = list(adapters)
     hosted_connections = list(hosted_connections)
+    preset_environment = _preset_from_environment()
+    if preset_environment is not None:
+        if hosted_connections or credential_vault is not None:
+            raise RuntimeError(
+                "PRESET_URL environment bootstrap cannot be combined with explicit "
+                "hosted_connections or credential_vault"
+            )
+        preset_connection, preset_vault = preset_environment
+        hosted_connections = [preset_connection]
+        credential_vault = preset_vault
     if hosted_connections:
         if credential_vault is None:
             raise RuntimeError(

@@ -54,7 +54,7 @@ Run the proof without spending TypeSafe credits:
 ./.venv/bin/python -m evaluations.onboarding_adversarial_review --format markdown
 ```
 
-The last local run produced 27 focused onboarding tests passing, 224 repository
+The last local run produced 27 focused onboarding tests passing, 226 repository
 tests passing with 2 skips, clean Ruff output, and a passing 30-scenario
 independent onboarding review. The review intentionally retained one warning:
 an ambiguous metric-definition candidate was surfaced for human review rather

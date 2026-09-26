@@ -333,6 +333,45 @@ def test_runtime_can_register_hosted_connections_without_global_provider_config(
     assert runtime.sources.adapter_names() == ["preset__northstar-preset"]
 
 
+def test_runtime_bootstraps_one_preset_connection_from_environment(monkeypatch, tmp_path):
+    monkeypatch.setenv("TYPESAFE_API_KEY", "test-key")
+    monkeypatch.delenv("TYPESAFE_API_KEY_FILE", raising=False)
+    monkeypatch.delenv("SUPERSET_URL", raising=False)
+    monkeypatch.setenv("PRESET_URL", "https://workspace.us-east-1.app.preset.io")
+    monkeypatch.setenv("PRESET_WORKSPACE", "workspace")
+    monkeypatch.setenv("PRESET_TENANT_ID", "northstar")
+    monkeypatch.setenv("PRESET_API_TOKEN_NAME", "preset-name")
+    monkeypatch.setenv("PRESET_API_TOKEN_SECRET", "preset-secret")
+    monkeypatch.setenv("PRESET_DATA_MODE", "metadata_only")
+    monkeypatch.setenv("SIGNALWEAVE_STORE_BACKEND", "sqlite")
+    monkeypatch.setenv("SIGNALWEAVE_STORE_PATH", str(tmp_path / "signalweave.db"))
+
+    runtime = build_runtime()
+
+    assert runtime.sources.adapter_names() == ["preset__preset-env"]
+    adapter = runtime.sources._adapters["preset__preset-env"]
+    assert isinstance(adapter, PresetAdapter)
+    assert adapter.tenant_id == "northstar"
+    assert adapter.policy.mode == HostedDataMode.METADATA_ONLY
+    assert adapter.client._api_token_name == "preset-name"
+    assert adapter.client._api_token_secret == "preset-secret"
+
+
+def test_runtime_rejects_incomplete_preset_environment_bootstrap(monkeypatch, tmp_path):
+    monkeypatch.setenv("TYPESAFE_API_KEY", "test-key")
+    monkeypatch.delenv("TYPESAFE_API_KEY_FILE", raising=False)
+    monkeypatch.delenv("SUPERSET_URL", raising=False)
+    monkeypatch.setenv("PRESET_URL", "https://workspace.us-east-1.app.preset.io")
+    monkeypatch.delenv("PRESET_ACCESS_TOKEN", raising=False)
+    monkeypatch.delenv("PRESET_API_TOKEN_NAME", raising=False)
+    monkeypatch.delenv("PRESET_API_TOKEN_SECRET", raising=False)
+    monkeypatch.setenv("SIGNALWEAVE_STORE_BACKEND", "sqlite")
+    monkeypatch.setenv("SIGNALWEAVE_STORE_PATH", str(tmp_path / "signalweave.db"))
+
+    with pytest.raises(RuntimeError, match="PRESET_ACCESS_TOKEN"):
+        build_runtime()
+
+
 def test_shared_runtime_requires_explicit_tenant_scope_for_multiple_connections(
     monkeypatch, tmp_path
 ):

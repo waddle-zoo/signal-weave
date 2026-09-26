@@ -8,6 +8,8 @@ __pycache__/
 .env
 .env.*
 !.env.example
+!examples/preset/
+!examples/preset/.env.preset.example
 secrets/
 data/*.json
 data/*.db
