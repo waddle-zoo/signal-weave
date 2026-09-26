@@ -128,6 +128,12 @@ budget. It also fails closed when Preset returns an asynchronous `202` chart
 response; this bounded connector does not pretend a pending job is an empty
 result or poll a provider-owned job queue. It does not silently truncate a time
 series and invent a current value.
+Even when a 202 response includes a provider `result_url`, the connector does
+not follow it or make a second-host request. Superset documents that field in
+its [async chart response schema](https://superset.apache.org/developer-docs/api/schemas/chartdataasyncresponseschema/).
+Supporting async completion would need a verified Preset contract for
+same-workspace polling, timeout, status, and filter-context preservation; until
+then the safe result is an explicit failure.
 After chart fan-out, the adapter applies the same byte budget to the aggregate
 dashboard snapshot. If a large dashboard would exceed it, SignalWeave drops the
 entire observation/evidence payload and returns an explicit failed-quality

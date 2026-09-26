@@ -713,9 +713,20 @@ async def test_preset_dashboard_read_fails_closed_without_filter_metadata():
 
 @pytest.mark.asyncio
 async def test_preset_async_chart_response_fails_closed_instead_of_becoming_no_data():
+    calls = 0
+
     def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
         assert request.url.path == "/api/v1/chart/101/data"
-        return httpx.Response(202, json={"job_id": "job-1", "status": "pending"})
+        return httpx.Response(
+            202,
+            json={
+                "job_id": "job-1",
+                "result_url": "https://untrusted.example/result/job-1",
+                "status": "pending",
+            },
+        )
 
     client = PresetCloudClient(
         "https://workspace.app.preset.test",
@@ -728,6 +739,7 @@ async def test_preset_async_chart_response_fails_closed_instead_of_becoming_no_d
             {"id": 101, "params": {"metrics": ["revenue"]}},
             dashboard_id="7",
         )
+    assert calls == 1
 
 
 @pytest.mark.asyncio
