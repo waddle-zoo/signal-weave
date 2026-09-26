@@ -537,6 +537,37 @@ def test_runtime_rejects_incomplete_preset_environment_bootstrap(monkeypatch, tm
         build_runtime()
 
 
+def test_runtime_rejects_mixed_preset_credential_modes(monkeypatch, tmp_path):
+    monkeypatch.setenv("TYPESAFE_API_KEY", "test-key")
+    monkeypatch.delenv("TYPESAFE_API_KEY_FILE", raising=False)
+    monkeypatch.delenv("SUPERSET_URL", raising=False)
+    monkeypatch.setenv("PRESET_URL", "https://workspace.us-east-1.app.preset.io")
+    monkeypatch.setenv("PRESET_ACCESS_TOKEN", "bearer-token")
+    monkeypatch.setenv("PRESET_API_TOKEN_NAME", "preset-name")
+    monkeypatch.setenv("PRESET_API_TOKEN_SECRET", "preset-secret")
+    monkeypatch.setenv("SIGNALWEAVE_STORE_BACKEND", "sqlite")
+    monkeypatch.setenv("SIGNALWEAVE_STORE_PATH", str(tmp_path / "signalweave.db"))
+
+    with pytest.raises(RuntimeError, match="exactly one Preset credential mode"):
+        build_runtime()
+
+
+def test_runtime_rejects_preset_and_signalweave_tenant_mismatch(monkeypatch, tmp_path):
+    monkeypatch.setenv("TYPESAFE_API_KEY", "test-key")
+    monkeypatch.delenv("TYPESAFE_API_KEY_FILE", raising=False)
+    monkeypatch.delenv("SUPERSET_URL", raising=False)
+    monkeypatch.setenv("PRESET_URL", "https://workspace.us-east-1.app.preset.io")
+    monkeypatch.setenv("PRESET_TENANT_ID", "northstar")
+    monkeypatch.setenv("SIGNALWEAVE_TENANT_ID", "harbor-bank")
+    monkeypatch.setenv("SIGNALWEAVE_PRINCIPAL_ID", "agent")
+    monkeypatch.setenv("PRESET_ACCESS_TOKEN", "bearer-token")
+    monkeypatch.setenv("SIGNALWEAVE_STORE_BACKEND", "sqlite")
+    monkeypatch.setenv("SIGNALWEAVE_STORE_PATH", str(tmp_path / "signalweave.db"))
+
+    with pytest.raises(RuntimeError, match="must match SIGNALWEAVE_TENANT_ID"):
+        build_runtime()
+
+
 def test_runtime_reads_preset_secrets_from_mounted_files(monkeypatch, tmp_path):
     monkeypatch.setenv("TYPESAFE_API_KEY", "test-key")
     monkeypatch.delenv("TYPESAFE_API_KEY_FILE", raising=False)

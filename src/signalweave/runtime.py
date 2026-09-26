@@ -106,6 +106,11 @@ def _preset_from_environment() -> tuple[HostedConnection, HostedCredentialVault]
     access_token = _env_secret("PRESET_ACCESS_TOKEN")
     token_name = _env_secret("PRESET_API_TOKEN_NAME")
     token_secret = _env_secret("PRESET_API_TOKEN_SECRET")
+    if access_token and (token_name or token_secret):
+        raise RuntimeError(
+            "configure exactly one Preset credential mode: PRESET_ACCESS_TOKEN or "
+            "PRESET_API_TOKEN_NAME plus PRESET_API_TOKEN_SECRET"
+        )
     if not access_token and not (token_name and token_secret):
         raise RuntimeError(
             "PRESET_URL requires PRESET_ACCESS_TOKEN or both "
@@ -125,7 +130,13 @@ def _preset_from_environment() -> tuple[HostedConnection, HostedCredentialVault]
         max_snapshot_bytes=_env_int("PRESET_MAX_SNAPSHOT_BYTES", 1_000_000),
         retention_hours=_env_int("PRESET_RETENTION_HOURS", 24),
     )
-    tenant_id = os.getenv("PRESET_TENANT_ID", os.getenv("SIGNALWEAVE_TENANT_ID", "default"))
+    preset_tenant_id = os.getenv("PRESET_TENANT_ID", "").strip()
+    signalweave_tenant_id = os.getenv("SIGNALWEAVE_TENANT_ID", "").strip()
+    if preset_tenant_id and signalweave_tenant_id and preset_tenant_id != signalweave_tenant_id:
+        raise RuntimeError(
+            "PRESET_TENANT_ID must match SIGNALWEAVE_TENANT_ID when both are configured"
+        )
+    tenant_id = preset_tenant_id or signalweave_tenant_id or "default"
     connection = HostedConnection(
         id=os.getenv("PRESET_CONNECTION_ID", "preset-env"),
         tenant_id=tenant_id,
