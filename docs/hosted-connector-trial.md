@@ -12,14 +12,14 @@ Run it with:
 uv run pytest tests/test_hosted_connections.py -q
 ```
 
-The current run covers 22 passing cases:
+The current run covers 27 passing cases:
 
 | Boundary | What is proven |
 | --- | --- |
 | Credential handling | Preset API-token exchange works; persisted connection metadata contains only a vault reference |
 | Preset | Hosted dashboard/chart data is normalized into SignalWeave observations and tenant contracts |
 | Preset policy | Metadata-only mode does not call chart-data endpoints |
-| Preset safety policy | Expired API tokens refresh once; row and response-byte limits fail closed |
+| Preset safety policy | Expired API tokens refresh once; transient 429/5xx responses retry with a bounded delay; row and response-byte limits fail closed |
 | Preset query mode | Cached mode sends `force=false`; live mode requires explicit refresh permission and sends `force=true` |
 | Preset fixture trial | Three varied workspaces and 13 chart definitions pass the independent integration harness |
 | Hex | Project metadata, completed-run state, explicit cell-output retrieval, and cursor pagination work |

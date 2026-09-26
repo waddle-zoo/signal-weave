@@ -262,6 +262,94 @@ async def test_preset_api_token_refreshes_once_after_expiry():
 
 
 @pytest.mark.asyncio
+async def test_preset_retries_after_token_refresh_with_the_new_token():
+    auth_calls = 0
+    resource_calls = 0
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal auth_calls, resource_calls
+        if request.url.host == "api.app.preset.test":
+            auth_calls += 1
+            return httpx.Response(
+                200,
+                json={"payload": {"access_token": f"preset-jwt-{auth_calls}"}},
+            )
+        resource_calls += 1
+        if resource_calls == 1:
+            assert request.headers["authorization"] == "Bearer preset-jwt-1"
+            return httpx.Response(401, json={"message": "expired"})
+        if resource_calls == 2:
+            assert request.headers["authorization"] == "Bearer preset-jwt-2"
+            return httpx.Response(429, headers={"Retry-After": "0"}, json={"message": "busy"})
+        assert request.headers["authorization"] == "Bearer preset-jwt-2"
+        return httpx.Response(200, json={"result": {"id": 7, "dashboard_title": "Growth"}})
+
+    client = PresetCloudClient(
+        "https://workspace.app.preset.test",
+        api_token_name="preset-name",
+        api_token_secret="preset-secret",
+        api_base_url="https://api.app.preset.test",
+        max_retries=1,
+        retry_backoff_seconds=0,
+        transport=httpx.MockTransport(handler),
+    )
+
+    metadata = await client.get_dashboard_metadata(7)
+
+    assert metadata["id"] == 7
+    assert auth_calls == 2
+    assert resource_calls == 3
+
+
+@pytest.mark.asyncio
+async def test_preset_retries_transient_rate_limit_with_bounded_backoff():
+    calls = 0
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            return httpx.Response(429, headers={"Retry-After": "0"}, json={"message": "busy"})
+        return httpx.Response(200, json={"result": {"id": 7, "dashboard_title": "Growth"}})
+
+    client = PresetCloudClient(
+        "https://workspace.app.preset.test",
+        access_token="preset-token",
+        max_retries=1,
+        retry_backoff_seconds=0,
+        transport=httpx.MockTransport(handler),
+    )
+
+    metadata = await client.get_dashboard_metadata(7)
+
+    assert metadata["id"] == 7
+    assert calls == 2
+
+
+@pytest.mark.asyncio
+async def test_preset_does_not_retry_non_transient_client_errors():
+    calls = 0
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        return httpx.Response(403, json={"message": "forbidden"})
+
+    client = PresetCloudClient(
+        "https://workspace.app.preset.test",
+        access_token="preset-token",
+        max_retries=3,
+        retry_backoff_seconds=0,
+        transport=httpx.MockTransport(handler),
+    )
+
+    with pytest.raises(httpx.HTTPStatusError):
+        await client.get_dashboard_metadata(7)
+
+    assert calls == 1
+
+
+@pytest.mark.asyncio
 async def test_preset_rejects_provider_result_that_ignores_row_policy():
     payloads: list[dict] = []
 

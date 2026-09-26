@@ -53,7 +53,8 @@ The connector enforces the configured `max_result_rows` and
 `max_snapshot_bytes` limits. It lowers the saved-chart row limit before calling
 Preset and fails closed if the provider returns more rows or bytes than the
 connection permits; it does not silently truncate a time series and invent a
-current value. Mounted secret files are supported with
+current value. Transient rate limits and 5xx responses receive a bounded retry;
+ordinary client errors do not retry. Mounted secret files are supported with
 `PRESET_API_TOKEN_NAME_FILE` and `PRESET_API_TOKEN_SECRET_FILE`.
 
 `cached_results` sends `force=false` and bounds the query, which asks the

@@ -8,6 +8,7 @@ generic adapter turns the resulting artifacts into SignalWeave snapshots.
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 import httpx
@@ -34,10 +35,16 @@ class PresetCloudClient(SupersetClient):
         api_base_url: str = "https://api.app.preset.io",
         max_result_rows: int | None = None,
         max_snapshot_bytes: int | None = None,
+        max_retries: int = 2,
+        retry_backoff_seconds: float = 0.25,
         transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
         if not access_token and not (api_token_name and api_token_secret):
             raise ValueError("Preset requires access_token or api token name and secret")
+        if max_retries < 0:
+            raise ValueError("Preset max_retries must be non-negative")
+        if retry_backoff_seconds < 0:
+            raise ValueError("Preset retry_backoff_seconds must be non-negative")
         super().__init__(workspace_url)
         self._token = access_token
         self._api_token_name = api_token_name
@@ -45,6 +52,8 @@ class PresetCloudClient(SupersetClient):
         self.api_base_url = api_base_url.rstrip("/")
         self.max_result_rows = max_result_rows
         self.max_snapshot_bytes = max_snapshot_bytes
+        self.max_retries = max_retries
+        self.retry_backoff_seconds = retry_backoff_seconds
         self._force_refresh = False
         self._transport = transport
 
@@ -101,21 +110,45 @@ class PresetCloudClient(SupersetClient):
         **kwargs: Any,
     ) -> httpx.Response:
         headers = await self._auth_headers()
+        request_kwargs = dict(kwargs)
+        request_headers = dict(headers)
+        supplied_headers = request_kwargs.pop("headers", None)
+        if supplied_headers:
+            request_headers.update(supplied_headers)
         async with httpx.AsyncClient(
             base_url=self.base_url,
             timeout=timeout,
-            headers=headers,
             transport=self._transport,
         ) as client:
-            response = await client.request(method, path, **kwargs)
+            response = await client.request(method, path, headers=request_headers, **request_kwargs)
             if response.status_code == 401 and self._api_token_name:
                 self._token = None
+                request_headers = dict(await self._auth_headers(force_refresh=True))
                 response = await client.request(
                     method,
                     path,
-                    headers=await self._auth_headers(force_refresh=True),
-                    **kwargs,
+                    headers=request_headers,
+                    **request_kwargs,
                 )
+            retries = 0
+            while response.status_code == 429 or 500 <= response.status_code <= 599:
+                if retries >= self.max_retries:
+                    break
+                retry_after = self._retry_after_seconds(response)
+                delay = (
+                    retry_after
+                    if retry_after is not None
+                    else min(self.retry_backoff_seconds * (2**retries), 5.0)
+                )
+                if delay:
+                    await asyncio.sleep(delay)
+                response = await client.request(
+                    method,
+                    path,
+                    headers=request_headers,
+                    **request_kwargs,
+                )
+                retries += 1
             response.raise_for_status()
             if (
                 self.max_snapshot_bytes is not None
@@ -123,8 +156,19 @@ class PresetCloudClient(SupersetClient):
             ):
                 raise PresetPolicyError(
                     "Preset response exceeded the configured max_snapshot_bytes limit"
-                )
+            )
             return response
+
+    @staticmethod
+    def _retry_after_seconds(response: httpx.Response) -> float | None:
+        value = response.headers.get("retry-after")
+        if value is None:
+            return None
+        try:
+            seconds = float(value)
+        except ValueError:
+            return None
+        return min(max(seconds, 0.0), 5.0)
 
     async def chart_data(self, chart: dict[str, Any]) -> list[dict[str, Any]]:
         """Fetch saved chart results with a hard row bound and no forced refresh.
