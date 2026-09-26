@@ -26,7 +26,7 @@ The trial currently proves:
 | Boundary | Observed result |
 | --- | --- |
 | Workspace isolation shape | Three independently tenant-bound workspaces inspected |
-| Chart coverage | 13 chart definitions, 10 with usable observations, 3 deliberately degraded |
+| Chart coverage | 13 chart definitions, 9 with usable observations, 4 deliberately degraded |
 | Result normalization | 17 observations across the varied envelopes and chart definitions |
 | Partial failure behavior | Provider and semantic failures remain visible as partial quality, not silently dropped |
 | Metadata-only policy | Dashboard metadata is retrieved without chart metadata or result calls |

@@ -183,6 +183,50 @@ async def test_preset_metadata_only_never_fetches_chart_data():
 
 
 @pytest.mark.asyncio
+async def test_preset_metadata_only_honors_selected_chart_ids():
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/api/v1/dashboard/7":
+            return httpx.Response(
+                200,
+                json={
+                    "result": {
+                        "id": 7,
+                        "dashboard_title": "Growth",
+                        "position_json": {
+                            "revenue": {"type": "CHART", "meta": {"chartId": 101}},
+                            "orders": {"type": "CHART", "meta": {"chartId": 102}},
+                        },
+                    }
+                },
+            )
+        raise AssertionError(f"metadata-only must not fetch chart routes: {request.url}")
+
+    client = PresetCloudClient(
+        "https://workspace.app.preset.test",
+        access_token="preset-token",
+        transport=httpx.MockTransport(handler),
+    )
+    adapter = PresetAdapter(
+        client,
+        tenant_id="northstar",
+        policy=HostedDataPolicy(mode=HostedDataMode.METADATA_ONLY),
+    )
+
+    snapshot = await adapter.inspect(
+        SourceRef(
+            key="growth",
+            adapter="preset",
+            resource="dashboard:7",
+            label="Growth",
+            parameters={"chart_ids": ["102"]},
+        )
+    )
+
+    assert snapshot.metadata["chart_count"] == 1
+    assert snapshot.evidence[0].subject_id == "102"
+
+
+@pytest.mark.asyncio
 async def test_preset_api_token_refreshes_once_after_expiry():
     auth_calls = 0
     resource_calls = 0

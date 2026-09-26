@@ -706,9 +706,6 @@ class SupersetClient:
     ) -> SupersetDashboardSnapshot:
         metadata = await self.get_dashboard_metadata(dashboard_id)
         snapshot = self.metadata_to_snapshot(metadata)
-        if not include_data:
-            return snapshot
-
         selected = set(chart_ids) if chart_ids else None
         if selected is not None:
             available = {chart.id for chart in snapshot.charts}
@@ -721,6 +718,8 @@ class SupersetClient:
             snapshot = snapshot.model_copy(
                 update={"charts": [chart for chart in snapshot.charts if chart.id in selected]}
             )
+        if not include_data:
+            return snapshot
 
         semaphore = asyncio.Semaphore(8)
 
