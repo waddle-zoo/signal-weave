@@ -156,8 +156,9 @@ policy. The generated receipt must show `evaluator=jev-latest`, evidence, and
 
 ## Can a hosted Preset customer use SignalWeave without hosting it?
 
-Yes, but that requires a managed SignalWeave service. The hosted architecture
-is:
+Not with the repository as shipped. That becomes possible only after a managed
+SignalWeave service is deployed and passes the boundary below. The intended
+hosted architecture is:
 
 ```text
 Preset Cloud API
