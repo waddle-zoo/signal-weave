@@ -293,6 +293,7 @@ def run_trial(
         "trial": "preset-generated-generalization",
         "seed": seed,
         "workspace_count": workspace_count,
+        "charts_per_workspace": charts_per_workspace,
         "chart_count": workspace_count * charts_per_workspace,
         "case_coverage": sorted({case for workspace in workspaces for case in (item["case"] for item in workspace["charts"])}),
         "envelope_coverage": sorted({envelope for result in results for envelope in result["envelopes"]}),

@@ -39,6 +39,7 @@ preset-trial:
 
 preset-generalization-trial:
 	uv run python evaluations/preset_generalization_trial.py --output artifacts/preset-generalization-trial.json
+	uv run python evaluations/preset_generalization_review.py artifacts/preset-generalization-trial.json
 
 preset-jev-contract-trial:
 	uv run python -m evaluations.preset_jev_contract_trial --output artifacts/preset-jev-contract-trial.json

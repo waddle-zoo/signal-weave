@@ -141,6 +141,12 @@ catalog entry disappears. The generated values are not imported from the named
 fixture, which makes this a useful anti-overfitting check rather than another
 hand-selected demo.
 
+The command then runs an independent reviewer over the JSON report. The
+reviewer recomputes chart-count and coverage invariants, checks every workspace
+result for hidden failures, and requires the live-Preset/live-Jev/managed-hosting
+non-claims to remain explicit. Mutation tests prove that a report with a false
+pass flag, dropped chart, or incomplete envelope coverage is rejected.
+
 This remains an HTTP contract simulation. It strengthens the generalized
 adapter claim; it does not replace a real Preset smoke test or a live Jev
 shadow run.
