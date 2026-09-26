@@ -186,25 +186,49 @@ class PresetCloudClient(SupersetClient):
             retries += 1
         return response
 
-    async def chart_data(self, chart: dict[str, Any]) -> list[dict[str, Any]]:
-        """Fetch saved chart results with a hard row bound and no forced refresh.
+    async def chart_data(
+        self, chart: dict[str, Any], *, dashboard_id: int | str | None = None
+    ) -> list[dict[str, Any]]:
+        """Fetch chart results with a hard response bound.
 
         Preset's Superset-compatible endpoint may return several result envelopes.
-        We cap the request and reject a provider response that ignores the cap;
-        silently truncating a time series would create a false current value.
+        Dashboard reads use Preset's chart-specific endpoint so its dashboard
+        filter scope and access checks are applied. Standalone reads use the
+        saved query endpoint. We reject a provider response that ignores the
+        configured response cap; silently truncating a time series would create
+        a false current value.
         """
 
-        payload = self._saved_query_context(chart) or self._query_context(chart)
-        if self.max_result_rows is not None:
-            for query in payload.get("queries", []):
-                if isinstance(query, dict):
-                    requested = query.get("row_limit")
-                    query["row_limit"] = min(
-                        self.max_result_rows,
-                        int(requested) if isinstance(requested, int) else self.max_result_rows,
-                    )
-        payload["force"] = self._force_refresh
-        response = await self._request("POST", "/api/v1/chart/data", timeout=60, json=payload)
+        if dashboard_id is not None:
+            response = await self._request(
+                "GET",
+                f"/api/v1/chart/{chart['id']}/data",
+                timeout=60,
+                params={
+                    "format": "json",
+                    "type": "full",
+                    "force": "true" if self._force_refresh else "false",
+                    # Preset Cloud documents the singular spelling. The
+                    # generic Superset client uses the upstream plural form.
+                    "filter_dashboard_id": str(dashboard_id),
+                },
+            )
+        else:
+            payload = self._saved_query_context(chart) or self._query_context(chart)
+            if self.max_result_rows is not None:
+                for query in payload.get("queries", []):
+                    if isinstance(query, dict):
+                        requested = query.get("row_limit")
+                        query["row_limit"] = min(
+                            self.max_result_rows,
+                            int(requested)
+                            if isinstance(requested, int)
+                            else self.max_result_rows,
+                        )
+            payload["force"] = self._force_refresh
+            response = await self._request(
+                "POST", "/api/v1/chart/data", timeout=60, json=payload
+            )
         result = response.json().get("result", [])
         envelopes = [result] if isinstance(result, dict) else result if isinstance(result, list) else []
         if self.max_result_rows is not None:

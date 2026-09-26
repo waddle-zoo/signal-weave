@@ -109,18 +109,10 @@ async def test_preset_cloud_token_exchange_and_dashboard_snapshot():
                     }
                 },
             )
-        if request.url.path == "/api/v1/chart/101":
-            return httpx.Response(
-                200,
-                json={
-                    "result": {
-                        "id": 101,
-                        "slice_name": "Revenue",
-                        "params": '{"datasource":"17__table","metrics":["revenue"],"granularity_sqla":"day"}',
-                    }
-                },
-            )
-        if request.url.path == "/api/v1/chart/data":
+        if request.url.path == "/api/v1/chart/101/data":
+            assert request.method == "GET"
+            assert request.url.params["filter_dashboard_id"] == "7"
+            assert request.url.params["force"] == "false"
             return httpx.Response(
                 200,
                 json={
@@ -140,6 +132,17 @@ async def test_preset_cloud_token_exchange_and_dashboard_snapshot():
                             ]
                         }
                     ]
+                },
+            )
+        if request.url.path == "/api/v1/chart/101":
+            return httpx.Response(
+                200,
+                json={
+                    "result": {
+                        "id": 101,
+                        "slice_name": "Revenue",
+                        "params": '{"datasource":"17__table","metrics":["revenue"],"granularity_sqla":"day"}',
+                    }
                 },
             )
         raise AssertionError(f"unexpected Preset request: {request.method} {request.url}")
@@ -192,6 +195,29 @@ async def test_preset_auth_exchange_retries_transient_provider_failure():
 
     assert metadata["id"] == 7
     assert auth_calls == 2
+
+
+@pytest.mark.asyncio
+async def test_preset_standalone_chart_keeps_saved_query_post_path():
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.method == "POST"
+        assert request.url.path == "/api/v1/chart/data"
+        payload = json.loads(request.content)
+        assert payload["force"] is False
+        assert payload["form_data"]["slice_id"] == 101
+        return httpx.Response(200, json={"result": [{"data": [{"revenue": 120}]}]})
+
+    client = PresetCloudClient(
+        "https://workspace.app.preset.test",
+        access_token="preset-token",
+        transport=httpx.MockTransport(handler),
+    )
+
+    result = await client.chart_data(
+        {"id": 101, "params": {"metrics": ["revenue"], "datasource": "17__table"}}
+    )
+
+    assert result == [{"data": [{"revenue": 120}]}]
 
 
 @pytest.mark.asyncio
@@ -404,8 +430,6 @@ async def test_preset_does_not_retry_non_transient_client_errors():
 
 @pytest.mark.asyncio
 async def test_preset_rejects_provider_result_that_ignores_row_policy():
-    payloads: list[dict] = []
-
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path == "/api/v1/dashboard/7":
             return httpx.Response(
@@ -429,8 +453,9 @@ async def test_preset_rejects_provider_result_that_ignores_row_policy():
                     }
                 },
             )
-        if request.url.path == "/api/v1/chart/data":
-            payloads.append(json.loads(request.content))
+        if request.url.path == "/api/v1/chart/101/data":
+            assert request.method == "GET"
+            assert request.url.params["filter_dashboard_id"] == "7"
             return httpx.Response(
                 200,
                 json={
@@ -461,7 +486,6 @@ async def test_preset_rejects_provider_result_that_ignores_row_policy():
         SourceRef(key="growth", adapter="preset", resource="dashboard:7", label="Growth")
     )
 
-    assert payloads[0]["queries"][0]["row_limit"] == 1
     assert snapshot.observations == []
     assert snapshot.metadata["data_quality"]["status"] == "failed"
     assert "max_result_rows" in snapshot.error

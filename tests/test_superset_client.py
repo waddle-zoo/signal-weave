@@ -291,7 +291,7 @@ async def test_partial_dashboard_preserves_good_charts_and_quality_metadata():
                 "params": {"metrics": [{"label": "Revenue"}], "granularity_sqla": "period"},
             }
 
-        async def chart_data(self, chart):
+        async def chart_data(self, chart, *, dashboard_id=None):
             if str(chart["id"]) == "43":
                 raise httpx.ReadTimeout("chart unavailable")
             return [{"data": [{"period": 1, "Revenue": 10}, {"period": 2, "Revenue": 12}]}]

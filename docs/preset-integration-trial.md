@@ -31,10 +31,11 @@ The trial currently proves:
 | Workspace isolation shape | Three independently tenant-bound workspaces inspected |
 | Chart coverage | 13 chart definitions across 12 visualization types, 9 with usable observations, 4 deliberately degraded |
 | Result normalization | 17 observations across the varied envelopes and chart definitions |
+| Dashboard filter context | Every dashboard chart read uses Preset's chart-specific data endpoint with the dashboard ID, so provider-side in-scope filter defaults and access checks are applied |
 | Partial failure behavior | Provider and semantic failures remain visible as partial quality, not silently dropped |
 | Metadata-only policy | Dashboard metadata is retrieved without chart metadata or result calls |
-| Cached-results guard | Every chart request sends `force=false` and a bounded row limit |
-| Live-query guard | Live mode requires both explicit live-query and refresh permission, then sends `force=true` |
+| Cached-results guard | Every dashboard chart request sends `force=false`; response row and byte budgets are enforced before normalization |
+| Live-query guard | Live mode requires both explicit live-query and refresh permission, then sends `force=true` to the provider endpoint |
 | Row limit enforcement | A provider response that exceeds the configured bound fails closed |
 | Byte limit enforcement | An oversized metadata response fails before parsing |
 | Token expiry | A 401 triggers exactly one API-token refresh and one retry |

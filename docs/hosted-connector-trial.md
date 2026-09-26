@@ -12,7 +12,7 @@ Run it with:
 uv run pytest tests/test_hosted_connections.py -q
 ```
 
-The current run covers 35 passing cases:
+The current run covers 36 passing cases:
 
 | Boundary | What is proven |
 | --- | --- |

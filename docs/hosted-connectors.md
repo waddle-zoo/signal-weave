@@ -77,7 +77,11 @@ The connector sends `force=false` for cached-results requests and enforces the
 connection's response byte and row budgets. That is a cache preference, not a
 provider-independent cache-only guarantee: a strict no-query-on-cache-miss
 contract requires a provider result endpoint or a customer proxy that exposes
-cache state.
+cache state. For dashboard monitoring, it calls Preset's chart-specific data
+endpoint with `filter_dashboard_id`; this is important because the provider,
+not SignalWeave, owns dashboard filter scope, default values, and the access
+check that the chart belongs to the dashboard. Standalone chart reads continue
+to use the saved-query data endpoint and have no dashboard filter context.
 
 Preset MCP remains useful for interactive onboarding by a customer-owned agent,
 but recurring monitoring should use the direct hosted API path. The connector

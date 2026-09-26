@@ -391,9 +391,31 @@ class SupersetClient:
             context["queries"] = bounded_queries
         return context
 
-    async def chart_data(self, chart: dict[str, Any]) -> list[dict[str, Any]]:
-        payload = self._saved_query_context(chart) or self._query_context(chart)
-        response = await self._request("POST", "/api/v1/chart/data", timeout=60, json=payload)
+    async def chart_data(
+        self, chart: dict[str, Any], *, dashboard_id: int | str | None = None
+    ) -> list[dict[str, Any]]:
+        if dashboard_id is not None:
+            # The chart-specific endpoint is the provider-owned path for
+            # applying dashboard filter defaults and scope.  Sending the
+            # dashboard context through the generic POST endpoint would make
+            # a dashboard monitor look successful while analyzing unfiltered
+            # chart data.
+            response = await self._request(
+                "GET",
+                f"/api/v1/chart/{chart['id']}/data",
+                timeout=60,
+                params={
+                    "format": "json",
+                    "type": "full",
+                    "force": "false",
+                    "filters_dashboard_id": str(dashboard_id),
+                },
+            )
+        else:
+            payload = self._saved_query_context(chart) or self._query_context(chart)
+            response = await self._request(
+                "POST", "/api/v1/chart/data", timeout=60, json=payload
+            )
         result = response.json().get("result", [])
         if isinstance(result, dict):
             return [result]
@@ -728,7 +750,8 @@ class SupersetClient:
                 try:
                     chart_metadata = await self.get_chart_metadata(chart.id)
                     extraction = self.extract_chart_data(
-                        chart_metadata, await self.chart_data(chart_metadata)
+                        chart_metadata,
+                        await self.chart_data(chart_metadata, dashboard_id=dashboard_id),
                     )
                     updates: dict[str, Any] = {
                         "observations": extraction.observations,

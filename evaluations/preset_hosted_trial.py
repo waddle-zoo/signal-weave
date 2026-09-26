@@ -40,6 +40,7 @@ class WorkspaceTransport:
                 "method": request.method,
                 "host": request.url.host,
                 "path": request.url.path,
+                "params": dict(request.url.params),
                 "payload": json.loads(request.content) if request.content else None,
             }
         )
@@ -79,6 +80,18 @@ class WorkspaceTransport:
             )
 
         prefix = "/api/v1/chart/"
+        if request.url.path.startswith(prefix) and request.url.path.endswith("/data"):
+            chart_id = request.url.path.removeprefix(prefix).removesuffix("/data")
+            chart = next(chart for chart in self.workspace["charts"] if chart["id"] == chart_id)
+            if request.method != "GET" or request.url.params.get("filter_dashboard_id") != str(
+                self.workspace["dashboard_id"]
+            ):
+                return httpx.Response(
+                    400,
+                    json={"message": "dashboard filter context was not supplied"},
+                )
+            return httpx.Response(200, json={"result": chart.get("result", [])})
+
         if request.url.path.startswith(prefix) and request.url.path != "/api/v1/chart/data":
             chart_id = request.url.path.removeprefix(prefix)
             chart = next(chart for chart in self.workspace["charts"] if chart["id"] == chart_id)
@@ -162,12 +175,24 @@ async def _inspect_workspace(workspace: dict[str, Any]) -> dict[str, Any]:
                 for request in transport.requests
             ),
             "chart_data": sum(request["path"] == "/api/v1/chart/data" for request in transport.requests),
+            "dashboard_chart_data": sum(
+                request["path"].endswith("/data") for request in transport.requests
+            ),
         },
         "cached_query_guards": all(
-            request["payload"]["force"] is False
-            and request["payload"]["queries"][0]["row_limit"] <= 100
+            request["method"] == "GET"
+            and request["params"].get("force") == "false"
+            and request["params"].get("filter_dashboard_id")
+            == str(workspace["dashboard_id"])
             for request in transport.requests
-            if request["path"] == "/api/v1/chart/data"
+            if request["path"].endswith("/data")
+        ),
+        "dashboard_filters_sent": all(
+            request["method"] == "GET"
+            and request["params"].get("filter_dashboard_id")
+            == str(workspace["dashboard_id"])
+            for request in transport.requests
+            if request["path"].endswith("/data")
         ),
     }
 
@@ -251,12 +276,12 @@ async def _live_query_case(workspace: dict[str, Any]) -> dict[str, Any]:
         )
     )
     query_requests = [
-        request for request in transport.requests if request["path"] == "/api/v1/chart/data"
+        request for request in transport.requests if request["path"].endswith("/data")
     ]
     return {
         "chart_data_requests": len(query_requests),
         "all_requests_force_refresh": all(
-            request["payload"]["force"] is True for request in query_requests
+            request["params"].get("force") == "true" for request in query_requests
         ),
     }
 
@@ -297,7 +322,14 @@ async def _policy_cases(workspace: dict[str, Any]) -> dict[str, Any]:
         byte_blocked = False
 
     return {
-        "row_limit_sent": row_transport.requests[-1]["payload"]["queries"][0]["row_limit"] == 1,
+        "row_limit_policy_enforced": row_snapshot.error is not None
+        and row_snapshot.observations == []
+        and any(
+            request["path"].endswith("/data")
+            and request["params"].get("filter_dashboard_id")
+            == str(workspace["dashboard_id"])
+            for request in row_transport.requests
+        ),
         "row_overflow_failed_closed": row_snapshot.error is not None
         and not row_snapshot.observations,
         "oversized_metadata_failed_closed": byte_blocked,
@@ -320,6 +352,9 @@ async def run_trial() -> dict[str, Any]:
         ),
         "varied_chart_types_are_reported": len(viz_types) >= 8,
         "cached_queries_are_bounded": all(item["cached_query_guards"] for item in inspections),
+        "dashboard_filters_are_applied_at_provider_boundary": all(
+            item["dashboard_filters_sent"] for item in inspections
+        ),
         "partial_provider_failures_are_visible": any(
             item["chart_errors"] > 0 and item["quality_status"] == "partial"
             for item in inspections

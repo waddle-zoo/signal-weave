@@ -66,15 +66,19 @@ and `PRESET_API_BASE_URL`; `SIGNALWEAVE_ALLOW_INSECURE_PROVIDER=1` is reserved
 for an isolated local test and should never be used in deployment.
 
 The connector enforces the configured `max_result_rows` and
-`max_snapshot_bytes` limits. It lowers the saved-chart row limit before calling
-Preset and fails closed if the provider returns more rows or bytes than the
-connection permits; it does not silently truncate a time series and invent a
-current value. Transient rate limits and 5xx responses receive a bounded retry;
-ordinary client errors do not retry. Mounted secret files are supported with
+`max_snapshot_bytes` limits. Standalone chart reads lower the saved-chart row
+limit before calling Preset; dashboard reads use Preset's chart-specific data
+endpoint so the provider can apply dashboard filter scope and access checks,
+then fail closed if the returned result exceeds the SignalWeave row or byte
+budget. It does not silently truncate a time series and invent a current value.
+Transient rate limits and 5xx responses receive a bounded retry; ordinary
+client errors do not retry. Mounted secret files are supported with
 `PRESET_API_TOKEN_NAME_FILE` and `PRESET_API_TOKEN_SECRET_FILE`.
 
-`cached_results` sends `force=false` and bounds the query, which asks the
-Superset-compatible endpoint to use its cache when available. It is not a
+`cached_results` sends `force=false`, which asks the Superset-compatible
+endpoint to use its cache when available. Standalone chart queries also carry
+a bounded row limit. Dashboard-scoped reads use Preset's saved chart query
+context and enforce the response budget after the provider returns. It is not a
 provider-independent guarantee that a cache miss will never execute work. A
 strict cache-only contract needs a Preset result/cache endpoint or a customer
 proxy that exposes that distinction; SignalWeave fails closed on payload-size
@@ -178,3 +182,4 @@ general cloud platform or a Preset UI plugin.
 - [Preset MCP server authentication](https://docs.preset.io/docs/preset-mcp-server-authentication)
 - [Preset Alerts & Reports](https://docs.preset.io/docs/alerts-reports)
 - [Preset dashboard embedding](https://docs.preset.io/docs/dashboard-embedding)
+- [Preset API update notes: dashboard-filtered chart data](https://docs.preset.io/docs/update)
