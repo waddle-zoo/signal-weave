@@ -14,6 +14,13 @@ from mcp.server.auth.settings import AuthSettings
 
 from signalweave.auth import OIDCJWTVerifier, OIDCSettings, principal_from_access_token
 from signalweave.engine import InsightEngine
+from signalweave.hosted import (
+    HostedAuthMode,
+    HostedConnection,
+    HostedProvider,
+    InMemoryCredentialVault,
+    build_hosted_adapters,
+)
 from signalweave.mcp_server import create_mcp
 from signalweave.models import InsightCard, InsightCardStatus, SourceRef
 from signalweave.runtime import Runtime
@@ -218,5 +225,162 @@ async def test_signed_oidc_token_scopes_the_real_mcp_http_surface(tmp_path):
             )
             assert webhook.status_code == 404
             assert "outside the authenticated principal tenant" in webhook.json()["error"]
+
+    await oidc_client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_oidc_request_tenant_selects_only_matching_preset_connection(tmp_path):
+    oidc_client, verifier, token = _oidc_fixture()
+    tenants = {
+        "tenant-a": {"dashboard_id": "dashboard-a", "jwt": "jwt-a"},
+        "tenant-b": {"dashboard_id": "dashboard-b", "jwt": "jwt-b"},
+    }
+    provider_calls: list[tuple[str, str, str]] = []
+
+    def provider_handler(request: httpx.Request) -> httpx.Response:
+        if request.url.host == "api.app.preset.test":
+            credentials = json.loads(request.content)
+            tenant = next(
+                tenant
+                for tenant in tenants
+                if credentials
+                == {"name": f"{tenant}-name", "secret": f"{tenant}-secret"}
+            )
+            provider_calls.append((tenant, request.method, request.url.path))
+            return httpx.Response(
+                200, json={"payload": {"access_token": tenants[tenant]["jwt"]}}
+            )
+
+        tenant = request.url.host.removesuffix(".preset.test")
+        if tenant not in tenants:
+            return httpx.Response(404, json={"message": "unknown workspace"})
+        provider_calls.append((tenant, request.method, request.url.path))
+        if request.headers.get("authorization") != f"Bearer {tenants[tenant]['jwt']}":
+            return httpx.Response(401, json={"message": "wrong tenant token"})
+        if request.url.path == "/api/v1/dashboard/":
+            return httpx.Response(
+                200,
+                json={
+                    "result": [
+                        {
+                            "id": tenants[tenant]["dashboard_id"],
+                            "dashboard_title": f"{tenant} dashboard",
+                        }
+                    ],
+                    "count": 1,
+                },
+            )
+        return httpx.Response(404, json={"message": "unexpected route"})
+
+    connections = [
+        HostedConnection(
+            id=f"{tenant}-preset",
+            tenant_id=tenant,
+            provider=HostedProvider.PRESET,
+            base_url=f"https://{tenant}.preset.test",
+            external_workspace=f"{tenant}-workspace",
+            credential_ref=f"vault://{tenant}/preset",
+            auth_mode=HostedAuthMode.API_TOKEN,
+        )
+        for tenant in tenants
+    ]
+    vault = InMemoryCredentialVault(
+        {
+            connection.credential_ref: {
+                "name": f"{tenant}-name",
+                "secret": f"{tenant}-secret",
+                "api_base_url": "https://api.app.preset.test",
+            }
+            for tenant, connection in zip(tenants, connections, strict=True)
+        }
+    )
+    adapters = build_hosted_adapters(
+        connections,
+        vault,
+        transport=httpx.MockTransport(provider_handler),
+    )
+    runtime = Runtime(
+        card_store=JsonInsightCardStore(tmp_path / "cards.json"),
+        sources=SourceRegistry(adapters),
+        engine=InsightEngine(NoopJev()),
+    )
+    server = create_mcp(
+        runtime,
+        principal_resolver=lambda _ctx: principal_from_access_token(
+            get_access_token(), required_scopes=["insights:read"]
+        ),
+        http_principal_resolver=lambda: principal_from_access_token(
+            get_access_token(), required_scopes=["insights:read"]
+        ),
+        auth_settings=AuthSettings(
+            issuer_url="https://issuer.integration.test",
+            resource_server_url=None,
+            required_scopes=["insights:read"],
+            validate_token_resource=False,
+        ),
+        token_verifier=verifier,
+    )
+    server.settings.transport_security.allowed_hosts = ["localhost"]
+    app = server.streamable_http_app()
+
+    async def list_resources_for(tenant: str, request_id: int) -> list[dict]:
+        headers = {
+            "authorization": f"Bearer {token(tenant=tenant)}",
+            "accept": "application/json, text/event-stream",
+            "content-type": "application/json",
+        }
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://localhost"
+        ) as client:
+            initialize = await client.post(
+                "/mcp",
+                headers=headers,
+                json={
+                    "jsonrpc": "2.0",
+                    "id": request_id,
+                    "method": "initialize",
+                    "params": {
+                        "protocolVersion": "2025-06-18",
+                        "capabilities": {},
+                        "clientInfo": {"name": "preset-oidc-test", "version": "1"},
+                    },
+                },
+            )
+            assert initialize.status_code == 200, initialize.text
+            session_id = initialize.headers["mcp-session-id"]
+            listed = await client.post(
+                "/mcp",
+                headers={**headers, "mcp-session-id": session_id},
+                json={
+                    "jsonrpc": "2.0",
+                    "id": request_id + 1,
+                    "method": "tools/call",
+                    "params": {"name": "list_resources", "arguments": {}},
+                },
+            )
+            assert listed.status_code == 200, listed.text
+            body = _payload(listed)
+            return [
+                json.loads(block["text"])
+                for block in body["result"]["content"]
+                if block["type"] == "text"
+            ]
+
+    async with app.router.lifespan_context(app):
+        tenant_a_resources = await list_resources_for("tenant-a", 10)
+        tenant_b_resources = await list_resources_for("tenant-b", 20)
+
+    assert [item["contract"]["tenant_id"] for item in tenant_a_resources] == ["tenant-a"]
+    assert [item["resource"] for item in tenant_a_resources] == ["dashboard:dashboard-a"]
+    assert [item["contract"]["tenant_id"] for item in tenant_b_resources] == ["tenant-b"]
+    assert [item["resource"] for item in tenant_b_resources] == ["dashboard:dashboard-b"]
+    assert {call[0] for call in provider_calls} == {"tenant-a", "tenant-b"}
+    assert set(provider_calls) == {
+        ("tenant-a", "POST", "/v1/auth/"),
+        ("tenant-a", "GET", "/api/v1/dashboard/"),
+        ("tenant-b", "POST", "/v1/auth/"),
+        ("tenant-b", "GET", "/api/v1/dashboard/"),
+    }
 
     await oidc_client.aclose()
