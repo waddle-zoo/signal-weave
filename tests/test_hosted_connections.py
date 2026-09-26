@@ -80,6 +80,11 @@ def test_policy_refuses_live_mode_without_refresh_permission():
         HostedDataPolicy(mode=HostedDataMode.LIVE_QUERY, allow_live_queries=True)
 
 
+def test_policy_rejects_unowned_retention_fields():
+    with pytest.raises(ValueError, match="extra_forbidden"):
+        HostedDataPolicy.model_validate({"retention_hours": 24})
+
+
 @pytest.mark.asyncio
 async def test_preset_cloud_token_exchange_and_dashboard_snapshot():
     calls: list[tuple[str, str, dict[str, str], bytes]] = []
@@ -697,6 +702,21 @@ def test_runtime_rejects_insecure_preset_auth_url(monkeypatch, tmp_path):
     monkeypatch.setenv("SIGNALWEAVE_STORE_PATH", str(tmp_path / "signalweave.db"))
 
     with pytest.raises(RuntimeError, match="PRESET_API_BASE_URL must use https"):
+        build_runtime()
+
+
+@pytest.mark.parametrize("variable", ["PRESET_RETAIN_RAW_RESULTS", "PRESET_RETENTION_HOURS"])
+def test_runtime_rejects_unowned_preset_retention_environment(monkeypatch, tmp_path, variable):
+    monkeypatch.setenv("TYPESAFE_API_KEY", "test-key")
+    monkeypatch.delenv("TYPESAFE_API_KEY_FILE", raising=False)
+    monkeypatch.delenv("SUPERSET_URL", raising=False)
+    monkeypatch.setenv("PRESET_URL", "https://workspace.app.preset.io")
+    monkeypatch.setenv("PRESET_ACCESS_TOKEN", "bearer-token")
+    monkeypatch.setenv(variable, "24" if variable.endswith("HOURS") else "false")
+    monkeypatch.setenv("SIGNALWEAVE_STORE_BACKEND", "sqlite")
+    monkeypatch.setenv("SIGNALWEAVE_STORE_PATH", str(tmp_path / "signalweave.db"))
+
+    with pytest.raises(RuntimeError, match="unsupported"):
         build_runtime()
 
 

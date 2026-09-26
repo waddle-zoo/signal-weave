@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 from enum import StrEnum
 from typing import Any, Protocol
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class HostedProvider(StrEnum):
@@ -39,6 +39,8 @@ class HostedDataMode(StrEnum):
 
 class HostedDataPolicy(BaseModel):
     """Data movement and execution limits for one hosted connection."""
+
+    model_config = ConfigDict(extra="forbid")
 
     mode: HostedDataMode = HostedDataMode.CACHED_RESULTS
     allow_live_queries: bool = False

@@ -105,6 +105,20 @@ def _require_secure_provider_url(name: str, value: str) -> None:
     )
 
 
+def _reject_unsupported_preset_policy_env() -> None:
+    """Reject policy settings that the current adapter deliberately does not own."""
+
+    if os.getenv("PRESET_RETAIN_RAW_RESULTS", "").strip():
+        raise RuntimeError(
+            "PRESET_RETAIN_RAW_RESULTS is unsupported: raw provider rows are never "
+            "retained by the adapter"
+        )
+    if os.getenv("PRESET_RETENTION_HOURS", "").strip():
+        raise RuntimeError(
+            "PRESET_RETENTION_HOURS is unsupported: receipt retention is deployment-owned"
+        )
+
+
 def _preset_from_environment() -> tuple[HostedConnection, HostedCredentialVault] | None:
     """Build one tenant-bound Preset connection from deployment secrets.
 
@@ -116,6 +130,7 @@ def _preset_from_environment() -> tuple[HostedConnection, HostedCredentialVault]
     base_url = os.getenv("PRESET_URL", "").strip()
     if not base_url:
         return None
+    _reject_unsupported_preset_policy_env()
     _require_secure_provider_url("PRESET_URL", base_url)
     access_token = _env_secret("PRESET_ACCESS_TOKEN")
     token_name = _env_secret("PRESET_API_TOKEN_NAME")
