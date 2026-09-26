@@ -121,3 +121,26 @@ TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
 
 It deliberately requires an explicit approval flag and fails if the final
 receipt is not a Jev-backed, delivery-disabled shadow result.
+
+## Generated-shape generalization trial
+
+The named fixture is complemented by a generated-shape stress trial:
+
+```bash
+make preset-generalization-trial
+cat artifacts/preset-generalization-trial.json
+```
+
+With the checked-in seed it generates 24 tenant-shaped workspaces and 192
+charts using unfamiliar IDs, metric names, visualization labels, five result
+envelopes, missing/non-numeric/empty data, ambiguous numeric data, and provider
+failures. It drives the same production adapter and requires that usable
+metrics survive, unusable metrics remain review-visible, dashboard filter
+scope and cached-query guards are present on every data request, and no chart
+catalog entry disappears. The generated values are not imported from the named
+fixture, which makes this a useful anti-overfitting check rather than another
+hand-selected demo.
+
+This remains an HTTP contract simulation. It strengthens the generalized
+adapter claim; it does not replace a real Preset smoke test or a live Jev
+shadow run.

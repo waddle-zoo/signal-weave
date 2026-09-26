@@ -40,8 +40,9 @@ returns an inspectable evidence bundle and receipt.
 | Shared hosted processes do not contact foreign tenant adapters | The source registry skips tenant-bound adapters outside the authenticated scope before list, search, authorization, or resolve calls. An adversarial two-tenant test plus an actual shared Preset/MCP runtime records provider contacts and requires zero foreign calls. | Pass locally; external identity-provider replay remains a deployment gate |
 | Live Superset provider matrix has no silent loss | The running Northstar Superset instance was checked across every saved dashboard and chart with the normal client path. | 20 dashboards; 580 charts; 41,002 observations; 580/580 extracted; 0 silent-loss issues |
 | Hosted credential injection is deployment-safe | Docker Compose secret overlay mounts Preset API-token files, clears direct `.env.preset` token values, and the runtime tests both value/file exclusivity and tenant binding. `make preset-compose-check` also inspects the rendered two-file Compose model with disposable file inputs. | Pass locally; vault/KMS and real tenant gate remain open |
+| Generated-shape anti-overfitting trial | A seeded generator creates 24 unfamiliar tenant workspaces / 192 charts across five result envelopes, 12 visualization labels, usable and unusable metric definitions, empty results, ambiguous numerics, and provider failures; the production Preset client/adapter passes catalog, scope, cache, retention, and safe-degradation assertions. | Pass locally; provider and live Jev gates remain open |
 | Existing enterprise workflows remain the owner | MCP tools return typed decisions and evidence; SignalWeave does not execute arbitrary SQL, tools, DAGs, or notifications. | Pass |
-| Regression safety | Full repository tests and lint. | 267 passed, 2 skipped; Ruff clean |
+| Regression safety | Full repository tests and lint. | 268 passed, 2 skipped; Ruff clean |
 
 ## Reproduction
 
@@ -54,6 +55,7 @@ From the repository root:
 ./.venv/bin/python -m evaluations.onboarding_adversarial_review --format markdown
 ./.venv/bin/pytest tests/test_sources.py tests/test_hosted_connections.py -q
 make preset-trial
+make preset-generalization-trial
 make preset-runtime-shadow-trial
 # With a copied .env.preset and disposable/real host secret files:
 make preset-compose-check
@@ -61,7 +63,7 @@ make preset-compose-check
 make superset-chart-matrix
 ```
 
-The current verified regression result is `267 passed, 2 skipped` with Ruff
+The current verified regression result is `268 passed, 2 skipped` with Ruff
 clean. The runtime-shadow and chart-matrix commands are separate evidence
 surfaces: the former uses synthetic Preset and TypeSafe transports to exercise
 the production runtime, while the latter uses the live local Superset service
