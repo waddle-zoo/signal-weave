@@ -24,7 +24,9 @@ customer agent or scheduler
 opaque `credential_ref`. It never stores an access token, API secret, or client
 secret. A deployment supplies a `HostedCredentialVault` implementation and the
 adapter factory resolves the secret only while constructing a short-lived
-source client.
+source client. Hosted connection URLs must use HTTPS and cannot contain inline
+credentials; local HTTP development remains available through the separate
+unmanaged Superset development connector, not this hosted-connection path.
 
 The repository includes an in-memory vault for tests and a SQLite connection
 metadata store for local or single-process deployments. A production cloud

@@ -32,6 +32,9 @@ deployment must establish a data policy before using company data.
   OIDC bearer token instead of a shared webhook token and derives the tenant
   from that token; `X-SignalWeave-Actor` is only an attribution label.
 - Source adapters own authentication and execution. The Superset adapter executes saved chart definitions only; it does not accept arbitrary SQL from an MCP caller. The same boundary applies to every connector: SignalWeave does not turn a BI, notebook, query, or workflow API into an unrestricted tool surface.
+- Hosted Preset, Hex, and Looker connection records require HTTPS endpoint URLs
+  and reject inline URL credentials. The local development exception applies to
+  the separate unmanaged Superset connector, not hosted connection bootstrap.
 - Source-specific row and series limits are bounded, catalog pagination is capped, and source fetches have timeouts.
 - A required source timeout, missing resource, stale contract, or partial result
   becomes visible evidence and cannot silently become an automatic `ignore`.

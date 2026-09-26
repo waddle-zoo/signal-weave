@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 from typing import Any
+from urllib.parse import urlsplit
 
 import httpx
 
@@ -39,6 +40,15 @@ class PresetCloudClient(SupersetClient):
         retry_backoff_seconds: float = 0.25,
         transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
+        for field_name, url in {
+            "Preset workspace_url": workspace_url,
+            "Preset api_base_url": api_base_url,
+        }.items():
+            parsed = urlsplit(url)
+            if parsed.scheme != "https" or not parsed.hostname:
+                raise ValueError(f"{field_name} must use https")
+            if parsed.username or parsed.password:
+                raise ValueError(f"{field_name} must not contain credentials")
         if access_token and (api_token_name or api_token_secret):
             raise ValueError("Preset requires exactly one authentication mode")
         if not access_token and not (api_token_name and api_token_secret):

@@ -15,6 +15,7 @@ from collections.abc import Iterable, Mapping
 from datetime import datetime, timezone
 from enum import StrEnum
 from typing import Any, Protocol
+from urllib.parse import urlsplit
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -78,8 +79,11 @@ class HostedConnection(BaseModel):
 
     @model_validator(mode="after")
     def validate_url(self) -> HostedConnection:
-        if not self.base_url.startswith(("https://", "http://")):
-            raise ValueError("hosted connection base_url must be an HTTP(S) URL")
+        parsed = urlsplit(self.base_url)
+        if parsed.scheme != "https" or not parsed.hostname:
+            raise ValueError("hosted connection base_url must use https")
+        if parsed.username or parsed.password:
+            raise ValueError("hosted connection base_url must not contain credentials")
         return self
 
 

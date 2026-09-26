@@ -46,6 +46,34 @@ def test_connection_record_contains_reference_not_secret():
     assert "access_token" not in serialized.lower()
 
 
+def test_hosted_connection_requires_https_without_inline_credentials():
+    with pytest.raises(ValueError, match="must use https"):
+        HostedConnection.model_validate(
+            {**connection(HostedProvider.PRESET).model_dump(), "base_url": "http://preset.local"}
+        )
+    with pytest.raises(ValueError, match="must not contain credentials"):
+        HostedConnection.model_validate(
+            {
+                **connection(HostedProvider.PRESET).model_dump(),
+                "base_url": "https://user:secret@preset.example",
+            }
+        )
+
+
+def test_preset_client_requires_secure_provider_urls():
+    with pytest.raises(ValueError, match="workspace_url must use https"):
+        PresetCloudClient(
+            "http://workspace.preset.test",
+            access_token="preset-token",
+        )
+    with pytest.raises(ValueError, match="api_base_url must use https"):
+        PresetCloudClient(
+            "https://workspace.preset.test",
+            access_token="preset-token",
+            api_base_url="http://api.preset.test",
+        )
+
+
 def test_connection_store_is_tenant_scoped():
     store = InMemoryHostedConnectionStore()
     item = connection(HostedProvider.PRESET)
