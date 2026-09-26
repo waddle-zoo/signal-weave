@@ -73,6 +73,29 @@ This proves wiring and fail-safe behavior, not Jev's live semantic accuracy,
 customer authorization, provider permissions, or managed hosting. Those remain
 explicit acceptance gates for a real tenant.
 
+## Full runtime shadow proof
+
+The stronger no-credit trial exercises the environment bootstrap and real MCP
+tools in addition to the adapter and engine:
+
+```bash
+make preset-runtime-shadow-trial
+cat artifacts/preset-runtime-shadow-trial.json
+```
+
+For each fixture workspace it builds the runtime from `PRESET_*` and
+`SIGNALWEAVE_*` settings, discovers an authorized dashboard, onboards a
+free-form card, approves it through the actual review gate, evaluates it
+through the actual Jev-only engine, reads the durable SQLite receipt, and
+replays the idempotency key. It checks both a full degraded dashboard
+(`insufficient_data`) and a healthy focused chart (`notify`), delivery remains
+disabled, provider dashboard filters are preserved, and the configured secret
+does not appear in MCP artifacts.
+
+The Preset and TypeSafe network transports are synthetic for this trial. The
+runtime/MCP/store/adapter/Jev parsing path is production code; live Jev
+semantics, real provider authorization, and managed hosting remain unproven.
+
 The direct Preset API is also a commercial capability boundary: Preset's
 documentation currently lists it as Enterprise-only. A non-Enterprise hosted
 customer needs the remote-MCP dual-connector pattern or an approved relay until

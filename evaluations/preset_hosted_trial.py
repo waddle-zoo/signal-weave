@@ -60,6 +60,20 @@ class WorkspaceTransport:
             self.expired = True
             return httpx.Response(401, json={"message": "expired"})
 
+        if request.url.path == "/api/v1/dashboard/":
+            return httpx.Response(
+                200,
+                json={
+                    "result": [
+                        {
+                            "id": self.workspace["dashboard_id"],
+                            "dashboard_title": self.workspace["dashboard_title"],
+                        }
+                    ],
+                    "count": 1,
+                },
+            )
+
         if request.url.path == f"/api/v1/dashboard/{self.workspace['dashboard_id']}":
             position = {
                 f"chart-{chart['id']}": {
