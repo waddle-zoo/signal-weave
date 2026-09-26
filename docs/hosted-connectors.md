@@ -62,6 +62,17 @@ dashboard, chart, and chart-data endpoints. `PresetAdapter` reuses the shipped
 Superset artifact normalization while reporting `adapter="preset"` and the
 customer tenant in the resource contract.
 
+Preset currently documents the direct Preset API as an Enterprise-plan
+capability. A customer without that entitlement can use Preset's remote MCP
+with a customer-owned agent, but cannot use this direct unattended connector
+without an approved API or bridge path.
+
+The connector sends `force=false` for cached-results requests and enforces the
+connection's response byte and row budgets. That is a cache preference, not a
+provider-independent cache-only guarantee: a strict no-query-on-cache-miss
+contract requires a provider result endpoint or a customer proxy that exposes
+cache state.
+
 Preset MCP remains useful for interactive onboarding by a customer-owned agent,
 but recurring monitoring should use the direct hosted API path. The connector
 does not create or delete dashboards, edit permissions, or execute arbitrary

@@ -1,0 +1,165 @@
+{
+  "workspaces": [
+    {
+      "id": "northstar",
+      "tenant_id": "northstar",
+      "dashboard_id": "7",
+      "dashboard_title": "Northstar executive pulse",
+      "charts": [
+        {
+          "id": "101",
+          "title": "Revenue trend",
+          "viz_type": "line",
+          "params": {
+            "datasource": "17__table",
+            "metrics": ["revenue"],
+            "granularity_sqla": "day"
+          },
+          "result": [{"data": [{"day": "2026-09-01", "revenue": 100}, {"day": "2026-09-02", "revenue": 120}]}, {"data": [{"day": "2026-09-03", "revenue": 125}]}]
+        },
+        {
+          "id": "102",
+          "title": "Orders by channel",
+          "viz_type": "bar",
+          "params": {
+            "datasource": "17__table",
+            "metrics": ["orders"],
+            "groupby": ["channel"]
+          },
+          "result": [{"records": [{"channel": "direct", "orders": 40}, {"channel": "partner", "orders": 20}]}]
+        },
+        {
+          "id": "103",
+          "title": "Customer mix",
+          "viz_type": "pie",
+          "params": {
+            "datasource": {"id": 17, "type": "table"},
+            "metrics": [{"label": "customers"}],
+            "groupby": ["segment"]
+          },
+          "result": [{"rows": [{"segment": "SMB", "customers": 80}, {"segment": "Enterprise", "customers": 20}]}]
+        },
+        {
+          "id": "104",
+          "title": "Regional heatmap",
+          "viz_type": "heatmap_v2",
+          "params": {
+            "datasource": "17__table",
+            "metrics": ["sessions"],
+            "all_columns": ["day", "region"]
+          },
+          "result": [{"data": {"columns": ["day", "region", "sessions"], "data": [["2026-09-01", "NA", 90], ["2026-09-02", "NA", 100]]}}]
+        },
+        {
+          "id": "105",
+          "title": "Segment bubble",
+          "viz_type": "bubble_v2",
+          "params": {
+            "datasource": "17__table",
+            "x": "revenue",
+            "y": "margin",
+            "size": "orders",
+            "groupby": ["segment"]
+          },
+          "result": [{"data": [{"segment": "SMB", "revenue": 50, "margin": 0.31, "orders": 40}, {"segment": "Enterprise", "revenue": 70, "margin": 0.42, "orders": 20}]}]
+        },
+        {
+          "id": "106",
+          "title": "Regional pivot",
+          "viz_type": "pivot_table_v2",
+          "params": {
+            "datasource": "17__table",
+            "metrics": [{"label": "revenue"}],
+            "groupby": ["region"]
+          },
+          "result": [{"values": [{"region": "NA", "revenue": 120}, {"region": "EU", "revenue": 80}]}]
+        },
+        {
+          "id": "107",
+          "title": "Customer count plugin",
+          "viz_type": "custom_plugin",
+          "params": {
+            "datasource": "17__table",
+            "column": "customer_id"
+          },
+          "result": [{"data": [{"customer_id": "c-1", "count": 4}, {"customer_id": "c-2", "count": 7}]}]
+        },
+        {
+          "id": "108",
+          "title": "Unknown metric plugin",
+          "viz_type": "vendor_plugin",
+          "params": {
+            "datasource": "17__table",
+            "metrics": ["metric_not_in_result"]
+          },
+          "result": [{"data": [{"other_value": 1}]}]
+        }
+      ]
+    },
+    {
+      "id": "harbor-bank",
+      "tenant_id": "harbor-bank",
+      "dashboard_id": "12",
+      "dashboard_title": "Risk operations",
+      "charts": [
+        {
+          "id": "201",
+          "title": "Loss trend",
+          "viz_type": "timeseries",
+          "params": {
+            "datasource": "21__table",
+            "metrics": ["losses"],
+            "granularity_sqla": "week"
+          },
+          "result": [{"data": [{"week": "2026-W35", "losses": 10}, {"week": "2026-W36", "losses": 9}]}]
+        },
+        {
+          "id": "202",
+          "title": "Provider outage",
+          "viz_type": "table",
+          "params": {
+            "datasource": "21__table",
+            "metrics": ["incidents"]
+          },
+          "http_status": 503
+        },
+        {
+          "id": "203",
+          "title": "Malformed saved chart",
+          "viz_type": "unknown",
+          "params": "not-json",
+          "result": [{"data": [{"value": 1}]}]
+        }
+      ]
+    },
+    {
+      "id": "orbitworks",
+      "tenant_id": "orbitworks",
+      "dashboard_id": "19",
+      "dashboard_title": "Product telemetry",
+      "charts": [
+        {
+          "id": "301",
+          "title": "Retention",
+          "viz_type": "area",
+          "params": {
+            "datasource": "31__table",
+            "metrics": ["retention"],
+            "granularity_sqla": "month"
+          },
+          "result": [{"data": [{"month": "2026-08", "retention": 0.71}, {"month": "2026-09", "retention": 0.74}]}]
+        },
+        {
+          "id": "302",
+          "title": "No rows",
+          "viz_type": "table",
+          "params": {
+            "datasource": "31__table",
+            "metrics": ["users"]
+          },
+          "result": [{"data": []}]
+        }
+      ]
+    }
+  ]
+}

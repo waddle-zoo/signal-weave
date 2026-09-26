@@ -23,6 +23,12 @@ The service listens on `http://127.0.0.1:18000` and exposes the MCP endpoint at
 or use the local bearer token for an isolated test. The container automatically
 registers one `preset` adapter from `PRESET_URL` and the supplied credentials.
 
+This direct API path requires a Preset plan that includes the Preset API. The
+current Preset documentation lists that API as Enterprise-only. Customers on a
+plan without API access can still use the interim dual-MCP pattern below, but
+cannot use this direct scheduled adapter until they have an approved API or
+bridge path.
+
 The default policy is `cached_results`, with live queries, refreshes, and raw
 result retention disabled. The card flow remains:
 
@@ -39,6 +45,26 @@ secret manager. They are loaded into memory only to construct the adapter and
 are never stored in cards, MCP payloads, or connection metadata. The customer
 should use the smallest Preset workspace permissions that allow the required
 read-only artifacts.
+
+The connector enforces the configured `max_result_rows` and
+`max_snapshot_bytes` limits. It lowers the saved-chart row limit before calling
+Preset and fails closed if the provider returns more rows or bytes than the
+connection permits; it does not silently truncate a time series and invent a
+current value. Mounted secret files are supported with
+`PRESET_API_TOKEN_NAME_FILE` and `PRESET_API_TOKEN_SECRET_FILE`.
+
+`cached_results` sends `force=false` and bounds the query, which asks the
+Superset-compatible endpoint to use its cache when available. It is not a
+provider-independent guarantee that a cache miss will never execute work. A
+strict cache-only contract needs a Preset result/cache endpoint or a customer
+proxy that exposes that distinction; SignalWeave fails closed on payload-size
+and row-limit violations but cannot infer provider execution cost from the
+response alone.
+
+The repeatable source-boundary trial is documented in
+[`docs/preset-integration-trial.md`](preset-integration-trial.md). It is a
+fixture-backed transport proof, not a substitute for a customer-authorized
+Preset smoke test or a live Jev shadow run.
 
 ## Can a hosted Preset customer use SignalWeave without hosting it?
 
@@ -70,12 +96,12 @@ and a hosted service deployment.
 
 ## What Preset itself can and cannot provide
 
-Preset documents a native MCP server that lets AI clients connect to Preset
-with Preset-managed OAuth or API-token authentication. That is useful when an
-agent wants to call Preset directly, but it is not an extension point for
-installing SignalWeave's server-side Jev decision layer inside Preset. Preset's
-native Alerts & Reports feature is documented around email and Slack delivery,
-not a generic SignalWeave callback.
+Preset documents a native remote MCP server that lets AI clients connect to
+Preset with Preset-managed OAuth or API-token authentication. That is useful
+when an agent wants to call Preset directly, but it is not an extension point
+for installing SignalWeave's server-side Jev decision layer inside Preset.
+Preset's native Alerts & Reports feature is documented around email and Slack
+delivery, not a generic SignalWeave callback.
 
 That leaves three practical options:
 
@@ -86,7 +112,8 @@ That leaves three practical options:
    Preset's MCP and SignalWeave's MCP, then passes approved Preset evidence into
    a card evaluation. This avoids giving SignalWeave a Preset credential but
    makes the agent responsible for evidence transport and is weaker for
-   scheduled, repeatable monitoring.
+   scheduled, repeatable monitoring. It is the practical option for a hosted
+   customer without the direct Preset API entitlement.
 3. **Preset-triggered relay.** If a customer's Preset plan and alerting setup
    can reach an approved relay, the relay can call SignalWeave's evaluation
    webhook. This should be treated as a trigger only; SignalWeave still needs

@@ -280,7 +280,7 @@ vendor-neutral. They are read-only by default and keep provider credentials
 outside cards and MCP payloads. See [`docs/hosted-connectors.md`](docs/hosted-connectors.md)
 and [`docs/preset-integration.md`](docs/preset-integration.md) for the Preset
 quickstart and hosted deployment boundary.
-for the connection and data-policy boundary. See the official [Looker API](https://cloud.google.com/looker/docs/api-getting-started)
+See the official [Looker API](https://cloud.google.com/looker/docs/api-getting-started)
 and [Hex public API](https://learn.hex.tech/docs/api-integrations/api/overview)
 documentation for the source capabilities those adapters map.
 
@@ -309,6 +309,17 @@ metadata/cached/live data policies, and contract tests using realistic hosted
 API responses. Cloud OAuth, KMS-backed secret storage, and managed polling are
 deployment work; they are intentionally outside the source adapter. See
 [`docs/hosted-connectors.md`](docs/hosted-connectors.md).
+
+For Preset specifically, this direct API connector requires a Preset plan with
+API access; Preset currently documents that API as Enterprise-only. Other
+customers can connect an agent to Preset's remote MCP and SignalWeave's MCP as
+an interim, agent-mediated path, but that path is weaker for unattended push
+monitoring.
+
+For the Preset-specific integration proof—varied chart/result shapes, partial
+provider failures, token refresh, metadata-only behavior, and fail-closed
+response limits—run `make preset-trial` and read
+[`docs/preset-integration-trial.md`](docs/preset-integration-trial.md).
 
 SignalWeave is not a replacement for Temporal, Airflow, Dagster, a BI tool,
 Glean, a knowledge graph, or a general-purpose agent framework. It is the typed

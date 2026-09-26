@@ -52,6 +52,8 @@ class HostedDataPolicy(BaseModel):
     def validate_execution_policy(self) -> HostedDataPolicy:
         if self.mode == HostedDataMode.LIVE_QUERY and not self.allow_live_queries:
             raise ValueError("live_query mode requires allow_live_queries=true")
+        if self.mode == HostedDataMode.LIVE_QUERY and not self.allow_refresh:
+            raise ValueError("live_query mode requires allow_refresh=true")
         if self.retention_hours == 0 and self.retain_raw_results:
             raise ValueError("raw results cannot be retained when retention_hours is zero")
         return self

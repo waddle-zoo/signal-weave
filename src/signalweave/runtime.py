@@ -69,6 +69,29 @@ def _env_flag(name: str, default: bool = False) -> bool:
     raise RuntimeError(f"{name} must be a boolean value")
 
 
+def _env_secret(name: str) -> str | None:
+    """Read a deployment secret from one value or one mounted secret file."""
+
+    value = os.getenv(name, "").strip()
+    file_name = os.getenv(f"{name}_FILE", "").strip()
+    if value and file_name:
+        raise RuntimeError(f"set only one of {name} or {name}_FILE")
+    if file_name:
+        try:
+            value = Path(file_name).read_text(encoding="utf-8").strip()
+        except OSError as error:
+            raise RuntimeError(f"could not read {name}_FILE: {file_name}") from error
+    return value or None
+
+
+def _env_int(name: str, default: int) -> int:
+    value = os.getenv(name, str(default)).strip()
+    try:
+        return int(value)
+    except ValueError as error:
+        raise RuntimeError(f"{name} must be an integer") from error
+
+
 def _preset_from_environment() -> tuple[HostedConnection, HostedCredentialVault] | None:
     """Build one tenant-bound Preset connection from deployment secrets.
 
@@ -80,9 +103,9 @@ def _preset_from_environment() -> tuple[HostedConnection, HostedCredentialVault]
     base_url = os.getenv("PRESET_URL", "").strip()
     if not base_url:
         return None
-    access_token = os.getenv("PRESET_ACCESS_TOKEN", "").strip() or None
-    token_name = os.getenv("PRESET_API_TOKEN_NAME", "").strip() or None
-    token_secret = os.getenv("PRESET_API_TOKEN_SECRET", "").strip() or None
+    access_token = _env_secret("PRESET_ACCESS_TOKEN")
+    token_name = _env_secret("PRESET_API_TOKEN_NAME")
+    token_secret = _env_secret("PRESET_API_TOKEN_SECRET")
     if not access_token and not (token_name and token_secret):
         raise RuntimeError(
             "PRESET_URL requires PRESET_ACCESS_TOKEN or both "
@@ -98,9 +121,9 @@ def _preset_from_environment() -> tuple[HostedConnection, HostedCredentialVault]
         allow_live_queries=_env_flag("PRESET_ALLOW_LIVE_QUERIES"),
         allow_refresh=_env_flag("PRESET_ALLOW_REFRESH"),
         retain_raw_results=_env_flag("PRESET_RETAIN_RAW_RESULTS"),
-        max_result_rows=int(os.getenv("PRESET_MAX_RESULT_ROWS", "500")),
-        max_snapshot_bytes=int(os.getenv("PRESET_MAX_SNAPSHOT_BYTES", "1000000")),
-        retention_hours=int(os.getenv("PRESET_RETENTION_HOURS", "24")),
+        max_result_rows=_env_int("PRESET_MAX_RESULT_ROWS", 500),
+        max_snapshot_bytes=_env_int("PRESET_MAX_SNAPSHOT_BYTES", 1_000_000),
+        retention_hours=_env_int("PRESET_RETENTION_HOURS", 24),
     )
     tenant_id = os.getenv("PRESET_TENANT_ID", os.getenv("SIGNALWEAVE_TENANT_ID", "default"))
     connection = HostedConnection(

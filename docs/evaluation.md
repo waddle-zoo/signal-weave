@@ -67,6 +67,19 @@ as `extracted`, and marked one raw multi-number table `partial` because its
 saved definition did not identify metric semantics. It reported zero
 unsupported charts and zero silent-loss issues.
 
+For the hosted Preset source boundary, run the fixture-backed multi-workspace
+trial. It uses the production Preset client and adapter, but no TypeSafe
+credits:
+
+```bash
+make preset-trial
+```
+
+The trial intentionally proves transport, chart/result normalization, policy
+enforcement, token refresh, and partial-failure visibility separately from
+semantic Jev quality. See [`preset-integration-trial.md`](preset-integration-trial.md)
+for its evidence and remaining real-account gates.
+
 The live integration test is skipped unless explicitly enabled. The unlabeled
 external-source acceptance check is:
 

@@ -1,4 +1,4 @@
-.PHONY: install test lint prove benchmark daily-trial enterprise-trial discovery-trial bundle-trial query-trial retrieval-explanation-trial verify docker-up docker-down
+.PHONY: install test lint prove benchmark daily-trial enterprise-trial discovery-trial bundle-trial query-trial retrieval-explanation-trial preset-trial verify docker-up docker-down
 
 install:
 	uv sync --extra dev
@@ -33,6 +33,9 @@ query-trial:
 
 retrieval-explanation-trial:
 	TYPESAFE_API_KEY_FILE=$${TYPESAFE_API_KEY_FILE:?set a live TypeSafe key file} uv run python evaluations/retrieval_explanation_trial.py --output artifacts/retrieval-explanation-trial.json
+
+preset-trial:
+	uv run python evaluations/preset_hosted_trial.py --output artifacts/preset-hosted-trial.json
 
 verify:
 	uv run ruff check .

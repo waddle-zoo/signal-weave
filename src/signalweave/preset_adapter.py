@@ -12,9 +12,13 @@ from typing import Any
 
 import httpx
 
-from .hosted import HostedDataPolicy
+from .hosted import HostedDataMode, HostedDataPolicy
 from .superset_adapter import SupersetAdapter
 from .superset_client import SupersetClient
+
+
+class PresetPolicyError(ValueError):
+    """Raised when a provider response violates the connection data policy."""
 
 
 class PresetCloudClient(SupersetClient):
@@ -28,6 +32,8 @@ class PresetCloudClient(SupersetClient):
         api_token_name: str | None = None,
         api_token_secret: str | None = None,
         api_base_url: str = "https://api.app.preset.io",
+        max_result_rows: int | None = None,
+        max_snapshot_bytes: int | None = None,
         transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
         if not access_token and not (api_token_name and api_token_secret):
@@ -37,7 +43,29 @@ class PresetCloudClient(SupersetClient):
         self._api_token_name = api_token_name
         self._api_token_secret = api_token_secret
         self.api_base_url = api_base_url.rstrip("/")
+        self.max_result_rows = max_result_rows
+        self.max_snapshot_bytes = max_snapshot_bytes
+        self._force_refresh = False
         self._transport = transport
+
+    def constrain_response_limits(self, *, max_result_rows: int, max_snapshot_bytes: int) -> None:
+        """Apply the connection policy without allowing a caller to loosen client limits."""
+
+        self.max_result_rows = (
+            max_result_rows
+            if self.max_result_rows is None
+            else min(self.max_result_rows, max_result_rows)
+        )
+        self.max_snapshot_bytes = (
+            max_snapshot_bytes
+            if self.max_snapshot_bytes is None
+            else min(self.max_snapshot_bytes, max_snapshot_bytes)
+        )
+
+    def set_query_mode(self, *, force_refresh: bool) -> None:
+        """Set the explicit provider query mode selected by the connection policy."""
+
+        self._force_refresh = force_refresh
 
     async def _auth_headers(self, force_refresh: bool = False) -> dict[str, str]:
         if self._token and not force_refresh:
@@ -89,7 +117,47 @@ class PresetCloudClient(SupersetClient):
                     **kwargs,
                 )
             response.raise_for_status()
+            if (
+                self.max_snapshot_bytes is not None
+                and len(response.content) > self.max_snapshot_bytes
+            ):
+                raise PresetPolicyError(
+                    "Preset response exceeded the configured max_snapshot_bytes limit"
+                )
             return response
+
+    async def chart_data(self, chart: dict[str, Any]) -> list[dict[str, Any]]:
+        """Fetch saved chart results with a hard row bound and no forced refresh.
+
+        Preset's Superset-compatible endpoint may return several result envelopes.
+        We cap the request and reject a provider response that ignores the cap;
+        silently truncating a time series would create a false current value.
+        """
+
+        payload = self._saved_query_context(chart) or self._query_context(chart)
+        if self.max_result_rows is not None:
+            for query in payload.get("queries", []):
+                if isinstance(query, dict):
+                    requested = query.get("row_limit")
+                    query["row_limit"] = min(
+                        self.max_result_rows,
+                        int(requested) if isinstance(requested, int) else self.max_result_rows,
+                    )
+        payload["force"] = self._force_refresh
+        response = await self._request("POST", "/api/v1/chart/data", timeout=60, json=payload)
+        result = response.json().get("result", [])
+        envelopes = [result] if isinstance(result, dict) else result if isinstance(result, list) else []
+        if self.max_result_rows is not None:
+            row_count = sum(
+                len(self._rows_from_result_item(item))
+                for item in envelopes
+                if isinstance(item, dict)
+            )
+            if row_count > self.max_result_rows:
+                raise PresetPolicyError(
+                    "Preset chart response exceeded the configured max_result_rows limit"
+                )
+        return [item for item in envelopes if isinstance(item, dict)]
 
 
 class PresetAdapter(SupersetAdapter):
@@ -110,6 +178,11 @@ class PresetAdapter(SupersetAdapter):
             provider_name="preset",
         )
         self.policy = policy or HostedDataPolicy()
+        client.constrain_response_limits(
+            max_result_rows=self.policy.max_result_rows,
+            max_snapshot_bytes=self.policy.max_snapshot_bytes,
+        )
+        client.set_query_mode(force_refresh=self.policy.mode == HostedDataMode.LIVE_QUERY)
 
     async def _inspect_dashboard(self, source, dashboard_id):
         if self.policy.mode.value == "metadata_only":

@@ -19,7 +19,7 @@ from signalweave.hosted import (
 )
 from signalweave.looker_adapter import LookerAdapter, LookerCloudClient
 from signalweave.models import SourceRef
-from signalweave.preset_adapter import PresetAdapter, PresetCloudClient
+from signalweave.preset_adapter import PresetAdapter, PresetCloudClient, PresetPolicyError
 from signalweave.runtime import build_runtime
 
 
@@ -73,6 +73,11 @@ def test_sqlite_connection_store_persists_metadata_without_credentials(tmp_path)
 def test_policy_refuses_live_mode_without_explicit_permission():
     with pytest.raises(ValueError, match="allow_live_queries"):
         HostedDataPolicy(mode=HostedDataMode.LIVE_QUERY)
+
+
+def test_policy_refuses_live_mode_without_refresh_permission():
+    with pytest.raises(ValueError, match="allow_refresh"):
+        HostedDataPolicy(mode=HostedDataMode.LIVE_QUERY, allow_live_queries=True)
 
 
 @pytest.mark.asyncio
@@ -175,6 +180,122 @@ async def test_preset_metadata_only_never_fetches_chart_data():
     assert snapshot.metadata["data_policy_mode"] == "metadata_only"
     assert "/api/v1/chart/101" not in paths
     assert "/api/v1/chart/data" not in paths
+
+
+@pytest.mark.asyncio
+async def test_preset_api_token_refreshes_once_after_expiry():
+    auth_calls = 0
+    resource_calls = 0
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal auth_calls, resource_calls
+        if request.url.host == "api.app.preset.test":
+            auth_calls += 1
+            return httpx.Response(
+                200,
+                json={"payload": {"access_token": f"preset-jwt-{auth_calls}"}},
+            )
+        resource_calls += 1
+        if resource_calls == 1:
+            assert request.headers["authorization"] == "Bearer preset-jwt-1"
+            return httpx.Response(401, json={"message": "expired"})
+        assert request.headers["authorization"] == "Bearer preset-jwt-2"
+        return httpx.Response(200, json={"result": {"id": 7, "dashboard_title": "Growth"}})
+
+    client = PresetCloudClient(
+        "https://workspace.app.preset.test",
+        api_token_name="preset-name",
+        api_token_secret="preset-secret",
+        api_base_url="https://api.app.preset.test",
+        transport=httpx.MockTransport(handler),
+    )
+
+    metadata = await client.get_dashboard_metadata(7)
+
+    assert metadata["id"] == 7
+    assert auth_calls == 2
+    assert resource_calls == 2
+
+
+@pytest.mark.asyncio
+async def test_preset_rejects_provider_result_that_ignores_row_policy():
+    payloads: list[dict] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/api/v1/dashboard/7":
+            return httpx.Response(
+                200,
+                json={
+                    "result": {
+                        "id": 7,
+                        "dashboard_title": "Growth",
+                        "position_json": {"chart": {"type": "CHART", "meta": {"chartId": 101}}},
+                    }
+                },
+            )
+        if request.url.path == "/api/v1/chart/101":
+            return httpx.Response(
+                200,
+                json={
+                    "result": {
+                        "id": 101,
+                        "slice_name": "Revenue",
+                        "params": '{"datasource":"17__table","metrics":["revenue"],"granularity_sqla":"day"}',
+                    }
+                },
+            )
+        if request.url.path == "/api/v1/chart/data":
+            payloads.append(json.loads(request.content))
+            return httpx.Response(
+                200,
+                json={
+                    "result": [
+                        {
+                            "data": [
+                                {"day": "2026-09-01", "revenue": 100},
+                                {"day": "2026-09-02", "revenue": 120},
+                            ]
+                        }
+                    ]
+                },
+            )
+        raise AssertionError(f"unexpected Preset request: {request.url}")
+
+    client = PresetCloudClient(
+        "https://workspace.app.preset.test",
+        access_token="preset-token",
+        transport=httpx.MockTransport(handler),
+    )
+    adapter = PresetAdapter(
+        client,
+        tenant_id="northstar",
+        policy=HostedDataPolicy(max_result_rows=1),
+    )
+
+    snapshot = await adapter.inspect(
+        SourceRef(key="growth", adapter="preset", resource="dashboard:7", label="Growth")
+    )
+
+    assert payloads[0]["queries"][0]["row_limit"] == 1
+    assert snapshot.observations == []
+    assert snapshot.metadata["data_quality"]["status"] == "failed"
+    assert "max_result_rows" in snapshot.error
+
+
+@pytest.mark.asyncio
+async def test_preset_rejects_oversized_response_before_parsing():
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=b"{" + b"x" * 128 + b"}")
+
+    client = PresetCloudClient(
+        "https://workspace.app.preset.test",
+        access_token="preset-token",
+        max_snapshot_bytes=64,
+        transport=httpx.MockTransport(handler),
+    )
+
+    with pytest.raises(PresetPolicyError, match="max_snapshot_bytes"):
+        await client.get_dashboard_metadata(7)
 
 
 @pytest.mark.asyncio
@@ -369,6 +490,45 @@ def test_runtime_rejects_incomplete_preset_environment_bootstrap(monkeypatch, tm
     monkeypatch.setenv("SIGNALWEAVE_STORE_PATH", str(tmp_path / "signalweave.db"))
 
     with pytest.raises(RuntimeError, match="PRESET_ACCESS_TOKEN"):
+        build_runtime()
+
+
+def test_runtime_reads_preset_secrets_from_mounted_files(monkeypatch, tmp_path):
+    monkeypatch.setenv("TYPESAFE_API_KEY", "test-key")
+    monkeypatch.delenv("TYPESAFE_API_KEY_FILE", raising=False)
+    monkeypatch.delenv("SUPERSET_URL", raising=False)
+    monkeypatch.setenv("PRESET_URL", "https://workspace.us-east-1.app.preset.io")
+    monkeypatch.setenv("PRESET_TENANT_ID", "northstar")
+    name_file = tmp_path / "preset-name"
+    secret_file = tmp_path / "preset-secret"
+    name_file.write_text("preset-name\n", encoding="utf-8")
+    secret_file.write_text("preset-secret\n", encoding="utf-8")
+    monkeypatch.setenv("PRESET_API_TOKEN_NAME_FILE", str(name_file))
+    monkeypatch.setenv("PRESET_API_TOKEN_SECRET_FILE", str(secret_file))
+    monkeypatch.setenv("SIGNALWEAVE_STORE_BACKEND", "sqlite")
+    monkeypatch.setenv("SIGNALWEAVE_STORE_PATH", str(tmp_path / "signalweave.db"))
+
+    runtime = build_runtime()
+    adapter = runtime.sources._adapters["preset__preset-env"]
+
+    assert adapter.client._api_token_name == "preset-name"
+    assert adapter.client._api_token_secret == "preset-secret"
+
+
+def test_runtime_rejects_secret_value_and_secret_file_together(monkeypatch, tmp_path):
+    monkeypatch.setenv("TYPESAFE_API_KEY", "test-key")
+    monkeypatch.delenv("TYPESAFE_API_KEY_FILE", raising=False)
+    monkeypatch.delenv("SUPERSET_URL", raising=False)
+    monkeypatch.setenv("PRESET_URL", "https://workspace.us-east-1.app.preset.io")
+    monkeypatch.setenv("PRESET_API_TOKEN_NAME", "preset-name")
+    name_file = tmp_path / "preset-name"
+    name_file.write_text("other-name\n", encoding="utf-8")
+    monkeypatch.setenv("PRESET_API_TOKEN_NAME_FILE", str(name_file))
+    monkeypatch.setenv("PRESET_API_TOKEN_SECRET", "preset-secret")
+    monkeypatch.setenv("SIGNALWEAVE_STORE_BACKEND", "sqlite")
+    monkeypatch.setenv("SIGNALWEAVE_STORE_PATH", str(tmp_path / "signalweave.db"))
+
+    with pytest.raises(RuntimeError, match="only one"):
         build_runtime()
 
 

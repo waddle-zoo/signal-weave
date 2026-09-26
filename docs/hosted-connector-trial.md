@@ -12,13 +12,16 @@ Run it with:
 uv run pytest tests/test_hosted_connections.py -q
 ```
 
-The current run covers 13 passing cases:
+The current run covers 20 passing cases:
 
 | Boundary | What is proven |
 | --- | --- |
 | Credential handling | Preset API-token exchange works; persisted connection metadata contains only a vault reference |
 | Preset | Hosted dashboard/chart data is normalized into SignalWeave observations and tenant contracts |
 | Preset policy | Metadata-only mode does not call chart-data endpoints |
+| Preset safety policy | Expired API tokens refresh once; row and response-byte limits fail closed |
+| Preset query mode | Cached mode sends `force=false`; live mode requires explicit refresh permission and sends `force=true` |
+| Preset fixture trial | Three varied workspaces and 13 chart definitions pass the independent integration harness |
 | Hex | Project metadata, completed-run state, explicit cell-output retrieval, and cursor pagination work |
 | Hex search | The adapter reports that the API is cursor-paginated and locally filters a bounded page rather than pretending native text search exists |
 | Looker | A cached Look result is retrieved with the provider cache flag and normalized into observations |
@@ -28,7 +31,8 @@ The current run covers 13 passing cases:
 The full repository suite is also the regression gate:
 
 ```text
-211 passed, 1 skipped
+The repository suite count is maintained by CI; run `make verify` and
+`make preset-trial` for the current result.
 ```
 
 ## What remains unproven
