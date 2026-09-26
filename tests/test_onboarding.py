@@ -427,14 +427,16 @@ async def test_generic_card_flow_discovers_proposes_previews_and_requires_approv
     assert preview["result"]["context"]["trust"] == "unverified"
     assert preview["result"]["delivery_methods"][0]["key"] == "growth-ops"
 
-    approved = await tool(server, "approve_insight_card")(card_id)
+    approved = await tool(server, "approve_insight_card")(card_id, actor="spoofed-label")
     assert approved["status"] == "approved"
+    assert approved["card"]["approved_by"] == "test-principal"
     approved_card = tool(server, "get_insight_card")(card_id)
     assert approved_card["status"] == "approved"
     assert len(approved_card["onboarding_review_history"]) == 2
     assert tool(server, "list_insight_cards")(status="approved")["count"] == 1
-    evaluated = await tool(server, "evaluate_insight_card")(card_id)
+    evaluated = await tool(server, "evaluate_insight_card")(card_id, actor="spoofed-label")
     assert evaluated["result"]["delivery_methods"][0]["key"] == "growth-ops"
+    assert evaluated["receipt"]["actor"] == "test-principal"
 
     concurrent = await asyncio.gather(
         tool(server, "evaluate_insight_card")(
@@ -446,10 +448,10 @@ async def test_generic_card_flow_discovers_proposes_previews_and_requires_approv
     )
     assert sorted(result["replayed"] for result in concurrent) == [False, True]
 
-    with pytest.raises(ValueError, match="already bound"):
-        await tool(server, "evaluate_insight_card")(
-            card_id, idempotency_key="concurrent-evaluation", actor="scheduler-b"
-        )
+    scoped_replay = await tool(server, "evaluate_insight_card")(
+        card_id, idempotency_key="concurrent-evaluation", actor="scheduler-b"
+    )
+    assert scoped_replay["replayed"] is True
 
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"

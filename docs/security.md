@@ -71,8 +71,10 @@ deployment must establish a data policy before using company data.
 - Trino execution accepts only compiler-produced `SELECT` queries with validated
   identifiers and bounded timestamp parameters. It is not a raw SQL endpoint.
 - Push evaluation requires an idempotency key and writes a durable decision
-  receipt with card version, actor, outcome, and delivery state. Replays return
-  the existing receipt. The default SQLite store enforces the claim atomically;
+  receipt with card version, actor, outcome, and delivery state. In a scoped
+  deployment, the verified principal—not a caller-supplied actor label—owns
+  the approval/evaluation audit identity. Replays return the existing receipt.
+  The default SQLite store enforces the claim atomically;
   its single-file scope is suitable for one service process or a shared mounted
   volume, not a multi-replica deployment without a stronger store.
 - Idempotency replays are bound to the card version, actor, and context snapshot;

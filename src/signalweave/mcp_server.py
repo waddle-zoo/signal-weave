@@ -1067,6 +1067,8 @@ def create_mcp(
         configured delivery methods; a caller-owned scheduler or agent may
         inspect the receipt and decide what to do next.
         """
+        principal = request_principal(ctx)
+        trusted_actor = principal.principal_id if principal else actor
         context_snapshot = (
             ContextSnapshot.model_validate(context).model_copy(update={"trust": "unverified"})
             if context
@@ -1075,9 +1077,9 @@ def create_mcp(
         return await evaluate_approved_card(
             card_id,
             idempotency_key=idempotency_key,
-            actor=actor,
+            actor=trusted_actor,
             context=context_snapshot,
-            principal=request_principal(ctx),
+            principal=principal,
         )
 
     @mcp.tool()
@@ -1388,7 +1390,10 @@ def create_mcp(
         runtime.card_store.save_card(card)
         approved = runtime.card_store.set_card_status(card_id, InsightCardStatus.APPROVED)
         approved = approved.model_copy(
-            update={"approved_by": actor, "approved_at": datetime.now(timezone.utc)}
+            update={
+                "approved_by": principal.principal_id if principal else actor,
+                "approved_at": datetime.now(timezone.utc),
+            }
         )
         runtime.card_store.save_card(approved)
         return {
@@ -1501,7 +1506,7 @@ def create_mcp(
             return JSONResponse(
                 {"error": "push webhook principal is not configured"}, status_code=503
             )
-        actor = str(request.headers.get("X-SignalWeave-Actor") or "webhook")
+        actor = principal.principal_id
         try:
             context = (
                 ContextSnapshot.model_validate(payload["context"]).model_copy(
