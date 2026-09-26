@@ -53,6 +53,9 @@ The service listens on `http://127.0.0.1:18000` and exposes the MCP endpoint at
 `/mcp`. Connect the customer's agent through the existing identity-aware proxy,
 or use the local bearer token for an isolated test. The container automatically
 registers one `preset` adapter from `PRESET_URL` and the supplied credentials.
+`PRESET_TENANT_ID` or `SIGNALWEAVE_TENANT_ID` is required; the bootstrap path
+never assigns an implicit default tenant. API-token and bearer credentials are
+mutually exclusive, and unexpected credential fields fail closed.
 The default route name is `preset__preset-env`; copy
 [`examples/preset/insight-card.example.json`](../examples/preset/insight-card.example.json),
 replace the dashboard/chart IDs, and use that route in the card's `sources`.

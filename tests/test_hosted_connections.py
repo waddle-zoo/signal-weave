@@ -818,6 +818,7 @@ def test_runtime_rejects_insecure_preset_auth_url(monkeypatch, tmp_path):
     monkeypatch.delenv("TYPESAFE_API_KEY_FILE", raising=False)
     monkeypatch.delenv("SUPERSET_URL", raising=False)
     monkeypatch.setenv("PRESET_URL", "https://workspace.app.preset.io")
+    monkeypatch.setenv("PRESET_TENANT_ID", "northstar")
     monkeypatch.setenv("PRESET_ACCESS_TOKEN", "bearer-token")
     monkeypatch.setenv("PRESET_API_BASE_URL", "http://api.local")
     monkeypatch.setenv("SIGNALWEAVE_STORE_BACKEND", "sqlite")
@@ -858,6 +859,22 @@ def test_preset_factory_enforces_declared_auth_mode():
     )
     with pytest.raises(ValueError, match="OAuth"):
         build_hosted_adapter(oauth_item, api_vault)
+
+    with pytest.raises(ValueError, match="unsupported fields"):
+        build_hosted_adapter(
+            item,
+            InMemoryCredentialVault(
+                {item.credential_ref: {"name": "name", "secret": "secret", "refresh_token": "token"}}
+            ),
+        )
+
+    with pytest.raises(ValueError, match="unsupported fields"):
+        build_hosted_adapter(
+            bearer_item,
+            InMemoryCredentialVault(
+                {item.credential_ref: {"access_token": "token", "client_secret": "secret"}}
+            ),
+        )
 
 
 def test_runtime_rejects_explicit_hosted_connection_tenant_mismatch(monkeypatch, tmp_path):
@@ -905,6 +922,22 @@ def test_runtime_rejects_preset_and_signalweave_tenant_mismatch(monkeypatch, tmp
     monkeypatch.setenv("SIGNALWEAVE_STORE_PATH", str(tmp_path / "signalweave.db"))
 
     with pytest.raises(RuntimeError, match="must match SIGNALWEAVE_TENANT_ID"):
+        build_runtime()
+
+
+def test_runtime_rejects_preset_bootstrap_without_tenant_identity(monkeypatch, tmp_path):
+    monkeypatch.setenv("TYPESAFE_API_KEY", "test-key")
+    monkeypatch.delenv("TYPESAFE_API_KEY_FILE", raising=False)
+    monkeypatch.delenv("SUPERSET_URL", raising=False)
+    monkeypatch.delenv("PRESET_TENANT_ID", raising=False)
+    monkeypatch.delenv("SIGNALWEAVE_TENANT_ID", raising=False)
+    monkeypatch.delenv("SIGNALWEAVE_PRINCIPAL_ID", raising=False)
+    monkeypatch.setenv("PRESET_URL", "https://workspace.us-east-1.app.preset.io")
+    monkeypatch.setenv("PRESET_ACCESS_TOKEN", "bearer-token")
+    monkeypatch.setenv("SIGNALWEAVE_STORE_BACKEND", "sqlite")
+    monkeypatch.setenv("SIGNALWEAVE_STORE_PATH", str(tmp_path / "signalweave.db"))
+
+    with pytest.raises(RuntimeError, match="requires PRESET_TENANT_ID"):
         build_runtime()
 
 

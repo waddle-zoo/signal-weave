@@ -159,11 +159,16 @@ def _preset_from_environment() -> tuple[HostedConnection, HostedCredentialVault]
     )
     preset_tenant_id = os.getenv("PRESET_TENANT_ID", "").strip()
     signalweave_tenant_id = os.getenv("SIGNALWEAVE_TENANT_ID", "").strip()
+    if not preset_tenant_id and not signalweave_tenant_id:
+        raise RuntimeError(
+            "Preset bootstrap requires PRESET_TENANT_ID or SIGNALWEAVE_TENANT_ID; "
+            "an implicit default tenant is not allowed"
+        )
     if preset_tenant_id and signalweave_tenant_id and preset_tenant_id != signalweave_tenant_id:
         raise RuntimeError(
             "PRESET_TENANT_ID must match SIGNALWEAVE_TENANT_ID when both are configured"
         )
-    tenant_id = preset_tenant_id or signalweave_tenant_id or "default"
+    tenant_id = preset_tenant_id or signalweave_tenant_id
     connection = HostedConnection(
         id=os.getenv("PRESET_CONNECTION_ID", "preset-env"),
         tenant_id=tenant_id,

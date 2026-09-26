@@ -163,16 +163,31 @@ def _preset_credentials(
 ) -> tuple[str | None, str | None, str | None]:
     """Validate the credential shape declared by a Preset connection."""
 
+    allowed_fields = {"api_base_url"}
     access_token = credentials.get("access_token")
     token_name = credentials.get("name")
     token_secret = credentials.get("secret")
     if connection.auth_mode == HostedAuthMode.API_TOKEN:
+        allowed_fields.update({"name", "secret"})
+        unexpected = sorted(set(credentials) - allowed_fields)
+        if unexpected:
+            raise ValueError(
+                "Preset API_TOKEN credentials contain unsupported fields: "
+                + ", ".join(unexpected)
+            )
         if access_token or not (token_name and token_secret):
             raise ValueError(
                 "Preset API_TOKEN connections require name and secret credentials only"
             )
         return None, token_name, token_secret
     if connection.auth_mode == HostedAuthMode.BEARER:
+        allowed_fields.add("access_token")
+        unexpected = sorted(set(credentials) - allowed_fields)
+        if unexpected:
+            raise ValueError(
+                "Preset BEARER credentials contain unsupported fields: "
+                + ", ".join(unexpected)
+            )
         if not access_token or token_name or token_secret:
             raise ValueError("Preset BEARER connections require an access_token only")
         return access_token, None, None

@@ -46,7 +46,10 @@ provider name collision.
 Credential mode is part of the connection contract. Preset API-token
 connections require only the token name and secret; bearer connections require
 only an access token; unsupported OAuth declarations fail closed rather than
-falling back to whichever secret shape happens to be present.
+falling back to whichever secret shape happens to be present. The Preset
+factory also rejects unrelated credential fields, and environment bootstrap
+requires an explicit Preset or SignalWeave tenant identity rather than using a
+default tenant.
 
 ## Data policy
 
