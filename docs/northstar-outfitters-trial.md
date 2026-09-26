@@ -55,6 +55,31 @@ It also demonstrates the intended product boundary: SignalWeave retrieves,
 normalizes, ranks, and evaluates evidence; a client-owned UI or agent still
 confirms related sources and owns the final human feedback loop.
 
+## Live chart-matrix acceptance
+
+After the initial trial, the running Northstar Superset instance was exercised
+with `make superset-chart-matrix` against every saved dashboard and chart
+without calling Jev. The result was:
+
+| Check | Result |
+| --- | --- |
+| Dashboards | 20 |
+| Charts | 580 |
+| Normalized observations | 41,002 |
+| Extracted charts | 580/580 |
+| Visualization families | 5 |
+| Silent-loss issues | 0 |
+
+The run also caught a real provider-shape issue: Superset's dashboard chart
+endpoint requires the canonical trailing-slash path and a saved chart query
+context. SignalWeave now uses that path and, only when dashboard metadata
+explicitly contains no native filters, falls back to the saved-chart POST
+query. A dashboard with native filters or an unrelated provider error still
+fails closed rather than analyzing unfiltered data. Superset documents that
+the dashboard-scoped endpoint applies `filters_dashboard_id` using the query
+context stored when the chart was saved:
+<https://superset.apache.org/developer-docs/api/return-payload-data-response-for-a-chart/>.
+
 This is integration evidence, not a universal accuracy or scale claim. A
 production deployment should provide tenant identity in the source adapter,
 prefer a native catalog/search index over the bounded title-term fallback, and

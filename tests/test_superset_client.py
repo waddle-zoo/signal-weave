@@ -16,6 +16,28 @@ def test_metadata_mapping_is_read_only_and_safe():
     assert snapshot.charts == []
 
 
+@pytest.mark.asyncio
+async def test_dashboard_chart_data_uses_superset_canonical_trailing_slash():
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        if request.url.path == "/api/v1/chart/42/data/":
+            return httpx.Response(200, json={"result": [{"data": [{"value": 7}]}]})
+        raise AssertionError(f"unexpected Superset request: {request.url}")
+
+    client = SupersetClient("http://superset.test", transport=httpx.MockTransport(handler))
+
+    result = await client.chart_data(
+        {"id": 42},
+        dashboard_id=7,
+    )
+
+    assert result == [{"data": [{"value": 7}]}]
+    assert requests[0].url.path == "/api/v1/chart/42/data/"
+    assert requests[0].url.params["filters_dashboard_id"] == "7"
+
+
 def test_query_context_preserves_chart_time_grain_and_filters():
     chart = {
         "id": 42,
@@ -291,7 +313,8 @@ async def test_partial_dashboard_preserves_good_charts_and_quality_metadata():
                 "params": {"metrics": [{"label": "Revenue"}], "granularity_sqla": "period"},
             }
 
-        async def chart_data(self, chart, *, dashboard_id=None):
+        async def chart_data(self, chart, *, dashboard_id=None, allow_unscoped_fallback=False):
+            del allow_unscoped_fallback
             if str(chart["id"]) == "43":
                 raise httpx.ReadTimeout("chart unavailable")
             return [{"data": [{"period": 1, "Revenue": 10}, {"period": 2, "Revenue": 12}]}]
@@ -423,6 +446,48 @@ def test_implicit_count_charts_keep_numeric_dimensions_out_of_metric_set():
     assert extraction.metrics == ["count"]
     assert extraction.semantic_status == "extracted"
     assert extraction.observations[0].dimensions == {"quantity_ordered": 1}
+
+
+@pytest.mark.asyncio
+async def test_dashboard_chart_data_can_fallback_only_for_unfiltered_dashboards():
+    calls: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append(f"{request.method} {request.url.path}")
+        if request.method == "GET":
+            return httpx.Response(
+                400,
+                json={"message": "Chart has no query context saved. Please save the chart again."},
+            )
+        return httpx.Response(200, json={"result": [{"data": [{"value": 7}]}]})
+
+    client = SupersetClient("http://superset.test", transport=httpx.MockTransport(handler))
+    result = await client.chart_data(
+        {
+            "id": 42,
+            "datasource": "1__table",
+            "params": {"metrics": ["value"]},
+        },
+        dashboard_id=7,
+        allow_unscoped_fallback=True,
+    )
+
+    assert result == [{"data": [{"value": 7}]}]
+    assert calls == ["GET /api/v1/chart/42/data/", "POST /api/v1/chart/data"]
+
+
+@pytest.mark.asyncio
+async def test_dashboard_chart_data_does_not_fallback_for_filter_errors():
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(400, json={"message": "invalid filter state"})
+
+    client = SupersetClient("http://superset.test", transport=httpx.MockTransport(handler))
+    with pytest.raises(httpx.HTTPStatusError):
+        await client.chart_data(
+            {"id": 42},
+            dashboard_id=7,
+            allow_unscoped_fallback=True,
+        )
 
 
 def test_dashboard_chart_array_metadata_is_discovered_without_position_json():

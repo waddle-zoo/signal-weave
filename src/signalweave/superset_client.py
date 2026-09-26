@@ -39,11 +39,16 @@ class SupersetClient:
     """
 
     def __init__(
-        self, base_url: str, username: str | None = None, password: str | None = None
+        self,
+        base_url: str,
+        username: str | None = None,
+        password: str | None = None,
+        transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.username = username
         self.password = password
+        self._transport = transport
         self._token: str | None = None
         self._auth_lock = asyncio.Lock()
 
@@ -55,7 +60,11 @@ class SupersetClient:
         async with self._auth_lock:
             if self._token and not force_refresh:
                 return {"Authorization": f"Bearer {self._token}"}
-            async with httpx.AsyncClient(base_url=self.base_url, timeout=20) as client:
+            async with httpx.AsyncClient(
+                base_url=self.base_url,
+                timeout=20,
+                transport=self._transport,
+            ) as client:
                 response = await client.post(
                     "/api/v1/security/login",
                     json={
@@ -79,7 +88,10 @@ class SupersetClient:
     ) -> httpx.Response:
         headers = await self._auth_headers()
         async with httpx.AsyncClient(
-            base_url=self.base_url, timeout=timeout, headers=headers
+            base_url=self.base_url,
+            timeout=timeout,
+            headers=headers,
+            transport=self._transport,
         ) as client:
             response = await client.request(method, path, **kwargs)
             if response.status_code == 401 and self._token and self.username and self.password:
@@ -392,7 +404,11 @@ class SupersetClient:
         return context
 
     async def chart_data(
-        self, chart: dict[str, Any], *, dashboard_id: int | str | None = None
+        self,
+        chart: dict[str, Any],
+        *,
+        dashboard_id: int | str | None = None,
+        allow_unscoped_fallback: bool = False,
     ) -> list[dict[str, Any]]:
         if dashboard_id is not None:
             # The chart-specific endpoint is the provider-owned path for
@@ -400,17 +416,27 @@ class SupersetClient:
             # dashboard context through the generic POST endpoint would make
             # a dashboard monitor look successful while analyzing unfiltered
             # chart data.
-            response = await self._request(
-                "GET",
-                f"/api/v1/chart/{chart['id']}/data",
-                timeout=60,
-                params={
-                    "format": "json",
-                    "type": "full",
-                    "force": "false",
-                    "filters_dashboard_id": str(dashboard_id),
-                },
-            )
+            try:
+                response = await self._request(
+                    "GET",
+                    f"/api/v1/chart/{chart['id']}/data/",
+                    timeout=60,
+                    params={
+                        "format": "json",
+                        "type": "full",
+                        "force": "false",
+                        "filters_dashboard_id": str(dashboard_id),
+                    },
+                )
+            except httpx.HTTPStatusError as error:
+                if not allow_unscoped_fallback or error.response.status_code != 400:
+                    raise
+                if "query context saved" not in error.response.text.lower():
+                    raise
+                payload = self._saved_query_context(chart) or self._query_context(chart)
+                response = await self._request(
+                    "POST", "/api/v1/chart/data", timeout=60, json=payload
+                )
         else:
             payload = self._saved_query_context(chart) or self._query_context(chart)
             response = await self._request(
@@ -743,6 +769,8 @@ class SupersetClient:
         if not include_data:
             return snapshot
 
+        allow_unscoped_fallback = self._dashboard_has_no_native_filters(metadata)
+
         semaphore = asyncio.Semaphore(8)
 
         async def load_chart(chart: SupersetChartSnapshot) -> SupersetChartSnapshot:
@@ -751,7 +779,11 @@ class SupersetClient:
                     chart_metadata = await self.get_chart_metadata(chart.id)
                     extraction = self.extract_chart_data(
                         chart_metadata,
-                        await self.chart_data(chart_metadata, dashboard_id=dashboard_id),
+                        await self.chart_data(
+                            chart_metadata,
+                            dashboard_id=dashboard_id,
+                            allow_unscoped_fallback=allow_unscoped_fallback,
+                        ),
                     )
                     updates: dict[str, Any] = {
                         "observations": extraction.observations,
@@ -837,4 +869,22 @@ class SupersetClient:
             ],
             charts=charts,
             source_url=metadata.get("url"),
+        )
+
+    @staticmethod
+    def _dashboard_has_no_native_filters(metadata: dict[str, Any]) -> bool:
+        """Allow a narrow fallback only when dashboard filter state is explicit."""
+
+        raw = metadata.get("json_metadata")
+        if not isinstance(raw, str):
+            return False
+        try:
+            payload = json.loads(raw)
+        except json.JSONDecodeError:
+            return False
+        if not isinstance(payload, dict):
+            return False
+        return not any(
+            payload.get(key)
+            for key in ("native_filters", "native_filter_configuration", "filter_scopes")
         )

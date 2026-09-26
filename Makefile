@@ -1,4 +1,4 @@
-.PHONY: install test lint prove benchmark daily-trial enterprise-trial discovery-trial bundle-trial query-trial retrieval-explanation-trial preset-trial preset-jev-contract-trial preset-runtime-shadow-trial preset-bootstrap-check preset-provider-smoke preset-live-trial verify docker-up docker-down
+.PHONY: install test lint prove benchmark daily-trial enterprise-trial discovery-trial bundle-trial query-trial retrieval-explanation-trial preset-trial preset-jev-contract-trial preset-runtime-shadow-trial preset-bootstrap-check preset-provider-smoke preset-live-trial superset-chart-matrix verify docker-up docker-down
 
 install:
 	uv sync --extra dev
@@ -63,6 +63,9 @@ preset-live-trial:
 		--destination "$${PRESET_TRIAL_DESTINATION:-slack://shadow-review}" \
 		--approve \
 		--output artifacts/preset-live-onboarding-shadow.json
+
+superset-chart-matrix:
+	uv run python scripts/superset_chart_matrix.py
 
 verify:
 	uv run ruff check .

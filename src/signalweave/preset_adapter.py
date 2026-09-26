@@ -201,7 +201,11 @@ class PresetCloudClient(SupersetClient):
         return response
 
     async def chart_data(
-        self, chart: dict[str, Any], *, dashboard_id: int | str | None = None
+        self,
+        chart: dict[str, Any],
+        *,
+        dashboard_id: int | str | None = None,
+        allow_unscoped_fallback: bool = False,
     ) -> list[dict[str, Any]]:
         """Fetch chart results with a hard response bound.
 
@@ -213,6 +217,9 @@ class PresetCloudClient(SupersetClient):
         a false current value.
         """
 
+        # Preset's dashboard endpoint is the only accepted dashboard-scoped
+        # path. It must never fall back to an unfiltered POST query.
+        del allow_unscoped_fallback
         if dashboard_id is not None:
             response = await self._request(
                 "GET",
