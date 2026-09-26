@@ -128,6 +128,12 @@ budget. It also fails closed when Preset returns an asynchronous `202` chart
 response; this bounded connector does not pretend a pending job is an empty
 result or poll a provider-owned job queue. It does not silently truncate a time
 series and invent a current value.
+After chart fan-out, the adapter applies the same byte budget to the aggregate
+dashboard snapshot. If a large dashboard would exceed it, SignalWeave drops the
+entire observation/evidence payload and returns an explicit failed-quality
+receipt; it never sends a partial dashboard to Jev as if it were complete. Use
+`chart_ids` source parameters or split the workflow when a dashboard is larger
+than the configured budget.
 Transient rate limits and 5xx responses receive a bounded retry; ordinary
 client errors do not retry. Mounted secret files are supported with
 `PRESET_API_TOKEN_NAME_FILE` and `PRESET_API_TOKEN_SECRET_FILE`.

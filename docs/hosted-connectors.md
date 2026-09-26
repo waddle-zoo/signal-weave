@@ -64,8 +64,11 @@ Every connection has an explicit `HostedDataPolicy`:
 Raw results are never retained by the connector itself; only bounded normalized
 observations and evidence enter the decision receipt. A cloud deployment must
 enforce receipt retention, deletion, encryption, and data residency outside the
-adapter layer. `max_result_rows` and `max_snapshot_bytes` keep a provider
-response from becoming an unbounded Jev input.
+adapter layer. `max_result_rows` and `max_snapshot_bytes` keep provider
+responses and the aggregate Preset dashboard snapshot from becoming an
+unbounded Jev input. If a Preset dashboard exceeds the aggregate byte budget,
+the adapter fails closed with no partial evidence; use explicit `chart_ids` or
+split the workflow rather than treating a truncated dashboard as complete.
 
 ## Provider coverage
 

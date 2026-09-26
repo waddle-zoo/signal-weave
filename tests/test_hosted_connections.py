@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 
 import httpx
@@ -417,6 +418,53 @@ async def test_preset_api_token_refreshes_once_after_expiry():
 
 
 @pytest.mark.asyncio
+async def test_preset_concurrent_expiry_uses_one_refresh_exchange():
+    auth_calls = 0
+    resource_calls = 0
+    stale_requests = 0
+    stale_requests_released = asyncio.Event()
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal auth_calls, resource_calls, stale_requests
+        if request.url.host == "api.app.preset.test":
+            auth_calls += 1
+            return httpx.Response(
+                200,
+                json={"payload": {"access_token": f"preset-jwt-{auth_calls}"}},
+            )
+
+        resource_calls += 1
+        if request.headers["authorization"] == "Bearer preset-jwt-1":
+            stale_requests += 1
+            if stale_requests == 2:
+                stale_requests_released.set()
+            await stale_requests_released.wait()
+            return httpx.Response(401, json={"message": "expired"})
+        assert request.headers["authorization"] == "Bearer preset-jwt-2"
+        return httpx.Response(
+            200,
+            json={"result": {"id": request.url.path.rsplit("/", 1)[-1], "dashboard_title": "Growth"}},
+        )
+
+    client = PresetCloudClient(
+        "https://workspace.app.preset.test",
+        api_token_name="preset-name",
+        api_token_secret="preset-secret",
+        api_base_url="https://api.app.preset.test",
+        transport=httpx.MockTransport(handler),
+    )
+
+    metadata = await asyncio.gather(
+        client.get_dashboard_metadata(7),
+        client.get_dashboard_metadata(8),
+    )
+
+    assert [item["id"] for item in metadata] == ["7", "8"]
+    assert auth_calls == 2
+    assert resource_calls == 4
+
+
+@pytest.mark.asyncio
 async def test_preset_retries_after_token_refresh_with_the_new_token():
     auth_calls = 0
     resource_calls = 0
@@ -566,6 +614,83 @@ async def test_preset_rejects_provider_result_that_ignores_row_policy():
     assert snapshot.observations == []
     assert snapshot.metadata["data_quality"]["status"] == "failed"
     assert "max_result_rows" in snapshot.error
+
+
+@pytest.mark.asyncio
+async def test_preset_dashboard_budget_fails_closed_after_chart_fanout():
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/api/v1/dashboard/7":
+            return httpx.Response(
+                200,
+                json={
+                    "result": {
+                        "id": 7,
+                        "dashboard_title": "Growth",
+                        "position_json": {
+                            "chart": {"type": "CHART", "meta": {"chartId": 101}}
+                        },
+                    }
+                },
+            )
+        if request.url.path == "/api/v1/chart/101":
+            return httpx.Response(
+                200,
+                json={
+                    "result": {
+                        "id": 101,
+                        "slice_name": "Revenue",
+                        "params": '{"datasource":"17__table","metrics":["revenue"],"granularity_sqla":"day"}',
+                    }
+                },
+            )
+        if request.url.path == "/api/v1/chart/101/data":
+            return httpx.Response(
+                200,
+                json={
+                    "result": [
+                        {
+                            "data": [
+                                {"day": f"2026-09-{index:02d}", "revenue": index * 10}
+                                for index in range(1, 11)
+                            ]
+                        }
+                    ],
+                    "dashboard_filters": {"filters": []},
+                },
+            )
+        raise AssertionError(f"unexpected Preset request: {request.url}")
+
+    client = PresetCloudClient(
+        "https://workspace.app.preset.test",
+        access_token="preset-token",
+        transport=httpx.MockTransport(handler),
+    )
+    adapter = PresetAdapter(
+        client,
+        tenant_id="northstar",
+        policy=HostedDataPolicy(max_result_rows=20, max_snapshot_bytes=1024),
+    )
+
+    snapshot = await adapter.inspect(
+        SourceRef(key="growth", adapter="preset", resource="dashboard:7", label="Growth")
+    )
+
+    assert snapshot.observations == []
+    assert snapshot.evidence == []
+    assert snapshot.metadata["data_quality"] == {
+        "status": "failed",
+        "reason": "dashboard_snapshot_bytes_exceeded",
+        "snapshot_bytes": snapshot.metadata["data_quality"]["snapshot_bytes"],
+        "max_snapshot_bytes": 1024,
+        "chart_count": 1,
+    }
+    assert snapshot.metadata["data_quality"]["snapshot_bytes"] > 1024
+    assert "no partial evidence" in snapshot.error
+    assert len(
+        json.dumps(
+            snapshot.model_dump(mode="json"), ensure_ascii=False, separators=(",", ":")
+        ).encode("utf-8")
+    ) <= 1024
 
 
 @pytest.mark.asyncio

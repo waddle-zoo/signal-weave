@@ -9,6 +9,7 @@ generic adapter turns the resulting artifacts into SignalWeave snapshots.
 from __future__ import annotations
 
 import asyncio
+import json
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -102,24 +103,48 @@ class PresetCloudClient(SupersetClient):
         async with self._auth_lock:
             if self._token and not force_refresh:
                 return {"Authorization": f"Bearer {self._token}"}
-            async with httpx.AsyncClient(
-                base_url=self.api_base_url,
-                timeout=20,
-                transport=self._transport,
-            ) as client:
-                response = await self._request_with_retries(
-                    client,
-                    "POST",
-                    "/v1/auth/",
-                    json={"name": self._api_token_name, "secret": self._api_token_secret},
-                )
-                response.raise_for_status()
-                payload = response.json()
-                token = payload.get("payload", {}).get("access_token")
-                if not token:
-                    raise ValueError("Preset auth response did not contain payload.access_token")
-                self._token = str(token)
+            await self._exchange_token()
         return {"Authorization": f"Bearer {self._token}"}
+
+    async def _exchange_token(self) -> None:
+        """Exchange the configured API token for one short-lived JWT.
+
+        Callers that need to coordinate a refresh must hold ``_auth_lock``.
+        Keeping the exchange separate lets a 401 waiter reuse a token another
+        concurrent request obtained while it was waiting on that lock.
+        """
+
+        async with httpx.AsyncClient(
+            base_url=self.api_base_url,
+            timeout=20,
+            transport=self._transport,
+        ) as client:
+            response = await self._request_with_retries(
+                client,
+                "POST",
+                "/v1/auth/",
+                json={"name": self._api_token_name, "secret": self._api_token_secret},
+            )
+            response.raise_for_status()
+            payload = response.json()
+            token = payload.get("payload", {}).get("access_token")
+            if not token:
+                raise ValueError("Preset auth response did not contain payload.access_token")
+            self._token = str(token)
+
+    async def _refresh_after_401(self, stale_token: str | None) -> dict[str, str]:
+        """Refresh once for all requests that observed the same stale token."""
+
+        if not self._api_token_name or not self._api_token_secret:
+            raise RuntimeError("Preset access token is unavailable")
+        async with self._auth_lock:
+            # Another request may have refreshed while this one waited. Reuse
+            # that newer token instead of creating another auth exchange.
+            if self._token and self._token != stale_token:
+                return {"Authorization": f"Bearer {self._token}"}
+            self._token = None
+            await self._exchange_token()
+            return {"Authorization": f"Bearer {self._token}"}
 
     async def _request(
         self,
@@ -148,8 +173,9 @@ class PresetCloudClient(SupersetClient):
                 **request_kwargs,
             )
             if response.status_code == 401 and self._api_token_name:
-                self._token = None
-                request_headers = dict(await self._auth_headers(force_refresh=True))
+                stale_authorization = request_headers.get("Authorization", "")
+                stale_token = stale_authorization.removeprefix("Bearer ") or None
+                request_headers = dict(await self._refresh_after_401(stale_token))
                 response = await self._request_with_retries(
                     client,
                     method,
@@ -308,15 +334,68 @@ class PresetAdapter(SupersetAdapter):
             snapshot = await self.client.dashboard_snapshot(
                 dashboard_id, include_data=False, chart_ids=source.parameters.get("chart_ids")
             )
-            return self._metadata_only_snapshot(source, snapshot)
+            return self._enforce_dashboard_budget(
+                source, self._metadata_only_snapshot(source, snapshot)
+            )
         if self.policy.mode.value == "live_query" and not self.policy.allow_live_queries:
             raise ValueError("Preset live queries are disabled by the connection policy")
         snapshot = await super()._inspect_dashboard(source, dashboard_id)
-        return snapshot.model_copy(
+        scoped_snapshot = snapshot.model_copy(
             update={
                 "adapter": self.name,
                 "contract": self._contract(),
                 "metadata": {**snapshot.metadata, "provider": self.provider_name},
+            }
+        )
+        return self._enforce_dashboard_budget(source, scoped_snapshot)
+
+    def _enforce_dashboard_budget(self, source, snapshot):
+        """Keep the aggregate Jev input bounded across dashboard fan-out.
+
+        The HTTP client bounds each chart response, but a dashboard can contain
+        hundreds of charts. Without an aggregate check, a valid per-chart
+        response set could still create an oversized Jev request. Dropping the
+        entire evidence payload is safer than sending an incomplete slice that
+        could look like a complete dashboard analysis.
+        """
+
+        snapshot_bytes = len(
+            json.dumps(
+                snapshot.model_dump(mode="json"),
+                ensure_ascii=False,
+                separators=(",", ":"),
+            ).encode("utf-8")
+        )
+        if snapshot_bytes <= self.policy.max_snapshot_bytes:
+            return snapshot
+
+        chart_count = snapshot.metadata.get("chart_count")
+        if not isinstance(chart_count, int):
+            chart_count = len(snapshot.metadata.get("charts", []))
+        metadata = {
+            "provider": self.provider_name,
+            "data_policy_mode": self.policy.mode.value,
+            "dashboard_id": snapshot.metadata.get("dashboard_id"),
+            "parameters": source.parameters,
+            "data_quality": {
+                "status": "failed",
+                "reason": "dashboard_snapshot_bytes_exceeded",
+                "snapshot_bytes": snapshot_bytes,
+                "max_snapshot_bytes": self.policy.max_snapshot_bytes,
+                "chart_count": chart_count,
+            },
+        }
+        return snapshot.model_copy(
+            update={
+                "title": snapshot.title[:200],
+                "description": "",
+                "observations": [],
+                "evidence": [],
+                "metadata": metadata,
+                "error": (
+                    "Preset dashboard snapshot exceeded the configured "
+                    "max_snapshot_bytes limit; no partial evidence was sent to Jev"
+                ),
             }
         )
 
