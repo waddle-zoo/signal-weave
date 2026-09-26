@@ -39,6 +39,7 @@ returns an inspectable evidence bundle and receipt.
 | Pending Preset chart jobs do not become false empty data | HTTP 202 chart-data responses fail closed with an explicit asynchronous-response error; the adapter does not report a pending provider job as `no_data`. | Pass locally; provider-specific polling remains intentionally out of scope |
 | Preset dashboard fan-out stays bounded | Concurrent chart reads use one refresh exchange when a shared token expires; the aggregate dashboard snapshot also fails closed when it exceeds the configured byte budget instead of sending partial evidence to Jev. | Pass locally |
 | Explicit Superset resources scale with card scope | Dashboard and chart card anchors use one provider metadata lookup for authorization; they do not materialize the full workspace catalog. A large-catalog regression test fails if the list endpoint is touched. | Pass locally |
+| Preset evidence reaches the typed Jev contract | The production Preset adapter and Jev adapter are exercised together across 3 workspace shapes / 13 charts; normalized observations, evidence, visualization labels, dashboard filter context, typed probabilities, and partial-quality safe outcomes are asserted. | Pass locally; live Jev semantics not proven |
 | Preset runtime shadow path is exercised end to end | Three tenant-bound Preset-shaped workspaces run through environment bootstrap, MCP discovery, free-form onboarding, approval, Jev-only evaluation, SQLite receipt lookup, and idempotent replay. | 3 workspaces; 6 cards; 42 synthetic Jev calls; pass; live semantics not proven |
 | Shared hosted processes do not contact foreign tenant adapters | The source registry skips tenant-bound adapters outside the authenticated scope before list, search, authorization, or resolve calls. An adversarial two-tenant test plus an OIDC-authenticated MCP HTTP replay over two Preset connections records exactly one matching auth/dashboard path per tenant and zero foreign calls. | Pass locally; external identity-provider replay remains a deployment gate |
 | Live Superset provider matrix has no silent loss | The running Northstar Superset instance was checked across every saved dashboard and chart with the normal client path. | 20 dashboards; 580 charts; 41,002 observations; 580/580 extracted; 0 silent-loss issues |
@@ -59,6 +60,7 @@ From the repository root:
 ./.venv/bin/pytest tests/test_sources.py tests/test_hosted_connections.py -q
 make preset-trial
 make preset-generalization-trial
+make preset-jev-contract-trial
 make preset-runtime-shadow-trial
 # With a copied .env.preset and disposable/real host secret files:
 make preset-compose-check
