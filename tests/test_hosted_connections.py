@@ -18,7 +18,8 @@ from signalweave.hosted import (
     build_hosted_adapter,
 )
 from signalweave.looker_adapter import LookerAdapter, LookerCloudClient
-from signalweave.models import SourceRef
+from signalweave.mcp_server import create_mcp
+from signalweave.models import PrincipalContext, SourceRef
 from signalweave.preset_adapter import PresetAdapter, PresetCloudClient, PresetPolicyError
 from signalweave.runtime import build_runtime
 
@@ -957,6 +958,107 @@ def test_shared_runtime_requires_explicit_tenant_scope_for_multiple_connections(
         "preset__northstar-preset",
     ]
     assert awaitable_resources_are_empty(runtime)
+
+
+@pytest.mark.asyncio
+async def test_shared_runtime_mcp_principal_never_contacts_foreign_preset(
+    monkeypatch, tmp_path
+):
+    requests: list[tuple[str, str, str]] = []
+    tenants = {
+        "northstar": {"dashboard_id": "northstar-dashboard", "token": "northstar-jwt"},
+        "harbor-bank": {"dashboard_id": "harbor-dashboard", "token": "harbor-jwt"},
+    }
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        host = request.url.host.removesuffix(".preset.test")
+        if request.url.host == "api.app.preset.test":
+            credentials = json.loads(request.content)
+            tenant = next(
+                tenant
+                for tenant, values in tenants.items()
+                if credentials == {"name": f"{tenant}-name", "secret": f"{tenant}-secret"}
+            )
+            requests.append((tenant, request.method, request.url.path))
+            return httpx.Response(
+                200, json={"payload": {"access_token": tenants[tenant]["token"]}}
+            )
+        if host not in tenants:
+            return httpx.Response(404, json={"message": "unknown workspace"})
+        tenant = tenants[host]
+        requests.append((host, request.method, request.url.path))
+        if request.headers.get("authorization") != f"Bearer {tenant['token']}":
+            return httpx.Response(401, json={"message": "wrong tenant token"})
+        if request.url.path == "/api/v1/dashboard/":
+            return httpx.Response(
+                200,
+                json={
+                    "result": [
+                        {
+                            "id": tenant["dashboard_id"],
+                            "dashboard_title": f"{host} dashboard",
+                        }
+                    ],
+                    "count": 1,
+                },
+            )
+        return httpx.Response(404, json={"message": "unexpected route"})
+
+    def hosted_connection(tenant: str) -> HostedConnection:
+        return HostedConnection(
+            id=f"{tenant}-preset",
+            tenant_id=tenant,
+            provider=HostedProvider.PRESET,
+            base_url=f"https://{tenant}.preset.test",
+            external_workspace=f"{tenant}-workspace",
+            credential_ref=f"vault://{tenant}/preset",
+            auth_mode=HostedAuthMode.API_TOKEN,
+        )
+
+    monkeypatch.setenv("TYPESAFE_API_KEY", "test-key")
+    monkeypatch.delenv("TYPESAFE_API_KEY_FILE", raising=False)
+    monkeypatch.delenv("SUPERSET_URL", raising=False)
+    monkeypatch.delenv("SIGNALWEAVE_TENANT_ID", raising=False)
+    monkeypatch.delenv("SIGNALWEAVE_PRINCIPAL_ID", raising=False)
+    monkeypatch.setenv("SIGNALWEAVE_STORE_BACKEND", "sqlite")
+    monkeypatch.setenv("SIGNALWEAVE_STORE_PATH", str(tmp_path / "signalweave.db"))
+    connections = [hosted_connection(tenant) for tenant in tenants]
+    vault = InMemoryCredentialVault(
+        {
+            connection.credential_ref: {
+                "name": f"{tenant}-name",
+                "secret": f"{tenant}-secret",
+                "api_base_url": "https://api.app.preset.test",
+            }
+            for tenant, connection in zip(tenants, connections, strict=True)
+        }
+    )
+
+    runtime = build_runtime(
+        hosted_connections=connections,
+        credential_vault=vault,
+        http_transport=httpx.MockTransport(handler),
+    )
+    server = create_mcp(
+        runtime,
+        principal_resolver=lambda _ctx: PrincipalContext(
+            principal_id="northstar-agent", tenant_id="northstar"
+        ),
+    )
+    list_resources = server._tool_manager.get_tool("list_resources").fn
+    inspect_resource = server._tool_manager.get_tool("inspect_resource").fn
+
+    visible = await list_resources(ctx=object())
+    foreign = await inspect_resource(
+        adapter="preset__harbor-bank-preset",
+        resource="dashboard:harbor-dashboard",
+        ctx=object(),
+    )
+
+    assert {item["contract"]["tenant_id"] for item in visible} == {"northstar"}
+    assert foreign["error"] is not None
+    assert {item[0] for item in requests} == {"northstar"}
+    assert all("harbor" not in item[0] for item in requests)
 
 
 def awaitable_resources_are_empty(runtime):

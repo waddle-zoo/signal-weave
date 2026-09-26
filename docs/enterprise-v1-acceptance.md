@@ -37,11 +37,11 @@ returns an inspectable evidence bundle and receipt.
 | Jev result provenance is inspectable | Discovery receipts, source candidates, roles, probabilities, plan evaluator, context version, and decision receipts are persisted or returned. | Pass |
 | Hosted Preset boundary is explicit and exercised | The production Preset adapter, token refresh, tenant-scoped policy limits, metadata/cached/live query modes, and varied chart-shape fixture trial pass; the real-account acceptance runner requires a tenant principal, `jev-latest`, explicit human approval, and a delivery-disabled receipt. | Fixture pass; customer gate open |
 | Preset runtime shadow path is exercised end to end | Three tenant-bound Preset-shaped workspaces run through environment bootstrap, MCP discovery, free-form onboarding, approval, Jev-only evaluation, SQLite receipt lookup, and idempotent replay. | 3 workspaces; 6 cards; 42 synthetic Jev calls; pass; live semantics not proven |
-| Shared hosted processes do not contact foreign tenant adapters | The source registry skips tenant-bound adapters outside the authenticated scope before list, search, authorization, or resolve calls. An adversarial two-tenant test records provider contacts and requires zero foreign calls. | Pass locally; external identity-provider replay remains a deployment gate |
+| Shared hosted processes do not contact foreign tenant adapters | The source registry skips tenant-bound adapters outside the authenticated scope before list, search, authorization, or resolve calls. An adversarial two-tenant test plus an actual shared Preset/MCP runtime records provider contacts and requires zero foreign calls. | Pass locally; external identity-provider replay remains a deployment gate |
 | Live Superset provider matrix has no silent loss | The running Northstar Superset instance was checked across every saved dashboard and chart with the normal client path. | 20 dashboards; 580 charts; 41,002 observations; 580/580 extracted; 0 silent-loss issues |
 | Hosted credential injection is deployment-safe | Docker Compose secret overlay mounts Preset API-token files, clears direct `.env.preset` token values, and the runtime tests both value/file exclusivity and tenant binding. | Pass locally; vault/KMS and real tenant gate remain open |
 | Existing enterprise workflows remain the owner | MCP tools return typed decisions and evidence; SignalWeave does not execute arbitrary SQL, tools, DAGs, or notifications. | Pass |
-| Regression safety | Full repository tests and lint. | 266 passed, 2 skipped; Ruff clean |
+| Regression safety | Full repository tests and lint. | 267 passed, 2 skipped; Ruff clean |
 
 ## Reproduction
 
@@ -59,7 +59,7 @@ make preset-runtime-shadow-trial
 make superset-chart-matrix
 ```
 
-The current verified regression result is `266 passed, 2 skipped` with Ruff
+The current verified regression result is `267 passed, 2 skipped` with Ruff
 clean. The runtime-shadow and chart-matrix commands are separate evidence
 surfaces: the former uses synthetic Preset and TypeSafe transports to exercise
 the production runtime, while the latter uses the live local Superset service
