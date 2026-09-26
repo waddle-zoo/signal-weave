@@ -159,9 +159,7 @@ class SupersetAdapter:
             and self.tenant_id not in set(authorized_tenants)
         ):
             return None
-        resource_type, separator, resource_id = source.resource.partition(":")
-        if not separator or not resource_id:
-            raise ValueError("Superset resources must use dashboard:<id> or chart:<id>")
+        resource_type, resource_id = _resource_id(source.resource)
         if resource_type == "dashboard":
             metadata = await self.client.get_dashboard_metadata(resource_id)
             if str(metadata.get("id")) != resource_id:
@@ -234,9 +232,7 @@ class SupersetAdapter:
         ]
 
     async def inspect(self, source: SourceRef) -> ResourceSnapshot:
-        resource_type, separator, resource_id = source.resource.partition(":")
-        if not separator or not resource_id:
-            raise ValueError("Superset resources must use dashboard:<id> or chart:<id>")
+        resource_type, resource_id = _resource_id(source.resource)
         if resource_type == "dashboard":
             return await self._inspect_dashboard(source, resource_id)
         if resource_type == "chart":
@@ -420,3 +416,16 @@ class SupersetAdapter:
             or (params.get("viz_type") if isinstance(params, dict) else None)
             or "unknown"
         )
+
+
+def _resource_id(resource: str) -> tuple[str, str]:
+    """Parse a Superset resource without allowing a path/query injection."""
+
+    resource_type, separator, resource_id = resource.partition(":")
+    if not separator or not resource_id or any(
+        character in resource_id for character in "/?#\x00\r\n"
+    ):
+        raise ValueError("Superset resources must use dashboard:<id> or chart:<id>")
+    if resource_type not in {"dashboard", "chart"}:
+        raise ValueError("Superset resources must use dashboard:<id> or chart:<id>")
+    return resource_type, resource_id

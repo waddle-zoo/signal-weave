@@ -608,6 +608,18 @@ async def test_superset_authorizes_explicit_chart_without_scanning_catalog():
 
 
 @pytest.mark.asyncio
+async def test_superset_rejects_resource_path_injection_before_provider_contact():
+    adapter = SupersetAdapter(FakeSupersetClient(), tenant_id="northstar")
+
+    for resource in ("dashboard:7/../8", "chart:62?query=foreign", "dashboard:7\nX"):
+        source = SourceRef(key="malformed", adapter="superset", resource=resource, label="Bad")
+        with pytest.raises(ValueError, match="dashboard:<id> or chart:<id>"):
+            await adapter.authorize(source, authorized_tenants={"northstar"})
+        with pytest.raises(ValueError, match="dashboard:<id> or chart:<id>"):
+            await adapter.inspect(source)
+
+
+@pytest.mark.asyncio
 async def test_superset_adapter_uses_server_paged_catalog_search():
     class PaginatedClient(FakeSupersetClient):
         async def list_dashboards_page(self, *, page, page_size, query):
