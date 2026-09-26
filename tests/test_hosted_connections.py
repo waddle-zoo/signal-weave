@@ -593,7 +593,8 @@ def test_factory_requires_vault_and_builds_tenant_bound_adapters():
     vault = InMemoryCredentialVault(
         {
             "vault://northstar/preset": {
-                "access_token": "preset-token",
+                "name": "preset-name",
+                "secret": "preset-secret",
             },
             "vault://northstar/hex": {"access_token": "hex-token"},
             "vault://northstar/looker": {"access_token": "looker-token"},
@@ -629,7 +630,9 @@ def test_runtime_can_register_hosted_connections_without_global_provider_config(
     monkeypatch.setenv("SIGNALWEAVE_STORE_BACKEND", "sqlite")
     monkeypatch.setenv("SIGNALWEAVE_STORE_PATH", str(tmp_path / "signalweave.db"))
     item = connection(HostedProvider.PRESET)
-    vault = InMemoryCredentialVault({item.credential_ref: {"access_token": "preset-token"}})
+    vault = InMemoryCredentialVault(
+        {item.credential_ref: {"name": "preset-name", "secret": "preset-secret"}}
+    )
 
     runtime = build_runtime(
         hosted_connections=[item],
@@ -720,6 +723,41 @@ def test_runtime_rejects_unowned_preset_retention_environment(monkeypatch, tmp_p
         build_runtime()
 
 
+def test_preset_factory_enforces_declared_auth_mode():
+    item = connection(HostedProvider.PRESET)
+    bearer_vault = InMemoryCredentialVault({item.credential_ref: {"access_token": "token"}})
+    with pytest.raises(ValueError, match="API_TOKEN"):
+        build_hosted_adapter(item, bearer_vault)
+
+    bearer_item = item.model_copy(update={"auth_mode": HostedAuthMode.BEARER})
+    bearer_adapter = build_hosted_adapter(bearer_item, bearer_vault)
+    assert isinstance(bearer_adapter, PresetAdapter)
+
+    oauth_item = item.model_copy(update={"auth_mode": HostedAuthMode.OAUTH})
+    api_vault = InMemoryCredentialVault(
+        {item.credential_ref: {"name": "name", "secret": "secret"}}
+    )
+    with pytest.raises(ValueError, match="OAuth"):
+        build_hosted_adapter(oauth_item, api_vault)
+
+
+def test_runtime_rejects_explicit_hosted_connection_tenant_mismatch(monkeypatch, tmp_path):
+    monkeypatch.setenv("TYPESAFE_API_KEY", "test-key")
+    monkeypatch.delenv("TYPESAFE_API_KEY_FILE", raising=False)
+    monkeypatch.delenv("SUPERSET_URL", raising=False)
+    monkeypatch.setenv("SIGNALWEAVE_TENANT_ID", "northstar")
+    monkeypatch.setenv("SIGNALWEAVE_PRINCIPAL_ID", "agent")
+    monkeypatch.setenv("SIGNALWEAVE_STORE_BACKEND", "sqlite")
+    monkeypatch.setenv("SIGNALWEAVE_STORE_PATH", str(tmp_path / "signalweave.db"))
+    item = connection(HostedProvider.PRESET, tenant="harbor-bank")
+    vault = InMemoryCredentialVault(
+        {item.credential_ref: {"name": "name", "secret": "secret"}}
+    )
+
+    with pytest.raises(RuntimeError, match="must match SIGNALWEAVE_TENANT_ID"):
+        build_runtime(hosted_connections=[item], credential_vault=vault)
+
+
 def test_runtime_rejects_mixed_preset_credential_modes(monkeypatch, tmp_path):
     monkeypatch.setenv("TYPESAFE_API_KEY", "test-key")
     monkeypatch.delenv("TYPESAFE_API_KEY_FILE", raising=False)
@@ -804,8 +842,8 @@ def test_shared_runtime_requires_explicit_tenant_scope_for_multiple_connections(
     second = connection(HostedProvider.PRESET, tenant="harbor-bank")
     vault = InMemoryCredentialVault(
         {
-            first.credential_ref: {"access_token": "northstar-token"},
-            second.credential_ref: {"access_token": "harbor-token"},
+            first.credential_ref: {"name": "northstar-name", "secret": "northstar-secret"},
+            second.credential_ref: {"name": "harbor-name", "secret": "harbor-secret"},
         }
     )
 

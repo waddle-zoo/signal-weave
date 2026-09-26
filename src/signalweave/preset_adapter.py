@@ -39,6 +39,8 @@ class PresetCloudClient(SupersetClient):
         retry_backoff_seconds: float = 0.25,
         transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
+        if access_token and (api_token_name or api_token_secret):
+            raise ValueError("Preset requires exactly one authentication mode")
         if not access_token and not (api_token_name and api_token_secret):
             raise ValueError("Preset requires access_token or api token name and secret")
         if max_retries < 0:

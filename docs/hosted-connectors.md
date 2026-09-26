@@ -37,6 +37,11 @@ adapter factory gives each connection a stable route such as
 request-scoped tenant authorization select one connection without allowing a
 provider name collision.
 
+Credential mode is part of the connection contract. Preset API-token
+connections require only the token name and secret; bearer connections require
+only an access token; unsupported OAuth declarations fail closed rather than
+falling back to whichever secret shape happens to be present.
+
 ## Data policy
 
 Every connection has an explicit `HostedDataPolicy`:

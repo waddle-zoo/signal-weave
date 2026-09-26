@@ -256,6 +256,15 @@ def build_runtime(
             "SIGNALWEAVE_TENANT_ID and SIGNALWEAVE_PRINCIPAL_ID must be configured together"
         )
     hosted_tenants = {connection.tenant_id for connection in hosted_connections}
+    if tenant_id:
+        mismatched_hosted_tenants = sorted(
+            tenant for tenant in hosted_tenants if tenant != tenant_id
+        )
+        if mismatched_hosted_tenants:
+            raise RuntimeError(
+                "hosted connection tenant must match SIGNALWEAVE_TENANT_ID: "
+                + ", ".join(mismatched_hosted_tenants)
+            )
     default_authorized_tenants: list[str] | None
     if tenant_id:
         default_authorized_tenants = [tenant_id]

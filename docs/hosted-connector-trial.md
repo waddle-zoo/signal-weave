@@ -12,11 +12,12 @@ Run it with:
 uv run pytest tests/test_hosted_connections.py -q
 ```
 
-The current run covers 33 passing cases:
+The current run covers 35 passing cases:
 
 | Boundary | What is proven |
 | --- | --- |
 | Credential handling | Preset API-token exchange works; persisted connection metadata contains only a vault reference |
+| Credential mode binding | Preset API-token, bearer, and unsupported OAuth connection declarations fail or build explicitly according to their credential shape |
 | Preset | Hosted dashboard/chart data is normalized into SignalWeave observations and tenant contracts |
 | Preset policy | Metadata-only mode does not call chart-data endpoints |
 | Preset safety policy | Expired API tokens refresh once; auth and workspace 429/5xx responses retry with a bounded delay; row and response-byte limits fail closed |
@@ -26,6 +27,7 @@ The current run covers 33 passing cases:
 | Hex search | The adapter reports that the API is cursor-paginated and locally filters a bounded page rather than pretending native text search exists |
 | Looker | A cached Look result is retrieved with the provider cache flag and normalized into observations |
 | Tenant isolation | Connection lookup, adapter routes, catalog scope, and shared-runtime defaults do not cross tenants |
+| Tenant bootstrap | Explicit hosted connections that disagree with the configured runtime tenant fail closed |
 | Jev boundary | `build_runtime` constructs hosted adapters around the existing Jev-only runtime without introducing a heuristic path |
 
 The full repository suite is also the regression gate:

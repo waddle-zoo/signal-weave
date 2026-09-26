@@ -126,6 +126,27 @@ def hosted_adapter_name(connection: HostedConnection) -> str:
     return f"{connection.provider.value}__{suffix}"[:80]
 
 
+def _preset_credentials(
+    connection: HostedConnection, credentials: Mapping[str, str]
+) -> tuple[str | None, str | None, str | None]:
+    """Validate the credential shape declared by a Preset connection."""
+
+    access_token = credentials.get("access_token")
+    token_name = credentials.get("name")
+    token_secret = credentials.get("secret")
+    if connection.auth_mode == HostedAuthMode.API_TOKEN:
+        if access_token or not (token_name and token_secret):
+            raise ValueError(
+                "Preset API_TOKEN connections require name and secret credentials only"
+            )
+        return None, token_name, token_secret
+    if connection.auth_mode == HostedAuthMode.BEARER:
+        if not access_token or token_name or token_secret:
+            raise ValueError("Preset BEARER connections require an access_token only")
+        return access_token, None, None
+    raise ValueError("Preset OAuth connections are not supported by this adapter")
+
+
 class InMemoryHostedConnectionStore:
     """Tenant-safe reference store used by local deployments and tests."""
 
@@ -242,11 +263,14 @@ def build_hosted_adapter(
     if connection.provider == HostedProvider.PRESET:
         from .preset_adapter import PresetAdapter, PresetCloudClient
 
+        access_token, api_token_name, api_token_secret = _preset_credentials(
+            connection, credentials
+        )
         client = PresetCloudClient(
             connection.base_url,
-            access_token=credentials.get("access_token"),
-            api_token_name=credentials.get("name"),
-            api_token_secret=credentials.get("secret"),
+            access_token=access_token,
+            api_token_name=api_token_name,
+            api_token_secret=api_token_secret,
             api_base_url=credentials.get("api_base_url", "https://api.app.preset.io"),
             transport=transport,
         )
