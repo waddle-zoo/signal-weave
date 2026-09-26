@@ -49,6 +49,8 @@ class PresetCloudClient(SupersetClient):
                 raise ValueError(f"{field_name} must use https")
             if parsed.username or parsed.password:
                 raise ValueError(f"{field_name} must not contain credentials")
+            if parsed.path not in {"", "/"}:
+                raise ValueError(f"{field_name} must be an origin without a path")
             if parsed.query or parsed.fragment:
                 raise ValueError(
                     f"{field_name} must be an origin without query or fragment"
