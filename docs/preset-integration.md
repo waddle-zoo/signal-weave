@@ -70,7 +70,9 @@ TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
 This exercises the dashboard-scoped chart-data endpoint and fails unless it
 returns usable normalized observations. It does not create a card, call Jev,
 approve anything, or deliver a notification. A successful probe proves the
-provider boundary; it is still not proof that the business card is correct.
+provider boundary; it is still not proof that the business card is correct. A
+`metadata_only` connection refuses this probe rather than bypassing its data
+policy.
 
 Preset API credentials must be kept in an untracked secret file or deployment
 secret manager. They are loaded into memory only to construct the adapter and

@@ -14,6 +14,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from signalweave.hosted import HostedDataMode
 from signalweave.preset_adapter import PresetAdapter
 from signalweave.runtime import build_runtime
 
@@ -46,20 +47,28 @@ async def run(
     jev_requests = getattr(getattr(judger, "metrics", None), "requests", 0)
     chart_probe: dict[str, Any] | None = None
     if dashboard_id and chart_id:
-        snapshot = await adapter.client.dashboard_snapshot(
-            dashboard_id,
-            include_data=True,
-            chart_ids=[chart_id],
-        )
-        chart = snapshot.charts[0]
-        chart_probe = {
-            "dashboard_id": dashboard_id,
-            "chart_id": chart_id,
-            "semantic_status": chart.semantic_status,
-            "observation_count": len(chart.observations),
-            "error": chart.error,
-            "passed": chart.error is None and bool(chart.observations),
-        }
+        if adapter.policy.mode == HostedDataMode.METADATA_ONLY:
+            chart_probe = {
+                "dashboard_id": dashboard_id,
+                "chart_id": chart_id,
+                "error": "metadata_only policy forbids chart-data probes",
+                "passed": False,
+            }
+        else:
+            snapshot = await adapter.client.dashboard_snapshot(
+                dashboard_id,
+                include_data=True,
+                chart_ids=[chart_id],
+            )
+            chart = snapshot.charts[0]
+            chart_probe = {
+                "dashboard_id": dashboard_id,
+                "chart_id": chart_id,
+                "semantic_status": chart.semantic_status,
+                "observation_count": len(chart.observations),
+                "error": chart.error,
+                "passed": chart.error is None and bool(chart.observations),
+            }
     report = {
         "trial": "preset-bootstrap-check",
         "adapter": adapter_name,
