@@ -159,7 +159,8 @@ async def test_preset_cloud_token_exchange_and_dashboard_snapshot():
                                 },
                             ]
                         }
-                    ]
+                    ],
+                    "dashboard_filters": {"filters": []},
                 },
             )
         if request.url.path == "/api/v1/chart/101":
@@ -494,7 +495,8 @@ async def test_preset_rejects_provider_result_that_ignores_row_policy():
                                 {"day": "2026-09-02", "revenue": 120},
                             ]
                         }
-                    ]
+                    ],
+                    "dashboard_filters": {"filters": []},
                 },
             )
         raise AssertionError(f"unexpected Preset request: {request.url}")
@@ -517,6 +519,24 @@ async def test_preset_rejects_provider_result_that_ignores_row_policy():
     assert snapshot.observations == []
     assert snapshot.metadata["data_quality"]["status"] == "failed"
     assert "max_result_rows" in snapshot.error
+
+
+@pytest.mark.asyncio
+async def test_preset_dashboard_read_fails_closed_without_filter_metadata():
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"result": [{"data": [{"revenue": 120}]}]})
+
+    client = PresetCloudClient(
+        "https://workspace.app.preset.test",
+        access_token="preset-token",
+        transport=httpx.MockTransport(handler),
+    )
+
+    with pytest.raises(PresetPolicyError, match="dashboard_filters"):
+        await client.chart_data(
+            {"id": 101, "params": {"metrics": ["revenue"]}},
+            dashboard_id="7",
+        )
 
 
 @pytest.mark.asyncio

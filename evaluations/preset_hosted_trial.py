@@ -90,7 +90,13 @@ class WorkspaceTransport:
                     400,
                     json={"message": "dashboard filter context was not supplied"},
                 )
-            return httpx.Response(200, json={"result": chart.get("result", [])})
+            return httpx.Response(
+                200,
+                json={
+                    "result": chart.get("result", []),
+                    "dashboard_filters": {"filters": []},
+                },
+            )
 
         if request.url.path.startswith(prefix) and request.url.path != "/api/v1/chart/data":
             chart_id = request.url.path.removeprefix(prefix)

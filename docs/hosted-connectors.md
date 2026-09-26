@@ -83,7 +83,10 @@ cache state. For dashboard monitoring, it calls Preset's chart-specific data
 endpoint with `filter_dashboard_id`; this is important because the provider,
 not SignalWeave, owns dashboard filter scope, default values, and the access
 check that the chart belongs to the dashboard. Standalone chart reads continue
-to use the saved-query data endpoint and have no dashboard filter context.
+to use the saved-query data endpoint and have no dashboard filter context. A
+dashboard-scoped response must also include Preset's `dashboard_filters`
+metadata; otherwise the connector fails closed rather than treating a possibly
+unfiltered 200 response as evidence.
 
 Preset MCP remains useful for interactive onboarding by a customer-owned agent,
 but recurring monitoring should use the direct hosted API path. The connector

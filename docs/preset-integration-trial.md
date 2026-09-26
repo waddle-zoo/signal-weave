@@ -32,6 +32,7 @@ The trial currently proves:
 | Chart coverage | 13 chart definitions across 12 visualization types, 9 with usable observations, 4 deliberately degraded |
 | Result normalization | 17 observations across the varied envelopes and chart definitions |
 | Dashboard filter context | Every dashboard chart read uses Preset's chart-specific data endpoint with the dashboard ID, so provider-side in-scope filter defaults and access checks are applied |
+| Filter response contract | Dashboard reads fail closed unless the provider returns `dashboard_filters` metadata confirming the dashboard-context response shape |
 | Partial failure behavior | Provider and semantic failures remain visible as partial quality, not silently dropped |
 | Metadata-only policy | Dashboard metadata is retrieved without chart metadata or result calls |
 | Cached-results guard | Every dashboard chart request sends `force=false`; response row and byte budgets are enforced before normalization |

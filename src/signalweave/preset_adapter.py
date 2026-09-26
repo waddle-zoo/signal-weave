@@ -239,7 +239,14 @@ class PresetCloudClient(SupersetClient):
             response = await self._request(
                 "POST", "/api/v1/chart/data", timeout=60, json=payload
             )
-        result = response.json().get("result", [])
+        body = response.json()
+        if not isinstance(body, dict):
+            raise PresetPolicyError("Preset chart response was not a JSON object")
+        if dashboard_id is not None and not isinstance(body.get("dashboard_filters"), dict):
+            raise PresetPolicyError(
+                "Preset dashboard-filter response did not include dashboard_filters metadata"
+            )
+        result = body.get("result", [])
         envelopes = [result] if isinstance(result, dict) else result if isinstance(result, list) else []
         if self.max_result_rows is not None:
             row_count = sum(
