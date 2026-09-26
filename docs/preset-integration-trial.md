@@ -50,6 +50,29 @@ proves the source/evidence boundary that Jev receives. A real pilot must add a
 customer-authorized Preset smoke test and a live Jev shadow run over an
 approved card before enabling any caller-owned delivery.
 
+## Preset-to-Jev contract proof
+
+The companion contract trial joins that provider boundary to the production
+`InsightEngine` and `JevJudger` without a live TypeSafe request:
+
+```bash
+make preset-jev-contract-trial
+cat artifacts/preset-jev-contract-trial.json
+```
+
+It runs every fixture workspace through the real Preset client and adapter,
+then through the real typed Jev plan compilation, judgment parsing, and safety
+gates. The synthetic SDK transport records the exact state sent to the judge,
+so the report verifies that normalized observations and evidence—not raw
+vendor responses—reach Jev, dashboard filter context is preserved, and partial
+data is downgraded to `insufficient_data`. It also exercises varied
+visualization/result shapes and a healthy single-chart slice that reaches an
+actionable `notify` result.
+
+This proves wiring and fail-safe behavior, not Jev's live semantic accuracy,
+customer authorization, provider permissions, or managed hosting. Those remain
+explicit acceptance gates for a real tenant.
+
 The direct Preset API is also a commercial capability boundary: Preset's
 documentation currently lists it as Enterprise-only. A non-Enterprise hosted
 customer needs the remote-MCP dual-connector pattern or an approved relay until

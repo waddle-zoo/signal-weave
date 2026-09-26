@@ -1,4 +1,4 @@
-.PHONY: install test lint prove benchmark daily-trial enterprise-trial discovery-trial bundle-trial query-trial retrieval-explanation-trial preset-trial preset-bootstrap-check preset-provider-smoke preset-live-trial verify docker-up docker-down
+.PHONY: install test lint prove benchmark daily-trial enterprise-trial discovery-trial bundle-trial query-trial retrieval-explanation-trial preset-trial preset-jev-contract-trial preset-bootstrap-check preset-provider-smoke preset-live-trial verify docker-up docker-down
 
 install:
 	uv sync --extra dev
@@ -36,6 +36,9 @@ retrieval-explanation-trial:
 
 preset-trial:
 	uv run python evaluations/preset_hosted_trial.py --output artifacts/preset-hosted-trial.json
+
+preset-jev-contract-trial:
+	uv run python -m evaluations.preset_jev_contract_trial --output artifacts/preset-jev-contract-trial.json
 
 preset-bootstrap-check:
 	TYPESAFE_API_KEY_FILE=$${TYPESAFE_API_KEY_FILE:?set a TypeSafe key file} \
