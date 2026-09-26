@@ -82,6 +82,22 @@ The card must contain real IDs and the deployment must load its Preset and
 SignalWeave credentials. This command invokes the live Jev path and should be
 run only against an approved shadow card; it does not contact the destination.
 
+For the stronger free-form onboarding proof, use the live trial runner. It
+discovers candidates from the Preset workspace, returns a draft for review, and
+only continues when the operator explicitly passes `--approve`:
+
+```bash
+PRESET_TRIAL_GOAL="Monitor the executive growth dashboard for meaningful changes" \
+PRESET_TRIAL_WHY="Tell Growth leadership when the evidence warrants investigation" \
+TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
+  make preset-live-trial
+```
+
+This is an acceptance test against a real workspace, not a synthetic benchmark;
+it consumes live Jev calls and must be run with a customer-approved shadow card
+policy. The generated receipt must show `evaluator=jev-latest`, evidence, and
+`delivery_enabled=false` before the trial is considered successful.
+
 ## Can a hosted Preset customer use SignalWeave without hosting it?
 
 Yes, but that requires a managed SignalWeave service. The hosted architecture

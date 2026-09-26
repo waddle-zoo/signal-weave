@@ -59,3 +59,16 @@ attaching to a deployment review:
 make preset-trial
 cat artifacts/preset-hosted-trial.json
 ```
+
+The deterministic trial is not the customer acceptance gate. That gate is the
+real-account runner:
+
+```bash
+PRESET_TRIAL_GOAL="..." \
+PRESET_TRIAL_WHY="..." \
+TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
+  make preset-live-trial
+```
+
+It deliberately requires an explicit approval flag and fails if the final
+receipt is not a Jev-backed, delivery-disabled shadow result.

@@ -1,4 +1,4 @@
-.PHONY: install test lint prove benchmark daily-trial enterprise-trial discovery-trial bundle-trial query-trial retrieval-explanation-trial preset-trial verify docker-up docker-down
+.PHONY: install test lint prove benchmark daily-trial enterprise-trial discovery-trial bundle-trial query-trial retrieval-explanation-trial preset-trial preset-live-trial verify docker-up docker-down
 
 install:
 	uv sync --extra dev
@@ -36,6 +36,15 @@ retrieval-explanation-trial:
 
 preset-trial:
 	uv run python evaluations/preset_hosted_trial.py --output artifacts/preset-hosted-trial.json
+
+preset-live-trial:
+	TYPESAFE_API_KEY_FILE=$${TYPESAFE_API_KEY_FILE:?set a live TypeSafe key file} \
+	uv run python evaluations/preset_live_onboarding_trial.py \
+		--goal "$${PRESET_TRIAL_GOAL:?set a human monitoring goal}" \
+		--why "$${PRESET_TRIAL_WHY:?set why the goal matters}" \
+		--destination "$${PRESET_TRIAL_DESTINATION:-slack://shadow-review}" \
+		--approve \
+		--output artifacts/preset-live-onboarding-shadow.json
 
 verify:
 	uv run ruff check .
