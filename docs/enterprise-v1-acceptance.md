@@ -2,7 +2,7 @@
 
 **Branch:** `feat/decision-feedback-contract`  
 **Scope:** controlled enterprise pilot, not autonomous production delivery  
-**Last verified:** 2026-09-25
+**Last verified:** 2026-09-26
 
 ## V1 claim
 
@@ -35,8 +35,9 @@ returns an inspectable evidence bundle and receipt.
 | Authorized retrieval works across messy shapes | 30 onboarding scenarios across BI, metric, notebook, workflow, quality, ownership, stale, revoked, paginated, and no-match cases. | 30/30 safe; 1.00 required-candidate recall; 0 leaks |
 | Tenant-aware native search is required for complete coverage | Adapters that accept `authorized_tenants` receive the scope at search time; older unscoped indexes have provider-wide counts redacted and remain review-visible. | Pass locally; adapter contract gate remains open per deployment |
 | Jev result provenance is inspectable | Discovery receipts, source candidates, roles, probabilities, plan evaluator, context version, and decision receipts are persisted or returned. | Pass |
+| Hosted Preset boundary is explicit and exercised | The production Preset adapter, token refresh, tenant-scoped policy limits, metadata/cached/live query modes, and varied chart-shape fixture trial pass; the real-account acceptance runner requires a tenant principal, `jev-latest`, explicit human approval, and a delivery-disabled receipt. | Fixture pass; customer gate open |
 | Existing enterprise workflows remain the owner | MCP tools return typed decisions and evidence; SignalWeave does not execute arbitrary SQL, tools, DAGs, or notifications. | Pass |
-| Regression safety | Full repository tests and lint. | 198 passed, 1 skipped; Ruff clean |
+| Regression safety | Full repository tests and lint. | 237 passed, 2 skipped; Ruff clean |
 
 ## Reproduction
 
@@ -47,6 +48,19 @@ From the repository root:
 ./.venv/bin/ruff check src tests evaluations
 ./.venv/bin/python -m evaluations.onboarding_contract_trial --format markdown
 ./.venv/bin/python -m evaluations.onboarding_adversarial_review --format markdown
+make preset-trial
+```
+
+For the hosted Preset customer acceptance gate, run the explicit shadow trial
+from [`docs/preset-integration.md`](preset-integration.md). It is intentionally
+not included in the offline reproduction commands because it requires a
+customer-authorized Preset credential and a live TypeSafe key:
+
+```bash
+PRESET_TRIAL_GOAL="..." \
+PRESET_TRIAL_WHY="..." \
+TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
+  make preset-live-trial
 ```
 
 The onboarding trial is intentionally not presented as a live Jev accuracy
@@ -114,7 +128,10 @@ for a specific customer, run a staging replay with that customer’s identity
 provider, adapter credentials, source permissions, card catalog, and operator
 labels. Measure useful-alert precision, investigation rate, time-to-decision,
 source-fetch cost, and delivery reliability. The existing synthetic and local
-trials do not substitute for those labels or prove warehouse cost savings.
+trials do not substitute for those labels or prove warehouse cost savings. The
+repository does not claim that a real company has passed this gate until the
+live runner produces a receipt and the company’s operators label the result
+useful in shadow mode.
 
 The correct next step after v1 is a bounded customer pilot, not a larger
 feature surface: one tenant, one or two source adapters, a small set of human
