@@ -146,6 +146,9 @@ async def _inspect_workspace(workspace: dict[str, Any]) -> dict[str, Any]:
         "workspace": workspace["id"],
         "tenant_id": workspace["tenant_id"],
         "chart_count": len(workspace["charts"]),
+        "viz_types": sorted(
+            {str(chart.get("viz_type") or "unknown") for chart in workspace["charts"]}
+        ),
         "observations": len(snapshot.observations),
         "charts_with_observations": len(observed_chart_ids),
         "chart_errors": len(chart_errors),
@@ -304,6 +307,7 @@ async def _policy_cases(workspace: dict[str, Any]) -> dict[str, Any]:
 async def run_trial() -> dict[str, Any]:
     workspaces = _load_fixture()
     inspections = [await _inspect_workspace(workspace) for workspace in workspaces]
+    viz_types = sorted({viz_type for item in inspections for viz_type in item["viz_types"]})
     metadata = await _metadata_only_case(workspaces[0])
     refresh = await _refresh_case(workspaces[0])
     live_query = await _live_query_case(workspaces[0])
@@ -314,6 +318,7 @@ async def run_trial() -> dict[str, Any]:
             item["chart_count"] > 0 and item["request_counts"]["dashboard"] == 1
             for item in inspections
         ),
+        "varied_chart_types_are_reported": len(viz_types) >= 8,
         "cached_queries_are_bounded": all(item["cached_query_guards"] for item in inspections),
         "partial_provider_failures_are_visible": any(
             item["chart_errors"] > 0 and item["quality_status"] == "partial"
@@ -337,6 +342,7 @@ async def run_trial() -> dict[str, Any]:
         "trial": "preset-hosted-integration",
         "fixture": str(FIXTURE.relative_to(ROOT)),
         "workspace_results": inspections,
+        "viz_types": viz_types,
         "metadata_only": metadata,
         "token_refresh": refresh,
         "live_query": live_query,

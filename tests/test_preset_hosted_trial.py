@@ -16,3 +16,5 @@ async def test_preset_hosted_trial_passes_all_declared_checks():
         "harbor-bank",
         "orbitworks",
     }
+    assert len(report["viz_types"]) == 12
+    assert "custom_plugin" in report["viz_types"]
