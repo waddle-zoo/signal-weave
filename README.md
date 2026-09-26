@@ -320,6 +320,8 @@ For the Preset-specific integration proof—varied chart/result shapes, partial
 provider failures, token refresh, metadata-only behavior, and fail-closed
 response limits—run `make preset-trial` and read
 [`docs/preset-integration-trial.md`](docs/preset-integration-trial.md).
+For a customer deployment, run `make preset-bootstrap-check` first; it validates
+the connection and one dashboard catalog page without making a Jev call.
 The real-account onboarding/shadow acceptance gate is `make preset-live-trial`;
 it requires tenant-scoped credentials, a live Jev key, and explicit human
 approval. Passing the fixture trial is not a substitute for that customer gate.
