@@ -311,10 +311,12 @@ deployment work; they are intentionally outside the source adapter. See
 [`docs/hosted-connectors.md`](docs/hosted-connectors.md).
 
 For Preset specifically, this direct API connector requires a Preset plan with
-API access; Preset currently documents that API as Enterprise-only. Other
-customers can connect an agent to Preset's remote MCP and SignalWeave's MCP as
-an interim, agent-mediated path, but that path is weaker for unattended push
-monitoring.
+API access; Preset currently documents that API as Enterprise-only. Preset's
+current MCP documentation also describes its MCP server as an Enterprise
+add-on, so customers with that entitlement can connect an agent to Preset's
+remote MCP and SignalWeave's MCP as an interim, agent-mediated path. That path
+is weaker for unattended push monitoring and is not a universal workaround for
+customers without the relevant Preset entitlement.
 
 For the Preset-specific integration proof—varied chart/result shapes, partial
 provider failures, token refresh, metadata-only behavior, and fail-closed

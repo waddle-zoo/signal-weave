@@ -60,6 +60,16 @@ def test_hosted_connection_requires_https_without_inline_credentials():
         )
 
 
+def test_hosted_connection_metadata_cannot_be_used_as_a_secret_store():
+    with pytest.raises(ValueError, match="metadata must not contain credential fields"):
+        HostedConnection.model_validate(
+            {
+                **connection(HostedProvider.PRESET).model_dump(),
+                "metadata": {"api_token_secret": "do-not-store"},
+            }
+        )
+
+
 def test_preset_client_requires_secure_provider_urls():
     with pytest.raises(ValueError, match="workspace_url must use https"):
         PresetCloudClient(

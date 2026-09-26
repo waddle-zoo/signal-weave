@@ -86,6 +86,28 @@ class HostedConnection(BaseModel):
             raise ValueError("hosted connection base_url must not contain credentials")
         return self
 
+    @model_validator(mode="after")
+    def validate_metadata(self) -> HostedConnection:
+        """Keep the safe metadata escape hatch from becoming a secret store."""
+
+        sensitive_fragments = (
+            "access_token",
+            "api_token",
+            "authorization",
+            "client_secret",
+            "credential",
+            "password",
+            "secret",
+            "token",
+        )
+        for key in self.metadata:
+            normalized = re.sub(r"[^a-z0-9]+", "_", key.lower()).strip("_")
+            if any(fragment in normalized for fragment in sensitive_fragments):
+                raise ValueError(
+                    "hosted connection metadata must not contain credential fields"
+                )
+        return self
+
 
 class HostedCredentialVault(Protocol):
     """Minimal vault contract used by the adapter factory."""

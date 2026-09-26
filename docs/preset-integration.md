@@ -27,10 +27,10 @@ The default route name is `preset__preset-env`; copy
 replace the dashboard/chart IDs, and use that route in the card's `sources`.
 
 This direct API path requires a Preset plan that includes the Preset API. The
-current Preset documentation lists that API as Enterprise-only. Customers on a
-plan without API access can still use the interim dual-MCP pattern below, but
-cannot use this direct scheduled adapter until they have an approved API or
-bridge path.
+current Preset documentation lists that API as Enterprise-only. Preset's MCP
+authentication documentation also describes the MCP server as an Enterprise
+add-on, so the interim dual-MCP pattern below is conditional on the customer
+having that entitlement; it is not a general fallback for every Preset plan.
 
 The default policy is `cached_results`, with live queries and refreshes disabled.
 Raw provider rows are never retained by the connector; receipt retention and
@@ -167,11 +167,11 @@ and a hosted service deployment.
 ## What Preset itself can and cannot provide
 
 Preset documents a native remote MCP server that lets AI clients connect to
-Preset with Preset-managed OAuth or API-token authentication. That is useful
-when an agent wants to call Preset directly, but it is not an extension point
-for installing SignalWeave's server-side Jev decision layer inside Preset.
-Preset's native Alerts & Reports feature is documented around email and Slack
-delivery, not a generic SignalWeave callback.
+Preset with Preset-managed OAuth or API-token authentication, subject to the
+MCP entitlement. That is useful when an agent wants to call Preset directly,
+but it is not an extension point for installing SignalWeave's server-side Jev
+decision layer inside Preset. Preset's native Alerts & Reports feature is
+documented around email and Slack delivery, not a generic SignalWeave callback.
 
 That leaves three practical options:
 

@@ -27,6 +27,9 @@ adapter factory resolves the secret only while constructing a short-lived
 source client. Hosted connection URLs must use HTTPS and cannot contain inline
 credentials; local HTTP development remains available through the separate
 unmanaged Superset development connector, not this hosted-connection path.
+The free-form `metadata` field is also rejected when its key looks like a
+token, secret, password, authorization, or credential field; it is descriptive
+metadata, not a second secret store.
 
 The repository includes an in-memory vault for tests and a SQLite connection
 metadata store for local or single-process deployments. A production cloud
@@ -71,9 +74,11 @@ Superset artifact normalization while reporting `adapter="preset"` and the
 customer tenant in the resource contract.
 
 Preset currently documents the direct Preset API as an Enterprise-plan
-capability. A customer without that entitlement can use Preset's remote MCP
-with a customer-owned agent, but cannot use this direct unattended connector
-without an approved API or bridge path.
+capability. Preset's current MCP authentication documentation also describes
+the MCP server as an Enterprise add-on. A customer must therefore have the
+relevant Preset entitlement for either direct unattended API access or the
+remote-MCP fallback; the remote-MCP path is not a universal workaround for a
+plan without API access.
 
 The connector sends `force=false` for cached-results requests and enforces the
 connection's response byte and row budgets. That is a cache preference, not a
@@ -130,3 +135,28 @@ If a customer's hosted instance is private or data cannot leave its network,
 the later option is a small outbound-only SignalWeave Bridge. Preset Cloud and
 Hex normally do not need that bridge because their APIs are already hosted;
 private Looker or warehouse connections may.
+
+## Exact managed-service boundary
+
+The repository currently ships a connector and a self-hosted deployment path;
+it does not ship a managed SignalWeave service. The boundary is deliberate:
+
+| Capability | Current state | Required before claiming managed hosting |
+| --- | --- | --- |
+| Preset API-token or bearer adapter | Shipped and fixture-tested | Real customer acceptance run |
+| Tenant-scoped source routes and card evaluation | Shipped and unit/integration-tested | External identity-provider acceptance |
+| Jev-only typed judgment and delivery-disabled shadow receipt | Shipped in the runtime | Live Jev shadow run over customer evidence |
+| Customer-owned scheduler and delivery | Supported | Customer operational sign-off |
+| Public SignalWeave MCP/API endpoint | Not provided as a hosted service | Authenticated ingress, rate limits, abuse controls, and tenancy |
+| OAuth connection onboarding | Modelled as a future boundary; Preset adapter currently fails OAuth closed | Callback handling, state/PKCE validation, token rotation, revocation |
+| Secret storage | In-memory vault for local use; vault interface for deployment | KMS/HSM-backed storage, rotation, redaction, and audit |
+| Durable multi-tenant state | SQLite for local/single-process use | Shared transactional store, migrations, backups, and tenant isolation |
+| Polling/workers | Customer-owned today | Per-tenant workers, leases, retries, idempotency, and quotas |
+| Retention, deletion, and residency | Deployment responsibility | Enforced policy, deletion jobs, legal holds, and regional controls |
+
+Until the right-hand column is implemented and tested, the supported hosted
+customer story is: the customer runs SignalWeave near their agent or uses an
+approved customer-owned relay, while Preset remains the hosted source. A
+customer can connect Preset's native MCP to its own agent for interactive work
+when entitled, but that does not install SignalWeave inside Preset and does not
+create unattended SignalWeave monitoring.
