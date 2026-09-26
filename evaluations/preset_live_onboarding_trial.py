@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from signalweave.mcp_server import create_mcp
+from signalweave.preset_adapter import PresetAdapter
 from signalweave.runtime import build_runtime
 
 
@@ -39,6 +40,7 @@ def _summary(payload: dict[str, Any]) -> dict[str, Any]:
         "receipt_status": receipt.get("status"),
         "delivery_enabled": receipt.get("delivery_enabled"),
         "replayed": payload.get("replayed"),
+        "resource_count": len(payload.get("resources") or []),
     }
 
 
@@ -66,6 +68,10 @@ async def run_trial(
         raise RuntimeError(
             f"adapter {adapter!r} is not installed; available adapters: "
             + ", ".join(runtime.sources.adapter_names())
+        )
+    if not isinstance(runtime.sources._get(adapter), PresetAdapter):
+        raise RuntimeError(
+            f"{adapter!r} is not a hosted Preset adapter; use the Preset environment route"
         )
     server = create_mcp(runtime)
     onboarding = await _tool(server, "onboard_insight_card")(
@@ -106,12 +112,37 @@ async def run_trial(
             approved = await _tool(server, "approve_insight_card")(
                 card_id, actor="preset-shadow-owner"
             )
+            idempotency_key = f"preset-shadow:{card_id}:v{approved['card']['version']}"
+            metrics = getattr(getattr(runtime.engine, "judger", None), "metrics", None)
+            jev_requests_before = getattr(metrics, "requests", None)
             evaluation = await _tool(server, "evaluate_insight_card")(
                 card_id,
-                idempotency_key=f"preset-shadow:{card_id}:v{approved['card']['version']}",
+                idempotency_key=idempotency_key,
                 actor="preset-shadow-scheduler",
             )
+            jev_requests_after_first = getattr(metrics, "requests", None)
+            replay = await _tool(server, "evaluate_insight_card")(
+                card_id,
+                idempotency_key=idempotency_key,
+                actor="preset-shadow-scheduler",
+            )
+            jev_requests_after_replay = getattr(metrics, "requests", None)
+            receipt_lookup = _tool(server, "get_decision_receipt")(
+                idempotency_key=idempotency_key
+            )
             summary = _summary(evaluation)
+            resources = evaluation.get("resources") or []
+            preset_resources = [item for item in resources if item.get("adapter") == adapter]
+            tenant_scoped_resources = bool(resources) and all(
+                item.get("contract", {}).get("tenant_id") == runtime.principal.tenant_id
+                for item in resources
+            )
+            replay_made_no_jev_call = (
+                jev_requests_before is not None
+                and jev_requests_after_first is not None
+                and jev_requests_after_replay is not None
+                and jev_requests_after_replay == jev_requests_after_first
+            )
             report.update(
                 {
                     "approval": {
@@ -120,12 +151,26 @@ async def run_trial(
                     },
                     "evaluation": evaluation,
                     "summary": summary,
+                    "replay": replay,
+                    "receipt_lookup": receipt_lookup,
+                    "provider_checks": {
+                        "preset_resources": len(preset_resources),
+                        "all_resources_use_requested_preset_adapter": bool(resources)
+                        and len(preset_resources) == len(resources),
+                        "all_resources_match_runtime_tenant": tenant_scoped_resources,
+                        "replay_made_no_jev_call": replay_made_no_jev_call,
+                    },
                     "passed": (
                         approved["status"] == "approved"
                         and summary["evaluator"] == "jev-latest"
                         and summary["evidence_count"] > 0
+                        and bool(preset_resources)
+                        and tenant_scoped_resources
                         and summary["receipt_status"] == "delivery_disabled"
                         and summary["delivery_enabled"] is False
+                        and replay.get("replayed") is True
+                        and receipt_lookup.get("status") == "found"
+                        and replay_made_no_jev_call
                     ),
                 }
             )

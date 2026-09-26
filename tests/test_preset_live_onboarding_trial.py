@@ -5,6 +5,7 @@ from types import SimpleNamespace
 import pytest
 
 import evaluations.preset_live_onboarding_trial as trial
+from signalweave.preset_adapter import PresetAdapter
 
 
 class ToolManager:
@@ -40,9 +41,16 @@ async def test_live_trial_requires_explicit_approval_before_shadow(monkeypatch, 
         trial,
         "build_runtime",
         lambda: SimpleNamespace(
-            sources=SimpleNamespace(adapter_names=lambda: ["preset__preset-env"]),
+            sources=SimpleNamespace(
+                adapter_names=lambda: ["preset__preset-env"],
+                _get=lambda name: PresetAdapter.__new__(PresetAdapter),
+            ),
             principal=SimpleNamespace(tenant_id="northstar"),
-            engine=SimpleNamespace(judger=SimpleNamespace(name="jev-latest")),
+            engine=SimpleNamespace(
+                judger=SimpleNamespace(
+                    name="jev-latest", metrics=SimpleNamespace(requests=0)
+                )
+            ),
         ),
     )
     monkeypatch.setattr(
@@ -53,6 +61,10 @@ async def test_live_trial_requires_explicit_approval_before_shadow(monkeypatch, 
                 "onboard_insight_card": onboard,
                 "approve_insight_card": approve,
                 "evaluate_insight_card": evaluate,
+                "get_decision_receipt": lambda **kwargs: {
+                    "status": "found",
+                    "receipt": {"receipt_id": "receipt-1"},
+                },
             }
         ),
     )
@@ -94,16 +106,46 @@ async def test_live_trial_accepts_only_jev_delivery_disabled_shadow(monkeypatch)
                 "status": "delivery_disabled",
                 "delivery_enabled": False,
             },
+            "resources": [
+                {
+                    "adapter": "preset__preset-env",
+                    "contract": {"tenant_id": "northstar"},
+                }
+            ],
             "replayed": False,
+        }
+
+    replay_calls = 0
+
+    async def replay_evaluate(*args, **kwargs):
+        nonlocal replay_calls
+        replay_calls += 1
+        if replay_calls == 1:
+            return await evaluate(*args, **kwargs)
+        return {
+            "result": {
+                "outcome": "notify",
+                "evaluator": "jev-latest",
+                "evidence": [{"subject_id": "chart-1"}],
+                "observations": [{"subject_id": "chart-1"}],
+            },
+            "replayed": True,
         }
 
     monkeypatch.setattr(
         trial,
         "build_runtime",
         lambda: SimpleNamespace(
-            sources=SimpleNamespace(adapter_names=lambda: ["preset__preset-env"]),
+            sources=SimpleNamespace(
+                adapter_names=lambda: ["preset__preset-env"],
+                _get=lambda name: PresetAdapter.__new__(PresetAdapter),
+            ),
             principal=SimpleNamespace(tenant_id="northstar"),
-            engine=SimpleNamespace(judger=SimpleNamespace(name="jev-latest")),
+            engine=SimpleNamespace(
+                judger=SimpleNamespace(
+                    name="jev-latest", metrics=SimpleNamespace(requests=1)
+                )
+            ),
         ),
     )
     monkeypatch.setattr(
@@ -113,7 +155,11 @@ async def test_live_trial_accepts_only_jev_delivery_disabled_shadow(monkeypatch)
             {
                 "onboard_insight_card": onboard,
                 "approve_insight_card": approve,
-                "evaluate_insight_card": evaluate,
+                "evaluate_insight_card": replay_evaluate,
+                "get_decision_receipt": lambda **kwargs: {
+                    "status": "found",
+                    "receipt": {"receipt_id": "receipt-1"},
+                },
             }
         ),
     )

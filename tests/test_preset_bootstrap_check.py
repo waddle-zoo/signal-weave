@@ -153,3 +153,39 @@ async def test_provider_smoke_does_not_bypass_metadata_only_policy(monkeypatch):
     assert report["chart_probe"]["passed"] is False
     assert "metadata_only" in report["chart_probe"]["error"]
     assert calls == 0
+
+
+@pytest.mark.asyncio
+async def test_provider_smoke_reports_missing_chart_instead_of_index_error(monkeypatch):
+    class Snapshot:
+        charts = []
+
+    class Client:
+        async def list_dashboards_page(self, *, page, page_size, query=None):
+            return ([{"id": 7, "dashboard_title": "Growth"}], 1)
+
+        async def dashboard_snapshot(self, *args, **kwargs):
+            return Snapshot()
+
+    adapter = PresetAdapter.__new__(PresetAdapter)
+    adapter.client = Client()
+    adapter.policy = HostedDataPolicy()
+    adapter.name = "preset__preset-env"
+    runtime = SimpleNamespace(
+        principal=SimpleNamespace(tenant_id="northstar"),
+        sources=SimpleNamespace(_get=lambda name: adapter),
+        engine=SimpleNamespace(
+            judger=SimpleNamespace(name="jev-latest", metrics=SimpleNamespace(requests=0))
+        ),
+    )
+    monkeypatch.setattr(bootstrap, "build_runtime", lambda: runtime)
+
+    report = await bootstrap.run(
+        adapter_name="preset__preset-env",
+        page_size=20,
+        dashboard_id="7",
+        chart_id="101",
+    )
+
+    assert report["passed"] is False
+    assert report["chart_probe"]["error"] == "the dashboard returned no matching chart"
