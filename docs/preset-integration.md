@@ -46,7 +46,8 @@ PRESET_API_TOKEN_SECRET_HOST_FILE=/absolute/path/preset-token-secret \
 ```
 
 This requires the copied `.env.preset` file, renders both Compose files, and
-fails if the TypeSafe mount or either Preset secret input is missing.
+fails if the TypeSafe mount, either Preset secret input, direct-token redaction,
+or `*_FILE` wiring is wrong. It does not contact Preset or TypeSafe.
 
 The service listens on `http://127.0.0.1:18000` and exposes the MCP endpoint at
 `/mcp`. Connect the customer's agent through the existing identity-aware proxy,

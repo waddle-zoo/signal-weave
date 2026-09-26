@@ -47,7 +47,7 @@ preset-compose-check:
 	TYPESAFE_API_KEY_FILE=$${TYPESAFE_API_KEY_FILE:?set a TypeSafe key file} \
 	PRESET_API_TOKEN_NAME_HOST_FILE=$${PRESET_API_TOKEN_NAME_HOST_FILE:?set the Preset token-name file} \
 	PRESET_API_TOKEN_SECRET_HOST_FILE=$${PRESET_API_TOKEN_SECRET_HOST_FILE:?set the Preset token-secret file} \
-	docker compose -f docker-compose.preset.yml -f docker-compose.preset.secrets.yml config --quiet
+	python3 scripts/preset_compose_check.py
 
 preset-bootstrap-check:
 	TYPESAFE_API_KEY_FILE=$${TYPESAFE_API_KEY_FILE:?set a TypeSafe key file} \
