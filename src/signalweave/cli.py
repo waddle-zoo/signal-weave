@@ -80,7 +80,13 @@ def main() -> None:
             token_verifier=verifier,
         )
     else:
-        server = create_mcp(build_runtime())
+        runtime = build_runtime()
+        if os.getenv("PRESET_URL", "").strip() and runtime.principal is None:
+            raise RuntimeError(
+                "token-authenticated Preset deployments require "
+                "SIGNALWEAVE_TENANT_ID and SIGNALWEAVE_PRINCIPAL_ID"
+            )
+        server = create_mcp(runtime)
     server.settings.host = args.host
     server.settings.port = args.port
 

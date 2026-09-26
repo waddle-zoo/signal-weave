@@ -56,6 +56,9 @@ registers one `preset` adapter from `PRESET_URL` and the supplied credentials.
 `PRESET_TENANT_ID` or `SIGNALWEAVE_TENANT_ID` is required; the bootstrap path
 never assigns an implicit default tenant. API-token and bearer credentials are
 mutually exclusive, and unexpected credential fields fail closed.
+When using the default token-authenticated HTTP deployment, both
+`SIGNALWEAVE_TENANT_ID` and `SIGNALWEAVE_PRINCIPAL_ID` are also required; an
+OIDC deployment instead resolves the principal from each verified request.
 The default route name is `preset__preset-env`; copy
 [`examples/preset/insight-card.example.json`](../examples/preset/insight-card.example.json),
 replace the dashboard/chart IDs, and use that route in the card's `sources`.
