@@ -4,7 +4,7 @@ import argparse
 import ipaddress
 import os
 
-from .runtime import build_runtime
+from .runtime import build_runtime, load_deployment_secret
 
 
 def _is_loopback_host(host: str) -> bool:
@@ -14,6 +14,12 @@ def _is_loopback_host(host: str) -> bool:
         return ipaddress.ip_address(host).is_loopback
     except ValueError:
         return False
+
+
+def _http_api_token() -> str | None:
+    """Load the streamable-HTTP bearer token from a value or mounted file."""
+
+    return load_deployment_secret("SIGNALWEAVE_API_TOKEN")
 
 
 def main() -> None:
@@ -96,7 +102,7 @@ def main() -> None:
 
     app = server.streamable_http_app()
     if auth_mode == "token":
-        api_token = os.getenv("SIGNALWEAVE_API_TOKEN")
+        api_token = _http_api_token()
         if not api_token and os.getenv("SIGNALWEAVE_ALLOW_INSECURE_HTTP") != "1":
             raise RuntimeError(
                 "streamable HTTP requires SIGNALWEAVE_API_TOKEN; set "

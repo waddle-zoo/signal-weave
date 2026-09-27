@@ -84,6 +84,12 @@ def _env_secret(name: str) -> str | None:
     return value or None
 
 
+def load_deployment_secret(name: str) -> str | None:
+    """Load one deployment secret from a value or an exclusive mounted file."""
+
+    return _env_secret(name)
+
+
 def _env_int(name: str, default: int) -> int:
     value = os.getenv(name, str(default)).strip()
     try:

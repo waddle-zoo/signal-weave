@@ -9,6 +9,8 @@ REQUIRED_HOST_ENV = {
     "TYPESAFE_API_KEY_FILE": "/tmp/typesafe-key",
     "PRESET_API_TOKEN_NAME_HOST_FILE": "/tmp/preset-name",
     "PRESET_API_TOKEN_SECRET_HOST_FILE": "/tmp/preset-secret",
+    "SIGNALWEAVE_API_TOKEN_HOST_FILE": "/tmp/signalweave-api-token",
+    "PUSH_WEBHOOK_TOKEN_HOST_FILE": "/tmp/push-webhook-token",
 }
 
 
@@ -22,10 +24,16 @@ def _rendered_config() -> dict:
                     "PRESET_API_TOKEN_SECRET": "",
                     "PRESET_API_TOKEN_NAME_FILE": "/run/secrets/preset_api_token_name",
                     "PRESET_API_TOKEN_SECRET_FILE": "/run/secrets/preset_api_token_secret",
+                    "SIGNALWEAVE_API_TOKEN": "",
+                    "SIGNALWEAVE_API_TOKEN_FILE": "/run/secrets/signalweave_api_token",
+                    "PUSH_WEBHOOK_TOKEN": "",
+                    "PUSH_WEBHOOK_TOKEN_FILE": "/run/secrets/push_webhook_token",
                 },
                 "secrets": [
                     {"source": "preset_api_token_name"},
                     {"source": "preset_api_token_secret"},
+                    {"source": "signalweave_api_token"},
+                    {"source": "push_webhook_token"},
                 ],
                 "volumes": [
                     "/tmp/typesafe-key:/run/secrets/typesafe_api_key:ro",
@@ -90,9 +98,7 @@ def test_compose_preflight_rejects_direct_token_rendering(monkeypatch, tmp_path)
 def test_compose_preflight_rejects_missing_preset_secret_mount(monkeypatch, tmp_path):
     _set_inputs(monkeypatch, tmp_path)
     config = _rendered_config()
-    config["services"]["signal-weave"]["secrets"] = [
-        {"source": "preset_api_token_name"},
-    ]
+    config["services"]["signal-weave"]["secrets"] = [{"source": "preset_api_token_name"}]
     completed = subprocess.CompletedProcess(
         args=["docker", "compose"],
         returncode=0,

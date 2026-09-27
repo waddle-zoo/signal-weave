@@ -49,7 +49,7 @@ from .retrieval_quality import (
     RetrievalQualityEvaluator,
     RetrievalQualityThresholds,
 )
-from .runtime import Runtime, build_runtime
+from .runtime import Runtime, build_runtime, load_deployment_secret
 from .store import (
     InMemoryCertificationReportStore,
     InMemoryDecisionFeedbackStore,
@@ -1467,7 +1467,7 @@ def create_mcp(
     async def evaluate_webhook(request: Request) -> JSONResponse:
         """Push-triggered card evaluation endpoint for schedulers and source alerts."""
         if http_principal_resolver is None:
-            expected_token = os.getenv("PUSH_WEBHOOK_TOKEN")
+            expected_token = load_deployment_secret("PUSH_WEBHOOK_TOKEN")
             if not expected_token:
                 return JSONResponse(
                     {"error": "push webhook authentication is not configured"}, status_code=503

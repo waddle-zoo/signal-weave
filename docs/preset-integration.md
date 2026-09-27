@@ -24,6 +24,8 @@ environment, leave the direct token fields empty and use the secrets overlay:
 ```bash
 PRESET_API_TOKEN_NAME_HOST_FILE=/absolute/path/preset-token-name \
 PRESET_API_TOKEN_SECRET_HOST_FILE=/absolute/path/preset-token-secret \
+SIGNALWEAVE_API_TOKEN_HOST_FILE=/absolute/path/signalweave-api-token \
+PUSH_WEBHOOK_TOKEN_HOST_FILE=/absolute/path/push-webhook-token \
 TYPESAFE_API_KEY_FILE=/absolute/path/apikey_typesafe \
   docker compose \
     -f docker-compose.preset.yml \
@@ -31,10 +33,12 @@ TYPESAFE_API_KEY_FILE=/absolute/path/apikey_typesafe \
     up --build -d
 ```
 
-The overlay mounts the two files as Docker secrets, sets the corresponding
-`*_FILE` variables inside the container, and clears any direct token values
-from `.env.preset`. The host paths are Compose inputs only and are not stored
-in the SignalWeave connection or card stores.
+The overlay mounts the four credential files as Docker secrets, sets the
+corresponding `*_FILE` variables inside the container, and clears the direct
+token values from `.env.preset`. The host paths are Compose inputs only and are
+not stored in the SignalWeave connection or card stores. The service accepts a
+direct value or a mounted file for `SIGNALWEAVE_API_TOKEN` and
+`PUSH_WEBHOOK_TOKEN`, never both.
 
 Validate the rendered deployment before starting it:
 
@@ -42,12 +46,15 @@ Validate the rendered deployment before starting it:
 TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
 PRESET_API_TOKEN_NAME_HOST_FILE=/absolute/path/preset-token-name \
 PRESET_API_TOKEN_SECRET_HOST_FILE=/absolute/path/preset-token-secret \
+SIGNALWEAVE_API_TOKEN_HOST_FILE=/absolute/path/signalweave-api-token \
+PUSH_WEBHOOK_TOKEN_HOST_FILE=/absolute/path/push-webhook-token \
   make preset-compose-check
 ```
 
 This requires the copied `.env.preset` file, renders both Compose files, and
-fails if the TypeSafe mount, either Preset secret input, direct-token redaction,
-or `*_FILE` wiring is wrong. It does not contact Preset or TypeSafe.
+fails if the TypeSafe mount, any Preset or SignalWeave secret input,
+direct-token redaction, or `*_FILE` wiring is wrong. It does not contact Preset
+or TypeSafe.
 
 Before preparing a Compose deployment, validate the runtime environment itself:
 

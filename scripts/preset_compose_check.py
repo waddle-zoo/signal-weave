@@ -23,6 +23,8 @@ def main() -> int:
         "TYPESAFE_API_KEY_FILE",
         "PRESET_API_TOKEN_NAME_HOST_FILE",
         "PRESET_API_TOKEN_SECRET_HOST_FILE",
+        "SIGNALWEAVE_API_TOKEN_HOST_FILE",
+        "PUSH_WEBHOOK_TOKEN_HOST_FILE",
     )
     missing = [name for name in required_environment if not os.getenv(name)]
     if missing:
@@ -59,6 +61,10 @@ def main() -> int:
         "PRESET_API_TOKEN_SECRET": "",
         "PRESET_API_TOKEN_NAME_FILE": "/run/secrets/preset_api_token_name",
         "PRESET_API_TOKEN_SECRET_FILE": "/run/secrets/preset_api_token_secret",
+        "SIGNALWEAVE_API_TOKEN": "",
+        "SIGNALWEAVE_API_TOKEN_FILE": "/run/secrets/signalweave_api_token",
+        "PUSH_WEBHOOK_TOKEN": "",
+        "PUSH_WEBHOOK_TOKEN_FILE": "/run/secrets/push_webhook_token",
     }
     for name, expected in expected_environment.items():
         if environment.get(name) != expected:
@@ -69,8 +75,13 @@ def main() -> int:
         for item in service.get("secrets", [])
         if isinstance(item, dict)
     }
-    if secret_names != {"preset_api_token_name", "preset_api_token_secret"}:
-        return _fail("both Preset Docker secrets are not mounted")
+    if secret_names != {
+        "preset_api_token_name",
+        "preset_api_token_secret",
+        "signalweave_api_token",
+        "push_webhook_token",
+    }:
+        return _fail("the required Preset and SignalWeave Docker secrets are not mounted")
 
     volume_text = json.dumps(service.get("volumes", []), sort_keys=True)
     if "/run/secrets/typesafe_api_key" not in volume_text:

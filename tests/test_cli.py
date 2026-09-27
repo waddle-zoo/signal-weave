@@ -16,3 +16,9 @@ def test_token_preset_server_fails_closed_without_static_principal(monkeypatch):
 
     with pytest.raises(RuntimeError, match="token-authenticated Preset deployments"):
         cli.main()
+
+
+def test_http_api_token_uses_deployment_secret_loader(monkeypatch):
+    monkeypatch.setattr(cli, "load_deployment_secret", lambda name: "mounted-token")
+
+    assert cli._http_api_token() == "mounted-token"

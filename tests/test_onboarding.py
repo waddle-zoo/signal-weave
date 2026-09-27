@@ -629,6 +629,20 @@ async def test_webhook_fails_closed_and_rejects_oversized_or_invalid_payloads(
     assert oversized.status_code == 413
     assert malformed.status_code == 400
 
+    webhook_secret_file = tmp_path / "push-webhook-token"
+    webhook_secret_file.write_text("file-webhook-token\n", encoding="utf-8")
+    monkeypatch.delenv("PUSH_WEBHOOK_TOKEN", raising=False)
+    monkeypatch.setenv("PUSH_WEBHOOK_TOKEN_FILE", str(webhook_secret_file))
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as client:
+        file_secret_response = await client.post(
+            "/webhooks/evaluate",
+            content=b"{}",
+            headers={"Authorization": "Bearer file-webhook-token"},
+        )
+    assert file_secret_response.status_code not in {401, 503}
+
 
 @pytest.mark.asyncio
 async def test_oidc_style_webhook_resolver_scopes_card_evaluation_without_shared_secret(tmp_path):

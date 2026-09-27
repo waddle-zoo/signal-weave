@@ -39,8 +39,10 @@ deployment must establish a data policy before using company data.
   and reject inline URL credentials. The local development exception applies to
   the separate unmanaged Superset connector, not hosted connection bootstrap.
 - The Preset Docker deployment includes a secrets overlay that injects API-token
-  name and secret through mounted Docker secrets and clears direct token values
-  inherited from `.env.preset`; use that overlay for shared deployments.
+  name and secret, the SignalWeave MCP bearer token, and the push-webhook token
+  through mounted Docker secrets and clears direct token values inherited from
+  `.env.preset`; use that overlay for shared deployments. The runtime rejects a
+  direct value and its corresponding `*_FILE` setting being present together.
 - Source-specific row and series limits are bounded, catalog pagination is capped, and source fetches have timeouts.
 - A required source timeout, missing resource, stale contract, or partial result
   becomes visible evidence and cannot silently become an automatic `ignore`.

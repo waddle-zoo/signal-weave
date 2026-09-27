@@ -83,6 +83,8 @@ preset-compose-check:
 	TYPESAFE_API_KEY_FILE=$${TYPESAFE_API_KEY_FILE:?set a TypeSafe key file} \
 	PRESET_API_TOKEN_NAME_HOST_FILE=$${PRESET_API_TOKEN_NAME_HOST_FILE:?set the Preset token-name file} \
 	PRESET_API_TOKEN_SECRET_HOST_FILE=$${PRESET_API_TOKEN_SECRET_HOST_FILE:?set the Preset token-secret file} \
+	SIGNALWEAVE_API_TOKEN_HOST_FILE=$${SIGNALWEAVE_API_TOKEN_HOST_FILE:?set the SignalWeave API-token file} \
+	PUSH_WEBHOOK_TOKEN_HOST_FILE=$${PUSH_WEBHOOK_TOKEN_HOST_FILE:?set the push-webhook token file} \
 	python3 scripts/preset_compose_check.py
 
 preset-bootstrap-check:
