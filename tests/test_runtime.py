@@ -1,7 +1,8 @@
 import pytest
 
 from signalweave.models import ResourceSnapshot
-from signalweave.runtime import build_runtime
+from signalweave.preset_adapter import PresetAdapter
+from signalweave.runtime import build_preset_adapter_from_environment, build_runtime
 from signalweave.store import (
     SQLiteDecisionFeedbackStore,
     SQLiteDecisionReceiptStore,
@@ -40,6 +41,19 @@ def test_runtime_requires_principal_with_tenant_scope(monkeypatch):
 
     with pytest.raises(RuntimeError, match="must be configured together"):
         build_runtime(adapters=[])
+
+
+def test_preset_provider_preflight_builds_adapter_without_jev_key(monkeypatch):
+    monkeypatch.setenv("PRESET_URL", "https://workspace.app.preset.io")
+    monkeypatch.setenv("PRESET_TENANT_ID", "acme")
+    monkeypatch.setenv("PRESET_ACCESS_TOKEN", "preset-token")
+    monkeypatch.delenv("TYPESAFE_API_KEY", raising=False)
+    monkeypatch.delenv("TYPESAFE_API_KEY_FILE", raising=False)
+
+    adapter = build_preset_adapter_from_environment()
+
+    assert isinstance(adapter, PresetAdapter)
+    assert adapter.name == "preset__preset-env"
 
 
 def test_runtime_accepts_an_embedded_non_superset_adapter(monkeypatch, tmp_path):

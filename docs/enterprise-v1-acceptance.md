@@ -47,7 +47,7 @@ returns an inspectable evidence bundle and receipt.
 | Preset onboarding fails early without burning Jev credits | `make preset-config-check` reuses the production Preset parser to validate credentials, tenant binding, auth mode, policy, and Jev key presence with zero network requests and zero Jev requests; provider acceptance remains a separate bounded check. | Pass locally; real tenant gate remains open |
 | Generated-shape anti-overfitting trial | A seeded generator creates 24 unfamiliar tenant workspaces / 192 charts across five result envelopes, 12 visualization labels, usable and unusable metric definitions, empty results, ambiguous numerics, and provider failures; the production Preset client/adapter passes catalog, scope, cache, retention, and safe-degradation assertions, then an independent report reviewer checks coverage and rejects mutated pass-looking reports. A generated 64-chart dashboard stress test proves the provider aggregate byte budget fails closed; an engine test separately proves the multi-source serialized Jev budget fails before any Jev call. | Pass locally; provider and live Jev gates remain open |
 | Existing enterprise workflows remain the owner | MCP tools return typed decisions and evidence; SignalWeave does not execute arbitrary SQL, tools, DAGs, or notifications. | Pass |
-| Regression safety | Full repository tests and lint. | 299 passed, 2 skipped; Ruff clean |
+| Regression safety | Full repository tests and lint. | 300 passed, 2 skipped; Ruff clean |
 
 ## Reproduction
 

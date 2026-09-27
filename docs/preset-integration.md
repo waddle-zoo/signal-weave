@@ -116,8 +116,7 @@ After the configuration check, start with the no-credit bootstrap preflight
 before onboarding a card:
 
 ```bash
-TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
-  make preset-bootstrap-check
+make preset-bootstrap-check
 ```
 
 This authenticates the configured Preset connection and reads one bounded
@@ -132,12 +131,12 @@ probe before spending a Jev call:
 ```bash
 PRESET_BOOTSTRAP_DASHBOARD_ID=123 \
 PRESET_BOOTSTRAP_CHART_ID=456 \
-TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
   make preset-provider-smoke
 ```
 
 This exercises the dashboard-scoped chart-data endpoint and fails unless it
-returns usable normalized observations. It does not create a card, call Jev,
+returns usable normalized observations. It does not require a TypeSafe key,
+create a card, call Jev,
 approve anything, or deliver a notification. A successful probe proves the
 provider boundary; it is still not proof that the business card is correct. A
 `metadata_only` connection refuses this probe rather than bypassing its data

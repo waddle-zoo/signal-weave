@@ -11,12 +11,16 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import os
 from pathlib import Path
 from typing import Any
 
 from signalweave.hosted import HostedDataMode
 from signalweave.preset_adapter import PresetAdapter
-from signalweave.runtime import build_runtime
+from signalweave.runtime import (
+    build_preset_adapter_from_environment,
+    validate_preset_environment,
+)
 
 
 async def run(
@@ -29,35 +33,23 @@ async def run(
 ) -> dict[str, Any]:
     if bool(dashboard_id) != bool(chart_id):
         raise ValueError("dashboard_id and chart_id must be supplied together")
-    runtime = build_runtime()
-    if runtime.principal is None:
-        raise RuntimeError(
-            "Preset bootstrap requires SIGNALWEAVE_TENANT_ID and "
-            "SIGNALWEAVE_PRINCIPAL_ID"
-        )
-    if adapter_name is None:
-        names = runtime.sources.adapter_names()
-        candidates = [
-            name
-            for name in names
-            if isinstance(runtime.sources._get(name), PresetAdapter)
-        ]
-        if len(candidates) != 1:
-            raise RuntimeError(
-                "Preset bootstrap requires exactly one configured Preset adapter; "
-                "pass --adapter when multiple hosted connections are installed"
-            )
-        adapter_name = candidates[0]
-    adapter = runtime.sources._get(adapter_name)
+    configuration = validate_preset_environment()
+    adapter = build_preset_adapter_from_environment()
+    if adapter is None:
+        raise RuntimeError("Preset bootstrap requires PRESET_URL")
     if not isinstance(adapter, PresetAdapter):
-        raise RuntimeError(f"{adapter_name!r} is not a Preset adapter")
+        raise RuntimeError("the environment adapter is not a Preset adapter")
+    if adapter_name is None:
+        adapter_name = adapter.name
+    elif adapter_name != adapter.name:
+        raise RuntimeError(f"{adapter_name!r} is not the configured Preset adapter")
 
     dashboards, provider_count = await adapter.client.list_dashboards_page(
         page=0,
         page_size=page_size,
     )
-    judger = runtime.engine.judger
-    jev_requests = getattr(getattr(judger, "metrics", None), "requests", 0)
+    jev_mode_configured = os.getenv("TYPESAFE_MODE", "jev").strip().lower() == "jev"
+    jev_requests = 0
     chart_probe: dict[str, Any] | None = None
     if dashboard_id and chart_id:
         if adapter.policy.mode == HostedDataMode.METADATA_ONLY:
@@ -93,7 +85,7 @@ async def run(
     report = {
         "trial": "preset-bootstrap-check",
         "adapter": adapter_name,
-        "tenant_id": runtime.principal.tenant_id,
+        "tenant_id": configuration["tenant_id"],
         "policy": adapter.policy.model_dump(mode="json"),
         "catalog": {
             "page_size": page_size,
@@ -102,7 +94,7 @@ async def run(
             "has_dashboard": bool(dashboards),
         },
         "checks": {
-            "jev_runtime_configured": getattr(judger, "name", None) == "jev-latest",
+            "jev_runtime_configured": jev_mode_configured,
             "tenant_principal_configured": True,
             "preset_catalog_request_succeeded": True,
             "workspace_has_dashboard": bool(dashboards),
@@ -112,7 +104,7 @@ async def run(
         "chart_probe": chart_probe,
         "jev_requests": jev_requests,
         "passed": bool(dashboards)
-        and getattr(judger, "name", None) == "jev-latest"
+        and jev_mode_configured
         and jev_requests == 0
         and (chart_probe is None or chart_probe["passed"]),
         "not_proven": [

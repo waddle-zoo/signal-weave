@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from types import SimpleNamespace
-
 import pytest
 
 import scripts.preset_bootstrap_check as bootstrap
@@ -9,8 +7,21 @@ from signalweave.hosted import HostedDataPolicy
 from signalweave.preset_adapter import PresetAdapter
 
 
+def _wire_environment(monkeypatch, adapter):
+    monkeypatch.setattr(
+        bootstrap,
+        "validate_preset_environment",
+        lambda: {"tenant_id": "northstar"},
+    )
+    monkeypatch.setattr(
+        bootstrap, "build_preset_adapter_from_environment", lambda: adapter
+    )
+
+
 @pytest.mark.asyncio
 async def test_bootstrap_preflight_reads_one_catalog_page_without_jev(monkeypatch, tmp_path):
+    monkeypatch.delenv("TYPESAFE_API_KEY", raising=False)
+    monkeypatch.delenv("TYPESAFE_API_KEY_FILE", raising=False)
     calls: list[tuple[int, int]] = []
 
     class Client:
@@ -23,16 +34,7 @@ async def test_bootstrap_preflight_reads_one_catalog_page_without_jev(monkeypatc
     adapter.client = Client()
     adapter.policy = HostedDataPolicy()
     adapter.name = "preset__preset-env"
-    runtime = SimpleNamespace(
-        principal=SimpleNamespace(tenant_id="northstar"),
-        sources=SimpleNamespace(
-            _get=lambda name: adapter if name == adapter.name else None,
-        ),
-        engine=SimpleNamespace(
-            judger=SimpleNamespace(name="jev-latest", metrics=SimpleNamespace(requests=0))
-        ),
-    )
-    monkeypatch.setattr(bootstrap, "build_runtime", lambda: runtime)
+    _wire_environment(monkeypatch, adapter)
 
     report = await bootstrap.run(
         adapter_name="preset__preset-env",
@@ -55,17 +57,7 @@ async def test_bootstrap_preflight_auto_detects_custom_sole_preset_adapter(monke
     adapter.client = Client()
     adapter.policy = HostedDataPolicy()
     adapter.name = "preset__customer-workspace"
-    runtime = SimpleNamespace(
-        principal=SimpleNamespace(tenant_id="northstar"),
-        sources=SimpleNamespace(
-            adapter_names=lambda: [adapter.name],
-            _get=lambda name: adapter if name == adapter.name else None,
-        ),
-        engine=SimpleNamespace(
-            judger=SimpleNamespace(name="jev-latest", metrics=SimpleNamespace(requests=0))
-        ),
-    )
-    monkeypatch.setattr(bootstrap, "build_runtime", lambda: runtime)
+    _wire_environment(monkeypatch, adapter)
 
     report = await bootstrap.run(adapter_name=None, page_size=20)
 
@@ -83,14 +75,7 @@ async def test_bootstrap_preflight_fails_empty_workspace(monkeypatch):
     adapter.client = Client()
     adapter.policy = HostedDataPolicy()
     adapter.name = "preset__preset-env"
-    runtime = SimpleNamespace(
-        principal=SimpleNamespace(tenant_id="northstar"),
-        sources=SimpleNamespace(_get=lambda name: adapter),
-        engine=SimpleNamespace(
-            judger=SimpleNamespace(name="jev-latest", metrics=SimpleNamespace(requests=0))
-        ),
-    )
-    monkeypatch.setattr(bootstrap, "build_runtime", lambda: runtime)
+    _wire_environment(monkeypatch, adapter)
 
     report = await bootstrap.run(adapter_name="preset__preset-env", page_size=20)
 
@@ -122,14 +107,7 @@ async def test_provider_smoke_probes_one_dashboard_chart_without_jev(monkeypatch
     adapter.client = Client()
     adapter.policy = HostedDataPolicy()
     adapter.name = "preset__preset-env"
-    runtime = SimpleNamespace(
-        principal=SimpleNamespace(tenant_id="northstar"),
-        sources=SimpleNamespace(_get=lambda name: adapter),
-        engine=SimpleNamespace(
-            judger=SimpleNamespace(name="jev-latest", metrics=SimpleNamespace(requests=0))
-        ),
-    )
-    monkeypatch.setattr(bootstrap, "build_runtime", lambda: runtime)
+    _wire_environment(monkeypatch, adapter)
 
     report = await bootstrap.run(
         adapter_name="preset__preset-env",
@@ -161,14 +139,7 @@ async def test_provider_smoke_does_not_bypass_metadata_only_policy(monkeypatch):
     adapter.client = Client()
     adapter.policy = HostedDataPolicy(mode="metadata_only")
     adapter.name = "preset__preset-env"
-    runtime = SimpleNamespace(
-        principal=SimpleNamespace(tenant_id="northstar"),
-        sources=SimpleNamespace(_get=lambda name: adapter),
-        engine=SimpleNamespace(
-            judger=SimpleNamespace(name="jev-latest", metrics=SimpleNamespace(requests=0))
-        ),
-    )
-    monkeypatch.setattr(bootstrap, "build_runtime", lambda: runtime)
+    _wire_environment(monkeypatch, adapter)
 
     report = await bootstrap.run(
         adapter_name="preset__preset-env",
@@ -199,14 +170,7 @@ async def test_provider_smoke_reports_missing_chart_instead_of_index_error(monke
     adapter.client = Client()
     adapter.policy = HostedDataPolicy()
     adapter.name = "preset__preset-env"
-    runtime = SimpleNamespace(
-        principal=SimpleNamespace(tenant_id="northstar"),
-        sources=SimpleNamespace(_get=lambda name: adapter),
-        engine=SimpleNamespace(
-            judger=SimpleNamespace(name="jev-latest", metrics=SimpleNamespace(requests=0))
-        ),
-    )
-    monkeypatch.setattr(bootstrap, "build_runtime", lambda: runtime)
+    _wire_environment(monkeypatch, adapter)
 
     report = await bootstrap.run(
         adapter_name="preset__preset-env",

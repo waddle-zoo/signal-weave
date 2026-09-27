@@ -57,12 +57,10 @@ preset-compose-check:
 	python3 scripts/preset_compose_check.py
 
 preset-bootstrap-check:
-	TYPESAFE_API_KEY_FILE=$${TYPESAFE_API_KEY_FILE:?set a TypeSafe key file} \
 	uv run python scripts/preset_bootstrap_check.py \
 		--output artifacts/preset-bootstrap-check.json
 
 preset-provider-smoke:
-	TYPESAFE_API_KEY_FILE=$${TYPESAFE_API_KEY_FILE:?set a TypeSafe key file} \
 	uv run python scripts/preset_bootstrap_check.py \
 		--dashboard-id "$${PRESET_BOOTSTRAP_DASHBOARD_ID:?set a dashboard id}" \
 		--chart-id "$${PRESET_BOOTSTRAP_CHART_ID:?set a chart id}" \
