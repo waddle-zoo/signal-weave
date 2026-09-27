@@ -320,6 +320,36 @@ async def test_preset_standalone_chart_keeps_saved_query_post_path():
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "query_context",
+    ['{"datasource": {"id": 17}}', '{"queries": ["not-an-object"]}'],
+)
+async def test_preset_malformed_saved_query_context_fails_before_provider_call(query_context):
+    calls = 0
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        raise AssertionError("malformed saved query context must fail before provider I/O")
+
+    client = PresetCloudClient(
+        "https://workspace.app.preset.test",
+        access_token="preset-token",
+        transport=httpx.MockTransport(handler),
+    )
+
+    with pytest.raises(PresetPolicyError, match="usable queries list"):
+        await client.chart_data(
+            {
+                "id": 101,
+                "query_context": query_context,
+                "params": {"metrics": ["revenue"], "datasource": "17__table"},
+            }
+        )
+    assert calls == 0
+
+
+@pytest.mark.asyncio
 async def test_preset_metadata_only_never_fetches_chart_data():
     paths: list[str] = []
 

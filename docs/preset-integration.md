@@ -113,6 +113,10 @@ limits. Successful evaluations expose the serialized payload size and budget
 in telemetry; a rejected shadow receipt records the failed stage and byte
 counts for audit.
 
+Standalone chart reads also require a usable saved `queries` list before making
+the provider POST request; malformed or missing saved query context fails locally
+instead of becoming a provider-side invalid or unbounded request.
+
 After the configuration check, start with the no-credit bootstrap preflight
 before onboarding a card:
 

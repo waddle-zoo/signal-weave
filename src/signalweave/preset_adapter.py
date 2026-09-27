@@ -294,16 +294,22 @@ class PresetCloudClient(SupersetClient):
             )
         else:
             payload = self._saved_query_context(chart) or self._query_context(chart)
+            queries = payload.get("queries")
+            if not isinstance(queries, list) or not queries or any(
+                not isinstance(query, dict) for query in queries
+            ):
+                raise PresetPolicyError(
+                    "Preset saved query context did not contain a usable queries list"
+                )
             if self.max_result_rows is not None:
-                for query in payload.get("queries", []):
-                    if isinstance(query, dict):
-                        requested = query.get("row_limit")
-                        query["row_limit"] = min(
-                            self.max_result_rows,
-                            int(requested)
-                            if isinstance(requested, int)
-                            else self.max_result_rows,
-                        )
+                for query in queries:
+                    requested = query.get("row_limit")
+                    query["row_limit"] = min(
+                        self.max_result_rows,
+                        int(requested)
+                        if isinstance(requested, int) and not isinstance(requested, bool)
+                        else self.max_result_rows,
+                    )
             payload["force"] = self._force_refresh
             response = await self._request(
                 "POST", "/api/v1/chart/data", timeout=60, json=payload
