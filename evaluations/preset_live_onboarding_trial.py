@@ -18,6 +18,7 @@ from typing import Any
 
 from signalweave.mcp_server import create_mcp
 from signalweave.preset_adapter import PresetAdapter
+from signalweave.preset_env import preset_environment_file
 from signalweave.runtime import build_runtime
 
 
@@ -332,7 +333,7 @@ def _resolve_preset_adapter(runtime: Any, requested: str | None) -> str:
     return candidates[0]
 
 
-async def run_trial(
+async def _run_trial_loaded(
     *,
     goal: str,
     why: str,
@@ -801,6 +802,30 @@ async def run_trial(
         output.write_text(serialized + "\n", encoding="utf-8")
     print(serialized)
     return report
+
+
+async def run_trial(
+    *,
+    goal: str,
+    why: str,
+    adapter: str | None,
+    limit: int,
+    destination: str,
+    approve: bool,
+    output: Path | None = None,
+    review_report: Path | None = None,
+) -> dict[str, Any]:
+    with preset_environment_file():
+        return await _run_trial_loaded(
+            goal=goal,
+            why=why,
+            adapter=adapter,
+            limit=limit,
+            destination=destination,
+            approve=approve,
+            output=output,
+            review_report=review_report,
+        )
 
 
 def main() -> None:

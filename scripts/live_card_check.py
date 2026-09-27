@@ -16,10 +16,11 @@ from pathlib import Path
 from typing import Any
 
 from signalweave.models import InsightCard, InsightCardStatus
+from signalweave.preset_env import preset_environment_file
 from signalweave.runtime import build_runtime
 
 
-async def run(card_path: str | Path, *, verbose: bool = False) -> dict[str, Any]:
+async def _run_loaded(card_path: str | Path, *, verbose: bool = False) -> dict[str, Any]:
     def progress(message: str) -> None:
         if verbose:
             print(message, file=sys.stderr, flush=True)
@@ -79,6 +80,11 @@ async def run(card_path: str | Path, *, verbose: bool = False) -> dict[str, Any]
             "expected_outcome_supplied": False,
         },
     }
+
+
+async def run(card_path: str | Path, *, verbose: bool = False) -> dict[str, Any]:
+    with preset_environment_file():
+        return await _run_loaded(card_path, verbose=verbose)
 
 
 def main() -> None:

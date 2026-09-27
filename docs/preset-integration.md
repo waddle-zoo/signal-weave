@@ -99,6 +99,9 @@ The Make target loads `.env.preset` by default when it exists; set
 Already-exported environment variables take precedence over file values. This
 keeps the copy/edit workflow simple without putting secrets into the Makefile
 or serialized reports.
+The Make targets for `preset-bootstrap-check`, `preset-readiness`, the chart
+readiness probes, and the live onboarding trial use the same default. Direct
+script invocations can opt in with `PRESET_ENV_FILE=...`.
 
 This is a zero-network configuration check. It validates the production Preset
 credential mode, tenant binding, policy, HTTP/OIDC mode, and Jev credential

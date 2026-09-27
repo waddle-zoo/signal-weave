@@ -23,6 +23,7 @@ from typing import Any
 from signalweave.hosted import HostedDataMode
 from signalweave.models import SourceRef
 from signalweave.preset_adapter import PresetAdapter
+from signalweave.preset_env import preset_environment_file
 from signalweave.runtime import (
     build_preset_adapter_from_environment,
     validate_preset_environment,
@@ -85,7 +86,7 @@ async def _select_dashboard_by_query(
     return matches, provider_count, truncated
 
 
-async def run(
+async def _run_loaded(
     *,
     adapter_name: str | None,
     page_size: int,
@@ -359,6 +360,28 @@ async def run(
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(serialized, encoding="utf-8")
     return report
+
+
+async def run(
+    *,
+    adapter_name: str | None,
+    page_size: int,
+    dashboard_id: str | None = None,
+    chart_id: str | None = None,
+    dashboard_query: str | None = None,
+    max_pages: int = 5,
+    output: Path | None = None,
+) -> dict[str, Any]:
+    with preset_environment_file():
+        return await _run_loaded(
+            adapter_name=adapter_name,
+            page_size=page_size,
+            dashboard_id=dashboard_id,
+            chart_id=chart_id,
+            dashboard_query=dashboard_query,
+            max_pages=max_pages,
+            output=output,
+        )
 
 
 def main() -> None:

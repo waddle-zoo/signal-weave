@@ -10,44 +10,17 @@ from __future__ import annotations
 
 import json
 import os
-from collections.abc import Iterator
-from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
-from dotenv import dotenv_values
-
+from signalweave.preset_env import preset_environment_file
 from signalweave.runtime import validate_preset_environment
 from signalweave.typesafe_adapter import load_api_key
 
 
-@contextmanager
-def _environment_file() -> Iterator[str | None]:
-    """Temporarily overlay an env file without mutating the caller's process."""
-
-    filename = os.getenv("PRESET_ENV_FILE", "").strip()
-    if not filename:
-        yield None
-        return
-    path = Path(filename)
-    if not path.is_file():
-        raise ValueError(f"PRESET_ENV_FILE does not exist: {path}")
-    values = dotenv_values(path)
-    injected: list[str] = []
-    for key, value in values.items():
-        if key and value is not None and key not in os.environ:
-            os.environ[key] = value
-            injected.append(key)
-    try:
-        yield str(path)
-    finally:
-        for key in injected:
-            os.environ.pop(key, None)
-
-
 def run(*, output: Path | None = None) -> dict[str, Any]:
     try:
-        with _environment_file() as environment_file:
+        with preset_environment_file() as environment_file:
             return _run_loaded(output=output, environment_file=environment_file)
     except (OSError, ValueError) as error:
         return _run_loaded(output=output, environment_file=None, environment_error=error)

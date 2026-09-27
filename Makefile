@@ -97,10 +97,12 @@ preset-compose-bearer-check:
 	python3 scripts/preset_compose_check.py
 
 preset-bootstrap-check:
+	PRESET_ENV_FILE=$${PRESET_ENV_FILE:-.env.preset} \
 	uv run python scripts/preset_bootstrap_check.py \
 		--output artifacts/preset-bootstrap-check.json
 
 preset-readiness:
+	PRESET_ENV_FILE=$${PRESET_ENV_FILE:-.env.preset} \
 	PRESET_BOOTSTRAP_DASHBOARD_QUERY="$${PRESET_BOOTSTRAP_DASHBOARD_QUERY:-}" \
 	PRESET_BOOTSTRAP_DASHBOARD_ID="$${PRESET_BOOTSTRAP_DASHBOARD_ID:-}" \
 	PRESET_BOOTSTRAP_CHART_ID="$${PRESET_BOOTSTRAP_CHART_ID:-}" \
@@ -110,17 +112,20 @@ preset-readiness:
 		--output artifacts/preset-readiness.json
 
 preset-provider-smoke:
+	PRESET_ENV_FILE=$${PRESET_ENV_FILE:-.env.preset} \
 	uv run python scripts/preset_bootstrap_check.py \
 		--dashboard-id "$${PRESET_BOOTSTRAP_DASHBOARD_ID:?set a dashboard id}" \
 		--chart-id "$${PRESET_BOOTSTRAP_CHART_ID:?set a chart id}" \
 		--output artifacts/preset-provider-smoke.json
 
 preset-dashboard-readiness:
+	PRESET_ENV_FILE=$${PRESET_ENV_FILE:-.env.preset} \
 	uv run python scripts/preset_bootstrap_check.py \
 		--dashboard-id "$${PRESET_BOOTSTRAP_DASHBOARD_ID:?set a dashboard id}" \
 		--output artifacts/preset-dashboard-readiness.json
 
 preset-live-trial:
+	PRESET_ENV_FILE=$${PRESET_ENV_FILE:-.env.preset} \
 	TYPESAFE_API_KEY_FILE=$${TYPESAFE_API_KEY_FILE:?set a live TypeSafe key file} \
 	uv run python evaluations/preset_live_onboarding_trial.py \
 		--goal "$${PRESET_TRIAL_GOAL:?set a human monitoring goal}" \
@@ -129,6 +134,7 @@ preset-live-trial:
 		--output artifacts/preset-live-onboarding-shadow.json
 
 preset-live-trial-approve:
+	PRESET_ENV_FILE=$${PRESET_ENV_FILE:-.env.preset} \
 	TYPESAFE_API_KEY_FILE=$${TYPESAFE_API_KEY_FILE:?set a live TypeSafe key file} \
 	uv run python evaluations/preset_live_onboarding_trial.py \
 		--goal "$${PRESET_TRIAL_GOAL:?set a human monitoring goal}" \
