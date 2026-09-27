@@ -381,6 +381,90 @@ async def test_live_trial_rejects_a_mutated_reviewed_card(monkeypatch, tmp_path)
 
 
 @pytest.mark.asyncio
+async def test_live_trial_rejects_changed_runtime_policy_before_approval(monkeypatch, tmp_path):
+    provider_adapter = PresetAdapter.__new__(PresetAdapter)
+    provider_adapter.client = SimpleNamespace(requests_made=0, request_path_counts={})
+    _attach_policy(provider_adapter)
+    draft_path = tmp_path / "draft.json"
+    draft_path.write_text(
+        json.dumps(
+            {
+                "trial": "preset-live-onboarding-shadow",
+                "adapter": "preset__preset-env",
+                "tenant_id": "northstar",
+                "request": {
+                    "goal": "Monitor growth",
+                    "why": "Support the growth team",
+                    "destination": "slack://growth",
+                    "limit": 10,
+                },
+                "approval_requested": False,
+                "passed": False,
+                "onboarding": {
+                    "status": "ready_for_approval",
+                    "approval_required": True,
+                    "delivery_enabled": False,
+                    "card": {"id": "card-1", "version": 1},
+                },
+                "provider_checks": {
+                    "provider_requests_before_onboarding": 0,
+                    "provider_requests_after_onboarding": 1,
+                    "provider_requests_for_onboarding": 1,
+                    "provider_transport_used": True,
+                    "provider_credentials_loaded": True,
+                    "provider_secrets_absent_from_artifacts": True,
+                    "provider_catalog_searches_for_onboarding": 1,
+                    "provider_request_paths_before_onboarding": {},
+                    "provider_request_paths_after_onboarding": {"/api/v1/dashboard/": 1},
+                    "provider_request_paths_for_onboarding": {"/api/v1/dashboard/": 1},
+                    **_policy_proof(),
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    provider_adapter.policy = HostedDataPolicy(
+        mode="live_query", allow_live_queries=True, allow_refresh=True
+    )
+    provider_adapter.client._force_refresh = True
+    monkeypatch.setattr(
+        trial,
+        "build_runtime",
+        lambda: SimpleNamespace(
+            sources=SimpleNamespace(
+                adapter_names=lambda: ["preset__preset-env"],
+                _get=lambda name: provider_adapter,
+            ),
+            principal=SimpleNamespace(tenant_id="northstar"),
+            card_store=SimpleNamespace(
+                get_card=lambda card_id: SimpleNamespace(
+                    model_dump=lambda mode: {"id": "card-1", "version": 1}
+                )
+            ),
+            engine=SimpleNamespace(judger=SimpleNamespace(name="jev-latest")),
+        ),
+    )
+    monkeypatch.setattr(
+        trial,
+        "create_mcp",
+        lambda runtime: (_ for _ in ()).throw(
+            AssertionError("approval must stop before MCP construction")
+        ),
+    )
+
+    with pytest.raises(RuntimeError, match="data policy no longer matches"):
+        await trial.run_trial(
+            goal="Monitor growth",
+            why="Support the growth team",
+            adapter="preset__preset-env",
+            limit=10,
+            destination="slack://growth",
+            approve=True,
+            output=draft_path,
+        )
+
+
+@pytest.mark.asyncio
 async def test_live_trial_rejects_mutated_transport_proof_before_approval(monkeypatch, tmp_path):
     provider_adapter = PresetAdapter.__new__(PresetAdapter)
     provider_adapter.client = SimpleNamespace(requests_made=0, request_path_counts={})

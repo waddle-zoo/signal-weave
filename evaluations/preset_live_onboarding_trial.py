@@ -296,6 +296,23 @@ async def run_trial(
     provider_client = getattr(preset_source, "client", None)
     provider_secrets = _provider_secret_values(provider_client)
     data_policy, provider_force_refresh = _data_policy_proof(preset_source, provider_client)
+    _validate_data_policy_proof(
+        {
+            "data_policy": data_policy,
+            "provider_force_refresh": provider_force_refresh,
+        }
+    )
+    if reviewed_draft is not None:
+        reviewed_checks = reviewed_draft.get("provider_checks")
+        if not isinstance(reviewed_checks, dict):
+            raise RuntimeError("reviewed draft is missing Preset provider checks")
+        if reviewed_checks.get("data_policy") != data_policy or reviewed_checks.get(
+            "provider_force_refresh"
+        ) != provider_force_refresh:
+            raise RuntimeError(
+                "configured Preset data policy no longer matches the reviewed draft; "
+                "re-run onboarding and review the new artifact"
+            )
     provider_requests_before = getattr(provider_client, "requests_made", None)
     if not isinstance(provider_requests_before, int):
         raise RuntimeError(
