@@ -110,6 +110,82 @@ jobs:
           PUSH_WEBHOOK_TOKEN_HOST_FILE="$secret_dir/push" \
             python3 scripts/preset_compose_check.py
 
+  hosted-preset-bootstrap-contract:
+    name: hosted Preset bootstrap contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --locked --extra dev
+
+      - name: Reject copied sample sentinels without network traffic
+        shell: bash
+        run: |
+          set +e
+          PRESET_URL='https://your-workspace.<region>.app.preset.io' \
+          PRESET_WORKSPACE='your-workspace' \
+          PRESET_TENANT_ID='your-company' \
+          PRESET_API_TOKEN_NAME='replace-me' \
+          PRESET_API_TOKEN_SECRET='replace-me' \
+          SIGNALWEAVE_TENANT_ID='your-company' \
+          SIGNALWEAVE_PRINCIPAL_ID='your-agent' \
+          TYPESAFE_API_KEY='placeholder' \
+            uv run python scripts/preset_config_check.py > /tmp/preset-config-sentinel.json 2>&1
+          status=$?
+          set -e
+          test "$status" -ne 0
+          grep -q '"network_requests": 0' /tmp/preset-config-sentinel.json
+          grep -q 'PRESET_URL' /tmp/preset-config-sentinel.json
+
+      - name: Accept valid-shaped config without network traffic
+        run: |
+          PRESET_URL='https://northstar.us-east-1.app.preset.io' \
+          PRESET_WORKSPACE='northstar' \
+          PRESET_TENANT_ID='northstar' \
+          PRESET_API_TOKEN_NAME='ci-name' \
+          PRESET_API_TOKEN_SECRET='ci-secret' \
+          SIGNALWEAVE_TENANT_ID='northstar' \
+          SIGNALWEAVE_PRINCIPAL_ID='signalweave-agent' \
+          TYPESAFE_API_KEY='ci-typesafe-key' \
+            uv run python scripts/preset_config_check.py > /tmp/preset-config-valid.json
+          grep -q '"passed": true' /tmp/preset-config-valid.json
+          grep -q '"network_requests": 0' /tmp/preset-config-valid.json
+          grep -q '"jev_requests": 0' /tmp/preset-config-valid.json
+
+      - name: Reject contradictory cached policy without network traffic
+        shell: bash
+        run: |
+          set +e
+          PRESET_URL='https://northstar.us-east-1.app.preset.io' \
+          PRESET_WORKSPACE='northstar' \
+          PRESET_TENANT_ID='northstar' \
+          PRESET_API_TOKEN_NAME='ci-name' \
+          PRESET_API_TOKEN_SECRET='ci-secret' \
+          PRESET_DATA_MODE='cached_results' \
+          PRESET_ALLOW_REFRESH='true' \
+          SIGNALWEAVE_TENANT_ID='northstar' \
+          SIGNALWEAVE_PRINCIPAL_ID='signalweave-agent' \
+          TYPESAFE_API_KEY='ci-typesafe-key' \
+            uv run python scripts/preset_config_check.py > /tmp/preset-config-policy.json 2>&1
+          status=$?
+          set -e
+          test "$status" -ne 0
+          grep -q '"network_requests": 0' /tmp/preset-config-policy.json
+          grep -q 'requires live_query mode' /tmp/preset-config-policy.json
+
   hosted-preset-scale-proof:
     name: hosted Preset scale proof (${{ matrix.seed }})
     runs-on: ubuntu-latest
