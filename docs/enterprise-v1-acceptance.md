@@ -65,10 +65,10 @@ returns an inspectable evidence bundle and receipt.
 | Hosted credential injection is deployment-safe | Docker Compose secret overlay mounts Preset API-token files, clears direct `.env.preset` token values, and the runtime tests value/file exclusivity, exact credential modes, explicit tenant identity, and tenant binding. `make preset-compose-check` also inspects the rendered two-file Compose model with disposable file inputs. | Pass locally; vault/KMS and real tenant gate remain open |
 | Customer bootstrap commands execute from the repository | The actual `make preset-compose-check` rendered the two-file Compose deployment with placeholder secret files, and `make preset-config-check` accepted a placeholder token-mode configuration without contacting a provider or Jev. | Both pass; 0 network requests and 0 Jev requests; real credentials remain unproven |
 | Shared-service egress is not overclaimed | The self-hosted connector enforces HTTPS origins, while the managed-service boundary explicitly requires provider allowlists, redirect blocking, DNS-rebinding protection, and network egress policy before accepting tenant-supplied URLs. | Documented boundary; managed-service controls not shipped |
-| Preset onboarding fails early without burning Jev credits | `make preset-config-check` reuses the production Preset parser to validate credentials, tenant binding, auth mode, policy, and Jev key presence with zero network requests and zero Jev requests. The provider-only bootstrap path then builds the same tenant-bound adapter and reaches a bounded catalog request without a TypeSafe key or Jev request. | Pass locally; real tenant gate remains open |
+| Preset onboarding fails early without burning Jev credits | `make preset-config-check` reuses the production Preset parser to validate credentials, tenant binding, auth mode, policy, and Jev key presence with zero network requests and zero Jev requests. The provider-only bootstrap path then builds the same tenant-bound adapter and reaches a bounded catalog request without a TypeSafe key or Jev request. The optional chart probe reports an actionable re-save remediation when Preset has no saved query context, rather than suggesting an unsafe unscoped fallback. | Pass locally; real tenant gate remains open |
 | Generated-shape anti-overfitting trial | A seeded generator creates 24 unfamiliar tenant workspaces / 192 charts across five result envelopes, 12 visualization labels, usable and unusable metric definitions, empty results, ambiguous numerics, and provider failures; the production Preset client/adapter passes catalog, scope, cache, retention, and safe-degradation assertions, then an independent report reviewer checks coverage and rejects mutated pass-looking reports. A generated 64-chart dashboard stress test proves the provider aggregate byte budget fails closed; an engine test separately proves the multi-source serialized Jev budget fails before any Jev call. | Pass locally; provider and live Jev gates remain open |
 | Existing enterprise workflows remain the owner | MCP tools return typed decisions and evidence; SignalWeave does not execute arbitrary SQL, tools, DAGs, or notifications. | Pass |
-| Regression safety | Full repository tests and lint. | 367 passed, 2 skipped; Ruff clean |
+| Regression safety | Full repository tests and lint. | 368 passed, 2 skipped; Ruff clean |
 
 ## Reproduction
 
@@ -108,7 +108,7 @@ make preset-compose-check
 make superset-chart-matrix
 ```
 
-The current verified regression result is `367 passed, 2 skipped` with Ruff
+The current verified regression result is `368 passed, 2 skipped` with Ruff
 clean. The runtime-shadow and chart-matrix commands are separate evidence
 surfaces: the former uses synthetic Preset and TypeSafe transports to exercise
 the production runtime, while the latter uses the live local Superset service

@@ -159,6 +159,10 @@ approve anything, or deliver a notification. A successful probe proves the
 provider boundary; it is still not proof that the business card is correct. A
 `metadata_only` connection refuses this probe rather than bypassing its data
 policy.
+If the provider reports that the chart has no saved query context, the report
+includes the concrete remediation: re-save the chart in Preset and rerun the
+probe. SignalWeave does not replace that context with an unscoped query when
+dashboard filter state could be bypassed.
 
 Preset API credentials must be kept in an untracked secret file or deployment
 secret manager. They are loaded into memory only to construct the adapter and

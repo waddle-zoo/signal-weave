@@ -23,6 +23,18 @@ from signalweave.runtime import (
 )
 
 
+def _chart_probe_remediation(error: str | None) -> str | None:
+    """Turn a common provider artifact failure into an onboarding action."""
+
+    if error and "query context" in error.lower():
+        return (
+            "Re-save the chart in Preset so its saved query context is persisted, "
+            "then rerun this probe. SignalWeave will not bypass dashboard filter "
+            "scope with an unscoped fallback."
+        )
+    return None
+
+
 async def run(
     *,
     adapter_name: str | None,
@@ -74,6 +86,7 @@ async def run(
                 }
             else:
                 chart = snapshot.charts[0]
+                remediation = _chart_probe_remediation(chart.error)
                 chart_probe = {
                     "dashboard_id": dashboard_id,
                     "chart_id": chart_id,
@@ -82,6 +95,8 @@ async def run(
                     "error": chart.error,
                     "passed": chart.error is None and bool(chart.observations),
                 }
+                if remediation:
+                    chart_probe["remediation"] = remediation
     report = {
         "trial": "preset-bootstrap-check",
         "adapter": adapter_name,

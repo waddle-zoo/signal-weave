@@ -181,3 +181,38 @@ async def test_provider_smoke_reports_missing_chart_instead_of_index_error(monke
 
     assert report["passed"] is False
     assert report["chart_probe"]["error"] == "the dashboard returned no matching chart"
+
+
+@pytest.mark.asyncio
+async def test_provider_smoke_explains_missing_saved_query_context(monkeypatch):
+    class Chart:
+        error = "Data unavailable: Chart has no query context saved. Please save the chart again."
+        semantic_status = "unsupported"
+        observations = []
+
+    class Snapshot:
+        charts = [Chart()]
+
+    class Client:
+        async def list_dashboards_page(self, *, page, page_size, query=None):
+            return ([{"id": 7, "dashboard_title": "Growth"}], 1)
+
+        async def dashboard_snapshot(self, *args, **kwargs):
+            return Snapshot()
+
+    adapter = PresetAdapter.__new__(PresetAdapter)
+    adapter.client = Client()
+    adapter.policy = HostedDataPolicy()
+    adapter.name = "preset__preset-env"
+    _wire_environment(monkeypatch, adapter)
+
+    report = await bootstrap.run(
+        adapter_name="preset__preset-env",
+        page_size=20,
+        dashboard_id="7",
+        chart_id="101",
+    )
+
+    assert report["passed"] is False
+    assert "Re-save the chart" in report["chart_probe"]["remediation"]
+    assert "unscoped fallback" in report["chart_probe"]["remediation"]
