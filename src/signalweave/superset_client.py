@@ -12,6 +12,8 @@ import httpx
 from .models import Observation
 from .superset_models import SupersetChartSnapshot, SupersetDashboardSnapshot
 
+DEFAULT_MAX_CONCURRENT_CHART_REQUESTS = 8
+
 
 @dataclass(frozen=True)
 class ChartObservationExtraction:
@@ -820,7 +822,7 @@ class SupersetClient:
             "chart_query_fallbacks": 0,
         }
 
-        semaphore = asyncio.Semaphore(8)
+        semaphore = asyncio.Semaphore(DEFAULT_MAX_CONCURRENT_CHART_REQUESTS)
 
         async def load_chart(chart: SupersetChartSnapshot) -> SupersetChartSnapshot:
             async with semaphore:

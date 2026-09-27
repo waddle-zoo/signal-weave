@@ -1,9 +1,14 @@
+import asyncio
+
 import httpx
 import pytest
 
 from signalweave.models import SourceRef
 from signalweave.superset_adapter import SupersetAdapter
-from signalweave.superset_client import SupersetClient
+from signalweave.superset_client import (
+    DEFAULT_MAX_CONCURRENT_CHART_REQUESTS,
+    SupersetClient,
+)
 
 
 def test_metadata_mapping_is_read_only_and_safe():
@@ -293,6 +298,63 @@ async def test_dashboard_snapshot_records_source_failures_for_safety_gates():
     )
     assert resource.error
     assert "source timeout" in resource.error
+
+
+@pytest.mark.asyncio
+async def test_dashboard_snapshot_bounds_chart_request_concurrency():
+    class CountingClient(SupersetClient):
+        def __init__(self):
+            super().__init__("https://superset.test")
+            self.active_requests = 0
+            self.max_active_requests = 0
+
+        async def get_dashboard_metadata(self, dashboard_id):
+            position = {
+                f"chart-{index}": {
+                    "type": "CHART",
+                    "meta": {"chartId": index},
+                }
+                for index in range(1, 25)
+            }
+            return {
+                "id": dashboard_id,
+                "dashboard_title": "Large dashboard",
+                "position_json": position,
+            }
+
+        async def get_chart_metadata(self, chart_id):
+            return {
+                "id": chart_id,
+                "slice_name": f"Chart {chart_id}",
+                "params": {"metrics": [{"label": "Revenue"}]},
+            }
+
+        async def chart_data(
+            self,
+            chart,
+            *,
+            dashboard_id=None,
+            allow_unscoped_fallback=False,
+            scope_telemetry=None,
+        ):
+            del chart, dashboard_id, allow_unscoped_fallback, scope_telemetry
+            self.active_requests += 1
+            self.max_active_requests = max(
+                self.max_active_requests, self.active_requests
+            )
+            try:
+                await asyncio.sleep(0.001)
+                return [{"data": [{"period": 1, "Revenue": 10}]}]
+            finally:
+                self.active_requests -= 1
+
+    client = CountingClient()
+
+    snapshot = await client.dashboard_snapshot(7)
+
+    assert len(snapshot.charts) == 24
+    assert client.max_active_requests == DEFAULT_MAX_CONCURRENT_CHART_REQUESTS
+    assert client.active_requests == 0
 
 
 @pytest.mark.asyncio
