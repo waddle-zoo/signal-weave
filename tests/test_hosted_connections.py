@@ -879,6 +879,30 @@ async def test_preset_async_chart_response_fails_closed_instead_of_becoming_no_d
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "status",
+    ["failed", "pending", "running", "scheduled", "stopped", "timed_out"],
+)
+async def test_preset_non_success_query_status_fails_closed_inside_http_200(status):
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={"result": [{"status": status, "data": []}]},
+        )
+
+    client = PresetCloudClient(
+        "https://workspace.app.preset.test",
+        access_token="preset-token",
+        transport=httpx.MockTransport(handler),
+    )
+
+    with pytest.raises(PresetPolicyError, match="non-success query status"):
+        await client.chart_data(
+            {"id": 101, "params": {"metrics": ["revenue"], "datasource": "17__table"}},
+        )
+
+
+@pytest.mark.asyncio
 async def test_preset_rejects_oversized_response_before_parsing():
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, content=b"{" + b"x" * 128 + b"}")

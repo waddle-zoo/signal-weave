@@ -310,6 +310,21 @@ class PresetCloudClient(SupersetClient):
                 "Preset chart response contained a non-object result envelope"
             )
         envelopes = [result] if isinstance(result, dict) else result
+        non_success_statuses = {
+            "failed",
+            "pending",
+            "running",
+            "scheduled",
+            "stopped",
+            "timed_out",
+        }
+        for item in envelopes:
+            status = item.get("status")
+            if status is not None and str(status).strip().lower() in non_success_statuses:
+                raise PresetPolicyError(
+                    "Preset chart response reported a non-success query status: "
+                    f"{status}"
+                )
         if self.max_result_rows is not None:
             row_count = sum(
                 len(self._rows_from_result_item(item))

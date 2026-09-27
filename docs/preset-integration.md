@@ -164,6 +164,9 @@ result or poll a provider-owned job queue. It does not silently truncate a time
 series and invent a current value. Malformed chart responses with a missing,
 scalar, or mixed-object `result` envelope, or invalid JSON also fail closed as
 provider-policy errors; they are not converted to an apparently empty chart.
+The same fail-closed rule applies when a provider returns HTTP 200 but embeds a
+non-success query status such as `pending`, `failed`, or `timed_out` inside a
+result item.
 Even when a 202 response includes a provider `result_url`, the connector does
 not follow it or make a second-host request. Superset documents that field in
 its [async chart response schema](https://superset.apache.org/developer-docs/api/schemas/chartdataasyncresponseschema/).
