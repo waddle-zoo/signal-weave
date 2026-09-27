@@ -230,6 +230,29 @@ async def test_jev_discovery_payload_budget_fails_before_transport(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_jev_question_payload_budget_fails_before_transport(monkeypatch):
+    FakeClient.calls = []
+    monkeypatch.setattr(typesafe_sdk, "AsyncTypeSafeClient", FakeClient)
+    monkeypatch.setattr(typesafe_sdk, "Noul", FakeNoul)
+    judger = JevJudger(api_key="synthetic-test-key", max_payload_bytes=1_024)
+
+    with pytest.raises(JevPayloadError, match="exceeded the configured budget"):
+        await judger._system_one_with_retry(
+            state={"goal": "small"},
+            questions={
+                "dynamic_card_question": FakeNoul(
+                    instructions="x" * 3_000,
+                    criteria={"true": "supported", "false": "not supported"},
+                )
+            },
+        )
+
+    assert FakeClient.calls == []
+    assert judger.metrics.requests == 0
+    assert judger.metrics.payload_bytes == 0
+
+
+@pytest.mark.asyncio
 async def test_jev_context_rank_includes_versioned_graph_facts(monkeypatch):
     FakeClient.calls = []
     monkeypatch.setattr(typesafe_sdk, "AsyncTypeSafeClient", FakeClient)

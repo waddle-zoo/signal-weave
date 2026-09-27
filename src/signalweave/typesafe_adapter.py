@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
@@ -80,6 +81,7 @@ class JudgerMetrics:
     requests: int = 0
     input_tokens: int = 0
     output_tokens: int = 0
+    payload_bytes: int = 0
 
     def record(self, response: Any) -> None:
         self.requests += 1
@@ -91,6 +93,9 @@ class JudgerMetrics:
     def record_tokens(self, input_tokens: Any = None, output_tokens: Any = None) -> None:
         self.input_tokens += int(input_tokens or 0)
         self.output_tokens += int(output_tokens or 0)
+
+    def record_payload(self, payload_bytes: int) -> None:
+        self.payload_bytes += max(0, int(payload_bytes))
 
 
 class JevJudger:
@@ -243,13 +248,21 @@ class JevJudger:
         connection is safe. API validation and model errors are returned
         immediately rather than being hidden behind repeated requests.
         """
-        serialized = json.dumps(state, ensure_ascii=False, separators=(",", ":"))
+        serialized = json.dumps(
+            {
+                "state": state,
+                "questions": self._question_budget_payload(questions),
+            },
+            ensure_ascii=False,
+            separators=(",", ":"),
+        )
         observed_bytes = len(serialized.encode("utf-8"))
         if observed_bytes > self.max_payload_bytes:
             raise JevPayloadError(
                 observed_bytes=observed_bytes,
                 budget_bytes=self.max_payload_bytes,
             )
+        self.metrics.record_payload(observed_bytes)
         for attempt in range(self._max_retries + 1):
             try:
                 async with self._client_type(
@@ -263,6 +276,32 @@ class JevJudger:
                 if delay:
                     await asyncio.sleep(delay)
         raise RuntimeError("unreachable Jev retry state")
+
+    @staticmethod
+    def _question_budget_payload(questions: Mapping[str, Any]) -> dict[str, Any]:
+        """Build the JSON shape that contributes to a TypeSafe request budget.
+
+        The SDK accepts typed question objects as well as raw dictionaries. Its
+        wire representation is deliberately small and stable: a question type,
+        instructions, and criteria. Keeping this projection at the transport
+        boundary means dynamically authored card text is bounded just like the
+        evidence state, without requiring question objects themselves to be
+        JSON serializable.
+        """
+        payload: dict[str, Any] = {}
+        for key, question in questions.items():
+            if isinstance(question, Mapping):
+                payload[str(key)] = dict(question)
+                continue
+            question_payload: dict[str, Any] = {
+                "type": type(question).__name__.removesuffix("Question").lower(),
+            }
+            for field in ("instructions", "criteria"):
+                value = getattr(question, field, None)
+                if value is not None:
+                    question_payload[field] = value
+            payload[str(key)] = question_payload
+        return payload
 
     @staticmethod
     def _is_retryable_transport_error(error: Exception) -> bool:

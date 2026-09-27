@@ -63,7 +63,7 @@ returns an inspectable evidence bundle and receipt.
 | Embedded Preset query errors do not become false empty data | A non-empty result-item `error` fails closed even when the HTTP response is 200; warnings remain non-blocking. | Pass locally |
 | Preset dashboard fan-out stays bounded | Concurrent chart reads use one refresh exchange when a shared token expires; the aggregate dashboard snapshot also fails closed when it exceeds the configured byte budget instead of sending partial evidence to Jev. | Pass locally |
 | Preset dashboard fan-out concurrency is bounded | The shared Superset/hosted-Preset client gates chart metadata and data work with `DEFAULT_MAX_CONCURRENT_CHART_REQUESTS=8`; a 24-chart regression test measures peak in-flight work and prevents an unbounded request burst. | Pass locally; provider-specific rate limits remain a deployment gate |
-| Jev budget covers onboarding as well as evaluation | The Jev adapter enforces the deployment's serialized input budget on every request, including bounded Preset catalog ranking; an oversized discovery payload fails before the TypeSafe transport is opened. | Pass locally; live Jev billing/limits remain a deployment gate |
+| Jev budget covers onboarding as well as evaluation | The Jev adapter enforces the deployment's serialized request budget over both evidence state and typed question definitions on every request, including bounded Preset catalog ranking; an oversized discovery or card-question payload fails before the TypeSafe transport is opened. | Pass locally; live Jev billing/limits remain a deployment gate |
 | Explicit chart selection cannot widen accidentally | An omitted `chart_ids` field means “inspect the dashboard”; an explicitly supplied empty or blank selection fails before chart fan-out instead of silently expanding to every chart. | Pass locally; regression: `tests/test_superset_client.py::test_dashboard_snapshot_rejects_empty_selected_chart_ids` |
 | Malformed retry hints cannot destabilize backoff | Non-finite `Retry-After` values (`NaN`, infinities) are ignored, while finite values remain clamped to the bounded retry window. | Pass locally; regression: `tests/test_hosted_connections.py::test_preset_retry_after_ignores_non_finite_values` |
 | Preset response streams stay bounded | The configured response-byte policy is enforced while consuming the API-token exchange and workspace/dashboard streams, before parsing or forwarding the body. Chunked oversized responses fail closed. | Pass locally |
@@ -136,7 +136,7 @@ make local-superset-runtime-shadow-trial
 make local-superset-runtime-shadow-review
 ```
 
-The current verified regression result is `486 passed, 2 skipped` with Ruff
+The current verified regression result is `489 passed, 2 skipped` with Ruff
 clean. The environment preflight also rejects malformed Preset workspace or
 API-auth URLs (credentials, paths, queries, fragments, missing hosts, and
 non-numeric ports) and copied example sentinels such as `replace-me`,

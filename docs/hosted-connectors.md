@@ -85,14 +85,16 @@ enforce receipt retention, deletion, encryption, and data residency outside the
 adapter layer. `max_result_rows` and `max_snapshot_bytes` keep provider
 responses and the aggregate Preset dashboard snapshot from becoming an
 unbounded Jev input. Every Jev request, including onboarding catalog ranking,
-uses the same serialized input budget. If a candidate catalog, card, or
-multi-source evaluation exceeds that deployment budget, SignalWeave fails
-before Jev rather than sending a partial bundle or consuming an unbounded
-request. Successful evaluation results expose the final serialized Jev payload
-size and configured budget in telemetry; failed receipts persist the stage,
-observed bytes, and budget. If a Preset dashboard exceeds the aggregate byte budget,
-the adapter fails closed with no partial evidence; use explicit `chart_ids` or
-split the workflow rather than treating a truncated dashboard as complete.
+uses the same serialized request budget over the evidence state and typed
+question definitions. If a candidate catalog, card, question, or multi-source
+evaluation exceeds that deployment budget, SignalWeave fails before Jev rather
+than sending a partial bundle or consuming an unbounded request. Successful
+evaluations expose the total serialized Jev request bytes used by that run and
+the configured budget in telemetry; failed receipts persist the stage,
+observed bytes, and budget. If a Preset dashboard exceeds the aggregate byte
+budget, the adapter fails closed with no partial evidence; use explicit
+`chart_ids` or split the workflow rather than treating a truncated dashboard as
+complete.
 When `chart_ids` is present, it must be a non-empty list of non-empty strings;
 an empty selection is rejected rather than being interpreted as “all charts.”
 

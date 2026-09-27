@@ -107,6 +107,7 @@ class InsightEngine:
             "requests": max(0, int(getattr(metrics, "requests", 0) or 0)),
             "input_tokens": max(0, int(getattr(metrics, "input_tokens", 0) or 0)),
             "output_tokens": max(0, int(getattr(metrics, "output_tokens", 0) or 0)),
+            "payload_bytes": max(0, int(getattr(metrics, "payload_bytes", 0) or 0)),
         }
 
     @staticmethod
@@ -182,6 +183,7 @@ class InsightEngine:
             key: max(0, metrics_after[key] - metrics_before[key])
             for key in metrics_after
         }
+        measured_payload_bytes = provider["payload_bytes"] or jev_payload_bytes
         source = self._source_telemetry(resources)
         return RunTelemetry(
             wall_time_ms=max(0.0, (perf_counter() - started) * 1000),
@@ -192,7 +194,7 @@ class InsightEngine:
             jev_requests=provider["requests"],
             jev_input_tokens=provider["input_tokens"],
             jev_output_tokens=provider["output_tokens"],
-            jev_payload_bytes=jev_payload_bytes,
+            jev_payload_bytes=measured_payload_bytes,
             jev_payload_budget_bytes=self.max_jev_payload_bytes,
             query_calls=int(source["query_calls"]),
             query_bytes_scanned=int(source["query_bytes_scanned"]),
