@@ -37,6 +37,7 @@ returns an inspectable evidence bundle and receipt.
 | Hosted workspace labels cannot widen authorization | `external_workspace` is descriptive metadata only; the tenant-bound credential and validated provider origin determine the adapter endpoint and authorization scope. | Pass locally |
 | Invalid or incomplete identity fails closed | Wrong signature/issuer/audience, expired tokens, malformed JWTs, missing tenant claims, and unauthorized MCP requests are tested. | Pass |
 | Health checks do not expose MCP | `/healthz` is public; `/mcp` requires a valid bearer token in native MCP auth mode. | Pass |
+| Local container deployment boundary | The running Compose SignalWeave container reported healthy; an actual `GET /healthz` returned 200 with the installed Superset adapter, while an unauthenticated `GET /mcp` returned 401. | Pass locally; authenticated customer deployment remains a gate |
 | Onboarding is usable without SignalWeave owning a UI | `onboard_insight_card` is one call from free-form intent to persisted draft plus Jev plan, candidates, blockers, questions, and next action. | Pass |
 | Human intent is not guessed | Missing sources, decision guidance, ambiguity, stale sources, bounded catalogs, and absent candidates remain explicit review/block states. | Pass |
 | Approval and delivery remain separate | One-call onboarding always returns `approval_required=true` and `delivery_enabled=false`; approval re-checks the current review. | Pass |
