@@ -189,3 +189,28 @@ def test_config_check_rejects_malformed_preset_auth_origin_before_network(
     assert any("PRESET_API_BASE_URL" in error for error in report["errors"])
     assert report["checks"]["network_requests"] == 0
     assert report["checks"]["jev_requests"] == 0
+
+
+@pytest.mark.parametrize(
+    "workspace_url",
+    [
+        "https://workspace.example.com/api",
+        "https://user:password@workspace.example.com",
+        "https://workspace.example.com?tenant=acme",
+        "https://workspace.example.com#dashboard",
+        "https://:443",
+    ],
+)
+def test_config_check_rejects_malformed_preset_workspace_origin_before_network(
+    monkeypatch, workspace_url
+):
+    _clear_config(monkeypatch)
+    _set_valid_token_config(monkeypatch)
+    monkeypatch.setenv("PRESET_URL", workspace_url)
+
+    report = config_check.run()
+
+    assert report["passed"] is False
+    assert any("PRESET_URL" in error for error in report["errors"])
+    assert report["checks"]["network_requests"] == 0
+    assert report["checks"]["jev_requests"] == 0
