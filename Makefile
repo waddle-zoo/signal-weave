@@ -1,4 +1,4 @@
-.PHONY: install test lint prove benchmark daily-trial enterprise-trial discovery-trial bundle-trial query-trial retrieval-explanation-trial preset-trial preset-boundary-trial preset-generalization-trial preset-jev-contract-trial preset-runtime-shadow-trial preset-runtime-shadow-review preset-enterprise-proof local-superset-runtime-shadow-trial local-superset-runtime-shadow-review preset-config-check preset-bootstrap-check preset-readiness preset-provider-smoke preset-dashboard-readiness preset-live-trial preset-live-trial-approve preset-live-trial-review preset-compose-check preset-compose-bearer-check superset-chart-matrix verify docker-up docker-down
+.PHONY: install test lint prove benchmark daily-trial enterprise-trial discovery-trial bundle-trial query-trial retrieval-explanation-trial preset-trial preset-boundary-trial preset-generalization-trial preset-jev-contract-trial preset-runtime-shadow-trial preset-runtime-shadow-review preset-enterprise-proof local-superset-runtime-shadow-trial local-superset-runtime-shadow-review preset-config-check preset-bootstrap-check preset-readiness preset-provider-smoke preset-dashboard-readiness preset-live-trial preset-live-trial-approve preset-live-trial-review preset-live-semantic-review preset-compose-check preset-compose-bearer-check superset-chart-matrix verify docker-up docker-down
 
 install:
 	uv sync --extra dev
@@ -139,6 +139,11 @@ preset-live-trial-approve:
 preset-live-trial-review:
 	uv run python evaluations/preset_live_onboarding_review.py \
 		artifacts/preset-live-onboarding-shadow.json
+
+preset-live-semantic-review:
+	uv run python evaluations/preset_live_semantic_review.py \
+		artifacts/preset-live-onboarding-shadow.json \
+		artifacts/preset-live-semantic-assessment.json
 
 superset-chart-matrix:
 	uv run python scripts/superset_chart_matrix.py

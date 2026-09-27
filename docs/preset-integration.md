@@ -145,6 +145,28 @@ onboard_insight_card
   -> caller-owned delivery
 ```
 
+For a real customer acceptance run, the live shadow review is followed by a
+separate operator label. Copy
+[`examples/preset/semantic-assessment.example.json`](../examples/preset/semantic-assessment.example.json),
+fill it out from the reviewed result, and bind it to the exact report before
+running the independent semantic gate:
+
+```bash
+uv run python evaluations/preset_live_semantic_review.py \
+  artifacts/preset-live-onboarding-shadow.json \
+  --print-report-digest
+# Put that digest in artifacts/preset-live-semantic-assessment.json.
+make preset-live-semantic-review
+```
+
+The assessment is deliberately small and human-owned: expected outcome,
+evidence that must be present or absent, expected delivery methods, a useful
+flag, and a note. The reviewer first reruns the transport/safety checks, then
+requires the assessment to match the report tenant, card version, outcome,
+evidence, delivery methods, and canonical report digest. A passing synthetic
+test cannot substitute for this label; a real customer result remains an open
+acceptance gate until an authorized owner labels it useful.
+
 The engine also enforces a serialized aggregate Jev input budget across all
 sources selected for one card. Configure it with
 `SIGNALWEAVE_MAX_JEV_PAYLOAD_BYTES` (4,000,000 by default). If a card spans

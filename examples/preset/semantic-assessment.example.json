@@ -1,0 +1,16 @@
+{
+  "trial": "preset-live-semantic-assessment",
+  "reviewer_id": "growth-owner",
+  "tenant_id": "replace-with-the-report-tenant",
+  "card_id": "replace-with-the-report-card-id",
+  "card_version": 1,
+  "report_digest": "replace-with-the-shadow-report-sha256",
+  "expected_outcome": "notify",
+  "required_evidence_subjects": [
+    "dashboard:replace-with-the-reviewed-dashboard-id"
+  ],
+  "forbidden_evidence_subjects": [],
+  "expected_delivery_method_keys": [],
+  "useful": true,
+  "note": "Explain why this result was or was not useful to the card owner."
+}
