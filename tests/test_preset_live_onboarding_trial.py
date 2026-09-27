@@ -123,16 +123,6 @@ async def test_live_trial_accepts_only_jev_delivery_disabled_shadow(monkeypatch,
         },
     }
 
-    async def onboard(**kwargs):
-        provider_client.requests_made += 1
-        provider_client.request_path_counts["/api/v1/dashboard/"] = 1
-        return {
-            "status": "ready_for_approval",
-            "approval_required": True,
-            "delivery_enabled": False,
-            "card": {"id": "card-1"},
-        }
-
     async def approve(*args, **kwargs):
         return {"status": "approved", "card": {"id": "card-1", "version": 3}}
 

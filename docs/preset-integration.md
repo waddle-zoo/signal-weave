@@ -251,9 +251,9 @@ TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
   --card examples/preset/insight-card.example.json
 ```
 
-The card must contain real IDs and the deployment must load its Preset and
-SignalWeave credentials. This command invokes the live Jev path and should be
-run only against an approved shadow card; it does not contact the destination.
+The card must contain real IDs, have `status="approved"`, and the deployment
+must load its Preset and SignalWeave credentials. This command invokes the live
+Jev path in delivery-disabled shadow mode and does not contact the destination.
 
 For the stronger free-form onboarding proof, use the live trial runner. First
 discover candidates and write a reviewable draft without approving it:

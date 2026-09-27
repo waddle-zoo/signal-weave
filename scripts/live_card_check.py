@@ -15,7 +15,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from signalweave.models import InsightCard
+from signalweave.models import InsightCard, InsightCardStatus
 from signalweave.runtime import build_runtime
 
 
@@ -26,6 +26,11 @@ async def run(card_path: str | Path, *, verbose: bool = False) -> dict[str, Any]
 
     progress("loading insight card")
     card = InsightCard.model_validate(json.loads(Path(card_path).read_text()))
+    if card.status != InsightCardStatus.APPROVED:
+        raise RuntimeError(
+            "live card acceptance requires a card with status='approved'; "
+            "approve it through SignalWeave before running a shadow check"
+        )
     runtime = build_runtime()
     missing_adapters = sorted(
         {source.adapter for source in card.sources} - set(runtime.sources.adapter_names())
@@ -68,6 +73,8 @@ async def run(card_path: str | Path, *, verbose: bool = False) -> dict[str, Any]
             "live_sources": True,
             "installed_adapters": runtime.sources.adapter_names(),
             "jev_evaluator": True,
+            "shadow_only": True,
+            "delivery_enabled": False,
             "evidence_count": len(result.evidence),
             "expected_outcome_supplied": False,
         },
