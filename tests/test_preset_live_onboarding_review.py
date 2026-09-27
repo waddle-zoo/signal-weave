@@ -44,7 +44,14 @@ def _passing_report() -> dict:
             "resources": [
                 {
                     "adapter": "preset__customer-workspace",
+                    "resource": "dashboard:1",
                     "contract": {"tenant_id": "northstar"},
+                    "metadata": {
+                        "dashboard_scope": {
+                            "dashboard_scoped_requests": 1,
+                            "chart_query_fallbacks": 0,
+                        }
+                    },
                 }
             ],
         },
@@ -173,6 +180,27 @@ def test_independent_reviewer_rejects_catalog_only_shadow():
 
     assert review["passed"] is False
     assert any("chart data" in finding for finding in review["findings"])
+
+
+def test_independent_reviewer_rejects_dashboard_scope_fallback_or_missing_telemetry():
+    report = deepcopy(_passing_report())
+    report["evaluation"]["resources"][0]["metadata"]["dashboard_scope"] = {
+        "dashboard_scoped_requests": 0,
+        "chart_query_fallbacks": 1,
+    }
+
+    review = review_report(report)
+
+    assert review["passed"] is False
+    assert any("no dashboard-scoped Preset request" in finding for finding in review["findings"])
+    assert any("chart-query fallback" in finding for finding in review["findings"])
+
+    report = deepcopy(_passing_report())
+    report["evaluation"]["resources"][0]["metadata"] = {}
+    review = review_report(report)
+
+    assert review["passed"] is False
+    assert any("missing dashboard-scope telemetry" in finding for finding in review["findings"])
 
 
 def test_independent_reviewer_accepts_unapproved_draft_without_claiming_acceptance():

@@ -223,6 +223,28 @@ def review_report(report: dict[str, Any]) -> dict[str, Any]:
             findings.append("resources are not all from the requested Preset adapter")
         if checks.get("all_resources_match_runtime_tenant") is not True:
             findings.append("resources are not all bound to the runtime tenant")
+        dashboard_resources = [
+            resource
+            for resource in resources
+            if isinstance(resource, dict)
+            and str(resource.get("resource", "")).startswith("dashboard:")
+        ]
+        for index, resource in enumerate(dashboard_resources):
+            metadata = resource.get("metadata")
+            scope = metadata.get("dashboard_scope") if isinstance(metadata, dict) else None
+            if not isinstance(scope, dict):
+                findings.append(
+                    f"dashboard resource {index} is missing dashboard-scope telemetry"
+                )
+                continue
+            if scope.get("dashboard_scoped_requests", 0) < 1:
+                findings.append(
+                    f"dashboard resource {index} has no dashboard-scoped Preset request"
+                )
+            if scope.get("chart_query_fallbacks", 0) != 0:
+                findings.append(
+                    f"dashboard resource {index} used a chart-query fallback"
+                )
         if summary.get("evidence_count") != len(result.get("evidence") or []):
             findings.append("summary evidence count disagrees with the result")
         if summary.get("observation_count") != len(result.get("observations") or []):
