@@ -1,55 +1,43 @@
+from __future__ import annotations
+
 from copy import deepcopy
 
 from evaluations.preset_generalization_review import review_report
+from evaluations.preset_generalization_trial import run_trial
 
 
-def _passing_report() -> dict:
-    return {
-        "workspace_count": 1,
-        "charts_per_workspace": 8,
-        "chart_count": 8,
-        "case_coverage": [
-            "ambiguous_numeric",
-            "dict_metric",
-            "empty",
-            "explicit",
-            "implicit_count",
-            "missing_metric",
-            "non_numeric_metric",
-            "provider_error",
-        ],
-        "envelope_coverage": ["columnar", "data", "records", "rows", "values"],
-        "results": [{"charts": 8, "failures": [], "passed": True, "quality": "partial"}],
-        "not_proven": [
-            "a real Preset tenant's permissions, plans, rate limits, or network path",
-            "live Jev semantic accuracy or business usefulness",
-            "managed SignalWeave hosting",
-        ],
-        "passed": True,
-    }
-
-
-def test_independent_preset_review_accepts_complete_report():
-    assert review_report(_passing_report())["passed"] is True
-
-
-def test_independent_preset_review_rejects_pass_flag_with_hidden_failure():
-    report = _passing_report()
-    report["results"][0]["failures"] = ["chart was dropped"]
+def test_generalization_reviewer_accepts_varied_chart_shapes():
+    report = run_trial(seed=17, workspace_count=4, charts_per_workspace=8)
 
     review = review_report(report)
 
+    assert review["passed"] is True
+    assert review["findings"] == []
+
+
+def test_generalization_reviewer_rejects_forged_visualization_coverage():
+    report = run_trial(seed=17, workspace_count=4, charts_per_workspace=8)
+    mutated = deepcopy(report)
+    mutated["viz_type_coverage"] = ["line", "bar"]
+
+    review = review_report(mutated)
+
     assert review["passed"] is False
-    assert any("contains trial failures" in finding for finding in review["findings"])
+    assert any("viz_type_coverage" in finding for finding in review["findings"])
 
 
-def test_independent_preset_review_rejects_incomplete_coverage():
-    report = deepcopy(_passing_report())
-    report["envelope_coverage"] = ["data"]
-    report["chart_count"] = 7
+def test_generalization_reviewer_rejects_missing_unknown_chart_shape():
+    report = run_trial(seed=17, workspace_count=4, charts_per_workspace=8)
+    mutated = deepcopy(report)
+    for result in mutated["results"]:
+        result["viz_types"] = [
+            viz_type for viz_type in result["viz_types"] if viz_type != "vendor_extension"
+        ]
+    mutated["viz_type_coverage"] = sorted(
+        {viz_type for result in mutated["results"] for viz_type in result["viz_types"]}
+    )
 
-    review = review_report(report)
+    review = review_report(mutated)
 
     assert review["passed"] is False
-    assert any("coverage is incomplete" in finding for finding in review["findings"])
-    assert any("chart_count" in finding for finding in review["findings"])
+    assert any("unknown/vendor extension" in finding for finding in review["findings"])
