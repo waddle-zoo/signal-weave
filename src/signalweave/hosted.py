@@ -56,6 +56,14 @@ class HostedDataPolicy(BaseModel):
             raise ValueError("live_query mode requires allow_live_queries=true")
         if self.mode == HostedDataMode.LIVE_QUERY and not self.allow_refresh:
             raise ValueError("live_query mode requires allow_refresh=true")
+        if self.mode != HostedDataMode.LIVE_QUERY and self.allow_live_queries:
+            raise ValueError(
+                "allow_live_queries=true requires live_query mode; refusing a contradictory policy"
+            )
+        if self.mode != HostedDataMode.LIVE_QUERY and self.allow_refresh:
+            raise ValueError(
+                "allow_refresh=true requires live_query mode; refusing a contradictory policy"
+            )
         return self
 
 

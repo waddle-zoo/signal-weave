@@ -67,6 +67,11 @@ Every connection has an explicit `HostedDataPolicy`:
   existing cache or latest completed run; and
 - `live_query` requires the separate `allow_live_queries=true` guard.
 
+The permission flags must agree with the mode: `allow_live_queries` and
+`allow_refresh` are rejected for `metadata_only` and `cached_results` instead
+of being silently ignored. A live-query connection must explicitly enable both
+flags. This keeps a serialized deployment policy unambiguous during review.
+
 Raw results are never retained by the connector itself; only bounded normalized
 observations and evidence enter the decision receipt. A cloud deployment must
 enforce receipt retention, deletion, encryption, and data residency outside the

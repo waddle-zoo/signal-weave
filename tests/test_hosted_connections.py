@@ -172,6 +172,19 @@ def test_policy_refuses_live_mode_without_refresh_permission():
         HostedDataPolicy(mode=HostedDataMode.LIVE_QUERY, allow_live_queries=True)
 
 
+def test_policy_refuses_live_permissions_in_non_live_modes():
+    with pytest.raises(ValueError, match="requires live_query mode"):
+        HostedDataPolicy(
+            mode=HostedDataMode.METADATA_ONLY,
+            allow_live_queries=True,
+        )
+    with pytest.raises(ValueError, match="requires live_query mode"):
+        HostedDataPolicy(
+            mode=HostedDataMode.CACHED_RESULTS,
+            allow_refresh=True,
+        )
+
+
 def test_policy_rejects_unowned_retention_fields():
     with pytest.raises(ValueError, match="extra_forbidden"):
         HostedDataPolicy.model_validate({"retention_hours": 24})

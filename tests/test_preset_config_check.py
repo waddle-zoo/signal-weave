@@ -214,3 +214,26 @@ def test_config_check_rejects_malformed_preset_workspace_origin_before_network(
     assert any("PRESET_URL" in error for error in report["errors"])
     assert report["checks"]["network_requests"] == 0
     assert report["checks"]["jev_requests"] == 0
+
+
+@pytest.mark.parametrize(
+    ("mode", "flag"),
+    [
+        ("metadata_only", "PRESET_ALLOW_LIVE_QUERIES"),
+        ("cached_results", "PRESET_ALLOW_REFRESH"),
+    ],
+)
+def test_config_check_rejects_contradictory_data_policy_before_network(
+    monkeypatch, mode, flag
+):
+    _clear_config(monkeypatch)
+    _set_valid_token_config(monkeypatch)
+    monkeypatch.setenv("PRESET_DATA_MODE", mode)
+    monkeypatch.setenv(flag, "true")
+
+    report = config_check.run()
+
+    assert report["passed"] is False
+    assert any("requires live_query mode" in error for error in report["errors"])
+    assert report["checks"]["network_requests"] == 0
+    assert report["checks"]["jev_requests"] == 0
