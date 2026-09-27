@@ -57,6 +57,8 @@ def review_report(report: dict[str, Any]) -> dict[str, Any]:
         contract = report.get("provider_checks", {}).get("onboarding_contract")
         if contract != {"approval_required": True, "delivery_disabled": True}:
             findings.append("approval/delivery onboarding contract is not fail-closed")
+        if onboarding.get("status") != "ready_for_approval":
+            findings.append("approved report did not prove onboarding readiness")
 
         approval = report.get("approval")
         if not isinstance(approval, dict) or approval.get("status") != "approved":
@@ -109,6 +111,17 @@ def review_report(report: dict[str, Any]) -> dict[str, Any]:
             findings.append("evaluation enabled delivery")
         if receipt_lookup.get("status") != "found":
             findings.append("durable receipt lookup did not find the decision")
+        lookup_receipt = receipt_lookup.get("receipt")
+        if not isinstance(lookup_receipt, dict):
+            findings.append("durable receipt lookup omitted the receipt")
+        else:
+            for field in ("receipt_id", "idempotency_key", "card_id", "card_version"):
+                if lookup_receipt.get(field) != receipt.get(field):
+                    findings.append(f"receipt lookup disagrees on {field}")
+        if isinstance(replay, dict):
+            replay_receipt = replay.get("receipt")
+            if not isinstance(replay_receipt, dict) or replay_receipt.get("status") != "replayed":
+                findings.append("idempotent replay did not return a replayed receipt")
         if checks.get("replay_made_no_jev_call") is not True:
             findings.append("replay made an additional Jev call")
         if checks.get("provider_transport_used") is not True:
@@ -125,6 +138,12 @@ def review_report(report: dict[str, Any]) -> dict[str, Any]:
             findings.append("resources are not all from the requested Preset adapter")
         if checks.get("all_resources_match_runtime_tenant") is not True:
             findings.append("resources are not all bound to the runtime tenant")
+        if summary.get("evidence_count") != len(result.get("evidence") or []):
+            findings.append("summary evidence count disagrees with the result")
+        if summary.get("observation_count") != len(result.get("observations") or []):
+            findings.append("summary observation count disagrees with the result")
+        if summary.get("receipt_id") != receipt.get("receipt_id"):
+            findings.append("summary receipt ID disagrees with the evaluation receipt")
         for index, resource in enumerate(resources):
             if not isinstance(resource, dict):
                 findings.append(f"resource {index} is not an object")

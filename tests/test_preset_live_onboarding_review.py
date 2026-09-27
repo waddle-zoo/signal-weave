@@ -26,7 +26,14 @@ def _passing_report() -> dict:
                 "evidence": [{"subject_id": "dashboard:1"}],
                 "observations": [{"subject_id": "dashboard:1"}],
             },
-            "receipt": {"status": "delivery_disabled", "delivery_enabled": False},
+            "receipt": {
+                "receipt_id": "receipt-1",
+                "idempotency_key": "shadow-1",
+                "card_id": "card-1",
+                "card_version": 3,
+                "status": "delivery_disabled",
+                "delivery_enabled": False,
+            },
             "resources": [
                 {
                     "adapter": "preset__customer-workspace",
@@ -36,11 +43,25 @@ def _passing_report() -> dict:
         },
         "summary": {
             "evaluator": "jev-latest",
+            "evidence_count": 1,
+            "observation_count": 1,
+            "receipt_id": "receipt-1",
             "receipt_status": "delivery_disabled",
             "delivery_enabled": False,
         },
-        "replay": {"replayed": True},
-        "receipt_lookup": {"status": "found"},
+        "replay": {
+            "replayed": True,
+            "receipt": {"status": "replayed"},
+        },
+        "receipt_lookup": {
+            "status": "found",
+            "receipt": {
+                "receipt_id": "receipt-1",
+                "idempotency_key": "shadow-1",
+                "card_id": "card-1",
+                "card_version": 3,
+            },
+        },
         "provider_checks": {
             "onboarding_contract": {
                 "approval_required": True,
@@ -96,6 +117,20 @@ def test_independent_reviewer_rejects_missing_preset_transport_proof():
 
     assert review["passed"] is False
     assert any("Preset provider request" in finding for finding in review["findings"])
+
+
+def test_independent_reviewer_rejects_inconsistent_receipt_artifacts():
+    report = deepcopy(_passing_report())
+    report["onboarding"]["status"] = "needs_human_review"
+    report["replay"]["receipt"]["status"] = "delivery_disabled"
+    report["receipt_lookup"]["receipt"]["card_version"] = 99
+
+    review = review_report(report)
+
+    assert review["passed"] is False
+    assert any("onboarding readiness" in finding for finding in review["findings"])
+    assert any("replayed receipt" in finding for finding in review["findings"])
+    assert any("card_version" in finding for finding in review["findings"])
 
 
 def test_independent_reviewer_accepts_unapproved_draft_without_claiming_acceptance():
