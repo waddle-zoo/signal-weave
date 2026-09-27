@@ -117,27 +117,56 @@ class HostedConnection(BaseModel):
 
 
 class HostedCredentialVault(Protocol):
-    """Minimal vault contract used by the adapter factory."""
+    """Tenant-scoped vault contract used by the adapter factory.
 
-    def get(self, credential_ref: str) -> Mapping[str, str]: ...
+    The reference is intentionally opaque.  A vault must independently bind
+    it to the requested tenant; SignalWeave must not infer ownership from a
+    reference string or trust a caller-controlled naming convention.
+    """
+
+    def get(self, credential_ref: str, *, tenant_id: str) -> Mapping[str, str]: ...
 
 
 class InMemoryCredentialVault:
     """Test/local vault; production deployments should provide KMS-backed storage."""
 
-    def __init__(self, credentials: Mapping[str, Mapping[str, str]] | None = None) -> None:
+    def __init__(
+        self,
+        credentials: Mapping[str, Mapping[str, str]] | None = None,
+        *,
+        tenant_by_ref: Mapping[str, str] | None = None,
+    ) -> None:
         self._credentials = {
             ref: dict(values) for ref, values in (credentials or {}).items()
         }
+        self._tenant_by_ref = dict(tenant_by_ref or {})
 
-    def put(self, credential_ref: str, values: Mapping[str, str]) -> None:
+    def put(
+        self,
+        credential_ref: str,
+        values: Mapping[str, str],
+        *,
+        tenant_id: str,
+    ) -> None:
         if not credential_ref.strip():
             raise ValueError("credential_ref must not be empty")
+        if not tenant_id.strip():
+            raise ValueError("tenant_id must not be empty")
         if not values:
             raise ValueError("credential values must not be empty")
         self._credentials[credential_ref] = dict(values)
+        self._tenant_by_ref[credential_ref] = tenant_id
 
-    def get(self, credential_ref: str) -> Mapping[str, str]:
+    def get(self, credential_ref: str, *, tenant_id: str) -> Mapping[str, str]:
+        owner = self._tenant_by_ref.get(credential_ref)
+        if owner is None:
+            raise KeyError(
+                f"credential reference has no tenant binding: {credential_ref}"
+            )
+        if owner != tenant_id:
+            raise KeyError(
+                f"credential reference is not available in tenant {tenant_id}"
+            )
         try:
             return dict(self._credentials[credential_ref])
         except KeyError as error:
@@ -311,7 +340,9 @@ def build_hosted_adapter(
 
     if not connection.enabled:
         raise ValueError(f"hosted connection {connection.id} is disabled")
-    credentials = dict(vault.get(connection.credential_ref))
+    credentials = dict(
+        vault.get(connection.credential_ref, tenant_id=connection.tenant_id)
+    )
     if connection.provider == HostedProvider.PRESET:
         from .preset_adapter import PresetAdapter, PresetCloudClient
 

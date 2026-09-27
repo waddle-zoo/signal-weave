@@ -188,7 +188,10 @@ def _preset_from_environment() -> tuple[HostedConnection, HostedCredentialVault]
     if api_base_url:
         _require_secure_provider_url("PRESET_API_BASE_URL", api_base_url)
         credentials["api_base_url"] = api_base_url
-    return connection, InMemoryCredentialVault({"env://preset": credentials})
+    return connection, InMemoryCredentialVault(
+        {"env://preset": credentials},
+        tenant_by_ref={"env://preset": tenant_id},
+    )
 
 
 def build_runtime(

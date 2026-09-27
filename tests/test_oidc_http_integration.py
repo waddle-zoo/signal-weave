@@ -293,7 +293,11 @@ async def test_oidc_request_tenant_selects_only_matching_preset_connection(tmp_p
                 "api_base_url": "https://api.app.preset.test",
             }
             for tenant, connection in zip(tenants, connections, strict=True)
-        }
+        },
+        tenant_by_ref={
+            connection.credential_ref: tenant
+            for tenant, connection in zip(tenants, connections, strict=True)
+        },
     )
     adapters = build_hosted_adapters(
         connections,

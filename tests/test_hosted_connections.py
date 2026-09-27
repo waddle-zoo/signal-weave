@@ -961,7 +961,12 @@ def test_factory_requires_vault_and_builds_tenant_bound_adapters():
             },
             "vault://northstar/hex": {"access_token": "hex-token"},
             "vault://northstar/looker": {"access_token": "looker-token"},
-        }
+        },
+        tenant_by_ref={
+            "vault://northstar/preset": "northstar",
+            "vault://northstar/hex": "northstar",
+            "vault://northstar/looker": "northstar",
+        },
     )
 
     preset = connection(HostedProvider.PRESET)
@@ -974,6 +979,25 @@ def test_factory_requires_vault_and_builds_tenant_bound_adapters():
     assert isinstance(build_hosted_adapter(preset, vault), PresetAdapter)
     assert isinstance(build_hosted_adapter(hex_connection, vault), HexAdapter)
     assert isinstance(build_hosted_adapter(looker, vault), LookerAdapter)
+
+
+def test_factory_rejects_cross_tenant_credential_reference():
+    northstar = connection(HostedProvider.PRESET, tenant="northstar")
+    harbor = connection(HostedProvider.PRESET, tenant="harbor-bank").model_copy(
+        update={"credential_ref": northstar.credential_ref}
+    )
+    vault = InMemoryCredentialVault(
+        {
+            northstar.credential_ref: {
+                "name": "northstar-name",
+                "secret": "northstar-secret",
+            }
+        },
+        tenant_by_ref={northstar.credential_ref: northstar.tenant_id},
+    )
+
+    with pytest.raises(KeyError, match="not available in tenant harbor-bank"):
+        build_hosted_adapter(harbor, vault)
 
 
 def test_same_provider_connections_get_distinct_source_routes():
@@ -1015,7 +1039,8 @@ def test_runtime_can_register_hosted_connections_without_global_provider_config(
     monkeypatch.setenv("SIGNALWEAVE_STORE_PATH", str(tmp_path / "signalweave.db"))
     item = connection(HostedProvider.PRESET)
     vault = InMemoryCredentialVault(
-        {item.credential_ref: {"name": "preset-name", "secret": "preset-secret"}}
+        {item.credential_ref: {"name": "preset-name", "secret": "preset-secret"}},
+        tenant_by_ref={item.credential_ref: item.tenant_id},
     )
 
     runtime = build_runtime(
@@ -1114,7 +1139,10 @@ def test_runtime_rejects_unowned_preset_retention_environment(monkeypatch, tmp_p
 
 def test_preset_factory_enforces_declared_auth_mode():
     item = connection(HostedProvider.PRESET)
-    bearer_vault = InMemoryCredentialVault({item.credential_ref: {"access_token": "token"}})
+    bearer_vault = InMemoryCredentialVault(
+        {item.credential_ref: {"access_token": "token"}},
+        tenant_by_ref={item.credential_ref: item.tenant_id},
+    )
     with pytest.raises(ValueError, match="API_TOKEN"):
         build_hosted_adapter(item, bearer_vault)
 
@@ -1124,7 +1152,8 @@ def test_preset_factory_enforces_declared_auth_mode():
 
     oauth_item = item.model_copy(update={"auth_mode": HostedAuthMode.OAUTH})
     api_vault = InMemoryCredentialVault(
-        {item.credential_ref: {"name": "name", "secret": "secret"}}
+        {item.credential_ref: {"name": "name", "secret": "secret"}},
+        tenant_by_ref={item.credential_ref: item.tenant_id},
     )
     with pytest.raises(ValueError, match="OAuth"):
         build_hosted_adapter(oauth_item, api_vault)
@@ -1133,7 +1162,8 @@ def test_preset_factory_enforces_declared_auth_mode():
         build_hosted_adapter(
             item,
             InMemoryCredentialVault(
-                {item.credential_ref: {"name": "name", "secret": "secret", "refresh_token": "token"}}
+                {item.credential_ref: {"name": "name", "secret": "secret", "refresh_token": "token"}},
+                tenant_by_ref={item.credential_ref: item.tenant_id},
             ),
         )
 
@@ -1141,7 +1171,8 @@ def test_preset_factory_enforces_declared_auth_mode():
         build_hosted_adapter(
             bearer_item,
             InMemoryCredentialVault(
-                {item.credential_ref: {"access_token": "token", "client_secret": "secret"}}
+                {item.credential_ref: {"access_token": "token", "client_secret": "secret"}},
+                tenant_by_ref={item.credential_ref: item.tenant_id},
             ),
         )
 
@@ -1156,7 +1187,8 @@ def test_runtime_rejects_explicit_hosted_connection_tenant_mismatch(monkeypatch,
     monkeypatch.setenv("SIGNALWEAVE_STORE_PATH", str(tmp_path / "signalweave.db"))
     item = connection(HostedProvider.PRESET, tenant="harbor-bank")
     vault = InMemoryCredentialVault(
-        {item.credential_ref: {"name": "name", "secret": "secret"}}
+        {item.credential_ref: {"name": "name", "secret": "secret"}},
+        tenant_by_ref={item.credential_ref: item.tenant_id},
     )
 
     with pytest.raises(RuntimeError, match="must match SIGNALWEAVE_TENANT_ID"):
@@ -1265,7 +1297,11 @@ def test_shared_runtime_requires_explicit_tenant_scope_for_multiple_connections(
         {
             first.credential_ref: {"name": "northstar-name", "secret": "northstar-secret"},
             second.credential_ref: {"name": "harbor-name", "secret": "harbor-secret"},
-        }
+        },
+        tenant_by_ref={
+            first.credential_ref: first.tenant_id,
+            second.credential_ref: second.tenant_id,
+        },
     )
 
     runtime = build_runtime(
@@ -1351,7 +1387,11 @@ async def test_shared_runtime_mcp_principal_never_contacts_foreign_preset(
                 "api_base_url": "https://api.app.preset.test",
             }
             for tenant, connection in zip(tenants, connections, strict=True)
-        }
+        },
+        tenant_by_ref={
+            connection.credential_ref: tenant
+            for tenant, connection in zip(tenants, connections, strict=True)
+        },
     )
 
     runtime = build_runtime(
