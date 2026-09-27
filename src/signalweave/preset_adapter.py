@@ -325,6 +325,11 @@ class PresetCloudClient(SupersetClient):
                     "Preset chart response reported a non-success query status: "
                     f"{status}"
                 )
+            provider_error = item.get("error")
+            if provider_error not in (None, False, ""):
+                raise PresetPolicyError(
+                    "Preset chart response reported a query error"
+                )
         if self.max_result_rows is not None:
             row_count = sum(
                 len(self._rows_from_result_item(item))

@@ -903,6 +903,27 @@ async def test_preset_non_success_query_status_fails_closed_inside_http_200(stat
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("provider_error", ["query failed", {"message": "query failed"}])
+async def test_preset_embedded_query_error_fails_closed_inside_http_200(provider_error):
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={"result": [{"error": provider_error, "data": []}]},
+        )
+
+    client = PresetCloudClient(
+        "https://workspace.app.preset.test",
+        access_token="preset-token",
+        transport=httpx.MockTransport(handler),
+    )
+
+    with pytest.raises(PresetPolicyError, match="query error"):
+        await client.chart_data(
+            {"id": 101, "params": {"metrics": ["revenue"], "datasource": "17__table"}},
+        )
+
+
+@pytest.mark.asyncio
 async def test_preset_rejects_oversized_response_before_parsing():
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, content=b"{" + b"x" * 128 + b"}")

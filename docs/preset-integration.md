@@ -167,6 +167,8 @@ provider-policy errors; they are not converted to an apparently empty chart.
 The same fail-closed rule applies when a provider returns HTTP 200 but embeds a
 non-success query status such as `pending`, `failed`, or `timed_out` inside a
 result item.
+An embedded non-empty result-item `error` is also a provider-policy failure;
+warnings remain visible but do not by themselves block a successful result.
 Even when a 202 response includes a provider `result_url`, the connector does
 not follow it or make a second-host request. Superset documents that field in
 its [async chart response schema](https://superset.apache.org/developer-docs/api/schemas/chartdataasyncresponseschema/).
