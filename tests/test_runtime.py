@@ -25,6 +25,13 @@ def test_runtime_rejects_non_jev_mode():
         build_runtime(mode="other")
 
 
+def test_runtime_rejects_non_jev_environment_mode(monkeypatch):
+    monkeypatch.setenv("TYPESAFE_MODE", "heuristic")
+
+    with pytest.raises(ValueError, match="only supports TYPESAFE_MODE=jev"):
+        build_runtime()
+
+
 def test_runtime_requires_a_source_adapter_after_jev_credentials(monkeypatch):
     monkeypatch.setenv("TYPESAFE_API_KEY", "test-key")
     monkeypatch.delenv("TYPESAFE_API_KEY_FILE", raising=False)
