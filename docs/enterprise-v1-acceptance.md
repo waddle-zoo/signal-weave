@@ -98,7 +98,7 @@ returns an inspectable evidence bundle and receipt.
 | Generated-shape anti-overfitting trial | A seeded generator creates 24 unfamiliar tenant workspaces / 192 charts per seed across five result envelopes, 12 visualization labels including an unknown/vendor extension, six parameter shapes (`metrics`, dict metrics, `x/y` visual measures, dimension count, spatial count, and `all_columns`), usable and unusable metric definitions, empty results, ambiguous numerics, and provider failures; the production Preset client/adapter passes catalog, scope, cache, retention, and safe-degradation assertions, then an independent report reviewer recomputes parameter and visualization coverage from each workspace result and rejects mutated pass-looking reports. A generated 64-chart dashboard stress test proves the provider aggregate byte budget fails closed; an engine test separately proves the multi-source serialized Jev budget fails before any Jev call. The same replay and reviewer run as a four-seed CI matrix on this branch. | 4/4 CI reports pass; 96 workspaces / 768 charts; synthetic provider and Jev only; live customer gates remain open |
 | Aggregate Preset enterprise proof pack | `make preset-enterprise-proof` runs the hosted connector, boundary, generated-shape, typed Jev, and runtime-shadow trials; each serialized report is independently reviewed and a separate aggregate reviewer verifies the complete five-case set, synthetic-only scope, delivery-disabled state, and explicit non-claims. The same no-credential proof pack runs as a dedicated CI job on every push to `main`, pull request, and manual workflow dispatch, retaining the JSON reports as downloadable CI artifacts. | 5/5 component reviews pass; aggregate review pass; no live provider or Jev requests |
 | Existing enterprise workflows remain the owner | MCP tools return typed decisions and evidence; SignalWeave does not execute arbitrary SQL, tools, DAGs, or notifications. | Pass |
-| Regression safety | Full repository tests and lint. | 521 passed, 2 skipped; Ruff clean on `feat/decision-feedback-contract` after shared scoped env-file bootstrap hardening |
+| Regression safety | Full repository tests and lint. | 523 passed, 2 skipped; Ruff clean on `feat/decision-feedback-contract` at `fdb287a` after actionable bootstrap-failure reporting |
 
 ## Reproduction
 
@@ -141,9 +141,9 @@ make local-superset-runtime-shadow-trial
 make local-superset-runtime-shadow-review
 ```
 
-The current local verified regression result is `521 passed, 2 skipped` with
-Ruff clean on `feat/decision-feedback-contract` at `6aa9892`. The current
-branch CI run is [`CI run 36322147007`](https://github.com/waddle-zoo/signal-weave/actions/runs/36322147007)
+The current local verified regression result is `523 passed, 2 skipped` with
+Ruff clean on `feat/decision-feedback-contract` at `fdb287a`. The most recent
+completed branch CI run independently verified here is [`CI run 36322147007`](https://github.com/waddle-zoo/signal-weave/actions/runs/36322147007)
 at commit `6aa9892`; all 14 jobs passed, including the Python test matrix,
 the every-chart local Superset matrix, the live Superset integration tests, the
 hosted Preset bootstrap/Compose contracts, and the generated-shape and scale
