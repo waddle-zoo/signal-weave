@@ -97,7 +97,10 @@ async def test_live_trial_accepts_only_jev_delivery_disabled_shadow(monkeypatch)
     async def approve(*args, **kwargs):
         return {"status": "approved", "card": {"id": "card-1", "version": 3}}
 
+    metrics = SimpleNamespace(requests=1)
+
     async def evaluate(*args, **kwargs):
+        metrics.requests += 1
         return {
             "result": {
                 "outcome": "notify",
@@ -147,9 +150,7 @@ async def test_live_trial_accepts_only_jev_delivery_disabled_shadow(monkeypatch)
             ),
             principal=SimpleNamespace(tenant_id="northstar"),
             engine=SimpleNamespace(
-                judger=SimpleNamespace(
-                    name="jev-latest", metrics=SimpleNamespace(requests=1)
-                )
+                judger=SimpleNamespace(name="jev-latest", metrics=metrics)
             ),
         ),
     )

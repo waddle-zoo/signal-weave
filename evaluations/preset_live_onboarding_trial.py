@@ -173,6 +173,11 @@ async def run_trial(
                 and jev_requests_after_replay is not None
                 and jev_requests_after_replay == jev_requests_after_first
             )
+            jev_requests_for_first_evaluation = (
+                jev_requests_after_first - jev_requests_before
+                if jev_requests_before is not None and jev_requests_after_first is not None
+                else None
+            )
             report.update(
                 {
                     "approval": {
@@ -189,6 +194,7 @@ async def run_trial(
                         "all_resources_use_requested_preset_adapter": bool(resources)
                         and len(preset_resources) == len(resources),
                         "all_resources_match_runtime_tenant": tenant_scoped_resources,
+                        "jev_requests_for_first_evaluation": jev_requests_for_first_evaluation,
                         "replay_made_no_jev_call": replay_made_no_jev_call,
                     },
                     "passed": (
@@ -196,8 +202,11 @@ async def run_trial(
                         and all(onboarding_contract.values())
                         and summary["evaluator"] == "jev-latest"
                         and summary["evidence_count"] > 0
+                        and summary["observation_count"] > 0
                         and bool(preset_resources)
                         and tenant_scoped_resources
+                        and isinstance(jev_requests_for_first_evaluation, int)
+                        and jev_requests_for_first_evaluation > 0
                         and summary["receipt_status"] == "delivery_disabled"
                         and summary["delivery_enabled"] is False
                         and replay.get("replayed") is True
