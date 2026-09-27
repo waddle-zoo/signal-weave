@@ -267,7 +267,7 @@ def validate_preset_environment() -> dict[str, Any]:
     }
 
 
-def build_preset_adapter_from_environment() -> SourceAdapter | None:
+def build_preset_adapter_from_environment(*, transport: Any | None = None) -> SourceAdapter | None:
     """Build the Preset adapter without constructing the Jev runtime.
 
     Provider-only preflights use this path so they can verify Preset access
@@ -278,7 +278,7 @@ def build_preset_adapter_from_environment() -> SourceAdapter | None:
     if configured is None:
         return None
     connection, vault = configured
-    adapters = build_hosted_adapters([connection], vault)
+    adapters = build_hosted_adapters([connection], vault, transport=transport)
     return adapters[0]
 
 

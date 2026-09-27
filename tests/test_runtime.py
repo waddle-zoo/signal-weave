@@ -1,3 +1,4 @@
+import httpx
 import pytest
 
 from signalweave.models import ResourceSnapshot
@@ -54,6 +55,46 @@ def test_preset_provider_preflight_builds_adapter_without_jev_key(monkeypatch):
 
     assert isinstance(adapter, PresetAdapter)
     assert adapter.name == "preset__preset-env"
+
+
+@pytest.mark.asyncio
+async def test_preset_environment_adapter_reaches_provider_without_jev_key(monkeypatch):
+    monkeypatch.setenv("PRESET_URL", "https://workspace.app.preset.io")
+    monkeypatch.setenv("PRESET_TENANT_ID", "acme")
+    monkeypatch.setenv("PRESET_API_TOKEN_NAME", "preset-name")
+    monkeypatch.setenv("PRESET_API_TOKEN_SECRET", "preset-secret")
+    monkeypatch.delenv("TYPESAFE_API_KEY", raising=False)
+    monkeypatch.delenv("TYPESAFE_API_KEY_FILE", raising=False)
+    requests: list[tuple[str, str]] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append((request.method, request.url.path))
+        if request.url.host == "api.app.preset.io":
+            assert request.method == "POST"
+            return httpx.Response(200, json={"payload": {"access_token": "preset-jwt"}})
+        assert request.headers["authorization"] == "Bearer preset-jwt"
+        assert request.url.path == "/api/v1/dashboard/"
+        return httpx.Response(
+            200,
+            json={"result": [{"id": 7, "dashboard_title": "Growth"}], "count": 1},
+        )
+
+    adapter = build_preset_adapter_from_environment(
+        transport=httpx.MockTransport(handler)
+    )
+    assert isinstance(adapter, PresetAdapter)
+
+    dashboards, provider_count = await adapter.client.list_dashboards_page(
+        page=0,
+        page_size=20,
+    )
+
+    assert dashboards == [{"id": 7, "dashboard_title": "Growth"}]
+    assert provider_count == 1
+    assert requests == [
+        ("POST", "/v1/auth/"),
+        ("GET", "/api/v1/dashboard/"),
+    ]
 
 
 def test_runtime_accepts_an_embedded_non_superset_adapter(monkeypatch, tmp_path):
