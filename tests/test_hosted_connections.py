@@ -1845,6 +1845,28 @@ def test_runtime_reads_preset_secrets_from_mounted_files(monkeypatch, tmp_path):
     assert adapter.client._api_token_secret == "preset-secret"
 
 
+def test_runtime_reads_preset_bearer_token_from_mounted_file(monkeypatch, tmp_path):
+    monkeypatch.setenv("TYPESAFE_API_KEY", "test-key")
+    monkeypatch.delenv("TYPESAFE_API_KEY_FILE", raising=False)
+    monkeypatch.delenv("SUPERSET_URL", raising=False)
+    monkeypatch.setenv("PRESET_URL", "https://workspace.us-east-1.app.preset.io")
+    monkeypatch.setenv("PRESET_TENANT_ID", "northstar")
+    monkeypatch.setenv("SIGNALWEAVE_TENANT_ID", "northstar")
+    monkeypatch.setenv("SIGNALWEAVE_PRINCIPAL_ID", "signalweave-agent")
+    access_file = tmp_path / "preset-access-token"
+    access_file.write_text("preset-access-token\n", encoding="utf-8")
+    monkeypatch.setenv("PRESET_ACCESS_TOKEN_FILE", str(access_file))
+    monkeypatch.setenv("SIGNALWEAVE_STORE_BACKEND", "sqlite")
+    monkeypatch.setenv("SIGNALWEAVE_STORE_PATH", str(tmp_path / "signalweave.db"))
+
+    runtime = build_runtime()
+    adapter = runtime.sources._adapters["preset__preset-env"]
+
+    assert adapter.client._token == "preset-access-token"
+    assert adapter.client._api_token_name is None
+    assert adapter.client._api_token_secret is None
+
+
 def test_runtime_rejects_secret_value_and_secret_file_together(monkeypatch, tmp_path):
     monkeypatch.setenv("TYPESAFE_API_KEY", "test-key")
     monkeypatch.delenv("TYPESAFE_API_KEY_FILE", raising=False)

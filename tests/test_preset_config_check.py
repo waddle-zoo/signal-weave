@@ -87,6 +87,29 @@ def test_config_check_accepts_oidc_and_mounted_secrets_without_static_principal(
     assert report["typesafe_key_source"] == "mounted_file"
 
 
+def test_config_check_accepts_mounted_bearer_preset_token(monkeypatch, tmp_path):
+    _clear_config(monkeypatch)
+    access_file = tmp_path / "preset-access-token"
+    typesafe_file = tmp_path / "typesafe"
+    access_file.write_text("preset-access-token\n", encoding="utf-8")
+    typesafe_file.write_text("typesafe-key\n", encoding="utf-8")
+    monkeypatch.setenv("PRESET_URL", "https://workspace.us-east-1.app.preset.io")
+    monkeypatch.setenv("PRESET_TENANT_ID", "northstar")
+    monkeypatch.setenv("SIGNALWEAVE_TENANT_ID", "northstar")
+    monkeypatch.setenv("SIGNALWEAVE_PRINCIPAL_ID", "signalweave-agent")
+    monkeypatch.setenv("PRESET_ACCESS_TOKEN_FILE", str(access_file))
+    monkeypatch.setenv("TYPESAFE_API_KEY_FILE", str(typesafe_file))
+
+    report = config_check.run()
+
+    assert report["passed"] is True
+    assert report["configuration"]["auth_mode"] == "token"
+    assert report["configuration"]["preset_credential_source"] == "mounted_file"
+    serialized = json.dumps(report)
+    assert "preset-access-token" not in serialized
+    assert "typesafe-key" not in serialized
+
+
 def test_config_check_rejects_malformed_oidc_identity_claim(monkeypatch):
     _clear_config(monkeypatch)
     monkeypatch.setenv("PRESET_URL", "https://workspace.us-east-1.app.preset.io")
