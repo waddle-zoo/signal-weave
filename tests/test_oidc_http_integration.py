@@ -23,7 +23,7 @@ from signalweave.hosted import (
 )
 from signalweave.mcp_server import create_mcp
 from signalweave.models import InsightCard, InsightCardStatus, SourceRef
-from signalweave.runtime import Runtime
+from signalweave.runtime import Runtime, build_runtime
 from signalweave.sources import SourceRegistry
 from signalweave.store import JsonInsightCardStore
 
@@ -385,6 +385,126 @@ async def test_oidc_request_tenant_selects_only_matching_preset_connection(tmp_p
         ("tenant-a", "GET", "/api/v1/dashboard/"),
         ("tenant-b", "POST", "/v1/auth/"),
         ("tenant-b", "GET", "/api/v1/dashboard/"),
+    }
+
+    await oidc_client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_oidc_http_uses_production_environment_preset_bootstrap(monkeypatch, tmp_path):
+    oidc_client, verifier, token = _oidc_fixture()
+    monkeypatch.setenv("TYPESAFE_API_KEY", "test-key")
+    monkeypatch.delenv("TYPESAFE_API_KEY_FILE", raising=False)
+    monkeypatch.setenv("PRESET_URL", "https://tenant-a.preset.test")
+    monkeypatch.setenv("PRESET_TENANT_ID", "tenant-a")
+    monkeypatch.setenv("PRESET_API_TOKEN_NAME", "tenant-a-name")
+    monkeypatch.setenv("PRESET_API_TOKEN_SECRET", "tenant-a-secret")
+    monkeypatch.delenv("PRESET_ACCESS_TOKEN", raising=False)
+    monkeypatch.setenv("PRESET_API_BASE_URL", "https://api.app.preset.test")
+    monkeypatch.setenv("SIGNALWEAVE_AUTH_MODE", "oidc")
+    monkeypatch.setenv("SIGNALWEAVE_OIDC_ISSUER_URL", "https://issuer.integration.test")
+    monkeypatch.setenv("SIGNALWEAVE_OIDC_AUDIENCE", "signalweave")
+    monkeypatch.setenv("SIGNALWEAVE_STORE_BACKEND", "sqlite")
+    monkeypatch.setenv("SIGNALWEAVE_STORE_PATH", str(tmp_path / "cards.db"))
+
+    provider_calls: list[tuple[str, str, str]] = []
+
+    def provider_handler(request: httpx.Request) -> httpx.Response:
+        if request.url.host == "api.app.preset.test":
+            provider_calls.append(("tenant-a", request.method, request.url.path))
+            assert json.loads(request.content) == {
+                "name": "tenant-a-name",
+                "secret": "tenant-a-secret",
+            }
+            return httpx.Response(200, json={"payload": {"access_token": "tenant-a-jwt"}})
+        provider_calls.append((request.url.host.removesuffix(".preset.test"), request.method, request.url.path))
+        assert request.url.host == "tenant-a.preset.test"
+        assert request.headers["authorization"] == "Bearer tenant-a-jwt"
+        if request.url.path == "/api/v1/dashboard/":
+            return httpx.Response(
+                200,
+                json={
+                    "result": [{"id": "dashboard-a", "dashboard_title": "Tenant A"}],
+                    "count": 1,
+                },
+            )
+        return httpx.Response(404, json={"message": "unexpected route"})
+
+    runtime = build_runtime(http_transport=httpx.MockTransport(provider_handler))
+    assert runtime.principal is None
+    assert runtime.sources.authorized_tenants == frozenset({"tenant-a"})
+    server = create_mcp(
+        runtime,
+        principal_resolver=lambda _ctx: principal_from_access_token(
+            get_access_token(), required_scopes=["insights:read"]
+        ),
+        http_principal_resolver=lambda: principal_from_access_token(
+            get_access_token(), required_scopes=["insights:read"]
+        ),
+        auth_settings=AuthSettings(
+            issuer_url="https://issuer.integration.test",
+            resource_server_url=None,
+            required_scopes=["insights:read"],
+            validate_token_resource=False,
+        ),
+        token_verifier=verifier,
+    )
+    server.settings.transport_security.allowed_hosts = ["localhost"]
+    app = server.streamable_http_app()
+
+    async def list_resources_for(tenant: str, request_id: int) -> list[dict]:
+        headers = {
+            "authorization": f"Bearer {token(tenant=tenant)}",
+            "accept": "application/json, text/event-stream",
+            "content-type": "application/json",
+        }
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://localhost"
+        ) as client:
+            initialize = await client.post(
+                "/mcp",
+                headers=headers,
+                json={
+                    "jsonrpc": "2.0",
+                    "id": request_id,
+                    "method": "initialize",
+                    "params": {
+                        "protocolVersion": "2025-06-18",
+                        "capabilities": {},
+                        "clientInfo": {"name": "production-bootstrap-test", "version": "1"},
+                    },
+                },
+            )
+            assert initialize.status_code == 200, initialize.text
+            listed = await client.post(
+                "/mcp",
+                headers={**headers, "mcp-session-id": initialize.headers["mcp-session-id"]},
+                json={
+                    "jsonrpc": "2.0",
+                    "id": request_id + 1,
+                    "method": "tools/call",
+                    "params": {"name": "list_resources", "arguments": {}},
+                },
+            )
+            assert listed.status_code == 200, listed.text
+            body = _payload(listed)
+            return [
+                json.loads(block["text"])
+                for block in body["result"]["content"]
+                if block["type"] == "text"
+            ]
+
+    async with app.router.lifespan_context(app):
+        tenant_a_resources = await list_resources_for("tenant-a", 30)
+        calls_after_tenant_a = list(provider_calls)
+        tenant_b_resources = await list_resources_for("tenant-b", 40)
+
+    assert [item["resource"] for item in tenant_a_resources] == ["dashboard:dashboard-a"]
+    assert tenant_b_resources == []
+    assert provider_calls == calls_after_tenant_a
+    assert set(provider_calls) == {
+        ("tenant-a", "POST", "/v1/auth/"),
+        ("tenant-a", "GET", "/api/v1/dashboard/"),
     }
 
     await oidc_client.aclose()
