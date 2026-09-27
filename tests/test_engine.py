@@ -780,6 +780,58 @@ async def test_partial_required_source_is_not_automatically_interpreted():
     assert any("partial evidence" in item.statement for item in run.result.evidence)
 
 
+async def test_provider_neutral_partial_quality_can_block_a_required_source():
+    source = SourceRef(
+        key="warehouse-query",
+        adapter="trino",
+        resource="query:revenue",
+        label="Revenue query",
+    )
+    card = card_for(
+        card_id="card-provider-neutral-partial",
+        title="Provider-neutral quality",
+        source=source,
+        delivery_methods=[
+            DeliveryMethod(
+                key="ops",
+                outcome=Outcome.NOTIFY,
+                label="Ops",
+                destination="slack://ops",
+            )
+        ],
+    )
+    resource = ResourceSnapshot(
+        source_key=source.key,
+        adapter=source.adapter,
+        resource=source.resource,
+        title=source.label,
+        metadata={
+            "data_quality": {
+                "status": "partial",
+                "issues": ["partition for the comparison window is missing"],
+                "blocking": True,
+            }
+        },
+        observations=[
+            Observation(
+                source_key=source.key,
+                subject_id="revenue",
+                subject_label="Revenue",
+                metric="revenue",
+                current=110,
+                baseline=100,
+                change_pct=10,
+            )
+        ],
+    )
+
+    run = await InsightEngine(SafetyTestDouble()).evaluate(card, [resource])
+
+    assert run.result.outcome == Outcome.INSUFFICIENT_DATA
+    assert run.result.delivery_methods == []
+    assert any("1 quality issue(s)" in item.statement for item in run.result.evidence)
+
+
 async def test_missing_baselines_warn_without_blocking_healthy_chart_evidence():
     source = SourceRef(
         key="mixed-dashboard",

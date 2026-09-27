@@ -782,6 +782,22 @@ class InsightEngine:
                 )
             quality = resource.metadata.get("data_quality") if resource is not None else None
             if isinstance(quality, dict) and quality.get("status") == "partial":
+                chart_errors = quality.get("chart_errors", [])
+                baseline_gaps = quality.get("missing_baseline_chart_ids", [])
+                generic_issues = quality.get("issues", [])
+                if not isinstance(chart_errors, list):
+                    chart_errors = [str(chart_errors)] if chart_errors else []
+                if not isinstance(baseline_gaps, list):
+                    baseline_gaps = [str(baseline_gaps)] if baseline_gaps else []
+                if not isinstance(generic_issues, list):
+                    generic_issues = [str(generic_issues)] if generic_issues else []
+                issue_count = len(chart_errors) + len(baseline_gaps) + len(generic_issues)
+                blocking = quality.get("blocking")
+                if not isinstance(blocking, bool):
+                    # Preserve the existing Superset contract while allowing
+                    # non-dashboard adapters to declare their own quality
+                    # issues without inventing chart-shaped fields.
+                    blocking = bool(chart_errors)
                 errors.append(
                     {
                         "source_key": key,
@@ -789,12 +805,10 @@ class InsightEngine:
                         "label": resource.title or source.label,
                         "message": (
                             "Source returned partial evidence: "
-                            f"{len(quality.get('chart_errors', []))} chart error(s), "
-                            f"{len(quality.get('missing_baseline_chart_ids', []))} chart(s) "
-                            "without a comparable baseline."
+                            f"{issue_count} quality issue(s)."
                         ),
                         "source_url": resource.source_url,
-                        "blocking": source.required and bool(quality.get("chart_errors")),
+                        "blocking": source.required and blocking,
                         "quality_status": "partial",
                     }
                 )
