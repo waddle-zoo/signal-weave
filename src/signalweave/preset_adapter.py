@@ -288,7 +288,10 @@ class PresetCloudClient(SupersetClient):
                 "Preset returned an asynchronous chart response; polling is not enabled "
                 "for this bounded connector"
             )
-        body = response.json()
+        try:
+            body = response.json()
+        except ValueError as error:
+            raise PresetPolicyError("Preset chart response was not valid JSON") from error
         if not isinstance(body, dict):
             raise PresetPolicyError("Preset chart response was not a JSON object")
         if dashboard_id is not None and not isinstance(body.get("dashboard_filters"), dict):

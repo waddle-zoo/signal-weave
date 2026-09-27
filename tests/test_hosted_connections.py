@@ -828,6 +828,26 @@ async def test_preset_rejects_malformed_result_envelopes(body):
 
 
 @pytest.mark.asyncio
+async def test_preset_rejects_invalid_chart_json_as_policy_failure():
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=b"not-json")
+
+    client = PresetCloudClient(
+        "https://workspace.app.preset.test",
+        access_token="preset-token",
+        transport=httpx.MockTransport(handler),
+    )
+
+    with pytest.raises(PresetPolicyError, match="not valid JSON"):
+        await client.chart_data(
+            {
+                "id": 101,
+                "params": {"metrics": ["revenue"], "datasource": "17__table"},
+            },
+        )
+
+
+@pytest.mark.asyncio
 async def test_preset_async_chart_response_fails_closed_instead_of_becoming_no_data():
     calls = 0
 

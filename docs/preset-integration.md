@@ -161,8 +161,8 @@ budget. It also fails closed when Preset returns an asynchronous `202` chart
 response; this bounded connector does not pretend a pending job is an empty
 result or poll a provider-owned job queue. It does not silently truncate a time
 series and invent a current value. Malformed chart responses with a missing,
-scalar, or mixed-object `result` envelope also fail closed as provider-policy
-errors; they are not converted to an apparently empty chart.
+scalar, or mixed-object `result` envelope, or invalid JSON also fail closed as
+provider-policy errors; they are not converted to an apparently empty chart.
 Even when a 202 response includes a provider `result_url`, the connector does
 not follow it or make a second-host request. Superset documents that field in
 its [async chart response schema](https://superset.apache.org/developer-docs/api/schemas/chartdataasyncresponseschema/).
