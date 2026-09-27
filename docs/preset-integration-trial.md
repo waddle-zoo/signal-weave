@@ -120,8 +120,11 @@ TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
   make preset-live-trial
 ```
 
-It deliberately requires an explicit approval flag and fails if the final
-receipt is not a Jev-backed, delivery-disabled shadow result.
+That first command only creates the reviewable draft. After a human confirms
+the returned sources and policy, rerun the same variables with
+`make preset-live-trial-approve`; the approval-specific target supplies the
+explicit approval flag and fails if the final receipt is not a Jev-backed,
+delivery-disabled shadow result.
 
 ## Generated-shape generalization trial
 

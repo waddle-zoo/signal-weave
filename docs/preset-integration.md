@@ -184,15 +184,24 @@ The card must contain real IDs and the deployment must load its Preset and
 SignalWeave credentials. This command invokes the live Jev path and should be
 run only against an approved shadow card; it does not contact the destination.
 
-For the stronger free-form onboarding proof, use the live trial runner. It
-discovers candidates from the Preset workspace, returns a draft for review, and
-only continues when the operator explicitly passes `--approve`:
+For the stronger free-form onboarding proof, use the live trial runner. First
+discover candidates and write a reviewable draft without approving it:
 
 ```bash
 PRESET_TRIAL_GOAL="Monitor the executive growth dashboard for meaningful changes" \
 PRESET_TRIAL_WHY="Tell Growth leadership when the evidence warrants investigation" \
 TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
   make preset-live-trial
+```
+
+After inspecting the onboarding artifact and confirming the sources and
+delivery policy, run the separate approval target:
+
+```bash
+PRESET_TRIAL_GOAL="Monitor the executive growth dashboard for meaningful changes" \
+PRESET_TRIAL_WHY="Tell Growth leadership when the evidence warrants investigation" \
+TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
+  make preset-live-trial-approve
 ```
 
 The live runner auto-detects the sole configured Preset adapter, so it does

@@ -87,6 +87,11 @@ PRESET_TRIAL_GOAL="..." \
 PRESET_TRIAL_WHY="..." \
 TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
   make preset-live-trial
+# Review the generated draft, then rerun the same variables with:
+PRESET_TRIAL_GOAL="..." \
+PRESET_TRIAL_WHY="..." \
+TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
+  make preset-live-trial-approve
 ```
 
 The onboarding trial is intentionally not presented as a live Jev accuracy

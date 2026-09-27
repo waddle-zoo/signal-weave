@@ -1,4 +1,4 @@
-.PHONY: install test lint prove benchmark daily-trial enterprise-trial discovery-trial bundle-trial query-trial retrieval-explanation-trial preset-trial preset-generalization-trial preset-jev-contract-trial preset-runtime-shadow-trial preset-bootstrap-check preset-provider-smoke preset-live-trial preset-compose-check superset-chart-matrix verify docker-up docker-down
+.PHONY: install test lint prove benchmark daily-trial enterprise-trial discovery-trial bundle-trial query-trial retrieval-explanation-trial preset-trial preset-generalization-trial preset-jev-contract-trial preset-runtime-shadow-trial preset-bootstrap-check preset-provider-smoke preset-live-trial preset-live-trial-approve preset-compose-check superset-chart-matrix verify docker-up docker-down
 
 install:
 	uv sync --extra dev
@@ -66,6 +66,14 @@ preset-provider-smoke:
 		--output artifacts/preset-provider-smoke.json
 
 preset-live-trial:
+	TYPESAFE_API_KEY_FILE=$${TYPESAFE_API_KEY_FILE:?set a live TypeSafe key file} \
+	uv run python evaluations/preset_live_onboarding_trial.py \
+		--goal "$${PRESET_TRIAL_GOAL:?set a human monitoring goal}" \
+		--why "$${PRESET_TRIAL_WHY:?set why the goal matters}" \
+		--destination "$${PRESET_TRIAL_DESTINATION:-slack://shadow-review}" \
+		--output artifacts/preset-live-onboarding-shadow.json
+
+preset-live-trial-approve:
 	TYPESAFE_API_KEY_FILE=$${TYPESAFE_API_KEY_FILE:?set a live TypeSafe key file} \
 	uv run python evaluations/preset_live_onboarding_trial.py \
 		--goal "$${PRESET_TRIAL_GOAL:?set a human monitoring goal}" \
