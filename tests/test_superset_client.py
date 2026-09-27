@@ -52,6 +52,7 @@ async def test_dashboard_chart_data_uses_superset_canonical_trailing_slash():
         ([{"data": [], "is_cached": True}], "cached"),
         ([{"data": [], "is_cached": False}], "uncached"),
         ([{"data": [], "is_cached": True}, {"data": [], "is_cached": False}], "mixed"),
+        ([{"data": [], "is_cached": None}], "unknown"),
         ([{"data": []}], "unknown"),
     ],
 )

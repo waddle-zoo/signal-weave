@@ -528,6 +528,8 @@ class SupersetClient:
             if "is_cached" not in envelope:
                 continue
             value = envelope["is_cached"]
+            if value is None:
+                continue
             if not isinstance(value, bool):
                 raise ValueError("Superset chart response contained an invalid is_cached value")
             values.append(value)
