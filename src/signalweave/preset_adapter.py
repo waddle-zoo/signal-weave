@@ -295,8 +295,18 @@ class PresetCloudClient(SupersetClient):
             raise PresetPolicyError(
                 "Preset dashboard-filter response did not include dashboard_filters metadata"
             )
-        result = body.get("result", [])
-        envelopes = [result] if isinstance(result, dict) else result if isinstance(result, list) else []
+        if "result" not in body:
+            raise PresetPolicyError("Preset chart response did not include a result envelope")
+        result = body["result"]
+        if not isinstance(result, (dict, list)):
+            raise PresetPolicyError(
+                "Preset chart response contained an unsupported result envelope"
+            )
+        if isinstance(result, list) and any(not isinstance(item, dict) for item in result):
+            raise PresetPolicyError(
+                "Preset chart response contained a non-object result envelope"
+            )
+        envelopes = [result] if isinstance(result, dict) else result
         if self.max_result_rows is not None:
             row_count = sum(
                 len(self._rows_from_result_item(item))

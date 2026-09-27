@@ -800,6 +800,34 @@ async def test_preset_dashboard_read_fails_closed_without_filter_metadata():
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "body",
+    [
+        {"result": "not-tabular"},
+        {"result": [None]},
+        {"payload": []},
+    ],
+)
+async def test_preset_rejects_malformed_result_envelopes(body):
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=body)
+
+    client = PresetCloudClient(
+        "https://workspace.app.preset.test",
+        access_token="preset-token",
+        transport=httpx.MockTransport(handler),
+    )
+
+    with pytest.raises(PresetPolicyError, match="result envelope"):
+        await client.chart_data(
+            {
+                "id": 101,
+                "params": {"metrics": ["revenue"], "datasource": "17__table"},
+            },
+        )
+
+
+@pytest.mark.asyncio
 async def test_preset_async_chart_response_fails_closed_instead_of_becoming_no_data():
     calls = 0
 
