@@ -14,6 +14,34 @@ REQUIRED_NOT_PROVEN = {
 }
 
 
+def _viz_types_from_judge_state(state: dict[str, Any]) -> list[str]:
+    return sorted(
+        {
+            str(chart.get("viz_type") or "unknown")
+            for source in state.get("sources", [])
+            if isinstance(source, dict)
+            for metadata in [source.get("metadata")]
+            if isinstance(metadata, dict)
+            for chart in metadata.get("charts", [])
+            if isinstance(chart, dict)
+        }
+    )
+
+
+def _data_requests(trace: dict[str, Any]) -> list[dict[str, Any]]:
+    requests: list[dict[str, Any]] = []
+    for phase in ("snapshot", "focused_snapshot", "full", "focused"):
+        phase_requests = trace.get(phase, [])
+        if not isinstance(phase_requests, list):
+            continue
+        requests.extend(
+            request
+            for request in phase_requests
+            if isinstance(request, dict) and str(request.get("path", "")).endswith("/data")
+        )
+    return requests
+
+
 def review_report(report: dict[str, Any]) -> dict[str, Any]:
     findings: list[str] = []
     if report.get("trial") != "preset-jev-contract":
@@ -64,6 +92,10 @@ def review_report(report: dict[str, Any]) -> dict[str, Any]:
         focused = workspace.get("focused_healthy_slice")
         typed = workspace.get("typed_judge_input")
         provider = workspace.get("provider_requests")
+        result_payload = workspace.get("result_payload")
+        focused_payload = workspace.get("focused_result_payload")
+        call_trace = workspace.get("jev_call_trace")
+        provider_trace = workspace.get("provider_request_trace")
         if not isinstance(result, dict) or result.get("evaluator") != "jev-latest":
             findings.append(f"workspace {index} full result is not Jev-backed")
         if not isinstance(result, dict) or result.get("outcome") != "insufficient_data":
@@ -99,6 +131,87 @@ def review_report(report: dict[str, Any]) -> dict[str, Any]:
                 findings.append(f"workspace {index} sent no observation items to Jev")
             viz_types.update(str(item) for item in typed.get("jev_source_viz_types", []))
 
+        if not isinstance(call_trace, dict):
+            findings.append(f"workspace {index} has no serialized Jev call trace")
+            full_calls: list[dict[str, Any]] = []
+            focused_calls: list[dict[str, Any]] = []
+        else:
+            full_calls = call_trace.get("full", [])
+            focused_calls = call_trace.get("focused", [])
+            if not isinstance(full_calls, list) or not isinstance(focused_calls, list):
+                findings.append(f"workspace {index} has malformed Jev call trace")
+                full_calls = full_calls if isinstance(full_calls, list) else []
+                focused_calls = focused_calls if isinstance(focused_calls, list) else []
+
+        if isinstance(result, dict) and len(full_calls) != result.get("jev_requests"):
+            findings.append(f"workspace {index} full Jev count is not backed by its raw trace")
+        if isinstance(focused, dict) and len(focused_calls) != focused.get("jev_requests"):
+            findings.append(f"workspace {index} focused Jev count is not backed by its raw trace")
+
+        if full_calls:
+            full_judge = full_calls[-1]
+            state = full_judge.get("state") if isinstance(full_judge, dict) else None
+            if not isinstance(state, dict) or "evidence" not in state or "observations" not in state:
+                findings.append(f"workspace {index} raw full Jev trace has no typed judge input")
+            else:
+                raw_evidence = state.get("evidence")
+                raw_observations = state.get("observations")
+                if not isinstance(raw_evidence, list) or not isinstance(raw_observations, list):
+                    findings.append(f"workspace {index} raw full Jev input is missing evidence or observations")
+                else:
+                    if isinstance(typed, dict) and typed.get("evidence_items") != len(raw_evidence):
+                        findings.append(f"workspace {index} evidence count is not derived from raw Jev input")
+                    if isinstance(typed, dict) and typed.get("observation_items") != len(raw_observations):
+                        findings.append(f"workspace {index} observation count is not derived from raw Jev input")
+                    expected_viz = _viz_types_from_judge_state(state)
+                    if isinstance(typed, dict) and typed.get("jev_source_viz_types") != expected_viz:
+                        findings.append(f"workspace {index} visualization coverage is not derived from raw Jev input")
+                    if isinstance(result_payload, dict):
+                        if result_payload.get("evidence") != raw_evidence:
+                            findings.append(f"workspace {index} result evidence differs from Jev input evidence")
+                        if result_payload.get("observations") != raw_observations:
+                            findings.append(f"workspace {index} result observations differ from Jev input observations")
+                        if result_payload.get("outcome") != result.get("outcome"):
+                            findings.append(f"workspace {index} result outcome summary is not backed by raw result")
+                        payload_evidence = result_payload.get("evidence")
+                        payload_observations = result_payload.get("observations")
+                        if not isinstance(payload_evidence, list):
+                            findings.append(f"workspace {index} raw result evidence is not a list")
+                        elif len(payload_evidence) != result.get("evidence"):
+                            findings.append(f"workspace {index} result evidence count is not reproducible")
+                        if not isinstance(payload_observations, list):
+                            findings.append(f"workspace {index} raw result observations are not a list")
+                        elif len(payload_observations) != result.get("observations"):
+                            findings.append(f"workspace {index} result observation count is not reproducible")
+                    else:
+                        findings.append(f"workspace {index} has no serialized full result payload")
+        else:
+            findings.append(f"workspace {index} has no full Jev call trace")
+
+        if not isinstance(focused_payload, dict):
+            findings.append(f"workspace {index} has no serialized focused result payload")
+        elif isinstance(focused, dict):
+            if focused_payload.get("outcome") != focused.get("outcome"):
+                findings.append(f"workspace {index} focused outcome summary is not backed by raw result")
+            if focused_payload.get("evaluator") != "jev-latest":
+                findings.append(f"workspace {index} focused raw result is not Jev-backed")
+
+        if not isinstance(provider_trace, dict):
+            findings.append(f"workspace {index} has no raw provider request trace")
+        else:
+            requests = _data_requests(provider_trace)
+            dashboard_id = str(workspace.get("dashboard_id", ""))
+            if not requests or any(
+                request.get("params", {}).get("filter_dashboard_id") != dashboard_id
+                for request in requests
+            ):
+                findings.append(f"workspace {index} raw provider requests lost dashboard filter context")
+            if isinstance(provider, dict) and provider.get("dashboard_filter_context") is not all(
+                request.get("params", {}).get("filter_dashboard_id") == dashboard_id
+                for request in requests
+            ):
+                findings.append(f"workspace {index} dashboard filter summary is not reproducible")
+
         if not isinstance(provider, dict) or provider.get("dashboard_filter_context") is not True:
             findings.append(f"workspace {index} lost dashboard filter context")
         if not isinstance(provider, dict) or provider.get("focused_chart_scope_sent") is not True:
@@ -112,6 +225,17 @@ def review_report(report: dict[str, Any]) -> dict[str, Any]:
         findings.append("serialized observation total is not reproducible")
     if report.get("total_jev_requests") != total_jev_requests:
         findings.append("serialized Jev request total is not reproducible")
+    raw_jev_requests = sum(
+        len(workspace.get("jev_call_trace", {}).get("full", []))
+        + len(workspace.get("jev_call_trace", {}).get("focused", []))
+        for workspace in workspaces
+        if isinstance(workspace, dict)
+        and isinstance(workspace.get("jev_call_trace"), dict)
+        and isinstance(workspace["jev_call_trace"].get("full", []), list)
+        and isinstance(workspace["jev_call_trace"].get("focused", []), list)
+    )
+    if report.get("total_jev_requests") != raw_jev_requests:
+        findings.append("serialized Jev request total is not backed by raw traces")
     if report.get("total_jev_requests") != len(workspaces) * 4:
         findings.append("the contract request count is not bounded to two cards per workspace")
 

@@ -171,6 +171,7 @@ async def _run_workspace(workspace: dict[str, Any], root: Path) -> dict[str, Any
 
         async def run_card(label: str, selected_sources: list[dict[str, Any]]) -> dict[str, Any]:
             before_calls = len(ContractClient.calls)
+            provider_start = len(transport.requests)
             onboarding = await onboard(
                 **common,
                 selected_sources=selected_sources,
@@ -191,6 +192,7 @@ async def _run_workspace(workspace: dict[str, Any], root: Path) -> dict[str, Any
                 actor=f"{workspace['id']}-scheduler",
             )
             receipt_lookup = get_receipt(idempotency_key=key)
+            after_replay_calls = len(ContractClient.calls)
             result = evaluated["result"]
             resources = evaluated.get("resources") or []
             viz_types = sorted(
@@ -219,7 +221,19 @@ async def _run_workspace(workspace: dict[str, Any], root: Path) -> dict[str, Any
                 "replayed": replay["replayed"],
                 "replay_made_no_jev_call": len(ContractClient.calls) == replay_calls_before,
                 "jev_calls_for_card": len(ContractClient.calls) - before_calls,
+                "jev_calls_before_replay": replay_calls_before,
+                "jev_calls_after_replay": after_replay_calls,
+                "jev_trace": ContractClient.calls[before_calls:after_replay_calls],
                 "viz_types_reached_runtime": viz_types,
+                "result_payload": result,
+                "receipt_payload": evaluated["receipt"],
+                "receipt_lookup_payload": receipt_lookup,
+                "mcp_artifacts": {
+                    "onboarding": onboarding,
+                    "approved": approved,
+                    "evaluated": evaluated,
+                },
+                "provider_request_trace": transport.requests[provider_start:],
                 "provider_filter_context": all(
                     request["params"].get("filter_dashboard_id")
                     == str(workspace["dashboard_id"])
@@ -249,6 +263,7 @@ async def _run_workspace(workspace: dict[str, Any], root: Path) -> dict[str, Any
         "provider_catalog_search_requests": sum(
             request["path"] == "/api/v1/dashboard/" for request in transport.requests
         ),
+        "provider_request_trace": transport.requests,
     }
 
 

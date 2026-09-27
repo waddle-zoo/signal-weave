@@ -149,11 +149,15 @@ async def _run_workspace(workspace: dict[str, Any]) -> dict[str, Any]:
         label=workspace["dashboard_title"],
     )
     snapshot = await adapter.inspect(source)
+    snapshot_provider_requests = list(transport.requests)
     judger = JevJudger(api_key="synthetic-contract-key", max_retries=0)
     engine = InsightEngine(judger=judger)
     full_call_start = len(ContractClient.calls)
+    full_provider_start = len(transport.requests)
     run = await engine.evaluate(_card(workspace, source), [snapshot])
     full_judge_call = ContractClient.calls[full_call_start + 1]
+    full_call_trace = ContractClient.calls[full_call_start:]
+    full_provider_requests = transport.requests[full_provider_start:]
 
     focused_source = SourceRef(
         key=f"{workspace['id']}-focused",
@@ -163,9 +167,14 @@ async def _run_workspace(workspace: dict[str, Any]) -> dict[str, Any]:
         parameters={"chart_ids": [str(workspace["charts"][0]["id"])]},
     )
     focused_snapshot = await adapter.inspect(focused_source)
+    focused_snapshot_provider_requests = transport.requests[len(snapshot_provider_requests) :]
+    focused_call_start = len(ContractClient.calls)
+    focused_provider_start = len(transport.requests)
     focused_run = await engine.evaluate(
         _card(workspace, focused_source), [focused_snapshot]
     )
+    focused_call_trace = ContractClient.calls[focused_call_start:]
+    focused_provider_requests = transport.requests[focused_provider_start:]
 
     evidence = full_judge_call["state"].get("evidence", [])
     observations = full_judge_call["state"].get("observations", [])
@@ -179,6 +188,7 @@ async def _run_workspace(workspace: dict[str, Any]) -> dict[str, Any]:
     return {
         "workspace": workspace["id"],
         "tenant_id": workspace["tenant_id"],
+        "dashboard_id": str(workspace["dashboard_id"]),
         "chart_count": len(workspace["charts"]),
         "viz_types": sorted({str(chart.get("viz_type") or "unknown") for chart in workspace["charts"]}),
         "snapshot_observations": len(snapshot.observations),
@@ -193,6 +203,7 @@ async def _run_workspace(workspace: dict[str, Any]) -> dict[str, Any]:
             "observations": len(run.result.observations),
             "jev_requests": run.result.telemetry.jev_requests,
         },
+        "result_payload": run.result.model_dump(mode="json"),
         "focused_healthy_slice": {
             "chart_id": str(workspace["charts"][0]["id"]),
             "quality": focused_quality.get("status"),
@@ -201,12 +212,23 @@ async def _run_workspace(workspace: dict[str, Any]) -> dict[str, Any]:
             "observations": len(focused_run.result.observations),
             "jev_requests": focused_run.result.telemetry.jev_requests,
         },
+        "focused_result_payload": focused_run.result.model_dump(mode="json"),
         "typed_judge_input": {
             "received_evidence": bool(evidence),
             "received_observations": bool(observations),
             "evidence_items": len(evidence),
             "observation_items": len(observations),
             "jev_source_viz_types": jev_source_viz_types,
+        },
+        "jev_call_trace": {
+            "full": full_call_trace,
+            "focused": focused_call_trace,
+        },
+        "provider_request_trace": {
+            "snapshot": snapshot_provider_requests,
+            "full": full_provider_requests,
+            "focused_snapshot": focused_snapshot_provider_requests,
+            "focused": focused_provider_requests,
         },
         "provider_requests": {
             "dashboard_chart_data": sum(

@@ -21,6 +21,37 @@ REQUIRED_NOT_PROVEN = {
 }
 
 
+def _contains_secret(value: Any) -> bool:
+    encoded = json.dumps(value, sort_keys=True)
+    return any(secret in encoded for secret in ("synthetic-secret", "synthetic-name"))
+
+
+def _data_requests(requests: Any) -> list[dict[str, Any]]:
+    if not isinstance(requests, list):
+        return []
+    return [
+        request
+        for request in requests
+        if isinstance(request, dict) and str(request.get("path", "")).endswith("/data")
+    ]
+
+
+def _runtime_viz_types(artifact: dict[str, Any]) -> list[str]:
+    evaluated = artifact.get("evaluated", {})
+    resources = evaluated.get("resources", []) if isinstance(evaluated, dict) else []
+    return sorted(
+        {
+            str(chart.get("viz_type") or "unknown")
+            for resource in resources
+            if isinstance(resource, dict)
+            for metadata in [resource.get("metadata")]
+            if isinstance(metadata, dict)
+            for chart in metadata.get("charts", [])
+            if isinstance(chart, dict)
+        }
+    )
+
+
 def _cards(report: dict[str, Any]) -> list[dict[str, Any]]:
     cards: list[dict[str, Any]] = []
     for workspace in report.get("workspaces", []):
@@ -64,6 +95,19 @@ def review_report(report: dict[str, Any]) -> dict[str, Any]:
     expected_card_count = len(workspaces) * 2
     if report.get("card_count") != expected_card_count or len(cards) != expected_card_count:
         findings.append("card_count does not match the two serialized cards per workspace")
+
+    for index, workspace in enumerate(workspaces):
+        trace = workspace.get("provider_request_trace") if isinstance(workspace, dict) else None
+        if not isinstance(trace, list):
+            findings.append(f"workspace {index} has no raw provider request trace")
+            continue
+        catalog_count = sum(
+            request.get("path") == "/api/v1/dashboard/"
+            for request in trace
+            if isinstance(request, dict)
+        )
+        if workspace.get("provider_catalog_search_requests") != catalog_count:
+            findings.append(f"workspace {index} catalog search count is not backed by raw requests")
 
     for index, workspace in enumerate(workspaces):
         if not isinstance(workspace, dict):
@@ -110,6 +154,84 @@ def review_report(report: dict[str, Any]) -> dict[str, Any]:
                 findings.append(f"workspace {index} {key} leaked a provider secret to Jev")
             if not isinstance(card.get("jev_calls_for_card"), int) or card["jev_calls_for_card"] < 1:
                 findings.append(f"workspace {index} {key} has no recorded Jev request")
+
+            trace = card.get("jev_trace")
+            if not isinstance(trace, list):
+                findings.append(f"workspace {index} {key} has no raw Jev trace")
+                trace = []
+            if len(trace) != card.get("jev_calls_for_card"):
+                findings.append(f"workspace {index} {key} Jev count is not backed by its raw trace")
+            if card.get("jev_calls_before_replay") != card.get("jev_calls_after_replay"):
+                findings.append(f"workspace {index} {key} replay changed the raw Jev call boundary")
+            if card.get("replay_made_no_jev_call") is not (
+                card.get("jev_calls_before_replay") == card.get("jev_calls_after_replay")
+            ):
+                findings.append(f"workspace {index} {key} replay summary is not reproducible")
+
+            artifacts = card.get("mcp_artifacts")
+            if not isinstance(artifacts, dict):
+                findings.append(f"workspace {index} {key} has no raw MCP artifacts")
+                artifacts = {}
+            elif _contains_secret(artifacts):
+                findings.append(f"workspace {index} {key} raw MCP artifacts contain a provider secret")
+            if card.get("secrets_absent_from_mcp_artifacts") is not (
+                not _contains_secret(artifacts)
+            ):
+                findings.append(f"workspace {index} {key} MCP secret summary is not reproducible")
+            if _contains_secret(trace):
+                findings.append(f"workspace {index} {key} raw Jev state contains a provider secret")
+            if card.get("secrets_absent_from_jev_state") is not (not _contains_secret(trace)):
+                findings.append(f"workspace {index} {key} Jev secret summary is not reproducible")
+
+            result_payload = card.get("result_payload")
+            receipt_payload = card.get("receipt_payload")
+            receipt_lookup_payload = card.get("receipt_lookup_payload")
+            if not isinstance(result_payload, dict):
+                findings.append(f"workspace {index} {key} has no raw result payload")
+            else:
+                for field in ("outcome", "evaluator"):
+                    if result_payload.get(field) != card.get(field):
+                        findings.append(f"workspace {index} {key} {field} summary is not backed by raw result")
+                payload_evidence = result_payload.get("evidence")
+                payload_observations = result_payload.get("observations")
+                if not isinstance(payload_evidence, list):
+                    findings.append(f"workspace {index} {key} raw result evidence is not a list")
+                elif len(payload_evidence) != card.get("evidence_count"):
+                    findings.append(f"workspace {index} {key} evidence count is not reproducible")
+                if not isinstance(payload_observations, list):
+                    findings.append(f"workspace {index} {key} raw result observations are not a list")
+                elif len(payload_observations) != card.get("observation_count"):
+                    findings.append(f"workspace {index} {key} observation count is not reproducible")
+            if not isinstance(receipt_payload, dict):
+                findings.append(f"workspace {index} {key} has no raw receipt payload")
+            else:
+                if receipt_payload.get("status") != card.get("receipt_status"):
+                    findings.append(f"workspace {index} {key} receipt status is not reproducible")
+                if receipt_payload.get("delivery_enabled") != card.get("delivery_enabled"):
+                    findings.append(f"workspace {index} {key} receipt delivery flag is not reproducible")
+            if not isinstance(receipt_lookup_payload, dict) or receipt_lookup_payload.get("status") != card.get("receipt_lookup_status"):
+                findings.append(f"workspace {index} {key} receipt lookup is not reproducible")
+
+            if trace:
+                judge_state = trace[-1].get("state") if isinstance(trace[-1], dict) else None
+                if not isinstance(judge_state, dict) or "evidence" not in judge_state or "observations" not in judge_state:
+                    findings.append(f"workspace {index} {key} raw Jev trace has no typed evidence handoff")
+                elif isinstance(result_payload, dict):
+                    if result_payload.get("evidence") != judge_state.get("evidence"):
+                        findings.append(f"workspace {index} {key} result evidence differs from Jev handoff")
+                    if result_payload.get("observations") != judge_state.get("observations"):
+                        findings.append(f"workspace {index} {key} result observations differ from Jev handoff")
+
+            raw_requests = card.get("provider_request_trace")
+            data_requests = _data_requests(raw_requests)
+            raw_filter_context = bool(data_requests) and all(
+                request.get("params", {}).get("filter_dashboard_id") for request in data_requests
+            )
+            if card.get("provider_filter_context") is not raw_filter_context:
+                findings.append(f"workspace {index} {key} provider filter summary is not reproducible")
+            expected_viz = _runtime_viz_types(artifacts)
+            if card.get("viz_types_reached_runtime") != expected_viz:
+                findings.append(f"workspace {index} {key} visualization summary is not reproducible")
 
     full_outcomes = {
         workspace.get("full_dashboard", {}).get("outcome")

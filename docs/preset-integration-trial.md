@@ -92,6 +92,13 @@ data is downgraded to `insufficient_data`. It also exercises varied
 visualization/result shapes and a healthy single-chart slice that reaches an
 actionable `notify` result.
 
+The report includes the raw synthetic Jev call projections, normalized input
+arrays, result payloads, and provider request traces used by the reviewer. The
+reviewer derives evidence/observation counts, visualization coverage, result
+parity, and dashboard-filter claims from those payloads; it does not accept an
+edited summary boolean as proof. Mutation tests intentionally remove evidence
+from the raw handoff and verify that review fails.
+
 This proves wiring and fail-safe behavior, not Jev's live semantic accuracy,
 customer authorization, provider permissions, or managed hosting. Those remain
 explicit acceptance gates for a real tenant.
@@ -129,7 +136,10 @@ The separate preset-runtime-shadow-review command independently rechecks the
 serialized report. It rejects missing cards, missing evidence, enabled
 delivery, lost dashboard scope, secret leakage, failed idempotent replay,
 missing generated tenants, or omitted non-claims even if the trial's own
-passed flag is still true.
+passed flag is still true. It also recomputes receipt and replay boundaries,
+secret scans over the raw MCP artifacts and Jev state, result/evidence parity,
+visualization coverage, and provider filter telemetry. Mutation tests verify
+that an edited result, raw artifact, or replay summary fails review.
 
 The Preset and TypeSafe network transports are synthetic for this trial. The
 runtime/MCP/store/adapter/Jev parsing path is production code; live Jev

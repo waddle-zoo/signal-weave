@@ -29,3 +29,19 @@ async def test_independent_preset_jev_contract_review_rejects_mutated_evidence(t
 
     assert review["passed"] is False
     assert any("did not send evidence" in finding for finding in review["findings"])
+
+
+@pytest.mark.asyncio
+async def test_independent_preset_jev_contract_review_rejects_raw_handoff_mutation(tmp_path):
+    report = await run_trial(tmp_path / "preset-jev-contract.json")
+    mutated = deepcopy(report)
+    mutated["workspaces"][0]["jev_call_trace"]["full"][-1]["state"]["evidence"].pop()
+
+    review = review_report(mutated)
+
+    assert review["passed"] is False
+    assert any(
+        "not derived from raw Jev input" in finding
+        or "differs from Jev input evidence" in finding
+        for finding in review["findings"]
+    )

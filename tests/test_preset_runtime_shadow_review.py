@@ -42,6 +42,42 @@ async def test_independent_runtime_shadow_review_rejects_leaked_secret(tmp_path)
 
 
 @pytest.mark.asyncio
+async def test_independent_runtime_shadow_review_rejects_raw_artifact_secret(tmp_path):
+    report = await run_trial(
+        tmp_path / "runtime-shadow.json",
+        generated_workspace_count=1,
+        generated_charts_per_workspace=8,
+        generated_seed=17,
+    )
+    mutated = deepcopy(report)
+    mutated["workspaces"][0]["full_dashboard"]["mcp_artifacts"]["evaluated"][
+        "result"
+    ]["risky_debug_value"] = "synthetic-secret"
+
+    review = review_report(mutated)
+
+    assert review["passed"] is False
+    assert any("raw MCP artifacts contain a provider secret" in finding for finding in review["findings"])
+
+
+@pytest.mark.asyncio
+async def test_independent_runtime_shadow_review_rejects_raw_result_mutation(tmp_path):
+    report = await run_trial(
+        tmp_path / "runtime-shadow.json",
+        generated_workspace_count=1,
+        generated_charts_per_workspace=8,
+        generated_seed=17,
+    )
+    mutated = deepcopy(report)
+    mutated["workspaces"][0]["full_dashboard"]["result_payload"]["outcome"] = "notify"
+
+    review = review_report(mutated)
+
+    assert review["passed"] is False
+    assert any("outcome summary is not backed by raw result" in finding for finding in review["findings"])
+
+
+@pytest.mark.asyncio
 async def test_independent_runtime_shadow_review_rejects_dropped_card(tmp_path):
     report = await run_trial(
         tmp_path / "runtime-shadow.json",
