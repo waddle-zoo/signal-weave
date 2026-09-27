@@ -81,6 +81,14 @@ def test_hosted_connection_requires_https_without_inline_credentials():
                 "base_url": "https://preset.example:not-a-port",
             }
         )
+    with pytest.raises(ValueError, match="real deployment value"):
+        HostedConnection.model_validate(
+            {**connection(HostedProvider.PRESET).model_dump(), "base_url": "https://your-workspace.<region>.preset.io"}
+        )
+    with pytest.raises(ValueError, match="real deployment value"):
+        HostedConnection.model_validate(
+            {**connection(HostedProvider.PRESET).model_dump(), "credential_ref": "replace-me"}
+        )
 
 
 def test_hosted_connection_metadata_cannot_be_used_as_a_secret_store():
@@ -126,6 +134,11 @@ def test_preset_client_requires_secure_provider_urls():
             "https://workspace.preset.test",
             access_token="preset-token",
             api_base_url="https://api.preset.test/api",
+        )
+    with pytest.raises(ValueError, match="real deployment value"):
+        PresetCloudClient(
+            "https://your-workspace.<region>.preset.io",
+            access_token="preset-token",
         )
     with pytest.raises(ValueError, match="workspace_url must be a valid https origin"):
         PresetCloudClient(

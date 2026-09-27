@@ -135,8 +135,8 @@ clean. The environment preflight also rejects malformed Preset workspace or
 API-auth URLs (credentials, paths, queries, fragments, missing hosts, and
 non-numeric ports) and copied example sentinels such as `replace-me`,
 `placeholder`, `your-*`, and angle-bracket values before provider or Jev
-traffic; the same malformed-origin check is enforced when a hosted connection
-or Preset client is constructed directly. The runtime-shadow and
+traffic; the same origin and sentinel checks are enforced when a hosted
+connection or Preset client is constructed directly. The runtime-shadow and
 chart-matrix commands are separate evidence
 surfaces: the former uses synthetic Preset and TypeSafe transports to exercise
 the production runtime, while the latter uses the live local Superset service

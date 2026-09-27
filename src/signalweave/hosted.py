@@ -20,6 +20,8 @@ from urllib.parse import urlsplit
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from .config import is_obvious_placeholder
+
 
 class HostedProvider(StrEnum):
     PRESET = "preset"
@@ -95,6 +97,8 @@ class HostedConnection(BaseModel):
 
     @model_validator(mode="after")
     def validate_url(self) -> HostedConnection:
+        if is_obvious_placeholder(self.base_url):
+            raise ValueError("hosted connection base_url must be replaced with a real deployment value")
         try:
             parsed = urlsplit(self.base_url)
             # Accessing ``port`` validates malformed numeric ports. Without
@@ -119,6 +123,14 @@ class HostedConnection(BaseModel):
     def validate_metadata(self) -> HostedConnection:
         """Keep the safe metadata escape hatch from becoming a secret store."""
 
+        for field_name, value in (
+            ("external_workspace", self.external_workspace),
+            ("credential_ref", self.credential_ref),
+        ):
+            if is_obvious_placeholder(value):
+                raise ValueError(
+                    f"hosted connection {field_name} must be replaced with a real deployment value"
+                )
         sensitive_fragments = (
             "access_token",
             "api_token",

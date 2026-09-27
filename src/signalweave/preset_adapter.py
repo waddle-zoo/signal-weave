@@ -16,6 +16,7 @@ from urllib.parse import urlsplit
 
 import httpx
 
+from .config import is_obvious_placeholder
 from .hosted import HostedDataMode, HostedDataPolicy
 from .superset_adapter import SupersetAdapter
 from .superset_client import SupersetClient
@@ -50,6 +51,10 @@ class PresetCloudClient(SupersetClient):
             "Preset workspace_url": workspace_url,
             "Preset api_base_url": api_base_url,
         }.items():
+            if is_obvious_placeholder(url):
+                raise ValueError(
+                    f"{field_name} must be replaced with a real deployment value"
+                )
             try:
                 parsed = urlsplit(url)
                 # ``urlsplit().hostname`` does not validate a malformed port.
