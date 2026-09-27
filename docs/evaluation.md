@@ -62,14 +62,14 @@ uv run python scripts/superset_chart_matrix.py
 The harness reports chart-family coverage and fails on unclassified empty
 results, observations without metric labels, or observations whose metrics
 were silently dropped. In the current local demo fixture on 2026-09-27 it
-traversed 9 dashboards and 102 charts, produced 8,611 observations, classified
-91 charts as `extracted`, marked one raw multi-number table `partial`, and
-surfaced 10 explicit provider failures as `unsupported`. The provider returned
-the actionable error `Chart has no query context saved. Please save the chart
-again.` for those charts; the connector did not replace the missing context
-with an unscoped query. It reported zero silent-loss issues. The separate
-Northstar Outfitters fixture was rerun against the live local service on
-2026-09-27: it traversed 20 dashboards and 580 charts, produced 41,002
+traversed 9 dashboards and 102 charts, produced 8,633 observations, classified
+101 charts as `extracted`, marked one raw multi-number table `partial`, and
+reported zero unsupported charts or silent-loss issues. The one partial chart
+retains every numeric field and is explicitly review-required. The same
+matrix and live integration round-trip run as a recurring GitHub Actions gate;
+the final run is retained as the `local-superset-chart-matrix` artifact. The
+separate Northstar Outfitters fixture was rerun against the live local service
+on 2026-09-27: it traversed 20 dashboards and 580 charts, produced 41,002
 observations, and extracted all 580 charts.
 
 The stronger local acceptance path runs the production runtime and MCP tools
