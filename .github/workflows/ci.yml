@@ -69,6 +69,14 @@ jobs:
           uv run python evaluations/preset_enterprise_proof_review.py \
             artifacts/preset-enterprise-proof.json
 
+      - name: Upload hosted Preset proof reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hosted-preset-proof-${{ github.run_id }}
+          path: artifacts/**/*.json
+          if-no-files-found: ignore
+
   hosted-preset-scale-proof:
     name: hosted Preset scale proof (${{ matrix.seed }})
     runs-on: ubuntu-latest
@@ -103,3 +111,11 @@ jobs:
             --output "artifacts/preset-runtime-shadow-${{ matrix.seed }}.json"
           uv run python evaluations/preset_runtime_shadow_review.py \
             "artifacts/preset-runtime-shadow-${{ matrix.seed }}.json"
+
+      - name: Upload scaled Preset proof report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hosted-preset-scale-${{ matrix.seed }}-${{ github.run_id }}
+          path: artifacts/preset-runtime-shadow-${{ matrix.seed }}.json
+          if-no-files-found: ignore
