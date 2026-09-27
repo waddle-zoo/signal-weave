@@ -4,6 +4,14 @@
 **Scope:** controlled enterprise pilot, not autonomous production delivery  
 **Last verified:** 2026-09-26
 
+The hosted-Preset assumptions in this record were checked against Preset's
+current documentation on 2026-09-26: the direct Preset API is Enterprise-only,
+Preset MCP is documented as an Enterprise add-on, and Preset Alerts & Reports
+are Preset-owned scheduled/event-triggered notifications delivered through
+email or Slack. Those capabilities do not amount to a managed SignalWeave
+endpoint or a server-side Jev extension point; the managed-service gates below
+remain open.
+
 ## V1 claim
 
 SignalWeave v1 is shippable as a small, self-hosted decision layer when an

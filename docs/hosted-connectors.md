@@ -91,11 +91,12 @@ customer tenant in the resource contract.
 
 Preset currently documents the direct Preset API as an Enterprise-plan
 capability; the [canonical API reference](https://api-docs.preset.io/) documents
-the `/v1/auth/` exchange and workspace API collection. Preset's current MCP authentication documentation also describes
-the MCP server as an Enterprise add-on. A customer must therefore have the
-relevant Preset entitlement for either direct unattended API access or the
-remote-MCP fallback; the remote-MCP path is not a universal workaround for a
-plan without API access.
+the `/v1/auth/` exchange and workspace API collection. Preset's current MCP
+documentation describes the MCP server itself as an add-on to Enterprise plans
+(the client-side OAuth matrix is a separate concern). A customer therefore
+needs the relevant Preset entitlement for either direct unattended API access
+or the remote-MCP fallback; the remote-MCP path is not a universal workaround
+for a plan without the required Preset capability.
 
 The connector sends `force=false` for cached-results requests and enforces the
 connection's response byte and row budgets. That is a cache preference, not a
@@ -115,9 +116,11 @@ forward a bearer token to another host. This is a transport invariant, not the
 complete managed-service egress boundary described below.
 
 Preset MCP remains useful for interactive onboarding by a customer-owned agent,
-but recurring monitoring should use the direct hosted API path. The connector
-does not create or delete dashboards, edit permissions, or execute arbitrary
-SQL.
+but recurring monitoring should use the direct hosted API path. Preset's native
+Alerts & Reports feature covers scheduled or event-triggered notifications and
+documents email and Slack delivery; it is not a generic callback into
+SignalWeave's Jev decision path. The connector does not create or delete
+dashboards, edit permissions, or execute arbitrary SQL.
 
 ### Hex Cloud
 
