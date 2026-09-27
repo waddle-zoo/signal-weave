@@ -169,12 +169,20 @@ make preset-bootstrap-check
 ```
 
 This authenticates the configured Preset connection and reads one bounded
-dashboard catalog page. It verifies tenant/principal configuration and that
-the runtime is Jev-only; token deployments report static tenant/principal
-identity while OIDC deployments report request-scoped identity. It makes zero
-Jev calls and never reads chart data.
-It fails for an empty workspace so a customer does not mistake a configured
-credential for a usable onboarding target.
+dashboard catalog page when no resource anchor is supplied. It verifies
+tenant/principal configuration and that the runtime is Jev-only; token
+deployments report static tenant/principal identity while OIDC deployments
+report request-scoped identity. It makes zero Jev calls and never reads chart
+data in catalog-only mode.
+
+When `PRESET_BOOTSTRAP_DASHBOARD_ID` or `PRESET_BOOTSTRAP_CHART_ID` is
+provided, the preflight bypasses catalog discovery and revalidates the explicit
+resource directly. This supports hosted workspaces where a read-only principal
+can read a known dashboard but cannot list the full catalog. The direct probe
+still requires the selected dashboard/chart to return usable provider data and
+fails closed on an identity mismatch. Catalog-only mode fails for an empty
+workspace so a customer does not mistake a configured credential for a usable
+onboarding target.
 
 To avoid copying dashboard IDs by hand, use the bounded readiness target with a
 title substring:

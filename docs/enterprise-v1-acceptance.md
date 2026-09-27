@@ -66,6 +66,7 @@ returns an inspectable evidence bundle and receipt.
 | Malformed standalone Preset query contexts fail before provider I/O | Saved chart contexts with invalid JSON, a non-object envelope, or without a usable bounded `queries` list are rejected locally; the connector does not replace malformed context with synthesized params or send an invalid/unbounded POST request. | Pass locally |
 | Preset saved row limits cannot disable bounding | Zero and negative numeric saved `row_limit` values clamp to `1`; oversized values clamp to the connection policy; boolean and malformed values fail before provider I/O. | Pass locally |
 | Explicit Superset resources scale with card scope | Dashboard and chart card anchors use one provider metadata lookup for authorization; they do not materialize the full workspace catalog. A large-catalog regression test fails if the list endpoint is touched. | Pass locally |
+| Explicit Preset bootstrap anchors bypass catalog permissions | `preset-bootstrap-check --dashboard-id ... --chart-id ...` revalidates the selected resource directly and does not require a broad dashboard listing permission; the provider response must still contain the requested chart and usable observations. | Pass locally; real Preset RBAC remains a customer gate |
 | Preset evidence reaches the typed Jev contract | The production Preset adapter and Jev adapter are exercised together across 3 workspace shapes / 13 charts; normalized observations, evidence, visualization labels, dashboard filter context, typed probabilities, and partial-quality safe outcomes are asserted. The serialized report is independently reviewed for tenant contracts, evidence hand-off, visualization coverage, fail-safe outcomes, and bounded Jev requests. | Pass locally; live Jev semantics not proven |
 | Preset runtime shadow path is exercised end to end | Three named plus six generated tenant-bound Preset-shaped workspaces run through environment bootstrap, MCP discovery, free-form onboarding, approval, Jev-only evaluation, SQLite receipt lookup, and idempotent replay. Generated workspaces use unfamiliar IDs and varied chart/result shapes; the named Harbor case also proves a dashboard-scoped provider outage becomes partial evidence. | 9 workspaces; 18 cards; 126 synthetic Jev calls; pass; live semantics not proven |
 | Larger anti-overfitting runtime replay | The same production runtime path was rerun with three named plus 30 seeded generated workspaces, 16 charts per generated workspace, unfamiliar tenants/IDs, provider failures, partial dashboards, and 15 visualization labels. The independent reviewer recomputed the report invariants. | 33 workspaces; 66 cards; 462 synthetic Jev calls; pass; live semantics not proven |
@@ -84,7 +85,7 @@ returns an inspectable evidence bundle and receipt.
 | Generated-shape anti-overfitting trial | A seeded generator creates 24 unfamiliar tenant workspaces / 192 charts across five result envelopes, 12 visualization labels including an unknown/vendor extension, usable and unusable metric definitions, empty results, ambiguous numerics, and provider failures; the production Preset client/adapter passes catalog, scope, cache, retention, and safe-degradation assertions, then an independent report reviewer recomputes visualization coverage from each workspace result and rejects mutated pass-looking reports. A generated 64-chart dashboard stress test proves the provider aggregate byte budget fails closed; an engine test separately proves the multi-source serialized Jev budget fails before any Jev call. | Pass locally; provider and live Jev gates remain open |
 | Aggregate Preset enterprise proof pack | `make preset-enterprise-proof` runs the hosted connector, boundary, generated-shape, typed Jev, and runtime-shadow trials; each serialized report is independently reviewed and a separate aggregate reviewer verifies the complete five-case set, synthetic-only scope, delivery-disabled state, and explicit non-claims. | 5/5 component reviews pass; aggregate review pass; no live provider or Jev requests |
 | Existing enterprise workflows remain the owner | MCP tools return typed decisions and evidence; SignalWeave does not execute arbitrary SQL, tools, DAGs, or notifications. | Pass |
-| Regression safety | Full repository tests and lint. | 443 passed, 2 skipped; Ruff clean |
+| Regression safety | Full repository tests and lint. | 444 passed, 2 skipped; Ruff clean |
 
 ## Reproduction
 
@@ -127,7 +128,7 @@ make local-superset-runtime-shadow-trial
 make local-superset-runtime-shadow-review
 ```
 
-The current verified regression result is `443 passed, 2 skipped` with Ruff
+The current verified regression result is `444 passed, 2 skipped` with Ruff
 clean. The environment preflight also rejects malformed Preset workspace or
 API-auth URLs (credentials, paths, queries, fragments, missing hosts, and
 non-numeric ports) before provider or Jev traffic. The runtime-shadow and

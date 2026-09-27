@@ -123,7 +123,9 @@ async def run(
             "Preset bootstrap requires a client with provider request telemetry"
         )
     catalog_truncated = False
+    catalog_requested = False
     if dashboard_query:
+        catalog_requested = True
         dashboards, provider_count, catalog_truncated = await _select_dashboard_by_query(
             adapter.client,
             query=dashboard_query,
@@ -136,20 +138,24 @@ async def run(
             dashboard_id = None
         else:
             dashboard_id = None
+    elif dashboard_id:
+        # An explicit provider resource is already an onboarding anchor. Do
+        # not require a broad catalog permission just to revalidate it; many
+        # hosted workspaces expose direct dashboard reads more narrowly than
+        # dashboard listing.
+        dashboards = []
+        provider_count = None
     else:
+        catalog_requested = True
         dashboards, provider_count = await adapter.client.list_dashboards_page(
             page=0,
             page_size=page_size,
         )
     provider_requests_after_catalog = getattr(adapter.client, "requests_made", None)
-    provider_requests_for_bootstrap = (
+    catalog_requests = (
         provider_requests_after_catalog - provider_requests_before
         if isinstance(provider_requests_after_catalog, int)
         else None
-    )
-    provider_transport_used = (
-        isinstance(provider_requests_for_bootstrap, int)
-        and provider_requests_for_bootstrap > 0
     )
     jev_requests = 0
     chart_probe: dict[str, Any] | None = None
@@ -271,6 +277,21 @@ async def run(
                         and not semantic_issues
                     ),
                 }
+    provider_requests_after = getattr(adapter.client, "requests_made", None)
+    provider_requests_for_bootstrap = (
+        provider_requests_after - provider_requests_before
+        if isinstance(provider_requests_after, int)
+        else None
+    )
+    provider_transport_used = (
+        isinstance(provider_requests_for_bootstrap, int)
+        and provider_requests_for_bootstrap > 0
+    )
+    explicit_anchor = bool(dashboard_id) and not dashboard_query
+    target_available = explicit_anchor or bool(dashboards)
+    catalog_request_succeeded = (
+        isinstance(catalog_requests, int) and catalog_requests > 0
+    )
     report = {
         "trial": "preset-bootstrap-check",
         "adapter": adapter_name,
@@ -284,14 +305,17 @@ async def run(
             "provider_count": provider_count,
             "has_dashboard": bool(dashboards),
             "truncated": catalog_truncated,
+            "requested": catalog_requested,
+            "explicit_anchor": explicit_anchor,
         },
         "checks": {
             "jev_runtime_configured": jev_mode_configured,
             "identity_scope_configured": True,
             "static_tenant_principal_configured": configuration["principal_mode"] == "static",
-            "preset_catalog_request_succeeded": provider_transport_used,
+            "preset_catalog_request_succeeded": catalog_request_succeeded,
+            "explicit_anchor_bypassed_catalog": explicit_anchor,
             "provider_transport_used": provider_transport_used,
-            "workspace_has_dashboard": bool(dashboards),
+            "workspace_has_dashboard": target_available,
             "dashboard_selection": selection is None or selection["passed"],
             "jev_calls_made": jev_requests == 0,
             "dashboard_chart_probe": chart_probe is None or chart_probe["passed"],
@@ -305,10 +329,12 @@ async def run(
         "provider_requests": {
             "before_bootstrap": provider_requests_before,
             "after_catalog": provider_requests_after_catalog,
+            "after_bootstrap": provider_requests_after,
+            "catalog_requests": catalog_requests,
             "for_bootstrap": provider_requests_for_bootstrap,
         },
         "jev_requests": jev_requests,
-        "passed": bool(dashboards)
+        "passed": target_available
         and jev_mode_configured
         and provider_transport_used
         and (selection is None or selection["passed"])
