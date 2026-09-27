@@ -7,7 +7,7 @@ from typing import Any
 
 import httpx
 
-from .hosted import HostedDataMode, HostedDataPolicy
+from .hosted import HostedDataMode, HostedDataPolicy, validate_hosted_origin
 from .models import (
     CatalogSearchPage,
     Evidence,
@@ -33,7 +33,7 @@ class LookerCloudClient:
     ) -> None:
         if not access_token and not (client_id and client_secret):
             raise ValueError("Looker requires access_token or client_id and client_secret")
-        self.base_url = base_url.rstrip("/")
+        self.base_url = validate_hosted_origin(base_url, field_name="Looker base_url")
         self.access_token = access_token
         self.client_id = client_id
         self.client_secret = client_secret
@@ -43,7 +43,10 @@ class LookerCloudClient:
 
     async def _login(self) -> str:
         async with httpx.AsyncClient(
-            base_url=self.base_url, timeout=self.timeout, transport=self.transport
+            base_url=self.base_url,
+            timeout=self.timeout,
+            follow_redirects=False,
+            transport=self.transport,
         ) as client:
             response = await client.post(
                 "/api/4.0/login",
@@ -63,6 +66,7 @@ class LookerCloudClient:
             base_url=self.base_url,
             headers={"Authorization": f"{self.token_type} {self.access_token}"},
             timeout=self.timeout,
+            follow_redirects=False,
             transport=self.transport,
         ) as client:
             response = await client.request(method, path, **kwargs)

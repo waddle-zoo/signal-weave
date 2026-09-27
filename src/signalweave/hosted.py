@@ -69,6 +69,35 @@ class HostedDataPolicy(BaseModel):
         return self
 
 
+def validate_hosted_origin(value: str, *, field_name: str) -> str:
+    """Validate and return one customer-owned HTTPS origin.
+
+    Hosted provider clients can be constructed directly by an embedding
+    application, so this check cannot live only in ``HostedConnection``. It
+    also keeps redirect and credential-forwarding assumptions consistent across
+    the Preset, Hex, and Looker clients.
+    """
+
+    if is_obvious_placeholder(value):
+        raise ValueError(f"{field_name} must be replaced with a real deployment value")
+    try:
+        parsed = urlsplit(value)
+        # Accessing ``port`` validates malformed numeric ports before any
+        # transport is constructed.
+        _validated_port = parsed.port
+    except ValueError as error:
+        raise ValueError(f"{field_name} must be a valid https origin") from error
+    if parsed.scheme != "https" or not parsed.hostname:
+        raise ValueError(f"{field_name} must use https")
+    if parsed.username or parsed.password:
+        raise ValueError(f"{field_name} must not contain credentials")
+    if parsed.path not in {"", "/"}:
+        raise ValueError(f"{field_name} must be an origin without a path")
+    if parsed.query or parsed.fragment:
+        raise ValueError(f"{field_name} must be an origin without query or fragment")
+    return value.rstrip("/")
+
+
 class HostedConnection(BaseModel):
     """A tenant-scoped reference to a customer-owned hosted BI workspace.
 
@@ -97,26 +126,7 @@ class HostedConnection(BaseModel):
 
     @model_validator(mode="after")
     def validate_url(self) -> HostedConnection:
-        if is_obvious_placeholder(self.base_url):
-            raise ValueError("hosted connection base_url must be replaced with a real deployment value")
-        try:
-            parsed = urlsplit(self.base_url)
-            # Accessing ``port`` validates malformed numeric ports. Without
-            # this, a direct hosted connection could survive model validation
-            # and fail only when its adapter first opens a socket.
-            _validated_port = parsed.port
-        except ValueError as error:
-            raise ValueError("hosted connection base_url must be a valid https origin") from error
-        if parsed.scheme != "https" or not parsed.hostname:
-            raise ValueError("hosted connection base_url must use https")
-        if parsed.username or parsed.password:
-            raise ValueError("hosted connection base_url must not contain credentials")
-        if parsed.path not in {"", "/"}:
-            raise ValueError("hosted connection base_url must be an origin without a path")
-        if parsed.query or parsed.fragment:
-            raise ValueError(
-                "hosted connection base_url must be an origin without query or fragment"
-            )
+        validate_hosted_origin(self.base_url, field_name="hosted connection base_url")
         return self
 
     @model_validator(mode="after")
@@ -188,6 +198,9 @@ class InMemoryCredentialVault:
             raise ValueError("tenant_id must not be empty")
         if not values:
             raise ValueError("credential values must not be empty")
+        existing_owner = self._tenant_by_ref.get(credential_ref)
+        if existing_owner is not None and existing_owner != tenant_id:
+            raise ValueError("credential reference already belongs to another tenant")
         self._credentials[credential_ref] = dict(values)
         self._tenant_by_ref[credential_ref] = tenant_id
 
@@ -271,6 +284,8 @@ def _validated_credential_map(credentials: Mapping[str, str]) -> dict[str, str]:
         for key, value in values.items()
     ):
         raise ValueError("hosted credentials must contain only string key/value pairs")
+    if any(is_obvious_placeholder(value) for value in values.values()):
+        raise ValueError("hosted credentials must be replaced with real deployment values")
     return values
 
 

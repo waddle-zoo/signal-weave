@@ -16,6 +16,7 @@ from pathlib import Path
 
 import httpx
 
+from signalweave.hex_adapter import HexCloudClient
 from signalweave.hosted import (
     HostedAuthMode,
     HostedConnection,
@@ -28,6 +29,7 @@ from signalweave.hosted import (
     build_hosted_adapter,
     hosted_adapter_name,
 )
+from signalweave.looker_adapter import LookerCloudClient
 from signalweave.models import SourceRef
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -214,6 +216,98 @@ def _provider_credential_checks() -> dict[str, bool]:
     }
 
 
+async def _direct_client_boundary_checks() -> dict[str, bool]:
+    """Exercise provider clients without going through HostedConnection."""
+
+    checks: dict[str, bool] = {}
+    cases = (
+        ("hex", HexCloudClient, {"access_token": "hex-token"}),
+        ("looker", LookerCloudClient, {"access_token": "looker-token"}),
+    )
+    for name, client_type, kwargs in cases:
+        rejected: list[bool] = []
+        for value in (
+            "http://provider.example",
+            "https://provider.example/workspace",
+            "https://provider.example/?token=leak",
+            "https://user:secret@provider.example",
+            "https://provider.example:not-a-port",
+            "https://your-workspace.<region>.provider",
+        ):
+            try:
+                client_type(value, **kwargs)
+            except ValueError:
+                rejected.append(True)
+            else:
+                rejected.append(False)
+        checks[f"{name}_direct_client_rejects_unsafe_origins"] = all(rejected)
+
+    redirect_cases = (
+        ("hex", HexCloudClient("https://app.hex.test", access_token="hex-token")),
+        (
+            "looker",
+            LookerCloudClient(
+                "https://growth.cloud.looker.test", access_token="looker-token"
+            ),
+        ),
+    )
+    for name, client in redirect_cases:
+        requests = 0
+
+        def redirect_handler(request: httpx.Request) -> httpx.Response:
+            nonlocal requests
+            requests += 1
+            return httpx.Response(
+                302,
+                headers={"location": "https://attacker.example/collect"},
+                request=request,
+            )
+
+        client.transport = httpx.MockTransport(redirect_handler)
+        try:
+            if name == "hex":
+                await client.list_projects_page()
+            else:
+                await client.search_looks()
+        except httpx.HTTPStatusError:
+            pass
+        checks[f"{name}_redirect_is_not_followed"] = requests == 1
+
+    placeholder_connection = _connection(
+        "tenant-sample", auth_mode=HostedAuthMode.BEARER, provider=HostedProvider.HEX
+    )
+    try:
+        build_hosted_adapter(
+            placeholder_connection,
+            InMemoryCredentialVault(
+                {placeholder_connection.credential_ref: {"access_token": "replace-me"}},
+                tenant_by_ref={
+                    placeholder_connection.credential_ref: placeholder_connection.tenant_id
+                },
+            ),
+        )
+    except ValueError:
+        checks["direct_factory_rejects_placeholder_credentials"] = True
+    else:
+        checks["direct_factory_rejects_placeholder_credentials"] = False
+
+    vault = InMemoryCredentialVault(
+        {"vault://tenant-a/shared": {"access_token": "tenant-a-token"}},
+        tenant_by_ref={"vault://tenant-a/shared": "tenant-a"},
+    )
+    try:
+        vault.put(
+            "vault://tenant-a/shared",
+            {"access_token": "tenant-b-token"},
+            tenant_id="tenant-b",
+        )
+    except ValueError:
+        checks["local_vault_rejects_cross_tenant_rebind"] = True
+    else:
+        checks["local_vault_rejects_cross_tenant_rebind"] = False
+    return checks
+
+
 async def _tenant_checks() -> dict[str, object]:
     first = _connection("tenant-a", auth_mode=HostedAuthMode.BEARER)
     second = _connection("tenant-b", auth_mode=HostedAuthMode.BEARER)
@@ -341,11 +435,13 @@ def _policy_checks() -> dict[str, object]:
 async def run_trial() -> dict[str, object]:
     credentials = _credential_checks()
     provider_credentials = _provider_credential_checks()
+    direct_clients = await _direct_client_boundary_checks()
     tenants = await _tenant_checks()
     policies = _policy_checks()
     checks = {
         **{f"credential_{key}": value for key, value in credentials.items()},
         **{f"provider_credential_{key}": value for key, value in provider_credentials.items()},
+        **{f"direct_client_{key}": value for key, value in direct_clients.items()},
         **{f"tenant_{key}": value for key, value in tenants.items() if isinstance(value, bool)},
         **{f"policy_{key}": value for key, value in policies["checks"].items()},
         "tenant_provider_requests": tenants["provider_requests"] == 0,
@@ -355,6 +451,7 @@ async def run_trial() -> dict[str, object]:
         "trial": "preset-boundary-matrix",
         "credential_modes": credentials,
         "provider_credentials": provider_credentials,
+        "direct_client_boundary": direct_clients,
         "tenant_boundary": tenants,
         "data_policy": policies,
         "checks": checks,

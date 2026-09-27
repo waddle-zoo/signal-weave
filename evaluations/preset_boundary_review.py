@@ -52,6 +52,20 @@ def review_report(report: dict[str, Any]) -> dict[str, Any]:
     elif not all(value is True for value in provider_credentials.values()):
         findings.append("a non-Preset provider credential boundary check failed")
 
+    direct_clients = report.get("direct_client_boundary")
+    required_direct_clients = {
+        "hex_direct_client_rejects_unsafe_origins",
+        "looker_direct_client_rejects_unsafe_origins",
+        "hex_redirect_is_not_followed",
+        "looker_redirect_is_not_followed",
+        "direct_factory_rejects_placeholder_credentials",
+        "local_vault_rejects_cross_tenant_rebind",
+    }
+    if not isinstance(direct_clients, dict) or set(direct_clients) != required_direct_clients:
+        findings.append("direct hosted-client boundary coverage is incomplete")
+    elif not all(value is True for value in direct_clients.values()):
+        findings.append("a direct hosted-client boundary check failed")
+
     tenants = report.get("tenant_boundary")
     required_tenants = {
         "foreign_connection_rejected",

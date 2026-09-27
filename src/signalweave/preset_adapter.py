@@ -12,12 +12,10 @@ import asyncio
 import json
 import math
 from typing import Any
-from urllib.parse import urlsplit
 
 import httpx
 
-from .config import is_obvious_placeholder
-from .hosted import HostedDataMode, HostedDataPolicy
+from .hosted import HostedDataMode, HostedDataPolicy, validate_hosted_origin
 from .superset_adapter import SupersetAdapter
 from .superset_client import SupersetClient
 
@@ -51,28 +49,7 @@ class PresetCloudClient(SupersetClient):
             "Preset workspace_url": workspace_url,
             "Preset api_base_url": api_base_url,
         }.items():
-            if is_obvious_placeholder(url):
-                raise ValueError(
-                    f"{field_name} must be replaced with a real deployment value"
-                )
-            try:
-                parsed = urlsplit(url)
-                # ``urlsplit().hostname`` does not validate a malformed port.
-                # Force parsing here so a direct client construction cannot
-                # defer an invalid origin until its first network request.
-                _validated_port = parsed.port
-            except ValueError as error:
-                raise ValueError(f"{field_name} must be a valid https origin") from error
-            if parsed.scheme != "https" or not parsed.hostname:
-                raise ValueError(f"{field_name} must use https")
-            if parsed.username or parsed.password:
-                raise ValueError(f"{field_name} must not contain credentials")
-            if parsed.path not in {"", "/"}:
-                raise ValueError(f"{field_name} must be an origin without a path")
-            if parsed.query or parsed.fragment:
-                raise ValueError(
-                    f"{field_name} must be an origin without query or fragment"
-                )
+            validate_hosted_origin(url, field_name=field_name)
         if access_token and (api_token_name or api_token_secret):
             raise ValueError("Preset requires exactly one authentication mode")
         if not access_token and not (api_token_name and api_token_secret):

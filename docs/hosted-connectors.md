@@ -41,6 +41,13 @@ metadata store for local or single-process deployments. A production cloud
 control plane should replace those with a KMS-backed vault and a shared
 transactional database.
 
+The same boundary applies when an embedding application constructs a provider
+client directly: Preset, Hex, and Looker clients accept HTTPS origins only,
+reject inline credentials and path/query-bearing URLs, reject copied example
+URL placeholders, and disable redirects. The hosted adapter factory also
+rejects copied placeholder credential values. This prevents a deployment from
+becoming less safe merely because it bypasses the connection-store helper.
+
 When one process serves multiple connections for the same provider, the
 adapter factory gives each connection a stable route such as
 `preset__northstar-preset`. This keeps source references unambiguous and lets

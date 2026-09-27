@@ -26,3 +26,13 @@ def test_preset_boundary_reviewer_rejects_mutated_pass_report():
 
     assert review["passed"] is False
     assert "serialized boundary checks are not all true" in review["findings"]
+
+
+def test_preset_boundary_reviewer_rejects_missing_direct_client_coverage():
+    report = asyncio.run(run_trial())
+    report["direct_client_boundary"].pop("looker_redirect_is_not_followed")
+
+    review = review_report(report)
+
+    assert review["passed"] is False
+    assert "direct hosted-client boundary coverage is incomplete" in review["findings"]

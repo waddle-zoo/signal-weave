@@ -13,7 +13,7 @@ from typing import Any
 
 import httpx
 
-from .hosted import HostedDataMode, HostedDataPolicy
+from .hosted import HostedDataMode, HostedDataPolicy, validate_hosted_origin
 from .models import (
     CatalogSearchPage,
     Evidence,
@@ -36,7 +36,7 @@ class HexCloudClient:
     ) -> None:
         if not access_token:
             raise ValueError("Hex requires an access token")
-        self.base_url = base_url.rstrip("/")
+        self.base_url = validate_hosted_origin(base_url, field_name="Hex base_url")
         self.access_token = access_token
         self.transport = transport
         self.timeout = timeout
@@ -47,6 +47,7 @@ class HexCloudClient:
             base_url=self.base_url,
             headers=headers,
             timeout=self.timeout,
+            follow_redirects=False,
             transport=self.transport,
         ) as client:
             response = await client.request(method, path, **kwargs)

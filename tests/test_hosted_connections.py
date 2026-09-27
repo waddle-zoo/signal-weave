@@ -153,6 +153,35 @@ def test_preset_client_requires_secure_provider_urls():
         )
 
 
+@pytest.mark.parametrize(
+    ("client_type", "field_name"),
+    [(HexCloudClient, "Hex base_url"), (LookerCloudClient, "Looker base_url")],
+)
+def test_other_hosted_clients_require_secure_origins(client_type, field_name):
+    kwargs = {"access_token": "provider-token"}
+    for value, message in (
+        ("http://provider.example", "must use https"),
+        ("https://provider.example/workspace", "without a path"),
+        ("https://provider.example/?token=leak", "without query or fragment"),
+        ("https://user:secret@provider.example", "must not contain credentials"),
+        ("https://provider.example:not-a-port", "valid https origin"),
+        ("https://your-workspace.<region>.provider", "real deployment value"),
+    ):
+        with pytest.raises(ValueError, match=message):
+            client_type(value, **kwargs)
+
+
+def test_hosted_factory_rejects_placeholder_credential_values():
+    item = connection(HostedProvider.HEX)
+    vault = InMemoryCredentialVault(
+        {item.credential_ref: {"access_token": "replace-me"}},
+        tenant_by_ref={item.credential_ref: item.tenant_id},
+    )
+
+    with pytest.raises(ValueError, match="real deployment values"):
+        build_hosted_adapter(item, vault)
+
+
 def test_connection_store_is_tenant_scoped():
     store = InMemoryHostedConnectionStore()
     item = connection(HostedProvider.PRESET)
@@ -162,6 +191,22 @@ def test_connection_store_is_tenant_scoped():
     with pytest.raises(KeyError, match="not available"):
         store.get(item.id, tenant_id="other-company")
     assert store.list(tenant_id="other-company") == []
+
+
+def test_in_memory_vault_cannot_rebind_a_credential_to_another_tenant():
+    vault = InMemoryCredentialVault(
+        {"vault://shared": {"access_token": "northstar-token"}},
+        tenant_by_ref={"vault://shared": "northstar"},
+    )
+
+    with pytest.raises(ValueError, match="already belongs"):
+        vault.put(
+            "vault://shared",
+            {"access_token": "harbor-token"},
+            tenant_id="harbor-bank",
+        )
+
+    assert vault.get("vault://shared", tenant_id="northstar")["access_token"] == "northstar-token"
 
 
 def test_external_workspace_label_does_not_change_provider_endpoint():
@@ -1466,6 +1511,48 @@ async def test_looker_cached_look_uses_cache_flag():
     assert snapshot.contract.tenant_id == "northstar"
     assert snapshot.observations[0].metric == "conversion"
     assert paths[-1][1]["cache"] == "true"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("client_factory", "path"),
+    [
+        (
+            lambda transport: HexCloudClient(
+                "https://app.hex.test", access_token="hex-token", transport=transport
+            ),
+            "/api/v1/projects",
+        ),
+        (
+            lambda transport: LookerCloudClient(
+                "https://growth.cloud.looker.test",
+                access_token="looker-token",
+                transport=transport,
+            ),
+            "/api/4.0/looks/search",
+        ),
+    ],
+)
+async def test_other_hosted_clients_do_not_follow_bearer_redirects(client_factory, path):
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(
+            302,
+            headers={"location": "https://attacker.example/collect"},
+            request=request,
+        )
+
+    client = client_factory(httpx.MockTransport(handler))
+    with pytest.raises(httpx.HTTPStatusError):
+        if isinstance(client, HexCloudClient):
+            await client.list_projects_page()
+        else:
+            await client.search_looks()
+
+    assert len(requests) == 1
+    assert requests[0].headers["authorization"].endswith("token")
 
 
 def test_factory_requires_vault_and_builds_tenant_bound_adapters():
