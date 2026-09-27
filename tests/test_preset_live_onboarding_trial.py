@@ -81,6 +81,19 @@ def test_reviewed_credential_proof_rejects_missing_current_runtime_credentials()
         trial._validate_reviewed_credential_proof(report, set())
 
 
+def test_reviewed_workspace_binding_rejects_a_stale_provider_origin():
+    report = {
+        "provider_checks": {
+            "provider_workspace_origin": "https://old-workspace.preset.test",
+        }
+    }
+
+    with pytest.raises(RuntimeError, match="origin no longer matches"):
+        trial._validate_reviewed_workspace_binding(
+            report, "https://new-workspace.preset.test"
+        )
+
+
 class ToolManager:
     def __init__(self, tools):
         self._tools = {name: SimpleNamespace(fn=fn) for name, fn in tools.items()}
@@ -97,7 +110,10 @@ class FakeServer:
 @pytest.mark.asyncio
 async def test_live_trial_requires_explicit_approval_before_shadow(monkeypatch, tmp_path):
     calls: list[str] = []
-    provider_client = SimpleNamespace(requests_made=0)
+    provider_client = SimpleNamespace(
+        requests_made=0,
+        base_url="https://workspace.preset.test",
+    )
     provider_adapter = PresetAdapter.__new__(PresetAdapter)
     provider_adapter.client = provider_client
     _attach_policy(provider_adapter)
@@ -166,6 +182,7 @@ async def test_live_trial_requires_explicit_approval_before_shadow(monkeypatch, 
 async def test_live_trial_accepts_only_jev_delivery_disabled_shadow(monkeypatch, tmp_path):
     provider_client = SimpleNamespace(
         requests_made=0,
+        base_url="https://workspace.preset.test",
         request_path_counts={},
         _api_token_name="name",
         _api_token_secret="preset-secret-7f9c2a",
@@ -197,6 +214,7 @@ async def test_live_trial_accepts_only_jev_delivery_disabled_shadow(monkeypatch,
             "provider_requests_after_onboarding": 1,
             "provider_requests_for_onboarding": 1,
             "provider_transport_used": True,
+            "provider_workspace_origin": "https://workspace.preset.test",
             "provider_credentials_loaded": True,
             "provider_secrets_absent_from_artifacts": True,
             "provider_catalog_searches_for_onboarding": 1,
@@ -314,7 +332,10 @@ async def test_live_trial_accepts_only_jev_delivery_disabled_shadow(monkeypatch,
 @pytest.mark.asyncio
 async def test_live_trial_auto_detects_custom_sole_preset_adapter(monkeypatch):
     onboarded_adapter: list[str] = []
-    provider_client = SimpleNamespace(requests_made=0)
+    provider_client = SimpleNamespace(
+        requests_made=0,
+        base_url="https://workspace.preset.test",
+    )
     provider_adapter = PresetAdapter.__new__(PresetAdapter)
     provider_adapter.client = provider_client
     _attach_policy(provider_adapter)
@@ -361,6 +382,7 @@ async def test_live_trial_rejects_a_mutated_reviewed_card(monkeypatch, tmp_path)
     provider_adapter = PresetAdapter.__new__(PresetAdapter)
     provider_adapter.client = SimpleNamespace(
         requests_made=0,
+        base_url="https://workspace.preset.test",
         request_path_counts={},
         _api_token_name="name",
         _api_token_secret="preset-secret-7f9c2a",
@@ -393,6 +415,7 @@ async def test_live_trial_rejects_a_mutated_reviewed_card(monkeypatch, tmp_path)
                     "provider_requests_after_onboarding": 1,
                     "provider_requests_for_onboarding": 1,
                     "provider_transport_used": True,
+                    "provider_workspace_origin": "https://workspace.preset.test",
                     "provider_credentials_loaded": True,
                     "provider_secrets_absent_from_artifacts": True,
                     "provider_catalog_searches_for_onboarding": 1,
@@ -440,6 +463,7 @@ async def test_live_trial_rejects_changed_runtime_policy_before_approval(monkeyp
     provider_adapter = PresetAdapter.__new__(PresetAdapter)
     provider_adapter.client = SimpleNamespace(
         requests_made=0,
+        base_url="https://workspace.preset.test",
         request_path_counts={},
         _api_token_name="name",
         _api_token_secret="preset-secret-7f9c2a",
@@ -471,6 +495,7 @@ async def test_live_trial_rejects_changed_runtime_policy_before_approval(monkeyp
                     "provider_requests_after_onboarding": 1,
                     "provider_requests_for_onboarding": 1,
                     "provider_transport_used": True,
+                    "provider_workspace_origin": "https://workspace.preset.test",
                     "provider_credentials_loaded": True,
                     "provider_secrets_absent_from_artifacts": True,
                     "provider_catalog_searches_for_onboarding": 1,
@@ -529,6 +554,7 @@ async def test_live_trial_rejects_mutated_transport_proof_before_approval(monkey
     provider_adapter = PresetAdapter.__new__(PresetAdapter)
     provider_adapter.client = SimpleNamespace(
         requests_made=0,
+        base_url="https://workspace.preset.test",
         request_path_counts={},
         _api_token_name="name",
         _api_token_secret="preset-secret-7f9c2a",
@@ -558,6 +584,7 @@ async def test_live_trial_rejects_mutated_transport_proof_before_approval(monkey
                 "provider_checks": {
                     "provider_requests_for_onboarding": 1,
                     "provider_transport_used": True,
+                    "provider_workspace_origin": "https://workspace.preset.test",
                     "provider_credentials_loaded": True,
                     "provider_secrets_absent_from_artifacts": True,
                     "provider_catalog_searches_for_onboarding": 1,
@@ -598,7 +625,11 @@ async def test_live_trial_rejects_mutated_transport_proof_before_approval(monkey
 @pytest.mark.asyncio
 async def test_live_trial_approval_requires_a_review_artifact(monkeypatch):
     provider_adapter = PresetAdapter.__new__(PresetAdapter)
-    provider_adapter.client = SimpleNamespace(requests_made=0, request_path_counts={})
+    provider_adapter.client = SimpleNamespace(
+        requests_made=0,
+        base_url="https://workspace.preset.test",
+        request_path_counts={},
+    )
     monkeypatch.setattr(
         trial,
         "build_runtime",

@@ -178,6 +178,19 @@ def review_report(report: dict[str, Any]) -> dict[str, Any]:
                 findings.append("current data-policy digest is inconsistent")
             if approval_basis.get("data_policy_unchanged") is not True:
                 findings.append("approval did not prove the reviewed data policy was unchanged")
+            reviewed_origin = approval_basis.get("reviewed_provider_workspace_origin")
+            current_origin = approval_basis.get("current_provider_workspace_origin")
+            report_origin = checks.get("provider_workspace_origin")
+            if not isinstance(reviewed_origin, str) or not reviewed_origin:
+                findings.append("approval basis has no reviewed Preset workspace origin")
+            if not isinstance(current_origin, str) or not current_origin:
+                findings.append("approval basis has no current Preset workspace origin")
+            if current_origin != report_origin:
+                findings.append("approval basis origin differs from current provider checks")
+            if reviewed_origin != current_origin:
+                findings.append("reviewed Preset workspace origin differs from current origin")
+            if approval_basis.get("provider_workspace_unchanged") is not True:
+                findings.append("approval did not prove the Preset workspace was unchanged")
 
         result = evaluation.get("result")
         receipt = evaluation.get("receipt")
@@ -226,6 +239,10 @@ def review_report(report: dict[str, Any]) -> dict[str, Any]:
             findings.append("replay made an additional Preset provider call")
         if checks.get("provider_transport_used") is not True:
             findings.append("approved shadow did not prove a Preset provider request")
+        if not isinstance(checks.get("provider_workspace_origin"), str) or not checks[
+            "provider_workspace_origin"
+        ]:
+            findings.append("approved shadow did not identify the Preset workspace")
         if checks.get("provider_credentials_loaded") is not True:
             findings.append("approved shadow did not prove Preset credentials were loaded")
         if checks.get("provider_secrets_absent_from_artifacts") is not True:

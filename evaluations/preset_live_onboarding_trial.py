@@ -83,6 +83,15 @@ def _provider_secret_values(client: Any) -> set[str]:
     return values
 
 
+def _provider_workspace_origin(client: Any) -> str:
+    """Return the configured provider origin used by the current adapter."""
+
+    origin = getattr(client, "base_url", None)
+    if not isinstance(origin, str) or not origin:
+        raise RuntimeError("the live acceptance trial requires a Preset workspace origin")
+    return origin.rstrip("/")
+
+
 def _secrets_absent(value: Any, secrets: set[str]) -> bool:
     """Prove serialized MCP artifacts do not contain loaded provider secrets."""
 
@@ -125,6 +134,25 @@ def _validate_reviewed_credential_proof(
         raise RuntimeError(
             "reviewed draft provider redaction proof does not match the current artifact"
         )
+
+
+def _validate_reviewed_workspace_binding(
+    report: dict[str, Any], current_origin: str
+) -> str:
+    """Reject approval when the current Preset origin differs from the draft."""
+
+    checks = report.get("provider_checks")
+    if not isinstance(checks, dict):
+        raise RuntimeError("reviewed draft is missing Preset provider checks")
+    reviewed_origin = checks.get("provider_workspace_origin")
+    if not isinstance(reviewed_origin, str) or not reviewed_origin:
+        raise RuntimeError("draft does not identify the reviewed Preset workspace")
+    if reviewed_origin != current_origin:
+        raise RuntimeError(
+            "the current Preset workspace origin no longer matches the reviewed draft; "
+            "re-run onboarding and review the new artifact"
+        )
+    return reviewed_origin
 
 
 def _data_policy_proof(source: Any, client: Any) -> tuple[dict[str, Any], bool | None]:
@@ -194,6 +222,10 @@ def _validate_approval_draft(report: dict[str, Any]) -> None:
         raise RuntimeError("draft is missing provider transport checks")
     if checks.get("provider_transport_used") is not True:
         raise RuntimeError("draft does not prove that Preset transport was used")
+    if not isinstance(checks.get("provider_workspace_origin"), str) or not checks[
+        "provider_workspace_origin"
+    ]:
+        raise RuntimeError("draft does not identify the reviewed Preset workspace")
     if checks.get("provider_credentials_loaded") is not True:
         raise RuntimeError("draft does not prove that Preset credentials were loaded")
     if checks.get("provider_secrets_absent_from_artifacts") is not True:
@@ -305,6 +337,7 @@ async def run_trial(
     reviewed_card: dict[str, Any] | None = None
     reviewed_data_policy: dict[str, Any] | None = None
     reviewed_provider_force_refresh: bool | None = None
+    reviewed_provider_workspace_origin: str | None = None
     stored_card_payload: dict[str, Any] | None = None
     review_path = review_report or output
     if approve:
@@ -347,8 +380,12 @@ async def run_trial(
             raise RuntimeError("the persisted card version no longer matches the reviewed draft")
     preset_source = runtime.sources._get(adapter)
     provider_client = getattr(preset_source, "client", None)
+    provider_workspace_origin = _provider_workspace_origin(provider_client)
     provider_secrets = _provider_secret_values(provider_client)
     if reviewed_draft is not None:
+        reviewed_provider_workspace_origin = _validate_reviewed_workspace_binding(
+            reviewed_draft, provider_workspace_origin
+        )
         _validate_reviewed_credential_proof(reviewed_draft, provider_secrets)
     data_policy, provider_force_refresh = _data_policy_proof(preset_source, provider_client)
     _validate_data_policy_proof(
@@ -480,6 +517,7 @@ async def run_trial(
             "provider_request_paths_after_onboarding": provider_paths_after_onboarding,
             "provider_request_paths_for_onboarding": provider_paths_for_onboarding,
             "provider_catalog_searches_for_onboarding": provider_catalog_searches_for_onboarding,
+            "provider_workspace_origin": provider_workspace_origin,
             "provider_credentials_loaded": bool(provider_secrets),
             "provider_secrets_absent_from_artifacts": _secrets_absent(
                 {"onboarding": onboarding}, provider_secrets
@@ -505,6 +543,11 @@ async def run_trial(
             "exact_draft_reused": True,
             "reviewed_data_policy": reviewed_data_policy,
             "reviewed_provider_force_refresh": reviewed_provider_force_refresh,
+            "reviewed_provider_workspace_origin": reviewed_provider_workspace_origin,
+            "current_provider_workspace_origin": provider_workspace_origin,
+            "provider_workspace_unchanged": (
+                reviewed_provider_workspace_origin == provider_workspace_origin
+            ),
             "current_data_policy_digest": _canonical_digest(data_policy),
             "reviewed_data_policy_digest": _canonical_digest(reviewed_data_policy),
             "data_policy_unchanged": (
@@ -620,6 +663,7 @@ async def run_trial(
                         "provider_request_paths_after_onboarding": provider_paths_after_onboarding,
                         "provider_request_paths_for_onboarding": provider_paths_for_onboarding,
                         "provider_catalog_searches_for_onboarding": provider_catalog_searches_for_onboarding,
+                        "provider_workspace_origin": provider_workspace_origin,
                         "provider_request_paths_before_first_evaluation": provider_paths_before_evaluation,
                         "provider_request_paths_after_first_evaluation": provider_paths_after_first,
                         "provider_request_paths_for_first_evaluation": provider_paths_for_first_evaluation,
@@ -661,6 +705,7 @@ async def run_trial(
                         and report["provider_checks"][
                             "provider_secrets_absent_from_artifacts"
                         ] is True
+                        and report["approval_basis"]["provider_workspace_unchanged"] is True
                         and bool(preset_resources)
                         and tenant_scoped_resources
                         and isinstance(jev_requests_for_first_evaluation, int)

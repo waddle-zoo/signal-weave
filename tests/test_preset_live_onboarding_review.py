@@ -82,6 +82,7 @@ def _passing_report() -> dict:
                 "delivery_disabled": True,
             },
             "provider_transport_used": True,
+            "provider_workspace_origin": "https://workspace.preset.test",
             "provider_credentials_loaded": True,
             "provider_secrets_absent_from_artifacts": True,
             "provider_requests_for_onboarding": 1,
@@ -121,6 +122,9 @@ def _passing_report() -> dict:
         "exact_draft_reused": True,
         "reviewed_data_policy": report["provider_checks"]["data_policy"],
         "reviewed_provider_force_refresh": False,
+        "reviewed_provider_workspace_origin": "https://workspace.preset.test",
+        "current_provider_workspace_origin": "https://workspace.preset.test",
+        "provider_workspace_unchanged": True,
         "current_data_policy_digest": _digest(report["provider_checks"]["data_policy"]),
         "reviewed_data_policy_digest": _digest(report["provider_checks"]["data_policy"]),
         "data_policy_unchanged": True,
@@ -198,6 +202,16 @@ def test_independent_reviewer_rejects_mutated_policy_approval_basis():
 
     assert review["passed"] is False
     assert any("unchanged" in finding for finding in review["findings"])
+
+
+def test_independent_reviewer_rejects_mutated_workspace_approval_basis():
+    report = deepcopy(_passing_report())
+    report["approval_basis"]["provider_workspace_unchanged"] = False
+
+    review = review_report(report)
+
+    assert review["passed"] is False
+    assert any("workspace was unchanged" in finding for finding in review["findings"])
 
 
 def test_independent_reviewer_rejects_unsafe_cached_policy_permissions():
