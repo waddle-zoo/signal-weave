@@ -173,6 +173,10 @@ def review_report(report: dict[str, Any]) -> dict[str, Any]:
             findings.append("replay made an additional Preset provider call")
         if checks.get("provider_transport_used") is not True:
             findings.append("approved shadow did not prove a Preset provider request")
+        if checks.get("provider_credentials_loaded") is not True:
+            findings.append("approved shadow did not prove Preset credentials were loaded")
+        if checks.get("provider_secrets_absent_from_artifacts") is not True:
+            findings.append("approved shadow did not prove provider secrets stayed out of artifacts")
         if not isinstance(checks.get("provider_requests_for_onboarding"), int) or checks[
             "provider_requests_for_onboarding"
         ] < 1:

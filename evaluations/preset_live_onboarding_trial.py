@@ -67,6 +67,30 @@ def _canonical_digest(value: Any) -> str:
     return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
 
 
+def _provider_secret_values(client: Any) -> set[str]:
+    """Read credential values only for an in-memory redaction assertion."""
+
+    values: set[str] = set()
+    for attribute in ("_api_token_name", "_api_token_secret", "_token"):
+        value = getattr(client, attribute, None)
+        if isinstance(value, str) and value:
+            values.add(value)
+    return values
+
+
+def _secrets_absent(value: Any, secrets: set[str]) -> bool:
+    """Prove serialized MCP artifacts do not contain loaded provider secrets."""
+
+    serialized = json.dumps(
+        value,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+        default=str,
+    )
+    return all(secret not in serialized for secret in secrets)
+
+
 def _load_reviewed_draft(path: Path) -> dict[str, Any]:
     """Load the exact draft artifact that a human is approving."""
 
@@ -196,6 +220,7 @@ async def run_trial(
             raise RuntimeError("the persisted card version no longer matches the reviewed draft")
     preset_source = runtime.sources._get(adapter)
     provider_client = getattr(preset_source, "client", None)
+    provider_secrets = _provider_secret_values(provider_client)
     provider_requests_before = getattr(provider_client, "requests_made", None)
     if not isinstance(provider_requests_before, int):
         raise RuntimeError(
@@ -278,6 +303,10 @@ async def run_trial(
             "provider_path_telemetry_available": isinstance(provider_paths_after_onboarding, dict),
             "provider_request_paths_before_onboarding": provider_paths_before,
             "provider_request_paths_after_onboarding": provider_paths_after_onboarding,
+            "provider_credentials_loaded": bool(provider_secrets),
+            "provider_secrets_absent_from_artifacts": _secrets_absent(
+                {"onboarding": onboarding}, provider_secrets
+            ),
         },
         "passed": False,
         "not_proven": [
@@ -411,6 +440,17 @@ async def run_trial(
                             isinstance(provider_requests_for_onboarding, int)
                             and provider_requests_for_onboarding > 0
                         ),
+                        "provider_credentials_loaded": bool(provider_secrets),
+                        "provider_secrets_absent_from_artifacts": _secrets_absent(
+                            {
+                                "onboarding": onboarding,
+                                "approval": approved,
+                                "evaluation": evaluation,
+                                "replay": replay,
+                                "receipt_lookup": receipt_lookup,
+                            },
+                            provider_secrets,
+                        ),
                         "preset_resources": len(preset_resources),
                         "all_resources_use_requested_preset_adapter": bool(resources)
                         and len(preset_resources) == len(resources),
@@ -426,6 +466,10 @@ async def run_trial(
                         and summary["evidence_count"] > 0
                         and summary["observation_count"] > 0
                         and report["provider_checks"]["provider_transport_used"] is True
+                        and report["provider_checks"]["provider_credentials_loaded"] is True
+                        and report["provider_checks"][
+                            "provider_secrets_absent_from_artifacts"
+                        ] is True
                         and bool(preset_resources)
                         and tenant_scoped_resources
                         and isinstance(jev_requests_for_first_evaluation, int)

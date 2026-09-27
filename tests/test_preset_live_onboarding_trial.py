@@ -91,7 +91,12 @@ async def test_live_trial_requires_explicit_approval_before_shadow(monkeypatch, 
 
 @pytest.mark.asyncio
 async def test_live_trial_accepts_only_jev_delivery_disabled_shadow(monkeypatch, tmp_path):
-    provider_client = SimpleNamespace(requests_made=0, request_path_counts={})
+    provider_client = SimpleNamespace(
+        requests_made=0,
+        request_path_counts={},
+        _api_token_name="name",
+        _api_token_secret="secret",
+    )
     provider_adapter = PresetAdapter.__new__(PresetAdapter)
     provider_adapter.client = provider_client
     draft_card = {"id": "card-1", "version": 3}

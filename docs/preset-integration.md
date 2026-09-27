@@ -322,10 +322,12 @@ generated receipt must show `evaluator=jev-latest`, non-empty observations and
 evidence, at least one Preset chart-data request and one Jev request during the
 first evaluation, zero additional Preset or Jev requests during the replay,
 and `delivery_enabled=false` before the trial is considered successful. The
-approved report must also contain an exact-draft approval basis. The
-independent reviewer recomputes those invariants from the serialized report
-instead of trusting the runner's `passed` flag. The runner records only
-non-secret Preset path counts for this transport proof. It still does not prove
+approved report must also contain an exact-draft approval basis, prove that the
+configured Preset credential was loaded, and prove that the provider secret
+values were absent from the serialized MCP artifacts. The independent reviewer
+recomputes those invariants from the serialized report instead of trusting the
+runner's `passed` flag. The runner records only non-secret Preset path counts
+and redaction booleans for this transport proof. It still does not prove
 operator usefulness or production delivery reliability.
 
 ## Can a hosted Preset customer use SignalWeave without hosting it?

@@ -82,6 +82,8 @@ def _passing_report() -> dict:
                 "delivery_disabled": True,
             },
             "provider_transport_used": True,
+            "provider_credentials_loaded": True,
+            "provider_secrets_absent_from_artifacts": True,
             "provider_requests_for_onboarding": 1,
             "provider_request_paths_before_onboarding": {},
             "provider_request_paths_after_onboarding": {"/api/v1/dashboard/": 1},
@@ -151,6 +153,16 @@ def test_independent_reviewer_rejects_missing_preset_transport_proof():
 
     assert review["passed"] is False
     assert any("Preset provider request" in finding for finding in review["findings"])
+
+
+def test_independent_reviewer_rejects_missing_credential_artifact_proof():
+    report = deepcopy(_passing_report())
+    report["provider_checks"]["provider_secrets_absent_from_artifacts"] = False
+
+    review = review_report(report)
+
+    assert review["passed"] is False
+    assert any("provider secrets stayed out" in finding for finding in review["findings"])
 
 
 def test_independent_reviewer_rejects_inconsistent_receipt_artifacts():
