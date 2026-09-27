@@ -34,6 +34,7 @@ returns an inspectable evidence bundle and receipt.
 | Preset provider URLs cannot downgrade to HTTP | Environment bootstrap and the hosted connection model both require HTTPS; a legacy `SIGNALWEAVE_ALLOW_INSECURE_PROVIDER` setting does not weaken the check. | Pass locally |
 | Preset provider redirects fail closed | Preset token-exchange and workspace HTTP clients explicitly disable redirects; a 3xx response produces no second-host request and cannot forward a bearer token. | Pass locally; shared-service egress controls remain open |
 | Provider resource identity cannot be substituted | Superset-compatible dashboard and chart metadata responses must echo the requested resource ID; dashboard fan-out and standalone chart inspection fail closed on a mismatched ID before evidence is normalized. | Pass locally |
+| Hosted workspace labels cannot widen authorization | `external_workspace` is descriptive metadata only; the tenant-bound credential and validated provider origin determine the adapter endpoint and authorization scope. | Pass locally |
 | Invalid or incomplete identity fails closed | Wrong signature/issuer/audience, expired tokens, malformed JWTs, missing tenant claims, and unauthorized MCP requests are tested. | Pass |
 | Health checks do not expose MCP | `/healthz` is public; `/mcp` requires a valid bearer token in native MCP auth mode. | Pass |
 | Onboarding is usable without SignalWeave owning a UI | `onboard_insight_card` is one call from free-form intent to persisted draft plus Jev plan, candidates, blockers, questions, and next action. | Pass |
@@ -70,7 +71,7 @@ returns an inspectable evidence bundle and receipt.
 | Preset onboarding fails early without burning Jev credits | `make preset-config-check` reuses the production Preset parser to validate credentials, tenant binding, auth mode, policy, and Jev key presence with zero network requests and zero Jev requests. The provider-only bootstrap path then builds the same tenant-bound adapter and reaches a bounded catalog request without a TypeSafe key or Jev request. The optional chart probe reports an actionable re-save remediation when Preset has no saved query context, rather than suggesting an unsafe unscoped fallback. | Pass locally; real tenant gate remains open |
 | Generated-shape anti-overfitting trial | A seeded generator creates 24 unfamiliar tenant workspaces / 192 charts across five result envelopes, 12 visualization labels, usable and unusable metric definitions, empty results, ambiguous numerics, and provider failures; the production Preset client/adapter passes catalog, scope, cache, retention, and safe-degradation assertions, then an independent report reviewer checks coverage and rejects mutated pass-looking reports. A generated 64-chart dashboard stress test proves the provider aggregate byte budget fails closed; an engine test separately proves the multi-source serialized Jev budget fails before any Jev call. | Pass locally; provider and live Jev gates remain open |
 | Existing enterprise workflows remain the owner | MCP tools return typed decisions and evidence; SignalWeave does not execute arbitrary SQL, tools, DAGs, or notifications. | Pass |
-| Regression safety | Full repository tests and lint. | 373 passed, 2 skipped; Ruff clean |
+| Regression safety | Full repository tests and lint. | 374 passed, 2 skipped; Ruff clean |
 
 ## Reproduction
 
@@ -110,7 +111,7 @@ make preset-compose-check
 make superset-chart-matrix
 ```
 
-The current verified regression result is `373 passed, 2 skipped` with Ruff
+The current verified regression result is `374 passed, 2 skipped` with Ruff
 clean. The runtime-shadow and chart-matrix commands are separate evidence
 surfaces: the former uses synthetic Preset and TypeSafe transports to exercise
 the production runtime, while the latter uses the live local Superset service

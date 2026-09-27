@@ -133,6 +133,22 @@ def test_connection_store_is_tenant_scoped():
     assert store.list(tenant_id="other-company") == []
 
 
+def test_external_workspace_label_does_not_change_provider_endpoint():
+    item = connection(HostedProvider.PRESET).model_copy(
+        update={"external_workspace": "misleading-display-label"}
+    )
+    vault = InMemoryCredentialVault(
+        {item.credential_ref: {"access_token": "preset-token"}},
+        tenant_by_ref={item.credential_ref: item.tenant_id},
+    )
+
+    adapter = build_hosted_adapter(
+        item.model_copy(update={"auth_mode": HostedAuthMode.BEARER}), vault
+    )
+
+    assert adapter.client.base_url == item.base_url
+
+
 def test_sqlite_connection_store_persists_metadata_without_credentials(tmp_path):
     path = tmp_path / "connections.db"
     store = SQLiteHostedConnectionStore(str(path))

@@ -20,9 +20,11 @@ customer agent or scheduler
 
 ## Connection contract
 
-`HostedConnection` stores the tenant, provider, hosted workspace URL, and an
-opaque `credential_ref`. It never stores an access token, API secret, or client
-secret. A deployment supplies a `HostedCredentialVault` implementation whose
+`HostedConnection` stores the tenant, provider, hosted workspace URL, a
+descriptive `external_workspace` label, and an opaque `credential_ref`. The
+label is not an authorization claim: the validated provider URL and the
+tenant-bound credential are the authority. It never stores an access token, API
+secret, or client secret. A deployment supplies a `HostedCredentialVault` implementation whose
 `get` method receives both the opaque reference and the connection's
 `tenant_id`; the vault must enforce that binding and fail closed on a mismatch.
 The adapter factory resolves the secret only while constructing a short-lived

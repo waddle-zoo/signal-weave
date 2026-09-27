@@ -70,7 +70,14 @@ class HostedConnection(BaseModel):
     tenant_id: str = Field(min_length=1, max_length=160)
     provider: HostedProvider
     base_url: str = Field(min_length=8, max_length=2_000)
-    external_workspace: str = Field(min_length=1, max_length=240)
+    external_workspace: str = Field(
+        min_length=1,
+        max_length=240,
+        description=(
+            "Descriptive provider workspace label; the tenant-bound credential and "
+            "validated base_url are the authorization boundary."
+        ),
+    )
     credential_ref: str = Field(min_length=1, max_length=500)
     auth_mode: HostedAuthMode
     policy: HostedDataPolicy = Field(default_factory=HostedDataPolicy)
