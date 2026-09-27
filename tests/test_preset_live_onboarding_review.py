@@ -329,6 +329,26 @@ def test_independent_reviewer_rejects_dashboard_scope_fallback_or_missing_teleme
 
 
 def test_independent_reviewer_accepts_unapproved_draft_without_claiming_acceptance():
+    report = deepcopy(_passing_report())
+    for key in ("approval", "evaluation", "summary", "replay", "receipt_lookup", "approval_basis"):
+        report.pop(key, None)
+    report["approval_requested"] = False
+    report["passed"] = False
+    report["onboarding"] = {
+        "status": "needs_human_review",
+        "approval_required": True,
+        "delivery_enabled": False,
+        "card": {"id": "card-1", "version": 3},
+    }
+    report["next_action"] = "review the draft before approval"
+    report["provider_checks"].pop("onboarding_contract", None)
+
+    review = review_report(report)
+
+    assert review["passed"] is True
+
+
+def test_independent_reviewer_rejects_incomplete_unapproved_draft():
     report = {
         "trial": "preset-live-onboarding-shadow",
         "adapter": "preset__customer-workspace",
@@ -341,4 +361,6 @@ def test_independent_reviewer_accepts_unapproved_draft_without_claiming_acceptan
 
     review = review_report(report)
 
-    assert review["passed"] is True
+    assert review["passed"] is False
+    assert any("persisted card draft" in finding for finding in review["findings"])
+    assert any("provider checks" in finding for finding in review["findings"])

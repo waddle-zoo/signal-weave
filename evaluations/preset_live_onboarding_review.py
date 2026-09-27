@@ -80,6 +80,76 @@ def _check_data_policy(findings: list[str], checks: dict[str, Any]) -> None:
             findings.append(f"Preset data-policy bound is invalid: {key}")
 
 
+def _check_unapproved_draft(
+    findings: list[str], report: dict[str, Any], onboarding: dict[str, Any]
+) -> None:
+    """Verify the non-mutating discovery proof before a human approves it.
+
+    A draft is allowed to remain ``needs_human_review``. It is not allowed to
+    be an arbitrary JSON envelope that happens to omit post-approval fields:
+    the operator must be able to inspect a real card, a tenant-scoped Preset
+    transport, and the policy that approval would use.
+    """
+
+    if onboarding.get("status") not in {"ready_for_approval", "needs_human_review"}:
+        findings.append("unapproved report has an invalid onboarding status")
+    if onboarding.get("approval_required") is not True:
+        findings.append("unapproved report does not require explicit approval")
+    if onboarding.get("delivery_enabled") is not False:
+        findings.append("unapproved report enables delivery")
+    card = onboarding.get("card")
+    if not isinstance(card, dict) or not isinstance(card.get("id"), str) or not card["id"]:
+        findings.append("unapproved report has no persisted card draft")
+    if not isinstance(card, dict) or not isinstance(card.get("version"), int):
+        findings.append("unapproved report card draft has no version")
+
+    checks = report.get("provider_checks")
+    if not isinstance(checks, dict):
+        findings.append("unapproved report has no provider checks")
+        return
+    if checks.get("provider_transport_used") is not True:
+        findings.append("unapproved report does not prove a Preset provider request")
+    if checks.get("provider_credentials_loaded") is not True:
+        findings.append("unapproved report does not prove Preset credentials were loaded")
+    if checks.get("provider_secrets_absent_from_artifacts") is not True:
+        findings.append("unapproved report does not prove provider secrets stayed out of artifacts")
+    for key in ("provider_workspace_origin", "provider_auth_origin"):
+        if not isinstance(checks.get(key), str) or not checks[key]:
+            findings.append(
+                f"unapproved report does not identify the Preset {key.removeprefix('provider_')}"
+            )
+    _check_data_policy(findings, checks)
+
+    request_count = checks.get("provider_requests_for_onboarding")
+    if not isinstance(request_count, int) or request_count < 1:
+        findings.append("unapproved report has no recorded Preset onboarding request")
+    catalog_searches = checks.get("provider_catalog_searches_for_onboarding")
+    if not isinstance(catalog_searches, int) or not 1 <= catalog_searches <= 21:
+        findings.append(
+            "unapproved report has unbounded Preset catalog search fan-out "
+            f"({catalog_searches!r}; expected 1-21)"
+        )
+    before = checks.get("provider_request_paths_before_onboarding")
+    after = checks.get("provider_request_paths_after_onboarding")
+    delta = checks.get("provider_request_paths_for_onboarding")
+    if not all(isinstance(paths, dict) for paths in (before, after, delta)):
+        findings.append("unapproved report is missing provider path telemetry")
+        return
+    if not all(
+        isinstance(path, str) and isinstance(count, int) and count >= 0
+        for paths in (before, after, delta)
+        for path, count in paths.items()
+    ):
+        findings.append("unapproved report has invalid provider path telemetry")
+        return
+    if _path_delta(before, after) != delta:
+        findings.append("unapproved Preset path telemetry is inconsistent")
+    if isinstance(request_count, int) and sum(delta.values()) != request_count:
+        findings.append("unapproved Preset request count disagrees with path telemetry")
+    if isinstance(catalog_searches, int) and delta.get("/api/v1/dashboard/", 0) != catalog_searches:
+        findings.append("unapproved catalog search count disagrees with path telemetry")
+
+
 def review_report(report: dict[str, Any]) -> dict[str, Any]:
     """Return an independent acceptance verdict without making provider calls."""
 
@@ -107,6 +177,7 @@ def review_report(report: dict[str, Any]) -> dict[str, Any]:
             findings.append("a non-approved report contains post-approval artifacts")
         if not isinstance(report.get("next_action"), str) or not report["next_action"]:
             findings.append("non-approved report has no review next action")
+        _check_unapproved_draft(findings, report, onboarding)
     else:
         approval_basis = report.get("approval_basis")
         onboarding_card = onboarding.get("card")

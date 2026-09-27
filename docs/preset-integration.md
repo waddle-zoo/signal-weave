@@ -400,9 +400,12 @@ digest in the approval basis, and prove that the provider secret values were
 absent from the serialized MCP artifacts. It records the provider and Jev
 requests made by the actual approval revalidation separately from the original
 draft discovery; approval must prove both revalidation paths before the shadow
-is accepted. The independent reviewer
-recomputes those invariants from the serialized report instead of trusting the
-runner's `passed` flag. The runner records only non-secret Preset path counts,
+is accepted. The independent reviewer recomputes those invariants from the
+serialized report instead of trusting the runner's `passed` flag. It also
+checks unapproved drafts: even a `needs_human_review` draft must contain a
+persisted card, explicit approval/delivery state, tenant-scoped Preset
+transport proof, credential redaction proof, bounded request telemetry, and a
+valid data-policy snapshot. The runner records only non-secret Preset path counts,
 policy telemetry, and redaction booleans for this transport proof, including a
 bounded catalog-search count (at most 21 dashboard catalog requests in this
 one-card flow). It still does not prove operator usefulness or production
