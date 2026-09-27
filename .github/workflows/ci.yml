@@ -68,3 +68,38 @@ jobs:
             --output artifacts/preset-enterprise-proof.json
           uv run python evaluations/preset_enterprise_proof_review.py \
             artifacts/preset-enterprise-proof.json
+
+  hosted-preset-scale-proof:
+    name: hosted Preset scale proof (${{ matrix.seed }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        seed: [2026092628, 2026092601, 2026092602, 2026092603]
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --locked --extra dev
+
+      - name: Run 33-workspace Preset-shaped replay
+        run: |
+          uv run python -m evaluations.preset_runtime_shadow_trial \
+            --generated-workspaces 30 \
+            --generated-charts-per-workspace 16 \
+            --generated-seed "${{ matrix.seed }}" \
+            --output "artifacts/preset-runtime-shadow-${{ matrix.seed }}.json"
+          uv run python evaluations/preset_runtime_shadow_review.py \
+            "artifacts/preset-runtime-shadow-${{ matrix.seed }}.json"
