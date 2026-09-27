@@ -67,7 +67,8 @@ credential mode, tenant binding, policy, HTTP/OIDC mode, and Jev credential
 source, including OIDC claim paths and JWKS timing bounds, without instantiating
 a TypeSafe client or reading a provider. It never proves that the credential is
 accepted by Preset; use `make preset-bootstrap-check` for that bounded provider
-request.
+request. The bootstrap report includes the counted Preset HTTP attempts and
+fails if the configured client cannot prove that it made the catalog request.
 
 The service listens on `http://127.0.0.1:18000` and exposes the MCP endpoint at
 `/mcp`. Connect the customer's agent through the existing identity-aware proxy,

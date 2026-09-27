@@ -68,9 +68,24 @@ async def run(
     elif adapter_name != adapter.name:
         raise RuntimeError(f"{adapter_name!r} is not the configured Preset adapter")
 
+    provider_requests_before = getattr(adapter.client, "requests_made", None)
+    if not isinstance(provider_requests_before, int):
+        raise RuntimeError(
+            "Preset bootstrap requires a client with provider request telemetry"
+        )
     dashboards, provider_count = await adapter.client.list_dashboards_page(
         page=0,
         page_size=page_size,
+    )
+    provider_requests_after_catalog = getattr(adapter.client, "requests_made", None)
+    provider_requests_for_bootstrap = (
+        provider_requests_after_catalog - provider_requests_before
+        if isinstance(provider_requests_after_catalog, int)
+        else None
+    )
+    provider_transport_used = (
+        isinstance(provider_requests_for_bootstrap, int)
+        and provider_requests_for_bootstrap > 0
     )
     jev_mode_configured = os.getenv("TYPESAFE_MODE", "jev").strip().lower() == "jev"
     jev_requests = 0
@@ -186,7 +201,8 @@ async def run(
             "jev_runtime_configured": jev_mode_configured,
             "identity_scope_configured": True,
             "static_tenant_principal_configured": configuration["principal_mode"] == "static",
-            "preset_catalog_request_succeeded": True,
+            "preset_catalog_request_succeeded": provider_transport_used,
+            "provider_transport_used": provider_transport_used,
             "workspace_has_dashboard": bool(dashboards),
             "jev_calls_made": jev_requests == 0,
             "dashboard_chart_probe": chart_probe is None or chart_probe["passed"],
@@ -196,9 +212,15 @@ async def run(
         },
         "chart_probe": chart_probe,
         "dashboard_probe": dashboard_probe,
+        "provider_requests": {
+            "before_bootstrap": provider_requests_before,
+            "after_catalog": provider_requests_after_catalog,
+            "for_bootstrap": provider_requests_for_bootstrap,
+        },
         "jev_requests": jev_requests,
         "passed": bool(dashboards)
         and jev_mode_configured
+        and provider_transport_used
         and jev_requests == 0
         and (chart_probe is None or chart_probe["passed"])
         and (dashboard_probe is None or dashboard_probe["passed"]),

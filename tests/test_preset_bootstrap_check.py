@@ -26,7 +26,10 @@ async def test_bootstrap_preflight_reads_one_catalog_page_without_jev(monkeypatc
     calls: list[tuple[int, int]] = []
 
     class Client:
+        requests_made = 0
+
         async def list_dashboards_page(self, *, page, page_size, query=None):
+            self.requests_made += 1
             calls.append((page, page_size))
             assert query is None
             return ([{"id": 7, "dashboard_title": "Growth"}], 1)
@@ -45,13 +48,18 @@ async def test_bootstrap_preflight_reads_one_catalog_page_without_jev(monkeypatc
 
     assert report["passed"] is True
     assert report["jev_requests"] == 0
+    assert report["checks"]["provider_transport_used"] is True
+    assert report["provider_requests"]["for_bootstrap"] == 1
     assert calls == [(0, 20)]
 
 
 @pytest.mark.asyncio
 async def test_bootstrap_preflight_auto_detects_custom_sole_preset_adapter(monkeypatch):
     class Client:
+        requests_made = 0
+
         async def list_dashboards_page(self, *, page, page_size, query=None):
+            self.requests_made += 1
             return ([{"id": 7, "dashboard_title": "Growth"}], 1)
 
     adapter = PresetAdapter.__new__(PresetAdapter)
@@ -67,9 +75,28 @@ async def test_bootstrap_preflight_auto_detects_custom_sole_preset_adapter(monke
 
 
 @pytest.mark.asyncio
-async def test_bootstrap_preflight_fails_empty_workspace(monkeypatch):
+async def test_bootstrap_preflight_rejects_client_without_provider_telemetry(monkeypatch):
     class Client:
         async def list_dashboards_page(self, *, page, page_size, query=None):
+            return ([{"id": 7, "dashboard_title": "Growth"}], 1)
+
+    adapter = PresetAdapter.__new__(PresetAdapter)
+    adapter.client = Client()
+    adapter.policy = HostedDataPolicy()
+    adapter.name = "preset__preset-env"
+    _wire_environment(monkeypatch, adapter)
+
+    with pytest.raises(RuntimeError, match="provider request telemetry"):
+        await bootstrap.run(adapter_name="preset__preset-env", page_size=20)
+
+
+@pytest.mark.asyncio
+async def test_bootstrap_preflight_fails_empty_workspace(monkeypatch):
+    class Client:
+        requests_made = 0
+
+        async def list_dashboards_page(self, *, page, page_size, query=None):
+            self.requests_made += 1
             return ([], 0)
 
     adapter = PresetAdapter.__new__(PresetAdapter)
@@ -98,10 +125,14 @@ async def test_provider_smoke_probes_one_dashboard_chart_without_jev(monkeypatch
         charts = [Chart()]
 
     class Client:
+        requests_made = 0
+
         async def list_dashboards_page(self, *, page, page_size, query=None):
+            self.requests_made += 1
             return ([{"id": 7, "dashboard_title": "Growth"}], 1)
 
         async def dashboard_snapshot(self, dashboard_id, *, include_data, chart_ids):
+            self.requests_made += 1
             calls.append((str(dashboard_id), include_data, chart_ids))
             return Snapshot()
 
@@ -136,10 +167,14 @@ async def test_provider_smoke_rejects_provider_returning_a_different_chart(monke
         charts = [Chart()]
 
     class Client:
+        requests_made = 0
+
         async def list_dashboards_page(self, *, page, page_size, query=None):
+            self.requests_made += 1
             return ([{"id": 7, "dashboard_title": "Growth"}], 1)
 
         async def dashboard_snapshot(self, dashboard_id, *, include_data, chart_ids):
+            self.requests_made += 1
             assert str(dashboard_id) == "7"
             assert include_data is True
             assert chart_ids == ["101"]
@@ -176,7 +211,10 @@ async def test_provider_smoke_does_not_bypass_metadata_only_policy(monkeypatch):
     calls = 0
 
     class Client:
+        requests_made = 0
+
         async def list_dashboards_page(self, *, page, page_size, query=None):
+            self.requests_made += 1
             return ([{"id": 7, "dashboard_title": "Growth"}], 1)
 
         async def dashboard_snapshot(self, *args, **kwargs):
@@ -209,10 +247,14 @@ async def test_provider_smoke_reports_missing_chart_instead_of_index_error(monke
         charts = []
 
     class Client:
+        requests_made = 0
+
         async def list_dashboards_page(self, *, page, page_size, query=None):
+            self.requests_made += 1
             return ([{"id": 7, "dashboard_title": "Growth"}], 1)
 
         async def dashboard_snapshot(self, *args, **kwargs):
+            self.requests_made += 1
             return Snapshot()
 
     adapter = PresetAdapter.__new__(PresetAdapter)
@@ -244,7 +286,10 @@ async def test_provider_smoke_explains_missing_saved_query_context(monkeypatch):
         charts = [Chart()]
 
     class Client:
+        requests_made = 0
+
         async def list_dashboards_page(self, *, page, page_size, query=None):
+            self.requests_made += 1
             return ([{"id": 7, "dashboard_title": "Growth"}], 1)
 
         async def dashboard_snapshot(self, *args, **kwargs):
@@ -271,7 +316,10 @@ async def test_provider_smoke_explains_missing_saved_query_context(monkeypatch):
 @pytest.mark.asyncio
 async def test_dashboard_readiness_reports_all_chart_remediations(monkeypatch):
     class Client:
+        requests_made = 0
+
         async def list_dashboards_page(self, *, page, page_size, query=None):
+            self.requests_made += 1
             return ([{"id": 7, "dashboard_title": "Growth"}], 1)
 
     async def inspect(source):
