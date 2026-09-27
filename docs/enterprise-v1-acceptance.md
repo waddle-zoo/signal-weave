@@ -37,6 +37,7 @@ returns an inspectable evidence bundle and receipt.
 | Tenant-aware native search is required for complete coverage | Adapters that accept `authorized_tenants` receive the scope at search time; older unscoped indexes have provider-wide counts redacted and remain review-visible. | Pass locally; adapter contract gate remains open per deployment |
 | Jev result provenance is inspectable | Discovery receipts, source candidates, roles, probabilities, plan evaluator, context version, and decision receipts are persisted or returned. | Pass |
 | Hosted Preset boundary is explicit and exercised | The production Preset adapter, token refresh, tenant-scoped policy limits, metadata/cached/live query modes, and varied chart-shape fixture trial pass; the real-account acceptance runner requires a tenant principal, `jev-latest`, explicit human approval, and a delivery-disabled receipt. | Fixture pass; customer gate open |
+| Live Preset acceptance is independently reviewable | `preset_live_onboarding_review.py` recomputes approval, Jev provenance, tenant/resource binding, idempotent replay, delivery-disabled receipt, and explicit non-claims from the serialized live-run report instead of trusting the runner's `passed` flag. | Pass locally; customer gate still requires a real tenant |
 | Pending Preset chart jobs do not become false empty data | HTTP 202 chart-data responses fail closed with an explicit asynchronous-response error; the adapter does not report a pending provider job as `no_data`. | Pass locally; provider-specific polling remains intentionally out of scope |
 | Malformed Preset result envelopes do not become false empty data | Missing, scalar, mixed-object, and invalid-JSON chart responses fail closed as explicit provider-policy errors while supported dict/list envelopes remain accepted. | Pass locally |
 | Non-success Preset query states do not become false empty data | `pending`, `failed`, `running`, `scheduled`, `stopped`, and `timed_out` result-item statuses fail closed even when the HTTP response is 200. | Pass locally |
@@ -45,13 +46,14 @@ returns an inspectable evidence bundle and receipt.
 | Explicit Superset resources scale with card scope | Dashboard and chart card anchors use one provider metadata lookup for authorization; they do not materialize the full workspace catalog. A large-catalog regression test fails if the list endpoint is touched. | Pass locally |
 | Preset evidence reaches the typed Jev contract | The production Preset adapter and Jev adapter are exercised together across 3 workspace shapes / 13 charts; normalized observations, evidence, visualization labels, dashboard filter context, typed probabilities, and partial-quality safe outcomes are asserted. | Pass locally; live Jev semantics not proven |
 | Preset runtime shadow path is exercised end to end | Three named plus six generated tenant-bound Preset-shaped workspaces run through environment bootstrap, MCP discovery, free-form onboarding, approval, Jev-only evaluation, SQLite receipt lookup, and idempotent replay. Generated workspaces use unfamiliar IDs and varied chart/result shapes; the named Harbor case also proves a dashboard-scoped provider outage becomes partial evidence. | 9 workspaces; 18 cards; 126 synthetic Jev calls; pass; live semantics not proven |
+| Larger anti-overfitting runtime replay | The same production runtime path was rerun with three named plus 30 seeded generated workspaces, 16 charts per generated workspace, unfamiliar tenants/IDs, provider failures, partial dashboards, and 15 visualization labels. The independent reviewer recomputed the report invariants. | 33 workspaces; 66 cards; 462 synthetic Jev calls; pass; live semantics not proven |
 | Shared hosted processes do not contact foreign tenant adapters | The source registry skips tenant-bound adapters outside the authenticated scope before list, search, authorization, or resolve calls. An adversarial two-tenant test plus an OIDC-authenticated MCP HTTP replay over two Preset connections records exactly one matching auth/dashboard path per tenant and zero foreign calls. | Pass locally; external identity-provider replay remains a deployment gate |
 | Live Superset provider matrix has no silent loss | The running Northstar Superset instance was checked across every saved dashboard and chart with the normal client path. | 20 dashboards; 580 charts; 41,002 observations; 580/580 extracted; 0 silent-loss issues |
 | Hosted credential injection is deployment-safe | Docker Compose secret overlay mounts Preset API-token files, clears direct `.env.preset` token values, and the runtime tests value/file exclusivity, exact credential modes, explicit tenant identity, and tenant binding. `make preset-compose-check` also inspects the rendered two-file Compose model with disposable file inputs. | Pass locally; vault/KMS and real tenant gate remain open |
 | Preset onboarding fails early without burning Jev credits | `make preset-config-check` reuses the production Preset parser to validate credentials, tenant binding, auth mode, policy, and Jev key presence with zero network requests and zero Jev requests. The provider-only bootstrap path then builds the same tenant-bound adapter and reaches a bounded catalog request without a TypeSafe key or Jev request. | Pass locally; real tenant gate remains open |
 | Generated-shape anti-overfitting trial | A seeded generator creates 24 unfamiliar tenant workspaces / 192 charts across five result envelopes, 12 visualization labels, usable and unusable metric definitions, empty results, ambiguous numerics, and provider failures; the production Preset client/adapter passes catalog, scope, cache, retention, and safe-degradation assertions, then an independent report reviewer checks coverage and rejects mutated pass-looking reports. A generated 64-chart dashboard stress test proves the provider aggregate byte budget fails closed; an engine test separately proves the multi-source serialized Jev budget fails before any Jev call. | Pass locally; provider and live Jev gates remain open |
 | Existing enterprise workflows remain the owner | MCP tools return typed decisions and evidence; SignalWeave does not execute arbitrary SQL, tools, DAGs, or notifications. | Pass |
-| Regression safety | Full repository tests and lint. | 326 passed, 2 skipped; Ruff clean |
+| Regression safety | Full repository tests and lint. | 330 passed, 2 skipped; Ruff clean |
 
 ## Reproduction
 
@@ -67,13 +69,21 @@ make preset-trial
 make preset-generalization-trial
 make preset-jev-contract-trial
 make preset-runtime-shadow-trial
+# Larger deterministic replay used for the current scale check:
+uv run python -m evaluations.preset_runtime_shadow_trial \
+  --generated-workspaces 30 \
+  --generated-charts-per-workspace 16 \
+  --generated-seed 2026092601 \
+  --output /tmp/preset-runtime-shadow-30x16.json
+uv run python evaluations/preset_runtime_shadow_review.py \
+  /tmp/preset-runtime-shadow-30x16.json
 # With a copied .env.preset and disposable/real host secret files:
 make preset-compose-check
 # For a running local Superset instance, also run:
 make superset-chart-matrix
 ```
 
-The current verified regression result is `326 passed, 2 skipped` with Ruff
+The current verified regression result is `330 passed, 2 skipped` with Ruff
 clean. The runtime-shadow and chart-matrix commands are separate evidence
 surfaces: the former uses synthetic Preset and TypeSafe transports to exercise
 the production runtime, while the latter uses the live local Superset service
@@ -97,6 +107,8 @@ PRESET_TRIAL_GOAL="..." \
 PRESET_TRIAL_WHY="..." \
 TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
   make preset-live-trial-approve
+# Independently review the resulting report:
+make preset-live-trial-review
 ```
 
 The onboarding trial is intentionally not presented as a live Jev accuracy

@@ -1,0 +1,101 @@
+from __future__ import annotations
+
+from copy import deepcopy
+
+from evaluations.preset_live_onboarding_review import review_report
+
+
+def _passing_report() -> dict:
+    return {
+        "trial": "preset-live-onboarding-shadow",
+        "adapter": "preset__customer-workspace",
+        "tenant_id": "northstar",
+        "approval_requested": True,
+        "passed": True,
+        "not_proven": [
+            "business usefulness or correctness without operator labels",
+            "provider permission coverage beyond the sources selected by this card",
+            "production delivery reliability or autonomous side effects",
+            "managed SignalWeave hosting",
+        ],
+        "onboarding": {"status": "ready_for_approval"},
+        "approval": {"status": "approved"},
+        "evaluation": {
+            "result": {
+                "evaluator": "jev-latest",
+                "evidence": [{"subject_id": "dashboard:1"}],
+                "observations": [{"subject_id": "dashboard:1"}],
+            },
+            "receipt": {"status": "delivery_disabled", "delivery_enabled": False},
+            "resources": [
+                {
+                    "adapter": "preset__customer-workspace",
+                    "contract": {"tenant_id": "northstar"},
+                }
+            ],
+        },
+        "summary": {
+            "evaluator": "jev-latest",
+            "receipt_status": "delivery_disabled",
+            "delivery_enabled": False,
+        },
+        "replay": {"replayed": True},
+        "receipt_lookup": {"status": "found"},
+        "provider_checks": {
+            "onboarding_contract": {
+                "approval_required": True,
+                "delivery_disabled": True,
+            },
+            "replay_made_no_jev_call": True,
+            "jev_requests_for_first_evaluation": 1,
+            "all_resources_use_requested_preset_adapter": True,
+            "all_resources_match_runtime_tenant": True,
+        },
+    }
+
+
+def test_independent_reviewer_accepts_complete_live_shadow_report():
+    review = review_report(_passing_report())
+
+    assert review["passed"] is True
+    assert review["findings"] == []
+
+
+def test_independent_reviewer_rejects_delivery_or_tenant_mutation():
+    report = _passing_report()
+    report["evaluation"]["receipt"]["delivery_enabled"] = True
+    report["evaluation"]["resources"][0]["contract"]["tenant_id"] = "foreign"
+
+    review = review_report(report)
+
+    assert review["passed"] is False
+    assert any("enabled delivery" in finding for finding in review["findings"])
+    assert any("not bound to the runtime tenant" in finding for finding in review["findings"])
+
+
+def test_independent_reviewer_rejects_overclaim_and_missing_jev_request():
+    report = deepcopy(_passing_report())
+    report["not_proven"] = []
+    report["provider_checks"]["jev_requests_for_first_evaluation"] = 0
+
+    review = review_report(report)
+
+    assert review["passed"] is False
+    assert any("non-claims" in finding for finding in review["findings"])
+    assert any("no recorded Jev request" in finding for finding in review["findings"])
+
+
+def test_independent_reviewer_accepts_unapproved_draft_without_claiming_acceptance():
+    report = {
+        "trial": "preset-live-onboarding-shadow",
+        "adapter": "preset__customer-workspace",
+        "tenant_id": "northstar",
+        "approval_requested": False,
+        "passed": False,
+        "onboarding": {"status": "needs_human_review"},
+        "next_action": "review the draft before approval",
+    }
+
+    review = review_report(report)
+
+    assert review["passed"] is True
