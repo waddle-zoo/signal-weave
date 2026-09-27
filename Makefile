@@ -1,4 +1,4 @@
-.PHONY: install test lint prove benchmark daily-trial enterprise-trial discovery-trial bundle-trial query-trial retrieval-explanation-trial preset-trial preset-boundary-trial preset-generalization-trial preset-jev-contract-trial preset-runtime-shadow-trial preset-runtime-shadow-review preset-enterprise-proof local-superset-runtime-shadow-trial local-superset-runtime-shadow-review preset-config-check preset-bootstrap-check preset-readiness preset-provider-smoke preset-dashboard-readiness preset-live-trial preset-live-trial-approve preset-live-trial-review preset-compose-check superset-chart-matrix verify docker-up docker-down
+.PHONY: install test lint prove benchmark daily-trial enterprise-trial discovery-trial bundle-trial query-trial retrieval-explanation-trial preset-trial preset-boundary-trial preset-generalization-trial preset-jev-contract-trial preset-runtime-shadow-trial preset-runtime-shadow-review preset-enterprise-proof local-superset-runtime-shadow-trial local-superset-runtime-shadow-review preset-config-check preset-bootstrap-check preset-readiness preset-provider-smoke preset-dashboard-readiness preset-live-trial preset-live-trial-approve preset-live-trial-review preset-compose-check preset-compose-bearer-check superset-chart-matrix verify docker-up docker-down
 
 install:
 	uv sync --extra dev
@@ -83,6 +83,14 @@ preset-compose-check:
 	TYPESAFE_API_KEY_FILE=$${TYPESAFE_API_KEY_FILE:?set a TypeSafe key file} \
 	PRESET_API_TOKEN_NAME_HOST_FILE=$${PRESET_API_TOKEN_NAME_HOST_FILE:?set the Preset token-name file} \
 	PRESET_API_TOKEN_SECRET_HOST_FILE=$${PRESET_API_TOKEN_SECRET_HOST_FILE:?set the Preset token-secret file} \
+	SIGNALWEAVE_API_TOKEN_HOST_FILE=$${SIGNALWEAVE_API_TOKEN_HOST_FILE:?set the SignalWeave API-token file} \
+	PUSH_WEBHOOK_TOKEN_HOST_FILE=$${PUSH_WEBHOOK_TOKEN_HOST_FILE:?set the push-webhook token file} \
+	python3 scripts/preset_compose_check.py
+
+preset-compose-bearer-check:
+	PRESET_COMPOSE_AUTH_MODE=bearer \
+	TYPESAFE_API_KEY_FILE=$${TYPESAFE_API_KEY_FILE:?set a TypeSafe key file} \
+	PRESET_ACCESS_TOKEN_HOST_FILE=$${PRESET_ACCESS_TOKEN_HOST_FILE:?set the Preset access-token file} \
 	SIGNALWEAVE_API_TOKEN_HOST_FILE=$${SIGNALWEAVE_API_TOKEN_HOST_FILE:?set the SignalWeave API-token file} \
 	PUSH_WEBHOOK_TOKEN_HOST_FILE=$${PUSH_WEBHOOK_TOKEN_HOST_FILE:?set the push-webhook token file} \
 	python3 scripts/preset_compose_check.py

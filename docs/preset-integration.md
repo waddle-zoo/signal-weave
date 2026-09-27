@@ -56,6 +56,31 @@ fails if the TypeSafe mount, any Preset or SignalWeave secret input,
 direct-token redaction, or `*_FILE` wiring is wrong. It does not contact Preset
 or TypeSafe.
 
+The secure overlay above uses Preset API-token authentication. If the
+deployment instead receives a Preset bearer token, use the bearer-specific
+example and overlay:
+
+```bash
+cp examples/preset/.env.preset.bearer.example .env.preset
+PRESET_ACCESS_TOKEN_HOST_FILE=/absolute/path/preset-access-token \
+SIGNALWEAVE_API_TOKEN_HOST_FILE=/absolute/path/signalweave-api-token \
+PUSH_WEBHOOK_TOKEN_HOST_FILE=/absolute/path/push-webhook-token \
+TYPESAFE_API_KEY_FILE=/absolute/path/apikey_typesafe \
+  docker compose \
+    -f docker-compose.preset.yml \
+    -f docker-compose.preset.bearer.secrets.yml \
+    up --build -d
+
+PRESET_ACCESS_TOKEN_HOST_FILE=/absolute/path/preset-access-token \
+SIGNALWEAVE_API_TOKEN_HOST_FILE=/absolute/path/signalweave-api-token \
+PUSH_WEBHOOK_TOKEN_HOST_FILE=/absolute/path/push-webhook-token \
+TYPESAFE_API_KEY_FILE=/absolute/path/apikey_typesafe \
+  make preset-compose-bearer-check
+```
+
+The bearer overlay clears every API-token field before startup; the API-token
+and bearer overlays are alternatives and must not be combined.
+
 Before preparing a Compose deployment, validate the runtime environment itself:
 
 ```bash

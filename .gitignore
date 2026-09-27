@@ -10,6 +10,7 @@ __pycache__/
 !.env.example
 !examples/preset/
 !examples/preset/.env.preset.example
+!examples/preset/.env.preset.bearer.example
 secrets/
 data/*.json
 data/*.db
