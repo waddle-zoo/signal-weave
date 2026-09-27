@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
+from .config import is_obvious_placeholder
 from .context import ContextProvider
 from .engine import DEFAULT_MAX_JEV_PAYLOAD_BYTES, InsightEngine
 from .hosted import (
@@ -82,6 +83,8 @@ def _env_secret(name: str) -> str | None:
             value = Path(file_name).read_text(encoding="utf-8").strip()
         except OSError as error:
             raise RuntimeError(f"could not read {name}_FILE: {file_name}") from error
+    if is_obvious_placeholder(value):
+        raise RuntimeError(f"{name} must be replaced with a real deployment value")
     return value or None
 
 
@@ -102,6 +105,8 @@ def _env_int(name: str, default: int) -> int:
 def _require_secure_provider_url(name: str, value: str) -> None:
     """Require an environment-injected provider URL to be an HTTPS origin."""
 
+    if is_obvious_placeholder(value):
+        raise RuntimeError(f"{name} must be replaced with a real deployment value")
     try:
         parsed = urlsplit(value)
         hostname = parsed.hostname
@@ -150,6 +155,17 @@ def _preset_from_environment() -> tuple[HostedConnection, HostedCredentialVault]
     access_token = _env_secret("PRESET_ACCESS_TOKEN")
     token_name = _env_secret("PRESET_API_TOKEN_NAME")
     token_secret = _env_secret("PRESET_API_TOKEN_SECRET")
+    for name, value in (
+        ("PRESET_ACCESS_TOKEN", access_token),
+        ("PRESET_API_TOKEN_NAME", token_name),
+        ("PRESET_API_TOKEN_SECRET", token_secret),
+        ("PRESET_WORKSPACE", os.getenv("PRESET_WORKSPACE", "")),
+        ("PRESET_TENANT_ID", os.getenv("PRESET_TENANT_ID", "")),
+        ("SIGNALWEAVE_TENANT_ID", os.getenv("SIGNALWEAVE_TENANT_ID", "")),
+        ("SIGNALWEAVE_PRINCIPAL_ID", os.getenv("SIGNALWEAVE_PRINCIPAL_ID", "")),
+    ):
+        if is_obvious_placeholder(value):
+            raise RuntimeError(f"{name} must be replaced with a real deployment value")
     if access_token and (token_name or token_secret):
         raise RuntimeError(
             "configure exactly one Preset credential mode: PRESET_ACCESS_TOKEN or "
@@ -246,6 +262,13 @@ def validate_preset_environment() -> dict[str, Any]:
         from .auth import OIDCSettings
 
         OIDCSettings.from_env()
+
+    # These values are optional for stdio/OIDC deployments, but if a copied
+    # example config supplies them they must fail before startup or network
+    # traffic rather than silently becoming a real bearer boundary.
+    for name in ("SIGNALWEAVE_API_TOKEN", "PUSH_WEBHOOK_TOKEN"):
+        if os.getenv(name, "").strip() or os.getenv(f"{name}_FILE", "").strip():
+            _env_secret(name)
 
     direct_preset_secret = any(
         os.getenv(name, "").strip()

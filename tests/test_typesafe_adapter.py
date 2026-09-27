@@ -17,7 +17,7 @@ from signalweave.models import (
     ResourceDescriptor,
     SourceRef,
 )
-from signalweave.typesafe_adapter import JevJudger
+from signalweave.typesafe_adapter import JevJudger, load_api_key
 
 
 class FakeNoul:
@@ -115,6 +115,20 @@ class FakeClient:
     async def system_one(self, *, state, questions):
         self.calls.append({"state": state, "questions": questions})
         return FakeResponse(questions)
+
+
+@pytest.mark.parametrize("value", ["replace-me", "placeholder", "your-typesafe-key"])
+def test_load_api_key_rejects_copied_example_sentinel(monkeypatch, value):
+    monkeypatch.setenv("TYPESAFE_API_KEY", value)
+
+    with pytest.raises(ValueError, match="real deployment value"):
+        load_api_key()
+
+
+def test_load_api_key_accepts_nonempty_test_key(monkeypatch):
+    monkeypatch.setenv("TYPESAFE_API_KEY", "test-key")
+
+    assert load_api_key() == "test-key"
 
 
 @pytest.mark.asyncio

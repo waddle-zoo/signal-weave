@@ -22,6 +22,10 @@ def _clear_config(monkeypatch):
         "SIGNALWEAVE_TENANT_ID",
         "SIGNALWEAVE_PRINCIPAL_ID",
         "SIGNALWEAVE_AUTH_MODE",
+        "SIGNALWEAVE_API_TOKEN",
+        "SIGNALWEAVE_API_TOKEN_FILE",
+        "PUSH_WEBHOOK_TOKEN",
+        "PUSH_WEBHOOK_TOKEN_FILE",
         "SIGNALWEAVE_OIDC_ISSUER_URL",
         "SIGNALWEAVE_OIDC_AUDIENCE",
         "SIGNALWEAVE_OIDC_JWKS_URL",
@@ -162,6 +166,33 @@ def test_config_check_rejects_insecure_provider_before_any_network(monkeypatch):
 
     assert report["passed"] is False
     assert any("PRESET_URL must use https" in error for error in report["errors"])
+    assert report["checks"]["network_requests"] == 0
+    assert report["checks"]["jev_requests"] == 0
+
+
+@pytest.mark.parametrize(
+    ("variable", "value", "expected"),
+    [
+        ("PRESET_URL", "https://your-workspace.<region>.app.preset.io", "PRESET_URL"),
+        ("PRESET_API_TOKEN_SECRET", "replace-me", "PRESET_API_TOKEN_SECRET"),
+        ("PRESET_WORKSPACE", "your-workspace", "PRESET_WORKSPACE"),
+        ("SIGNALWEAVE_PRINCIPAL_ID", "your-agent", "SIGNALWEAVE_PRINCIPAL_ID"),
+        ("TYPESAFE_API_KEY", "placeholder", "TYPESAFE_API_KEY"),
+        ("SIGNALWEAVE_API_TOKEN", "replace-me", "SIGNALWEAVE_API_TOKEN"),
+        ("PUSH_WEBHOOK_TOKEN", "replace-me", "PUSH_WEBHOOK_TOKEN"),
+    ],
+)
+def test_config_check_rejects_copied_example_sentinels_before_network(
+    monkeypatch, variable, value, expected
+):
+    _clear_config(monkeypatch)
+    _set_valid_token_config(monkeypatch)
+    monkeypatch.setenv(variable, value)
+
+    report = config_check.run()
+
+    assert report["passed"] is False
+    assert any(expected in error for error in report["errors"])
     assert report["checks"]["network_requests"] == 0
     assert report["checks"]["jev_requests"] == 0
 

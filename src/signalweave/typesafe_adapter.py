@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
 
+from .config import is_obvious_placeholder
 from .models import (
     ContextSnapshot,
     Evidence,
@@ -755,7 +756,10 @@ class JevJudger:
 def load_api_key(path: str | None = None) -> str | None:
     path = path or os.getenv("TYPESAFE_API_KEY_FILE")
     if not path:
-        return os.getenv("TYPESAFE_API_KEY")
+        key = os.getenv("TYPESAFE_API_KEY")
+        if is_obvious_placeholder(key):
+            raise ValueError("TYPESAFE_API_KEY must be replaced with a real deployment value")
+        return key
     key_path = Path(path)
     if not key_path.exists():
         raise FileNotFoundError(f"TypeSafe API key file does not exist: {key_path}")
@@ -767,4 +771,9 @@ def load_api_key(path: str | None = None) -> str | None:
     key = key_path.read_text().strip()
     if not key:
         raise ValueError(f"TypeSafe API key file is empty: {key_path}")
+    if is_obvious_placeholder(key):
+        raise ValueError(
+            "TypeSafe API key file contains a sample placeholder; "
+            "replace it with a real deployment value"
+        )
     return key

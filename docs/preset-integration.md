@@ -97,8 +97,10 @@ TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
 This is a zero-network configuration check. It validates the production Preset
 credential mode, tenant binding, policy, HTTP/OIDC mode, and Jev credential
 source, including OIDC claim paths and JWKS timing bounds, without instantiating
-a TypeSafe client or reading a provider. It never proves that the credential is
-accepted by Preset; use `make preset-bootstrap-check` for that bounded provider
+a TypeSafe client or reading a provider. The sample values above are
+intentionally rejected: replace every `your-*`, angle-bracket, and
+`replace-me` value before expecting a passing check. It never proves that the
+credential is accepted by Preset; use `make preset-bootstrap-check` for that bounded provider
 request. The bootstrap report includes the counted Preset HTTP attempts and
 fails if the configured client cannot prove that it made the catalog request.
 
