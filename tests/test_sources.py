@@ -40,6 +40,37 @@ class BrokenCatalogAdapter:
         raise AssertionError("inspect must not run after catalog failure")
 
 
+class PartiallyFailingAuthorizeAdapter:
+    name = "mixed"
+
+    def __init__(self):
+        self.inspect_calls = []
+
+    async def list_resources(self):
+        raise AssertionError("native authorization should avoid a full catalog scan")
+
+    async def authorize(self, source, *, authorized_tenants=None):
+        del authorized_tenants
+        if source.resource == "query:broken":
+            raise TimeoutError("one source timed out")
+        return ResourceDescriptor(
+            adapter=self.name,
+            resource=source.resource,
+            kind="query",
+            title=source.label,
+        )
+
+    async def inspect(self, source):
+        self.inspect_calls.append(source.resource)
+        return ResourceSnapshot(
+            source_key=source.key,
+            adapter=self.name,
+            resource=source.resource,
+            title=source.label,
+            evidence=[],
+        )
+
+
 class TenantCatalogAdapter:
     name = "superset"
 
@@ -307,6 +338,34 @@ async def test_source_registry_isolates_unrelated_catalog_outages():
 
     assert snapshots[0].error is None
     assert "catalog unavailable" in snapshots[1].error
+
+
+@pytest.mark.asyncio
+async def test_source_registry_isolates_one_source_authorization_failure():
+    adapter = PartiallyFailingAuthorizeAdapter()
+    registry = SourceRegistry([adapter])
+    snapshots = await registry.resolve(
+        [
+            SourceRef(key="healthy", adapter="mixed", resource="query:healthy", label="Healthy"),
+            SourceRef(key="broken", adapter="mixed", resource="query:broken", label="Broken"),
+        ]
+    )
+
+    assert snapshots[0].error is None
+    assert snapshots[1].error is not None
+    assert "one source timed out" in snapshots[1].error
+    assert adapter.inspect_calls == ["query:healthy"]
+
+
+@pytest.mark.asyncio
+async def test_source_registry_keeps_healthy_adapters_visible_when_one_search_fails():
+    registry = SourceRegistry([BrokenCatalogAdapter(), LocalScanAdapter()])
+
+    page = await registry.search_resources("revenue", limit=4)
+
+    assert page.resources
+    assert {resource.adapter for resource in page.resources} == {"local"}
+    assert any("Adapter broken catalog search failed" in warning for warning in page.warnings)
 
 
 @pytest.mark.asyncio

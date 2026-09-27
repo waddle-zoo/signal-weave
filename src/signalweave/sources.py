@@ -210,39 +210,55 @@ class SourceRegistry:
         pages: list[CatalogSearchPage] = []
         for adapter in adapters:
             search = getattr(adapter, "search_resources", None)
-            if callable(search):
-                supports_tenant_scope = tenant_scope is None or _accepts_keyword(
-                    search, "authorized_tenants"
+            try:
+                if callable(search):
+                    supports_tenant_scope = tenant_scope is None or _accepts_keyword(
+                        search, "authorized_tenants"
+                    )
+                    search_kwargs: dict[str, object] = {
+                        "limit": per_adapter_limit,
+                        "cursor": cursor,
+                    }
+                    if tenant_scope is not None and supports_tenant_scope:
+                        search_kwargs["authorized_tenants"] = sorted(tenant_scope)
+                    page = await search(query, **search_kwargs)
+                    page = (
+                        page
+                        if isinstance(page, CatalogSearchPage)
+                        else CatalogSearchPage.model_validate(page)
+                    )
+                else:
+                    resources = await adapter.list_resources()
+                    authorized = [
+                        resource
+                        for resource in resources
+                        if self._is_authorized(resource, tenant_scope)
+                    ]
+                    visible = _bounded_local_search(query, authorized, per_adapter_limit)
+                    page = CatalogSearchPage(
+                        resources=visible,
+                        total_count=len(authorized),
+                        has_more=len(authorized) > len(visible),
+                        provider=adapter.name,
+                        strategy="local-scan-fallback",
+                        warnings=[
+                            f"Adapter {adapter.name} does not implement bounded catalog search; "
+                            "the catalog was locally scanned and lexically bounded before Jev ranking."
+                        ],
+                    )
+            except Exception as error:  # noqa: BLE001 - isolate one provider outage
+                pages.append(
+                    CatalogSearchPage(
+                        total_count=0,
+                        provider=adapter.name,
+                        strategy="adapter-error",
+                        warnings=[
+                            f"Adapter {adapter.name} catalog search failed: "
+                            f"{type(error).__name__}: {error}"
+                        ],
+                    )
                 )
-                search_kwargs: dict[str, object] = {
-                    "limit": per_adapter_limit,
-                    "cursor": cursor,
-                }
-                if tenant_scope is not None and supports_tenant_scope:
-                    search_kwargs["authorized_tenants"] = sorted(tenant_scope)
-                page = await search(query, **search_kwargs)
-                page = (
-                    page
-                    if isinstance(page, CatalogSearchPage)
-                    else CatalogSearchPage.model_validate(page)
-                )
-            else:
-                resources = await adapter.list_resources()
-                authorized = [
-                    resource for resource in resources if self._is_authorized(resource, tenant_scope)
-                ]
-                visible = _bounded_local_search(query, authorized, per_adapter_limit)
-                page = CatalogSearchPage(
-                    resources=visible,
-                    total_count=len(authorized),
-                    has_more=len(authorized) > len(visible),
-                    provider=adapter.name,
-                    strategy="local-scan-fallback",
-                    warnings=[
-                        f"Adapter {adapter.name} does not implement bounded catalog search; "
-                        "the catalog was locally scanned and lexically bounded before Jev ranking."
-                    ],
-                )
+                continue
             visible = [
                 resource for resource in page.resources
                 if self._is_authorized(resource, tenant_scope)
@@ -474,12 +490,14 @@ class SourceRegistry:
         """Fetch sources independently so one broken source is visible to the engine."""
         source_list = list(sources)
         catalog: dict[tuple[str, str], ResourceDescriptor] = {}
-        catalog_errors: dict[str, str] = {}
+        catalog_errors: dict[tuple[str, str], str] = {}
         for adapter_name in sorted({source.adapter for source in source_list}):
             try:
                 adapter = self._get(adapter_name)
             except Exception as error:  # noqa: BLE001 - preserve missing adapter per source
-                catalog_errors[adapter_name] = f"{type(error).__name__}: {error}"
+                message = f"{type(error).__name__}: {error}"
+                for source in [item for item in source_list if item.adapter == adapter_name]:
+                    catalog_errors[(adapter_name, source.resource)] = message
                 continue
             for source in [item for item in source_list if item.adapter == adapter_name]:
                 try:
@@ -489,8 +507,9 @@ class SourceRegistry:
                     if descriptor is not None:
                         catalog[(descriptor.adapter, descriptor.resource)] = descriptor
                 except Exception as error:  # noqa: BLE001 - isolate one catalog outage
-                    catalog_errors[adapter_name] = f"{type(error).__name__}: {error}"
-                    break
+                    catalog_errors[(adapter_name, source.resource)] = (
+                        f"{type(error).__name__}: {error}"
+                    )
         semaphore = asyncio.Semaphore(self._max_concurrency)
 
         async def resolve_one(source: SourceRef) -> ResourceSnapshot:
@@ -504,7 +523,8 @@ class SourceRegistry:
                     title=source.label,
                     error=f"{type(error).__name__}: {error}",
                 )
-            if source.adapter in catalog_errors:
+            catalog_error = catalog_errors.get((source.adapter, source.resource))
+            if catalog_error is not None:
                 return ResourceSnapshot(
                     source_key=source.key,
                     adapter=source.adapter,
@@ -518,7 +538,7 @@ class SourceRegistry:
                     },
                     error=(
                         "authorized source catalog unavailable for adapter "
-                        f"{source.adapter}: {catalog_errors[source.adapter]}"
+                        f"{source.adapter}: {catalog_error}"
                     ),
                 )
             descriptor = catalog.get((source.adapter, source.resource))
