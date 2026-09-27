@@ -127,7 +127,7 @@ make local-superset-runtime-shadow-trial
 make local-superset-runtime-shadow-review
 ```
 
-The current verified regression result is `411 passed, 2 skipped` with Ruff
+The current verified regression result is `415 passed, 2 skipped` with Ruff
 clean. The runtime-shadow and chart-matrix commands are separate evidence
 surfaces: the former uses synthetic Preset and TypeSafe transports to exercise
 the production runtime, while the latter uses the live local Superset service
