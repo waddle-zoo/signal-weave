@@ -151,6 +151,24 @@ def review_report(report: dict[str, Any]) -> dict[str, Any]:
         if not isinstance(checks, dict):
             findings.append("approved report has no provider checks")
             checks = {}
+        if isinstance(approval_basis, dict):
+            reviewed_policy = approval_basis.get("reviewed_data_policy")
+            reviewed_force_refresh = approval_basis.get("reviewed_provider_force_refresh")
+            current_policy = checks.get("data_policy")
+            current_force_refresh = checks.get("provider_force_refresh")
+            if not isinstance(reviewed_policy, dict):
+                findings.append("approval basis has no reviewed data-policy snapshot")
+            else:
+                if reviewed_policy != current_policy:
+                    findings.append("reviewed data-policy snapshot differs from current policy")
+                if reviewed_force_refresh != current_force_refresh:
+                    findings.append("reviewed force-refresh mode differs from current policy")
+                if approval_basis.get("reviewed_data_policy_digest") != _digest(reviewed_policy):
+                    findings.append("reviewed data-policy digest is inconsistent")
+            if approval_basis.get("current_data_policy_digest") != _digest(current_policy):
+                findings.append("current data-policy digest is inconsistent")
+            if approval_basis.get("data_policy_unchanged") is not True:
+                findings.append("approval did not prove the reviewed data policy was unchanged")
 
         result = evaluation.get("result")
         receipt = evaluation.get("receipt")

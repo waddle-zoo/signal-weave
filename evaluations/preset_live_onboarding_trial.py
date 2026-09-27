@@ -252,6 +252,8 @@ async def run_trial(
     adapter = _resolve_preset_adapter(runtime, adapter)
     reviewed_draft: dict[str, Any] | None = None
     reviewed_card: dict[str, Any] | None = None
+    reviewed_data_policy: dict[str, Any] | None = None
+    reviewed_provider_force_refresh: bool | None = None
     stored_card_payload: dict[str, Any] | None = None
     review_path = review_report or output
     if approve:
@@ -306,6 +308,10 @@ async def run_trial(
         reviewed_checks = reviewed_draft.get("provider_checks")
         if not isinstance(reviewed_checks, dict):
             raise RuntimeError("reviewed draft is missing Preset provider checks")
+        if not isinstance(reviewed_checks.get("data_policy"), dict):
+            raise RuntimeError("reviewed draft is missing Preset data-policy telemetry")
+        reviewed_data_policy = reviewed_checks["data_policy"]
+        reviewed_provider_force_refresh = reviewed_checks.get("provider_force_refresh")
         if reviewed_checks.get("data_policy") != data_policy or reviewed_checks.get(
             "provider_force_refresh"
         ) != provider_force_refresh:
@@ -444,6 +450,14 @@ async def run_trial(
             "reviewed_card_digest": _canonical_digest(reviewed_card),
             "stored_card_digest": _canonical_digest(stored_card_payload),
             "exact_draft_reused": True,
+            "reviewed_data_policy": reviewed_data_policy,
+            "reviewed_provider_force_refresh": reviewed_provider_force_refresh,
+            "current_data_policy_digest": _canonical_digest(data_policy),
+            "reviewed_data_policy_digest": _canonical_digest(reviewed_data_policy),
+            "data_policy_unchanged": (
+                reviewed_data_policy == data_policy
+                and reviewed_provider_force_refresh == provider_force_refresh
+            ),
         }
     if not approve:
         report["next_action"] = (

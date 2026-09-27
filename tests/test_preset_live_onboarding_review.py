@@ -119,6 +119,11 @@ def _passing_report() -> dict:
         "reviewed_card_digest": _digest(card),
         "stored_card_digest": _digest(card),
         "exact_draft_reused": True,
+        "reviewed_data_policy": report["provider_checks"]["data_policy"],
+        "reviewed_provider_force_refresh": False,
+        "current_data_policy_digest": _digest(report["provider_checks"]["data_policy"]),
+        "reviewed_data_policy_digest": _digest(report["provider_checks"]["data_policy"]),
+        "data_policy_unchanged": True,
     }
     return report
 
@@ -183,6 +188,16 @@ def test_independent_reviewer_rejects_live_refresh_without_policy_proof():
 
     assert review["passed"] is False
     assert any("force=false" in finding for finding in review["findings"])
+
+
+def test_independent_reviewer_rejects_mutated_policy_approval_basis():
+    report = deepcopy(_passing_report())
+    report["approval_basis"]["data_policy_unchanged"] = False
+
+    review = review_report(report)
+
+    assert review["passed"] is False
+    assert any("unchanged" in finding for finding in review["findings"])
 
 
 def test_independent_reviewer_rejects_unbounded_catalog_search_fanout():

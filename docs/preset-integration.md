@@ -368,8 +368,9 @@ first evaluation, zero additional Preset or Jev requests during the replay,
 and `delivery_enabled=false` before the trial is considered successful. The
 approved report must also contain an exact-draft approval basis, prove that the
 configured Preset credential was loaded, prove the selected data-policy mode
-and bounded result/snapshot limits, and prove that the provider secret values
-were absent from the serialized MCP artifacts. The independent reviewer
+and bounded result/snapshot limits, preserve the reviewed policy snapshot and
+digest in the approval basis, and prove that the provider secret values were
+absent from the serialized MCP artifacts. The independent reviewer
 recomputes those invariants from the serialized report instead of trusting the
 runner's `passed` flag. The runner records only non-secret Preset path counts,
 policy telemetry, and redaction booleans for this transport proof, including a
