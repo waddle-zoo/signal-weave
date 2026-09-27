@@ -295,8 +295,9 @@ entire observation/evidence payload and returns an explicit failed-quality
 receipt; it never sends a partial dashboard to Jev as if it were complete. Use
 `chart_ids` source parameters or split the workflow when a dashboard is larger
 than the configured budget.
-Transient rate limits and 5xx responses receive a bounded retry; ordinary
-client errors do not retry. Mounted secret files are supported with
+Transient rate limits and 5xx responses receive a bounded retry; malformed or
+non-finite `Retry-After` headers are ignored, and ordinary client errors do not
+retry. Mounted secret files are supported with
 `PRESET_API_TOKEN_NAME_FILE` and `PRESET_API_TOKEN_SECRET_FILE`.
 
 `cached_results` sends `force=false`, which asks the Superset-compatible

@@ -941,6 +941,22 @@ async def test_preset_retries_transient_rate_limit_with_bounded_backoff():
     assert calls == 2
 
 
+@pytest.mark.parametrize(
+    ("header", "expected"),
+    [
+        ("NaN", None),
+        ("Infinity", None),
+        ("-Infinity", None),
+        ("2.5", 2.5),
+        ("-1", 0.0),
+    ],
+)
+def test_preset_retry_after_ignores_non_finite_values(header, expected):
+    response = httpx.Response(429, headers={"Retry-After": header})
+
+    assert PresetCloudClient._retry_after_seconds(response) == expected
+
+
 @pytest.mark.asyncio
 async def test_preset_does_not_retry_non_transient_client_errors():
     calls = 0

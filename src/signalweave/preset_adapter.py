@@ -230,6 +230,8 @@ class PresetCloudClient(SupersetClient):
             seconds = float(value)
         except ValueError:
             return None
+        if not math.isfinite(seconds):
+            return None
         return min(max(seconds, 0.0), 5.0)
 
     @staticmethod
