@@ -113,7 +113,7 @@ def _failure_report(error: Exception) -> dict[str, Any]:
         "passed": False,
         "failure": _provider_failure(error),
         "checks": {
-            "provider_transport_used": False,
+            "provider_transport_used": True,
             "provider_request_failed": True,
             "jev_calls_made": 0,
         },

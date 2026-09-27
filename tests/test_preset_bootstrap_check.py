@@ -101,6 +101,8 @@ async def test_bootstrap_reports_redacted_permission_failure(monkeypatch, tmp_pa
     )
 
     assert report["passed"] is False
+    assert report["checks"]["provider_transport_used"] is True
+    assert report["checks"]["provider_request_failed"] is True
     assert report["failure"] == {
         "category": "authentication_or_permission",
         "status_code": 403,
