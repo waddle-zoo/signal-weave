@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from typing import Any, Protocol
+from urllib.parse import urlsplit
 
 import httpx
 
@@ -32,18 +33,22 @@ class HttpxTrinoExecutor:
         schema: str | None = None,
         timeout: float = 30.0,
         max_rows: int = 1000,
+        max_pages: int = 100,
         client: httpx.AsyncClient | None = None,
     ) -> None:
         if not user.strip():
             raise ValueError("Trino user is required")
         if max_rows < 1:
             raise ValueError("max_rows must be positive")
+        if not 1 <= max_pages <= 1000:
+            raise ValueError("max_pages must be between 1 and 1000")
         self.base_url = base_url.rstrip("/")
         self.user = user
         self.catalog = catalog
         self.schema = schema
         self.timeout = timeout
         self.max_rows = max_rows
+        self.max_pages = max_pages
         self._client = client
 
     async def execute(self, sql: str, parameters: dict[str, str]) -> list[dict[str, Any]]:
@@ -73,12 +78,23 @@ class HttpxTrinoExecutor:
             payload = response.json()
             rows = _rows_from_trino(payload)
             next_uri = payload.get("nextUri")
+            seen_uris: set[str] = set()
+            pages = 1
             while next_uri and len(rows) < self.max_rows:
+                next_uri = _validated_next_uri(str(next_uri), self.base_url)
+                if next_uri in seen_uris:
+                    raise ValueError("Trino returned a repeated nextUri")
+                if pages >= self.max_pages:
+                    raise ValueError(
+                        f"Trino response exceeded the {self.max_pages}-page limit"
+                    )
+                seen_uris.add(next_uri)
                 response = await client.get(next_uri, headers=headers)
                 response.raise_for_status()
                 payload = response.json()
                 rows.extend(_rows_from_trino(payload))
                 next_uri = payload.get("nextUri")
+                pages += 1
             return rows[: self.max_rows]
         finally:
             if owns_client:
@@ -195,6 +211,21 @@ def _safe_timestamp(value: str) -> bool:
     except ValueError:
         return False
     return True
+
+
+def _validated_next_uri(next_uri: str, base_url: str) -> str:
+    """Accept only absolute Trino pagination URLs on the configured origin."""
+    candidate = urlsplit(next_uri)
+    origin = urlsplit(base_url)
+    if candidate.scheme != origin.scheme or candidate.hostname != origin.hostname:
+        raise ValueError("Trino nextUri changed the configured origin")
+    if candidate.port != origin.port:
+        raise ValueError("Trino nextUri changed the configured port")
+    if candidate.username or candidate.password or candidate.fragment:
+        raise ValueError("Trino nextUri contains unsafe URL components")
+    if not candidate.path.startswith("/"):
+        raise ValueError("Trino nextUri must contain an absolute path")
+    return next_uri
 
 
 def _rows_from_trino(payload: dict[str, Any]) -> list[dict[str, Any]]:

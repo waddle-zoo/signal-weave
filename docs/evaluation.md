@@ -137,14 +137,15 @@ enforcement, token refresh, and partial-failure visibility separately from
 semantic Jev quality. See [`preset-integration-trial.md`](preset-integration-trial.md)
 for its evidence and remaining real-account gates.
 
-The live integration test is skipped unless explicitly enabled. The unlabeled
-external-source acceptance check is:
+The live integration test is skipped unless explicitly enabled. The checked-in
+card is a draft, so the unlabeled external-source acceptance check requires an
+approved card export produced by the MCP onboarding flow:
 
 ```bash
 TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
 SUPERSET_URL=http://127.0.0.1:8088 \
   uv run python scripts/live_card_check.py \
-  --card examples/insight-card.json
+  --card /absolute/path/to/approved-card.json
 ```
 
 The scheduled daily path can be exercised end to end through the real MCP

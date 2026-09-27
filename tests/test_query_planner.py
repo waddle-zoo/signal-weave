@@ -1,9 +1,10 @@
+import httpx
 import pytest
 
 from signalweave.models import MetricDefinition, ResourceContract, ResourceDescriptor, SourceRef
 from signalweave.query_planner import QueryWindow, compile_query, plan_query
 from signalweave.sources import SourceRegistry
-from signalweave.trino_adapter import TrinoQueryAdapter
+from signalweave.trino_adapter import HttpxTrinoExecutor, TrinoQueryAdapter
 
 
 def metric_resource(*, tenant_id="acme", resource="query:revenue"):
@@ -166,6 +167,63 @@ class FakeExecutor:
         self.sql = sql
         assert parameters["window_start"].startswith("2026-01")
         return self.rows
+
+
+@pytest.mark.asyncio
+async def test_http_trino_rejects_cross_origin_next_uri():
+    requests = []
+
+    async def handler(request):
+        requests.append(request)
+        return httpx.Response(
+            200,
+            json={
+                "columns": [{"name": "metric_value"}],
+                "data": [[1]],
+                "nextUri": "http://169.254.169.254/latest/meta-data/",
+            },
+        )
+
+    transport = httpx.MockTransport(handler)
+    async with httpx.AsyncClient(
+        base_url="https://trino.example", transport=transport
+    ) as client:
+        executor = HttpxTrinoExecutor(
+            "https://trino.example", user="signalweave", client=client
+        )
+        with pytest.raises(ValueError, match="configured origin"):
+            await executor.execute("SELECT 1", {})
+
+    assert len(requests) == 1
+
+
+@pytest.mark.asyncio
+async def test_http_trino_rejects_repeated_next_uri():
+    calls = 0
+
+    async def handler(request):
+        nonlocal calls
+        calls += 1
+        return httpx.Response(
+            200,
+            json={
+                "columns": [{"name": "metric_value"}],
+                "data": [[1]],
+                "nextUri": "https://trino.example/v1/statement/1/page/2",
+            },
+        )
+
+    transport = httpx.MockTransport(handler)
+    async with httpx.AsyncClient(
+        base_url="https://trino.example", transport=transport
+    ) as client:
+        executor = HttpxTrinoExecutor(
+            "https://trino.example", user="signalweave", client=client
+        )
+        with pytest.raises(ValueError, match="repeated nextUri"):
+            await executor.execute("SELECT 1", {})
+
+    assert calls == 2
 
 
 class CatalogAdapter:

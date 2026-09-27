@@ -130,14 +130,14 @@ class JevJudger:
                 retry_value = int(os.getenv("TYPESAFE_MAX_RETRIES", "2"))
             except ValueError as error:
                 raise ValueError("TYPESAFE_MAX_RETRIES must be a non-negative integer") from error
-        if retry_value < 0:
-            raise ValueError("TYPESAFE_MAX_RETRIES must be a non-negative integer")
+        if retry_value < 0 or retry_value > 5:
+            raise ValueError("TYPESAFE_MAX_RETRIES must be between 0 and 5")
         try:
             retry_backoff = float(os.getenv("TYPESAFE_RETRY_BACKOFF_SECONDS", "0.25"))
         except ValueError as error:
             raise ValueError("TYPESAFE_RETRY_BACKOFF_SECONDS must be non-negative") from error
-        if retry_backoff < 0:
-            raise ValueError("TYPESAFE_RETRY_BACKOFF_SECONDS must be non-negative")
+        if retry_backoff < 0 or retry_backoff > 30:
+            raise ValueError("TYPESAFE_RETRY_BACKOFF_SECONDS must be between 0 and 30")
         payload_limit = max_payload_bytes
         if payload_limit is None:
             try:
@@ -272,7 +272,9 @@ class JevJudger:
         for attempt in range(self._max_retries + 1):
             try:
                 async with self._client_type(
-                    api_key=self._api_key, timeout=self._timeout
+                    api_key=self._api_key,
+                    model=self.name,
+                    timeout=self._timeout,
                 ) as client:
                     return await client.system_one(state=state, questions=questions)
             except Exception as error:  # noqa: BLE001 - classify transport failures below
@@ -429,7 +431,7 @@ class JevJudger:
         ]
         state = {
             **state,
-            "card": card.model_dump(mode="json"),
+            "card": card.execution_payload(),
             "insight_plan": plan.model_dump(mode="json"),
             "candidate_resources": candidate_payload,
         }

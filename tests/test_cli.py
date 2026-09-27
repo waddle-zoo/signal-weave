@@ -14,7 +14,17 @@ def test_token_preset_server_fails_closed_without_static_principal(monkeypatch):
     monkeypatch.setattr(cli, "build_runtime", lambda: SimpleNamespace(principal=None))
     monkeypatch.setattr(sys, "argv", ["signalweave", "serve", "--transport", "streamable-http"])
 
-    with pytest.raises(RuntimeError, match="token-authenticated Preset deployments"):
+    with pytest.raises(RuntimeError, match="streamable HTTP requires"):
+        cli.main()
+
+
+def test_token_http_fails_closed_without_any_static_principal(monkeypatch):
+    monkeypatch.delenv("PRESET_URL", raising=False)
+    monkeypatch.setenv("SIGNALWEAVE_AUTH_MODE", "token")
+    monkeypatch.setattr(cli, "build_runtime", lambda: SimpleNamespace(principal=None))
+    monkeypatch.setattr(sys, "argv", ["signalweave", "serve", "--transport", "streamable-http"])
+
+    with pytest.raises(RuntimeError, match="streamable HTTP requires"):
         cli.main()
 
 

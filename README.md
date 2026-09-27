@@ -56,15 +56,22 @@ push evaluation at `POST /webhooks/evaluate`. The demo credentials are
 loopback-only and must not be exposed. Set `SIGNALWEAVE_API_TOKEN` and
 `PUSH_WEBHOOK_TOKEN` to real deployment secrets outside local development.
 
-To run the included card against live local Superset:
+For an already approved card export, the standalone checker can run one
+delivery-disabled Jev evaluation against local Superset:
 
 ```bash
 SUPERSET_URL=http://127.0.0.1:8088 \
 SUPERSET_USERNAME=admin SUPERSET_PASSWORD=admin \
 TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
   uv run python scripts/live_card_check.py \
-  --card examples/insight-card.json
+  --card /absolute/path/to/approved-card.json
 ```
+
+The checked-in example is intentionally a draft and will be rejected by this
+command until a caller completes onboarding and approval. For the real flow,
+use the MCP sequence below: `onboard_insight_card` → human review →
+`approve_insight_card` → `evaluate_insight_card`. That approval boundary is
+part of the product, not a demo shortcut.
 
 ## The card
 
@@ -344,38 +351,34 @@ SignalWeave is not a replacement for Temporal, Airflow, Dagster, a BI tool,
 Glean, a knowledge graph, or a general-purpose agent framework. It is the typed
 decision layer between those systems.
 
+Use `signalweave serve --transport streamable-http` for HTTP deployments. The
+CLI is the supported boundary that installs bearer/OIDC authentication and
+requires a trusted tenant/principal; direct `create_mcp()` embedding is for
+stdio or test integrations unless the embedding application supplies the same
+principal requirement and middleware.
+
 ## Evidence and limits
 
-The repository includes reproducible synthetic trials, not a substitute for a
-customer's historical holdout. The controlled Jev decision matrix covered 3
-companies, 22 personas, 1,664 heterogeneous resources, and 144 tasks: the latest
-live Jev run made 130/144 exact outcome decisions, with all fourteen misses
-conservative
-`notify` → `investigate` routes. That runner supplied hidden source refs, so its
-source-selection result is not a discovery score.
+The strongest current proof is a bounded live Jev shadow trial, not a promise of
+universal accuracy. Across six synthetic company shapes and 60 messy monitoring
+cases, live Jev made 53/60 exact outcome decisions, recalled 100% of required
+evidence, and produced 0 unsafe automatic actions; an independent adversarial
+review passed. Median Jev latency was 532 ms and p95 was 662 ms. The separate
+eight-case live onboarding replay achieved 8/8 required-candidate recall, 8/8
+safe review-preserving outcomes, 6/8 exact recommendation sets, and 0 tenant
+leaks. See [`docs/live-jev-proof-2026-09-27.md`](docs/live-jev-proof-2026-09-27.md).
 
-A stricter live onboarding replay withheld expected labels from Jev and covered
-eight heterogeneous cases: 8/8 required-candidate recall, 8/8 safe outcomes,
-7/8 exact recommendation sets, and 0 tenant leaks. The one mismatch was held
-for human review as a definition conflict. The current deterministic wiring
-rerun is deliberately reported separately: 100/144 exact decisions, with 0
-unsafe automatic actions and complete workflow/card/provenance/source-selection
-contracts. Its 44 mismatches are not Jev evidence; they are retained as a
-failed research baseline. See [`docs/live-jev-onboarding-2026-09-25.md`](docs/live-jev-onboarding-2026-09-25.md)
-and [`docs/adversarial-v1-review-2026-09-25.md`](docs/adversarial-v1-review-2026-09-25.md).
+The Northstar local Superset proof also completed the production MCP lifecycle:
+discovery, free-form onboarding, persisted review, human approval, live Jev
+evaluation, and idempotent replay. It normalized 10 charts into 25 observations
+and 36 evidence items, then replayed without duplicate provider or Jev calls.
+The clarified owner policy passed 6/6 local counterfactual cases with 0 false
+or missed notifications.
 
-The independent live discovery trial used 48 tasks, 576 resources before tenant
-filtering, same-name cross-tenant decoys, and two-source labels that were not sent
-to Jev. It achieved 48/48 exact top-2 sets, 48/48 top-10 coverage, and 0 wrong-
-tenant returns with an explicit tenant boundary. The live metric-plan trial used
-24 held-out metric labels and achieved 24/24 correct definitions, dimensions, and
-time grains; all 24 compiled queries were bounded, `SELECT`-only, and semicolon-
-free. The live evidence-bundle trial used the same 48-task catalog with a
-human-approved anchor and independently held-out related-source labels: 48/48
-expected related sources were selected, 48/48 anchors were preserved, and 0
-wrong-tenant sources were returned. Run it with `make bundle-trial`. These are
-synthetic regression measurements, not universal accuracy or production safety
-claims.
+The repository also contains discovery, metric-plan, evidence-bundle, provider,
+and generated-shape trials. They are synthetic regression measurements, not
+customer accuracy or production-cost claims. In particular, the modeled query
+and cost reductions in the research notes are not measured savings.
 
 The MCP enterprise trial also exposed the limits: malformed client calls and
 unscoped catalogs caused source-discovery failures. Keep tenant identity, metric
@@ -383,28 +386,20 @@ definition, population, grain, freshness, lineage, and source status in adapter
 metadata, and run a domain-owner-labeled, time-split shadow trial before enabling
 automated actions.
 
-The live adversarial retrieval-and-explanation fixture covers SaaS, retail,
-logistics, fintech, and marketplace cases with same-name tenant decoys, graph
-context, stale evidence, related and unrelated dashboards, and a no-diagnostic
-case. The current five-case run made 5/5 exact outcome decisions, 5/5 exact
-delivery decisions, selected only authorized sources in 5/5 cases, and averaged
-0.70 recall over the labeled optional diagnostic-source set. This is a synthetic
-stress test; the imperfect source recall is intentionally visible and is not a
-production accuracy claim. Re-run it with `make retrieval-explanation-trial`.
-
-The default runtime stores insight cards, metric cards, and decision receipts in
-one SQLite file. Its database uniqueness constraint makes a completed
-idempotency key replayable after restart. Multi-replica deployments should
-provide a shared transactional store through the store interfaces before routing
-traffic to more than one evaluator process.
+The default runtime stores cards and receipts in one SQLite file. It is suitable
+for a single-process shadow pilot. Multi-replica deployments still need a shared
+transactional store, migrations, backups, lease-based recovery, and operational
+quotas before they should route production traffic to more than one evaluator.
+The repo intentionally does not claim those distributed guarantees.
 
 Operator labels are also durable and retry-safe when the caller supplies a
 stable `feedback_id` to `record_decision_feedback`. Labels are linked to the
 receipt's card and context versions; revising a card later cannot rewrite what
 the operator labeled about an earlier run.
 
-See [`docs/evidence-brief.md`](docs/evidence-brief.md) for the measured case and
-limitations.
+See [`docs/live-jev-proof-2026-09-27.md`](docs/live-jev-proof-2026-09-27.md) and
+[`docs/release-readiness-review-2026-09-27.md`](docs/release-readiness-review-2026-09-27.md)
+for the measured case, adversarial findings, and release boundary.
 
 To reproduce the scheduled analytical-artifact monitor contract—no-change
 suppression, contextual notification, complete evidence, and idempotent

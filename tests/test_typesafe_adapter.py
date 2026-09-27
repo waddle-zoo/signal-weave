@@ -209,6 +209,35 @@ async def test_jev_rank_resources_uses_typed_questions_and_returns_probabilities
 
 
 @pytest.mark.asyncio
+async def test_jev_always_pins_the_production_model(monkeypatch):
+    class CapturingClient(FakeClient):
+        init_kwargs = []
+
+        def __init__(self, **kwargs):
+            super().__init__(**kwargs)
+            type(self).init_kwargs.append(kwargs)
+
+    CapturingClient.init_kwargs = []
+    monkeypatch.setattr(typesafe_sdk, "AsyncTypeSafeClient", CapturingClient)
+    monkeypatch.setattr(typesafe_sdk, "Noul", FakeNoul)
+    judger = JevJudger(api_key="synthetic-test-key")
+
+    await judger.rank_resources(
+        "Understand revenue risk",
+        [
+            ResourceDescriptor(
+                adapter="superset",
+                resource="dashboard:growth",
+                kind="dashboard",
+                title="Growth funnel",
+            )
+        ],
+    )
+
+    assert CapturingClient.init_kwargs[-1]["model"] == "jev-latest"
+
+
+@pytest.mark.asyncio
 async def test_jev_discovery_payload_budget_fails_before_transport(monkeypatch):
     FakeClient.calls = []
     monkeypatch.setattr(typesafe_sdk, "AsyncTypeSafeClient", FakeClient)
@@ -461,6 +490,12 @@ async def test_jev_selects_bounded_followup_sources_with_scores(monkeypatch):
     call = FakeClient.calls[0]
     assert isinstance(call["questions"]["candidate_0"], FakeScore)
     assert call["state"]["candidate_resources"][0]["title"] == "Billing operations"
+    assert "onboarding_review" not in call["state"]["card"]
+    assert "principal_tenant" not in call["state"]["card"]
+    assert all(
+        "destination" not in method
+        for method in call["state"]["card"]["delivery_methods"]
+    )
 
 
 @pytest.mark.asyncio

@@ -73,6 +73,11 @@ def _evaluation_fingerprint(
         "card_id": card.id,
         "card_version": card.version,
         "actor": actor or "mcp-client",
+        "principal_tenant": card.principal_tenant,
+        # Version numbers are useful audit labels but are not an integrity
+        # boundary by themselves. Include the executable card contract so a
+        # same-version overwrite cannot replay a receipt for different policy.
+        "execution_payload": card.execution_payload(),
         "context": (
             context.model_dump(mode="json", exclude={"captured_at"}) if context else None
         ),
@@ -88,8 +93,14 @@ def create_mcp(
     http_principal_resolver: Callable[[], PrincipalContext] | None = None,
     auth_settings: Any | None = None,
     token_verifier: Any | None = None,
+    require_principal: bool = False,
 ) -> FastMCP:
     runtime = runtime or build_runtime()
+    if require_principal and runtime.principal is None and principal_resolver is None:
+        raise RuntimeError(
+            "the HTTP MCP server requires a deployment or request principal; "
+            "use stdio for an intentionally unscoped local process"
+        )
     authoring = InsightAuthoringService(
         runtime.sources, runtime.engine, principal=runtime.principal
     )
@@ -109,6 +120,8 @@ def create_mcp(
     def request_principal(ctx: Context | None) -> PrincipalContext | None:
         """Resolve a trusted gateway principal without accepting tool input as identity."""
         if principal_resolver is None:
+            if require_principal and runtime.principal is None:
+                raise RuntimeError("the identity gateway did not provide a principal")
             return runtime.principal
         if ctx is None:
             raise RuntimeError(
@@ -907,7 +920,6 @@ def create_mcp(
         questions: list[str] | None = None,
         decision_guidance: str | None = None,
         delivery_methods: list[dict[str, Any]] | None = None,
-        card_id: str | None = None,
         comparison_windows: list[str] | None = None,
         action_confidence_threshold: float = 0.70,
         owner: str | None = None,
@@ -924,7 +936,7 @@ def create_mcp(
         principal = request_principal(ctx)
         source_refs = [SourceRef.model_validate(source) for source in sources]
         card = InsightCard(
-            id=card_id or f"card-{_slug(title)}",
+            id=f"card-{_slug(title)}-{uuid4().hex[:12]}",
             title=title,
             what_to_watch=what_to_watch,
             why_watch=why_watch,
@@ -964,7 +976,6 @@ def create_mcp(
         requested_dimensions: list[str] | None = None,
         requested_time_grain: str | None = None,
         title: str | None = None,
-        card_id: str | None = None,
         ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Create a draft plain-language metric card over approved definitions.
@@ -990,7 +1001,7 @@ def create_mcp(
         )
         card_title = (title or question.strip().rstrip("."))[:200] or "Metric query"
         card = MetricQueryCard(
-            id=card_id or f"metric-{_slug(card_title)}-{uuid4().hex[:8]}",
+            id=f"metric-{_slug(card_title)}-{uuid4().hex[:12]}",
             title=card_title,
             question=question,
             why=why,

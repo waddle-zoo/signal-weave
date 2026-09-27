@@ -147,19 +147,21 @@ the same key, but it does not become a scheduler or delivery worker.
 
 ## D. Live unlabeled acceptance check
 
-For the included card against the local Superset:
+The checked-in example is a draft and is intentionally rejected by the
+standalone helper. Complete the MCP onboarding flow above, then pass the
+approved card export to the helper:
 
 ```bash
 SUPERSET_URL=http://127.0.0.1:8088 \
 SUPERSET_USERNAME=admin SUPERSET_PASSWORD=admin \
 TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
   uv run python scripts/live_card_check.py \
-  --card examples/insight-card.json
+  --card /absolute/path/to/approved-card.json
 ```
 
-No expected outcome is supplied. The command verifies that the card is read, the
-source adapter returns live evidence, Jev is the evaluator, and safety gates
-produce a typed result.
+No expected outcome is supplied. The command verifies that an approved card is
+read, the source adapter returns live evidence, Jev is the evaluator, and
+safety gates produce a typed result.
 
 ## E. Repeatable benchmark
 

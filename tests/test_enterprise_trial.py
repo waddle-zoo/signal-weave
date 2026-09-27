@@ -133,7 +133,6 @@ async def test_enterprise_fixture_is_reachable_through_mcp_and_trace(tmp_path):
     _, draft_payload = await server.call_tool(
         "draft_insight_card",
         {
-            "card_id": "card-test-stale",
             "title": task["brief"]["title"],
             "what_to_watch": task["brief"]["what_to_watch"],
             "why_watch": task["brief"]["why_watch"],
@@ -144,10 +143,11 @@ async def test_enterprise_fixture_is_reachable_through_mcp_and_trace(tmp_path):
         },
     )
     draft_result = draft_payload.get("result", draft_payload)
+    card_id = draft_result["card"]["id"]
     assert draft_result["status"] == "draft"
 
     _, simulation_payload = await server.call_tool(
-        "simulate_insight_card", {"card_id": "card-test-stale"}
+        "simulate_insight_card", {"card_id": card_id}
     )
     simulation_result = simulation_payload.get("result", simulation_payload)
     assert simulation_result["outcome"] == "escalate"

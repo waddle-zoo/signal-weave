@@ -84,15 +84,17 @@ def main() -> None:
             ),
             auth_settings=auth_settings,
             token_verifier=verifier,
+            require_principal=True,
         )
     else:
         runtime = build_runtime()
-        if os.getenv("PRESET_URL", "").strip() and runtime.principal is None:
+        if runtime.principal is None:
             raise RuntimeError(
-                "token-authenticated Preset deployments require "
-                "SIGNALWEAVE_TENANT_ID and SIGNALWEAVE_PRINCIPAL_ID"
+                "token-authenticated streamable HTTP requires "
+                "SIGNALWEAVE_TENANT_ID and SIGNALWEAVE_PRINCIPAL_ID; use stdio for "
+                "an intentionally unscoped local process"
             )
-        server = create_mcp(runtime)
+        server = create_mcp(runtime, require_principal=True)
     server.settings.host = args.host
     server.settings.port = args.port
 

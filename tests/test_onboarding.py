@@ -897,11 +897,11 @@ async def test_dynamic_bundle_keeps_anchors_and_adds_jev_related_sources(tmp_pat
         ],
         questions=["What context explains a conversion movement?"],
         retrieval_mode="expand",
-        card_id="dynamic-bundle",
     )
+    card_id = drafted["card"]["id"]
     assert drafted["card"]["retrieval_mode"] == "expand"
 
-    bundle_preview = await tool(server, "resolve_insight_sources")("dynamic-bundle")
+    bundle_preview = await tool(server, "resolve_insight_sources")(card_id)
     bundle = bundle_preview["bundle"]
     assert bundle["anchor_source_keys"] == ["growth-anchor"]
     assert [match["resource"] for match in bundle["related_matches"]] == ["dashboard:8"]
@@ -911,9 +911,9 @@ async def test_dynamic_bundle_keeps_anchors_and_adds_jev_related_sources(tmp_pat
     ]
     assert bundle["selected_sources"][1]["required"] is False
 
-    await tool(server, "approve_insight_card")("dynamic-bundle")
+    await tool(server, "approve_insight_card")(card_id)
     evaluated = await tool(server, "evaluate_insight_card")(
-        "dynamic-bundle", idempotency_key="dynamic-bundle:1"
+        card_id, idempotency_key="dynamic-bundle:1"
     )
     assert evaluated["retrieval"]["evaluator"] == "jev-onboarding-test-double"
     assert evaluated["result"]["retrieval"]["selected_sources"][1]["resource"] == "dashboard:8"
@@ -936,10 +936,10 @@ async def test_dynamic_bundle_avoids_colliding_with_human_source_keys(tmp_path):
             }
         ],
         retrieval_mode="expand",
-        card_id="collision-safe-bundle",
     )
+    card_id = drafted["card"]["id"]
 
-    bundle = (await tool(server, "resolve_insight_sources")("collision-safe-bundle"))["bundle"]
+    bundle = (await tool(server, "resolve_insight_sources")(card_id))["bundle"]
     assert [source["key"] for source in bundle["selected_sources"]] == [
         "related-superset-dashboard-8",
         "related-superset-dashboard-8-2",
@@ -963,16 +963,16 @@ async def test_sqlite_runtime_replays_completed_evaluation_after_restart(tmp_pat
             }
         ],
         questions=["Should this run use the latest available snapshot?"],
-        card_id="restart-safe",
     )
-    await tool(server, "approve_insight_card")("restart-safe")
+    card_id = drafted["card"]["id"]
+    await tool(server, "approve_insight_card")(card_id)
     first = await tool(server, "evaluate_insight_card")(
         drafted["card"]["id"], idempotency_key="daily:restart-safe"
     )
 
     restarted = make_server(tmp_path, sqlite=True)
     replay = await tool(restarted, "evaluate_insight_card")(
-        "restart-safe", idempotency_key="daily:restart-safe"
+        card_id, idempotency_key="daily:restart-safe"
     )
 
     assert first["replayed"] is False
@@ -1087,9 +1087,9 @@ async def test_decision_feedback_is_scoped_and_survives_restart(tmp_path):
                 "destination": "slack://growth-ops",
             }
         ],
-        card_id="feedback-card",
     )
-    await tool(server, "approve_insight_card")("feedback-card")
+    card_id = drafted["card"]["id"]
+    await tool(server, "approve_insight_card")(card_id)
     evaluated = await tool(server, "evaluate_insight_card")(
         drafted["card"]["id"], idempotency_key="daily:feedback-card"
     )
@@ -1113,7 +1113,7 @@ async def test_decision_feedback_is_scoped_and_survives_restart(tmp_path):
     assert recorded["status"] == "recorded"
     assert recorded["feedback"]["principal_tenant"] == "default"
     assert recorded["feedback"]["expected_outcome"] == "ignore"
-    assert tool(server, "list_decision_feedback")(card_id="feedback-card")["count"] == 1
+    assert tool(server, "list_decision_feedback")(card_id=card_id)["count"] == 1
 
     replayed = tool(server, "record_decision_feedback")(
         idempotency_key="daily:feedback-card",
@@ -1123,7 +1123,7 @@ async def test_decision_feedback_is_scoped_and_survives_restart(tmp_path):
         note="The movement was expected seasonality.",
     )
     assert replayed["status"] == "replayed"
-    assert tool(server, "list_decision_feedback")(card_id="feedback-card")["count"] == 1
+    assert tool(server, "list_decision_feedback")(card_id=card_id)["count"] == 1
 
     restarted = make_server(tmp_path, sqlite=True)
     listed = tool(restarted, "list_decision_feedback")(idempotency_key="daily:feedback-card")
@@ -1145,7 +1145,7 @@ async def test_decision_feedback_is_scoped_and_survives_restart(tmp_path):
 @pytest.mark.asyncio
 async def test_feedback_keeps_the_receipt_card_version_after_a_card_revision(tmp_path):
     server = make_server(tmp_path, sqlite=True)
-    await tool(server, "draft_insight_card")(
+    drafted = await tool(server, "draft_insight_card")(
         title="Versioned feedback card",
         what_to_watch="Checkout conversion.",
         why_watch="Decide whether Growth should act.",
@@ -1168,14 +1168,14 @@ async def test_feedback_keeps_the_receipt_card_version_after_a_card_revision(tmp
                 "destination": "slack://growth-ops",
             }
         ],
-        card_id="versioned-feedback",
     )
-    await tool(server, "approve_insight_card")("versioned-feedback")
+    card_id = drafted["card"]["id"]
+    await tool(server, "approve_insight_card")(card_id)
     evaluated = await tool(server, "evaluate_insight_card")(
-        "versioned-feedback", idempotency_key="daily:versioned-feedback"
+        card_id, idempotency_key="daily:versioned-feedback"
     )
 
-    stored = tool(server, "get_insight_card")("versioned-feedback")
+    stored = tool(server, "get_insight_card")(card_id)
     revised = InsightCard.model_validate(stored).model_copy(
         update={"version": 2, "compiled_plan": None}
     )
@@ -1277,7 +1277,6 @@ async def test_approval_retains_authorized_anchor_omitted_from_bounded_review(tm
                 "destination": "slack://growth-ops",
             }
         ],
-        card_id="bounded-anchor-card",
     )
 
     reviewed = await tool(server, "review_insight_card")(drafted["card"]["id"], limit=10)
@@ -1316,17 +1315,17 @@ async def test_runtime_context_provider_expands_bundle_and_is_receipt_visible(tm
             }
         ],
         retrieval_mode="expand",
-        card_id="graph-backed-card",
     )
+    card_id = drafted["card"]["id"]
 
     preview = await tool(server, "simulate_insight_card")(drafted["card"]["id"])
     assert preview["result"]["context"]["provider"] == "company-graph"
     assert preview["result"]["context"]["version"] == "graph-v7"
     assert "dashboard:8" in {source["resource"] for source in preview["retrieval"]["selected_sources"]}
 
-    await tool(server, "approve_insight_card")("graph-backed-card")
+    await tool(server, "approve_insight_card")(card_id)
     evaluated = await tool(server, "evaluate_insight_card")(
-        "graph-backed-card", idempotency_key="daily:graph-backed"
+        card_id, idempotency_key="daily:graph-backed"
     )
     assert evaluated["receipt"]["context_provider"] == "company-graph"
     assert evaluated["receipt"]["context_version"] == "graph-v7"
