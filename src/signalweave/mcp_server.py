@@ -56,6 +56,7 @@ from .store import (
     InMemoryDecisionReceiptStore,
     JsonMetricQueryCardStore,
 )
+from .typesafe_adapter import JevPayloadError
 
 
 def _slug(value: str) -> str:
@@ -320,7 +321,7 @@ def create_mcp(
             result = evaluated_result.model_dump(mode="json")
         except Exception as error:  # noqa: BLE001 - persist failed claims for replay safety
             failure: dict[str, Any] = {"error": f"{type(error).__name__}: {error}"}
-            if isinstance(error, EvaluationPayloadError):
+            if isinstance(error, (EvaluationPayloadError, JevPayloadError)):
                 failure["jev_payload_budget"] = {
                     "stage": error.stage,
                     "observed_bytes": error.observed_bytes,

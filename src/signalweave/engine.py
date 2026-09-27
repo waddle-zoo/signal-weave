@@ -28,7 +28,12 @@ from .models import (
 )
 from .retrieval import build_candidate_pool, resource_ref
 from .sources import SourceRegistry
-from .typesafe_adapter import DEFAULT_MAX_JEV_PAYLOAD_BYTES, InsightJudger, JevJudger
+from .typesafe_adapter import (
+    DEFAULT_MAX_JEV_PAYLOAD_BYTES,
+    InsightJudger,
+    JevJudger,
+    JevPayloadError,
+)
 
 
 @dataclass
@@ -404,6 +409,8 @@ class InsightEngine:
                 authorized_tenants=authorized_tenants,
             )
         except Exception as error:  # noqa: BLE001 - optional investigation fails closed
+            if isinstance(error, JevPayloadError):
+                raise
             return InvestigationTrace(
                 mode=card.investigation_mode,
                 candidate_count=0,

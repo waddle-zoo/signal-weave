@@ -65,11 +65,14 @@ DEFAULT_MAX_JEV_PAYLOAD_BYTES = 4_000_000
 class JevPayloadError(ValueError):
     """Raised before Jev when any typed request would exceed its input budget."""
 
-    def __init__(self, *, observed_bytes: int, budget_bytes: int) -> None:
+    def __init__(
+        self, *, stage: str, observed_bytes: int, budget_bytes: int
+    ) -> None:
+        self.stage = stage
         self.observed_bytes = observed_bytes
         self.budget_bytes = budget_bytes
         super().__init__(
-            "Jev payload exceeded the configured budget "
+            f"{stage} Jev payload exceeded the configured budget "
             f"({observed_bytes} > {budget_bytes} bytes)"
         )
 
@@ -232,7 +235,9 @@ class JevJudger:
         }
         if not questions:
             return {}
-        response = await self._system_one_with_retry(state=state, questions=questions)
+        response = await self._system_one_with_retry(
+            state=state, questions=questions, stage="onboarding"
+        )
         self.metrics.record(response)
         return {
             f"{resource.adapter}|{resource.resource}": response.nouls[f"resource_{index}"].noul
@@ -240,7 +245,7 @@ class JevJudger:
         }
 
     async def _system_one_with_retry(
-        self, *, state: dict[str, Any], questions: dict[str, Any]
+        self, *, state: dict[str, Any], questions: dict[str, Any], stage: str
     ) -> Any:
         """Retry only idempotent transport failures around a Jev request.
 
@@ -259,6 +264,7 @@ class JevJudger:
         observed_bytes = len(serialized.encode("utf-8"))
         if observed_bytes > self.max_payload_bytes:
             raise JevPayloadError(
+                stage=stage,
                 observed_bytes=observed_bytes,
                 budget_bytes=self.max_payload_bytes,
             )
@@ -367,7 +373,9 @@ class JevJudger:
             )
             for index in range(min(len(resources), 40))
         }
-        response = await self._system_one_with_retry(state=state, questions=questions)
+        response = await self._system_one_with_retry(
+            state=state, questions=questions, stage="onboarding"
+        )
         self.metrics.record(response)
         judgments: dict[str, dict[str, Any]] = {}
         for index, resource in enumerate(resources[:40]):
@@ -458,7 +466,9 @@ class JevJudger:
                 ),
                 criteria=score_criteria,
             )
-        response = await self._system_one_with_retry(state=state, questions=questions)
+        response = await self._system_one_with_retry(
+            state=state, questions=questions, stage="investigation"
+        )
         self.metrics.record(response)
         probability = max(0.0, min(1.0, float(response.nouls["need_investigation"].noul)))
         scored: list[dict[str, Any]] = []
@@ -550,7 +560,9 @@ class JevJudger:
             "requested_time_grain": requested_time_grain,
             "metric_candidates": [dict(candidate) for candidate in candidates[:50]],
         }
-        response = await self._system_one_with_retry(state=state, questions=questions)
+        response = await self._system_one_with_retry(
+            state=state, questions=questions, stage="metric-plan"
+        )
         self.metrics.record(response)
         metric_answer = response.choices["metric"]
         selected_dimensions = list(requested_dimensions)
@@ -597,7 +609,9 @@ class JevJudger:
             criteria={window: None for window in windows},
         )
 
-        response = await self._system_one_with_retry(state=state, questions=questions)
+        response = await self._system_one_with_retry(
+            state=state, questions=questions, stage="compile"
+        )
         self.metrics.record(response)
         capabilities = [
             capability["key"]
@@ -721,7 +735,9 @@ class JevJudger:
             criteria=outcome_criteria,
         )
 
-        response = await self._system_one_with_retry(state=state, questions=questions)
+        response = await self._system_one_with_retry(
+            state=state, questions=questions, stage="judgment"
+        )
         self.metrics.record(response)
 
         def probability(key: str) -> float:

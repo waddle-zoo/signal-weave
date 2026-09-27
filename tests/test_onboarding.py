@@ -30,6 +30,7 @@ from signalweave.store import (
     SQLiteDecisionReceiptStore,
     SQLiteInsightCardStore,
 )
+from signalweave.typesafe_adapter import JevPayloadError
 
 
 class SupersetCatalogDouble:
@@ -213,6 +214,14 @@ class LowRelevanceJudger(OnboardingJevDouble):
     async def rank_resources(self, goal, resources):
         del goal
         return {f"{resource.adapter}|{resource.resource}": 0.12 for resource in resources}
+
+
+class QuestionBudgetJevDouble(OnboardingJevDouble):
+    async def judge(self, state, card, plan, observations):
+        del state, card, plan, observations
+        raise JevPayloadError(
+            stage="judgment", observed_bytes=2_048, budget_bytes=1_024
+        )
 
 
 class AmbiguousCatalogJevDouble(OnboardingJevDouble):
@@ -1010,6 +1019,46 @@ async def test_payload_budget_failure_is_persisted_as_structured_receipt(tmp_pat
         "status": "exceeded",
     }
     assert receipt["result"]["jev_payload_budget"]["observed_bytes"] > 1_024
+
+
+@pytest.mark.asyncio
+async def test_question_budget_failure_is_persisted_as_structured_receipt(tmp_path):
+    server = make_server(tmp_path, judger=QuestionBudgetJevDouble())
+    server._test_runtime.card_store.save_card(
+        InsightCard(
+            id="question-budget-card",
+            title="Question budget card",
+            what_to_watch="Growth conversion.",
+            why_watch="Keep the judgment request bounded.",
+            sources=[
+                {
+                    "key": "growth",
+                    "adapter": "superset",
+                    "resource": "dashboard:7",
+                    "label": "Growth overview",
+                }
+            ],
+            status=InsightCardStatus.APPROVED,
+            principal_id="test-principal",
+            principal_tenant="default",
+        )
+    )
+
+    with pytest.raises(JevPayloadError, match="judgment Jev payload exceeded"):
+        await tool(server, "evaluate_insight_card")(
+            "question-budget-card", idempotency_key="daily:question-budget-card"
+        )
+
+    receipt = tool(server, "get_decision_receipt")(
+        idempotency_key="daily:question-budget-card"
+    )
+    assert receipt["receipt"]["status"] == "failed"
+    assert receipt["result"]["jev_payload_budget"] == {
+        "stage": "judgment",
+        "observed_bytes": 2_048,
+        "budget_bytes": 1_024,
+        "status": "exceeded",
+    }
 
 
 @pytest.mark.asyncio

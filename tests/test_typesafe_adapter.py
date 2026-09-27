@@ -222,9 +222,10 @@ async def test_jev_discovery_payload_budget_fails_before_transport(monkeypatch):
         description="x" * 3_000,
     )
 
-    with pytest.raises(JevPayloadError, match="exceeded the configured budget"):
+    with pytest.raises(JevPayloadError, match="onboarding Jev payload exceeded") as error_info:
         await judger.rank_resources("monitor the dashboard", [resource])
 
+    assert error_info.value.stage == "onboarding"
     assert FakeClient.calls == []
     assert judger.metrics.requests == 0
 
@@ -236,9 +237,10 @@ async def test_jev_question_payload_budget_fails_before_transport(monkeypatch):
     monkeypatch.setattr(typesafe_sdk, "Noul", FakeNoul)
     judger = JevJudger(api_key="synthetic-test-key", max_payload_bytes=1_024)
 
-    with pytest.raises(JevPayloadError, match="exceeded the configured budget"):
+    with pytest.raises(JevPayloadError, match="judgment Jev payload exceeded") as error_info:
         await judger._system_one_with_retry(
             state={"goal": "small"},
+            stage="judgment",
             questions={
                 "dynamic_card_question": FakeNoul(
                     instructions="x" * 3_000,
@@ -247,6 +249,7 @@ async def test_jev_question_payload_budget_fails_before_transport(monkeypatch):
             },
         )
 
+    assert error_info.value.stage == "judgment"
     assert FakeClient.calls == []
     assert judger.metrics.requests == 0
     assert judger.metrics.payload_bytes == 0
