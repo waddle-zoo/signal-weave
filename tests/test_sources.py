@@ -526,6 +526,71 @@ async def test_source_registry_bounds_local_scan_and_preserves_multiple_adapters
 
 
 @pytest.mark.asyncio
+async def test_source_registry_continues_multiple_provider_catalogs_with_opaque_cursor():
+    class PagedAdapter:
+        def __init__(self, name: str, pages: int):
+            self.name = name
+            self.pages = pages
+            self.cursors: list[str | None] = []
+
+        async def list_resources(self):
+            raise AssertionError("native search must not materialize the catalog")
+
+        async def search_resources(self, query, *, limit, cursor=None):
+            assert query == "revenue"
+            self.cursors.append(cursor)
+            page = int(cursor or 0)
+            start = page * 2
+            resources = [
+                ResourceDescriptor(
+                    adapter=self.name,
+                    resource=f"query:{self.name}-{index}",
+                    kind="query",
+                    title=f"{self.name} revenue {index}",
+                )
+                for index in range(start, min(start + limit, self.pages * 2))
+            ]
+            has_more = page + 1 < self.pages
+            return CatalogSearchPage(
+                resources=resources,
+                total_count=self.pages * 2,
+                has_more=has_more,
+                next_cursor=str(page + 1) if has_more else None,
+                provider=self.name,
+                strategy="paged-test-search",
+            )
+
+    exhausted = PagedAdapter("hex", pages=1)
+    continuing = PagedAdapter("trino", pages=2)
+    registry = SourceRegistry([exhausted, continuing])
+
+    first = await registry.search_resources("revenue", limit=4)
+    second = await registry.search_resources("revenue", limit=4, cursor=first.next_cursor)
+
+    assert first.has_more is True
+    assert first.next_cursor is not None and first.next_cursor.startswith("multi:")
+    assert first.total_count == 6
+    assert {resource.adapter for resource in first.resources} == {"hex", "trino"}
+    assert second.has_more is False
+    assert second.next_cursor is None
+    assert second.total_count == 6
+    assert {resource.resource for resource in second.resources} == {
+        "query:trino-2",
+        "query:trino-3",
+    }
+    assert exhausted.cursors == [None]
+    assert continuing.cursors == [None, "1"]
+
+
+@pytest.mark.asyncio
+async def test_source_registry_rejects_malformed_multi_provider_cursor():
+    registry = SourceRegistry([FakeAdapter()])
+
+    with pytest.raises(ValueError, match="multi-adapter catalog cursors"):
+        await registry.search_resources("revenue", cursor="provider-token")
+
+
+@pytest.mark.asyncio
 async def test_source_registry_does_not_overflow_bounded_catalog_page():
     registry = SourceRegistry([LargeLocalScanAdapter()])
 

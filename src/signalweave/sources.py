@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import inspect
 import json
 import re
@@ -66,6 +67,64 @@ def _bounded_local_search(
         reverse=True,
     )
     return ranked[:limit]
+
+
+def _encode_multi_adapter_cursor(
+    next_cursors: dict[str, str], total_counts: dict[str, int], page_size: int
+) -> str:
+    """Encode bounded continuation state without exposing provider internals."""
+    payload = json.dumps(
+        {
+            "version": 1,
+            "next": next_cursors,
+            "totals": total_counts,
+            "page_size": page_size,
+        },
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode("utf-8")
+    cursor = "multi:" + base64.urlsafe_b64encode(payload).decode("ascii").rstrip("=")
+    if len(cursor) > 500:
+        raise ValueError("multi-adapter catalog cursor exceeded the 500-character limit")
+    return cursor
+
+
+def _decode_multi_adapter_cursor(
+    cursor: str,
+) -> tuple[dict[str, str], dict[str, int], int]:
+    """Validate and decode registry-owned continuation state."""
+    if not cursor.startswith("multi:"):
+        raise ValueError("multi-adapter catalog cursors must use the registry format")
+    token = cursor.removeprefix("multi:")
+    try:
+        payload = json.loads(
+            base64.urlsafe_b64decode(token + "=" * (-len(token) % 4)).decode("utf-8")
+        )
+    except (ValueError, UnicodeDecodeError) as error:
+        raise ValueError("invalid multi-adapter catalog cursor") from error
+    if not isinstance(payload, dict) or payload.get("version") != 1:
+        raise ValueError("unsupported multi-adapter catalog cursor")
+    next_cursors = payload.get("next")
+    total_counts = payload.get("totals")
+    page_size = payload.get("page_size")
+    if (
+        not isinstance(next_cursors, dict)
+        or not isinstance(total_counts, dict)
+        or not isinstance(page_size, int)
+        or not 1 <= page_size <= 500
+    ):
+        raise ValueError("invalid multi-adapter catalog cursor payload")
+    if any(
+        not isinstance(key, str) or not isinstance(value, str)
+        for key, value in next_cursors.items()
+    ):
+        raise ValueError("multi-adapter catalog cursors must contain string provider cursors")
+    if any(
+        not isinstance(key, str) or not isinstance(value, int) or value < 0
+        for key, value in total_counts.items()
+    ):
+        raise ValueError("multi-adapter catalog totals must contain non-negative integers")
+    return dict(next_cursors), dict(total_counts), page_size
 
 
 class SourceAdapter(Protocol):
@@ -183,8 +242,9 @@ class SourceRegistry:
             raise ValueError("catalog search query must not be empty")
         if not 1 <= limit <= 500:
             raise ValueError("catalog search limit must be between 1 and 500")
+        multi_cursor: tuple[dict[str, str], dict[str, int]] | None = None
         if cursor and not adapter_name:
-            raise ValueError("a catalog cursor requires an explicit adapter name")
+            multi_cursor = _decode_multi_adapter_cursor(cursor)
         tenant_scope = self._tenant_scope(authorized_tenants)
         if tenant_scope is not None and not tenant_scope:
             return CatalogSearchPage(
@@ -200,14 +260,24 @@ class SourceRegistry:
         adapters = [
             adapter for adapter in adapters if self._adapter_is_in_scope(adapter, tenant_scope)
         ]
+        if multi_cursor is not None:
+            next_cursors, _, _ = multi_cursor
+            adapters = [adapter for adapter in adapters if adapter.name in next_cursors]
+            if not adapters:
+                raise ValueError("multi-adapter catalog cursor has no active providers")
         if not adapters:
             return CatalogSearchPage(
                 total_count=0,
                 provider="signalweave",
                 strategy="empty-catalog",
             )
-        per_adapter_limit = max(1, (limit + len(adapters) - 1) // len(adapters))
-        pages: list[CatalogSearchPage] = []
+        multi_mode = adapter_name is None and (multi_cursor is not None or len(adapters) > 1)
+        per_adapter_limit = (
+            multi_cursor[2]
+            if multi_cursor is not None
+            else max(1, (limit + len(adapters) - 1) // len(adapters))
+        )
+        pages: list[tuple[SourceAdapter, CatalogSearchPage]] = []
         for adapter in adapters:
             search = getattr(adapter, "search_resources", None)
             try:
@@ -215,9 +285,14 @@ class SourceRegistry:
                     supports_tenant_scope = tenant_scope is None or _accepts_keyword(
                         search, "authorized_tenants"
                     )
+                    provider_cursor = (
+                        cursor
+                        if adapter_name
+                        else (multi_cursor[0].get(adapter.name) if multi_cursor else None)
+                    )
                     search_kwargs: dict[str, object] = {
                         "limit": per_adapter_limit,
-                        "cursor": cursor,
+                        "cursor": provider_cursor,
                     }
                     if tenant_scope is not None and supports_tenant_scope:
                         search_kwargs["authorized_tenants"] = sorted(tenant_scope)
@@ -248,14 +323,17 @@ class SourceRegistry:
                     )
             except Exception as error:  # noqa: BLE001 - isolate one provider outage
                 pages.append(
-                    CatalogSearchPage(
-                        total_count=0,
-                        provider=adapter.name,
-                        strategy="adapter-error",
-                        warnings=[
-                            f"Adapter {adapter.name} catalog search failed: "
-                            f"{type(error).__name__}: {error}"
-                        ],
+                    (
+                        adapter,
+                        CatalogSearchPage(
+                            total_count=0,
+                            provider=adapter.name,
+                            strategy="adapter-error",
+                            warnings=[
+                                f"Adapter {adapter.name} catalog search failed: "
+                                f"{type(error).__name__}: {error}"
+                            ],
+                        ),
                     )
                 )
                 continue
@@ -279,7 +357,9 @@ class SourceRegistry:
                         ],
                     }
                 )
-            pages.append(page.model_copy(update={"resources": visible[:per_adapter_limit]}))
+            pages.append(
+                (adapter, page.model_copy(update={"resources": visible[:per_adapter_limit]}))
+            )
         if len(adapters) > 1:
             # Give every installed adapter a chance to contribute candidates.  A
             # simple concatenation would let alphabetically earlier adapters
@@ -287,20 +367,51 @@ class SourceRegistry:
             # systems (for example, SQL or Superset behind Airflow).
             resources = []
             for index in range(per_adapter_limit):
-                for page in pages:
+                for _, page in pages:
                     if index < len(page.resources) and len(resources) < limit:
                         resources.append(page.resources[index])
         else:
-            resources = list(pages[0].resources)
-        page = pages[0] if len(pages) == 1 else None
+            resources = list(pages[0][1].resources)
+        page = pages[0][1] if len(pages) == 1 and not multi_mode else None
+        if page is not None:
+            total_count = page.total_count
+            has_more = page.has_more
+            next_cursor = page.next_cursor
+            warnings = list(page.warnings)
+        else:
+            previous_totals = multi_cursor[1] if multi_cursor else {}
+            total_counts = {
+                **previous_totals,
+                **{adapter.name: page.total_count for adapter, page in pages},
+            }
+            next_cursors = {
+                adapter.name: page.next_cursor
+                for adapter, page in pages
+                if page.has_more and page.next_cursor
+            }
+            total_count = sum(total_counts.values())
+            has_more = bool(next_cursors) or any(page.has_more for _, page in pages)
+            next_cursor = (
+                _encode_multi_adapter_cursor(
+                    next_cursors, total_counts, per_adapter_limit
+                )
+                if has_more and next_cursors
+                else None
+            )
+            warnings = [warning for _, page in pages for warning in page.warnings]
+            if any(page.has_more and not page.next_cursor for _, page in pages):
+                warnings.append(
+                    "At least one adapter reported more catalog results without a cursor; "
+                    "that adapter was not continued."
+                )
         return CatalogSearchPage(
             resources=resources,
-            total_count=sum(page_item.total_count for page_item in pages),
-            has_more=any(page_item.has_more for page_item in pages),
-            next_cursor=page.next_cursor if page is not None else None,
+            total_count=total_count,
+            has_more=has_more,
+            next_cursor=next_cursor,
             provider=(page.provider if page is not None else "signalweave"),
             strategy=(page.strategy if page is not None else "multi-adapter-search"),
-            warnings=[warning for page_item in pages for warning in page_item.warnings],
+            warnings=warnings,
         )
 
     async def expand_related_resources(
