@@ -163,6 +163,28 @@ def test_preset_client_requires_secure_provider_urls():
 
 
 @pytest.mark.parametrize(
+    ("parameter", "value"),
+    [
+        ("max_retries", -1),
+        ("max_retries", 6),
+        ("max_retries", True),
+        ("retry_backoff_seconds", -0.1),
+        ("retry_backoff_seconds", 5.1),
+        ("retry_backoff_seconds", float("nan")),
+        ("retry_backoff_seconds", float("inf")),
+        ("retry_backoff_seconds", True),
+    ],
+)
+def test_preset_retry_policy_is_finite_and_bounded(parameter, value):
+    with pytest.raises(ValueError, match="Preset (max_retries|retry_backoff_seconds)"):
+        PresetCloudClient(
+            "https://workspace.preset.test",
+            access_token="preset-token",
+            **{parameter: value},
+        )
+
+
+@pytest.mark.parametrize(
     ("client_type", "field_name"),
     [(HexCloudClient, "Hex base_url"), (LookerCloudClient, "Looker base_url")],
 )
@@ -939,6 +961,30 @@ async def test_preset_retries_transient_rate_limit_with_bounded_backoff():
 
     assert metadata["id"] == 7
     assert calls == 2
+
+
+@pytest.mark.asyncio
+async def test_preset_retry_count_never_exceeds_hard_cap():
+    calls = 0
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        return httpx.Response(503, json={"message": "busy"})
+
+    client = PresetCloudClient(
+        "https://workspace.app.preset.test",
+        access_token="preset-token",
+        max_retries=5,
+        retry_backoff_seconds=0,
+        transport=httpx.MockTransport(handler),
+    )
+
+    with pytest.raises(httpx.HTTPStatusError):
+        await client.get_dashboard_metadata(7)
+
+    # One initial request plus the five permitted retries.
+    assert calls == 6
 
 
 @pytest.mark.parametrize(

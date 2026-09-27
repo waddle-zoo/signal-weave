@@ -169,6 +169,12 @@ keeps provider smoke tests and custom integrations from accidentally creating
 an unbounded response path without silently shrinking a customer's configured
 policy.
 
+Provider retries are bounded as well: the client permits at most five retries
+per request, with a finite backoff of at most five seconds (the defaults are
+two retries and 250 milliseconds). Invalid, non-finite, or oversized retry
+settings fail during client construction rather than turning a provider outage
+into an unbounded onboarding or monitoring run.
+
 After the configuration check, start with the no-credit bootstrap preflight
 before onboarding a card:
 

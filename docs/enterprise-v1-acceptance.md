@@ -66,6 +66,7 @@ returns an inspectable evidence bundle and receipt.
 | Jev budget covers onboarding as well as evaluation | The Jev adapter enforces the deployment's serialized request budget over both evidence state and typed question definitions on every request, including bounded Preset catalog ranking; an oversized discovery or card-question payload fails before the TypeSafe transport is opened, preserves its stage/byte details in an evaluation receipt, and cannot be downgraded to an optional-investigation warning. | Pass locally; live Jev billing/limits remain a deployment gate |
 | Explicit chart selection cannot widen accidentally | An omitted `chart_ids` field means “inspect the dashboard”; an explicitly supplied empty or blank selection fails before chart fan-out instead of silently expanding to every chart. | Pass locally; regression: `tests/test_superset_client.py::test_dashboard_snapshot_rejects_empty_selected_chart_ids` |
 | Malformed retry hints cannot destabilize backoff | Non-finite `Retry-After` values (`NaN`, infinities) are ignored, while finite values remain clamped to the bounded retry window. | Pass locally; regression: `tests/test_hosted_connections.py::test_preset_retry_after_ignores_non_finite_values` |
+| Preset retry settings cannot create unbounded provider work | Direct `PresetCloudClient` construction rejects negative, boolean, non-finite, or oversized retry settings; retries are capped at five per request and the hard-cap regression proves one initial request plus five retries on a persistent 503. | Pass locally; regressions: `tests/test_hosted_connections.py::test_preset_retry_policy_is_finite_and_bounded`, `tests/test_hosted_connections.py::test_preset_retry_count_never_exceeds_hard_cap` |
 | Preset response streams stay bounded | The configured response-byte policy is enforced while consuming the API-token exchange and workspace/dashboard streams, before parsing or forwarding the body. Chunked oversized responses fail closed. | Pass locally |
 | Provider-reported Preset row counts cannot bypass limits | The connector validates `rowcount` and `sql_rowcount` metadata in addition to materialized rows, and rejects malformed, fractional, negative, or non-finite counts before evidence reaches Jev. | Pass locally |
 | Preset low-level client default bounds | A directly constructed `PresetCloudClient` defaults to 500 rows and 1 MB; a 501-row standalone result is rejected without requiring an adapter policy. | Pass locally |
@@ -93,7 +94,7 @@ returns an inspectable evidence bundle and receipt.
 | Generated-shape anti-overfitting trial | A seeded generator creates 24 unfamiliar tenant workspaces / 192 charts per seed across five result envelopes, 12 visualization labels including an unknown/vendor extension, six parameter shapes (`metrics`, dict metrics, `x/y` visual measures, dimension count, spatial count, and `all_columns`), usable and unusable metric definitions, empty results, ambiguous numerics, and provider failures; the production Preset client/adapter passes catalog, scope, cache, retention, and safe-degradation assertions, then an independent report reviewer recomputes parameter and visualization coverage from each workspace result and rejects mutated pass-looking reports. A generated 64-chart dashboard stress test proves the provider aggregate byte budget fails closed; an engine test separately proves the multi-source serialized Jev budget fails before any Jev call. The same replay and reviewer now run as a four-seed CI matrix on commit `8957c67`. | 4/4 CI reports pass; 96 workspaces / 768 charts; synthetic provider and Jev only; live customer gates remain open |
 | Aggregate Preset enterprise proof pack | `make preset-enterprise-proof` runs the hosted connector, boundary, generated-shape, typed Jev, and runtime-shadow trials; each serialized report is independently reviewed and a separate aggregate reviewer verifies the complete five-case set, synthetic-only scope, delivery-disabled state, and explicit non-claims. The same no-credential proof pack runs as a dedicated CI job on every push to `main`, pull request, and manual workflow dispatch, retaining the JSON reports as downloadable CI artifacts. | 5/5 component reviews pass; aggregate review pass; no live provider or Jev requests |
 | Existing enterprise workflows remain the owner | MCP tools return typed decisions and evidence; SignalWeave does not execute arbitrary SQL, tools, DAGs, or notifications. | Pass |
-| Regression safety | Full repository tests and lint. | 491 passed, 2 skipped; Ruff clean |
+| Regression safety | Full repository tests and lint. | 499 passed, 2 skipped; Ruff clean |
 
 ## Reproduction
 
@@ -136,7 +137,7 @@ make local-superset-runtime-shadow-trial
 make local-superset-runtime-shadow-review
 ```
 
-The current verified regression result is `491 passed, 2 skipped` with Ruff
+The current verified regression result is `499 passed, 2 skipped` with Ruff
 clean. The environment preflight also rejects malformed Preset workspace or
 API-auth URLs (credentials, paths, queries, fragments, missing hosts, and
 non-numeric ports) and copied example sentinels such as `replace-me`,

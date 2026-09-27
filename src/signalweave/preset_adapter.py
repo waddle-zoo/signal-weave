@@ -26,6 +26,9 @@ class PresetPolicyError(ValueError):
 
 DEFAULT_PRESET_MAX_RESULT_ROWS = 500
 DEFAULT_PRESET_MAX_SNAPSHOT_BYTES = 1_000_000
+DEFAULT_PRESET_MAX_RETRIES = 2
+MAX_PRESET_RETRIES = 5
+MAX_PRESET_RETRY_BACKOFF_SECONDS = 5.0
 
 
 class PresetCloudClient(SupersetClient):
@@ -41,7 +44,7 @@ class PresetCloudClient(SupersetClient):
         api_base_url: str = "https://api.app.preset.io",
         max_result_rows: int | None = None,
         max_snapshot_bytes: int | None = None,
-        max_retries: int = 2,
+        max_retries: int = DEFAULT_PRESET_MAX_RETRIES,
         retry_backoff_seconds: float = 0.25,
         transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
@@ -54,10 +57,25 @@ class PresetCloudClient(SupersetClient):
             raise ValueError("Preset requires exactly one authentication mode")
         if not access_token and not (api_token_name and api_token_secret):
             raise ValueError("Preset requires access_token or api token name and secret")
-        if max_retries < 0:
-            raise ValueError("Preset max_retries must be non-negative")
-        if retry_backoff_seconds < 0:
-            raise ValueError("Preset retry_backoff_seconds must be non-negative")
+        if (
+            isinstance(max_retries, bool)
+            or not isinstance(max_retries, int)
+            or not 0 <= max_retries <= MAX_PRESET_RETRIES
+        ):
+            raise ValueError(
+                "Preset max_retries must be an integer between 0 and "
+                f"{MAX_PRESET_RETRIES}"
+            )
+        if (
+            isinstance(retry_backoff_seconds, bool)
+            or not isinstance(retry_backoff_seconds, (int, float))
+            or not math.isfinite(retry_backoff_seconds)
+            or not 0 <= retry_backoff_seconds <= MAX_PRESET_RETRY_BACKOFF_SECONDS
+        ):
+            raise ValueError(
+                "Preset retry_backoff_seconds must be finite and between 0 and "
+                f"{MAX_PRESET_RETRY_BACKOFF_SECONDS:g}"
+            )
         if max_result_rows is not None and max_result_rows < 1:
             raise ValueError("Preset max_result_rows must be positive")
         if max_snapshot_bytes is not None and max_snapshot_bytes < 1:
