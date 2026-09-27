@@ -10,6 +10,7 @@ report cannot be mistaken for customer acceptance.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 from typing import Any
@@ -24,6 +25,16 @@ REQUIRED_NOT_PROVEN = {
 
 def _is_nonempty_list(value: Any) -> bool:
     return isinstance(value, list) and bool(value)
+
+
+def _digest(value: Any) -> str:
+    serialized = json.dumps(
+        value,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
 
 
 def _path_delta(before: dict[str, int], after: dict[str, int]) -> dict[str, int]:
@@ -62,6 +73,32 @@ def review_report(report: dict[str, Any]) -> dict[str, Any]:
         if not isinstance(report.get("next_action"), str) or not report["next_action"]:
             findings.append("non-approved report has no review next action")
     else:
+        approval_basis = report.get("approval_basis")
+        onboarding_card = onboarding.get("card")
+        if not isinstance(approval_basis, dict):
+            findings.append("approved report has no exact-draft approval basis")
+        else:
+            if approval_basis.get("exact_draft_reused") is not True:
+                findings.append("approval was not bound to the exact reviewed draft")
+            if not isinstance(approval_basis.get("review_report"), str) or not approval_basis[
+                "review_report"
+            ]:
+                findings.append("approval basis has no reviewed report path")
+            if not isinstance(onboarding_card, dict):
+                findings.append("approved report onboarding card is missing")
+            else:
+                if approval_basis.get("card_id") != onboarding_card.get("id"):
+                    findings.append("approval basis card ID disagrees with the onboarding draft")
+                if approval_basis.get("card_version") != onboarding_card.get("version"):
+                    findings.append(
+                        "approval basis card version disagrees with the onboarding draft"
+                    )
+                if approval_basis.get("reviewed_card_digest") != _digest(onboarding_card):
+                    findings.append("approval basis digest does not match the onboarding draft")
+                if approval_basis.get("stored_card_digest") != approval_basis.get(
+                    "reviewed_card_digest"
+                ):
+                    findings.append("stored card digest differs from the reviewed draft")
         contract = report.get("provider_checks", {}).get("onboarding_contract")
         if contract != {"approval_required": True, "delivery_disabled": True}:
             findings.append("approval/delivery onboarding contract is not fail-closed")

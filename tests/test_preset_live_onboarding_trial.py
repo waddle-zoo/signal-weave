@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from types import SimpleNamespace
 
 import pytest
@@ -89,10 +90,38 @@ async def test_live_trial_requires_explicit_approval_before_shadow(monkeypatch, 
 
 
 @pytest.mark.asyncio
-async def test_live_trial_accepts_only_jev_delivery_disabled_shadow(monkeypatch):
+async def test_live_trial_accepts_only_jev_delivery_disabled_shadow(monkeypatch, tmp_path):
     provider_client = SimpleNamespace(requests_made=0, request_path_counts={})
     provider_adapter = PresetAdapter.__new__(PresetAdapter)
     provider_adapter.client = provider_client
+    draft_card = {"id": "card-1", "version": 3}
+    draft_report = {
+        "trial": "preset-live-onboarding-shadow",
+        "adapter": "preset__preset-env",
+        "tenant_id": "northstar",
+        "request": {
+            "goal": "Monitor growth",
+            "why": "Support the growth team",
+            "destination": "slack://growth",
+            "limit": 10,
+        },
+        "approval_requested": False,
+        "passed": False,
+        "onboarding": {
+            "status": "ready_for_approval",
+            "approval_required": True,
+            "delivery_enabled": False,
+            "card": draft_card,
+        },
+        "provider_checks": {
+            "provider_requests_before_onboarding": 0,
+            "provider_requests_after_onboarding": 1,
+            "provider_requests_for_onboarding": 1,
+            "provider_transport_used": True,
+            "provider_request_paths_before_onboarding": {},
+            "provider_request_paths_after_onboarding": {"/api/v1/dashboard/": 1},
+        },
+    }
 
     async def onboard(**kwargs):
         provider_client.requests_made += 1
@@ -161,6 +190,11 @@ async def test_live_trial_accepts_only_jev_delivery_disabled_shadow(monkeypatch)
                     _get=lambda name: provider_adapter,
             ),
             principal=SimpleNamespace(tenant_id="northstar"),
+            card_store=SimpleNamespace(
+                get_card=lambda card_id: SimpleNamespace(
+                    model_dump=lambda mode: draft_card
+                )
+            ),
             engine=SimpleNamespace(
                 judger=SimpleNamespace(name="jev-latest", metrics=metrics)
             ),
@@ -171,7 +205,6 @@ async def test_live_trial_accepts_only_jev_delivery_disabled_shadow(monkeypatch)
         "create_mcp",
         lambda runtime: FakeServer(
             {
-                "onboard_insight_card": onboard,
                 "approve_insight_card": approve,
                 "evaluate_insight_card": replay_evaluate,
                 "get_decision_receipt": lambda **kwargs: {
@@ -182,6 +215,8 @@ async def test_live_trial_accepts_only_jev_delivery_disabled_shadow(monkeypatch)
         ),
     )
 
+    draft_path = tmp_path / "draft.json"
+    draft_path.write_text(json.dumps(draft_report), encoding="utf-8")
     report = await trial.run_trial(
         goal="Monitor growth",
         why="Support the growth team",
@@ -189,6 +224,7 @@ async def test_live_trial_accepts_only_jev_delivery_disabled_shadow(monkeypatch)
         limit=10,
         destination="slack://growth",
         approve=True,
+        output=draft_path,
     )
 
     assert report["passed"] is True
@@ -198,6 +234,7 @@ async def test_live_trial_accepts_only_jev_delivery_disabled_shadow(monkeypatch)
         "approval_required": True,
         "delivery_disabled": True,
     }
+    assert report["approval_basis"]["exact_draft_reused"] is True
 
 
 @pytest.mark.asyncio
@@ -242,6 +279,96 @@ async def test_live_trial_auto_detects_custom_sole_preset_adapter(monkeypatch):
     )
 
     assert onboarded_adapter == ["preset__customer-workspace"]
+
+
+@pytest.mark.asyncio
+async def test_live_trial_rejects_a_mutated_reviewed_card(monkeypatch, tmp_path):
+    provider_adapter = PresetAdapter.__new__(PresetAdapter)
+    provider_adapter.client = SimpleNamespace(
+        requests_made=0,
+        request_path_counts={},
+    )
+    reviewed_card = {"id": "card-1", "version": 1}
+    draft_path = tmp_path / "draft.json"
+    draft_path.write_text(
+        json.dumps(
+            {
+                "trial": "preset-live-onboarding-shadow",
+                "adapter": "preset__preset-env",
+                "tenant_id": "northstar",
+                "request": {
+                    "goal": "Monitor growth",
+                    "why": "Support the growth team",
+                    "destination": "slack://growth",
+                    "limit": 10,
+                },
+                "approval_requested": False,
+                "passed": False,
+                "onboarding": {
+                    "status": "ready_for_approval",
+                    "card": reviewed_card,
+                },
+                "provider_checks": {"provider_transport_used": True},
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        trial,
+        "build_runtime",
+        lambda: SimpleNamespace(
+            sources=SimpleNamespace(
+                adapter_names=lambda: ["preset__preset-env"],
+                _get=lambda name: provider_adapter,
+            ),
+            principal=SimpleNamespace(tenant_id="northstar"),
+            card_store=SimpleNamespace(
+                get_card=lambda card_id: SimpleNamespace(
+                    model_dump=lambda mode: {"id": "card-1", "version": 2}
+                )
+            ),
+            engine=SimpleNamespace(judger=SimpleNamespace(name="jev-latest")),
+        ),
+    )
+
+    with pytest.raises(RuntimeError, match="no longer matches"):
+        await trial.run_trial(
+            goal="Monitor growth",
+            why="Support the growth team",
+            adapter="preset__preset-env",
+            limit=10,
+            destination="slack://growth",
+            approve=True,
+            output=draft_path,
+        )
+
+
+@pytest.mark.asyncio
+async def test_live_trial_approval_requires_a_review_artifact(monkeypatch):
+    provider_adapter = PresetAdapter.__new__(PresetAdapter)
+    provider_adapter.client = SimpleNamespace(requests_made=0, request_path_counts={})
+    monkeypatch.setattr(
+        trial,
+        "build_runtime",
+        lambda: SimpleNamespace(
+            sources=SimpleNamespace(
+                adapter_names=lambda: ["preset__preset-env"],
+                _get=lambda name: provider_adapter,
+            ),
+            principal=SimpleNamespace(tenant_id="northstar"),
+            engine=SimpleNamespace(judger=SimpleNamespace(name="jev-latest")),
+        ),
+    )
+
+    with pytest.raises(RuntimeError, match="approval requires"):
+        await trial.run_trial(
+            goal="Monitor growth",
+            why="Support the growth team",
+            adapter="preset__preset-env",
+            limit=10,
+            destination="slack://growth",
+            approve=True,
+        )
 
 
 @pytest.mark.asyncio

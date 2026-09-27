@@ -2,14 +2,21 @@ from __future__ import annotations
 
 from copy import deepcopy
 
-from evaluations.preset_live_onboarding_review import review_report
+from evaluations.preset_live_onboarding_review import _digest, review_report
 
 
 def _passing_report() -> dict:
-    return {
+    card = {"id": "card-1", "version": 3}
+    report = {
         "trial": "preset-live-onboarding-shadow",
         "adapter": "preset__customer-workspace",
         "tenant_id": "northstar",
+        "request": {
+            "goal": "Monitor growth",
+            "why": "Support the growth team",
+            "destination": "slack://growth",
+            "limit": 10,
+        },
         "approval_requested": True,
         "passed": True,
         "not_proven": [
@@ -18,7 +25,7 @@ def _passing_report() -> dict:
             "production delivery reliability or autonomous side effects",
             "managed SignalWeave hosting",
         ],
-        "onboarding": {"status": "ready_for_approval"},
+        "onboarding": {"status": "ready_for_approval", "card": card},
         "approval": {"status": "approved"},
         "evaluation": {
             "result": {
@@ -86,6 +93,15 @@ def _passing_report() -> dict:
             "all_resources_match_runtime_tenant": True,
         },
     }
+    report["approval_basis"] = {
+        "review_report": "draft.json",
+        "card_id": card["id"],
+        "card_version": card["version"],
+        "reviewed_card_digest": _digest(card),
+        "stored_card_digest": _digest(card),
+        "exact_draft_reused": True,
+    }
+    return report
 
 
 def test_independent_reviewer_accepts_complete_live_shadow_report():

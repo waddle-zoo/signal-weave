@@ -266,7 +266,7 @@ TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
 ```
 
 After inspecting the onboarding artifact and confirming the sources and
-delivery policy, run the separate approval target:
+delivery policy, run the separate approval target with the same output path:
 
 ```bash
 PRESET_TRIAL_GOAL="Monitor the executive growth dashboard for meaningful changes" \
@@ -274,6 +274,13 @@ PRESET_TRIAL_WHY="Tell Growth leadership when the evidence warrants investigatio
 TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
   make preset-live-trial-approve
 ```
+
+The approval target is bound to the exact draft artifact written by the first
+command. It loads the persisted card from the same SignalWeave store, checks
+the card ID, version, and canonical digest, and refuses to approve if the
+stored card or the request changed after review. It does not rerun discovery
+and silently approve a new draft. If a reviewer edits the card, run onboarding
+again and review the newly written artifact before approving it.
 
 The live runner auto-detects the sole configured Preset adapter, so it does
 not assume the default connection ID. Pass `--adapter` when multiple Preset
@@ -287,8 +294,11 @@ generated receipt must show `evaluator=jev-latest`, non-empty observations and
 evidence, at least one Preset chart-data request and one Jev request during the
 first evaluation, zero additional Preset or Jev requests during the replay,
 and `delivery_enabled=false` before the trial is considered successful. The
-runner records only non-secret Preset path counts for this transport proof. It
-still does not prove operator usefulness or production delivery reliability.
+approved report must also contain an exact-draft approval basis. The
+independent reviewer recomputes those invariants from the serialized report
+instead of trusting the runner's `passed` flag. The runner records only
+non-secret Preset path counts for this transport proof. It still does not prove
+operator usefulness or production delivery reliability.
 
 ## Can a hosted Preset customer use SignalWeave without hosting it?
 

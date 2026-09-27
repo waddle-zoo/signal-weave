@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import hashlib
 import json
 from pathlib import Path
 from typing import Any
@@ -54,6 +55,52 @@ def _path_delta(before: dict[str, int], after: dict[str, int]) -> dict[str, int]
     }
 
 
+def _canonical_digest(value: Any) -> str:
+    """Hash a review artifact without depending on JSON formatting."""
+
+    serialized = json.dumps(
+        value,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
+
+
+def _load_reviewed_draft(path: Path) -> dict[str, Any]:
+    """Load the exact draft artifact that a human is approving."""
+
+    try:
+        report = json.loads(path.read_text(encoding="utf-8"))
+    except OSError as error:
+        raise RuntimeError(f"could not read the onboarding draft report: {path}") from error
+    except json.JSONDecodeError as error:
+        raise RuntimeError(f"onboarding draft report is not valid JSON: {path}") from error
+    if not isinstance(report, dict):
+        raise RuntimeError("onboarding draft report must be a JSON object")
+    if report.get("trial") != "preset-live-onboarding-shadow":
+        raise RuntimeError("approval report is not a Preset onboarding shadow draft")
+    if report.get("approval_requested") is True:
+        raise RuntimeError("approval report has already been used for an approval run")
+    if report.get("passed") is True or "evaluation" in report:
+        raise RuntimeError("approval report already contains post-approval artifacts")
+    onboarding = report.get("onboarding")
+    if not isinstance(onboarding, dict):
+        raise RuntimeError("approval report does not contain an onboarding draft")
+    card = onboarding.get("card")
+    if not isinstance(card, dict) or not isinstance(card.get("id"), str):
+        raise RuntimeError("approval report does not contain a persisted card draft")
+    if onboarding.get("status") != "ready_for_approval":
+        raise RuntimeError("only a ready_for_approval draft can be approved")
+    checks = report.get("provider_checks")
+    if not isinstance(checks, dict) or checks.get("provider_transport_used") is not True:
+        raise RuntimeError("approval report does not prove the draft used Preset transport")
+    request = report.get("request")
+    if not isinstance(request, dict):
+        raise RuntimeError("approval report does not contain the original request")
+    return report
+
+
 def _resolve_preset_adapter(runtime: Any, requested: str | None) -> str:
     """Resolve a configured Preset route without assuming its connection ID."""
 
@@ -92,6 +139,7 @@ async def run_trial(
     destination: str,
     approve: bool,
     output: Path | None = None,
+    review_report: Path | None = None,
 ) -> dict[str, Any]:
     if not goal.strip() or not why.strip():
         raise ValueError("goal and why are required")
@@ -104,6 +152,48 @@ async def run_trial(
     if getattr(runtime.engine.judger, "name", None) != "jev-latest":
         raise RuntimeError("the live acceptance trial must run with the jev-latest judger")
     adapter = _resolve_preset_adapter(runtime, adapter)
+    reviewed_draft: dict[str, Any] | None = None
+    reviewed_card: dict[str, Any] | None = None
+    stored_card_payload: dict[str, Any] | None = None
+    review_path = review_report or output
+    if approve:
+        if review_path is None:
+            raise RuntimeError(
+                "approval requires --output or --review-report pointing to the previously "
+                "reviewed onboarding draft"
+            )
+        reviewed_draft = _load_reviewed_draft(review_path)
+        request = reviewed_draft["request"]
+        for key, current in (
+            ("goal", goal),
+            ("why", why),
+            ("destination", destination),
+            ("limit", limit),
+        ):
+            if request.get(key) != current:
+                raise RuntimeError(
+                    f"approval request does not match the reviewed draft for {key!r}"
+                )
+        reviewed_card = reviewed_draft["onboarding"]["card"]
+        if reviewed_draft.get("adapter") != adapter:
+            raise RuntimeError("approval request does not match the reviewed Preset adapter")
+        if reviewed_draft.get("tenant_id") != runtime.principal.tenant_id:
+            raise RuntimeError("approval request does not match the reviewed tenant")
+        try:
+            stored_card = runtime.card_store.get_card(reviewed_card["id"])
+        except (AttributeError, KeyError) as error:
+            raise RuntimeError(
+                "the reviewed card is not present in the configured card store; "
+                "run approval against the same persistent store as the draft"
+            ) from error
+        stored_card_payload = stored_card.model_dump(mode="json")
+        if _canonical_digest(reviewed_card) != _canonical_digest(stored_card_payload):
+            raise RuntimeError(
+                "the persisted card no longer matches the reviewed draft; "
+                "re-run onboarding and review the new artifact"
+            )
+        if reviewed_card.get("version") != stored_card_payload.get("version"):
+            raise RuntimeError("the persisted card version no longer matches the reviewed draft")
     preset_source = runtime.sources._get(adapter)
     provider_client = getattr(preset_source, "client", None)
     provider_requests_before = getattr(provider_client, "requests_made", None)
@@ -117,22 +207,27 @@ async def run_trial(
     if isinstance(provider_paths_before, dict):
         provider_paths_before = dict(provider_paths_before)
     server = create_mcp(runtime)
-    onboarding = await _tool(server, "onboard_insight_card")(
-        what_to_watch=goal,
-        why_watch=why,
-        adapter=adapter,
-        limit=limit,
-        title=goal[:120],
-        delivery_methods=[
-            {
-                "key": "owner-review",
-                "outcome": "notify",
-                "label": "Owner review",
-                "destination": destination,
-                "instructions": "Send the evidence bundle to the existing owner workflow.",
-            }
-        ],
-    )
+    if reviewed_card is None:
+        onboarding = await _tool(server, "onboard_insight_card")(
+            what_to_watch=goal,
+            why_watch=why,
+            adapter=adapter,
+            limit=limit,
+            title=goal[:120],
+            delivery_methods=[
+                {
+                    "key": "owner-review",
+                    "outcome": "notify",
+                    "label": "Owner review",
+                    "destination": destination,
+                    "instructions": "Send the evidence bundle to the existing owner workflow.",
+                }
+            ],
+        )
+    else:
+        # Approval must operate on the persisted draft the operator reviewed;
+        # it must not silently create and approve a second discovery result.
+        onboarding = reviewed_draft["onboarding"]
     provider_requests_after_onboarding = getattr(provider_client, "requests_made", None)
     provider_paths_after_onboarding = getattr(provider_client, "request_path_counts", None)
     if isinstance(provider_paths_after_onboarding, dict):
@@ -142,10 +237,34 @@ async def run_trial(
         if isinstance(provider_requests_after_onboarding, int)
         else None
     )
+    if reviewed_draft is not None:
+        # The approval process intentionally does not rerun onboarding. Carry
+        # forward the first run's non-secret transport proof instead of
+        # pretending that a second process observed those requests.
+        prior_checks = reviewed_draft["provider_checks"]
+        provider_requests_before = prior_checks.get(
+            "provider_requests_before_onboarding"
+        )
+        provider_requests_after_onboarding = prior_checks.get(
+            "provider_requests_after_onboarding"
+        )
+        provider_requests_for_onboarding = prior_checks.get(
+            "provider_requests_for_onboarding"
+        )
+        provider_paths_before = prior_checks.get("provider_request_paths_before_onboarding")
+        provider_paths_after_onboarding = prior_checks.get(
+            "provider_request_paths_after_onboarding"
+        )
     report: dict[str, Any] = {
         "trial": "preset-live-onboarding-shadow",
         "adapter": adapter,
         "tenant_id": runtime.principal.tenant_id if runtime.principal else None,
+        "request": {
+            "goal": goal,
+            "why": why,
+            "destination": destination,
+            "limit": limit,
+        },
         "onboarding": onboarding,
         "approval_requested": approve,
         "provider_checks": {
@@ -168,6 +287,15 @@ async def run_trial(
             "managed SignalWeave hosting",
         ],
     }
+    if reviewed_card is not None and stored_card_payload is not None:
+        report["approval_basis"] = {
+            "review_report": str(review_path),
+            "card_id": reviewed_card["id"],
+            "card_version": reviewed_card.get("version"),
+            "reviewed_card_digest": _canonical_digest(reviewed_card),
+            "stored_card_digest": _canonical_digest(stored_card_payload),
+            "exact_draft_reused": True,
+        }
     if not approve:
         report["next_action"] = (
             "review the onboarding response, then rerun with --approve "
@@ -336,9 +464,17 @@ def main() -> None:
     parser.add_argument(
         "--approve",
         action="store_true",
-        help="Explicitly approve when onboarding reports ready_for_approval, then run shadow",
+        help=(
+            "Approve the exact ready_for_approval draft in --review-report or --output, "
+            "then run shadow"
+        ),
     )
     parser.add_argument("--output", type=Path)
+    parser.add_argument(
+        "--review-report",
+        type=Path,
+        help="Previously written draft report to bind to the approval step",
+    )
     args = parser.parse_args()
     if not 1 <= args.limit <= 500:
         parser.error("--limit must be between 1 and 500")
@@ -351,6 +487,7 @@ def main() -> None:
             destination=args.destination,
             approve=args.approve,
             output=args.output,
+            review_report=args.review_report,
         )
     )
     if args.approve and not report["passed"]:
