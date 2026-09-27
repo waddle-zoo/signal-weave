@@ -17,7 +17,15 @@ make preset-trial
 independent serialized-report reviewer; the reviewer must pass before the
 trial is treated as evidence.
 
-The current focused run covers 100 passing cases:
+For the complete Preset slice, including the credential/tenant boundary,
+generated-shape generalization, Jev handoff, runtime shadow path, and a
+separate aggregate reviewer, run:
+
+```bash
+make preset-enterprise-proof
+```
+
+The focused connector proof covers the following boundaries:
 
 | Boundary | What is proven |
 | --- | --- |
