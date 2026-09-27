@@ -932,6 +932,47 @@ async def test_preset_known_success_query_status_remains_supported(status):
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("row_count_key", ["rowcount", "sql_rowcount"])
+async def test_preset_provider_reported_row_count_cannot_bypass_result_limit(row_count_key):
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={"result": [{"data": [{"revenue": 1}], row_count_key: 11}]},
+        )
+
+    client = PresetCloudClient(
+        "https://workspace.app.preset.test",
+        access_token="preset-token",
+        max_result_rows=10,
+        transport=httpx.MockTransport(handler),
+    )
+
+    with pytest.raises(PresetPolicyError, match="max_result_rows"):
+        await client.chart_data(
+            {"id": 101, "params": {"metrics": ["revenue"], "datasource": "17__table"}},
+        )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("bad_value", [True, -1, 1.5, "11"])
+async def test_preset_invalid_provider_reported_row_count_fails_closed(bad_value):
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"result": [{"data": [], "rowcount": bad_value}]})
+
+    client = PresetCloudClient(
+        "https://workspace.app.preset.test",
+        access_token="preset-token",
+        max_result_rows=10,
+        transport=httpx.MockTransport(handler),
+    )
+
+    with pytest.raises(PresetPolicyError, match="invalid rowcount"):
+        await client.chart_data(
+            {"id": 101, "params": {"metrics": ["revenue"], "datasource": "17__table"}},
+        )
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("provider_error", ["query failed", {"message": "query failed"}])
 async def test_preset_embedded_query_error_fails_closed_inside_http_200(provider_error):
     def handler(request: httpx.Request) -> httpx.Response:

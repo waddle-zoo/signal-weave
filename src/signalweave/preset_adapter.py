@@ -209,6 +209,31 @@ class PresetCloudClient(SupersetClient):
             return None
         return min(max(seconds, 0.0), 5.0)
 
+    @staticmethod
+    def _reported_row_counts(item: dict[str, Any]) -> list[int]:
+        """Read provider row-count metadata without trusting malformed values."""
+
+        counts: list[int] = []
+        payloads: list[dict[str, Any]] = [item]
+        nested = item.get("data")
+        if isinstance(nested, dict):
+            payloads.append(nested)
+        for payload in payloads:
+            for key in ("rowcount", "sql_rowcount"):
+                value = payload.get(key)
+                if value is None:
+                    continue
+                if isinstance(value, bool) or not isinstance(value, (int, float)):
+                    raise PresetPolicyError(
+                        f"Preset chart response contained an invalid {key} value"
+                    )
+                if value < 0 or int(value) != value:
+                    raise PresetPolicyError(
+                        f"Preset chart response contained an invalid {key} value"
+                    )
+                counts.append(int(value))
+        return counts
+
     async def _request_with_retries(
         self,
         client: httpx.AsyncClient,
@@ -325,11 +350,12 @@ class PresetCloudClient(SupersetClient):
                     "Preset chart response reported a query error"
                 )
         if self.max_result_rows is not None:
-            row_count = sum(
-                len(self._rows_from_result_item(item))
-                for item in envelopes
-                if isinstance(item, dict)
-            )
+            row_count = 0
+            for item in envelopes:
+                row_count += len(self._rows_from_result_item(item))
+                reported_counts = self._reported_row_counts(item)
+                if reported_counts:
+                    row_count = max(row_count, max(reported_counts))
             if row_count > self.max_result_rows:
                 raise PresetPolicyError(
                     "Preset chart response exceeded the configured max_result_rows limit"
