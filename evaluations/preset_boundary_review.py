@@ -114,6 +114,8 @@ def review_report(report: dict[str, Any]) -> dict[str, Any]:
         value is True for value in checks.values()
     ):
         findings.append("serialized boundary checks are not all true")
+    if not isinstance(checks, dict) or checks.get("sqlite_tenant_metadata_tamper_rejected") is not True:
+        findings.append("SQLite tenant metadata tamper rejection is missing")
     missing = REQUIRED_NOT_PROVEN - set(report.get("not_proven", []))
     if missing:
         findings.append("report omitted non-claims: " + ", ".join(sorted(missing)))

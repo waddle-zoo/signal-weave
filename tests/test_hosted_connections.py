@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import sqlite3
 
 import httpx
 import pytest
@@ -236,6 +237,27 @@ def test_sqlite_connection_store_persists_metadata_without_credentials(tmp_path)
     assert b"preset-secret" not in path.read_bytes()
     with pytest.raises(KeyError):
         store.get(item.id, tenant_id="other-company")
+
+
+def test_sqlite_connection_store_rejects_tenant_payload_tampering(tmp_path):
+    path = tmp_path / "connections.db"
+    store = SQLiteHostedConnectionStore(str(path))
+    item = connection(HostedProvider.PRESET)
+    store.save(item)
+
+    database = sqlite3.connect(path)
+    try:
+        tampered = item.model_copy(update={"tenant_id": "other-company"})
+        database.execute(
+            "UPDATE hosted_connections SET payload = ? WHERE connection_id = ?",
+            (json.dumps(tampered.model_dump(mode="json")), item.id),
+        )
+        database.commit()
+    finally:
+        database.close()
+
+    with pytest.raises(ValueError, match="storage boundary"):
+        store.get(item.id, tenant_id=item.tenant_id)
 
 
 def test_policy_refuses_live_mode_without_explicit_permission():

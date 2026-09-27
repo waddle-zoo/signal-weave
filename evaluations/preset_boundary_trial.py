@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import sqlite3
 import tempfile
 from pathlib import Path
 
@@ -382,6 +383,29 @@ def _storage_check() -> bool:
     return restored == connection and b"opaque-secret" not in serialized_db
 
 
+def _storage_tamper_check() -> bool:
+    connection = _connection("tenant-storage-tamper", auth_mode=HostedAuthMode.BEARER)
+    with tempfile.TemporaryDirectory(prefix="signalweave-boundary-tamper-") as directory:
+        path = Path(directory) / "connections.sqlite"
+        store = SQLiteHostedConnectionStore(str(path))
+        store.save(connection)
+        tampered = connection.model_copy(update={"tenant_id": "foreign-tenant"})
+        database = sqlite3.connect(path)
+        try:
+            database.execute(
+                "UPDATE hosted_connections SET payload = ? WHERE connection_id = ?",
+                (json.dumps(tampered.model_dump(mode="json")), connection.id),
+            )
+            database.commit()
+        finally:
+            database.close()
+        try:
+            store.get(connection.id, tenant_id=connection.tenant_id)
+        except ValueError as error:
+            return "storage boundary" in str(error)
+        return False
+
+
 def _policy_checks() -> dict[str, object]:
     policies = {
         "metadata_only": HostedDataPolicy(mode=HostedDataMode.METADATA_ONLY),
@@ -446,6 +470,7 @@ async def run_trial() -> dict[str, object]:
         **{f"policy_{key}": value for key, value in policies["checks"].items()},
         "tenant_provider_requests": tenants["provider_requests"] == 0,
         "sqlite_metadata_is_secret_free": _storage_check(),
+        "sqlite_tenant_metadata_tamper_rejected": _storage_tamper_check(),
     }
     return {
         "trial": "preset-boundary-matrix",

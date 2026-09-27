@@ -421,25 +421,36 @@ class SQLiteHostedConnectionStore:
         database = sqlite3.connect(self.path, timeout=30)
         try:
             row = database.execute(
-                "SELECT payload FROM hosted_connections WHERE connection_id = ? AND tenant_id = ?",
+                "SELECT tenant_id, payload FROM hosted_connections WHERE connection_id = ? AND tenant_id = ?",
                 (connection_id, tenant_id),
             ).fetchone()
         finally:
             database.close()
         if row is None:
             raise KeyError(f"hosted connection is not available in tenant {tenant_id}")
-        return HostedConnection.model_validate(json.loads(row[0]))
+        connection = HostedConnection.model_validate(json.loads(row[1]))
+        if connection.tenant_id != row[0] or connection.tenant_id != tenant_id:
+            raise ValueError("hosted connection metadata tenant does not match its storage boundary")
+        return connection
 
     def list(self, *, tenant_id: str) -> list[HostedConnection]:
         database = sqlite3.connect(self.path, timeout=30)
         try:
             rows = database.execute(
-                "SELECT payload FROM hosted_connections WHERE tenant_id = ? ORDER BY connection_id",
+                "SELECT tenant_id, payload FROM hosted_connections WHERE tenant_id = ? ORDER BY connection_id",
                 (tenant_id,),
             ).fetchall()
         finally:
             database.close()
-        return [HostedConnection.model_validate(json.loads(row[0])) for row in rows]
+        connections: list[HostedConnection] = []
+        for stored_tenant_id, payload in rows:
+            connection = HostedConnection.model_validate(json.loads(payload))
+            if connection.tenant_id != stored_tenant_id or connection.tenant_id != tenant_id:
+                raise ValueError(
+                    "hosted connection metadata tenant does not match its storage boundary"
+                )
+            connections.append(connection)
+        return connections
 
 
 def build_hosted_adapter(
