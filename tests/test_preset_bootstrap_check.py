@@ -11,7 +11,7 @@ def _wire_environment(monkeypatch, adapter):
     monkeypatch.setattr(
         bootstrap,
         "validate_preset_environment",
-        lambda: {"tenant_id": "northstar"},
+        lambda: {"tenant_id": "northstar", "principal_mode": "static"},
     )
     monkeypatch.setattr(
         bootstrap, "build_preset_adapter_from_environment", lambda: adapter

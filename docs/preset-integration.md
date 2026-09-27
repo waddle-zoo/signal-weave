@@ -121,7 +121,9 @@ make preset-bootstrap-check
 
 This authenticates the configured Preset connection and reads one bounded
 dashboard catalog page. It verifies tenant/principal configuration and that
-the runtime is Jev-only, but makes zero Jev calls and never reads chart data.
+the runtime is Jev-only; token deployments report static tenant/principal
+identity while OIDC deployments report request-scoped identity. It makes zero
+Jev calls and never reads chart data.
 It fails for an empty workspace so a customer does not mistake a configured
 credential for a usable onboarding target.
 

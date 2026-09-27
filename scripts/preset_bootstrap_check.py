@@ -95,7 +95,8 @@ async def run(
         },
         "checks": {
             "jev_runtime_configured": jev_mode_configured,
-            "tenant_principal_configured": True,
+            "identity_scope_configured": True,
+            "static_tenant_principal_configured": configuration["principal_mode"] == "static",
             "preset_catalog_request_succeeded": True,
             "workspace_has_dashboard": bool(dashboards),
             "jev_calls_made": jev_requests == 0,
