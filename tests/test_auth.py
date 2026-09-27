@@ -171,6 +171,14 @@ def test_oidc_settings_require_tls_and_explicit_identity_configuration(monkeypat
     assert settings.issuer_url == "http://issuer.example.test"
 
 
+def test_oidc_settings_reject_malformed_origin_port(monkeypatch):
+    monkeypatch.setenv("SIGNALWEAVE_OIDC_ISSUER_URL", "https://issuer.example.test:not-a-port")
+    monkeypatch.setenv("SIGNALWEAVE_OIDC_AUDIENCE", "signalweave")
+
+    with pytest.raises(RuntimeError, match="must be a valid URL"):
+        OIDCSettings.from_env()
+
+
 @pytest.mark.parametrize(
     ("variable", "value"),
     [

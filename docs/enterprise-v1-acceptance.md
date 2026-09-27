@@ -37,7 +37,7 @@ returns an inspectable evidence bundle and receipt.
 | Request identity reaches every sensitive operation | OIDC JWT verifier plus MCP-native bearer middleware; tenant/principal are derived from verified claims, never tool arguments. Metric-query cards and workflow replay snapshots are tenant-scoped too; OIDC webhook requests use the verified bearer principal. Token-authenticated Preset deployments fail closed without a static tenant/principal pair. | Pass locally; external IdP replay remains a deployment gate |
 | OIDC deployment configuration fails before request traffic | The zero-network Preset configuration preflight rejects empty/malformed tenant, principal, and scope claim paths plus invalid JWKS TTL values before a shared deployment can start with request-time identity failures. | Pass locally; external IdP replay remains a deployment gate |
 | Local OIDC MCP replay preserves Preset tenant isolation | `tests/test_oidc_http_integration.py` verifies signed discovery/JWKS validation, required scopes, tenant-scoped card access, webhook rejection for a foreign card, two tenant-bound Preset connections receiving exactly their own adapter/provider calls, and the production `build_runtime()` environment bootstrap rejecting foreign-tenant provider access. | 3 tests pass locally; external IdP replay remains a deployment gate |
-| OIDC discovery cannot redirect key retrieval insecurely | Configured and discovered issuer/JWKS URLs are validated for HTTPS and safe URL shape; a discovered HTTP `jwks_uri` is rejected before any HTTP JWKS request. | Pass locally |
+| OIDC discovery cannot redirect key retrieval insecurely | Configured and discovered issuer/JWKS URLs are validated for HTTPS, safe URL shape, and valid ports; a discovered HTTP `jwks_uri` is rejected before any HTTP JWKS request. | Pass locally |
 | Production Preset startup reuses the identity preflight | `build_runtime()` invokes the same configuration contract before registering an environment Preset adapter: token mode requires a static trusted tenant/principal, while OIDC mode permits request-scoped identity and requires valid OIDC settings. | Pass locally |
 | Preset provider URLs cannot downgrade to HTTP or defer malformed origins | Environment bootstrap, the hosted connection model, and direct `PresetCloudClient` construction require HTTPS origins without credentials, paths, queries, fragments, or malformed ports; a legacy `SIGNALWEAVE_ALLOW_INSECURE_PROVIDER` setting does not weaken the check. | Pass locally |
 | Preset provider redirects fail closed | Preset token-exchange and workspace HTTP clients explicitly disable redirects; a 3xx response produces no second-host request and cannot forward a bearer token. | Pass locally; shared-service egress controls remain open |
@@ -87,7 +87,7 @@ returns an inspectable evidence bundle and receipt.
 | Generated-shape anti-overfitting trial | A seeded generator creates 24 unfamiliar tenant workspaces / 192 charts across five result envelopes, 12 visualization labels including an unknown/vendor extension, usable and unusable metric definitions, empty results, ambiguous numerics, and provider failures; the production Preset client/adapter passes catalog, scope, cache, retention, and safe-degradation assertions, then an independent report reviewer recomputes visualization coverage from each workspace result and rejects mutated pass-looking reports. A generated 64-chart dashboard stress test proves the provider aggregate byte budget fails closed; an engine test separately proves the multi-source serialized Jev budget fails before any Jev call. | Pass locally; provider and live Jev gates remain open |
 | Aggregate Preset enterprise proof pack | `make preset-enterprise-proof` runs the hosted connector, boundary, generated-shape, typed Jev, and runtime-shadow trials; each serialized report is independently reviewed and a separate aggregate reviewer verifies the complete five-case set, synthetic-only scope, delivery-disabled state, and explicit non-claims. | 5/5 component reviews pass; aggregate review pass; no live provider or Jev requests |
 | Existing enterprise workflows remain the owner | MCP tools return typed decisions and evidence; SignalWeave does not execute arbitrary SQL, tools, DAGs, or notifications. | Pass |
-| Regression safety | Full repository tests and lint. | 448 passed, 2 skipped; Ruff clean |
+| Regression safety | Full repository tests and lint. | 449 passed, 2 skipped; Ruff clean |
 
 ## Reproduction
 
@@ -130,7 +130,7 @@ make local-superset-runtime-shadow-trial
 make local-superset-runtime-shadow-review
 ```
 
-The current verified regression result is `448 passed, 2 skipped` with Ruff
+The current verified regression result is `449 passed, 2 skipped` with Ruff
 clean. The environment preflight also rejects malformed Preset workspace or
 API-auth URLs (credentials, paths, queries, fragments, missing hosts, and
 non-numeric ports) before provider or Jev traffic; the same malformed-origin

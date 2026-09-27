@@ -69,7 +69,14 @@ def _claim(payload: dict[str, Any], path: str) -> Any:
 def _validate_oidc_url(name: str, value: str) -> None:
     """Validate configured or discovered OIDC URLs before making a request."""
 
-    parsed = urlsplit(value)
+    try:
+        parsed = urlsplit(value)
+        hostname = parsed.hostname
+        # ``urlsplit().hostname`` alone does not validate malformed ports.
+        # Force parsing before OIDC discovery or JWKS retrieval.
+        _validated_port = parsed.port
+    except ValueError as error:
+        raise RuntimeError(f"{name} must be a valid URL") from error
     insecure_allowed = os.getenv("SIGNALWEAVE_ALLOW_INSECURE_OIDC") == "1"
     if parsed.scheme != "https" and not (parsed.scheme == "http" and insecure_allowed):
         raise RuntimeError(
@@ -77,7 +84,7 @@ def _validate_oidc_url(name: str, value: str) -> None:
             "only for an isolated local test"
         )
     if (
-        not parsed.hostname
+        not hostname
         or parsed.username
         or parsed.password
         or parsed.query
