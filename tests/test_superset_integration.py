@@ -44,36 +44,36 @@ async def test_local_superset_dashboard_data_round_trip():
     assert snapshot is not None, "fixture has no dashboard with populated chart data"
     assert snapshot.charts
 
-    chart_with_baseline = next(
+    chart_with_observations = next(
         (
             chart
             for chart in snapshot.charts
-            if any(observation.baseline is not None for observation in chart.observations)
+            if chart.observations
         ),
         None,
     )
-    assert chart_with_baseline is not None, "fixture has no chart with baseline observations"
+    assert chart_with_observations is not None, "fixture has no chart with observations"
 
     timeseries = await client.dashboard_snapshot(
-        snapshot.id, chart_ids=[chart_with_baseline.id]
+        snapshot.id, chart_ids=[chart_with_observations.id]
     )
     assert timeseries.charts[0].observations
-    assert any(
-        observation.baseline is not None
-        for observation in timeseries.charts[0].observations
-    )
+    assert timeseries.charts[0].metrics
 
     card_source = SourceRef(
         key="integration-dashboard",
         adapter="superset",
         resource=f"dashboard:{snapshot.id}",
         label=snapshot.title,
-        parameters={"chart_ids": [chart_with_baseline.id]},
+        parameters={"chart_ids": [chart_with_observations.id]},
     )
     resource = await SupersetAdapter(client).inspect(card_source)
     assert resource.source_key == "integration-dashboard"
     assert resource.metadata["provider"] == "superset"
-    assert resource.observations[0].baseline is not None
+    assert resource.observations
+    assert {observation.metric for observation in resource.observations} <= set(
+        timeseries.charts[0].metrics
+    )
 
 
 @pytest.mark.asyncio
