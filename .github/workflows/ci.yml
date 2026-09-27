@@ -74,7 +74,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for attempt in $(seq 1 40); do
+          for attempt in $(seq 1 100); do
             if curl --fail --silent --show-error http://127.0.0.1:8088/health >/dev/null; then
               exit 0
             fi
