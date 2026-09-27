@@ -41,6 +41,75 @@ jobs:
       - name: Run tests
         run: uv run python -m pytest
 
+  local-superset-chart-matrix:
+    name: local Superset chart matrix
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --locked --extra dev
+
+      - name: Start local Superset fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          touch "$RUNNER_TEMP/typesafe_api_key"
+          TYPESAFE_API_KEY_FILE="$RUNNER_TEMP/typesafe_api_key" \
+            docker compose up -d --build superset
+
+      - name: Wait for Superset health
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 40); do
+            if curl --fail --silent --show-error http://127.0.0.1:8088/health >/dev/null; then
+              exit 0
+            fi
+            sleep 3
+          done
+          docker compose ps --all
+          docker compose logs --tail=160 superset
+          exit 1
+
+      - name: Run every-chart matrix
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          uv run python scripts/superset_chart_matrix.py \
+            | tee artifacts/superset-chart-matrix.json
+
+      - name: Run live Superset integration tests
+        env:
+          RUN_SUPERSET_INTEGRATION: "1"
+        run: uv run pytest tests/test_superset_integration.py -q
+
+      - name: Upload Superset matrix report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: local-superset-chart-matrix-${{ github.run_id }}
+          path: artifacts/superset-chart-matrix.json
+          if-no-files-found: ignore
+
+      - name: Tear down local Superset fixture
+        if: always()
+        shell: bash
+        run: docker compose down -v
+
   hosted-preset-proof:
     name: hosted Preset contract proof
     runs-on: ubuntu-latest
