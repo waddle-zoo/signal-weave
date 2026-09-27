@@ -74,9 +74,10 @@ without calling Jev. The result below was refreshed on 2026-09-27:
 The run also caught a real provider-shape issue: Superset's dashboard chart
 endpoint requires the canonical trailing-slash path and a saved chart query
 context. SignalWeave now uses that path and, only when dashboard metadata
-explicitly contains no native filters, falls back to the saved-chart POST
-query. A dashboard with native filters or an unrelated provider error still
-fails closed rather than analyzing unfiltered data. Superset documents that
+shows that every native filter is omitted on initial load, falls back to the
+bounded saved-chart POST query. A native filter with a static default or
+`defaultToFirstItem`, or an unrelated provider error, still fails closed rather
+than analyzing unfiltered data. Superset documents that
 the dashboard-scoped endpoint applies `filters_dashboard_id` using the query
 context stored when the chart was saved:
 <https://superset.apache.org/developer-docs/api/return-payload-data-response-for-a-chart/>.

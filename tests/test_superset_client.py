@@ -695,7 +695,13 @@ async def test_dashboard_snapshot_never_falls_back_when_native_filters_exist():
                         "position_json": {
                             "chart-42": {"type": "CHART", "meta": {"chartId": 42}}
                         },
-                        "json_metadata": '{"native_filters":[{"id":"region"}]}',
+                        "json_metadata": (
+                            '{"native_filter_configuration":[{"id":"region",'
+                            '"controlValues":{"defaultToFirstItem":false},'
+                            '"defaultDataMask":{"extraFormData":{"filters":['
+                            '{"col":"region","op":"IN","val":["ca"]}]},'
+                            '"filterState":{"value":["ca"]}}}]}'
+                        ),
                     }
                 },
             )
@@ -727,6 +733,68 @@ async def test_dashboard_snapshot_never_falls_back_when_native_filters_exist():
     assert snapshot.charts[0].error is not None
     assert "400 Bad Request" in snapshot.charts[0].error
     assert "POST /api/v1/chart/data" not in calls
+
+
+@pytest.mark.asyncio
+async def test_dashboard_snapshot_falls_back_for_native_filters_without_defaults():
+    calls: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append(f"{request.method} {request.url.path}")
+        if request.url.path == "/api/v1/dashboard/7":
+            return httpx.Response(
+                200,
+                json={
+                    "result": {
+                        "id": 7,
+                        "dashboard_title": "Initial-load growth",
+                        "position_json": {
+                            "chart-42": {"type": "CHART", "meta": {"chartId": 42}}
+                        },
+                        "json_metadata": (
+                            '{"default_filters":"{}",'
+                            '"native_filter_configuration":[{"id":"region",'
+                            '"controlValues":{"defaultToFirstItem":false},'
+                            '"defaultDataMask":{"extraFormData":{},"filterState":{}}}]}'
+                        ),
+                    }
+                },
+            )
+        if request.url.path == "/api/v1/chart/42":
+            return httpx.Response(
+                200,
+                json={
+                    "result": {
+                        "id": 42,
+                        "slice_name": "Revenue",
+                        "params": '{"datasource":"1__table","metrics":["value"]}',
+                    }
+                },
+            )
+        if request.url.path == "/api/v1/chart/42/data/":
+            return httpx.Response(
+                400,
+                json={"message": "Chart has no query context saved. Please save the chart again."},
+            )
+        if request.url.path == "/api/v1/chart/data":
+            return httpx.Response(200, json={"result": [{"data": [{"value": 7}]}]})
+        raise AssertionError(f"unexpected request: {request.method} {request.url}")
+
+    client = SupersetClient("http://superset.test", transport=httpx.MockTransport(handler))
+    snapshot = await client.dashboard_snapshot(7)
+
+    assert snapshot.charts[0].observations
+    assert snapshot.charts[0].data_scope == "chart_query_fallback"
+    assert snapshot.scope_telemetry == {
+        "dashboard_scoped_requests": 0,
+        "chart_query_fallbacks": 1,
+    }
+    assert calls == [
+        "GET /api/v1/dashboard/7",
+        "GET /api/v1/chart/42",
+        "GET /api/v1/chart/42/data/",
+        "POST /api/v1/chart/data",
+    ]
 
 
 def test_dashboard_chart_array_metadata_is_discovered_without_position_json():

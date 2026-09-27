@@ -826,7 +826,7 @@ class SupersetClient:
         if not include_data:
             return snapshot
 
-        allow_unscoped_fallback = self._dashboard_has_no_native_filters(metadata)
+        allow_unscoped_fallback = self._dashboard_allows_unscoped_fallback(metadata)
         scope_telemetry: dict[str, int] = {
             "dashboard_scoped_requests": 0,
             "chart_query_fallbacks": 0,
@@ -961,8 +961,17 @@ class SupersetClient:
         )
 
     @staticmethod
-    def _dashboard_has_no_native_filters(metadata: dict[str, Any]) -> bool:
-        """Allow a narrow fallback only when dashboard filter state is explicit."""
+    def _dashboard_allows_unscoped_fallback(metadata: dict[str, Any]) -> bool:
+        """Allow fallback only when it matches the dashboard's initial state.
+
+        Superset's chart-data endpoint needs a saved query context before it
+        can apply ``filters_dashboard_id``. Older or imported charts may have
+        no saved context even though their form-data is enough to rebuild a
+        bounded chart query. Falling back is safe only when every native
+        filter is omitted on the dashboard's initial load: a static default
+        or ``defaultToFirstItem`` can change the result and therefore keeps
+        the dashboard-scoped request fail-closed.
+        """
 
         raw = metadata.get("json_metadata")
         if not isinstance(raw, str):
@@ -973,7 +982,40 @@ class SupersetClient:
             return False
         if not isinstance(payload, dict):
             return False
-        return not any(
-            payload.get(key)
-            for key in ("native_filters", "native_filter_configuration", "filter_scopes")
-        )
+        default_filters = payload.get("default_filters")
+        if default_filters not in (None, "", "{}"):
+            try:
+                parsed_defaults = (
+                    json.loads(default_filters)
+                    if isinstance(default_filters, str)
+                    else default_filters
+                )
+            except json.JSONDecodeError:
+                return False
+            if parsed_defaults not in ({}, None, ""):
+                return False
+
+        configuration = payload.get("native_filter_configuration")
+        if configuration in (None, []):
+            # Legacy metadata may expose only a truthy native_filters or
+            # filter_scopes marker. Without per-filter default state, do not
+            # guess that a reconstructed query is equivalent.
+            return not any(payload.get(key) for key in ("native_filters", "filter_scopes"))
+        if not isinstance(configuration, list):
+            return False
+
+        for native_filter in configuration:
+            if not isinstance(native_filter, dict):
+                return False
+            control_values = native_filter.get("controlValues")
+            if isinstance(control_values, dict) and control_values.get("defaultToFirstItem"):
+                return False
+            if control_values is not None and not isinstance(control_values, dict):
+                # Unknown control-value shapes are not safe to interpret.
+                return False
+            default_mask = native_filter.get("defaultDataMask")
+            if not isinstance(default_mask, dict):
+                return False
+            if default_mask.get("extraFormData") or default_mask.get("filterState"):
+                return False
+        return True
