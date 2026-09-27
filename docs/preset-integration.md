@@ -120,6 +120,12 @@ instead of becoming a provider-side invalid or unbounded request. Saved numeric
 policy; zero and negative values become `1`, while boolean or malformed values
 fail closed before provider I/O.
 
+The low-level `PresetCloudClient` is bounded even when used without a
+`PresetAdapter`: it defaults to 500 result rows and a 1 MB response. The
+adapter can only lower those limits to match a connection policy. This keeps
+provider smoke tests and custom integrations from accidentally creating an
+unbounded response path.
+
 After the configuration check, start with the no-credit bootstrap preflight
 before onboarding a card:
 

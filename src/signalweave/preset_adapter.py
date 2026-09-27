@@ -25,6 +25,10 @@ class PresetPolicyError(ValueError):
     """Raised when a provider response violates the connection data policy."""
 
 
+DEFAULT_PRESET_MAX_RESULT_ROWS = 500
+DEFAULT_PRESET_MAX_SNAPSHOT_BYTES = 1_000_000
+
+
 class PresetCloudClient(SupersetClient):
     """Read-only Preset Cloud client with API-token or bearer authentication."""
 
@@ -36,8 +40,8 @@ class PresetCloudClient(SupersetClient):
         api_token_name: str | None = None,
         api_token_secret: str | None = None,
         api_base_url: str = "https://api.app.preset.io",
-        max_result_rows: int | None = None,
-        max_snapshot_bytes: int | None = None,
+        max_result_rows: int = DEFAULT_PRESET_MAX_RESULT_ROWS,
+        max_snapshot_bytes: int = DEFAULT_PRESET_MAX_SNAPSHOT_BYTES,
         max_retries: int = 2,
         retry_backoff_seconds: float = 0.25,
         transport: httpx.AsyncBaseTransport | None = None,
@@ -65,6 +69,10 @@ class PresetCloudClient(SupersetClient):
             raise ValueError("Preset max_retries must be non-negative")
         if retry_backoff_seconds < 0:
             raise ValueError("Preset retry_backoff_seconds must be non-negative")
+        if max_result_rows < 1:
+            raise ValueError("Preset max_result_rows must be positive")
+        if max_snapshot_bytes < 1:
+            raise ValueError("Preset max_snapshot_bytes must be positive")
         super().__init__(workspace_url)
         self._token = access_token
         self._api_token_name = api_token_name
