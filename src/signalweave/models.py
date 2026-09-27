@@ -563,7 +563,13 @@ class Evidence(BaseModel):
 
 
 class ResourceSnapshot(BaseModel):
-    """A bounded, typed snapshot returned by a source adapter."""
+    """A bounded, typed snapshot returned by a source adapter.
+
+    ``captured_at`` records when SignalWeave received the snapshot.  Adapters
+    that can prove when the underlying result was produced should populate
+    ``source_captured_at`` so freshness checks measure the data rather than
+    the retrieval request.
+    """
 
     source_key: str
     adapter: str
@@ -576,6 +582,7 @@ class ResourceSnapshot(BaseModel):
     error: str | None = None
     source_url: str | None = None
     captured_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    source_captured_at: datetime | None = None
     contract: ResourceContract = Field(default_factory=ResourceContract)
 
 

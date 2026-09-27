@@ -813,7 +813,7 @@ class InsightEngine:
                     }
                 )
             if resource is not None and card.max_source_age_hours is not None:
-                captured_at = resource.captured_at
+                captured_at = resource.source_captured_at or resource.captured_at
                 if captured_at.tzinfo is None:
                     captured_at = captured_at.replace(tzinfo=timezone.utc)
                 age_hours = (datetime.now(timezone.utc) - captured_at).total_seconds() / 3600

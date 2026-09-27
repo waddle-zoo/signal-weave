@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Iterable
+from datetime import datetime, timezone
 from typing import Any
 
 import httpx
@@ -122,6 +123,24 @@ def _project_id(resource: str) -> str:
     if kind != "project" or not separator or not identifier:
         raise ValueError("Hex resources must use project:<id>")
     return identifier
+
+
+def _completed_at(run: dict[str, Any] | None) -> datetime | None:
+    """Return a provider-confirmed completion time without trusting bad input."""
+    if not isinstance(run, dict):
+        return None
+    for key in ("completedAt", "finishedAt", "endedAt"):
+        value = run.get(key)
+        if not isinstance(value, str) or not value.strip():
+            continue
+        try:
+            captured_at = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        if captured_at.tzinfo is None:
+            captured_at = captured_at.replace(tzinfo=timezone.utc)
+        return captured_at
+    return None
 
 
 def _observations_from_rows(source_key: str, rows: list[dict[str, Any]]) -> list[Observation]:
@@ -303,6 +322,9 @@ class HexAdapter:
                         for key in ("runId", "status", "startedAt", "completedAt", "url")
                         if latest.get(key) is not None
                     }
+        source_captured_at = _completed_at(latest)
+        if source_captured_at is not None:
+            metadata["source_captured_at"] = source_captured_at.isoformat()
         return ResourceSnapshot(
             source_key=source.key,
             adapter=self.name,
@@ -314,5 +336,6 @@ class HexAdapter:
             metadata=metadata,
             error=error,
             source_url=project.get("url"),
+            source_captured_at=source_captured_at,
             contract=_contract(self.tenant_id),
         )

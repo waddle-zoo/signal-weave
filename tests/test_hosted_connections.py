@@ -1612,7 +1612,15 @@ async def test_hex_adapter_reads_published_run_without_starting_one():
         if request.url.path == "/api/v1/projects/retention/runs":
             return httpx.Response(
                 200,
-                json={"runs": [{"runId": "run-1", "status": "completed"}]},
+                json={
+                    "runs": [
+                        {
+                            "runId": "run-1",
+                            "status": "completed",
+                            "completedAt": "2026-09-26T12:00:00Z",
+                        }
+                    ]
+                },
             )
         if request.url.path == "/api/v1/cells/cell-1/output":
             return httpx.Response(
@@ -1638,6 +1646,8 @@ async def test_hex_adapter_reads_published_run_without_starting_one():
     assert resources[0].contract.tenant_id == "northstar"
     assert snapshot.observations[0].metric == "retained"
     assert snapshot.observations[0].current == 0.71
+    assert snapshot.source_captured_at is not None
+    assert snapshot.source_captured_at.isoformat() == "2026-09-26T12:00:00+00:00"
 
 
 @pytest.mark.asyncio

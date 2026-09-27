@@ -1047,6 +1047,53 @@ async def test_old_required_source_snapshot_is_not_automatic():
     assert "hours old" in run.result.evidence[-1].statement
 
 
+async def test_provider_capture_time_controls_freshness_over_retrieval_time():
+    source = SourceRef(
+        key="cached-hex",
+        adapter="hex",
+        resource="project:retention",
+        label="Retention project",
+    )
+    card = card_for(
+        card_id="card-provider-capture-time",
+        title="Provider capture time",
+        source=source,
+        delivery_methods=[
+            DeliveryMethod(
+                key="ops",
+                outcome=Outcome.NOTIFY,
+                label="Ops",
+                destination="slack://ops",
+            )
+        ],
+    ).model_copy(update={"max_source_age_hours": 24.0})
+    resource = ResourceSnapshot(
+        source_key=source.key,
+        adapter=source.adapter,
+        resource=source.resource,
+        title=source.label,
+        captured_at=datetime.now(timezone.utc),
+        source_captured_at=datetime.now(timezone.utc) - timedelta(hours=25),
+        observations=[
+            Observation(
+                source_key=source.key,
+                subject_id="retention",
+                subject_label="Retention",
+                metric="retained",
+                current=0.71,
+                baseline=0.80,
+                change_pct=-11.25,
+            )
+        ],
+    )
+
+    run = await InsightEngine(SafetyTestDouble()).evaluate(card, [resource])
+
+    assert run.result.outcome == Outcome.INSUFFICIENT_DATA
+    assert run.result.delivery_methods == []
+    assert "hours old" in run.result.evidence[-1].statement
+
+
 async def test_semantic_outcome_without_matching_delivery_method_is_downgraded():
     class UnconfiguredNotifyJudger(SafetyTestDouble):
         async def judge(self, state, card, plan, observations):
