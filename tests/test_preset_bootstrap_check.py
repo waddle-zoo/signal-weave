@@ -264,3 +264,4 @@ async def test_dashboard_readiness_reports_all_chart_remediations(monkeypatch):
     assert report["dashboard_probe"]["charts_with_observations"] == 2
     assert report["dashboard_probe"]["remediations"]
     assert report["checks"]["dashboard_readiness_probe"] is False
+    assert report["not_proven"][0] == "business usefulness beyond the dashboard readiness probe"

@@ -189,9 +189,13 @@ async def run(
         and (chart_probe is None or chart_probe["passed"])
         and (dashboard_probe is None or dashboard_probe["passed"]),
         "not_proven": [
-            "chart-level permissions and semantic quality"
-            if chart_probe is None
-            else "business usefulness beyond the selected chart probe",
+            (
+                "business usefulness beyond the dashboard readiness probe"
+                if dashboard_probe is not None and chart_probe is None
+                else "chart-level permissions and semantic quality"
+                if chart_probe is None
+                else "business usefulness beyond the selected chart probe"
+            ),
             "a human-approved card or Jev shadow decision",
             "managed SignalWeave hosting",
         ],
