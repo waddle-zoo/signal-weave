@@ -41,14 +41,17 @@ def review_report(report: dict[str, Any]) -> dict[str, Any]:
         "foreign_list_is_empty",
         "foreign_authorize_skips_provider",
         "connection_routes_are_distinct",
+        "provider_requests",
         "visible_tenants",
     }
     if not isinstance(tenants, dict) or not required_tenants.issubset(tenants):
         findings.append("tenant boundary coverage is incomplete")
     else:
-        for key in required_tenants - {"visible_tenants"}:
+        for key in required_tenants - {"visible_tenants", "provider_requests"}:
             if tenants.get(key) is not True:
                 findings.append(f"tenant boundary check failed: {key}")
+        if tenants.get("provider_requests") != 0:
+            findings.append("tenant authorization made a provider request")
         if tenants.get("visible_tenants") != ["tenant-a"]:
             findings.append("tenant listing was not narrowed to the requested tenant")
 

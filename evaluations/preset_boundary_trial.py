@@ -45,8 +45,13 @@ def _connection(tenant_id: str, *, auth_mode: HostedAuthMode) -> HostedConnectio
     )
 
 
-def _transport_must_not_be_called(request: httpx.Request) -> httpx.Response:
-    raise AssertionError(f"provider was contacted before authorization: {request.url}")
+class _RequestCounter:
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def __call__(self, request: httpx.Request) -> httpx.Response:
+        self.calls += 1
+        raise AssertionError(f"provider was contacted before authorization: {request.url}")
 
 
 def _credential_checks() -> dict[str, bool]:
@@ -133,10 +138,11 @@ async def _tenant_checks() -> dict[str, object]:
     else:
         foreign_credential_rejected = False
 
+    transport = _RequestCounter()
     adapter = build_hosted_adapter(
         first,
         vault,
-        transport=httpx.MockTransport(_transport_must_not_be_called),
+        transport=httpx.MockTransport(transport),
     )
     result = await adapter.authorize(
         SourceRef(
@@ -155,6 +161,7 @@ async def _tenant_checks() -> dict[str, object]:
         "foreign_authorize_skips_provider": result is None,
         "connection_routes_are_distinct": hosted_adapter_name(first)
         != hosted_adapter_name(second),
+        "provider_requests": transport.calls,
         "visible_tenants": sorted(
             connection.tenant_id for connection in store.list(tenant_id="tenant-a")
         ),
@@ -232,6 +239,7 @@ async def run_trial() -> dict[str, object]:
         **{f"credential_{key}": value for key, value in credentials.items()},
         **{f"tenant_{key}": value for key, value in tenants.items() if isinstance(value, bool)},
         **{f"policy_{key}": value for key, value in policies["checks"].items()},
+        "tenant_provider_requests": tenants["provider_requests"] == 0,
         "sqlite_metadata_is_secret_free": _storage_check(),
     }
     return {
@@ -240,7 +248,7 @@ async def run_trial() -> dict[str, object]:
         "tenant_boundary": tenants,
         "data_policy": policies,
         "checks": checks,
-        "provider_requests": 0,
+        "provider_requests": tenants["provider_requests"],
         "typesafe_requests": 0,
         "passed": all(value is True for value in checks.values()),
         "not_proven": [
