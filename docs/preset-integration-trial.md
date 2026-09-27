@@ -146,12 +146,13 @@ make preset-enterprise-proof
 
 This runs the hosted connector, credential/tenant boundary, generated-shape,
 typed Jev contract, and full runtime-shadow trials, then invokes each
-independent reviewer against its serialized report. It writes the aggregate
-report to `artifacts/preset-enterprise-proof.json` and component reports below
-`artifacts/preset-enterprise-proof-components/`. The command uses synthetic
-Preset and TypeSafe transports only; a pass proves local integration and
-fail-closed boundaries, not a real Preset entitlement, live Jev semantics, or
-managed SignalWeave hosting.
+independent reviewer against its serialized report, followed by a separate
+aggregate reviewer that verifies the complete case set and proof scope. It
+writes the aggregate report to `artifacts/preset-enterprise-proof.json` and
+component reports below `artifacts/preset-enterprise-proof-components/`. The
+command uses synthetic Preset and TypeSafe transports only; a pass proves local
+integration and fail-closed boundaries, not a real Preset entitlement, live Jev
+semantics, or managed SignalWeave hosting.
 
 The runtime shadow report also records provider catalog-search fan-out. The
 Preset adapter tries the exact title phrase and at most six fallback terms per

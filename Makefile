@@ -60,6 +60,8 @@ preset-runtime-shadow-review:
 preset-enterprise-proof:
 	uv run python evaluations/preset_enterprise_proof.py \
 		--output artifacts/preset-enterprise-proof.json
+	uv run python evaluations/preset_enterprise_proof_review.py \
+		artifacts/preset-enterprise-proof.json
 
 local-superset-runtime-shadow-trial:
 	uv run python -m evaluations.local_superset_runtime_shadow_trial \
