@@ -249,7 +249,7 @@ class InsightEngine:
         context = context_override or await self._load_context(card, resources)
         self._assert_jev_payload_budget(
             {
-                "card": card.model_dump(mode="json"),
+                "card": card.execution_payload(),
                 "sources": [resource.model_dump(mode="json") for resource in resources],
                 "context": context.model_dump(mode="json") if context else None,
             },
@@ -467,8 +467,8 @@ class InsightEngine:
         try:
             decision = await selector(
                 {
-                    "card": card.model_dump(mode="json"),
-                    "insight_card": card.model_dump(mode="json"),
+                    "card": card.execution_payload(),
+                    "insight_card": card.execution_payload(),
                     "insight_plan": plan.model_dump(mode="json"),
                     "observations": [item.model_dump(mode="json") for item in observations],
                     "evidence": [
@@ -664,8 +664,8 @@ class InsightEngine:
         evidence.extend(source_error_evidence)
         evidence.extend(context_facts_as_evidence(context))
         state: dict[str, Any] = {
-            "card": card.model_dump(mode="json"),
-            "insight_card": card.model_dump(mode="json"),
+            "card": card.execution_payload(),
+            "insight_card": card.execution_payload(),
             "insight_plan": plan.model_dump(mode="json"),
             "sources": [resource.model_dump(mode="json") for resource in resources],
             "observations": [observation.model_dump(mode="json") for observation in observations],

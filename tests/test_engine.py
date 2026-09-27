@@ -24,6 +24,49 @@ def evaluation_catalog():
     return {case.id: case for case in load_evaluation_cases()}
 
 
+def test_insight_card_execution_payload_excludes_audit_and_routing_state():
+    card = InsightCard(
+        id="execution-payload-card",
+        title="Execution payload",
+        what_to_watch="Revenue movement",
+        why_watch="Route meaningful change",
+        decision_guidance="Ignore ordinary movement; investigate material change.",
+        sources=[
+            SourceRef(
+                key="dashboard",
+                adapter="superset",
+                resource="dashboard:1",
+                label="Executive dashboard",
+            )
+        ],
+        delivery_methods=[
+            DeliveryMethod(
+                key="owner",
+                outcome=Outcome.NOTIFY,
+                label="Owner",
+                destination="slack://private-owner-channel",
+                instructions="Notify only for supported change.",
+            )
+        ],
+    )
+
+    payload = card.execution_payload()
+
+    assert payload["decision_guidance"] == card.decision_guidance
+    assert payload["delivery_methods"] == [
+        {
+            "key": "owner",
+            "outcome": "notify",
+            "label": "Owner",
+            "instructions": "Notify only for supported change.",
+        }
+    ]
+    assert "onboarding_review" not in payload
+    assert "onboarding_review_history" not in payload
+    assert "onboarding_corrections" not in payload
+    assert "destination" not in payload["delivery_methods"][0]
+
+
 class JevTestDouble:
     """Test-only stand-in for Jev; expected labels live in evaluations/data."""
 

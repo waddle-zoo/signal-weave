@@ -32,6 +32,15 @@ async def _run_loaded(card_path: str | Path, *, verbose: bool = False) -> dict[s
             "live card acceptance requires a card with status='approved'; "
             "approve it through SignalWeave before running a shadow check"
         )
+    review = card.onboarding_review
+    if review is None or review.readiness_status != "ready_for_approval":
+        raise RuntimeError(
+            "live card acceptance requires a persisted onboarding review with "
+            "readiness_status='ready_for_approval'; approve the card through "
+            "SignalWeave instead of bypassing onboarding"
+        )
+    if review.card_id != card.id:
+        raise RuntimeError("live card acceptance requires an onboarding review for this card")
     runtime = build_runtime()
     missing_adapters = sorted(
         {source.adapter for source in card.sources} - set(runtime.sources.adapter_names())

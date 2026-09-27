@@ -12,6 +12,7 @@ production delivery.
 | Onboarding retrieval | 8 deliberately different enterprise cases across SaaS, retail, fintech, marketplace, logistics, and sparse catalogs | 8/8 required-candidate recall; 8/8 safe review-preserving outcomes; 6/8 exact recommended sets; 0 tenant leaks; 0 governed-role disagreements |
 | Everything tracking | 6 company shapes, 12 workflows, 60 cases, 36 source adapters, 7–8 sources per case, two unrelated decoys | 53/60 exact outcomes (88.3%); 100% required-evidence recall; 0 unsafe automatic actions; 24 unsafe baseline actions; median Jev latency 532 ms; p95 662 ms |
 | Northstar local Superset runtime | Production `build_runtime()` and `live_card_check.py` against dashboard 1 | 10 charts; 25 normalized observations; 36 evidence items; 2 live Jev requests; 2.51 s end-to-end; typed result probabilities `ignore=0.01`, `investigate=0.54`, `notify=0.45`; delivery disabled |
+| Northstar production MCP lifecycle | Live discovery → free-form onboarding → persisted review → approval → evaluation → idempotent replay through the registered MCP tools | 1 approved card; `ready_for_approval` review; 1 live Jev request; 25 observations; 36 evidence items; 25,765 Jev input tokens; `notify` at 0.72; 1 receipt after replay; 0 duplicate provider or Jev calls on replay; delivery disabled |
 | Northstar real-row replay, original card | Six counterfactual cases built from local Northstar row distributions and validated against the live local Superset dashboard | 5/6 correct; 1 false notify on a modest -6% movement; 0 missed notify; source-unavailable case failed safe |
 | Northstar real-row replay, clarified card | Same six cases and evidence; added an explicit owner policy: ignore below 10%, notify only after material corroboration, otherwise investigate | 6/6 correct; 0 false notify; 0 missed notify |
 
@@ -33,6 +34,12 @@ findings. Expected labels were held outside the Jev request.
   card did not define a numeric boundary for ordinary movement; the live run
   exposed a false notify. Adding the explicit owner policy corrected that case
   without changing the runtime or source data.
+- The production lifecycle now keeps onboarding and audit state out of the
+  Jev execution payload. Before this fix, an approved card carrying its
+  persisted candidate catalog and review history could exceed the TypeSafe
+  request budget. The runtime now sends only execution-relevant card context;
+  the live MCP lifecycle completed without that failure, while the review and
+  approval records remain persisted for governance.
 
 This is the intended division of responsibility: humans define what matters
 and what outcomes mean; SignalWeave retrieves and packages the evidence; Jev
@@ -50,6 +57,9 @@ gates, thresholds, and delivery safety.
 - No Slack, email, incident, or other external destination was contacted.
 - Live Jev billing, rate limits, and customer-specific semantic correctness
   still require an authorized pilot with operator labels.
+- The live MCP lifecycle used a local Northstar Superset and shadow delivery;
+  it proves the integration contract and bounded decision path, not that every
+  customer-authored card will be semantically correct without operator review.
 
 ## Reproduction
 

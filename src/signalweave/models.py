@@ -675,6 +675,39 @@ class InsightCard(BaseModel):
                 raise ValueError("compiled_plan may only select card delivery methods")
         return self
 
+    def execution_payload(self) -> dict[str, Any]:
+        """Return the bounded card context that may be sent to Jev.
+
+        Onboarding receipts and correction history are durable audit/retrieval
+        records, not execution instructions. Sending them on every evaluation
+        duplicates the catalog and can exhaust a provider's token budget after
+        a card has accumulated review history. Delivery endpoints are also
+        application routing data rather than semantic evidence.
+        """
+
+        payload = self.model_dump(mode="json")
+        for field in (
+            "compiled_plan",
+            "onboarding_review",
+            "onboarding_review_history",
+            "onboarding_corrections",
+            "status",
+            "approved_by",
+            "approved_at",
+            "principal_id",
+            "principal_tenant",
+        ):
+            payload.pop(field, None)
+        payload["delivery_methods"] = [
+            {
+                key: value
+                for key, value in method.items()
+                if key != "destination"
+            }
+            for method in payload.get("delivery_methods", [])
+        ]
+        return payload
+
 
 class InsightCardProposal(BaseModel):
     """A human-reviewable card assembled from a natural-language goal."""

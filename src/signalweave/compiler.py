@@ -55,8 +55,8 @@ async def compile_with_typesafe(
     """Compile owner language into the fixed capabilities this service executes."""
     state = state or {}
     state = {
-        "card": card.model_dump(mode="json"),
-        "insight_card": card.model_dump(mode="json"),
+        "card": card.execution_payload(),
+        "insight_card": card.execution_payload(),
         "sources": state.get("sources", []),
         "available_capabilities": [
             {"key": key, "description": description}

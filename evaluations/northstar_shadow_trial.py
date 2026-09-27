@@ -386,16 +386,27 @@ def _card() -> InsightCard:
             "a material revenue decline is corroborated across the business; route ambiguous "
             "or conflicting movement to analytics for investigation; ignore ordinary movement."
         ),
+        decision_guidance=(
+            "Apply this owner-defined policy in order: if any required source is unavailable, "
+            "return insufficient_data. If the primary revenue movement is less than 10 percent "
+            "in absolute value and there is no severe operational incident, return ignore; do "
+            "not notify or route to analytics. Notify leadership only when revenue declines at "
+            "least 15 percent and at least two channels plus conversion or finance corroborate "
+            "the decline. Return investigate for isolated, conflicting, or otherwise ambiguous "
+            "movement."
+        ),
         watch_for=[
             "Net sales revenue moves materially below its comparable baseline.",
             "Two or more sales channels corroborate a material revenue decline.",
             "Web conversion or support backlog provides related context for the movement.",
             "Finance and operational sources agree enough to support an automatic route.",
+            "Absolute movement below 10 percent is ordinary noise and must be ignored, not routed for investigation.",
         ],
         questions=[
             "What changed materially and which channels are most relevant?",
             "Is the movement corroborated across the related sources?",
             "Should leadership be notified or should analytics investigate first?",
+            "Which ordered policy outcome applies: insufficient_data, ignore for sub-10-percent ordinary movement, notify for material corroborated decline, or investigate?",
         ],
         sources=[
             SourceRef(
