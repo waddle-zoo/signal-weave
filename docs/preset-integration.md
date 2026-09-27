@@ -231,8 +231,11 @@ connections are installed and the operator has selected one explicitly.
 
 This is an acceptance test against a real workspace, not a synthetic benchmark;
 it consumes live Jev calls and must be run with a customer-approved shadow card
-policy. The generated receipt must show `evaluator=jev-latest`, evidence, and
-`delivery_enabled=false` before the trial is considered successful.
+policy. The runner also verifies that onboarding returned
+`approval_required=true` and `delivery_enabled=false` before approval. The
+generated receipt must show `evaluator=jev-latest`, evidence, and
+`delivery_enabled=false` before the trial is considered successful. It still
+does not prove operator usefulness or production delivery reliability.
 
 ## Can a hosted Preset customer use SignalWeave without hosting it?
 

@@ -87,7 +87,12 @@ async def test_live_trial_requires_explicit_approval_before_shadow(monkeypatch, 
 @pytest.mark.asyncio
 async def test_live_trial_accepts_only_jev_delivery_disabled_shadow(monkeypatch):
     async def onboard(**kwargs):
-        return {"status": "ready_for_approval", "card": {"id": "card-1"}}
+        return {
+            "status": "ready_for_approval",
+            "approval_required": True,
+            "delivery_enabled": False,
+            "card": {"id": "card-1"},
+        }
 
     async def approve(*args, **kwargs):
         return {"status": "approved", "card": {"id": "card-1", "version": 3}}
@@ -176,6 +181,10 @@ async def test_live_trial_accepts_only_jev_delivery_disabled_shadow(monkeypatch)
     assert report["passed"] is True
     assert report["summary"]["evaluator"] == "jev-latest"
     assert report["summary"]["receipt_status"] == "delivery_disabled"
+    assert report["provider_checks"]["onboarding_contract"] == {
+        "approval_required": True,
+        "delivery_disabled": True,
+    }
 
 
 @pytest.mark.asyncio

@@ -120,6 +120,8 @@ async def run_trial(
         "passed": False,
         "not_proven": [
             "business usefulness or correctness without operator labels",
+            "provider permission coverage beyond the sources selected by this card",
+            "production delivery reliability or autonomous side effects",
             "managed SignalWeave hosting",
         ],
     }
@@ -130,6 +132,10 @@ async def run_trial(
         )
     else:
         card_id = onboarding["card"]["id"]
+        onboarding_contract = {
+            "approval_required": onboarding.get("approval_required") is True,
+            "delivery_disabled": onboarding.get("delivery_enabled") is False,
+        }
         if onboarding["status"] != "ready_for_approval":
             report["next_action"] = "resolve the onboarding blockers before approval"
         else:
@@ -178,6 +184,7 @@ async def run_trial(
                     "replay": replay,
                     "receipt_lookup": receipt_lookup,
                     "provider_checks": {
+                        "onboarding_contract": onboarding_contract,
                         "preset_resources": len(preset_resources),
                         "all_resources_use_requested_preset_adapter": bool(resources)
                         and len(preset_resources) == len(resources),
@@ -186,6 +193,7 @@ async def run_trial(
                     },
                     "passed": (
                         approved["status"] == "approved"
+                        and all(onboarding_contract.values())
                         and summary["evaluator"] == "jev-latest"
                         and summary["evidence_count"] > 0
                         and bool(preset_resources)
