@@ -327,8 +327,9 @@ configured Preset credential was loaded, and prove that the provider secret
 values were absent from the serialized MCP artifacts. The independent reviewer
 recomputes those invariants from the serialized report instead of trusting the
 runner's `passed` flag. The runner records only non-secret Preset path counts
-and redaction booleans for this transport proof. It still does not prove
-operator usefulness or production delivery reliability.
+and redaction booleans for this transport proof, including a bounded catalog
+search count (at most 21 dashboard catalog requests in this one-card flow). It
+still does not prove operator usefulness or production delivery reliability.
 
 ## Can a hosted Preset customer use SignalWeave without hosting it?
 

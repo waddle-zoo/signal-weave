@@ -87,6 +87,8 @@ def _passing_report() -> dict:
             "provider_requests_for_onboarding": 1,
             "provider_request_paths_before_onboarding": {},
             "provider_request_paths_after_onboarding": {"/api/v1/dashboard/": 1},
+            "provider_request_paths_for_onboarding": {"/api/v1/dashboard/": 1},
+            "provider_catalog_searches_for_onboarding": 1,
             "provider_request_paths_before_first_evaluation": {"/api/v1/dashboard/": 1},
             "provider_request_paths_after_first_evaluation": {
                 "/api/v1/dashboard/": 1,
@@ -163,6 +165,16 @@ def test_independent_reviewer_rejects_missing_credential_artifact_proof():
 
     assert review["passed"] is False
     assert any("provider secrets stayed out" in finding for finding in review["findings"])
+
+
+def test_independent_reviewer_rejects_unbounded_catalog_search_fanout():
+    report = deepcopy(_passing_report())
+    report["provider_checks"]["provider_catalog_searches_for_onboarding"] = 22
+
+    review = review_report(report)
+
+    assert review["passed"] is False
+    assert any("catalog search fan-out" in finding for finding in review["findings"])
 
 
 def test_independent_reviewer_rejects_inconsistent_receipt_artifacts():

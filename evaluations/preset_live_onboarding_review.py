@@ -181,6 +181,12 @@ def review_report(report: dict[str, Any]) -> dict[str, Any]:
             "provider_requests_for_onboarding"
         ] < 1:
             findings.append("approved shadow has no recorded Preset request")
+        catalog_searches = checks.get("provider_catalog_searches_for_onboarding")
+        if not isinstance(catalog_searches, int) or not 1 <= catalog_searches <= 21:
+            findings.append(
+                "approved shadow has unbounded Preset catalog search fan-out "
+                f"({catalog_searches!r}; expected 1-21)"
+            )
         if not isinstance(checks.get("jev_requests_for_first_evaluation"), int) or checks[
             "jev_requests_for_first_evaluation"
         ] < 1:
@@ -210,6 +216,8 @@ def review_report(report: dict[str, Any]) -> dict[str, Any]:
             )
             if sum(onboarding_delta.values()) != checks.get("provider_requests_for_onboarding"):
                 findings.append("onboarding provider request count disagrees with path telemetry")
+            if onboarding_delta.get("/api/v1/dashboard/", 0) != catalog_searches:
+                findings.append("catalog search count disagrees with onboarding path telemetry")
             if path_values[4] != evaluation_delta:
                 findings.append("first-evaluation provider path delta is not reproducible")
             if sum(evaluation_delta.values()) != checks.get(

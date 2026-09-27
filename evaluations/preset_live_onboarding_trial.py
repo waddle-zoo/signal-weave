@@ -257,6 +257,15 @@ async def run_trial(
     provider_paths_after_onboarding = getattr(provider_client, "request_path_counts", None)
     if isinstance(provider_paths_after_onboarding, dict):
         provider_paths_after_onboarding = dict(provider_paths_after_onboarding)
+    provider_paths_for_onboarding = (
+        _path_delta(provider_paths_before, provider_paths_after_onboarding)
+        if isinstance(provider_paths_before, dict)
+        and isinstance(provider_paths_after_onboarding, dict)
+        else {}
+    )
+    provider_catalog_searches_for_onboarding = provider_paths_for_onboarding.get(
+        "/api/v1/dashboard/", 0
+    )
     provider_requests_for_onboarding = (
         provider_requests_after_onboarding - provider_requests_before
         if isinstance(provider_requests_after_onboarding, int)
@@ -279,6 +288,21 @@ async def run_trial(
         provider_paths_before = prior_checks.get("provider_request_paths_before_onboarding")
         provider_paths_after_onboarding = prior_checks.get(
             "provider_request_paths_after_onboarding"
+        )
+        provider_paths_for_onboarding = prior_checks.get(
+            "provider_request_paths_for_onboarding",
+            _path_delta(
+                provider_paths_before, provider_paths_after_onboarding
+            )
+            if isinstance(provider_paths_before, dict)
+            and isinstance(provider_paths_after_onboarding, dict)
+            else {},
+        )
+        provider_catalog_searches_for_onboarding = prior_checks.get(
+            "provider_catalog_searches_for_onboarding",
+            provider_paths_for_onboarding.get("/api/v1/dashboard/", 0)
+            if isinstance(provider_paths_for_onboarding, dict)
+            else 0,
         )
     report: dict[str, Any] = {
         "trial": "preset-live-onboarding-shadow",
@@ -303,6 +327,8 @@ async def run_trial(
             "provider_path_telemetry_available": isinstance(provider_paths_after_onboarding, dict),
             "provider_request_paths_before_onboarding": provider_paths_before,
             "provider_request_paths_after_onboarding": provider_paths_after_onboarding,
+            "provider_request_paths_for_onboarding": provider_paths_for_onboarding,
+            "provider_catalog_searches_for_onboarding": provider_catalog_searches_for_onboarding,
             "provider_credentials_loaded": bool(provider_secrets),
             "provider_secrets_absent_from_artifacts": _secrets_absent(
                 {"onboarding": onboarding}, provider_secrets
@@ -431,6 +457,8 @@ async def run_trial(
                         "provider_path_telemetry_available": True,
                         "provider_request_paths_before_onboarding": provider_paths_before,
                         "provider_request_paths_after_onboarding": provider_paths_after_onboarding,
+                        "provider_request_paths_for_onboarding": provider_paths_for_onboarding,
+                        "provider_catalog_searches_for_onboarding": provider_catalog_searches_for_onboarding,
                         "provider_request_paths_before_first_evaluation": provider_paths_before_evaluation,
                         "provider_request_paths_after_first_evaluation": provider_paths_after_first,
                         "provider_request_paths_for_first_evaluation": provider_paths_for_first_evaluation,
