@@ -40,8 +40,8 @@ class PresetCloudClient(SupersetClient):
         api_token_name: str | None = None,
         api_token_secret: str | None = None,
         api_base_url: str = "https://api.app.preset.io",
-        max_result_rows: int = DEFAULT_PRESET_MAX_RESULT_ROWS,
-        max_snapshot_bytes: int = DEFAULT_PRESET_MAX_SNAPSHOT_BYTES,
+        max_result_rows: int | None = None,
+        max_snapshot_bytes: int | None = None,
         max_retries: int = 2,
         retry_backoff_seconds: float = 0.25,
         transport: httpx.AsyncBaseTransport | None = None,
@@ -69,17 +69,27 @@ class PresetCloudClient(SupersetClient):
             raise ValueError("Preset max_retries must be non-negative")
         if retry_backoff_seconds < 0:
             raise ValueError("Preset retry_backoff_seconds must be non-negative")
-        if max_result_rows < 1:
+        if max_result_rows is not None and max_result_rows < 1:
             raise ValueError("Preset max_result_rows must be positive")
-        if max_snapshot_bytes < 1:
+        if max_snapshot_bytes is not None and max_snapshot_bytes < 1:
             raise ValueError("Preset max_snapshot_bytes must be positive")
         super().__init__(workspace_url)
         self._token = access_token
         self._api_token_name = api_token_name
         self._api_token_secret = api_token_secret
         self.api_base_url = api_base_url.rstrip("/")
-        self.max_result_rows = max_result_rows
-        self.max_snapshot_bytes = max_snapshot_bytes
+        self._explicit_result_limit = max_result_rows is not None
+        self._explicit_snapshot_limit = max_snapshot_bytes is not None
+        self.max_result_rows = (
+            DEFAULT_PRESET_MAX_RESULT_ROWS
+            if max_result_rows is None
+            else max_result_rows
+        )
+        self.max_snapshot_bytes = (
+            DEFAULT_PRESET_MAX_SNAPSHOT_BYTES
+            if max_snapshot_bytes is None
+            else max_snapshot_bytes
+        )
         self.max_retries = max_retries
         self.retry_backoff_seconds = retry_backoff_seconds
         self._force_refresh = False
@@ -89,14 +99,14 @@ class PresetCloudClient(SupersetClient):
         """Apply the connection policy without allowing a caller to loosen client limits."""
 
         self.max_result_rows = (
-            max_result_rows
-            if self.max_result_rows is None
-            else min(self.max_result_rows, max_result_rows)
+            min(self.max_result_rows, max_result_rows)
+            if self._explicit_result_limit
+            else max_result_rows
         )
         self.max_snapshot_bytes = (
-            max_snapshot_bytes
-            if self.max_snapshot_bytes is None
-            else min(self.max_snapshot_bytes, max_snapshot_bytes)
+            min(self.max_snapshot_bytes, max_snapshot_bytes)
+            if self._explicit_snapshot_limit
+            else max_snapshot_bytes
         )
 
     def set_query_mode(self, *, force_refresh: bool) -> None:

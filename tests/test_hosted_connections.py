@@ -1098,6 +1098,34 @@ async def test_preset_standalone_client_has_safe_default_row_limit():
         )
 
 
+def test_preset_adapter_applies_policy_without_widening_explicit_client_caps():
+    default_client = PresetCloudClient(
+        "https://workspace.app.preset.test",
+        access_token="preset-token",
+    )
+    PresetAdapter(
+        default_client,
+        tenant_id="northstar",
+        policy=HostedDataPolicy(max_result_rows=2_000, max_snapshot_bytes=2_000_000),
+    )
+    assert default_client.max_result_rows == 2_000
+    assert default_client.max_snapshot_bytes == 2_000_000
+
+    explicitly_bounded_client = PresetCloudClient(
+        "https://workspace.app.preset.test",
+        access_token="preset-token",
+        max_result_rows=10,
+        max_snapshot_bytes=64,
+    )
+    PresetAdapter(
+        explicitly_bounded_client,
+        tenant_id="northstar",
+        policy=HostedDataPolicy(max_result_rows=2_000, max_snapshot_bytes=2_000_000),
+    )
+    assert explicitly_bounded_client.max_result_rows == 10
+    assert explicitly_bounded_client.max_snapshot_bytes == 64
+
+
 @pytest.mark.asyncio
 @pytest.mark.parametrize("bad_value", [True, -1, 1.5, "11", float("nan"), float("inf")])
 async def test_preset_invalid_provider_reported_row_count_fails_closed(bad_value):

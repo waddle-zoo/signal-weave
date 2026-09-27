@@ -122,9 +122,11 @@ fail closed before provider I/O.
 
 The low-level `PresetCloudClient` is bounded even when used without a
 `PresetAdapter`: it defaults to 500 result rows and a 1 MB response. The
-adapter can only lower those limits to match a connection policy. This keeps
-provider smoke tests and custom integrations from accidentally creating an
-unbounded response path.
+adapter applies the connection policy when its limits were left at those safe
+defaults, while an explicitly tighter client limit remains in force. This
+keeps provider smoke tests and custom integrations from accidentally creating
+an unbounded response path without silently shrinking a customer's configured
+policy.
 
 After the configuration check, start with the no-credit bootstrap preflight
 before onboarding a card:
