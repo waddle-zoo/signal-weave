@@ -123,8 +123,12 @@ async def test_live_trial_accepts_only_jev_delivery_disabled_shadow(monkeypatch,
             "provider_requests_after_onboarding": 1,
             "provider_requests_for_onboarding": 1,
             "provider_transport_used": True,
+            "provider_credentials_loaded": True,
+            "provider_secrets_absent_from_artifacts": True,
+            "provider_catalog_searches_for_onboarding": 1,
             "provider_request_paths_before_onboarding": {},
             "provider_request_paths_after_onboarding": {"/api/v1/dashboard/": 1},
+            "provider_request_paths_for_onboarding": {"/api/v1/dashboard/": 1},
         },
     }
 
@@ -301,9 +305,22 @@ async def test_live_trial_rejects_a_mutated_reviewed_card(monkeypatch, tmp_path)
                 "passed": False,
                 "onboarding": {
                     "status": "ready_for_approval",
+                    "approval_required": True,
+                    "delivery_enabled": False,
                     "card": reviewed_card,
                 },
-                "provider_checks": {"provider_transport_used": True},
+                "provider_checks": {
+                    "provider_requests_before_onboarding": 0,
+                    "provider_requests_after_onboarding": 1,
+                    "provider_requests_for_onboarding": 1,
+                    "provider_transport_used": True,
+                    "provider_credentials_loaded": True,
+                    "provider_secrets_absent_from_artifacts": True,
+                    "provider_catalog_searches_for_onboarding": 1,
+                    "provider_request_paths_before_onboarding": {},
+                    "provider_request_paths_after_onboarding": {"/api/v1/dashboard/": 1},
+                    "provider_request_paths_for_onboarding": {"/api/v1/dashboard/": 1},
+                },
             }
         ),
         encoding="utf-8",
@@ -327,6 +344,70 @@ async def test_live_trial_rejects_a_mutated_reviewed_card(monkeypatch, tmp_path)
     )
 
     with pytest.raises(RuntimeError, match="no longer matches"):
+        await trial.run_trial(
+            goal="Monitor growth",
+            why="Support the growth team",
+            adapter="preset__preset-env",
+            limit=10,
+            destination="slack://growth",
+            approve=True,
+            output=draft_path,
+        )
+
+
+@pytest.mark.asyncio
+async def test_live_trial_rejects_mutated_transport_proof_before_approval(monkeypatch, tmp_path):
+    provider_adapter = PresetAdapter.__new__(PresetAdapter)
+    provider_adapter.client = SimpleNamespace(requests_made=0, request_path_counts={})
+    draft_path = tmp_path / "draft.json"
+    draft_path.write_text(
+        json.dumps(
+            {
+                "trial": "preset-live-onboarding-shadow",
+                "adapter": "preset__preset-env",
+                "tenant_id": "northstar",
+                "request": {
+                    "goal": "Monitor growth",
+                    "why": "Support the growth team",
+                    "destination": "slack://growth",
+                    "limit": 10,
+                },
+                "approval_requested": False,
+                "passed": False,
+                "onboarding": {
+                    "status": "ready_for_approval",
+                    "approval_required": True,
+                    "delivery_enabled": False,
+                    "card": {"id": "card-1", "version": 1},
+                },
+                "provider_checks": {
+                    "provider_requests_for_onboarding": 1,
+                    "provider_transport_used": True,
+                    "provider_credentials_loaded": True,
+                    "provider_secrets_absent_from_artifacts": True,
+                    "provider_catalog_searches_for_onboarding": 1,
+                    "provider_request_paths_before_onboarding": {},
+                    "provider_request_paths_after_onboarding": {},
+                    "provider_request_paths_for_onboarding": {"/api/v1/dashboard/": 1},
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        trial,
+        "build_runtime",
+        lambda: SimpleNamespace(
+            sources=SimpleNamespace(
+                adapter_names=lambda: ["preset__preset-env"],
+                _get=lambda name: provider_adapter,
+            ),
+            principal=SimpleNamespace(tenant_id="northstar"),
+            engine=SimpleNamespace(judger=SimpleNamespace(name="jev-latest")),
+        ),
+    )
+
+    with pytest.raises(RuntimeError, match="path telemetry is inconsistent"):
         await trial.run_trial(
             goal="Monitor growth",
             why="Support the growth team",

@@ -342,6 +342,12 @@ stored card or the request changed after review. It does not rerun discovery
 and silently approve a new draft. If a reviewer edits the card, run onboarding
 again and review the newly written artifact before approving it.
 
+Before approval, the runner also rechecks the draft's non-secret Preset request
+counts, dashboard-search bound, path-delta consistency, credential-load proof,
+secret-redaction proof, explicit approval requirement, and delivery-disabled
+state. A draft whose transport evidence was edited or is internally
+inconsistent is rejected before `approve_insight_card` or any Jev call.
+
 The live runner auto-detects the sole configured Preset adapter, so it does
 not assume the default connection ID. Pass `--adapter` when multiple Preset
 connections are installed and the operator has selected one explicitly.

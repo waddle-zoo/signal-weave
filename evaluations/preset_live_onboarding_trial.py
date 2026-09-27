@@ -91,6 +91,44 @@ def _secrets_absent(value: Any, secrets: set[str]) -> bool:
     return all(secret not in serialized for secret in secrets)
 
 
+def _validate_approval_draft(report: dict[str, Any]) -> None:
+    """Reject a draft artifact whose transport proof was edited after review."""
+
+    onboarding = report.get("onboarding")
+    if not isinstance(onboarding, dict) or onboarding.get("status") != "ready_for_approval":
+        raise RuntimeError("only a ready_for_approval draft can be approved")
+    if onboarding.get("approval_required") is not True:
+        raise RuntimeError("draft does not require explicit approval")
+    if onboarding.get("delivery_enabled") is not False:
+        raise RuntimeError("draft enables delivery")
+    checks = report.get("provider_checks")
+    if not isinstance(checks, dict):
+        raise RuntimeError("draft is missing provider transport checks")
+    if checks.get("provider_transport_used") is not True:
+        raise RuntimeError("draft does not prove that Preset transport was used")
+    if checks.get("provider_credentials_loaded") is not True:
+        raise RuntimeError("draft does not prove that Preset credentials were loaded")
+    if checks.get("provider_secrets_absent_from_artifacts") is not True:
+        raise RuntimeError("draft does not prove provider secrets stayed out of artifacts")
+    request_count = checks.get("provider_requests_for_onboarding")
+    if not isinstance(request_count, int) or request_count < 1:
+        raise RuntimeError("draft has no recorded Preset onboarding request")
+    catalog_count = checks.get("provider_catalog_searches_for_onboarding")
+    if not isinstance(catalog_count, int) or not 1 <= catalog_count <= 21:
+        raise RuntimeError("draft has invalid Preset catalog search fan-out")
+    before = checks.get("provider_request_paths_before_onboarding")
+    after = checks.get("provider_request_paths_after_onboarding")
+    delta = checks.get("provider_request_paths_for_onboarding")
+    if not all(isinstance(paths, dict) for paths in (before, after, delta)):
+        raise RuntimeError("draft is missing Preset request path telemetry")
+    if _path_delta(before, after) != delta:
+        raise RuntimeError("draft Preset request path telemetry is inconsistent")
+    if sum(delta.values()) != request_count:
+        raise RuntimeError("draft Preset request count disagrees with path telemetry")
+    if delta.get("/api/v1/dashboard/", 0) != catalog_count:
+        raise RuntimeError("draft catalog search count disagrees with path telemetry")
+
+
 def _load_reviewed_draft(path: Path) -> dict[str, Any]:
     """Load the exact draft artifact that a human is approving."""
 
@@ -116,9 +154,7 @@ def _load_reviewed_draft(path: Path) -> dict[str, Any]:
         raise RuntimeError("approval report does not contain a persisted card draft")
     if onboarding.get("status") != "ready_for_approval":
         raise RuntimeError("only a ready_for_approval draft can be approved")
-    checks = report.get("provider_checks")
-    if not isinstance(checks, dict) or checks.get("provider_transport_used") is not True:
-        raise RuntimeError("approval report does not prove the draft used Preset transport")
+    _validate_approval_draft(report)
     request = report.get("request")
     if not isinstance(request, dict):
         raise RuntimeError("approval report does not contain the original request")
