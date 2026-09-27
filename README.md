@@ -291,14 +291,15 @@ source without native per-user permissions should be placed behind an approved
 gateway or isolated deployment; that security decision belongs to the source
 integration, not to a hidden SignalWeave default.
 
-## Hosted BI without self-hosting SignalWeave
+## Hosted BI with a separate SignalWeave deployment
 
 Customers can connect hosted Preset, Hex, or Looker workspaces to a separate
-SignalWeave deployment. The connection stores only a tenant-scoped credential
-reference; the source secret stays in the deployment's vault. The connector
-retrieves bounded metadata or cached results, Jev evaluates the approved card,
-and the customer's existing agent, scheduler, and delivery system owns the
-next action.
+SignalWeave deployment that they operate today. The repository does not include
+a managed SignalWeave endpoint. The connection stores only a tenant-scoped
+credential reference; the source secret stays in the deployment's vault. The
+connector retrieves bounded metadata or cached results, Jev evaluates the
+approved card, and the customer's existing agent, scheduler, and delivery
+system owns the next action.
 
 ```text
 hosted BI workspace -> SignalWeave adapter -> typed evidence -> Jev -> agent
