@@ -186,7 +186,10 @@ class OIDCJWTVerifier:
         http_client: httpx.AsyncClient | None = None,
     ) -> None:
         self.settings = settings
-        self._http = http_client or httpx.AsyncClient(timeout=5.0)
+        self._http = http_client or httpx.AsyncClient(
+            timeout=5.0,
+            follow_redirects=False,
+        )
         self._jwks_uri = settings.jwks_url
         self._keys: dict[str, Any] = {}
         self._jwks_expires_at = 0.0
@@ -205,6 +208,8 @@ class OIDCJWTVerifier:
                 response = await self._http.get(
                     f"{self.settings.issuer_url.rstrip('/')}/.well-known/openid-configuration"
                 )
+                if 300 <= response.status_code < 400:
+                    raise RuntimeError("OIDC discovery returned a redirect")
                 response.raise_for_status()
                 metadata = response.json()
                 if not isinstance(metadata, dict):
@@ -219,6 +224,8 @@ class OIDCJWTVerifier:
             if not isinstance(self._jwks_uri, str) or not self._jwks_uri:
                 raise RuntimeError("OIDC discovery did not provide jwks_uri")
             response = await self._http.get(self._jwks_uri)
+            if 300 <= response.status_code < 400:
+                raise RuntimeError("OIDC JWKS retrieval returned a redirect")
             response.raise_for_status()
             payload = response.json()
             if not isinstance(payload, dict):

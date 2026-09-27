@@ -254,3 +254,27 @@ async def test_oidc_discovery_rejects_insecure_jwks_uri_before_following_it():
     assert requested_urls == [
         "https://issuer.example.test/.well-known/openid-configuration"
     ]
+
+
+@pytest.mark.asyncio
+async def test_oidc_discovery_rejects_redirect_without_following_it():
+    client, verifier, token = oidc_fixture()
+    await client.aclose()
+    requested_urls: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requested_urls.append(str(request.url))
+        return httpx.Response(
+            302,
+            headers={"location": "https://attacker.example/oidc-metadata"},
+        )
+
+    verifier._http = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    try:
+        assert await verifier.verify_token(token()) is None
+    finally:
+        await verifier._http.aclose()
+
+    assert requested_urls == [
+        "https://issuer.example.test/.well-known/openid-configuration"
+    ]
