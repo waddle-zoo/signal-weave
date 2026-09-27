@@ -125,7 +125,10 @@ check that the chart belongs to the dashboard. Standalone chart reads continue
 to use the saved-query data endpoint and have no dashboard filter context. A
 dashboard-scoped response must also include Preset's `dashboard_filters`
 metadata; otherwise the connector fails closed rather than treating a possibly
-unfiltered 200 response as evidence.
+unfiltered 200 response as evidence. Preset documents the dashboard-filtered
+parameter in its [API update notes](https://docs.preset.io/docs/update), while
+the underlying Superset [chart-data response schema](https://superset.apache.org/developer-docs/api/return-payload-data-response-for-a-chart/)
+documents the `dashboard_filters` response metadata that the connector requires.
 The HTTP clients explicitly disable redirects for both the Preset token exchange
 and workspace requests, so a provider 3xx response is an error and cannot
 forward a bearer token to another host. This is a transport invariant, not the
