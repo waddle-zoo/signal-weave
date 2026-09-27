@@ -1214,6 +1214,31 @@ async def test_preset_auth_exchange_respects_response_byte_limit_before_token_pa
 
 
 @pytest.mark.asyncio
+async def test_preset_response_byte_limit_is_checked_across_stream_chunks():
+    class ChunkedResponseStream(httpx.AsyncByteStream):
+        async def __aiter__(self):
+            yield b"{" + b"x" * 40
+            yield b"y" * 40 + b"}"
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            headers={"content-type": "application/json"},
+            stream=ChunkedResponseStream(),
+        )
+
+    client = PresetCloudClient(
+        "https://workspace.app.preset.test",
+        access_token="preset-token",
+        max_snapshot_bytes=64,
+        transport=httpx.MockTransport(handler),
+    )
+
+    with pytest.raises(PresetPolicyError, match="max_snapshot_bytes"):
+        await client.get_dashboard_metadata(7)
+
+
+@pytest.mark.asyncio
 async def test_hex_adapter_reads_published_run_without_starting_one():
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.headers["authorization"] == "Bearer hex-token"

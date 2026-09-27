@@ -144,7 +144,6 @@ class PresetCloudClient(SupersetClient):
                 "/v1/auth/",
                 json={"name": self._api_token_name, "secret": self._api_token_secret},
             )
-            self._enforce_response_size(response)
             response.raise_for_status()
             payload = response.json()
             auth_payload = payload.get("payload") if isinstance(payload, dict) else None
@@ -208,18 +207,8 @@ class PresetCloudClient(SupersetClient):
                     headers=request_headers,
                     **request_kwargs,
                 )
-            self._enforce_response_size(response)
             response.raise_for_status()
             return response
-
-    def _enforce_response_size(self, response: httpx.Response) -> None:
-        if (
-            self.max_snapshot_bytes is not None
-            and len(response.content) > self.max_snapshot_bytes
-        ):
-            raise PresetPolicyError(
-                "Preset response exceeded the configured max_snapshot_bytes limit"
-            )
 
     @staticmethod
     def _retry_after_seconds(response: httpx.Response) -> float | None:
@@ -323,7 +312,7 @@ class PresetCloudClient(SupersetClient):
         path: str,
         **kwargs: Any,
     ) -> httpx.Response:
-        response = await client.request(method, path, **kwargs)
+        response = await self._request_stream_bounded(client, method, path, **kwargs)
         retries = 0
         while response.status_code == 429 or 500 <= response.status_code <= 599:
             if retries >= self.max_retries:
@@ -336,9 +325,39 @@ class PresetCloudClient(SupersetClient):
             )
             if delay:
                 await asyncio.sleep(delay)
-            response = await client.request(method, path, **kwargs)
+            response = await self._request_stream_bounded(client, method, path, **kwargs)
             retries += 1
         return response
+
+    async def _request_stream_bounded(
+        self,
+        client: httpx.AsyncClient,
+        method: str,
+        path: str,
+        **kwargs: Any,
+    ) -> httpx.Response:
+        """Read one provider response without buffering beyond the byte policy."""
+
+        chunks: list[bytes] = []
+        observed_bytes = 0
+        async with client.stream(method, path, **kwargs) as response:
+            async for chunk in response.aiter_bytes():
+                observed_bytes += len(chunk)
+                if (
+                    self.max_snapshot_bytes is not None
+                    and observed_bytes > self.max_snapshot_bytes
+                ):
+                    raise PresetPolicyError(
+                        "Preset response exceeded the configured max_snapshot_bytes limit"
+                    )
+                chunks.append(chunk)
+            return httpx.Response(
+                response.status_code,
+                headers=response.headers,
+                content=b"".join(chunks),
+                request=response.request,
+                extensions=response.extensions,
+            )
 
     async def chart_data(
         self,
