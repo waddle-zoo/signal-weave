@@ -32,6 +32,7 @@ def _clear_config(monkeypatch):
         "TYPESAFE_MODE",
         "TYPESAFE_API_KEY",
         "TYPESAFE_API_KEY_FILE",
+        "PRESET_ENV_FILE",
     ):
         monkeypatch.delenv(name, raising=False)
 
@@ -61,6 +62,38 @@ def test_config_check_is_zero_network_and_redacts_credentials(monkeypatch, tmp_p
     assert "preset-secret" not in serialized
     assert "test-key" not in serialized
     assert json.loads((tmp_path / "config.json").read_text()) == report
+
+
+def test_config_check_loads_env_file_without_overriding_process_values(monkeypatch, tmp_path):
+    _clear_config(monkeypatch)
+    env_file = tmp_path / ".env.preset"
+    env_file.write_text(
+        "\n".join(
+            [
+                "PRESET_URL=https://workspace.us-east-1.app.preset.io",
+                "PRESET_WORKSPACE=northstar",
+                "PRESET_TENANT_ID=northstar",
+                "PRESET_API_TOKEN_NAME=preset-name",
+                "PRESET_API_TOKEN_SECRET=preset-secret",
+                "SIGNALWEAVE_TENANT_ID=northstar",
+                "SIGNALWEAVE_PRINCIPAL_ID=signalweave-agent",
+                "TYPESAFE_API_KEY=typesafe-key",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("PRESET_ENV_FILE", str(env_file))
+    monkeypatch.setenv("PRESET_TENANT_ID", "northstar-from-process")
+
+    report = config_check.run()
+
+    assert report["passed"] is False
+    assert report["environment_file"] == str(env_file)
+    assert any("must match SIGNALWEAVE_TENANT_ID" in error for error in report["errors"])
+    serialized = json.dumps(report)
+    assert "preset-secret" not in serialized
+    assert "typesafe-key" not in serialized
 
 
 def test_config_check_accepts_oidc_and_mounted_secrets_without_static_principal(

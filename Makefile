@@ -77,6 +77,7 @@ local-superset-runtime-shadow-review:
 		artifacts/local-superset-runtime-shadow.json
 
 preset-config-check:
+	PRESET_ENV_FILE=$${PRESET_ENV_FILE:-.env.preset} \
 	uv run python scripts/preset_config_check.py
 
 preset-compose-check:

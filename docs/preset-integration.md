@@ -94,6 +94,12 @@ TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
   make preset-config-check
 ```
 
+The Make target loads `.env.preset` by default when it exists; set
+`PRESET_ENV_FILE=/absolute/path/to/another.env` to use a different file.
+Already-exported environment variables take precedence over file values. This
+keeps the copy/edit workflow simple without putting secrets into the Makefile
+or serialized reports.
+
 This is a zero-network configuration check. It validates the production Preset
 credential mode, tenant binding, policy, HTTP/OIDC mode, and Jev credential
 source, including OIDC claim paths and JWKS timing bounds, without instantiating
