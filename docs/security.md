@@ -25,7 +25,9 @@ deployment must establish a data policy before using company data.
   verified subject and tenant claim. Missing or invalid tenant claims fail
   closed. JWKS responses are cached and refreshed when a signing key rotates.
   The deployment may set `SIGNALWEAVE_OIDC_REQUIRED_SCOPES` for MCP-level
-  authorization. `SIGNALWEAVE_ALLOW_INSECURE_OIDC=1` is local-test-only.
+authorization. `SIGNALWEAVE_ALLOW_INSECURE_OIDC=1` is local-test-only and is
+accepted only for loopback OIDC hosts; it cannot enable an external HTTP issuer
+or JWKS endpoint.
   Configured and discovered JWKS URLs are also validated for HTTPS and safe URL
   shape before key retrieval; discovery metadata cannot redirect verification to
   an HTTP, credential-bearing, query-bearing, or fragment-bearing endpoint.

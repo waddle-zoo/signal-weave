@@ -161,14 +161,23 @@ async def test_native_mcp_auth_keeps_health_public_and_mcp_protected():
 
 
 def test_oidc_settings_require_tls_and_explicit_identity_configuration(monkeypatch):
-    monkeypatch.setenv("SIGNALWEAVE_OIDC_ISSUER_URL", "http://issuer.example.test")
+    monkeypatch.setenv("SIGNALWEAVE_OIDC_ISSUER_URL", "http://localhost:8080")
     monkeypatch.setenv("SIGNALWEAVE_OIDC_AUDIENCE", "signalweave")
     with pytest.raises(RuntimeError, match="must use https"):
         OIDCSettings.from_env()
 
     monkeypatch.setenv("SIGNALWEAVE_ALLOW_INSECURE_OIDC", "1")
     settings = OIDCSettings.from_env()
-    assert settings.issuer_url == "http://issuer.example.test"
+    assert settings.issuer_url == "http://localhost:8080"
+
+
+def test_oidc_settings_reject_external_http_even_with_local_override(monkeypatch):
+    monkeypatch.setenv("SIGNALWEAVE_OIDC_ISSUER_URL", "http://issuer.example.test")
+    monkeypatch.setenv("SIGNALWEAVE_OIDC_AUDIENCE", "signalweave")
+    monkeypatch.setenv("SIGNALWEAVE_ALLOW_INSECURE_OIDC", "1")
+
+    with pytest.raises(RuntimeError, match="only on a loopback host"):
+        OIDCSettings.from_env()
 
 
 def test_oidc_settings_reject_malformed_origin_port(monkeypatch):

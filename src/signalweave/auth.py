@@ -78,7 +78,15 @@ def _validate_oidc_url(name: str, value: str) -> None:
     except ValueError as error:
         raise RuntimeError(f"{name} must be a valid URL") from error
     insecure_allowed = os.getenv("SIGNALWEAVE_ALLOW_INSECURE_OIDC") == "1"
-    if parsed.scheme != "https" and not (parsed.scheme == "http" and insecure_allowed):
+    loopback_hosts = {"localhost", "127.0.0.1", "::1"}
+    local_http_allowed = (
+        parsed.scheme == "http" and insecure_allowed and hostname in loopback_hosts
+    )
+    if parsed.scheme != "https" and not local_http_allowed:
+        if parsed.scheme == "http" and insecure_allowed and hostname not in loopback_hosts:
+            raise RuntimeError(
+                f"{name} may use http only on a loopback host for an isolated local test"
+            )
         raise RuntimeError(
             f"{name} must use https; set SIGNALWEAVE_ALLOW_INSECURE_OIDC=1 "
             "only for an isolated local test"
