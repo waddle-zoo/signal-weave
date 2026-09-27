@@ -46,7 +46,9 @@ The adapter should:
 - include supported comparison baselines in `Observation.comparison_baselines`
   when the source can calculate them;
 - return non-numeric facts, relationships, and run metadata as `Evidence` or `metadata`;
-- set `captured_at` to the source snapshot time rather than process time when possible;
+- set `source_captured_at` to the provider-confirmed result time when possible;
+  `captured_at` remains the time SignalWeave received the snapshot and is the
+  safe fallback when the provider does not expose a trustworthy result time;
 - include a source URL/run ID when possible; and
 - return a `ResourceSnapshot(error=...)` through the registry path when the source cannot be trusted.
 
@@ -90,6 +92,10 @@ For catalogs that are too large to materialize, implement `search_resources`.
 It should apply the caller's authorization at the source, return only a bounded
 page of descriptors, and report the authorized `total_count`, `has_more`, and a
 resume cursor. The registry records the adapter's search strategy and warnings.
+When multiple adapters are installed, the registry returns an opaque
+multi-provider cursor and preserves each provider's page size while callers
+continue discovery. A provider that reports more results without a cursor is
+reported as incomplete rather than silently treated as a complete catalog.
 Adapters without this method still work through a `local-scan-fallback`, but that
 path deliberately reports that the full catalog was materialized and is not an
 enterprise-scale implementation.
