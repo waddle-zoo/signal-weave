@@ -77,6 +77,39 @@ jobs:
           path: artifacts/**/*.json
           if-no-files-found: ignore
 
+  hosted-preset-compose-contract:
+    name: hosted Preset Compose contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Run API-token Compose preflight
+        run: |
+          cp examples/preset/.env.preset.example .env.preset
+          secret_dir="$(mktemp -d)"
+          touch "$secret_dir/typesafe" "$secret_dir/preset-name" \
+            "$secret_dir/preset-secret" "$secret_dir/signalweave" "$secret_dir/push"
+          TYPESAFE_API_KEY_FILE="$secret_dir/typesafe" \
+          PRESET_API_TOKEN_NAME_HOST_FILE="$secret_dir/preset-name" \
+          PRESET_API_TOKEN_SECRET_HOST_FILE="$secret_dir/preset-secret" \
+          SIGNALWEAVE_API_TOKEN_HOST_FILE="$secret_dir/signalweave" \
+          PUSH_WEBHOOK_TOKEN_HOST_FILE="$secret_dir/push" \
+            python3 scripts/preset_compose_check.py
+
+      - name: Run bearer Compose preflight
+        run: |
+          secret_dir="$(mktemp -d)"
+          touch "$secret_dir/typesafe" "$secret_dir/preset-access" \
+            "$secret_dir/signalweave" "$secret_dir/push"
+          PRESET_COMPOSE_AUTH_MODE=bearer \
+          TYPESAFE_API_KEY_FILE="$secret_dir/typesafe" \
+          PRESET_ACCESS_TOKEN_HOST_FILE="$secret_dir/preset-access" \
+          SIGNALWEAVE_API_TOKEN_HOST_FILE="$secret_dir/signalweave" \
+          PUSH_WEBHOOK_TOKEN_HOST_FILE="$secret_dir/push" \
+            python3 scripts/preset_compose_check.py
+
   hosted-preset-scale-proof:
     name: hosted Preset scale proof (${{ matrix.seed }})
     runs-on: ubuntu-latest
