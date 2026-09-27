@@ -44,6 +44,16 @@ def _summary(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _path_delta(before: dict[str, int], after: dict[str, int]) -> dict[str, int]:
+    """Return positive provider-attempt deltas without exposing request data."""
+
+    return {
+        path: count - before.get(path, 0)
+        for path, count in after.items()
+        if count - before.get(path, 0) > 0
+    }
+
+
 def _resolve_preset_adapter(runtime: Any, requested: str | None) -> str:
     """Resolve a configured Preset route without assuming its connection ID."""
 
@@ -101,6 +111,11 @@ async def run_trial(
         raise RuntimeError(
             "the live acceptance trial requires a Preset client with request telemetry"
         )
+    provider_paths_before = getattr(provider_client, "request_path_counts", None)
+    if provider_paths_before is not None and not isinstance(provider_paths_before, dict):
+        raise RuntimeError("Preset request path telemetry must be a mapping")
+    if isinstance(provider_paths_before, dict):
+        provider_paths_before = dict(provider_paths_before)
     server = create_mcp(runtime)
     onboarding = await _tool(server, "onboard_insight_card")(
         what_to_watch=goal,
@@ -119,6 +134,9 @@ async def run_trial(
         ],
     )
     provider_requests_after_onboarding = getattr(provider_client, "requests_made", None)
+    provider_paths_after_onboarding = getattr(provider_client, "request_path_counts", None)
+    if isinstance(provider_paths_after_onboarding, dict):
+        provider_paths_after_onboarding = dict(provider_paths_after_onboarding)
     provider_requests_for_onboarding = (
         provider_requests_after_onboarding - provider_requests_before
         if isinstance(provider_requests_after_onboarding, int)
@@ -138,6 +156,9 @@ async def run_trial(
                 isinstance(provider_requests_for_onboarding, int)
                 and provider_requests_for_onboarding > 0
             ),
+            "provider_path_telemetry_available": isinstance(provider_paths_after_onboarding, dict),
+            "provider_request_paths_before_onboarding": provider_paths_before,
+            "provider_request_paths_after_onboarding": provider_paths_after_onboarding,
         },
         "passed": False,
         "not_proven": [
@@ -161,6 +182,14 @@ async def run_trial(
         if onboarding["status"] != "ready_for_approval":
             report["next_action"] = "resolve the onboarding blockers before approval"
         else:
+            provider_requests_before_evaluation = getattr(provider_client, "requests_made", None)
+            provider_paths_before_evaluation = getattr(provider_client, "request_path_counts", None)
+            if isinstance(provider_paths_before_evaluation, dict):
+                provider_paths_before_evaluation = dict(provider_paths_before_evaluation)
+            if not isinstance(provider_paths_before_evaluation, dict):
+                raise RuntimeError(
+                    "approved Preset acceptance requires request path telemetry"
+                )
             approved = await _tool(server, "approve_insight_card")(
                 card_id, actor="preset-shadow-owner"
             )
@@ -173,12 +202,39 @@ async def run_trial(
                 actor="preset-shadow-scheduler",
             )
             jev_requests_after_first = getattr(metrics, "requests", None)
+            provider_requests_after_first = getattr(provider_client, "requests_made", None)
+            provider_paths_after_first = getattr(provider_client, "request_path_counts", None)
+            if not isinstance(provider_paths_after_first, dict):
+                raise RuntimeError("Preset request path telemetry disappeared during evaluation")
+            provider_paths_after_first = dict(provider_paths_after_first)
+            provider_paths_for_first_evaluation = _path_delta(
+                provider_paths_before_evaluation, provider_paths_after_first
+            )
+            provider_requests_for_first_evaluation = (
+                provider_requests_after_first - provider_requests_before_evaluation
+                if isinstance(provider_requests_after_first, int)
+                and isinstance(provider_requests_before_evaluation, int)
+                else None
+            )
+            provider_data_requests_for_first_evaluation = sum(
+                count
+                for path, count in provider_paths_for_first_evaluation.items()
+                if path.endswith("/data")
+            )
+            provider_paths_before_replay = dict(provider_paths_after_first)
             replay = await _tool(server, "evaluate_insight_card")(
                 card_id,
                 idempotency_key=idempotency_key,
                 actor="preset-shadow-scheduler",
             )
             jev_requests_after_replay = getattr(metrics, "requests", None)
+            provider_paths_after_replay = getattr(provider_client, "request_path_counts", None)
+            if isinstance(provider_paths_after_replay, dict):
+                provider_paths_after_replay = dict(provider_paths_after_replay)
+            replay_made_no_provider_call = (
+                isinstance(provider_paths_after_replay, dict)
+                and provider_paths_after_replay == provider_paths_before_replay
+            )
             receipt_lookup = _tool(server, "get_decision_receipt")(
                 idempotency_key=idempotency_key
             )
@@ -215,6 +271,14 @@ async def run_trial(
                         "provider_requests_before_onboarding": provider_requests_before,
                         "provider_requests_after_onboarding": provider_requests_after_onboarding,
                         "provider_requests_for_onboarding": provider_requests_for_onboarding,
+                        "provider_path_telemetry_available": True,
+                        "provider_request_paths_before_onboarding": provider_paths_before,
+                        "provider_request_paths_after_onboarding": provider_paths_after_onboarding,
+                        "provider_request_paths_before_first_evaluation": provider_paths_before_evaluation,
+                        "provider_request_paths_after_first_evaluation": provider_paths_after_first,
+                        "provider_request_paths_for_first_evaluation": provider_paths_for_first_evaluation,
+                        "provider_requests_for_first_evaluation": provider_requests_for_first_evaluation,
+                        "provider_data_requests_for_first_evaluation": provider_data_requests_for_first_evaluation,
                         "provider_transport_used": (
                             isinstance(provider_requests_for_onboarding, int)
                             and provider_requests_for_onboarding > 0
@@ -225,6 +289,7 @@ async def run_trial(
                         "all_resources_match_runtime_tenant": tenant_scoped_resources,
                         "jev_requests_for_first_evaluation": jev_requests_for_first_evaluation,
                         "replay_made_no_jev_call": replay_made_no_jev_call,
+                        "replay_made_no_provider_call": replay_made_no_provider_call,
                     },
                     "passed": (
                         approved["status"] == "approved"
@@ -237,11 +302,15 @@ async def run_trial(
                         and tenant_scoped_resources
                         and isinstance(jev_requests_for_first_evaluation, int)
                         and jev_requests_for_first_evaluation > 0
+                        and isinstance(provider_requests_for_first_evaluation, int)
+                        and provider_requests_for_first_evaluation > 0
+                        and provider_data_requests_for_first_evaluation > 0
                         and summary["receipt_status"] == "delivery_disabled"
                         and summary["delivery_enabled"] is False
                         and replay.get("replayed") is True
                         and receipt_lookup.get("status") == "found"
                         and replay_made_no_jev_call
+                        and replay_made_no_provider_call
                     ),
                 }
             )

@@ -90,12 +90,13 @@ async def test_live_trial_requires_explicit_approval_before_shadow(monkeypatch, 
 
 @pytest.mark.asyncio
 async def test_live_trial_accepts_only_jev_delivery_disabled_shadow(monkeypatch):
-    provider_client = SimpleNamespace(requests_made=0)
+    provider_client = SimpleNamespace(requests_made=0, request_path_counts={})
     provider_adapter = PresetAdapter.__new__(PresetAdapter)
     provider_adapter.client = provider_client
 
     async def onboard(**kwargs):
         provider_client.requests_made += 1
+        provider_client.request_path_counts["/api/v1/dashboard/"] = 1
         return {
             "status": "ready_for_approval",
             "approval_required": True,
@@ -110,6 +111,8 @@ async def test_live_trial_accepts_only_jev_delivery_disabled_shadow(monkeypatch)
 
     async def evaluate(*args, **kwargs):
         metrics.requests += 1
+        provider_client.requests_made += 1
+        provider_client.request_path_counts["/api/v1/chart/1/data"] = 1
         return {
             "result": {
                 "outcome": "notify",

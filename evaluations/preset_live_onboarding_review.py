@@ -26,6 +26,14 @@ def _is_nonempty_list(value: Any) -> bool:
     return isinstance(value, list) and bool(value)
 
 
+def _path_delta(before: dict[str, int], after: dict[str, int]) -> dict[str, int]:
+    return {
+        path: count - before.get(path, 0)
+        for path, count in after.items()
+        if count - before.get(path, 0) > 0
+    }
+
+
 def review_report(report: dict[str, Any]) -> dict[str, Any]:
     """Return an independent acceptance verdict without making provider calls."""
 
@@ -124,6 +132,8 @@ def review_report(report: dict[str, Any]) -> dict[str, Any]:
                 findings.append("idempotent replay did not return a replayed receipt")
         if checks.get("replay_made_no_jev_call") is not True:
             findings.append("replay made an additional Jev call")
+        if checks.get("replay_made_no_provider_call") is not True:
+            findings.append("replay made an additional Preset provider call")
         if checks.get("provider_transport_used") is not True:
             findings.append("approved shadow did not prove a Preset provider request")
         if not isinstance(checks.get("provider_requests_for_onboarding"), int) or checks[
@@ -134,6 +144,44 @@ def review_report(report: dict[str, Any]) -> dict[str, Any]:
             "jev_requests_for_first_evaluation"
         ] < 1:
             findings.append("first evaluation has no recorded Jev request")
+        path_values = [
+            checks.get("provider_request_paths_before_onboarding"),
+            checks.get("provider_request_paths_after_onboarding"),
+            checks.get("provider_request_paths_before_first_evaluation"),
+            checks.get("provider_request_paths_after_first_evaluation"),
+            checks.get("provider_request_paths_for_first_evaluation"),
+        ]
+        if not all(
+            isinstance(paths, dict)
+            and all(
+                isinstance(path, str) and isinstance(count, int) and count >= 0
+                for path, count in paths.items()
+            )
+            for paths in path_values
+        ):
+            findings.append("approved shadow is missing non-secret provider path telemetry")
+        else:
+            onboarding_delta = _path_delta(
+                path_values[0], path_values[1]
+            )
+            evaluation_delta = _path_delta(
+                path_values[2], path_values[3]
+            )
+            if sum(onboarding_delta.values()) != checks.get("provider_requests_for_onboarding"):
+                findings.append("onboarding provider request count disagrees with path telemetry")
+            if path_values[4] != evaluation_delta:
+                findings.append("first-evaluation provider path delta is not reproducible")
+            if sum(evaluation_delta.values()) != checks.get(
+                "provider_requests_for_first_evaluation"
+            ):
+                findings.append("first-evaluation provider request count disagrees with path telemetry")
+            data_requests = sum(
+                count for path, count in evaluation_delta.items() if path.endswith("/data")
+            )
+            if data_requests != checks.get("provider_data_requests_for_first_evaluation"):
+                findings.append("first-evaluation chart-data count disagrees with path telemetry")
+            if data_requests < 1:
+                findings.append("approved shadow did not fetch Preset chart data")
         if checks.get("all_resources_use_requested_preset_adapter") is not True:
             findings.append("resources are not all from the requested Preset adapter")
         if checks.get("all_resources_match_runtime_tenant") is not True:

@@ -95,6 +95,7 @@ class PresetCloudClient(SupersetClient):
         self._force_refresh = False
         self._transport = transport
         self._requests_made = 0
+        self._request_path_counts: dict[str, int] = {}
 
     @property
     def requests_made(self) -> int:
@@ -107,6 +108,12 @@ class PresetCloudClient(SupersetClient):
         """
 
         return self._requests_made
+
+    @property
+    def request_path_counts(self) -> dict[str, int]:
+        """Return non-secret counts by provider path for acceptance telemetry."""
+
+        return dict(self._request_path_counts)
 
     def constrain_response_limits(self, *, max_result_rows: int, max_snapshot_bytes: int) -> None:
         """Apply the connection policy without allowing a caller to loosen client limits."""
@@ -354,6 +361,7 @@ class PresetCloudClient(SupersetClient):
         """Read one provider response without buffering beyond the byte policy."""
 
         self._requests_made += 1
+        self._request_path_counts[path] = self._request_path_counts.get(path, 0) + 1
         chunks: list[bytes] = []
         observed_bytes = 0
         async with client.stream(method, path, **kwargs) as response:

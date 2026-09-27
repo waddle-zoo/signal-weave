@@ -69,7 +69,18 @@ def _passing_report() -> dict:
             },
             "provider_transport_used": True,
             "provider_requests_for_onboarding": 1,
+            "provider_request_paths_before_onboarding": {},
+            "provider_request_paths_after_onboarding": {"/api/v1/dashboard/": 1},
+            "provider_request_paths_before_first_evaluation": {"/api/v1/dashboard/": 1},
+            "provider_request_paths_after_first_evaluation": {
+                "/api/v1/dashboard/": 1,
+                "/api/v1/chart/1/data": 1,
+            },
+            "provider_request_paths_for_first_evaluation": {"/api/v1/chart/1/data": 1},
+            "provider_requests_for_first_evaluation": 1,
+            "provider_data_requests_for_first_evaluation": 1,
             "replay_made_no_jev_call": True,
+            "replay_made_no_provider_call": True,
             "jev_requests_for_first_evaluation": 1,
             "all_resources_use_requested_preset_adapter": True,
             "all_resources_match_runtime_tenant": True,
@@ -131,6 +142,21 @@ def test_independent_reviewer_rejects_inconsistent_receipt_artifacts():
     assert any("onboarding readiness" in finding for finding in review["findings"])
     assert any("replayed receipt" in finding for finding in review["findings"])
     assert any("card_version" in finding for finding in review["findings"])
+
+
+def test_independent_reviewer_rejects_catalog_only_shadow():
+    report = deepcopy(_passing_report())
+    report["provider_checks"]["provider_request_paths_after_first_evaluation"] = {
+        "/api/v1/dashboard/": 1
+    }
+    report["provider_checks"]["provider_request_paths_for_first_evaluation"] = {}
+    report["provider_checks"]["provider_requests_for_first_evaluation"] = 0
+    report["provider_checks"]["provider_data_requests_for_first_evaluation"] = 0
+
+    review = review_report(report)
+
+    assert review["passed"] is False
+    assert any("chart data" in finding for finding in review["findings"])
 
 
 def test_independent_reviewer_accepts_unapproved_draft_without_claiming_acceptance():

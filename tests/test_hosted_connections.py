@@ -259,6 +259,10 @@ async def test_preset_cloud_token_exchange_and_dashboard_snapshot():
     assert "do-not-retain" not in json.dumps(snapshot.model_dump(mode="json"))
     assert len([call for call in calls if call[1].endswith("/v1/auth/")]) == 1
     assert client.requests_made == len(calls)
+    assert client.request_path_counts["/v1/auth/"] == 1
+    assert client.request_path_counts["/api/v1/dashboard/7"] == 1
+    assert client.request_path_counts["/api/v1/chart/101"] == 1
+    assert client.request_path_counts["/api/v1/chart/101/data"] == 1
 
 
 @pytest.mark.asyncio
