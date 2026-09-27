@@ -1191,6 +1191,29 @@ async def test_preset_rejects_oversized_response_before_parsing():
 
 
 @pytest.mark.asyncio
+async def test_preset_auth_exchange_respects_response_byte_limit_before_token_parsing():
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.host == "api.app.preset.test"
+        return httpx.Response(
+            200,
+            content=b'{"payload":{"access_token":"preset-jwt"}}' + b"x" * 64,
+            headers={"content-type": "application/json"},
+        )
+
+    client = PresetCloudClient(
+        "https://workspace.app.preset.test",
+        api_token_name="preset-name",
+        api_token_secret="preset-secret",
+        api_base_url="https://api.app.preset.test",
+        max_snapshot_bytes=64,
+        transport=httpx.MockTransport(handler),
+    )
+
+    with pytest.raises(PresetPolicyError, match="max_snapshot_bytes"):
+        await client.get_dashboard_metadata(7)
+
+
+@pytest.mark.asyncio
 async def test_hex_adapter_reads_published_run_without_starting_one():
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.headers["authorization"] == "Bearer hex-token"

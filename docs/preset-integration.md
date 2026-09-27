@@ -172,9 +172,10 @@ blocking, DNS-rebinding protection, and network-level egress policy before it
 accepts tenant-supplied connection URLs.
 
 The connector enforces the configured `max_result_rows` and
-`max_snapshot_bytes` limits. It checks both materialized rows and provider
-reported `rowcount`/`sql_rowcount` metadata, so a truncated response cannot
-hide a larger result behind a small returned page. Malformed count metadata
+`max_snapshot_bytes` limits on both the Preset token exchange and workspace
+responses. It checks both materialized rows and provider reported
+`rowcount`/`sql_rowcount` metadata, so a truncated response cannot hide a
+larger result behind a small returned page. Malformed count metadata
 also fails closed. Standalone chart reads lower the saved-chart row limit
 before calling Preset; dashboard reads use Preset's chart-specific data
 endpoint so the provider can apply dashboard filter scope and access checks,

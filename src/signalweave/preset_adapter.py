@@ -144,6 +144,7 @@ class PresetCloudClient(SupersetClient):
                 "/v1/auth/",
                 json={"name": self._api_token_name, "secret": self._api_token_secret},
             )
+            self._enforce_response_size(response)
             response.raise_for_status()
             payload = response.json()
             auth_payload = payload.get("payload") if isinstance(payload, dict) else None
@@ -207,15 +208,18 @@ class PresetCloudClient(SupersetClient):
                     headers=request_headers,
                     **request_kwargs,
                 )
+            self._enforce_response_size(response)
             response.raise_for_status()
-            if (
-                self.max_snapshot_bytes is not None
-                and len(response.content) > self.max_snapshot_bytes
-            ):
-                raise PresetPolicyError(
-                    "Preset response exceeded the configured max_snapshot_bytes limit"
-            )
             return response
+
+    def _enforce_response_size(self, response: httpx.Response) -> None:
+        if (
+            self.max_snapshot_bytes is not None
+            and len(response.content) > self.max_snapshot_bytes
+        ):
+            raise PresetPolicyError(
+                "Preset response exceeded the configured max_snapshot_bytes limit"
+            )
 
     @staticmethod
     def _retry_after_seconds(response: httpx.Response) -> float | None:
