@@ -61,13 +61,16 @@ uv run python scripts/superset_chart_matrix.py
 
 The harness reports chart-family coverage and fails on unclassified empty
 results, observations without metric labels, or observations whose metrics
-were silently dropped. In the current local demo fixture on 2026-09-26 it
+were silently dropped. In the current local demo fixture on 2026-09-27 it
 traversed 9 dashboards and 102 charts, produced 8,611 observations, classified
 91 charts as `extracted`, marked one raw multi-number table `partial`, and
-surfaced 10 explicit provider failures as `unsupported`. It reported zero
-silent-loss issues. The separate Northstar Outfitters fixture traversed 20
-dashboards and 580 charts, produced 41,002 observations, and extracted all
-580 charts.
+surfaced 10 explicit provider failures as `unsupported`. The provider returned
+the actionable error `Chart has no query context saved. Please save the chart
+again.` for those charts; the connector did not replace the missing context
+with an unscoped query. It reported zero silent-loss issues. The separate
+Northstar Outfitters fixture was rerun against the live local service on
+2026-09-27: it traversed 20 dashboards and 580 charts, produced 41,002
+observations, and extracted all 580 charts.
 
 For the hosted Preset source boundary, run the fixture-backed multi-workspace
 trial. It uses the production Preset client and adapter, but no TypeSafe

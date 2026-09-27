@@ -60,7 +60,7 @@ confirms related sources and owns the final human feedback loop.
 
 After the initial trial, the running Northstar Superset instance was exercised
 with `make superset-chart-matrix` against every saved dashboard and chart
-without calling Jev. The result was:
+without calling Jev. The result below was refreshed on 2026-09-27:
 
 | Check | Result |
 | --- | --- |
