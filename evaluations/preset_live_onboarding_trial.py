@@ -140,6 +140,12 @@ def _validate_data_policy_proof(checks: dict[str, Any]) -> None:
 def _validate_approval_draft(report: dict[str, Any]) -> None:
     """Reject a draft artifact whose transport proof was edited after review."""
 
+    if report.get("approval_requested") is not False:
+        raise RuntimeError("approval input must be an unapproved onboarding draft")
+    if report.get("passed") is True:
+        raise RuntimeError("approval input must not already claim acceptance")
+    if any(key in report for key in ("approval", "evaluation", "summary", "replay")):
+        raise RuntimeError("approval input must not contain post-approval artifacts")
     onboarding = report.get("onboarding")
     if not isinstance(onboarding, dict) or onboarding.get("status") != "ready_for_approval":
         raise RuntimeError("only a ready_for_approval draft can be approved")

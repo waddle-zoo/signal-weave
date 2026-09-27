@@ -341,6 +341,8 @@ the card ID, version, and canonical digest, and refuses to approve if the
 stored card or the request changed after review. It does not rerun discovery
 and silently approve a new draft. If a reviewer edits the card, run onboarding
 again and review the newly written artifact before approving it.
+The input must still be an unapproved onboarding artifact; previously approved
+or partially evaluated reports are rejected as approval inputs.
 
 Before approval, the runner also rechecks the draft's non-secret Preset request
 counts, dashboard-search bound, path-delta consistency, credential-load proof,

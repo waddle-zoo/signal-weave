@@ -28,6 +28,30 @@ def _policy_proof() -> dict[str, object]:
     }
 
 
+@pytest.mark.parametrize(
+    ("field", "value", "message"),
+    [
+        ("approval_requested", True, "unapproved onboarding draft"),
+        ("passed", True, "must not already claim acceptance"),
+        ("evaluation", {}, "post-approval artifacts"),
+    ],
+)
+def test_approval_loader_rejects_non_draft_artifacts(field, value, message):
+    report = {
+        "approval_requested": False,
+        "passed": False,
+        "onboarding": {
+            "status": "ready_for_approval",
+            "approval_required": True,
+            "delivery_enabled": False,
+        },
+    }
+    report[field] = value
+
+    with pytest.raises(RuntimeError, match=message):
+        trial._validate_approval_draft(report)
+
+
 class ToolManager:
     def __init__(self, tools):
         self._tools = {name: SimpleNamespace(fn=fn) for name, fn in tools.items()}
