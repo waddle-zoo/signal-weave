@@ -1079,10 +1079,18 @@ async def test_preset_provider_reported_row_count_cannot_bypass_result_limit(row
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("bad_value", [True, -1, 1.5, "11"])
+@pytest.mark.parametrize("bad_value", [True, -1, 1.5, "11", float("nan"), float("inf")])
 async def test_preset_invalid_provider_reported_row_count_fails_closed(bad_value):
     def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(200, json={"result": [{"data": [], "rowcount": bad_value}]})
+        body = json.dumps(
+            {"result": [{"data": [], "rowcount": bad_value}]},
+            allow_nan=True,
+        ).encode()
+        return httpx.Response(
+            200,
+            content=body,
+            headers={"content-type": "application/json"},
+        )
 
     client = PresetCloudClient(
         "https://workspace.app.preset.test",

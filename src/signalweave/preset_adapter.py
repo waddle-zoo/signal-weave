@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import math
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -227,11 +228,21 @@ class PresetCloudClient(SupersetClient):
                     raise PresetPolicyError(
                         f"Preset chart response contained an invalid {key} value"
                     )
-                if value < 0 or int(value) != value:
+                if isinstance(value, float) and not math.isfinite(value):
                     raise PresetPolicyError(
                         f"Preset chart response contained an invalid {key} value"
                     )
-                counts.append(int(value))
+                try:
+                    integer_value = int(value)
+                except (OverflowError, ValueError):
+                    raise PresetPolicyError(
+                        f"Preset chart response contained an invalid {key} value"
+                    ) from None
+                if value < 0 or integer_value != value:
+                    raise PresetPolicyError(
+                        f"Preset chart response contained an invalid {key} value"
+                    )
+                counts.append(integer_value)
         return counts
 
     @staticmethod
