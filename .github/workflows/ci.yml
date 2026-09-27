@@ -40,3 +40,31 @@ jobs:
 
       - name: Run tests
         run: uv run python -m pytest
+
+  hosted-preset-proof:
+    name: hosted Preset contract proof
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --locked --extra dev
+
+      - name: Run no-credential hosted Preset proof pack
+        run: |
+          uv run python evaluations/preset_enterprise_proof.py \
+            --output artifacts/preset-enterprise-proof.json
+          uv run python evaluations/preset_enterprise_proof_review.py \
+            artifacts/preset-enterprise-proof.json
