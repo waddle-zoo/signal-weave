@@ -142,9 +142,9 @@ make local-superset-runtime-shadow-review
 ```
 
 The current local verified regression result is `521 passed, 2 skipped` with
-Ruff clean on `feat/decision-feedback-contract` at `d430d88`. The current
-branch CI run is [`CI run 36321747827`](https://github.com/waddle-zoo/signal-weave/actions/runs/36321747827)
-at commit `f39119b`; all 14 jobs passed, including the Python test matrix,
+Ruff clean on `feat/decision-feedback-contract` at `6aa9892`. The current
+branch CI run is [`CI run 36322147007`](https://github.com/waddle-zoo/signal-weave/actions/runs/36322147007)
+at commit `6aa9892`; all 14 jobs passed, including the Python test matrix,
 the every-chart local Superset matrix, the live Superset integration tests, the
 hosted Preset bootstrap/Compose contracts, and the generated-shape and scale
 proofs. The environment preflight also rejects malformed Preset workspace or
