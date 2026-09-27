@@ -141,12 +141,14 @@ make local-superset-runtime-shadow-trial
 make local-superset-runtime-shadow-review
 ```
 
-The current verified regression result is `514 passed, 2 skipped` with Ruff
-clean on commit `4329efa`. The corrected remote CI run is retained at
-[`CI run 36319479176`](https://github.com/waddle-zoo/signal-weave/actions/runs/36319479176);
-it passed the Python test matrix, the every-chart local Superset matrix, the
-live Superset integration tests, the hosted Preset bootstrap/Compose contracts,
-and the generated-shape and scale proofs. The environment preflight also rejects malformed Preset workspace or
+The current local verified regression result is `521 passed, 2 skipped` with
+Ruff clean on `feat/decision-feedback-contract` at `d430d88`. The last
+recorded remote CI run is [`CI run 36319479176`](https://github.com/waddle-zoo/signal-weave/actions/runs/36319479176)
+at the earlier hardening commit `4329efa`; it passed the Python test matrix,
+the every-chart local Superset matrix, the live Superset integration tests, the
+hosted Preset bootstrap/Compose contracts, and the generated-shape and scale
+proofs. A current-branch CI run is pending the pull request opened for this
+feature branch. The environment preflight also rejects malformed Preset workspace or
 API-auth URLs (credentials, paths, queries, fragments, missing hosts, and
 non-numeric ports) and copied example sentinels such as `replace-me`,
 `placeholder`, `your-*`, and angle-bracket values before provider or Jev
