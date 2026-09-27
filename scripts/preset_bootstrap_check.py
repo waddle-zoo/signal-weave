@@ -99,17 +99,31 @@ async def run(
                 }
             else:
                 chart = snapshot.charts[0]
-                remediation = _chart_probe_remediation(chart.error)
-                chart_probe = {
-                    "dashboard_id": dashboard_id,
-                    "chart_id": chart_id,
-                    "semantic_status": chart.semantic_status,
-                    "observation_count": len(chart.observations),
-                    "error": chart.error,
-                    "passed": chart.error is None and bool(chart.observations),
-                }
-                if remediation:
-                    chart_probe["remediation"] = remediation
+                returned_chart_id = str(getattr(chart, "id", ""))
+                if returned_chart_id != str(chart_id):
+                    chart_probe = {
+                        "dashboard_id": dashboard_id,
+                        "chart_id": chart_id,
+                        "returned_chart_id": returned_chart_id or None,
+                        "error": (
+                            "the provider returned a different chart than requested; "
+                            "the chart-scope probe cannot be trusted"
+                        ),
+                        "passed": False,
+                    }
+                else:
+                    remediation = _chart_probe_remediation(chart.error)
+                    chart_probe = {
+                        "dashboard_id": dashboard_id,
+                        "chart_id": chart_id,
+                        "returned_chart_id": returned_chart_id,
+                        "semantic_status": chart.semantic_status,
+                        "observation_count": len(chart.observations),
+                        "error": chart.error,
+                        "passed": chart.error is None and bool(chart.observations),
+                    }
+                    if remediation:
+                        chart_probe["remediation"] = remediation
     elif dashboard_id:
         if adapter.policy.mode == HostedDataMode.METADATA_ONLY:
             dashboard_probe = {

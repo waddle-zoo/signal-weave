@@ -89,6 +89,7 @@ async def test_provider_smoke_probes_one_dashboard_chart_without_jev(monkeypatch
     calls: list[tuple[str, bool, list[str]]] = []
 
     class Chart:
+        id = "101"
         error = None
         semantic_status = "extracted"
         observations = [object()]
@@ -121,6 +122,53 @@ async def test_provider_smoke_probes_one_dashboard_chart_without_jev(monkeypatch
     assert report["chart_probe"]["passed"] is True
     assert report["checks"]["jev_calls_made"] is True
     assert calls == [("7", True, ["101"])]
+
+
+@pytest.mark.asyncio
+async def test_provider_smoke_rejects_provider_returning_a_different_chart(monkeypatch):
+    class Chart:
+        id = "999"
+        error = None
+        semantic_status = "extracted"
+        observations = [object()]
+
+    class Snapshot:
+        charts = [Chart()]
+
+    class Client:
+        async def list_dashboards_page(self, *, page, page_size, query=None):
+            return ([{"id": 7, "dashboard_title": "Growth"}], 1)
+
+        async def dashboard_snapshot(self, dashboard_id, *, include_data, chart_ids):
+            assert str(dashboard_id) == "7"
+            assert include_data is True
+            assert chart_ids == ["101"]
+            return Snapshot()
+
+    adapter = PresetAdapter.__new__(PresetAdapter)
+    adapter.client = Client()
+    adapter.policy = HostedDataPolicy()
+    adapter.name = "preset__preset-env"
+    _wire_environment(monkeypatch, adapter)
+
+    report = await bootstrap.run(
+        adapter_name="preset__preset-env",
+        page_size=20,
+        dashboard_id="7",
+        chart_id="101",
+    )
+
+    assert report["passed"] is False
+    assert report["chart_probe"] == {
+        "dashboard_id": "7",
+        "chart_id": "101",
+        "returned_chart_id": "999",
+        "error": (
+            "the provider returned a different chart than requested; "
+            "the chart-scope probe cannot be trusted"
+        ),
+        "passed": False,
+    }
 
 
 @pytest.mark.asyncio
@@ -187,6 +235,7 @@ async def test_provider_smoke_reports_missing_chart_instead_of_index_error(monke
 @pytest.mark.asyncio
 async def test_provider_smoke_explains_missing_saved_query_context(monkeypatch):
     class Chart:
+        id = "101"
         error = "Data unavailable: Chart has no query context saved. Please save the chart again."
         semantic_status = "unsupported"
         observations = []
