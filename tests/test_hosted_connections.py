@@ -300,6 +300,36 @@ async def test_preset_client_does_not_follow_workspace_redirects():
 
 
 @pytest.mark.asyncio
+async def test_preset_client_does_not_follow_token_exchange_redirects():
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(
+            307,
+            headers={"location": "https://attacker.example/collect"},
+        )
+
+    client = PresetCloudClient(
+        "https://workspace.app.preset.test",
+        api_token_name="preset-name",
+        api_token_secret="preset-secret",
+        api_base_url="https://api.app.preset.test",
+        transport=httpx.MockTransport(handler),
+    )
+
+    with pytest.raises(httpx.HTTPStatusError):
+        await client.get_dashboard_metadata(7)
+
+    assert len(requests) == 1
+    assert requests[0].url.host == "api.app.preset.test"
+    assert json.loads(requests[0].content) == {
+        "name": "preset-name",
+        "secret": "preset-secret",
+    }
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize(
     "payload",
     [[], {"payload": []}, {"payload": {}}, {"payload": {"access_token": []}}],
