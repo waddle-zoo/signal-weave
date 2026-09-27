@@ -83,6 +83,7 @@ tools in addition to the adapter and engine:
 ```bash
 make preset-runtime-shadow-trial
 cat artifacts/preset-runtime-shadow-trial.json
+make preset-runtime-shadow-review
 ```
 
 For each named and generated workspace it builds the runtime from `PRESET_*`
@@ -102,6 +103,12 @@ seed and counts when reviewing a release; the CLI accepts
 `--generated-workspaces`, `--generated-charts-per-workspace`, and
 `--generated-seed`. The named fixture still remains for readable regression
 cases.
+
+The separate preset-runtime-shadow-review command independently rechecks the
+serialized report. It rejects missing cards, missing evidence, enabled
+delivery, lost dashboard scope, secret leakage, failed idempotent replay,
+missing generated tenants, or omitted non-claims even if the trial's own
+passed flag is still true.
 
 The Preset and TypeSafe network transports are synthetic for this trial. The
 runtime/MCP/store/adapter/Jev parsing path is production code; live Jev

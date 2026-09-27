@@ -358,6 +358,11 @@ async def run_trial(
         "synthetic_typesafe_transport": True,
         "live_jev_semantics_proven": False,
         "real_preset_tenant_proven": False,
+        "not_proven": [
+            "live Jev semantic accuracy or business usefulness",
+            "a real Preset tenant's permissions, plan, rate limits, or network path",
+            "managed SignalWeave hosting",
+        ],
         "checks": checks,
         "passed": all(checks.values()),
         "workspace_count": len(results),
