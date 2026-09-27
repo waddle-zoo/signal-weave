@@ -81,7 +81,7 @@ returns an inspectable evidence bundle and receipt.
 | Preset onboarding fails early without burning Jev credits | `make preset-config-check` reuses the production Preset parser to validate credentials, tenant binding, auth mode, policy, and Jev key presence with zero network requests and zero Jev requests. The provider-only bootstrap path refuses non-Jev mode before provider access, requires counted transport telemetry, then reaches a bounded catalog request without a Jev request. The optional chart probe reports an actionable re-save remediation when Preset has no saved query context, rather than suggesting an unsafe unscoped fallback. | Pass locally; real tenant gate remains open |
 | Generated-shape anti-overfitting trial | A seeded generator creates 24 unfamiliar tenant workspaces / 192 charts across five result envelopes, 12 visualization labels, usable and unusable metric definitions, empty results, ambiguous numerics, and provider failures; the production Preset client/adapter passes catalog, scope, cache, retention, and safe-degradation assertions, then an independent report reviewer checks coverage and rejects mutated pass-looking reports. A generated 64-chart dashboard stress test proves the provider aggregate byte budget fails closed; an engine test separately proves the multi-source serialized Jev budget fails before any Jev call. | Pass locally; provider and live Jev gates remain open |
 | Existing enterprise workflows remain the owner | MCP tools return typed decisions and evidence; SignalWeave does not execute arbitrary SQL, tools, DAGs, or notifications. | Pass |
-| Regression safety | Full repository tests and lint. | 387 passed, 2 skipped; Ruff clean |
+| Regression safety | Full repository tests and lint. | 386 passed, 2 skipped; Ruff clean |
 
 ## Reproduction
 
@@ -122,7 +122,7 @@ make preset-compose-check
 make superset-chart-matrix
 ```
 
-The current verified regression result is `387 passed, 2 skipped` with Ruff
+The current verified regression result is `386 passed, 2 skipped` with Ruff
 clean. The runtime-shadow and chart-matrix commands are separate evidence
 surfaces: the former uses synthetic Preset and TypeSafe transports to exercise
 the production runtime, while the latter uses the live local Superset service
