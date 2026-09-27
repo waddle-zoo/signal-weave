@@ -328,6 +328,9 @@ override to mount the Preset API-token name and secret as Docker secrets rather
 than placing their values in `.env.preset`.
 For a customer deployment, run `make preset-bootstrap-check` first; it validates
 the connection and one dashboard catalog page without making a Jev call.
+Before that provider request, `make preset-config-check` validates the local
+Preset/tenant/auth/policy wiring with zero network requests and zero Jev calls;
+it does not prove the credential is accepted by Preset.
 Then run `make preset-provider-smoke` with one real dashboard/chart ID to verify
 the filtered chart-data boundary without spending a Jev call.
 The real-account onboarding/shadow acceptance gate is a two-step flow:

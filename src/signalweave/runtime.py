@@ -194,6 +194,79 @@ def _preset_from_environment() -> tuple[HostedConnection, HostedCredentialVault]
     )
 
 
+def validate_preset_environment() -> dict[str, Any]:
+    """Validate Preset deployment wiring without building a Jev runtime.
+
+    This intentionally reuses the same environment parser as ``build_runtime``
+    so a no-network preflight cannot drift from the production connection
+    contract. It returns only non-secret metadata; it does not contact Preset,
+    instantiate a TypeSafe client, or make a Jev request.
+    """
+    configured = _preset_from_environment()
+    if configured is None:
+        raise RuntimeError("PRESET_URL is required for the Preset configuration preflight")
+    connection, _ = configured
+
+    signalweave_tenant_id = os.getenv("SIGNALWEAVE_TENANT_ID", "").strip()
+    principal_id = os.getenv("SIGNALWEAVE_PRINCIPAL_ID", "").strip()
+    if bool(signalweave_tenant_id) != bool(principal_id):
+        raise RuntimeError(
+            "SIGNALWEAVE_TENANT_ID and SIGNALWEAVE_PRINCIPAL_ID must be configured together"
+        )
+    if signalweave_tenant_id and signalweave_tenant_id != connection.tenant_id:
+        raise RuntimeError(
+            "hosted Preset tenant must match SIGNALWEAVE_TENANT_ID: "
+            f"{connection.tenant_id} != {signalweave_tenant_id}"
+        )
+
+    auth_mode = os.getenv("SIGNALWEAVE_AUTH_MODE", "token").strip().lower()
+    if auth_mode not in {"token", "oidc"}:
+        raise RuntimeError("SIGNALWEAVE_AUTH_MODE must be token or oidc")
+    if auth_mode == "token" and not (signalweave_tenant_id and principal_id):
+        raise RuntimeError(
+            "token-authenticated Preset deployments require "
+            "SIGNALWEAVE_TENANT_ID and SIGNALWEAVE_PRINCIPAL_ID"
+        )
+    if auth_mode == "oidc":
+        from .auth import OIDCSettings
+
+        OIDCSettings.from_env()
+
+    direct_preset_secret = any(
+        os.getenv(name, "").strip()
+        for name in (
+            "PRESET_ACCESS_TOKEN",
+            "PRESET_API_TOKEN_NAME",
+            "PRESET_API_TOKEN_SECRET",
+        )
+    )
+    mounted_preset_secret = any(
+        os.getenv(name, "").strip()
+        for name in (
+            "PRESET_ACCESS_TOKEN_FILE",
+            "PRESET_API_TOKEN_NAME_FILE",
+            "PRESET_API_TOKEN_SECRET_FILE",
+        )
+    )
+    return {
+        "provider": connection.provider.value,
+        "connection_id": connection.id,
+        "tenant_id": connection.tenant_id,
+        "external_workspace": connection.external_workspace,
+        "base_url": connection.base_url,
+        "auth_mode": auth_mode,
+        "preset_credential_source": (
+            "environment"
+            if direct_preset_secret
+            else "mounted_file"
+            if mounted_preset_secret
+            else "none"
+        ),
+        "policy": connection.policy.model_dump(mode="json"),
+        "principal_mode": "static" if principal_id else "request_scoped",
+    }
+
+
 def build_runtime(
     mode: str | None = None,
     *,

@@ -49,6 +49,25 @@ This requires the copied `.env.preset` file, renders both Compose files, and
 fails if the TypeSafe mount, either Preset secret input, direct-token redaction,
 or `*_FILE` wiring is wrong. It does not contact Preset or TypeSafe.
 
+Before preparing a Compose deployment, validate the runtime environment itself:
+
+```bash
+PRESET_URL=https://your-workspace.<region>.app.preset.io \
+PRESET_TENANT_ID=your-company \
+PRESET_API_TOKEN_NAME=replace-me \
+PRESET_API_TOKEN_SECRET=replace-me \
+SIGNALWEAVE_TENANT_ID=your-company \
+SIGNALWEAVE_PRINCIPAL_ID=signalweave-agent \
+TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
+  make preset-config-check
+```
+
+This is a zero-network configuration check. It validates the production Preset
+credential mode, tenant binding, policy, HTTP/OIDC mode, and Jev credential
+source without instantiating a TypeSafe client or reading a provider. It never
+proves that the credential is accepted by Preset; use `make preset-bootstrap-check`
+for that bounded provider request.
+
 The service listens on `http://127.0.0.1:18000` and exposes the MCP endpoint at
 `/mcp`. Connect the customer's agent through the existing identity-aware proxy,
 or use the local bearer token for an isolated test. The container automatically
@@ -93,7 +112,8 @@ limits. Successful evaluations expose the serialized payload size and budget
 in telemetry; a rejected shadow receipt records the failed stage and byte
 counts for audit.
 
-Start with the no-credit bootstrap preflight before onboarding a card:
+After the configuration check, start with the no-credit bootstrap preflight
+before onboarding a card:
 
 ```bash
 TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
