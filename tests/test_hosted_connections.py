@@ -90,6 +90,14 @@ def test_hosted_connection_requires_https_without_inline_credentials():
         HostedConnection.model_validate(
             {**connection(HostedProvider.PRESET).model_dump(), "credential_ref": "replace-me"}
         )
+    with pytest.raises(ValueError, match="real deployment value"):
+        HostedConnection.model_validate(
+            {**connection(HostedProvider.PRESET).model_dump(), "tenant_id": "your-company"}
+        )
+    with pytest.raises(ValueError, match="real deployment value"):
+        HostedConnection.model_validate(
+            {**connection(HostedProvider.PRESET).model_dump(), "id": "replace-me"}
+        )
 
 
 def test_hosted_connection_metadata_cannot_be_used_as_a_secret_store():
@@ -1822,6 +1830,23 @@ def test_runtime_rejects_incomplete_preset_environment_bootstrap(monkeypatch, tm
     monkeypatch.setenv("SIGNALWEAVE_STORE_PATH", str(tmp_path / "signalweave.db"))
 
     with pytest.raises(RuntimeError, match="PRESET_ACCESS_TOKEN"):
+        build_runtime()
+
+
+def test_runtime_rejects_placeholder_preset_connection_id(monkeypatch, tmp_path):
+    monkeypatch.setenv("TYPESAFE_API_KEY", "test-key")
+    monkeypatch.delenv("TYPESAFE_API_KEY_FILE", raising=False)
+    monkeypatch.delenv("SUPERSET_URL", raising=False)
+    monkeypatch.setenv("PRESET_URL", "https://workspace.us-east-1.app.preset.io")
+    monkeypatch.setenv("PRESET_CONNECTION_ID", "replace-me")
+    monkeypatch.setenv("PRESET_TENANT_ID", "northstar")
+    monkeypatch.setenv("PRESET_ACCESS_TOKEN", "bearer-token")
+    monkeypatch.setenv("SIGNALWEAVE_TENANT_ID", "northstar")
+    monkeypatch.setenv("SIGNALWEAVE_PRINCIPAL_ID", "agent")
+    monkeypatch.setenv("SIGNALWEAVE_STORE_BACKEND", "sqlite")
+    monkeypatch.setenv("SIGNALWEAVE_STORE_PATH", str(tmp_path / "signalweave.db"))
+
+    with pytest.raises(RuntimeError, match="PRESET_CONNECTION_ID"):
         build_runtime()
 
 

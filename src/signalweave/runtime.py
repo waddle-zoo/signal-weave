@@ -160,6 +160,7 @@ def _preset_from_environment() -> tuple[HostedConnection, HostedCredentialVault]
         ("PRESET_API_TOKEN_NAME", token_name),
         ("PRESET_API_TOKEN_SECRET", token_secret),
         ("PRESET_WORKSPACE", os.getenv("PRESET_WORKSPACE", "")),
+        ("PRESET_CONNECTION_ID", os.getenv("PRESET_CONNECTION_ID", "")),
         ("PRESET_TENANT_ID", os.getenv("PRESET_TENANT_ID", "")),
         ("SIGNALWEAVE_TENANT_ID", os.getenv("SIGNALWEAVE_TENANT_ID", "")),
         ("SIGNALWEAVE_PRINCIPAL_ID", os.getenv("SIGNALWEAVE_PRINCIPAL_ID", "")),

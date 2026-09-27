@@ -59,6 +59,7 @@ def review_report(report: dict[str, Any]) -> dict[str, Any]:
         "hex_redirect_is_not_followed",
         "looker_redirect_is_not_followed",
         "direct_factory_rejects_placeholder_credentials",
+        "direct_connection_identity_rejects_placeholders",
         "local_vault_rejects_cross_tenant_rebind",
     }
     if not isinstance(direct_clients, dict) or set(direct_clients) != required_direct_clients:

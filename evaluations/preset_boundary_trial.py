@@ -274,6 +274,19 @@ async def _direct_client_boundary_checks() -> dict[str, bool]:
             pass
         checks[f"{name}_redirect_is_not_followed"] = requests == 1
 
+    identity_rejections: list[bool] = []
+    base_connection = _connection("tenant-identity", auth_mode=HostedAuthMode.BEARER)
+    for field, value in (("id", "replace-me"), ("tenant_id", "your-company")):
+        try:
+            HostedConnection.model_validate(
+                {**base_connection.model_dump(mode="json"), field: value}
+            )
+        except ValueError:
+            identity_rejections.append(True)
+        else:
+            identity_rejections.append(False)
+    checks["direct_connection_identity_rejects_placeholders"] = all(identity_rejections)
+
     placeholder_connection = _connection(
         "tenant-sample", auth_mode=HostedAuthMode.BEARER, provider=HostedProvider.HEX
     )

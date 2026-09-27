@@ -134,6 +134,8 @@ class HostedConnection(BaseModel):
         """Keep the safe metadata escape hatch from becoming a secret store."""
 
         for field_name, value in (
+            ("id", self.id),
+            ("tenant_id", self.tenant_id),
             ("external_workspace", self.external_workspace),
             ("credential_ref", self.credential_ref),
         ):
