@@ -47,6 +47,17 @@ def review(report: dict[str, Any]) -> dict[str, Any]:
     require(int(provider.get("requests_for_replay", 0)) == 0, "replay contacted the provider")
     paths = provider.get("request_path_counts") or {}
     require(any(str(path).endswith("/data/") for path in paths), "no saved chart-data path was observed")
+    scope = provider.get("dashboard_scope") or {}
+    require(
+        all(isinstance(scope.get(key), int) for key in ("dashboard_scoped_requests", "chart_query_fallbacks")),
+        "dashboard scope telemetry is missing",
+    )
+    if int(scope.get("chart_query_fallbacks", 0)) > 0:
+        require(
+            isinstance(provider.get("dashboard_scope_warning"), str)
+            and bool(provider["dashboard_scope_warning"]),
+            "unscoped chart-query fallback was not disclosed",
+        )
 
     checks = report.get("checks") or {}
     require(bool(checks) and all(checks.values()), "producer checks did not all pass")

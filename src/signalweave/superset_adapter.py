@@ -292,6 +292,7 @@ class SupersetAdapter:
                 chart.model_dump(mode="json", exclude={"observations"})
                 for chart in dashboard.charts
             ],
+            "dashboard_scope": dashboard.scope_telemetry,
             "parameters": source.parameters,
         }
         chart_errors = [

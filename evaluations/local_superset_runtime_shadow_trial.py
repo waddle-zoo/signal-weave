@@ -296,6 +296,23 @@ async def run_trial(
                 chart_summary = _chart_summary(
                     resources, observation_count=len(result.get("observations") or [])
                 )
+                dashboard_scope = next(
+                    (
+                        resource.get("metadata", {}).get("dashboard_scope")
+                        for resource in resources
+                        if isinstance(resource, dict)
+                        and isinstance(resource.get("metadata"), dict)
+                        and isinstance(resource.get("metadata", {}).get("dashboard_scope"), dict)
+                    ),
+                    {},
+                )
+                dashboard_scope_warning = (
+                    "Some charts used the bounded saved-chart-query fallback because "
+                    "the provider reported no saved query context; dashboard-native "
+                    "filter state was not applied to those requests."
+                    if dashboard_scope.get("chart_query_fallbacks", 0) > 0
+                    else None
+                )
                 checks = {
                     "tenant_bound_runtime": adapter.tenant_id == tenant_id,
                     "discovery_found_requested_dashboard": match["ref"].startswith(
@@ -315,6 +332,10 @@ async def run_trial(
                     and bool(result.get("observations")),
                     "dashboard_chart_evidence_is_visible": chart_summary["charts"] > 0
                     and chart_summary["observations"] > 0,
+                    "dashboard_scope_telemetry_visible": all(
+                        isinstance(dashboard_scope.get(key), int)
+                        for key in ("dashboard_scoped_requests", "chart_query_fallbacks")
+                    ),
                     "delivery_is_disabled": receipt["receipt"]["status"] == "delivery_disabled"
                     and receipt["receipt"]["delivery_enabled"] is False,
                     "replay_is_idempotent": replay["replayed"] is True
@@ -374,6 +395,8 @@ async def run_trial(
                     "provider": {
                         "requests_made": provider_after_evaluation,
                         "request_path_counts": provider_client.request_path_counts,
+                        "dashboard_scope": dashboard_scope,
+                        "dashboard_scope_warning": dashboard_scope_warning,
                         "requests_for_evaluation": provider_after_evaluation
                         - provider_after_approval,
                         "requests_for_replay": provider_after_replay

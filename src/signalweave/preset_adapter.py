@@ -389,6 +389,7 @@ class PresetCloudClient(SupersetClient):
         *,
         dashboard_id: int | str | None = None,
         allow_unscoped_fallback: bool = False,
+        scope_telemetry: dict[str, int] | None = None,
     ) -> list[dict[str, Any]]:
         """Fetch chart results with a hard response bound.
 
@@ -417,6 +418,10 @@ class PresetCloudClient(SupersetClient):
                     "filter_dashboard_id": str(dashboard_id),
                 },
             )
+            if scope_telemetry is not None:
+                scope_telemetry["dashboard_scoped_requests"] = (
+                    scope_telemetry.get("dashboard_scoped_requests", 0) + 1
+                )
         else:
             self._validate_raw_saved_query_context(chart)
             payload = self._saved_query_context(chart) or self._query_context(chart)

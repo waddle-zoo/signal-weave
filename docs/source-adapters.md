@@ -169,6 +169,16 @@ This prevents a tenant-scoped MCP principal from seeing the adapter's implicit
 `default` contract and makes the standalone Superset path usable in a real
 tenant deployment. A deployment can add any connector at construction time;
 Superset is not a required runtime dependency.
+
+Dashboard snapshots expose `metadata.dashboard_scope` telemetry. A successful
+dashboard-filtered chart request increments `dashboard_scoped_requests`. The
+generic local Superset client has one deliberately narrow compatibility path:
+when the dashboard declares no native filters and the provider reports missing
+saved query context, it may use the bounded saved-chart-query fallback. That
+increments `chart_query_fallbacks` and must remain visible to the caller; it is
+not evidence that dashboard-native filters were applied. Hosted Preset uses its
+provider-specific dashboard endpoint and fails closed instead of taking this
+fallback.
 Hosted connections should be created through the
 credential-reference-only factory:
 

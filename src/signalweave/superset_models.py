@@ -20,6 +20,13 @@ class SupersetChartSnapshot(BaseModel):
         "extracted", "partial", "unsupported", "metadata_only", "no_data"
     ] = "metadata_only"
     semantic_notes: list[str] = Field(default_factory=list, max_length=20)
+    data_scope: Literal[
+        "dashboard_scoped",
+        "chart_query_fallback",
+        "chart_unscoped",
+        "metadata_only",
+        "unknown",
+    ] = "unknown"
     result_row_count: int = Field(default=0, ge=0)
     result_columns: list[str] = Field(default_factory=list, max_length=200)
     observations: list[Observation] = Field(default_factory=list)
@@ -32,5 +39,6 @@ class SupersetDashboardSnapshot(BaseModel):
     description: str = ""
     owners: list[str] = Field(default_factory=list)
     charts: list[SupersetChartSnapshot] = Field(default_factory=list)
+    scope_telemetry: dict[str, int] = Field(default_factory=dict)
     source_url: str | None = None
     captured_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

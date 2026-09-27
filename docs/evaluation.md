@@ -88,9 +88,16 @@ checked Northstar run selected `01 | Executive Command Center`, read 10
 charts, returned 25 normalized observations and 36 evidence items, and added
 zero provider or Jev calls on replay. Its TypeSafe transport is synthetic, so
 this proves real provider/runtime wiring and safety behavior, not live Jev
-semantic accuracy. The independent reviewer rejects a pass-looking report
-with no provider data, no evidence, enabled delivery, or a replay that
-contacts either dependency.
+semantic accuracy. The report also records a real provider-artifact limitation:
+all 10 charts used the bounded saved-chart-query fallback (`chart_query_fallbacks=10`,
+`dashboard_scoped_requests=0`) because the local charts returned “Chart has no
+query context saved.” The run passes only because that lack of dashboard-native
+filter application is disclosed; it is not evidence that the provider applied
+dashboard filter state. The hosted Preset connector does not use this fallback
+and fails closed when saved query context is missing. The independent reviewer
+rejects a pass-looking report with no provider data, no evidence, enabled
+delivery, an undisclosed scope fallback, or a replay that contacts either
+dependency.
 
 For a larger approved dashboard, keep the default bound as the first test and
 raise it explicitly only after reviewing the resulting payload size:

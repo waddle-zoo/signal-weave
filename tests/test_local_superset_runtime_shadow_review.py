@@ -30,6 +30,11 @@ def _report() -> dict:
             "requests_for_evaluation": 2,
             "requests_for_replay": 0,
             "request_path_counts": {"/api/v1/chart/1/data/": 1},
+            "dashboard_scope": {
+                "dashboard_scoped_requests": 1,
+                "chart_query_fallbacks": 0,
+            },
+            "dashboard_scope_warning": None,
         },
         "checks": {"tenant_bound_runtime": True},
         "passed": True,
@@ -56,3 +61,17 @@ def test_independent_review_rejects_providerless_pass_looking_report():
 
     assert result["passed"] is False
     assert "evaluation did not cross the provider" in result["failures"]
+
+
+def test_independent_review_rejects_undisclosed_scope_fallback():
+    report = _report()
+    report["provider"]["dashboard_scope"] = {
+        "dashboard_scoped_requests": 0,
+        "chart_query_fallbacks": 1,
+    }
+    report["provider"]["dashboard_scope_warning"] = None
+
+    result = review(report)
+
+    assert result["passed"] is False
+    assert "unscoped chart-query fallback was not disclosed" in result["failures"]

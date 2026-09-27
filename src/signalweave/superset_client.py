@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 import json
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -440,6 +441,7 @@ class SupersetClient:
         *,
         dashboard_id: int | str | None = None,
         allow_unscoped_fallback: bool = False,
+        scope_telemetry: dict[str, int] | None = None,
     ) -> list[dict[str, Any]]:
         if dashboard_id is not None:
             # The chart-specific endpoint is the provider-owned path for
@@ -459,6 +461,10 @@ class SupersetClient:
                         "filters_dashboard_id": str(dashboard_id),
                     },
                 )
+                if scope_telemetry is not None:
+                    scope_telemetry["dashboard_scoped_requests"] = (
+                        scope_telemetry.get("dashboard_scoped_requests", 0) + 1
+                    )
             except httpx.HTTPStatusError as error:
                 if not allow_unscoped_fallback or error.response.status_code != 400:
                     raise
@@ -468,6 +474,10 @@ class SupersetClient:
                 response = await self._request(
                     "POST", "/api/v1/chart/data", timeout=60, json=payload
                 )
+                if scope_telemetry is not None:
+                    scope_telemetry["chart_query_fallbacks"] = (
+                        scope_telemetry.get("chart_query_fallbacks", 0) + 1
+                    )
         else:
             payload = self._saved_query_context(chart) or self._query_context(chart)
             response = await self._request(
@@ -805,6 +815,10 @@ class SupersetClient:
             return snapshot
 
         allow_unscoped_fallback = self._dashboard_has_no_native_filters(metadata)
+        scope_telemetry: dict[str, int] = {
+            "dashboard_scoped_requests": 0,
+            "chart_query_fallbacks": 0,
+        }
 
         semaphore = asyncio.Semaphore(8)
 
@@ -816,13 +830,34 @@ class SupersetClient:
                         raise ValueError(
                             "Superset chart response did not match the requested chart ID"
                         )
+                    chart_scope: dict[str, int] = {
+                        "dashboard_scoped_requests": 0,
+                        "chart_query_fallbacks": 0,
+                    }
+                    chart_data_kwargs: dict[str, Any] = {
+                        "dashboard_id": dashboard_id,
+                        "allow_unscoped_fallback": allow_unscoped_fallback,
+                    }
+                    if "scope_telemetry" in inspect.signature(self.chart_data).parameters:
+                        chart_data_kwargs["scope_telemetry"] = chart_scope
+                    else:
+                        # Preserve compatibility with small provider test doubles
+                        # and downstream subclasses written before scope telemetry
+                        # was added. Their scope is explicitly unknown.
+                        chart_scope["scope_telemetry_unavailable"] = 1
                     extraction = self.extract_chart_data(
                         chart_metadata,
                         await self.chart_data(
                             chart_metadata,
-                            dashboard_id=dashboard_id,
-                            allow_unscoped_fallback=allow_unscoped_fallback,
+                            **chart_data_kwargs,
                         ),
+                    )
+                    for key, value in chart_scope.items():
+                        scope_telemetry[key] = scope_telemetry.get(key, 0) + value
+                    data_scope = (
+                        "chart_query_fallback"
+                        if chart_scope.get("chart_query_fallbacks", 0) > 0
+                        else "dashboard_scoped"
                     )
                     updates: dict[str, Any] = {
                         "observations": extraction.observations,
@@ -833,6 +868,7 @@ class SupersetClient:
                         "semantic_notes": extraction.notes,
                         "result_row_count": extraction.row_count,
                         "result_columns": extraction.columns or [],
+                        "data_scope": data_scope,
                     }
                     if not extraction.observations:
                         updates["error"] = "; ".join(extraction.notes)
@@ -849,7 +885,9 @@ class SupersetClient:
                     )
 
         charts = await asyncio.gather(*(load_chart(chart) for chart in snapshot.charts))
-        return snapshot.model_copy(update={"charts": charts})
+        return snapshot.model_copy(
+            update={"charts": charts, "scope_telemetry": scope_telemetry}
+        )
 
     @staticmethod
     def metadata_to_snapshot(metadata: dict[str, Any]) -> SupersetDashboardSnapshot:
