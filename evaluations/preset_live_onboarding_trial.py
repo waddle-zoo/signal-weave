@@ -460,9 +460,9 @@ async def run_trial(
         else None
     )
     if reviewed_draft is not None:
-        # The approval process intentionally does not rerun onboarding. Carry
-        # forward the first run's non-secret transport proof instead of
-        # pretending that a second process observed those requests.
+        # The trial does not call onboard_insight_card a second time. Carry
+        # forward the first run's discovery proof, while the actual approval
+        # revalidation is measured separately below.
         prior_checks = reviewed_draft["provider_checks"]
         provider_requests_before = prior_checks.get(
             "provider_requests_before_onboarding"
@@ -569,19 +569,43 @@ async def run_trial(
         if onboarding["status"] != "ready_for_approval":
             report["next_action"] = "resolve the onboarding blockers before approval"
         else:
-            provider_requests_before_evaluation = getattr(provider_client, "requests_made", None)
-            provider_paths_before_evaluation = getattr(provider_client, "request_path_counts", None)
-            if isinstance(provider_paths_before_evaluation, dict):
-                provider_paths_before_evaluation = dict(provider_paths_before_evaluation)
-            if not isinstance(provider_paths_before_evaluation, dict):
+            provider_requests_before_approval = getattr(provider_client, "requests_made", None)
+            provider_paths_before_approval = getattr(provider_client, "request_path_counts", None)
+            if isinstance(provider_paths_before_approval, dict):
+                provider_paths_before_approval = dict(provider_paths_before_approval)
+            if not isinstance(provider_paths_before_approval, dict):
                 raise RuntimeError(
                     "approved Preset acceptance requires request path telemetry"
                 )
+            metrics = getattr(getattr(runtime.engine, "judger", None), "metrics", None)
+            jev_requests_before_approval = getattr(metrics, "requests", None)
             approved = await _tool(server, "approve_insight_card")(
                 card_id, actor="preset-shadow-owner"
             )
+            jev_requests_after_approval = getattr(metrics, "requests", None)
+            provider_requests_after_approval = getattr(provider_client, "requests_made", None)
+            provider_paths_after_approval = getattr(provider_client, "request_path_counts", None)
+            if not isinstance(provider_paths_after_approval, dict):
+                raise RuntimeError("Preset request path telemetry disappeared during approval")
+            provider_paths_after_approval = dict(provider_paths_after_approval)
+            provider_paths_for_approval = _path_delta(
+                provider_paths_before_approval, provider_paths_after_approval
+            )
+            provider_requests_for_approval = (
+                provider_requests_after_approval - provider_requests_before_approval
+                if isinstance(provider_requests_after_approval, int)
+                and isinstance(provider_requests_before_approval, int)
+                else None
+            )
+            jev_requests_for_approval = (
+                jev_requests_after_approval - jev_requests_before_approval
+                if isinstance(jev_requests_after_approval, int)
+                and isinstance(jev_requests_before_approval, int)
+                else None
+            )
+            provider_requests_before_evaluation = provider_requests_after_approval
+            provider_paths_before_evaluation = provider_paths_after_approval
             idempotency_key = f"preset-shadow:{card_id}:v{approved['card']['version']}"
-            metrics = getattr(getattr(runtime.engine, "judger", None), "metrics", None)
             jev_requests_before = getattr(metrics, "requests", None)
             evaluation = await _tool(server, "evaluate_insight_card")(
                 card_id,
@@ -664,14 +688,18 @@ async def run_trial(
                         "provider_request_paths_for_onboarding": provider_paths_for_onboarding,
                         "provider_catalog_searches_for_onboarding": provider_catalog_searches_for_onboarding,
                         "provider_workspace_origin": provider_workspace_origin,
+                        "provider_request_paths_before_approval": provider_paths_before_approval,
+                        "provider_request_paths_after_approval": provider_paths_after_approval,
+                        "provider_request_paths_for_approval": provider_paths_for_approval,
+                        "provider_requests_for_approval": provider_requests_for_approval,
                         "provider_request_paths_before_first_evaluation": provider_paths_before_evaluation,
                         "provider_request_paths_after_first_evaluation": provider_paths_after_first,
                         "provider_request_paths_for_first_evaluation": provider_paths_for_first_evaluation,
                         "provider_requests_for_first_evaluation": provider_requests_for_first_evaluation,
                         "provider_data_requests_for_first_evaluation": provider_data_requests_for_first_evaluation,
                         "provider_transport_used": (
-                            isinstance(provider_requests_for_onboarding, int)
-                            and provider_requests_for_onboarding > 0
+                            isinstance(provider_requests_for_approval, int)
+                            and provider_requests_for_approval > 0
                         ),
                         "provider_credentials_loaded": bool(provider_secrets),
                         "provider_secrets_absent_from_artifacts": _secrets_absent(
@@ -691,6 +719,7 @@ async def run_trial(
                         and len(preset_resources) == len(resources),
                         "all_resources_match_runtime_tenant": tenant_scoped_resources,
                         "jev_requests_for_first_evaluation": jev_requests_for_first_evaluation,
+                        "jev_requests_for_approval": jev_requests_for_approval,
                         "replay_made_no_jev_call": replay_made_no_jev_call,
                         "replay_made_no_provider_call": replay_made_no_provider_call,
                     },
@@ -700,11 +729,21 @@ async def run_trial(
                         and summary["evaluator"] == "jev-latest"
                         and summary["evidence_count"] > 0
                         and summary["observation_count"] > 0
-                        and report["provider_checks"]["provider_transport_used"] is True
-                        and report["provider_checks"]["provider_credentials_loaded"] is True
-                        and report["provider_checks"][
-                            "provider_secrets_absent_from_artifacts"
-                        ] is True
+                        and isinstance(provider_requests_for_approval, int)
+                        and provider_requests_for_approval > 0
+                        and isinstance(jev_requests_for_approval, int)
+                        and jev_requests_for_approval > 0
+                        and bool(provider_secrets)
+                        and _secrets_absent(
+                            {
+                                "onboarding": onboarding,
+                                "approval": approved,
+                                "evaluation": evaluation,
+                                "replay": replay,
+                                "receipt_lookup": receipt_lookup,
+                            },
+                            provider_secrets,
+                        )
                         and report["approval_basis"]["provider_workspace_unchanged"] is True
                         and bool(preset_resources)
                         and tenant_scoped_resources

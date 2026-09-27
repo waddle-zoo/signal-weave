@@ -247,6 +247,12 @@ def review_report(report: dict[str, Any]) -> dict[str, Any]:
             findings.append("approved shadow did not prove Preset credentials were loaded")
         if checks.get("provider_secrets_absent_from_artifacts") is not True:
             findings.append("approved shadow did not prove provider secrets stayed out of artifacts")
+        approval_provider_requests = checks.get("provider_requests_for_approval")
+        if not isinstance(approval_provider_requests, int) or approval_provider_requests < 1:
+            findings.append("approval did not record a Preset provider revalidation")
+        approval_jev_requests = checks.get("jev_requests_for_approval")
+        if not isinstance(approval_jev_requests, int) or approval_jev_requests < 1:
+            findings.append("approval did not record a Jev-backed revalidation")
         _check_data_policy(findings, checks)
         if not isinstance(checks.get("provider_requests_for_onboarding"), int) or checks[
             "provider_requests_for_onboarding"
@@ -265,6 +271,9 @@ def review_report(report: dict[str, Any]) -> dict[str, Any]:
         path_values = [
             checks.get("provider_request_paths_before_onboarding"),
             checks.get("provider_request_paths_after_onboarding"),
+            checks.get("provider_request_paths_before_approval"),
+            checks.get("provider_request_paths_after_approval"),
+            checks.get("provider_request_paths_for_approval"),
             checks.get("provider_request_paths_before_first_evaluation"),
             checks.get("provider_request_paths_after_first_evaluation"),
             checks.get("provider_request_paths_for_first_evaluation"),
@@ -282,14 +291,19 @@ def review_report(report: dict[str, Any]) -> dict[str, Any]:
             onboarding_delta = _path_delta(
                 path_values[0], path_values[1]
             )
+            approval_delta = _path_delta(path_values[2], path_values[3])
             evaluation_delta = _path_delta(
-                path_values[2], path_values[3]
+                path_values[5], path_values[6]
             )
             if sum(onboarding_delta.values()) != checks.get("provider_requests_for_onboarding"):
                 findings.append("onboarding provider request count disagrees with path telemetry")
             if onboarding_delta.get("/api/v1/dashboard/", 0) != catalog_searches:
                 findings.append("catalog search count disagrees with onboarding path telemetry")
-            if path_values[4] != evaluation_delta:
+            if path_values[4] != approval_delta:
+                findings.append("approval provider path delta is not reproducible")
+            if sum(approval_delta.values()) != checks.get("provider_requests_for_approval"):
+                findings.append("approval provider request count disagrees with path telemetry")
+            if path_values[7] != evaluation_delta:
                 findings.append("first-evaluation provider path delta is not reproducible")
             if sum(evaluation_delta.values()) != checks.get(
                 "provider_requests_for_first_evaluation"

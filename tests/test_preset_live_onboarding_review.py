@@ -90,6 +90,13 @@ def _passing_report() -> dict:
             "provider_request_paths_after_onboarding": {"/api/v1/dashboard/": 1},
             "provider_request_paths_for_onboarding": {"/api/v1/dashboard/": 1},
             "provider_catalog_searches_for_onboarding": 1,
+            "provider_request_paths_before_approval": {"/api/v1/dashboard/": 1},
+            "provider_request_paths_after_approval": {
+                "/api/v1/dashboard/": 1,
+                "/api/v1/chart/1": 1,
+            },
+            "provider_request_paths_for_approval": {"/api/v1/chart/1": 1},
+            "provider_requests_for_approval": 1,
             "provider_request_paths_before_first_evaluation": {"/api/v1/dashboard/": 1},
             "provider_request_paths_after_first_evaluation": {
                 "/api/v1/dashboard/": 1,
@@ -101,6 +108,7 @@ def _passing_report() -> dict:
             "replay_made_no_jev_call": True,
             "replay_made_no_provider_call": True,
             "jev_requests_for_first_evaluation": 1,
+            "jev_requests_for_approval": 1,
             "all_resources_use_requested_preset_adapter": True,
             "all_resources_match_runtime_tenant": True,
             "data_policy": {
@@ -172,6 +180,18 @@ def test_independent_reviewer_rejects_missing_preset_transport_proof():
 
     assert review["passed"] is False
     assert any("Preset provider request" in finding for finding in review["findings"])
+
+
+def test_independent_reviewer_rejects_missing_approval_revalidation_proof():
+    report = deepcopy(_passing_report())
+    report["provider_checks"].pop("provider_requests_for_approval")
+    report["provider_checks"].pop("jev_requests_for_approval")
+
+    review = review_report(report)
+
+    assert review["passed"] is False
+    assert any("approval did not record a Preset" in finding for finding in review["findings"])
+    assert any("approval did not record a Jev-backed" in finding for finding in review["findings"])
 
 
 def test_independent_reviewer_rejects_missing_credential_artifact_proof():
