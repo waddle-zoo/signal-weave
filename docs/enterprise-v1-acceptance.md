@@ -32,6 +32,7 @@ returns an inspectable evidence bundle and receipt.
 | OIDC discovery cannot redirect key retrieval insecurely | Configured and discovered issuer/JWKS URLs are validated for HTTPS and safe URL shape; a discovered HTTP `jwks_uri` is rejected before any HTTP JWKS request. | Pass locally |
 | Production Preset startup reuses the identity preflight | `build_runtime()` invokes the same configuration contract before registering an environment Preset adapter: token mode requires a static trusted tenant/principal, while OIDC mode permits request-scoped identity and requires valid OIDC settings. | Pass locally |
 | Preset provider URLs cannot downgrade to HTTP | Environment bootstrap and the hosted connection model both require HTTPS; a legacy `SIGNALWEAVE_ALLOW_INSECURE_PROVIDER` setting does not weaken the check. | Pass locally |
+| Preset provider redirects fail closed | Preset token-exchange and workspace HTTP clients explicitly disable redirects; a 3xx response produces no second-host request and cannot forward a bearer token. | Pass locally; shared-service egress controls remain open |
 | Invalid or incomplete identity fails closed | Wrong signature/issuer/audience, expired tokens, malformed JWTs, missing tenant claims, and unauthorized MCP requests are tested. | Pass |
 | Health checks do not expose MCP | `/healthz` is public; `/mcp` requires a valid bearer token in native MCP auth mode. | Pass |
 | Onboarding is usable without SignalWeave owning a UI | `onboard_insight_card` is one call from free-form intent to persisted draft plus Jev plan, candidates, blockers, questions, and next action. | Pass |
@@ -57,7 +58,7 @@ returns an inspectable evidence bundle and receipt.
 | Preset runtime shadow path is exercised end to end | Three named plus six generated tenant-bound Preset-shaped workspaces run through environment bootstrap, MCP discovery, free-form onboarding, approval, Jev-only evaluation, SQLite receipt lookup, and idempotent replay. Generated workspaces use unfamiliar IDs and varied chart/result shapes; the named Harbor case also proves a dashboard-scoped provider outage becomes partial evidence. | 9 workspaces; 18 cards; 126 synthetic Jev calls; pass; live semantics not proven |
 | Larger anti-overfitting runtime replay | The same production runtime path was rerun with three named plus 30 seeded generated workspaces, 16 charts per generated workspace, unfamiliar tenants/IDs, provider failures, partial dashboards, and 15 visualization labels. The independent reviewer recomputed the report invariants. | 33 workspaces; 66 cards; 462 synthetic Jev calls; pass; live semantics not proven |
 | Multi-seed replay stability | The 33-workspace replay was repeated with seeds `2026092601`, `2026092602`, and `2026092603`; each report passed the independent reviewer. The generator keeps the same envelope/type coverage while changing generated tenant/resource IDs and deterministic failure placement. | 3/3 reports pass; 99 workspaces; 198 cards; 1,386 synthetic Jev calls; live semantics not proven |
-| Post-hardening scaled replay | After fail-closed provider parsing, startup identity-contract validation, bounded low-level Preset defaults, the HTTPS-only environment contract, production OIDC bootstrap coverage, incrementally bounded response streams, safe OIDC discovery validation, and the Jev-only environment guard landed, a fresh seeded 33-workspace replay passed the production runtime path and independent reviewer. | Seed `2026092626`; 33 workspaces; 66 cards; 462 synthetic Jev calls; pass |
+| Post-hardening scaled replay | After fail-closed provider parsing, startup identity-contract validation, bounded low-level Preset defaults, the HTTPS-only environment contract, production OIDC bootstrap coverage, incrementally bounded response streams, safe OIDC discovery validation, the Jev-only environment guard, and explicit no-redirect transport landed, a fresh seeded 33-workspace replay passed the production runtime path and independent reviewer. | Seed `2026092627`; 33 workspaces; 66 cards; 462 synthetic Jev calls; pass |
 | Shared hosted processes do not contact foreign tenant adapters | The source registry skips tenant-bound adapters outside the authenticated scope before list, search, authorization, or resolve calls. An adversarial two-tenant test plus an OIDC-authenticated MCP HTTP replay over two Preset connections records exactly one matching auth/dashboard path per tenant and zero foreign calls. | Pass locally; external identity-provider replay remains a deployment gate |
 | Live Superset provider matrix has no silent loss | The running Northstar Superset instance was checked across every saved dashboard and chart with the normal client path. | 20 dashboards; 580 charts; 41,002 observations; 580/580 extracted; 0 silent-loss issues |
 | Hosted credential injection is deployment-safe | Docker Compose secret overlay mounts Preset API-token files, clears direct `.env.preset` token values, and the runtime tests value/file exclusivity, exact credential modes, explicit tenant identity, and tenant binding. `make preset-compose-check` also inspects the rendered two-file Compose model with disposable file inputs. | Pass locally; vault/KMS and real tenant gate remain open |
@@ -65,7 +66,7 @@ returns an inspectable evidence bundle and receipt.
 | Preset onboarding fails early without burning Jev credits | `make preset-config-check` reuses the production Preset parser to validate credentials, tenant binding, auth mode, policy, and Jev key presence with zero network requests and zero Jev requests. The provider-only bootstrap path then builds the same tenant-bound adapter and reaches a bounded catalog request without a TypeSafe key or Jev request. | Pass locally; real tenant gate remains open |
 | Generated-shape anti-overfitting trial | A seeded generator creates 24 unfamiliar tenant workspaces / 192 charts across five result envelopes, 12 visualization labels, usable and unusable metric definitions, empty results, ambiguous numerics, and provider failures; the production Preset client/adapter passes catalog, scope, cache, retention, and safe-degradation assertions, then an independent report reviewer checks coverage and rejects mutated pass-looking reports. A generated 64-chart dashboard stress test proves the provider aggregate byte budget fails closed; an engine test separately proves the multi-source serialized Jev budget fails before any Jev call. | Pass locally; provider and live Jev gates remain open |
 | Existing enterprise workflows remain the owner | MCP tools return typed decisions and evidence; SignalWeave does not execute arbitrary SQL, tools, DAGs, or notifications. | Pass |
-| Regression safety | Full repository tests and lint. | 365 passed, 2 skipped; Ruff clean |
+| Regression safety | Full repository tests and lint. | 366 passed, 2 skipped; Ruff clean |
 
 ## Reproduction
 
@@ -85,7 +86,7 @@ make preset-runtime-shadow-trial
 uv run python -m evaluations.preset_runtime_shadow_trial \
   --generated-workspaces 30 \
   --generated-charts-per-workspace 16 \
-  --generated-seed 2026092626 \
+  --generated-seed 2026092627 \
   --output /tmp/preset-runtime-shadow-30x16.json
 uv run python evaluations/preset_runtime_shadow_review.py \
   /tmp/preset-runtime-shadow-30x16.json
@@ -105,7 +106,7 @@ make preset-compose-check
 make superset-chart-matrix
 ```
 
-The current verified regression result is `365 passed, 2 skipped` with Ruff
+The current verified regression result is `366 passed, 2 skipped` with Ruff
 clean. The runtime-shadow and chart-matrix commands are separate evidence
 surfaces: the former uses synthetic Preset and TypeSafe transports to exercise
 the production runtime, while the latter uses the live local Superset service

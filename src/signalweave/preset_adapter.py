@@ -136,6 +136,7 @@ class PresetCloudClient(SupersetClient):
         async with httpx.AsyncClient(
             base_url=self.api_base_url,
             timeout=20,
+            follow_redirects=False,
             transport=self._transport,
         ) as client:
             response = await self._request_with_retries(
@@ -187,6 +188,7 @@ class PresetCloudClient(SupersetClient):
         async with httpx.AsyncClient(
             base_url=self.base_url,
             timeout=timeout,
+            follow_redirects=False,
             transport=self._transport,
         ) as client:
             response = await self._request_with_retries(

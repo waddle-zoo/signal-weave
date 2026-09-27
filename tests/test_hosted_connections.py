@@ -275,6 +275,31 @@ async def test_preset_auth_exchange_retries_transient_provider_failure():
 
 
 @pytest.mark.asyncio
+async def test_preset_client_does_not_follow_workspace_redirects():
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(
+            307,
+            headers={"location": "https://attacker.example/collect"},
+        )
+
+    client = PresetCloudClient(
+        "https://workspace.app.preset.test",
+        access_token="preset-jwt",
+        transport=httpx.MockTransport(handler),
+    )
+
+    with pytest.raises(httpx.HTTPStatusError):
+        await client.list_dashboards_page(page=0, page_size=20)
+
+    assert len(requests) == 1
+    assert requests[0].url.host == "workspace.app.preset.test"
+    assert requests[0].headers["authorization"] == "Bearer preset-jwt"
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize(
     "payload",
     [[], {"payload": []}, {"payload": {}}, {"payload": {"access_token": []}}],

@@ -107,6 +107,10 @@ to use the saved-query data endpoint and have no dashboard filter context. A
 dashboard-scoped response must also include Preset's `dashboard_filters`
 metadata; otherwise the connector fails closed rather than treating a possibly
 unfiltered 200 response as evidence.
+The HTTP clients explicitly disable redirects for both the Preset token exchange
+and workspace requests, so a provider 3xx response is an error and cannot
+forward a bearer token to another host. This is a transport invariant, not the
+complete managed-service egress boundary described below.
 
 Preset MCP remains useful for interactive onboarding by a customer-owned agent,
 but recurring monitoring should use the direct hosted API path. The connector
