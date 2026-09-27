@@ -108,11 +108,23 @@ class SupersetClient:
 
     async def get_dashboard_metadata(self, dashboard_id: int | str) -> dict[str, Any]:
         response = await self._request("GET", f"/api/v1/dashboard/{dashboard_id}", timeout=30)
-        return response.json().get("result", response.json())
+        payload = response.json()
+        result = payload.get("result", payload) if isinstance(payload, dict) else payload
+        if not isinstance(result, dict) or str(result.get("id")) != str(dashboard_id):
+            raise ValueError(
+                "Superset dashboard response did not match the requested dashboard ID"
+            )
+        return result
 
     async def get_chart_metadata(self, chart_id: int | str) -> dict[str, Any]:
         response = await self._request("GET", f"/api/v1/chart/{chart_id}", timeout=30)
-        return response.json().get("result", response.json())
+        payload = response.json()
+        result = payload.get("result", payload) if isinstance(payload, dict) else payload
+        if not isinstance(result, dict) or str(result.get("id")) != str(chart_id):
+            raise ValueError(
+                "Superset chart response did not match the requested chart ID"
+            )
+        return result
 
     async def list_dashboards(
         self,
@@ -754,6 +766,10 @@ class SupersetClient:
         chart_ids: list[str] | None = None,
     ) -> SupersetDashboardSnapshot:
         metadata = await self.get_dashboard_metadata(dashboard_id)
+        if str(metadata.get("id")) != str(dashboard_id):
+            raise ValueError(
+                "Superset dashboard response did not match the requested dashboard ID"
+            )
         snapshot = self.metadata_to_snapshot(metadata)
         selected = set(chart_ids) if chart_ids else None
         if selected is not None:
@@ -778,6 +794,10 @@ class SupersetClient:
             async with semaphore:
                 try:
                     chart_metadata = await self.get_chart_metadata(chart.id)
+                    if str(chart_metadata.get("id")) != str(chart.id):
+                        raise ValueError(
+                            "Superset chart response did not match the requested chart ID"
+                        )
                     extraction = self.extract_chart_data(
                         chart_metadata,
                         await self.chart_data(

@@ -347,6 +347,10 @@ class SupersetAdapter:
 
     async def _inspect_chart(self, source: SourceRef, chart_id: str) -> ResourceSnapshot:
         chart = await self.client.get_chart_metadata(chart_id)
+        if str(chart.get("id")) != str(chart_id):
+            raise ValueError(
+                "Superset chart response did not match the requested chart ID"
+            )
         extraction = self.client.extract_chart_data(chart, await self.client.chart_data(chart))
         observations = extraction.observations
         observations = [

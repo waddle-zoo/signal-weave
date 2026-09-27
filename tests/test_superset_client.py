@@ -294,6 +294,62 @@ async def test_dashboard_snapshot_records_source_failures_for_safety_gates():
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("resource_path", "requested_id", "message"),
+    [
+        (
+            "/api/v1/dashboard/7",
+            7,
+            "Superset dashboard response did not match the requested dashboard ID",
+        ),
+        (
+            "/api/v1/chart/101",
+            101,
+            "Superset chart response did not match the requested chart ID",
+        ),
+    ],
+)
+async def test_metadata_endpoints_reject_substituted_resource_ids(
+    resource_path, requested_id, message
+):
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == resource_path
+        return httpx.Response(200, json={"result": {"id": "foreign-resource"}})
+
+    client = SupersetClient(
+        "https://superset.test", transport=httpx.MockTransport(handler)
+    )
+
+    with pytest.raises(ValueError, match=message):
+        if resource_path.startswith("/api/v1/dashboard"):
+            await client.get_dashboard_metadata(requested_id)
+        else:
+            await client.get_chart_metadata(requested_id)
+
+
+@pytest.mark.asyncio
+async def test_dashboard_snapshot_rejects_substituted_chart_metadata():
+    class SubstitutedChartClient(SupersetClient):
+        async def get_dashboard_metadata(self, dashboard_id):
+            return {
+                "id": dashboard_id,
+                "dashboard_title": "Substituted chart",
+                "position_json": (
+                    '{"chart": {"type": "CHART", "meta": {"chartId": 42}}}'
+                ),
+            }
+
+        async def get_chart_metadata(self, chart_id):
+            del chart_id
+            return {"id": 99, "slice_name": "Foreign chart"}
+
+    snapshot = await SubstitutedChartClient("https://superset.test").dashboard_snapshot(7)
+
+    assert snapshot.charts[0].error
+    assert "did not match the requested chart ID" in snapshot.charts[0].error
+
+
+@pytest.mark.asyncio
 async def test_partial_dashboard_preserves_good_charts_and_quality_metadata():
     class PartiallyBrokenClient(SupersetClient):
         async def get_dashboard_metadata(self, dashboard_id):
