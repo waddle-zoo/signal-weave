@@ -441,17 +441,22 @@ but it is not an extension point for installing SignalWeave's server-side Jev
 decision layer inside Preset. Preset's native Alerts & Reports feature is
 documented around email and Slack delivery, not a generic SignalWeave callback.
 
-That leaves three practical options:
+That leaves three options, but only the first is a supported unattended
+SignalWeave evaluation path in the current release:
 
 1. **Managed SignalWeave service — recommended.** SignalWeave calls Preset's
    API directly with a customer-authorized credential. This preserves the
    bounded evidence and Jev decision boundary.
-2. **Customer-side dual-MCP agent — interim.** The agent connects to both
-   Preset's MCP and SignalWeave's MCP, then passes approved Preset evidence into
-   a card evaluation. This avoids giving SignalWeave a Preset credential but
-   makes the agent responsible for evidence transport and is weaker for
-   scheduled, repeatable monitoring. It is the practical option for a hosted
-   customer without the direct Preset API entitlement.
+2. **Customer-side dual-MCP agent — exploratory only.** An agent can connect to
+   Preset's MCP and SignalWeave's MCP for interactive work, but the shipped
+   `evaluate_insight_card` contract still retrieves the card's required sources
+   through SignalWeave adapters. Its caller-supplied `context` is supplementary,
+   marked unverified, and cannot replace missing Preset source retrieval. This
+   is therefore not a supported unattended fallback for a customer without
+   direct Preset API access. Supporting it would require a new bounded
+   external-evidence ingestion contract with tenant binding, provenance,
+   freshness, size limits, replay protection, and an explicit policy for when
+   ingested evidence may participate in a Jev decision.
 3. **Preset-triggered relay.** If a customer's Preset plan and alerting setup
    can reach an approved relay, the relay can call SignalWeave's evaluation
    webhook. This should be treated as a trigger only; SignalWeave still needs
