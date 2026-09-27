@@ -283,6 +283,8 @@ class SupersetAdapter:
                     "viz_type": chart.viz_type,
                     "semantic_status": chart.semantic_status,
                     "semantic_notes": chart.semantic_notes,
+                    "data_scope": chart.data_scope,
+                    "dashboard_filters": chart.dashboard_filters,
                     "related_chart_ids": chart.related_chart_ids,
                     "description": chart.description,
                     "error": chart.error,

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -29,6 +29,7 @@ class SupersetChartSnapshot(BaseModel):
     ] = "unknown"
     result_row_count: int = Field(default=0, ge=0)
     result_columns: list[str] = Field(default_factory=list, max_length=200)
+    dashboard_filters: dict[str, Any] | None = None
     observations: list[Observation] = Field(default_factory=list)
     related_chart_ids: list[str] = Field(default_factory=list)
 

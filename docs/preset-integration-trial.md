@@ -48,7 +48,7 @@ The trial currently proves:
 | Chart coverage | 13 chart definitions across 12 visualization types, 9 with usable observations, 4 deliberately degraded |
 | Result normalization | 17 observations across the varied envelopes and chart definitions |
 | Dashboard filter context | Every dashboard chart read uses Preset's chart-specific data endpoint with the dashboard ID, so provider-side in-scope filter defaults and access checks are applied |
-| Filter response contract | Dashboard reads fail closed unless the provider returns `dashboard_filters` metadata confirming the dashboard-context response shape |
+| Filter response contract | Dashboard reads fail closed unless the provider returns `dashboard_filters` metadata confirming the dashboard-context response shape; the allowed filter statuses are normalized and retained per chart |
 | Partial failure behavior | Provider and semantic failures remain visible as partial quality, not silently dropped |
 | Metadata-only policy | Dashboard metadata is retrieved without chart metadata or result calls |
 | Cached-results guard | Every dashboard chart request sends `force=false`; response row and byte budgets are enforced before normalization |
@@ -87,7 +87,8 @@ It runs every fixture workspace through the real Preset client and adapter,
 then through the real typed Jev plan compilation, judgment parsing, and safety
 gates. The synthetic SDK transport records the exact state sent to the judge,
 so the report verifies that normalized observations and evidence—not raw
-vendor responses—reach Jev, dashboard filter context is preserved, and partial
+vendor responses—reach Jev, dashboard filter context and its applied/not-applied
+statuses are preserved, and partial
 data is downgraded to `insufficient_data`. It also exercises varied
 visualization/result shapes and a healthy single-chart slice that reaches an
 actionable `notify` result.

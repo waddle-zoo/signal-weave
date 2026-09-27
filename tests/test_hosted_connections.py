@@ -365,7 +365,28 @@ async def test_preset_cloud_token_exchange_and_dashboard_snapshot():
                             ]
                         }
                     ],
-                    "dashboard_filters": {"filters": []},
+                    "dashboard_filters": {
+                        "filters": [
+                            {
+                                "id": "region",
+                                "name": "Region",
+                                "column": "region",
+                                "status": "applied",
+                            },
+                            {
+                                "id": "segment",
+                                "name": "Segment",
+                                "column": "segment",
+                                "status": "not_applied",
+                            },
+                            {
+                                "id": "channel",
+                                "name": "Channel",
+                                "column": None,
+                                "status": "not_applied_uses_default_to_first_item_prequery",
+                            },
+                        ]
+                    },
                 },
             )
         if request.url.path == "/api/v1/chart/101":
@@ -401,6 +422,30 @@ async def test_preset_cloud_token_exchange_and_dashboard_snapshot():
         "dashboard_scoped_requests": 1,
         "chart_query_fallbacks": 0,
     }
+    expected_dashboard_filters = {
+        "filters": [
+            {
+                "id": "region",
+                "name": "Region",
+                "column": "region",
+                "status": "applied",
+            },
+            {
+                "id": "segment",
+                "name": "Segment",
+                "column": "segment",
+                "status": "not_applied",
+            },
+            {
+                "id": "channel",
+                "name": "Channel",
+                "column": None,
+                "status": "not_applied_uses_default_to_first_item_prequery",
+            },
+        ]
+    }
+    assert snapshot.metadata["charts"][0]["dashboard_filters"] == expected_dashboard_filters
+    assert snapshot.evidence[0].values["dashboard_filters"] == expected_dashboard_filters
     assert "do-not-retain" not in json.dumps(snapshot.model_dump(mode="json"))
     assert len([call for call in calls if call[1].endswith("/v1/auth/")]) == 1
     assert client.requests_made == len(calls)
@@ -1171,6 +1216,40 @@ async def test_preset_dashboard_budget_fails_closed_after_chart_fanout():
 async def test_preset_dashboard_read_fails_closed_without_filter_metadata():
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, json={"result": [{"data": [{"revenue": 120}]}]})
+
+    client = PresetCloudClient(
+        "https://workspace.app.preset.test",
+        access_token="preset-token",
+        transport=httpx.MockTransport(handler),
+    )
+
+    with pytest.raises(PresetPolicyError, match="dashboard_filters"):
+        await client.chart_data(
+            {"id": 101, "params": {"metrics": ["revenue"]}},
+            dashboard_id="7",
+        )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "dashboard_filters",
+    [
+        {"filters": [{"id": "region", "name": "Region", "status": "future"}]},
+        {"filters": [{"id": "region", "name": "Region", "status": "applied", "column": 7}]},
+        {"filters": [{"id": "region", "name": "Region"}]},
+        {"filters": ["not-a-filter"]},
+        {"filters": {"id": "region"}},
+    ],
+)
+async def test_preset_dashboard_filter_metadata_fails_closed(dashboard_filters):
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "result": [{"data": [{"revenue": 120}]}],
+                "dashboard_filters": dashboard_filters,
+            },
+        )
 
     client = PresetCloudClient(
         "https://workspace.app.preset.test",

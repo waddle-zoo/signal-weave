@@ -45,3 +45,17 @@ async def test_independent_preset_jev_contract_review_rejects_raw_handoff_mutati
         or "differs from Jev input evidence" in finding
         for finding in review["findings"]
     )
+
+
+@pytest.mark.asyncio
+async def test_independent_preset_jev_contract_review_rejects_filter_context_mutation(tmp_path):
+    report = await run_trial(tmp_path / "preset-jev-contract.json")
+    mutated = deepcopy(report)
+    mutated["workspaces"][0]["typed_judge_input"]["dashboard_filter_statuses"] = [
+        "applied"
+    ]
+
+    review = review_report(mutated)
+
+    assert review["passed"] is False
+    assert any("dashboard filter metadata" in finding for finding in review["findings"])

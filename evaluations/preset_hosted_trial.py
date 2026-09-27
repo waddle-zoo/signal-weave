@@ -113,7 +113,22 @@ class WorkspaceTransport:
                 200,
                 json={
                     "result": chart.get("result", []),
-                    "dashboard_filters": {"filters": []},
+                    "dashboard_filters": {
+                        "filters": [
+                            {
+                                "id": "region",
+                                "name": "Region",
+                                "column": "region",
+                                "status": "applied",
+                            },
+                            {
+                                "id": "segment",
+                                "name": "Segment",
+                                "column": "segment",
+                                "status": "not_applied",
+                            },
+                        ]
+                    },
                 },
             )
 

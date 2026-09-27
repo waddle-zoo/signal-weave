@@ -444,6 +444,7 @@ class SupersetClient:
         dashboard_id: int | str | None = None,
         allow_unscoped_fallback: bool = False,
         scope_telemetry: dict[str, int] | None = None,
+        response_telemetry: dict[str, Any] | None = None,
     ) -> list[dict[str, Any]]:
         if dashboard_id is not None:
             # The chart-specific endpoint is the provider-owned path for
@@ -485,7 +486,14 @@ class SupersetClient:
             response = await self._request(
                 "POST", "/api/v1/chart/data", timeout=60, json=payload
             )
-        result = response.json().get("result", [])
+        body = response.json()
+        if not isinstance(body, dict):
+            raise ValueError("Superset chart response was not a JSON object")
+        if response_telemetry is not None:
+            dashboard_filters = body.get("dashboard_filters")
+            if isinstance(dashboard_filters, dict):
+                response_telemetry["dashboard_filters"] = dashboard_filters
+        result = body.get("result", [])
         if isinstance(result, dict):
             return [result]
         return [item for item in result if isinstance(item, dict)] if isinstance(result, list) else []
@@ -846,17 +854,21 @@ class SupersetClient:
                         "dashboard_scoped_requests": 0,
                         "chart_query_fallbacks": 0,
                     }
+                    response_telemetry: dict[str, Any] = {}
                     chart_data_kwargs: dict[str, Any] = {
                         "dashboard_id": dashboard_id,
                         "allow_unscoped_fallback": allow_unscoped_fallback,
                     }
-                    if "scope_telemetry" in inspect.signature(self.chart_data).parameters:
+                    chart_data_parameters = inspect.signature(self.chart_data).parameters
+                    if "scope_telemetry" in chart_data_parameters:
                         chart_data_kwargs["scope_telemetry"] = chart_scope
                     else:
                         # Preserve compatibility with small provider test doubles
                         # and downstream subclasses written before scope telemetry
                         # was added. Their scope is explicitly unknown.
                         chart_scope["scope_telemetry_unavailable"] = 1
+                    if "response_telemetry" in chart_data_parameters:
+                        chart_data_kwargs["response_telemetry"] = response_telemetry
                     extraction = self.extract_chart_data(
                         chart_metadata,
                         await self.chart_data(
@@ -882,6 +894,8 @@ class SupersetClient:
                         "result_columns": extraction.columns or [],
                         "data_scope": data_scope,
                     }
+                    if "dashboard_filters" in response_telemetry:
+                        updates["dashboard_filters"] = response_telemetry["dashboard_filters"]
                     if not extraction.observations:
                         updates["error"] = "; ".join(extraction.notes)
                         updates["description"] = updates["error"]

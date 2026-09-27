@@ -183,6 +183,15 @@ async def _run_workspace(workspace: dict[str, Any]) -> dict[str, Any]:
     jev_source_viz_types = sorted(
         {str(chart.get("viz_type") or "unknown") for chart in chart_metadata}
     )
+    jev_dashboard_filter_statuses = sorted(
+        {
+            str(filter_item.get("status"))
+            for chart in chart_metadata
+            if isinstance(chart, dict)
+            for filter_item in (chart.get("dashboard_filters") or {}).get("filters", [])
+            if isinstance(filter_item, dict) and filter_item.get("status")
+        }
+    )
     quality = snapshot.metadata.get("data_quality", {})
     focused_quality = focused_snapshot.metadata.get("data_quality", {})
     return {
@@ -219,6 +228,7 @@ async def _run_workspace(workspace: dict[str, Any]) -> dict[str, Any]:
             "evidence_items": len(evidence),
             "observation_items": len(observations),
             "jev_source_viz_types": jev_source_viz_types,
+            "dashboard_filter_statuses": jev_dashboard_filter_statuses,
         },
         "jev_call_trace": {
             "full": full_call_trace,
@@ -286,6 +296,11 @@ async def run_trial(output: Path | None = None) -> dict[str, Any]:
         ),
         "judge_received_normalized_observations": all(
             result["typed_judge_input"]["received_observations"] for result in results
+        ),
+        "dashboard_filter_context_reaches_jev": all(
+            result["typed_judge_input"]["dashboard_filter_statuses"]
+            == ["applied", "not_applied"]
+            for result in results
         ),
         "dashboard_filter_context_preserved": all(
             result["provider_requests"]["dashboard_filter_context"] for result in results

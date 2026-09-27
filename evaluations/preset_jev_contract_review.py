@@ -28,6 +28,22 @@ def _viz_types_from_judge_state(state: dict[str, Any]) -> list[str]:
     )
 
 
+def _dashboard_filter_statuses_from_judge_state(state: dict[str, Any]) -> list[str]:
+    return sorted(
+        {
+            str(filter_item.get("status"))
+            for source in state.get("sources", [])
+            if isinstance(source, dict)
+            for metadata in [source.get("metadata")]
+            if isinstance(metadata, dict)
+            for chart in metadata.get("charts", [])
+            if isinstance(chart, dict)
+            for filter_item in (chart.get("dashboard_filters") or {}).get("filters", [])
+            if isinstance(filter_item, dict) and filter_item.get("status")
+        }
+    )
+
+
 def _data_requests(trace: dict[str, Any]) -> list[dict[str, Any]]:
     requests: list[dict[str, Any]] = []
     for phase in ("snapshot", "focused_snapshot", "full", "focused"):
@@ -166,6 +182,15 @@ def review_report(report: dict[str, Any]) -> dict[str, Any]:
                     expected_viz = _viz_types_from_judge_state(state)
                     if isinstance(typed, dict) and typed.get("jev_source_viz_types") != expected_viz:
                         findings.append(f"workspace {index} visualization coverage is not derived from raw Jev input")
+                    expected_filter_statuses = _dashboard_filter_statuses_from_judge_state(state)
+                    if expected_filter_statuses != ["applied", "not_applied"]:
+                        findings.append(
+                            f"workspace {index} raw Jev input omitted expected dashboard filter statuses"
+                        )
+                    if isinstance(typed, dict) and typed.get("dashboard_filter_statuses") != expected_filter_statuses:
+                        findings.append(
+                            f"workspace {index} dashboard filter metadata is not derived from raw Jev input"
+                        )
                     if isinstance(result_payload, dict):
                         if result_payload.get("evidence") != raw_evidence:
                             findings.append(f"workspace {index} result evidence differs from Jev input evidence")

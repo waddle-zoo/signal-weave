@@ -172,6 +172,12 @@ Superset is not a required runtime dependency.
 
 Dashboard snapshots expose `metadata.dashboard_scope` telemetry. A successful
 dashboard-filtered chart request increments `dashboard_scoped_requests`. The
+hosted Preset adapter also retains the provider's normalized dashboard filter
+statuses (`applied`, `not_applied`, or
+`not_applied_uses_default_to_first_item_prequery`) on each chart and in its
+evidence values, so a Jev decision can distinguish filtered evidence from
+evidence where a dashboard control was omitted. Unknown or malformed filter
+contracts fail closed. The
 generic local Superset client has one deliberately narrow compatibility path:
 when the dashboard's initial state omits every native-filter default and the
 provider reports missing saved query context, it may use the bounded

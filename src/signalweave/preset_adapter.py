@@ -34,6 +34,14 @@ MAX_PRESET_RETRY_BACKOFF_SECONDS = 5.0
 class PresetCloudClient(SupersetClient):
     """Read-only Preset Cloud client with API-token or bearer authentication."""
 
+    _DASHBOARD_FILTER_STATUSES = frozenset(
+        {
+            "applied",
+            "not_applied",
+            "not_applied_uses_default_to_first_item_prequery",
+        }
+    )
+
     def __init__(
         self,
         workspace_url: str,
@@ -399,6 +407,7 @@ class PresetCloudClient(SupersetClient):
         dashboard_id: int | str | None = None,
         allow_unscoped_fallback: bool = False,
         scope_telemetry: dict[str, int] | None = None,
+        response_telemetry: dict[str, Any] | None = None,
     ) -> list[dict[str, Any]]:
         """Fetch chart results with a hard response bound.
 
@@ -473,10 +482,15 @@ class PresetCloudClient(SupersetClient):
             raise PresetPolicyError("Preset chart response was not valid JSON") from error
         if not isinstance(body, dict):
             raise PresetPolicyError("Preset chart response was not a JSON object")
-        if dashboard_id is not None and not isinstance(body.get("dashboard_filters"), dict):
-            raise PresetPolicyError(
-                "Preset dashboard-filter response did not include dashboard_filters metadata"
-            )
+        if dashboard_id is not None:
+            raw_dashboard_filters = body.get("dashboard_filters")
+            if not isinstance(raw_dashboard_filters, dict):
+                raise PresetPolicyError(
+                    "Preset dashboard-filter response did not include dashboard_filters metadata"
+                )
+            dashboard_filters = self._normalize_dashboard_filters(raw_dashboard_filters)
+            if response_telemetry is not None:
+                response_telemetry["dashboard_filters"] = dashboard_filters
         if "result" not in body:
             raise PresetPolicyError("Preset chart response did not include a result envelope")
         result = body["result"]
@@ -515,6 +529,42 @@ class PresetCloudClient(SupersetClient):
                     "Preset chart response exceeded the configured max_result_rows limit"
                 )
         return [item for item in envelopes if isinstance(item, dict)]
+
+    @classmethod
+    def _normalize_dashboard_filters(cls, payload: dict[str, Any]) -> dict[str, Any]:
+        """Retain only the provider's safe, decision-relevant filter metadata."""
+
+        raw_filters = payload.get("filters")
+        if not isinstance(raw_filters, list):
+            raise PresetPolicyError(
+                "Preset dashboard_filters metadata did not contain a filters list"
+            )
+        filters: list[dict[str, str | None]] = []
+        for item in raw_filters:
+            if not isinstance(item, dict):
+                raise PresetPolicyError(
+                    "Preset dashboard_filters metadata contained a malformed filter"
+                )
+            filter_id = item.get("id")
+            name = item.get("name")
+            status = item.get("status")
+            column = item.get("column")
+            if (
+                not isinstance(filter_id, str)
+                or not filter_id
+                or not isinstance(name, str)
+                or not name
+                or not isinstance(status, str)
+                or status not in cls._DASHBOARD_FILTER_STATUSES
+                or (column is not None and not isinstance(column, str))
+            ):
+                raise PresetPolicyError(
+                    "Preset dashboard_filters metadata contained an invalid filter contract"
+                )
+            filters.append(
+                {"id": filter_id, "name": name, "column": column, "status": status}
+            )
+        return {"filters": filters}
 
 
 class PresetAdapter(SupersetAdapter):

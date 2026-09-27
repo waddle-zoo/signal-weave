@@ -41,6 +41,7 @@ returns an inspectable evidence bundle and receipt.
 | Production Preset startup reuses the identity preflight | `build_runtime()` invokes the same configuration contract before registering an environment Preset adapter: token mode requires a static trusted tenant/principal, while OIDC mode permits request-scoped identity and requires valid OIDC settings. | Pass locally |
 | Preset provider URLs cannot downgrade to HTTP or defer malformed origins | Environment bootstrap, the hosted connection model, and direct `PresetCloudClient` construction require HTTPS origins without credentials, paths, queries, fragments, or malformed ports; a legacy `SIGNALWEAVE_ALLOW_INSECURE_PROVIDER` setting does not weaken the check. | Pass locally |
 | Preset provider redirects fail closed | Preset token-exchange and workspace HTTP clients explicitly disable redirects; a 3xx response produces no second-host request and cannot forward a bearer token. | Pass locally; shared-service egress controls remain open |
+| Preset dashboard filter context reaches decisions | The provider's `dashboard_filters` response is validated against the documented filter contract, normalized per chart, retained in the snapshot/evidence bundle, and recomputed from the raw typed Jev input. `applied`, `not_applied`, and `not_applied_uses_default_to_first_item_prequery` are supported; unknown or malformed statuses fail closed. | Pass locally; live provider-version variance remains a customer gate |
 | Provider resource identity cannot be substituted | Superset-compatible dashboard and chart metadata responses must echo the requested resource ID; dashboard fan-out and standalone chart inspection fail closed on a mismatched ID before evidence is normalized. | Pass locally |
 | Hosted workspace labels cannot widen authorization | `external_workspace` is descriptive metadata only; the tenant-bound credential and validated provider origin determine the adapter endpoint and authorization scope. | Pass locally |
 | Invalid or incomplete identity fails closed | Wrong signature/issuer/audience, expired tokens, malformed JWTs, missing tenant claims, and unauthorized MCP requests are tested. | Pass |
@@ -94,7 +95,7 @@ returns an inspectable evidence bundle and receipt.
 | Generated-shape anti-overfitting trial | A seeded generator creates 24 unfamiliar tenant workspaces / 192 charts per seed across five result envelopes, 12 visualization labels including an unknown/vendor extension, six parameter shapes (`metrics`, dict metrics, `x/y` visual measures, dimension count, spatial count, and `all_columns`), usable and unusable metric definitions, empty results, ambiguous numerics, and provider failures; the production Preset client/adapter passes catalog, scope, cache, retention, and safe-degradation assertions, then an independent report reviewer recomputes parameter and visualization coverage from each workspace result and rejects mutated pass-looking reports. A generated 64-chart dashboard stress test proves the provider aggregate byte budget fails closed; an engine test separately proves the multi-source serialized Jev budget fails before any Jev call. The same replay and reviewer now run as a four-seed CI matrix on commit `8957c67`. | 4/4 CI reports pass; 96 workspaces / 768 charts; synthetic provider and Jev only; live customer gates remain open |
 | Aggregate Preset enterprise proof pack | `make preset-enterprise-proof` runs the hosted connector, boundary, generated-shape, typed Jev, and runtime-shadow trials; each serialized report is independently reviewed and a separate aggregate reviewer verifies the complete five-case set, synthetic-only scope, delivery-disabled state, and explicit non-claims. The same no-credential proof pack runs as a dedicated CI job on every push to `main`, pull request, and manual workflow dispatch, retaining the JSON reports as downloadable CI artifacts. | 5/5 component reviews pass; aggregate review pass; no live provider or Jev requests |
 | Existing enterprise workflows remain the owner | MCP tools return typed decisions and evidence; SignalWeave does not execute arbitrary SQL, tools, DAGs, or notifications. | Pass |
-| Regression safety | Full repository tests and lint. | 499 passed, 2 skipped; Ruff clean |
+| Regression safety | Full repository tests and lint. | 506 passed, 2 skipped; Ruff clean |
 
 ## Reproduction
 
@@ -137,7 +138,7 @@ make local-superset-runtime-shadow-trial
 make local-superset-runtime-shadow-review
 ```
 
-The current verified regression result is `499 passed, 2 skipped` with Ruff
+The current verified regression result is `506 passed, 2 skipped` with Ruff
 clean. The environment preflight also rejects malformed Preset workspace or
 API-auth URLs (credentials, paths, queries, fragments, missing hosts, and
 non-numeric ports) and copied example sentinels such as `replace-me`,
