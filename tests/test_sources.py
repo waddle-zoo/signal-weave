@@ -658,6 +658,23 @@ async def test_superset_adapter_recovers_natural_language_title_search():
 
 
 @pytest.mark.asyncio
+async def test_superset_adapter_retains_numeric_title_terms():
+    class NumericTitleClient:
+        async def list_dashboards_page(self, *, page, page_size, query):
+            del page, page_size
+            if query == "36":
+                return ([{"id": 36, "dashboard_title": "Catalog Pack 36"}], 1)
+            return ([], 0)
+
+    page = await SupersetAdapter(NumericTitleClient()).search_resources(
+        "monitor Catalog Pack 36 for meaningful movement", limit=5
+    )
+
+    assert [resource.title for resource in page.resources] == ["Catalog Pack 36"]
+    assert page.strategy == "superset-server-filter-term-fallback"
+
+
+@pytest.mark.asyncio
 async def test_superset_adapter_preserves_dashboard_chart_context():
     adapter = SupersetAdapter(FakeSupersetClient())
     source = SourceRef(

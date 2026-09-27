@@ -72,6 +72,46 @@ Northstar Outfitters fixture was rerun against the live local service on
 2026-09-27: it traversed 20 dashboards and 580 charts, produced 41,002
 observations, and extracted all 580 charts.
 
+The stronger local acceptance path runs the production runtime and MCP tools
+against that same live Superset service:
+
+```bash
+make local-superset-runtime-shadow-trial
+make local-superset-runtime-shadow-review
+```
+
+It discovers the dashboard from its title, binds the standalone Superset
+adapter to the authenticated tenant, onboards a free-form card, requires
+human approval, reads saved charts through the normal provider client, returns
+a Jev-shaped delivery-disabled receipt, and replays the scheduler key. The
+checked Northstar run selected `01 | Executive Command Center`, read 10
+charts, returned 25 normalized observations and 36 evidence items, and added
+zero provider or Jev calls on replay. Its TypeSafe transport is synthetic, so
+this proves real provider/runtime wiring and safety behavior, not live Jev
+semantic accuracy. The independent reviewer rejects a pass-looking report
+with no provider data, no evidence, enabled delivery, or a replay that
+contacts either dependency.
+
+For a larger approved dashboard, keep the default bound as the first test and
+raise it explicitly only after reviewing the resulting payload size:
+
+```bash
+uv run python -m evaluations.local_superset_runtime_shadow_trial \
+  --superset-url http://127.0.0.1:18089 \
+  --goal "Monitor Catalog Pack 36 for meaningful movement in its saved analytical signals and return an evidence-backed owner review." \
+  --dashboard-title-contains "catalog pack 36" \
+  --max-snapshot-bytes 10000000 \
+  --max-jev-payload-bytes 10000000 \
+  --output artifacts/local-superset-catalog36-runtime-shadow.json
+uv run python evaluations/local_superset_runtime_shadow_review.py \
+  artifacts/local-superset-catalog36-runtime-shadow.json
+```
+
+That Northstar run covered 30 charts, 2,121 observations, and 2,152 evidence
+items. The bound is a deployment choice, not a silent fallback: oversized
+dashboards remain `insufficient_data` until an operator explicitly tunes the
+policy or narrows the card's chart scope.
+
 For the hosted Preset source boundary, run the fixture-backed multi-workspace
 trial. It uses the production Preset client and adapter, but no TypeSafe
 credits:

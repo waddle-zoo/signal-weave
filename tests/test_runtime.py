@@ -10,6 +10,7 @@ from signalweave.store import (
     SQLiteInsightCardStore,
     SQLiteMetricQueryCardStore,
 )
+from signalweave.superset_adapter import SupersetAdapter
 
 
 def test_runtime_requires_jev_credentials_by_default(monkeypatch):
@@ -148,3 +149,47 @@ def test_runtime_defaults_all_card_and_receipt_stores_to_sqlite(monkeypatch, tmp
     assert isinstance(runtime.metric_query_store, SQLiteMetricQueryCardStore)
     assert isinstance(runtime.decision_receipts, SQLiteDecisionReceiptStore)
     assert isinstance(runtime.decision_feedback, SQLiteDecisionFeedbackStore)
+
+
+def test_runtime_binds_standalone_superset_to_authenticated_tenant(monkeypatch, tmp_path):
+    monkeypatch.setenv("TYPESAFE_API_KEY", "test-key")
+    monkeypatch.delenv("TYPESAFE_API_KEY_FILE", raising=False)
+    monkeypatch.setenv("SUPERSET_URL", "http://superset")
+    monkeypatch.setenv("SIGNALWEAVE_TENANT_ID", "northstar")
+    monkeypatch.setenv("SIGNALWEAVE_PRINCIPAL_ID", "monitoring-agent")
+    monkeypatch.delenv("SUPERSET_TENANT_ID", raising=False)
+    monkeypatch.setenv("SIGNALWEAVE_STORE_BACKEND", "sqlite")
+    monkeypatch.setenv("SIGNALWEAVE_STORE_PATH", str(tmp_path / "signalweave.db"))
+
+    runtime = build_runtime()
+
+    adapter = runtime.sources._adapters["superset"]
+    assert isinstance(adapter, SupersetAdapter)
+    assert adapter.tenant_id == "northstar"
+
+
+def test_runtime_rejects_standalone_superset_tenant_mismatch(monkeypatch, tmp_path):
+    monkeypatch.setenv("TYPESAFE_API_KEY", "test-key")
+    monkeypatch.delenv("TYPESAFE_API_KEY_FILE", raising=False)
+    monkeypatch.setenv("SUPERSET_URL", "http://superset")
+    monkeypatch.setenv("SIGNALWEAVE_TENANT_ID", "northstar")
+    monkeypatch.setenv("SIGNALWEAVE_PRINCIPAL_ID", "monitoring-agent")
+    monkeypatch.setenv("SUPERSET_TENANT_ID", "otherco")
+    monkeypatch.setenv("SIGNALWEAVE_STORE_BACKEND", "sqlite")
+    monkeypatch.setenv("SIGNALWEAVE_STORE_PATH", str(tmp_path / "signalweave.db"))
+
+    with pytest.raises(RuntimeError, match="SUPERSET_TENANT_ID"):
+        build_runtime()
+
+
+def test_runtime_applies_snapshot_budget_to_standalone_sources(monkeypatch, tmp_path):
+    monkeypatch.setenv("TYPESAFE_API_KEY", "test-key")
+    monkeypatch.delenv("TYPESAFE_API_KEY_FILE", raising=False)
+    monkeypatch.setenv("SUPERSET_URL", "http://superset")
+    monkeypatch.setenv("SIGNALWEAVE_MAX_SNAPSHOT_BYTES", "5000000")
+    monkeypatch.setenv("SIGNALWEAVE_STORE_BACKEND", "sqlite")
+    monkeypatch.setenv("SIGNALWEAVE_STORE_PATH", str(tmp_path / "signalweave.db"))
+
+    runtime = build_runtime()
+
+    assert runtime.sources._max_snapshot_bytes == 5_000_000

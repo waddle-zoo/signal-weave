@@ -333,23 +333,33 @@ def build_runtime(
                 transport=http_transport,
             )
         )
+    tenant_id = os.getenv("SIGNALWEAVE_TENANT_ID", "").strip() or None
+    principal_id = os.getenv("SIGNALWEAVE_PRINCIPAL_ID", "").strip() or None
+    if bool(tenant_id) != bool(principal_id):
+        raise RuntimeError(
+            "SIGNALWEAVE_TENANT_ID and SIGNALWEAVE_PRINCIPAL_ID must be configured together"
+        )
     url = os.getenv("SUPERSET_URL")
     configured_names = {adapter.name for adapter in configured_adapters}
     if url and "superset" not in configured_names:
+        superset_tenant_id = os.getenv("SUPERSET_TENANT_ID", "").strip() or tenant_id
+        if (
+            superset_tenant_id
+            and tenant_id
+            and superset_tenant_id != tenant_id
+        ):
+            raise RuntimeError(
+                "SUPERSET_TENANT_ID must match SIGNALWEAVE_TENANT_ID when both are configured"
+            )
         configured_adapters.append(
             SupersetAdapter(
                 SupersetClient(
                     base_url=url,
                     username=os.getenv("SUPERSET_USERNAME"),
                     password=os.getenv("SUPERSET_PASSWORD"),
-                )
+                ),
+                tenant_id=superset_tenant_id,
             )
-        )
-    tenant_id = os.getenv("SIGNALWEAVE_TENANT_ID")
-    principal_id = os.getenv("SIGNALWEAVE_PRINCIPAL_ID")
-    if bool(tenant_id) != bool(principal_id):
-        raise RuntimeError(
-            "SIGNALWEAVE_TENANT_ID and SIGNALWEAVE_PRINCIPAL_ID must be configured together"
         )
     hosted_tenants = {connection.tenant_id for connection in hosted_connections}
     if tenant_id:
@@ -376,6 +386,7 @@ def build_runtime(
     registry = SourceRegistry(
         configured_adapters,
         authorized_tenants=default_authorized_tenants,
+        max_snapshot_bytes=_env_int("SIGNALWEAVE_MAX_SNAPSHOT_BYTES", 1_000_000),
     )
     trino_url = os.getenv("TRINO_URL")
     trino_catalog_file = os.getenv("TRINO_CATALOG_FILE")

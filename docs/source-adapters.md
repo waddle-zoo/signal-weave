@@ -163,8 +163,13 @@ establish their state.
 ## Registering an adapter
 
 The local runtime registers `SupersetAdapter` when `SUPERSET_URL` is configured.
-A deployment can add any connector at construction time; Superset is not a
-required runtime dependency. Hosted connections should be created through the
+If `SIGNALWEAVE_TENANT_ID` is set, the adapter inherits that tenant binding;
+`SUPERSET_TENANT_ID` may be used as an explicit equivalent and must match it.
+This prevents a tenant-scoped MCP principal from seeing the adapter's implicit
+`default` contract and makes the standalone Superset path usable in a real
+tenant deployment. A deployment can add any connector at construction time;
+Superset is not a required runtime dependency.
+Hosted connections should be created through the
 credential-reference-only factory:
 
 ```python

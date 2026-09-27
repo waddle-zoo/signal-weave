@@ -95,10 +95,15 @@ class SupersetAdapter:
                 terms = [
                     term
                     for term in re.findall(r"[a-z0-9]+", clause.lower())
-                    if len(term) > 2
+                    if len(term) > 2 or (term.isdigit() and len(term) >= 2)
                 ]
                 # Titles commonly appear at either end of a free-form clause.
-                fallback_terms.extend(terms[:3] + terms[-3:])
+                # Numeric title tokens are often the distinguishing identity in
+                # generated or catalog dashboards, so retain them even when
+                # they occur in the middle of a longer sentence.
+                fallback_terms.extend(
+                    terms[:3] + terms[-3:] + [term for term in terms if term.isdigit()]
+                )
             # The cap bounds API fan-out for large enterprise catalogs while
             # preserving title terms from each card section.
             fallback_terms = list(dict.fromkeys(fallback_terms))[:18]

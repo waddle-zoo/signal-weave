@@ -36,6 +36,8 @@ async def test_dashboard_chart_data_uses_superset_canonical_trailing_slash():
     assert result == [{"data": [{"value": 7}]}]
     assert requests[0].url.path == "/api/v1/chart/42/data/"
     assert requests[0].url.params["filters_dashboard_id"] == "7"
+    assert client.requests_made == 1
+    assert client.request_path_counts == {"/api/v1/chart/42/data/": 1}
 
 
 def test_query_context_preserves_chart_time_grain_and_filters():

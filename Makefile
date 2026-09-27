@@ -1,4 +1,4 @@
-.PHONY: install test lint prove benchmark daily-trial enterprise-trial discovery-trial bundle-trial query-trial retrieval-explanation-trial preset-trial preset-boundary-trial preset-generalization-trial preset-jev-contract-trial preset-runtime-shadow-trial preset-runtime-shadow-review preset-config-check preset-bootstrap-check preset-provider-smoke preset-dashboard-readiness preset-live-trial preset-live-trial-approve preset-live-trial-review preset-compose-check superset-chart-matrix verify docker-up docker-down
+.PHONY: install test lint prove benchmark daily-trial enterprise-trial discovery-trial bundle-trial query-trial retrieval-explanation-trial preset-trial preset-boundary-trial preset-generalization-trial preset-jev-contract-trial preset-runtime-shadow-trial preset-runtime-shadow-review local-superset-runtime-shadow-trial local-superset-runtime-shadow-review preset-config-check preset-bootstrap-check preset-provider-smoke preset-dashboard-readiness preset-live-trial preset-live-trial-approve preset-live-trial-review preset-compose-check superset-chart-matrix verify docker-up docker-down
 
 install:
 	uv sync --extra dev
@@ -56,6 +56,19 @@ preset-runtime-shadow-trial:
 
 preset-runtime-shadow-review:
 	uv run python evaluations/preset_runtime_shadow_review.py artifacts/preset-runtime-shadow-trial.json
+
+local-superset-runtime-shadow-trial:
+	uv run python -m evaluations.local_superset_runtime_shadow_trial \
+		--superset-url "$${SUPERSET_URL:-http://127.0.0.1:18089}" \
+		--superset-username "$${SUPERSET_USERNAME:-admin}" \
+		--superset-password "$${SUPERSET_PASSWORD:-admin}" \
+		--tenant-id "$${SIGNALWEAVE_TENANT_ID:-northstar-outfitters}" \
+		--principal-id "$${SIGNALWEAVE_PRINCIPAL_ID:-northstar-monitoring-agent}" \
+		--output artifacts/local-superset-runtime-shadow.json
+
+local-superset-runtime-shadow-review:
+	uv run python evaluations/local_superset_runtime_shadow_review.py \
+		artifacts/local-superset-runtime-shadow.json
 
 preset-config-check:
 	uv run python scripts/preset_config_check.py

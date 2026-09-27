@@ -51,6 +51,20 @@ class SupersetClient:
         self._transport = transport
         self._token: str | None = None
         self._auth_lock = asyncio.Lock()
+        self._requests_made = 0
+        self._request_path_counts: dict[str, int] = {}
+
+    @property
+    def requests_made(self) -> int:
+        """Return provider HTTP attempts made by this read-only client."""
+
+        return self._requests_made
+
+    @property
+    def request_path_counts(self) -> dict[str, int]:
+        """Return non-secret request counts by provider path."""
+
+        return dict(self._request_path_counts)
 
     async def _auth_headers(self, force_refresh: bool = False) -> dict[str, str]:
         if self._token and not force_refresh:
@@ -86,6 +100,8 @@ class SupersetClient:
         timeout: float,
         **kwargs: Any,
     ) -> httpx.Response:
+        self._requests_made += 1
+        self._request_path_counts[path] = self._request_path_counts.get(path, 0) + 1
         headers = await self._auth_headers()
         async with httpx.AsyncClient(
             base_url=self.base_url,
@@ -97,6 +113,8 @@ class SupersetClient:
             if response.status_code == 401 and self._token and self.username and self.password:
                 self._token = None
                 refreshed_headers = await self._auth_headers(force_refresh=True)
+                self._requests_made += 1
+                self._request_path_counts[path] = self._request_path_counts.get(path, 0) + 1
                 response = await client.request(method, path, headers=refreshed_headers, **kwargs)
             response.raise_for_status()
             return response
