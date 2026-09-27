@@ -132,6 +132,12 @@ make preset-trial
 cat artifacts/preset-hosted-trial.json
 ```
 
+`make preset-trial` also runs
+[`preset_hosted_review.py`](../evaluations/preset_hosted_review.py), an
+independent serialized-report reviewer. It recomputes chart-shape coverage,
+dashboard filter scope, cached/live policy behavior, token refresh, bounded
+limits, degraded-workspace visibility, and the explicit non-claims.
+
 The deterministic trial is not the customer acceptance gate. That gate is the
 real-account runner:
 

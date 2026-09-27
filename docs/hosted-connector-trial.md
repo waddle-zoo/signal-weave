@@ -10,7 +10,12 @@ Run it with:
 
 ```bash
 uv run pytest tests/test_hosted_connections.py -q
+make preset-trial
 ```
+
+`make preset-trial` runs the provider-shaped Preset trial and then an
+independent serialized-report reviewer; the reviewer must pass before the
+trial is treated as evidence.
 
 The current focused run covers 100 passing cases:
 

@@ -36,6 +36,7 @@ retrieval-explanation-trial:
 
 preset-trial:
 	uv run python evaluations/preset_hosted_trial.py --output artifacts/preset-hosted-trial.json
+	uv run python evaluations/preset_hosted_review.py artifacts/preset-hosted-trial.json
 
 preset-generalization-trial:
 	uv run python evaluations/preset_generalization_trial.py --output artifacts/preset-generalization-trial.json
