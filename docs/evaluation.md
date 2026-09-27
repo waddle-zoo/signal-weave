@@ -99,6 +99,11 @@ rejects a pass-looking report with no provider data, no evidence, enabled
 delivery, an undisclosed scope fallback, or a replay that contacts either
 dependency.
 
+The repository Docker fixture is the stock sample Superset catalog, so the
+local replay defaults to tenant `local-superset-demo` and does not infer a
+company identity from generic dashboard titles. Pass an explicit tenant and
+principal when replaying a named company fixture such as Northstar.
+
 For a larger approved dashboard, keep the default bound as the first test and
 raise it explicitly only after reviewing the resulting payload size:
 

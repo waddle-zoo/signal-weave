@@ -188,16 +188,16 @@ def _chart_summary(
 
 async def run_trial(
     *,
-    superset_url: str = "http://127.0.0.1:18089",
+    superset_url: str = "http://127.0.0.1:8088",
     username: str = "admin",
     password: str = "admin",
-    tenant_id: str = "northstar-outfitters",
-    principal_id: str = "northstar-monitoring-agent",
+    tenant_id: str = "local-superset-demo",
+    principal_id: str = "local-superset-monitoring-agent",
     goal: str = (
-        "Monitor the executive command center for meaningful movement in saved business "
+        "Monitor the Sales Dashboard for meaningful movement in saved business "
         "signals and return one evidence-backed owner review."
     ),
-    title_contains: str | None = "executive",
+    title_contains: str | None = "Sales Dashboard",
     max_snapshot_bytes: int | None = None,
     max_jev_payload_bytes: int | None = None,
     output: Path | None = None,
@@ -258,7 +258,7 @@ async def run_trial(
                     selected_sources=selected_sources,
                     adapter="superset",
                     limit=10,
-                    title="Northstar executive monitoring",
+                    title=f"{match['title']} monitoring",
                     delivery_methods=[
                         {
                             "key": "owner-review",
@@ -275,21 +275,27 @@ async def run_trial(
                 approved = await approve(card_id, actor=principal_id)
                 provider_after_approval = provider_client.requests_made
                 jev_before_evaluation = len(ContractClient.calls)
+                resource_identity = re.sub(
+                    r"[^a-z0-9_-]+",
+                    "-",
+                    str(match.get("ref", "dashboard")).lower(),
+                ).strip("-_") or "dashboard"
+                idempotency_key = f"local-superset-shadow:{tenant_id}:{resource_identity}"
                 evaluated = await evaluate(
                     card_id,
-                    idempotency_key="northstar-local-executive-shadow",
+                    idempotency_key=idempotency_key,
                     actor=principal_id,
                 )
                 jev_after_evaluation = len(ContractClient.calls)
                 provider_after_evaluation = provider_client.requests_made
                 replay = await evaluate(
                     card_id,
-                    idempotency_key="northstar-local-executive-shadow",
+                    idempotency_key=idempotency_key,
                     actor=principal_id,
                 )
                 jev_after_replay = len(ContractClient.calls)
                 provider_after_replay = provider_client.requests_made
-                receipt = get_receipt(idempotency_key="northstar-local-executive-shadow")
+                receipt = get_receipt(idempotency_key=idempotency_key)
 
                 result = evaluated["result"]
                 resources = evaluated.get("resources") or []
@@ -423,13 +429,13 @@ async def run_trial(
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--superset-url", default="http://127.0.0.1:18089")
+    parser.add_argument("--superset-url", default="http://127.0.0.1:8088")
     parser.add_argument("--superset-username", default="admin")
     parser.add_argument("--superset-password", default="admin")
-    parser.add_argument("--tenant-id", default="northstar-outfitters")
-    parser.add_argument("--principal-id", default="northstar-monitoring-agent")
+    parser.add_argument("--tenant-id", default="local-superset-demo")
+    parser.add_argument("--principal-id", default="local-superset-monitoring-agent")
     parser.add_argument("--goal", default=None)
-    parser.add_argument("--dashboard-title-contains", default="executive")
+    parser.add_argument("--dashboard-title-contains", default="Sales Dashboard")
     parser.add_argument("--max-snapshot-bytes", type=int)
     parser.add_argument("--max-jev-payload-bytes", type=int)
     parser.add_argument("--output", type=Path, default=Path("artifacts/local-superset-runtime-shadow.json"))
@@ -443,7 +449,7 @@ def main() -> int:
             principal_id=args.principal_id,
             goal=args.goal
             or (
-                "Monitor the executive command center for meaningful movement in saved "
+                "Monitor the Sales Dashboard for meaningful movement in saved "
                 "business signals and return one evidence-backed owner review."
             ),
             title_contains=args.dashboard_title_contains or None,

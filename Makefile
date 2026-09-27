@@ -65,11 +65,11 @@ preset-enterprise-proof:
 
 local-superset-runtime-shadow-trial:
 	uv run python -m evaluations.local_superset_runtime_shadow_trial \
-		--superset-url "$${SUPERSET_URL:-http://127.0.0.1:18089}" \
+		--superset-url "$${SUPERSET_URL:-http://127.0.0.1:8088}" \
 		--superset-username "$${SUPERSET_USERNAME:-admin}" \
 		--superset-password "$${SUPERSET_PASSWORD:-admin}" \
-		--tenant-id "$${SIGNALWEAVE_TENANT_ID:-northstar-outfitters}" \
-		--principal-id "$${SIGNALWEAVE_PRINCIPAL_ID:-northstar-monitoring-agent}" \
+		--tenant-id "$${SIGNALWEAVE_TENANT_ID:-local-superset-demo}" \
+		--principal-id "$${SIGNALWEAVE_PRINCIPAL_ID:-local-superset-monitoring-agent}" \
 		--output artifacts/local-superset-runtime-shadow.json
 
 local-superset-runtime-shadow-review:
