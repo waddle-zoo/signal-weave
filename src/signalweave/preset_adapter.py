@@ -50,7 +50,14 @@ class PresetCloudClient(SupersetClient):
             "Preset workspace_url": workspace_url,
             "Preset api_base_url": api_base_url,
         }.items():
-            parsed = urlsplit(url)
+            try:
+                parsed = urlsplit(url)
+                # ``urlsplit().hostname`` does not validate a malformed port.
+                # Force parsing here so a direct client construction cannot
+                # defer an invalid origin until its first network request.
+                _validated_port = parsed.port
+            except ValueError as error:
+                raise ValueError(f"{field_name} must be a valid https origin") from error
             if parsed.scheme != "https" or not parsed.hostname:
                 raise ValueError(f"{field_name} must use https")
             if parsed.username or parsed.password:

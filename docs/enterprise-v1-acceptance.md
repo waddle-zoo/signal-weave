@@ -39,7 +39,7 @@ returns an inspectable evidence bundle and receipt.
 | Local OIDC MCP replay preserves Preset tenant isolation | `tests/test_oidc_http_integration.py` verifies signed discovery/JWKS validation, required scopes, tenant-scoped card access, webhook rejection for a foreign card, two tenant-bound Preset connections receiving exactly their own adapter/provider calls, and the production `build_runtime()` environment bootstrap rejecting foreign-tenant provider access. | 3 tests pass locally; external IdP replay remains a deployment gate |
 | OIDC discovery cannot redirect key retrieval insecurely | Configured and discovered issuer/JWKS URLs are validated for HTTPS and safe URL shape; a discovered HTTP `jwks_uri` is rejected before any HTTP JWKS request. | Pass locally |
 | Production Preset startup reuses the identity preflight | `build_runtime()` invokes the same configuration contract before registering an environment Preset adapter: token mode requires a static trusted tenant/principal, while OIDC mode permits request-scoped identity and requires valid OIDC settings. | Pass locally |
-| Preset provider URLs cannot downgrade to HTTP | Environment bootstrap and the hosted connection model both require HTTPS; a legacy `SIGNALWEAVE_ALLOW_INSECURE_PROVIDER` setting does not weaken the check. | Pass locally |
+| Preset provider URLs cannot downgrade to HTTP or defer malformed origins | Environment bootstrap, the hosted connection model, and direct `PresetCloudClient` construction require HTTPS origins without credentials, paths, queries, fragments, or malformed ports; a legacy `SIGNALWEAVE_ALLOW_INSECURE_PROVIDER` setting does not weaken the check. | Pass locally |
 | Preset provider redirects fail closed | Preset token-exchange and workspace HTTP clients explicitly disable redirects; a 3xx response produces no second-host request and cannot forward a bearer token. | Pass locally; shared-service egress controls remain open |
 | Provider resource identity cannot be substituted | Superset-compatible dashboard and chart metadata responses must echo the requested resource ID; dashboard fan-out and standalone chart inspection fail closed on a mismatched ID before evidence is normalized. | Pass locally |
 | Hosted workspace labels cannot widen authorization | `external_workspace` is descriptive metadata only; the tenant-bound credential and validated provider origin determine the adapter endpoint and authorization scope. | Pass locally |
@@ -133,7 +133,9 @@ make local-superset-runtime-shadow-review
 The current verified regression result is `448 passed, 2 skipped` with Ruff
 clean. The environment preflight also rejects malformed Preset workspace or
 API-auth URLs (credentials, paths, queries, fragments, missing hosts, and
-non-numeric ports) before provider or Jev traffic. The runtime-shadow and
+non-numeric ports) before provider or Jev traffic; the same malformed-origin
+check is enforced when a hosted connection or Preset client is constructed
+directly. The runtime-shadow and
 chart-matrix commands are separate evidence
 surfaces: the former uses synthetic Preset and TypeSafe transports to exercise
 the production runtime, while the latter uses the live local Superset service

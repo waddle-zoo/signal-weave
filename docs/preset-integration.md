@@ -250,11 +250,13 @@ secret manager. They are loaded into memory only to construct the adapter and
 are never stored in cards, MCP payloads, or connection metadata. The customer
 should use the smallest Preset workspace permissions that allow the required
 read-only artifacts. Environment bootstrap requires HTTPS for both `PRESET_URL`
-and `PRESET_API_BASE_URL`; there is no insecure-provider override. The HTTPS
-origin check is a self-hosted transport invariant, not a managed-service egress
-control: a future shared service must add provider allowlists, redirect
-blocking, DNS-rebinding protection, and network-level egress policy before it
-accepts tenant-supplied connection URLs.
+and `PRESET_API_BASE_URL`; there is no insecure-provider override. The same
+origin check is enforced when a hosted connection or Preset client is
+constructed directly, and rejects credentials, paths, queries, fragments, and
+malformed ports. This is a self-hosted transport invariant, not a
+managed-service egress control: a future shared service must add provider
+allowlists, redirect blocking, DNS-rebinding protection, and network-level
+egress policy before it accepts tenant-supplied connection URLs.
 
 The connector enforces the configured `max_result_rows` and
 `max_snapshot_bytes` limits on both the Preset token exchange and workspace

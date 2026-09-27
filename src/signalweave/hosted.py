@@ -95,7 +95,14 @@ class HostedConnection(BaseModel):
 
     @model_validator(mode="after")
     def validate_url(self) -> HostedConnection:
-        parsed = urlsplit(self.base_url)
+        try:
+            parsed = urlsplit(self.base_url)
+            # Accessing ``port`` validates malformed numeric ports. Without
+            # this, a direct hosted connection could survive model validation
+            # and fail only when its adapter first opens a socket.
+            _validated_port = parsed.port
+        except ValueError as error:
+            raise ValueError("hosted connection base_url must be a valid https origin") from error
         if parsed.scheme != "https" or not parsed.hostname:
             raise ValueError("hosted connection base_url must use https")
         if parsed.username or parsed.password:
