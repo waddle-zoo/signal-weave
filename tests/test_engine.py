@@ -578,13 +578,55 @@ async def test_aggregate_jev_payload_budget_fails_before_any_jev_call():
     )
     judger = CountingJev()
 
-    with pytest.raises(EvaluationPayloadError, match="source Jev payload exceeded"):
+    with pytest.raises(EvaluationPayloadError, match="source Jev payload exceeded") as error_info:
         await InsightEngine(judger, max_jev_payload_bytes=1_024).evaluate(
             card, [resource]
         )
 
     assert judger.compile_calls == 0
     assert judger.judge_calls == 0
+    assert error_info.value.stage == "source"
+    assert error_info.value.observed_bytes > error_info.value.budget_bytes
+
+
+async def test_jev_payload_telemetry_is_persisted_on_successful_run():
+    source = SourceRef(
+        key="telemetry-budget-source",
+        adapter="preset",
+        resource="dashboard:telemetry-budget",
+        label="Telemetry budget dashboard",
+    )
+    card = card_for(
+        card_id="card-payload-telemetry",
+        title="Payload telemetry",
+        source=source,
+    )
+    resource = ResourceSnapshot(
+        source_key=source.key,
+        adapter=source.adapter,
+        resource=source.resource,
+        title=source.label,
+        observations=[
+            Observation(
+                source_key=source.key,
+                subject_id="metric-1",
+                subject_label="Metric one",
+                metric="metric_one",
+                current=10,
+                baseline=9,
+                change_pct=11.11,
+            )
+        ],
+    )
+
+    run = await InsightEngine(SafetyTestDouble(), max_jev_payload_bytes=8_192).evaluate(
+        card, [resource]
+    )
+
+    telemetry = run.result.telemetry
+    assert telemetry.jev_payload_bytes > 0
+    assert telemetry.jev_payload_bytes <= telemetry.jev_payload_budget_bytes
+    assert telemetry.jev_payload_budget_bytes == 8_192
 
 
 async def test_partial_required_source_is_not_automatically_interpreted():

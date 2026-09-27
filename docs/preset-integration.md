@@ -89,7 +89,9 @@ enough dashboards or related sources to exceed that budget, SignalWeave fails
 before a Jev request rather than truncating the evidence or presenting a
 partial aggregate as complete. Split the card, narrow its `chart_ids`, or
 raise the deployment budget only after reviewing the provider and TypeSafe
-limits.
+limits. Successful evaluations expose the serialized payload size and budget
+in telemetry; a rejected shadow receipt records the failed stage and byte
+counts for audit.
 
 Start with the no-credit bootstrap preflight before onboarding a card:
 

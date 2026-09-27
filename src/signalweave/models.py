@@ -775,6 +775,8 @@ class RunTelemetry(BaseModel):
     jev_requests: int = Field(default=0, ge=0)
     jev_input_tokens: int = Field(default=0, ge=0)
     jev_output_tokens: int = Field(default=0, ge=0)
+    jev_payload_bytes: int = Field(default=0, ge=0)
+    jev_payload_budget_bytes: int = Field(default=4_000_000, ge=1_024)
     query_calls: int = Field(default=0, ge=0)
     query_bytes_scanned: int = Field(default=0, ge=0)
     query_cache_hits: int = Field(default=0, ge=0)

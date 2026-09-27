@@ -4,7 +4,7 @@ from types import SimpleNamespace
 import httpx
 import pytest
 
-from signalweave.engine import InsightEngine
+from signalweave.engine import EvaluationPayloadError, InsightEngine
 from signalweave.mcp_server import create_mcp
 from signalweave.models import (
     CertificationRecord,
@@ -226,33 +226,47 @@ class AmbiguousCatalogJevDouble(OnboardingJevDouble):
         }
 
 
-def make_server(tmp_path, judger=None, *, sqlite=False, catalog=None, context_provider=None):
+def make_server(
+    tmp_path,
+    judger=None,
+    *,
+    sqlite=False,
+    catalog=None,
+    context_provider=None,
+    max_jev_payload_bytes=None,
+):
     registry = SourceRegistry([catalog or SupersetCatalogDouble()], authorized_tenants=["default"])
+    engine_kwargs = {
+        "registry": registry,
+        "context_provider": context_provider,
+    }
+    if max_jev_payload_bytes is not None:
+        engine_kwargs["max_jev_payload_bytes"] = max_jev_payload_bytes
     engine = InsightEngine(
         judger or OnboardingJevDouble(),
-        registry=registry,
-        context_provider=context_provider,
+        **engine_kwargs,
     )
     card_store = (
         SQLiteInsightCardStore(tmp_path / "signalweave.db")
         if sqlite
         else JsonInsightCardStore(tmp_path / "cards.json")
     )
-    return create_mcp(
-        Runtime(
-            card_store=card_store,
-            sources=registry,
-            engine=engine,
-            decision_receipts=(
-                SQLiteDecisionReceiptStore(tmp_path / "signalweave.db") if sqlite else None
-            ),
-            decision_feedback=(
-                SQLiteDecisionFeedbackStore(tmp_path / "signalweave.db") if sqlite else None
-            ),
-            context_provider=context_provider,
-            principal=PrincipalContext(principal_id="test-principal", tenant_id="default"),
-        )
+    runtime = Runtime(
+        card_store=card_store,
+        sources=registry,
+        engine=engine,
+        decision_receipts=(
+            SQLiteDecisionReceiptStore(tmp_path / "signalweave.db") if sqlite else None
+        ),
+        decision_feedback=(
+            SQLiteDecisionFeedbackStore(tmp_path / "signalweave.db") if sqlite else None
+        ),
+        context_provider=context_provider,
+        principal=PrincipalContext(principal_id="test-principal", tenant_id="default"),
     )
+    server = create_mcp(runtime)
+    server._test_runtime = runtime
+    return server
 
 
 def tool(server, name):
@@ -942,6 +956,46 @@ async def test_sqlite_runtime_replays_completed_evaluation_after_restart(tmp_pat
     assert replay["replayed"] is True
     assert replay["receipt"]["status"] == "replayed"
     assert replay["result"] == first["result"]
+
+
+@pytest.mark.asyncio
+async def test_payload_budget_failure_is_persisted_as_structured_receipt(tmp_path):
+    server = make_server(tmp_path, max_jev_payload_bytes=1_024)
+    source = {
+        "key": "oversized-card-source",
+        "adapter": "superset",
+        "resource": "dashboard:7",
+        "label": "Growth overview",
+    }
+    server._test_runtime.card_store.save_card(
+        InsightCard(
+            id="oversized-card",
+            title="Oversized card",
+            what_to_watch="x" * 2_000,
+            why_watch="Keep this card in the test fixture.",
+            sources=[source],
+            status=InsightCardStatus.APPROVED,
+            principal_id="test-principal",
+            principal_tenant="default",
+        )
+    )
+
+    with pytest.raises(EvaluationPayloadError, match="source Jev payload exceeded"):
+        await tool(server, "evaluate_insight_card")(
+            "oversized-card", idempotency_key="daily:oversized-card"
+        )
+
+    receipt = tool(server, "get_decision_receipt")(
+        idempotency_key="daily:oversized-card"
+    )
+    assert receipt["receipt"]["status"] == "failed"
+    assert receipt["result"]["jev_payload_budget"] == {
+        "stage": "source",
+        "observed_bytes": receipt["result"]["jev_payload_budget"]["observed_bytes"],
+        "budget_bytes": 1_024,
+        "status": "exceeded",
+    }
+    assert receipt["result"]["jev_payload_budget"]["observed_bytes"] > 1_024
 
 
 @pytest.mark.asyncio

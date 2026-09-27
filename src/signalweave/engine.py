@@ -56,6 +56,15 @@ DEFAULT_MAX_JEV_PAYLOAD_BYTES = 4_000_000
 class EvaluationPayloadError(ValueError):
     """Raised before Jev when one evaluation would exceed its input budget."""
 
+    def __init__(self, *, stage: str, observed_bytes: int, budget_bytes: int) -> None:
+        self.stage = stage
+        self.observed_bytes = observed_bytes
+        self.budget_bytes = budget_bytes
+        super().__init__(
+            f"{stage} Jev payload exceeded the configured budget "
+            f"({observed_bytes} > {budget_bytes} bytes)"
+        )
+
 
 class InsightEngine:
     """Evaluate a user-authored insight card over adapter-provided snapshots."""
@@ -78,7 +87,7 @@ class InsightEngine:
         self.investigation_candidate_limit = investigation_candidate_limit
         self.max_jev_payload_bytes = max_jev_payload_bytes
 
-    def _assert_jev_payload_budget(self, state: dict[str, Any], *, stage: str) -> None:
+    def _assert_jev_payload_budget(self, state: dict[str, Any], *, stage: str) -> int:
         """Fail closed before any Jev request can receive an oversized state."""
 
         serialized = json.dumps(
@@ -89,9 +98,11 @@ class InsightEngine:
         observed_bytes = len(serialized.encode("utf-8"))
         if observed_bytes > self.max_jev_payload_bytes:
             raise EvaluationPayloadError(
-                f"{stage} Jev payload exceeded the configured budget "
-                f"({observed_bytes} > {self.max_jev_payload_bytes} bytes)"
+                stage=stage,
+                observed_bytes=observed_bytes,
+                budget_bytes=self.max_jev_payload_bytes,
             )
+        return observed_bytes
 
     def _judger_metrics(self) -> dict[str, int]:
         metrics = getattr(self.judger, "metrics", None)
@@ -167,6 +178,7 @@ class InsightEngine:
         metrics_before: dict[str, int],
         resources: list[ResourceSnapshot],
         result: InsightResult,
+        jev_payload_bytes: int,
     ) -> RunTelemetry:
         metrics_after = self._judger_metrics()
         provider = {
@@ -183,6 +195,8 @@ class InsightEngine:
             jev_requests=provider["requests"],
             jev_input_tokens=provider["input_tokens"],
             jev_output_tokens=provider["output_tokens"],
+            jev_payload_bytes=jev_payload_bytes,
+            jev_payload_budget_bytes=self.max_jev_payload_bytes,
             query_calls=int(source["query_calls"]),
             query_bytes_scanned=int(source["query_bytes_scanned"]),
             query_cache_hits=int(source["query_cache_hits"]),
@@ -305,7 +319,9 @@ class InsightEngine:
         materials = self._evaluation_materials(
             evaluation_card, plan, resources, context, investigation
         )
-        self._assert_jev_payload_budget(materials.state, stage="judgment")
+        judgment_payload_bytes = self._assert_jev_payload_budget(
+            materials.state, stage="judgment"
+        )
         result = await self.judger.judge(
             materials.state, evaluation_card, plan, materials.observations
         )
@@ -330,6 +346,7 @@ class InsightEngine:
                     metrics_before=metrics_before,
                     resources=resources,
                     result=result,
+                    jev_payload_bytes=judgment_payload_bytes,
                 )
             }
         )

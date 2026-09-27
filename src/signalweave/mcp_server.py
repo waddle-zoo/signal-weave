@@ -16,6 +16,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 from .bootstrap import BootstrapManifest, BootstrapService
+from .engine import EvaluationPayloadError
 from .evaluation import (
     CardEvaluationCase,
     CardEvaluationThresholds,
@@ -318,12 +319,20 @@ def create_mcp(
             evaluated_result = run.result.model_copy(update={"retrieval": bundle})
             result = evaluated_result.model_dump(mode="json")
         except Exception as error:  # noqa: BLE001 - persist failed claims for replay safety
+            failure: dict[str, Any] = {"error": f"{type(error).__name__}: {error}"}
+            if isinstance(error, EvaluationPayloadError):
+                failure["jev_payload_budget"] = {
+                    "stage": error.stage,
+                    "observed_bytes": error.observed_bytes,
+                    "budget_bytes": error.budget_bytes,
+                    "status": "exceeded",
+                }
             decision_receipts.save(
                 prepared.model_copy(
                     update={
                         "status": ReceiptStatus.FAILED,
                         "outcome": Outcome.INSUFFICIENT_DATA,
-                        "result": {"error": f"{type(error).__name__}: {error}"},
+                        "result": failure,
                     }
                 )
             )

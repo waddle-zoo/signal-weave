@@ -64,7 +64,7 @@ the card or trusted graph and checked independently.
 | Authorization isolation | Local contract proven | Tenant filtering and request principal propagation exist; production gate is an OIDC/shared-gateway replay with real adapter credentials. |
 | Trusted context | Runtime-injectable contract proven locally | A deployment-owned provider can expand/rank with trusted context; provider/version are recorded on receipts and feedback, while unverified context cannot widen retrieval. A real graph provider still must publish freshness, completeness, and provenance. |
 | Workflow bundle completeness | Deliberately bounded | Explicit `requires_*` relationships preserve at least one candidate per obligation; role-level completeness needs human/graph labels, not a guessed global threshold. |
-| Cost and latency budgets | Partially closed | Candidate, source-fetch, follow-up, and aggregate serialized Jev-payload budgets now fail closed; shared receipt telemetry and live provider cost proof remain open. |
+| Cost and latency budgets | Partially closed | Candidate, source-fetch, follow-up, and aggregate serialized Jev-payload budgets now fail closed and expose Jev payload telemetry in results/failed receipts; live provider cost proof remains open. |
 | Outcome quality | Remaining P1 | Needs operator-labeled historical replay or shadow traffic; synthetic Jev labels are not enough. |
 
 ## Highest-confidence gaps
@@ -164,9 +164,9 @@ Completed on this branch:
 Remaining enterprise gates:
 
 4. Replay the contract through real OIDC/shared-gateway and connector adapters.
-5. Finish the budget slice with shared receipt telemetry and live provider-cost
-   measurement; candidate, source-fetch, follow-up, and aggregate serialized
-   Jev-payload limits now fail closed.
+5. Finish the budget slice with live provider-cost measurement; candidate,
+   source-fetch, follow-up, and aggregate serialized Jev-payload limits now
+   fail closed and are visible in results or failed receipts.
 6. Add operator-labeled historical replay or shadow traffic to measure whether
    the selected evidence and route would have produced the right business
    outcome.
