@@ -19,7 +19,6 @@ from signalweave.hosted import (
     HostedConnection,
     HostedProvider,
     InMemoryCredentialVault,
-    build_hosted_adapters,
 )
 from signalweave.mcp_server import create_mcp
 from signalweave.models import InsightCard, InsightCardStatus, SourceRef
@@ -230,8 +229,20 @@ async def test_signed_oidc_token_scopes_the_real_mcp_http_surface(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_oidc_request_tenant_selects_only_matching_preset_connection(tmp_path):
+async def test_oidc_request_tenant_selects_only_matching_preset_connection(
+    monkeypatch, tmp_path
+):
     oidc_client, verifier, token = _oidc_fixture()
+    monkeypatch.setenv("TYPESAFE_API_KEY", "test-key")
+    monkeypatch.delenv("TYPESAFE_API_KEY_FILE", raising=False)
+    monkeypatch.delenv("PRESET_URL", raising=False)
+    monkeypatch.delenv("SIGNALWEAVE_TENANT_ID", raising=False)
+    monkeypatch.delenv("SIGNALWEAVE_PRINCIPAL_ID", raising=False)
+    monkeypatch.setenv("SIGNALWEAVE_AUTH_MODE", "oidc")
+    monkeypatch.setenv("SIGNALWEAVE_OIDC_ISSUER_URL", "https://issuer.integration.test")
+    monkeypatch.setenv("SIGNALWEAVE_OIDC_AUDIENCE", "signalweave")
+    monkeypatch.setenv("SIGNALWEAVE_STORE_BACKEND", "sqlite")
+    monkeypatch.setenv("SIGNALWEAVE_STORE_PATH", str(tmp_path / "cards.db"))
     tenants = {
         "tenant-a": {"dashboard_id": "dashboard-a", "jwt": "jwt-a"},
         "tenant-b": {"dashboard_id": "dashboard-b", "jwt": "jwt-b"},
@@ -299,16 +310,13 @@ async def test_oidc_request_tenant_selects_only_matching_preset_connection(tmp_p
             for tenant, connection in zip(tenants, connections, strict=True)
         },
     )
-    adapters = build_hosted_adapters(
-        connections,
-        vault,
-        transport=httpx.MockTransport(provider_handler),
+    runtime = build_runtime(
+        hosted_connections=connections,
+        credential_vault=vault,
+        http_transport=httpx.MockTransport(provider_handler),
     )
-    runtime = Runtime(
-        card_store=JsonInsightCardStore(tmp_path / "cards.json"),
-        sources=SourceRegistry(adapters),
-        engine=InsightEngine(NoopJev()),
-    )
+    assert runtime.principal is None
+    assert runtime.sources.authorized_tenants == frozenset()
     server = create_mcp(
         runtime,
         principal_resolver=lambda _ctx: principal_from_access_token(
