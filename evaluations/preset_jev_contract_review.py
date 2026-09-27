@@ -44,6 +44,20 @@ def _dashboard_filter_statuses_from_judge_state(state: dict[str, Any]) -> list[s
     )
 
 
+def _cache_statuses_from_judge_state(state: dict[str, Any]) -> list[str]:
+    return sorted(
+        {
+            str(chart.get("cache_status") or "unknown")
+            for source in state.get("sources", [])
+            if isinstance(source, dict)
+            for metadata in [source.get("metadata")]
+            if isinstance(metadata, dict)
+            for chart in metadata.get("charts", [])
+            if isinstance(chart, dict)
+        }
+    )
+
+
 def _data_requests(trace: dict[str, Any]) -> list[dict[str, Any]]:
     requests: list[dict[str, Any]] = []
     for phase in ("snapshot", "focused_snapshot", "full", "focused"):
@@ -87,6 +101,7 @@ def review_report(report: dict[str, Any]) -> dict[str, Any]:
     total_observations = 0
     total_jev_requests = 0
     viz_types: set[str] = set()
+    cache_statuses: set[str] = set()
     for index, workspace in enumerate(workspaces):
         if not isinstance(workspace, dict):
             findings.append(f"workspace {index} is not an object")
@@ -146,6 +161,7 @@ def review_report(report: dict[str, Any]) -> dict[str, Any]:
             ] < 1:
                 findings.append(f"workspace {index} sent no observation items to Jev")
             viz_types.update(str(item) for item in typed.get("jev_source_viz_types", []))
+            cache_statuses.update(str(item) for item in typed.get("cache_statuses", []))
 
         if not isinstance(call_trace, dict):
             findings.append(f"workspace {index} has no serialized Jev call trace")
@@ -190,6 +206,11 @@ def review_report(report: dict[str, Any]) -> dict[str, Any]:
                     if isinstance(typed, dict) and typed.get("dashboard_filter_statuses") != expected_filter_statuses:
                         findings.append(
                             f"workspace {index} dashboard filter metadata is not derived from raw Jev input"
+                        )
+                    expected_cache_statuses = _cache_statuses_from_judge_state(state)
+                    if isinstance(typed, dict) and typed.get("cache_statuses") != expected_cache_statuses:
+                        findings.append(
+                            f"workspace {index} cache provenance is not derived from raw Jev input"
                         )
                     if isinstance(result_payload, dict):
                         if result_payload.get("evidence") != raw_evidence:
@@ -244,6 +265,8 @@ def review_report(report: dict[str, Any]) -> dict[str, Any]:
 
     if len(viz_types) < 10:
         findings.append("fewer than ten visualization labels reached Jev")
+    if not {"cached", "uncached", "mixed"} <= cache_statuses:
+        findings.append("raw Jev inputs omitted one or more cache provenance states")
     if report.get("total_charts") != total_charts:
         findings.append("serialized total_charts is not reproducible")
     if report.get("total_snapshot_observations") != total_observations:

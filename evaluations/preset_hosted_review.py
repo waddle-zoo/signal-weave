@@ -67,6 +67,17 @@ def review_report(report: dict[str, Any]) -> dict[str, Any]:
     if partial_workspaces < 1:
         findings.append("no provider-degraded workspace remained visible as partial")
 
+    observed_cache_statuses = {
+        status
+        for item in workspaces
+        if isinstance(item, dict)
+        for status in item.get("cache_statuses", [])
+    }
+    if not {"cached", "uncached", "mixed"} <= observed_cache_statuses:
+        findings.append(
+            "cache provenance did not preserve cached, uncached, and mixed provider states"
+        )
+
     metadata = report.get("metadata_only")
     if not isinstance(metadata, dict) or metadata.get("no_chart_data") is not True or metadata.get(
         "no_chart_metadata"

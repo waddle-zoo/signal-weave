@@ -178,6 +178,10 @@ statuses (`applied`, `not_applied`, or
 evidence values, so a Jev decision can distinguish filtered evidence from
 evidence where a dashboard control was omitted. Unknown or malformed filter
 contracts fail closed. The
+hosted Preset adapter also retains Superset cache provenance as
+`cache_status` (`cached`, `uncached`, `mixed`, or `unknown`) without retaining
+provider cache keys. This qualifies freshness for Jev and downstream agents;
+it does not claim that `force=false` guarantees a cache hit. The
 generic local Superset client has one deliberately narrow compatibility path:
 when the dashboard's initial state omits every native-filter default and the
 provider reports missing saved query context, it may use the bounded

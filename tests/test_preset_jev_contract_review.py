@@ -59,3 +59,15 @@ async def test_independent_preset_jev_contract_review_rejects_filter_context_mut
 
     assert review["passed"] is False
     assert any("dashboard filter metadata" in finding for finding in review["findings"])
+
+
+@pytest.mark.asyncio
+async def test_independent_preset_jev_contract_review_rejects_cache_provenance_mutation(tmp_path):
+    report = await run_trial(tmp_path / "preset-jev-contract.json")
+    mutated = deepcopy(report)
+    mutated["workspaces"][0]["typed_judge_input"]["cache_statuses"] = ["cached"]
+
+    review = review_report(mutated)
+
+    assert review["passed"] is False
+    assert any("cache provenance" in finding for finding in review["findings"])

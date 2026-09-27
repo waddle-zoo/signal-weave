@@ -109,10 +109,28 @@ class WorkspaceTransport:
                     int(chart["http_status"]),
                     json={"message": "provider unavailable"},
                 )
+            result = chart.get("result", [])
+            cache_status = chart.get("cache_status")
+            if cache_status in {"cached", "uncached", "mixed"}:
+                cached_values = {
+                    "cached": [True],
+                    "uncached": [False],
+                    "mixed": [True, False],
+                }[cache_status]
+                if isinstance(result, list):
+                    result = [
+                        {
+                            **item,
+                            "is_cached": cached_values[index % len(cached_values)],
+                        }
+                        if isinstance(item, dict)
+                        else item
+                        for index, item in enumerate(result)
+                    ]
             return httpx.Response(
                 200,
                 json={
-                    "result": chart.get("result", []),
+                    "result": result,
                     "dashboard_filters": {
                         "filters": [
                             {
@@ -205,6 +223,12 @@ async def _inspect_workspace(workspace: dict[str, Any]) -> dict[str, Any]:
         "observations": len(snapshot.observations),
         "charts_with_observations": len(observed_chart_ids),
         "chart_errors": len(chart_errors),
+        "cache_statuses": sorted(
+            {
+                str(chart.get("cache_status") or "unknown")
+                for chart in snapshot.metadata["charts"]
+            }
+        ),
         "quality_status": snapshot.metadata["data_quality"]["status"],
         "request_counts": {
             "auth": sum(request["path"] == "/v1/auth/" for request in transport.requests),
@@ -391,6 +415,12 @@ async def run_trial() -> dict[str, Any]:
             for item in inspections
         ),
         "varied_chart_types_are_reported": len(viz_types) >= 8,
+        "cache_provenance_is_visible": {
+            status
+            for item in inspections
+            for status in item["cache_statuses"]
+        }
+        >= {"cached", "uncached", "mixed"},
         "cached_queries_are_bounded": all(item["cached_query_guards"] for item in inspections),
         "dashboard_filters_are_applied_at_provider_boundary": all(
             item["dashboard_filters_sent"] for item in inspections

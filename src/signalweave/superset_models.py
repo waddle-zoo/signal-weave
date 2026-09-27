@@ -27,6 +27,7 @@ class SupersetChartSnapshot(BaseModel):
         "metadata_only",
         "unknown",
     ] = "unknown"
+    cache_status: Literal["cached", "uncached", "mixed", "unknown"] = "unknown"
     result_row_count: int = Field(default=0, ge=0)
     result_columns: list[str] = Field(default_factory=list, max_length=200)
     dashboard_filters: dict[str, Any] | None = None

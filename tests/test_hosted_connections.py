@@ -362,7 +362,8 @@ async def test_preset_cloud_token_exchange_and_dashboard_snapshot():
                                     "revenue": 120,
                                     "provider_internal_note": "do-not-retain",
                                 },
-                            ]
+                            ],
+                            "is_cached": True,
                         }
                     ],
                     "dashboard_filters": {
@@ -418,6 +419,8 @@ async def test_preset_cloud_token_exchange_and_dashboard_snapshot():
     assert snapshot.contract.tenant_id == "northstar"
     assert snapshot.observations[0].metric == "revenue"
     assert snapshot.observations[0].current == 120
+    assert snapshot.metadata["charts"][0]["cache_status"] == "cached"
+    assert snapshot.evidence[0].values["cache_status"] == "cached"
     assert snapshot.metadata["dashboard_scope"] == {
         "dashboard_scoped_requests": 1,
         "chart_query_fallbacks": 0,
@@ -583,6 +586,26 @@ async def test_preset_standalone_chart_keeps_saved_query_post_path():
     )
 
     assert result == [{"data": [{"revenue": 120}]}]
+
+
+@pytest.mark.asyncio
+async def test_preset_rejects_malformed_cache_provenance():
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={"result": [{"data": [], "is_cached": "yes"}]},
+        )
+
+    client = PresetCloudClient(
+        "https://workspace.app.preset.test",
+        access_token="preset-token",
+        transport=httpx.MockTransport(handler),
+    )
+
+    with pytest.raises(PresetPolicyError, match="invalid is_cached"):
+        await client.chart_data(
+            {"id": 101, "params": {"metrics": ["revenue"], "datasource": "17__table"}},
+        )
 
 
 @pytest.mark.asyncio

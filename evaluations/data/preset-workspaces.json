@@ -15,6 +15,7 @@
             "metrics": ["revenue"],
             "granularity_sqla": "day"
           },
+          "cache_status": "mixed",
           "result": [{"data": [{"day": "2026-09-01", "revenue": 100}, {"day": "2026-09-02", "revenue": 120}]}, {"data": [{"day": "2026-09-03", "revenue": 125}]}]
         },
         {
@@ -111,6 +112,7 @@
             "metrics": ["losses"],
             "granularity_sqla": "week"
           },
+          "cache_status": "uncached",
           "result": [{"data": [{"week": "2026-W35", "losses": 10}, {"week": "2026-W36", "losses": 9}]}]
         },
         {
@@ -147,6 +149,7 @@
             "metrics": ["retention"],
             "granularity_sqla": "month"
           },
+          "cache_status": "cached",
           "result": [{"data": [{"month": "2026-08", "retention": 0.71}, {"month": "2026-09", "retention": 0.74}]}]
         },
         {

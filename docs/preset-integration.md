@@ -320,7 +320,13 @@ provider-independent guarantee that a cache miss will never execute work. A
 strict cache-only contract needs a Preset result/cache endpoint or a customer
 proxy that exposes that distinction; SignalWeave fails closed on payload-size
 and row-limit violations but cannot infer provider execution cost from the
-response alone.
+response alone. When the provider includes Superset's `is_cached` result
+telemetry, normalized chart evidence retains only `cache_status`: `cached`,
+`uncached`, or `mixed` for multi-envelope responses. Missing telemetry is
+explicit as `unknown`; cache keys and raw provider cache metadata are not
+retained. This lets Jev and downstream agents qualify a decision's freshness
+without turning `force=false` into a false cache-only claim. See Superset's
+[ChartDataResponseResult schema](https://superset.apache.org/docs/api/schemas/chartdataresponseresult).
 
 The repeatable source-boundary trial is documented in
 [`docs/preset-integration-trial.md`](preset-integration-trial.md). It is a

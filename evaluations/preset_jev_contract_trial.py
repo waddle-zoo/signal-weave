@@ -192,6 +192,13 @@ async def _run_workspace(workspace: dict[str, Any]) -> dict[str, Any]:
             if isinstance(filter_item, dict) and filter_item.get("status")
         }
     )
+    jev_cache_statuses = sorted(
+        {
+            str(chart.get("cache_status") or "unknown")
+            for chart in chart_metadata
+            if isinstance(chart, dict)
+        }
+    )
     quality = snapshot.metadata.get("data_quality", {})
     focused_quality = focused_snapshot.metadata.get("data_quality", {})
     return {
@@ -229,6 +236,7 @@ async def _run_workspace(workspace: dict[str, Any]) -> dict[str, Any]:
             "observation_items": len(observations),
             "jev_source_viz_types": jev_source_viz_types,
             "dashboard_filter_statuses": jev_dashboard_filter_statuses,
+            "cache_statuses": jev_cache_statuses,
         },
         "jev_call_trace": {
             "full": full_call_trace,
@@ -302,6 +310,11 @@ async def run_trial(output: Path | None = None) -> dict[str, Any]:
             == ["applied", "not_applied"]
             for result in results
         ),
+        "cache_provenance_reaches_jev": {
+            status
+            for result in results
+            for status in result["typed_judge_input"]["cache_statuses"]
+        } >= {"cached", "uncached", "mixed"},
         "dashboard_filter_context_preserved": all(
             result["provider_requests"]["dashboard_filter_context"] for result in results
         ),

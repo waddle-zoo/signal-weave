@@ -45,6 +45,45 @@ async def test_dashboard_chart_data_uses_superset_canonical_trailing_slash():
     assert client.request_path_counts == {"/api/v1/chart/42/data/": 1}
 
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("result", "expected"),
+    [
+        ([{"data": [], "is_cached": True}], "cached"),
+        ([{"data": [], "is_cached": False}], "uncached"),
+        ([{"data": [], "is_cached": True}, {"data": [], "is_cached": False}], "mixed"),
+        ([{"data": []}], "unknown"),
+    ],
+)
+async def test_chart_data_surfaces_cache_provenance(result, expected):
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"result": result})
+
+    client = SupersetClient("http://superset.test", transport=httpx.MockTransport(handler))
+    telemetry: dict[str, object] = {}
+
+    await client.chart_data(
+        {"id": 42, "params": {"datasource": "1__table"}},
+        response_telemetry=telemetry,
+    )
+
+    assert telemetry["cache_status"] == expected
+
+
+@pytest.mark.asyncio
+async def test_chart_data_rejects_malformed_cache_provenance():
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"result": [{"data": [], "is_cached": "yes"}]})
+
+    client = SupersetClient("http://superset.test", transport=httpx.MockTransport(handler))
+
+    with pytest.raises(ValueError, match="invalid is_cached"):
+        await client.chart_data(
+            {"id": 42, "params": {"datasource": "1__table"}},
+            response_telemetry={},
+        )
+
+
 def test_query_context_preserves_chart_time_grain_and_filters():
     chart = {
         "id": 42,

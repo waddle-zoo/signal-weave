@@ -93,6 +93,13 @@ data is downgraded to `insufficient_data`. It also exercises varied
 visualization/result shapes and a healthy single-chart slice that reaches an
 actionable `notify` result.
 
+Chart result envelopes also retain cache provenance as a small typed status:
+`cached`, `uncached`, `mixed`, or `unknown`. The hosted trial includes all
+three observable provider states. This is evidence for freshness-aware
+decisions, not a claim that `force=false` guarantees a cache hit; cache-only
+execution would require a provider contract or customer proxy that exposes
+that control.
+
 The report includes the raw synthetic Jev call projections, normalized input
 arrays, result payloads, and provider request traces used by the reviewer. The
 reviewer derives evidence/observation counts, visualization coverage, result

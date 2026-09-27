@@ -495,8 +495,49 @@ class SupersetClient:
                 response_telemetry["dashboard_filters"] = dashboard_filters
         result = body.get("result", [])
         if isinstance(result, dict):
+            if response_telemetry is not None:
+                response_telemetry["cache_status"] = self._cache_status_from_result_envelopes(
+                    [result]
+                )
             return [result]
-        return [item for item in result if isinstance(item, dict)] if isinstance(result, list) else []
+        if isinstance(result, list):
+            envelopes = [item for item in result if isinstance(item, dict)]
+            if response_telemetry is not None:
+                response_telemetry["cache_status"] = self._cache_status_from_result_envelopes(
+                    envelopes
+                )
+            return envelopes
+        if response_telemetry is not None:
+            response_telemetry["cache_status"] = "unknown"
+        return []
+
+    @staticmethod
+    def _cache_status_from_result_envelopes(
+        envelopes: Iterable[dict[str, Any]],
+    ) -> str:
+        """Normalize provider cache provenance without retaining cache keys.
+
+        Superset reports ``is_cached`` per result envelope. A dashboard can
+        contain multiple query envelopes, so mixed provenance is explicit
+        instead of being collapsed into a misleading all-cached/all-fresh
+        claim. Providers that omit this optional telemetry remain ``unknown``.
+        """
+
+        values: list[bool] = []
+        for envelope in envelopes:
+            if "is_cached" not in envelope:
+                continue
+            value = envelope["is_cached"]
+            if not isinstance(value, bool):
+                raise ValueError("Superset chart response contained an invalid is_cached value")
+            values.append(value)
+        if not values:
+            return "unknown"
+        if all(values):
+            return "cached"
+        if not any(values):
+            return "uncached"
+        return "mixed"
 
     @staticmethod
     def _numeric_keys(rows: Iterable[dict[str, Any]]) -> list[str]:
@@ -894,6 +935,8 @@ class SupersetClient:
                         "result_columns": extraction.columns or [],
                         "data_scope": data_scope,
                     }
+                    if "cache_status" in response_telemetry:
+                        updates["cache_status"] = response_telemetry["cache_status"]
                     if "dashboard_filters" in response_telemetry:
                         updates["dashboard_filters"] = response_telemetry["dashboard_filters"]
                     if not extraction.observations:

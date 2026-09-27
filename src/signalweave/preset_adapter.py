@@ -503,6 +503,12 @@ class PresetCloudClient(SupersetClient):
                 "Preset chart response contained a non-object result envelope"
             )
         envelopes = [result] if isinstance(result, dict) else result
+        try:
+            cache_status = self._cache_status_from_result_envelopes(envelopes)
+        except ValueError as error:
+            raise PresetPolicyError(str(error)) from error
+        if response_telemetry is not None:
+            response_telemetry["cache_status"] = cache_status
         successful_statuses = {"success", "completed", "complete", "ok"}
         for item in envelopes:
             status = item.get("status")
