@@ -358,6 +358,13 @@ The approval path also compares the reviewed policy snapshot with the policy
 loaded by the current runtime; changing cached/live mode or its bounds requires
 a new onboarding draft.
 
+Credential proof is also recomputed against the current adapter during the
+approval process. The runner does not trust a draft's
+`provider_credentials_loaded` or `provider_secrets_absent_from_artifacts`
+booleans: the active runtime must have a provider secret, and the complete
+review artifact is rescanned for that secret before `approve_insight_card` or
+any Jev call.
+
 The live runner auto-detects the sole configured Preset adapter, so it does
 not assume the default connection ID. Pass `--adapter` when multiple Preset
 connections are installed and the operator has selected one explicitly.

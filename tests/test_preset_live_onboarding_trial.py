@@ -52,6 +52,35 @@ def test_approval_loader_rejects_non_draft_artifacts(field, value, message):
         trial._validate_approval_draft(report)
 
 
+def test_reviewed_credential_proof_is_recomputed_against_current_runtime():
+    report = {
+        "onboarding": {"status": "ready_for_approval"},
+        "provider_checks": {
+            "provider_credentials_loaded": True,
+            "provider_secrets_absent_from_artifacts": True,
+        },
+    }
+
+    with pytest.raises(RuntimeError, match="contains a loaded Preset provider secret"):
+        trial._validate_reviewed_credential_proof(
+            {**report, "operator_note": "preset-secret-7f9c2a"},
+            {"preset-secret-7f9c2a"},
+        )
+
+
+def test_reviewed_credential_proof_rejects_missing_current_runtime_credentials():
+    report = {
+        "onboarding": {"status": "ready_for_approval"},
+        "provider_checks": {
+            "provider_credentials_loaded": True,
+            "provider_secrets_absent_from_artifacts": True,
+        },
+    }
+
+    with pytest.raises(RuntimeError, match="did not load provider credentials"):
+        trial._validate_reviewed_credential_proof(report, set())
+
+
 class ToolManager:
     def __init__(self, tools):
         self._tools = {name: SimpleNamespace(fn=fn) for name, fn in tools.items()}
@@ -139,7 +168,7 @@ async def test_live_trial_accepts_only_jev_delivery_disabled_shadow(monkeypatch,
         requests_made=0,
         request_path_counts={},
         _api_token_name="name",
-        _api_token_secret="secret",
+        _api_token_secret="preset-secret-7f9c2a",
     )
     provider_adapter = PresetAdapter.__new__(PresetAdapter)
     provider_adapter.client = provider_client
@@ -333,6 +362,8 @@ async def test_live_trial_rejects_a_mutated_reviewed_card(monkeypatch, tmp_path)
     provider_adapter.client = SimpleNamespace(
         requests_made=0,
         request_path_counts={},
+        _api_token_name="name",
+        _api_token_secret="preset-secret-7f9c2a",
     )
     _attach_policy(provider_adapter)
     reviewed_card = {"id": "card-1", "version": 1}
@@ -407,7 +438,12 @@ async def test_live_trial_rejects_a_mutated_reviewed_card(monkeypatch, tmp_path)
 @pytest.mark.asyncio
 async def test_live_trial_rejects_changed_runtime_policy_before_approval(monkeypatch, tmp_path):
     provider_adapter = PresetAdapter.__new__(PresetAdapter)
-    provider_adapter.client = SimpleNamespace(requests_made=0, request_path_counts={})
+    provider_adapter.client = SimpleNamespace(
+        requests_made=0,
+        request_path_counts={},
+        _api_token_name="name",
+        _api_token_secret="preset-secret-7f9c2a",
+    )
     _attach_policy(provider_adapter)
     draft_path = tmp_path / "draft.json"
     draft_path.write_text(
@@ -491,7 +527,12 @@ async def test_live_trial_rejects_changed_runtime_policy_before_approval(monkeyp
 @pytest.mark.asyncio
 async def test_live_trial_rejects_mutated_transport_proof_before_approval(monkeypatch, tmp_path):
     provider_adapter = PresetAdapter.__new__(PresetAdapter)
-    provider_adapter.client = SimpleNamespace(requests_made=0, request_path_counts={})
+    provider_adapter.client = SimpleNamespace(
+        requests_made=0,
+        request_path_counts={},
+        _api_token_name="name",
+        _api_token_secret="preset-secret-7f9c2a",
+    )
     _attach_policy(provider_adapter)
     draft_path = tmp_path / "draft.json"
     draft_path.write_text(

@@ -68,10 +68,15 @@ def _canonical_digest(value: Any) -> str:
 
 
 def _provider_secret_values(client: Any) -> set[str]:
-    """Read credential values only for an in-memory redaction assertion."""
+    """Read secret values only for an in-memory redaction assertion.
+
+    The Preset API-token name is an identifier, not a secret.  Including it
+    would make redaction checks report false positives for ordinary JSON keys
+    or prose containing a short/common token name.
+    """
 
     values: set[str] = set()
-    for attribute in ("_api_token_name", "_api_token_secret", "_token"):
+    for attribute in ("_api_token_secret", "_token"):
         value = getattr(client, attribute, None)
         if isinstance(value, str) and value:
             values.add(value)
@@ -89,6 +94,37 @@ def _secrets_absent(value: Any, secrets: set[str]) -> bool:
         default=str,
     )
     return all(secret not in serialized for secret in secrets)
+
+
+def _validate_reviewed_credential_proof(
+    report: dict[str, Any], secrets: set[str]
+) -> None:
+    """Recompute credential loading and redaction against the current runtime.
+
+    A draft is an operator-reviewed input, not a trusted source of transport
+    facts.  In particular, approval must not succeed because an edited JSON
+    artifact says credentials were loaded and redacted.  The current adapter
+    must have a credential, and the complete reviewed artifact must still be
+    free of that credential.
+    """
+
+    checks = report.get("provider_checks")
+    if not isinstance(checks, dict):
+        raise RuntimeError("reviewed draft is missing provider credential proof")
+    credentials_loaded = bool(secrets)
+    if credentials_loaded is not True:
+        raise RuntimeError("the current Preset runtime did not load provider credentials")
+    if checks.get("provider_credentials_loaded") is not credentials_loaded:
+        raise RuntimeError(
+            "reviewed draft provider credential proof does not match the current runtime"
+        )
+    actual_redaction = _secrets_absent(report, secrets)
+    if actual_redaction is not True:
+        raise RuntimeError("reviewed draft contains a loaded Preset provider secret")
+    if checks.get("provider_secrets_absent_from_artifacts") is not actual_redaction:
+        raise RuntimeError(
+            "reviewed draft provider redaction proof does not match the current artifact"
+        )
 
 
 def _data_policy_proof(source: Any, client: Any) -> tuple[dict[str, Any], bool | None]:
@@ -312,6 +348,8 @@ async def run_trial(
     preset_source = runtime.sources._get(adapter)
     provider_client = getattr(preset_source, "client", None)
     provider_secrets = _provider_secret_values(provider_client)
+    if reviewed_draft is not None:
+        _validate_reviewed_credential_proof(reviewed_draft, provider_secrets)
     data_policy, provider_force_refresh = _data_policy_proof(preset_source, provider_client)
     _validate_data_policy_proof(
         {
