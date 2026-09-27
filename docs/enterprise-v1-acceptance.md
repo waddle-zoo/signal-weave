@@ -47,6 +47,7 @@ returns an inspectable evidence bundle and receipt.
 | Preset evidence reaches the typed Jev contract | The production Preset adapter and Jev adapter are exercised together across 3 workspace shapes / 13 charts; normalized observations, evidence, visualization labels, dashboard filter context, typed probabilities, and partial-quality safe outcomes are asserted. | Pass locally; live Jev semantics not proven |
 | Preset runtime shadow path is exercised end to end | Three named plus six generated tenant-bound Preset-shaped workspaces run through environment bootstrap, MCP discovery, free-form onboarding, approval, Jev-only evaluation, SQLite receipt lookup, and idempotent replay. Generated workspaces use unfamiliar IDs and varied chart/result shapes; the named Harbor case also proves a dashboard-scoped provider outage becomes partial evidence. | 9 workspaces; 18 cards; 126 synthetic Jev calls; pass; live semantics not proven |
 | Larger anti-overfitting runtime replay | The same production runtime path was rerun with three named plus 30 seeded generated workspaces, 16 charts per generated workspace, unfamiliar tenants/IDs, provider failures, partial dashboards, and 15 visualization labels. The independent reviewer recomputed the report invariants. | 33 workspaces; 66 cards; 462 synthetic Jev calls; pass; live semantics not proven |
+| Multi-seed replay stability | The 33-workspace replay was repeated with seeds `2026092601`, `2026092602`, and `2026092603`; each report passed the independent reviewer. The generator keeps the same envelope/type coverage while changing generated tenant/resource IDs and deterministic failure placement. | 3/3 reports pass; 99 workspaces; 198 cards; 1,386 synthetic Jev calls; live semantics not proven |
 | Shared hosted processes do not contact foreign tenant adapters | The source registry skips tenant-bound adapters outside the authenticated scope before list, search, authorization, or resolve calls. An adversarial two-tenant test plus an OIDC-authenticated MCP HTTP replay over two Preset connections records exactly one matching auth/dashboard path per tenant and zero foreign calls. | Pass locally; external identity-provider replay remains a deployment gate |
 | Live Superset provider matrix has no silent loss | The running Northstar Superset instance was checked across every saved dashboard and chart with the normal client path. | 20 dashboards; 580 charts; 41,002 observations; 580/580 extracted; 0 silent-loss issues |
 | Hosted credential injection is deployment-safe | Docker Compose secret overlay mounts Preset API-token files, clears direct `.env.preset` token values, and the runtime tests value/file exclusivity, exact credential modes, explicit tenant identity, and tenant binding. `make preset-compose-check` also inspects the rendered two-file Compose model with disposable file inputs. | Pass locally; vault/KMS and real tenant gate remain open |
@@ -77,6 +78,16 @@ uv run python -m evaluations.preset_runtime_shadow_trial \
   --output /tmp/preset-runtime-shadow-30x16.json
 uv run python evaluations/preset_runtime_shadow_review.py \
   /tmp/preset-runtime-shadow-30x16.json
+# Repeat the same replay with independent generated IDs/failure placement:
+for seed in 2026092601 2026092602 2026092603; do \
+  uv run python -m evaluations.preset_runtime_shadow_trial \
+    --generated-workspaces 30 \
+    --generated-charts-per-workspace 16 \
+    --generated-seed "$seed" \
+    --output "/tmp/preset-runtime-shadow-$seed.json" && \
+  uv run python evaluations/preset_runtime_shadow_review.py \
+    "/tmp/preset-runtime-shadow-$seed.json"; \
+done
 # With a copied .env.preset and disposable/real host secret files:
 make preset-compose-check
 # For a running local Superset instance, also run:
