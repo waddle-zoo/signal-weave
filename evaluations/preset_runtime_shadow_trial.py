@@ -24,6 +24,7 @@ from typing import Any
 import httpx
 import typesafe_sdk
 
+from evaluations.preset_generalization_trial import _workspaces
 from evaluations.preset_hosted_trial import WorkspaceTransport, _load_fixture
 from evaluations.preset_jev_contract_trial import ContractChoice, ContractClient, ContractNoul
 from signalweave.mcp_server import create_mcp
@@ -86,6 +87,19 @@ def _selected_source(discovery: dict[str, Any], *, chart_ids: list[str] | None =
     if chart_ids is not None:
         selected["parameters"] = {"chart_ids": chart_ids}
     return [selected]
+
+
+def _focused_chart_id(workspace: dict[str, Any]) -> str:
+    """Choose a usable chart without relying on a fixture-specific ID or title."""
+
+    for chart in workspace.get("charts", []):
+        if chart.get("http_status"):
+            continue
+        if not isinstance(chart.get("params"), dict):
+            continue
+        if chart.get("result"):
+            return str(chart["id"])
+    raise RuntimeError(f"workspace {workspace.get('id')} has no usable focused chart")
 
 
 async def _run_workspace(workspace: dict[str, Any], root: Path) -> dict[str, Any]:
@@ -152,7 +166,7 @@ async def _run_workspace(workspace: dict[str, Any], root: Path) -> dict[str, Any
         discovery = await discover(goal, adapter=adapter_name, limit=10)
         full_selection = _selected_source(discovery)
         focused_selection = _selected_source(
-            discovery, chart_ids=[str(workspace["charts"][0]["id"])]
+            discovery, chart_ids=[_focused_chart_id(workspace)]
         )
 
         async def run_card(label: str, selected_sources: list[dict[str, Any]]) -> dict[str, Any]:
@@ -235,7 +249,17 @@ async def _run_workspace(workspace: dict[str, Any], root: Path) -> dict[str, Any
     }
 
 
-async def run_trial(output: Path | None = None) -> dict[str, Any]:
+async def run_trial(
+    output: Path | None = None,
+    *,
+    generated_workspace_count: int = 6,
+    generated_charts_per_workspace: int = 8,
+    generated_seed: int = 20260926,
+) -> dict[str, Any]:
+    if generated_workspace_count < 1:
+        raise ValueError("generated_workspace_count must be positive")
+    if generated_charts_per_workspace < 8:
+        raise ValueError("generated_charts_per_workspace must cover all generated cases")
     original_client = typesafe_sdk.AsyncTypeSafeClient
     original_noul = typesafe_sdk.Noul
     original_choice = typesafe_sdk.Choice
@@ -246,7 +270,13 @@ async def run_trial(output: Path | None = None) -> dict[str, Any]:
     try:
         with tempfile.TemporaryDirectory(prefix="signalweave-preset-runtime-") as directory:
             root = Path(directory)
-            workspaces = _load_fixture()
+            named_workspaces = _load_fixture()
+            generated_workspaces = _workspaces(
+                seed=generated_seed,
+                workspace_count=generated_workspace_count,
+                charts_per_workspace=generated_charts_per_workspace,
+            )
+            workspaces = named_workspaces + generated_workspaces
             results = [await _run_workspace(workspace, root) for workspace in workspaces]
     finally:
         typesafe_sdk.AsyncTypeSafeClient = original_client
@@ -269,7 +299,7 @@ async def run_trial(output: Path | None = None) -> dict[str, Any]:
             for result in results
             for card in (result["full_dashboard"], result["focused_chart"])
         ),
-        "full_dashboards_fail_safe_when_fixture_is_partial": all(
+        "full_dashboards_fail_safe_when_source_is_partial": all(
             result["full_dashboard"]["outcome"] == "insufficient_data"
             for result in results
         ),
@@ -316,6 +346,10 @@ async def run_trial(output: Path | None = None) -> dict[str, Any]:
                 for viz in result["full_dashboard"]["viz_types_reached_runtime"]
             }
         ) >= 10,
+        "generated_tenants_reach_runtime": all(
+            result["workspace"].startswith("workspace-")
+            for result in results[len(named_workspaces) :]
+        ),
     }
     report = {
         "trial": "preset-runtime-shadow",
@@ -327,6 +361,10 @@ async def run_trial(output: Path | None = None) -> dict[str, Any]:
         "checks": checks,
         "passed": all(checks.values()),
         "workspace_count": len(results),
+        "named_workspace_count": len(named_workspaces),
+        "generated_workspace_count": len(generated_workspaces),
+        "generated_seed": generated_seed,
+        "generated_charts_per_workspace": generated_charts_per_workspace,
         "card_count": len(results) * 2,
         "total_jev_requests": len(ContractClient.calls),
         "workspaces": results,
@@ -342,8 +380,18 @@ def main() -> int:
     parser.add_argument(
         "--output", type=Path, default=Path("artifacts/preset-runtime-shadow-trial.json")
     )
+    parser.add_argument("--generated-workspaces", type=int, default=6)
+    parser.add_argument("--generated-charts-per-workspace", type=int, default=8)
+    parser.add_argument("--generated-seed", type=int, default=20260926)
     args = parser.parse_args()
-    report = asyncio.run(run_trial(args.output))
+    report = asyncio.run(
+        run_trial(
+            args.output,
+            generated_workspace_count=args.generated_workspaces,
+            generated_charts_per_workspace=args.generated_charts_per_workspace,
+            generated_seed=args.generated_seed,
+        )
+    )
     print(json.dumps(report, indent=2, sort_keys=True))
     return 0 if report["passed"] else 1
 

@@ -11,7 +11,8 @@ HTTP transport. The fixture intentionally contains three workspace shapes:
 - Orbitworks: one healthy chart and one empty result.
 
 The result envelopes vary between `data`, `records`, `rows`, `values`, and
-columnar `columns`/`data` forms. The trial is data-driven from
+columnar `columns`/`data` forms. The Harbor workspace includes a real
+dashboard-scoped provider failure, not just malformed data. The trial is data-driven from
 [`evaluations/data/preset-workspaces.json`](../evaluations/data/preset-workspaces.json),
 not from product conditionals or a Northstar-only code path.
 
@@ -84,14 +85,23 @@ make preset-runtime-shadow-trial
 cat artifacts/preset-runtime-shadow-trial.json
 ```
 
-For each fixture workspace it builds the runtime from `PRESET_*` and
-`SIGNALWEAVE_*` settings, discovers an authorized dashboard, onboards a
+For each named and generated workspace it builds the runtime from `PRESET_*`
+and `SIGNALWEAVE_*` settings, discovers an authorized dashboard, onboards a
 free-form card, approves it through the actual review gate, evaluates it
 through the actual Jev-only engine, reads the durable SQLite receipt, and
-replays the idempotency key. It checks both a full degraded dashboard
-(`insufficient_data`) and a healthy focused chart (`notify`), delivery remains
-disabled, provider dashboard filters are preserved, and the configured secret
-does not appear in MCP artifacts.
+replays the idempotency key. The default run covers 9 tenant-shaped
+workspaces (3 named plus 6 generated), 18 cards, 126 synthetic Jev requests,
+unfamiliar IDs, and 12 visualization labels. It checks both a full degraded
+dashboard (`insufficient_data`) and a healthy focused chart (`notify`),
+delivery remains disabled, provider dashboard filters are preserved, and the
+configured secret does not appear in MCP artifacts.
+
+The generator is deliberately kept outside `src/`: it is an anti-overfitting
+test input, not a product fixture or a supported provider schema. Change its
+seed and counts when reviewing a release; the CLI accepts
+`--generated-workspaces`, `--generated-charts-per-workspace`, and
+`--generated-seed`. The named fixture still remains for readable regression
+cases.
 
 The Preset and TypeSafe network transports are synthetic for this trial. The
 runtime/MCP/store/adapter/Jev parsing path is production code; live Jev

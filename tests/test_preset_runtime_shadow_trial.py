@@ -13,6 +13,11 @@ async def test_environment_to_mcp_shadow_path_is_proven_without_live_credits(tmp
     assert report["synthetic_preset_transport"] is True
     assert report["synthetic_typesafe_transport"] is True
     assert report["live_jev_semantics_proven"] is False
+    assert report["named_workspace_count"] == 3
+    assert report["generated_workspace_count"] == 6
+    assert report["workspace_count"] == 9
+    assert report["card_count"] == 18
+    assert report["total_jev_requests"] == 126
     assert report["checks"]["onboarding_and_approval_passed"] is True
     assert report["checks"]["receipts_are_delivery_disabled"] is True
     assert report["checks"]["idempotent_replay_does_not_call_jev"] is True

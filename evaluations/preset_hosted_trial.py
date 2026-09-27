@@ -104,6 +104,11 @@ class WorkspaceTransport:
                     400,
                     json={"message": "dashboard filter context was not supplied"},
                 )
+            if chart.get("http_status"):
+                return httpx.Response(
+                    int(chart["http_status"]),
+                    json={"message": "provider unavailable"},
+                )
             return httpx.Response(
                 200,
                 json={

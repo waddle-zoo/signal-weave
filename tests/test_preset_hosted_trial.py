@@ -16,5 +16,10 @@ async def test_preset_hosted_trial_passes_all_declared_checks():
         "harbor-bank",
         "orbitworks",
     }
+    harbor = next(
+        item for item in report["workspace_results"] if item["workspace"] == "harbor-bank"
+    )
+    assert harbor["chart_errors"] == 1
+    assert harbor["quality_status"] == "partial"
     assert len(report["viz_types"]) == 12
     assert "custom_plugin" in report["viz_types"]
