@@ -4,7 +4,7 @@ from types import SimpleNamespace
 import pytest
 
 from evaluations.cases import load_evaluation_cases
-from signalweave.engine import InsightEngine
+from signalweave.engine import EvaluationPayloadError, InsightEngine
 from signalweave.models import (
     ContextFact,
     ContextSnapshot,
@@ -542,6 +542,49 @@ async def test_oversized_source_payload_cannot_trigger_automatic_delivery():
     assert run.result.outcome == Outcome.INSUFFICIENT_DATA
     assert run.result.delivery_methods == []
     assert "payload budget" in run.result.evidence[-1].statement
+
+
+async def test_aggregate_jev_payload_budget_fails_before_any_jev_call():
+    class CountingJev(SafetyTestDouble):
+        def __init__(self):
+            self.compile_calls = 0
+            self.judge_calls = 0
+
+        async def compile_plan(self, state, card):
+            self.compile_calls += 1
+            return await super().compile_plan(state, card)
+
+        async def judge(self, state, card, plan, observations):
+            self.judge_calls += 1
+            return await super().judge(state, card, plan, observations)
+
+    source = SourceRef(
+        key="large-source",
+        adapter="preset",
+        resource="dashboard:large",
+        label="Large dashboard",
+    )
+    card = card_for(
+        card_id="card-aggregate-budget",
+        title="Aggregate budget",
+        source=source,
+    )
+    resource = ResourceSnapshot(
+        source_key=source.key,
+        adapter=source.adapter,
+        resource=source.resource,
+        title=source.label,
+        metadata={"provider_payload": "x" * 2_000},
+    )
+    judger = CountingJev()
+
+    with pytest.raises(EvaluationPayloadError, match="source Jev payload exceeded"):
+        await InsightEngine(judger, max_jev_payload_bytes=1_024).evaluate(
+            card, [resource]
+        )
+
+    assert judger.compile_calls == 0
+    assert judger.judge_calls == 0
 
 
 async def test_partial_required_source_is_not_automatically_interpreted():

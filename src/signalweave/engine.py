@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from time import perf_counter
@@ -49,6 +50,13 @@ class _EvaluationMaterials:
     source_errors: list[dict[str, Any]]
 
 
+DEFAULT_MAX_JEV_PAYLOAD_BYTES = 4_000_000
+
+
+class EvaluationPayloadError(ValueError):
+    """Raised before Jev when one evaluation would exceed its input budget."""
+
+
 class InsightEngine:
     """Evaluate a user-authored insight card over adapter-provided snapshots."""
 
@@ -58,13 +66,32 @@ class InsightEngine:
         registry: SourceRegistry | None = None,
         context_provider: ContextProvider | None = None,
         investigation_candidate_limit: int = 40,
+        max_jev_payload_bytes: int = DEFAULT_MAX_JEV_PAYLOAD_BYTES,
     ) -> None:
         if investigation_candidate_limit < 1:
             raise ValueError("investigation_candidate_limit must be positive")
+        if max_jev_payload_bytes < 1_024:
+            raise ValueError("max_jev_payload_bytes must be at least 1024")
         self.judger = judger or JevJudger()
         self.registry = registry
         self.context_provider = context_provider
         self.investigation_candidate_limit = investigation_candidate_limit
+        self.max_jev_payload_bytes = max_jev_payload_bytes
+
+    def _assert_jev_payload_budget(self, state: dict[str, Any], *, stage: str) -> None:
+        """Fail closed before any Jev request can receive an oversized state."""
+
+        serialized = json.dumps(
+            state,
+            ensure_ascii=False,
+            separators=(",", ":"),
+        )
+        observed_bytes = len(serialized.encode("utf-8"))
+        if observed_bytes > self.max_jev_payload_bytes:
+            raise EvaluationPayloadError(
+                f"{stage} Jev payload exceeded the configured budget "
+                f"({observed_bytes} > {self.max_jev_payload_bytes} bytes)"
+            )
 
     def _judger_metrics(self) -> dict[str, int]:
         metrics = getattr(self.judger, "metrics", None)
@@ -176,6 +203,7 @@ class InsightEngine:
                 else [source.model_dump(mode="json") for source in card.sources]
             )
         }
+        self._assert_jev_payload_budget(state, stage="compile")
         return await compile_with_typesafe(card, self.judger, state=state)
 
     async def evaluate(
@@ -201,6 +229,14 @@ class InsightEngine:
             resources = list(resources)
 
         context = context_override or await self._load_context(card, resources)
+        self._assert_jev_payload_budget(
+            {
+                "card": card.model_dump(mode="json"),
+                "sources": [resource.model_dump(mode="json") for resource in resources],
+                "context": context.model_dump(mode="json") if context else None,
+            },
+            stage="source",
+        )
         plan = await self.compile(card, resources)
         investigation = await self._select_investigation(
             card, plan, resources, context, authorized_tenants=authorized_tenants
@@ -269,6 +305,7 @@ class InsightEngine:
         materials = self._evaluation_materials(
             evaluation_card, plan, resources, context, investigation
         )
+        self._assert_jev_payload_budget(materials.state, stage="judgment")
         result = await self.judger.judge(
             materials.state, evaluation_card, plan, materials.observations
         )

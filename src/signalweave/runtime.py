@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from .context import ContextProvider
-from .engine import InsightEngine
+from .engine import DEFAULT_MAX_JEV_PAYLOAD_BYTES, InsightEngine
 from .hosted import (
     HostedAuthMode,
     HostedConnection,
@@ -346,6 +346,9 @@ def build_runtime(
             judger=judger,
             registry=registry,
             context_provider=context_provider,
+            max_jev_payload_bytes=_env_int(
+                "SIGNALWEAVE_MAX_JEV_PAYLOAD_BYTES", DEFAULT_MAX_JEV_PAYLOAD_BYTES
+            ),
         ),
         metric_query_store=metric_query_store,
         decision_receipts=decision_receipts,

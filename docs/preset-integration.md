@@ -82,6 +82,15 @@ onboard_insight_card
   -> caller-owned delivery
 ```
 
+The engine also enforces a serialized aggregate Jev input budget across all
+sources selected for one card. Configure it with
+`SIGNALWEAVE_MAX_JEV_PAYLOAD_BYTES` (4,000,000 by default). If a card spans
+enough dashboards or related sources to exceed that budget, SignalWeave fails
+before a Jev request rather than truncating the evidence or presenting a
+partial aggregate as complete. Split the card, narrow its `chart_ids`, or
+raise the deployment budget only after reviewing the provider and TypeSafe
+limits.
+
 Start with the no-credit bootstrap preflight before onboarding a card:
 
 ```bash
