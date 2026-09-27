@@ -93,16 +93,11 @@ def _env_int(name: str, default: int) -> int:
 
 
 def _require_secure_provider_url(name: str, value: str) -> None:
-    """Keep environment-injected hosted credentials on HTTPS by default."""
+    """Keep environment-injected hosted credentials on HTTPS."""
 
     if value.startswith("https://"):
         return
-    if os.getenv("SIGNALWEAVE_ALLOW_INSECURE_PROVIDER") == "1":
-        return
-    raise RuntimeError(
-        f"{name} must use https; set SIGNALWEAVE_ALLOW_INSECURE_PROVIDER=1 "
-        "only for an isolated local test"
-    )
+    raise RuntimeError(f"{name} must use https")
 
 
 def _reject_unsupported_preset_policy_env() -> None:

@@ -138,6 +138,6 @@ def test_config_check_rejects_insecure_provider_before_any_network(monkeypatch):
     report = config_check.run()
 
     assert report["passed"] is False
-    assert any("base_url must use https" in error for error in report["errors"])
+    assert any("PRESET_URL must use https" in error for error in report["errors"])
     assert report["checks"]["network_requests"] == 0
     assert report["checks"]["jev_requests"] == 0

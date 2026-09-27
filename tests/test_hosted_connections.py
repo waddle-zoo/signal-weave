@@ -1487,6 +1487,7 @@ def test_runtime_rejects_insecure_preset_workspace_url(monkeypatch, tmp_path):
     monkeypatch.delenv("SUPERSET_URL", raising=False)
     monkeypatch.setenv("PRESET_URL", "http://workspace.local")
     monkeypatch.setenv("PRESET_ACCESS_TOKEN", "bearer-token")
+    monkeypatch.setenv("SIGNALWEAVE_ALLOW_INSECURE_PROVIDER", "1")
     monkeypatch.setenv("SIGNALWEAVE_STORE_BACKEND", "sqlite")
     monkeypatch.setenv("SIGNALWEAVE_STORE_PATH", str(tmp_path / "signalweave.db"))
 

@@ -165,8 +165,7 @@ secret manager. They are loaded into memory only to construct the adapter and
 are never stored in cards, MCP payloads, or connection metadata. The customer
 should use the smallest Preset workspace permissions that allow the required
 read-only artifacts. Environment bootstrap requires HTTPS for both `PRESET_URL`
-and `PRESET_API_BASE_URL`; `SIGNALWEAVE_ALLOW_INSECURE_PROVIDER=1` is reserved
-for an isolated local test and should never be used in deployment. The HTTPS
+and `PRESET_API_BASE_URL`; there is no insecure-provider override. The HTTPS
 origin check is a self-hosted transport invariant, not a managed-service egress
 control: a future shared service must add provider allowlists, redirect
 blocking, DNS-rebinding protection, and network-level egress policy before it
