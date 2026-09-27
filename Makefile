@@ -1,4 +1,4 @@
-.PHONY: install test lint prove benchmark daily-trial enterprise-trial discovery-trial bundle-trial query-trial retrieval-explanation-trial preset-trial preset-generalization-trial preset-jev-contract-trial preset-runtime-shadow-trial preset-runtime-shadow-review preset-config-check preset-bootstrap-check preset-provider-smoke preset-dashboard-readiness preset-live-trial preset-live-trial-approve preset-live-trial-review preset-compose-check superset-chart-matrix verify docker-up docker-down
+.PHONY: install test lint prove benchmark daily-trial enterprise-trial discovery-trial bundle-trial query-trial retrieval-explanation-trial preset-trial preset-boundary-trial preset-generalization-trial preset-jev-contract-trial preset-runtime-shadow-trial preset-runtime-shadow-review preset-config-check preset-bootstrap-check preset-provider-smoke preset-dashboard-readiness preset-live-trial preset-live-trial-approve preset-live-trial-review preset-compose-check superset-chart-matrix verify docker-up docker-down
 
 install:
 	uv sync --extra dev
@@ -37,6 +37,10 @@ retrieval-explanation-trial:
 preset-trial:
 	uv run python evaluations/preset_hosted_trial.py --output artifacts/preset-hosted-trial.json
 	uv run python evaluations/preset_hosted_review.py artifacts/preset-hosted-trial.json
+
+preset-boundary-trial:
+	uv run python evaluations/preset_boundary_trial.py --output artifacts/preset-boundary-trial.json
+	uv run python evaluations/preset_boundary_review.py artifacts/preset-boundary-trial.json
 
 preset-generalization-trial:
 	uv run python evaluations/preset_generalization_trial.py --output artifacts/preset-generalization-trial.json

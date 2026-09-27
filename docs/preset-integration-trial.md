@@ -22,6 +22,21 @@ Run it with:
 make preset-trial
 ```
 
+The connection boundary has a separate zero-network matrix. It uses the
+production hosted factory and client, but intentionally makes no Preset or Jev
+request:
+
+```bash
+make preset-boundary-trial
+```
+
+The matrix covers API-token and bearer construction, explicit rejection of
+OAuth and mixed credentials for the current Preset adapter, secret-free
+connection persistence, tenant-scoped stores and authorization short-circuit,
+distinct adapter routes, and metadata/cached/live refresh policy behavior. The
+second command is an independent reviewer over the serialized report; it does
+not trust the producer's `passed` flag.
+
 That command is also covered by `tests/test_preset_hosted_trial.py`, so a
 clean checkout can run the proof through the normal repository test gate.
 
