@@ -364,8 +364,8 @@ approval process. The runner does not trust a draft's
 booleans: the active runtime must have a provider secret, and the complete
 review artifact is rescanned for that secret before `approve_insight_card` or
 any Jev call.
-The reviewed Preset workspace origin is bound in the same way: approval fails
-if the configured connection now points at a different origin, even when the
+The reviewed Preset workspace and API/auth origins are bound in the same way:
+approval fails if either configured connection origin changes, even when the
 adapter name and tenant are unchanged.
 
 The live runner auto-detects the sole configured Preset adapter, so it does

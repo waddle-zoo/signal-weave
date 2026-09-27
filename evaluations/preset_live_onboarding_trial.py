@@ -92,6 +92,15 @@ def _provider_workspace_origin(client: Any) -> str:
     return origin.rstrip("/")
 
 
+def _provider_auth_origin(client: Any) -> str:
+    """Return the Preset API/auth origin used for credential exchange."""
+
+    origin = getattr(client, "api_base_url", None)
+    if not isinstance(origin, str) or not origin:
+        raise RuntimeError("the live acceptance trial requires a Preset auth origin")
+    return origin.rstrip("/")
+
+
 def _secrets_absent(value: Any, secrets: set[str]) -> bool:
     """Prove serialized MCP artifacts do not contain loaded provider secrets."""
 
@@ -137,9 +146,9 @@ def _validate_reviewed_credential_proof(
 
 
 def _validate_reviewed_workspace_binding(
-    report: dict[str, Any], current_origin: str
-) -> str:
-    """Reject approval when the current Preset origin differs from the draft."""
+    report: dict[str, Any], current_origin: str, current_auth_origin: str
+) -> tuple[str, str]:
+    """Reject approval when either current Preset origin differs from the draft."""
 
     checks = report.get("provider_checks")
     if not isinstance(checks, dict):
@@ -152,7 +161,15 @@ def _validate_reviewed_workspace_binding(
             "the current Preset workspace origin no longer matches the reviewed draft; "
             "re-run onboarding and review the new artifact"
         )
-    return reviewed_origin
+    reviewed_auth_origin = checks.get("provider_auth_origin")
+    if not isinstance(reviewed_auth_origin, str) or not reviewed_auth_origin:
+        raise RuntimeError("draft does not identify the reviewed Preset auth origin")
+    if reviewed_auth_origin != current_auth_origin:
+        raise RuntimeError(
+            "the current Preset auth origin no longer matches the reviewed draft; "
+            "re-run onboarding and review the new artifact"
+        )
+    return reviewed_origin, reviewed_auth_origin
 
 
 def _data_policy_proof(source: Any, client: Any) -> tuple[dict[str, Any], bool | None]:
@@ -226,6 +243,10 @@ def _validate_approval_draft(report: dict[str, Any]) -> None:
         "provider_workspace_origin"
     ]:
         raise RuntimeError("draft does not identify the reviewed Preset workspace")
+    if not isinstance(checks.get("provider_auth_origin"), str) or not checks[
+        "provider_auth_origin"
+    ]:
+        raise RuntimeError("draft does not identify the reviewed Preset auth origin")
     if checks.get("provider_credentials_loaded") is not True:
         raise RuntimeError("draft does not prove that Preset credentials were loaded")
     if checks.get("provider_secrets_absent_from_artifacts") is not True:
@@ -338,6 +359,7 @@ async def run_trial(
     reviewed_data_policy: dict[str, Any] | None = None
     reviewed_provider_force_refresh: bool | None = None
     reviewed_provider_workspace_origin: str | None = None
+    reviewed_provider_auth_origin: str | None = None
     stored_card_payload: dict[str, Any] | None = None
     review_path = review_report or output
     if approve:
@@ -381,10 +403,14 @@ async def run_trial(
     preset_source = runtime.sources._get(adapter)
     provider_client = getattr(preset_source, "client", None)
     provider_workspace_origin = _provider_workspace_origin(provider_client)
+    provider_auth_origin = _provider_auth_origin(provider_client)
     provider_secrets = _provider_secret_values(provider_client)
     if reviewed_draft is not None:
-        reviewed_provider_workspace_origin = _validate_reviewed_workspace_binding(
-            reviewed_draft, provider_workspace_origin
+        (
+            reviewed_provider_workspace_origin,
+            reviewed_provider_auth_origin,
+        ) = _validate_reviewed_workspace_binding(
+            reviewed_draft, provider_workspace_origin, provider_auth_origin
         )
         _validate_reviewed_credential_proof(reviewed_draft, provider_secrets)
     data_policy, provider_force_refresh = _data_policy_proof(preset_source, provider_client)
@@ -518,6 +544,7 @@ async def run_trial(
             "provider_request_paths_for_onboarding": provider_paths_for_onboarding,
             "provider_catalog_searches_for_onboarding": provider_catalog_searches_for_onboarding,
             "provider_workspace_origin": provider_workspace_origin,
+            "provider_auth_origin": provider_auth_origin,
             "provider_credentials_loaded": bool(provider_secrets),
             "provider_secrets_absent_from_artifacts": _secrets_absent(
                 {"onboarding": onboarding}, provider_secrets
@@ -544,9 +571,14 @@ async def run_trial(
             "reviewed_data_policy": reviewed_data_policy,
             "reviewed_provider_force_refresh": reviewed_provider_force_refresh,
             "reviewed_provider_workspace_origin": reviewed_provider_workspace_origin,
+            "reviewed_provider_auth_origin": reviewed_provider_auth_origin,
             "current_provider_workspace_origin": provider_workspace_origin,
+            "current_provider_auth_origin": provider_auth_origin,
             "provider_workspace_unchanged": (
                 reviewed_provider_workspace_origin == provider_workspace_origin
+            ),
+            "provider_auth_origin_unchanged": (
+                reviewed_provider_auth_origin == provider_auth_origin
             ),
             "current_data_policy_digest": _canonical_digest(data_policy),
             "reviewed_data_policy_digest": _canonical_digest(reviewed_data_policy),
@@ -688,6 +720,7 @@ async def run_trial(
                         "provider_request_paths_for_onboarding": provider_paths_for_onboarding,
                         "provider_catalog_searches_for_onboarding": provider_catalog_searches_for_onboarding,
                         "provider_workspace_origin": provider_workspace_origin,
+                        "provider_auth_origin": provider_auth_origin,
                         "provider_request_paths_before_approval": provider_paths_before_approval,
                         "provider_request_paths_after_approval": provider_paths_after_approval,
                         "provider_request_paths_for_approval": provider_paths_for_approval,
@@ -745,6 +778,7 @@ async def run_trial(
                             provider_secrets,
                         )
                         and report["approval_basis"]["provider_workspace_unchanged"] is True
+                        and report["approval_basis"]["provider_auth_origin_unchanged"] is True
                         and bool(preset_resources)
                         and tenant_scoped_resources
                         and isinstance(jev_requests_for_first_evaluation, int)

@@ -90,7 +90,25 @@ def test_reviewed_workspace_binding_rejects_a_stale_provider_origin():
 
     with pytest.raises(RuntimeError, match="origin no longer matches"):
         trial._validate_reviewed_workspace_binding(
-            report, "https://new-workspace.preset.test"
+            report,
+            "https://new-workspace.preset.test",
+            "https://api.preset.test",
+        )
+
+
+def test_reviewed_workspace_binding_rejects_a_stale_provider_auth_origin():
+    report = {
+        "provider_checks": {
+            "provider_workspace_origin": "https://workspace.preset.test",
+            "provider_auth_origin": "https://old-api.preset.test",
+        }
+    }
+
+    with pytest.raises(RuntimeError, match="auth origin no longer matches"):
+        trial._validate_reviewed_workspace_binding(
+            report,
+            "https://workspace.preset.test",
+            "https://new-api.preset.test",
         )
 
 
@@ -113,6 +131,7 @@ async def test_live_trial_requires_explicit_approval_before_shadow(monkeypatch, 
     provider_client = SimpleNamespace(
         requests_made=0,
         base_url="https://workspace.preset.test",
+        api_base_url="https://api.preset.test",
     )
     provider_adapter = PresetAdapter.__new__(PresetAdapter)
     provider_adapter.client = provider_client
@@ -183,6 +202,7 @@ async def test_live_trial_accepts_only_jev_delivery_disabled_shadow(monkeypatch,
     provider_client = SimpleNamespace(
         requests_made=0,
         base_url="https://workspace.preset.test",
+        api_base_url="https://api.preset.test",
         request_path_counts={},
         _api_token_name="name",
         _api_token_secret="preset-secret-7f9c2a",
@@ -215,6 +235,7 @@ async def test_live_trial_accepts_only_jev_delivery_disabled_shadow(monkeypatch,
             "provider_requests_for_onboarding": 1,
             "provider_transport_used": True,
             "provider_workspace_origin": "https://workspace.preset.test",
+            "provider_auth_origin": "https://api.preset.test",
             "provider_credentials_loaded": True,
             "provider_secrets_absent_from_artifacts": True,
             "provider_catalog_searches_for_onboarding": 1,
@@ -338,6 +359,7 @@ async def test_live_trial_auto_detects_custom_sole_preset_adapter(monkeypatch):
     provider_client = SimpleNamespace(
         requests_made=0,
         base_url="https://workspace.preset.test",
+        api_base_url="https://api.preset.test",
     )
     provider_adapter = PresetAdapter.__new__(PresetAdapter)
     provider_adapter.client = provider_client
@@ -386,6 +408,7 @@ async def test_live_trial_rejects_a_mutated_reviewed_card(monkeypatch, tmp_path)
     provider_adapter.client = SimpleNamespace(
         requests_made=0,
         base_url="https://workspace.preset.test",
+        api_base_url="https://api.preset.test",
         request_path_counts={},
         _api_token_name="name",
         _api_token_secret="preset-secret-7f9c2a",
@@ -419,6 +442,7 @@ async def test_live_trial_rejects_a_mutated_reviewed_card(monkeypatch, tmp_path)
                     "provider_requests_for_onboarding": 1,
                     "provider_transport_used": True,
                     "provider_workspace_origin": "https://workspace.preset.test",
+                    "provider_auth_origin": "https://api.preset.test",
                     "provider_credentials_loaded": True,
                     "provider_secrets_absent_from_artifacts": True,
                     "provider_catalog_searches_for_onboarding": 1,
@@ -467,6 +491,7 @@ async def test_live_trial_rejects_changed_runtime_policy_before_approval(monkeyp
     provider_adapter.client = SimpleNamespace(
         requests_made=0,
         base_url="https://workspace.preset.test",
+        api_base_url="https://api.preset.test",
         request_path_counts={},
         _api_token_name="name",
         _api_token_secret="preset-secret-7f9c2a",
@@ -499,6 +524,7 @@ async def test_live_trial_rejects_changed_runtime_policy_before_approval(monkeyp
                     "provider_requests_for_onboarding": 1,
                     "provider_transport_used": True,
                     "provider_workspace_origin": "https://workspace.preset.test",
+                    "provider_auth_origin": "https://api.preset.test",
                     "provider_credentials_loaded": True,
                     "provider_secrets_absent_from_artifacts": True,
                     "provider_catalog_searches_for_onboarding": 1,
@@ -558,6 +584,7 @@ async def test_live_trial_rejects_mutated_transport_proof_before_approval(monkey
     provider_adapter.client = SimpleNamespace(
         requests_made=0,
         base_url="https://workspace.preset.test",
+        api_base_url="https://api.preset.test",
         request_path_counts={},
         _api_token_name="name",
         _api_token_secret="preset-secret-7f9c2a",
@@ -588,6 +615,7 @@ async def test_live_trial_rejects_mutated_transport_proof_before_approval(monkey
                     "provider_requests_for_onboarding": 1,
                     "provider_transport_used": True,
                     "provider_workspace_origin": "https://workspace.preset.test",
+                    "provider_auth_origin": "https://api.preset.test",
                     "provider_credentials_loaded": True,
                     "provider_secrets_absent_from_artifacts": True,
                     "provider_catalog_searches_for_onboarding": 1,
