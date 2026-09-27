@@ -1,4 +1,4 @@
-.PHONY: install test lint prove benchmark daily-trial enterprise-trial discovery-trial bundle-trial query-trial retrieval-explanation-trial preset-trial preset-generalization-trial preset-jev-contract-trial preset-runtime-shadow-trial preset-runtime-shadow-review preset-config-check preset-bootstrap-check preset-provider-smoke preset-live-trial preset-live-trial-approve preset-live-trial-review preset-compose-check superset-chart-matrix verify docker-up docker-down
+.PHONY: install test lint prove benchmark daily-trial enterprise-trial discovery-trial bundle-trial query-trial retrieval-explanation-trial preset-trial preset-generalization-trial preset-jev-contract-trial preset-runtime-shadow-trial preset-runtime-shadow-review preset-config-check preset-bootstrap-check preset-provider-smoke preset-dashboard-readiness preset-live-trial preset-live-trial-approve preset-live-trial-review preset-compose-check superset-chart-matrix verify docker-up docker-down
 
 install:
 	uv sync --extra dev
@@ -69,6 +69,11 @@ preset-provider-smoke:
 		--dashboard-id "$${PRESET_BOOTSTRAP_DASHBOARD_ID:?set a dashboard id}" \
 		--chart-id "$${PRESET_BOOTSTRAP_CHART_ID:?set a chart id}" \
 		--output artifacts/preset-provider-smoke.json
+
+preset-dashboard-readiness:
+	uv run python scripts/preset_bootstrap_check.py \
+		--dashboard-id "$${PRESET_BOOTSTRAP_DASHBOARD_ID:?set a dashboard id}" \
+		--output artifacts/preset-dashboard-readiness.json
 
 preset-live-trial:
 	TYPESAFE_API_KEY_FILE=$${TYPESAFE_API_KEY_FILE:?set a live TypeSafe key file} \

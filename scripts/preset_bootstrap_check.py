@@ -2,8 +2,10 @@
 
 The preflight authenticates the configured Preset connection and reads only one
 dashboard catalog page by default. With ``--dashboard-id`` and ``--chart-id``
-it also probes one dashboard-scoped chart read. It never creates a card, calls
-Jev, approves anything, or contacts a delivery destination.
+it probes one dashboard-scoped chart; with ``--dashboard-id`` alone it checks
+the full dashboard through the production adapter and reports chart readiness.
+It never creates a card, calls Jev, approves anything, or contacts a delivery
+destination.
 """
 
 from __future__ import annotations
@@ -16,6 +18,7 @@ from pathlib import Path
 from typing import Any
 
 from signalweave.hosted import HostedDataMode
+from signalweave.models import SourceRef
 from signalweave.preset_adapter import PresetAdapter
 from signalweave.runtime import (
     build_preset_adapter_from_environment,
@@ -35,6 +38,15 @@ def _chart_probe_remediation(error: str | None) -> str | None:
     return None
 
 
+def _remediations(errors: list[str]) -> list[str]:
+    values: list[str] = []
+    for error in errors:
+        remediation = _chart_probe_remediation(error)
+        if remediation and remediation not in values:
+            values.append(remediation)
+    return values
+
+
 async def run(
     *,
     adapter_name: str | None,
@@ -43,8 +55,8 @@ async def run(
     chart_id: str | None = None,
     output: Path | None = None,
 ) -> dict[str, Any]:
-    if bool(dashboard_id) != bool(chart_id):
-        raise ValueError("dashboard_id and chart_id must be supplied together")
+    if chart_id and not dashboard_id:
+        raise ValueError("chart_id requires dashboard_id")
     configuration = validate_preset_environment()
     adapter = build_preset_adapter_from_environment()
     if adapter is None:
@@ -63,6 +75,7 @@ async def run(
     jev_mode_configured = os.getenv("TYPESAFE_MODE", "jev").strip().lower() == "jev"
     jev_requests = 0
     chart_probe: dict[str, Any] | None = None
+    dashboard_probe: dict[str, Any] | None = None
     if dashboard_id and chart_id:
         if adapter.policy.mode == HostedDataMode.METADATA_ONLY:
             chart_probe = {
@@ -97,6 +110,53 @@ async def run(
                 }
                 if remediation:
                     chart_probe["remediation"] = remediation
+    elif dashboard_id:
+        if adapter.policy.mode == HostedDataMode.METADATA_ONLY:
+            dashboard_probe = {
+                "dashboard_id": dashboard_id,
+                "error": "metadata_only policy forbids dashboard chart-data probes",
+                "passed": False,
+            }
+        else:
+            try:
+                snapshot = await adapter.inspect(
+                    SourceRef(
+                        key="preset-bootstrap-dashboard",
+                        adapter=adapter.name,
+                        resource=f"dashboard:{dashboard_id}",
+                        label=f"Preset dashboard {dashboard_id}",
+                    )
+                )
+            except Exception as error:  # noqa: BLE001 - preflight must return a report
+                dashboard_probe = {
+                    "dashboard_id": dashboard_id,
+                    "error": str(error),
+                    "passed": False,
+                }
+            else:
+                quality = snapshot.metadata.get("data_quality", {})
+                chart_errors = quality.get("chart_errors", [])
+                semantic_issues = quality.get("semantic_issues", [])
+                if not isinstance(chart_errors, list):
+                    chart_errors = [str(chart_errors)]
+                if not isinstance(semantic_issues, list):
+                    semantic_issues = [str(semantic_issues)]
+                dashboard_probe = {
+                    "dashboard_id": dashboard_id,
+                    "quality_status": quality.get("status"),
+                    "chart_count": quality.get("chart_count", 0),
+                    "charts_with_observations": quality.get("charts_with_observations", 0),
+                    "chart_errors": chart_errors,
+                    "semantic_issues": semantic_issues,
+                    "error": snapshot.error,
+                    "remediations": _remediations(chart_errors),
+                    "passed": (
+                        snapshot.error is None
+                        and quality.get("status") == "healthy"
+                        and not chart_errors
+                        and not semantic_issues
+                    ),
+                }
     report = {
         "trial": "preset-bootstrap-check",
         "adapter": adapter_name,
@@ -116,13 +176,18 @@ async def run(
             "workspace_has_dashboard": bool(dashboards),
             "jev_calls_made": jev_requests == 0,
             "dashboard_chart_probe": chart_probe is None or chart_probe["passed"],
+            "dashboard_readiness_probe": (
+                dashboard_probe is None or dashboard_probe["passed"]
+            ),
         },
         "chart_probe": chart_probe,
+        "dashboard_probe": dashboard_probe,
         "jev_requests": jev_requests,
         "passed": bool(dashboards)
         and jev_mode_configured
         and jev_requests == 0
-        and (chart_probe is None or chart_probe["passed"]),
+        and (chart_probe is None or chart_probe["passed"])
+        and (dashboard_probe is None or dashboard_probe["passed"]),
         "not_proven": [
             "chart-level permissions and semantic quality"
             if chart_probe is None
@@ -148,7 +213,10 @@ def main() -> None:
     )
     parser.add_argument("--page-size", type=int, default=20)
     parser.add_argument("--dashboard-id")
-    parser.add_argument("--chart-id")
+    parser.add_argument(
+        "--chart-id",
+        help="Probe one chart; omit this flag with --dashboard-id to scan the full dashboard",
+    )
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
     if not 1 <= args.page_size <= 100:

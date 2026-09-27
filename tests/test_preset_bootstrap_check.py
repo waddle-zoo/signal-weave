@@ -4,6 +4,7 @@ import pytest
 
 import scripts.preset_bootstrap_check as bootstrap
 from signalweave.hosted import HostedDataPolicy
+from signalweave.models import ResourceSnapshot
 from signalweave.preset_adapter import PresetAdapter
 
 
@@ -216,3 +217,50 @@ async def test_provider_smoke_explains_missing_saved_query_context(monkeypatch):
     assert report["passed"] is False
     assert "Re-save the chart" in report["chart_probe"]["remediation"]
     assert "unscoped fallback" in report["chart_probe"]["remediation"]
+
+
+@pytest.mark.asyncio
+async def test_dashboard_readiness_reports_all_chart_remediations(monkeypatch):
+    class Client:
+        async def list_dashboards_page(self, *, page, page_size, query=None):
+            return ([{"id": 7, "dashboard_title": "Growth"}], 1)
+
+    async def inspect(source):
+        assert source.resource == "dashboard:7"
+        return ResourceSnapshot(
+            source_key=source.key,
+            adapter="preset__preset-env",
+            resource=source.resource,
+            title="Growth",
+            metadata={
+                "data_quality": {
+                    "status": "partial",
+                    "chart_count": 3,
+                    "charts_with_observations": 2,
+                    "chart_errors": [
+                        "Legacy chart: Chart has no query context saved. Please save the chart again."
+                    ],
+                    "semantic_issues": [],
+                }
+            },
+        )
+
+    adapter = PresetAdapter.__new__(PresetAdapter)
+    adapter.client = Client()
+    adapter.policy = HostedDataPolicy()
+    adapter.name = "preset__preset-env"
+    adapter.inspect = inspect
+    _wire_environment(monkeypatch, adapter)
+
+    report = await bootstrap.run(
+        adapter_name="preset__preset-env",
+        page_size=20,
+        dashboard_id="7",
+    )
+
+    assert report["passed"] is False
+    assert report["chart_probe"] is None
+    assert report["dashboard_probe"]["chart_count"] == 3
+    assert report["dashboard_probe"]["charts_with_observations"] == 2
+    assert report["dashboard_probe"]["remediations"]
+    assert report["checks"]["dashboard_readiness_probe"] is False

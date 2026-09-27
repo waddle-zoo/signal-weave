@@ -164,6 +164,18 @@ includes the concrete remediation: re-save the chart in Preset and rerun the
 probe. SignalWeave does not replace that context with an unscoped query when
 dashboard filter state could be bypassed.
 
+For a full dashboard readiness check before creating a card, omit the chart ID:
+
+```bash
+PRESET_BOOTSTRAP_DASHBOARD_ID=123 \
+  make preset-dashboard-readiness
+```
+
+This runs the dashboard through the production Preset adapter, applies the
+aggregate snapshot budget, reports chart-quality failures and remediations, and
+still makes zero Jev calls. A failing dashboard readiness check is an
+onboarding gate, not a hidden partial-evidence success.
+
 Preset API credentials must be kept in an untracked secret file or deployment
 secret manager. They are loaded into memory only to construct the adapter and
 are never stored in cards, MCP payloads, or connection metadata. The customer
