@@ -85,7 +85,7 @@ make preset-runtime-shadow-trial
 uv run python -m evaluations.preset_runtime_shadow_trial \
   --generated-workspaces 30 \
   --generated-charts-per-workspace 16 \
-  --generated-seed 2026092611 \
+  --generated-seed 2026092626 \
   --output /tmp/preset-runtime-shadow-30x16.json
 uv run python evaluations/preset_runtime_shadow_review.py \
   /tmp/preset-runtime-shadow-30x16.json
@@ -105,7 +105,7 @@ make preset-compose-check
 make superset-chart-matrix
 ```
 
-The current verified regression result is `358 passed, 2 skipped` with Ruff
+The current verified regression result is `365 passed, 2 skipped` with Ruff
 clean. The runtime-shadow and chart-matrix commands are separate evidence
 surfaces: the former uses synthetic Preset and TypeSafe transports to exercise
 the production runtime, while the latter uses the live local Superset service
