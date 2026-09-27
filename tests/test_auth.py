@@ -211,3 +211,29 @@ async def test_oidc_verifier_preserves_a_trailing_slash_issuer():
         assert access_token is not None
     finally:
         await client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_oidc_discovery_rejects_insecure_jwks_uri_before_following_it():
+    client, verifier, token = oidc_fixture()
+    await client.aclose()
+    requested_urls: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requested_urls.append(str(request.url))
+        if request.url.path == "/.well-known/openid-configuration":
+            return httpx.Response(
+                200,
+                json={"jwks_uri": "http://issuer.example.test/keys"},
+            )
+        raise AssertionError("the verifier must not follow an insecure discovered JWKS URL")
+
+    verifier._http = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    try:
+        assert await verifier.verify_token(token()) is None
+    finally:
+        await verifier._http.aclose()
+
+    assert requested_urls == [
+        "https://issuer.example.test/.well-known/openid-configuration"
+    ]

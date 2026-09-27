@@ -26,6 +26,9 @@ deployment must establish a data policy before using company data.
   closed. JWKS responses are cached and refreshed when a signing key rotates.
   The deployment may set `SIGNALWEAVE_OIDC_REQUIRED_SCOPES` for MCP-level
   authorization. `SIGNALWEAVE_ALLOW_INSECURE_OIDC=1` is local-test-only.
+  Configured and discovered JWKS URLs are also validated for HTTPS and safe URL
+  shape before key retrieval; discovery metadata cannot redirect verification to
+  an HTTP, credential-bearing, query-bearing, or fragment-bearing endpoint.
 - In a static-token sidecar, set `PUSH_WEBHOOK_TOKEN` for the webhook bearer
   check. The webhook fails closed with `503` when it is not configured or when
   the sidecar principal is absent. In OIDC mode, the webhook uses the verified

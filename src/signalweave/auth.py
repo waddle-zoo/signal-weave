@@ -8,6 +8,7 @@ import time
 from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Any
+from urllib.parse import urlsplit
 
 import httpx
 import jwt
@@ -65,6 +66,26 @@ def _claim(payload: dict[str, Any], path: str) -> Any:
     return value
 
 
+def _validate_oidc_url(name: str, value: str) -> None:
+    """Validate configured or discovered OIDC URLs before making a request."""
+
+    parsed = urlsplit(value)
+    insecure_allowed = os.getenv("SIGNALWEAVE_ALLOW_INSECURE_OIDC") == "1"
+    if parsed.scheme != "https" and not (parsed.scheme == "http" and insecure_allowed):
+        raise RuntimeError(
+            f"{name} must use https; set SIGNALWEAVE_ALLOW_INSECURE_OIDC=1 "
+            "only for an isolated local test"
+        )
+    if (
+        not parsed.hostname
+        or parsed.username
+        or parsed.password
+        or parsed.query
+        or parsed.fragment
+    ):
+        raise RuntimeError(f"{name} must be a URL without credentials, query, or fragment")
+
+
 @dataclass(frozen=True)
 class OIDCSettings:
     """Small, deployment-owned configuration for signed OIDC access tokens."""
@@ -89,21 +110,10 @@ class OIDCSettings:
                 "OIDC mode requires SIGNALWEAVE_OIDC_ISSUER_URL and "
                 "SIGNALWEAVE_OIDC_AUDIENCE"
             )
-        if not issuer.startswith("https://") and os.getenv(
-            "SIGNALWEAVE_ALLOW_INSECURE_OIDC"
-        ) != "1":
-            raise RuntimeError(
-                "OIDC issuer must use https; set SIGNALWEAVE_ALLOW_INSECURE_OIDC=1 "
-                "only for an isolated local test"
-            )
+        _validate_oidc_url("OIDC issuer", issuer)
         jwks_url = (os.getenv("SIGNALWEAVE_OIDC_JWKS_URL") or "").strip() or None
-        if jwks_url and not jwks_url.startswith("https://") and os.getenv(
-            "SIGNALWEAVE_ALLOW_INSECURE_OIDC"
-        ) != "1":
-            raise RuntimeError(
-                "OIDC JWKS URL must use https; set SIGNALWEAVE_ALLOW_INSECURE_OIDC=1 "
-                "only for an isolated local test"
-            )
+        if jwks_url:
+            _validate_oidc_url("OIDC JWKS URL", jwks_url)
         algorithms = tuple(
             item.strip()
             for item in os.getenv("SIGNALWEAVE_OIDC_ALGORITHMS", "RS256").split(",")
@@ -175,18 +185,29 @@ class OIDCJWTVerifier:
             now = time.monotonic()
             if not force and self._keys and now < self._jwks_expires_at:
                 return self._keys
+            _validate_oidc_url("OIDC issuer", self.settings.issuer_url)
             if not self._jwks_uri:
                 response = await self._http.get(
                     f"{self.settings.issuer_url.rstrip('/')}/.well-known/openid-configuration"
                 )
                 response.raise_for_status()
                 metadata = response.json()
-                self._jwks_uri = metadata.get("jwks_uri")
-            if not self._jwks_uri:
+                if not isinstance(metadata, dict):
+                    raise RuntimeError("OIDC discovery response was not a JSON object")
+                discovered_jwks_uri = metadata.get("jwks_uri")
+                if not isinstance(discovered_jwks_uri, str) or not discovered_jwks_uri.strip():
+                    raise RuntimeError("OIDC discovery did not provide jwks_uri")
+                self._jwks_uri = discovered_jwks_uri.strip()
+                _validate_oidc_url("OIDC discovery jwks_uri", self._jwks_uri)
+            else:
+                _validate_oidc_url("OIDC JWKS URL", self._jwks_uri)
+            if not isinstance(self._jwks_uri, str) or not self._jwks_uri:
                 raise RuntimeError("OIDC discovery did not provide jwks_uri")
             response = await self._http.get(self._jwks_uri)
             response.raise_for_status()
             payload = response.json()
+            if not isinstance(payload, dict):
+                raise RuntimeError("OIDC JWKS response was not a JSON object")
             raw_keys = payload.get("keys")
             if not isinstance(raw_keys, list) or not raw_keys:
                 raise RuntimeError("OIDC JWKS response did not contain keys")
