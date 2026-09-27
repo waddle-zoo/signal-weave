@@ -45,6 +45,32 @@ def _path_delta(before: dict[str, int], after: dict[str, int]) -> dict[str, int]
     }
 
 
+def _check_data_policy(findings: list[str], checks: dict[str, Any]) -> None:
+    """Recompute the reported Preset query mode and execution bounds."""
+
+    policy = checks.get("data_policy")
+    force_refresh = checks.get("provider_force_refresh")
+    if not isinstance(policy, dict):
+        findings.append("approved shadow is missing Preset data-policy telemetry")
+        return
+    mode = policy.get("mode")
+    if mode == "metadata_only":
+        findings.append("metadata-only policy cannot satisfy a chart-data shadow")
+    elif mode == "cached_results" and force_refresh is not False:
+        findings.append("cached-results policy did not prove force=false")
+    elif mode == "live_query":
+        if force_refresh is not True:
+            findings.append("live-query policy did not prove force=true")
+        if policy.get("allow_live_queries") is not True or policy.get("allow_refresh") is not True:
+            findings.append("live-query policy lacks explicit execution permissions")
+    elif mode not in {"cached_results", "live_query"}:
+        findings.append(f"unsupported Preset data-policy mode: {mode!r}")
+    for key in ("max_result_rows", "max_snapshot_bytes"):
+        value = policy.get(key)
+        if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+            findings.append(f"Preset data-policy bound is invalid: {key}")
+
+
 def review_report(report: dict[str, Any]) -> dict[str, Any]:
     """Return an independent acceptance verdict without making provider calls."""
 
@@ -177,6 +203,7 @@ def review_report(report: dict[str, Any]) -> dict[str, Any]:
             findings.append("approved shadow did not prove Preset credentials were loaded")
         if checks.get("provider_secrets_absent_from_artifacts") is not True:
             findings.append("approved shadow did not prove provider secrets stayed out of artifacts")
+        _check_data_policy(findings, checks)
         if not isinstance(checks.get("provider_requests_for_onboarding"), int) or checks[
             "provider_requests_for_onboarding"
         ] < 1:

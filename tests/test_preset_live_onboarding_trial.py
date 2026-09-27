@@ -6,7 +6,26 @@ from types import SimpleNamespace
 import pytest
 
 import evaluations.preset_live_onboarding_trial as trial
+from signalweave.hosted import HostedDataPolicy
 from signalweave.preset_adapter import PresetAdapter
+
+
+def _attach_policy(adapter: PresetAdapter) -> None:
+    adapter.policy = HostedDataPolicy()
+    adapter.client._force_refresh = False
+
+
+def _policy_proof() -> dict[str, object]:
+    return {
+        "data_policy": {
+            "mode": "cached_results",
+            "allow_live_queries": False,
+            "allow_refresh": False,
+            "max_result_rows": 500,
+            "max_snapshot_bytes": 1_000_000,
+        },
+        "provider_force_refresh": False,
+    }
 
 
 class ToolManager:
@@ -28,6 +47,7 @@ async def test_live_trial_requires_explicit_approval_before_shadow(monkeypatch, 
     provider_client = SimpleNamespace(requests_made=0)
     provider_adapter = PresetAdapter.__new__(PresetAdapter)
     provider_adapter.client = provider_client
+    _attach_policy(provider_adapter)
 
     async def onboard(**kwargs):
         calls.append("onboard")
@@ -99,6 +119,7 @@ async def test_live_trial_accepts_only_jev_delivery_disabled_shadow(monkeypatch,
     )
     provider_adapter = PresetAdapter.__new__(PresetAdapter)
     provider_adapter.client = provider_client
+    _attach_policy(provider_adapter)
     draft_card = {"id": "card-1", "version": 3}
     draft_report = {
         "trial": "preset-live-onboarding-shadow",
@@ -129,6 +150,7 @@ async def test_live_trial_accepts_only_jev_delivery_disabled_shadow(monkeypatch,
             "provider_request_paths_before_onboarding": {},
             "provider_request_paths_after_onboarding": {"/api/v1/dashboard/": 1},
             "provider_request_paths_for_onboarding": {"/api/v1/dashboard/": 1},
+            **_policy_proof(),
         },
     }
 
@@ -242,6 +264,7 @@ async def test_live_trial_auto_detects_custom_sole_preset_adapter(monkeypatch):
     provider_client = SimpleNamespace(requests_made=0)
     provider_adapter = PresetAdapter.__new__(PresetAdapter)
     provider_adapter.client = provider_client
+    _attach_policy(provider_adapter)
 
     async def onboard(**kwargs):
         onboarded_adapter.append(kwargs["adapter"])
@@ -287,6 +310,7 @@ async def test_live_trial_rejects_a_mutated_reviewed_card(monkeypatch, tmp_path)
         requests_made=0,
         request_path_counts={},
     )
+    _attach_policy(provider_adapter)
     reviewed_card = {"id": "card-1", "version": 1}
     draft_path = tmp_path / "draft.json"
     draft_path.write_text(
@@ -320,6 +344,7 @@ async def test_live_trial_rejects_a_mutated_reviewed_card(monkeypatch, tmp_path)
                     "provider_request_paths_before_onboarding": {},
                     "provider_request_paths_after_onboarding": {"/api/v1/dashboard/": 1},
                     "provider_request_paths_for_onboarding": {"/api/v1/dashboard/": 1},
+                    **_policy_proof(),
                 },
             }
         ),
@@ -359,6 +384,7 @@ async def test_live_trial_rejects_a_mutated_reviewed_card(monkeypatch, tmp_path)
 async def test_live_trial_rejects_mutated_transport_proof_before_approval(monkeypatch, tmp_path):
     provider_adapter = PresetAdapter.__new__(PresetAdapter)
     provider_adapter.client = SimpleNamespace(requests_made=0, request_path_counts={})
+    _attach_policy(provider_adapter)
     draft_path = tmp_path / "draft.json"
     draft_path.write_text(
         json.dumps(
@@ -389,6 +415,7 @@ async def test_live_trial_rejects_mutated_transport_proof_before_approval(monkey
                     "provider_request_paths_before_onboarding": {},
                     "provider_request_paths_after_onboarding": {},
                     "provider_request_paths_for_onboarding": {"/api/v1/dashboard/": 1},
+                    **_policy_proof(),
                 },
             }
         ),

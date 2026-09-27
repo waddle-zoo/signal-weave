@@ -102,6 +102,14 @@ def _passing_report() -> dict:
             "jev_requests_for_first_evaluation": 1,
             "all_resources_use_requested_preset_adapter": True,
             "all_resources_match_runtime_tenant": True,
+            "data_policy": {
+                "mode": "cached_results",
+                "allow_live_queries": False,
+                "allow_refresh": False,
+                "max_result_rows": 500,
+                "max_snapshot_bytes": 1_000_000,
+            },
+            "provider_force_refresh": False,
         },
     }
     report["approval_basis"] = {
@@ -165,6 +173,16 @@ def test_independent_reviewer_rejects_missing_credential_artifact_proof():
 
     assert review["passed"] is False
     assert any("provider secrets stayed out" in finding for finding in review["findings"])
+
+
+def test_independent_reviewer_rejects_live_refresh_without_policy_proof():
+    report = deepcopy(_passing_report())
+    report["provider_checks"]["provider_force_refresh"] = True
+
+    review = review_report(report)
+
+    assert review["passed"] is False
+    assert any("force=false" in finding for finding in review["findings"])
 
 
 def test_independent_reviewer_rejects_unbounded_catalog_search_fanout():

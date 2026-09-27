@@ -344,8 +344,11 @@ again and review the newly written artifact before approving it.
 
 Before approval, the runner also rechecks the draft's non-secret Preset request
 counts, dashboard-search bound, path-delta consistency, credential-load proof,
-secret-redaction proof, explicit approval requirement, and delivery-disabled
-state. A draft whose transport evidence was edited or is internally
+secret-redaction proof, explicit approval requirement, delivery-disabled state,
+and data-policy telemetry. A cached-results draft must prove `force=false`; a
+live-query draft must prove `force=true` plus explicit live-query and refresh
+permissions; metadata-only policy cannot satisfy a chart-data shadow. A draft
+whose transport evidence or policy proof was edited or is internally
 inconsistent is rejected before `approve_insight_card` or any Jev call.
 
 The live runner auto-detects the sole configured Preset adapter, so it does
@@ -361,13 +364,15 @@ evidence, at least one Preset chart-data request and one Jev request during the
 first evaluation, zero additional Preset or Jev requests during the replay,
 and `delivery_enabled=false` before the trial is considered successful. The
 approved report must also contain an exact-draft approval basis, prove that the
-configured Preset credential was loaded, and prove that the provider secret
-values were absent from the serialized MCP artifacts. The independent reviewer
+configured Preset credential was loaded, prove the selected data-policy mode
+and bounded result/snapshot limits, and prove that the provider secret values
+were absent from the serialized MCP artifacts. The independent reviewer
 recomputes those invariants from the serialized report instead of trusting the
-runner's `passed` flag. The runner records only non-secret Preset path counts
-and redaction booleans for this transport proof, including a bounded catalog
-search count (at most 21 dashboard catalog requests in this one-card flow). It
-still does not prove operator usefulness or production delivery reliability.
+runner's `passed` flag. The runner records only non-secret Preset path counts,
+policy telemetry, and redaction booleans for this transport proof, including a
+bounded catalog-search count (at most 21 dashboard catalog requests in this
+one-card flow). It still does not prove operator usefulness or production
+delivery reliability.
 
 ## Can a hosted Preset customer use SignalWeave without hosting it?
 

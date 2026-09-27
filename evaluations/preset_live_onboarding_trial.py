@@ -91,6 +91,43 @@ def _secrets_absent(value: Any, secrets: set[str]) -> bool:
     return all(secret not in serialized for secret in secrets)
 
 
+def _data_policy_proof(source: Any, client: Any) -> tuple[dict[str, Any], bool | None]:
+    """Capture the configured Preset policy without exposing provider secrets."""
+
+    policy = getattr(source, "policy", None)
+    if policy is None or not hasattr(policy, "model_dump"):
+        raise RuntimeError("the live acceptance trial requires Preset data-policy telemetry")
+    data_policy = policy.model_dump(mode="json")
+    if not isinstance(data_policy, dict):
+        raise RuntimeError("Preset data-policy telemetry must be a mapping")
+    return data_policy, getattr(client, "_force_refresh", None)
+
+
+def _validate_data_policy_proof(checks: dict[str, Any]) -> None:
+    """Ensure the reported query mode matches the configured Preset policy."""
+
+    policy = checks.get("data_policy")
+    force_refresh = checks.get("provider_force_refresh")
+    if not isinstance(policy, dict):
+        raise RuntimeError("draft is missing Preset data-policy telemetry")
+    mode = policy.get("mode")
+    if mode == "metadata_only":
+        raise RuntimeError("metadata_only policy cannot satisfy a chart-data shadow")
+    if mode == "cached_results" and force_refresh is not False:
+        raise RuntimeError("cached_results policy did not prove force=false")
+    if mode == "live_query":
+        if force_refresh is not True:
+            raise RuntimeError("live_query policy did not prove force=true")
+        if policy.get("allow_live_queries") is not True or policy.get("allow_refresh") is not True:
+            raise RuntimeError("live_query policy is missing explicit execution permissions")
+    if mode not in {"cached_results", "live_query"}:
+        raise RuntimeError(f"unsupported Preset data-policy mode: {mode!r}")
+    for key in ("max_result_rows", "max_snapshot_bytes"):
+        value = policy.get(key)
+        if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+            raise RuntimeError(f"Preset data-policy bound is invalid: {key}")
+
+
 def _validate_approval_draft(report: dict[str, Any]) -> None:
     """Reject a draft artifact whose transport proof was edited after review."""
 
@@ -110,6 +147,7 @@ def _validate_approval_draft(report: dict[str, Any]) -> None:
         raise RuntimeError("draft does not prove that Preset credentials were loaded")
     if checks.get("provider_secrets_absent_from_artifacts") is not True:
         raise RuntimeError("draft does not prove provider secrets stayed out of artifacts")
+    _validate_data_policy_proof(checks)
     request_count = checks.get("provider_requests_for_onboarding")
     if not isinstance(request_count, int) or request_count < 1:
         raise RuntimeError("draft has no recorded Preset onboarding request")
@@ -257,6 +295,7 @@ async def run_trial(
     preset_source = runtime.sources._get(adapter)
     provider_client = getattr(preset_source, "client", None)
     provider_secrets = _provider_secret_values(provider_client)
+    data_policy, provider_force_refresh = _data_policy_proof(preset_source, provider_client)
     provider_requests_before = getattr(provider_client, "requests_made", None)
     if not isinstance(provider_requests_before, int):
         raise RuntimeError(
@@ -369,6 +408,8 @@ async def run_trial(
             "provider_secrets_absent_from_artifacts": _secrets_absent(
                 {"onboarding": onboarding}, provider_secrets
             ),
+            "data_policy": data_policy,
+            "provider_force_refresh": provider_force_refresh,
         },
         "passed": False,
         "not_proven": [
@@ -515,6 +556,8 @@ async def run_trial(
                             },
                             provider_secrets,
                         ),
+                        "data_policy": data_policy,
+                        "provider_force_refresh": provider_force_refresh,
                         "preset_resources": len(preset_resources),
                         "all_resources_use_requested_preset_adapter": bool(resources)
                         and len(preset_resources) == len(resources),
