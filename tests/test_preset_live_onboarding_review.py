@@ -200,6 +200,26 @@ def test_independent_reviewer_rejects_mutated_policy_approval_basis():
     assert any("unchanged" in finding for finding in review["findings"])
 
 
+def test_independent_reviewer_rejects_unsafe_cached_policy_permissions():
+    report = deepcopy(_passing_report())
+    report["provider_checks"]["data_policy"]["allow_refresh"] = True
+
+    review = review_report(report)
+
+    assert review["passed"] is False
+    assert any("live execution permissions" in finding for finding in review["findings"])
+
+
+def test_independent_reviewer_rejects_policy_bounds_above_connection_maximum():
+    report = deepcopy(_passing_report())
+    report["provider_checks"]["data_policy"]["max_result_rows"] = 10_001
+
+    review = review_report(report)
+
+    assert review["passed"] is False
+    assert any("max_result_rows" in finding for finding in review["findings"])
+
+
 def test_independent_reviewer_rejects_unbounded_catalog_search_fanout():
     report = deepcopy(_passing_report())
     report["provider_checks"]["provider_catalog_searches_for_onboarding"] = 22

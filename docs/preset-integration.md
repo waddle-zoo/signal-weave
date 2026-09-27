@@ -350,6 +350,8 @@ live-query draft must prove `force=true` plus explicit live-query and refresh
 permissions; metadata-only policy cannot satisfy a chart-data shadow. A draft
 whose transport evidence or policy proof was edited or is internally
 inconsistent is rejected before `approve_insight_card` or any Jev call.
+The proof also enforces the connection's maximum row and snapshot bounds;
+cached mode must keep both live-execution permissions disabled.
 The approval path also compares the reviewed policy snapshot with the policy
 loaded by the current runtime; changing cached/live mode or its bounds requires
 a new onboarding draft.

@@ -113,8 +113,11 @@ def _validate_data_policy_proof(checks: dict[str, Any]) -> None:
     mode = policy.get("mode")
     if mode == "metadata_only":
         raise RuntimeError("metadata_only policy cannot satisfy a chart-data shadow")
-    if mode == "cached_results" and force_refresh is not False:
-        raise RuntimeError("cached_results policy did not prove force=false")
+    if mode == "cached_results":
+        if force_refresh is not False:
+            raise RuntimeError("cached_results policy did not prove force=false")
+        if policy.get("allow_live_queries") is not False or policy.get("allow_refresh") is not False:
+            raise RuntimeError("cached_results policy has live execution permissions enabled")
     if mode == "live_query":
         if force_refresh is not True:
             raise RuntimeError("live_query policy did not prove force=true")
@@ -122,9 +125,15 @@ def _validate_data_policy_proof(checks: dict[str, Any]) -> None:
             raise RuntimeError("live_query policy is missing explicit execution permissions")
     if mode not in {"cached_results", "live_query"}:
         raise RuntimeError(f"unsupported Preset data-policy mode: {mode!r}")
-    for key in ("max_result_rows", "max_snapshot_bytes"):
+    maximums = {"max_result_rows": 10_000, "max_snapshot_bytes": 10_000_000}
+    for key, maximum in maximums.items():
         value = policy.get(key)
-        if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+        if (
+            isinstance(value, bool)
+            or not isinstance(value, int)
+            or value < 1
+            or value > maximum
+        ):
             raise RuntimeError(f"Preset data-policy bound is invalid: {key}")
 
 
