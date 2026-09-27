@@ -61,11 +61,13 @@ uv run python scripts/superset_chart_matrix.py
 
 The harness reports chart-family coverage and fails on unclassified empty
 results, observations without metric labels, or observations whose metrics
-were silently dropped. In the local fixture on 2026-09-26 it traversed 9
-dashboards and 102 charts, produced 9,231 observations, classified 101 charts
-as `extracted`, and marked one raw multi-number table `partial` because its
-saved definition did not identify metric semantics. It reported zero
-unsupported charts and zero silent-loss issues.
+were silently dropped. In the current local demo fixture on 2026-09-26 it
+traversed 9 dashboards and 102 charts, produced 8,611 observations, classified
+91 charts as `extracted`, marked one raw multi-number table `partial`, and
+surfaced 10 explicit provider failures as `unsupported`. It reported zero
+silent-loss issues. The separate Northstar Outfitters fixture traversed 20
+dashboards and 580 charts, produced 41,002 observations, and extracted all
+580 charts.
 
 For the hosted Preset source boundary, run the fixture-backed multi-workspace
 trial. It uses the production Preset client and adapter, but no TypeSafe

@@ -11,7 +11,8 @@ warehouse remained local.
 
 ## Trial setup
 
-- Superset catalog: 48 dashboards and 1,200 chart records.
+- Superset catalog: 20 dashboards and 580 chart records in the current local
+  Northstar fixture.
 - Card scope: the 10 charts on 01 | Executive Command Center.
 - Card intent: watch revenue, gross margin, orders, returns, active customers,
   and regional movement; explain material changes and route follow-up.
