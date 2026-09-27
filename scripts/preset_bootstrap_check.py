@@ -68,6 +68,11 @@ async def run(
     elif adapter_name != adapter.name:
         raise RuntimeError(f"{adapter_name!r} is not the configured Preset adapter")
 
+    jev_mode_configured = os.getenv("TYPESAFE_MODE", "jev").strip().lower() == "jev"
+    if not jev_mode_configured:
+        raise RuntimeError(
+            "Preset bootstrap requires TYPESAFE_MODE=jev; refusing provider access"
+        )
     provider_requests_before = getattr(adapter.client, "requests_made", None)
     if not isinstance(provider_requests_before, int):
         raise RuntimeError(
@@ -87,7 +92,6 @@ async def run(
         isinstance(provider_requests_for_bootstrap, int)
         and provider_requests_for_bootstrap > 0
     )
-    jev_mode_configured = os.getenv("TYPESAFE_MODE", "jev").strip().lower() == "jev"
     jev_requests = 0
     chart_probe: dict[str, Any] | None = None
     dashboard_probe: dict[str, Any] | None = None

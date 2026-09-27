@@ -91,6 +91,26 @@ async def test_bootstrap_preflight_rejects_client_without_provider_telemetry(mon
 
 
 @pytest.mark.asyncio
+async def test_bootstrap_preflight_rejects_non_jev_before_provider_access(monkeypatch):
+    monkeypatch.setenv("TYPESAFE_MODE", "heuristic")
+
+    class Client:
+        requests_made = 0
+
+        async def list_dashboards_page(self, *, page, page_size, query=None):
+            raise AssertionError("invalid Jev mode must stop before provider access")
+
+    adapter = PresetAdapter.__new__(PresetAdapter)
+    adapter.client = Client()
+    adapter.policy = HostedDataPolicy()
+    adapter.name = "preset__preset-env"
+    _wire_environment(monkeypatch, adapter)
+
+    with pytest.raises(RuntimeError, match="TYPESAFE_MODE=jev"):
+        await bootstrap.run(adapter_name="preset__preset-env", page_size=20)
+
+
+@pytest.mark.asyncio
 async def test_bootstrap_preflight_fails_empty_workspace(monkeypatch):
     class Client:
         requests_made = 0
