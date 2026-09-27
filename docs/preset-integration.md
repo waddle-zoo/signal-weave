@@ -120,14 +120,18 @@ supported. Copy
 replace the dashboard/chart IDs, and use that route in the card's `sources`.
 
 This direct API path requires a Preset plan that includes the Preset API. The
-current Preset documentation lists that API as Enterprise-only. Preset's MCP
-authentication documentation also describes the MCP server as an Enterprise
-add-on and documents OAuth/JWT access to a workspace `/mcp` endpoint, so the
-interim dual-MCP pattern below is conditional on the customer having that
-entitlement; it is not a general fallback for every Preset plan. SignalWeave's
-shipped connector currently calls the direct Preset API, not Preset's remote
-MCP endpoint; adding OAuth-capable remote-MCP ingestion remains a separate
-future adapter, not an undocumented capability of this deployment.
+current Preset documentation lists that API as Enterprise-only. Preset's
+current MCP authentication documentation describes a separate workspace
+`/mcp` endpoint with OAuth for interactive AI clients and bearer/JWT access for
+programmatic clients; it also describes the MCP feature as an Enterprise
+add-on. That endpoint is an agent-facing remote tool surface, not a way to
+install SignalWeave inside Preset or to grant SignalWeave an unattended
+service-level source credential. The interim dual-MCP pattern below is
+therefore conditional on the customer's Preset MCP entitlement and remains an
+interactive-agent option, not a supported unattended monitoring path. The
+shipped connector calls the direct Preset API, not Preset's remote MCP
+endpoint; adding OAuth-capable remote-MCP ingestion remains a separate future
+adapter, not an undocumented capability of this deployment.
 
 The default policy is `cached_results`, with live queries and refreshes disabled.
 Raw provider rows are never retained by the connector; receipt retention and
@@ -456,7 +460,10 @@ agent or scheduler would still own delivery and side effects.
 The repository does not claim this managed path exists yet. It still needs an
 OAuth or secure connection bootstrap flow, KMS-backed credentials, shared
 transactional storage, per-tenant worker isolation, retention/deletion policy,
-and a hosted service deployment.
+and a hosted service deployment. A customer connecting their agent directly to
+Preset's remote MCP endpoint does not satisfy these requirements: it bypasses
+SignalWeave's owned retrieval, Jev shadow receipt, and unattended scheduling
+boundary.
 
 ## What Preset itself can and cannot provide
 
@@ -465,7 +472,11 @@ Preset with Preset-managed OAuth or API-token authentication, subject to the
 MCP entitlement. That is useful when an agent wants to call Preset directly,
 but it is not an extension point for installing SignalWeave's server-side Jev
 decision layer inside Preset. Preset's native Alerts & Reports feature is
-documented around email and Slack delivery, not a generic SignalWeave callback.
+documented around scheduled/event-triggered email and Slack delivery, not a
+generic SignalWeave callback. See Preset's [API availability](https://docs.preset.io/docs/the-preset-api),
+[MCP authentication](https://docs.preset.io/docs/preset-mcp-server-authentication),
+and [Alerts & Reports](https://docs.preset.io/docs/alerts-reports) documentation
+for the provider-side boundaries checked here.
 
 That leaves three options, but only the first is a supported unattended
 SignalWeave evaluation path in the current release:
