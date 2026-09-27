@@ -216,8 +216,10 @@ cat artifacts/preset-generalization-trial.json
 
 With the checked-in seed it generates 24 tenant-shaped workspaces and 192
 charts using unfamiliar IDs, metric names, visualization labels, five result
-envelopes, missing/non-numeric/empty data, ambiguous numeric data, and provider
-failures. It drives the same production adapter and requires that usable
+envelopes, six parameter shapes (`metrics`, dict metrics, `x/y` visual
+measures, dimension count, spatial count, and `all_columns`),
+missing/non-numeric/empty data, ambiguous numeric data, and provider failures.
+It drives the same production adapter and requires that usable
 metrics survive, unusable metrics remain review-visible, dashboard filter
 scope and cached-query guards are present on every data request, and no chart
 catalog entry disappears. The generated values are not imported from the named

@@ -25,6 +25,14 @@ REQUIRED_CASES = {
 }
 REQUIRED_ENVELOPES = {"columnar", "data", "records", "rows", "values"}
 REQUIRED_VIZ_TYPES = {"vendor_extension"}
+REQUIRED_PARAM_VARIANTS = {
+    "all_columns",
+    "dict_metric",
+    "dimension_count",
+    "metrics",
+    "spatial_count",
+    "visual_measures",
+}
 REQUIRED_NOT_PROVEN = {
     "a real Preset tenant's permissions, plans, rate limits, or network path",
     "live Jev semantic accuracy or business usefulness",
@@ -56,6 +64,7 @@ def review_report(report: dict[str, Any]) -> dict[str, Any]:
         findings.append("workspace result count does not match workspace_count")
     else:
         recomputed_viz_types: set[str] = set()
+        recomputed_param_variants: set[str] = set()
         for index, result in enumerate(workspaces):
             if not isinstance(result, dict):
                 findings.append(f"workspace result {index} is not an object")
@@ -75,12 +84,23 @@ def review_report(report: dict[str, Any]) -> dict[str, Any]:
                 findings.append(f"workspace result {index} is missing visualization coverage")
             else:
                 recomputed_viz_types.update(viz_types)
+            param_variants = result.get("param_variants")
+            if not isinstance(param_variants, list) or not all(
+                isinstance(variant, str) and variant for variant in param_variants
+            ):
+                findings.append(f"workspace result {index} is missing parameter-shape coverage")
+            else:
+                recomputed_param_variants.update(param_variants)
         if len(recomputed_viz_types) < 10:
             findings.append("visualization coverage has fewer than ten distinct chart types")
         if not REQUIRED_VIZ_TYPES.issubset(recomputed_viz_types):
             findings.append("visualization coverage omitted the unknown/vendor extension shape")
         if set(report.get("viz_type_coverage", [])) != recomputed_viz_types:
             findings.append("viz_type_coverage does not match workspace results")
+        if not REQUIRED_PARAM_VARIANTS.issubset(recomputed_param_variants):
+            findings.append("parameter-shape coverage is incomplete")
+        if set(report.get("param_variant_coverage", [])) != recomputed_param_variants:
+            findings.append("param_variant_coverage does not match workspace results")
     missing_non_claims = REQUIRED_NOT_PROVEN - set(report.get("not_proven", []))
     if missing_non_claims:
         findings.append(

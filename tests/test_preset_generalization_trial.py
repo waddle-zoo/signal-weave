@@ -37,6 +37,14 @@ def test_generated_preset_shapes_do_not_depend_on_named_fixture_values():
     }
     assert len(report["viz_type_coverage"]) >= 10
     assert "vendor_extension" in report["viz_type_coverage"]
+    assert {
+        "all_columns",
+        "dict_metric",
+        "dimension_count",
+        "metrics",
+        "spatial_count",
+        "visual_measures",
+    }.issubset(set(report["param_variant_coverage"]))
 
 
 def test_generated_large_dashboard_fails_closed_before_partial_jev_state():

@@ -41,6 +41,14 @@ VIZ_TYPES = (
     "vendor_extension",
 )
 ENVELOPES = ("data", "records", "rows", "values", "columnar")
+PARAM_VARIANTS = (
+    "metrics",
+    "dict_metric",
+    "visual_measures",
+    "dimension_count",
+    "spatial_count",
+    "all_columns",
+)
 CASES = (
     "explicit",
     "dict_metric",
@@ -53,7 +61,9 @@ CASES = (
 )
 
 
-def _rows_for(case: str, metric: str, *, offset: int) -> list[dict[str, Any]]:
+def _rows_for(
+    case: str, metric: str, *, offset: int, param_variant: str = "metrics"
+) -> list[dict[str, Any]]:
     if case == "empty":
         return []
     if case == "missing_metric":
@@ -70,10 +80,96 @@ def _rows_for(case: str, metric: str, *, offset: int) -> list[dict[str, Any]]:
             {"segment": "one", "count": 10 + offset},
             {"segment": "two", "count": 12 + offset},
         ]
-    return [
+    rows = [
         {"period": f"p-{offset}-0", metric: 10 + offset},
         {"period": f"p-{offset}-1", metric: 12 + offset},
     ]
+    if param_variant == "visual_measures":
+        for index, row in enumerate(rows):
+            row[f"secondary_{offset}"] = 20 + offset + index
+    if param_variant == "dimension_count":
+        return [
+            {"segment": "one", "count": 10 + offset},
+            {"segment": "two", "count": 12 + offset},
+        ]
+    if param_variant == "spatial_count":
+        return [
+            {"latitude": 40.0 + offset, "longitude": -73.0 - offset, "count": 10 + offset},
+            {"latitude": 41.0 + offset, "longitude": -72.0 - offset, "count": 12 + offset},
+        ]
+    return rows
+
+
+def _param_variant(case: str, *, workspace_index: int) -> str:
+    variants = {
+        "explicit": ("metrics", "visual_measures", "all_columns"),
+        "dict_metric": ("dict_metric",),
+        "implicit_count": ("metrics", "dimension_count", "spatial_count", "all_columns"),
+    }.get(case, ("metrics",))
+    return variants[workspace_index % len(variants)]
+
+
+def _params_for(
+    case: str, metric: str, *, workspace_index: int, datasource_id: int, offset: int
+) -> tuple[dict[str, Any], str]:
+    variant = _param_variant(case, workspace_index=workspace_index)
+    datasource = f"{datasource_id}__table"
+    if case == "explicit" and variant == "visual_measures":
+        return (
+            {
+                "datasource": datasource,
+                "x": metric,
+                "y": f"secondary_{offset}",
+                "granularity_sqla": "period",
+            },
+            variant,
+        )
+    if case == "explicit" and variant == "all_columns":
+        return (
+            {
+                "datasource": datasource,
+                "all_columns": ["period", metric],
+                "granularity_sqla": "period",
+            },
+            variant,
+        )
+    if case == "dict_metric":
+        return (
+            {
+                "datasource": datasource,
+                "metrics": [{"label": metric}],
+                "granularity_sqla": "period",
+            },
+            variant,
+        )
+    if case == "implicit_count" and variant == "dimension_count":
+        return ({"datasource": datasource, "column": "segment"}, variant)
+    if case == "implicit_count" and variant == "spatial_count":
+        return (
+            {
+                "datasource": datasource,
+                "spatial": {"latCol": "latitude", "lonCol": "longitude"},
+            },
+            variant,
+        )
+    if case == "implicit_count" and variant == "all_columns":
+        return (
+            {
+                "datasource": datasource,
+                "all_columns": ["period", "count"],
+                "granularity_sqla": "period",
+            },
+            variant,
+        )
+    if case == "implicit_count":
+        return (
+            {"datasource": {"id": datasource_id, "type": "table"}, "groupby": ["segment"]},
+            variant,
+        )
+    return (
+        {"datasource": datasource, "metrics": [metric], "granularity_sqla": "period"},
+        variant,
+    )
 
 
 def _envelope(rows: list[dict[str, Any]], kind: str) -> list[dict[str, Any]]:
@@ -99,26 +195,22 @@ def _workspaces(*, seed: int, workspace_count: int, charts_per_workspace: int) -
             viz_type = VIZ_TYPES[rng.randrange(len(VIZ_TYPES))]
             metric = f"metric_{rng.randrange(1000, 9999)}"
             chart_id = f"chart-{rng.randrange(10_000, 99_999)}-{workspace_index}-{chart_index}"
-            rows = _rows_for(case, metric, offset=workspace_index + chart_index)
+            params, param_variant = _params_for(
+                case,
+                metric,
+                workspace_index=workspace_index,
+                datasource_id=workspace_index + 10,
+                offset=workspace_index + chart_index,
+            )
             if case == "ambiguous_numeric":
-                params: dict[str, Any] = {"datasource": f"{workspace_index + 10}__table"}
-            elif case == "implicit_count":
-                params = {
-                    "datasource": {"id": workspace_index + 10, "type": "table"},
-                    "groupby": ["segment"],
-                }
-            elif case == "dict_metric":
-                params = {
-                    "datasource": f"{workspace_index + 10}__table",
-                    "metrics": [{"label": metric}],
-                    "granularity_sqla": "period",
-                }
-            else:
-                params = {
-                    "datasource": f"{workspace_index + 10}__table",
-                    "metrics": [metric],
-                    "granularity_sqla": "period",
-                }
+                params = {"datasource": f"{workspace_index + 10}__table"}
+                param_variant = "baseline"
+            rows = _rows_for(
+                case,
+                metric,
+                offset=workspace_index + chart_index,
+                param_variant=param_variant,
+            )
             charts.append(
                 {
                     "id": chart_id,
@@ -128,6 +220,7 @@ def _workspaces(*, seed: int, workspace_count: int, charts_per_workspace: int) -
                     "result": _envelope(rows, envelope),
                     "case": case,
                     "envelope": envelope,
+                    "param_variant": param_variant,
                     "http_status": 503 if case == "provider_error" else None,
                 }
             )
@@ -269,6 +362,7 @@ def _check_workspace(workspace: dict[str, Any]) -> dict[str, Any]:
             "observations": len(snapshot.observations),
             "envelopes": sorted({item["envelope"] for item in charts_by_id.values()}),
             "viz_types": sorted({item["viz_type"] for item in charts_by_id.values()}),
+            "param_variants": sorted({item["param_variant"] for item in charts_by_id.values()}),
             "quality": snapshot.metadata["data_quality"]["status"],
             "failures": failures,
             "passed": not failures,
@@ -298,6 +392,9 @@ def run_trial(
         "case_coverage": sorted({case for workspace in workspaces for case in (item["case"] for item in workspace["charts"])}),
         "envelope_coverage": sorted({envelope for result in results for envelope in result["envelopes"]}),
         "viz_type_coverage": sorted({viz_type for result in results for viz_type in result["viz_types"]}),
+        "param_variant_coverage": sorted(
+            {variant for result in results for variant in result["param_variants"]}
+        ),
         "results": results,
         "failures": failures,
         "passed": not failures,
