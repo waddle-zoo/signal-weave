@@ -75,6 +75,12 @@ def review_report(report: dict[str, Any]) -> dict[str, Any]:
             "discovery_matches", 0
         ) < 1:
             findings.append(f"workspace {index} has no discovered dashboard")
+        catalog_requests = workspace.get("provider_catalog_search_requests")
+        if not isinstance(catalog_requests, int) or not 0 < catalog_requests <= 21:
+            findings.append(
+                f"workspace {index} has unbounded Preset catalog search fan-out: "
+                f"{catalog_requests!r} (expected 1-21)"
+            )
         for key in ("full_dashboard", "focused_chart"):
             card = workspace.get(key)
             if not isinstance(card, dict):

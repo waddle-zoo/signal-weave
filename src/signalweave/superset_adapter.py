@@ -33,11 +33,15 @@ class SupersetAdapter:
         adapter_name: str = "superset",
         tenant_id: str | None = None,
         provider_name: str | None = None,
+        max_search_fallback_terms: int = 18,
     ) -> None:
+        if not 1 <= max_search_fallback_terms <= 32:
+            raise ValueError("max_search_fallback_terms must be between 1 and 32")
         self.client = client
         self.name = adapter_name
         self.tenant_id = tenant_id
         self.provider_name = provider_name or adapter_name
+        self.max_search_fallback_terms = max_search_fallback_terms
 
     async def list_resources(self) -> list[ResourceDescriptor]:
         dashboards = await self.client.list_dashboards()
@@ -106,7 +110,9 @@ class SupersetAdapter:
                 )
             # The cap bounds API fan-out for large enterprise catalogs while
             # preserving title terms from each card section.
-            fallback_terms = list(dict.fromkeys(fallback_terms))[:18]
+            fallback_terms = list(dict.fromkeys(fallback_terms))[
+                : self.max_search_fallback_terms
+            ]
             fallback_results = await asyncio.gather(
                 *(
                     list_page(page=0, page_size=limit, query=term)
@@ -125,7 +131,8 @@ class SupersetAdapter:
                 strategy = "superset-server-filter-term-fallback"
                 warnings.append(
                     "Superset returned no exact phrase matches; bounded title-term "
-                    "fallback expanded candidate recall before Jev ranking."
+                    "fallback expanded candidate recall before Jev ranking; "
+                    f"the adapter capped this fallback at {len(fallback_terms)} provider queries."
                 )
         resources = self._descriptors(dashboards)
         total_count = count if count is not None else len(resources)

@@ -117,6 +117,13 @@ and workspace requests, so a provider 3xx response is an error and cannot
 forward a bearer token to another host. This is a transport invariant, not the
 complete managed-service egress boundary described below.
 
+Free-form onboarding first tries the provider's exact dashboard-title search and
+then uses a Preset-specific cap of six title-term queries when the phrase has no
+matches. This keeps a long human monitoring brief from becoming dozens of
+provider requests while still giving Jev a bounded candidate pool. Explicit
+dashboard or chart anchors bypass discovery fan-out and are revalidated through
+the provider identity endpoint.
+
 Preset MCP remains useful for interactive onboarding by a customer-owned agent,
 but recurring monitoring should use the direct hosted API path. Preset's native
 Alerts & Reports feature covers scheduled or event-triggered notifications and

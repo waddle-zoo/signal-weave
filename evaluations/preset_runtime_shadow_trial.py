@@ -246,6 +246,9 @@ async def _run_workspace(workspace: dict[str, Any], root: Path) -> dict[str, Any
         "provider_data_requests": sum(
             request["path"].endswith("/data") for request in transport.requests
         ),
+        "provider_catalog_search_requests": sum(
+            request["path"] == "/api/v1/dashboard/" for request in transport.requests
+        ),
     }
 
 
@@ -349,6 +352,11 @@ async def run_trial(
         "generated_tenants_reach_runtime": all(
             result["workspace"].startswith("workspace-")
             for result in results[len(named_workspaces) :]
+        ),
+        "preset_catalog_search_fanout_is_bounded": all(
+            isinstance(result.get("provider_catalog_search_requests"), int)
+            and 0 < result["provider_catalog_search_requests"] <= 21
+            for result in results
         ),
     }
     report = {

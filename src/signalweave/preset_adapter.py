@@ -518,12 +518,14 @@ class PresetAdapter(SupersetAdapter):
         tenant_id: str,
         policy: HostedDataPolicy | None = None,
         adapter_name: str = "preset",
+        max_search_fallback_terms: int = 6,
     ) -> None:
         super().__init__(
             client,
             adapter_name=adapter_name,
             tenant_id=tenant_id,
             provider_name="preset",
+            max_search_fallback_terms=max_search_fallback_terms,
         )
         self.policy = policy or HostedDataPolicy()
         client.constrain_response_limits(

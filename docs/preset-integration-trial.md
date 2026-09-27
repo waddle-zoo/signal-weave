@@ -135,6 +135,13 @@ The Preset and TypeSafe network transports are synthetic for this trial. The
 runtime/MCP/store/adapter/Jev parsing path is production code; live Jev
 semantics, real provider authorization, and managed hosting remain unproven.
 
+The runtime shadow report also records provider catalog-search fan-out. The
+Preset adapter tries the exact title phrase and at most six fallback terms per
+search call; the default fixed-card shadow path makes three discovery calls per
+workspace, so the independent reviewer rejects more than 21 catalog requests.
+This is a provider-quota guard, not a claim that a real Preset plan has unlimited
+rate capacity.
+
 The direct Preset API is also a commercial capability boundary: Preset's
 documentation currently lists it as Enterprise-only. A non-Enterprise hosted
 customer needs the remote-MCP dual-connector pattern or an approved relay until

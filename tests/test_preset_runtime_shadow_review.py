@@ -58,6 +58,26 @@ async def test_independent_runtime_shadow_review_rejects_dropped_card(tmp_path):
     assert any("missing focused_chart" in finding for finding in review["findings"])
 
 
+@pytest.mark.asyncio
+async def test_independent_runtime_shadow_review_rejects_unbounded_catalog_search(tmp_path):
+    report = await run_trial(
+        tmp_path / "runtime-shadow.json",
+        generated_workspace_count=1,
+        generated_charts_per_workspace=8,
+        generated_seed=17,
+    )
+    mutated = deepcopy(report)
+    mutated["workspaces"][0]["provider_catalog_search_requests"] = 22
+
+    review = review_report(mutated)
+
+    assert review["passed"] is False
+    assert any(
+        "unbounded Preset catalog search fan-out" in finding
+        for finding in review["findings"]
+    )
+
+
 def test_independent_runtime_shadow_review_rejects_malformed_workspace_without_crashing():
     review = review_report(
         {

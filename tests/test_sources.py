@@ -8,6 +8,7 @@ from signalweave.models import (
     ResourceSnapshot,
     SourceRef,
 )
+from signalweave.preset_adapter import PresetAdapter
 from signalweave.sources import SourceRegistry
 from signalweave.superset_adapter import SupersetAdapter
 from signalweave.superset_models import SupersetChartSnapshot, SupersetDashboardSnapshot
@@ -672,6 +673,41 @@ async def test_superset_adapter_retains_numeric_title_terms():
 
     assert [resource.title for resource in page.resources] == ["Catalog Pack 36"]
     assert page.strategy == "superset-server-filter-term-fallback"
+
+
+@pytest.mark.asyncio
+async def test_preset_adapter_bounds_free_form_search_fanout():
+    class CountingPresetClient:
+        def __init__(self):
+            self.queries: list[str] = []
+
+        def constrain_response_limits(self, *, max_result_rows, max_snapshot_bytes):
+            del max_result_rows, max_snapshot_bytes
+
+        def set_query_mode(self, *, force_refresh):
+            del force_refresh
+
+        async def list_dashboards_page(self, *, page, page_size, query=None):
+            del page, page_size
+            self.queries.append(query or "")
+            if query == "executive":
+                return ([{"id": 7, "dashboard_title": "Executive Command Center"}], 1)
+            return ([], 0)
+
+    client = CountingPresetClient()
+    adapter = PresetAdapter(client, tenant_id="northstar")
+
+    page = await adapter.search_resources(
+        "Monitor the executive dashboard for meaningful movement and owner-ready evidence. "
+        "Purpose: Give leadership one bounded evidence bundle. "
+        "Questions: What changed and who should review it?",
+        limit=10,
+    )
+
+    assert page.strategy == "superset-server-filter-term-fallback"
+    assert [resource.resource for resource in page.resources] == ["dashboard:7"]
+    assert len(client.queries) == 7  # exact phrase plus the six-term Preset cap
+    assert "capped this fallback at 6 provider queries" in page.warnings[0]
 
 
 @pytest.mark.asyncio
