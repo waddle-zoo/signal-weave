@@ -80,7 +80,7 @@ async def test_live_trial_requires_explicit_approval_before_shadow(monkeypatch, 
     )
 
     assert report["passed"] is False
-    assert report["next_action"].endswith("--approve")
+    assert "make preset-live-trial-approve" in report["next_action"]
     assert calls == ["onboard"]
 
 

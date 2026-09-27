@@ -124,7 +124,10 @@ async def run_trial(
         ],
     }
     if not approve:
-        report["next_action"] = "review the onboarding response, then rerun with --approve"
+        report["next_action"] = (
+            "review the onboarding response, then rerun with --approve "
+            "or make preset-live-trial-approve"
+        )
     else:
         card_id = onboarding["card"]["id"]
         if onboarding["status"] != "ready_for_approval":
