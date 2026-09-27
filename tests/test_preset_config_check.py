@@ -164,3 +164,28 @@ def test_config_check_rejects_insecure_provider_before_any_network(monkeypatch):
     assert any("PRESET_URL must use https" in error for error in report["errors"])
     assert report["checks"]["network_requests"] == 0
     assert report["checks"]["jev_requests"] == 0
+
+
+@pytest.mark.parametrize(
+    "api_base_url",
+    [
+        "https://api.example.com/v1",
+        "https://user:password@api.example.com",
+        "https://api.example.com?tenant=acme",
+        "https://api.example.com#auth",
+        "https://:443",
+    ],
+)
+def test_config_check_rejects_malformed_preset_auth_origin_before_network(
+    monkeypatch, api_base_url
+):
+    _clear_config(monkeypatch)
+    _set_valid_token_config(monkeypatch)
+    monkeypatch.setenv("PRESET_API_BASE_URL", api_base_url)
+
+    report = config_check.run()
+
+    assert report["passed"] is False
+    assert any("PRESET_API_BASE_URL" in error for error in report["errors"])
+    assert report["checks"]["network_requests"] == 0
+    assert report["checks"]["jev_requests"] == 0

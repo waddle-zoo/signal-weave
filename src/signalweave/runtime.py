@@ -6,6 +6,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 from .context import ContextProvider
 from .engine import DEFAULT_MAX_JEV_PAYLOAD_BYTES, InsightEngine
@@ -99,11 +100,24 @@ def _env_int(name: str, default: int) -> int:
 
 
 def _require_secure_provider_url(name: str, value: str) -> None:
-    """Keep environment-injected hosted credentials on HTTPS."""
+    """Require an environment-injected provider URL to be an HTTPS origin."""
 
-    if value.startswith("https://"):
-        return
-    raise RuntimeError(f"{name} must use https")
+    try:
+        parsed = urlsplit(value)
+        hostname = parsed.hostname
+        # Accessing ``port`` validates malformed numeric ports without making
+        # any network request.
+        _validated_port = parsed.port
+    except ValueError as error:
+        raise RuntimeError(f"{name} must be a valid https origin") from error
+    if parsed.scheme != "https" or not hostname:
+        raise RuntimeError(f"{name} must use https")
+    if parsed.username or parsed.password:
+        raise RuntimeError(f"{name} must not contain credentials")
+    if parsed.path not in {"", "/"}:
+        raise RuntimeError(f"{name} must be an origin without a path")
+    if parsed.query or parsed.fragment:
+        raise RuntimeError(f"{name} must be an origin without query or fragment")
 
 
 def _reject_unsupported_preset_policy_env() -> None:
