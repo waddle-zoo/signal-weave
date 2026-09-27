@@ -1,0 +1,31 @@
+from __future__ import annotations
+
+from copy import deepcopy
+
+import pytest
+
+from evaluations.preset_jev_contract_review import review_report
+from evaluations.preset_jev_contract_trial import run_trial
+
+
+@pytest.mark.asyncio
+async def test_independent_preset_jev_contract_review_passes(tmp_path):
+    report = await run_trial(tmp_path / "preset-jev-contract.json")
+
+    review = review_report(report)
+
+    assert review["passed"] is True
+    assert review["workspace_count"] == 3
+    assert review["visualization_count"] >= 10
+
+
+@pytest.mark.asyncio
+async def test_independent_preset_jev_contract_review_rejects_mutated_evidence(tmp_path):
+    report = await run_trial(tmp_path / "preset-jev-contract.json")
+    mutated = deepcopy(report)
+    mutated["workspaces"][0]["typed_judge_input"]["received_evidence"] = False
+
+    review = review_report(mutated)
+
+    assert review["passed"] is False
+    assert any("did not send evidence" in finding for finding in review["findings"])

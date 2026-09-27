@@ -77,6 +77,12 @@ make preset-jev-contract-trial
 cat artifacts/preset-jev-contract-trial.json
 ```
 
+The command also runs
+[`preset_jev_contract_review.py`](../evaluations/preset_jev_contract_review.py),
+which independently recomputes tenant contracts, normalized evidence and
+observation hand-off, visualization coverage, dashboard scope, fail-safe
+outcomes, and the bounded Jev request total from the serialized report.
+
 It runs every fixture workspace through the real Preset client and adapter,
 then through the real typed Jev plan compilation, judgment parsing, and safety
 gates. The synthetic SDK transport records the exact state sent to the judge,
