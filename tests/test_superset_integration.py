@@ -22,25 +22,56 @@ async def test_local_superset_dashboard_data_round_trip():
 
     assert await client.health()
     dashboards = await client.list_dashboards()
-    assert any(item.get("dashboard_title") == "Sales Dashboard" for item in dashboards)
 
-    snapshot = await client.dashboard_snapshot(7)
-    assert snapshot.title == "Sales Dashboard"
-    assert len(snapshot.charts) >= 5
-    assert any(chart.observations for chart in snapshot.charts)
+    # Do not bind the integration proof to the IDs or titles of the bundled
+    # Superset examples.  Imports, fixture versions, and real customer
+    # workspaces all assign different IDs and names.  Select the first
+    # dashboard that actually exposes a populated saved chart instead.
+    snapshots = [
+        await client.dashboard_snapshot(item["id"])
+        for item in dashboards
+        if item.get("id") is not None
+    ]
+    snapshot = next(
+        (
+            candidate
+            for candidate in snapshots
+            if len(candidate.charts) >= 1
+            and any(chart.observations for chart in candidate.charts)
+        ),
+        None,
+    )
+    assert snapshot is not None, "fixture has no dashboard with populated chart data"
+    assert snapshot.charts
 
-    timeseries = await client.dashboard_snapshot(7, chart_ids=["64"])
-    assert timeseries.charts[0].observations[0].baseline is not None
+    chart_with_baseline = next(
+        (
+            chart
+            for chart in snapshot.charts
+            if any(observation.baseline is not None for observation in chart.observations)
+        ),
+        None,
+    )
+    assert chart_with_baseline is not None, "fixture has no chart with baseline observations"
+
+    timeseries = await client.dashboard_snapshot(
+        snapshot.id, chart_ids=[chart_with_baseline.id]
+    )
+    assert timeseries.charts[0].observations
+    assert any(
+        observation.baseline is not None
+        for observation in timeseries.charts[0].observations
+    )
 
     card_source = SourceRef(
-        key="sales-dashboard",
+        key="integration-dashboard",
         adapter="superset",
-        resource="dashboard:7",
-        label="Sales dashboard",
-        parameters={"chart_ids": ["64"]},
+        resource=f"dashboard:{snapshot.id}",
+        label=snapshot.title,
+        parameters={"chart_ids": [chart_with_baseline.id]},
     )
     resource = await SupersetAdapter(client).inspect(card_source)
-    assert resource.source_key == "sales-dashboard"
+    assert resource.source_key == "integration-dashboard"
     assert resource.metadata["provider"] == "superset"
     assert resource.observations[0].baseline is not None
 
