@@ -163,6 +163,7 @@ it does not ship a managed SignalWeave service. The boundary is deliberate:
 | Jev-only typed judgment and delivery-disabled shadow receipt | Shipped in the runtime | Live Jev shadow run over customer evidence |
 | Customer-owned scheduler and delivery | Supported | Customer operational sign-off |
 | Public SignalWeave MCP/API endpoint | Not provided as a hosted service | Authenticated ingress, rate limits, abuse controls, and tenancy |
+| Provider egress and SSRF controls | Self-hosted connectors require HTTPS origins, but do not implement a shared-service egress allowlist or DNS/IP pinning | Per-tenant provider allowlists, redirect blocking, DNS-rebinding protection, network egress policy, and audit coverage |
 | OAuth connection onboarding | Modelled as a future boundary; Preset adapter currently fails OAuth closed | Callback handling, state/PKCE validation, token rotation, revocation |
 | Secret storage | In-memory vault for local use; vault interface for deployment | KMS/HSM-backed storage, rotation, redaction, and audit |
 | Durable multi-tenant state | SQLite for local/single-process use | Shared transactional store, migrations, backups, and tenant isolation |
