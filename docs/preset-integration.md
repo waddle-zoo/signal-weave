@@ -64,9 +64,10 @@ TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
 
 This is a zero-network configuration check. It validates the production Preset
 credential mode, tenant binding, policy, HTTP/OIDC mode, and Jev credential
-source without instantiating a TypeSafe client or reading a provider. It never
-proves that the credential is accepted by Preset; use `make preset-bootstrap-check`
-for that bounded provider request.
+source, including OIDC claim paths and JWKS timing bounds, without instantiating
+a TypeSafe client or reading a provider. It never proves that the credential is
+accepted by Preset; use `make preset-bootstrap-check` for that bounded provider
+request.
 
 The service listens on `http://127.0.0.1:18000` and exposes the MCP endpoint at
 `/mcp`. Connect the customer's agent through the existing identity-aware proxy,

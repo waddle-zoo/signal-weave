@@ -114,16 +114,33 @@ class OIDCSettings:
             raise RuntimeError(
                 "SIGNALWEAVE_OIDC_ALGORITHMS must contain only approved asymmetric algorithms"
             )
-        ttl = int(os.getenv("SIGNALWEAVE_OIDC_JWKS_TTL_SECONDS", "300"))
+        try:
+            ttl = int(os.getenv("SIGNALWEAVE_OIDC_JWKS_TTL_SECONDS", "300"))
+        except ValueError as error:
+            raise RuntimeError("SIGNALWEAVE_OIDC_JWKS_TTL_SECONDS must be an integer") from error
         if not 30 <= ttl <= 86400:
             raise RuntimeError("SIGNALWEAVE_OIDC_JWKS_TTL_SECONDS must be between 30 and 86400")
+        claim_paths = {
+            "SIGNALWEAVE_OIDC_TENANT_CLAIM": os.getenv(
+                "SIGNALWEAVE_OIDC_TENANT_CLAIM", "tenant_id"
+            ),
+            "SIGNALWEAVE_OIDC_PRINCIPAL_CLAIM": os.getenv(
+                "SIGNALWEAVE_OIDC_PRINCIPAL_CLAIM", "sub"
+            ),
+            "SIGNALWEAVE_OIDC_SCOPE_CLAIM": os.getenv(
+                "SIGNALWEAVE_OIDC_SCOPE_CLAIM", "scope"
+            ),
+        }
+        for name, claim_path in claim_paths.items():
+            if not claim_path.strip() or any(not part.strip() for part in claim_path.split(".")):
+                raise RuntimeError(f"{name} must be a non-empty dotted claim path")
         return cls(
             issuer_url=issuer,
             audience=audience,
             jwks_url=jwks_url,
-            tenant_claim=os.getenv("SIGNALWEAVE_OIDC_TENANT_CLAIM", "tenant_id"),
-            principal_claim=os.getenv("SIGNALWEAVE_OIDC_PRINCIPAL_CLAIM", "sub"),
-            scope_claim=os.getenv("SIGNALWEAVE_OIDC_SCOPE_CLAIM", "scope"),
+            tenant_claim=claim_paths["SIGNALWEAVE_OIDC_TENANT_CLAIM"],
+            principal_claim=claim_paths["SIGNALWEAVE_OIDC_PRINCIPAL_CLAIM"],
+            scope_claim=claim_paths["SIGNALWEAVE_OIDC_SCOPE_CLAIM"],
             jwks_ttl_seconds=ttl,
             algorithms=algorithms,
         )

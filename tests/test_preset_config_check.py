@@ -87,6 +87,25 @@ def test_config_check_accepts_oidc_and_mounted_secrets_without_static_principal(
     assert report["typesafe_key_source"] == "mounted_file"
 
 
+def test_config_check_rejects_malformed_oidc_identity_claim(monkeypatch):
+    _clear_config(monkeypatch)
+    monkeypatch.setenv("PRESET_URL", "https://workspace.us-east-1.app.preset.io")
+    monkeypatch.setenv("PRESET_TENANT_ID", "northstar")
+    monkeypatch.setenv("PRESET_ACCESS_TOKEN", "preset-token")
+    monkeypatch.setenv("SIGNALWEAVE_AUTH_MODE", "oidc")
+    monkeypatch.setenv("SIGNALWEAVE_OIDC_ISSUER_URL", "https://id.example.com")
+    monkeypatch.setenv("SIGNALWEAVE_OIDC_AUDIENCE", "signalweave")
+    monkeypatch.setenv("SIGNALWEAVE_OIDC_TENANT_CLAIM", "claims..tenant")
+    monkeypatch.setenv("TYPESAFE_API_KEY", "test-key")
+
+    report = config_check.run()
+
+    assert report["passed"] is False
+    assert any("dotted claim path" in error for error in report["errors"])
+    assert report["checks"]["network_requests"] == 0
+    assert report["checks"]["jev_requests"] == 0
+
+
 @pytest.mark.parametrize(
     ("missing", "expected"),
     [

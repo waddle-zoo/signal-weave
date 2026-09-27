@@ -171,6 +171,32 @@ def test_oidc_settings_require_tls_and_explicit_identity_configuration(monkeypat
     assert settings.issuer_url == "http://issuer.example.test"
 
 
+@pytest.mark.parametrize(
+    ("variable", "value"),
+    [
+        ("SIGNALWEAVE_OIDC_TENANT_CLAIM", ""),
+        ("SIGNALWEAVE_OIDC_PRINCIPAL_CLAIM", "claims..subject"),
+        ("SIGNALWEAVE_OIDC_SCOPE_CLAIM", ".scope"),
+    ],
+)
+def test_oidc_settings_reject_malformed_claim_paths(monkeypatch, variable, value):
+    monkeypatch.setenv("SIGNALWEAVE_OIDC_ISSUER_URL", "https://issuer.example.test")
+    monkeypatch.setenv("SIGNALWEAVE_OIDC_AUDIENCE", "signalweave")
+    monkeypatch.setenv(variable, value)
+
+    with pytest.raises(RuntimeError, match="dotted claim path"):
+        OIDCSettings.from_env()
+
+
+def test_oidc_settings_reject_non_integer_jwks_ttl(monkeypatch):
+    monkeypatch.setenv("SIGNALWEAVE_OIDC_ISSUER_URL", "https://issuer.example.test")
+    monkeypatch.setenv("SIGNALWEAVE_OIDC_AUDIENCE", "signalweave")
+    monkeypatch.setenv("SIGNALWEAVE_OIDC_JWKS_TTL_SECONDS", "not-an-integer")
+
+    with pytest.raises(RuntimeError, match="must be an integer"):
+        OIDCSettings.from_env()
+
+
 @pytest.mark.asyncio
 async def test_oidc_verifier_preserves_a_trailing_slash_issuer():
     client, verifier, token = oidc_fixture()
