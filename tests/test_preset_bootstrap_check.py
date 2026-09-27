@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+from types import SimpleNamespace
+
+import httpx
 import pytest
 
 import scripts.preset_bootstrap_check as bootstrap
+from evaluations.preset_hosted_trial import WorkspaceTransport, _load_fixture
 from signalweave.hosted import HostedDataPolicy
 from signalweave.models import ResourceSnapshot
-from signalweave.preset_adapter import PresetAdapter
+from signalweave.preset_adapter import PresetAdapter, PresetCloudClient
 
 
 def _wire_environment(monkeypatch, adapter):
@@ -16,6 +20,21 @@ def _wire_environment(monkeypatch, adapter):
     )
     monkeypatch.setattr(
         bootstrap, "build_preset_adapter_from_environment", lambda: adapter
+    )
+
+
+def _healthy_snapshot():
+    return SimpleNamespace(
+        metadata={
+            "data_quality": {
+                "status": "healthy",
+                "chart_count": 2,
+                "charts_with_observations": 2,
+                "chart_errors": [],
+                "semantic_issues": [],
+            }
+        },
+        error=None,
     )
 
 
@@ -129,6 +148,160 @@ async def test_bootstrap_preflight_fails_empty_workspace(monkeypatch):
 
     assert report["passed"] is False
     assert report["catalog"]["provider_count"] == 0
+
+
+@pytest.mark.asyncio
+async def test_bootstrap_query_selects_one_dashboard_and_runs_readiness(monkeypatch):
+    calls: list[tuple[int, str | None]] = []
+
+    class Client:
+        requests_made = 0
+
+        async def list_dashboards_page(self, *, page, page_size, query=None):
+            self.requests_made += 1
+            calls.append((page, query))
+            if page == 0:
+                return ([{"id": 7, "dashboard_title": "Growth command center"}], 1)
+            return ([], 1)
+
+    adapter = PresetAdapter.__new__(PresetAdapter)
+    adapter.client = Client()
+    adapter.policy = HostedDataPolicy()
+    adapter.name = "preset__preset-env"
+
+    async def inspect(source):
+        assert source.resource == "dashboard:7"
+        return _healthy_snapshot()
+
+    adapter.inspect = inspect
+    _wire_environment(monkeypatch, adapter)
+
+    report = await bootstrap.run(
+        adapter_name="preset__preset-env",
+        page_size=20,
+        dashboard_query="growth command",
+    )
+
+    assert report["passed"] is True
+    assert report["selection"] == {
+        "query": "growth command",
+        "matched_dashboards": [{"id": 7, "title": "Growth command center"}],
+        "max_pages": 5,
+        "truncated": False,
+        "selected_dashboard_id": "7",
+        "passed": True,
+    }
+    assert report["dashboard_probe"]["dashboard_id"] == "7"
+    assert calls == [(0, "growth command")]
+
+
+@pytest.mark.asyncio
+async def test_bootstrap_query_rejects_ambiguous_dashboard_without_readiness(monkeypatch):
+    inspected = False
+
+    class Client:
+        requests_made = 0
+
+        async def list_dashboards_page(self, *, page, page_size, query=None):
+            self.requests_made += 1
+            return (
+                [
+                    {"id": 7, "dashboard_title": "Growth command center"},
+                    {"id": 8, "dashboard_title": "Growth command center — EMEA"},
+                ],
+                2,
+            )
+
+    adapter = PresetAdapter.__new__(PresetAdapter)
+    adapter.client = Client()
+    adapter.policy = HostedDataPolicy()
+    adapter.name = "preset__preset-env"
+
+    async def inspect(source):
+        nonlocal inspected
+        inspected = True
+        return _healthy_snapshot()
+
+    adapter.inspect = inspect
+    _wire_environment(monkeypatch, adapter)
+
+    report = await bootstrap.run(
+        adapter_name="preset__preset-env",
+        page_size=20,
+        dashboard_query="growth command",
+    )
+
+    assert report["passed"] is False
+    assert report["checks"]["dashboard_selection"] is False
+    assert report["selection"]["selected_dashboard_id"] is None
+    assert report["dashboard_probe"] is None
+    assert inspected is False
+
+
+@pytest.mark.asyncio
+async def test_bootstrap_query_rejects_truncated_matches(monkeypatch):
+    class Client:
+        requests_made = 0
+
+        async def list_dashboards_page(self, *, page, page_size, query=None):
+            self.requests_made += 1
+            return ([{"id": page + 1, "dashboard_title": f"Growth {page}"}], 3)
+
+    adapter = PresetAdapter.__new__(PresetAdapter)
+    adapter.client = Client()
+    adapter.policy = HostedDataPolicy()
+    adapter.name = "preset__preset-env"
+    _wire_environment(monkeypatch, adapter)
+
+    report = await bootstrap.run(
+        adapter_name="preset__preset-env",
+        page_size=1,
+        dashboard_query="growth",
+        max_pages=2,
+    )
+
+    assert report["passed"] is False
+    assert report["catalog"]["truncated"] is True
+    assert report["selection"]["passed"] is False
+
+
+@pytest.mark.asyncio
+async def test_bootstrap_query_crosses_real_preset_client_and_preserves_failure(monkeypatch):
+    workspace = _load_fixture()[0]
+    transport = WorkspaceTransport(workspace)
+    client = PresetCloudClient(
+        f"https://{workspace['id']}.preset.test",
+        api_token_name="synthetic-name",
+        api_token_secret="synthetic-secret",
+        api_base_url="https://api.app.preset.test",
+        transport=httpx.MockTransport(transport),
+    )
+    adapter = PresetAdapter(
+        client,
+        tenant_id=workspace["tenant_id"],
+        policy=HostedDataPolicy(max_result_rows=100),
+        adapter_name="preset__preset-env",
+    )
+    _wire_environment(monkeypatch, adapter)
+
+    report = await bootstrap.run(
+        adapter_name="preset__preset-env",
+        page_size=20,
+        dashboard_query="Northstar executive pulse",
+    )
+
+    # The fixture intentionally contains one unsupported chart, so readiness
+    # must fail even though provider-side selection and transport succeeded.
+    assert report["passed"] is False
+    assert report["selection"]["passed"] is True
+    assert report["selection"]["selected_dashboard_id"] == workspace["dashboard_id"]
+    assert report["dashboard_probe"]["quality_status"] == "partial"
+    assert report["jev_requests"] == 0
+    assert any(
+        request["path"] == "/api/v1/dashboard/"
+        and "Northstar executive pulse" in request["params"].get("q", "")
+        for request in transport.requests
+    )
 
 
 @pytest.mark.asyncio

@@ -1,9 +1,12 @@
 """Run a bounded, no-Jev-call Preset connection preflight.
 
-The preflight authenticates the configured Preset connection and reads only one
-dashboard catalog page by default. With ``--dashboard-id`` and ``--chart-id``
-it probes one dashboard-scoped chart; with ``--dashboard-id`` alone it checks
-the full dashboard through the production adapter and reports chart readiness.
+The preflight authenticates the configured Preset connection and reads one
+bounded dashboard catalog page by default. With ``--dashboard-id`` and
+``--chart-id`` it probes one dashboard-scoped chart; with ``--dashboard-id``
+alone it checks the full dashboard through the production adapter and reports
+chart readiness. ``--dashboard-query`` can select a unique dashboard by title
+substring, but ambiguous matches fail closed instead of picking the first
+result.
 It never creates a card, calls Jev, approves anything, or contacts a delivery
 destination.
 """
@@ -47,16 +50,57 @@ def _remediations(errors: list[str]) -> list[str]:
     return values
 
 
+async def _select_dashboard_by_query(
+    client: Any,
+    *,
+    query: str,
+    page_size: int,
+    max_pages: int,
+) -> tuple[list[dict[str, Any]], int | None, bool]:
+    """Resolve a unique dashboard with bounded, provider-side title search.
+
+    The provider's ``count`` is retained so a customer can tell the difference
+    between an empty search and a search that was truncated by the safety cap.
+    We never silently choose one dashboard from an ambiguous title match.
+    """
+
+    if not query.strip():
+        raise ValueError("dashboard_query must not be empty")
+    matches: list[dict[str, Any]] = []
+    provider_count: int | None = None
+    for page in range(max_pages):
+        batch, count = await client.list_dashboards_page(
+            page=page,
+            page_size=page_size,
+            query=query,
+        )
+        if provider_count is None and isinstance(count, int):
+            provider_count = count
+        matches.extend(item for item in batch if isinstance(item, dict))
+        if not batch or len(batch) < page_size or (
+            isinstance(count, int) and (page + 1) * page_size >= count
+        ):
+            break
+    truncated = isinstance(provider_count, int) and len(matches) < provider_count
+    return matches, provider_count, truncated
+
+
 async def run(
     *,
     adapter_name: str | None,
     page_size: int,
     dashboard_id: str | None = None,
     chart_id: str | None = None,
+    dashboard_query: str | None = None,
+    max_pages: int = 5,
     output: Path | None = None,
 ) -> dict[str, Any]:
     if chart_id and not dashboard_id:
         raise ValueError("chart_id requires dashboard_id")
+    if dashboard_id and dashboard_query:
+        raise ValueError("dashboard_id and dashboard_query are mutually exclusive")
+    if max_pages < 1:
+        raise ValueError("max_pages must be positive")
     configuration = validate_preset_environment()
     adapter = build_preset_adapter_from_environment()
     if adapter is None:
@@ -78,10 +122,25 @@ async def run(
         raise RuntimeError(
             "Preset bootstrap requires a client with provider request telemetry"
         )
-    dashboards, provider_count = await adapter.client.list_dashboards_page(
-        page=0,
-        page_size=page_size,
-    )
+    catalog_truncated = False
+    if dashboard_query:
+        dashboards, provider_count, catalog_truncated = await _select_dashboard_by_query(
+            adapter.client,
+            query=dashboard_query,
+            page_size=page_size,
+            max_pages=max_pages,
+        )
+        if len(dashboards) == 1 and dashboards[0].get("id") is not None:
+            dashboard_id = str(dashboards[0]["id"])
+        elif not dashboards:
+            dashboard_id = None
+        else:
+            dashboard_id = None
+    else:
+        dashboards, provider_count = await adapter.client.list_dashboards_page(
+            page=0,
+            page_size=page_size,
+        )
     provider_requests_after_catalog = getattr(adapter.client, "requests_made", None)
     provider_requests_for_bootstrap = (
         provider_requests_after_catalog - provider_requests_before
@@ -95,6 +154,28 @@ async def run(
     jev_requests = 0
     chart_probe: dict[str, Any] | None = None
     dashboard_probe: dict[str, Any] | None = None
+    selection: dict[str, Any] | None = None
+    if dashboard_query:
+        selection = {
+            "query": dashboard_query,
+            "matched_dashboards": [
+                {
+                    "id": item.get("id"),
+                    "title": item.get("dashboard_title"),
+                }
+                for item in dashboards
+            ],
+            "max_pages": max_pages,
+            "truncated": catalog_truncated,
+            "selected_dashboard_id": dashboard_id,
+            "passed": (
+                len(dashboards) == 1
+                and dashboards[0].get("id") is not None
+                and not catalog_truncated
+            ),
+        }
+        if not selection["passed"]:
+            dashboard_id = None
     if dashboard_id and chart_id:
         if adapter.policy.mode == HostedDataMode.METADATA_ONLY:
             chart_probe = {
@@ -197,9 +278,12 @@ async def run(
         "policy": adapter.policy.model_dump(mode="json"),
         "catalog": {
             "page_size": page_size,
+            "max_pages": max_pages if dashboard_query else 1,
+            "query": dashboard_query,
             "returned_dashboards": len(dashboards),
             "provider_count": provider_count,
             "has_dashboard": bool(dashboards),
+            "truncated": catalog_truncated,
         },
         "checks": {
             "jev_runtime_configured": jev_mode_configured,
@@ -208,6 +292,7 @@ async def run(
             "preset_catalog_request_succeeded": provider_transport_used,
             "provider_transport_used": provider_transport_used,
             "workspace_has_dashboard": bool(dashboards),
+            "dashboard_selection": selection is None or selection["passed"],
             "jev_calls_made": jev_requests == 0,
             "dashboard_chart_probe": chart_probe is None or chart_probe["passed"],
             "dashboard_readiness_probe": (
@@ -216,6 +301,7 @@ async def run(
         },
         "chart_probe": chart_probe,
         "dashboard_probe": dashboard_probe,
+        "selection": selection,
         "provider_requests": {
             "before_bootstrap": provider_requests_before,
             "after_catalog": provider_requests_after_catalog,
@@ -225,6 +311,7 @@ async def run(
         "passed": bool(dashboards)
         and jev_mode_configured
         and provider_transport_used
+        and (selection is None or selection["passed"])
         and jev_requests == 0
         and (chart_probe is None or chart_probe["passed"])
         and (dashboard_probe is None or dashboard_probe["passed"]),
@@ -255,22 +342,48 @@ def main() -> None:
         default=None,
         help="Configured Preset adapter name; auto-detects the sole Preset adapter by default",
     )
-    parser.add_argument("--page-size", type=int, default=20)
-    parser.add_argument("--dashboard-id")
+    parser.add_argument(
+        "--page-size",
+        type=int,
+        default=int(os.getenv("PRESET_BOOTSTRAP_PAGE_SIZE", "20")),
+    )
+    parser.add_argument(
+        "--dashboard-id",
+        default=os.getenv("PRESET_BOOTSTRAP_DASHBOARD_ID", "").strip() or None,
+    )
+    parser.add_argument(
+        "--dashboard-query",
+        default=os.getenv("PRESET_BOOTSTRAP_DASHBOARD_QUERY", "").strip() or None,
+        help=(
+            "Select exactly one dashboard whose title contains this text; "
+            "ambiguous or truncated matches fail closed"
+        ),
+    )
+    parser.add_argument(
+        "--max-pages",
+        type=int,
+        default=int(os.getenv("PRESET_BOOTSTRAP_MAX_PAGES", "5")),
+        help="Maximum provider pages to inspect for --dashboard-query (default: 5)",
+    )
     parser.add_argument(
         "--chart-id",
+        default=os.getenv("PRESET_BOOTSTRAP_CHART_ID", "").strip() or None,
         help="Probe one chart; omit this flag with --dashboard-id to scan the full dashboard",
     )
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
     if not 1 <= args.page_size <= 100:
         parser.error("--page-size must be between 1 and 100")
+    if not 1 <= args.max_pages <= 100:
+        parser.error("--max-pages must be between 1 and 100")
     report = asyncio.run(
         run(
             adapter_name=args.adapter,
             page_size=args.page_size,
             dashboard_id=args.dashboard_id,
             chart_id=args.chart_id,
+            dashboard_query=args.dashboard_query,
+            max_pages=args.max_pages,
             output=args.output,
         )
     )

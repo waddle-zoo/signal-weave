@@ -1,4 +1,4 @@
-.PHONY: install test lint prove benchmark daily-trial enterprise-trial discovery-trial bundle-trial query-trial retrieval-explanation-trial preset-trial preset-boundary-trial preset-generalization-trial preset-jev-contract-trial preset-runtime-shadow-trial preset-runtime-shadow-review local-superset-runtime-shadow-trial local-superset-runtime-shadow-review preset-config-check preset-bootstrap-check preset-provider-smoke preset-dashboard-readiness preset-live-trial preset-live-trial-approve preset-live-trial-review preset-compose-check superset-chart-matrix verify docker-up docker-down
+.PHONY: install test lint prove benchmark daily-trial enterprise-trial discovery-trial bundle-trial query-trial retrieval-explanation-trial preset-trial preset-boundary-trial preset-generalization-trial preset-jev-contract-trial preset-runtime-shadow-trial preset-runtime-shadow-review local-superset-runtime-shadow-trial local-superset-runtime-shadow-review preset-config-check preset-bootstrap-check preset-readiness preset-provider-smoke preset-dashboard-readiness preset-live-trial preset-live-trial-approve preset-live-trial-review preset-compose-check superset-chart-matrix verify docker-up docker-down
 
 install:
 	uv sync --extra dev
@@ -82,6 +82,15 @@ preset-compose-check:
 preset-bootstrap-check:
 	uv run python scripts/preset_bootstrap_check.py \
 		--output artifacts/preset-bootstrap-check.json
+
+preset-readiness:
+	PRESET_BOOTSTRAP_DASHBOARD_QUERY="$${PRESET_BOOTSTRAP_DASHBOARD_QUERY:-}" \
+	PRESET_BOOTSTRAP_DASHBOARD_ID="$${PRESET_BOOTSTRAP_DASHBOARD_ID:-}" \
+	PRESET_BOOTSTRAP_CHART_ID="$${PRESET_BOOTSTRAP_CHART_ID:-}" \
+	PRESET_BOOTSTRAP_PAGE_SIZE="$${PRESET_BOOTSTRAP_PAGE_SIZE:-20}" \
+	PRESET_BOOTSTRAP_MAX_PAGES="$${PRESET_BOOTSTRAP_MAX_PAGES:-5}" \
+	uv run python scripts/preset_bootstrap_check.py \
+		--output artifacts/preset-readiness.json
 
 preset-provider-smoke:
 	uv run python scripts/preset_bootstrap_check.py \

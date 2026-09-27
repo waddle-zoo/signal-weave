@@ -144,6 +144,34 @@ Jev calls and never reads chart data.
 It fails for an empty workspace so a customer does not mistake a configured
 credential for a usable onboarding target.
 
+To avoid copying dashboard IDs by hand, use the bounded readiness target with a
+title substring:
+
+```bash
+PRESET_BOOTSTRAP_DASHBOARD_QUERY="executive command" \
+  make preset-readiness
+```
+
+This uses Preset's server-side title filter, follows at most five pages by
+default, and runs the selected dashboard through the same production adapter
+used by card onboarding. It passes only when exactly one dashboard matches and
+the dashboard is healthy. Zero matches, multiple matches, a missing dashboard
+ID, or a result set that hits the page cap fail closed; SignalWeave never picks
+the first dashboard from an ambiguous search. Adjust the bound explicitly when
+needed:
+
+```bash
+PRESET_BOOTSTRAP_DASHBOARD_QUERY="growth" \
+PRESET_BOOTSTRAP_MAX_PAGES=20 \
+PRESET_BOOTSTRAP_PAGE_SIZE=50 \
+  make preset-readiness
+```
+
+The readiness report is still a provider/onboarding gate, not a decision. It
+makes zero Jev calls and does not create or approve a card. After it passes, use
+the free-form `preset-live-trial` draft flow below so a human can review the
+goal, source, and delivery policy before the first Jev shadow run.
+
 After choosing one real dashboard and chart, run the no-credit provider smoke
 probe before spending a Jev call:
 
