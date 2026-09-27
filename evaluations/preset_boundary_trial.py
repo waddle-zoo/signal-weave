@@ -33,14 +33,19 @@ from signalweave.models import SourceRef
 ROOT = Path(__file__).resolve().parent.parent
 
 
-def _connection(tenant_id: str, *, auth_mode: HostedAuthMode) -> HostedConnection:
+def _connection(
+    tenant_id: str,
+    *,
+    auth_mode: HostedAuthMode,
+    provider: HostedProvider = HostedProvider.PRESET,
+) -> HostedConnection:
     return HostedConnection(
-        id=f"{tenant_id}-preset",
+        id=f"{tenant_id}-{provider.value}",
         tenant_id=tenant_id,
-        provider=HostedProvider.PRESET,
-        base_url=f"https://{tenant_id}.preset.example",
+        provider=provider,
+        base_url=f"https://{tenant_id}.{provider.value}.example",
         external_workspace=f"{tenant_id}-display-label",
-        credential_ref=f"vault://{tenant_id}/preset",
+        credential_ref=f"vault://{tenant_id}/{provider.value}",
         auth_mode=auth_mode,
     )
 
@@ -104,6 +109,108 @@ def _credential_checks() -> dict[str, bool]:
         "mixed_credentials_rejected": mixed_rejected,
         "connection_record_has_no_secret_material": "opaque-secret" not in serialized
         and "opaque-access-token" not in serialized,
+    }
+
+
+def _provider_credential_checks() -> dict[str, bool]:
+    """Exercise mode-specific contracts for the other shipped hosted factories."""
+
+    hex_connection = _connection(
+        "tenant-hex", auth_mode=HostedAuthMode.BEARER, provider=HostedProvider.HEX
+    )
+    hex_vault = InMemoryCredentialVault(
+        {hex_connection.credential_ref: {"access_token": "hex-token"}},
+        tenant_by_ref={hex_connection.credential_ref: hex_connection.tenant_id},
+    )
+    hex_bearer_builds = (
+        build_hosted_adapter(hex_connection, hex_vault).__class__.__name__ == "HexAdapter"
+    )
+    try:
+        build_hosted_adapter(
+            hex_connection.model_copy(update={"auth_mode": HostedAuthMode.API_TOKEN}),
+            hex_vault,
+        )
+    except ValueError:
+        hex_auth_mismatch_rejected = True
+    else:
+        hex_auth_mismatch_rejected = False
+    try:
+        build_hosted_adapter(
+            hex_connection,
+            InMemoryCredentialVault(
+                {
+                    hex_connection.credential_ref: {
+                        "access_token": "hex-token",
+                        "secret": "extra",
+                    }
+                },
+                tenant_by_ref={hex_connection.credential_ref: hex_connection.tenant_id},
+            ),
+        )
+    except ValueError:
+        hex_extra_fields_rejected = True
+    else:
+        hex_extra_fields_rejected = False
+
+    looker_connection = _connection(
+        "tenant-looker", auth_mode=HostedAuthMode.BEARER, provider=HostedProvider.LOOKER
+    )
+    looker_bearer_vault = InMemoryCredentialVault(
+        {looker_connection.credential_ref: {"access_token": "looker-token"}},
+        tenant_by_ref={looker_connection.credential_ref: looker_connection.tenant_id},
+    )
+    looker_bearer_builds = (
+        build_hosted_adapter(looker_connection, looker_bearer_vault).__class__.__name__
+        == "LookerAdapter"
+    )
+    looker_oauth = looker_connection.model_copy(update={"auth_mode": HostedAuthMode.OAUTH})
+    looker_oauth_vault = InMemoryCredentialVault(
+        {
+            looker_oauth.credential_ref: {
+                "client_id": "looker-client",
+                "client_secret": "looker-secret",
+            }
+        },
+        tenant_by_ref={looker_oauth.credential_ref: looker_oauth.tenant_id},
+    )
+    looker_oauth_builds = (
+        build_hosted_adapter(looker_oauth, looker_oauth_vault).__class__.__name__
+        == "LookerAdapter"
+    )
+    try:
+        build_hosted_adapter(
+            looker_connection.model_copy(update={"auth_mode": HostedAuthMode.API_TOKEN}),
+            looker_bearer_vault,
+        )
+    except ValueError:
+        looker_api_token_rejected = True
+    else:
+        looker_api_token_rejected = False
+    try:
+        build_hosted_adapter(
+            looker_connection,
+            InMemoryCredentialVault(
+                {
+                    looker_connection.credential_ref: {
+                        "access_token": "looker-token",
+                        "client_secret": "extra",
+                    }
+                },
+                tenant_by_ref={looker_connection.credential_ref: looker_connection.tenant_id},
+            ),
+        )
+    except ValueError:
+        looker_extra_fields_rejected = True
+    else:
+        looker_extra_fields_rejected = False
+    return {
+        "hex_bearer_builds": hex_bearer_builds,
+        "hex_auth_mismatch_rejected": hex_auth_mismatch_rejected,
+        "hex_extra_fields_rejected": hex_extra_fields_rejected,
+        "looker_bearer_builds": looker_bearer_builds,
+        "looker_oauth_builds": looker_oauth_builds,
+        "looker_api_token_rejected": looker_api_token_rejected,
+        "looker_extra_fields_rejected": looker_extra_fields_rejected,
     }
 
 
@@ -233,10 +340,12 @@ def _policy_checks() -> dict[str, object]:
 
 async def run_trial() -> dict[str, object]:
     credentials = _credential_checks()
+    provider_credentials = _provider_credential_checks()
     tenants = await _tenant_checks()
     policies = _policy_checks()
     checks = {
         **{f"credential_{key}": value for key, value in credentials.items()},
+        **{f"provider_credential_{key}": value for key, value in provider_credentials.items()},
         **{f"tenant_{key}": value for key, value in tenants.items() if isinstance(value, bool)},
         **{f"policy_{key}": value for key, value in policies["checks"].items()},
         "tenant_provider_requests": tenants["provider_requests"] == 0,
@@ -245,6 +354,7 @@ async def run_trial() -> dict[str, object]:
     return {
         "trial": "preset-boundary-matrix",
         "credential_modes": credentials,
+        "provider_credentials": provider_credentials,
         "tenant_boundary": tenants,
         "data_policy": policies,
         "checks": checks,

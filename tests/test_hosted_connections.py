@@ -1449,6 +1449,69 @@ def test_factory_requires_vault_and_builds_tenant_bound_adapters():
     assert isinstance(build_hosted_adapter(looker, vault), LookerAdapter)
 
 
+def test_factory_enforces_hex_and_looker_auth_modes():
+    hex_item = connection(HostedProvider.HEX)
+    with pytest.raises(ValueError, match="Hex connections require BEARER"):
+        build_hosted_adapter(
+            hex_item.model_copy(update={"auth_mode": HostedAuthMode.API_TOKEN}),
+            InMemoryCredentialVault(
+                {hex_item.credential_ref: {"access_token": "hex-token"}},
+                tenant_by_ref={hex_item.credential_ref: hex_item.tenant_id},
+            ),
+        )
+    with pytest.raises(ValueError, match="unsupported fields"):
+        build_hosted_adapter(
+            hex_item,
+            InMemoryCredentialVault(
+                {hex_item.credential_ref: {"access_token": "hex-token", "secret": "extra"}},
+                tenant_by_ref={hex_item.credential_ref: hex_item.tenant_id},
+            ),
+        )
+
+    looker_item = connection(HostedProvider.LOOKER)
+    oauth_item = looker_item.model_copy(update={"auth_mode": HostedAuthMode.OAUTH})
+    oauth_vault = InMemoryCredentialVault(
+        {
+            oauth_item.credential_ref: {
+                "client_id": "looker-client",
+                "client_secret": "looker-secret",
+            }
+        },
+        tenant_by_ref={oauth_item.credential_ref: oauth_item.tenant_id},
+    )
+    assert isinstance(build_hosted_adapter(oauth_item, oauth_vault), LookerAdapter)
+    with pytest.raises(ValueError, match="unsupported"):
+        build_hosted_adapter(
+            oauth_item,
+            InMemoryCredentialVault(
+                {oauth_item.credential_ref: {"access_token": "looker-token"}},
+                tenant_by_ref={oauth_item.credential_ref: oauth_item.tenant_id},
+            ),
+        )
+
+    with pytest.raises(ValueError, match="only string key/value pairs"):
+        build_hosted_adapter(
+            hex_item,
+            InMemoryCredentialVault(
+                {hex_item.credential_ref: {"access_token": 123}},  # type: ignore[dict-item]
+                tenant_by_ref={hex_item.credential_ref: hex_item.tenant_id},
+            ),
+        )
+    with pytest.raises(ValueError, match="unsupported"):
+        build_hosted_adapter(
+            looker_item,
+            InMemoryCredentialVault(
+                {
+                    looker_item.credential_ref: {
+                        "access_token": "looker-token",
+                        "client_secret": "unexpected",
+                    }
+                },
+                tenant_by_ref={looker_item.credential_ref: looker_item.tenant_id},
+            ),
+        )
+
+
 def test_factory_rejects_cross_tenant_credential_reference():
     northstar = connection(HostedProvider.PRESET, tenant="northstar")
     harbor = connection(HostedProvider.PRESET, tenant="harbor-bank").model_copy(

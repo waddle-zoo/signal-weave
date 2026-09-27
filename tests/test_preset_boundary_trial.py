@@ -14,6 +14,8 @@ def test_preset_boundary_trial_and_independent_review_pass():
     assert review["passed"] is True
     assert report["provider_requests"] == 0
     assert report["typesafe_requests"] == 0
+    assert report["provider_credentials"]["hex_bearer_builds"] is True
+    assert report["provider_credentials"]["looker_oauth_builds"] is True
 
 
 def test_preset_boundary_reviewer_rejects_mutated_pass_report():

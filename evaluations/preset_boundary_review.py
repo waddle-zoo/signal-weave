@@ -34,6 +34,24 @@ def review_report(report: dict[str, Any]) -> dict[str, Any]:
     elif not all(value is True for value in credentials.values()):
         findings.append("a credential boundary check failed")
 
+    provider_credentials = report.get("provider_credentials")
+    required_provider_credentials = {
+        "hex_bearer_builds",
+        "hex_auth_mismatch_rejected",
+        "hex_extra_fields_rejected",
+        "looker_bearer_builds",
+        "looker_oauth_builds",
+        "looker_api_token_rejected",
+        "looker_extra_fields_rejected",
+    }
+    if (
+        not isinstance(provider_credentials, dict)
+        or set(provider_credentials) != required_provider_credentials
+    ):
+        findings.append("non-Preset provider credential coverage is incomplete")
+    elif not all(value is True for value in provider_credentials.values()):
+        findings.append("a non-Preset provider credential boundary check failed")
+
     tenants = report.get("tenant_boundary")
     required_tenants = {
         "foreign_connection_rejected",

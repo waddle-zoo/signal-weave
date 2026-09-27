@@ -235,6 +235,73 @@ def _preset_credentials(
     raise ValueError("Preset OAuth connections are not supported by this adapter")
 
 
+def _validated_credential_map(credentials: Mapping[str, str]) -> dict[str, str]:
+    """Keep untrusted vault implementations inside the string credential contract."""
+
+    values = dict(credentials)
+    if any(
+        not isinstance(key, str) or not isinstance(value, str)
+        for key, value in values.items()
+    ):
+        raise ValueError("hosted credentials must contain only string key/value pairs")
+    return values
+
+
+def _validated_hex_credentials(
+    connection: HostedConnection, credentials: Mapping[str, str]
+) -> str:
+    """Validate the Hex bearer contract before constructing a provider client."""
+
+    if connection.auth_mode != HostedAuthMode.BEARER:
+        raise ValueError("Hex connections require BEARER authentication")
+    unexpected = sorted(set(credentials) - {"access_token"})
+    if unexpected:
+        raise ValueError(
+            "Hex BEARER credentials contain unsupported fields: "
+            + ", ".join(unexpected)
+        )
+    access_token = credentials.get("access_token")
+    if not access_token:
+        raise ValueError("Hex BEARER connections require an access_token only")
+    return access_token
+
+
+def _validated_looker_credentials(
+    connection: HostedConnection, credentials: Mapping[str, str]
+) -> tuple[str | None, str | None, str | None, str]:
+    """Validate Looker's bearer or client-credential login contract."""
+
+    access_token = credentials.get("access_token")
+    client_id = credentials.get("client_id")
+    client_secret = credentials.get("client_secret")
+    if connection.auth_mode == HostedAuthMode.BEARER:
+        unexpected = sorted(set(credentials) - {"access_token", "token_type"})
+        if unexpected:
+            raise ValueError(
+                "Looker BEARER credentials contain unsupported fields: "
+                + ", ".join(unexpected)
+            )
+        if not access_token or client_id or client_secret:
+            raise ValueError("Looker BEARER connections require an access_token only")
+    elif connection.auth_mode == HostedAuthMode.OAUTH:
+        unexpected = sorted(set(credentials) - {"client_id", "client_secret", "token_type"})
+        if unexpected:
+            raise ValueError(
+                "Looker OAuth credentials contain unsupported fields: "
+                + ", ".join(unexpected)
+            )
+        if access_token or not (client_id and client_secret):
+            raise ValueError(
+                "Looker OAuth connections require client_id and client_secret only"
+            )
+    else:
+        raise ValueError("Looker API_TOKEN authentication is not supported")
+    token_type = credentials.get("token_type", "token")
+    if not re.fullmatch(r"[A-Za-z][A-Za-z0-9._-]{0,31}", token_type):
+        raise ValueError("Looker token_type must be a simple HTTP auth scheme")
+    return access_token, client_id, client_secret, token_type
+
+
 class InMemoryHostedConnectionStore:
     """Tenant-safe reference store used by local deployments and tests."""
 
@@ -347,7 +414,7 @@ def build_hosted_adapter(
 
     if not connection.enabled:
         raise ValueError(f"hosted connection {connection.id} is disabled")
-    credentials = dict(
+    credentials = _validated_credential_map(
         vault.get(connection.credential_ref, tenant_id=connection.tenant_id)
     )
     if connection.provider == HostedProvider.PRESET:
@@ -373,9 +440,10 @@ def build_hosted_adapter(
     if connection.provider == HostedProvider.HEX:
         from .hex_adapter import HexAdapter, HexCloudClient
 
+        access_token = _validated_hex_credentials(connection, credentials)
         client = HexCloudClient(
             connection.base_url,
-            access_token=credentials.get("access_token"),
+            access_token=access_token,
             transport=transport,
         )
         return HexAdapter(
@@ -387,12 +455,15 @@ def build_hosted_adapter(
     if connection.provider == HostedProvider.LOOKER:
         from .looker_adapter import LookerAdapter, LookerCloudClient
 
+        access_token, client_id, client_secret, token_type = _validated_looker_credentials(
+            connection, credentials
+        )
         client = LookerCloudClient(
             connection.base_url,
-            access_token=credentials.get("access_token"),
-            client_id=credentials.get("client_id"),
-            client_secret=credentials.get("client_secret"),
-            token_type=credentials.get("token_type", "token"),
+            access_token=access_token,
+            client_id=client_id,
+            client_secret=client_secret,
+            token_type=token_type,
             transport=transport,
         )
         return LookerAdapter(
