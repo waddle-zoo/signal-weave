@@ -344,7 +344,10 @@ def build_runtime(
             raise RuntimeError(
                 "TYPESAFE_MODE=jev requires TYPESAFE_API_KEY or TYPESAFE_API_KEY_FILE"
             )
-        judger = JevJudger(api_key=key)
+        max_jev_payload_bytes = _env_int(
+            "SIGNALWEAVE_MAX_JEV_PAYLOAD_BYTES", DEFAULT_MAX_JEV_PAYLOAD_BYTES
+        )
+        judger = JevJudger(api_key=key, max_payload_bytes=max_jev_payload_bytes)
     else:
         raise ValueError("SignalWeave production runtime only supports TYPESAFE_MODE=jev")
     configured_adapters = list(adapters)
@@ -489,9 +492,7 @@ def build_runtime(
             judger=judger,
             registry=registry,
             context_provider=context_provider,
-            max_jev_payload_bytes=_env_int(
-                "SIGNALWEAVE_MAX_JEV_PAYLOAD_BYTES", DEFAULT_MAX_JEV_PAYLOAD_BYTES
-            ),
+            max_jev_payload_bytes=max_jev_payload_bytes,
         ),
         metric_query_store=metric_query_store,
         decision_receipts=decision_receipts,

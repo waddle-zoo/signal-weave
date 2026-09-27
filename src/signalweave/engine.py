@@ -28,7 +28,7 @@ from .models import (
 )
 from .retrieval import build_candidate_pool, resource_ref
 from .sources import SourceRegistry
-from .typesafe_adapter import InsightJudger, JevJudger
+from .typesafe_adapter import DEFAULT_MAX_JEV_PAYLOAD_BYTES, InsightJudger, JevJudger
 
 
 @dataclass
@@ -48,9 +48,6 @@ class _EvaluationMaterials:
     blocking_partial_source_errors: list[dict[str, Any]]
     source_error_evidence: list[Evidence]
     source_errors: list[dict[str, Any]]
-
-
-DEFAULT_MAX_JEV_PAYLOAD_BYTES = 4_000_000
 
 
 class EvaluationPayloadError(ValueError):

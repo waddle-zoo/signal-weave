@@ -17,7 +17,7 @@ from signalweave.models import (
     ResourceDescriptor,
     SourceRef,
 )
-from signalweave.typesafe_adapter import JevJudger, load_api_key
+from signalweave.typesafe_adapter import JevJudger, JevPayloadError, load_api_key
 
 
 class FakeNoul:
@@ -206,6 +206,27 @@ async def test_jev_rank_resources_uses_typed_questions_and_returns_probabilities
     assert judger.metrics.requests == 1
     assert judger.metrics.input_tokens == 41
     assert judger.metrics.output_tokens == 7
+
+
+@pytest.mark.asyncio
+async def test_jev_discovery_payload_budget_fails_before_transport(monkeypatch):
+    FakeClient.calls = []
+    monkeypatch.setattr(typesafe_sdk, "AsyncTypeSafeClient", FakeClient)
+    monkeypatch.setattr(typesafe_sdk, "Noul", FakeNoul)
+    judger = JevJudger(api_key="synthetic-test-key", max_payload_bytes=1_024)
+    resource = ResourceDescriptor(
+        adapter="preset",
+        resource="dashboard:verbose",
+        kind="dashboard",
+        title="Verbose dashboard",
+        description="x" * 3_000,
+    )
+
+    with pytest.raises(JevPayloadError, match="exceeded the configured budget"):
+        await judger.rank_resources("monitor the dashboard", [resource])
+
+    assert FakeClient.calls == []
+    assert judger.metrics.requests == 0
 
 
 @pytest.mark.asyncio

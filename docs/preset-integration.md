@@ -122,8 +122,12 @@ replace the dashboard/chart IDs, and use that route in the card's `sources`.
 This direct API path requires a Preset plan that includes the Preset API. The
 current Preset documentation lists that API as Enterprise-only. Preset's MCP
 authentication documentation also describes the MCP server as an Enterprise
-add-on, so the interim dual-MCP pattern below is conditional on the customer
-having that entitlement; it is not a general fallback for every Preset plan.
+add-on and documents OAuth/JWT access to a workspace `/mcp` endpoint, so the
+interim dual-MCP pattern below is conditional on the customer having that
+entitlement; it is not a general fallback for every Preset plan. SignalWeave's
+shipped connector currently calls the direct Preset API, not Preset's remote
+MCP endpoint; adding OAuth-capable remote-MCP ingestion remains a separate
+future adapter, not an undocumented capability of this deployment.
 
 The default policy is `cached_results`, with live queries and refreshes disabled.
 Raw provider rows are never retained by the connector; receipt retention and
@@ -146,7 +150,9 @@ partial aggregate as complete. Split the card, narrow its `chart_ids`, or
 raise the deployment budget only after reviewing the provider and TypeSafe
 limits. Successful evaluations expose the serialized payload size and budget
 in telemetry; a rejected shadow receipt records the failed stage and byte
-counts for audit.
+counts for audit. The same guard applies during onboarding discovery: unusually
+large catalog descriptions or metadata cannot trigger an oversized Jev ranking
+request before a human approves the card.
 
 Standalone chart reads also require a usable saved `queries` list before making
 the provider POST request; malformed or missing saved query context fails locally

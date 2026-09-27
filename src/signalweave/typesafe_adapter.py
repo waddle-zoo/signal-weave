@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -57,6 +58,21 @@ class InsightJudger(Protocol):
     ) -> dict[str, Any]: ...
 
 
+DEFAULT_MAX_JEV_PAYLOAD_BYTES = 4_000_000
+
+
+class JevPayloadError(ValueError):
+    """Raised before Jev when any typed request would exceed its input budget."""
+
+    def __init__(self, *, observed_bytes: int, budget_bytes: int) -> None:
+        self.observed_bytes = observed_bytes
+        self.budget_bytes = budget_bytes
+        super().__init__(
+            "Jev payload exceeded the configured budget "
+            f"({observed_bytes} > {budget_bytes} bytes)"
+        )
+
+
 @dataclass
 class JudgerMetrics:
     """Small, non-sensitive counters used by the local benchmark harness."""
@@ -88,6 +104,7 @@ class JevJudger:
         api_key: str | None = None,
         timeout: float | None = None,
         max_retries: int | None = None,
+        max_payload_bytes: int | None = None,
     ) -> None:
         from typesafe_sdk import AsyncTypeSafeClient
 
@@ -113,11 +130,29 @@ class JevJudger:
             raise ValueError("TYPESAFE_RETRY_BACKOFF_SECONDS must be non-negative") from error
         if retry_backoff < 0:
             raise ValueError("TYPESAFE_RETRY_BACKOFF_SECONDS must be non-negative")
+        payload_limit = max_payload_bytes
+        if payload_limit is None:
+            try:
+                payload_limit = int(
+                    os.getenv(
+                        "SIGNALWEAVE_MAX_JEV_PAYLOAD_BYTES",
+                        str(DEFAULT_MAX_JEV_PAYLOAD_BYTES),
+                    )
+                )
+            except ValueError as error:
+                raise ValueError(
+                    "SIGNALWEAVE_MAX_JEV_PAYLOAD_BYTES must be a positive integer"
+                ) from error
+        if payload_limit < 1_024:
+            raise ValueError(
+                "SIGNALWEAVE_MAX_JEV_PAYLOAD_BYTES must be at least 1024"
+            )
         self._client_type = AsyncTypeSafeClient
         self._api_key = api_key
         self._timeout = timeout_seconds
         self._max_retries = retry_value
         self._retry_backoff = retry_backoff
+        self.max_payload_bytes = payload_limit
         self.metrics = JudgerMetrics()
 
     async def rank_resources(
@@ -208,6 +243,13 @@ class JevJudger:
         connection is safe. API validation and model errors are returned
         immediately rather than being hidden behind repeated requests.
         """
+        serialized = json.dumps(state, ensure_ascii=False, separators=(",", ":"))
+        observed_bytes = len(serialized.encode("utf-8"))
+        if observed_bytes > self.max_payload_bytes:
+            raise JevPayloadError(
+                observed_bytes=observed_bytes,
+                budget_bytes=self.max_payload_bytes,
+            )
         for attempt in range(self._max_retries + 1):
             try:
                 async with self._client_type(

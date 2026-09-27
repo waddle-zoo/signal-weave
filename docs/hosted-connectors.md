@@ -84,12 +84,13 @@ observations and evidence enter the decision receipt. A cloud deployment must
 enforce receipt retention, deletion, encryption, and data residency outside the
 adapter layer. `max_result_rows` and `max_snapshot_bytes` keep provider
 responses and the aggregate Preset dashboard snapshot from becoming an
-unbounded Jev input. The engine additionally enforces a serialized aggregate
-Jev input budget across all selected sources; if a multi-source card exceeds
-that deployment budget, the run fails before Jev rather than sending a partial
-bundle. Successful results expose the final serialized Jev payload size and
-configured budget in telemetry; failed receipts persist the stage, observed
-bytes, and budget. If a Preset dashboard exceeds the aggregate byte budget,
+unbounded Jev input. Every Jev request, including onboarding catalog ranking,
+uses the same serialized input budget. If a candidate catalog, card, or
+multi-source evaluation exceeds that deployment budget, SignalWeave fails
+before Jev rather than sending a partial bundle or consuming an unbounded
+request. Successful evaluation results expose the final serialized Jev payload
+size and configured budget in telemetry; failed receipts persist the stage,
+observed bytes, and budget. If a Preset dashboard exceeds the aggregate byte budget,
 the adapter fails closed with no partial evidence; use explicit `chart_ids` or
 split the workflow rather than treating a truncated dashboard as complete.
 When `chart_ids` is present, it must be a non-empty list of non-empty strings;
@@ -107,12 +108,14 @@ customer tenant in the resource contract.
 
 Preset currently documents the direct Preset API as an Enterprise-plan
 capability; the [canonical API reference](https://api-docs.preset.io/) documents
-the `/v1/auth/` exchange and workspace API collection. Preset's current MCP
-documentation describes the MCP server itself as an add-on to Enterprise plans
-(the client-side OAuth matrix is a separate concern). A customer therefore
-needs the relevant Preset entitlement for either direct unattended API access
-or the remote-MCP fallback; the remote-MCP path is not a universal workaround
-for a plan without the required Preset capability.
+the `/v1/auth/` exchange and workspace API collection. Preset's [MCP server
+overview](https://docs.preset.io/docs/preset-mcp-server) and [MCP authentication
+guide](https://docs.preset.io/docs/preset-mcp-server-authentication) describe a
+provider-hosted `/mcp` endpoint with OAuth or JWT/Bearer authentication, and
+the MCP server itself as an Enterprise add-on. A customer therefore needs the
+relevant Preset entitlement for either direct unattended API access or the
+provider-hosted MCP path; the remote-MCP path is not a universal workaround for
+a plan without the required Preset capability.
 
 The connector sends `force=false` for cached-results requests and enforces the
 connection's response byte and row budgets. That is a cache preference, not a
@@ -142,7 +145,9 @@ dashboard or chart anchors bypass discovery fan-out and are revalidated through
 the provider identity endpoint.
 
 Preset MCP remains useful for interactive onboarding by a customer-owned agent,
-but recurring monitoring should use the direct hosted API path. Preset's native
+but the current SignalWeave connector does not consume Preset's remote MCP
+transport. Recurring monitoring should use the direct hosted API path until a
+separate OAuth-capable remote-MCP adapter is implemented and tested. Preset's native
 Alerts & Reports feature covers scheduled or event-triggered notifications and
 documents email and Slack delivery; it is not a generic callback into
 SignalWeave's Jev decision path. The connector does not create or delete
