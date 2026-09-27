@@ -986,6 +986,27 @@ def test_same_provider_connections_get_distinct_source_routes():
     assert hosted_adapter_name(first).startswith("preset__")
 
 
+def test_long_connection_ids_keep_source_routes_collision_resistant():
+    from signalweave.hosted import hosted_adapter_name
+
+    common_prefix = "customer-" + ("x" * 120)
+    first = connection(HostedProvider.PRESET).model_copy(
+        update={"id": common_prefix + "-alpha"}
+    )
+    second = connection(HostedProvider.PRESET).model_copy(
+        update={"id": common_prefix + "-beta"}
+    )
+
+    first_route = hosted_adapter_name(first)
+    second_route = hosted_adapter_name(second)
+
+    assert first_route != second_route
+    assert len(first_route) <= 80
+    assert len(second_route) <= 80
+    assert first_route.startswith("preset__")
+    assert second_route.startswith("preset__")
+
+
 def test_runtime_can_register_hosted_connections_without_global_provider_config(monkeypatch, tmp_path):
     monkeypatch.setenv("TYPESAFE_API_KEY", "test-key")
     monkeypatch.delenv("TYPESAFE_API_KEY_FILE", raising=False)

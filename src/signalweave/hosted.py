@@ -8,6 +8,7 @@ short-lived source adapter.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import sqlite3
@@ -152,10 +153,14 @@ class HostedConnectionStore(Protocol):
 
 
 def hosted_adapter_name(connection: HostedConnection) -> str:
-    """Return a stable routing name when one process serves multiple connections."""
+    """Return a stable, collision-resistant route for one hosted connection."""
 
     suffix = re.sub(r"[^a-z0-9_-]+", "-", connection.id.lower()).strip("-_")
-    return f"{connection.provider.value}__{suffix}"[:80]
+    route = f"{connection.provider.value}__{suffix}"
+    if len(route) <= 80:
+        return route
+    digest = hashlib.sha256(connection.id.encode("utf-8")).hexdigest()[:12]
+    return f"{route[:80 - len(digest) - 1]}-{digest}"
 
 
 def _preset_credentials(

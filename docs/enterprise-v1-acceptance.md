@@ -46,7 +46,7 @@ returns an inspectable evidence bundle and receipt.
 | Hosted credential injection is deployment-safe | Docker Compose secret overlay mounts Preset API-token files, clears direct `.env.preset` token values, and the runtime tests value/file exclusivity, exact credential modes, explicit tenant identity, and tenant binding. `make preset-compose-check` also inspects the rendered two-file Compose model with disposable file inputs. | Pass locally; vault/KMS and real tenant gate remain open |
 | Generated-shape anti-overfitting trial | A seeded generator creates 24 unfamiliar tenant workspaces / 192 charts across five result envelopes, 12 visualization labels, usable and unusable metric definitions, empty results, ambiguous numerics, and provider failures; the production Preset client/adapter passes catalog, scope, cache, retention, and safe-degradation assertions, then an independent report reviewer checks coverage and rejects mutated pass-looking reports. A separate generated 64-chart dashboard stress test proves the aggregate byte budget fails closed before partial evidence reaches Jev. | Pass locally; provider and live Jev gates remain open |
 | Existing enterprise workflows remain the owner | MCP tools return typed decisions and evidence; SignalWeave does not execute arbitrary SQL, tools, DAGs, or notifications. | Pass |
-| Regression safety | Full repository tests and lint. | 289 passed, 2 skipped; Ruff clean |
+| Regression safety | Full repository tests and lint. | 290 passed, 2 skipped; Ruff clean |
 
 ## Reproduction
 
@@ -68,7 +68,7 @@ make preset-compose-check
 make superset-chart-matrix
 ```
 
-The current verified regression result is `289 passed, 2 skipped` with Ruff
+The current verified regression result is `290 passed, 2 skipped` with Ruff
 clean. The runtime-shadow and chart-matrix commands are separate evidence
 surfaces: the former uses synthetic Preset and TypeSafe transports to exercise
 the production runtime, while the latter uses the live local Superset service
