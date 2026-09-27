@@ -94,6 +94,19 @@ class PresetCloudClient(SupersetClient):
         self.retry_backoff_seconds = retry_backoff_seconds
         self._force_refresh = False
         self._transport = transport
+        self._requests_made = 0
+
+    @property
+    def requests_made(self) -> int:
+        """Return the number of provider HTTP attempts made by this client.
+
+        This is deployment telemetry, not response content.  The live
+        acceptance runner uses it to prove that a reported customer shadow
+        actually crossed the configured Preset transport instead of being
+        satisfied by a cached or synthetic adapter response.
+        """
+
+        return self._requests_made
 
     def constrain_response_limits(self, *, max_result_rows: int, max_snapshot_bytes: int) -> None:
         """Apply the connection policy without allowing a caller to loosen client limits."""
@@ -340,6 +353,7 @@ class PresetCloudClient(SupersetClient):
     ) -> httpx.Response:
         """Read one provider response without buffering beyond the byte policy."""
 
+        self._requests_made += 1
         chunks: list[bytes] = []
         observed_bytes = 0
         async with client.stream(method, path, **kwargs) as response:

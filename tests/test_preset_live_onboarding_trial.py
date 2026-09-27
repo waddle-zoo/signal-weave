@@ -24,9 +24,13 @@ class FakeServer:
 @pytest.mark.asyncio
 async def test_live_trial_requires_explicit_approval_before_shadow(monkeypatch, tmp_path):
     calls: list[str] = []
+    provider_client = SimpleNamespace(requests_made=0)
+    provider_adapter = PresetAdapter.__new__(PresetAdapter)
+    provider_adapter.client = provider_client
 
     async def onboard(**kwargs):
         calls.append("onboard")
+        provider_client.requests_made += 1
         return {"status": "needs_human_review", "card": {"id": "card-1"}}
 
     async def approve(*args, **kwargs):
@@ -41,9 +45,9 @@ async def test_live_trial_requires_explicit_approval_before_shadow(monkeypatch, 
         trial,
         "build_runtime",
         lambda: SimpleNamespace(
-            sources=SimpleNamespace(
-                adapter_names=lambda: ["preset__preset-env"],
-                _get=lambda name: PresetAdapter.__new__(PresetAdapter),
+                sources=SimpleNamespace(
+                    adapter_names=lambda: ["preset__preset-env"],
+                    _get=lambda name: provider_adapter,
             ),
             principal=SimpleNamespace(tenant_id="northstar"),
             engine=SimpleNamespace(
@@ -86,7 +90,12 @@ async def test_live_trial_requires_explicit_approval_before_shadow(monkeypatch, 
 
 @pytest.mark.asyncio
 async def test_live_trial_accepts_only_jev_delivery_disabled_shadow(monkeypatch):
+    provider_client = SimpleNamespace(requests_made=0)
+    provider_adapter = PresetAdapter.__new__(PresetAdapter)
+    provider_adapter.client = provider_client
+
     async def onboard(**kwargs):
+        provider_client.requests_made += 1
         return {
             "status": "ready_for_approval",
             "approval_required": True,
@@ -144,9 +153,9 @@ async def test_live_trial_accepts_only_jev_delivery_disabled_shadow(monkeypatch)
         trial,
         "build_runtime",
         lambda: SimpleNamespace(
-            sources=SimpleNamespace(
-                adapter_names=lambda: ["preset__preset-env"],
-                _get=lambda name: PresetAdapter.__new__(PresetAdapter),
+                sources=SimpleNamespace(
+                    adapter_names=lambda: ["preset__preset-env"],
+                    _get=lambda name: provider_adapter,
             ),
             principal=SimpleNamespace(tenant_id="northstar"),
             engine=SimpleNamespace(
@@ -191,18 +200,22 @@ async def test_live_trial_accepts_only_jev_delivery_disabled_shadow(monkeypatch)
 @pytest.mark.asyncio
 async def test_live_trial_auto_detects_custom_sole_preset_adapter(monkeypatch):
     onboarded_adapter: list[str] = []
+    provider_client = SimpleNamespace(requests_made=0)
+    provider_adapter = PresetAdapter.__new__(PresetAdapter)
+    provider_adapter.client = provider_client
 
     async def onboard(**kwargs):
         onboarded_adapter.append(kwargs["adapter"])
+        provider_client.requests_made += 1
         return {"status": "needs_human_review", "card": {"id": "card-1"}}
 
     monkeypatch.setattr(
         trial,
         "build_runtime",
         lambda: SimpleNamespace(
-            sources=SimpleNamespace(
-                adapter_names=lambda: ["preset__customer-workspace"],
-                _get=lambda name: PresetAdapter.__new__(PresetAdapter),
+                sources=SimpleNamespace(
+                    adapter_names=lambda: ["preset__customer-workspace"],
+                    _get=lambda name: provider_adapter,
             ),
             principal=SimpleNamespace(tenant_id="northstar"),
             engine=SimpleNamespace(

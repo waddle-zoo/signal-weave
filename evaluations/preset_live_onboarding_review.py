@@ -111,6 +111,12 @@ def review_report(report: dict[str, Any]) -> dict[str, Any]:
             findings.append("durable receipt lookup did not find the decision")
         if checks.get("replay_made_no_jev_call") is not True:
             findings.append("replay made an additional Jev call")
+        if checks.get("provider_transport_used") is not True:
+            findings.append("approved shadow did not prove a Preset provider request")
+        if not isinstance(checks.get("provider_requests_for_onboarding"), int) or checks[
+            "provider_requests_for_onboarding"
+        ] < 1:
+            findings.append("approved shadow has no recorded Preset request")
         if not isinstance(checks.get("jev_requests_for_first_evaluation"), int) or checks[
             "jev_requests_for_first_evaluation"
         ] < 1:

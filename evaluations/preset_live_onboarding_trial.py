@@ -94,6 +94,13 @@ async def run_trial(
     if getattr(runtime.engine.judger, "name", None) != "jev-latest":
         raise RuntimeError("the live acceptance trial must run with the jev-latest judger")
     adapter = _resolve_preset_adapter(runtime, adapter)
+    preset_source = runtime.sources._get(adapter)
+    provider_client = getattr(preset_source, "client", None)
+    provider_requests_before = getattr(provider_client, "requests_made", None)
+    if not isinstance(provider_requests_before, int):
+        raise RuntimeError(
+            "the live acceptance trial requires a Preset client with request telemetry"
+        )
     server = create_mcp(runtime)
     onboarding = await _tool(server, "onboard_insight_card")(
         what_to_watch=goal,
@@ -111,12 +118,27 @@ async def run_trial(
             }
         ],
     )
+    provider_requests_after_onboarding = getattr(provider_client, "requests_made", None)
+    provider_requests_for_onboarding = (
+        provider_requests_after_onboarding - provider_requests_before
+        if isinstance(provider_requests_after_onboarding, int)
+        else None
+    )
     report: dict[str, Any] = {
         "trial": "preset-live-onboarding-shadow",
         "adapter": adapter,
         "tenant_id": runtime.principal.tenant_id if runtime.principal else None,
         "onboarding": onboarding,
         "approval_requested": approve,
+        "provider_checks": {
+            "provider_requests_before_onboarding": provider_requests_before,
+            "provider_requests_after_onboarding": provider_requests_after_onboarding,
+            "provider_requests_for_onboarding": provider_requests_for_onboarding,
+            "provider_transport_used": (
+                isinstance(provider_requests_for_onboarding, int)
+                and provider_requests_for_onboarding > 0
+            ),
+        },
         "passed": False,
         "not_proven": [
             "business usefulness or correctness without operator labels",
@@ -190,6 +212,13 @@ async def run_trial(
                     "receipt_lookup": receipt_lookup,
                     "provider_checks": {
                         "onboarding_contract": onboarding_contract,
+                        "provider_requests_before_onboarding": provider_requests_before,
+                        "provider_requests_after_onboarding": provider_requests_after_onboarding,
+                        "provider_requests_for_onboarding": provider_requests_for_onboarding,
+                        "provider_transport_used": (
+                            isinstance(provider_requests_for_onboarding, int)
+                            and provider_requests_for_onboarding > 0
+                        ),
                         "preset_resources": len(preset_resources),
                         "all_resources_use_requested_preset_adapter": bool(resources)
                         and len(preset_resources) == len(resources),
@@ -203,6 +232,7 @@ async def run_trial(
                         and summary["evaluator"] == "jev-latest"
                         and summary["evidence_count"] > 0
                         and summary["observation_count"] > 0
+                        and report["provider_checks"]["provider_transport_used"] is True
                         and bool(preset_resources)
                         and tenant_scoped_resources
                         and isinstance(jev_requests_for_first_evaluation, int)

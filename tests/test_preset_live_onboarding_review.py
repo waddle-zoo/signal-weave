@@ -46,6 +46,8 @@ def _passing_report() -> dict:
                 "approval_required": True,
                 "delivery_disabled": True,
             },
+            "provider_transport_used": True,
+            "provider_requests_for_onboarding": 1,
             "replay_made_no_jev_call": True,
             "jev_requests_for_first_evaluation": 1,
             "all_resources_use_requested_preset_adapter": True,
@@ -83,6 +85,17 @@ def test_independent_reviewer_rejects_overclaim_and_missing_jev_request():
     assert review["passed"] is False
     assert any("non-claims" in finding for finding in review["findings"])
     assert any("no recorded Jev request" in finding for finding in review["findings"])
+
+
+def test_independent_reviewer_rejects_missing_preset_transport_proof():
+    report = deepcopy(_passing_report())
+    report["provider_checks"].pop("provider_transport_used")
+    report["provider_checks"].pop("provider_requests_for_onboarding")
+
+    review = review_report(report)
+
+    assert review["passed"] is False
+    assert any("Preset provider request" in finding for finding in review["findings"])
 
 
 def test_independent_reviewer_accepts_unapproved_draft_without_claiming_acceptance():

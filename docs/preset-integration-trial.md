@@ -119,6 +119,11 @@ documentation currently lists it as Enterprise-only. A non-Enterprise hosted
 customer needs the remote-MCP dual-connector pattern or an approved relay until
 the direct API or a managed bridge is available.
 
+The live acceptance runner also records bounded Preset transport telemetry. An
+approved report is rejected unless the onboarding stage made at least one
+actual request through the configured Preset client; a synthetic or cached
+adapter response cannot satisfy the customer-transport gate.
+
 The generated JSON report is ignored under `artifacts/` and is suitable for
 attaching to a deployment review:
 
