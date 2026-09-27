@@ -321,10 +321,17 @@ async def test_preset_standalone_chart_keeps_saved_query_post_path():
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    "query_context",
-    ['{"datasource": {"id": 17}}', '{"queries": ["not-an-object"]}'],
+    ("query_context", "message"),
+    [
+        ('{"datasource": {"id": 17}}', "usable queries list"),
+        ('{"queries": ["not-an-object"]}', "usable queries list"),
+        ("{not-json", "not valid JSON"),
+        ("[]", "not a JSON object"),
+    ],
 )
-async def test_preset_malformed_saved_query_context_fails_before_provider_call(query_context):
+async def test_preset_malformed_saved_query_context_fails_before_provider_call(
+    query_context, message
+):
     calls = 0
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -338,13 +345,36 @@ async def test_preset_malformed_saved_query_context_fails_before_provider_call(q
         transport=httpx.MockTransport(handler),
     )
 
-    with pytest.raises(PresetPolicyError, match="usable queries list"):
+    with pytest.raises(PresetPolicyError, match=message):
         await client.chart_data(
             {
                 "id": 101,
                 "query_context": query_context,
                 "params": {"metrics": ["revenue"], "datasource": "17__table"},
             }
+        )
+    assert calls == 0
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("params", [{"row_limit": True}, {"row_limit": "not-an-int"}])
+async def test_preset_malformed_fallback_row_limit_fails_before_provider_call(params):
+    calls = 0
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        raise AssertionError("invalid fallback row_limit must fail before provider I/O")
+
+    client = PresetCloudClient(
+        "https://workspace.app.preset.test",
+        access_token="preset-token",
+        transport=httpx.MockTransport(handler),
+    )
+
+    with pytest.raises(PresetPolicyError, match="invalid row_limit"):
+        await client.chart_data(
+            {"id": 101, "params": {**params, "metrics": ["revenue"]}}
         )
     assert calls == 0
 

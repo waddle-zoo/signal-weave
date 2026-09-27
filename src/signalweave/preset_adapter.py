@@ -235,24 +235,37 @@ class PresetCloudClient(SupersetClient):
         return counts
 
     @staticmethod
-    def _validate_raw_saved_query_limits(chart: dict[str, Any]) -> None:
-        """Reject malformed saved limits before the generic normalizer can hide them."""
+    def _validate_raw_saved_query_context(chart: dict[str, Any]) -> None:
+        """Reject malformed saved context before generic normalization can hide it."""
 
-        raw_context = chart.get("query_context")
-        if isinstance(raw_context, str):
-            try:
-                raw_context = json.loads(raw_context)
-            except json.JSONDecodeError:
-                return
-        if not isinstance(raw_context, dict):
-            return
-        raw_queries = raw_context.get("queries")
-        if not isinstance(raw_queries, list):
-            return
-        for query in raw_queries:
-            if not isinstance(query, dict):
-                continue
-            requested = query.get("row_limit")
+        if "query_context" in chart and chart.get("query_context") is not None:
+            raw_context = chart["query_context"]
+            if isinstance(raw_context, str):
+                try:
+                    raw_context = json.loads(raw_context)
+                except json.JSONDecodeError:
+                    raise PresetPolicyError(
+                        "Preset saved query context was not valid JSON"
+                    ) from None
+            if not isinstance(raw_context, dict):
+                raise PresetPolicyError(
+                    "Preset saved query context was not a JSON object"
+                )
+            raw_queries = raw_context.get("queries")
+            if not isinstance(raw_queries, list) or not raw_queries or any(
+                not isinstance(query, dict) for query in raw_queries
+            ):
+                raise PresetPolicyError(
+                    "Preset saved query context did not contain a usable queries list"
+                )
+            query_values = [
+                query.get("row_limit") for query in raw_queries if isinstance(query, dict)
+            ]
+        else:
+            raw_params = chart.get("params")
+            query_values = [raw_params.get("row_limit")] if isinstance(raw_params, dict) else []
+
+        for requested in query_values:
             if requested is None:
                 continue
             if isinstance(requested, bool):
@@ -329,7 +342,7 @@ class PresetCloudClient(SupersetClient):
                 },
             )
         else:
-            self._validate_raw_saved_query_limits(chart)
+            self._validate_raw_saved_query_context(chart)
             payload = self._saved_query_context(chart) or self._query_context(chart)
             queries = payload.get("queries")
             if not isinstance(queries, list) or not queries or any(
