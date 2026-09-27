@@ -115,6 +115,9 @@ intentionally rejected: replace every `your-*`, angle-bracket, and
 credential is accepted by Preset; use `make preset-bootstrap-check` for that bounded provider
 request. The bootstrap report includes the counted Preset HTTP attempts and
 fails if the configured client cannot prove that it made the catalog request.
+Provider authentication, permission/plan, rate-limit, and transport failures
+are returned as redacted readiness reports with bounded remediation instead of
+forwarding provider response bodies or secret-bearing stack traces.
 
 The service listens on `http://127.0.0.1:18000` and exposes the MCP endpoint at
 `/mcp`. Connect the customer's agent through the existing identity-aware proxy,

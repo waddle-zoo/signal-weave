@@ -73,6 +73,72 @@ async def test_bootstrap_preflight_reads_one_catalog_page_without_jev(monkeypatc
 
 
 @pytest.mark.asyncio
+async def test_bootstrap_reports_redacted_permission_failure(monkeypatch, tmp_path):
+    request = httpx.Request("GET", "https://workspace.preset.test/api/v1/dashboard/")
+    response = httpx.Response(
+        403,
+        json={"message": "token-secret-must-not-appear"},
+        request=request,
+    )
+
+    class Client:
+        requests_made = 1
+
+        async def list_dashboards_page(self, *, page, page_size, query=None):
+            raise httpx.HTTPStatusError("forbidden", request=request, response=response)
+
+    adapter = PresetAdapter.__new__(PresetAdapter)
+    adapter.client = Client()
+    adapter.policy = HostedDataPolicy()
+    adapter.name = "preset__preset-env"
+    _wire_environment(monkeypatch, adapter)
+
+    output = tmp_path / "bootstrap-failure.json"
+    report = await bootstrap.run(
+        adapter_name="preset__preset-env",
+        page_size=20,
+        output=output,
+    )
+
+    assert report["passed"] is False
+    assert report["failure"] == {
+        "category": "authentication_or_permission",
+        "status_code": 403,
+        "error_type": "HTTPStatusError",
+        "remediation": (
+            "Verify that the Preset API is enabled for the workspace, the token "
+            "has access to the selected workspace and read-only assets, and the "
+            "configured token mode matches the credential files."
+        ),
+    }
+    assert report["jev_requests"] == 0
+    assert "token-secret-must-not-appear" not in output.read_text(encoding="utf-8")
+
+
+@pytest.mark.asyncio
+async def test_bootstrap_reports_transport_failure_without_stack_trace(monkeypatch):
+    class Client:
+        requests_made = 0
+
+        async def list_dashboards_page(self, *, page, page_size, query=None):
+            request = httpx.Request("GET", "https://workspace.preset.test/api/v1/dashboard/")
+            raise httpx.ConnectTimeout("timed out", request=request)
+
+    adapter = PresetAdapter.__new__(PresetAdapter)
+    adapter.client = Client()
+    adapter.policy = HostedDataPolicy()
+    adapter.name = "preset__preset-env"
+    _wire_environment(monkeypatch, adapter)
+
+    report = await bootstrap.run(adapter_name="preset__preset-env", page_size=20)
+
+    assert report["passed"] is False
+    assert report["failure"]["category"] == "transport_error"
+    assert report["failure"]["error_type"] == "ConnectTimeout"
+    assert report["jev_requests"] == 0
+
+
+@pytest.mark.asyncio
 async def test_bootstrap_preflight_auto_detects_custom_sole_preset_adapter(monkeypatch):
     class Client:
         requests_made = 0

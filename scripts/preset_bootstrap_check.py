@@ -20,6 +20,8 @@ import os
 from pathlib import Path
 from typing import Any
 
+import httpx
+
 from signalweave.hosted import HostedDataMode
 from signalweave.models import SourceRef
 from signalweave.preset_adapter import PresetAdapter
@@ -49,6 +51,80 @@ def _remediations(errors: list[str]) -> list[str]:
         if remediation and remediation not in values:
             values.append(remediation)
     return values
+
+
+def _provider_failure(error: Exception) -> dict[str, Any]:
+    """Return a redacted, actionable provider failure without response content."""
+
+    if isinstance(error, httpx.HTTPStatusError):
+        status_code = error.response.status_code
+        if status_code in {401, 403}:
+            category = "authentication_or_permission"
+            remediation = (
+                "Verify that the Preset API is enabled for the workspace, the token "
+                "has access to the selected workspace and read-only assets, and the "
+                "configured token mode matches the credential files."
+            )
+        elif status_code == 429:
+            category = "rate_limited"
+            remediation = (
+                "Wait for the Preset rate-limit window to clear, then rerun the bounded "
+                "bootstrap probe; do not increase page size or retry limits to bypass it."
+            )
+        elif status_code >= 500:
+            category = "provider_unavailable"
+            remediation = (
+                "Confirm the Preset workspace is healthy and rerun the probe; the "
+                "connector will keep provider retries bounded."
+            )
+        else:
+            category = "provider_request_rejected"
+            remediation = (
+                "Inspect the selected Preset resource and data-policy permissions, "
+                "then rerun the bounded probe."
+            )
+        return {
+            "category": category,
+            "status_code": status_code,
+            "error_type": "HTTPStatusError",
+            "remediation": remediation,
+        }
+    if isinstance(error, httpx.RequestError):
+        return {
+            "category": "transport_error",
+            "error_type": type(error).__name__,
+            "remediation": (
+                "Verify DNS, TLS, egress policy, and the Preset workspace origin, "
+                "then rerun the bounded bootstrap probe."
+            ),
+        }
+    return {
+        "category": "provider_error",
+        "error_type": type(error).__name__,
+        "remediation": "Inspect the provider integration logs and rerun the bounded probe.",
+    }
+
+
+def _failure_report(error: Exception) -> dict[str, Any]:
+    """Build the no-secret report used when provider bootstrap cannot complete."""
+
+    return {
+        "trial": "preset-bootstrap-check",
+        "passed": False,
+        "failure": _provider_failure(error),
+        "checks": {
+            "provider_transport_used": False,
+            "provider_request_failed": True,
+            "jev_calls_made": 0,
+        },
+        "jev_requests": 0,
+        "not_proven": [
+            "Preset credentials are accepted by the provider",
+            "dashboard/chart permissions and result-shape quality",
+            "a human-approved card or Jev shadow decision",
+            "managed SignalWeave hosting",
+        ],
+    }
 
 
 async def _select_dashboard_by_query(
@@ -373,15 +449,24 @@ async def run(
     output: Path | None = None,
 ) -> dict[str, Any]:
     with preset_environment_file():
-        return await _run_loaded(
-            adapter_name=adapter_name,
-            page_size=page_size,
-            dashboard_id=dashboard_id,
-            chart_id=chart_id,
-            dashboard_query=dashboard_query,
-            max_pages=max_pages,
-            output=output,
-        )
+        try:
+            report = await _run_loaded(
+                adapter_name=adapter_name,
+                page_size=page_size,
+                dashboard_id=dashboard_id,
+                chart_id=chart_id,
+                dashboard_query=dashboard_query,
+                max_pages=max_pages,
+                output=output,
+            )
+        except (httpx.HTTPStatusError, httpx.RequestError) as error:
+            report = _failure_report(error)
+            serialized = json.dumps(report, indent=2, sort_keys=True) + "\n"
+            print(serialized, end="")
+            if output:
+                output.parent.mkdir(parents=True, exist_ok=True)
+                output.write_text(serialized, encoding="utf-8")
+        return report
 
 
 def main() -> None:
