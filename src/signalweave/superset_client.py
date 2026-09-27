@@ -801,7 +801,17 @@ class SupersetClient:
                 "Superset dashboard response did not match the requested dashboard ID"
             )
         snapshot = self.metadata_to_snapshot(metadata)
-        selected = set(chart_ids) if chart_ids else None
+        if chart_ids is not None and (
+            not chart_ids
+            or any(
+                not isinstance(chart_id, str) or not chart_id.strip()
+                for chart_id in chart_ids
+            )
+        ):
+            raise ValueError(
+                "Superset dashboard chart_ids must be a non-empty list of non-empty strings"
+            )
+        selected = set(chart_ids) if chart_ids is not None else None
         if selected is not None:
             available = {chart.id for chart in snapshot.charts}
             missing = sorted(selected - available)

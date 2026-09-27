@@ -92,6 +92,8 @@ configured budget in telemetry; failed receipts persist the stage, observed
 bytes, and budget. If a Preset dashboard exceeds the aggregate byte budget,
 the adapter fails closed with no partial evidence; use explicit `chart_ids` or
 split the workflow rather than treating a truncated dashboard as complete.
+When `chart_ids` is present, it must be a non-empty list of non-empty strings;
+an empty selection is rejected rather than being interpreted as “all charts.”
 
 ## Provider coverage
 

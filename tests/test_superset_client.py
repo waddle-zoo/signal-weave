@@ -474,6 +474,28 @@ async def test_dashboard_snapshot_rejects_unknown_selected_chart_ids():
         await CatalogClient("http://superset").dashboard_snapshot(7, chart_ids=["99"])
 
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize("chart_ids", [[], [""], ["  "]])
+async def test_dashboard_snapshot_rejects_empty_selected_chart_ids(chart_ids):
+    class CatalogClient(SupersetClient):
+        async def get_dashboard_metadata(self, dashboard_id):
+            return {
+                "id": dashboard_id,
+                "dashboard_title": "Revenue",
+                "position_json": {
+                    "chart": {"type": "CHART", "meta": {"chartId": 64}}
+                },
+            }
+
+    with pytest.raises(
+        ValueError,
+        match="chart_ids must be a non-empty list of non-empty strings",
+    ):
+        await CatalogClient("http://superset").dashboard_snapshot(
+            7, chart_ids=chart_ids
+        )
+
+
 def test_time_series_rows_become_a_comparable_observation():
     chart = {
         "id": 42,
