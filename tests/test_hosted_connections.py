@@ -881,7 +881,16 @@ async def test_preset_async_chart_response_fails_closed_instead_of_becoming_no_d
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     "status",
-    ["failed", "pending", "running", "scheduled", "stopped", "timed_out"],
+    [
+        "failed",
+        "pending",
+        "running",
+        "scheduled",
+        "stopped",
+        "timed_out",
+        "error",
+        "future-provider-state",
+    ],
 )
 async def test_preset_non_success_query_status_fails_closed_inside_http_200(status):
     def handler(request: httpx.Request) -> httpx.Response:
@@ -896,10 +905,30 @@ async def test_preset_non_success_query_status_fails_closed_inside_http_200(stat
         transport=httpx.MockTransport(handler),
     )
 
-    with pytest.raises(PresetPolicyError, match="non-success query status"):
+    with pytest.raises(PresetPolicyError, match="unsupported or non-success query status"):
         await client.chart_data(
             {"id": 101, "params": {"metrics": ["revenue"], "datasource": "17__table"}},
         )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("status", [None, "success", "completed", "complete", "ok"])
+async def test_preset_known_success_query_status_remains_supported(status):
+    def handler(request: httpx.Request) -> httpx.Response:
+        item = {"data": []}
+        if status is not None:
+            item["status"] = status
+        return httpx.Response(200, json={"result": [item]})
+
+    client = PresetCloudClient(
+        "https://workspace.app.preset.test",
+        access_token="preset-token",
+        transport=httpx.MockTransport(handler),
+    )
+
+    assert await client.chart_data(
+        {"id": 101, "params": {"metrics": ["revenue"], "datasource": "17__table"}},
+    ) == [{"data": [], **({"status": status} if status is not None else {})}]
 
 
 @pytest.mark.asyncio

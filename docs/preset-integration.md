@@ -165,8 +165,10 @@ series and invent a current value. Malformed chart responses with a missing,
 scalar, or mixed-object `result` envelope, or invalid JSON also fail closed as
 provider-policy errors; they are not converted to an apparently empty chart.
 The same fail-closed rule applies when a provider returns HTTP 200 but embeds a
-non-success query status such as `pending`, `failed`, or `timed_out` inside a
-result item.
+non-success query status inside a result item. Only known successful states
+(`success`, `completed`, `complete`, or `ok`) and an omitted status are accepted;
+`pending`, `failed`, `timed_out`, unknown, and future provider states fail closed
+instead of becoming apparently empty data.
 An embedded non-empty result-item `error` is also a provider-policy failure;
 warnings remain visible but do not by themselves block a successful result.
 Even when a 202 response includes a provider `result_url`, the connector does
