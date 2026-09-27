@@ -312,6 +312,11 @@ def build_runtime(
     hosted_connections = list(hosted_connections)
     preset_environment = _preset_from_environment()
     if preset_environment is not None:
+        # Keep production startup on the same identity and auth contract as
+        # the no-network preflight. Without this check, token-mode deployments
+        # could register a Preset adapter with a tenant but no trusted
+        # principal, despite the HTTP deployment contract requiring both.
+        validate_preset_environment()
         if hosted_connections or credential_vault is not None:
             raise RuntimeError(
                 "PRESET_URL environment bootstrap cannot be combined with explicit "

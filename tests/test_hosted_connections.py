@@ -1358,6 +1358,8 @@ def test_runtime_bootstraps_one_preset_connection_from_environment(monkeypatch, 
     monkeypatch.setenv("PRESET_TENANT_ID", "northstar")
     monkeypatch.setenv("PRESET_API_TOKEN_NAME", "preset-name")
     monkeypatch.setenv("PRESET_API_TOKEN_SECRET", "preset-secret")
+    monkeypatch.setenv("SIGNALWEAVE_TENANT_ID", "northstar")
+    monkeypatch.setenv("SIGNALWEAVE_PRINCIPAL_ID", "signalweave-agent")
     monkeypatch.setenv("PRESET_DATA_MODE", "metadata_only")
     monkeypatch.setenv("SIGNALWEAVE_STORE_BACKEND", "sqlite")
     monkeypatch.setenv("SIGNALWEAVE_STORE_PATH", str(tmp_path / "signalweave.db"))
@@ -1371,6 +1373,47 @@ def test_runtime_bootstraps_one_preset_connection_from_environment(monkeypatch, 
     assert adapter.policy.mode == HostedDataMode.METADATA_ONLY
     assert adapter.client._api_token_name == "preset-name"
     assert adapter.client._api_token_secret == "preset-secret"
+    assert runtime.principal is not None
+    assert runtime.principal.tenant_id == "northstar"
+    assert runtime.sources.authorized_tenants == frozenset({"northstar"})
+
+
+def test_runtime_rejects_token_preset_bootstrap_without_trusted_principal(
+    monkeypatch, tmp_path
+):
+    monkeypatch.setenv("TYPESAFE_API_KEY", "test-key")
+    monkeypatch.delenv("TYPESAFE_API_KEY_FILE", raising=False)
+    monkeypatch.delenv("SUPERSET_URL", raising=False)
+    monkeypatch.setenv("PRESET_URL", "https://workspace.us-east-1.app.preset.io")
+    monkeypatch.setenv("PRESET_TENANT_ID", "northstar")
+    monkeypatch.setenv("PRESET_ACCESS_TOKEN", "preset-token")
+    monkeypatch.delenv("SIGNALWEAVE_TENANT_ID", raising=False)
+    monkeypatch.delenv("SIGNALWEAVE_PRINCIPAL_ID", raising=False)
+    monkeypatch.setenv("SIGNALWEAVE_STORE_BACKEND", "sqlite")
+    monkeypatch.setenv("SIGNALWEAVE_STORE_PATH", str(tmp_path / "signalweave.db"))
+
+    with pytest.raises(RuntimeError, match="token-authenticated Preset deployments"):
+        build_runtime()
+
+
+def test_runtime_bootstraps_oidc_preset_without_static_principal(monkeypatch, tmp_path):
+    monkeypatch.setenv("TYPESAFE_API_KEY", "test-key")
+    monkeypatch.delenv("TYPESAFE_API_KEY_FILE", raising=False)
+    monkeypatch.delenv("SUPERSET_URL", raising=False)
+    monkeypatch.setenv("PRESET_URL", "https://workspace.us-east-1.app.preset.io")
+    monkeypatch.setenv("PRESET_TENANT_ID", "northstar")
+    monkeypatch.setenv("PRESET_ACCESS_TOKEN", "preset-token")
+    monkeypatch.setenv("SIGNALWEAVE_AUTH_MODE", "oidc")
+    monkeypatch.setenv("SIGNALWEAVE_OIDC_ISSUER_URL", "https://id.example.com")
+    monkeypatch.setenv("SIGNALWEAVE_OIDC_AUDIENCE", "signalweave")
+    monkeypatch.delenv("SIGNALWEAVE_TENANT_ID", raising=False)
+    monkeypatch.delenv("SIGNALWEAVE_PRINCIPAL_ID", raising=False)
+    monkeypatch.setenv("SIGNALWEAVE_STORE_BACKEND", "sqlite")
+    monkeypatch.setenv("SIGNALWEAVE_STORE_PATH", str(tmp_path / "signalweave.db"))
+
+    runtime = build_runtime()
+
+    assert isinstance(runtime.sources._adapters["preset__preset-env"], PresetAdapter)
     assert runtime.principal is None
     assert runtime.sources.authorized_tenants == frozenset({"northstar"})
 
@@ -1544,6 +1587,8 @@ def test_runtime_reads_preset_secrets_from_mounted_files(monkeypatch, tmp_path):
     monkeypatch.delenv("SUPERSET_URL", raising=False)
     monkeypatch.setenv("PRESET_URL", "https://workspace.us-east-1.app.preset.io")
     monkeypatch.setenv("PRESET_TENANT_ID", "northstar")
+    monkeypatch.setenv("SIGNALWEAVE_TENANT_ID", "northstar")
+    monkeypatch.setenv("SIGNALWEAVE_PRINCIPAL_ID", "signalweave-agent")
     name_file = tmp_path / "preset-name"
     secret_file = tmp_path / "preset-secret"
     name_file.write_text("preset-name\n", encoding="utf-8")
