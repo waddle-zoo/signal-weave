@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "dataset_id": "northstar-growth-analytics-history-v1",
+  "team": {
+    "company": "Northstar Outfitters Co.",
+    "name": "Growth Analytics",
+    "owner": "growth-analytics-lead",
+    "operating_question": "Which changes deserve a push, which are explainable, and which need investigation before anyone acts?",
+    "source_basis": "Northstar local seed rows normalized through the existing shadow-trial helpers"
+  },
+  "periods": [
+    {"id": "week-01", "date": "2026-07-06", "split": "train", "ambient_adjustments": {"revenue": 0, "conversion_rate": 0, "support_backlog": 0, "finance_revenue": 0}},
+    {"id": "week-02", "date": "2026-07-13", "split": "train", "ambient_adjustments": {"revenue": 3, "conversion_rate": 2, "support_backlog": -4, "finance_revenue": 2}},
+    {"id": "week-03", "date": "2026-07-20", "split": "train", "ambient_adjustments": {"revenue": -2, "conversion_rate": -1, "support_backlog": 6, "finance_revenue": -1}},
+    {"id": "week-04", "date": "2026-07-27", "split": "train", "ambient_adjustments": {"revenue": 5, "conversion_rate": 3, "support_backlog": -7, "finance_revenue": 4}},
+    {"id": "week-05", "date": "2026-08-03", "split": "validation", "ambient_adjustments": {"revenue": -4, "conversion_rate": -2, "support_backlog": 8, "finance_revenue": -3}},
+    {"id": "week-06", "date": "2026-08-10", "split": "validation", "ambient_adjustments": {"revenue": 2, "conversion_rate": -3, "support_backlog": 4, "finance_revenue": 1}},
+    {"id": "week-07", "date": "2026-08-17", "split": "holdout", "ambient_adjustments": {"revenue": -3, "conversion_rate": 1, "support_backlog": -5, "finance_revenue": -2}},
+    {"id": "week-08", "date": "2026-08-24", "split": "holdout", "ambient_adjustments": {"revenue": 4, "conversion_rate": -1, "support_backlog": 7, "finance_revenue": 3}}
+  ],
+  "card_policy": {
+    "card_id": "northstar-growth-pulse-v1",
+    "version": 1,
+    "movement_only_baseline": {"threshold_percent": 10, "action": "notify", "missing_primary": "ignore"},
+    "decision_guidance": "Apply this policy in order. First, if the primary dashboard source is unavailable, return insufficient_data and route to data trust; never interpret the missing source as business movement. Second, if absolute net sales movement is below 10 percent and no severe operational incident is present, return ignore, even when supporting sources move slightly; do not route or notify. Third, notify leadership only when net sales declines at least 15 percent and at least two channels plus web conversion or finance corroborate the decline. Finally, investigate isolated, conflicting, or otherwise ambiguous material movement. Explain which sources support or contradict the outcome.",
+    "delivery_methods": {
+      "ignore": [],
+      "notify": ["leadership"],
+      "investigate": ["analytics"],
+      "insufficient_data": ["data-trust"]
+    }
+  },
+  "variants": [
+    {
+      "base_case_id": "day-01-no-change",
+      "historical_outcome": "ignore",
+      "manual_minutes": 18,
+      "signalweave_minutes": 1,
+      "human_action": "No action; continue the operating cadence.",
+      "decision_reason": "Movement stayed within expected operating noise.",
+      "required_explanation_sources": ["superset|dashboard:1", "northstar|fct_web_session"],
+      "baseline": "ignore"
+    },
+    {
+      "base_case_id": "day-02-modest-movement",
+      "historical_outcome": "ignore",
+      "manual_minutes": 22,
+      "signalweave_minutes": 1,
+      "human_action": "No action; suppress the routine movement.",
+      "decision_reason": "The broad change was below the team's materiality threshold.",
+      "required_explanation_sources": ["superset|dashboard:1", "northstar|fct_web_session"],
+      "baseline": "movement_only"
+    },
+    {
+      "base_case_id": "day-03-isolated-channel",
+      "historical_outcome": "investigate",
+      "manual_minutes": 36,
+      "signalweave_minutes": 15,
+      "human_action": "Ask Growth Analytics to inspect the isolated channel movement.",
+      "decision_reason": "The top-line movement was concentrated in one channel without independent corroboration.",
+      "required_explanation_sources": ["superset|dashboard:1", "northstar|fct_web_session", "northstar|fct_finance_daily"],
+      "baseline": "movement_only"
+    },
+    {
+      "base_case_id": "day-04-corroborated-decline",
+      "historical_outcome": "notify",
+      "manual_minutes": 42,
+      "signalweave_minutes": 5,
+      "human_action": "Notify growth leadership with the evidence bundle and affected channels.",
+      "decision_reason": "Revenue, multiple channels, funnel conversion, and finance agreed on a material decline.",
+      "required_explanation_sources": ["superset|dashboard:1", "northstar|fct_web_session", "northstar|fct_finance_daily"],
+      "baseline": "movement_only"
+    },
+    {
+      "base_case_id": "day-05-conflicting-sources",
+      "historical_outcome": "investigate",
+      "manual_minutes": 48,
+      "signalweave_minutes": 15,
+      "human_action": "Route to analytics to reconcile the dashboard and finance definitions.",
+      "decision_reason": "Sales movement conflicted with finance and funnel evidence.",
+      "required_explanation_sources": ["superset|dashboard:1", "northstar|fct_web_session", "northstar|fct_finance_daily"],
+      "baseline": "movement_only"
+    },
+    {
+      "base_case_id": "day-06-source-unavailable",
+      "historical_outcome": "insufficient_data",
+      "manual_minutes": 27,
+      "signalweave_minutes": 5,
+      "human_action": "Route the source failure to Data Trust; do not interpret the movement.",
+      "decision_reason": "The primary dashboard was unavailable, so business interpretation was unsafe.",
+      "required_explanation_sources": ["superset|dashboard:1"],
+      "baseline": "ignore"
+    }
+  ]
+}

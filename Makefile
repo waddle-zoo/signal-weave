@@ -1,4 +1,4 @@
-.PHONY: install test lint prove benchmark daily-trial enterprise-trial discovery-trial bundle-trial query-trial retrieval-explanation-trial preset-trial preset-boundary-trial preset-generalization-trial preset-jev-contract-trial preset-runtime-shadow-trial preset-runtime-shadow-review preset-enterprise-proof local-superset-runtime-shadow-trial local-superset-runtime-shadow-review preset-config-check preset-bootstrap-check preset-readiness preset-provider-smoke preset-dashboard-readiness preset-live-trial preset-live-trial-approve preset-live-trial-review preset-live-semantic-review preset-compose-check preset-compose-bearer-check superset-chart-matrix verify docker-up docker-down
+.PHONY: install test lint prove benchmark daily-trial enterprise-trial discovery-trial bundle-trial query-trial retrieval-explanation-trial northstar-growth-history-trial northstar-growth-history-review preset-trial preset-boundary-trial preset-generalization-trial preset-jev-contract-trial preset-runtime-shadow-trial preset-runtime-shadow-review preset-enterprise-proof local-superset-runtime-shadow-trial local-superset-runtime-shadow-review preset-config-check preset-bootstrap-check preset-readiness preset-provider-smoke preset-dashboard-readiness preset-live-trial preset-live-trial-approve preset-live-trial-review preset-live-semantic-review preset-compose-check preset-compose-bearer-check superset-chart-matrix verify docker-up docker-down
 
 install:
 	uv sync --extra dev
@@ -33,6 +33,17 @@ query-trial:
 
 retrieval-explanation-trial:
 	TYPESAFE_API_KEY_FILE=$${TYPESAFE_API_KEY_FILE:?set a live TypeSafe key file} uv run python evaluations/retrieval_explanation_trial.py --output artifacts/retrieval-explanation-trial.json
+
+northstar-growth-history-trial:
+	TYPESAFE_API_KEY_FILE=$${TYPESAFE_API_KEY_FILE:?set a live TypeSafe key file} \
+	uv run python -m evaluations.northstar_growth_history_trial \
+		--seed-dir "$${NORTHSTAR_SEED_DIR:?set the Northstar warehouse/init directory}" \
+		--typesafe-key-file "$${TYPESAFE_API_KEY_FILE}" \
+		--output artifacts/northstar-growth-history-live.json
+
+northstar-growth-history-review:
+	uv run python -m evaluations.northstar_growth_history_adversarial_review \
+		artifacts/northstar-growth-history-live.json
 
 preset-trial:
 	uv run python evaluations/preset_hosted_trial.py --output artifacts/preset-hosted-trial.json

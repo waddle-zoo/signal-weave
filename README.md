@@ -234,6 +234,12 @@ fixture shape are documented in
 [`docs/bootstrap-and-certification.md`](docs/bootstrap-and-certification.md).
 The full synthetic Jev-only enterprise trial and its adversarial gate are in
 [`docs/generalized-readiness-trial.md`](docs/generalized-readiness-trial.md).
+The stronger one-team historical-decision replay is documented in
+[`docs/northstar-growth-history-trial.md`](docs/northstar-growth-history-trial.md):
+on the local Northstar example rows, Jev reduced 25 movement-only pushes to 8
+typed routes, with zero unnecessary routes and complete evidence on the 12-case
+holdout-style slice after one card-calibration pass. This is simulated company
+evidence, not a customer claim.
 
 ## Plain-language metric queries
 
