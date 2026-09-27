@@ -115,7 +115,10 @@ counts for audit.
 
 Standalone chart reads also require a usable saved `queries` list before making
 the provider POST request; malformed or missing saved query context fails locally
-instead of becoming a provider-side invalid or unbounded request.
+instead of becoming a provider-side invalid or unbounded request. Saved numeric
+`row_limit` values are normalized to a positive value within the connection
+policy; zero and negative values become `1`, while boolean or malformed values
+fail closed before provider I/O.
 
 After the configuration check, start with the no-credit bootstrap preflight
 before onboarding a card:

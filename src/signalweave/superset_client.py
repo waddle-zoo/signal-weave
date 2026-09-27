@@ -231,7 +231,8 @@ class SupersetClient:
         params: dict[str, Any], key: str, default: int, minimum: int, maximum: int
     ) -> int:
         try:
-            value = int(params.get(key) or default)
+            raw_value = params.get(key)
+            value = int(default if raw_value is None else raw_value)
         except (TypeError, ValueError):
             value = default
         return max(minimum, min(value, maximum))

@@ -350,6 +350,71 @@ async def test_preset_malformed_saved_query_context_fails_before_provider_call(q
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("requested_limit", [0, -10, 100])
+async def test_preset_saved_query_row_limit_is_positive_and_bounded(requested_limit):
+    def handler(request: httpx.Request) -> httpx.Response:
+        payload = json.loads(request.content)
+        expected = 1 if requested_limit <= 0 else 10
+        assert payload["queries"][0]["row_limit"] == expected
+        return httpx.Response(200, json={"result": [{"data": []}]})
+
+    client = PresetCloudClient(
+        "https://workspace.app.preset.test",
+        access_token="preset-token",
+        max_result_rows=10,
+        transport=httpx.MockTransport(handler),
+    )
+
+    result = await client.chart_data(
+        {
+            "id": 101,
+            "query_context": json.dumps(
+                {
+                    "queries": [{"row_limit": requested_limit}],
+                    "datasource": {"id": 17, "type": "table"},
+                }
+            ),
+            "params": {"metrics": ["revenue"], "datasource": "17__table"},
+        }
+    )
+
+    assert result == [{"data": []}]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("requested_limit", [True, "not-an-int"])
+async def test_preset_malformed_saved_row_limit_fails_before_provider_call(requested_limit):
+    calls = 0
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        raise AssertionError("invalid row_limit must fail before provider I/O")
+
+    client = PresetCloudClient(
+        "https://workspace.app.preset.test",
+        access_token="preset-token",
+        max_result_rows=10,
+        transport=httpx.MockTransport(handler),
+    )
+
+    with pytest.raises(PresetPolicyError, match="invalid row_limit"):
+        await client.chart_data(
+            {
+                "id": 101,
+                "query_context": json.dumps(
+                    {
+                        "queries": [{"row_limit": requested_limit}],
+                        "datasource": {"id": 17, "type": "table"},
+                    }
+                ),
+                "params": {"metrics": ["revenue"], "datasource": "17__table"},
+            }
+        )
+    assert calls == 0
+
+
+@pytest.mark.asyncio
 async def test_preset_metadata_only_never_fetches_chart_data():
     paths: list[str] = []
 

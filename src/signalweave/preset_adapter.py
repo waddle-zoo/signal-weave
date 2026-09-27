@@ -234,6 +234,42 @@ class PresetCloudClient(SupersetClient):
                 counts.append(int(value))
         return counts
 
+    @staticmethod
+    def _validate_raw_saved_query_limits(chart: dict[str, Any]) -> None:
+        """Reject malformed saved limits before the generic normalizer can hide them."""
+
+        raw_context = chart.get("query_context")
+        if isinstance(raw_context, str):
+            try:
+                raw_context = json.loads(raw_context)
+            except json.JSONDecodeError:
+                return
+        if not isinstance(raw_context, dict):
+            return
+        raw_queries = raw_context.get("queries")
+        if not isinstance(raw_queries, list):
+            return
+        for query in raw_queries:
+            if not isinstance(query, dict):
+                continue
+            requested = query.get("row_limit")
+            if requested is None:
+                continue
+            if isinstance(requested, bool):
+                raise PresetPolicyError(
+                    "Preset saved query context contained an invalid row_limit"
+                )
+            if isinstance(requested, float) and not requested.is_integer():
+                raise PresetPolicyError(
+                    "Preset saved query context contained an invalid row_limit"
+                )
+            try:
+                int(requested)
+            except (TypeError, ValueError):
+                raise PresetPolicyError(
+                    "Preset saved query context contained an invalid row_limit"
+                ) from None
+
     async def _request_with_retries(
         self,
         client: httpx.AsyncClient,
@@ -293,6 +329,7 @@ class PresetCloudClient(SupersetClient):
                 },
             )
         else:
+            self._validate_raw_saved_query_limits(chart)
             payload = self._saved_query_context(chart) or self._query_context(chart)
             queries = payload.get("queries")
             if not isinstance(queries, list) or not queries or any(
@@ -304,12 +341,20 @@ class PresetCloudClient(SupersetClient):
             if self.max_result_rows is not None:
                 for query in queries:
                     requested = query.get("row_limit")
-                    query["row_limit"] = min(
-                        self.max_result_rows,
-                        int(requested)
-                        if isinstance(requested, int) and not isinstance(requested, bool)
-                        else self.max_result_rows,
-                    )
+                    if isinstance(requested, bool):
+                        raise PresetPolicyError(
+                            "Preset saved query context contained an invalid row_limit"
+                        )
+                    if requested is None:
+                        bounded = self.max_result_rows
+                    else:
+                        try:
+                            bounded = int(requested)
+                        except (TypeError, ValueError):
+                            raise PresetPolicyError(
+                                "Preset saved query context contained an invalid row_limit"
+                            ) from None
+                    query["row_limit"] = max(1, min(self.max_result_rows, bounded))
             payload["force"] = self._force_refresh
             response = await self._request(
                 "POST", "/api/v1/chart/data", timeout=60, json=payload
