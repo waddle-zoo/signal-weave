@@ -135,6 +135,24 @@ The Preset and TypeSafe network transports are synthetic for this trial. The
 runtime/MCP/store/adapter/Jev parsing path is production code; live Jev
 semantics, real provider authorization, and managed hosting remain unproven.
 
+## One-command enterprise proof pack
+
+Run the complete no-credit hosted-Preset proof before using customer
+credentials:
+
+```bash
+make preset-enterprise-proof
+```
+
+This runs the hosted connector, credential/tenant boundary, generated-shape,
+typed Jev contract, and full runtime-shadow trials, then invokes each
+independent reviewer against its serialized report. It writes the aggregate
+report to `artifacts/preset-enterprise-proof.json` and component reports below
+`artifacts/preset-enterprise-proof-components/`. The command uses synthetic
+Preset and TypeSafe transports only; a pass proves local integration and
+fail-closed boundaries, not a real Preset entitlement, live Jev semantics, or
+managed SignalWeave hosting.
+
 The runtime shadow report also records provider catalog-search fan-out. The
 Preset adapter tries the exact title phrase and at most six fallback terms per
 search call; the default fixed-card shadow path makes three discovery calls per

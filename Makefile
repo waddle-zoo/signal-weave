@@ -1,4 +1,4 @@
-.PHONY: install test lint prove benchmark daily-trial enterprise-trial discovery-trial bundle-trial query-trial retrieval-explanation-trial preset-trial preset-boundary-trial preset-generalization-trial preset-jev-contract-trial preset-runtime-shadow-trial preset-runtime-shadow-review local-superset-runtime-shadow-trial local-superset-runtime-shadow-review preset-config-check preset-bootstrap-check preset-readiness preset-provider-smoke preset-dashboard-readiness preset-live-trial preset-live-trial-approve preset-live-trial-review preset-compose-check superset-chart-matrix verify docker-up docker-down
+.PHONY: install test lint prove benchmark daily-trial enterprise-trial discovery-trial bundle-trial query-trial retrieval-explanation-trial preset-trial preset-boundary-trial preset-generalization-trial preset-jev-contract-trial preset-runtime-shadow-trial preset-runtime-shadow-review preset-enterprise-proof local-superset-runtime-shadow-trial local-superset-runtime-shadow-review preset-config-check preset-bootstrap-check preset-readiness preset-provider-smoke preset-dashboard-readiness preset-live-trial preset-live-trial-approve preset-live-trial-review preset-compose-check superset-chart-matrix verify docker-up docker-down
 
 install:
 	uv sync --extra dev
@@ -56,6 +56,10 @@ preset-runtime-shadow-trial:
 
 preset-runtime-shadow-review:
 	uv run python evaluations/preset_runtime_shadow_review.py artifacts/preset-runtime-shadow-trial.json
+
+preset-enterprise-proof:
+	uv run python evaluations/preset_enterprise_proof.py \
+		--output artifacts/preset-enterprise-proof.json
 
 local-superset-runtime-shadow-trial:
 	uv run python -m evaluations.local_superset_runtime_shadow_trial \

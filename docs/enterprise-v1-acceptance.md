@@ -5,12 +5,12 @@
 **Last verified:** 2026-09-27
 
 The hosted-Preset assumptions in this record were checked against Preset's
-current documentation on 2026-09-26: the direct Preset API is Enterprise-only,
+current documentation on 2026-09-27: the direct Preset API is Enterprise-only,
 Preset MCP is documented as an Enterprise add-on, and Preset Alerts & Reports
 are Preset-owned scheduled/event-triggered notifications delivered through
-email or Slack. Those capabilities do not amount to a managed SignalWeave
-endpoint or a server-side Jev extension point; the managed-service gates below
-remain open.
+email or Slack on Professional and Enterprise plans. Those capabilities do not
+amount to a managed SignalWeave endpoint or a server-side Jev extension point;
+the managed-service gates below remain open.
 
 ## V1 claim
 
