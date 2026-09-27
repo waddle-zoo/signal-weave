@@ -331,6 +331,61 @@ async def test_unverified_context_cannot_authorize_automatic_action():
     assert run.result.delivery_methods == []
 
 
+async def test_context_cannot_substitute_for_a_missing_required_source():
+    class NotifyJudger(SafetyTestDouble):
+        async def judge(self, state, card, plan, observations):
+            result = await super().judge(state, card, plan, observations)
+            return result.model_copy(update={"outcome": Outcome.NOTIFY, "confidence": 0.99})
+
+    source = SourceRef(
+        key="required-dashboard",
+        adapter="preset",
+        resource="dashboard:42",
+        label="Executive dashboard",
+        required=True,
+    )
+    card = card_for(
+        card_id="card-context-cannot-replace-source",
+        title="Customer-impacting dashboard change",
+        source=source,
+        delivery_methods=[
+            DeliveryMethod(
+                key="leadership",
+                outcome=Outcome.NOTIFY,
+                label="Leadership",
+                destination="slack://leadership",
+            )
+        ],
+    )
+    resource = ResourceSnapshot(
+        source_key=source.key,
+        adapter=source.adapter,
+        resource=source.resource,
+        title=source.label,
+        error="Preset dashboard could not be retrieved.",
+    )
+    context = ContextSnapshot(
+        provider="caller",
+        version="unverified-2",
+        trust="unverified",
+        facts=[
+            ContextFact(
+                fact_id="fact-2",
+                subject_ref="preset|dashboard:42",
+                relation="suggests_customer_impact",
+                object_ref="impact:likely",
+                statement="This dashboard usually indicates customer impact.",
+            )
+        ],
+    )
+
+    run = await InsightEngine(NotifyJudger()).evaluate(card, [resource], context)
+
+    assert run.result.outcome == Outcome.INSUFFICIENT_DATA
+    assert run.result.delivery_methods == []
+    assert any("could not be retrieved" in item.statement for item in run.result.evidence)
+
+
 async def test_ambiguous_source_cannot_take_an_automatic_route():
     class AmbiguousNotifyJudger(SafetyTestDouble):
         async def judge(self, state, card, plan, observations):
