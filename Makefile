@@ -126,7 +126,6 @@ preset-dashboard-readiness:
 
 preset-live-trial:
 	PRESET_ENV_FILE=$${PRESET_ENV_FILE:-.env.preset} \
-	TYPESAFE_API_KEY_FILE=$${TYPESAFE_API_KEY_FILE:?set a live TypeSafe key file} \
 	uv run python evaluations/preset_live_onboarding_trial.py \
 		--goal "$${PRESET_TRIAL_GOAL:?set a human monitoring goal}" \
 		--why "$${PRESET_TRIAL_WHY:?set why the goal matters}" \
@@ -135,7 +134,6 @@ preset-live-trial:
 
 preset-live-trial-approve:
 	PRESET_ENV_FILE=$${PRESET_ENV_FILE:-.env.preset} \
-	TYPESAFE_API_KEY_FILE=$${TYPESAFE_API_KEY_FILE:?set a live TypeSafe key file} \
 	uv run python evaluations/preset_live_onboarding_trial.py \
 		--goal "$${PRESET_TRIAL_GOAL:?set a human monitoring goal}" \
 		--why "$${PRESET_TRIAL_WHY:?set why the goal matters}" \

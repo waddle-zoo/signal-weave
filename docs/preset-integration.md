@@ -102,6 +102,9 @@ or serialized reports.
 The Make targets for `preset-bootstrap-check`, `preset-readiness`, the chart
 readiness probes, and the live onboarding trial use the same default. Direct
 script invocations can opt in with `PRESET_ENV_FILE=...`.
+The live onboarding targets also accept `TYPESAFE_API_KEY` or
+`TYPESAFE_API_KEY_FILE` from that file; if neither is configured, the Jev-only
+runtime fails closed before provider evaluation.
 
 This is a zero-network configuration check. It validates the production Preset
 credential mode, tenant binding, policy, HTTP/OIDC mode, and Jev credential

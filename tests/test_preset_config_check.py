@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import json
+import os
 
 import pytest
 
 import scripts.preset_config_check as config_check
+from signalweave.preset_env import preset_environment_file
 
 
 def _clear_config(monkeypatch):
@@ -94,6 +96,19 @@ def test_config_check_loads_env_file_without_overriding_process_values(monkeypat
     serialized = json.dumps(report)
     assert "preset-secret" not in serialized
     assert "typesafe-key" not in serialized
+
+
+def test_preset_env_overlay_is_scoped_and_restored(monkeypatch, tmp_path):
+    _clear_config(monkeypatch)
+    env_file = tmp_path / ".env.preset"
+    env_file.write_text("PRESET_URL=https://workspace.example\n", encoding="utf-8")
+    monkeypatch.setenv("PRESET_ENV_FILE", str(env_file))
+
+    assert "PRESET_URL" not in os.environ
+    with preset_environment_file() as loaded:
+        assert loaded == str(env_file)
+        assert os.environ["PRESET_URL"] == "https://workspace.example"
+    assert "PRESET_URL" not in os.environ
 
 
 def test_config_check_accepts_oidc_and_mounted_secrets_without_static_principal(
