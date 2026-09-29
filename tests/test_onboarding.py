@@ -982,6 +982,62 @@ async def test_sqlite_runtime_replays_completed_evaluation_after_restart(tmp_pat
 
 
 @pytest.mark.asyncio
+async def test_follow_up_evaluation_links_to_parent_receipt(tmp_path):
+    server = make_server(tmp_path)
+    drafted = await tool(server, "draft_insight_card")(
+        title="Multi-step growth pulse",
+        what_to_watch="Online revenue and its likely drivers.",
+        why_watch="Investigate material movement before notifying leadership.",
+        watch_for=["material online revenue movement and corroborating drivers"],
+        questions=["What changed and what evidence explains it?"],
+        decision_guidance="Notify leadership only after diagnostic evidence corroborates a material cause.",
+        delivery_methods=[
+            {
+                "key": "analytics",
+                "outcome": "investigate",
+                "label": "Analytics",
+                "destination": "slack://analytics",
+            },
+            {
+                "key": "leadership",
+                "outcome": "notify",
+                "label": "Leadership",
+                "destination": "slack://leadership",
+            },
+        ],
+        follow_up_guidance="Inspect diagnostic sources, then re-evaluate before delivery.",
+        sources=[
+            {
+                "key": "growth",
+                "adapter": "superset",
+                "resource": "dashboard:7",
+                "label": "Growth overview",
+            }
+        ],
+    )
+    card_id = drafted["card"]["id"]
+    assert drafted["card"]["follow_up_guidance"] == (
+        "Inspect diagnostic sources, then re-evaluate before delivery."
+    )
+    await tool(server, "approve_insight_card")(card_id)
+    first = await tool(server, "evaluate_insight_card")(
+        card_id,
+        idempotency_key="workflow-parent",
+    )
+
+    second = await tool(server, "evaluate_insight_card")(
+        card_id,
+        idempotency_key="workflow-child",
+        parent_receipt_id=first["receipt"]["receipt_id"],
+        workflow_step_key="investigate",
+    )
+
+    assert second["receipt"]["parent_receipt_id"] == first["receipt"]["receipt_id"]
+    assert second["receipt"]["workflow_step_key"] == "investigate"
+    assert second["result"]["workflow"]["action"] == "deliver"
+
+
+@pytest.mark.asyncio
 async def test_payload_budget_failure_is_persisted_as_structured_receipt(tmp_path):
     server = make_server(tmp_path, max_jev_payload_bytes=1_024)
     source = {

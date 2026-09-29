@@ -25,6 +25,7 @@ from .models import (
     ResourceSnapshot,
     RunTelemetry,
     SourceRef,
+    WorkflowHandoff,
 )
 from .retrieval import build_candidate_pool, resource_ref
 from .sources import SourceRegistry
@@ -343,6 +344,9 @@ class InsightEngine:
             materials.source_errors,
         )
         result = result.model_copy(
+            update={"workflow": self._workflow_handoff(evaluation_card, result)}
+        )
+        result = result.model_copy(
             update={
                 "telemetry": self._run_telemetry(
                     started=started,
@@ -359,6 +363,89 @@ class InsightEngine:
             resources=resources,
             plan=plan,
             result=result,
+        )
+
+    @staticmethod
+    def _workflow_handoff(card: InsightCard, result: InsightResult) -> WorkflowHandoff:
+        """Turn the final outcome into a bounded caller-owned next step."""
+
+        objective = card.why_watch or card.what_to_watch
+        delivery_keys = [method.key for method in result.delivery_methods]
+        if result.outcome == Outcome.IGNORE:
+            return WorkflowHandoff(
+                status="complete",
+                step_key="suppress",
+                action="suppress",
+                objective=objective,
+                instructions="Record the result and suppress delivery for this run.",
+                completion_criteria="No further workflow step is required unless new evidence arrives.",
+            )
+        if result.outcome in {Outcome.NOTIFY, Outcome.ESCALATE}:
+            return WorkflowHandoff(
+                status="ready",
+                step_key="deliver",
+                action="deliver",
+                objective=objective,
+                instructions=(
+                    "Deliver the evidence bundle to the configured destination. "
+                    "Do not invent a destination or change the outcome."
+                ),
+                required_source_keys=sorted(set(result.source_keys)),
+                completion_criteria="The caller-owned delivery adapter accepted the evidence bundle.",
+                delivery_method_keys=delivery_keys,
+            )
+        if result.outcome == Outcome.INSUFFICIENT_DATA:
+            required_sources = sorted(source.key for source in card.sources if source.required)
+            return WorkflowHandoff(
+                status="blocked",
+                step_key="repair-source",
+                action="repair_source",
+                objective=objective,
+                instructions=(
+                    card.follow_up_guidance
+                    or "Repair or validate the required source, then re-evaluate the same card."
+                ),
+                required_source_keys=required_sources,
+                completion_criteria="Required sources are healthy and a new evaluation is submitted.",
+                delivery_method_keys=delivery_keys,
+            )
+
+        selected_sources = (
+            [selection.source.key for selection in result.investigation.selected]
+            if result.investigation is not None
+            else []
+        )
+        has_follow_up_guidance = bool(card.follow_up_guidance.strip())
+        if not has_follow_up_guidance and delivery_keys:
+            return WorkflowHandoff(
+                status="ready",
+                step_key="deliver",
+                action="deliver",
+                objective=objective,
+                instructions=(
+                    "Deliver the configured investigation route. This card does not define "
+                    "a follow-up step, so the existing single-step behavior is terminal."
+                ),
+                required_source_keys=sorted(set(result.source_keys)),
+                completion_criteria="The caller-owned delivery adapter accepted the evidence bundle.",
+                delivery_method_keys=delivery_keys,
+            )
+        return WorkflowHandoff(
+            status="pending" if has_follow_up_guidance else "blocked",
+            step_key="investigate",
+            action="retrieve_evidence" if has_follow_up_guidance else "request_review",
+            objective=objective,
+            instructions=(
+                card.follow_up_guidance
+                or "Review the evidence and gather the missing context before deciding whether to notify."
+            ),
+            required_source_keys=sorted(set(selected_sources)),
+            completion_criteria=(
+                "Submit the follow-up evidence to the same card for re-evaluation before leadership delivery."
+                if has_follow_up_guidance
+                else "A human or caller-owned agent must review the evidence and decide the next retrieval."
+            ),
+            delivery_method_keys=delivery_keys,
         )
 
     async def _load_context(

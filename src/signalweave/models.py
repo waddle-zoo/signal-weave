@@ -178,6 +178,8 @@ class DecisionReceipt(BaseModel):
     card_id: str = Field(min_length=1, max_length=160)
     card_version: int = Field(ge=1)
     actor: str = Field(min_length=1, max_length=240)
+    parent_receipt_id: str | None = Field(default=None, max_length=160)
+    workflow_step_key: str | None = Field(default=None, max_length=160)
     context_provider: str | None = Field(default=None, max_length=160)
     context_version: str | None = Field(default=None, max_length=240)
     delivery_mode: Literal["shadow", "live"] = "shadow"
@@ -631,6 +633,14 @@ class InsightCard(BaseModel):
             "escalate, and insufficient_data mean for this card."
         ),
     )
+    follow_up_guidance: str = Field(
+        default="",
+        max_length=8000,
+        description=(
+            "Optional free-form instructions for an agent after an investigate or "
+            "insufficient_data outcome. The caller owns execution and re-evaluation."
+        ),
+    )
     sources: list[SourceRef] = Field(default_factory=list, max_length=200)
     comparison_windows: list[str] = Field(
         default_factory=lambda: ["previous_period", "trailing_4_period_average"],
@@ -798,6 +808,26 @@ class InvestigationTrace(BaseModel):
     warnings: list[str] = Field(default_factory=list, max_length=50)
 
 
+class WorkflowHandoff(BaseModel):
+    """A typed, caller-owned next step for continuing one card decision."""
+
+    status: Literal["complete", "ready", "pending", "blocked"]
+    step_key: str = Field(min_length=1, max_length=160)
+    action: Literal[
+        "suppress",
+        "retrieve_evidence",
+        "deliver",
+        "repair_source",
+        "request_review",
+        "re_evaluate",
+    ]
+    objective: str = Field(min_length=1, max_length=4000)
+    instructions: str = Field(default="", max_length=8000)
+    required_source_keys: list[str] = Field(default_factory=list, max_length=100)
+    completion_criteria: str = Field(default="", max_length=4000)
+    delivery_method_keys: list[str] = Field(default_factory=list, max_length=100)
+
+
 class RunTelemetry(BaseModel):
     """Provider-neutral measurements attached to one evaluated decision.
 
@@ -843,6 +873,7 @@ class InsightResult(BaseModel):
     retrieval: EvidenceBundle | None = None
     context: ContextSnapshot | None = None
     investigation: InvestigationTrace | None = None
+    workflow: WorkflowHandoff | None = None
     telemetry: RunTelemetry = Field(default_factory=RunTelemetry)
     evaluated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     evaluator: str

@@ -90,6 +90,7 @@ The user-facing contract is intentionally generic:
     "Is this outside expected seasonal behavior?",
     "Does this warrant a Revenue Operations response?"
   ],
+  "follow_up_guidance": "If the evidence is material but inconclusive, inspect the authorized diagnostic sources and re-evaluate this card before delivery.",
   "sources": [
     {
       "key": "sales-dashboard",
@@ -174,6 +175,16 @@ scheduler key or the returned receipt id.
 
 The narrow shadow-pilot contract and its proof commands are documented in
 [`docs/shadow-pilot-contract.md`](docs/shadow-pilot-contract.md).
+
+Cards can also opt into a caller-owned multi-step loop with
+`follow_up_guidance`. The result includes a typed `workflow` handoff such as
+`retrieve_evidence`, `repair_source`, `deliver`, or `suppress`; a legacy
+investigate card with a configured route remains a terminal `deliver` handoff.
+The agent runs its own tools and submits a versioned context snapshot back to
+the same card.
+SignalWeave never invents destinations or executes side effects. See
+[`docs/multi-step-workflows.md`](docs/multi-step-workflows.md) and the live
+Northstar trial in `evaluations/northstar_multistep_trial.py`.
 
 Cards created through the proposal path also default to one bounded investigation
 stage. Jev first decides whether the initial evidence needs more context, then
