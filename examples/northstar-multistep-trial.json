@@ -3,7 +3,7 @@
   "dataset_id": "northstar-growth-multistep-v1",
   "card": {
     "id": "northstar-growth-multistep-v1",
-    "decision_guidance": "Apply this staged policy in order. If the primary source is unavailable, return insufficient_data and repair the source; never interpret missing data as business movement. A primary movement below 10 percent in absolute value is ordinary noise: return ignore and do not investigate or notify, even when individual supporting signals move slightly. The immediate broad-corroboration path requires net sales down at least 15 percent, at least two channels down at least 10 percent, and either web conversion or finance revenue itself down at least 10 percent. If sales channels decline while conversion or finance is nonnegative, positive, or otherwise contradicts the decline, do not use the broad path: return investigate. Otherwise, for a material decline, return investigate when the evidence does not yet explain the movement, route the caller-owned agent to the diagnostic instructions, and do not notify leadership before re-evaluation. After re-evaluation, notify leadership when the material movement has either the broad corroboration above or a credible, time-linked customer-impacting cause supported by authorized diagnostic evidence, even if it is concentrated in one channel. Keep the result as investigate when the diagnostic evidence is conflicting, definition-related, or insufficient to support a cause.",
+    "decision_guidance": "Apply this staged policy in order. If the primary source is unavailable, return insufficient_data and repair the source; never interpret missing data as business movement. A primary movement at or below 10 percent in absolute value is ordinary noise: return ignore and do not investigate or notify, even when individual supporting signals move slightly. The 15 percent materiality gate is absolute and cannot be overridden by diagnostic context: if total net sales decline is below 15 percent, return investigate and never notify leadership. The immediate broad-corroboration path requires net sales down at least 15 percent, at least two channels down at least 10 percent, and either web conversion or finance revenue itself down at least 10 percent. If sales channels decline while conversion or finance is nonnegative, positive, or otherwise contradicts the decline, do not use the broad path: return investigate. Otherwise, for a material decline, return investigate when the evidence does not yet explain the movement, route the caller-owned agent to the diagnostic instructions, and do not notify leadership before re-evaluation. After re-evaluation, notify leadership when the material movement has either the broad corroboration above or a credible, time-linked customer-impacting cause supported by two independent authorized diagnostic facts, even if it is concentrated in one channel. Keep the result as investigate when the diagnostic evidence is conflicting, definition-related, below materiality, or insufficient to support a cause.",
     "follow_up_guidance": "When the result is investigate, inspect the relevant diagnostic and ownership sources for the stated movement. Return only authorized evidence with its time relationship and source provenance, then re-evaluate this same card before any leadership delivery. Do not treat a single correlated signal as proof of causation.",
     "investigation_mode": "none"
   },
@@ -36,8 +36,16 @@
           "subject_ref": "superset|dashboard:1",
           "relation": "diagnosed_by",
           "object_ref": "ops|checkout-failures",
-          "statement": "Checkout failures increased 42% in the online channel 12 minutes after payment deployment v1842, while web sessions were stable.",
+          "statement": "Confirmed customer-impacting checkout regression: failures increased 42% in the online channel while web sessions stayed stable.",
           "provenance": ["ops-events:payment-v1842", "checkout-monitor:2026-08-03"]
+        },
+        {
+          "fact_id": "payment-deployment-timing",
+          "subject_ref": "ops|checkout-failures",
+          "relation": "followed_by",
+          "object_ref": "deploy|payment-v1842",
+          "statement": "The checkout failure increase began 12 minutes after payment deployment v1842 and the Payments on-call incident review identified the rollout as the most likely driver.",
+          "provenance": ["ops-events:payment-v1842", "incident-review:payments-2026-08"]
         },
         {
           "fact_id": "online-owner",
@@ -46,6 +54,24 @@
           "object_ref": "team|payments-oncall",
           "statement": "Payments on-call owns checkout failure regressions.",
           "provenance": ["ownership-catalog:payments"]
+        }
+      ],
+      "additional_diagnostic_facts": [
+        {
+          "fact_id": "payment-incident-scope-validated",
+          "subject_ref": "ops|checkout-failures",
+          "relation": "validated_by",
+          "object_ref": "data-trust|online-sales-definition",
+          "statement": "Data Trust verified that the checkout-failure cohort and the online-sales dashboard use the same channel population and comparison window.",
+          "provenance": ["data-trust-review:online-sales-v2", "metric-catalog:online-sales"]
+        },
+        {
+          "fact_id": "payment-incident-cause-confirmed",
+          "subject_ref": "deploy|payment-v1842",
+          "relation": "confirmed_by",
+          "object_ref": "incident|payments-1842",
+          "statement": "The independent payments incident review confirmed the rollout as the primary cause of the customer-impacting checkout regression; no competing driver explained the movement.",
+          "provenance": ["incident-review:payments-2026-08", "payments-oncall:postmortem"]
         }
       ]
     },

@@ -251,6 +251,9 @@ on the local Northstar example rows, Jev reduced 25 movement-only pushes to 8
 typed routes, with zero unnecessary routes and complete evidence on the 12-case
 holdout-style slice after one card-calibration pass. This is simulated company
 evidence, not a customer claim.
+The longitudinal panel trial extends that proof across eight simulated months,
+48 workflows, repeated multi-step investigations, and independent role reviews:
+[`docs/northstar-longitudinal-panel-trial.md`](docs/northstar-longitudinal-panel-trial.md).
 
 ## Plain-language metric queries
 
