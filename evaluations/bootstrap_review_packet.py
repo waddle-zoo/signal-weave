@@ -33,7 +33,8 @@ def packets(report: dict) -> tuple[list[dict], dict, dict]:
             public["period"] = shift_timestamps(public["period"], delta)
         cases.append({"case_id": identifier, "business": {
             key: public[key] for key in ("company", "brief", "glossary", "owner_answers",
-                                        "destinations", "catalog", "period")},
+                                        "destinations", "catalog", "period", "numeric_vocabulary",
+                                        "submission_contract")},
             "analysis": row["submission"], "inspected_refs": row["inspected_refs"],
             "execution_complete": row["status"] == "complete"})
         mapping[identifier] = {key: row[key] for key in ("scenario_id", "period_id", "arm")}

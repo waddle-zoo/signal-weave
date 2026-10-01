@@ -74,6 +74,7 @@ def test_blind_packets_exclude_oracles_scores_and_arm_metadata(review_report):
         assert set(case) == {"case_id", "business", "analysis", "inspected_refs", "execution_complete"}
         assert set(case["business"]) == {
             "company", "brief", "glossary", "owner_answers", "destinations", "catalog", "period",
+            "numeric_vocabulary", "submission_contract",
         }
     assert {entry["arm"] for entry in mapping.values()} == {"luna_bi", "luna_signalweave_jev"}
     assert "SCORER_RESULT_CANARY" in json.dumps(compact)

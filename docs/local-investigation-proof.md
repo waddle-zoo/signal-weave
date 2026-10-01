@@ -4,6 +4,13 @@ Scope: a first local runtime and quantitative-analysis slice. This is simulated
 company data with **live Jev**, not production customer adoption, a causal-inference
 benchmark, or a claim of superiority to a frontier agent.
 
+**October 1 update:** the paired bootstrap trial has now run using Codex's saved
+login and live Jev; a separate OpenAI API key is not needed for that transport.
+The [fresh six-company result](bootstrap-codex-holdout-v3-01.md) repaired setup
+completion but did **not** meet the comparative quality/resource gates. The
+release and six-case execution evidence below remain historical, bounded checks,
+not proof of successful novice onboarding or an enterprise advantage.
+
 ## Published native preview: v0.2.0rc1
 
 The [local preview release](https://github.com/waddle-zoo/signal-weave/releases/tag/v0.2.0rc1)
@@ -37,7 +44,7 @@ These are distribution and bounded-runtime checks. The binary smoke supplies an
 approved synthetic card; it is **not** novice onboarding or a Luna comparison.
 The [paired bootstrap protocol](bootstrap-benchmark-protocol.md) and independent
 scorer are implemented and reviewed for development testing. The live paired run
-remains unexecuted pending an authorized OpenAI credential. No new comparative
+was then unexecuted pending an authorized OpenAI credential. No comparative
 accuracy, latency, cost, or enterprise-readiness claim follows from this release.
 
 macOS builds remain unsigned by a Developer ID and are not notarized; managed
