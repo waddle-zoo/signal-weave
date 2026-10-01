@@ -1,0 +1,814 @@
+{
+  "live_jev": true,
+  "cases": [
+    {
+      "case": "offsetting-segments",
+      "expected_outcome": "notify",
+      "outcome": "notify",
+      "seconds": 0.9326732499757782,
+      "checks": {
+        "analysis_status": true,
+        "noncausal_contract": true,
+        "delivery_disabled": true,
+        "delta": true,
+        "policy_outcome": true,
+        "replay_no_jev": true
+      },
+      "analysis": {
+        "source_key": "activity",
+        "comparison_key": "activity-breakdown",
+        "metric": "activity",
+        "dimension": "segment",
+        "unit": "count",
+        "method": "additive_contribution_v1",
+        "status": "complete",
+        "required": true,
+        "input_digest": "9e9837dbd7e1d55b50ebc56bc7bf08820a8a5ceb071d598fa4f4f3f7c95ea307",
+        "query_refs": [
+          "sqlite:measurements:group-by-period",
+          "sqlite:measurements:group-by-period-segment"
+        ],
+        "comparison": {
+          "key": "activity-breakdown",
+          "metric": "activity",
+          "definition": "Approved completed activity per eligible population",
+          "population": "Production eligible accounts",
+          "unit": "count",
+          "dimension": "segment",
+          "kind": "additive",
+          "baseline_start": "2026-08-01T00:00:00Z",
+          "baseline_end": "2026-08-08T00:00:00Z",
+          "current_start": "2026-08-08T00:00:00Z",
+          "current_end": "2026-08-15T00:00:00Z",
+          "comparison_window": "previous_period",
+          "coverage": "complete",
+          "disjoint_segments": true,
+          "comparable": true,
+          "require_equal_duration": false,
+          "required": true,
+          "query_refs": [
+            "sqlite:measurements:group-by-period",
+            "sqlite:measurements:group-by-period-segment"
+          ],
+          "baseline_total": {
+            "value": 100,
+            "numerator": null,
+            "denominator": null
+          },
+          "current_total": {
+            "value": 80,
+            "numerator": null,
+            "denominator": null
+          },
+          "segments": [
+            {
+              "segment": "online",
+              "baseline": {
+                "value": 60,
+                "numerator": null,
+                "denominator": null
+              },
+              "current": {
+                "value": 30,
+                "numerator": null,
+                "denominator": null
+              }
+            },
+            {
+              "segment": "store",
+              "baseline": {
+                "value": 40,
+                "numerator": null,
+                "denominator": null
+              },
+              "current": {
+                "value": 50,
+                "numerator": null,
+                "denominator": null
+              }
+            }
+          ]
+        },
+        "baseline": 100,
+        "current": 80,
+        "delta": -20,
+        "residual": 0,
+        "within_effect": null,
+        "mix_effect": null,
+        "contributions": [
+          {
+            "segment": "online",
+            "baseline": 60,
+            "current": 30,
+            "contribution": -30,
+            "within_effect": null,
+            "mix_effect": null
+          },
+          {
+            "segment": "store",
+            "baseline": 40,
+            "current": 50,
+            "contribution": 10,
+            "within_effect": null,
+            "mix_effect": null
+          }
+        ],
+        "issues": [],
+        "claim_type": "accounting_decomposition",
+        "limitations": [
+          "Contributions explain the measured difference, not its causal mechanism.",
+          "No sampling uncertainty or statistical significance is estimated from these aggregates.",
+          "Coverage, population and comparability depend on the source measurement contract."
+        ]
+      },
+      "telemetry": {
+        "wall_time_ms": 885.5142089887522,
+        "source_fetch_ms": 359.2890829895623,
+        "source_count": 1,
+        "observation_count": 0,
+        "evidence_count": 1,
+        "jev_requests": 2,
+        "jev_input_tokens": 8084,
+        "jev_output_tokens": 316,
+        "jev_payload_bytes": 23206,
+        "jev_payload_budget_bytes": 4000000,
+        "query_calls": 3,
+        "query_bytes_scanned": 0,
+        "query_cache_hits": 0,
+        "query_cache_misses": 0,
+        "warnings": []
+      }
+    },
+    {
+      "case": "flat-total-hidden-movement",
+      "expected_outcome": "notify",
+      "outcome": "notify",
+      "seconds": 0.9019773749751039,
+      "checks": {
+        "analysis_status": true,
+        "noncausal_contract": true,
+        "delivery_disabled": true,
+        "delta": true,
+        "policy_outcome": true,
+        "replay_no_jev": true
+      },
+      "analysis": {
+        "source_key": "activity",
+        "comparison_key": "activity-breakdown",
+        "metric": "activity",
+        "dimension": "segment",
+        "unit": "count",
+        "method": "additive_contribution_v1",
+        "status": "complete",
+        "required": true,
+        "input_digest": "04a11dbb769a2ccaf69e5a1c3057e50d7723613382f049c3cd5da73ebdf35b52",
+        "query_refs": [
+          "sqlite:measurements:group-by-period",
+          "sqlite:measurements:group-by-period-segment"
+        ],
+        "comparison": {
+          "key": "activity-breakdown",
+          "metric": "activity",
+          "definition": "Approved completed activity per eligible population",
+          "population": "Production eligible accounts",
+          "unit": "count",
+          "dimension": "segment",
+          "kind": "additive",
+          "baseline_start": "2026-08-01T00:00:00Z",
+          "baseline_end": "2026-08-08T00:00:00Z",
+          "current_start": "2026-08-08T00:00:00Z",
+          "current_end": "2026-08-15T00:00:00Z",
+          "comparison_window": "previous_period",
+          "coverage": "complete",
+          "disjoint_segments": true,
+          "comparable": true,
+          "require_equal_duration": false,
+          "required": true,
+          "query_refs": [
+            "sqlite:measurements:group-by-period",
+            "sqlite:measurements:group-by-period-segment"
+          ],
+          "baseline_total": {
+            "value": 100,
+            "numerator": null,
+            "denominator": null
+          },
+          "current_total": {
+            "value": 100,
+            "numerator": null,
+            "denominator": null
+          },
+          "segments": [
+            {
+              "segment": "enterprise",
+              "baseline": {
+                "value": 90,
+                "numerator": null,
+                "denominator": null
+              },
+              "current": {
+                "value": 70,
+                "numerator": null,
+                "denominator": null
+              }
+            },
+            {
+              "segment": "self-serve",
+              "baseline": {
+                "value": 10,
+                "numerator": null,
+                "denominator": null
+              },
+              "current": {
+                "value": 30,
+                "numerator": null,
+                "denominator": null
+              }
+            }
+          ]
+        },
+        "baseline": 100,
+        "current": 100,
+        "delta": 0,
+        "residual": 0,
+        "within_effect": null,
+        "mix_effect": null,
+        "contributions": [
+          {
+            "segment": "enterprise",
+            "baseline": 90,
+            "current": 70,
+            "contribution": -20,
+            "within_effect": null,
+            "mix_effect": null
+          },
+          {
+            "segment": "self-serve",
+            "baseline": 10,
+            "current": 30,
+            "contribution": 20,
+            "within_effect": null,
+            "mix_effect": null
+          }
+        ],
+        "issues": [],
+        "claim_type": "accounting_decomposition",
+        "limitations": [
+          "Contributions explain the measured difference, not its causal mechanism.",
+          "No sampling uncertainty or statistical significance is estimated from these aggregates.",
+          "Coverage, population and comparability depend on the source measurement contract."
+        ]
+      },
+      "telemetry": {
+        "wall_time_ms": 855.1479579764418,
+        "source_fetch_ms": 383.03637504577637,
+        "source_count": 1,
+        "observation_count": 0,
+        "evidence_count": 1,
+        "jev_requests": 2,
+        "jev_input_tokens": 8100,
+        "jev_output_tokens": 316,
+        "jev_payload_bytes": 23261,
+        "jev_payload_budget_bytes": 4000000,
+        "query_calls": 3,
+        "query_bytes_scanned": 0,
+        "query_cache_hits": 0,
+        "query_cache_misses": 0,
+        "warnings": []
+      }
+    },
+    {
+      "case": "simpson-reversal",
+      "expected_outcome": "notify",
+      "outcome": "notify",
+      "seconds": 0.8967691659927368,
+      "checks": {
+        "analysis_status": true,
+        "noncausal_contract": true,
+        "delivery_disabled": true,
+        "delta": true,
+        "within_effect": true,
+        "mix_effect": true,
+        "policy_outcome": true,
+        "replay_no_jev": true
+      },
+      "analysis": {
+        "source_key": "activity",
+        "comparison_key": "activity-breakdown",
+        "metric": "activity",
+        "dimension": "segment",
+        "unit": "proportion",
+        "method": "symmetric_rate_decomposition_v1",
+        "status": "complete",
+        "required": true,
+        "input_digest": "d559e3b857ef5b5f207ae5ae34e760fb979ac34671472bdce33bcfd2c00cb492",
+        "query_refs": [
+          "sqlite:measurements:group-by-period",
+          "sqlite:measurements:group-by-period-segment"
+        ],
+        "comparison": {
+          "key": "activity-breakdown",
+          "metric": "activity",
+          "definition": "Approved completed activity per eligible population",
+          "population": "Production eligible accounts",
+          "unit": "proportion",
+          "dimension": "segment",
+          "kind": "rate",
+          "baseline_start": "2026-08-01T00:00:00Z",
+          "baseline_end": "2026-08-08T00:00:00Z",
+          "current_start": "2026-08-08T00:00:00Z",
+          "current_end": "2026-08-15T00:00:00Z",
+          "comparison_window": "previous_period",
+          "coverage": "complete",
+          "disjoint_segments": true,
+          "comparable": true,
+          "require_equal_duration": false,
+          "required": true,
+          "query_refs": [
+            "sqlite:measurements:group-by-period",
+            "sqlite:measurements:group-by-period-segment"
+          ],
+          "baseline_total": {
+            "value": null,
+            "numerator": 82,
+            "denominator": 100
+          },
+          "current_total": {
+            "value": null,
+            "numerator": 28,
+            "denominator": 100
+          },
+          "segments": [
+            {
+              "segment": "new",
+              "baseline": {
+                "value": null,
+                "numerator": 1,
+                "denominator": 10
+              },
+              "current": {
+                "value": null,
+                "numerator": 18,
+                "denominator": 90
+              }
+            },
+            {
+              "segment": "returning",
+              "baseline": {
+                "value": null,
+                "numerator": 81,
+                "denominator": 90
+              },
+              "current": {
+                "value": null,
+                "numerator": 10,
+                "denominator": 10
+              }
+            }
+          ]
+        },
+        "baseline": 0.82,
+        "current": 0.28,
+        "delta": -0.54,
+        "residual": -8.326672684688674e-17,
+        "within_effect": 0.1,
+        "mix_effect": -0.64,
+        "contributions": [
+          {
+            "segment": "returning",
+            "baseline": 0.9,
+            "current": 1,
+            "contribution": -0.71,
+            "within_effect": 0.05,
+            "mix_effect": -0.76
+          },
+          {
+            "segment": "new",
+            "baseline": 0.1,
+            "current": 0.2,
+            "contribution": 0.17,
+            "within_effect": 0.05,
+            "mix_effect": 0.12
+          }
+        ],
+        "issues": [],
+        "claim_type": "accounting_decomposition",
+        "limitations": [
+          "Contributions explain the measured difference, not its causal mechanism.",
+          "No sampling uncertainty or statistical significance is estimated from these aggregates.",
+          "Coverage, population and comparability depend on the source measurement contract."
+        ]
+      },
+      "telemetry": {
+        "wall_time_ms": 831.5936669823714,
+        "source_fetch_ms": 372.17020796379074,
+        "source_count": 1,
+        "observation_count": 0,
+        "evidence_count": 1,
+        "jev_requests": 2,
+        "jev_input_tokens": 8254,
+        "jev_output_tokens": 316,
+        "jev_payload_bytes": 23282,
+        "jev_payload_budget_bytes": 4000000,
+        "query_calls": 3,
+        "query_bytes_scanned": 0,
+        "query_cache_hits": 0,
+        "query_cache_misses": 0,
+        "warnings": []
+      }
+    },
+    {
+      "case": "mix-only",
+      "expected_outcome": "notify",
+      "outcome": "notify",
+      "seconds": 0.8732227089931257,
+      "checks": {
+        "analysis_status": true,
+        "noncausal_contract": true,
+        "delivery_disabled": true,
+        "delta": true,
+        "within_effect": true,
+        "mix_effect": true,
+        "policy_outcome": true,
+        "replay_no_jev": true
+      },
+      "analysis": {
+        "source_key": "activity",
+        "comparison_key": "activity-breakdown",
+        "metric": "activity",
+        "dimension": "segment",
+        "unit": "proportion",
+        "method": "symmetric_rate_decomposition_v1",
+        "status": "complete",
+        "required": true,
+        "input_digest": "12b4f3b3b542ac1bc1a97c5cabda09bc180af31c2e09d1a63d694a4659a9c20d",
+        "query_refs": [
+          "sqlite:measurements:group-by-period",
+          "sqlite:measurements:group-by-period-segment"
+        ],
+        "comparison": {
+          "key": "activity-breakdown",
+          "metric": "activity",
+          "definition": "Approved completed activity per eligible population",
+          "population": "Production eligible accounts",
+          "unit": "proportion",
+          "dimension": "segment",
+          "kind": "rate",
+          "baseline_start": "2026-08-01T00:00:00Z",
+          "baseline_end": "2026-08-08T00:00:00Z",
+          "current_start": "2026-08-08T00:00:00Z",
+          "current_end": "2026-08-15T00:00:00Z",
+          "comparison_window": "previous_period",
+          "coverage": "complete",
+          "disjoint_segments": true,
+          "comparable": true,
+          "require_equal_duration": false,
+          "required": true,
+          "query_refs": [
+            "sqlite:measurements:group-by-period",
+            "sqlite:measurements:group-by-period-segment"
+          ],
+          "baseline_total": {
+            "value": null,
+            "numerator": 74,
+            "denominator": 100
+          },
+          "current_total": {
+            "value": null,
+            "numerator": 26,
+            "denominator": 100
+          },
+          "segments": [
+            {
+              "segment": "high-intent",
+              "baseline": {
+                "value": null,
+                "numerator": 72,
+                "denominator": 90
+              },
+              "current": {
+                "value": null,
+                "numerator": 8,
+                "denominator": 10
+              }
+            },
+            {
+              "segment": "low-intent",
+              "baseline": {
+                "value": null,
+                "numerator": 2,
+                "denominator": 10
+              },
+              "current": {
+                "value": null,
+                "numerator": 18,
+                "denominator": 90
+              }
+            }
+          ]
+        },
+        "baseline": 0.74,
+        "current": 0.26,
+        "delta": -0.48,
+        "residual": 2.7755575615628914e-17,
+        "within_effect": 0,
+        "mix_effect": -0.48,
+        "contributions": [
+          {
+            "segment": "high-intent",
+            "baseline": 0.8,
+            "current": 0.8,
+            "contribution": -0.64,
+            "within_effect": 0,
+            "mix_effect": -0.64
+          },
+          {
+            "segment": "low-intent",
+            "baseline": 0.2,
+            "current": 0.2,
+            "contribution": 0.16,
+            "within_effect": 0,
+            "mix_effect": 0.16
+          }
+        ],
+        "issues": [],
+        "claim_type": "accounting_decomposition",
+        "limitations": [
+          "Contributions explain the measured difference, not its causal mechanism.",
+          "No sampling uncertainty or statistical significance is estimated from these aggregates.",
+          "Coverage, population and comparability depend on the source measurement contract."
+        ]
+      },
+      "telemetry": {
+        "wall_time_ms": 826.7936250194907,
+        "source_fetch_ms": 372.6479159668088,
+        "source_count": 1,
+        "observation_count": 0,
+        "evidence_count": 1,
+        "jev_requests": 2,
+        "jev_input_tokens": 8264,
+        "jev_output_tokens": 316,
+        "jev_payload_bytes": 23328,
+        "jev_payload_budget_bytes": 4000000,
+        "query_calls": 3,
+        "query_bytes_scanned": 0,
+        "query_cache_hits": 0,
+        "query_cache_misses": 0,
+        "warnings": []
+      }
+    },
+    {
+      "case": "unchanged",
+      "expected_outcome": "ignore",
+      "outcome": "ignore",
+      "seconds": 0.7911275000078604,
+      "checks": {
+        "analysis_status": true,
+        "noncausal_contract": true,
+        "delivery_disabled": true,
+        "delta": true,
+        "policy_outcome": true,
+        "replay_no_jev": true
+      },
+      "analysis": {
+        "source_key": "activity",
+        "comparison_key": "activity-breakdown",
+        "metric": "activity",
+        "dimension": "segment",
+        "unit": "count",
+        "method": "additive_contribution_v1",
+        "status": "complete",
+        "required": true,
+        "input_digest": "6e9939bff155b080e0107f2f1999394948f92f18fc3c349e03fb2204674a8a7a",
+        "query_refs": [
+          "sqlite:measurements:group-by-period",
+          "sqlite:measurements:group-by-period-segment"
+        ],
+        "comparison": {
+          "key": "activity-breakdown",
+          "metric": "activity",
+          "definition": "Approved completed activity per eligible population",
+          "population": "Production eligible accounts",
+          "unit": "count",
+          "dimension": "segment",
+          "kind": "additive",
+          "baseline_start": "2026-08-01T00:00:00Z",
+          "baseline_end": "2026-08-08T00:00:00Z",
+          "current_start": "2026-08-08T00:00:00Z",
+          "current_end": "2026-08-15T00:00:00Z",
+          "comparison_window": "previous_period",
+          "coverage": "complete",
+          "disjoint_segments": true,
+          "comparable": true,
+          "require_equal_duration": false,
+          "required": true,
+          "query_refs": [
+            "sqlite:measurements:group-by-period",
+            "sqlite:measurements:group-by-period-segment"
+          ],
+          "baseline_total": {
+            "value": 100,
+            "numerator": null,
+            "denominator": null
+          },
+          "current_total": {
+            "value": 100,
+            "numerator": null,
+            "denominator": null
+          },
+          "segments": [
+            {
+              "segment": "east",
+              "baseline": {
+                "value": 60,
+                "numerator": null,
+                "denominator": null
+              },
+              "current": {
+                "value": 60,
+                "numerator": null,
+                "denominator": null
+              }
+            },
+            {
+              "segment": "west",
+              "baseline": {
+                "value": 40,
+                "numerator": null,
+                "denominator": null
+              },
+              "current": {
+                "value": 40,
+                "numerator": null,
+                "denominator": null
+              }
+            }
+          ]
+        },
+        "baseline": 100,
+        "current": 100,
+        "delta": 0,
+        "residual": 0,
+        "within_effect": null,
+        "mix_effect": null,
+        "contributions": [
+          {
+            "segment": "east",
+            "baseline": 60,
+            "current": 60,
+            "contribution": 0,
+            "within_effect": null,
+            "mix_effect": null
+          },
+          {
+            "segment": "west",
+            "baseline": 40,
+            "current": 40,
+            "contribution": 0,
+            "within_effect": null,
+            "mix_effect": null
+          }
+        ],
+        "issues": [],
+        "claim_type": "accounting_decomposition",
+        "limitations": [
+          "Contributions explain the measured difference, not its causal mechanism.",
+          "No sampling uncertainty or statistical significance is estimated from these aggregates.",
+          "Coverage, population and comparability depend on the source measurement contract."
+        ]
+      },
+      "telemetry": {
+        "wall_time_ms": 746.9970830134116,
+        "source_fetch_ms": 356.215208012145,
+        "source_count": 1,
+        "observation_count": 0,
+        "evidence_count": 1,
+        "jev_requests": 2,
+        "jev_input_tokens": 8090,
+        "jev_output_tokens": 317,
+        "jev_payload_bytes": 23183,
+        "jev_payload_budget_bytes": 4000000,
+        "query_calls": 3,
+        "query_bytes_scanned": 0,
+        "query_cache_hits": 0,
+        "query_cache_misses": 0,
+        "warnings": []
+      }
+    },
+    {
+      "case": "incomplete-population",
+      "expected_outcome": "insufficient_data",
+      "outcome": "insufficient_data",
+      "seconds": 0.9446415419806726,
+      "checks": {
+        "analysis_status": true,
+        "noncausal_contract": true,
+        "delivery_disabled": true,
+        "policy_outcome": true,
+        "unknown_not_absent": true,
+        "blocked_evidence_plan": true,
+        "replay_no_jev": true
+      },
+      "analysis": {
+        "source_key": "activity",
+        "comparison_key": "activity-breakdown",
+        "metric": "activity",
+        "dimension": "segment",
+        "unit": "count",
+        "method": "additive_contribution_v1",
+        "status": "insufficient_data",
+        "required": true,
+        "input_digest": "912e3a4c821a7a657c4187314934b81cfc875f5996f2a9bd2da9ec12d2118535",
+        "query_refs": [
+          "sqlite:measurements:group-by-period",
+          "sqlite:measurements:group-by-period-segment"
+        ],
+        "comparison": {
+          "key": "activity-breakdown",
+          "metric": "activity",
+          "definition": "Approved completed activity per eligible population",
+          "population": "Production eligible accounts",
+          "unit": "count",
+          "dimension": "segment",
+          "kind": "additive",
+          "baseline_start": "2026-08-01T00:00:00Z",
+          "baseline_end": "2026-08-08T00:00:00Z",
+          "current_start": "2026-08-08T00:00:00Z",
+          "current_end": "2026-08-15T00:00:00Z",
+          "comparison_window": "previous_period",
+          "coverage": "partial",
+          "disjoint_segments": true,
+          "comparable": true,
+          "require_equal_duration": false,
+          "required": true,
+          "query_refs": [
+            "sqlite:measurements:group-by-period",
+            "sqlite:measurements:group-by-period-segment"
+          ],
+          "baseline_total": {
+            "value": 60,
+            "numerator": null,
+            "denominator": null
+          },
+          "current_total": {
+            "value": 30,
+            "numerator": null,
+            "denominator": null
+          },
+          "segments": [
+            {
+              "segment": "known",
+              "baseline": {
+                "value": 60,
+                "numerator": null,
+                "denominator": null
+              },
+              "current": {
+                "value": 30,
+                "numerator": null,
+                "denominator": null
+              }
+            }
+          ]
+        },
+        "baseline": null,
+        "current": null,
+        "delta": null,
+        "residual": null,
+        "within_effect": null,
+        "mix_effect": null,
+        "contributions": [],
+        "issues": [
+          "Segment coverage is not declared complete."
+        ],
+        "claim_type": "accounting_decomposition",
+        "limitations": [
+          "Contributions explain the measured difference, not its causal mechanism.",
+          "No sampling uncertainty or statistical significance is estimated from these aggregates.",
+          "Coverage, population and comparability depend on the source measurement contract."
+        ]
+      },
+      "telemetry": {
+        "wall_time_ms": 897.2721659811214,
+        "source_fetch_ms": 380.6490830029361,
+        "source_count": 1,
+        "observation_count": 0,
+        "evidence_count": 2,
+        "jev_requests": 2,
+        "jev_input_tokens": 7743,
+        "jev_output_tokens": 320,
+        "jev_payload_bytes": 22831,
+        "jev_payload_budget_bytes": 4000000,
+        "query_calls": 3,
+        "query_bytes_scanned": 0,
+        "query_cache_hits": 0,
+        "query_cache_misses": 0,
+        "warnings": []
+      }
+    }
+  ],
+  "requests": 12,
+  "passed": true,
+  "frozen_revision": "b7f6438",
+  "full_report_sha256": "e26bbb607ffe8e89b26f679c4fb12bb6baf141453100b05ffd17c9a14f555f41"
+}

@@ -281,3 +281,12 @@ across additive, rate, mix, stable and incomplete evidence. It remains a
 post-approval regression with an existing reviewed card, not a bootstrap win.
 The harness performs at most two Jev requests per case with retries disabled;
 save all outcomes without a success-only rerun.
+
+That unchanged regression passed all six cases at frozen `b7f6438` (production
+`d1ab074`): correct numerical decompositions, outcomes, incomplete-population
+abstention and receipt replay, with zero additional Jev calls on all six replays.
+Twelve live requests consumed 48,535 input and 1,901 output tokens; summed case
+execution was 5.34 seconds, excluding separate source preflight. The harness did
+not record the resolved model version. [Complete retained checks/analyses](evidence/local-investigation-admission-v2-01.json)
+omit only local absolute artifact paths. Original report SHA-256:
+`e26bbb607ffe8e89b26f679c4fb12bb6baf141453100b05ffd17c9a14f555f41`.
