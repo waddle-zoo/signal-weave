@@ -325,3 +325,12 @@ clarified that empty delivery methods mean no configured routes and no notify/
 escalate option; execution is caller-owned regardless. The focused tests were
 rerun after that wording correction. This is guidance, not a guarantee that an
 agent will preserve owner policy correctly.
+
+The frozen run completed all 16 episodes using 29 live Jev requests, observed
+`jev-1.13.0`, without failed requests or budget censoring. [v3-04 results](bootstrap-codex-regression-v3-04.md)
+remain negative: baseline final routing 6/6, treatment 5/6, treatment native
+outcome AND recipients 4/6. Helpdesk is native 3/3; the database card still rewrites
+investigate into notify and omits its investigation route. Independent blind
+review confirms that policy violation. Guidance alone did not solve onboarding,
+and procedural approval is not owner-policy validation. No broader run or repeated
+retry is justified until that failure is addressed.
