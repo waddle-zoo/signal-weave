@@ -310,10 +310,15 @@ def common_tools(public: dict, phase: str) -> list[dict]:
                               "baseline uses its durable notes and leaves card_id null.",
                               {"card_id": {"type": ["string", "null"]}}, []))
     else:
+        schema = _Submission.model_json_schema()
+        # Declare the public contract equally for both arms, never period labels.
+        numeric_schema = next(value for value in schema["$defs"].values()
+                              if "fact" in value.get("properties", {}))
+        numeric_schema["properties"]["fact"]["enum"] = public["numeric_vocabulary"]
         tools.append({"type": "function", "name": "submit_analysis", "strict": False,
                       "description": "Submit the final current-period evidence-backed analysis. "
                       "This records proposed recipients only; it never sends a notification.",
-                      "parameters": _Submission.model_json_schema()})
+                      "parameters": schema})
     return tools
 
 
@@ -411,7 +416,11 @@ class ToolSession:
             return {"setup_complete": True, "card_id": self.card_id,
                     "human_approval": "synthetic procedural approval, not proof of policy correctness"}
         if name == "submit_analysis" and self.phase == "monitoring":
-            self.submission = _Submission.model_validate(arguments).model_dump(mode="json")
+            parsed = _Submission.model_validate(arguments).model_dump(mode="json")
+            if any(c["fact"] not in self.public["numeric_vocabulary"] for c in parsed["numeric_claims"]):
+                raise ValueError("Use exact numeric_vocabulary fact identifiers, without values or prose: "
+                                 + ", ".join(self.public["numeric_vocabulary"]))
+            self.submission = parsed
             return {"recorded": True, "delivery_enabled": False}
         if name == "request_synthetic_owner_approval" and self.treatment and self.phase == "onboarding":
             card_id = arguments["card_id"]
@@ -421,7 +430,11 @@ class ToolSession:
                         and self.simulated.get(card_id) == fingerprint)
             decision = {"card_id": card_id, "approved": accepted, "card_digest": fingerprint,
                         "synthetic": True, "policy_correctness_validated": False,
-                        "reason": "Inspected stored card and preview; no hidden labels consulted."}
+                        "reason": "Inspected stored card and preview; no hidden labels consulted."
+                        if accepted else "Current card inspection and/or preview is missing.",
+                        "next_tools": (["approve_insight_card", "save_notes", "finish_setup"] if accepted
+                                       else ["get_insight_card", "simulate_insight_card",
+                                             "request_synthetic_owner_approval"])}
             self.adapter.audit.emit("owner.approval", **decision)
             if accepted:
                 self.owner_approvals[card_id] = fingerprint
@@ -606,8 +619,10 @@ def source_fingerprint() -> dict:
     root = Path(__file__).resolve().parents[1]
     paths = ("evaluations/bootstrap_agent_trial.py", "evaluations/bootstrap_scenarios.py",
              "evaluations/codex_trial_transport.py",
-             "docs/bootstrap-benchmark-protocol.md", "uv.lock", "src/signalweave/engine.py",
-             "src/signalweave/mcp_server.py", "src/signalweave/typesafe_adapter.py")
+             "docs/bootstrap-benchmark-protocol.md", "docs/bootstrap-benchmark-v3.md", "uv.lock",
+             "src/signalweave/engine.py", "src/signalweave/models.py", "src/signalweave/onboarding.py",
+             "src/signalweave/diagnostics.py", "src/signalweave/mcp_server.py",
+             "src/signalweave/typesafe_adapter.py")
     hashes = {name: hashlib.sha256((root / name).read_bytes()).hexdigest() for name in paths}
     revision = subprocess.run(["git", "rev-parse", "HEAD"], cwd=root, capture_output=True,
                               text=True, check=True, timeout=5).stdout.strip()
@@ -672,6 +687,7 @@ async def run_trial(args) -> dict:
     clock = datetime.now(timezone.utc)
     config = {"model": MODEL, "effort": args.effort, "seed": args.seed, "split": args.split,
               "dataset_digest": dataset_digest(scenarios), "selected_companies": len(scenarios),
+              "public_context_digest": digest([public_scenario(scenario) for scenario in scenarios]),
               "max_api_requests": args.max_api_requests, "max_turns": args.max_turns,
               "max_tool_calls": args.max_tool_calls, "max_output_tokens": args.max_output_tokens,
               "prices": PRICES, "clock_rebased_to": clock.isoformat(),

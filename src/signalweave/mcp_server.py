@@ -33,6 +33,7 @@ from .models import (
     InsightCardStatus,
     InvestigationMode,
     MetricQueryCard,
+    OnboardingBlockerCode,
     OnboardingCorrection,
     OnboardingCorrectionKind,
     Outcome,
@@ -128,7 +129,13 @@ def create_mcp(
             "contracts. Simulate the draft and show the owner the selected sources, "
             "calculations, uncertainties, and intended routes before requesting explicit "
             "approval. Only call approve_insight_card after that approval; tool access "
-            "is not approval. For repeat runs, reuse the approved card instead of "
+            "is not approval. Similar catalog titles are not automatically the same metric. "
+            "If the owner confirms a bounded source selection despite duplicate titles or "
+            "omitted suggestions, use a fixed card with investigation_mode=none, call "
+            "review_insight_card, and pass that review's source_selection_fingerprint "
+            "and the owner's source_selection_reason to approve_insight_card. This does "
+            "not override missing definitions, unhealthy sources or permissions. "
+            "For repeat runs, reuse the approved card instead of "
             "recreating it. Use a stable idempotency key for retries and a new key for "
             "new observations. Return the evidence, numerical analysis, limitations, "
             "and workflow handoff. Correlation and accounting contributions are not "
@@ -1237,12 +1244,15 @@ def create_mcp(
         """
         principal = request_principal(ctx)
         card = get_scoped_card(card_id, principal)
+        original = card.model_dump(mode="json")
         review = await authoring.review(
             card,
             adapter=adapter,
             limit=limit,
             principal=principal,
         )
+        if get_scoped_card(card_id, principal).model_dump(mode="json") != original:
+            raise ValueError("Card changed during review; review the current card before approval.")
         card = append_onboarding_review(card, review)
         runtime.card_store.save_card(card)
         return {
@@ -1288,7 +1298,7 @@ def create_mcp(
     @mcp.tool()
     def record_insight_card_correction(
         card_id: str,
-        kind: str,
+        kind: OnboardingCorrectionKind,
         source_ref: str | None = None,
         note: str = "",
         ctx: Context | None = None,
@@ -1324,7 +1334,7 @@ def create_mcp(
     @mcp.tool()
     def record_decision_feedback(
         idempotency_key: str,
-        kind: str,
+        kind: DecisionFeedbackKind,
         feedback_id: str | None = None,
         expected_outcome: str | None = None,
         expected_delivery_method_keys: list[str] | None = None,
@@ -1447,24 +1457,76 @@ def create_mcp(
     async def approve_insight_card(
         card_id: str,
         actor: str = "mcp-client",
+        source_selection_fingerprint: str | None = None,
+        source_selection_reason: str | None = None,
         ctx: Context | None = None,
     ) -> dict[str, Any]:
-        """Approve a draft card for later scheduler or webhook evaluation."""
+        """Approve only after explicit owner review and a delivery-disabled simulation.
+
+        For a fixed card with no dynamic investigation, an owner may confirm its
+        exact selected sources despite duplicate titles or omitted recommendations.
+        Pass source_selection_fingerprint from review_insight_card and the owner's
+        source_selection_reason explaining which definitions/populations were chosen
+        and why. Changed policy/catalog invalidates that confirmation. This cannot
+        override source health, permissions, missing policy or other blockers.
+        Feedback corrections alone never approve or resolve a card.
+        """
         principal = request_principal(ctx)
         card = get_scoped_card(card_id, principal)
+        original = card.model_dump(mode="json")
         if not card.sources:
             raise ValueError("an insight card needs at least one selected source before approval")
         onboarding_review = await authoring.review(card, principal=principal)
+        if source_selection_fingerprint is not None or source_selection_reason is not None:
+            reason = (source_selection_reason or "").strip()
+            if not source_selection_fingerprint or not reason or len(reason) > 4000:
+                raise ValueError("Provide both source_selection_fingerprint and a nonempty "
+                                 "source_selection_reason (at most 4000 characters).")
+            if (card.retrieval_mode != RetrievalMode.FIXED
+                    or card.investigation_mode != InvestigationMode.NONE):
+                raise ValueError("Source-selection confirmation requires retrieval_mode=fixed and "
+                                 "investigation_mode=none. Draft that bounded scope, review, simulate, "
+                                 "and ask its owner before approving; dynamic sources are not excluded.")
+            previous = card.onboarding_review
+            if (previous is None or not hmac.compare_digest(
+                    source_selection_fingerprint, previous.source_selection_fingerprint)
+                    or not hmac.compare_digest(source_selection_fingerprint,
+                                               onboarding_review.source_selection_fingerprint)):
+                raise ValueError("Source selection review is stale or missing. Call review_insight_card "
+                                 "and obtain owner confirmation of the current policy and catalog.")
+            confirmable = {OnboardingBlockerCode.DEFINITION_CONFLICT,
+                           OnboardingBlockerCode.CANDIDATE_SELECTION_REVIEW}
+            resolved = [b for b in onboarding_review.blockers if b.code in confirmable]
+            remaining = [b for b in onboarding_review.blockers if b.code not in confirmable]
+            if resolved:
+                remaining_questions = [q for q in onboarding_review.questions
+                                       if q not in {b.question for b in resolved}]
+                blocking = any(b.severity.value == "block" for b in remaining)
+                needs_review = any(b.severity.value == "review" for b in remaining)
+                onboarding_review = onboarding_review.model_copy(update={
+                    "blockers": remaining, "questions": remaining_questions,
+                    "status": "needs_human_input" if remaining_questions else "ready_for_approval",
+                    "readiness_status": "blocked" if blocking else "needs_human_review"
+                    if needs_review else "ready_for_approval",
+                    "source_selection_confirmation": reason,
+                    "confirmed_blocker_codes": [b.code for b in resolved],
+                })
         if onboarding_review.readiness_status != "ready_for_approval":
             codes = ", ".join(blocker.code.value for blocker in onboarding_review.blockers)
             raise ValueError(
                 "insight card is not ready for approval; resolve onboarding blockers: "
                 + (codes or "human review required")
+                + ". Call review_insight_card for evidence. For an owner-confirmed fixed source "
+                "selection (investigation_mode=none), pass its source_selection_fingerprint "
+                "and source_selection_reason. Other blockers must be repaired, not acknowledged."
             )
         card = append_onboarding_review(card, onboarding_review)
         if card.compiled_plan is None:
             plan = await runtime.engine.compile(card)
             card = card.model_copy(update={"compiled_plan": plan})
+        if get_scoped_card(card_id, principal).model_dump(mode="json") != original:
+            raise ValueError("Card changed during approval; review and simulate the current card "
+                             "and obtain its owner's approval again.")
         runtime.card_store.save_card(card)
         approved = runtime.card_store.set_card_status(card_id, InsightCardStatus.APPROVED)
         approved = approved.model_copy(

@@ -55,6 +55,36 @@ again and fails closed if it is stale, unavailable, unauthorized, or over budget
 Cards in `expand` mode still require review when bounded discovery leaves their
 dynamic context incomplete.
 
+### Resolve a source-selection ambiguity
+
+Two resources can legitimately share a title. A warning is not a reason to change
+the catalog or pretend both mean the same thing. Inspect their definitions and
+populations, ask the owner which sources belong in this investigation, and create
+a `fixed` card with `investigation_mode="none"` using those exact source refs.
+Multiple selected sources are supported; dynamic retrieval is deliberately not
+covered by this confirmation.
+
+1. Call `review_insight_card(card_id)` and inspect its candidates and blockers.
+2. Simulate the card and show the owner the selected scope, excluded alternatives,
+   calculations, uncertainties and routes.
+3. After explicit owner approval, call `approve_insight_card` with that review's
+   `source_selection_fingerprint` and a `source_selection_reason` explaining the
+   chosen definitions/populations and excluded alternatives.
+
+This resolves only `definition-conflict` (the title-collision warning) and
+`candidate-selection-review` (omitted Jev recommendations). It does not waive
+health, authorization, missing intent/policy or incomplete dynamic scope.
+The fingerprint binds the exact policy, source parameters, delivery destinations,
+principal, and visible catalog. Changes require a fresh review and confirmation.
+It is an integrity check, not a credential or evidence that an LLM actually asked
+a human: your host must enforce its human-approval policy. The stored approval
+review records the reason and confirmed blocker codes; it is excluded from Jev's
+execution state. Ordinary correction feedback remains append-only and does not
+silently resolve or approve anything.
+
+Source freshness and authorization are checked again during execution. This
+transition check does not yet provide continuous semantic-drift recertification.
+
 For a tenant-level view across the bootstrap report, stored cards, workflow
 certifications, retrieval certification, installed adapters, and configured
 company context provider, call `get_enterprise_readiness`. It returns explicit

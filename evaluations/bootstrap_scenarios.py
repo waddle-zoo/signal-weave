@@ -20,7 +20,7 @@ from pydantic import BaseModel, ConfigDict, Field, StrictFloat, StrictInt, Valid
 from signalweave.models import ResourceDescriptor, ResourceSnapshot
 
 SCHEMA_VERSION = 1
-SCORER_VERSION = 2
+SCORER_VERSION = 3
 DEFAULT_SEED = 20261001
 CLAIM_TYPES = ("observation", "accounting_decomposition", "association", "hypothesis", "causal")
 OWNER_TOPICS = ("metric_scope", "materiality", "routing", "data_gaps")
@@ -63,6 +63,13 @@ def _numeric_definitions(spec: dict) -> dict[str, dict[str, str]]:
     if spec["family"] == "ops":
         definitions["delta"] = "Current query p95 latency minus baseline query p95 latency " \
                                "in milliseconds for the defined customer-cluster population."
+    if spec["family"] == "finance":
+        policy = (" Canonical collections require all expected bank partitions closed and the "
+                  "bank watermark at the reporting cutoff. This export has no independent "
+                  "historical closure attestation: a partial or stale export cannot validate "
+                  "even its baseline. A printed amount alone does not establish a canonical total.")
+        for name in ("baseline", "current", "delta"):
+            definitions[name] += policy
     units = {"affected_regions": "regions", "rollout_lead_minutes": "minutes"}
     return {fact: {"definition": definitions[fact.rsplit(".", 1)[1]],
                    "unit": units.get(fact.rsplit(".", 1)[1], spec["unit"])}
@@ -125,6 +132,47 @@ def _comparison(metric: str, rows: list[tuple[str, int, int, int, int]],
                       "current": {"numerator": n1, "denominator": d1}}
                      for name, n0, d0, n1, d1 in rows],
     }
+
+
+def _buyer_values(export: dict) -> dict[str, float]:
+    """Read the union export, never reconstruct missing buyers from audience tags."""
+    if (export.get("identity") != "customer_id" or export.get("aggregation") != "count_distinct"
+            or export.get("coverage") not in {"all_completed_purchases", "missing_union_export"}):
+        return {}
+    values = {}
+    for name in ("baseline", "current"):
+        value = export.get(f"{name}_distinct_buyers")
+        # missing_union_export describes the current union, not the supplied baseline.
+        if name == "current" and export["coverage"] != "all_completed_purchases":
+            continue
+        if _is_finite_number(value) and value >= 0 and value == int(value):
+            values[name] = value
+    if {"baseline", "current"} <= values.keys():
+        values["delta"] = values["current"] - values["baseline"]
+    return values
+
+
+def _finance_values(export: dict, control: dict, as_of: datetime) -> dict[str, float]:
+    """No historical freshness exemption without a public closure attestation.
+
+    The shared bank control is the only attestation in these fixtures. It must
+    close every partition at the reporting cutoff, even for a baseline-only claim.
+    Latent generating totals and the scenario's condition are not evidence.
+    """
+    expected, closed = control.get("expected_partitions"), control.get("closed_partitions")
+    if type(expected) is not int or expected <= 0 or type(closed) is not int or closed != expected:
+        return {}
+    try:
+        watermark = datetime.fromisoformat(control["watermark"])
+    except (KeyError, TypeError, ValueError):
+        return {}
+    if watermark != as_of:
+        return {}
+    values = {name: export[f"{name}_settled_usd"] for name in ("baseline", "current")
+              if _is_finite_number(export.get(f"{name}_settled_usd"))}
+    if {"baseline", "current"} <= values.keys():
+        values["delta"] = values["current"] - values["baseline"]
+    return values
 
 
 def _specs(split: str) -> list[dict]:
@@ -280,9 +328,8 @@ def _payload(spec: dict, condition: str, scale: int, as_of: datetime,
         payloads[1] = {"baseline_audience_counts": {"loyal": 150 * scale, "mobile": 150 * scale},
                        "current_audience_counts": {"loyal": c * 3 // 4, "mobile": c * 3 // 4},
                        "overlap": "known, intersection count not exported", "disjoint": False}
-        if not broken:
-            for name, value in (("baseline", b), ("current", c), ("delta", c - b)):
-                fact(name, value, needed=name == "delta")
+        for name, value in _buyer_values(payloads[0]).items():
+            fact(name, value, needed=name == "delta")
     else:
         b, c = 1000 * scale, (750 if event else 1000) * scale
         payloads[0] = {"baseline_settled_usd": b, "current_settled_usd": 400 * scale if broken else c,
@@ -290,9 +337,8 @@ def _payload(spec: dict, condition: str, scale: int, as_of: datetime,
                                 {"bank": "west", "current_usd": (250 if broken else c // scale // 2) * scale}]}
         payloads[1] = {"closed_partitions": 1 if broken else 2, "expected_partitions": 2,
                        "watermark": (as_of - timedelta(days=3) if broken else as_of).isoformat()}
-        if not broken:
-            for name, value in (("baseline", b), ("current", c), ("delta", c - b)):
-                fact(name, value, needed=name == "delta")
+        for name, value in _finance_values(payloads[0], payloads[1], as_of).items():
+            fact(name, value, needed=name == "delta", evidence_refs=refs[:2])
     # Plausible, large movements in irrelevant populations on *every* period.
     payloads[2] = {"baseline": 900 * scale, "current": 450 * scale,
                    "population": spec["descriptions"][2], "coverage": "complete_for_this_population"}
@@ -493,6 +539,7 @@ def score_submission(scenario: dict, period_id: str, submission: dict, *,
               "evidence_recall": 0.0, "provenance_complete": False,
               "numeric_precision": 0.0, "numeric_recall": 0.0,
               "unsupported_numeric_facts": [], "unsupported_claim_types": [],
+              "numeric_diagnostics": [], "citation_diagnostics": [], "missing_numeric_facts": [],
               "owner_policy_complete": False, "errors": [],
               "scoring_scope": "structured_fields_only", "narrative_review_required": True}
     try:
@@ -517,21 +564,55 @@ def score_submission(scenario: dict, period_id: str, submission: dict, *,
     report["evidence_recall"] = len(evidence & required & inspected) / len(required)
     report["provenance_complete"] = bool(evidence) and cited <= inspected and cited <= evidence
     report["owner_policy_complete"] = set(label["required_owner_topics"]) <= set(asked_owner_topics)
-    correct, bad = set(), []
-    for claim in parsed.numeric_claims:
+
+    def check_citations(location: str, refs: set[str], dependencies: set[str]) -> bool:
+        failures = {"unknown_refs": sorted(refs - allowed),
+                    "uninspected_refs": sorted((refs & allowed) - inspected),
+                    "unlisted_refs": sorted(refs - evidence),
+                    "missing_required_refs": sorted(dependencies - refs)}
+        if any(failures.values()):
+            report["citation_diagnostics"].append({"location": location, **failures})
+            return False
+        return True
+
+    check_citations("evidence_refs", evidence, required)
+    for index, claim in enumerate(parsed.claims):
+        check_citations(f"claims[{index}].evidence_refs", set(claim.evidence_refs), set())
+    vocabulary = set(scenario["public"]["numeric_vocabulary"])
+    correct, seen, bad = set(), set(), []
+    for index, claim in enumerate(parsed.numeric_claims):
         oracle = label["numeric_facts"].get(claim.fact)
-        valid = (oracle is not None and _is_finite_number(claim.value) and claim.unit == oracle["unit"]
-                 and math.isclose(claim.value, oracle["value"], rel_tol=1e-9,
-                                  abs_tol=oracle["absolute_tolerance"])
-                 and set(oracle["evidence_refs"]) <= set(claim.evidence_refs) <= inspected)
-        if valid and claim.fact not in correct:
+        reasons = []
+        if claim.fact not in vocabulary:
+            reasons.append("unknown_identifier")
+        elif oracle is None:
+            reasons.append("unavailable_scope")
+        finite = _is_finite_number(claim.value)
+        if not finite:
+            reasons.append("nonfinite_value")
+        if oracle is not None:
+            if claim.unit != oracle["unit"]:
+                reasons.append("wrong_unit")
+            if finite and not math.isclose(claim.value, oracle["value"], rel_tol=1e-9,
+                                           abs_tol=oracle["absolute_tolerance"]):
+                reasons.append("wrong_value")
+        if not check_citations(f"numeric_claims[{index}].evidence_refs", set(claim.evidence_refs),
+                               set(oracle["evidence_refs"]) if oracle else set()):
+            reasons.append("invalid_citations")
+        if claim.fact in seen:
+            reasons.append("duplicate_fact")
+        seen.add(claim.fact)
+        if not reasons:
             correct.add(claim.fact)
         else:
             bad.append(claim.fact)
+            report["numeric_diagnostics"].append({"claim_index": index, "fact": claim.fact,
+                                                  "reasons": reasons})
     numerical_required = set(label["required_numeric_facts"])
     report["numeric_precision"] = len(correct) / len(parsed.numeric_claims) if parsed.numeric_claims else (1.0 if not numerical_required else 0.0)
     report["numeric_recall"] = len(correct & numerical_required) / len(numerical_required) if numerical_required else 1.0
     report["unsupported_numeric_facts"] = bad
+    report["missing_numeric_facts"] = sorted(numerical_required - correct)
     claim_types = {c.claim_type for c in parsed.claims}
     report["unsupported_claim_types"] = sorted(claim_types - set(label["allowed_claim_types"]))
     if len(parsed.recipients) != len(recipients):

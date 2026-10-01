@@ -23,7 +23,7 @@ def session_stub(*, treatment=False, phase="monitoring"):
         names.append("onboard_insight_card")
     return SimpleNamespace(
         treatment=treatment, phase=phase, submission=None, setup_complete=False,
-        public={"brief": "Synthetic test"}, notes="saved policy",
+        public={"brief": "Synthetic test", "numeric_vocabulary": ["delta"]}, notes="saved policy",
         adapter=SimpleNamespace(period_context={
             "period_id": "offline-period", "as_of": "2026-10-01T00:00:00+00:00",
         }),
@@ -146,7 +146,7 @@ async def test_call_budget_counts_rejected_tools_and_never_dispatches_over_cap(m
 
 async def test_sdk_schema_invalid_calls_count_toward_budget_and_audit_rejections():
     session, audit = session_stub(), trial.Audit()
-    specs = trial.common_tools({"owner_topics": ["materiality"]}, "monitoring")
+    specs = trial.common_tools({"owner_topics": ["materiality"], "numeric_vocabulary": ["delta"]}, "monitoring")
     bridge = transport.TrialMCP(session, audit, specs, max_calls=1)
     handler = bridge.server.request_handlers[transport.types.CallToolRequest]
     results = []
@@ -179,7 +179,7 @@ async def test_sdk_infinite_submission_does_not_latch_and_finite_retry_finishes(
 
     session.call.side_effect = submit
     audit = trial.Audit(path=tmp_path / "audit.jsonl")
-    specs = trial.common_tools({"owner_topics": ["materiality"]}, "monitoring")
+    specs = trial.common_tools({"owner_topics": ["materiality"], "numeric_vocabulary": ["delta"]}, "monitoring")
     bridge = transport.TrialMCP(session, audit, specs, max_calls=2)
     handler = bridge.server.request_handlers[transport.types.CallToolRequest]
     arguments = {

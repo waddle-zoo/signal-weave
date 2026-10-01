@@ -70,6 +70,40 @@ def make_session(tmp_path, public, treatment=True):
     return trial.ToolSession(public, adapter, create_mcp(runtime), treatment)
 
 
+async def test_public_numeric_enum_is_identical_for_both_arms(tmp_path, public):
+    schemas = []
+    for treatment in (False, True):
+        session = make_session(tmp_path, public, treatment)
+        session.phase = "monitoring"
+        specs = await session.specs()
+        schema = next(t["parameters"] for t in specs if t["name"] == "submit_analysis")
+        schemas.append(schema)
+        assert schema["$defs"]["_NumericClaim"]["properties"]["fact"]["enum"] == public["numeric_vocabulary"]
+        with pytest.raises(ValueError, match="exact numeric_vocabulary"):
+            await session.call("submit_analysis", {"outcome": "ignore", "recipients": [],
+                "evidence_refs": [], "claims": [], "summary": "Contract test",
+                "numeric_claims": [{"fact": "invented = 100", "value": 100,
+                                    "unit": "USD", "evidence_refs": ["company_mcp|example"]}]})
+        assert session.submission is None
+    assert schemas[0] == schemas[1]
+
+
+async def test_missing_owner_review_returns_actionable_steps(tmp_path, public):
+    session = make_session(tmp_path, public)
+    await session.specs()
+    source = session.adapter.catalog[0]
+    drafted = await session.call("draft_insight_card", {
+        "title": "Review flow", "what_to_watch": "Current source", "why_watch": "Test approval",
+        "sources": [{"key": "s", "adapter": source.adapter, "resource": source.resource,
+                     "label": source.title}], "questions": ["What changed?"],
+    })
+    result = await session.call("request_synthetic_owner_approval", {"card_id": drafted["card"]["id"]})
+    assert not result["approved"]
+    assert result["next_tools"] == ["get_insight_card", "simulate_insight_card", "request_synthetic_owner_approval"]
+    assert "missing" in result["reason"]
+    assert session.owner_approvals == {}
+
+
 def test_real_sdk_response_usage_serializes_and_is_counted():
     response = SystemOneResponse(model="jev-1.13.0", usage=Usage(input_tokens=120, output_tokens=0), answers={})
     audit = trial.Audit()

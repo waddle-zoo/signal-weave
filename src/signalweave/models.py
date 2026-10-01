@@ -338,6 +338,7 @@ class ResourceMatch(BaseModel):
     role_probability: float = Field(default=0.0, ge=0.0, le=1.0)
     retrieval_signals: list[str] = Field(default_factory=list, max_length=20)
     contract: ResourceContract = Field(default_factory=ResourceContract)
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class ContextFact(BaseModel):
@@ -527,6 +528,9 @@ class InsightCardOnboardingReview(BaseModel):
         "ready_for_approval"
     )
     blockers: list[OnboardingBlocker] = Field(default_factory=list, max_length=50)
+    source_selection_fingerprint: str = Field(default="", max_length=64)
+    source_selection_confirmation: str | None = Field(default=None, max_length=4000)
+    confirmed_blocker_codes: list[OnboardingBlockerCode] = Field(default_factory=list)
     principal_id: str | None = Field(default=None, max_length=240)
     principal_tenant: str | None = Field(default=None, max_length=160)
     authorization_evidence: str = Field(default="not-provided", max_length=240)

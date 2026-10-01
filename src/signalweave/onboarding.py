@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import json
 from collections import defaultdict
 from dataclasses import dataclass
 from typing import Any, Protocol
@@ -85,6 +87,27 @@ class InsightAuthoringService:
 
     def _effective_principal(self, principal: PrincipalContext | None) -> PrincipalContext | None:
         return principal or self.principal
+
+    @staticmethod
+    def source_selection_fingerprint(
+        card: InsightCard, discovery: ResourceDiscovery, principal: PrincipalContext | None
+    ) -> str:
+        """Bind explicit scope confirmation to policy and visible catalog, not model scores.
+
+        This is a stale-review check, not an authentication credential. Caller
+        identity/tenant and source authorization are checked independently.
+        """
+        policy = card.model_dump(mode="json", exclude={
+            "compiled_plan", "onboarding_review", "onboarding_review_history",
+            "onboarding_corrections", "status", "approved_at", "approved_by",
+        })
+        candidates = [match.model_dump(mode="json", exclude={
+            "relevance", "recommended", "suggested_role", "role_probability", "retrieval_signals",
+        }) for match in sorted(discovery.matches, key=lambda item: item.ref)]
+        payload = {"card": policy, "catalog": candidates,
+                   "principal": principal.model_dump(mode="json") if principal else None,
+                   "tenant": discovery.authorized_tenant, "truncated": discovery.truncated}
+        return hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
     @staticmethod
     def _relationship_seed_refs(
@@ -260,7 +283,8 @@ class InsightAuthoringService:
                 domain=match.contract.domain,
                 tenant_id=match.contract.tenant_id,
                 source_status=match.contract.source_status,
-                metadata=match.contract.model_dump(mode="json"),
+                metadata={**match.contract.model_dump(mode="json"),
+                          "adapter_metadata": match.metadata},
                 selected=match.ref in selected_refs,
                 recommended=match.recommended,
                 relevance=match.relevance,
@@ -537,6 +561,7 @@ class InsightAuthoringService:
         )
         return InsightCardOnboardingReview(
             card_id=card.id,
+            source_selection_fingerprint=cls.source_selection_fingerprint(card, discovery, principal),
             status="needs_human_input" if questions else "ready_for_approval",
             readiness_status=readiness_status,
             blockers=blockers,
@@ -639,6 +664,7 @@ class InsightAuthoringService:
                     recommended=False,
                     retrieval_signals=["explicit-card-anchor", "authorized-revalidation"],
                     contract=descriptor.contract,
+                    metadata=descriptor.metadata,
                 )
             )
         if not appended:
@@ -709,6 +735,7 @@ class InsightAuthoringService:
                     suggested_role=role_judgment["role"],
                     role_probability=role_judgment["probability"],
                     contract=resource.contract,
+                    metadata=resource.metadata,
                     retrieval_signals=pool.signals.get(resource_ref(resource), []),
                 )
             )
