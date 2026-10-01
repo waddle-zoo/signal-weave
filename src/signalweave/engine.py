@@ -9,7 +9,7 @@ from time import perf_counter
 from typing import Any
 
 from .analysis import candidate_observations, evidence_statements, observations_for_plan
-from .compiler import compile_with_typesafe
+from .compiler import base_plan, compile_with_typesafe
 from .context import ContextProvider, context_facts_as_evidence
 from .diagnostics import AnalysisReport, analyze_comparison
 from .models import (
@@ -223,7 +223,19 @@ class InsightEngine:
         resources: list[ResourceSnapshot] | None = None,
     ) -> InsightPlan:
         if card.compiled_plan is not None and card.compiled_plan.card_version == card.version:
-            return card.compiled_plan
+            if not card.compiled_plan.comparison_windows or not set(
+                card.compiled_plan.comparison_windows
+            ).issubset(card.comparison_windows):
+                raise ValueError("compiled_plan comparison windows must be a nonempty subset of card windows")
+            # A cached semantic selection is not authority to waive prerequisites
+            # or carry fulfilled evidence into another run.
+            current = base_plan(card)
+            return card.compiled_plan.model_copy(update={
+                "evidence_slots": current.evidence_slots,
+                "questions": current.questions,
+                "watch_for": current.watch_for,
+                "card_scope": current.card_scope,
+            })
         state = {
             "sources": (
                 [resource.model_dump(mode="json") for resource in resources]
@@ -1283,7 +1295,6 @@ class InsightEngine:
         if (
             result.evidence_plan is not None
             and result.outcome in {Outcome.NOTIFY, Outcome.ESCALATE}
-            and card.follow_up_guidance.strip()
             and result.evidence_plan.status != "complete"
         ):
             return cls._with_outcome(

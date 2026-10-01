@@ -4,6 +4,7 @@ from types import SimpleNamespace
 import pytest
 
 from evaluations.cases import load_evaluation_cases
+from signalweave.compiler import base_plan
 from signalweave.engine import EvaluationPayloadError, InsightEngine
 from signalweave.models import (
     ContextFact,
@@ -88,6 +89,16 @@ class JevTestDouble:
             rationale="Test double result from the checked-in labeled case.",
             confidence=0.99,
             probabilities={case.expected_outcome: 0.99, "other": 0.01},
+            # These labeled-case routing tests assume answered semantic checks.
+            # Missing/unknown answers are exercised in test_evidence_admission_policy.
+            question_results=[
+                {"key": f"question_{i}", "question": question, "status": "supported", "probability": 0.99}
+                for i, question in enumerate(card.questions)
+            ],
+            watch_results=[
+                {"key": f"watch_{i}", "watch_for": watch, "status": "present", "probability": 0.99}
+                for i, watch in enumerate(card.watch_for)
+            ],
             delivery_methods=[
                 method
                 for method in card.delivery_methods
@@ -1278,7 +1289,13 @@ async def test_stored_compiled_plan_is_used_without_recompiling():
         ],
     )
     run = await InsightEngine(CompileMustNotRun()).evaluate(card, [resource])
-    assert run.plan == plan
+    current = base_plan(card)
+    assert run.plan == plan.model_copy(update={
+        "evidence_slots": current.evidence_slots,
+        "questions": current.questions, "watch_for": current.watch_for,
+        "card_scope": current.card_scope,
+    })
+    assert plan.evidence_slots == []  # Stored cache is not mutated or trusted for admission.
 
 
 def test_card_rejects_compiled_plan_from_another_version():

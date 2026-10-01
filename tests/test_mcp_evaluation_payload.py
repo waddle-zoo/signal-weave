@@ -22,16 +22,16 @@ async def test_compact_evaluation_preserves_evidence_and_durable_audit(tmp_path,
     tool(server, "record_insight_card_correction")(
         card_id, kind="intent-clarified", note="Owner reviewed the population. " * 60,
     )
-    stored = tool(server, "get_insight_card")(card_id)
+    stored = tool(server, "get_insight_card")(card_id, include_history=True)
     preview = await tool(server, "simulate_insight_card")(card_id)
     omitted = {"onboarding_review", "onboarding_review_history", "onboarding_corrections", "compiled_plan"}
     assert preview["card"] == {k: v for k, v in stored.items() if k not in omitted}
     assert preview["delivery_enabled"] is False
     assert preview["resources"] and preview["result"]["evidence"]
-    assert tool(server, "get_insight_card")(card_id) == stored
+    assert tool(server, "get_insight_card")(card_id, include_history=True) == stored
 
     await tool(server, "approve_insight_card")(card_id)
-    stored = tool(server, "get_insight_card")(card_id)
+    stored = tool(server, "get_insight_card")(card_id, include_history=True)
     result = await tool(server, "evaluate_insight_card")(card_id, idempotency_key="repeatable")
     assert result["card"] == {k: v for k, v in stored.items() if k not in omitted}
     assert result["resources"] and result["result"]["evidence"]
@@ -40,8 +40,19 @@ async def test_compact_evaluation_preserves_evidence_and_durable_audit(tmp_path,
     full = tool(server, "get_decision_receipt")(idempotency_key="repeatable")
     assert full["receipt"]["result"] == result["result"] == full["result"]
     assert result["receipt"] == {k: v for k, v in full["receipt"].items() if k != "result"}
-    assert tool(server, "get_insight_card")(card_id) == stored
+    assert tool(server, "get_insight_card")(card_id, include_history=True) == stored
     assert stored["onboarding_review_history"] and stored["onboarding_corrections"]
+    compact = tool(server, "get_insight_card")(card_id)
+    assert compact == {k: v for k, v in stored.items()
+                       if k not in {"onboarding_review_history", "onboarding_corrections"}}
+    assert compact["onboarding_review"] == stored["onboarding_review"]
+    assert compact["compiled_plan"] == stored["compiled_plan"]
+    # Actual MCP JSON dispatch must expose the opt-in audit, too.
+    _, json_compact = await server.call_tool("get_insight_card", {"card_id": card_id})
+    _, json_audit = await server.call_tool("get_insight_card", {"card_id": card_id, "include_history": True})
+    assert json_compact == compact and json_audit == stored
+    assert server._test_runtime.card_store.get_card(card_id).model_dump(mode="json") == stored
+    assert len(json.dumps(compact)) < len(json.dumps(stored))
 
     replay = await tool(server, "evaluate_insight_card")(card_id, idempotency_key="repeatable")
     assert replay["replayed"] and replay["result"] == result["result"]
@@ -61,14 +72,14 @@ async def test_authoring_responses_preserve_current_review_without_repeated_hist
         )
         response = response.get("proposal", response)
         card_id = response["card"]["id"]
-        stored = tool(server, "get_insight_card")(card_id)
+        stored = tool(server, "get_insight_card")(card_id, include_history=True)
         assert response["card"] == {k: v for k, v in stored.items() if k not in omitted}
         review = response.get("onboarding_review", response.get("review"))
         assert review == stored["onboarding_review"]
         assert response["plan"] == stored["compiled_plan"]
         for _ in range(2):
             reviewed = await tool(server, "review_insight_card")(card_id)
-            stored = tool(server, "get_insight_card")(card_id)
+            stored = tool(server, "get_insight_card")(card_id, include_history=True)
             assert reviewed["card"] == {k: v for k, v in stored.items() if k not in omitted}
             assert reviewed["review"] == stored["onboarding_review"]
         assert len(stored["onboarding_review_history"]) == 3

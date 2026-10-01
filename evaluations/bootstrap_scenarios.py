@@ -365,12 +365,16 @@ def build_scenarios(seed: int = DEFAULT_SEED, split: Literal["dev", "holdout"] =
         route, data_route = _opaque(rng, "team"), _opaque(rng, "team")
         destinations = [{"key": route, "label": "Business owner", "destination": f"slack://{route}"},
                         {"key": data_route, "label": "Data operations", "destination": f"slack://{data_route}"}]
+        # Keep this measured v3 fixture immutable as production models evolve.
+        # It did not declare window capabilities; a later trial must version
+        # any enriched source contract instead of silently changing old inputs.
         catalog = [ResourceDescriptor(
             adapter="company_mcp", resource=key, kind=("saved_query", "document", "saved_query", "chart")[i],
             title=spec["titles"][i], description=spec["descriptions"][i],
             metadata={"tenant": scenario_id, "owner": destinations[i % 2]["label"],
                       "inspection": "bounded current-period snapshot", "read_only": True},
-        ).model_dump(mode="json") for i, key in enumerate(keys)]
+        ).model_dump(mode="json", exclude={"contract": {"available_comparison_windows"}})
+                   for i, key in enumerate(keys)]
         rng.shuffle(catalog)
         scale = rng.randint(3, 37)
         base = datetime(2026, 10, 5, tzinfo=timezone.utc)
@@ -393,7 +397,7 @@ def build_scenarios(seed: int = DEFAULT_SEED, split: Literal["dev", "holdout"] =
                                "statement": "Source export; interpret using catalog and owner definitions.",
                                "values": payload, "provenance": [refs[i]]}],
                     metadata={"tenant": scenario_id, "period_id": period_id},
-                ).model_dump(mode="json")
+                ).model_dump(mode="json", exclude={"contract": {"available_comparison_windows"}})
             outcome = ("insufficient_data" if condition == "quality" else
                        "investigate" if condition == "event" and spec["family"] == "ops" else
                        "notify" if condition == "event" else "ignore")

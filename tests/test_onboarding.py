@@ -158,6 +158,15 @@ class OnboardingJevDouble:
             rationale="Test-only onboarding decision.",
             confidence=0.91,
             probabilities={Outcome.NOTIFY.value: 0.91},
+            # Successful onboarding control; unknown-answer admission has its own suite.
+            question_results=[
+                {"key": f"question_{i}", "question": question, "status": "supported", "probability": 0.99}
+                for i, question in enumerate(card.questions)
+            ],
+            watch_results=[
+                {"key": f"watch_{i}", "watch_for": watch, "status": "present", "probability": 0.99}
+                for i, watch in enumerate(card.watch_for)
+            ],
             delivery_methods=[],
             evidence=[Evidence.model_validate(item) for item in state["evidence"]],
             observations=observations,
@@ -407,7 +416,7 @@ async def test_generic_card_flow_discovers_proposes_previews_and_requires_approv
     assert proposal["proposal"]["onboarding_review"]["source_candidates"][0]["selected"] is True
     assert proposal["proposal"]["setup_questions"]
 
-    stored = tool(server, "get_insight_card")(card_id)
+    stored = tool(server, "get_insight_card")(card_id, include_history=True)
     assert stored["status"] == "draft"
     assert stored["principal_tenant"] == "default"
     assert stored["onboarding_review"]["discovery_receipt"]["principal_tenant"] == "default"
@@ -422,7 +431,7 @@ async def test_generic_card_flow_discovers_proposes_previews_and_requires_approv
     )
     assert correction["status"] == "recorded"
     assert correction["correction"]["principal_tenant"] == "default"
-    assert tool(server, "get_insight_card")(card_id)["onboarding_corrections"][0]["kind"] == (
+    assert tool(server, "get_insight_card")(card_id, include_history=True)["onboarding_corrections"][0]["kind"] == (
         "candidate-rejected"
     )
 
@@ -453,7 +462,7 @@ async def test_generic_card_flow_discovers_proposes_previews_and_requires_approv
     approved = await tool(server, "approve_insight_card")(card_id, actor="spoofed-label")
     assert approved["status"] == "approved"
     assert approved["card"]["approved_by"] == "test-principal"
-    approved_card = tool(server, "get_insight_card")(card_id)
+    approved_card = tool(server, "get_insight_card")(card_id, include_history=True)
     assert approved_card["status"] == "approved"
     assert len(approved_card["onboarding_review_history"]) == 2
     assert tool(server, "list_insight_cards")(status="approved")["count"] == 1
@@ -983,7 +992,12 @@ async def test_sqlite_runtime_replays_completed_evaluation_after_restart(tmp_pat
 
 @pytest.mark.asyncio
 async def test_follow_up_evaluation_links_to_parent_receipt(tmp_path):
-    server = make_server(tmp_path)
+    class MissingDiagnosticEvidence(OnboardingJevDouble):
+        async def judge(self, state, card, plan, observations):
+            result = await super().judge(state, card, plan, observations)
+            return result.model_copy(update={"question_results": [], "watch_results": []})
+
+    server = make_server(tmp_path, judger=MissingDiagnosticEvidence())
     drafted = await tool(server, "draft_insight_card")(
         title="Multi-step growth pulse",
         what_to_watch="Online revenue and its likely drivers.",

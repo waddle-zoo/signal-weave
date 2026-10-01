@@ -106,3 +106,52 @@ is not external peer review. It does not validate the native decisions or establ
 comparative benefit. These two
 regression attempts together consumed 16 Codex invocations and 26 Jev requests;
 neither is folded into a future fresh holdout or omitted from development effort.
+
+## Fresh six-company holdout and subsequent repairs
+
+The [frozen six-company v3-01 run](bootstrap-codex-holdout-v3-01.md) completed
+at `8dde234`. Both arms onboarded 6/6 companies. Final exact answers were 15/18
+for Luna/source tools versus 11/18 for Luna/SignalWeave/live Jev; final routing
+was 18/18 versus 16/18. Native SignalWeave had both the right outcome and route
+in only 9/18 cases. The report retains all costs and the two blind reviews.
+This is failed acceptance, not a new success claim.
+
+Post-run engineering separates required semantic evidence from advisory detail,
+removes the accidental dependency on follow-up prose, rebuilds cached evidence
+slots, and invalidates legacy certification for the changed admission policy.
+The [adversarial admission review](evidence-admission-review.md) records the
+test-first failures and a cache inconsistency found and repaired during review.
+Offline passing tests isolate these contracts; they do not establish improved
+live semantic performance or cure agent-authored routing mistakes.
+
+The new window-capability declaration is absent from the measured v3 fixtures.
+Their full fresh-holdout digest and older raw-data digests remain unchanged;
+fixture serialization explicitly omits the newly added empty model default.
+No capability was retroactively supplied to either arm. A later enriched fixture
+needs its own recorded public contract and run, not revised old scores.
+
+Ordinary `get_insight_card` reads now retain active policy, compiled plan and
+latest review while omitting historical reviews/corrections. Explicit
+`include_history=true` returns the unchanged full audit. Applied as a serialization
+projection to the retained 19 card reads, that would reduce JSON from 370,164 to
+205,078 characters. This is a retrospective payload-size calculation, not a
+measured token, latency or cost improvement.
+
+### Next bounded execution regression (declared before running)
+
+After offline review and an implementation freeze, run the existing
+`evaluations.local_investigation_trial` once into a new exclusive artifact directory.
+Keep its six cases and expected outcomes unchanged: offsetting segments, hidden
+movement under a flat total, Simpson reversal, mix-only movement, unchanged data,
+and incomplete population. The caller uses an already-reviewed card, real
+read-only SQLite queries through stdio MCP, live Jev with no retry fallback,
+and persisted local receipts. Retain every outcome and replay check.
+
+This cheap check validates post-approval execution after the admission changes.
+It is not a fresh bootstrap comparison, six new companies, longitudinal evidence,
+or proof that the failed comparative gates are now met. No second large agent
+trial is warranted merely because these code contracts pass.
+
+Pre-live freeze verification: `make verify` passed Ruff and **1,382 tests**, with
+3 opt-in tests skipped (91.89 seconds). Whitespace checks passed. This includes
+the new admission/migration/window contracts and unchanged fixture-digest checks.

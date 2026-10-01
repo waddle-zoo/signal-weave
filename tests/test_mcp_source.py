@@ -185,6 +185,27 @@ async def test_response_cannot_upgrade_configured_health(tmp_path, manifest, pay
     assert (await adapter.inspect(source)).contract.source_status == "failed"
 
 
+@pytest.mark.parametrize("declared", [[], ["fiscal/previous closed cycle@v2"]])
+async def test_comparison_window_capabilities_are_manifest_owned(
+    tmp_path, manifest, payload, source, declared,
+):
+    entry = manifest["connections"][0]["resources"][0]
+    entry["descriptor"]["contract"]["available_comparison_windows"] = declared
+    payload["contract"]["available_comparison_windows"] = ["snapshot-injected"]
+    adapter, = build(tmp_path, manifest, FakeTransport(payload))
+    catalog = await adapter.list_resources()
+    assert catalog[0].contract.available_comparison_windows == declared
+    catalog[0].contract.available_comparison_windows.append("mutated-copy")
+    authorized = await adapter.authorize(source, authorized_tenants={"tenant-a"})
+    assert authorized.contract.available_comparison_windows == declared
+    snapshot = await adapter.inspect(source)
+    assert snapshot.error is None
+    assert snapshot.contract.available_comparison_windows == declared
+    source.parameters["available_comparison_windows"] = ["caller-injected"]
+    assert await adapter.authorize(source, authorized_tenants={"tenant-a"}) is None
+    assert (await adapter.inspect(source)).error == "MCP source is not authorized"
+
+
 @pytest.mark.parametrize("kind", ["exception", "is_error", "snapshot_error", "invalid", "text_only"])
 async def test_errors_never_expose_payloads(tmp_path, manifest, payload, source, kind, caplog):
     sentinel = "credential-sentinel@private-endpoint.invalid"

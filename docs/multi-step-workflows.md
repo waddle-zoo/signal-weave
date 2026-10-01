@@ -125,14 +125,42 @@ SignalWeave does not manufacture certainty.
 
 ## Compatibility and boundaries
 
-Cards without `follow_up_guidance` retain the existing single-evaluation
-outcome and delivery behavior. They receive only the additive workflow
-metadata. This is intentional: a multi-step handoff is opt-in through the
-human-authored card, while source retrieval and action execution remain outside
-SignalWeave.
+Evidence admission policy version **1** is a breaking change. Required semantic
+slots always gate automatic `notify` and `escalate`, whether or not the card has
+`follow_up_guidance`. That prose describes follow-up after an inconclusive result;
+adding or removing it must not change evidence admission. Multi-step handoff
+instructions remain opt-in, and source retrieval and action execution remain
+outside SignalWeave.
 
-The live proof for this contract is in
+Cards declare `evidence_requirements: dict[str, StrictBool]`, defaulting to `{}`.
+Only exact keys for existing, one-based `question:N` and `watch:N` slots are
+accepted. Unspecified slots remain required. For example,
+`{"question:2": false}` makes only the second question advisory. Values must be
+JSON booleans, not strings or numbers. An advisory unknown remains visible in the
+evidence plan and missing-slot list but does not block admission. `false` is an
+unconditional advisory designation, not "required when applicable" or a
+conditional policy. Neither prose such as "when supported" nor a model judgment
+silently waives a requirement. Required-source and comparison checks cannot be
+waived through this map; other safety and confidence gates still apply.
+
+Review which slots are core decision evidence and which are advisory before
+migrating existing cards. Policy-map changes and question/watch edits or reordering
+require a new card version, fresh owner review/approval, and recertification over
+owner-labeled snapshots. The positional keys belong to that reviewed card version;
+do not carry a waiver onto a different question merely because its index matches.
+Even unchanged cards without follow-up prose may now conservatively withhold an
+automatic route when required evidence is unresolved.
+
+New `CardEvaluationReport` objects emitted by `CardWorkflowEvaluator` record
+`evidence_admission_policy_version=1`. Reports lacking the field load as legacy
+version `0`; they remain readable audit evidence, not current certification.
+Readiness must require the current policy version in addition to the existing
+card-version, approval, and certification gates. Re-run certification rather than
+relabeling an old green report. Retain old reports, receipts, and reviews unchanged;
+the policy version is compatibility metadata, not proof of semantic correctness.
+
+The historical live trial for the earlier handoff contract is in
 `evaluations/northstar_multistep_trial.py` and
 `examples/northstar-multistep-trial.json`. It uses live Jev over the same local
 Northstar rows as the single-step historical replay; expected dispositions stay
-outside the Jev state.
+outside the Jev state. Those retained results do not certify policy version 1.

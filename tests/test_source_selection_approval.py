@@ -158,7 +158,7 @@ async def test_confirmation_persists_exact_scope_and_audit_after_restart(tmp_pat
         assert approved[field] == before[field]
 
     restarted = make_server(tmp_path, judger, sqlite=sqlite, catalog=catalog)
-    assert tool(restarted, "get_insight_card")(card_id) == approved
+    assert tool(restarted, "get_insight_card")(card_id, include_history=True) == approved
 
 
 @pytest.mark.parametrize("sqlite", [False, True], ids=["json", "sqlite"])
@@ -585,7 +585,7 @@ async def test_review_and_compile_awaits_preserve_concurrent_card_changes(
         assert stored(server, card_id) == changed
         assert changed["status"] == "draft"
         restarted = make_server(tmp_path, sqlite=sqlite)
-        assert tool(restarted, "get_insight_card")(card_id) == changed
+        assert tool(restarted, "get_insight_card")(card_id, include_history=True) == changed
     finally:
         resume.set()
         if not pending.done():

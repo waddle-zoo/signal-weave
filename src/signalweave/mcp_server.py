@@ -12,6 +12,7 @@ from typing import Any
 from uuid import uuid4
 
 from mcp.server.fastmcp import Context, FastMCP
+from pydantic import StrictBool
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
@@ -21,9 +22,11 @@ from .evaluation import (
     CardEvaluationCase,
     CardEvaluationThresholds,
     CardWorkflowEvaluator,
+    has_current_evidence_admission_policy,
 )
 from .models import (
     CertificationRecord,
+    ComparisonWindows,
     ContextSnapshot,
     DecisionFeedback,
     DecisionFeedbackKind,
@@ -43,7 +46,7 @@ from .models import (
     RetrievalMode,
     SourceRef,
 )
-from .onboarding import InsightAuthoringService, proposal_summary
+from .onboarding import InsightAuthoringService, proposal_summary, resolve_comparison_windows
 from .query_planner import QueryWindow, compile_query, plan_query
 from .retrieval_quality import (
     RetrievalQualityCase,
@@ -134,9 +137,11 @@ def create_mcp(
             "the owner only for unresolved metric definitions, comparison periods, "
             "materiality rules, or notification destinations. Never invent those answers. "
             "Preserve the owner's rules in decision_guidance and required source "
-            "contracts. watch_for contains required business conditions checked on every "
-            "run, not a generic analysis checklist. Include only applicable owner-required "
-            "conditions; put reporting preferences in decision_guidance. Simulate the "
+            "contracts. watch_for and questions are required evidence checks by default, "
+            "not a generic analysis checklist. Use evidence_requirements with exact one-based "
+            "question:N or watch:N keys and false only for owner-reviewed advisory details. "
+            "False is not conditional applicability and never waives a required source. "
+            "Review the effective requirements; follow_up_guidance cannot change them. Simulate the "
             "draft and show the owner the selected sources, "
             "calculations, uncertainties, and intended routes before requesting explicit "
             "approval. Only call approve_insight_card after that approval; tool access "
@@ -741,6 +746,7 @@ def create_mcp(
                 else "missing"
             )
             workflow = latest(kind="card_workflow", subject_id=card.id)
+            policy_current = bool(workflow and has_current_evidence_admission_policy(workflow.report))
             summary = {
                 "card_id": card.id,
                 "version": card.version,
@@ -752,7 +758,8 @@ def create_mcp(
                         "status": workflow.status,
                         "created_at": workflow.created_at.isoformat(),
                         "subject_version": workflow.subject_version,
-                        "stale": workflow.subject_version != str(card.version),
+                        "stale": workflow.subject_version != str(card.version) or not policy_current,
+                        "evidence_admission_policy_current": policy_current,
                     }
                     if workflow
                     else None
@@ -795,6 +802,15 @@ def create_mcp(
                         ),
                     }
                 )
+            elif not policy_current:
+                gates.append({
+                    "code": "workflow-admission-policy-stale",
+                    "severity": "blocked",
+                    "message": (
+                        f"Card {card.id} certification predates the current evidence admission policy. "
+                        "Review required versus advisory checks and replay certification; the old audit is retained."
+                    ),
+                })
             elif workflow.status != "approved":
                 gates.append(
                     {
@@ -849,13 +865,14 @@ def create_mcp(
         why_watch: str,
         watch_for: list[str] | None = None,
         questions: list[str] | None = None,
+        evidence_requirements: dict[str, StrictBool] | None = None,
         decision_guidance: str | None = None,
         follow_up_guidance: str | None = None,
         selected_sources: list[dict[str, Any]] | None = None,
         adapter: str | None = None,
         limit: int = 10,
         title: str | None = None,
-        comparison_windows: list[str] | None = None,
+        comparison_windows: ComparisonWindows | None = None,
         delivery_methods: list[DeliveryMethod] | None = None,
         action_confidence_threshold: float = 0.70,
         owner: str | None = None,
@@ -878,6 +895,7 @@ def create_mcp(
             why_watch,
             watch_for=watch_for,
             questions=questions,
+            evidence_requirements=evidence_requirements,
             decision_guidance=decision_guidance,
             follow_up_guidance=follow_up_guidance,
             selected_sources=selected_sources,
@@ -913,13 +931,14 @@ def create_mcp(
         why_watch: str,
         watch_for: list[str] | None = None,
         questions: list[str] | None = None,
+        evidence_requirements: dict[str, StrictBool] | None = None,
         decision_guidance: str | None = None,
         follow_up_guidance: str | None = None,
         selected_sources: list[dict[str, Any]] | None = None,
         adapter: str | None = None,
         limit: int = 10,
         title: str | None = None,
-        comparison_windows: list[str] | None = None,
+        comparison_windows: ComparisonWindows | None = None,
         delivery_methods: list[DeliveryMethod] | None = None,
         action_confidence_threshold: float = 0.70,
         owner: str | None = None,
@@ -943,6 +962,7 @@ def create_mcp(
             why_watch=why_watch,
             watch_for=watch_for,
             questions=questions,
+            evidence_requirements=evidence_requirements,
             decision_guidance=decision_guidance,
             follow_up_guidance=follow_up_guidance,
             selected_sources=selected_sources,
@@ -989,10 +1009,11 @@ def create_mcp(
         sources: list[SourceRef],
         watch_for: list[str] | None = None,
         questions: list[str] | None = None,
+        evidence_requirements: dict[str, StrictBool] | None = None,
         decision_guidance: str | None = None,
         follow_up_guidance: str | None = None,
         delivery_methods: list[DeliveryMethod] | None = None,
-        comparison_windows: list[str] | None = None,
+        comparison_windows: ComparisonWindows | None = None,
         action_confidence_threshold: float = 0.70,
         owner: str | None = None,
         max_source_age_hours: float | None = 24.0,
@@ -1007,6 +1028,14 @@ def create_mcp(
             raise ValueError("at least one source reference is required")
         principal = request_principal(ctx)
         source_refs = [SourceRef.model_validate(source) for source in sources]
+        contracts = {}
+        if comparison_windows is None:
+            for source in source_refs:
+                descriptor = await runtime.sources.authorize(
+                    source, authorized_tenants=[principal.tenant_id] if principal else None,
+                )
+                if descriptor is not None:
+                    contracts[f"{source.adapter}|{source.resource}"] = descriptor.contract
         card = InsightCard(
             id=f"card-{_slug(title)}-{uuid4().hex[:12]}",
             title=title,
@@ -1014,11 +1043,11 @@ def create_mcp(
             why_watch=why_watch,
             watch_for=watch_for or [],
             questions=questions or [],
+            evidence_requirements=evidence_requirements or {},
             decision_guidance=(decision_guidance or "").strip(),
             follow_up_guidance=(follow_up_guidance or "").strip(),
             sources=source_refs,
-            comparison_windows=comparison_windows
-            or ["previous_period", "trailing_4_period_average"],
+            comparison_windows=resolve_comparison_windows(comparison_windows, source_refs, contracts),
             delivery_methods=[
                 DeliveryMethod.model_validate(method) for method in (delivery_methods or [])
             ],
@@ -1575,11 +1604,18 @@ def create_mcp(
 
     @mcp.tool()
     def get_insight_card(
-        card_id: str, ctx: Context | None = None
+        card_id: str, include_history: bool = False, ctx: Context | None = None
     ) -> dict[str, Any]:
-        """Return one stored insight card by its stable ID."""
+        """Return active policy, compiled plan and latest review by stable ID.
+
+        Set include_history=true for prior reviews and correction audit records.
+        History stays persisted but is not repeated in ordinary agent reads.
+        """
         principal = request_principal(ctx)
-        return get_scoped_card(card_id, principal).model_dump(mode="json")
+        return get_scoped_card(card_id, principal).model_dump(
+            mode="json",
+            exclude=set() if include_history else {"onboarding_review_history", "onboarding_corrections"},
+        )
 
     @mcp.resource("insight://catalog")
     def insight_catalog(ctx: Context | None = None) -> str:

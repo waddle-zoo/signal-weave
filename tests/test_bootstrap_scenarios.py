@@ -607,6 +607,12 @@ def test_v3_preserves_v2_holdout_assets_rng_and_raw_public_context(seed, origina
     assert dataset_digest(projected) == original_digest
 
 
+def test_completed_v3_fresh_holdout_fixture_remains_byte_identical_in_canonical_form():
+    assert dataset_digest(build_scenarios(seed=20261002, split="holdout")) == (
+        "78b1fa45e4a7b7f8b4f71bc0cae19755b71c941fae17159c14dff5cc590c114e"
+    )
+
+
 @pytest.mark.parametrize("baseline", [0, 17, 12345])
 def test_buyer_baseline_survives_missing_current_without_reconstruction(baseline):
     export = {"baseline_distinct_buyers": baseline, "current_distinct_buyers": None,

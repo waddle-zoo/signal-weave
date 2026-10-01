@@ -7,11 +7,14 @@ from dataclasses import dataclass
 from typing import Any, Protocol
 from uuid import uuid4
 
-from .compiler import SUPPORTED_CAPABILITIES
+from pydantic import StrictBool
+
+from .compiler import SUPPORTED_CAPABILITIES, base_plan
 from .models import (
     ContextSnapshot,
     DeliveryMethod,
     EvidenceBundle,
+    EvidenceRequirement,
     InsightCard,
     InsightCardOnboardingReview,
     InsightCardProposal,
@@ -22,6 +25,7 @@ from .models import (
     OnboardingDiscoveryReceipt,
     OnboardingSourceReview,
     PrincipalContext,
+    ResourceContract,
     ResourceDescriptor,
     ResourceDiscovery,
     ResourceMatch,
@@ -46,6 +50,35 @@ def _slug(value: str) -> str:
     import re
 
     return re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")[:80] or "insight"
+
+
+def declared_comparison_windows(
+    sources: list[SourceRef], contracts: dict[str, ResourceContract],
+) -> dict[str, list[str]]:
+    """Only reviewed catalog declarations constrain authoring; never infer windows."""
+    return {
+        f"{source.adapter}|{source.resource}": contract.available_comparison_windows
+        for source in sources
+        if (contract := contracts.get(f"{source.adapter}|{source.resource}")) is not None
+        and contract.available_comparison_windows
+    }
+
+
+def resolve_comparison_windows(
+    requested: list[str] | None, sources: list[SourceRef], contracts: dict[str, ResourceContract],
+) -> list[str]:
+    """Resolve omitted defaults; explicit identifiers are never rewritten."""
+    if requested is not None:
+        if not requested or any(not value.strip() for value in requested):
+            raise ValueError("comparison_windows must contain nonempty identifiers")
+        return list(requested)
+    declared = declared_comparison_windows([source for source in sources if source.required], contracts)
+    if not declared:
+        return list(InsightCard.model_fields["comparison_windows"].get_default(call_default_factory=True))
+    common = set.intersection(*(set(windows) for windows in declared.values()))
+    if not common:
+        raise ValueError("comparison-window-mismatch: required sources have no common declared window")
+    return sorted(common)
 
 
 def insight_goal(
@@ -283,6 +316,7 @@ class InsightAuthoringService:
                 domain=match.contract.domain,
                 tenant_id=match.contract.tenant_id,
                 source_status=match.contract.source_status,
+                available_comparison_windows=list(match.contract.available_comparison_windows),
                 metadata={**match.contract.model_dump(mode="json"),
                           "adapter_metadata": match.metadata},
                 selected=match.ref in selected_refs,
@@ -316,6 +350,46 @@ class InsightAuthoringService:
                     question=question,
                     refs=sorted(set(refs or [])),
                 )
+            )
+
+        declared_windows = declared_comparison_windows(
+            card.sources, {match.ref: match.contract for match in discovery.matches},
+        )
+        window_issues: list[str] = []
+        window_refs: list[str] = []
+        undeclared_refs: list[str] = []
+        optional_window_issues: list[str] = []
+        for source in card.sources:
+            ref = f"{source.adapter}|{source.resource}"
+            available = declared_windows.get(ref)
+            if not available:
+                undeclared_refs.append(ref)
+            elif not set(card.comparison_windows).issubset(available):
+                message = f"{ref}: requested {card.comparison_windows!r}; available {available!r}."
+                if source.required:
+                    window_issues.append(message)
+                    window_refs.append(ref)
+                else:
+                    optional_window_issues.append(message)
+        if undeclared_refs:
+            warnings.append("Comparison windows are undeclared; compatibility is unverified for: "
+                            + ", ".join(undeclared_refs))
+        if optional_window_issues:
+            warnings.append("Optional source comparison-window mismatch: " + " ".join(optional_window_issues))
+        if not card.comparison_windows:
+            window_issues.append("The card must select at least one comparison window.")
+        if card.compiled_plan is not None and (
+            not card.compiled_plan.comparison_windows
+            or not set(card.compiled_plan.comparison_windows).issubset(card.comparison_windows)
+        ):
+            window_issues.append("Cached plan windows must be a nonempty subset of the card's windows.")
+        if window_issues:
+            question = "Select exact compatible source identifiers and recompile the card before approval."
+            questions.append(question)
+            add_blocker(
+                OnboardingBlockerCode.COMPARISON_WINDOW_MISMATCH,
+                OnboardingBlockerSeverity.BLOCK, "comparison-window",
+                " ".join(window_issues)[:2000], question, window_refs,
             )
 
         principal_tenant = principal.tenant_id if principal else discovery.authorized_tenant
@@ -577,6 +651,11 @@ class InsightAuthoringService:
             source_candidates=candidates,
             questions=questions,
             warnings=warnings,
+            evidence_requirements=[
+                EvidenceRequirement(key=slot.key, question=slot.question, required=slot.required)
+                for slot in base_plan(card).evidence_slots
+                if slot.role in {"question", "watch"}
+            ],
         )
 
     async def review(
@@ -803,6 +882,7 @@ class InsightAuthoringService:
         *,
         watch_for: list[str] | None = None,
         questions: list[str] | None = None,
+        evidence_requirements: dict[str, StrictBool] | None = None,
         decision_guidance: str | None = None,
         follow_up_guidance: str | None = None,
         selected_sources: list[dict[str, Any]] | None = None,
@@ -871,11 +951,13 @@ class InsightAuthoringService:
             why_watch=why_watch,
             watch_for=watch_for,
             questions=questions,
+            evidence_requirements=evidence_requirements or {},
             decision_guidance=decision_guidance,
             follow_up_guidance=follow_up_guidance,
             sources=source_refs,
-            comparison_windows=comparison_windows
-            or ["previous_period", "trailing_4_period_average"],
+            comparison_windows=resolve_comparison_windows(
+                comparison_windows, source_refs, {ref: match.contract for ref, match in matches.items()},
+            ),
             delivery_methods=delivery_methods,
             action_confidence_threshold=action_confidence_threshold,
             owner=owner,

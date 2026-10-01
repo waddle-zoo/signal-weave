@@ -2,11 +2,22 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from enum import StrEnum
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, StrictBool, field_validator, model_validator
 
 from .diagnostics import AnalysisReport, AnalyticalComparison
+
+ComparisonWindows = Annotated[list[str], Field(
+    min_length=1, max_length=20,
+    description=(
+        "Exact source-declared comparison identifiers from discovery's "
+        "contract.available_comparison_windows, not translated labels. "
+        "These are not required_comparison_keys: those must be exact analytical_comparisons[].key "
+        "or reviewed catalog required_comparison_keys. Inspect the source; do not invent keys. "
+        "Omit to resolve defaults from required sources; an explicit empty list is invalid."
+    ),
+)]
 
 
 class Outcome(StrEnum):
@@ -62,7 +73,13 @@ class SourceRef(BaseModel):
     label: str = Field(min_length=1, max_length=240)
     parameters: dict[str, Any] = Field(default_factory=dict, max_length=50)
     required: bool = True
-    required_comparison_keys: list[str] = Field(default_factory=list, max_length=20)
+    required_comparison_keys: list[str] = Field(
+        default_factory=list, max_length=20,
+        description=(
+            "Exact analytical_comparisons[].key or reviewed catalog required_comparison_keys, "
+            "NOT comparison_window or time-window labels. Inspect the source; do not invent keys."
+        ),
+    )
 
 
 class MetricDefinition(BaseModel):
@@ -112,6 +129,13 @@ class ResourceContract(BaseModel):
     scope: str = Field(default="", max_length=1000)
     metric_names: list[str] = Field(default_factory=list, max_length=100)
     metric_definitions: list[MetricDefinition] = Field(default_factory=list, max_length=100)
+    available_comparison_windows: list[str] = Field(
+        default_factory=list, max_length=20,
+        description=(
+            "Exact adapter-owned identifiers compatible with this resource's required comparisons. "
+            "Empty means undeclared, not support for every window."
+        ),
+    )
     required_comparison_keys: list[str] = Field(
         default_factory=list,
         max_length=20,
@@ -127,6 +151,13 @@ class ResourceContract(BaseModel):
     roles: list[str] = Field(default_factory=list, max_length=30)
     source_status: Literal["healthy", "stale", "failed", "ambiguous", "unknown"] = "healthy"
     authorized: bool = True
+
+    @field_validator("available_comparison_windows")
+    @classmethod
+    def validate_available_windows(cls, values: list[str]) -> list[str]:
+        if any(not value.strip() for value in values):
+            raise ValueError("available_comparison_windows entries must not be empty")
+        return values
 
 
 class PrincipalContext(BaseModel):
@@ -426,6 +457,7 @@ class OnboardingSourceReview(BaseModel):
     domain: str = "unknown"
     tenant_id: str = "default"
     source_status: str = "unknown"
+    available_comparison_windows: list[str] = Field(default_factory=list, max_length=20)
     metadata: dict[str, Any] = Field(default_factory=dict)
     selected: bool = False
     recommended: bool = False
@@ -466,6 +498,7 @@ class OnboardingBlockerCode(StrEnum):
     INTENT_DETAIL_REQUIRED = "intent-detail-required"
     DECISION_GUIDANCE_REQUIRED = "decision-guidance-required"
     DELIVERY_POLICY_MISSING = "delivery-policy-missing"
+    COMPARISON_WINDOW_MISMATCH = "comparison-window-mismatch"
 
 
 class OnboardingBlocker(BaseModel):
@@ -519,6 +552,14 @@ class OnboardingCorrection(BaseModel):
     recorded_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
+class EvidenceRequirement(BaseModel):
+    """An owner-reviewable semantic prerequisite, not an execution result."""
+
+    key: str
+    question: str
+    required: StrictBool
+
+
 class InsightCardOnboardingReview(BaseModel):
     """The confirmation boundary between an agent-drafted card and approval."""
 
@@ -549,6 +590,7 @@ class InsightCardOnboardingReview(BaseModel):
     )
     questions: list[str] = Field(default_factory=list, max_length=50)
     warnings: list[str] = Field(default_factory=list, max_length=50)
+    evidence_requirements: list[EvidenceRequirement] = Field(default_factory=list, max_length=200)
 
 
 class Observation(BaseModel):
@@ -653,7 +695,7 @@ class InsightPlan(BaseModel):
     card_id: str
     card_version: int = Field(default=1, ge=1)
     selected_source_keys: list[str]
-    comparison_windows: list[str]
+    comparison_windows: ComparisonWindows
     capabilities: list[str]
     watch_for: list[str] = Field(default_factory=list)
     questions: list[str] = Field(default_factory=list)
@@ -675,6 +717,15 @@ class InsightCard(BaseModel):
     why_watch: str = Field(min_length=1, max_length=4000)
     watch_for: list[str] = Field(default_factory=list, max_length=100)
     questions: list[str] = Field(default_factory=list, max_length=100)
+    evidence_requirements: dict[str, StrictBool] = Field(
+        default_factory=dict,
+        max_length=200,
+        description=(
+            "Reviewed overrides for existing one-based question:N or watch:N slots. "
+            "Unspecified slots are required for automatic notification/escalation. "
+            "False marks advisory detail, not a conditional prerequisite or a source waiver."
+        ),
+    )
     decision_guidance: str = Field(
         default="",
         max_length=8000,
@@ -692,9 +743,8 @@ class InsightCard(BaseModel):
         ),
     )
     sources: list[SourceRef] = Field(default_factory=list, max_length=200)
-    comparison_windows: list[str] = Field(
+    comparison_windows: ComparisonWindows = Field(
         default_factory=lambda: ["previous_period", "trailing_4_period_average"],
-        max_length=20,
     )
     action_confidence_threshold: float = Field(default=0.70, ge=0.0, le=1.0)
     owner: str | None = Field(default=None, max_length=240)
@@ -731,7 +781,20 @@ class InsightCard(BaseModel):
             values = getattr(self, field_name)
             if any(not value.strip() for value in values):
                 raise ValueError(f"{field_name} entries must not be empty")
+        requirement_keys = {
+            *(f"question:{i + 1}" for i in range(len(self.questions))),
+            *(f"watch:{i + 1}" for i in range(len(self.watch_for))),
+        }
+        if unknown := set(self.evidence_requirements) - requirement_keys:
+            raise ValueError(
+                "evidence_requirements must identify existing question:N or watch:N slots: "
+                + ", ".join(sorted(unknown))
+            )
         if self.compiled_plan:
+            if not self.compiled_plan.comparison_windows or not set(
+                self.compiled_plan.comparison_windows
+            ).issubset(self.comparison_windows):
+                raise ValueError("compiled_plan comparison windows must be a nonempty subset of card windows")
             if self.compiled_plan.card_id != self.id:
                 raise ValueError("compiled_plan must belong to its insight card")
             if self.compiled_plan.card_version != self.version:

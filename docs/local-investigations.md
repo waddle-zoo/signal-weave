@@ -101,6 +101,44 @@ Other admission rules:
   Observation baseline requirements can be satisfied by a complete comparison only
   when source, comparison/subject ID and metric match.
 
+### Comparison-window onboarding
+
+Adapters can publish `ResourceDescriptor.contract.available_comparison_windows`,
+for example `["previous_period"]`. These are exact, opaque identifiers compatible
+with the configured resource's required comparisons, not human labels or a union
+that hides incompatible required comparisons. Custom identifiers, including spaces
+and Unicode, are supported without translation, case folding, or aliases. An empty
+or omitted declaration means compatibility is unknown; review warns but does not
+block legacy sources. Context-only resources need not declare windows.
+
+`SourceRef.required_comparison_keys` identifies analytical tables by their exact
+`analytical_comparisons[].key` or reviewed catalog requirements. It does not contain
+`comparison_window` identifiers or time-window labels. Inspect the source rather
+than inventing keys. Schema guidance makes this distinction explicit; it does not
+prove that callers will always author the correct keys.
+
+Discovery exposes the contract and onboarding review exposes each candidate's
+`available_comparison_windows`. The configured MCP bridge's reviewed descriptor
+owns this field; caller source-selection fields and snapshot metadata cannot replace
+it. This capability must actually be supplied by the adapter/operator. Adding the
+field alone does not repair existing cards or establish that a trial now succeeds.
+
+When `comparison_windows` is omitted from draft/propose/onboard, defaults are the
+intersection of nonempty declarations from required selected sources. If those
+declarations have no common window, drafting fails with `comparison-window-mismatch`.
+If none is declared, legacy defaults remain and review marks compatibility unverified.
+An explicit empty list is rejected. Explicit identifiers are retained for review;
+every allowed card window must be supported by each required source that declares
+windows, since compilation may choose any of them. Optional sources do not narrow
+the intersection; their mismatches produce warnings.
+
+Review blocks incompatible cards and cached plans whose windows are empty or outside
+the card's allowlist. Approval rechecks the catalog and cannot waive this blocker
+through source-selection confirmation. Changed declarations invalidate the review
+fingerprint. Execution still requires an exact match to
+`AnalyticalComparison.comparison_window` and validates the actual coverage, periods,
+totals, and denominators. A declared capability is not proof of valid run evidence.
+
 Exact arithmetic over the supplied binary floats avoids cancellation/overflow
 inside the decomposition; returned values are finite floats with a reconciliation
 residual. This is not decimal-currency precision or evidence of source accuracy.

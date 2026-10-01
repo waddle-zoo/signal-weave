@@ -12,6 +12,7 @@ import asyncio
 import hashlib
 import json
 import time
+from collections.abc import Mapping
 from enum import StrEnum
 from pathlib import Path
 from typing import Literal
@@ -20,6 +21,18 @@ from pydantic import BaseModel, Field, model_validator
 
 from .engine import InsightEngine
 from .models import ContextSnapshot, InsightCard, Outcome, ResourceSnapshot
+
+# Increment when evidence-admission semantics require fresh certification.
+EVIDENCE_ADMISSION_POLICY_VERSION = 1
+
+
+def has_current_evidence_admission_policy(report: Mapping[str, object]) -> bool:
+    """Check stored report compatibility, not approval or overall readiness."""
+
+    version = report.get("evidence_admission_policy_version")
+    # Stored certification bodies are opaque dictionaries. Do not coerce a
+    # boolean/string/float into a version, or assume unknown future compatibility.
+    return type(version) is int and version == EVIDENCE_ADMISSION_POLICY_VERSION
 
 
 class EvaluationDataset(BaseModel):
@@ -179,6 +192,10 @@ class CardEvaluationCaseResult(BaseModel):
 class CardEvaluationReport(BaseModel):
     """Aggregate certification report for a card/workflow replay set."""
 
+    evidence_admission_policy_version: int = Field(
+        default=0, ge=0, strict=True,
+        description="Evidence admission policy used by this replay; 0 denotes a legacy report.",
+    )
     card_ids: list[str] = Field(default_factory=list, max_length=10_000)
     card_versions: dict[str, int] = Field(default_factory=dict)
     case_count: int = Field(ge=0)
@@ -440,6 +457,7 @@ class CardWorkflowEvaluator:
         case_labels = [_case_labels(case) for case in (cases or [])]
         metrics = getattr(self, "_metrics_delta", {})
         return CardEvaluationReport(
+            evidence_admission_policy_version=EVIDENCE_ADMISSION_POLICY_VERSION,
             card_ids=card_ids or sorted({case.card_id for case in results}),
             card_versions=card_versions
             or {case.card_id: case.card_version for case in results},
