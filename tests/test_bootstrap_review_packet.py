@@ -2,11 +2,17 @@
 
 import copy
 import json
+from datetime import datetime, timedelta
 
 import pytest
 
 from evaluations import bootstrap_review_packet as review
-from evaluations.bootstrap_scenarios import DEFAULT_SEED, build_scenarios, public_episode
+from evaluations.bootstrap_scenarios import (
+    DEFAULT_SEED,
+    build_scenarios,
+    dataset_digest,
+    public_episode,
+)
 
 
 @pytest.fixture
@@ -120,3 +126,28 @@ def test_export_does_not_mutate_report_or_fixture(review_report):
     review.packets(report)
     assert report == before_report
     assert scenario == before_scenario
+
+
+def test_export_rejects_changed_measured_fixtures():
+    fixtures = build_scenarios(seed=DEFAULT_SEED, split="dev")[:1]
+    report = {"config": {"seed": DEFAULT_SEED, "split": "dev", "selected_companies": 1,
+                         "dataset_digest": "not-the-frozen-digest"}}
+    with pytest.raises(ValueError, match="Fixture digest differs"):
+        review.packets(report)
+    report["config"]["dataset_digest"] = dataset_digest(fixtures)
+    report.update(rows=[], status="complete", summary={}, usage={},
+                  budget_censored=False, comparative_eligible=True)
+    assert review.packets(report)[0] == []
+
+
+def test_export_rebases_period_clock_without_changing_fixture(review_report):
+    report, scenario = review_report
+    original = copy.deepcopy(scenario)
+    delta = timedelta(days=47, seconds=123)
+    anchor = datetime.fromisoformat(scenario["public"]["onboarding"]["as_of"])
+    report["config"]["clock_rebased_to"] = (anchor + delta).isoformat()
+    cases, mapping, _ = review.packets(report)
+    for case in cases:
+        period = public_episode(scenario, mapping[case["case_id"]]["period_id"])["period"]
+        assert case["business"]["period"] == review.shift_timestamps(period, delta)
+    assert scenario == original

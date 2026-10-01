@@ -45,7 +45,9 @@ privately and configures your data connection without hand-editing TOML.
 
 > The native installer is available as the **v0.2.0rc1 local preview**. Use the
 > pinned command in the guide. This is not a stable enterprise release; the new
-> Luna/Jev onboarding comparison is still pending. Stable v0.1.0 has no native assets.
+> [Live Codex/Jev onboarding trials](docs/codex-bootstrap-trial-2026-10-01.md)
+> exposed unresolved card-approval gaps; comparative benefit is not established.
+> Stable v0.1.0 has no native assets.
 
 Then ask your agent:
 

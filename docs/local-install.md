@@ -11,9 +11,10 @@ or notarized; company device-management policies may block them. Do not disable
 those controls—use an administrator-approved installation path instead.
 
 > **Local preview:** `v0.2.0rc1` is a prerelease for trying the local runtime.
-> Installation and bounded live-Jev execution have been tested; the new paired
-> Luna onboarding benchmark is not complete. This is not an enterprise-readiness
-> or comparative-performance claim. The stable v0.1.0 release has no native assets.
+> Installation and bounded live-Jev execution have been tested. The paired
+> [Codex/Jev trial](codex-bootstrap-trial-2026-10-01.md) exposed unresolved
+> card-approval gaps; easy onboarding and comparative benefit are not proven.
+> The stable v0.1.0 release has no native assets.
 
 ## 1. Install and set up
 

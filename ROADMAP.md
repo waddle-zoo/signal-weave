@@ -51,6 +51,20 @@ card and per source domain.
 
 ### Bootstrap a company
 
+The [October 1 live Codex/Jev trial](docs/codex-bootstrap-trial-2026-10-01.md)
+exposed approval failures before repeat monitoring. Prioritize these before
+claiming easy agent-led onboarding:
+
+- [ ] Make correction categories discoverable in the MCP schema and validation errors.
+- [ ] Let an authorized reviewer resolve a specific source ambiguity with versioned
+      evidence; retain real conflicts, source-health checks and permission gates.
+- [ ] Make the draft → inspect → preview → owner approval → activation sequence
+      actionable to an agent, including invalidation after card changes.
+- [ ] Validate repairs on development cases, then freeze a new held-out trial;
+      retain the failed original and include setup costs and missed runs.
+- [ ] Complete evaluator per-fact availability rules (including valid historical
+      buyer counts) and separate numeric, vocabulary, provenance and scope errors.
+
 - [x] Add a portable `BootstrapManifest` and read-only `BootstrapReport` that
       checks authorized catalog coverage, native bounded search, sample
       inspection, tenant scope, and optional metadata capabilities.
