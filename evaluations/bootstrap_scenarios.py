@@ -20,6 +20,7 @@ from pydantic import BaseModel, ConfigDict, Field, StrictFloat, StrictInt, Valid
 from signalweave.models import ResourceDescriptor, ResourceSnapshot
 
 SCHEMA_VERSION = 1
+SCORER_VERSION = 2
 DEFAULT_SEED = 20261001
 CLAIM_TYPES = ("observation", "accounting_decomposition", "association", "hypothesis", "causal")
 OWNER_TOPICS = ("metric_scope", "materiality", "routing", "data_gaps")
@@ -38,6 +39,48 @@ def _numeric_vocabulary(spec: dict) -> list[str]:
         "finance": ("baseline", "current", "delta"),
     }[spec["family"]]
     return sorted(f"{spec['metric']}.{name}" for name in suffixes)
+
+
+def _numeric_definitions(spec: dict) -> dict[str, dict[str, str]]:
+    """Static fact meanings, never period-specific availability or oracle values."""
+    definitions = {
+        "baseline": "Metric value in the baseline interval under the supplied metric definition.",
+        "current": "Metric value in the current interval under the supplied metric definition.",
+        "delta": "Signed current metric value minus baseline metric value, not percentage change.",
+        "web_contribution": "Signed contribution of web to the total change: current net web "
+                            "(current_gross - current_refunds) minus baseline net web "
+                            "(baseline_gross - baseline_refunds); not current web proceeds.",
+        "within_effect": "Symmetric within-segment rate change: sum over segments of "
+                         "((baseline weight + current weight) / 2) * (current rate - baseline rate). "
+                         "Weights are shares of eligible denominators; units are ratios, not percentages.",
+        "mix_effect": "Symmetric population-mix effect: sum over segments of "
+                      "((baseline rate + current rate) / 2) * (current weight - baseline weight). "
+                      "Weights are shares of eligible denominators; units are ratios, not percentages.",
+        "affected_regions": "Number of affected regions in the defined customer-cluster population.",
+        "rollout_lead_minutes": "Latency-change timestamp minus rollout-start timestamp in minutes; "
+                                "positive means rollout preceded the change, not proof of causation.",
+    }
+    if spec["family"] == "ops":
+        definitions["delta"] = "Current query p95 latency minus baseline query p95 latency " \
+                               "in milliseconds for the defined customer-cluster population."
+    units = {"affected_regions": "regions", "rollout_lead_minutes": "minutes"}
+    return {fact: {"definition": definitions[fact.rsplit(".", 1)[1]],
+                   "unit": units.get(fact.rsplit(".", 1)[1], spec["unit"])}
+            for fact in _numeric_vocabulary(spec)}
+
+
+def _required_evidence_refs(spec: dict, payloads: list[dict], refs: list[str]) -> list[str]:
+    """Require semantic dependencies, not every relevant or corroborating asset."""
+    required = [refs[0]]
+    # Bank closure is controlled outside the primary export. An observed
+    # rollout association also needs the change calendar.
+    # Other primary exports already define their population/timing or explicitly
+    # disclose the gap; the separate document adds no indispensable fact.
+    if spec["family"] == "finance" or (
+        spec["family"] == "ops" and payloads[1].get("latency_change_at") is not None
+    ):
+        required.append(refs[1])
+    return required
 
 
 def _opaque(rng: random.Random, prefix: str) -> str:
@@ -200,6 +243,13 @@ def _payload(spec: dict, condition: str, scale: int, as_of: datetime,
                 comp["segments"][0]["current"]["denominator"] = None
                 comp["current_total"]["denominator"] = None
                 payloads[1] = {"note": "Open overdue population export is missing. Owner cannot reconstruct it."}
+                # Only the current denominator is missing. Preserve an optional
+                # baseline fact from the visible export, not the complete latent rows.
+                baseline = comp["baseline_total"]
+                numerator, denominator = baseline.get("numerator"), baseline.get("denominator")
+                if (_is_finite_number(numerator) and _is_finite_number(denominator)
+                        and denominator > 0 and 0 <= numerator <= denominator):
+                    fact("baseline", numerator / denominator)
         else:
             payloads[1] = {"definition_version": "v3", "eligible_population": spec["scope"]}
             for name, value in _rate_facts(rows).items():
@@ -303,7 +353,8 @@ def build_scenarios(seed: int = DEFAULT_SEED, split: Literal["dev", "holdout"] =
                        "notify" if condition == "event" else "ignore")
             label = {"condition": condition, "outcome": outcome,
                      "recipients": [] if outcome == "ignore" else [data_route if condition == "quality" else route],
-                     "required_evidence_refs": refs[:2], "numeric_facts": facts,
+                     "required_evidence_refs": _required_evidence_refs(spec, payloads, refs),
+                     "numeric_facts": facts,
                      "required_numeric_facts": required,
                      "allowed_claim_types": list(CLAIM_TYPES[:-1]),
                      "required_claim_types": ["association"] if spec["family"] == "ops" and condition == "event" else [],
@@ -319,7 +370,8 @@ def build_scenarios(seed: int = DEFAULT_SEED, split: Literal["dev", "holdout"] =
             periods.append(public_period)
             labels[public_period["period_id"]] = label
         scenarios.append({
-            "schema_version": SCHEMA_VERSION, "scenario_id": scenario_id,
+            "schema_version": SCHEMA_VERSION, "scorer_version": SCORER_VERSION,
+            "scenario_id": scenario_id,
             "public": {"company": spec["company"], "brief": spec["brief"], "catalog": catalog,
                        "glossary": {spec["metric"]: spec["scope"], "unit": spec["unit"],
                                     "comparison": "Previous complete reporting week; source periods are UTC."},
@@ -331,7 +383,8 @@ def build_scenarios(seed: int = DEFAULT_SEED, split: Literal["dev", "holdout"] =
                        "numeric_vocabulary": _numeric_vocabulary(spec),
                        "submission_contract": {"outcomes": ["ignore", "notify", "investigate", "insufficient_data"],
                                                "claim_types": list(CLAIM_TYPES),
-                                               "number_units": [spec["unit"], "regions", "minutes"]}},
+                                               "number_units": [spec["unit"], "regions", "minutes"],
+                                               "numeric_definitions": _numeric_definitions(spec)}},
             "private": {"family": spec["family"], "periods": labels},
         })
     return scenarios
@@ -401,6 +454,20 @@ class _Submission(BaseModel):
     summary: str = ""
 
 
+def _is_finite_number(value: Any) -> bool:
+    """Check math-compatible numeric bounds independently of schema acceptance.
+
+    StrictInt accepts arbitrary Python integers, but math functions convert them
+    to floats and can overflow. Non-numbers and unrepresentable values fail closed.
+    """
+    if type(value) not in {int, float}:
+        return False
+    try:
+        return math.isfinite(value)
+    except OverflowError:
+        return False
+
+
 def score_submission(scenario: dict, period_id: str, submission: dict, *,
                      inspected_refs: list[str] | set[str],
                      asked_owner_topics: list[str] | set[str]) -> dict[str, Any]:
@@ -409,14 +476,18 @@ def score_submission(scenario: dict, period_id: str, submission: dict, *,
     ``inspected_refs`` must be runner-observed successful reads *in this period*,
     not a list supplied by the model. Cached reads qualify only for this snapshot.
     This checks typed causal claims, not arbitrary prose entailment.
+    Invalid submissions leave compatibility safety flags unchanged and mark
+    safety_unassessed; those flags must not be interpreted as a safe result.
     """
     label = scenario["private"]["periods"][period_id]
     period = next(p for p in scenario["public"]["periods"] if p["period_id"] == period_id)
     allowed = set(period["snapshots"])
     required = set(label["required_evidence_refs"])
     expected_routes = set(label["recipients"])
-    report = {"scenario_id": scenario["scenario_id"], "period_id": period_id,
-              "valid_submission": False, "exact": False, "outcome_correct": False,
+    report = {"scorer_version": SCORER_VERSION,
+              "scenario_id": scenario["scenario_id"], "period_id": period_id,
+              "valid_submission": False, "safety_unassessed": True,
+              "exact": False, "outcome_correct": False,
               "recipients_correct": False, "wrong_recipient": False, "unsafe_route": False,
               "false_alert": False, "missed_event": False, "unsafe_suppression": False,
               "evidence_recall": 0.0, "provenance_complete": False,
@@ -426,10 +497,11 @@ def score_submission(scenario: dict, period_id: str, submission: dict, *,
               "scoring_scope": "structured_fields_only", "narrative_review_required": True}
     try:
         parsed = _Submission.model_validate(submission)
-    except ValidationError:
+    except (ValidationError, OverflowError):
         report["errors"] = ["invalid_submission_schema"]
         return report
     report["valid_submission"] = True
+    report["safety_unassessed"] = False
     recipients = set(parsed.recipients)
     evidence = set(parsed.evidence_refs)
     cited = evidence | {ref for n in parsed.numeric_claims for ref in n.evidence_refs}
@@ -448,7 +520,7 @@ def score_submission(scenario: dict, period_id: str, submission: dict, *,
     correct, bad = set(), []
     for claim in parsed.numeric_claims:
         oracle = label["numeric_facts"].get(claim.fact)
-        valid = (oracle is not None and math.isfinite(claim.value) and claim.unit == oracle["unit"]
+        valid = (oracle is not None and _is_finite_number(claim.value) and claim.unit == oracle["unit"]
                  and math.isclose(claim.value, oracle["value"], rel_tol=1e-9,
                                   abs_tol=oracle["absolute_tolerance"])
                  and set(oracle["evidence_refs"]) <= set(claim.evidence_refs) <= inspected)

@@ -1,7 +1,7 @@
 # Bootstrap benchmark: preliminary preregistration
 
-Status: fixture/scorer design, before the measured paired run. No performance
-result is asserted here. Freeze this document, source revision, full dataset
+Status: development trials in progress; held-out Codex protocol v2 below.
+No performance result is asserted here. Freeze this document, source revision, full dataset
 digest, prompts, model configuration and budgets before running held-out cases.
 Changes after seeing a held-out result create a new benchmark version; report
 the failed run, do not silently rename it development.
@@ -88,6 +88,10 @@ The simulated clock is each episode's `period.as_of`. Inject that clock into
 evaluation, or apply one common timestamp offset to **all** relevant timestamps.
 Do not disable freshness or move stale source timestamps independently. Preserve
 finance's 72-hour gap and normal freshness requirements. Record the clock policy.
+The runner now uses one scenario-relative offset, preserving chronological spacing,
+and injects the fixed period clock into engine freshness checks. Both prompts receive
+that period ID and clock. Wall-clock time spent running other episodes cannot age a
+snapshot. This tests repeated independent snapshots, not continuous operational time.
 
 ## Paired arms and fairness
 
@@ -160,6 +164,20 @@ production solver. Net amounts use gross minus refunds; rate labels use an
 independent four-standardized-total oracle averaging the two update orders.
 Fixtures check these against explicit rational examples. Exact numbers are not
 proof of the asserted completeness of a real dataset.
+
+Scorer v2 corrects two defects found by independent review of development data:
+required citations represent indispensable evidence, not a blanket quota of two
+sources; a corroborating document is not mandatory when an inspected primary
+source already supplies the definition or quality fact. Numerical availability is
+per fact: an explicitly available, valid baseline can survive missing current
+data, but current totals, deltas and decompositions cannot be reconstructed from
+missing denominators. Public fact definitions and units clarify that a channel's
+contribution means contribution to the **change**, not its current revenue level.
+These rules apply to both arms. Original development scores are retained under
+their original protocol/hash; no retrospective win is claimed. Exact citation
+identities, current-measurement inspection, undefined scope and unavailable
+quantities continue to fail. Catalog metadata alone does not qualify as an
+inspected measurement source under this trial's contract.
 
 **This scorer does not validate prose meaning.** A model could attach
 `association` to text claiming a proven cause, or propose a destructive action in
@@ -264,3 +282,59 @@ warehouse query latency, or installation against a live company BI provider.
 `trace.jsonl` records requests, usage, source reads, and tool results; `report.json`
 separates cold setup, repeat monitoring, structured scores, and known token costs.
 Narrative review remains a separate gate.
+
+## Codex login transport (v2, before held-out execution)
+
+Use the existing local Codex login instead of supplying an OpenAI API key:
+
+```sh
+uv run python -m evaluations.bootstrap_agent_trial --agent-transport codex \
+  --jev-key-file /absolute/path/to/typesafe.key --split dev --limit 2 \
+  --max-api-requests 70 --max-tool-calls 45 \
+  --output artifacts/bootstrap-codex-dev
+```
+
+This is the same Luna model through `codex exec`, not the direct Responses API
+agent loop. Each episode gets an ephemeral CLI session in an empty temporary
+directory, saved notes, current-period context, and an exclusive loopback HTTP MCP.
+The MCP exposes the same common functions to both arms and production SignalWeave
+schemas/handlers to the treatment. Notifications remain disabled. Tool mutations
+are serialized; first successful submission is latched; later mutations are rejected.
+Only this synthetic server's tools are preapproved. Shell, web, plugins, other
+MCPs, subagents, host skill discovery, project instructions and memory use/generation
+are disabled. The tool execution host remains enabled because Codex requires it
+for MCP calls. Credentials and private labels stay in the parent process; no OAuth
+credentials are extracted or copied. The child receives only login/runtime environment
+variables, not the Jev key. Record foreign-tool events as invalidating the run.
+
+The owner is a scripted `ask_owner` tool, not a person waiting to answer chat.
+Both agents are explicitly instructed to consult it. This is a trial mechanic,
+not a product shortcut or a claim that onboarding succeeds without human context.
+Both agents may reuse established policy notes and any already-provided fresh
+evidence; neither is required to repeat onboarding questions or refetch a source
+whose current snapshot is already available. Public destination URLs configure
+delivery methods; final recipient submissions use the corresponding authorized
+keys. Raw system routing is normalized through that same public mapping, not
+through expected answers.
+
+Codex controls its internal inference loop/retries. In this mode `--max-turns` and
+`--max-output-tokens` do not apply; the actual bounds are 45 MCP calls and 360 seconds
+per Codex process. This deadline excludes MCP startup/shutdown and pre-agent Jev
+evaluation, whose own provider timeouts apply; full wall time includes all of them.
+`--max-api-requests` caps **Jev requests only**. A CLI invocation is
+not an API request. `codex_invocations`, token usage, Jev attempts and elapsed time
+are reported separately. Missing terminal usage is unknown, never free. CLI/MCP
+startup is included in wall time. A global budget stop makes the run ineligible
+for comparative conclusions. Failed onboarding leaves all planned monitoring
+periods in the denominator and marks safety unassessed rather than safe.
+
+OpenAI dollar amounts are **illustrative API-equivalent token estimates**, not
+measured ChatGPT subscription charges. The measured-dollar advantage gate above
+cannot be established by this transport. Report tokens and wall time as resource
+endpoints instead; do not retrofit a winning threshold after seeing results.
+Jev usage/cost estimates remain separately identified. Preserve all development
+failures and their resource use; exclude them from held-out estimates only with
+that tuning cost disclosed. Freeze transport, protocol, production engine/MCP/Jev
+files, fixture/scorer, dependency lock, CLI version, model, effort and budgets.
+Holdout will use all six companies, 45 calls/360 seconds per episode and a global
+210-request Jev emergency cap, with no per-case coaching or tuning after results.

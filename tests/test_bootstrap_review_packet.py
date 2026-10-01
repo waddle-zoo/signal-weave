@@ -1,0 +1,122 @@
+"""Offline review-export contracts using fabricated results, never model calls."""
+
+import copy
+import json
+
+import pytest
+
+from evaluations import bootstrap_review_packet as review
+from evaluations.bootstrap_scenarios import DEFAULT_SEED, build_scenarios, public_episode
+
+
+@pytest.fixture
+def review_report(monkeypatch):
+    scenarios = build_scenarios(seed=DEFAULT_SEED, split="dev")
+    scenario = scenarios[0]
+    scenario["private"]["canary"] = "PRIVATE_ORACLE_CANARY"
+    scenario["unexpected_top_level"] = "PRIVATE_ORACLE_CANARY"
+
+    def fixtures(*, seed, split):
+        assert (seed, split) == (DEFAULT_SEED, "dev")
+        return scenarios
+
+    monkeypatch.setattr(review, "build_scenarios", fixtures)
+    rows = []
+    for index, period in enumerate(scenario["public"]["periods"][:2]):
+        refs = list(period["snapshots"])[:1]
+        for arm in ("luna_bi", "luna_signalweave_jev"):
+            submission = {
+                "outcome": "investigate", "summary": f"Review current evidence for period {index}.",
+                "evidence_refs": refs.copy(), "recipients": [], "numeric_claims": [], "claims": [],
+            }
+            if index == 1 and arm == "luna_signalweave_jev":
+                submission = None
+            rows.append({
+                "scenario_id": scenario["scenario_id"], "period_id": period["period_id"],
+                "arm": arm, "phase": "monitoring", "status": "complete" if index == 0 else "failed",
+                "submission": submission, "inspected_refs": refs.copy(),
+                "score": {"exact": False, "canary": "SCORER_RESULT_CANARY"},
+                "raw_system_decision": {"canary": "TREATMENT_RESULT_CANARY"},
+                "error": None if index == 0 else "EPISODE_ERROR_CANARY",
+            })
+    rows.insert(0, {
+        "scenario_id": scenario["scenario_id"],
+        "period_id": scenario["public"]["onboarding"]["period_id"],
+        "arm": "luna_bi", "phase": "onboarding", "status": "complete",
+        "submission": {"summary": "ONBOARDING_CANARY"}, "inspected_refs": [],
+    })
+    report = {
+        "config": {"seed": DEFAULT_SEED, "split": "dev"}, "rows": rows,
+        "status": "partial_or_failed", "summary": {"luna_bi": {}, "luna_signalweave_jev": {}},
+        "usage": {}, "budget_censored": False, "comparative_eligible": False,
+    }
+    return report, scenario
+
+
+def test_blind_packets_exclude_oracles_scores_and_arm_metadata(review_report):
+    report, scenario = review_report
+    cases, mapping, compact = review.packets(report)
+    text = json.dumps(cases, allow_nan=False)
+    for forbidden in (
+        "PRIVATE_ORACLE_CANARY", "SCORER_RESULT_CANARY", "TREATMENT_RESULT_CANARY",
+        "EPISODE_ERROR_CANARY", "ONBOARDING_CANARY", "luna_bi", "luna_signalweave_jev",
+        '"private"', '"score"', '"arm"', '"condition"', '"required_evidence_refs"',
+        '"required_numeric_facts"', '"numeric_facts"', '"raw_system_decision"',
+    ):
+        assert forbidden not in text
+    for case in cases:
+        assert set(case) == {"case_id", "business", "analysis", "inspected_refs", "execution_complete"}
+        assert set(case["business"]) == {
+            "company", "brief", "glossary", "owner_answers", "destinations", "catalog", "period",
+        }
+    assert {entry["arm"] for entry in mapping.values()} == {"luna_bi", "luna_signalweave_jev"}
+    assert "SCORER_RESULT_CANARY" in json.dumps(compact)
+    # Changing the oracle must not change any blinded review evidence.
+    scenario["private"] = {"replacement": "OTHER_PRIVATE_ORACLE"}
+    assert review.packets(report)[0] == cases
+
+
+def test_completed_failed_and_missing_submissions_are_all_preserved(review_report):
+    report, _ = review_report
+    cases, mapping, compact = review.packets(report)
+    rows = {(r["scenario_id"], r["period_id"], r["arm"]): r
+            for r in report["rows"] if r["phase"] == "monitoring"}
+    assert len(cases) == len(mapping) == len(rows) == 4
+    assert sum(case["execution_complete"] for case in cases) == 2
+    assert sum(case["analysis"] is None for case in cases) == 1
+    for case in cases:
+        identity = mapping[case["case_id"]]
+        row = rows[tuple(identity[key] for key in ("scenario_id", "period_id", "arm"))]
+        assert case["analysis"] == row["submission"]
+        assert case["inspected_refs"] == row["inspected_refs"]
+        assert case["execution_complete"] is (row["status"] == "complete")
+    assert len(compact["cases"]) == len(report["rows"])
+    for original, exported in zip(report["rows"], compact["cases"], strict=True):
+        for key in ("phase", "status", "error", "submission", "score"):
+            assert exported[key] == original.get(key)
+
+
+def test_mapping_is_deterministic_and_paired_arms_receive_identical_public_evidence(review_report):
+    report, scenario = review_report
+    cases, mapping, compact = review.packets(report)
+    assert review.packets(copy.deepcopy(report)) == (cases, mapping, compact)
+    assert [case["case_id"] for case in cases] == [f"review-{index:03d}" for index in range(1, 5)]
+    assert set(mapping) == {case["case_id"] for case in cases}
+    by_period = {}
+    for case in cases:
+        identity = mapping[case["case_id"]]
+        assert set(identity) == {"scenario_id", "period_id", "arm"}
+        public = public_episode(scenario, identity["period_id"])
+        assert case["business"] == {key: public[key] for key in case["business"]}
+        by_period.setdefault(identity["period_id"], []).append(case["business"])
+    assert len(by_period) == 2
+    for pair in by_period.values():
+        assert len(pair) == 2 and pair[0] == pair[1]
+
+
+def test_export_does_not_mutate_report_or_fixture(review_report):
+    report, scenario = review_report
+    before_report, before_scenario = copy.deepcopy(report), copy.deepcopy(scenario)
+    review.packets(report)
+    assert report == before_report
+    assert scenario == before_scenario

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import math
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from time import perf_counter
@@ -85,6 +86,7 @@ class InsightEngine:
         context_provider: ContextProvider | None = None,
         investigation_candidate_limit: int = 40,
         max_jev_payload_bytes: int = DEFAULT_MAX_JEV_PAYLOAD_BYTES,
+        clock: Callable[[], datetime] | None = None,
     ) -> None:
         if investigation_candidate_limit < 1:
             raise ValueError("investigation_candidate_limit must be positive")
@@ -95,6 +97,7 @@ class InsightEngine:
         self.context_provider = context_provider
         self.investigation_candidate_limit = investigation_candidate_limit
         self.max_jev_payload_bytes = max_jev_payload_bytes
+        self.clock = clock or (lambda: datetime.now(timezone.utc))
 
     def _assert_jev_payload_budget(self, state: dict[str, Any], *, stage: str) -> int:
         """Fail closed before any Jev request can receive an oversized state."""
@@ -872,7 +875,7 @@ class InsightEngine:
     ) -> _EvaluationMaterials:
         observations = observations_for_plan(resources, plan.selected_source_keys)
         observations = self._apply_comparison_window(observations, plan)
-        source_errors = self._source_errors(card, resources)
+        source_errors = self._source_errors(card, resources, now=self.clock())
         analyses = []
         analytical_evidence = []
         required_sources = {source.key for source in card.sources if source.required}
@@ -1057,7 +1060,7 @@ class InsightEngine:
 
     @staticmethod
     def _source_errors(
-        card: InsightCard, resources: list[ResourceSnapshot]
+        card: InsightCard, resources: list[ResourceSnapshot], *, now: datetime | None = None
     ) -> list[dict[str, Any]]:
         declared = {source.key: source for source in card.sources}
         provided = {resource.source_key: resource for resource in resources}
@@ -1167,7 +1170,7 @@ class InsightEngine:
                 captured_at = resource.source_captured_at or resource.captured_at
                 if captured_at.tzinfo is None:
                     captured_at = captured_at.replace(tzinfo=timezone.utc)
-                age_hours = (datetime.now(timezone.utc) - captured_at).total_seconds() / 3600
+                age_hours = ((now or datetime.now(timezone.utc)) - captured_at).total_seconds() / 3600
                 if age_hours > card.max_source_age_hours:
                     errors.append(
                         {

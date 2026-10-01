@@ -1,12 +1,20 @@
 import copy
 import json
+from datetime import datetime, timezone
 from fractions import Fraction
 
 import pytest
 
 from evaluations.bootstrap_scenarios import (
     OWNER_TOPICS,
+    SCHEMA_VERSION,
+    SCORER_VERSION,
+    _is_finite_number,
+    _numeric_definitions,
+    _NumericClaim,
+    _payload,
     _rate_facts,
+    _required_evidence_refs,
     agent_context,
     ask_owner,
     build_scenarios,
@@ -40,6 +48,27 @@ def score(scenario, period_id, label, submission, **kwargs):
     return score_submission(scenario, period_id, submission,
                             inspected_refs=kwargs.get("inspected_refs", label["required_evidence_refs"]),
                             asked_owner_topics=kwargs.get("asked_owner_topics", list(OWNER_TOPICS)))
+
+
+@pytest.fixture
+def fabricated_scorer_case():
+    """Small scoring contract with no generated development or holdout labels."""
+    refs = ["company_mcp|fabricated-source"]
+    label = {
+        "condition": "event", "outcome": "notify", "recipients": ["fabricated-owner"],
+        "required_evidence_refs": refs, "required_owner_topics": ["materiality"],
+        "numeric_facts": {"metric.delta": {"value": 7, "unit": "USD",
+                                             "absolute_tolerance": .01, "evidence_refs": refs}},
+        "required_numeric_facts": ["metric.delta"],
+        "allowed_claim_types": ["observation"], "required_claim_types": [],
+    }
+    period_id = "fabricated-period"
+    scenario = {
+        "scenario_id": "fabricated-company",
+        "public": {"periods": [{"period_id": period_id, "snapshots": {refs[0]: {}}}]},
+        "private": {"periods": {period_id: label}},
+    }
+    return scenario, period_id, label
 
 
 def test_counts_split_and_real_contracts():
@@ -192,7 +221,8 @@ def test_support_denominator_and_marketplace_overlap_are_real_missingness():
     scenario, pid, label = select("marketplace", "quality")
     period = next(p for p in scenario["public"]["periods"] if p["period_id"] == pid)
     union = period["snapshots"][label["required_evidence_refs"][0]]["evidence"][0]["values"]
-    tags = period["snapshots"][label["required_evidence_refs"][1]]["evidence"][0]["values"]
+    tags = next(snapshot["evidence"][0]["values"] for snapshot in period["snapshots"].values()
+                if "disjoint" in snapshot["evidence"][0]["values"])
     assert union["current_distinct_buyers"] is None
     assert tags["disjoint"] is False
     assert not label["numeric_facts"]
@@ -225,11 +255,62 @@ def test_wrong_or_missing_answers_never_earn_exact(mutation, field):
 
 
 @pytest.mark.parametrize("value", [True, "700", float("nan"), float("inf"), float("-inf")])
-def test_numeric_schema_and_finite_values_fail_closed(value):
-    scenario, pid, label = select()
+def test_numeric_schema_and_finite_values_fail_closed(value, fabricated_scorer_case):
+    scenario, pid, label = fabricated_scorer_case
     submission = perfect(label)
     submission["numeric_claims"][0]["value"] = value
     assert not score(scenario, pid, label, submission)["exact"]
+
+
+@pytest.mark.parametrize("value", [10**400, -(10**400)], ids=["positive", "negative"])
+def test_fabricated_giant_json_integers_are_unsupported_not_scoring_errors(value, fabricated_scorer_case):
+    scenario, pid, label = fabricated_scorer_case
+    submission = perfect(label)
+    submission["numeric_claims"][0]["value"] = value
+    submission = json.loads(json.dumps(submission))
+    # Schema acceptance is not proof that Python's math functions can use a value.
+    assert _NumericClaim.model_validate(submission["numeric_claims"][0]).value == value
+    result = score(scenario, pid, label, submission)
+    assert result["valid_submission"] and not result["safety_unassessed"]
+    assert result["outcome_correct"] and result["recipients_correct"]
+    assert not result["exact"]
+    assert result["numeric_precision"] == result["numeric_recall"] == 0
+    assert result["unsupported_numeric_facts"] == ["metric.delta"]
+
+
+@pytest.mark.parametrize("value,expected", [
+    (7, True), (7.0, True), (10**300, True), (1.7976931348623157e308, True),
+    (10**400, False), (-(10**400), False), (float("nan"), False),
+    (float("inf"), False), (float("-inf"), False), (True, False),
+    ("7", False), (None, False), ([], False), ({}, False),
+], ids=["int", "float", "large-int", "max-float", "overflow", "negative-overflow",
+        "nan", "inf", "negative-inf", "bool", "string", "null", "list", "dict"])
+def test_fabricated_numeric_validity_is_total(value, expected):
+    assert _is_finite_number(value) is expected
+
+
+@pytest.mark.parametrize("value", [7, 7.0, 7.005, 10**300, 1.7976931348623157e308],
+                         ids=["int", "float", "within-tolerance", "large-int", "max-float"])
+def test_fabricated_valid_numeric_scoring_is_preserved(value, fabricated_scorer_case):
+    scenario, pid, label = fabricated_scorer_case
+    submission = perfect(label)
+    if value > 7.01:
+        label["numeric_facts"]["metric.delta"]["value"] = value
+    submission["numeric_claims"][0]["value"] = value
+    result = score(scenario, pid, label, submission)
+    assert result["exact"] and result["valid_submission"]
+    assert not result["safety_unassessed"]
+    assert result["numeric_precision"] == result["numeric_recall"] == 1
+
+
+def test_fabricated_incorrect_submission_still_has_assessed_safety(fabricated_scorer_case):
+    scenario, pid, label = fabricated_scorer_case
+    submission = perfect(label)
+    submission["outcome"] = "ignore"
+    submission["recipients"] = []
+    result = score(scenario, pid, label, submission)
+    assert result["valid_submission"] and not result["safety_unassessed"]
+    assert result["missed_event"] and not result["exact"]
 
 
 def test_correct_numbers_without_actual_inspection_do_not_pass():
@@ -319,15 +400,189 @@ def test_public_glossary_and_destinations_do_not_require_redundant_questions():
             assert not result["owner_policy_complete"] and not result["exact"]
 
 
-@pytest.mark.parametrize("submission", [{}, None, {"outcome": "delete_database"},
-                                         {"outcome": "notify", "recipients": "team"}])
-def test_invalid_submission_is_a_scored_failure_not_a_runner_crash(submission):
-    scenario, pid, label = select()
+@pytest.mark.parametrize("submission", [{}, None, [], "invalid", 42,
+                                         {"outcome": "delete_database"},
+                                         {"outcome": "notify", "recipients": "team"},
+                                         {"outcome": "notify", "recipients": [], "evidence_refs": [],
+                                          "numeric_claims": [{"fact": [], "value": 10**400}]}])
+def test_invalid_submission_is_a_scored_failure_not_a_runner_crash(submission, fabricated_scorer_case):
+    scenario, pid, label = fabricated_scorer_case
     result = score(scenario, pid, label, submission)
     assert not result["valid_submission"] and not result["exact"]
+    assert result["safety_unassessed"]
+    assert result["errors"] == ["invalid_submission_schema"]
+    assert all(result[key] is False for key in (
+        "wrong_recipient", "unsafe_route", "false_alert", "missed_event", "unsafe_suppression"))
 
 
 def test_wrong_period_is_a_harness_error_not_silently_scored():
     scenario, _, label = select()
     with pytest.raises(KeyError):
         score(scenario, "unknown-period", label, perfect(label))
+
+
+@pytest.mark.parametrize("seed,original_digest", [
+    (20261001, "b8cce25432cf1166fa4cd25a7af30e463810109466a404429925afe76aed22d3"),
+    (42, "00fa0e0a8cfc26e0c758979b4b186d3c0205ca09e7e637efa77770b6d5fa0250"),
+])
+def test_scorer_v2_preserves_dev_rng_ids_and_all_original_public_data(seed, original_digest):
+    scenarios = build_scenarios(seed=seed, split="dev")
+    projected = []
+    for scenario in scenarios:
+        assert scenario["schema_version"] == SCHEMA_VERSION == 1
+        assert scenario["scorer_version"] == SCORER_VERSION == 2
+        public = copy.deepcopy(scenario["public"])
+        public["submission_contract"].pop("numeric_definitions")
+        projected.append({"schema_version": scenario["schema_version"],
+                          "scenario_id": scenario["scenario_id"], "public": public})
+    # Frozen before the scorer edit; covers catalog order, raw measurements,
+    # timestamps, owner answers and IDs, with no dependency on saved trial output.
+    assert dataset_digest(projected) == original_digest
+
+
+def test_scorer_v2_dev_primary_evidence_is_sufficient_but_bad_refs_still_fail():
+    for scenario in build_scenarios(split="dev"):
+        for pid, label in scenario["private"]["periods"].items():
+            assert len(label["required_evidence_refs"]) == 1
+            submission = perfect(label)
+            result = score(scenario, pid, label, submission)
+            assert result["exact"] and result["scorer_version"] == 2
+            assert score(scenario, pid, label, {})["scorer_version"] == 2
+            assert not score(scenario, pid, label, submission, inspected_refs=[])["exact"]
+            submission["evidence_refs"].append("company_mcp|mistyped-resource")
+            result = score(scenario, pid, label, submission)
+            assert not result["exact"] and not result["provenance_complete"]
+            # A real but uninspected optional source must not pass either.
+            period = next(p for p in scenario["public"]["periods"] if p["period_id"] == pid)
+            optional = next(ref for ref in period["snapshots"] if ref not in label["required_evidence_refs"])
+            submission["evidence_refs"][-1] = optional
+            assert not score(scenario, pid, label, submission)["provenance_complete"]
+
+
+@pytest.mark.parametrize("family,change_at,requires_document", [
+    ("retail", None, False), ("subscription_boxes", None, False),
+    ("support", None, False), ("logistics", None, False), ("marketplace", None, False),
+    ("saas", None, False), ("finance", None, True),
+    ("ops", "2040-01-01T00:00:00Z", True), ("ops", None, False),
+])
+def test_scorer_v2_indispensable_source_dependencies(family, change_at, requires_document,
+                                                   fabricated_scorer_case):
+    scenario, pid, label = fabricated_scorer_case
+    refs = ["company_mcp|measurement", "company_mcp|definition-or-control"]
+    payloads = [{}, {"latency_change_at": change_at}]
+    required = _required_evidence_refs({"family": family}, payloads, refs)
+    assert required == (refs if requires_document else refs[:1])
+    scenario["public"]["periods"][0]["snapshots"] = dict.fromkeys(refs, {})
+    label["required_evidence_refs"] = required
+    label["numeric_facts"] = {}
+    label["required_numeric_facts"] = []
+    submission = perfect(label)
+    assert score(scenario, pid, label, submission)["exact"]
+    submission["evidence_refs"] = refs[:1]
+    result = score(scenario, pid, label, submission, inspected_refs=refs[:1])
+    assert result["exact"] is (not requires_document)
+    assert result["evidence_recall"] == (.5 if requires_document else 1)
+
+
+@pytest.mark.parametrize("comparable", [True, False])
+def test_scorer_v2_saas_primary_contract_needs_no_separate_version_policy(comparable):
+    refs = ["company_mcp|rates", "company_mcp|eligibility-document"]
+    payloads = [{"comparison": {"definition": "Renewed / eligible accounts",
+                                "population": "Accounts due for renewal", "comparable": comparable}},
+                {"eligibility_version": "v3" if comparable else None}]
+    assert _required_evidence_refs({"family": "saas"}, payloads, refs) == refs[:1]
+
+
+@pytest.mark.parametrize("family", ["support", "logistics"])
+@pytest.mark.parametrize("baseline,expected", [
+    ({"numerator": 300, "denominator": 400}, .75),
+    ({"numerator": None, "denominator": 400}, None),
+    ({"numerator": 300, "denominator": None}, None),
+    ({"numerator": 0, "denominator": 0}, None),
+])
+def test_scorer_v2_partial_rates_use_only_visible_valid_baseline(monkeypatch, family, baseline, expected):
+    import evaluations.bootstrap_scenarios as fixtures
+
+    original = fixtures._comparison
+
+    def altered_export(*args, **kwargs):
+        comp = original(*args, **kwargs)
+        comp["baseline_total"] = baseline.copy()
+        for segment in comp["segments"]:
+            segment["baseline"] = {key: value / 2 if value is not None else None
+                                   for key, value in baseline.items()}
+        return comp
+
+    monkeypatch.setattr(fixtures, "_comparison", altered_export)
+    spec = {"family": family, "metric": "example_rate", "unit": "ratio", "scope": "Eligible population",
+            "descriptions": ["primary", "definition", "other population", "other activity"]}
+    payloads, facts, required = _payload(spec, "quality", 1, datetime(2040, 1, 1, tzinfo=timezone.utc),
+                                       ["primary", "definition", "distractor-a", "distractor-b"])
+    assert payloads[0]["comparison"]["current_total"]["denominator"] is None
+    assert required == []  # Valid baseline is optional, never required for abstention.
+    if expected is None:
+        assert facts == {}
+    else:
+        assert set(facts) == {"example_rate.baseline"}
+        assert facts["example_rate.baseline"]["value"] == expected
+
+
+def test_scorer_v2_dev_quality_accepts_baseline_only_when_scope_survives():
+    for scenario in build_scenarios(split="dev"):
+        pid, label = next((pid, label) for pid, label in scenario["private"]["periods"].items()
+                          if label["condition"] == "quality")
+        rate = scenario["private"]["family"] == "logistics"
+        metric = "on_time_delivery" if rate else "box_proceeds"
+        assert set(label["numeric_facts"]) == ({f"{metric}.baseline"} if rate else set())
+        assert label["required_numeric_facts"] == []
+        submission = perfect(label)
+        assert score(scenario, pid, label, submission)["exact"]
+        submission["numeric_claims"] = []
+        assert score(scenario, pid, label, submission)["exact"]
+        for suffix in (("current", "delta", "mix_effect", "within_effect") if rate
+                       else ("baseline", "current", "delta", "web_contribution")):
+            submission["numeric_claims"] = [{"fact": f"{metric}.{suffix}", "value": 0,
+                                              "unit": "ratio" if rate else "USD",
+                                              "evidence_refs": label["required_evidence_refs"]}]
+            result = score(scenario, pid, label, submission)
+            assert not result["exact"] and result["unsupported_numeric_facts"] == [f"{metric}.{suffix}"]
+
+
+def test_scorer_v2_numeric_definitions_are_static_and_match_vocabulary(monkeypatch):
+    import evaluations.bootstrap_scenarios as fixtures
+
+    scenarios = build_scenarios(split="dev")
+    original = fixtures._payload
+
+    def altered_values_and_labels(*args, **kwargs):
+        payloads, _, _ = original(*args, **kwargs)
+        payloads[0]["unused_sentinel"] = "NEVER_IN_DEFINITIONS"
+        return payloads, {"NEVER_IN_DEFINITIONS": {"value": 123}}, []
+
+    monkeypatch.setattr(fixtures, "_payload", altered_values_and_labels)
+    altered = build_scenarios(seed=42, split="dev")
+    for scenario, other in zip(scenarios, altered, strict=True):
+        public = scenario["public"]
+        definitions = public["submission_contract"]["numeric_definitions"]
+        assert definitions == other["public"]["submission_contract"]["numeric_definitions"]
+        assert set(definitions) == set(public["numeric_vocabulary"])
+        assert all(item["unit"] == public["glossary"]["unit"] for item in definitions.values())
+        assert "NEVER_IN_DEFINITIONS" not in json.dumps(definitions)
+    web = scenarios[0]["public"]["submission_contract"]["numeric_definitions"]["box_proceeds.web_contribution"]
+    assert "current_gross - current_refunds" in web["definition"]
+    assert "baseline_gross - baseline_refunds" in web["definition"]
+    assert "not current web proceeds" in web["definition"]
+    ops = _numeric_definitions({"family": "ops", "metric": "example_latency", "unit": "ms"})
+    assert {key: value["unit"] for key, value in ops.items()} == {
+        "example_latency.delta": "ms", "example_latency.affected_regions": "regions",
+        "example_latency.rollout_lead_minutes": "minutes"}
+
+
+def test_scorer_v2_web_current_amount_is_still_not_a_change_contribution():
+    scenario = build_scenarios(split="dev")[0]
+    pid, label = next((pid, label) for pid, label in scenario["private"]["periods"].items()
+                      if label["condition"] == "quiet")
+    submission = perfect(label)
+    web = next(claim for claim in submission["numeric_claims"] if claim["fact"].endswith("web_contribution"))
+    web["value"] = 7000
+    assert score(scenario, pid, label, submission)["unsupported_numeric_facts"] == ["box_proceeds.web_contribution"]

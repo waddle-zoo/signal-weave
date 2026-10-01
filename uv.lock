@@ -1069,6 +1069,7 @@ binary = [
     { name = "pyinstaller" },
 ]
 dev = [
+    { name = "jsonschema" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "ruff" },
@@ -1078,6 +1079,7 @@ dev = [
 requires-dist = [
     { name = "fastapi", specifier = ">=0.115,<1" },
     { name = "httpx", specifier = ">=0.27,<1" },
+    { name = "jsonschema", marker = "extra == 'dev'", specifier = ">=4.20,<5" },
     { name = "mcp", specifier = ">=1.13,<2" },
     { name = "pydantic", specifier = ">=2.8,<3" },
     { name = "pydantic-settings", specifier = ">=2.4,<3" },

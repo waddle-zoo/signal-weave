@@ -12,7 +12,14 @@ from evaluations import bootstrap_agent_trial as trial
 from evaluations.bootstrap_scenarios import build_scenarios, public_scenario
 from signalweave.engine import InsightEngine
 from signalweave.mcp_server import create_mcp
-from signalweave.models import InsightResult, PrincipalContext, SourceRef
+from signalweave.models import (
+    InsightCard,
+    InsightResult,
+    Observation,
+    PrincipalContext,
+    ResourceSnapshot,
+    SourceRef,
+)
 from signalweave.runtime import Runtime
 from signalweave.sources import SourceRegistry
 from signalweave.store import JsonInsightCardStore, JsonMetricQueryCardStore
@@ -32,6 +39,18 @@ class OfflineJudger:
                              rationale="Not evidence", confidence=.99,
                              evidence=state["evidence"], observations=observations,
                              source_keys=[source.key for source in card.sources], evaluator=self.name)
+
+
+def test_codex_credentials_require_only_jev(monkeypatch):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("TYPESAFE_API_KEY_FILE", raising=False)
+    monkeypatch.setenv("TYPESAFE_API_KEY", "offline-jev")
+    args = trial.parser().parse_args(["--agent-transport", "codex"])
+    assert trial.credentials(args) == ("", "offline-jev")
+    monkeypatch.delenv("TYPESAFE_API_KEY")
+    with pytest.raises(ValueError, match="TYPESAFE_API_KEY") as error:
+        trial.credentials(args)
+    assert "OPENAI_API_KEY" not in str(error.value)
 
 
 @pytest.fixture
@@ -131,6 +150,80 @@ async def test_both_arms_have_same_raw_tools_context_and_calculator(tmp_path, pu
     assert "onboard_insight_card" not in a
     with pytest.raises(ValueError, match="not available"):
         await baseline.call("onboard_insight_card", {})
+
+
+@pytest.mark.parametrize("name", ["propose_insight_card", "onboard_insight_card", "draft_insight_card"])
+async def test_authoring_schemas_expose_required_delivery_fields_and_mode_enums(tmp_path, public, name):
+    session = make_session(tmp_path, public)
+    schemas = {tool.name: tool.inputSchema for tool in await session.server.list_tools()}
+    schema = schemas[name]
+    properties, definitions = schema["properties"], schema["$defs"]
+    delivery_array = next(item for item in properties["delivery_methods"]["anyOf"]
+                          if item.get("type") == "array")
+    delivery = definitions[delivery_array["items"]["$ref"].rsplit("/", 1)[1]]
+    assert set(delivery["required"]) == {"key", "outcome", "label", "destination"}
+    for field in ("key", "label", "destination"):
+        assert delivery["properties"][field]["type"] == "string"
+        assert delivery["properties"][field]["minLength"] == 1
+    outcome = definitions[delivery["properties"]["outcome"]["$ref"].rsplit("/", 1)[1]]
+    assert set(outcome["enum"]) == {"ignore", "investigate", "notify", "escalate", "insufficient_data"}
+    for field, choices, default in (
+        ("retrieval_mode", {"fixed", "expand"}, "fixed" if name == "draft_insight_card" else "expand"),
+        ("investigation_mode", {"none", "bounded"}, "none" if name == "draft_insight_card" else "bounded"),
+    ):
+        mode = definitions[properties[field]["$ref"].rsplit("/", 1)[1]]
+        assert set(mode["enum"]) == choices
+        assert properties[field]["default"] == default
+    specs = {spec["name"]: spec for spec in await session.specs()}
+    assert specs[name]["parameters"] == schema
+
+
+async def test_draft_schema_exposes_typed_source_refs(tmp_path, public):
+    session = make_session(tmp_path, public)
+    schema = next(tool.inputSchema for tool in await session.server.list_tools()
+                  if tool.name == "draft_insight_card")
+    assert "sources" in schema["required"]
+    sources = schema["properties"]["sources"]
+    assert sources["type"] == "array"
+    source = schema["$defs"][sources["items"]["$ref"].rsplit("/", 1)[1]]
+    assert set(source["required"]) == {"key", "adapter", "resource", "label"}
+    for field in source["required"]:
+        assert source["properties"][field]["type"] == "string"
+        assert source["properties"][field]["minLength"] == 1
+    assert source["properties"]["adapter"]["pattern"] == r"^[a-z][a-z0-9_-]*$"
+    assert source["properties"]["parameters"]["type"] == "object"
+    assert source["properties"]["required"]["default"] is True
+
+
+@pytest.mark.parametrize("wall_year", [1990, 2090])
+@pytest.mark.parametrize("age_hours,outcome", [(1, "ignore"), (72, "insufficient_data")])
+async def test_engine_uses_injected_clock_for_fresh_and_72_hour_sources(monkeypatch, wall_year, age_hours, outcome):
+    clock = datetime(2040, 1, 1, tzinfo=timezone.utc)
+
+    class WallClock(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return datetime(wall_year, 1, 1, tzinfo=tz)
+
+    monkeypatch.setattr("signalweave.engine.datetime", WallClock)
+    source = SourceRef(key="signal", adapter="company_mcp", resource="metric:signal", label="Signal")
+    card = InsightCard(id="clock-regression", title="Clock regression", what_to_watch="Source signal",
+                       why_watch="Check source freshness", sources=[source], max_source_age_hours=24)
+    snapshot = ResourceSnapshot(
+        source_key=source.key, adapter=source.adapter, resource=source.resource, title=source.label,
+        captured_at=clock, source_captured_at=clock - timedelta(hours=age_hours),
+        observations=[Observation(source_key=source.key, subject_id="signal", subject_label="Signal",
+                                  metric="value", current=10, baseline=10, change_pct=0)],
+    )
+    run = await InsightEngine(OfflineJudger(), clock=lambda: clock).evaluate(card, [snapshot])
+    assert run.result.outcome == outcome
+    assert run.result.delivery_methods == []
+    freshness = [item.statement for item in run.result.evidence if "hours old" in item.statement]
+    if age_hours == 72:
+        assert len(freshness) == 1
+        assert "72.0 hours old; maximum is 24 hours" in freshness[0]
+    else:
+        assert freshness == []
 
 
 async def test_clock_preserves_staleness_and_nested_source_keys(tmp_path, public):
@@ -300,7 +393,8 @@ async def test_exhausted_budget_keeps_every_planned_period_in_denominator(monkey
     assert report["status"] == "partial_or_failed"
     assert report["comparative_eligible"] is False
     assert report["budget_censored"] is True
-    assert len(report["config"]["source_fingerprint"]["sha256"]) == 3
+    assert "evaluations/codex_trial_transport.py" in report["config"]["source_fingerprint"]["sha256"]
+    assert "src/signalweave/engine.py" in report["config"]["source_fingerprint"]["sha256"]
     assert len(report["rows"]) == 8
     assert all(row["monitoring_denominator"] == 3 for row in report["summary"].values())
     assert all(row["exact_count"] == 0 for row in report["summary"].values())
@@ -322,6 +416,28 @@ def test_cost_counts_cold_warm_and_unknown_attempts_separately():
     report = trial.aggregate([{**row, "phase": "onboarding"}, {**row, "phase": "monitoring"}])
     assert report[trial.ARMS[0]]["cost_complete"] is False
     assert report[trial.ARMS[0]]["observed_cold_plus_warm_known_usage_usd"] == pytest.approx(.00046)
+
+
+@pytest.mark.parametrize("responding_provider", ["openai", "jev"])
+def test_usage_request_id_collision_does_not_hide_other_provider_unknown_cost(responding_provider):
+    missing_provider = "jev" if responding_provider == "openai" else "openai"
+    events = [
+        {"kind": "api.request", "provider": "openai", "request_id": 1},
+        {"kind": "api.request", "provider": "jev", "request_id": 1},
+        {"kind": "api.response", "provider": responding_provider, "request_id": 1,
+         "usage": {"input_tokens": 100, "output_tokens": 0}},
+        {"kind": "api.error", "provider": missing_provider, "request_id": 1},
+    ]
+    usage = trial.usage_summary(events)
+    known, unknown = usage[responding_provider], usage[missing_provider]
+    assert known["attempts"] == unknown["attempts"] == 1
+    assert known["unknown_usage_attempts"] == known["failed_attempts"] == 0
+    assert known["input_tokens"] == 100
+    assert known["estimated_known_usage_usd"] > 0
+    assert unknown["unknown_usage_attempts"] == unknown["failed_attempts"] == 1
+    assert unknown["input_tokens"] == unknown["output_tokens"] == 0
+    row = {"arm": trial.ARMS[0], "phase": "monitoring", "status": "failed", "seconds": 0, "usage": usage}
+    assert trial.aggregate([row])[trial.ARMS[0]]["cost_complete"] is False
 
 
 @pytest.mark.parametrize("usage", [{"input_tokens": None, "output_tokens": None},

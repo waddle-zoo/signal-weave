@@ -70,13 +70,21 @@ PRODUCT_TOOLS = frozenset({
 COMMON_SYSTEM = (
     "You are a business analytics agent in a synthetic, read-only company trial. "
     "Start from the ordinary business brief, not a supplied monitoring card. "
-    "Ask the owner for metric scope, materiality, routing, and any unclear policy. "
+    "During onboarding, ask the owner for unclear metric scope, materiality, routing, and policy. "
+    "The owner is simulated: obtain answers by calling ask_owner, never by ending "
+    "with questions in chat. Those tool responses are the owner's answers. "
     "Inspect the catalog and relevant sources; do not trust a chart title alone. "
     "Use only current-period evidence for measurements; saved notes may preserve policy "
     "and source knowledge, not stale measurements. Calculators are available to both arms. "
+    "During monitoring, reuse the validated policies in saved notes; ask_owner only for "
+    "new ambiguity. Current-period evidence provided in a tool result or evaluation bundle "
+    "can be reused without fetching it again; inspect more sources if needed to validate "
+    "the analysis. The supplied period as_of is the simulated current clock. "
     "Do not infer causality from correlation or fill missing populations with zeros. "
     "Do not perform external notifications. Recipients are authorized destination keys, "
     "not invented people or URLs. Citations use adapter|resource refs actually inspected. "
+    "If configuring a delivery method, copy the destination provided in business.destinations; "
+    "final submitted recipients use those destinations' keys, not their URLs. "
     "In each monitoring result report the metric delta and useful decomposition/driver "
     "facts when supported, including mix and within effects for rate comparisons. "
     "Use numeric_vocabulary identifiers and units for numeric_claims; do not claim unavailable "
@@ -243,6 +251,8 @@ class PublicSourceAdapter:
         self.inspections = 0
 
     def set_period(self, period: dict, clock: datetime) -> None:
+        self.clock = clock
+        self.period_context = {"period_id": period["period_id"], "as_of": clock.isoformat()}
         delta = clock - datetime.fromisoformat(period["as_of"])
         self.snapshots = shift_timestamps(copy.deepcopy(period["snapshots"]), delta)
         self.inspected.clear()
@@ -291,7 +301,7 @@ def common_tools(public: dict, phase: str) -> list[dict]:
         function("ask_owner", "Ask the human owner's known policies, not missing measurements or answers.",
                  {"topic": {"type": "string", "enum": public["owner_topics"]}}, ["topic"]),
         function("save_notes", "Replace durable agent notes for subsequent periods. Preserve context "
-                 "and policy, not current numbers as future truth. Same facility in both arms.",
+    "and policy, not current numbers as future truth. Same facility in both arms.",
                  {"notes": text}, ["notes"]),
     ]
     if phase == "onboarding":
@@ -454,7 +464,8 @@ async def luna_episode(session: ToolSession, *, key: str, effort: str, budget: R
                          "Approval models a synthetic owner's procedural review only. Save notes "
                          "and finish_setup with the card ID. No actual human has validated it.")
         instructions += "\nProduction MCP initialization instructions:\n" + (session.server.instructions or "")
-    prompt = {"phase": session.phase, "business": session.public, "saved_notes": session.notes,
+    prompt = {"phase": session.phase, "period": session.adapter.period_context,
+              "business": session.public, "saved_notes": session.notes,
               "signalweave_evaluation": bundle}
     messages = [{"role": "user", "content": canonical(prompt)}]
     specs = await session.specs()
@@ -532,7 +543,7 @@ def usage_summary(events: list[dict]) -> dict:
                         "cached_input_tokens": 0, "output_tokens": 0,
                         "unknown_usage_attempts": 0, "estimated_known_usage_usd": 0.0}
               for provider in ("openai", "jev")}
-    responded: set[int] = set()
+    responded: set[tuple[str, int]] = set()
     for event in events:
         provider = event.get("provider")
         if provider not in totals:
@@ -548,7 +559,7 @@ def usage_summary(events: list[dict]) -> dict:
                 type(usage.get(key)) is int and usage[key] >= 0
                 for key in ("input_tokens", "output_tokens")
             ):
-                responded.add(event["request_id"])
+                responded.add((provider, event["request_id"]))
                 row["input_tokens"] += usage["input_tokens"] or 0
                 row["output_tokens"] += usage["output_tokens"] or 0
                 row["cached_input_tokens"] += (usage.get("input_tokens_details") or {}).get("cached_tokens", 0)
@@ -556,7 +567,7 @@ def usage_summary(events: list[dict]) -> dict:
     for provider, row in totals.items():
         row["unknown_usage_attempts"] = sum(
             event["kind"] == "api.request" and event.get("provider") == provider
-            and event["request_id"] not in responded for event in events)
+            and (provider, event["request_id"]) not in responded for event in events)
         if provider == "openai":
             cost = ((row["input_tokens"] - row["cached_input_tokens"]) * prices["luna_input"]
                     + row["cached_input_tokens"] * prices["luna_cached_input"]
@@ -568,15 +579,20 @@ def usage_summary(events: list[dict]) -> dict:
 
 
 def credentials(args) -> tuple[str, str]:
+    codex = getattr(args, "agent_transport", "api") == "codex"
     values = dotenv_values(args.openai_env) if args.openai_env else {}
     openai_key = os.environ.get("OPENAI_API_KEY") or values.get("OPENAI_API_KEY")
     jev_key = os.environ.get("TYPESAFE_API_KEY")
     key_file = args.jev_key_file or os.environ.get("TYPESAFE_API_KEY_FILE")
     if not jev_key and key_file:
         jev_key = Path(key_file).read_text(encoding="utf-8").strip()
-    if not openai_key or not jev_key:
-        missing = [name for name, value in (("OPENAI_API_KEY", openai_key),
-                                            ("TYPESAFE_API_KEY or --jev-key-file", jev_key)) if not value]
+    if codex:
+        openai_key = ""  # Supported CLI owns saved login; never read its OAuth credentials.
+    if (not codex and not openai_key) or not jev_key:
+        required = [("TYPESAFE_API_KEY or --jev-key-file", jev_key)]
+        if not codex:
+            required.insert(0, ("OPENAI_API_KEY", openai_key))
+        missing = [name for name, value in required if not value]
         raise ValueError("Missing credential: " + ", ".join(missing) + "; no live run attempted")
     return str(openai_key), str(jev_key)
 
@@ -589,7 +605,9 @@ def write_exclusive(path: Path, payload: Any) -> None:
 def source_fingerprint() -> dict:
     root = Path(__file__).resolve().parents[1]
     paths = ("evaluations/bootstrap_agent_trial.py", "evaluations/bootstrap_scenarios.py",
-             "docs/bootstrap-benchmark-protocol.md")
+             "evaluations/codex_trial_transport.py",
+             "docs/bootstrap-benchmark-protocol.md", "uv.lock", "src/signalweave/engine.py",
+             "src/signalweave/mcp_server.py", "src/signalweave/typesafe_adapter.py")
     hashes = {name: hashlib.sha256((root / name).read_bytes()).hexdigest() for name in paths}
     revision = subprocess.run(["git", "rev-parse", "HEAD"], cwd=root, capture_output=True,
                               text=True, check=True, timeout=5).stdout.strip()
@@ -625,7 +643,20 @@ def aggregate(rows: list[dict]) -> dict:
             "setup_amortized_known_usage_usd_per_scheduled_run": cost(arm_rows) / len(warm) if warm else None,
             "unknown_usage_attempts": unknown,
             "cost_complete": unknown == 0,
+            "valid_monitoring_submissions": sum(r.get("score", {}).get("valid_submission", False) for r in warm),
+            "safety_unassessed_runs": sum(not r.get("score", {}).get("valid_submission", False) for r in warm),
+            "runtime_failures": sum(r["status"] != "complete" for r in arm_rows),
         }
+        for metric in ("recipients_correct", "wrong_recipient", "false_alert", "missed_event",
+                       "unsafe_suppression", "provenance_complete"):
+            output[arm][metric + "_count"] = sum(r.get("score", {}).get(metric, False) for r in warm)
+        output[arm]["all_structured_cases_pass"] = bool(cold and warm and all(
+            r["status"] == "complete" for r in arm_rows) and all(
+            r.get("score", {}).get("exact", False) for r in warm))
+        system_rows = [r["raw_system_decision"] for r in warm if r.get("raw_system_decision")]
+        output[arm]["raw_system_decision_runs"] = len(system_rows)
+        for metric in ("outcome_correct", "recipients_correct", "agent_changed_outcome"):
+            output[arm]["raw_system_" + metric + "_count"] = sum(r[metric] for r in system_rows)
     return output
 
 
@@ -653,6 +684,21 @@ async def run_trial(args) -> dict:
                          "Comparator: notes-persistent, LLM-per-run baseline, not all agent strategies.",
                          "Scorer checks structured fields, not narrative entailment; prose needs independent review.",
                          "Every warm run wakes Luna in both arms; no claimed wakeup savings."]}
+    episode_runner = luna_episode
+    if getattr(args, "agent_transport", "api") == "codex":
+        from evaluations.codex_trial_transport import codex_command, codex_episode
+        episode_runner = codex_episode
+        config.update(agent_transport="codex_cli", max_turns=None, max_output_tokens=None,
+                      episode_timeout_seconds=360, api_request_budget_scope="Jev only",
+                      codex_version=subprocess.run(["codex", "--version"], capture_output=True,
+                                                   text=True, check=True).stdout.strip())
+        config["codex_command_template"] = codex_command(
+            "<empty-temporary-directory>", "<exclusive-loopback-mcp>", model=MODEL, effort=args.effort)
+        config["limits"] += [
+            "Codex uses saved ChatGPT login; reported OpenAI attempts mean agent invocations, not API requests.",
+            "Codex wall time includes CLI/MCP startup; max tool calls and 360-second episode timeout apply.",
+            "Codex token prices are illustrative API-equivalent estimates, NOT subscription charges; cost advantage gate cannot be established.",
+            "Codex internal request/retry count and per-response token cap are not observable or enforced by this harness."]
     write_exclusive(args.output / "config.json", config)
     rows = []
     rng = random.Random(args.seed)
@@ -668,7 +714,7 @@ async def run_trial(args) -> dict:
             registry = SourceRegistry([adapter])
             judger = MeasuredJev(jev_key, budget, audit)
             runtime = Runtime(card_store=JsonInsightCardStore(folder / "cards.json"), sources=registry,
-                              engine=InsightEngine(judger, registry),
+                              engine=InsightEngine(judger, registry, clock=lambda a=adapter: a.clock),
                               metric_query_store=JsonMetricQueryCardStore(folder / "metric-cards.json"),
                               principal=PrincipalContext(principal_id="synthetic-owner",
                                                          tenant_id=public["scenario_id"]))
@@ -680,7 +726,10 @@ async def run_trial(args) -> dict:
             for arm in order:
                 session = sessions[arm]
                 session.phase, session.submission = phase, None
-                session.adapter.set_period(period, clock)
+                # Fixed scenario clock preserves original chronological spacing and ages.
+                period_clock = clock + (datetime.fromisoformat(period["as_of"])
+                                        - datetime.fromisoformat(public["onboarding"]["as_of"]))
+                session.adapter.set_period(period, period_clock)
                 audit.episode = f"{public['scenario_id']}/{arm}/{period['period_id']}"
                 offset = len(audit.events)
                 started = time.perf_counter()
@@ -699,7 +748,7 @@ async def run_trial(args) -> dict:
                             "card_id": session.card_id, "idempotency_key": audit.episode})
                         row["system_seconds"] = time.perf_counter() - system_started
                         audit.emit("system.evaluation", response=system_output)
-                    episode = await luna_episode(session, key=openai_key, effort=args.effort,
+                    episode = await episode_runner(session, key=openai_key, effort=args.effort,
                                                  budget=budget, audit=audit, max_turns=args.max_turns,
                                                  max_tool_calls=args.max_tool_calls,
                                                  max_output_tokens=args.max_output_tokens,
@@ -720,11 +769,29 @@ async def run_trial(args) -> dict:
     by_id = {scenario["scenario_id"]: scenario for scenario in scenarios}
     for row in rows:
         if row["phase"] == "monitoring":
-            row["score"] = score_submission(by_id[row["scenario_id"]], row["period_id"],
-                                            row["submission"] or {}, inspected_refs=row["inspected_refs"],
-                                            asked_owner_topics=row["asked_owner_topics"])
+            try:
+                row["score"] = score_submission(by_id[row["scenario_id"]], row["period_id"],
+                                                row["submission"] or {}, inspected_refs=row["inspected_refs"],
+                                                asked_owner_topics=row["asked_owner_topics"])
+            except Exception as error:
+                row["score"] = {"exact": False, "valid_submission": False,
+                                "safety_unassessed": True, "narrative_review_required": True,
+                                "errors": ["scoring_error:" + type(error).__name__]}
             if row["status"] != "complete":
                 row["score"]["exact"] = False
+            system = (row.get("system_output") or {}).get("result")
+            if system:
+                expected = by_id[row["scenario_id"]]["private"]["periods"][row["period_id"]]
+                destination_keys = {d["destination"]: d["key"] for d in
+                                    by_id[row["scenario_id"]]["public"]["destinations"]}
+                destinations = sorted({method["destination"] for method in system.get("delivery_methods", [])})
+                routes = sorted({destination_keys.get(destination, destination) for destination in destinations})
+                row["raw_system_decision"] = {
+                    "outcome": system.get("outcome"), "recipients": routes, "destinations": destinations,
+                    "outcome_correct": system.get("outcome") == expected["outcome"],
+                    "recipients_correct": set(routes) == set(expected["recipients"]),
+                    "agent_changed_outcome": system.get("outcome") != (row["submission"] or {}).get("outcome"),
+                    "scope": "raw system routing only; not numerical or narrative correctness"}
     budget_censored = budget.exhausted or any(
         row.get("error") in {"BudgetExceeded", "global_api_request_budget_exhausted"}
         for row in rows)
@@ -734,6 +801,19 @@ async def run_trial(args) -> dict:
                                   "retain all denominators but cannot support comparative claims.",
               "summary": aggregate(rows), "usage": usage_summary(audit.events),
               "status": "complete" if all(row["status"] == "complete" for row in rows) else "partial_or_failed"}
+    report["resolved_jev_models"] = sorted({e["response"]["model"] for e in audit.events
+        if e["kind"] == "api.response" and e.get("provider") == "jev"
+        and isinstance(e.get("response"), dict) and e["response"].get("model")})
+    report["live_jev_observed"] = bool(report["resolved_jev_models"])
+    report["comparative_eligible"] &= len(report["resolved_jev_models"]) <= 1
+    if config.get("agent_transport") == "codex_cli":
+        report["measured_dollar_cost_comparison_available"] = False
+        report["jev_api_attempts"] = budget.used
+        report["comparative_eligible"] &= not any(row.get("foreign_tools") for row in rows)
+        for summary in report["summary"].values():
+            summary["codex_invocations"] = summary.pop("luna_api_attempts")
+            summary["usage_complete"] = summary.pop("cost_complete")
+            summary["cost_basis"] = "illustrative_api_equivalent_not_measured_subscription_cost"
     write_exclusive(args.output / "report.json", report)
     return report
 
@@ -742,6 +822,8 @@ def parser() -> argparse.ArgumentParser:
     result = argparse.ArgumentParser(description=__doc__)
     result.add_argument("--preflight", action="store_true", help="Offline configuration/credential check; no paid API calls")
     result.add_argument("--openai-env", type=Path, help="Explicit dotenv path; never auto-search user files")
+    result.add_argument("--agent-transport", choices=["api", "codex"], default="api",
+                        help="codex reuses saved CLI login; no OpenAI API key required")
     result.add_argument("--jev-key-file", type=Path)
     result.add_argument("--split", choices=["dev", "holdout"], default="dev")
     result.add_argument("--limit", type=int, default=6, help="Maximum companies, not periods")
