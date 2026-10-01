@@ -374,6 +374,26 @@ class ToolSession:
         """
         if not self.notes:
             return {"approved": False, "reasons": ["Save reusable notes before owner review."]}
+        # The public directory is an exact caller-supplied mapping, not a semantic
+        # judgment. Opaque endpoints are legal; substituting their key is not.
+        # This check changes future research admission, not frozen v4 scores.
+        if card is not None:
+            destinations: dict[str, str] = {}
+            errors = []
+            for entry in self.public["destinations"]:
+                key, destination = entry["key"], entry["destination"]
+                if key in destinations and destinations[key] != destination:
+                    errors.append(f"The supplied destination directory conflicts for key {key!r}.")
+                destinations[key] = destination
+            for method in card.get("delivery_methods", []):
+                key = method.get("key")
+                if key not in destinations or method.get("destination") != destinations[key]:
+                    errors.append(f"Delivery method {key!r} must copy its exact supplied destination, not its key or an inferred endpoint.")
+            if errors:
+                decision = {"approved": False, "directory_validation": "rejected", "reasons": errors,
+                            "synthetic": True, "real_human_approval": False}
+                self.adapter.audit.emit("review.directory", card_id=card.get("id"), **decision)
+                return decision
         fingerprint = self.approval_fingerprint(card)
         previous = next((r for r in self.owner_review_records if r["approval_fingerprint"] == fingerprint), None)
         if previous is not None:

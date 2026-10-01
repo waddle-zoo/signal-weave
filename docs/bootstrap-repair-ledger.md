@@ -430,3 +430,34 @@ Ruff and whitespace checks clean. Credential/configuration preflight made zero
 requests. Reviewed code hashes match the final files; freeze this revision and
 run the one preregistered two-company trial, without editing its implementation,
 prompts, fixtures or scoring while active.
+
+### Owner-reviewed v4-01 result: goal not met
+
+The [frozen run](bootstrap-owner-reviewed-v4-01.md) completed all 16 episodes and
+six model-owner reviews with 46 live Jev requests. Native joint outcome/recipient
+keys remain 4/6; final treatment 5/6 versus baseline 6/6. One unnecessary evidence
+requirement was corrected, but answerability/coverage uncertainty and agent
+overrides persist. Independent blind review: baseline 5 supported/1 qualified;
+treatment 3 supported/2 qualified/1 unsupported. Full failure evidence retained.
+
+Post-run audit also found accepted bare destination keys where supplied directory
+entries require slack:// addresses. The frozen scorer checks keys, not endpoints;
+no delivery success follows from that score. Keep this limitation explicit and
+test exact directory lookup separately. Next isolate the answerability predicate
+with a bounded paired probe rather than rerunning the full experiment or tuning
+thresholds. No production approval or enterprise-readiness claim is justified.
+
+Exact-directory lookup now rejects mismatched endpoint strings before a paid
+synthetic-owner review. Five negative tests failed before the repair, with an
+opaque-endpoint positive control. Independent review cleared the fix and its 25
+owner-gate tests. It is research admission, not a universal URI requirement or a
+retroactive scorer correction.
+
+The [paired answerability probe](question-answerability-probe-v1.md) received
+independent preflight review. Review caught a reporting mismatch that required
+both templates to pass instead of the preregistered candidate gate; this was
+corrected and tested before dispatch. Forty-two isolated offline harness tests
+passed with network/credentials blocked. Final unchanged-tree `make verify`:
+1,557 passed, 3 opt-in skips in 95.24 seconds; Ruff and diff checks clean.
+Freeze the reviewed source and run the single capped 20-request probe. No
+production question template has been changed yet.

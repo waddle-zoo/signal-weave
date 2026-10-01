@@ -49,6 +49,11 @@ privately and configures your data connection without hand-editing TOML.
 > exposed unresolved card-approval gaps; comparative benefit is not established.
 > Stable v0.1.0 has no native assets.
 
+The newer [owner-reviewed onboarding trial](docs/bootstrap-owner-reviewed-v4-01.md)
+also failed its gate: final routing was correct on 5/6 runs versus Luna's 6/6,
+with higher setup effort and token cost. Existing curated-card results do not
+establish that novice onboarding delivers the same benefit.
+
 Then ask your agent:
 
 > Use SignalWeave to monitor why online sales changed and how that affected net

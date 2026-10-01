@@ -1,0 +1,62 @@
+{
+  "review-001": {
+    "scenario_id": "company-4468fde576db47408a2e",
+    "period_id": "period-9932972e8b83de26d788",
+    "arm": "luna_signalweave_jev"
+  },
+  "review-002": {
+    "scenario_id": "company-4468fde576db47408a2e",
+    "period_id": "period-e3981f68213f03ea190b",
+    "arm": "luna_bi"
+  },
+  "review-003": {
+    "scenario_id": "company-9e23313593edcc9dbcae",
+    "period_id": "period-4b8c926e47494c3df4bd",
+    "arm": "luna_bi"
+  },
+  "review-004": {
+    "scenario_id": "company-9e23313593edcc9dbcae",
+    "period_id": "period-5acc399d4b7b37f7dbdb",
+    "arm": "luna_bi"
+  },
+  "review-005": {
+    "scenario_id": "company-9e23313593edcc9dbcae",
+    "period_id": "period-e56fd0dafbceab07f247",
+    "arm": "luna_bi"
+  },
+  "review-006": {
+    "scenario_id": "company-9e23313593edcc9dbcae",
+    "period_id": "period-4b8c926e47494c3df4bd",
+    "arm": "luna_signalweave_jev"
+  },
+  "review-007": {
+    "scenario_id": "company-9e23313593edcc9dbcae",
+    "period_id": "period-5acc399d4b7b37f7dbdb",
+    "arm": "luna_signalweave_jev"
+  },
+  "review-008": {
+    "scenario_id": "company-4468fde576db47408a2e",
+    "period_id": "period-3492985677a94690cb09",
+    "arm": "luna_bi"
+  },
+  "review-009": {
+    "scenario_id": "company-4468fde576db47408a2e",
+    "period_id": "period-e3981f68213f03ea190b",
+    "arm": "luna_signalweave_jev"
+  },
+  "review-010": {
+    "scenario_id": "company-9e23313593edcc9dbcae",
+    "period_id": "period-e56fd0dafbceab07f247",
+    "arm": "luna_signalweave_jev"
+  },
+  "review-011": {
+    "scenario_id": "company-4468fde576db47408a2e",
+    "period_id": "period-3492985677a94690cb09",
+    "arm": "luna_signalweave_jev"
+  },
+  "review-012": {
+    "scenario_id": "company-4468fde576db47408a2e",
+    "period_id": "period-9932972e8b83de26d788",
+    "arm": "luna_bi"
+  }
+}

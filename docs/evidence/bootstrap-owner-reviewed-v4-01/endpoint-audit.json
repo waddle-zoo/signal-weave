@@ -1,0 +1,77 @@
+{
+  "scope": "Post-run exact-directory sidecar audit. Original v4 scorer and results unchanged. These are configured endpoints, not delivered messages.",
+  "full_report_sha256": "738421956b6d4e7577bb8998c9d4dc743302d69922908a2d3788d754d35198bb",
+  "cases": [
+    {
+      "scenario_id": "company-4468fde576db47408a2e",
+      "period_id": "period-9932972e8b83de26d788",
+      "configured_methods": [],
+      "original_native_outcome_and_recipient_keys_correct": false,
+      "native_outcome_and_recipient_keys_and_endpoints_correct": false
+    },
+    {
+      "scenario_id": "company-4468fde576db47408a2e",
+      "period_id": "period-e3981f68213f03ea190b",
+      "configured_methods": [
+        {
+          "key": "team-9a2d45a98644ae6225a4",
+          "actual": "slack://team-9a2d45a98644ae6225a4",
+          "expected": "slack://team-9a2d45a98644ae6225a4",
+          "exact": true
+        }
+      ],
+      "original_native_outcome_and_recipient_keys_correct": true,
+      "native_outcome_and_recipient_keys_and_endpoints_correct": true
+    },
+    {
+      "scenario_id": "company-4468fde576db47408a2e",
+      "period_id": "period-3492985677a94690cb09",
+      "configured_methods": [],
+      "original_native_outcome_and_recipient_keys_correct": true,
+      "native_outcome_and_recipient_keys_and_endpoints_correct": true
+    },
+    {
+      "scenario_id": "company-9e23313593edcc9dbcae",
+      "period_id": "period-4b8c926e47494c3df4bd",
+      "configured_methods": [
+        {
+          "key": "team-d9b0b08268525cabb39c",
+          "actual": "team-d9b0b08268525cabb39c",
+          "expected": "slack://team-d9b0b08268525cabb39c",
+          "exact": false
+        }
+      ],
+      "original_native_outcome_and_recipient_keys_correct": true,
+      "native_outcome_and_recipient_keys_and_endpoints_correct": false
+    },
+    {
+      "scenario_id": "company-9e23313593edcc9dbcae",
+      "period_id": "period-e56fd0dafbceab07f247",
+      "configured_methods": [
+        {
+          "key": "team-b38c29bd3701bb1cdceb",
+          "actual": "team-b38c29bd3701bb1cdceb",
+          "expected": "slack://team-b38c29bd3701bb1cdceb",
+          "exact": false
+        }
+      ],
+      "original_native_outcome_and_recipient_keys_correct": true,
+      "native_outcome_and_recipient_keys_and_endpoints_correct": false
+    },
+    {
+      "scenario_id": "company-9e23313593edcc9dbcae",
+      "period_id": "period-5acc399d4b7b37f7dbdb",
+      "configured_methods": [
+        {
+          "key": "team-b38c29bd3701bb1cdceb",
+          "actual": "team-b38c29bd3701bb1cdceb",
+          "expected": "slack://team-b38c29bd3701bb1cdceb",
+          "exact": false
+        }
+      ],
+      "original_native_outcome_and_recipient_keys_correct": false,
+      "native_outcome_and_recipient_keys_and_endpoints_correct": false
+    }
+  ],
+  "endpoint_aware_joint_correct_count": 2
+}
