@@ -235,6 +235,7 @@ async def test_jev_always_pins_the_production_model(monkeypatch):
     )
 
     assert CapturingClient.init_kwargs[-1]["model"] == "jev-latest"
+    assert CapturingClient.init_kwargs[-1]["retry"].max_retries == 0
 
 
 @pytest.mark.asyncio

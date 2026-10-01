@@ -25,11 +25,21 @@ person writes a free-form insight card, source adapters return bounded evidence,
 judgments, and your existing agent, scheduler, or delivery system decides what
 to do next.
 
+For local agents, the [local investigation runtime](docs/local-investigations.md)
+adds a buildable standalone executable, private persistent cards, reviewed company
+MCP sources, and reproducible segment/mixture analysis. Describe and approve the
+investigation once, then rerun it through your agent. This is an initial local-first
+implementation—not automatic causal discovery or support for arbitrary MCP responses.
+
 <p align="center">
   <img src="assets/decision-flow.svg" alt="SignalWeave turns an insight card and source evidence into Jev judgments, safety gates, and an existing push or agent action" width="900">
 </p>
 
 ## Quick start
+
+Using a local agent? Start with the [local installation guide](docs/local-install.md)
+for `init`, Codex/Claude configuration, and repeated investigations. The existing
+service/deployment path remains available below.
 
 Requirements: Python 3.11+, [uv](https://docs.astral.sh/uv/), and a TypeSafe API
 key.

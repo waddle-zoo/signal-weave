@@ -832,6 +832,7 @@ class InsightAuthoringService:
                 label=str(item.get("label") or matches[item["ref"]].title),
                 parameters=item.get("parameters") or {},
                 required=bool(item.get("required", True)),
+                required_comparison_keys=list(matches[item["ref"]].contract.required_comparison_keys),
             )
             for item in requested
         ]
@@ -1057,6 +1058,7 @@ class InsightAuthoringService:
                     resource=match.resource,
                     label=match.title,
                     required=False,
+                    required_comparison_keys=list(match.contract.required_comparison_keys),
                 )
             )
         warnings: list[str] = []

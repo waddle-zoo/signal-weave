@@ -6,6 +6,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field, model_validator
 
+from .diagnostics import AnalysisReport, AnalyticalComparison
+
 
 class Outcome(StrEnum):
     """The small set of outcomes a card can produce."""
@@ -60,6 +62,7 @@ class SourceRef(BaseModel):
     label: str = Field(min_length=1, max_length=240)
     parameters: dict[str, Any] = Field(default_factory=dict, max_length=50)
     required: bool = True
+    required_comparison_keys: list[str] = Field(default_factory=list, max_length=20)
 
 
 class MetricDefinition(BaseModel):
@@ -109,6 +112,14 @@ class ResourceContract(BaseModel):
     scope: str = Field(default="", max_length=1000)
     metric_names: list[str] = Field(default_factory=list, max_length=100)
     metric_definitions: list[MetricDefinition] = Field(default_factory=list, max_length=100)
+    required_comparison_keys: list[str] = Field(
+        default_factory=list,
+        max_length=20,
+        description=(
+            "Reviewed catalog requirements copied onto proposed source references; "
+            "never inferred from returned snapshots."
+        ),
+    )
     population: str = Field(default="", max_length=1000)
     grain: str = Field(default="", max_length=1000)
     freshness_sla_hours: float | None = Field(default=None, ge=0.0, le=876000.0)
@@ -584,6 +595,7 @@ class ResourceSnapshot(BaseModel):
     title: str
     description: str = ""
     observations: list[Observation] = Field(default_factory=list)
+    analytical_comparisons: list[AnalyticalComparison] = Field(default_factory=list, max_length=20)
     evidence: list[Evidence] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
     error: str | None = None
@@ -906,6 +918,7 @@ class InsightResult(BaseModel):
     evidence_findings: list[EvidenceFinding] = Field(default_factory=list, max_length=500)
     evidence: list[Evidence] = Field(default_factory=list)
     observations: list[Observation] = Field(default_factory=list)
+    analyses: list[AnalysisReport] = Field(default_factory=list, max_length=4000)
     source_keys: list[str] = Field(default_factory=list)
     retrieval: EvidenceBundle | None = None
     context: ContextSnapshot | None = None

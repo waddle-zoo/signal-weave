@@ -351,6 +351,11 @@ def build_runtime(
     else:
         raise ValueError("SignalWeave production runtime only supports TYPESAFE_MODE=jev")
     configured_adapters = list(adapters)
+    mcp_sources_file = os.getenv("SIGNALWEAVE_MCP_SOURCES_FILE", "").strip()
+    if mcp_sources_file:
+        from .mcp_source import build_mcp_sources
+
+        configured_adapters.extend(build_mcp_sources(mcp_sources_file))
     hosted_connections = list(hosted_connections)
     preset_environment = _preset_from_environment()
     if preset_environment is not None:
@@ -454,7 +459,7 @@ def build_runtime(
                 ),
             )
         )
-    if not registry.adapter_names():
+    if not registry.adapter_names() and not _env_flag("SIGNALWEAVE_ALLOW_EMPTY_SOURCES"):
         raise RuntimeError(
             "SignalWeave production runtime requires at least one source adapter; "
             "configure SUPERSET_URL, a Trino catalog, or pass adapters to build_runtime"

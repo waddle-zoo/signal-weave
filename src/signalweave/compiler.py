@@ -51,8 +51,9 @@ def _evidence_slots(card: InsightCard) -> list[EvidenceSlot]:
             source_refs=[source],
             required=source.required,
             completion_criteria=(
-                "Return a bounded observation or evidence statement with its source and "
-                "comparison window."
+                ("Return complete, reconciled analytical comparisons: " + ", ".join(source.required_comparison_keys))
+                if source.required_comparison_keys else
+                "Return a bounded observation or evidence statement with its source and comparison window."
             ),
         )
         for source in card.sources

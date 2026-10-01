@@ -887,7 +887,7 @@ async def test_partial_quality_blocks_before_incomplete_follow_up_plan():
     run = await InsightEngine(NotifyFollowUp()).evaluate(card, [resource])
 
     assert run.result.evidence_plan is not None
-    assert run.result.evidence_plan.status == "incomplete"
+    assert run.result.evidence_plan.status == "blocked"
     assert run.result.outcome == Outcome.INSUFFICIENT_DATA
     assert run.result.delivery_methods == []
     assert any("1 quality issue(s)" in item.statement for item in run.result.evidence)

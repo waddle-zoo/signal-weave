@@ -1,9 +1,23 @@
 from __future__ import annotations
 
 import argparse
+import asyncio
 import ipaddress
+import json
 import os
+import shlex
+import sys
+from contextlib import ExitStack, nullcontext
+from pathlib import Path
 
+from .local_setup import (
+    SetupError,
+    agent_config,
+    doctor,
+    initialize,
+    local_environment,
+    validate_key_configuration,
+)
 from .runtime import build_runtime, load_deployment_secret
 
 
@@ -23,19 +37,112 @@ def _http_api_token() -> str | None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Run the SignalWeave MCP server")
-    serve = parser.add_subparsers(dest="command", required=True).add_parser(
+    distribution = "standalone executable" if getattr(sys, "frozen", False) else "Python CLI"
+    parser = argparse.ArgumentParser(description=f"SignalWeave local setup and MCP server ({distribution})")
+    commands = parser.add_subparsers(dest="command", required=True)
+    init = commands.add_parser("init", help="Create private local configuration and state")
+    init.add_argument("--home", help="Local home (default: SIGNALWEAVE_HOME or ~/.signalweave)")
+    init.add_argument("--key-file", help="Copy a private TypeSafe key file instead of prompting")
+    check = commands.add_parser("doctor", help="Check configuration offline; makes no live requests")
+    check.add_argument("--home", help="Local home (default: SIGNALWEAVE_HOME or ~/.signalweave)")
+    snippet = commands.add_parser("agent-config", help="Print configuration; never edits agent files")
+    snippet.add_argument("--home", help="Local home (default: SIGNALWEAVE_HOME or ~/.signalweave)")
+    snippet.add_argument("--agent", choices=["codex", "claude"], required=True)
+    run = commands.add_parser("run", help="Evaluate an approved card once and print its JSON result")
+    run.add_argument("card", metavar="CARD")
+    run.add_argument("--run-key", required=True, help="Stable idempotency key for this evaluation")
+    run.add_argument("--output", type=Path, help="Directory for rendered output")
+    run.add_argument("--home", help="Local home (default: SIGNALWEAVE_HOME or ~/.signalweave)")
+    serve = commands.add_parser(
         "serve", help="Run the MCP server against configured source adapters"
     )
+    serve.add_argument("--home", help="Load a local home; otherwise use SIGNALWEAVE_HOME or deployment environment")
     serve.add_argument("--transport", choices=["stdio", "streamable-http"], default="stdio")
-    serve.add_argument("--host", default=os.getenv("MCP_HOST", "127.0.0.1"))
-    serve.add_argument("--port", type=int, default=int(os.getenv("MCP_PORT", "8000")))
+    serve.add_argument("--host", default=None)
+    serve.add_argument("--port", type=int, default=None)
 
     args = parser.parse_args()
+    try:
+        if args.command == "init":
+            home = initialize(args.home, key_file=args.key_file)
+            print(f"Local configuration: {home / 'config.toml'}")
+            print(f"Local state directory: {home / 'state'}")
+            print("Next: " + shlex.join(["signalweave", "doctor", "--home", str(home)]))
+            for agent in ("codex", "claude"):
+                print("Agent snippet: " + shlex.join([
+                    "signalweave", "agent-config", "--agent", agent, "--home", str(home),
+                ]))
+            return
+        if args.command == "agent-config":
+            print(agent_config(args.home, args.agent), end="")
+            return
+        # Legacy serve remains environment-only unless the caller selects a home.
+        context = (
+            local_environment(args.home)
+            if args.command != "serve" or args.home is not None or "SIGNALWEAVE_HOME" in os.environ
+            else nullcontext()
+        )
+        with context as local_home:
+            if args.command == "doctor":
+                healthy, messages = doctor()
+                print("\n".join(messages))
+                if not healthy:
+                    raise SystemExit(1)
+                return
+            if local_home is not None:
+                validate_key_configuration()
+            if args.command == "run":
+                from .local_run import run_card
+
+                if not args.card.strip() or not args.run_key.strip():
+                    raise SetupError("CARD and --run-key must not be empty")
+                output = args.output.expanduser().absolute() if args.output is not None else None
+                result = asyncio.run(run_card(args.card, args.run_key, output_dir=output))
+                print(json.dumps(result, ensure_ascii=False))
+                return
+            args.host = args.host if args.host is not None else os.getenv("MCP_HOST", "127.0.0.1")
+            try:
+                args.port = args.port if args.port is not None else int(os.getenv("MCP_PORT", "8000"))
+            except ValueError:
+                raise SetupError("MCP_PORT must be an integer") from None
+            if not 1 <= args.port <= 65535:
+                raise SetupError("MCP port must be between 1 and 65535")
+            _serve(args)
+    except SetupError as error:
+        print(f"SignalWeave setup error: {error}", file=sys.stderr)
+        raise SystemExit(1) from None
+    except OSError:
+        # OS errors can expose filenames containing secrets; keep CLI failures bounded.
+        print("SignalWeave could not access a required file; check paths and permissions.", file=sys.stderr)
+        raise SystemExit(1) from None
+    except KeyboardInterrupt:
+        raise SystemExit(130) from None
+
+
+def _run_stdio(server) -> None:
+    """Let the transport own duplicated handles, never the process standard streams."""
+    original_stdin, original_stdout = sys.stdin, sys.stdout
+    with ExitStack() as streams:
+        stdin = streams.enter_context(os.fdopen(
+            os.dup(original_stdin.fileno()), "r", encoding="utf-8", errors="replace",
+        ))
+        stdout = streams.enter_context(os.fdopen(
+            os.dup(original_stdout.fileno()), "w", encoding="utf-8",
+        ))
+        # MCP re-wraps these buffers and may close them during teardown. Duplicates
+        # keep the originals usable for interpreter/PyInstaller shutdown flushing.
+        sys.stdin, sys.stdout = stdin, stdout
+        try:
+            server.run(transport="stdio")
+        finally:
+            sys.stdin, sys.stdout = original_stdin, original_stdout
+
+
+def _serve(args: argparse.Namespace) -> None:
     from .mcp_server import create_mcp
     if args.transport == "stdio":
         server = create_mcp(build_runtime())
-        server.run(transport="stdio")
+        _run_stdio(server)
         return
 
     import uvicorn

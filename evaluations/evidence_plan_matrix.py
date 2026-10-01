@@ -459,7 +459,7 @@ def _case_definitions() -> list[tuple[InsightCard, list[ResourceSnapshot], Conte
             [_resource(empty_source, populated=False)],
             None,
             JudgmentFixture(Outcome.NOTIFY, (QuestionStatus.UNKNOWN,)),
-            {"plan": "incomplete", "outcome": "insufficient_data", "workflow": "repair_source"},
+            {"plan": "blocked", "outcome": "insufficient_data", "workflow": "repair_source"},
         )
     )
 

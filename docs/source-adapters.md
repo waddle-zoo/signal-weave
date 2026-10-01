@@ -43,6 +43,8 @@ The adapter should:
 - resolve only approved/read-only resources;
 - bound result size and execution time;
 - return numeric facts as `Observation` values;
+- supply `analytical_comparisons` when a reviewed source can provide complete
+  partitions and controlling totals for [quantitative investigation](local-investigations.md);
 - include supported comparison baselines in `Observation.comparison_baselines`
   when the source can calculate them;
 - return non-numeric facts, relationships, and run metadata as `Evidence` or `metadata`;
@@ -60,10 +62,16 @@ runtime evaluation still calls `inspect` and applies freshness, health, and
 payload-budget gates.
 
 The registry also enforces a serialized snapshot byte budget (1 MiB by default).
-An oversized adapter result is stripped of observations, evidence, and metadata
+An oversized adapter result is stripped of observations, comparisons, evidence, and metadata
 and returned as a typed source error. Required sources therefore route to
 `insufficient_data` instead of silently sending an unbounded payload to Jev.
 Deployments can lower the budget with `SourceRegistry(max_snapshot_bytes=...)`.
+
+For an operator-reviewed external MCP read tool, use the
+[configured MCP source bridge](mcp-source-bridge.md) instead of writing an in-process
+adapter. It supports stdio and Streamable HTTP with fixed tool/argument bindings,
+explicit normalized snapshots, and authorization before execution. It is not an
+automatic adapter for every MCP response shape.
 
 ### Shadow telemetry
 

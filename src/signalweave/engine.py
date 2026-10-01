@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from time import perf_counter
@@ -9,6 +10,7 @@ from typing import Any
 from .analysis import candidate_observations, evidence_statements, observations_for_plan
 from .compiler import compile_with_typesafe
 from .context import ContextProvider, context_facts_as_evidence
+from .diagnostics import AnalysisReport, analyze_comparison
 from .models import (
     ContextSnapshot,
     DeliveryMethod,
@@ -24,9 +26,11 @@ from .models import (
     Observation,
     Outcome,
     PrincipalContext,
+    QuestionStatus,
     ResourceSnapshot,
     RunTelemetry,
     SourceRef,
+    WatchStatus,
     WorkflowHandoff,
 )
 from .retrieval import build_candidate_pool, resource_ref
@@ -55,6 +59,7 @@ class _EvaluationMaterials:
     blocking_source_errors: list[dict[str, Any]]
     source_error_evidence: list[Evidence]
     source_errors: list[dict[str, Any]]
+    analyses: list[AnalysisReport]
 
 
 class EvaluationPayloadError(ValueError):
@@ -289,7 +294,7 @@ class InsightEngine:
                         "selected source contract status is "
                         f"{resource.contract.source_status}"
                     )
-                elif not resource.observations and not resource.evidence:
+                elif not resource.observations and not resource.evidence and not resource.analytical_comparisons:
                     retrieval_status = "failed"
                     retrieval_error = "selected source returned no observations or evidence"
                 if retrieval_status == "failed":
@@ -332,6 +337,16 @@ class InsightEngine:
             materials.state, evaluation_card, plan, materials.observations
         )
         result = result.model_copy(
+            update={"analyses": materials.analyses}
+        )
+        if materials.blocking_source_errors:
+            # There is no reliable item-to-source dependency map here. Missing
+            # required evidence cannot establish absence or refute a question.
+            result = result.model_copy(update={
+                "watch_results": [item.model_copy(update={"status": WatchStatus.UNKNOWN}) for item in result.watch_results],
+                "question_results": [item.model_copy(update={"status": QuestionStatus.UNKNOWN}) for item in result.question_results],
+            })
+        result = result.model_copy(
             update={
                 "context": context,
                 "investigation": investigation,
@@ -341,6 +356,7 @@ class InsightEngine:
                     result=result,
                     resources=resources,
                     context=context,
+                    source_errors=materials.source_errors,
                 ),
             }
         )
@@ -383,6 +399,7 @@ class InsightEngine:
         result: InsightResult,
         resources: list[ResourceSnapshot],
         context: ContextSnapshot | None,
+        source_errors: list[dict[str, Any]] | None = None,
     ) -> EvidencePlan:
         """Resolve the compiled evidence checklist against this run's facts."""
 
@@ -394,12 +411,23 @@ class InsightEngine:
                     context_by_slot.setdefault(fact.slot_key, []).append(fact)
         slots: list[EvidenceSlot] = []
         warnings: list[str] = []
+        blocking_keys = {
+            error["source_key"] for error in (
+                source_errors if source_errors is not None else InsightEngine._source_errors(card, resources)
+            ) if error["blocking"]
+        }
+        blocking_keys.update(report.source_key for report in result.analyses if report.required and report.status != "complete")
         for slot in plan.evidence_slots:
             status = slot.status
             fact_ids = list(slot.evidence_fact_ids)
             evidence_source_keys = list(slot.evidence_source_keys)
             slot_facts = context_by_slot.get(slot.key, [])
-            if slot_facts:
+            if ((slot.role == "primary" and blocking_keys.intersection(slot.source_keys))
+                    or (slot.role in {"watch", "question"} and blocking_keys)):
+                status = "unavailable"
+                fact_ids = []
+                evidence_source_keys = []
+            elif slot_facts:
                 status = "fulfilled"
                 fact_ids = [fact.fact_id for fact in slot_facts]
                 evidence_source_keys = sorted(
@@ -414,12 +442,24 @@ class InsightEngine:
                     for key in slot.source_keys
                     if key in resources_by_key
                 ]
-                if any(
+                analytical_reports = [
+                    report for report in result.analyses if report.source_key in slot.source_keys
+                ]
+                admitted = {(report.source_key, report.comparison_key) for report in analytical_reports if report.status == "complete"}
+                required_analyses = {
+                    (source.key, key) for source in card.sources if source.key in slot.source_keys
+                    for key in source.required_comparison_keys
+                }
+                if required_analyses - admitted or any(report.required and report.status != "complete" for report in analytical_reports):
+                    status = "unavailable"
+                elif any(
                     resource.error or resource.contract.source_status == "failed"
                     for resource in relevant
                 ):
                     status = "unavailable"
-                elif any(resource.observations or resource.evidence for resource in relevant):
+                elif any(resource.observations or resource.evidence for resource in relevant) or any(
+                    report.status == "complete" for report in analytical_reports
+                ):
                     status = "fulfilled"
                     evidence_source_keys = sorted(resource.source_key for resource in relevant)
                 else:
@@ -833,6 +873,68 @@ class InsightEngine:
         observations = observations_for_plan(resources, plan.selected_source_keys)
         observations = self._apply_comparison_window(observations, plan)
         source_errors = self._source_errors(card, resources)
+        analyses = []
+        analytical_evidence = []
+        required_sources = {source.key for source in card.sources if source.required}
+        required_comparisons = {
+            (source.key, key) for source in card.sources for key in source.required_comparison_keys
+        }
+        for resource in resources:
+            if resource.source_key not in plan.selected_source_keys and resource.source_key not in required_sources:
+                continue
+            for comparison in resource.analytical_comparisons:
+                report = analyze_comparison(
+                    resource.source_key, comparison,
+                    comparison_window=plan.comparison_windows[0] if plan.comparison_windows else None,
+                )
+                report = report.model_copy(update={
+                    "required": resource.source_key in required_sources and (
+                        comparison.required or (resource.source_key, comparison.key) in required_comparisons
+                    ),
+                })
+                analyses.append(report)
+                if report.status == "complete":
+                    for observation in observations:
+                        if (observation.source_key, observation.subject_id, observation.metric) != (
+                            report.source_key, report.comparison_key, report.metric,
+                        ):
+                            continue
+                        values = [(observation.current, report.current), (observation.baseline, report.baseline)]
+                        conflict = any(
+                            value is not None and (
+                                not math.isfinite(value) or not math.isclose(
+                                    value, expected, rel_tol=0, abs_tol=max(math.ulp(value), math.ulp(expected))
+                                )
+                            ) for value, expected in values
+                        )
+                        if conflict or (observation.unit != "number" and observation.unit != report.unit):
+                            source_errors.append({
+                                "source_key": resource.source_key, "resource": resource.resource,
+                                "label": resource.title, "message": "Observation conflicts with its matched analytical comparison.",
+                                "blocking": resource.source_key in required_sources,
+                                "quality_status": "analysis_conflict", "source_url": resource.source_url,
+                            })
+                statement = (
+                    f"{comparison.metric}: {report.baseline:g} to {report.current:g}; "
+                    f"measured difference {report.delta:g}. {report.method} reconciles "
+                    f"{len(report.contributions)} segments. This is an accounting decomposition, "
+                    "not a causal explanation."
+                    if report.status == "complete"
+                    else f"Analysis unavailable for {comparison.metric}: " + " ".join(report.issues)
+                )
+                analytical_evidence.append(Evidence(
+                    source_key=resource.source_key, subject_id=comparison.key,
+                    subject_label=comparison.metric, statement=statement,
+                    values=report.model_dump(mode="json"), origin="derived",
+                    provenance=comparison.query_refs, source_url=resource.source_url,
+                ))
+                if report.status != "complete":
+                    source_errors.append({
+                        "source_key": resource.source_key, "resource": resource.resource,
+                        "label": resource.title, "message": statement,
+                        "blocking": report.required and resource.source_key in required_sources,
+                        "quality_status": "analysis_incomplete", "source_url": resource.source_url,
+                    })
         blocking_source_errors = [error for error in source_errors if error["blocking"]]
         priority_observations = candidate_observations(observations)
         priority_keys = {
@@ -900,6 +1002,7 @@ class InsightEngine:
         ]
         evidence.extend(source_error_evidence)
         evidence.extend(context_facts_as_evidence(context))
+        evidence.extend(analytical_evidence)
         state: dict[str, Any] = {
             "card": card.execution_payload(),
             "insight_card": card.execution_payload(),
@@ -911,6 +1014,7 @@ class InsightEngine:
             ],
             "source_errors": source_errors,
             "evidence": [item.model_dump(mode="json") for item in evidence],
+            "analyses": [item.model_dump(mode="json") for item in analyses],
             "context": context.model_dump(mode="json") if context else None,
             "investigation": investigation.model_dump(mode="json") if investigation else None,
         }
@@ -921,6 +1025,7 @@ class InsightEngine:
             blocking_source_errors=blocking_source_errors,
             source_error_evidence=source_error_evidence,
             source_errors=source_errors,
+            analyses=analyses,
         )
 
     @staticmethod
@@ -992,7 +1097,17 @@ class InsightEngine:
                         "blocking": source.required,
                     }
                 )
-            elif not resource.observations and not resource.evidence:
+            if resource is not None:
+                returned_keys = [comparison.key for comparison in resource.analytical_comparisons]
+                missing_keys = set(source.required_comparison_keys) - set(returned_keys)
+                if missing_keys or len(returned_keys) != len(set(returned_keys)):
+                    errors.append({
+                        "source_key": key, "resource": source.resource, "label": source.label,
+                        "message": "Required analytical comparisons are missing or comparison keys are duplicated.",
+                        "source_url": resource.source_url, "blocking": source.required,
+                        "quality_status": "analysis_incomplete",
+                    })
+            if resource is not None and not resource.error and not resource.observations and not resource.evidence and not resource.analytical_comparisons:
                 errors.append(
                     {
                         "source_key": key,
@@ -1200,7 +1315,7 @@ class InsightEngine:
             and observation.source_key in stale_keys
             and observation not in stale
         )
-        if stale:
+        if stale or stale_keys & required_source_keys:
             stale_outcome = (
                 Outcome.ESCALATE
                 if cls._delivery_methods_for(card, Outcome.ESCALATE)
@@ -1223,7 +1338,11 @@ class InsightEngine:
             if observation.source_key in required_source_keys
             and str(observation.attributes.get("source_status", "")).lower() == "ambiguous"
         ]
-        if ambiguous and result.outcome in {Outcome.NOTIFY, Outcome.ESCALATE}:
+        ambiguous_keys = {
+            error["source_key"] for error in source_errors
+            if error.get("quality_status") == "ambiguous"
+        }
+        if (ambiguous or ambiguous_keys & required_source_keys) and result.outcome in {Outcome.NOTIFY, Outcome.ESCALATE}:
             return cls._with_outcome(
                 result,
                 card,
@@ -1237,10 +1356,15 @@ class InsightEngine:
         numeric_observations = [
             observation for observation in observations if observation.current is not None
         ]
+        analyzed_observations = {
+            (report.source_key, report.comparison_key, report.metric)
+            for report in result.analyses if report.status == "complete"
+        }
         incomplete_baselines = [
             observation
             for observation in numeric_observations
             if observation.source_key in required_source_keys
+            and (observation.source_key, observation.subject_id, observation.metric) not in analyzed_observations
             and (observation.baseline is None or observation.change_pct is None)
         ]
         comparable_baselines = [

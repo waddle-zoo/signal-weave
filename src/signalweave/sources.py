@@ -17,6 +17,13 @@ from .models import (
 )
 
 
+def _inspection_contract(catalog: ResourceContract, snapshot: ResourceContract) -> ResourceContract:
+    """Catalog owns authorization/meaning; either source can downgrade health."""
+    severity = {"healthy": 0, "ambiguous": 1, "stale": 2, "unknown": 3, "failed": 4}
+    status = max((catalog.source_status, snapshot.source_status), key=severity.__getitem__)
+    return catalog.model_copy(update={"source_status": status})
+
+
 def _catalog_terms(resource: ResourceDescriptor) -> set[str]:
     """Extract bounded lexical terms for adapters without native search.
 
@@ -535,7 +542,7 @@ class SourceRegistry:
         if self._enforce_catalog and descriptor is not None:
             snapshot = snapshot.model_copy(
                 update={
-                    "contract": descriptor.contract,
+                    "contract": _inspection_contract(descriptor.contract, snapshot.contract),
                     "source_url": snapshot.source_url or descriptor.source_url,
                 }
             )
@@ -577,6 +584,7 @@ class SourceRegistry:
         return snapshot.model_copy(
             update={
                 "observations": [],
+                "analytical_comparisons": [],
                 "evidence": [],
                 "metadata": {
                     "signalweave_budget": {
@@ -701,7 +709,7 @@ class SourceRegistry:
                 }
                 snapshot = snapshot.model_copy(
                     update={
-                        "contract": descriptor.contract,
+                        "contract": _inspection_contract(descriptor.contract, snapshot.contract),
                         "source_url": snapshot.source_url or descriptor.source_url,
                         "metadata": metadata,
                     }

@@ -279,12 +279,15 @@ class JevJudger:
                 budget_bytes=self.max_payload_bytes,
             )
         self.metrics.record_payload(observed_bytes)
+        from typesafe_sdk import RetryPolicy
+
         for attempt in range(self._max_retries + 1):
             try:
                 async with self._client_type(
                     api_key=self._api_key,
                     model=self.name,
                     timeout=self._timeout,
+                    retry=RetryPolicy(max_retries=0),
                 ) as client:
                     return await client.system_one(state=state, questions=questions)
             except Exception as error:  # noqa: BLE001 - classify transport failures below
@@ -650,6 +653,8 @@ class JevJudger:
                 instructions=(
                     f"Does the current evidence support watch_for[{index}]? Assess the "
                     "card's purpose, all normalized observations, all evidence, and "
+                    "computed analyses. Respect each analysis's status and limitations; "
+                    "an accounting contribution is not causal evidence. Use "
                     "related source context. Do not require a numeric change when the "
                     "item describes existence, freshness, a relationship, or another "
                     "non-numeric condition."
@@ -664,6 +669,8 @@ class JevJudger:
                 instructions=(
                     f"Does the available evidence support a concrete answer to questions[{index}]? "
                     "Use only the normalized observations, source evidence, and card context. "
+                    "Computed analyses contain verified arithmetic, not proof of causation "
+                    "or statistical significance; respect their limitations. "
                     "A related metric may support an answer, but do not invent facts that are absent."
                 ),
                 criteria={
@@ -847,7 +854,8 @@ class JevJudger:
             outcome = Outcome.INVESTIGATE
         source_keys = plan.selected_source_keys or [source.key for source in card.sources]
         summary = (
-            f"Evaluated {len(observations)} observations across {len(source_keys)} sources; "
+            f"Evaluated {len(observations)} observations and {len(state.get('analyses', []))} "
+            f"computed analyses across {len(source_keys)} sources; "
             f"{len(watch_results)} watch items and {len(question_results)} questions were checked."
         )
         return InsightResult(
