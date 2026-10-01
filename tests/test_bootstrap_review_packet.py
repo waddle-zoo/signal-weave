@@ -141,6 +141,24 @@ def test_export_rejects_changed_measured_fixtures():
     assert review.packets(report)[0] == []
 
 
+def test_export_reconstructs_explicit_nonprefix_regression_subset():
+    fixtures = build_scenarios(seed=20261002, split="holdout")[2:4]
+    report = {
+        "config": {"seed": 20261002, "split": "holdout", "selected_companies": 2,
+                   "selected_scenario_ids": [s["scenario_id"] for s in fixtures],
+                   "dataset_digest": dataset_digest(fixtures)},
+        "rows": [{"scenario_id": s["scenario_id"], "period_id": s["public"]["periods"][0]["period_id"],
+                  "phase": "monitoring", "arm": "luna_bi", "submission": None,
+                  "inspected_refs": [], "status": "failed"} for s in fixtures],
+        "status": "partial_or_failed", "summary": {}, "usage": {},
+        "budget_censored": False, "comparative_eligible": False,
+    }
+    cases, mapping, _ = review.packets(report)
+    assert {entry["scenario_id"] for entry in mapping.values()} == set(report["config"]["selected_scenario_ids"])
+    assert {c["business"]["company"] for c in cases} == {s["public"]["company"] for s in fixtures}
+    assert len(cases) == 2 and all(not c["execution_complete"] for c in cases)
+
+
 def test_export_rebases_period_clock_without_changing_fixture(review_report):
     report, scenario = review_report
     original = copy.deepcopy(scenario)

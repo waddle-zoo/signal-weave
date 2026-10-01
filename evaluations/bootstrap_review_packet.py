@@ -9,14 +9,15 @@ import random
 from datetime import datetime
 from pathlib import Path
 
-from evaluations.bootstrap_agent_trial import shift_timestamps, write_exclusive
+from evaluations.bootstrap_agent_trial import select_scenarios, shift_timestamps, write_exclusive
 from evaluations.bootstrap_scenarios import build_scenarios, dataset_digest, public_episode
 
 
 def packets(report: dict) -> tuple[list[dict], dict, dict]:
     config = report["config"]
     fixtures = build_scenarios(seed=config["seed"], split=config["split"])
-    fixtures = fixtures[:config.get("selected_companies", len(fixtures))]
+    fixtures = select_scenarios(fixtures, config.get("selected_scenario_ids"),
+                               config.get("selected_companies", len(fixtures)))
     if config.get("dataset_digest") and dataset_digest(fixtures) != config["dataset_digest"]:
         raise ValueError("Fixture digest differs from measured run; do not reconstruct review evidence.")
     scenarios = {s["scenario_id"]: s for s in fixtures}

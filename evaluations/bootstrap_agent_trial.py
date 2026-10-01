@@ -675,9 +675,26 @@ def aggregate(rows: list[dict]) -> dict:
     return output
 
 
+def select_scenarios(scenarios: list[dict], scenario_ids: list[str] | None, limit: int) -> list[dict]:
+    """Explicit regression subsets, preserving fixture order and every selected period."""
+    if limit < 1:
+        raise ValueError("limit must be positive")
+    if scenario_ids is None:
+        return scenarios[:limit]
+    if not scenario_ids or len(set(scenario_ids)) != len(scenario_ids):
+        raise ValueError("scenario IDs must be nonempty and unique")
+    if len(scenario_ids) > limit:
+        raise ValueError("explicit scenario selection exceeds limit; do not silently drop a company")
+    unknown = set(scenario_ids) - {scenario["scenario_id"] for scenario in scenarios}
+    if unknown:
+        raise ValueError("Unknown scenario IDs: " + ", ".join(sorted(unknown)))
+    return [scenario for scenario in scenarios if scenario["scenario_id"] in scenario_ids]
+
+
 async def run_trial(args) -> dict:
     openai_key, jev_key = credentials(args)  # Fail before creating output or calling a provider.
-    scenarios = build_scenarios(seed=args.seed, split=args.split)[:args.limit]
+    scenarios = select_scenarios(build_scenarios(seed=args.seed, split=args.split),
+                                 getattr(args, "scenario_id", None), args.limit)
     if not scenarios:
         raise ValueError("no selected scenarios")
     args.output.mkdir(parents=True, exist_ok=False)
@@ -687,6 +704,7 @@ async def run_trial(args) -> dict:
     clock = datetime.now(timezone.utc)
     config = {"model": MODEL, "effort": args.effort, "seed": args.seed, "split": args.split,
               "dataset_digest": dataset_digest(scenarios), "selected_companies": len(scenarios),
+              "selected_scenario_ids": [scenario["scenario_id"] for scenario in scenarios],
               "public_context_digest": digest([public_scenario(scenario) for scenario in scenarios]),
               "max_api_requests": args.max_api_requests, "max_turns": args.max_turns,
               "max_tool_calls": args.max_tool_calls, "max_output_tokens": args.max_output_tokens,
@@ -843,6 +861,7 @@ def parser() -> argparse.ArgumentParser:
     result.add_argument("--jev-key-file", type=Path)
     result.add_argument("--split", choices=["dev", "holdout"], default="dev")
     result.add_argument("--limit", type=int, default=6, help="Maximum companies, not periods")
+    result.add_argument("--scenario-id", action="append", help="Explicit development subset; repeat per company. No periods are omitted.")
     result.add_argument("--seed", type=int, default=DEFAULT_SEED)
     result.add_argument("--max-api-requests", type=int, default=120, help="Global Luna + Jev attempt ceiling, failures included")
     result.add_argument("--max-turns", type=int, default=12)
@@ -861,6 +880,7 @@ def main() -> None:
                args.max_output_tokens) < 1:
             raise ValueError("limits must be positive")
         credentials(args)
+        select_scenarios(build_scenarios(seed=args.seed, split=args.split), args.scenario_id, args.limit)
         if args.output.exists():
             raise ValueError("Output already exists; choose a new directory. No overwrite or silent resume.")
         if args.preflight:

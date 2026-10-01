@@ -155,3 +155,54 @@ trial is warranted merely because these code contracts pass.
 Pre-live freeze verification: `make verify` passed Ruff and **1,382 tests**, with
 3 opt-in tests skipped (91.89 seconds). Whitespace checks passed. This includes
 the new admission/migration/window contracts and unchanged fixture-digest checks.
+
+### Post-approval execution result
+
+Frozen implementation `3387916154e8fb98f4dd981249d816e598b4a7b3`: the declared
+six-case live regression passed every recorded check. Four movement cases
+returned notify, unchanged returned ignore, and incomplete population returned
+insufficient_data with unknown watch evidence and a blocked evidence plan.
+All six saved-receipt replays added zero Jev calls. Twelve live Jev requests
+consumed 48,068 input and 1,780 output tokens; summed case execution was 5.59
+seconds, excluding separate source preflight reads. No LLM-agent comparison or
+external notification was performed. The harness's noncausal check verifies the
+typed analysis method, not an independently reviewed causal narrative.
+
+[Retained results, analyses and telemetry](evidence/local-investigation-admission-v1-01.json)
+omit only local absolute artifact paths. Original local report SHA-256:
+`97774d413575fb7c256fc35d61543615e5857af813334419ba157199f9bf3a29`.
+This confirms bounded execution still works; it does not repair the failed
+novice-bootstrap headline by substitution.
+
+### Targeted bootstrap regression v3-03 (declared before running)
+
+Run only the two previously failed operational-route companies from seed
+`20261002`, holdout fixture split: Kindred Helpdesk
+(`company-4468fde576db47408a2e`) and Cinder Database Cloud
+(`company-9e23313593edcc9dbcae`). This seed and both failures are already known:
+the run is retrospective development, not a fresh holdout or a representative
+subset chosen to estimate success. Keep the raw v3 dataset unchanged and its
+undeclared window capabilities visible. Do not inject a repaired source
+descriptor, expert card, owner answer, expected outcome, or corrected mapping.
+
+Use Codex Luna at low effort and live Jev, empty per-arm state, both arms and all
+three periods: 16 scheduled episodes. Retain failures, retries, source reads,
+timings, native routes and agent overrides. Bounds: 45 tools and 360 seconds per
+agent episode, 60 global Jev attempts, no post-exhaustion top-up. Save a separate
+exclusive `artifacts/bootstrap-codex-regression-v3-03` directory with recorded
+implementation fingerprints. Freeze code, schemas and this declaration before
+execution; do not inspect intermediate scores or patch an active run.
+
+The narrow question is whether reviewed API/contract repairs reduce these two
+observed onboarding failures in actual agent behavior. Check persisted window
+and comparison identifiers and fidelity to owner routing, not just completion.
+Report all six monitoring cases and both comparators, even if a previous failure
+recurs or a new one appears. The overall enterprise/value goal remains open.
+
+Pre-run review found no selection/exporter blockers; 203 targeted offline tests
+passed, including old-config reconstruction and frozen dataset checks. Both
+failure cases were selected explicitly before dispatch, not filtered after scoring.
+Native build [36891227344](https://github.com/waddle-zoo/signal-weave/actions/runs/36891227344)
+passed macOS Intel, macOS ARM64 and Linux x64 for the production repair commit;
+the publication job was skipped. These are feature-branch artifacts, not a new
+release or a main merge.

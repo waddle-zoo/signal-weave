@@ -53,6 +53,20 @@ def test_codex_credentials_require_only_jev(monkeypatch):
     assert "OPENAI_API_KEY" not in str(error.value)
 
 
+def test_explicit_regression_subset_preserves_whole_companies_fixture_order_and_inputs():
+    scenarios = build_scenarios(seed=20261002)
+    before = copy.deepcopy(scenarios)
+    ids = [scenarios[3]["scenario_id"], scenarios[2]["scenario_id"]]
+    selected = trial.select_scenarios(scenarios, ids, 2)
+    assert selected == scenarios[2:4]
+    assert scenarios == before
+    assert all(len(s["public"]["periods"]) == 3 for s in selected)
+    assert trial.select_scenarios(scenarios, None, 2) == scenarios[:2]
+    for bad, limit in (([], 2), ([ids[0], ids[0]], 2), (["not-a-company"], 2), (ids, 1), (None, 0)):
+        with pytest.raises(ValueError):
+            trial.select_scenarios(scenarios, bad, limit)
+
+
 @pytest.fixture
 def public():
     return public_scenario(build_scenarios(split="dev")[0])
