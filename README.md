@@ -126,6 +126,13 @@ observation, source evidence, confidence, and provenance. If the card names 100
 things to watch, Jev receives all 100 observations; changed rows are only placed
 first for client rendering.
 
+For cards that need investigation, the result also includes a typed
+`evidence_plan`: SignalWeave turns approved sources, questions, and watch items
+into bounded evidence slots with source references, completion criteria, and
+statuses. A caller-owned agent executes the pending slots and returns
+provenance-bearing facts; it does not have to invent the investigation structure
+from a prose prompt.
+
 ## MCP flow
 
 An existing UI or agent can guide onboarding without SignalWeave owning the UI:
@@ -185,6 +192,13 @@ the same card.
 SignalWeave never invents destinations or executes side effects. See
 [`docs/multi-step-workflows.md`](docs/multi-step-workflows.md) and the live
 Northstar trial in `evaluations/northstar_multistep_trial.py`.
+
+An optional caller-owned investigation agent is included in
+[`examples/investigation_agent/`](examples/investigation_agent/). It shows how
+an existing agent can consume the handoff, gather authorized evidence,
+re-evaluate the same card, and post a structured evidence bundle to stdout or
+Slack. It is not part of the SignalWeave service and does not replace a
+scheduler or durable workflow runner.
 
 Cards created through the proposal path also default to one bounded investigation
 stage. Jev first decides whether the initial evidence needs more context, then
@@ -395,6 +409,14 @@ and 36 evidence items, then replayed without duplicate provider or Jev calls.
 The clarified owner policy passed 6/6 local counterfactual cases with 0 false
 or missed notifications.
 
+The stronger live owner-labeled holdout added six new 1,000-chart catalogs. The
+card-guided Jev path reached 94.4% retrieval precision, 100% retrieval recall,
+100% outcome accuracy, 100% driver recall, and 100% promoted evidence-role
+accuracy. The lexical-selection baseline reached 50.0% retrieval precision and
+83.3% outcome accuracy on the same cards. The labels stayed outside Jev and the
+independent reviewer recomputed the aggregates. See
+[`docs/card-guided-owner-holdout-trial-2026-09-30.md`](docs/card-guided-owner-holdout-trial-2026-09-30.md).
+
 The repository also contains discovery, metric-plan, evidence-bundle, provider,
 and generated-shape trials. They are synthetic regression measurements, not
 customer accuracy or production-cost claims. In particular, the modeled query
@@ -436,12 +458,14 @@ accuracy claim.
 - [`docs/source-adapters.md`](docs/source-adapters.md) — adapter contract and security boundary
 - [`docs/metric-query-cards.md`](docs/metric-query-cards.md) — approved catalogs, Trino plans, and SQL bounds
 - [`docs/benchmark.md`](docs/benchmark.md) — comparison methodology
+- [`docs/card-guided-owner-holdout-trial-2026-09-30.md`](docs/card-guided-owner-holdout-trial-2026-09-30.md) — live owner-labeled retrieval and evidence holdout
 - [`docs/evidence-brief.md`](docs/evidence-brief.md) — measured product case
 - [`docs/enterprise-experiment.md`](docs/enterprise-experiment.md) — MCP-only enterprise readiness experiment
 - [`docs/enterprise-closure.md`](docs/enterprise-closure.md) — current proof boundary and next gate
 - [`docs/enterprise-readiness-report-2026-09-25.md`](docs/enterprise-readiness-report-2026-09-25.md) — high-level product-value, landscape, evidence, and enterprise-readiness assessment
 - [`docs/adversarial-v1-review-2026-09-25.md`](docs/adversarial-v1-review-2026-09-25.md) — security, retrieval, packaging, and release verdict for the reviewed branch
 - [`docs/adversarial-review.md`](docs/adversarial-review.md) — public-readiness review and explicit gaps
+- [`examples/investigation_agent/README.md`](examples/investigation_agent/README.md) — optional multi-stage investigation agent
 - [`docs/retrieval-explanation.md`](docs/retrieval-explanation.md) — bounded investigation contract and adversarial trial
 - [`docs/postfix-agent-trial.md`](docs/postfix-agent-trial.md) — live post-fix Luna agent trial
 - [`docs/security.md`](docs/security.md) — credentials and deployment notes

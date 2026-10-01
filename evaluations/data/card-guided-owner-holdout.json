@@ -1,0 +1,162 @@
+{
+  "schema_version": 1,
+  "chart_count": 1000,
+  "scenarios": [
+    {
+      "id": "documentdb-performance-regression",
+      "dashboard_title": "DocumentDB performance",
+      "card": {
+        "title": "Detect customer-impacting database regressions",
+        "what_to_watch": "Scan database performance charts for a broad customer-impacting regression and the operational evidence needed to route it safely.",
+        "why_watch": "The database service owner needs one evidence-backed incident signal instead of separate alarms for every performance symptom.",
+        "watch_for": [
+          "Latency or replication health is materially worse across the customer population.",
+          "The evidence distinguishes a broad regression from an isolated cluster spike.",
+          "Deployment and data freshness context is available before escalation."
+        ],
+        "questions": [
+          "Is this a customer-impacting database regression?",
+          "What operational evidence should the service owner inspect first?"
+        ],
+        "decision_guidance": "Escalate when p95 query latency is up at least 25% across regions and replication lag is also elevated. For the evidence bundle, treat p95 query latency as the focal driver, replication lag as corroboration, throttled requests as diagnostic context, and deployment timeline as diagnostic context. Ignore isolated CPU movement.",
+        "expected_outcome": "escalate"
+      },
+      "overrides": [
+        {"index": 3, "chart_id": "query-latency", "title": "P95 query latency", "metric": "p95_query_latency", "current": 134, "baseline": 100, "change_pct": 34.0, "group": "database"},
+        {"index": 4, "chart_id": "replication-lag", "title": "Replication lag", "metric": "replication_lag", "current": 18, "baseline": 10, "change_pct": 80.0, "group": "database"},
+        {"index": 5, "chart_id": "throttled-requests", "title": "Throttled requests", "metric": "throttled_requests", "current": 160, "baseline": 100, "change_pct": 60.0, "group": "database"},
+        {"index": 6, "chart_id": "deployment-timeline", "title": "Deployment timeline", "metric": "deployments_last_hour", "current": 2, "baseline": 0, "change_pct": 200.0, "group": "database"}
+      ]
+    },
+    {
+      "id": "checkout-conversion-regression",
+      "dashboard_title": "Checkout health",
+      "card": {
+        "title": "Find a customer checkout regression",
+        "what_to_watch": "Scan checkout and acquisition charts for a broad conversion problem and the strongest evidence for what changed.",
+        "why_watch": "Growth and payments need to act on a broken customer path without escalating ordinary traffic mix changes.",
+        "watch_for": [
+          "Completed purchases are materially below the normal operating path.",
+          "The movement is corroborated by checkout behavior rather than traffic volume alone.",
+          "Release context is available before assigning an owner."
+        ],
+        "questions": [
+          "Did the customer checkout path materially regress?",
+          "What should growth and payments inspect next?"
+        ],
+        "decision_guidance": "Notify when completed purchases are down at least 15% and checkout errors are elevated. For the evidence bundle, treat completed purchases as the focal driver, checkout errors as corroboration, ad click-through as diagnostic context, and the latest release as diagnostic context. Do not treat more traffic by itself as a checkout regression.",
+        "expected_outcome": "notify"
+      },
+      "overrides": [
+        {"index": 13, "chart_id": "completed-purchases", "title": "Completed purchases", "metric": "completed_purchases", "current": 810, "baseline": 1000, "change_pct": -19.0, "group": "checkout"},
+        {"index": 14, "chart_id": "checkout-errors", "title": "Checkout errors", "metric": "checkout_error_rate", "current": 4.8, "baseline": 2.0, "change_pct": 140.0, "group": "checkout"},
+        {"index": 15, "chart_id": "ad-click-through", "title": "Ad click-through", "metric": "ad_ctr", "current": 5.1, "baseline": 4.0, "change_pct": 27.5, "group": "checkout"},
+        {"index": 16, "chart_id": "latest-release", "title": "Latest checkout release", "metric": "releases_last_day", "current": 1, "baseline": 0, "change_pct": 100.0, "group": "checkout"}
+      ]
+    },
+    {
+      "id": "warehouse-stockout-risk",
+      "dashboard_title": "Warehouse service risk",
+      "card": {
+        "title": "Detect broad stockout risk",
+        "what_to_watch": "Scan inventory and fulfillment charts for a broad customer-facing stockout risk, not isolated SKU noise.",
+        "why_watch": "Operations needs to know when inventory availability is causing an order promise problem and which evidence supports that conclusion.",
+        "watch_for": [
+          "Stockout exposure is broad enough to affect customer orders.",
+          "Fulfillment impact corroborates the inventory movement.",
+          "Supplier and source freshness context is available."
+        ],
+        "questions": [
+          "Is this broad enough to require an operations response?",
+          "Is inventory the most likely operating driver?"
+        ],
+        "decision_guidance": "Notify when stockout rate is up at least 20% and fulfillment failures are also elevated. For the evidence bundle, treat stockout rate as the focal driver, fulfillment failures as corroboration, supplier lead time as diagnostic context, and inventory snapshot freshness as a quality check.",
+        "expected_outcome": "notify"
+      },
+      "overrides": [
+        {"index": 23, "chart_id": "stockout-rate", "title": "Stockout rate", "metric": "stockout_rate", "current": 14, "baseline": 8, "change_pct": 75.0, "group": "warehouse"},
+        {"index": 24, "chart_id": "fulfillment-failures", "title": "Fulfillment failures", "metric": "fulfillment_failures", "current": 180, "baseline": 100, "change_pct": 80.0, "group": "warehouse"},
+        {"index": 25, "chart_id": "supplier-lead-time", "title": "Supplier lead time", "metric": "supplier_lead_time", "current": 12, "baseline": 8, "change_pct": 50.0, "group": "warehouse"},
+        {"index": 26, "chart_id": "inventory-freshness", "title": "Inventory snapshot freshness", "metric": "snapshot_age_hours", "current": 1, "baseline": 1, "change_pct": 0.0, "group": "warehouse"}
+      ]
+    },
+    {
+      "id": "support-backlog-noise",
+      "dashboard_title": "Support operations",
+      "card": {
+        "title": "Separate support risk from normal volume",
+        "what_to_watch": "Scan support operations charts for a customer-impacting service backlog and evidence that distinguishes it from ordinary ticket mix.",
+        "why_watch": "Support leadership should receive a push only when customers are waiting longer than the operating promise.",
+        "watch_for": [
+          "SLA breach rate is materially worse than baseline.",
+          "Backlog movement corroborates a customer-facing service issue.",
+          "Ticket mix and staffing context clarify whether the movement is expected."
+        ],
+        "questions": [
+          "Is there a customer-facing support service issue?",
+          "What context should the support lead inspect before acting?"
+        ],
+        "decision_guidance": "Ignore when backlog moves but SLA breach rate is no more than 10% above its baseline (2.2% or lower in this card's comparison window). For the evidence bundle, treat SLA breach rate as the focal driver, backlog volume as corroboration, ticket mix as diagnostic context, and staffing schedule as contradicting an unexpected capacity explanation when coverage is normal.",
+        "expected_outcome": "ignore"
+      },
+      "overrides": [
+        {"index": 33, "chart_id": "sla-breach-rate", "title": "SLA breach rate", "metric": "sla_breach_rate", "current": 2.1, "baseline": 2.0, "change_pct": 5.0, "group": "support"},
+        {"index": 34, "chart_id": "support-backlog", "title": "Support backlog", "metric": "support_backlog", "current": 1120, "baseline": 1000, "change_pct": 12.0, "group": "support"},
+        {"index": 35, "chart_id": "ticket-mix", "title": "Ticket mix", "metric": "billing_ticket_share", "current": 42, "baseline": 30, "change_pct": 40.0, "group": "support"},
+        {"index": 36, "chart_id": "staffing-schedule", "title": "Staffing schedule", "metric": "staffing_coverage", "current": 99, "baseline": 100, "change_pct": -1.0, "group": "support"}
+      ]
+    },
+    {
+      "id": "identity-region-incident",
+      "dashboard_title": "Identity reliability",
+      "card": {
+        "title": "Find a broad authentication incident",
+        "what_to_watch": "Scan authentication charts for a broad customer login failure and operational context that supports escalation.",
+        "why_watch": "Security and platform owners need a concise incident bundle with the affected population and likely operational context.",
+        "watch_for": [
+          "Login failure is materially worse for customers.",
+          "Regional concentration corroborates the incident scope.",
+          "Deploy and data quality context is sufficient for escalation."
+        ],
+        "questions": [
+          "Is this a broad customer authentication incident?",
+          "Which operational context should the on-call inspect?"
+        ],
+        "decision_guidance": "Escalate when login failure rate is up at least 30% and multiple regions are affected. For the evidence bundle, treat login failure rate as the focal driver, regional concentration as corroboration, identity deployment history as diagnostic context, and authentication event freshness as a quality check.",
+        "expected_outcome": "escalate"
+      },
+      "overrides": [
+        {"index": 43, "chart_id": "login-failure-rate", "title": "Login failure rate", "metric": "login_failure_rate", "current": 6.4, "baseline": 4.0, "change_pct": 60.0, "group": "identity"},
+        {"index": 44, "chart_id": "affected-regions", "title": "Affected regions", "metric": "affected_regions", "current": 3, "baseline": 1, "change_pct": 200.0, "group": "identity"},
+        {"index": 45, "chart_id": "identity-deploys", "title": "Identity deployments", "metric": "deployments_last_day", "current": 2, "baseline": 0, "change_pct": 200.0, "group": "identity"},
+        {"index": 46, "chart_id": "auth-event-freshness", "title": "Authentication event freshness", "metric": "event_age_hours", "current": 1, "baseline": 1, "change_pct": 0.0, "group": "identity"}
+      ]
+    },
+    {
+      "id": "data-pipeline-latency",
+      "dashboard_title": "Analytics data trust",
+      "card": {
+        "title": "Detect an analytics data trust incident",
+        "what_to_watch": "Scan data platform charts for a material freshness or completeness failure that makes downstream analytics unsafe to trust.",
+        "why_watch": "Data leadership needs a repair route when dashboards are stale, but ordinary query latency should not create an incident.",
+        "watch_for": [
+          "Required tables or partitions are materially stale.",
+          "Downstream dashboard freshness corroborates the source problem.",
+          "Warehouse query latency helps diagnose the cause without being the primary incident."
+        ],
+        "questions": [
+          "Is the analytics data safe to use?",
+          "What evidence should data engineering repair first?"
+        ],
+        "decision_guidance": "Escalate when required table freshness is stale by more than 12 hours and downstream dashboard freshness is also stale. For the evidence bundle, treat table freshness as the focal quality driver, dashboard freshness as corroboration, warehouse query latency as diagnostic context, and partition completeness as a quality check.",
+        "expected_outcome": "investigate"
+      },
+      "overrides": [
+        {"index": 53, "chart_id": "table-freshness", "title": "Required table freshness", "metric": "table_age_hours", "current": 26, "baseline": 1, "change_pct": 2500.0, "group": "data-platform", "freshness": "stale by 25 hours"},
+        {"index": 54, "chart_id": "dashboard-freshness", "title": "Downstream dashboard freshness", "metric": "dashboard_age_hours", "current": 24, "baseline": 1, "change_pct": 2300.0, "group": "data-platform", "freshness": "stale by 23 hours"},
+        {"index": 55, "chart_id": "warehouse-query-latency", "title": "Warehouse query latency", "metric": "query_latency", "current": 180, "baseline": 100, "change_pct": 80.0, "group": "data-platform"},
+        {"index": 56, "chart_id": "partition-completeness", "title": "Partition completeness", "metric": "partition_completeness", "current": 92, "baseline": 100, "change_pct": -8.0, "group": "data-platform"}
+      ]
+    }
+  ]
+}

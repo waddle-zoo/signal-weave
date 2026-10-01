@@ -1034,7 +1034,8 @@ async def test_follow_up_evaluation_links_to_parent_receipt(tmp_path):
 
     assert second["receipt"]["parent_receipt_id"] == first["receipt"]["receipt_id"]
     assert second["receipt"]["workflow_step_key"] == "investigate"
-    assert second["result"]["workflow"]["action"] == "deliver"
+    assert second["result"]["workflow"]["action"] == "retrieve_evidence"
+    assert second["result"]["evidence_plan"]["status"] == "incomplete"
 
 
 @pytest.mark.asyncio

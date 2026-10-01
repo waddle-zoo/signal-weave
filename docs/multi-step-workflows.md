@@ -32,6 +32,44 @@ not get to invent destinations, source keys, or arbitrary actions. The caller
 must still own source access, tool execution, Slack/email/ticketing side
 effects, and any remediation.
 
+## Evidence plan
+
+Each result and workflow handoff also carries an `evidence_plan`. SignalWeave
+compiles it from the card's approved sources, `questions`, and `watch_for`
+items. A slot includes:
+
+- a stable key and role (`primary`, `diagnostic`, `question`, `watch`, `quality`,
+  or `ownership`);
+- the concrete question the agent should answer;
+- authorized source keys and full source references, including adapter parameters;
+- whether the slot is required; and
+- its current status: `pending`, `fulfilled`, `conflicting`, or `unavailable`.
+
+This makes the agent's retrieval work inspectable and bounded. The agent does
+not need to turn a prose instruction into an investigation from scratch. It
+executes tools for the pending slots and returns facts tagged with the slot key
+when it can. SignalWeave resolves those facts against the plan and carries the
+missing or conflicting slots into the next handoff. A source adapter still owns
+the actual query and permission boundary; SignalWeave does not generate
+arbitrary SQL or grant access to a source.
+
+Each evaluated observation also receives an `evidence_finding` when the Jev
+provider returns one. Its typed role is `driver`, `corroborates`, `diagnostic`,
+`contradicts`, `quality`, `unrelated`, or `unknown`, with a probability and optional
+`suggested_role` when the classification is below the advisory threshold. The
+advisory threshold is separate from the threshold used to permit an automatic
+outcome; showing a weighted lead does not authorize delivery.
+These are ranked explanations for the current evidence, not causal proof. They
+are available on ordinary cards as well as bounded investigations, so a caller
+can show why a push happened without making the extra-source selector part of
+the core decision.
+
+For example, a card asking why online sales fell can produce slots for the
+sales source, channel breakdown, acquisition change, purchase conversion, and
+ownership context. The final evidence bundle can therefore show which slots
+were fulfilled and which remain uncertain, rather than presenting a single
+opaque “investigate” instruction.
+
 ## Caller-owned loop
 
 The intended sequence is:
@@ -47,6 +85,10 @@ The intended sequence is:
    receipt's `parent_receipt_id` and a stable `workflow_step_key` such as
    `investigate` when using the MCP server.
 6. Deliver only when the new handoff action is `deliver`.
+
+The caller should use `workflow.evidence_plan.missing_slot_keys` to decide
+which authorized tools to run. A fact can set `slot_key` to the corresponding
+plan key so SignalWeave can show exactly which request it fulfilled.
 
 If the second result is still `retrieve_evidence`, the agent can continue the
 bounded loop. If it is `repair_source` or `request_review`, no leadership

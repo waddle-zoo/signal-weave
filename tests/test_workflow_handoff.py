@@ -160,6 +160,57 @@ def test_workflow_handoff_is_strictly_typed():
 
 
 @pytest.mark.asyncio
+async def test_workflow_exposes_compiled_evidence_slots_and_completion_state():
+    card = _card(follow_up_guidance="Retrieve diagnostic evidence.").model_copy(
+        update={
+            "questions": ["Did the affected funnel step change?"],
+            "watch_for": ["A material online revenue movement."],
+        }
+    )
+    run = await InsightEngine(TwoStageJudger()).evaluate(card, [_resource()])
+
+    assert run.result.evidence_plan is not None
+    slots = {slot.key: slot for slot in run.result.evidence_plan.slots}
+    assert slots["source:growth-dashboard"].status == "fulfilled"
+    assert slots["source:growth-dashboard"].source_refs[0].resource == "dashboard:growth"
+    assert slots["question:1"].status == "pending"
+    assert slots["watch:1"].status == "pending"
+    assert "question:1" in run.result.evidence_plan.missing_slot_keys
+    assert "Evidence slots to complete:" in run.result.workflow.instructions
+    assert "Did the affected funnel step change?" in run.result.workflow.instructions
+
+
+@pytest.mark.asyncio
+async def test_context_fact_can_fulfill_an_named_evidence_slot():
+    card = _card(follow_up_guidance="Re-evaluate after diagnostics.").model_copy(
+        update={"questions": ["Did the affected funnel step change?"]}
+    )
+    context = ContextSnapshot(
+        provider="growth-agent",
+        version="diagnostic-1",
+        facts=[
+            ContextFact(
+                fact_id="funnel-change",
+                slot_key="question:1",
+                subject_ref="warehouse|purchase-funnel",
+                relation="supports",
+                statement="Purchase conversion declined in the affected cohort.",
+            )
+        ],
+    )
+    run = await InsightEngine(TwoStageJudger()).evaluate(
+        card,
+        [_resource()],
+        context_override=context,
+    )
+
+    assert run.result.evidence_plan is not None
+    slot = next(slot for slot in run.result.evidence_plan.slots if slot.key == "question:1")
+    assert slot.status == "fulfilled"
+    assert slot.evidence_fact_ids == ["funnel-change"]
+
+
+@pytest.mark.asyncio
 async def test_failed_required_source_cannot_become_a_delivery_handoff():
     class UnsafeJudger(TwoStageJudger):
         async def judge(self, state, card, plan, observations):

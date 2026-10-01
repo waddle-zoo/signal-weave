@@ -68,14 +68,19 @@ roles:
 - `driver` — a strongest candidate explanation associated with the movement or
   condition; this is not a causal claim;
 - `corroborates` — independently supports its significance;
+- `diagnostic` — could help explain why the movement or condition changed,
+  without being the strongest explanation;
 - `contradicts` — argues that it is expected or not actionable;
 - `quality` — qualifies freshness, completeness, trust, or comparability;
 - `unrelated`; or
 - `unknown` when the role probability is below the configured item threshold.
 
 When the role is uncertain, the result also preserves the model's
-`suggested_role` and probability without promoting it to a typed finding. These
-are typed references to returned observations, not generated causal prose.
+`suggested_role` and probability without promoting it to a typed finding. Jev's
+advisory evidence-role threshold is separate from the higher watch/question
+and action thresholds, so a caller can see a useful lead without treating it as
+safe to act on. These are typed references to returned observations, not
+generated causal prose.
 Clients can render the exact metric, values, source URL, and provenance beside the
 role. Low-confidence source selection or evidence roles remain visible as
 uncertainty instead of being promoted to facts.

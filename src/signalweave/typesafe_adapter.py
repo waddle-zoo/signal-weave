@@ -106,6 +106,7 @@ class JevJudger:
 
     name = "jev-latest"
     item_threshold = 0.70
+    evidence_role_threshold = 0.50
 
     def __init__(
         self,
@@ -113,6 +114,7 @@ class JevJudger:
         timeout: float | None = None,
         max_retries: int | None = None,
         max_payload_bytes: int | None = None,
+        evidence_role_threshold: float | None = None,
     ) -> None:
         from typesafe_sdk import AsyncTypeSafeClient
 
@@ -155,12 +157,20 @@ class JevJudger:
             raise ValueError(
                 "SIGNALWEAVE_MAX_JEV_PAYLOAD_BYTES must be at least 1024"
             )
+        role_threshold = (
+            self.evidence_role_threshold
+            if evidence_role_threshold is None
+            else evidence_role_threshold
+        )
+        if not 0.0 <= role_threshold <= 1.0:
+            raise ValueError("evidence_role_threshold must be between 0 and 1")
         self._client_type = AsyncTypeSafeClient
         self._api_key = api_key
         self._timeout = timeout_seconds
         self._max_retries = retry_value
         self._retry_backoff = retry_backoff
         self.max_payload_bytes = payload_limit
+        self.evidence_role_threshold = role_threshold
         self.metrics = JudgerMetrics()
 
     async def rank_resources(
@@ -662,33 +672,65 @@ class JevJudger:
                 },
             )
 
-        if card.investigation_mode.value == "bounded":
-            from typesafe_sdk import Choice
+        # Every result can need an explanation, not only a card that asks the
+        # bounded follow-up stage to discover more sources.  Keep this as a
+        # parallel typed classification over the observations already supplied
+        # by the caller.  ``investigation_mode`` remains the separate control
+        # for selecting additional source resources.
 
-            questions.update(
-                {
-                    f"evidence_{index}": Choice(
-                        instructions=(
-                            f"Classify the role of observations[{index}] in the card's "
-                            "current decision. Use the observation's values, dimensions, "
-                            "freshness, source metadata, context, and all related evidence. "
-                            "Do not infer causation from correlation alone."
+        from .models import EvidenceFinding
+
+        questions.update(
+            {
+                f"evidence_{index}": Choice(
+                    instructions=(
+                        f"Classify the role of observations[{index}] in the card's "
+                        "current decision. First read the card's what_to_watch, why_watch, "
+                        "decision_guidance, watch_for, and questions to identify the focal "
+                        "condition and the owner's explicit interpretation rules. Then use "
+                        "the observation's values, dimensions, freshness, source metadata, "
+                        "context, and all related evidence. Apply this precedence when the "
+                        "card does not say otherwise: quality for freshness, completeness, "
+                        "or comparability; contradicts for expected, benign, or countervailing "
+                        "evidence; driver only for the focal movement or an owner-described "
+                        "direct mechanism; corroborates for independent supporting movement; "
+                        "diagnostic for related context that is worth investigating but does "
+                        "not establish the explanation; unrelated when it does not bear on "
+                        "the decision; unknown when the evidence is insufficient. Magnitude "
+                        "alone does not make an observation a driver. Do not infer causation "
+                        "from correlation alone."
+                    ),
+                    criteria={
+                        "driver": (
+                            "The focal metric or an owner-described direct mechanism that "
+                            "best accounts for the watched movement. Do not promote a merely "
+                            "related or high-magnitude observation to driver."
                         ),
-                        criteria={
-                            "driver": (
-                                "Is the strongest candidate explanation associated with the "
-                                "observed movement or condition; do not infer causation."
-                            ),
-                            "corroborates": "Independently supports the movement or its significance.",
-                            "contradicts": "Argues that the movement is expected, benign, or otherwise not actionable.",
-                            "quality": "Primarily qualifies trust, freshness, completeness, or comparability.",
-                            "unrelated": "Does not materially bear on this card's decision.",
-                            "unknown": "The evidence is insufficient to classify this observation.",
-                        },
-                    )
-                    for index in range(len(observations))
-                }
-            )
+                        "corroborates": (
+                            "Independent evidence that moves consistently with the focal "
+                            "signal and supports its significance, without being the focal "
+                            "mechanism itself."
+                        ),
+                        "diagnostic": (
+                            "Related context that should be inspected to explain the movement, "
+                            "but whose current evidence does not establish the explanation "
+                            "or qualify the data."
+                        ),
+                        "contradicts": (
+                            "Evidence that the movement is expected, benign, isolated, or "
+                            "otherwise argues against the card's action."
+                        ),
+                        "quality": (
+                            "Evidence whose primary role is data trust: freshness, completeness, "
+                            "definition, comparability, or source health."
+                        ),
+                        "unrelated": "Does not materially bear on this card's decision.",
+                        "unknown": "The evidence is insufficient to classify this observation.",
+                    },
+                )
+                for index in range(len(observations))
+            }
+        )
 
         action_outcomes = [Outcome.IGNORE, Outcome.INVESTIGATE]
         for method in card.delivery_methods:
@@ -754,44 +796,42 @@ class JevJudger:
             for index, question in enumerate(card.questions)
         ]
         evidence_findings = []
-        if card.investigation_mode.value == "bounded":
-            from .models import EvidenceFinding
-
-            for index, observation in enumerate(observations):
-                answer = response.choices.get(f"evidence_{index}")
-                if answer is None:
-                    continue
-                role = str(answer.choice)
-                allowed_roles = {
-                    "driver",
-                    "corroborates",
-                    "contradicts",
-                    "quality",
-                    "unrelated",
-                    "unknown",
-                }
-                if role not in allowed_roles:
-                    role = "unknown"
-                probability = max(
-                    0.0,
-                    min(1.0, float(answer.probabilities.get(role, 0.0))),
+        for index, observation in enumerate(observations):
+            answer = response.choices.get(f"evidence_{index}")
+            if answer is None:
+                continue
+            role = str(answer.choice)
+            allowed_roles = {
+                "driver",
+                "corroborates",
+                "diagnostic",
+                "contradicts",
+                "quality",
+                "unrelated",
+                "unknown",
+            }
+            if role not in allowed_roles:
+                role = "unknown"
+            probability = max(
+                0.0,
+                min(1.0, float(answer.probabilities.get(role, 0.0))),
+            )
+            suggested_role = None
+            if probability < self.evidence_role_threshold:
+                suggested_role = role
+                role = "unknown"
+            evidence_findings.append(
+                EvidenceFinding(
+                    key=f"evidence_{index}",
+                    source_key=observation.source_key,
+                    subject_id=observation.subject_id,
+                    subject_label=observation.subject_label,
+                    metric=observation.metric,
+                    role=role,
+                    probability=probability,
+                    suggested_role=suggested_role,
                 )
-                suggested_role = None
-                if probability < self.item_threshold:
-                    suggested_role = role
-                    role = "unknown"
-                evidence_findings.append(
-                    EvidenceFinding(
-                        key=f"evidence_{index}",
-                        source_key=observation.source_key,
-                        subject_id=observation.subject_id,
-                        subject_label=observation.subject_label,
-                        metric=observation.metric,
-                        role=role,
-                        probability=probability,
-                        suggested_role=suggested_role,
-                    )
-                )
+            )
         selected_outcome = str(response.choices["outcome"].choice)
         raw_probabilities = getattr(response.choices["outcome"], "probabilities", {})
         action_probabilities = {

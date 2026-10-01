@@ -25,10 +25,20 @@ def test_builds_a_100_chart_catalog_without_evaluator_labels_in_metadata() -> No
     assert len(case.snapshots) == 100
     assert len(case.descriptors) == 101  # dashboard anchor + 100 charts
     assert case.gold_roles
+    assert case.gold_evidence_roles
     for descriptor in case.descriptors:
         assert "gold_role" not in descriptor.metadata
         assert "signal_class" not in descriptor.metadata
         assert "gold_role" not in descriptor.description
+    public_payload = json.dumps(
+        {
+            "card": case.card.model_dump(mode="json"),
+            "descriptors": [item.model_dump(mode="json") for item in case.descriptors],
+            "snapshots": [item.model_dump(mode="json") for item in case.snapshots.values()],
+        }
+    )
+    for hidden_key in ("gold_role", "gold_evidence_role", "signal_class", "expected_outcome"):
+        assert hidden_key not in public_payload
 
 
 @pytest.mark.asyncio

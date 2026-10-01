@@ -1,5 +1,11 @@
 # Benchmark protocol
 
+The current live 1,000-chart Jev retrieval trial and its adversarial result are
+recorded in [`card-guided-retrieval-trial-2026-09-29.md`](card-guided-retrieval-trial-2026-09-29.md).
+
+The separate owner-labeled holdout and its adversarial process result are in
+[`card-guided-owner-holdout-trial-2026-09-30.md`](card-guided-owner-holdout-trial-2026-09-30.md).
+
 SignalWeave should earn its Jev dependency with measurements, not a marketing claim. This repository therefore includes a small benchmark that compares the production Jev path with an optional conventional embedding-plus-reasoning pipeline. The concise measured case is in [`evidence-brief.md`](evidence-brief.md).
 
 ## What is held constant
