@@ -91,6 +91,14 @@ def _evaluation_fingerprint(
     return hashlib.sha256(encoded).hexdigest()
 
 
+def _evaluation_card(card: InsightCard) -> dict[str, Any]:
+    """Keep active policy; authoring history remains available through get_insight_card."""
+    return card.model_dump(
+        mode="json",
+        exclude={"onboarding_review", "onboarding_review_history", "onboarding_corrections", "compiled_plan"},
+    )
+
+
 def create_mcp(
     runtime: Runtime | None = None,
     *,
@@ -126,7 +134,10 @@ def create_mcp(
             "the owner only for unresolved metric definitions, comparison periods, "
             "materiality rules, or notification destinations. Never invent those answers. "
             "Preserve the owner's rules in decision_guidance and required source "
-            "contracts. Simulate the draft and show the owner the selected sources, "
+            "contracts. watch_for contains required business conditions checked on every "
+            "run, not a generic analysis checklist. Include only applicable owner-required "
+            "conditions; put reporting preferences in decision_guidance. Simulate the "
+            "draft and show the owner the selected sources, "
             "calculations, uncertainties, and intended routes before requesting explicit "
             "approval. Only call approve_insight_card after that approval; tool access "
             "is not approval. Similar catalog titles are not automatically the same metric. "
@@ -337,7 +348,7 @@ def create_mcp(
                 raise ValueError("idempotency key is already being evaluated; retry shortly")
             return {
                 "receipt": existing.model_copy(update={"status": ReceiptStatus.REPLAYED}).model_dump(
-                    mode="json"
+                    mode="json", exclude={"result"}
                 ),
                 "replayed": True,
                 "result": existing.result,
@@ -368,7 +379,7 @@ def create_mcp(
                 raise RuntimeError("unable to claim idempotency key")
             return {
                 "receipt": existing.model_copy(update={"status": ReceiptStatus.REPLAYED}).model_dump(
-                    mode="json"
+                    mode="json", exclude={"result"}
                 ),
                 "replayed": True,
                 "result": existing.result,
@@ -413,9 +424,9 @@ def create_mcp(
         )
         decision_receipts.save(receipt)
         return {
-            "receipt": receipt.model_dump(mode="json"),
+            "receipt": receipt.model_dump(mode="json", exclude={"result"}),
             "replayed": False,
-            "card": run.card.model_dump(mode="json"),
+            "card": _evaluation_card(run.card),
             "retrieval": bundle.model_dump(mode="json"),
             "resources": [resource.model_dump(mode="json") for resource in run.resources],
             "plan": run.plan.model_dump(mode="json"),
@@ -1288,7 +1299,7 @@ def create_mcp(
         return {
             "status": "preview",
             "delivery_enabled": False,
-            "card": run.card.model_dump(mode="json"),
+            "card": _evaluation_card(run.card),
             "resources": [resource.model_dump(mode="json") for resource in run.resources],
             "plan": run.plan.model_dump(mode="json"),
             "retrieval": bundle.model_dump(mode="json"),

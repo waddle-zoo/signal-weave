@@ -1,9 +1,10 @@
 # Bootstrap benchmark v3: evaluator repairs and proposed fresh-seed replay
 
-Status: evaluator changes and offline regressions only. No new live trial or
-paid model call is part of this change. The replay below is a predeclared design
-to freeze with the final implementation and retained run configuration before running.
-It is not an already executed or fully frozen experiment.
+Status: evaluator repairs and development regression. The first cheap live
+regression completed; see the [repair ledger](bootstrap-repair-ledger.md), which
+retains its adverse findings and costs. The fresh-seed replay below remains a
+predeclared design to freeze with the final implementation and retained run
+configuration before running. It is not an already executed fresh experiment.
 
 ## Preserve the failed v2 result
 

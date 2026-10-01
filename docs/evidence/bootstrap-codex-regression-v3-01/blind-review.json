@@ -1,0 +1,2634 @@
+{
+  "cases": [
+    {
+      "case_id": "review-001",
+      "business": {
+        "company": "Juniper Trail Retail",
+        "brief": "Keep an eye on what we actually keep from sales. If it takes a hit, tell our commerce lead what changed, not just that a chart moved.",
+        "glossary": {
+          "net_sales": "Sales means gross completed-order revenue minus refunds posted during the same reporting week, excluding tax and shipping. Do not use booked order value or subtract refunds twice.",
+          "unit": "USD",
+          "comparison": "Previous complete reporting week; source periods are UTC."
+        },
+        "owner_answers": {
+          "metric_scope": "Sales means gross completed-order revenue minus refunds posted during the same reporting week, excluding tax and shipping. Do not use booked order value or subtract refunds twice.",
+          "materiality": "Notify the business destination for a net-sales decline of at least 10% against the prior complete week. Otherwise ignore. Missing definitions or incomplete postings require insufficient_data to the data destination, not a business alert.",
+          "routing": "business destination: team-f88d053536cba66bc88e; data destination: team-b5fcff88e8691a8a9289. Only these routes are authorized; no destructive actions.",
+          "data_gaps": "Ask for a corrected export or a versioned definition when needed. I cannot reconstruct missing rows, infer causation, or tell you a period's correct answer."
+        },
+        "destinations": [
+          {
+            "key": "team-f88d053536cba66bc88e",
+            "label": "Business owner",
+            "destination": "slack://team-f88d053536cba66bc88e"
+          },
+          {
+            "key": "team-b5fcff88e8691a8a9289",
+            "label": "Data operations",
+            "destination": "slack://team-b5fcff88e8691a8a9289"
+          }
+        ],
+        "catalog": [
+          {
+            "adapter": "company_mcp",
+            "resource": "resource-00dc1bfdfad5f5f05554",
+            "kind": "document",
+            "title": "Returns operations",
+            "description": "Refund posting metadata and accounting mapping; not an additional refund ledger.",
+            "source_url": null,
+            "metadata": {
+              "tenant": "company-3e9c1df69fac812309d9",
+              "owner": "Data operations",
+              "inspection": "bounded current-period snapshot",
+              "read_only": true
+            },
+            "contract": {
+              "tenant_id": "default",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true
+            }
+          },
+          {
+            "adapter": "company_mcp",
+            "resource": "resource-af08bd091b93bfc9567d",
+            "kind": "saved_query",
+            "title": "Orders weekly",
+            "description": "Order bookings including cancelled orders, tax and shipping; not recognized sales.",
+            "source_url": null,
+            "metadata": {
+              "tenant": "company-3e9c1df69fac812309d9",
+              "owner": "Business owner",
+              "inspection": "bounded current-period snapshot",
+              "read_only": true
+            },
+            "contract": {
+              "tenant_id": "default",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true
+            }
+          },
+          {
+            "adapter": "company_mcp",
+            "resource": "resource-949a4c0c44fb188d1658",
+            "kind": "saved_query",
+            "title": "Commerce weekly",
+            "description": "Completed transaction amounts by sales channel; refunds are positive deductions, amounts in USD.",
+            "source_url": null,
+            "metadata": {
+              "tenant": "company-3e9c1df69fac812309d9",
+              "owner": "Business owner",
+              "inspection": "bounded current-period snapshot",
+              "read_only": true
+            },
+            "contract": {
+              "tenant_id": "default",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true
+            }
+          },
+          {
+            "adapter": "company_mcp",
+            "resource": "resource-4184db0c3714a4e31a98",
+            "kind": "chart",
+            "title": "Commerce weekly",
+            "description": "Archived checkout experiment, test-store population only.",
+            "source_url": null,
+            "metadata": {
+              "tenant": "company-3e9c1df69fac812309d9",
+              "owner": "Data operations",
+              "inspection": "bounded current-period snapshot",
+              "read_only": true
+            },
+            "contract": {
+              "tenant_id": "default",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true
+            }
+          }
+        ],
+        "period": {
+          "period_id": "period-b47d22d0383ab140f7fc",
+          "as_of": "2026-10-22T14:58:52.998912+00:00",
+          "snapshots": {
+            "company_mcp|resource-949a4c0c44fb188d1658": {
+              "source_key": "resource-949a4c0c44fb188d1658",
+              "adapter": "company_mcp",
+              "resource": "resource-949a4c0c44fb188d1658",
+              "title": "Commerce weekly",
+              "description": "Completed transaction amounts by sales channel; refunds are positive deductions, amounts in USD.",
+              "observations": [],
+              "analytical_comparisons": [],
+              "evidence": [
+                {
+                  "source_key": "resource-949a4c0c44fb188d1658",
+                  "subject_id": "resource-949a4c0c44fb188d1658",
+                  "subject_label": "unknown",
+                  "statement": "Source export; interpret using catalog and owner definitions.",
+                  "values": {
+                    "rows": [
+                      {
+                        "channel": "web",
+                        "baseline_gross": 8000,
+                        "baseline_refunds": 1000,
+                        "current_gross": 6500,
+                        "current_refunds": 2500
+                      },
+                      {
+                        "channel": "shop",
+                        "baseline_gross": 4000,
+                        "baseline_refunds": 1000,
+                        "current_gross": 4000,
+                        "current_refunds": 1000
+                      }
+                    ],
+                    "fields": {
+                      "gross": "USD",
+                      "refunds": "USD"
+                    },
+                    "refund_timing": "posting_week"
+                  },
+                  "source_url": null,
+                  "origin": "source",
+                  "provenance": [
+                    "company_mcp|resource-949a4c0c44fb188d1658"
+                  ]
+                }
+              ],
+              "metadata": {
+                "tenant": "company-3e9c1df69fac812309d9",
+                "period_id": "period-b47d22d0383ab140f7fc"
+              },
+              "error": null,
+              "source_url": null,
+              "captured_at": "2026-10-22T14:58:52.998912+00:00",
+              "source_captured_at": "2026-10-22T14:58:52.998912+00:00",
+              "contract": {
+                "tenant_id": "default",
+                "domain": "unknown",
+                "scope": "",
+                "metric_names": [],
+                "metric_definitions": [],
+                "required_comparison_keys": [],
+                "population": "",
+                "grain": "",
+                "freshness_sla_hours": null,
+                "lineage": [],
+                "roles": [],
+                "source_status": "healthy",
+                "authorized": true
+              }
+            },
+            "company_mcp|resource-00dc1bfdfad5f5f05554": {
+              "source_key": "resource-00dc1bfdfad5f5f05554",
+              "adapter": "company_mcp",
+              "resource": "resource-00dc1bfdfad5f5f05554",
+              "title": "Returns operations",
+              "description": "Refund posting metadata and accounting mapping; not an additional refund ledger.",
+              "observations": [],
+              "analytical_comparisons": [],
+              "evidence": [
+                {
+                  "source_key": "resource-00dc1bfdfad5f5f05554",
+                  "subject_id": "resource-00dc1bfdfad5f5f05554",
+                  "subject_label": "unknown",
+                  "statement": "Source export; interpret using catalog and owner definitions.",
+                  "values": {
+                    "posting_policy": "Posting week matches transaction feed; refunds already included in its rows."
+                  },
+                  "source_url": null,
+                  "origin": "source",
+                  "provenance": [
+                    "company_mcp|resource-00dc1bfdfad5f5f05554"
+                  ]
+                }
+              ],
+              "metadata": {
+                "tenant": "company-3e9c1df69fac812309d9",
+                "period_id": "period-b47d22d0383ab140f7fc"
+              },
+              "error": null,
+              "source_url": null,
+              "captured_at": "2026-10-22T14:58:52.998912+00:00",
+              "source_captured_at": "2026-10-22T14:58:52.998912+00:00",
+              "contract": {
+                "tenant_id": "default",
+                "domain": "unknown",
+                "scope": "",
+                "metric_names": [],
+                "metric_definitions": [],
+                "required_comparison_keys": [],
+                "population": "",
+                "grain": "",
+                "freshness_sla_hours": null,
+                "lineage": [],
+                "roles": [],
+                "source_status": "healthy",
+                "authorized": true
+              }
+            },
+            "company_mcp|resource-af08bd091b93bfc9567d": {
+              "source_key": "resource-af08bd091b93bfc9567d",
+              "adapter": "company_mcp",
+              "resource": "resource-af08bd091b93bfc9567d",
+              "title": "Orders weekly",
+              "description": "Order bookings including cancelled orders, tax and shipping; not recognized sales.",
+              "observations": [],
+              "analytical_comparisons": [],
+              "evidence": [
+                {
+                  "source_key": "resource-af08bd091b93bfc9567d",
+                  "subject_id": "resource-af08bd091b93bfc9567d",
+                  "subject_label": "unknown",
+                  "statement": "Source export; interpret using catalog and owner definitions.",
+                  "values": {
+                    "baseline": 9000,
+                    "current": 4500,
+                    "population": "Order bookings including cancelled orders, tax and shipping; not recognized sales.",
+                    "coverage": "complete_for_this_population"
+                  },
+                  "source_url": null,
+                  "origin": "source",
+                  "provenance": [
+                    "company_mcp|resource-af08bd091b93bfc9567d"
+                  ]
+                }
+              ],
+              "metadata": {
+                "tenant": "company-3e9c1df69fac812309d9",
+                "period_id": "period-b47d22d0383ab140f7fc"
+              },
+              "error": null,
+              "source_url": null,
+              "captured_at": "2026-10-22T14:58:52.998912+00:00",
+              "source_captured_at": "2026-10-22T14:58:52.998912+00:00",
+              "contract": {
+                "tenant_id": "default",
+                "domain": "unknown",
+                "scope": "",
+                "metric_names": [],
+                "metric_definitions": [],
+                "required_comparison_keys": [],
+                "population": "",
+                "grain": "",
+                "freshness_sla_hours": null,
+                "lineage": [],
+                "roles": [],
+                "source_status": "healthy",
+                "authorized": true
+              }
+            },
+            "company_mcp|resource-4184db0c3714a4e31a98": {
+              "source_key": "resource-4184db0c3714a4e31a98",
+              "adapter": "company_mcp",
+              "resource": "resource-4184db0c3714a4e31a98",
+              "title": "Commerce weekly",
+              "description": "Archived checkout experiment, test-store population only.",
+              "observations": [],
+              "analytical_comparisons": [],
+              "evidence": [
+                {
+                  "source_key": "resource-4184db0c3714a4e31a98",
+                  "subject_id": "resource-4184db0c3714a4e31a98",
+                  "subject_label": "unknown",
+                  "statement": "Source export; interpret using catalog and owner definitions.",
+                  "values": {
+                    "baseline": 1000,
+                    "current": 2000,
+                    "population": "Archived checkout experiment, test-store population only."
+                  },
+                  "source_url": null,
+                  "origin": "source",
+                  "provenance": [
+                    "company_mcp|resource-4184db0c3714a4e31a98"
+                  ]
+                }
+              ],
+              "metadata": {
+                "tenant": "company-3e9c1df69fac812309d9",
+                "period_id": "period-b47d22d0383ab140f7fc"
+              },
+              "error": null,
+              "source_url": null,
+              "captured_at": "2026-10-22T14:58:52.998912+00:00",
+              "source_captured_at": "2026-10-22T14:58:52.998912+00:00",
+              "contract": {
+                "tenant_id": "default",
+                "domain": "unknown",
+                "scope": "",
+                "metric_names": [],
+                "metric_definitions": [],
+                "required_comparison_keys": [],
+                "population": "",
+                "grain": "",
+                "freshness_sla_hours": null,
+                "lineage": [],
+                "roles": [],
+                "source_status": "healthy",
+                "authorized": true
+              }
+            }
+          }
+        }
+      },
+      "analysis": {
+        "outcome": "notify",
+        "recipients": [
+          "team-f88d053536cba66bc88e"
+        ],
+        "evidence_refs": [
+          "company_mcp|resource-949a4c0c44fb188d1658",
+          "company_mcp|resource-00dc1bfdfad5f5f05554"
+        ],
+        "numeric_claims": [
+          {
+            "fact": "net_sales.baseline",
+            "value": 10000,
+            "unit": "USD",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658"
+            ]
+          },
+          {
+            "fact": "net_sales.current",
+            "value": 7000,
+            "unit": "USD",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658"
+            ]
+          },
+          {
+            "fact": "net_sales.delta",
+            "value": -3000,
+            "unit": "USD",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658"
+            ]
+          },
+          {
+            "fact": "net_sales.web_contribution",
+            "value": -3000,
+            "unit": "USD",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658"
+            ]
+          }
+        ],
+        "claims": [
+          {
+            "claim_type": "observation",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658"
+            ],
+            "statement": "Current net sales are USD 7,000 versus USD 10,000 in the previous complete reporting week, a USD -3,000 change (30% decline)."
+          },
+          {
+            "claim_type": "accounting_decomposition",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658"
+            ],
+            "statement": "Web contributed USD -3,000 to the total change: net web sales moved from USD 7,000 to USD 4,000. Shop net sales were USD 3,000 in both periods, contributing USD 0."
+          },
+          {
+            "claim_type": "observation",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658",
+              "company_mcp|resource-00dc1bfdfad5f5f05554"
+            ],
+            "statement": "Refunds are posted in the transaction feed's reporting week and are already included in the source rows; no additional refund ledger was added."
+          }
+        ],
+        "summary": "Notify the business owner: net sales declined 30% versus the previous complete reporting week, from USD 10,000 to USD 7,000 (USD -3,000). Web drove the full USD -3,000 decline; shop was unchanged. This meets the saved 10% notification threshold."
+      },
+      "inspected_refs": [
+        "company_mcp|resource-00dc1bfdfad5f5f05554",
+        "company_mcp|resource-949a4c0c44fb188d1658"
+      ],
+      "execution_complete": true
+    },
+    {
+      "case_id": "review-002",
+      "business": {
+        "company": "Juniper Trail Retail",
+        "brief": "Keep an eye on what we actually keep from sales. If it takes a hit, tell our commerce lead what changed, not just that a chart moved.",
+        "glossary": {
+          "net_sales": "Sales means gross completed-order revenue minus refunds posted during the same reporting week, excluding tax and shipping. Do not use booked order value or subtract refunds twice.",
+          "unit": "USD",
+          "comparison": "Previous complete reporting week; source periods are UTC."
+        },
+        "owner_answers": {
+          "metric_scope": "Sales means gross completed-order revenue minus refunds posted during the same reporting week, excluding tax and shipping. Do not use booked order value or subtract refunds twice.",
+          "materiality": "Notify the business destination for a net-sales decline of at least 10% against the prior complete week. Otherwise ignore. Missing definitions or incomplete postings require insufficient_data to the data destination, not a business alert.",
+          "routing": "business destination: team-f88d053536cba66bc88e; data destination: team-b5fcff88e8691a8a9289. Only these routes are authorized; no destructive actions.",
+          "data_gaps": "Ask for a corrected export or a versioned definition when needed. I cannot reconstruct missing rows, infer causation, or tell you a period's correct answer."
+        },
+        "destinations": [
+          {
+            "key": "team-f88d053536cba66bc88e",
+            "label": "Business owner",
+            "destination": "slack://team-f88d053536cba66bc88e"
+          },
+          {
+            "key": "team-b5fcff88e8691a8a9289",
+            "label": "Data operations",
+            "destination": "slack://team-b5fcff88e8691a8a9289"
+          }
+        ],
+        "catalog": [
+          {
+            "adapter": "company_mcp",
+            "resource": "resource-00dc1bfdfad5f5f05554",
+            "kind": "document",
+            "title": "Returns operations",
+            "description": "Refund posting metadata and accounting mapping; not an additional refund ledger.",
+            "source_url": null,
+            "metadata": {
+              "tenant": "company-3e9c1df69fac812309d9",
+              "owner": "Data operations",
+              "inspection": "bounded current-period snapshot",
+              "read_only": true
+            },
+            "contract": {
+              "tenant_id": "default",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true
+            }
+          },
+          {
+            "adapter": "company_mcp",
+            "resource": "resource-af08bd091b93bfc9567d",
+            "kind": "saved_query",
+            "title": "Orders weekly",
+            "description": "Order bookings including cancelled orders, tax and shipping; not recognized sales.",
+            "source_url": null,
+            "metadata": {
+              "tenant": "company-3e9c1df69fac812309d9",
+              "owner": "Business owner",
+              "inspection": "bounded current-period snapshot",
+              "read_only": true
+            },
+            "contract": {
+              "tenant_id": "default",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true
+            }
+          },
+          {
+            "adapter": "company_mcp",
+            "resource": "resource-949a4c0c44fb188d1658",
+            "kind": "saved_query",
+            "title": "Commerce weekly",
+            "description": "Completed transaction amounts by sales channel; refunds are positive deductions, amounts in USD.",
+            "source_url": null,
+            "metadata": {
+              "tenant": "company-3e9c1df69fac812309d9",
+              "owner": "Business owner",
+              "inspection": "bounded current-period snapshot",
+              "read_only": true
+            },
+            "contract": {
+              "tenant_id": "default",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true
+            }
+          },
+          {
+            "adapter": "company_mcp",
+            "resource": "resource-4184db0c3714a4e31a98",
+            "kind": "chart",
+            "title": "Commerce weekly",
+            "description": "Archived checkout experiment, test-store population only.",
+            "source_url": null,
+            "metadata": {
+              "tenant": "company-3e9c1df69fac812309d9",
+              "owner": "Data operations",
+              "inspection": "bounded current-period snapshot",
+              "read_only": true
+            },
+            "contract": {
+              "tenant_id": "default",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true
+            }
+          }
+        ],
+        "period": {
+          "period_id": "period-b47d22d0383ab140f7fc",
+          "as_of": "2026-10-22T14:58:52.998912+00:00",
+          "snapshots": {
+            "company_mcp|resource-949a4c0c44fb188d1658": {
+              "source_key": "resource-949a4c0c44fb188d1658",
+              "adapter": "company_mcp",
+              "resource": "resource-949a4c0c44fb188d1658",
+              "title": "Commerce weekly",
+              "description": "Completed transaction amounts by sales channel; refunds are positive deductions, amounts in USD.",
+              "observations": [],
+              "analytical_comparisons": [],
+              "evidence": [
+                {
+                  "source_key": "resource-949a4c0c44fb188d1658",
+                  "subject_id": "resource-949a4c0c44fb188d1658",
+                  "subject_label": "unknown",
+                  "statement": "Source export; interpret using catalog and owner definitions.",
+                  "values": {
+                    "rows": [
+                      {
+                        "channel": "web",
+                        "baseline_gross": 8000,
+                        "baseline_refunds": 1000,
+                        "current_gross": 6500,
+                        "current_refunds": 2500
+                      },
+                      {
+                        "channel": "shop",
+                        "baseline_gross": 4000,
+                        "baseline_refunds": 1000,
+                        "current_gross": 4000,
+                        "current_refunds": 1000
+                      }
+                    ],
+                    "fields": {
+                      "gross": "USD",
+                      "refunds": "USD"
+                    },
+                    "refund_timing": "posting_week"
+                  },
+                  "source_url": null,
+                  "origin": "source",
+                  "provenance": [
+                    "company_mcp|resource-949a4c0c44fb188d1658"
+                  ]
+                }
+              ],
+              "metadata": {
+                "tenant": "company-3e9c1df69fac812309d9",
+                "period_id": "period-b47d22d0383ab140f7fc"
+              },
+              "error": null,
+              "source_url": null,
+              "captured_at": "2026-10-22T14:58:52.998912+00:00",
+              "source_captured_at": "2026-10-22T14:58:52.998912+00:00",
+              "contract": {
+                "tenant_id": "default",
+                "domain": "unknown",
+                "scope": "",
+                "metric_names": [],
+                "metric_definitions": [],
+                "required_comparison_keys": [],
+                "population": "",
+                "grain": "",
+                "freshness_sla_hours": null,
+                "lineage": [],
+                "roles": [],
+                "source_status": "healthy",
+                "authorized": true
+              }
+            },
+            "company_mcp|resource-00dc1bfdfad5f5f05554": {
+              "source_key": "resource-00dc1bfdfad5f5f05554",
+              "adapter": "company_mcp",
+              "resource": "resource-00dc1bfdfad5f5f05554",
+              "title": "Returns operations",
+              "description": "Refund posting metadata and accounting mapping; not an additional refund ledger.",
+              "observations": [],
+              "analytical_comparisons": [],
+              "evidence": [
+                {
+                  "source_key": "resource-00dc1bfdfad5f5f05554",
+                  "subject_id": "resource-00dc1bfdfad5f5f05554",
+                  "subject_label": "unknown",
+                  "statement": "Source export; interpret using catalog and owner definitions.",
+                  "values": {
+                    "posting_policy": "Posting week matches transaction feed; refunds already included in its rows."
+                  },
+                  "source_url": null,
+                  "origin": "source",
+                  "provenance": [
+                    "company_mcp|resource-00dc1bfdfad5f5f05554"
+                  ]
+                }
+              ],
+              "metadata": {
+                "tenant": "company-3e9c1df69fac812309d9",
+                "period_id": "period-b47d22d0383ab140f7fc"
+              },
+              "error": null,
+              "source_url": null,
+              "captured_at": "2026-10-22T14:58:52.998912+00:00",
+              "source_captured_at": "2026-10-22T14:58:52.998912+00:00",
+              "contract": {
+                "tenant_id": "default",
+                "domain": "unknown",
+                "scope": "",
+                "metric_names": [],
+                "metric_definitions": [],
+                "required_comparison_keys": [],
+                "population": "",
+                "grain": "",
+                "freshness_sla_hours": null,
+                "lineage": [],
+                "roles": [],
+                "source_status": "healthy",
+                "authorized": true
+              }
+            },
+            "company_mcp|resource-af08bd091b93bfc9567d": {
+              "source_key": "resource-af08bd091b93bfc9567d",
+              "adapter": "company_mcp",
+              "resource": "resource-af08bd091b93bfc9567d",
+              "title": "Orders weekly",
+              "description": "Order bookings including cancelled orders, tax and shipping; not recognized sales.",
+              "observations": [],
+              "analytical_comparisons": [],
+              "evidence": [
+                {
+                  "source_key": "resource-af08bd091b93bfc9567d",
+                  "subject_id": "resource-af08bd091b93bfc9567d",
+                  "subject_label": "unknown",
+                  "statement": "Source export; interpret using catalog and owner definitions.",
+                  "values": {
+                    "baseline": 9000,
+                    "current": 4500,
+                    "population": "Order bookings including cancelled orders, tax and shipping; not recognized sales.",
+                    "coverage": "complete_for_this_population"
+                  },
+                  "source_url": null,
+                  "origin": "source",
+                  "provenance": [
+                    "company_mcp|resource-af08bd091b93bfc9567d"
+                  ]
+                }
+              ],
+              "metadata": {
+                "tenant": "company-3e9c1df69fac812309d9",
+                "period_id": "period-b47d22d0383ab140f7fc"
+              },
+              "error": null,
+              "source_url": null,
+              "captured_at": "2026-10-22T14:58:52.998912+00:00",
+              "source_captured_at": "2026-10-22T14:58:52.998912+00:00",
+              "contract": {
+                "tenant_id": "default",
+                "domain": "unknown",
+                "scope": "",
+                "metric_names": [],
+                "metric_definitions": [],
+                "required_comparison_keys": [],
+                "population": "",
+                "grain": "",
+                "freshness_sla_hours": null,
+                "lineage": [],
+                "roles": [],
+                "source_status": "healthy",
+                "authorized": true
+              }
+            },
+            "company_mcp|resource-4184db0c3714a4e31a98": {
+              "source_key": "resource-4184db0c3714a4e31a98",
+              "adapter": "company_mcp",
+              "resource": "resource-4184db0c3714a4e31a98",
+              "title": "Commerce weekly",
+              "description": "Archived checkout experiment, test-store population only.",
+              "observations": [],
+              "analytical_comparisons": [],
+              "evidence": [
+                {
+                  "source_key": "resource-4184db0c3714a4e31a98",
+                  "subject_id": "resource-4184db0c3714a4e31a98",
+                  "subject_label": "unknown",
+                  "statement": "Source export; interpret using catalog and owner definitions.",
+                  "values": {
+                    "baseline": 1000,
+                    "current": 2000,
+                    "population": "Archived checkout experiment, test-store population only."
+                  },
+                  "source_url": null,
+                  "origin": "source",
+                  "provenance": [
+                    "company_mcp|resource-4184db0c3714a4e31a98"
+                  ]
+                }
+              ],
+              "metadata": {
+                "tenant": "company-3e9c1df69fac812309d9",
+                "period_id": "period-b47d22d0383ab140f7fc"
+              },
+              "error": null,
+              "source_url": null,
+              "captured_at": "2026-10-22T14:58:52.998912+00:00",
+              "source_captured_at": "2026-10-22T14:58:52.998912+00:00",
+              "contract": {
+                "tenant_id": "default",
+                "domain": "unknown",
+                "scope": "",
+                "metric_names": [],
+                "metric_definitions": [],
+                "required_comparison_keys": [],
+                "population": "",
+                "grain": "",
+                "freshness_sla_hours": null,
+                "lineage": [],
+                "roles": [],
+                "source_status": "healthy",
+                "authorized": true
+              }
+            }
+          }
+        }
+      },
+      "analysis": {
+        "outcome": "notify",
+        "recipients": [
+          "team-f88d053536cba66bc88e"
+        ],
+        "evidence_refs": [
+          "company_mcp|resource-949a4c0c44fb188d1658",
+          "company_mcp|resource-00dc1bfdfad5f5f05554"
+        ],
+        "numeric_claims": [
+          {
+            "fact": "net_sales.baseline",
+            "value": 10000,
+            "unit": "USD",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658"
+            ]
+          },
+          {
+            "fact": "net_sales.current",
+            "value": 7000,
+            "unit": "USD",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658"
+            ]
+          },
+          {
+            "fact": "net_sales.delta",
+            "value": -3000,
+            "unit": "USD",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658"
+            ]
+          },
+          {
+            "fact": "net_sales.web_contribution",
+            "value": -3000,
+            "unit": "USD",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658"
+            ]
+          }
+        ],
+        "claims": [
+          {
+            "claim_type": "observation",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658"
+            ],
+            "statement": "Net sales declined from USD 10,000 to USD 7,000 versus the previous complete UTC reporting week, a USD 3,000 decrease; this exceeds the 10% notification threshold."
+          },
+          {
+            "claim_type": "accounting_decomposition",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658"
+            ],
+            "statement": "The full USD 3,000 decline is attributable to web net sales: web moved from USD 7,000 (USD 8,000 gross minus USD 1,000 refunds) to USD 4,000 (USD 6,500 gross minus USD 2,500 refunds). Shop net sales were USD 3,000 in both periods."
+          },
+          {
+            "claim_type": "observation",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658",
+              "company_mcp|resource-00dc1bfdfad5f5f05554"
+            ],
+            "statement": "The source states refund posting week matches the transaction feed and refunds are already included in the channel rows; no double subtraction was applied. Mix and within effects are not supported because the evidence contains amounts by channel, not rate data."
+          }
+        ],
+        "summary": "Notify the commerce lead: weekly net sales fell 30% (USD 3,000) from USD 10,000 to USD 7,000, entirely from web net sales; shop net sales were unchanged. No causal inference is made."
+      },
+      "inspected_refs": [
+        "company_mcp|resource-00dc1bfdfad5f5f05554",
+        "company_mcp|resource-949a4c0c44fb188d1658"
+      ],
+      "execution_complete": true
+    },
+    {
+      "case_id": "review-003",
+      "business": {
+        "company": "Juniper Trail Retail",
+        "brief": "Keep an eye on what we actually keep from sales. If it takes a hit, tell our commerce lead what changed, not just that a chart moved.",
+        "glossary": {
+          "net_sales": "Sales means gross completed-order revenue minus refunds posted during the same reporting week, excluding tax and shipping. Do not use booked order value or subtract refunds twice.",
+          "unit": "USD",
+          "comparison": "Previous complete reporting week; source periods are UTC."
+        },
+        "owner_answers": {
+          "metric_scope": "Sales means gross completed-order revenue minus refunds posted during the same reporting week, excluding tax and shipping. Do not use booked order value or subtract refunds twice.",
+          "materiality": "Notify the business destination for a net-sales decline of at least 10% against the prior complete week. Otherwise ignore. Missing definitions or incomplete postings require insufficient_data to the data destination, not a business alert.",
+          "routing": "business destination: team-f88d053536cba66bc88e; data destination: team-b5fcff88e8691a8a9289. Only these routes are authorized; no destructive actions.",
+          "data_gaps": "Ask for a corrected export or a versioned definition when needed. I cannot reconstruct missing rows, infer causation, or tell you a period's correct answer."
+        },
+        "destinations": [
+          {
+            "key": "team-f88d053536cba66bc88e",
+            "label": "Business owner",
+            "destination": "slack://team-f88d053536cba66bc88e"
+          },
+          {
+            "key": "team-b5fcff88e8691a8a9289",
+            "label": "Data operations",
+            "destination": "slack://team-b5fcff88e8691a8a9289"
+          }
+        ],
+        "catalog": [
+          {
+            "adapter": "company_mcp",
+            "resource": "resource-00dc1bfdfad5f5f05554",
+            "kind": "document",
+            "title": "Returns operations",
+            "description": "Refund posting metadata and accounting mapping; not an additional refund ledger.",
+            "source_url": null,
+            "metadata": {
+              "tenant": "company-3e9c1df69fac812309d9",
+              "owner": "Data operations",
+              "inspection": "bounded current-period snapshot",
+              "read_only": true
+            },
+            "contract": {
+              "tenant_id": "default",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true
+            }
+          },
+          {
+            "adapter": "company_mcp",
+            "resource": "resource-af08bd091b93bfc9567d",
+            "kind": "saved_query",
+            "title": "Orders weekly",
+            "description": "Order bookings including cancelled orders, tax and shipping; not recognized sales.",
+            "source_url": null,
+            "metadata": {
+              "tenant": "company-3e9c1df69fac812309d9",
+              "owner": "Business owner",
+              "inspection": "bounded current-period snapshot",
+              "read_only": true
+            },
+            "contract": {
+              "tenant_id": "default",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true
+            }
+          },
+          {
+            "adapter": "company_mcp",
+            "resource": "resource-949a4c0c44fb188d1658",
+            "kind": "saved_query",
+            "title": "Commerce weekly",
+            "description": "Completed transaction amounts by sales channel; refunds are positive deductions, amounts in USD.",
+            "source_url": null,
+            "metadata": {
+              "tenant": "company-3e9c1df69fac812309d9",
+              "owner": "Business owner",
+              "inspection": "bounded current-period snapshot",
+              "read_only": true
+            },
+            "contract": {
+              "tenant_id": "default",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true
+            }
+          },
+          {
+            "adapter": "company_mcp",
+            "resource": "resource-4184db0c3714a4e31a98",
+            "kind": "chart",
+            "title": "Commerce weekly",
+            "description": "Archived checkout experiment, test-store population only.",
+            "source_url": null,
+            "metadata": {
+              "tenant": "company-3e9c1df69fac812309d9",
+              "owner": "Data operations",
+              "inspection": "bounded current-period snapshot",
+              "read_only": true
+            },
+            "contract": {
+              "tenant_id": "default",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true
+            }
+          }
+        ],
+        "period": {
+          "period_id": "period-43e3d40cb273e389dab0",
+          "as_of": "2026-10-15T14:58:52.998912+00:00",
+          "snapshots": {
+            "company_mcp|resource-949a4c0c44fb188d1658": {
+              "source_key": "resource-949a4c0c44fb188d1658",
+              "adapter": "company_mcp",
+              "resource": "resource-949a4c0c44fb188d1658",
+              "title": "Commerce weekly",
+              "description": "Completed transaction amounts by sales channel; refunds are positive deductions, amounts in USD.",
+              "observations": [],
+              "analytical_comparisons": [],
+              "evidence": [
+                {
+                  "source_key": "resource-949a4c0c44fb188d1658",
+                  "subject_id": "resource-949a4c0c44fb188d1658",
+                  "subject_label": "unknown",
+                  "statement": "Source export; interpret using catalog and owner definitions.",
+                  "values": {
+                    "rows": [
+                      {
+                        "channel": "web",
+                        "baseline_gross": 8000,
+                        "baseline_refunds": 1000,
+                        "current_gross": 8000,
+                        "current_refunds": 1000
+                      },
+                      {
+                        "channel": "shop",
+                        "baseline_gross": 4000,
+                        "baseline_refunds": 1000,
+                        "current_gross": 4000,
+                        "current_refunds": 1000
+                      }
+                    ],
+                    "fields": {
+                      "gross": "USD",
+                      "refunds": "USD"
+                    },
+                    "refund_timing": "posting_week"
+                  },
+                  "source_url": null,
+                  "origin": "source",
+                  "provenance": [
+                    "company_mcp|resource-949a4c0c44fb188d1658"
+                  ]
+                }
+              ],
+              "metadata": {
+                "tenant": "company-3e9c1df69fac812309d9",
+                "period_id": "period-43e3d40cb273e389dab0"
+              },
+              "error": null,
+              "source_url": null,
+              "captured_at": "2026-10-15T14:58:52.998912+00:00",
+              "source_captured_at": "2026-10-15T14:58:52.998912+00:00",
+              "contract": {
+                "tenant_id": "default",
+                "domain": "unknown",
+                "scope": "",
+                "metric_names": [],
+                "metric_definitions": [],
+                "required_comparison_keys": [],
+                "population": "",
+                "grain": "",
+                "freshness_sla_hours": null,
+                "lineage": [],
+                "roles": [],
+                "source_status": "healthy",
+                "authorized": true
+              }
+            },
+            "company_mcp|resource-00dc1bfdfad5f5f05554": {
+              "source_key": "resource-00dc1bfdfad5f5f05554",
+              "adapter": "company_mcp",
+              "resource": "resource-00dc1bfdfad5f5f05554",
+              "title": "Returns operations",
+              "description": "Refund posting metadata and accounting mapping; not an additional refund ledger.",
+              "observations": [],
+              "analytical_comparisons": [],
+              "evidence": [
+                {
+                  "source_key": "resource-00dc1bfdfad5f5f05554",
+                  "subject_id": "resource-00dc1bfdfad5f5f05554",
+                  "subject_label": "unknown",
+                  "statement": "Source export; interpret using catalog and owner definitions.",
+                  "values": {
+                    "posting_policy": "Posting week matches transaction feed; refunds already included in its rows."
+                  },
+                  "source_url": null,
+                  "origin": "source",
+                  "provenance": [
+                    "company_mcp|resource-00dc1bfdfad5f5f05554"
+                  ]
+                }
+              ],
+              "metadata": {
+                "tenant": "company-3e9c1df69fac812309d9",
+                "period_id": "period-43e3d40cb273e389dab0"
+              },
+              "error": null,
+              "source_url": null,
+              "captured_at": "2026-10-15T14:58:52.998912+00:00",
+              "source_captured_at": "2026-10-15T14:58:52.998912+00:00",
+              "contract": {
+                "tenant_id": "default",
+                "domain": "unknown",
+                "scope": "",
+                "metric_names": [],
+                "metric_definitions": [],
+                "required_comparison_keys": [],
+                "population": "",
+                "grain": "",
+                "freshness_sla_hours": null,
+                "lineage": [],
+                "roles": [],
+                "source_status": "healthy",
+                "authorized": true
+              }
+            },
+            "company_mcp|resource-af08bd091b93bfc9567d": {
+              "source_key": "resource-af08bd091b93bfc9567d",
+              "adapter": "company_mcp",
+              "resource": "resource-af08bd091b93bfc9567d",
+              "title": "Orders weekly",
+              "description": "Order bookings including cancelled orders, tax and shipping; not recognized sales.",
+              "observations": [],
+              "analytical_comparisons": [],
+              "evidence": [
+                {
+                  "source_key": "resource-af08bd091b93bfc9567d",
+                  "subject_id": "resource-af08bd091b93bfc9567d",
+                  "subject_label": "unknown",
+                  "statement": "Source export; interpret using catalog and owner definitions.",
+                  "values": {
+                    "baseline": 9000,
+                    "current": 4500,
+                    "population": "Order bookings including cancelled orders, tax and shipping; not recognized sales.",
+                    "coverage": "complete_for_this_population"
+                  },
+                  "source_url": null,
+                  "origin": "source",
+                  "provenance": [
+                    "company_mcp|resource-af08bd091b93bfc9567d"
+                  ]
+                }
+              ],
+              "metadata": {
+                "tenant": "company-3e9c1df69fac812309d9",
+                "period_id": "period-43e3d40cb273e389dab0"
+              },
+              "error": null,
+              "source_url": null,
+              "captured_at": "2026-10-15T14:58:52.998912+00:00",
+              "source_captured_at": "2026-10-15T14:58:52.998912+00:00",
+              "contract": {
+                "tenant_id": "default",
+                "domain": "unknown",
+                "scope": "",
+                "metric_names": [],
+                "metric_definitions": [],
+                "required_comparison_keys": [],
+                "population": "",
+                "grain": "",
+                "freshness_sla_hours": null,
+                "lineage": [],
+                "roles": [],
+                "source_status": "healthy",
+                "authorized": true
+              }
+            },
+            "company_mcp|resource-4184db0c3714a4e31a98": {
+              "source_key": "resource-4184db0c3714a4e31a98",
+              "adapter": "company_mcp",
+              "resource": "resource-4184db0c3714a4e31a98",
+              "title": "Commerce weekly",
+              "description": "Archived checkout experiment, test-store population only.",
+              "observations": [],
+              "analytical_comparisons": [],
+              "evidence": [
+                {
+                  "source_key": "resource-4184db0c3714a4e31a98",
+                  "subject_id": "resource-4184db0c3714a4e31a98",
+                  "subject_label": "unknown",
+                  "statement": "Source export; interpret using catalog and owner definitions.",
+                  "values": {
+                    "baseline": 1000,
+                    "current": 2000,
+                    "population": "Archived checkout experiment, test-store population only."
+                  },
+                  "source_url": null,
+                  "origin": "source",
+                  "provenance": [
+                    "company_mcp|resource-4184db0c3714a4e31a98"
+                  ]
+                }
+              ],
+              "metadata": {
+                "tenant": "company-3e9c1df69fac812309d9",
+                "period_id": "period-43e3d40cb273e389dab0"
+              },
+              "error": null,
+              "source_url": null,
+              "captured_at": "2026-10-15T14:58:52.998912+00:00",
+              "source_captured_at": "2026-10-15T14:58:52.998912+00:00",
+              "contract": {
+                "tenant_id": "default",
+                "domain": "unknown",
+                "scope": "",
+                "metric_names": [],
+                "metric_definitions": [],
+                "required_comparison_keys": [],
+                "population": "",
+                "grain": "",
+                "freshness_sla_hours": null,
+                "lineage": [],
+                "roles": [],
+                "source_status": "healthy",
+                "authorized": true
+              }
+            }
+          }
+        }
+      },
+      "analysis": {
+        "outcome": "ignore",
+        "recipients": [],
+        "evidence_refs": [
+          "company_mcp|resource-949a4c0c44fb188d1658",
+          "company_mcp|resource-00dc1bfdfad5f5f05554"
+        ],
+        "numeric_claims": [
+          {
+            "fact": "net_sales.baseline",
+            "value": 7000,
+            "unit": "USD",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658",
+              "company_mcp|resource-00dc1bfdfad5f5f05554"
+            ]
+          },
+          {
+            "fact": "net_sales.current",
+            "value": 7000,
+            "unit": "USD",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658",
+              "company_mcp|resource-00dc1bfdfad5f5f05554"
+            ]
+          },
+          {
+            "fact": "net_sales.delta",
+            "value": 0,
+            "unit": "USD",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658",
+              "company_mcp|resource-00dc1bfdfad5f5f05554"
+            ]
+          },
+          {
+            "fact": "net_sales.web_contribution",
+            "value": 0,
+            "unit": "USD",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658"
+            ]
+          }
+        ],
+        "claims": [
+          {
+            "claim_type": "observation",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658",
+              "company_mcp|resource-00dc1bfdfad5f5f05554"
+            ],
+            "statement": "Net sales were USD 7,000 in both the prior complete UTC reporting week and the current period; the delta was USD 0, so the material-decline threshold was not met."
+          },
+          {
+            "claim_type": "accounting_decomposition",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658",
+              "company_mcp|resource-00dc1bfdfad5f5f05554"
+            ],
+            "statement": "Web net sales were USD 7,000 in both periods (USD 8,000 gross less USD 1,000 refunds), contributing USD 0 to the total change; shop was also unchanged at USD 3,000 net in both periods."
+          },
+          {
+            "claim_type": "observation",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658",
+              "company_mcp|resource-00dc1bfdfad5f5f05554"
+            ],
+            "statement": "Refunds are already included in the Commerce weekly rows and posting week matches the transaction feed; sources were healthy and no data gap was reported."
+          }
+        ],
+        "summary": "Ignore: current net sales are unchanged versus the prior complete UTC week, with no web or shop change and no supported data-quality issue."
+      },
+      "inspected_refs": [
+        "company_mcp|resource-00dc1bfdfad5f5f05554",
+        "company_mcp|resource-949a4c0c44fb188d1658"
+      ],
+      "execution_complete": true
+    },
+    {
+      "case_id": "review-004",
+      "business": {
+        "company": "Juniper Trail Retail",
+        "brief": "Keep an eye on what we actually keep from sales. If it takes a hit, tell our commerce lead what changed, not just that a chart moved.",
+        "glossary": {
+          "net_sales": "Sales means gross completed-order revenue minus refunds posted during the same reporting week, excluding tax and shipping. Do not use booked order value or subtract refunds twice.",
+          "unit": "USD",
+          "comparison": "Previous complete reporting week; source periods are UTC."
+        },
+        "owner_answers": {
+          "metric_scope": "Sales means gross completed-order revenue minus refunds posted during the same reporting week, excluding tax and shipping. Do not use booked order value or subtract refunds twice.",
+          "materiality": "Notify the business destination for a net-sales decline of at least 10% against the prior complete week. Otherwise ignore. Missing definitions or incomplete postings require insufficient_data to the data destination, not a business alert.",
+          "routing": "business destination: team-f88d053536cba66bc88e; data destination: team-b5fcff88e8691a8a9289. Only these routes are authorized; no destructive actions.",
+          "data_gaps": "Ask for a corrected export or a versioned definition when needed. I cannot reconstruct missing rows, infer causation, or tell you a period's correct answer."
+        },
+        "destinations": [
+          {
+            "key": "team-f88d053536cba66bc88e",
+            "label": "Business owner",
+            "destination": "slack://team-f88d053536cba66bc88e"
+          },
+          {
+            "key": "team-b5fcff88e8691a8a9289",
+            "label": "Data operations",
+            "destination": "slack://team-b5fcff88e8691a8a9289"
+          }
+        ],
+        "catalog": [
+          {
+            "adapter": "company_mcp",
+            "resource": "resource-00dc1bfdfad5f5f05554",
+            "kind": "document",
+            "title": "Returns operations",
+            "description": "Refund posting metadata and accounting mapping; not an additional refund ledger.",
+            "source_url": null,
+            "metadata": {
+              "tenant": "company-3e9c1df69fac812309d9",
+              "owner": "Data operations",
+              "inspection": "bounded current-period snapshot",
+              "read_only": true
+            },
+            "contract": {
+              "tenant_id": "default",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true
+            }
+          },
+          {
+            "adapter": "company_mcp",
+            "resource": "resource-af08bd091b93bfc9567d",
+            "kind": "saved_query",
+            "title": "Orders weekly",
+            "description": "Order bookings including cancelled orders, tax and shipping; not recognized sales.",
+            "source_url": null,
+            "metadata": {
+              "tenant": "company-3e9c1df69fac812309d9",
+              "owner": "Business owner",
+              "inspection": "bounded current-period snapshot",
+              "read_only": true
+            },
+            "contract": {
+              "tenant_id": "default",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true
+            }
+          },
+          {
+            "adapter": "company_mcp",
+            "resource": "resource-949a4c0c44fb188d1658",
+            "kind": "saved_query",
+            "title": "Commerce weekly",
+            "description": "Completed transaction amounts by sales channel; refunds are positive deductions, amounts in USD.",
+            "source_url": null,
+            "metadata": {
+              "tenant": "company-3e9c1df69fac812309d9",
+              "owner": "Business owner",
+              "inspection": "bounded current-period snapshot",
+              "read_only": true
+            },
+            "contract": {
+              "tenant_id": "default",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true
+            }
+          },
+          {
+            "adapter": "company_mcp",
+            "resource": "resource-4184db0c3714a4e31a98",
+            "kind": "chart",
+            "title": "Commerce weekly",
+            "description": "Archived checkout experiment, test-store population only.",
+            "source_url": null,
+            "metadata": {
+              "tenant": "company-3e9c1df69fac812309d9",
+              "owner": "Data operations",
+              "inspection": "bounded current-period snapshot",
+              "read_only": true
+            },
+            "contract": {
+              "tenant_id": "default",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true
+            }
+          }
+        ],
+        "period": {
+          "period_id": "period-830b9daf52602d929f27",
+          "as_of": "2026-10-08T14:58:52.998912+00:00",
+          "snapshots": {
+            "company_mcp|resource-949a4c0c44fb188d1658": {
+              "source_key": "resource-949a4c0c44fb188d1658",
+              "adapter": "company_mcp",
+              "resource": "resource-949a4c0c44fb188d1658",
+              "title": "Commerce weekly",
+              "description": "Completed transaction amounts by sales channel; refunds are positive deductions, amounts in USD.",
+              "observations": [],
+              "analytical_comparisons": [],
+              "evidence": [
+                {
+                  "source_key": "resource-949a4c0c44fb188d1658",
+                  "subject_id": "resource-949a4c0c44fb188d1658",
+                  "subject_label": "unknown",
+                  "statement": "Source export; interpret using catalog and owner definitions.",
+                  "values": {
+                    "rows": [
+                      {
+                        "channel": "web",
+                        "baseline_gross": 8000,
+                        "baseline_refunds": 1000,
+                        "current_gross": 8000,
+                        "current_refunds": 1000
+                      },
+                      {
+                        "channel": "shop",
+                        "baseline_gross": 4000,
+                        "baseline_refunds": 1000,
+                        "current_gross": 4000,
+                        "current_refunds": 1000
+                      }
+                    ],
+                    "fields": {
+                      "gross": "USD",
+                      "refunds": "USD"
+                    },
+                    "refund_timing": "undocumented"
+                  },
+                  "source_url": null,
+                  "origin": "source",
+                  "provenance": [
+                    "company_mcp|resource-949a4c0c44fb188d1658"
+                  ]
+                }
+              ],
+              "metadata": {
+                "tenant": "company-3e9c1df69fac812309d9",
+                "period_id": "period-830b9daf52602d929f27"
+              },
+              "error": null,
+              "source_url": null,
+              "captured_at": "2026-10-08T14:58:52.998912+00:00",
+              "source_captured_at": "2026-10-08T14:58:52.998912+00:00",
+              "contract": {
+                "tenant_id": "default",
+                "domain": "unknown",
+                "scope": "",
+                "metric_names": [],
+                "metric_definitions": [],
+                "required_comparison_keys": [],
+                "population": "",
+                "grain": "",
+                "freshness_sla_hours": null,
+                "lineage": [],
+                "roles": [],
+                "source_status": "healthy",
+                "authorized": true
+              }
+            },
+            "company_mcp|resource-00dc1bfdfad5f5f05554": {
+              "source_key": "resource-00dc1bfdfad5f5f05554",
+              "adapter": "company_mcp",
+              "resource": "resource-00dc1bfdfad5f5f05554",
+              "title": "Returns operations",
+              "description": "Refund posting metadata and accounting mapping; not an additional refund ledger.",
+              "observations": [],
+              "analytical_comparisons": [],
+              "evidence": [
+                {
+                  "source_key": "resource-00dc1bfdfad5f5f05554",
+                  "subject_id": "resource-00dc1bfdfad5f5f05554",
+                  "subject_label": "unknown",
+                  "statement": "Source export; interpret using catalog and owner definitions.",
+                  "values": {
+                    "posting_policy": "New refund feed has no versioned timing mapping."
+                  },
+                  "source_url": null,
+                  "origin": "source",
+                  "provenance": [
+                    "company_mcp|resource-00dc1bfdfad5f5f05554"
+                  ]
+                }
+              ],
+              "metadata": {
+                "tenant": "company-3e9c1df69fac812309d9",
+                "period_id": "period-830b9daf52602d929f27"
+              },
+              "error": null,
+              "source_url": null,
+              "captured_at": "2026-10-08T14:58:52.998912+00:00",
+              "source_captured_at": "2026-10-08T14:58:52.998912+00:00",
+              "contract": {
+                "tenant_id": "default",
+                "domain": "unknown",
+                "scope": "",
+                "metric_names": [],
+                "metric_definitions": [],
+                "required_comparison_keys": [],
+                "population": "",
+                "grain": "",
+                "freshness_sla_hours": null,
+                "lineage": [],
+                "roles": [],
+                "source_status": "healthy",
+                "authorized": true
+              }
+            },
+            "company_mcp|resource-af08bd091b93bfc9567d": {
+              "source_key": "resource-af08bd091b93bfc9567d",
+              "adapter": "company_mcp",
+              "resource": "resource-af08bd091b93bfc9567d",
+              "title": "Orders weekly",
+              "description": "Order bookings including cancelled orders, tax and shipping; not recognized sales.",
+              "observations": [],
+              "analytical_comparisons": [],
+              "evidence": [
+                {
+                  "source_key": "resource-af08bd091b93bfc9567d",
+                  "subject_id": "resource-af08bd091b93bfc9567d",
+                  "subject_label": "unknown",
+                  "statement": "Source export; interpret using catalog and owner definitions.",
+                  "values": {
+                    "baseline": 9000,
+                    "current": 4500,
+                    "population": "Order bookings including cancelled orders, tax and shipping; not recognized sales.",
+                    "coverage": "complete_for_this_population"
+                  },
+                  "source_url": null,
+                  "origin": "source",
+                  "provenance": [
+                    "company_mcp|resource-af08bd091b93bfc9567d"
+                  ]
+                }
+              ],
+              "metadata": {
+                "tenant": "company-3e9c1df69fac812309d9",
+                "period_id": "period-830b9daf52602d929f27"
+              },
+              "error": null,
+              "source_url": null,
+              "captured_at": "2026-10-08T14:58:52.998912+00:00",
+              "source_captured_at": "2026-10-08T14:58:52.998912+00:00",
+              "contract": {
+                "tenant_id": "default",
+                "domain": "unknown",
+                "scope": "",
+                "metric_names": [],
+                "metric_definitions": [],
+                "required_comparison_keys": [],
+                "population": "",
+                "grain": "",
+                "freshness_sla_hours": null,
+                "lineage": [],
+                "roles": [],
+                "source_status": "healthy",
+                "authorized": true
+              }
+            },
+            "company_mcp|resource-4184db0c3714a4e31a98": {
+              "source_key": "resource-4184db0c3714a4e31a98",
+              "adapter": "company_mcp",
+              "resource": "resource-4184db0c3714a4e31a98",
+              "title": "Commerce weekly",
+              "description": "Archived checkout experiment, test-store population only.",
+              "observations": [],
+              "analytical_comparisons": [],
+              "evidence": [
+                {
+                  "source_key": "resource-4184db0c3714a4e31a98",
+                  "subject_id": "resource-4184db0c3714a4e31a98",
+                  "subject_label": "unknown",
+                  "statement": "Source export; interpret using catalog and owner definitions.",
+                  "values": {
+                    "baseline": 1000,
+                    "current": 2000,
+                    "population": "Archived checkout experiment, test-store population only."
+                  },
+                  "source_url": null,
+                  "origin": "source",
+                  "provenance": [
+                    "company_mcp|resource-4184db0c3714a4e31a98"
+                  ]
+                }
+              ],
+              "metadata": {
+                "tenant": "company-3e9c1df69fac812309d9",
+                "period_id": "period-830b9daf52602d929f27"
+              },
+              "error": null,
+              "source_url": null,
+              "captured_at": "2026-10-08T14:58:52.998912+00:00",
+              "source_captured_at": "2026-10-08T14:58:52.998912+00:00",
+              "contract": {
+                "tenant_id": "default",
+                "domain": "unknown",
+                "scope": "",
+                "metric_names": [],
+                "metric_definitions": [],
+                "required_comparison_keys": [],
+                "population": "",
+                "grain": "",
+                "freshness_sla_hours": null,
+                "lineage": [],
+                "roles": [],
+                "source_status": "healthy",
+                "authorized": true
+              }
+            }
+          }
+        }
+      },
+      "analysis": {
+        "outcome": "insufficient_data",
+        "recipients": [
+          "team-b5fcff88e8691a8a9289"
+        ],
+        "evidence_refs": [
+          "company_mcp|resource-949a4c0c44fb188d1658",
+          "company_mcp|resource-00dc1bfdfad5f5f05554"
+        ],
+        "numeric_claims": [],
+        "claims": [
+          {
+            "claim_type": "observation",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658"
+            ],
+            "statement": "The current Commerce weekly export contains baseline and current gross/refund rows for web and shop, but refund timing is undocumented."
+          },
+          {
+            "claim_type": "observation",
+            "evidence_refs": [
+              "company_mcp|resource-00dc1bfdfad5f5f05554"
+            ],
+            "statement": "The current Returns operations metadata says the new refund feed has no versioned timing mapping."
+          },
+          {
+            "claim_type": "hypothesis",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658",
+              "company_mcp|resource-00dc1bfdfad5f5f05554"
+            ],
+            "statement": "Net sales cannot be validly measured for this period under the required same-week refund definition until refund posting timing is versioned or otherwise validated."
+          }
+        ],
+        "summary": "Insufficient data: the current export does not establish that refunds are posted in the same reporting week, so net sales, its delta, and web contribution cannot be reported reliably. Please provide a corrected export or versioned refund-timing definition."
+      },
+      "inspected_refs": [
+        "company_mcp|resource-00dc1bfdfad5f5f05554",
+        "company_mcp|resource-949a4c0c44fb188d1658"
+      ],
+      "execution_complete": true
+    },
+    {
+      "case_id": "review-005",
+      "business": {
+        "company": "Juniper Trail Retail",
+        "brief": "Keep an eye on what we actually keep from sales. If it takes a hit, tell our commerce lead what changed, not just that a chart moved.",
+        "glossary": {
+          "net_sales": "Sales means gross completed-order revenue minus refunds posted during the same reporting week, excluding tax and shipping. Do not use booked order value or subtract refunds twice.",
+          "unit": "USD",
+          "comparison": "Previous complete reporting week; source periods are UTC."
+        },
+        "owner_answers": {
+          "metric_scope": "Sales means gross completed-order revenue minus refunds posted during the same reporting week, excluding tax and shipping. Do not use booked order value or subtract refunds twice.",
+          "materiality": "Notify the business destination for a net-sales decline of at least 10% against the prior complete week. Otherwise ignore. Missing definitions or incomplete postings require insufficient_data to the data destination, not a business alert.",
+          "routing": "business destination: team-f88d053536cba66bc88e; data destination: team-b5fcff88e8691a8a9289. Only these routes are authorized; no destructive actions.",
+          "data_gaps": "Ask for a corrected export or a versioned definition when needed. I cannot reconstruct missing rows, infer causation, or tell you a period's correct answer."
+        },
+        "destinations": [
+          {
+            "key": "team-f88d053536cba66bc88e",
+            "label": "Business owner",
+            "destination": "slack://team-f88d053536cba66bc88e"
+          },
+          {
+            "key": "team-b5fcff88e8691a8a9289",
+            "label": "Data operations",
+            "destination": "slack://team-b5fcff88e8691a8a9289"
+          }
+        ],
+        "catalog": [
+          {
+            "adapter": "company_mcp",
+            "resource": "resource-00dc1bfdfad5f5f05554",
+            "kind": "document",
+            "title": "Returns operations",
+            "description": "Refund posting metadata and accounting mapping; not an additional refund ledger.",
+            "source_url": null,
+            "metadata": {
+              "tenant": "company-3e9c1df69fac812309d9",
+              "owner": "Data operations",
+              "inspection": "bounded current-period snapshot",
+              "read_only": true
+            },
+            "contract": {
+              "tenant_id": "default",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true
+            }
+          },
+          {
+            "adapter": "company_mcp",
+            "resource": "resource-af08bd091b93bfc9567d",
+            "kind": "saved_query",
+            "title": "Orders weekly",
+            "description": "Order bookings including cancelled orders, tax and shipping; not recognized sales.",
+            "source_url": null,
+            "metadata": {
+              "tenant": "company-3e9c1df69fac812309d9",
+              "owner": "Business owner",
+              "inspection": "bounded current-period snapshot",
+              "read_only": true
+            },
+            "contract": {
+              "tenant_id": "default",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true
+            }
+          },
+          {
+            "adapter": "company_mcp",
+            "resource": "resource-949a4c0c44fb188d1658",
+            "kind": "saved_query",
+            "title": "Commerce weekly",
+            "description": "Completed transaction amounts by sales channel; refunds are positive deductions, amounts in USD.",
+            "source_url": null,
+            "metadata": {
+              "tenant": "company-3e9c1df69fac812309d9",
+              "owner": "Business owner",
+              "inspection": "bounded current-period snapshot",
+              "read_only": true
+            },
+            "contract": {
+              "tenant_id": "default",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true
+            }
+          },
+          {
+            "adapter": "company_mcp",
+            "resource": "resource-4184db0c3714a4e31a98",
+            "kind": "chart",
+            "title": "Commerce weekly",
+            "description": "Archived checkout experiment, test-store population only.",
+            "source_url": null,
+            "metadata": {
+              "tenant": "company-3e9c1df69fac812309d9",
+              "owner": "Data operations",
+              "inspection": "bounded current-period snapshot",
+              "read_only": true
+            },
+            "contract": {
+              "tenant_id": "default",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true
+            }
+          }
+        ],
+        "period": {
+          "period_id": "period-43e3d40cb273e389dab0",
+          "as_of": "2026-10-15T14:58:52.998912+00:00",
+          "snapshots": {
+            "company_mcp|resource-949a4c0c44fb188d1658": {
+              "source_key": "resource-949a4c0c44fb188d1658",
+              "adapter": "company_mcp",
+              "resource": "resource-949a4c0c44fb188d1658",
+              "title": "Commerce weekly",
+              "description": "Completed transaction amounts by sales channel; refunds are positive deductions, amounts in USD.",
+              "observations": [],
+              "analytical_comparisons": [],
+              "evidence": [
+                {
+                  "source_key": "resource-949a4c0c44fb188d1658",
+                  "subject_id": "resource-949a4c0c44fb188d1658",
+                  "subject_label": "unknown",
+                  "statement": "Source export; interpret using catalog and owner definitions.",
+                  "values": {
+                    "rows": [
+                      {
+                        "channel": "web",
+                        "baseline_gross": 8000,
+                        "baseline_refunds": 1000,
+                        "current_gross": 8000,
+                        "current_refunds": 1000
+                      },
+                      {
+                        "channel": "shop",
+                        "baseline_gross": 4000,
+                        "baseline_refunds": 1000,
+                        "current_gross": 4000,
+                        "current_refunds": 1000
+                      }
+                    ],
+                    "fields": {
+                      "gross": "USD",
+                      "refunds": "USD"
+                    },
+                    "refund_timing": "posting_week"
+                  },
+                  "source_url": null,
+                  "origin": "source",
+                  "provenance": [
+                    "company_mcp|resource-949a4c0c44fb188d1658"
+                  ]
+                }
+              ],
+              "metadata": {
+                "tenant": "company-3e9c1df69fac812309d9",
+                "period_id": "period-43e3d40cb273e389dab0"
+              },
+              "error": null,
+              "source_url": null,
+              "captured_at": "2026-10-15T14:58:52.998912+00:00",
+              "source_captured_at": "2026-10-15T14:58:52.998912+00:00",
+              "contract": {
+                "tenant_id": "default",
+                "domain": "unknown",
+                "scope": "",
+                "metric_names": [],
+                "metric_definitions": [],
+                "required_comparison_keys": [],
+                "population": "",
+                "grain": "",
+                "freshness_sla_hours": null,
+                "lineage": [],
+                "roles": [],
+                "source_status": "healthy",
+                "authorized": true
+              }
+            },
+            "company_mcp|resource-00dc1bfdfad5f5f05554": {
+              "source_key": "resource-00dc1bfdfad5f5f05554",
+              "adapter": "company_mcp",
+              "resource": "resource-00dc1bfdfad5f5f05554",
+              "title": "Returns operations",
+              "description": "Refund posting metadata and accounting mapping; not an additional refund ledger.",
+              "observations": [],
+              "analytical_comparisons": [],
+              "evidence": [
+                {
+                  "source_key": "resource-00dc1bfdfad5f5f05554",
+                  "subject_id": "resource-00dc1bfdfad5f5f05554",
+                  "subject_label": "unknown",
+                  "statement": "Source export; interpret using catalog and owner definitions.",
+                  "values": {
+                    "posting_policy": "Posting week matches transaction feed; refunds already included in its rows."
+                  },
+                  "source_url": null,
+                  "origin": "source",
+                  "provenance": [
+                    "company_mcp|resource-00dc1bfdfad5f5f05554"
+                  ]
+                }
+              ],
+              "metadata": {
+                "tenant": "company-3e9c1df69fac812309d9",
+                "period_id": "period-43e3d40cb273e389dab0"
+              },
+              "error": null,
+              "source_url": null,
+              "captured_at": "2026-10-15T14:58:52.998912+00:00",
+              "source_captured_at": "2026-10-15T14:58:52.998912+00:00",
+              "contract": {
+                "tenant_id": "default",
+                "domain": "unknown",
+                "scope": "",
+                "metric_names": [],
+                "metric_definitions": [],
+                "required_comparison_keys": [],
+                "population": "",
+                "grain": "",
+                "freshness_sla_hours": null,
+                "lineage": [],
+                "roles": [],
+                "source_status": "healthy",
+                "authorized": true
+              }
+            },
+            "company_mcp|resource-af08bd091b93bfc9567d": {
+              "source_key": "resource-af08bd091b93bfc9567d",
+              "adapter": "company_mcp",
+              "resource": "resource-af08bd091b93bfc9567d",
+              "title": "Orders weekly",
+              "description": "Order bookings including cancelled orders, tax and shipping; not recognized sales.",
+              "observations": [],
+              "analytical_comparisons": [],
+              "evidence": [
+                {
+                  "source_key": "resource-af08bd091b93bfc9567d",
+                  "subject_id": "resource-af08bd091b93bfc9567d",
+                  "subject_label": "unknown",
+                  "statement": "Source export; interpret using catalog and owner definitions.",
+                  "values": {
+                    "baseline": 9000,
+                    "current": 4500,
+                    "population": "Order bookings including cancelled orders, tax and shipping; not recognized sales.",
+                    "coverage": "complete_for_this_population"
+                  },
+                  "source_url": null,
+                  "origin": "source",
+                  "provenance": [
+                    "company_mcp|resource-af08bd091b93bfc9567d"
+                  ]
+                }
+              ],
+              "metadata": {
+                "tenant": "company-3e9c1df69fac812309d9",
+                "period_id": "period-43e3d40cb273e389dab0"
+              },
+              "error": null,
+              "source_url": null,
+              "captured_at": "2026-10-15T14:58:52.998912+00:00",
+              "source_captured_at": "2026-10-15T14:58:52.998912+00:00",
+              "contract": {
+                "tenant_id": "default",
+                "domain": "unknown",
+                "scope": "",
+                "metric_names": [],
+                "metric_definitions": [],
+                "required_comparison_keys": [],
+                "population": "",
+                "grain": "",
+                "freshness_sla_hours": null,
+                "lineage": [],
+                "roles": [],
+                "source_status": "healthy",
+                "authorized": true
+              }
+            },
+            "company_mcp|resource-4184db0c3714a4e31a98": {
+              "source_key": "resource-4184db0c3714a4e31a98",
+              "adapter": "company_mcp",
+              "resource": "resource-4184db0c3714a4e31a98",
+              "title": "Commerce weekly",
+              "description": "Archived checkout experiment, test-store population only.",
+              "observations": [],
+              "analytical_comparisons": [],
+              "evidence": [
+                {
+                  "source_key": "resource-4184db0c3714a4e31a98",
+                  "subject_id": "resource-4184db0c3714a4e31a98",
+                  "subject_label": "unknown",
+                  "statement": "Source export; interpret using catalog and owner definitions.",
+                  "values": {
+                    "baseline": 1000,
+                    "current": 2000,
+                    "population": "Archived checkout experiment, test-store population only."
+                  },
+                  "source_url": null,
+                  "origin": "source",
+                  "provenance": [
+                    "company_mcp|resource-4184db0c3714a4e31a98"
+                  ]
+                }
+              ],
+              "metadata": {
+                "tenant": "company-3e9c1df69fac812309d9",
+                "period_id": "period-43e3d40cb273e389dab0"
+              },
+              "error": null,
+              "source_url": null,
+              "captured_at": "2026-10-15T14:58:52.998912+00:00",
+              "source_captured_at": "2026-10-15T14:58:52.998912+00:00",
+              "contract": {
+                "tenant_id": "default",
+                "domain": "unknown",
+                "scope": "",
+                "metric_names": [],
+                "metric_definitions": [],
+                "required_comparison_keys": [],
+                "population": "",
+                "grain": "",
+                "freshness_sla_hours": null,
+                "lineage": [],
+                "roles": [],
+                "source_status": "healthy",
+                "authorized": true
+              }
+            }
+          }
+        }
+      },
+      "analysis": {
+        "outcome": "ignore",
+        "recipients": [],
+        "evidence_refs": [
+          "company_mcp|resource-949a4c0c44fb188d1658",
+          "company_mcp|resource-00dc1bfdfad5f5f05554"
+        ],
+        "numeric_claims": [
+          {
+            "fact": "net_sales.baseline",
+            "value": 10000,
+            "unit": "USD",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658"
+            ]
+          },
+          {
+            "fact": "net_sales.current",
+            "value": 10000,
+            "unit": "USD",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658"
+            ]
+          },
+          {
+            "fact": "net_sales.delta",
+            "value": 0,
+            "unit": "USD",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658"
+            ]
+          },
+          {
+            "fact": "net_sales.web_contribution",
+            "value": 0,
+            "unit": "USD",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658"
+            ]
+          }
+        ],
+        "claims": [
+          {
+            "claim_type": "observation",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658"
+            ],
+            "statement": "Net sales were USD 10,000 in both the previous complete reporting week and the current reporting week, so the change was USD 0."
+          },
+          {
+            "claim_type": "accounting_decomposition",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658",
+              "company_mcp|resource-00dc1bfdfad5f5f05554"
+            ],
+            "statement": "Web contributed USD 0 to the total change: its net sales were USD 7,000 in both periods; shop contributed USD 0, with USD 3,000 in both periods. Gross and refunds were unchanged by channel, and refunds are already included by posting week."
+          }
+        ],
+        "summary": "Ignore: net sales were flat at USD 10,000 versus the previous complete reporting week (USD 0 delta; 0% change). Web and shop were each unchanged, and web contributed USD 0 to the total change. The decline threshold is not met."
+      },
+      "inspected_refs": [
+        "company_mcp|resource-00dc1bfdfad5f5f05554",
+        "company_mcp|resource-949a4c0c44fb188d1658"
+      ],
+      "execution_complete": true
+    },
+    {
+      "case_id": "review-006",
+      "business": {
+        "company": "Juniper Trail Retail",
+        "brief": "Keep an eye on what we actually keep from sales. If it takes a hit, tell our commerce lead what changed, not just that a chart moved.",
+        "glossary": {
+          "net_sales": "Sales means gross completed-order revenue minus refunds posted during the same reporting week, excluding tax and shipping. Do not use booked order value or subtract refunds twice.",
+          "unit": "USD",
+          "comparison": "Previous complete reporting week; source periods are UTC."
+        },
+        "owner_answers": {
+          "metric_scope": "Sales means gross completed-order revenue minus refunds posted during the same reporting week, excluding tax and shipping. Do not use booked order value or subtract refunds twice.",
+          "materiality": "Notify the business destination for a net-sales decline of at least 10% against the prior complete week. Otherwise ignore. Missing definitions or incomplete postings require insufficient_data to the data destination, not a business alert.",
+          "routing": "business destination: team-f88d053536cba66bc88e; data destination: team-b5fcff88e8691a8a9289. Only these routes are authorized; no destructive actions.",
+          "data_gaps": "Ask for a corrected export or a versioned definition when needed. I cannot reconstruct missing rows, infer causation, or tell you a period's correct answer."
+        },
+        "destinations": [
+          {
+            "key": "team-f88d053536cba66bc88e",
+            "label": "Business owner",
+            "destination": "slack://team-f88d053536cba66bc88e"
+          },
+          {
+            "key": "team-b5fcff88e8691a8a9289",
+            "label": "Data operations",
+            "destination": "slack://team-b5fcff88e8691a8a9289"
+          }
+        ],
+        "catalog": [
+          {
+            "adapter": "company_mcp",
+            "resource": "resource-00dc1bfdfad5f5f05554",
+            "kind": "document",
+            "title": "Returns operations",
+            "description": "Refund posting metadata and accounting mapping; not an additional refund ledger.",
+            "source_url": null,
+            "metadata": {
+              "tenant": "company-3e9c1df69fac812309d9",
+              "owner": "Data operations",
+              "inspection": "bounded current-period snapshot",
+              "read_only": true
+            },
+            "contract": {
+              "tenant_id": "default",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true
+            }
+          },
+          {
+            "adapter": "company_mcp",
+            "resource": "resource-af08bd091b93bfc9567d",
+            "kind": "saved_query",
+            "title": "Orders weekly",
+            "description": "Order bookings including cancelled orders, tax and shipping; not recognized sales.",
+            "source_url": null,
+            "metadata": {
+              "tenant": "company-3e9c1df69fac812309d9",
+              "owner": "Business owner",
+              "inspection": "bounded current-period snapshot",
+              "read_only": true
+            },
+            "contract": {
+              "tenant_id": "default",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true
+            }
+          },
+          {
+            "adapter": "company_mcp",
+            "resource": "resource-949a4c0c44fb188d1658",
+            "kind": "saved_query",
+            "title": "Commerce weekly",
+            "description": "Completed transaction amounts by sales channel; refunds are positive deductions, amounts in USD.",
+            "source_url": null,
+            "metadata": {
+              "tenant": "company-3e9c1df69fac812309d9",
+              "owner": "Business owner",
+              "inspection": "bounded current-period snapshot",
+              "read_only": true
+            },
+            "contract": {
+              "tenant_id": "default",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true
+            }
+          },
+          {
+            "adapter": "company_mcp",
+            "resource": "resource-4184db0c3714a4e31a98",
+            "kind": "chart",
+            "title": "Commerce weekly",
+            "description": "Archived checkout experiment, test-store population only.",
+            "source_url": null,
+            "metadata": {
+              "tenant": "company-3e9c1df69fac812309d9",
+              "owner": "Data operations",
+              "inspection": "bounded current-period snapshot",
+              "read_only": true
+            },
+            "contract": {
+              "tenant_id": "default",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true
+            }
+          }
+        ],
+        "period": {
+          "period_id": "period-830b9daf52602d929f27",
+          "as_of": "2026-10-08T14:58:52.998912+00:00",
+          "snapshots": {
+            "company_mcp|resource-949a4c0c44fb188d1658": {
+              "source_key": "resource-949a4c0c44fb188d1658",
+              "adapter": "company_mcp",
+              "resource": "resource-949a4c0c44fb188d1658",
+              "title": "Commerce weekly",
+              "description": "Completed transaction amounts by sales channel; refunds are positive deductions, amounts in USD.",
+              "observations": [],
+              "analytical_comparisons": [],
+              "evidence": [
+                {
+                  "source_key": "resource-949a4c0c44fb188d1658",
+                  "subject_id": "resource-949a4c0c44fb188d1658",
+                  "subject_label": "unknown",
+                  "statement": "Source export; interpret using catalog and owner definitions.",
+                  "values": {
+                    "rows": [
+                      {
+                        "channel": "web",
+                        "baseline_gross": 8000,
+                        "baseline_refunds": 1000,
+                        "current_gross": 8000,
+                        "current_refunds": 1000
+                      },
+                      {
+                        "channel": "shop",
+                        "baseline_gross": 4000,
+                        "baseline_refunds": 1000,
+                        "current_gross": 4000,
+                        "current_refunds": 1000
+                      }
+                    ],
+                    "fields": {
+                      "gross": "USD",
+                      "refunds": "USD"
+                    },
+                    "refund_timing": "undocumented"
+                  },
+                  "source_url": null,
+                  "origin": "source",
+                  "provenance": [
+                    "company_mcp|resource-949a4c0c44fb188d1658"
+                  ]
+                }
+              ],
+              "metadata": {
+                "tenant": "company-3e9c1df69fac812309d9",
+                "period_id": "period-830b9daf52602d929f27"
+              },
+              "error": null,
+              "source_url": null,
+              "captured_at": "2026-10-08T14:58:52.998912+00:00",
+              "source_captured_at": "2026-10-08T14:58:52.998912+00:00",
+              "contract": {
+                "tenant_id": "default",
+                "domain": "unknown",
+                "scope": "",
+                "metric_names": [],
+                "metric_definitions": [],
+                "required_comparison_keys": [],
+                "population": "",
+                "grain": "",
+                "freshness_sla_hours": null,
+                "lineage": [],
+                "roles": [],
+                "source_status": "healthy",
+                "authorized": true
+              }
+            },
+            "company_mcp|resource-00dc1bfdfad5f5f05554": {
+              "source_key": "resource-00dc1bfdfad5f5f05554",
+              "adapter": "company_mcp",
+              "resource": "resource-00dc1bfdfad5f5f05554",
+              "title": "Returns operations",
+              "description": "Refund posting metadata and accounting mapping; not an additional refund ledger.",
+              "observations": [],
+              "analytical_comparisons": [],
+              "evidence": [
+                {
+                  "source_key": "resource-00dc1bfdfad5f5f05554",
+                  "subject_id": "resource-00dc1bfdfad5f5f05554",
+                  "subject_label": "unknown",
+                  "statement": "Source export; interpret using catalog and owner definitions.",
+                  "values": {
+                    "posting_policy": "New refund feed has no versioned timing mapping."
+                  },
+                  "source_url": null,
+                  "origin": "source",
+                  "provenance": [
+                    "company_mcp|resource-00dc1bfdfad5f5f05554"
+                  ]
+                }
+              ],
+              "metadata": {
+                "tenant": "company-3e9c1df69fac812309d9",
+                "period_id": "period-830b9daf52602d929f27"
+              },
+              "error": null,
+              "source_url": null,
+              "captured_at": "2026-10-08T14:58:52.998912+00:00",
+              "source_captured_at": "2026-10-08T14:58:52.998912+00:00",
+              "contract": {
+                "tenant_id": "default",
+                "domain": "unknown",
+                "scope": "",
+                "metric_names": [],
+                "metric_definitions": [],
+                "required_comparison_keys": [],
+                "population": "",
+                "grain": "",
+                "freshness_sla_hours": null,
+                "lineage": [],
+                "roles": [],
+                "source_status": "healthy",
+                "authorized": true
+              }
+            },
+            "company_mcp|resource-af08bd091b93bfc9567d": {
+              "source_key": "resource-af08bd091b93bfc9567d",
+              "adapter": "company_mcp",
+              "resource": "resource-af08bd091b93bfc9567d",
+              "title": "Orders weekly",
+              "description": "Order bookings including cancelled orders, tax and shipping; not recognized sales.",
+              "observations": [],
+              "analytical_comparisons": [],
+              "evidence": [
+                {
+                  "source_key": "resource-af08bd091b93bfc9567d",
+                  "subject_id": "resource-af08bd091b93bfc9567d",
+                  "subject_label": "unknown",
+                  "statement": "Source export; interpret using catalog and owner definitions.",
+                  "values": {
+                    "baseline": 9000,
+                    "current": 4500,
+                    "population": "Order bookings including cancelled orders, tax and shipping; not recognized sales.",
+                    "coverage": "complete_for_this_population"
+                  },
+                  "source_url": null,
+                  "origin": "source",
+                  "provenance": [
+                    "company_mcp|resource-af08bd091b93bfc9567d"
+                  ]
+                }
+              ],
+              "metadata": {
+                "tenant": "company-3e9c1df69fac812309d9",
+                "period_id": "period-830b9daf52602d929f27"
+              },
+              "error": null,
+              "source_url": null,
+              "captured_at": "2026-10-08T14:58:52.998912+00:00",
+              "source_captured_at": "2026-10-08T14:58:52.998912+00:00",
+              "contract": {
+                "tenant_id": "default",
+                "domain": "unknown",
+                "scope": "",
+                "metric_names": [],
+                "metric_definitions": [],
+                "required_comparison_keys": [],
+                "population": "",
+                "grain": "",
+                "freshness_sla_hours": null,
+                "lineage": [],
+                "roles": [],
+                "source_status": "healthy",
+                "authorized": true
+              }
+            },
+            "company_mcp|resource-4184db0c3714a4e31a98": {
+              "source_key": "resource-4184db0c3714a4e31a98",
+              "adapter": "company_mcp",
+              "resource": "resource-4184db0c3714a4e31a98",
+              "title": "Commerce weekly",
+              "description": "Archived checkout experiment, test-store population only.",
+              "observations": [],
+              "analytical_comparisons": [],
+              "evidence": [
+                {
+                  "source_key": "resource-4184db0c3714a4e31a98",
+                  "subject_id": "resource-4184db0c3714a4e31a98",
+                  "subject_label": "unknown",
+                  "statement": "Source export; interpret using catalog and owner definitions.",
+                  "values": {
+                    "baseline": 1000,
+                    "current": 2000,
+                    "population": "Archived checkout experiment, test-store population only."
+                  },
+                  "source_url": null,
+                  "origin": "source",
+                  "provenance": [
+                    "company_mcp|resource-4184db0c3714a4e31a98"
+                  ]
+                }
+              ],
+              "metadata": {
+                "tenant": "company-3e9c1df69fac812309d9",
+                "period_id": "period-830b9daf52602d929f27"
+              },
+              "error": null,
+              "source_url": null,
+              "captured_at": "2026-10-08T14:58:52.998912+00:00",
+              "source_captured_at": "2026-10-08T14:58:52.998912+00:00",
+              "contract": {
+                "tenant_id": "default",
+                "domain": "unknown",
+                "scope": "",
+                "metric_names": [],
+                "metric_definitions": [],
+                "required_comparison_keys": [],
+                "population": "",
+                "grain": "",
+                "freshness_sla_hours": null,
+                "lineage": [],
+                "roles": [],
+                "source_status": "healthy",
+                "authorized": true
+              }
+            }
+          }
+        }
+      },
+      "analysis": {
+        "outcome": "insufficient_data",
+        "recipients": [
+          "team-b5fcff88e8691a8a9289"
+        ],
+        "evidence_refs": [
+          "company_mcp|resource-949a4c0c44fb188d1658",
+          "company_mcp|resource-00dc1bfdfad5f5f05554"
+        ],
+        "numeric_claims": [
+          {
+            "fact": "net_sales.baseline",
+            "value": 10000,
+            "unit": "USD",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658"
+            ]
+          },
+          {
+            "fact": "net_sales.current",
+            "value": 10000,
+            "unit": "USD",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658"
+            ]
+          },
+          {
+            "fact": "net_sales.delta",
+            "value": 0,
+            "unit": "USD",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658"
+            ]
+          },
+          {
+            "fact": "net_sales.web_contribution",
+            "value": 0,
+            "unit": "USD",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658"
+            ]
+          }
+        ],
+        "claims": [
+          {
+            "claim_type": "observation",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658"
+            ],
+            "statement": "Current-period Commerce weekly rows show unchanged gross and refunds for web and shop versus the previous complete UTC reporting week; the computed net-sales change is USD 0."
+          },
+          {
+            "claim_type": "accounting_decomposition",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658"
+            ],
+            "statement": "Under the approved definition, baseline net sales are USD 10,000 (USD 12,000 gross less USD 2,000 refunds) and current net sales are USD 10,000; web contributes USD 0 to the change."
+          },
+          {
+            "claim_type": "observation",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658"
+            ],
+            "statement": "Refund timing is undocumented in Commerce weekly, and Returns operations reports that the new refund feed has no versioned timing mapping; completeness of same-week refund matching cannot be validated."
+          }
+        ],
+        "summary": "Insufficient data for the weekly net-sales decision: observed baseline and current net sales are both USD 10,000 with USD 0 delta, but refund timing and versioned mapping are missing. Route only to Data Operations for a corrected export or versioned definition."
+      },
+      "inspected_refs": [
+        "company_mcp|resource-00dc1bfdfad5f5f05554",
+        "company_mcp|resource-949a4c0c44fb188d1658"
+      ],
+      "execution_complete": true
+    }
+  ]
+}

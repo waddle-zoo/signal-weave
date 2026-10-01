@@ -98,6 +98,24 @@ prevents an old green report from being mistaken for proof about a newer card.
 
 ## 2. Certify a card/workflow
 
+Keep `watch_for` specific to the owner's required business conditions. Each item
+is assessed on every run and unresolved required evidence can block notification.
+Do not copy a general analysis checklist into it: an inapplicable decomposition
+can turn an otherwise answerable investigation into an incomplete one. Reporting
+preferences belong in `decision_guidance`; test the draft on both actionable and
+quiet snapshots before approval.
+
+Jev can return `insufficient_data` for semantic gaps even when every source is
+reachable, such as an undefined population or comparison basis. This reserved
+outcome does not invent a recipient: delivery still uses only the card's configured
+methods. A confident judgment is not a substitute for evidence or certification.
+
+MCP simulation and evaluation responses include active card policy, source
+resources, the compiled plan and the complete result. They omit repeated
+authoring reviews/corrections and the receipt's duplicate result. Full audit data
+remains available through `get_insight_card` and `get_decision_receipt` and is
+unchanged in storage; consumers should read the top-level evaluation `result`.
+
 Use `CardWorkflowEvaluator` directly or the MCP tool `evaluate_card_workflow`.
 The MCP form takes a stored `card_id` and cases without repeating the card
 policy:

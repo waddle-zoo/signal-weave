@@ -739,11 +739,11 @@ class JevJudger:
             }
         )
 
-        action_outcomes = [Outcome.IGNORE, Outcome.INVESTIGATE]
+        # Missing semantic context can make a healthy source unusable. Keep this
+        # outcome available even without a delivery route; code owns routing.
+        action_outcomes = [Outcome.IGNORE, Outcome.INVESTIGATE, Outcome.INSUFFICIENT_DATA]
         for method in card.delivery_methods:
-            if method.outcome not in action_outcomes and method.outcome not in {
-                Outcome.INSUFFICIENT_DATA
-            }:
+            if method.outcome not in action_outcomes:
                 action_outcomes.append(method.outcome)
         outcome_criteria: dict[str, str] = {}
         for outcome in action_outcomes:
@@ -755,7 +755,17 @@ class JevJudger:
                     "normal, seasonal, explainable, within range, or should not create a "
                     "notification, that guidance is positive evidence for ignore when the "
                     "related observations support it. A large numeric movement alone is not "
-                    "enough to notify when the card's context explains it."
+                    "enough to notify when the card's context explains it. There must be "
+                    "enough trustworthy evidence to establish that no action is needed; "
+                    "missing evidence is not evidence for ignore."
+                )
+            elif outcome == Outcome.INSUFFICIENT_DATA:
+                condition = (
+                    "Missing, untrusted, or ambiguous evidence prevents applying the "
+                    "owner's policy: for example an unresolved metric definition, "
+                    "population, comparison period, or incomplete required data. Source "
+                    "availability alone does not establish semantic completeness. Do not "
+                    "reconstruct missing definitions or treat unknown as non-actionable."
                 )
             elif outcome == Outcome.INVESTIGATE:
                 condition = "The evidence warrants human or downstream investigation before an automatic action."
@@ -779,8 +789,9 @@ class JevJudger:
                 "Which single outcome best fits the current evidence and the owner's "
                 "card purpose and decision guidance? The card's decision_guidance is "
                 "human-authored policy: apply it, do not invent missing business rules. "
-                "Choose only from the allowed outcomes. Treat an outcome "
-                "as unavailable if its delivery route is not configured. Do not invent "
+                "Choose only from the allowed outcomes. Ignore, investigate, and "
+                "insufficient_data are always available; other outcomes require a "
+                "configured delivery route. Delivery is separately controlled by code. Do not invent "
                 "facts, sources, or destinations."
             ),
             criteria=outcome_criteria,

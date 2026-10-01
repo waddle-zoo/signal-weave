@@ -1,0 +1,1151 @@
+{
+  "config": {
+    "model": "gpt-5.6-luna",
+    "effort": "low",
+    "seed": 20261001,
+    "split": "holdout",
+    "dataset_digest": "e7a855d4d2b3f8383cbadabe64a85f95c5921282c9e6d43d79d9d4df5f80533d",
+    "selected_companies": 1,
+    "public_context_digest": "c8f5d4c292d044c1f148b19e183c5af8161fe7fb093324358f071f9cb8168a52",
+    "max_api_requests": 70,
+    "max_turns": null,
+    "max_tool_calls": 45,
+    "max_output_tokens": null,
+    "prices": {
+      "assumption_date": "2026-09-30",
+      "currency": "USD",
+      "per_million_tokens": {
+        "luna_input": 0.2,
+        "luna_cached_input": 0.02,
+        "luna_output": 1.2,
+        "jev_input": 0.042,
+        "jev_output": 0.0
+      },
+      "sources": [
+        "https://developers.openai.com/api/docs/models/gpt-5.6-luna",
+        "https://docs.typesafe.ai/models"
+      ],
+      "scope": "Small-context standard pricing; estimated token charges, not billed invoices. Failed requests with missing usage have unknown cost, never assumed free."
+    },
+    "clock_rebased_to": "2026-10-01T14:58:52.998912+00:00",
+    "source_fingerprint": {
+      "git_revision": "6266b963eaac173137e5e8c1afc03904eb3e00b4",
+      "sha256": {
+        "evaluations/bootstrap_agent_trial.py": "d725d8abdaab4b1c3288d1fc6d6067f3ac67b8c764369191cd45880c25aec4be",
+        "evaluations/bootstrap_scenarios.py": "6c4dfef6f995ff81105645a3cc6caf38886428ffecb937660cfd71b373c67fa1",
+        "evaluations/codex_trial_transport.py": "8f4be8fbb897683da5e1a6f479ce850a1130f42d398c8541fbc4f5c0be0da2ea",
+        "docs/bootstrap-benchmark-protocol.md": "4a249143da0414dff7f0b0a6af292cce61eb227fd26b5de8286314e72c1f7263",
+        "docs/bootstrap-benchmark-v3.md": "553e576c71ce1620a4f6f35892093d4f0251d27808626e09c7b6f781b4b529ea",
+        "uv.lock": "4340d3bc5b590d36e9204d94d4c32c2b6841059a89a78628cc72ec15757c9add",
+        "src/signalweave/engine.py": "32352f8867ecee17be80b756ff2d48f4b3931a5aef83c7fb9e5f152469fe1fe6",
+        "src/signalweave/models.py": "da942f97bde9c1e9293853b5f8a5879194cc8bd51493d8a285a50b963f913d57",
+        "src/signalweave/onboarding.py": "3a054e586832c5df3333ffc3f254d9ee3f6d37e823e8f57b3f9a7d1f2e8ed542",
+        "src/signalweave/diagnostics.py": "fb0f713fab70dd68a3beb13fc404338a7bd2d52a9d943ba4b04fae3a2835c5d7",
+        "src/signalweave/mcp_server.py": "3c88769101051b73220962781efffe73aea003f821d2dfdd68ccbf8cd89bb586",
+        "src/signalweave/typesafe_adapter.py": "0e0a8a9e20a65b10ddaa63baeeb2c562924d443028ccd7a647d0111c7426bab1"
+      },
+      "note": "Content hashes include uncommitted working files; revision alone is insufficient."
+    },
+    "live": true,
+    "real_external_notifications": false,
+    "limits": [
+      "Synthetic sources with normalized adapter contracts, not real BI connectors.",
+      "Human approval is procedural and simulated, not actual human validation.",
+      "No autonomous causal inference or enterprise reliability claim.",
+      "Baseline has notes and calculators but not persistent code generation.",
+      "Comparator: notes-persistent, LLM-per-run baseline, not all agent strategies.",
+      "Scorer checks structured fields, not narrative entailment; prose needs independent review.",
+      "Every warm run wakes Luna in both arms; no claimed wakeup savings.",
+      "Codex uses saved ChatGPT login; reported OpenAI attempts mean agent invocations, not API requests.",
+      "Codex wall time includes CLI/MCP startup; max tool calls and 360-second episode timeout apply.",
+      "Codex token prices are illustrative API-equivalent estimates, NOT subscription charges; cost advantage gate cannot be established.",
+      "Codex internal request/retry count and per-response token cap are not observable or enforced by this harness."
+    ],
+    "agent_transport": "codex_cli",
+    "episode_timeout_seconds": 360,
+    "api_request_budget_scope": "Jev only",
+    "codex_version": "codex-cli 0.153.4",
+    "codex_command_template": [
+      "codex",
+      "exec",
+      "--ignore-user-config",
+      "--ephemeral",
+      "--json",
+      "--skip-git-repo-check",
+      "--sandbox",
+      "read-only",
+      "--cd",
+      "<empty-temporary-directory>",
+      "--model",
+      "gpt-5.6-luna",
+      "-c",
+      "model_reasoning_effort=\"low\"",
+      "-c",
+      "web_search=\"disabled\"",
+      "-c",
+      "project_doc_max_bytes=0",
+      "-c",
+      "features.skip_host_skill_discovery=true",
+      "-c",
+      "features.code_mode_host=true",
+      "-c",
+      "memories.use_memories=false",
+      "-c",
+      "memories.generate_memories=false",
+      "-c",
+      "mcp_servers={}",
+      "-c",
+      "mcp_servers.trial.url=\"<exclusive-loopback-mcp>\"",
+      "-c",
+      "mcp_servers.trial.required=true",
+      "-c",
+      "mcp_servers.trial.default_tools_approval_mode=\"approve\"",
+      "-c",
+      "mcp_servers.trial.tool_timeout_sec=120",
+      "-c",
+      "approval_policy=\"never\"",
+      "--disable",
+      "shell_tool",
+      "--disable",
+      "unified_exec",
+      "--disable",
+      "apps",
+      "--disable",
+      "plugins",
+      "--disable",
+      "hooks",
+      "--disable",
+      "multi_agent",
+      "--disable",
+      "browser_use",
+      "--disable",
+      "computer_use",
+      "--disable",
+      "image_generation",
+      "--disable",
+      "view_image",
+      "--disable",
+      "memories",
+      "--disable",
+      "skill_search",
+      "--disable",
+      "workspace_dependencies",
+      "--disable",
+      "shell_snapshot",
+      "--disable",
+      "code_mode",
+      "--disable",
+      "sleep_tool",
+      "--disable",
+      "goals",
+      "-"
+    ]
+  },
+  "status": "complete",
+  "summary": {
+    "luna_bi": {
+      "onboarding_attempts": 1,
+      "onboarding_complete": 1,
+      "monitoring_denominator": 3,
+      "complete_monitoring_runs": 3,
+      "exact_count": 3,
+      "outcome_correct_count": 3,
+      "cold_seconds": 22.6016993339872,
+      "warm_seconds": 91.95086795900716,
+      "source_reads": 11,
+      "tool_calls": 24,
+      "jev_api_attempts": 0,
+      "warm_completed_median_seconds": 29.91048745898297,
+      "cold_known_usage_usd": 0.0046814000000000005,
+      "warm_known_usage_usd": 0.019400960000000002,
+      "observed_cold_plus_warm_known_usage_usd": 0.02408236,
+      "setup_amortized_known_usage_usd_per_scheduled_run": 0.008027453333333334,
+      "unknown_usage_attempts": 0,
+      "valid_monitoring_submissions": 3,
+      "safety_unassessed_runs": 0,
+      "runtime_failures": 0,
+      "recipients_correct_count": 3,
+      "wrong_recipient_count": 0,
+      "false_alert_count": 0,
+      "missed_event_count": 0,
+      "unsafe_suppression_count": 0,
+      "provenance_complete_count": 3,
+      "all_structured_cases_pass": true,
+      "raw_system_decision_runs": 0,
+      "raw_system_outcome_correct_count": 0,
+      "raw_system_recipients_correct_count": 0,
+      "raw_system_agent_changed_outcome_count": 0,
+      "codex_invocations": 4,
+      "usage_complete": true,
+      "cost_basis": "illustrative_api_equivalent_not_measured_subscription_cost"
+    },
+    "luna_signalweave_jev": {
+      "onboarding_attempts": 1,
+      "onboarding_complete": 1,
+      "monitoring_denominator": 3,
+      "complete_monitoring_runs": 3,
+      "exact_count": 1,
+      "outcome_correct_count": 3,
+      "cold_seconds": 57.744532542012166,
+      "warm_seconds": 83.04778408393031,
+      "source_reads": 15,
+      "tool_calls": 25,
+      "jev_api_attempts": 12,
+      "warm_completed_median_seconds": 26.28384799999185,
+      "cold_known_usage_usd": 0.024857262,
+      "warm_known_usage_usd": 0.025036858000000002,
+      "observed_cold_plus_warm_known_usage_usd": 0.04989412,
+      "setup_amortized_known_usage_usd_per_scheduled_run": 0.016631373333333335,
+      "unknown_usage_attempts": 0,
+      "valid_monitoring_submissions": 3,
+      "safety_unassessed_runs": 0,
+      "runtime_failures": 0,
+      "recipients_correct_count": 3,
+      "wrong_recipient_count": 0,
+      "false_alert_count": 0,
+      "missed_event_count": 0,
+      "unsafe_suppression_count": 0,
+      "provenance_complete_count": 3,
+      "all_structured_cases_pass": false,
+      "raw_system_decision_runs": 3,
+      "raw_system_outcome_correct_count": 1,
+      "raw_system_recipients_correct_count": 1,
+      "raw_system_agent_changed_outcome_count": 2,
+      "codex_invocations": 4,
+      "usage_complete": true,
+      "cost_basis": "illustrative_api_equivalent_not_measured_subscription_cost"
+    }
+  },
+  "usage": {
+    "openai": {
+      "attempts": 8,
+      "failed_attempts": 0,
+      "input_tokens": 1031737,
+      "cached_input_tokens": 798464,
+      "output_tokens": 7938,
+      "unknown_usage_attempts": 0,
+      "estimated_known_usage_usd": 0.07214948000000002
+    },
+    "jev": {
+      "attempts": 12,
+      "failed_attempts": 0,
+      "input_tokens": 43500,
+      "cached_input_tokens": 0,
+      "output_tokens": 1943,
+      "unknown_usage_attempts": 0,
+      "estimated_known_usage_usd": 0.001827
+    }
+  },
+  "budget_censored": false,
+  "comparative_eligible": true,
+  "cases": [
+    {
+      "scenario_id": "company-3e9c1df69fac812309d9",
+      "period_id": "period-3cad5c974b37f4789541",
+      "arm": "luna_bi",
+      "phase": "onboarding",
+      "status": "complete",
+      "error": null,
+      "seconds": 22.6016993339872,
+      "agent_seconds": 22.599877375003416,
+      "system_seconds": 0.0,
+      "tool_calls": 9,
+      "source_reads": 2,
+      "usage": {
+        "openai": {
+          "attempts": 1,
+          "failed_attempts": 0,
+          "input_tokens": 50953,
+          "cached_input_tokens": 35840,
+          "output_tokens": 785,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.0046814000000000005
+        },
+        "jev": {
+          "attempts": 0,
+          "failed_attempts": 0,
+          "input_tokens": 0,
+          "cached_input_tokens": 0,
+          "output_tokens": 0,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.0
+        }
+      },
+      "score": null,
+      "raw_system_decision": null,
+      "submission": null,
+      "foreign_tools": []
+    },
+    {
+      "scenario_id": "company-3e9c1df69fac812309d9",
+      "period_id": "period-3cad5c974b37f4789541",
+      "arm": "luna_signalweave_jev",
+      "phase": "onboarding",
+      "status": "complete",
+      "error": null,
+      "seconds": 57.744532542012166,
+      "agent_seconds": 57.742313124996144,
+      "system_seconds": 0.0,
+      "tool_calls": 14,
+      "source_reads": 2,
+      "usage": {
+        "openai": {
+          "attempts": 1,
+          "failed_attempts": 0,
+          "input_tokens": 505584,
+          "cached_input_tokens": 443136,
+          "output_tokens": 2016,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.02377152
+        },
+        "jev": {
+          "attempts": 9,
+          "failed_attempts": 0,
+          "input_tokens": 25851,
+          "cached_input_tokens": 0,
+          "output_tokens": 1601,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.001085742
+        }
+      },
+      "score": null,
+      "raw_system_decision": null,
+      "submission": null,
+      "foreign_tools": []
+    },
+    {
+      "scenario_id": "company-3e9c1df69fac812309d9",
+      "period_id": "period-830b9daf52602d929f27",
+      "arm": "luna_signalweave_jev",
+      "phase": "monitoring",
+      "status": "complete",
+      "error": null,
+      "seconds": 26.28384799999185,
+      "agent_seconds": 26.06050308299018,
+      "system_seconds": 0.21810050000203773,
+      "tool_calls": 5,
+      "source_reads": 5,
+      "usage": {
+        "openai": {
+          "attempts": 1,
+          "failed_attempts": 0,
+          "input_tokens": 117740,
+          "cached_input_tokens": 81152,
+          "output_tokens": 985,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.010122639999999999
+        },
+        "jev": {
+          "attempts": 1,
+          "failed_attempts": 0,
+          "input_tokens": 5883,
+          "cached_input_tokens": 0,
+          "output_tokens": 114,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.00024708600000000004
+        }
+      },
+      "score": {
+        "scorer_version": 3,
+        "scenario_id": "company-3e9c1df69fac812309d9",
+        "period_id": "period-830b9daf52602d929f27",
+        "valid_submission": true,
+        "safety_unassessed": false,
+        "exact": false,
+        "outcome_correct": true,
+        "recipients_correct": true,
+        "wrong_recipient": false,
+        "unsafe_route": false,
+        "false_alert": false,
+        "missed_event": false,
+        "unsafe_suppression": false,
+        "evidence_recall": 1.0,
+        "provenance_complete": true,
+        "numeric_precision": 0.0,
+        "numeric_recall": 1.0,
+        "unsupported_numeric_facts": [
+          "net_sales.baseline",
+          "net_sales.current",
+          "net_sales.delta",
+          "net_sales.web_contribution"
+        ],
+        "unsupported_claim_types": [],
+        "numeric_diagnostics": [
+          {
+            "claim_index": 0,
+            "fact": "net_sales.baseline",
+            "reasons": [
+              "unavailable_scope"
+            ]
+          },
+          {
+            "claim_index": 1,
+            "fact": "net_sales.current",
+            "reasons": [
+              "unavailable_scope"
+            ]
+          },
+          {
+            "claim_index": 2,
+            "fact": "net_sales.delta",
+            "reasons": [
+              "unavailable_scope"
+            ]
+          },
+          {
+            "claim_index": 3,
+            "fact": "net_sales.web_contribution",
+            "reasons": [
+              "unavailable_scope"
+            ]
+          }
+        ],
+        "citation_diagnostics": [],
+        "missing_numeric_facts": [],
+        "owner_policy_complete": true,
+        "errors": [],
+        "scoring_scope": "structured_fields_only",
+        "narrative_review_required": true
+      },
+      "raw_system_decision": {
+        "outcome": "ignore",
+        "recipients": [],
+        "destinations": [],
+        "outcome_correct": false,
+        "recipients_correct": false,
+        "agent_changed_outcome": true,
+        "scope": "raw system routing only; not numerical or narrative correctness"
+      },
+      "submission": {
+        "outcome": "insufficient_data",
+        "recipients": [
+          "team-b5fcff88e8691a8a9289"
+        ],
+        "evidence_refs": [
+          "company_mcp|resource-949a4c0c44fb188d1658",
+          "company_mcp|resource-00dc1bfdfad5f5f05554"
+        ],
+        "numeric_claims": [
+          {
+            "fact": "net_sales.baseline",
+            "value": 10000,
+            "unit": "USD",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658"
+            ]
+          },
+          {
+            "fact": "net_sales.current",
+            "value": 10000,
+            "unit": "USD",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658"
+            ]
+          },
+          {
+            "fact": "net_sales.delta",
+            "value": 0,
+            "unit": "USD",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658"
+            ]
+          },
+          {
+            "fact": "net_sales.web_contribution",
+            "value": 0,
+            "unit": "USD",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658"
+            ]
+          }
+        ],
+        "claims": [
+          {
+            "claim_type": "observation",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658"
+            ],
+            "statement": "Current-period Commerce weekly rows show unchanged gross and refunds for web and shop versus the previous complete UTC reporting week; the computed net-sales change is USD 0."
+          },
+          {
+            "claim_type": "accounting_decomposition",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658"
+            ],
+            "statement": "Under the approved definition, baseline net sales are USD 10,000 (USD 12,000 gross less USD 2,000 refunds) and current net sales are USD 10,000; web contributes USD 0 to the change."
+          },
+          {
+            "claim_type": "observation",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658"
+            ],
+            "statement": "Refund timing is undocumented in Commerce weekly, and Returns operations reports that the new refund feed has no versioned timing mapping; completeness of same-week refund matching cannot be validated."
+          }
+        ],
+        "summary": "Insufficient data for the weekly net-sales decision: observed baseline and current net sales are both USD 10,000 with USD 0 delta, but refund timing and versioned mapping are missing. Route only to Data Operations for a corrected export or versioned definition."
+      },
+      "foreign_tools": []
+    },
+    {
+      "scenario_id": "company-3e9c1df69fac812309d9",
+      "period_id": "period-830b9daf52602d929f27",
+      "arm": "luna_bi",
+      "phase": "monitoring",
+      "status": "complete",
+      "error": null,
+      "seconds": 29.91048745898297,
+      "agent_seconds": 29.908996375044808,
+      "system_seconds": 0.0,
+      "tool_calls": 5,
+      "source_reads": 3,
+      "usage": {
+        "openai": {
+          "attempts": 1,
+          "failed_attempts": 0,
+          "input_tokens": 52761,
+          "cached_input_tokens": 25600,
+          "output_tokens": 734,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.006825000000000001
+        },
+        "jev": {
+          "attempts": 0,
+          "failed_attempts": 0,
+          "input_tokens": 0,
+          "cached_input_tokens": 0,
+          "output_tokens": 0,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.0
+        }
+      },
+      "score": {
+        "scorer_version": 3,
+        "scenario_id": "company-3e9c1df69fac812309d9",
+        "period_id": "period-830b9daf52602d929f27",
+        "valid_submission": true,
+        "safety_unassessed": false,
+        "exact": true,
+        "outcome_correct": true,
+        "recipients_correct": true,
+        "wrong_recipient": false,
+        "unsafe_route": false,
+        "false_alert": false,
+        "missed_event": false,
+        "unsafe_suppression": false,
+        "evidence_recall": 1.0,
+        "provenance_complete": true,
+        "numeric_precision": 1.0,
+        "numeric_recall": 1.0,
+        "unsupported_numeric_facts": [],
+        "unsupported_claim_types": [],
+        "numeric_diagnostics": [],
+        "citation_diagnostics": [],
+        "missing_numeric_facts": [],
+        "owner_policy_complete": true,
+        "errors": [],
+        "scoring_scope": "structured_fields_only",
+        "narrative_review_required": true
+      },
+      "raw_system_decision": null,
+      "submission": {
+        "outcome": "insufficient_data",
+        "recipients": [
+          "team-b5fcff88e8691a8a9289"
+        ],
+        "evidence_refs": [
+          "company_mcp|resource-949a4c0c44fb188d1658",
+          "company_mcp|resource-00dc1bfdfad5f5f05554"
+        ],
+        "numeric_claims": [],
+        "claims": [
+          {
+            "claim_type": "observation",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658"
+            ],
+            "statement": "The current Commerce weekly export contains baseline and current gross/refund rows for web and shop, but refund timing is undocumented."
+          },
+          {
+            "claim_type": "observation",
+            "evidence_refs": [
+              "company_mcp|resource-00dc1bfdfad5f5f05554"
+            ],
+            "statement": "The current Returns operations metadata says the new refund feed has no versioned timing mapping."
+          },
+          {
+            "claim_type": "hypothesis",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658",
+              "company_mcp|resource-00dc1bfdfad5f5f05554"
+            ],
+            "statement": "Net sales cannot be validly measured for this period under the required same-week refund definition until refund posting timing is versioned or otherwise validated."
+          }
+        ],
+        "summary": "Insufficient data: the current export does not establish that refunds are posted in the same reporting week, so net sales, its delta, and web contribution cannot be reported reliably. Please provide a corrected export or versioned refund-timing definition."
+      },
+      "foreign_tools": []
+    },
+    {
+      "scenario_id": "company-3e9c1df69fac812309d9",
+      "period_id": "period-43e3d40cb273e389dab0",
+      "arm": "luna_bi",
+      "phase": "monitoring",
+      "status": "complete",
+      "error": null,
+      "seconds": 32.37379054201301,
+      "agent_seconds": 32.370806040999014,
+      "system_seconds": 0.0,
+      "tool_calls": 5,
+      "source_reads": 3,
+      "usage": {
+        "openai": {
+          "attempts": 1,
+          "failed_attempts": 0,
+          "input_tokens": 63838,
+          "cached_input_tokens": 33536,
+          "output_tokens": 812,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.00770552
+        },
+        "jev": {
+          "attempts": 0,
+          "failed_attempts": 0,
+          "input_tokens": 0,
+          "cached_input_tokens": 0,
+          "output_tokens": 0,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.0
+        }
+      },
+      "score": {
+        "scorer_version": 3,
+        "scenario_id": "company-3e9c1df69fac812309d9",
+        "period_id": "period-43e3d40cb273e389dab0",
+        "valid_submission": true,
+        "safety_unassessed": false,
+        "exact": true,
+        "outcome_correct": true,
+        "recipients_correct": true,
+        "wrong_recipient": false,
+        "unsafe_route": false,
+        "false_alert": false,
+        "missed_event": false,
+        "unsafe_suppression": false,
+        "evidence_recall": 1.0,
+        "provenance_complete": true,
+        "numeric_precision": 1.0,
+        "numeric_recall": 1.0,
+        "unsupported_numeric_facts": [],
+        "unsupported_claim_types": [],
+        "numeric_diagnostics": [],
+        "citation_diagnostics": [],
+        "missing_numeric_facts": [],
+        "owner_policy_complete": true,
+        "errors": [],
+        "scoring_scope": "structured_fields_only",
+        "narrative_review_required": true
+      },
+      "raw_system_decision": null,
+      "submission": {
+        "outcome": "ignore",
+        "recipients": [],
+        "evidence_refs": [
+          "company_mcp|resource-949a4c0c44fb188d1658",
+          "company_mcp|resource-00dc1bfdfad5f5f05554"
+        ],
+        "numeric_claims": [
+          {
+            "fact": "net_sales.baseline",
+            "value": 10000,
+            "unit": "USD",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658"
+            ]
+          },
+          {
+            "fact": "net_sales.current",
+            "value": 10000,
+            "unit": "USD",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658"
+            ]
+          },
+          {
+            "fact": "net_sales.delta",
+            "value": 0,
+            "unit": "USD",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658"
+            ]
+          },
+          {
+            "fact": "net_sales.web_contribution",
+            "value": 0,
+            "unit": "USD",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658"
+            ]
+          }
+        ],
+        "claims": [
+          {
+            "claim_type": "observation",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658"
+            ],
+            "statement": "Net sales were USD 10,000 in both the previous complete reporting week and the current reporting week, so the change was USD 0."
+          },
+          {
+            "claim_type": "accounting_decomposition",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658",
+              "company_mcp|resource-00dc1bfdfad5f5f05554"
+            ],
+            "statement": "Web contributed USD 0 to the total change: its net sales were USD 7,000 in both periods; shop contributed USD 0, with USD 3,000 in both periods. Gross and refunds were unchanged by channel, and refunds are already included by posting week."
+          }
+        ],
+        "summary": "Ignore: net sales were flat at USD 10,000 versus the previous complete reporting week (USD 0 delta; 0% change). Web and shop were each unchanged, and web contributed USD 0 to the total change. The decline threshold is not met."
+      },
+      "foreign_tools": []
+    },
+    {
+      "scenario_id": "company-3e9c1df69fac812309d9",
+      "period_id": "period-43e3d40cb273e389dab0",
+      "arm": "luna_signalweave_jev",
+      "phase": "monitoring",
+      "status": "complete",
+      "error": null,
+      "seconds": 33.92986833397299,
+      "agent_seconds": 33.62048166699242,
+      "system_seconds": 0.30404258397175,
+      "tool_calls": 5,
+      "source_reads": 6,
+      "usage": {
+        "openai": {
+          "attempts": 1,
+          "failed_attempts": 0,
+          "input_tokens": 102902,
+          "cached_input_tokens": 73984,
+          "output_tokens": 665,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.00806128
+        },
+        "jev": {
+          "attempts": 1,
+          "failed_attempts": 0,
+          "input_tokens": 5883,
+          "cached_input_tokens": 0,
+          "output_tokens": 114,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.00024708600000000004
+        }
+      },
+      "score": {
+        "scorer_version": 3,
+        "scenario_id": "company-3e9c1df69fac812309d9",
+        "period_id": "period-43e3d40cb273e389dab0",
+        "valid_submission": true,
+        "safety_unassessed": false,
+        "exact": false,
+        "outcome_correct": true,
+        "recipients_correct": true,
+        "wrong_recipient": false,
+        "unsafe_route": false,
+        "false_alert": false,
+        "missed_event": false,
+        "unsafe_suppression": false,
+        "evidence_recall": 1.0,
+        "provenance_complete": true,
+        "numeric_precision": 0.5,
+        "numeric_recall": 1.0,
+        "unsupported_numeric_facts": [
+          "net_sales.baseline",
+          "net_sales.current"
+        ],
+        "unsupported_claim_types": [],
+        "numeric_diagnostics": [
+          {
+            "claim_index": 0,
+            "fact": "net_sales.baseline",
+            "reasons": [
+              "wrong_value"
+            ]
+          },
+          {
+            "claim_index": 1,
+            "fact": "net_sales.current",
+            "reasons": [
+              "wrong_value"
+            ]
+          }
+        ],
+        "citation_diagnostics": [],
+        "missing_numeric_facts": [],
+        "owner_policy_complete": true,
+        "errors": [],
+        "scoring_scope": "structured_fields_only",
+        "narrative_review_required": true
+      },
+      "raw_system_decision": {
+        "outcome": "ignore",
+        "recipients": [],
+        "destinations": [],
+        "outcome_correct": true,
+        "recipients_correct": true,
+        "agent_changed_outcome": false,
+        "scope": "raw system routing only; not numerical or narrative correctness"
+      },
+      "submission": {
+        "outcome": "ignore",
+        "recipients": [],
+        "evidence_refs": [
+          "company_mcp|resource-949a4c0c44fb188d1658",
+          "company_mcp|resource-00dc1bfdfad5f5f05554"
+        ],
+        "numeric_claims": [
+          {
+            "fact": "net_sales.baseline",
+            "value": 7000,
+            "unit": "USD",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658",
+              "company_mcp|resource-00dc1bfdfad5f5f05554"
+            ]
+          },
+          {
+            "fact": "net_sales.current",
+            "value": 7000,
+            "unit": "USD",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658",
+              "company_mcp|resource-00dc1bfdfad5f5f05554"
+            ]
+          },
+          {
+            "fact": "net_sales.delta",
+            "value": 0,
+            "unit": "USD",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658",
+              "company_mcp|resource-00dc1bfdfad5f5f05554"
+            ]
+          },
+          {
+            "fact": "net_sales.web_contribution",
+            "value": 0,
+            "unit": "USD",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658"
+            ]
+          }
+        ],
+        "claims": [
+          {
+            "claim_type": "observation",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658",
+              "company_mcp|resource-00dc1bfdfad5f5f05554"
+            ],
+            "statement": "Net sales were USD 7,000 in both the prior complete UTC reporting week and the current period; the delta was USD 0, so the material-decline threshold was not met."
+          },
+          {
+            "claim_type": "accounting_decomposition",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658",
+              "company_mcp|resource-00dc1bfdfad5f5f05554"
+            ],
+            "statement": "Web net sales were USD 7,000 in both periods (USD 8,000 gross less USD 1,000 refunds), contributing USD 0 to the total change; shop was also unchanged at USD 3,000 net in both periods."
+          },
+          {
+            "claim_type": "observation",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658",
+              "company_mcp|resource-00dc1bfdfad5f5f05554"
+            ],
+            "statement": "Refunds are already included in the Commerce weekly rows and posting week matches the transaction feed; sources were healthy and no data gap was reported."
+          }
+        ],
+        "summary": "Ignore: current net sales are unchanged versus the prior complete UTC week, with no web or shop change and no supported data-quality issue."
+      },
+      "foreign_tools": []
+    },
+    {
+      "scenario_id": "company-3e9c1df69fac812309d9",
+      "period_id": "period-b47d22d0383ab140f7fc",
+      "arm": "luna_signalweave_jev",
+      "phase": "monitoring",
+      "status": "complete",
+      "error": null,
+      "seconds": 22.83406774996547,
+      "agent_seconds": 22.573829208966345,
+      "system_seconds": 0.25601920898770913,
+      "tool_calls": 1,
+      "source_reads": 2,
+      "usage": {
+        "openai": {
+          "attempts": 1,
+          "failed_attempts": 0,
+          "input_tokens": 73318,
+          "cached_input_tokens": 53504,
+          "output_tokens": 899,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.00611168
+        },
+        "jev": {
+          "attempts": 1,
+          "failed_attempts": 0,
+          "input_tokens": 5883,
+          "cached_input_tokens": 0,
+          "output_tokens": 114,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.00024708600000000004
+        }
+      },
+      "score": {
+        "scorer_version": 3,
+        "scenario_id": "company-3e9c1df69fac812309d9",
+        "period_id": "period-b47d22d0383ab140f7fc",
+        "valid_submission": true,
+        "safety_unassessed": false,
+        "exact": true,
+        "outcome_correct": true,
+        "recipients_correct": true,
+        "wrong_recipient": false,
+        "unsafe_route": false,
+        "false_alert": false,
+        "missed_event": false,
+        "unsafe_suppression": false,
+        "evidence_recall": 1.0,
+        "provenance_complete": true,
+        "numeric_precision": 1.0,
+        "numeric_recall": 1.0,
+        "unsupported_numeric_facts": [],
+        "unsupported_claim_types": [],
+        "numeric_diagnostics": [],
+        "citation_diagnostics": [],
+        "missing_numeric_facts": [],
+        "owner_policy_complete": true,
+        "errors": [],
+        "scoring_scope": "structured_fields_only",
+        "narrative_review_required": true
+      },
+      "raw_system_decision": {
+        "outcome": "investigate",
+        "recipients": [],
+        "destinations": [],
+        "outcome_correct": false,
+        "recipients_correct": false,
+        "agent_changed_outcome": true,
+        "scope": "raw system routing only; not numerical or narrative correctness"
+      },
+      "submission": {
+        "outcome": "notify",
+        "recipients": [
+          "team-f88d053536cba66bc88e"
+        ],
+        "evidence_refs": [
+          "company_mcp|resource-949a4c0c44fb188d1658",
+          "company_mcp|resource-00dc1bfdfad5f5f05554"
+        ],
+        "numeric_claims": [
+          {
+            "fact": "net_sales.baseline",
+            "value": 10000,
+            "unit": "USD",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658"
+            ]
+          },
+          {
+            "fact": "net_sales.current",
+            "value": 7000,
+            "unit": "USD",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658"
+            ]
+          },
+          {
+            "fact": "net_sales.delta",
+            "value": -3000,
+            "unit": "USD",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658"
+            ]
+          },
+          {
+            "fact": "net_sales.web_contribution",
+            "value": -3000,
+            "unit": "USD",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658"
+            ]
+          }
+        ],
+        "claims": [
+          {
+            "claim_type": "observation",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658"
+            ],
+            "statement": "Net sales declined from USD 10,000 to USD 7,000 versus the previous complete UTC reporting week, a USD 3,000 decrease; this exceeds the 10% notification threshold."
+          },
+          {
+            "claim_type": "accounting_decomposition",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658"
+            ],
+            "statement": "The full USD 3,000 decline is attributable to web net sales: web moved from USD 7,000 (USD 8,000 gross minus USD 1,000 refunds) to USD 4,000 (USD 6,500 gross minus USD 2,500 refunds). Shop net sales were USD 3,000 in both periods."
+          },
+          {
+            "claim_type": "observation",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658",
+              "company_mcp|resource-00dc1bfdfad5f5f05554"
+            ],
+            "statement": "The source states refund posting week matches the transaction feed and refunds are already included in the channel rows; no double subtraction was applied. Mix and within effects are not supported because the evidence contains amounts by channel, not rate data."
+          }
+        ],
+        "summary": "Notify the commerce lead: weekly net sales fell 30% (USD 3,000) from USD 10,000 to USD 7,000, entirely from web net sales; shop net sales were unchanged. No causal inference is made."
+      },
+      "foreign_tools": []
+    },
+    {
+      "scenario_id": "company-3e9c1df69fac812309d9",
+      "period_id": "period-b47d22d0383ab140f7fc",
+      "arm": "luna_bi",
+      "phase": "monitoring",
+      "status": "complete",
+      "error": null,
+      "seconds": 29.666589958011173,
+      "agent_seconds": 29.664986542018596,
+      "system_seconds": 0.0,
+      "tool_calls": 5,
+      "source_reads": 3,
+      "usage": {
+        "openai": {
+          "attempts": 1,
+          "failed_attempts": 0,
+          "input_tokens": 64641,
+          "cached_input_tokens": 51712,
+          "output_tokens": 1042,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.004870439999999999
+        },
+        "jev": {
+          "attempts": 0,
+          "failed_attempts": 0,
+          "input_tokens": 0,
+          "cached_input_tokens": 0,
+          "output_tokens": 0,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.0
+        }
+      },
+      "score": {
+        "scorer_version": 3,
+        "scenario_id": "company-3e9c1df69fac812309d9",
+        "period_id": "period-b47d22d0383ab140f7fc",
+        "valid_submission": true,
+        "safety_unassessed": false,
+        "exact": true,
+        "outcome_correct": true,
+        "recipients_correct": true,
+        "wrong_recipient": false,
+        "unsafe_route": false,
+        "false_alert": false,
+        "missed_event": false,
+        "unsafe_suppression": false,
+        "evidence_recall": 1.0,
+        "provenance_complete": true,
+        "numeric_precision": 1.0,
+        "numeric_recall": 1.0,
+        "unsupported_numeric_facts": [],
+        "unsupported_claim_types": [],
+        "numeric_diagnostics": [],
+        "citation_diagnostics": [],
+        "missing_numeric_facts": [],
+        "owner_policy_complete": true,
+        "errors": [],
+        "scoring_scope": "structured_fields_only",
+        "narrative_review_required": true
+      },
+      "raw_system_decision": null,
+      "submission": {
+        "outcome": "notify",
+        "recipients": [
+          "team-f88d053536cba66bc88e"
+        ],
+        "evidence_refs": [
+          "company_mcp|resource-949a4c0c44fb188d1658",
+          "company_mcp|resource-00dc1bfdfad5f5f05554"
+        ],
+        "numeric_claims": [
+          {
+            "fact": "net_sales.baseline",
+            "value": 10000,
+            "unit": "USD",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658"
+            ]
+          },
+          {
+            "fact": "net_sales.current",
+            "value": 7000,
+            "unit": "USD",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658"
+            ]
+          },
+          {
+            "fact": "net_sales.delta",
+            "value": -3000,
+            "unit": "USD",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658"
+            ]
+          },
+          {
+            "fact": "net_sales.web_contribution",
+            "value": -3000,
+            "unit": "USD",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658"
+            ]
+          }
+        ],
+        "claims": [
+          {
+            "claim_type": "observation",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658"
+            ],
+            "statement": "Current net sales are USD 7,000 versus USD 10,000 in the previous complete reporting week, a USD -3,000 change (30% decline)."
+          },
+          {
+            "claim_type": "accounting_decomposition",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658"
+            ],
+            "statement": "Web contributed USD -3,000 to the total change: net web sales moved from USD 7,000 to USD 4,000. Shop net sales were USD 3,000 in both periods, contributing USD 0."
+          },
+          {
+            "claim_type": "observation",
+            "evidence_refs": [
+              "company_mcp|resource-949a4c0c44fb188d1658",
+              "company_mcp|resource-00dc1bfdfad5f5f05554"
+            ],
+            "statement": "Refunds are posted in the transaction feed's reporting week and are already included in the source rows; no additional refund ledger was added."
+          }
+        ],
+        "summary": "Notify the business owner: net sales declined 30% versus the previous complete reporting week, from USD 10,000 to USD 7,000 (USD -3,000). Web drove the full USD -3,000 decline; shop was unchanged. This meets the saved 10% notification threshold."
+      },
+      "foreign_tools": []
+    }
+  ],
+  "dollar_cost_scope": "Illustrative API-equivalent token estimates, not subscription charges.",
+  "resolved_jev_models": [
+    "jev-1.13.0"
+  ],
+  "narrative_review_status": "Pending separate internal blind review; not external peer review.",
+  "full_report_sha256": "658f67bc99bc42cfa4c4219282044d21496f1de2664a2b04347bfc9ea44aee6a"
+}
