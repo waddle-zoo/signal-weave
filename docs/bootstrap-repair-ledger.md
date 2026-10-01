@@ -260,3 +260,24 @@ transport doubles were updated to return normalized distributions; evidence-plan
 positive fixtures now supply explicit supported judgments instead of depending
 on a context-tag bypass. Their expected decisions were not relaxed. Historical
 live evidence remains unchanged and does not certify this policy version.
+
+### Live three-way watch result
+
+Frozen `d1ab074`: all 12 declared cases passed watch-state, outcome, exact route,
+distribution-retention and single-request checks. All six missing/conflicting
+cases remained unknown/incomplete and routed insufficient_data, not absence or
+business notification. Three affirmative cases notified and three supported
+negative cases ignored. Twelve successful live `jev-1.13.0` requests, no retries,
+31,542 input and 1,119 output tokens, 2.54 seconds summed execution.
+[Full requests, results and hashes](evidence/watch-evidence-v2-01.json) are retained.
+This proves the bounded semantic cases, not arbitrary topic interpretation,
+bootstrap quality, long-document robustness or benefit over an LLM baseline.
+
+Before further code changes, repeat the unchanged six-case
+`evaluations.local_investigation_trial` into a new
+`artifacts/local-investigation-admission-v2-01` directory. This checks whether the
+new watch semantics preserve real SQLite/MCP arithmetic and replay behavior
+across additive, rate, mix, stable and incomplete evidence. It remains a
+post-approval regression with an existing reviewed card, not a bootstrap win.
+The harness performs at most two Jev requests per case with retries disabled;
+save all outcomes without a success-only rerun.
