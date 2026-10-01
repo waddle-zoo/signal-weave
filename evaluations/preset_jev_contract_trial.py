@@ -58,7 +58,8 @@ class ContractResponse:
                 criteria = list(question.criteria)
                 selected = "notify" if "notify" in criteria else (criteria[0] if criteria else "")
                 probabilities = {
-                    option: (0.93 if option == selected else 0.02) for option in criteria
+                    option: (1.0 if len(criteria) == 1 else 0.93 if option == selected else 0.07 / (len(criteria) - 1))
+                    for option in criteria
                 }
                 self.choices[key] = SimpleNamespace(
                     choice=selected,

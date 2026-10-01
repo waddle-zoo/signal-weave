@@ -206,3 +206,57 @@ Native build [36891227344](https://github.com/waddle-zoo/signal-weave/actions/ru
 passed macOS Intel, macOS ARM64 and Linux x64 for the production repair commit;
 the publication job was skipped. These are feature-branch artifacts, not a new
 release or a main merge.
+
+### Targeted regression v3-03 result
+
+The declared run completed at `7f2d73b`: both setups and all six monitoring
+episodes per arm, 29 live Jev attempts, no provider failure or budget censoring.
+Final routing was 6/6 for both arms; native treatment routing was jointly 3/6.
+Frozen exact results were baseline 5/6, treatment 4/6. Treatment monitoring took
+150.19 versus 163.16 seconds but used 523,974 versus 331,419 agent tokens;
+including setup, treatment used 1,470,835 versus 476,999. No cost/value win.
+
+[Full result and failure analysis](bootstrap-codex-regression-v3-03.md) retains
+the independent blind review's disagreement with strict scoring. Missing public
+requirements are a benchmark defect, not permission to rewrite old results.
+Persisted card prose/route disagreement, recurring setup questions, and mandatory
+ambiguous watch items remain onboarding defects. The enterprise goal stays open.
+
+### Three-way watch evidence repair and bounded live plan
+
+Post-run inspection found a binary watch question whose false option explicitly
+combined absence and insufficient evidence. It could not distinguish those two
+meanings in code. Sixteen corrected test fixtures failed at the real SDK question
+construction boundary before the repair. Watch judgments now use a single
+present/absent/unknown Choice in the existing batched call, preserving the full
+distribution and unchanged 0.70 item threshold. Unknown required evidence still
+blocks automatic notify/escalate; optional unknown remains visible.
+
+Adversarial review reproduced two additional failures (2 failed, 18 controls
+passed): a loose distribution tolerance accepted sum 1.019, and a context fact's
+slot tag fulfilled an unknown semantic slot. Both were fixed: distribution sums
+must match 1 within 1e-6, and context tags retain provenance but do not override
+watch/question judgments. Policy version 2 requires new certification; older
+reports are retained, not upgraded. These are code-contract proofs, not live
+accuracy claims or solutions to arbitrary topic-only watch definitions.
+
+After offline verification and review, freeze this repair and run
+`evaluations.watch_evidence_trial` once, in an exclusive output directory.
+Twelve synthetic cases: commerce approvals, deployment maintenance windows, and
+renewal ownership; each has affirmative, negative, missing, and conflicting
+evidence. Sources remain healthy so missing meaning cannot hide behind a source
+error. Expectations stay outside inference state. Use the actual engine and
+live Jev with a hard twelve-attempt ceiling, no retry, no external delivery,
+no threshold changes, and retain every request shape, result and provider error.
+This is a development regression of evidence semantics, not a bootstrap trial,
+LLM comparison, connector proof, scalability test, or enterprise acceptance.
+
+Pre-live verification: full `make verify` passed 1,412 tests with 3 opt-in skips
+(92.57 seconds), Ruff and whitespace checks passed. A subsequent harness-only
+interruption test also passed; it proves that an otherwise-green 1/12 partial
+report remains `running` and `passed=false`. The independent reviewer closed
+all identified blockers after 149 focused offline tests. Existing offline Preset
+transport doubles were updated to return normalized distributions; evidence-plan
+positive fixtures now supply explicit supported judgments instead of depending
+on a context-tag bypass. Their expected decisions were not relaxed. Historical
+live evidence remains unchanged and does not certify this policy version.

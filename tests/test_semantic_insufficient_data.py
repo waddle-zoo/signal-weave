@@ -47,6 +47,14 @@ def sdk(monkeypatch):
             choices = {}
             nouls = {}
             for key, question in questions.items():
+                if key.startswith("watch_"):
+                    assert isinstance(question, typesafe_sdk.Choice)
+                    p = control.watch_probability
+                    choices[key] = SimpleNamespace(
+                        choice="present" if p >= .5 else "absent",
+                        probabilities={"present": p, "absent": 1 - p, "unknown": 0.0},
+                    )
+                    continue
                 if isinstance(question, typesafe_sdk.Choice):
                     selected = control.choice if key == "outcome" else "quality"
                     probability = control.probability if key == "outcome" else 0.99

@@ -225,7 +225,8 @@ agent runner:
   compilation;
 - one bounded `Choice` selects a comparison window from the card's configured
   options;
-- one `Noul` evaluates every `watch_for` item;
+- one three-way `Choice` evaluates each `watch_for` item as present, absent, or
+  unknown; absence requires affirmative evidence, not merely missing support;
 - one `Noul` evaluates whether every `question` is supported by the evidence; and
 - one bounded `Choice` selects the mutually exclusive outcome from the card's
   configured delivery vocabulary;
@@ -237,6 +238,10 @@ invent a destination, call a delivery system, or return an unconstrained action
 plan. A follow-up candidate is still checked against the authorized catalog in
 code. Confidence is a routing signal: below the card threshold, automatic
 outcomes become `investigate`; low-confidence evidence roles become `unknown`.
+Watch results retain the full three-way distribution; their legacy `probability`
+field is the probability of present, not confidence in the returned status.
+Below the unchanged item threshold, a watch result becomes unknown. Source-health
+gates can also override its status without erasing the model distribution.
 
 ## Safety gates
 

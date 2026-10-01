@@ -97,6 +97,11 @@ class TwoStageJudger:
             probabilities={outcome.value: 0.9},
             evidence=state["evidence"],
             observations=observations,
+            question_results=[{
+                "key": f"question_{i}", "question": question,
+                "status": "supported" if confirmed else "unknown",
+                "probability": .99 if confirmed else .5,
+            } for i, question in enumerate(card.questions)],
             source_keys=[item.source_key for item in observations],
             evaluator=self.name,
         )
@@ -181,7 +186,7 @@ async def test_workflow_exposes_compiled_evidence_slots_and_completion_state():
 
 
 @pytest.mark.asyncio
-async def test_context_fact_can_fulfill_an_named_evidence_slot():
+async def test_context_fact_can_fulfill_a_named_evidence_slot_when_semantically_supported():
     card = _card(follow_up_guidance="Re-evaluate after diagnostics.").model_copy(
         update={"questions": ["Did the affected funnel step change?"]}
     )

@@ -437,20 +437,19 @@ class InsightEngine:
             fact_ids = list(slot.evidence_fact_ids)
             evidence_source_keys = list(slot.evidence_source_keys)
             slot_facts = context_by_slot.get(slot.key, [])
+            if slot_facts:
+                fact_ids = [fact.fact_id for fact in slot_facts]
+                evidence_source_keys = sorted({fact.subject_ref.split("|", 1)[0] for fact in slot_facts})
             if ((slot.role == "primary" and blocking_keys.intersection(slot.source_keys))
                     or (slot.role in {"watch", "question"} and blocking_keys)):
                 status = "unavailable"
                 fact_ids = []
                 evidence_source_keys = []
-            elif slot_facts:
+            elif slot_facts and slot.role not in {"watch", "question"}:
                 status = "fulfilled"
-                fact_ids = [fact.fact_id for fact in slot_facts]
-                evidence_source_keys = sorted(
-                    {
-                        fact.subject_ref.split("|", 1)[0]
-                        for fact in slot_facts
-                    }
-                )
+                # Slot tags associate provenance; semantic watch/question slots
+                # still require Jev's evidence judgment below. Trusted context
+                # may truthfully report that a condition is unknown or disputed.
             elif slot.role == "primary":
                 relevant = [
                     resources_by_key[key]

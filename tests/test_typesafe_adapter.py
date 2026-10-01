@@ -79,12 +79,15 @@ class FakeResponse:
                     probabilities={"driver": 0.91, "unknown": 0.04},
                 )
                 continue
+            if key.startswith("watch_"):
+                self.choices[key] = SimpleNamespace(
+                    choice="present", probabilities={"present": .91, "absent": .04, "unknown": .05},
+                )
+                continue
             if key == "resource_0":
                 probability = 0.91
             elif key.startswith("resource_"):
                 probability = 0.08
-            elif key.startswith("watch_"):
-                probability = 0.91
             elif key.startswith("question_"):
                 probability = 0.83
             elif key.startswith("use_"):

@@ -88,7 +88,10 @@ The intended sequence is:
 
 The caller should use `workflow.evidence_plan.missing_slot_keys` to decide
 which authorized tools to run. A fact can set `slot_key` to the corresponding
-plan key so SignalWeave can show exactly which request it fulfilled.
+plan key so SignalWeave can associate it with the request. For watch/question
+slots, that tag is provenance, not a completion override: Jev must still judge
+whether the combined evidence answers the question or establishes presence or
+absence. A trusted fact may truthfully describe missing or conflicting evidence.
 
 If the second result is still `retrieve_evidence`, the agent can continue the
 bounded loop. If it is `repair_source` or `request_review`, no leadership
@@ -152,15 +155,23 @@ Even unchanged cards without follow-up prose may now conservatively withhold an
 automatic route when required evidence is unresolved.
 
 New `CardEvaluationReport` objects emitted by `CardWorkflowEvaluator` record
-`evidence_admission_policy_version=1`. Reports lacking the field load as legacy
+`evidence_admission_policy_version=2`. Reports lacking the field load as legacy
 version `0`; they remain readable audit evidence, not current certification.
 Readiness must require the current policy version in addition to the existing
 card-version, approval, and certification gates. Re-run certification rather than
 relabeling an old green report. Retain old reports, receipts, and reviews unchanged;
 the policy version is compatibility metadata, not proof of semantic correctness.
 
+Version **2** separates watch evidence into present, absent, and unknown using a
+Jev Choice instead of interpreting a binary lack of support as absence. Existing
+version-1 reports remain audit records, but do not certify this changed judgment
+contract. Re-run owner-labeled evaluations before promotion; do not edit old
+reports to upgrade their version. Watch distributions remain visible even when
+code overrides their status for a required source failure.
+
 The historical live trial for the earlier handoff contract is in
 `evaluations/northstar_multistep_trial.py` and
 `examples/northstar-multistep-trial.json`. It uses live Jev over the same local
 Northstar rows as the single-step historical replay; expected dispositions stay
-outside the Jev state. Those retained results do not certify policy version 1.
+outside the Jev state. Those retained results certify neither policy version 1
+nor the current version 2.

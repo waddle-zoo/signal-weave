@@ -23,7 +23,7 @@ from .engine import InsightEngine
 from .models import ContextSnapshot, InsightCard, Outcome, ResourceSnapshot
 
 # Increment when evidence-admission semantics require fresh certification.
-EVIDENCE_ADMISSION_POLICY_VERSION = 1
+EVIDENCE_ADMISSION_POLICY_VERSION = 2
 
 
 def has_current_evidence_admission_policy(report: Mapping[str, object]) -> bool:

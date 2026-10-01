@@ -328,8 +328,9 @@ def _case_definitions() -> list[tuple[InsightCard, list[ResourceSnapshot], Conte
             _facts("question:1", "question:2", "watch:1"),
             JudgmentFixture(
                 Outcome.NOTIFY,
-                (QuestionStatus.UNKNOWN, QuestionStatus.UNKNOWN),
-                (WatchStatus.UNKNOWN,),
+                # Context association alone no longer asserts semantic completion.
+                (QuestionStatus.SUPPORTED, QuestionStatus.SUPPORTED),
+                (WatchStatus.PRESENT,),
             ),
             {"plan": "complete", "outcome": "notify", "workflow": "deliver"},
         )
@@ -384,7 +385,7 @@ def _case_definitions() -> list[tuple[InsightCard, list[ResourceSnapshot], Conte
             unverified_card,
             [_resource(unverified_card.sources[0])],
             _facts("question:1", "watch:1", trust="unverified"),
-            JudgmentFixture(Outcome.NOTIFY, (QuestionStatus.UNKNOWN,), (WatchStatus.UNKNOWN,)),
+            JudgmentFixture(Outcome.NOTIFY, (QuestionStatus.SUPPORTED,), (WatchStatus.PRESENT,)),
             {"plan": "complete", "outcome": "investigate", "workflow": "retrieve_evidence"},
         )
     )
@@ -399,7 +400,7 @@ def _case_definitions() -> list[tuple[InsightCard, list[ResourceSnapshot], Conte
             unknown_slot_card,
             [_resource(unknown_slot_card.sources[0])],
             _facts("question:1", "question:99"),
-            JudgmentFixture(Outcome.NOTIFY, (QuestionStatus.UNKNOWN,)),
+            JudgmentFixture(Outcome.NOTIFY, (QuestionStatus.SUPPORTED,)),
             {
                 "plan": "complete",
                 "outcome": "notify",

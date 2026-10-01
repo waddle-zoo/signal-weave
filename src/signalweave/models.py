@@ -379,7 +379,7 @@ class ContextFact(BaseModel):
     slot_key: str | None = Field(
         default=None,
         max_length=160,
-        description="Optional evidence-plan slot this fact fulfills.",
+        description="Optional evidence-plan slot this fact addresses; a tag alone does not fulfill a semantic watch or question.",
     )
     subject_ref: str = Field(min_length=1, max_length=500)
     relation: str = Field(min_length=1, max_length=160)
@@ -854,7 +854,11 @@ class WatchResult(BaseModel):
     key: str
     watch_for: str
     status: WatchStatus
-    probability: float = Field(ge=0.0, le=1.0)
+    probability: float = Field(ge=0.0, le=1.0, description="Probability of present, not confidence in the final status; 0.5 if no valid answer.")
+    probabilities: dict[WatchStatus, float] = Field(
+        default_factory=dict,
+        description="Jev present/absent/unknown distribution; empty for legacy or invalid answers. Code may override status for source failures.",
+    )
 
 
 class QuestionResult(BaseModel):

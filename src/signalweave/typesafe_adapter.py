@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import math
 import os
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -649,19 +650,21 @@ class JevJudger:
         # items that were supported, not just one opaque alert explanation.
         questions: dict[str, Any] = {}
         for index, watch_item in enumerate(card.watch_for):
-            questions[f"watch_{index}"] = Noul(
+            questions[f"watch_{index}"] = Choice(
                 instructions=(
-                    f"Does the current evidence support watch_for[{index}]? Assess the "
+                    f"Classify the evidence for this watch item: {watch_item!r}. Assess the "
                     "card's purpose, all normalized observations, all evidence, and "
                     "computed analyses. Respect each analysis's status and limitations; "
                     "an accounting contribution is not causal evidence. Use "
                     "related source context. Do not require a numeric change when the "
                     "item describes existence, freshness, a relationship, or another "
-                    "non-numeric condition."
+                    "non-numeric condition. Distinguish evidence that a condition is absent "
+                    "from missing evidence about the condition."
                 ),
                 criteria={
-                    "true": watch_item,
-                    "false": "The current evidence does not support this watch item or is insufficient to judge it.",
+                    "present": "The available evidence establishes the watch item as stated.",
+                    "absent": "Sufficient applicable evidence establishes that the watch item does not hold.",
+                    "unknown": "Evidence is missing, conflicting, inapplicable, or insufficient to determine whether the watch item holds.",
                 },
             )
         for index, question in enumerate(card.questions):
@@ -806,7 +809,7 @@ class JevJudger:
             return max(0.0, min(1.0, float(response.nouls[key].noul)))
 
         watch_results = [
-            self._watch_result(index, item, probability(f"watch_{index}"))
+            self._watch_result(index, item, response.choices.get(f"watch_{index}"))
             for index, item in enumerate(card.watch_for)
         ]
         question_results = [
@@ -888,15 +891,29 @@ class JevJudger:
             evaluator=self.name,
         )
 
-    def _watch_result(self, index: int, item: str, probability: float) -> WatchResult:
-        if probability >= self.item_threshold:
-            status = WatchStatus.PRESENT
-        elif probability <= 1 - self.item_threshold:
-            status = WatchStatus.ABSENT
-        else:
-            status = WatchStatus.UNKNOWN
+    def _watch_result(self, index: int, item: str, answer: Any) -> WatchResult:
+        # A binary "not supported" answer cannot distinguish absence from missing
+        # context. Keep the full three-way distribution and fail closed if the
+        # response is malformed; never manufacture a confident negative.
+        probabilities = getattr(answer, "probabilities", {})
+        selected = getattr(answer, "choice", None)
+        options = {status.value for status in WatchStatus}
+        valid = (
+            isinstance(probabilities, Mapping)
+            and set(probabilities) == options and selected in options
+            and all(type(p) in (int, float) and math.isfinite(p) and 0 <= p <= 1
+                    for p in probabilities.values())
+            and math.isclose(sum(probabilities.values()), 1.0, abs_tol=1e-6)
+            and probabilities[selected] == max(probabilities.values())
+        )
+        if not valid:
+            probabilities = {}
+        status = WatchStatus.UNKNOWN
+        if valid and probabilities[selected] >= self.item_threshold:
+            status = WatchStatus(selected)
         return WatchResult(
-            key=f"watch_{index}", watch_for=item, status=status, probability=probability
+            key=f"watch_{index}", watch_for=item, status=status,
+            probability=probabilities.get("present", 0.5), probabilities=probabilities,
         )
 
     def _question_result(self, index: int, question: str, probability: float) -> QuestionResult:

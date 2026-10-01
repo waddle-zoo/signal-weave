@@ -27,6 +27,7 @@ from test_source_selection_approval import (
 from signalweave.compiler import base_plan
 from signalweave.engine import InsightEngine
 from signalweave.models import (
+    ContextSnapshot,
     InsightCard,
     InsightResult,
     Outcome,
@@ -35,6 +36,25 @@ from signalweave.models import (
 from signalweave.store import JsonInsightCardStore, SQLiteInsightCardStore
 
 GUIDANCE = "After investigation, ask the owner for corrected or additional evidence."
+
+
+@pytest.mark.parametrize("semantic,status,outcome", [
+    ("unknown", "pending", "investigate"),
+    ("not_supported", "conflicting", "investigate"),
+    ("supported", "fulfilled", "notify"),
+])
+async def test_trusted_context_tag_does_not_bypass_question_evidence(semantic, status, outcome):
+    context = ContextSnapshot(provider="approved-context", version="1", facts=[{
+        "fact_id": "answer-context", "slot_key": "question:1", "subject_ref": "test|query:metric",
+        "relation": "related_to", "statement": "The requested dimensional evidence is unresolved.",
+    }])
+    run = await InsightEngine(FixedJudger(question=semantic)).evaluate(
+        make_card(), [snapshot()], context_override=context,
+    )
+    slot = next(s for s in run.result.evidence_plan.slots if s.key == "question:1")
+    assert slot.status == status
+    assert slot.evidence_fact_ids == ["answer-context"]
+    assert run.result.outcome.value == outcome
 
 
 @pytest.fixture(autouse=True)
