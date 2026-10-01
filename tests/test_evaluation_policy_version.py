@@ -55,7 +55,7 @@ def test_missing_policy_version_loads_as_legacy_without_upgrading_old_approval()
     serialized = json.dumps(payload)
     report = CardEvaluationReport.model_validate_json(serialized)
 
-    assert EVIDENCE_ADMISSION_POLICY_VERSION == 2
+    assert EVIDENCE_ADMISSION_POLICY_VERSION == 3
     assert report.evidence_admission_policy_version == 0
     assert report.status == "approved"
     assert report.evaluation_id == payload["evaluation_id"]
@@ -69,7 +69,7 @@ def test_missing_policy_version_loads_as_legacy_without_upgrading_old_approval()
     ).evidence_admission_policy_version == 0
 
 
-@pytest.mark.parametrize("version", [0, 1, 3, -1, True, False, 1.0, "1", None, []])
+@pytest.mark.parametrize("version", [0, 1, 2, EVIDENCE_ADMISSION_POLICY_VERSION + 1, -1, True, False, 1.0, "1", None, []])
 def test_stored_report_compatibility_fails_closed_for_noncurrent_or_malformed_version(version):
     payload = {**legacy_report(), "evidence_admission_policy_version": version}
     assert not has_current_evidence_admission_policy(payload)
@@ -136,8 +136,10 @@ async def test_evaluator_stamps_policy_version_on_every_report_path(path, status
     (JsonCertificationReportStore, "reports.json"),
     (SQLiteCertificationReportStore, "reports.db"),
 ])
-def test_legacy_audit_retained_when_current_policy_report_is_appended(tmp_path, store_type, filename):
+@pytest.mark.parametrize("policy", [{}, {"evidence_admission_policy_version": 2}], ids=["unversioned", "pre-delivery-gate"])
+def test_legacy_audit_retained_when_current_policy_report_is_appended(tmp_path, store_type, filename, policy):
     old_body = legacy_report()
+    old_body.update(policy)
     old_record = CertificationRecord(
         report_id="legacy", kind="card_workflow", subject_id="orders-good",
         subject_version="1", status="approved", report=old_body,
@@ -155,6 +157,9 @@ def test_legacy_audit_retained_when_current_policy_report_is_appended(tmp_path, 
     assert reopened.get("legacy") == old_record
     assert reopened.get("legacy").report == old_body
     assert not has_current_evidence_admission_policy(reopened.get("legacy").report)
+    restored = CardEvaluationReport.model_validate_json(json.dumps(old_body))
+    assert restored.status == "approved"
+    assert restored.evidence_admission_policy_version == policy.get("evidence_admission_policy_version", 0)
     current = reopened.get("current").report
     assert has_current_evidence_admission_policy(current)
     assert CardEvaluationReport.model_validate(current).evidence_admission_policy_version == EVIDENCE_ADMISSION_POLICY_VERSION
@@ -204,11 +209,12 @@ async def mcp_readiness(server):
     ({}, False),
     ({"evidence_admission_policy_version": 0}, False),
     ({"evidence_admission_policy_version": 1}, False),
+    ({"evidence_admission_policy_version": 2}, False),
     ({"evidence_admission_policy_version": True}, False),
     ({"evidence_admission_policy_version": "1"}, False),
     ({"evidence_admission_policy_version": EVIDENCE_ADMISSION_POLICY_VERSION + 1}, False),
     ({"evidence_admission_policy_version": EVIDENCE_ADMISSION_POLICY_VERSION}, True),
-], ids=["missing", "legacy-zero", "legacy-one", "bool", "string", "future", "current"])
+], ids=["missing", "legacy-zero", "legacy-one", "pre-delivery-gate", "bool", "string", "future", "current"])
 async def test_actual_mcp_readiness_requires_current_policy_and_preserves_reports(readiness_case, policy, current):
     server, runtime, reports, card_id = readiness_case
     reports.save(CertificationRecord(

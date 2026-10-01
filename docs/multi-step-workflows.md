@@ -155,7 +155,7 @@ Even unchanged cards without follow-up prose may now conservatively withhold an
 automatic route when required evidence is unresolved.
 
 New `CardEvaluationReport` objects emitted by `CardWorkflowEvaluator` record
-`evidence_admission_policy_version=2`. Reports lacking the field load as legacy
+`evidence_admission_policy_version=3`. Reports lacking the field load as legacy
 version `0`; they remain readable audit evidence, not current certification.
 Readiness must require the current policy version in addition to the existing
 card-version, approval, and certification gates. Re-run certification rather than
@@ -169,9 +169,14 @@ contract. Re-run owner-labeled evaluations before promotion; do not edit old
 reports to upgrade their version. Watch distributions remain visible even when
 code overrides their status for a required source failure.
 
+Version **3** also requires exact delivery-method keys on every successful case
+where the owner supplied delivery labels. Earlier reports could record a delivery
+mismatch and still promote; they must be replayed. Unlabeled delivery remains
+unassessed, not proof of correct recipients. This fixes certification promotion;
+it does not add a route, change a live outcome or grant delivery authorization.
+
 The historical live trial for the earlier handoff contract is in
 `evaluations/northstar_multistep_trial.py` and
 `examples/northstar-multistep-trial.json`. It uses live Jev over the same local
 Northstar rows as the single-step historical replay; expected dispositions stay
-outside the Jev state. Those retained results certify neither policy version 1
-nor the current version 2.
+outside the Jev state. Those retained results do not certify the current version 3.

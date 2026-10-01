@@ -181,10 +181,27 @@ The evaluator reports:
 - latency and evaluator identity for every case.
 
 Default promotion thresholds are deliberately strict: 95% outcome accuracy,
-95% evidence recall, 95% retrieval recall, zero unsafe actions, zero runtime
-errors, and at least one labeled case. A report that misses a threshold is
+95% evidence recall, 95% retrieval recall, zero unsafe outcomes, zero runtime
+errors, exact delivery-method keys on every successfully executed case with
+explicit delivery labels, and at least one labeled case. A report that misses a threshold is
 `shadow`, not `approved`; a runtime failure or empty evaluation set is
 `blocked`.
+
+`expected_delivery_method_keys: []` explicitly requires no route. Omitting that
+field leaves delivery unassessed/unconstrained; its legacy `delivery_exact=true`
+value must not be counted as evidence of correct recipients. Supply labels for
+every intended outcome, including investigate and insufficient_data, before
+claiming routing quality. Correct outcome or an allowed conservative disposition
+cannot waive a labeled delivery mismatch, even with relaxed numeric thresholds.
+These labels check method keys, not independent correctness of endpoint contents
+or actual delivery. The existing `unsafe_action_rate` is outcome-only; it does not
+include recipient errors or causal/explanation errors.
+
+Promotion policy version 3 fixes an earlier omission: delivery mismatches were
+recorded but did not prevent an approved report. Version-2 and older reports stay
+readable but are stale for readiness. Re-evaluate the unchanged owner-labeled
+cases; do not edit historical report versions to make them current. Certification
+does not itself approve a card or authenticate the owner's labels.
 
 ## 3. Measure retrieval before blaming the decision
 

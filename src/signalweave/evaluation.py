@@ -22,8 +22,11 @@ from pydantic import BaseModel, Field, model_validator
 from .engine import InsightEngine
 from .models import ContextSnapshot, InsightCard, Outcome, ResourceSnapshot
 
-# Increment when evidence-admission semantics require fresh certification.
-EVIDENCE_ADMISSION_POLICY_VERSION = 2
+# Increment when admission or promotion semantics require fresh certification.
+# Version 3 also gates promotion on owner-labeled delivery exactness; version 2
+# reports recorded delivery failures but could still approve them. Keep the
+# existing marker name so readiness invalidates those reports without migration.
+EVIDENCE_ADMISSION_POLICY_VERSION = 3
 
 
 def has_current_evidence_admission_policy(report: Mapping[str, object]) -> bool:
@@ -441,6 +444,9 @@ class CardWorkflowEvaluator:
         meets = (
             sufficient
             and outcome_accuracy >= thresholds.min_outcome_accuracy
+            # An allowed outcome does not excuse wrong/missing/extra recipients.
+            # Unlabeled delivery is unconstrained; an explicit [] requires none.
+            and all(case.delivery_exact for case in successful)
             and evidence_recall >= thresholds.min_evidence_recall
             and retrieval_recall >= thresholds.min_retrieval_recall
             and unsafe_action_rate <= thresholds.max_unsafe_action_rate

@@ -334,3 +334,64 @@ investigate into notify and omits its investigation route. Independent blind
 review confirms that policy violation. Guidance alone did not solve onboarding,
 and procedural approval is not owner-policy validation. No broader run or repeated
 retry is justified until that failure is addressed.
+
+### Owner-policy verification research probe v1
+
+Before adding another production gate, test whether a bounded Jev verification
+call can identify a draft that changes the supplied owner's policy. This is a
+development probe under `evaluations/`, not an approval feature or a new bootstrap
+benchmark. It does not authenticate the provenance of the supplied statement.
+
+`evaluations.owner_policy_review_trial` sends two independent Choice questions
+together: fidelity of prose decision rules, and fidelity of actual outcome/route
+entries. Twelve synthetic pairs span database operations, finance approval and
+support SLA. Four faithful controls include a paraphrase; eight negative controls
+cover omitted routes, an extra recipient, outcome broadening, changed threshold,
+underspecification and conflicting owner instructions. No hidden expected labels
+enter the state. These are deliberate development mutations, not fresh enterprise
+holdouts, and they do not test source selection or mandatory-watch semantics.
+
+Freeze after reviewer preflight. Run once into exclusive
+`artifacts/owner-policy-probe-v1-01`, at most 12 live requests, no transport retry,
+no external notification. Retain full synthetic inputs, questions, distributions,
+resolved model, durations, token usage and errors. The experimental acceptance
+rule requires both valid distributions to select consistent at probability ≥.80.
+No threshold tuning or repeated run to obtain a passing result. Record exact
+judgment matches separately from false acceptance and false blocking. Malformed,
+missing and failed answers do not accept; partial execution cannot pass.
+
+Even perfect results here would only justify exploring a production integration.
+That would need persistent original requirements, provenance, current-card binding,
+non-waivable failures, host-owned human approval and stale/race tests. An optional
+transient review argument would be insufficient because later approval could lose
+the original statement. Do not silently replace procedural approval in the frozen
+v3 benchmark with this check or describe it as human validation.
+
+Preflight review caught overlapping unclear/inconsistent criteria, ambiguous
+approval-record wording, and extra specificity in a purported paraphrase.
+All were repaired before live dispatch: unclear owner dimensions take precedence;
+explicitly recorded nonapproval differs from missing records; both sides now use
+the same defined latency/lag scope. Pending-attempt persistence and JSON-safe raw
+answer diagnostics were also added. Fourteen offline probe tests pass. The
+independent reviewer cleared the frozen probe SHA-256
+`42df7f4924d0103027499fa169ad1ff23591a25032ddf67e68258305e06e9418`
+for one 12-request development run, not production use.
+
+### Delivery certification gate repair
+
+Independent code review found `delivery_exact` was recorded but omitted from
+the promotion predicate. Test-first reproduction produced seven failures and
+five positive controls. The fix requires every successful case's explicit route
+label to match before promotion; no averaging or lowered outcome threshold can
+waive it. Missing labels remain unconstrained, not verified. Explicit empty labels
+still require no route. The existing outcome-only safety metric is not renamed
+into a broader claim. Policy version 3 makes earlier reports stale for readiness;
+historical evidence is not rewritten. This repairs certification, not the failed
+agent's authored card, nor the authenticity of simulated human approval.
+
+Final full verification after the fix: 1,450 passed, 3 opt-in skips in 93.31s,
+Ruff and whitespace checks clean. A second reviewer independently ran 61 focused
+delivery/version tests and found no scoped blocker. An earlier suite had imported
+the old evaluator while the test-first patch was being applied and reproduced
+seven delivery failures; it is not the final verification result. The probe and
+gate are frozen together before the one permitted research dispatch.
