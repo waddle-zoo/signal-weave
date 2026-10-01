@@ -13,9 +13,11 @@ from pathlib import Path
 from .local_setup import (
     SetupError,
     agent_config,
+    agent_registration,
     doctor,
     initialize,
     local_environment,
+    setup_local,
     validate_key_configuration,
 )
 from .runtime import build_runtime, load_deployment_secret
@@ -43,6 +45,19 @@ def main() -> None:
     init = commands.add_parser("init", help="Create private local configuration and state")
     init.add_argument("--home", help="Local home (default: SIGNALWEAVE_HOME or ~/.signalweave)")
     init.add_argument("--key-file", help="Copy a private TypeSafe key file instead of prompting")
+    setup = commands.add_parser("setup", help="Offline wizard: Jev key, source, local identity, and agent config")
+    setup.add_argument("--home", help="Local home (default: SIGNALWEAVE_HOME or ~/.signalweave)")
+    setup.add_argument("--non-interactive", action="store_true", help="Never prompt; credentials must exist or use private files")
+    setup.add_argument("--key-file", help="Private file containing the TypeSafe key")
+    setup.add_argument("--source", choices=["superset", "preset", "mcp", "skip"])
+    setup.add_argument("--url", help="Superset or Preset workspace URL")
+    setup.add_argument("--username", help="Superset username")
+    setup.add_argument("--secret-file", help="Private Superset password or Preset API-token-secret file")
+    setup.add_argument("--token-name-file", help="Private Preset API-token-name file")
+    setup.add_argument("--manifest", help="Reviewed read-only MCP source manifest (no server is launched)")
+    setup.add_argument("--tenant", help="Local tenant identifier (default: existing setting or local)")
+    setup.add_argument("--principal", help="Local principal identifier (default: existing setting or local)")
+    setup.add_argument("--agent", choices=["codex", "claude"])
     check = commands.add_parser("doctor", help="Check configuration offline; makes no live requests")
     check.add_argument("--home", help="Local home (default: SIGNALWEAVE_HOME or ~/.signalweave)")
     snippet = commands.add_parser("agent-config", help="Print configuration; never edits agent files")
@@ -63,6 +78,17 @@ def main() -> None:
 
     args = parser.parse_args()
     try:
+        if args.command == "setup":
+            options = vars(args).copy()
+            options.pop("command")
+            home, agent = setup_local(**options)
+            print("Local configuration saved. No network requests or source processes were started.")
+            print("Local identity scopes this single-user process; it is not provider authentication.")
+            print("Credentials and live source access remain unverified. Review and simulate cards before approval.")
+            print("To register with your agent, review and run this command:")
+            print(agent_registration(home, agent))
+            print("Offline check: " + shlex.join(["signalweave", "doctor", "--home", str(home)]))
+            return
         if args.command == "init":
             home = initialize(args.home, key_file=args.key_file)
             print(f"Local configuration: {home / 'config.toml'}")

@@ -44,3 +44,9 @@ def test_server_exposes_mcp_object():
         )
     )
     assert server.name == "signal-weave"
+    # These instructions travel in MCP initialization, including the standalone
+    # executable. A newly connected agent should not need a separate setup skill.
+    assert "onboard_insight_card" in server.instructions
+    assert "Only call approve_insight_card after that approval" in server.instructions
+    assert "not offline inference" in server.instructions
+    assert "not proof of causation" in server.instructions

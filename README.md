@@ -3,8 +3,8 @@
 </p>
 
 <p align="center">
-  <strong>Typed decisions for the signals your company already has.</strong><br>
-  Turn dashboards, queries, jobs, and source context into evidence-backed results.
+  <strong>Describe the investigation once. Repeat it with fresh evidence.</strong><br>
+  Give your agent reusable investigations powered by TypeSafe Jev.
 </p>
 
 <p align="center">
@@ -25,11 +25,11 @@ person writes a free-form insight card, source adapters return bounded evidence,
 judgments, and your existing agent, scheduler, or delivery system decides what
 to do next.
 
-For local agents, the [local investigation runtime](docs/local-investigations.md)
-adds a buildable standalone executable, private persistent cards, reviewed company
-MCP sources, and reproducible segment/mixture analysis. Describe and approve the
-investigation once, then rerun it through your agent. This is an initial local-first
-implementation—not automatic causal discovery or support for arbitrary MCP responses.
+Run it locally alongside your agent or deploy the same open-source service.
+Your agent helps draft the card; you review its definitions, sources, and first
+result. SignalWeave saves that contract and repeats it using Jev, validated
+calculations, and evidence receipts. Scheduling and delivery stay with your agent.
+See [supported analyses and current limits](docs/local-investigations.md).
 
 <p align="center">
   <img src="assets/decision-flow.svg" alt="SignalWeave turns an insight card and source evidence into Jev judgments, safety gates, and an existing push or agent action" width="900">
@@ -37,9 +37,29 @@ implementation—not automatic causal discovery or support for arbitrary MCP res
 
 ## Quick start
 
-Using a local agent? Start with the [local installation guide](docs/local-install.md)
-for `init`, Codex/Claude configuration, and repeated investigations. The existing
-service/deployment path remains available below.
+### With your local agent
+
+Follow the [two-step installation guide](docs/local-install.md): install and run
+`signalweave setup`, then connect it to Codex or Claude. Setup stores your Jev key
+privately and configures your data connection without hand-editing TOML.
+
+> Native release builds are being validated on this branch. The existing v0.1.0
+> release does not yet include the new installer; the guide includes a source-build
+> path until downloadable native assets are published.
+
+Then ask your agent:
+
+> Use SignalWeave to monitor why online sales changed and how that affected net
+> sales. Find the relevant sources, ask me what's missing, and show me a test
+> investigation before I approve it.
+
+You need a TypeSafe key **and** credentials for your sources. Evidence is sent to
+TypeSafe; local installation does not mean offline inference. Supported adapters
+and reviewed company MCP mappings are required—not every arbitrary MCP response
+can be analyzed automatically.
+
+<details>
+<summary>Develop from source or run the local Docker demo</summary>
 
 Requirements: Python 3.11+, [uv](https://docs.astral.sh/uv/), and a TypeSafe API
 key.
@@ -82,6 +102,8 @@ command until a caller completes onboarding and approval. For the real flow,
 use the MCP sequence below: `onboard_insight_card` → human review →
 `approve_insight_card` → `evaluate_insight_card`. That approval boundary is
 part of the product, not a demo shortcut.
+
+</details>
 
 ## The card
 

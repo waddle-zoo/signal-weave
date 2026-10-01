@@ -9,6 +9,8 @@ from __future__ import annotations
 import getpass
 import json
 import os
+import re
+import shlex
 import stat
 import sys
 import tempfile
@@ -30,6 +32,7 @@ class SetupError(ValueError):
 _SECRET_NAMES = (
     "TYPESAFE_API_KEY", "PRESET_ACCESS_TOKEN", "PRESET_API_TOKEN_NAME",
     "PRESET_API_TOKEN_SECRET", "SIGNALWEAVE_API_TOKEN", "PUSH_WEBHOOK_TOKEN",
+    "SUPERSET_PASSWORD",
 )
 _STORE_PATHS = {
     "SIGNALWEAVE_STORE_PATH": "signalweave.db",
@@ -76,6 +79,7 @@ def resolve_home(home: str | Path | None = None) -> Path:
 
 
 def _private_path(path: Path, *, directory: bool = False) -> None:
+    _no_symlinks(path)
     try:
         info = path.lstat()
     except OSError:
@@ -90,8 +94,15 @@ def _private_path(path: Path, *, directory: bool = False) -> None:
 
 
 def _private_directory(path: Path) -> None:
+    _no_symlinks(path)
     path.mkdir(mode=0o700, parents=True, exist_ok=True)
     _private_path(path, directory=True)
+
+
+def _no_symlinks(path: Path) -> None:
+    for part in (path, *path.parents):
+        if part.is_symlink():
+            raise SetupError("Local paths must not contain symlinks")
 
 
 def _read_private(path: Path) -> str:
@@ -201,6 +212,262 @@ def read_config(home: str | Path | None = None) -> tuple[Path, dict[str, str]]:
     return root, environment
 
 
+def _ask(label: str, default: str = "") -> str:
+    try:
+        return input(f"{label}" + (f" [{default}]" if default else "") + ": ").strip() or default
+    except EOFError:
+        raise SetupError("Setup input ended; use --non-interactive with file options") from None
+
+
+def _secret(value: str, *, preserve_spaces: bool = False) -> str:
+    value = value.removesuffix("\n").removesuffix("\r") if preserve_spaces else value.strip()
+    if not value or any(ord(c) < 32 or ord(c) == 127 for c in value):
+        raise SetupError("Credentials must be non-empty single-line values")
+    if is_obvious_placeholder(value):
+        raise SetupError("Replace example credentials with real values")
+    return value
+
+
+def _hidden(label: str, *, preserve_spaces: bool = False) -> str:
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", getpass.GetPassWarning)
+        try:
+            return _secret(getpass.getpass(f"{label} (hidden): "), preserve_spaces=preserve_spaces)
+        except (getpass.GetPassWarning, EOFError):
+            raise SetupError("A secure terminal is required; use private credential files") from None
+
+
+def _source_url(value: str, source: str) -> str:
+    try:
+        parsed = urlsplit(value)
+        valid = (
+            parsed.scheme in {"http", "https"} and parsed.hostname
+            and parsed.port != 0
+            and parsed.username is None and parsed.password is None
+            and not parsed.query and not parsed.fragment
+            and not any(ord(c) <= 32 for c in value)
+            and not is_obvious_placeholder(value)
+        )
+        if source == "preset":
+            valid = valid and parsed.scheme == "https" and parsed.path in {"", "/"}
+        elif parsed.scheme == "http":
+            import ipaddress
+
+            try:
+                local = ipaddress.ip_address(parsed.hostname or "").is_loopback
+            except ValueError:
+                local = parsed.hostname == "localhost"
+            valid = valid and local
+        if not valid:
+            raise ValueError
+    except ValueError:
+        raise SetupError("Use a credential-free HTTPS source URL (HTTP only for local Superset)") from None
+    return value.rstrip("/")
+
+
+def _manifest_tenant(path: Path, tenant: str) -> None:
+    from .mcp_source import build_mcp_sources
+
+    _private_path(path)
+    try:
+        adapters = build_mcp_sources(str(path))
+        if not adapters or any(adapter.tenant_id != tenant for adapter in adapters):
+            raise ValueError
+    except (ValueError, OSError):
+        raise SetupError("Reviewed MCP manifest must be valid, non-empty, and match the local tenant") from None
+
+
+def _publish_config(path: Path, content: str) -> None:
+    """Atomically replace validated private config; caller holds the setup lock."""
+    _private_path(path)
+    fd, temporary = tempfile.mkstemp(prefix=".setup-", dir=path.parent)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as output:
+            output.write(content)
+            output.flush()
+            os.fsync(output.fileno())
+        _private_path(path)
+        os.replace(temporary, path)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
+
+
+def setup_local(
+    home: str | Path | None = None, *, key_file: str | Path | None = None,
+    source: str | None = None, url: str | None = None, username: str | None = None,
+    secret_file: str | Path | None = None, token_name_file: str | Path | None = None,
+    manifest: str | Path | None = None, tenant: str | None = None,
+    principal: str | None = None, agent: str | None = None, non_interactive: bool = False,
+) -> tuple[Path, str]:
+    """Configure a local, single-tenant stdio installation without contacting sources.
+
+    Existing settings and secrets can be reused or extended, never silently changed.
+    Secrets are published first and the complete config last. A failed config commit
+    rolls back new credentials; existing credentials and state are untouched.
+    """
+    root = resolve_home(home)
+    _private_directory(root)
+    _private_directory(root / "state")
+    lock = root / ".setup.lock"
+    try:
+        fd = os.open(lock, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    except FileExistsError:
+        raise SetupError("Setup is already running or has an unreviewed stale setup lock") from None
+    os.close(fd)
+    created: list[Path] = []
+    try:
+        config = root / "config.toml"
+        original = _read_private(config) if config.exists() or config.is_symlink() else None
+        configured = read_config(root)[1] if original is not None else {}
+        values = dict(configured)
+        pending: dict[Path, str] = {}
+
+        def add(name: str, value: str) -> None:
+            if name in values and values[name] != value:
+                raise SetupError("Setup will not replace existing settings; use a separate home or review config manually")
+            values[name] = value
+
+        def credential(name: str, filename: str, supplied: str | Path | None, label: str) -> None:
+            preserve_spaces = name == "SUPERSET_PASSWORD"
+            file_setting = values.get(f"{name}_FILE")
+            current = values.get(name)
+            if file_setting and current:
+                raise SetupError("A credential has both an inline value and a file; review the existing config")
+            if file_setting:
+                path = Path(file_setting).expanduser()
+                current = _secret(_read_private(path if path.is_absolute() else root / path), preserve_spaces=preserve_spaces)
+            candidate = _secret(_read_private(Path(supplied).expanduser().absolute()), preserve_spaces=preserve_spaces) if supplied else current
+            # Recover an init interrupted after writing its key, without replacing it.
+            destination = root / filename
+            if candidate is None and (destination.exists() or destination.is_symlink()):
+                candidate = _secret(_read_private(destination), preserve_spaces=preserve_spaces)
+            if candidate is None:
+                if non_interactive:
+                    raise SetupError("Missing credential file; supply --key-file / --secret-file / --token-name-file")
+                candidate = _hidden(label, preserve_spaces=preserve_spaces)
+            candidate = _validate_key(candidate) if name == "TYPESAFE_API_KEY" else _secret(candidate, preserve_spaces=preserve_spaces)
+            if current is not None:
+                if candidate != current:
+                    raise SetupError("Setup will not replace an existing credential")
+                return
+            if destination.exists() or destination.is_symlink():
+                if _secret(_read_private(destination), preserve_spaces=preserve_spaces) != candidate:
+                    raise SetupError("Setup will not replace an existing credential file")
+            else:
+                pending[destination] = candidate + "\n"
+            add(f"{name}_FILE", filename)
+
+        credential("TYPESAFE_API_KEY", "typesafe.key", key_file, "TypeSafe API key")
+        for name, explicit, label in (
+            ("SIGNALWEAVE_TENANT_ID", tenant, "Local tenant"),
+            ("SIGNALWEAVE_PRINCIPAL_ID", principal, "Local principal"),
+        ):
+            default = values.get(name, "local")
+            value = explicit if explicit is not None else (
+                default if non_interactive else _ask(label, default)
+            )
+            if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.:@-]{0,159}", value):
+                raise SetupError("Tenant and principal must be short non-empty identifiers without whitespace")
+            add(name, value)
+        tenant_id = values["SIGNALWEAVE_TENANT_ID"]
+        source = source or ("skip" if non_interactive else _ask("Source: superset / preset / mcp / skip", "skip"))
+        if source not in {"superset", "preset", "mcp", "skip"}:
+            raise SetupError("Choose superset, preset, mcp, or skip")
+        if (source not in {"superset", "preset"} and (url or secret_file)) or (
+            source != "superset" and username is not None
+        ) or (source != "preset" and token_name_file) or (source != "mcp" and manifest):
+            raise SetupError("Source options do not match the selected source")
+        if source in {"superset", "preset"}:
+            prefix = source.upper()
+            address = url or values.get(f"{prefix}_URL")
+            if not address and not non_interactive:
+                address = _ask("Source URL")
+            if not address:
+                raise SetupError("A source URL is required")
+            add(f"{prefix}_URL", _source_url(address, source))
+            add(f"{prefix}_TENANT_ID", tenant_id)
+            if source == "superset":
+                user = username or values.get("SUPERSET_USERNAME")
+                if not user and not non_interactive:
+                    user = _ask("Superset username")
+                if not user or any(ord(c) < 32 for c in user) or is_obvious_placeholder(user):
+                    raise SetupError("A non-empty Superset username is required")
+                add("SUPERSET_USERNAME", user)
+                credential("SUPERSET_PASSWORD", "superset-password.key", secret_file, "Superset password")
+            else:
+                if values.get("PRESET_ACCESS_TOKEN") or values.get("PRESET_ACCESS_TOKEN_FILE"):
+                    if token_name_file or secret_file:
+                        raise SetupError("Existing Preset access-token mode will not be replaced")
+                else:
+                    credential("PRESET_API_TOKEN_NAME", "preset-token-name.key", token_name_file, "Preset API token name")
+                    credential("PRESET_API_TOKEN_SECRET", "preset-token-secret.key", secret_file, "Preset API token secret")
+                values.setdefault("PRESET_DATA_MODE", "cached_results")
+        if source == "mcp":
+            selected = manifest or values.get("SIGNALWEAVE_MCP_SOURCES_FILE")
+            if not selected and not non_interactive:
+                selected = _ask("Reviewed MCP manifest path (normalized read-only sources only)")
+            if not selected:
+                raise SetupError("A reviewed MCP manifest is required")
+            path = Path(selected).expanduser()
+            if manifest is None and selected == values.get("SIGNALWEAVE_MCP_SOURCES_FILE"):
+                path = path if path.is_absolute() else root / path
+            path = path.absolute()
+            _manifest_tenant(path, tenant_id)
+            # Preserve an existing relative path when it identifies the same file.
+            if "SIGNALWEAVE_MCP_SOURCES_FILE" not in values:
+                add("SIGNALWEAVE_MCP_SOURCES_FILE", str(path))
+            else:
+                previous = Path(values["SIGNALWEAVE_MCP_SOURCES_FILE"]).expanduser()
+                if (previous if previous.is_absolute() else root / previous).absolute() != path:
+                    raise SetupError("Setup will not replace an existing MCP manifest")
+        for prefix in ("SUPERSET", "PRESET"):
+            if values.get(f"{prefix}_URL"):
+                add(f"{prefix}_TENANT_ID", tenant_id)
+        if values.get("SIGNALWEAVE_MCP_SOURCES_FILE"):
+            path = Path(values["SIGNALWEAVE_MCP_SOURCES_FILE"]).expanduser()
+            _manifest_tenant(path if path.is_absolute() else root / path, tenant_id)
+        agent = agent or ("codex" if non_interactive else _ask("Agent: codex / claude", "codex"))
+        if agent not in {"codex", "claude"}:
+            raise SetupError("Choose codex or claude")
+        add("TYPESAFE_MODE", "jev")
+        values.setdefault("SIGNALWEAVE_STORE_BACKEND", "sqlite")
+        values.setdefault("SIGNALWEAVE_STORE_PATH", "state/signalweave.db")
+        values.setdefault("SIGNALWEAVE_ALLOW_EMPTY_SOURCES", "1")
+        if values == configured:
+            return root, agent
+        content = "# Local single-user setup; process environment overrides these settings.\nversion = 1\n\n[environment]\n"
+        content += "".join(f"{name} = {json.dumps(value, ensure_ascii=False)}\n" for name, value in values.items())
+        if original is not None:
+            # Preserve comments/layout for the usual [environment] form. Inline
+            # TOML tables cannot be extended by appending keys; those are serialized
+            # with exactly the same existing values and the approved additions.
+            extended = original + "\n" + "".join(
+                f"{name} = {json.dumps(value, ensure_ascii=False)}\n"
+                for name, value in values.items() if name not in configured
+            )
+            try:
+                if tomllib.loads(extended) == {"version": 1, "environment": values}:
+                    content = extended
+            except tomllib.TOMLDecodeError:
+                pass
+        for path, text in pending.items():
+            _write_new(path, text)
+            created.append(path)
+        if original is None:
+            _write_new(config, content)
+        else:
+            if _read_private(config) != original:
+                raise SetupError("Configuration changed during setup; no existing settings were replaced")
+            _publish_config(config, content)
+        created.clear()
+        return root, agent
+    finally:
+        for path in created:
+            path.unlink()
+        lock.unlink()
+
+
 @contextmanager
 def local_environment(home: str | Path | None = None) -> Iterator[Path]:
     """Apply local defaults for the server lifetime, restoring the caller afterward."""
@@ -221,9 +488,20 @@ def local_environment(home: str | Path | None = None) -> Iterator[Path]:
         if values.get(name):
             path = Path(values[name]).expanduser()
             values[name] = str(root / path) if not path.is_absolute() else str(path)
+    # The Superset deployment client currently consumes an inline password.
+    # Resolve the private local file only for this process lifetime, never into
+    # config, command arguments, or agent configuration. Other secrets keep their
+    # native runtime file loaders.
+    password_file = values.get("SUPERSET_PASSWORD_FILE")
+    if password_file:
+        if values.get("SUPERSET_PASSWORD"):
+            raise SetupError("Set only one of SUPERSET_PASSWORD or SUPERSET_PASSWORD_FILE")
+        values["SUPERSET_PASSWORD"] = _secret(_read_private(Path(password_file)), preserve_spaces=True)
     previous = {name: os.environ.get(name) for name in values}
     try:
         os.environ.update(values)
+        if password_file:
+            os.environ.pop("SUPERSET_PASSWORD_FILE", None)
         yield root
     finally:
         for name, value in previous.items():
@@ -252,6 +530,18 @@ def agent_config(home: str | Path | None, agent: str) -> str:
             "type": "stdio", "command": command, "args": args,
         }}}, indent=2, ensure_ascii=False) + "\n"
     raise SetupError("Unknown agent; choose codex or claude")
+
+
+def agent_registration(home: str | Path | None, agent: str) -> str:
+    """Print only: the user controls whether to change their agent registration."""
+    entry = json.loads(agent_config(home, "claude"))["mcpServers"]["signalweave"]
+    if agent == "codex":
+        prefix = ["codex", "mcp", "add", "signalweave", "--"]
+    elif agent == "claude":
+        prefix = ["claude", "mcp", "add", "--transport", "stdio", "--scope", "user", "signalweave", "--"]
+    else:
+        raise SetupError("Unknown agent; choose codex or claude")
+    return shlex.join([*prefix, entry["command"], *entry["args"]])
 
 
 def _valid_source_url(name: str) -> None:

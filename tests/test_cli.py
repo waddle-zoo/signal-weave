@@ -306,12 +306,26 @@ async def test_binary_checker_checks_stderr_after_shutdown_without_echo(
     binary = tmp_path / "binary"
     key = tmp_path / "key"
     key.write_text("test-only-key")
-    monkeypatch.setattr(check_binary.subprocess, "run", lambda *args, **kwargs: SimpleNamespace(
-        returncode=0, stderr="", stdout=(
-            json.dumps({"binary": str(binary)}) if args[0][1] == "agent-config"
+    def checked_command(argv, **kwargs):
+        if argv[1] == "setup":
+            from signalweave.local_setup import setup_local
+
+            def option(name):
+                return argv[argv.index(name) + 1]
+
+            setup_local(
+                option("--home"), key_file=option("--key-file"),
+                source=option("--source"), url=option("--url"),
+                username=option("--username"), secret_file=option("--secret-file"),
+                tenant=option("--tenant"), principal=option("--principal"),
+                agent=option("--agent"), non_interactive=True,
+            )
+        return SimpleNamespace(returncode=0, stderr="", stdout=(
+            json.dumps({"binary": str(binary)}) if argv[1] == "agent-config"
             else "Offline configuration check"
-        ),
-    ))
+        ))
+
+    monkeypatch.setattr(check_binary.subprocess, "run", checked_command)
 
     @asynccontextmanager
     async def transport(parameters, *, errlog):

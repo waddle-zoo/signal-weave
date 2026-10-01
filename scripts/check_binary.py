@@ -17,10 +17,7 @@ from pathlib import Path
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
-# Test-only imports; this checker is never bundled into the executable.
-from evaluations.local_investigation_trial import ROOT, cases, seed
-from signalweave.models import DeliveryMethod, InsightCard, InsightCardStatus, Outcome, SourceRef
-from signalweave.store import SQLiteInsightCardStore
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def _check_stderr(stderr: str) -> None:
@@ -28,9 +25,11 @@ def _check_stderr(stderr: str) -> None:
         raise RuntimeError("Binary emitted a traceback on stderr; diagnostic contents withheld")
 
 
-async def check(binary: Path, key_file: Path, live: bool):
+async def check(binary: Path, key_file: Path | None, live: bool):
     with tempfile.TemporaryDirectory(prefix="signalweave-binary-check-") as temporary:
-        folder = Path(temporary)
+        # macOS aliases /var to /private/var; the setup contract rejects symlink
+        # ancestors. Canonicalize only this newly created temporary test directory.
+        folder = Path(temporary).resolve()
         home = folder / "home"
         environment = {key: value for key, value in os.environ.items()
                        if not key.startswith(("SIGNALWEAVE_", "TYPESAFE_", "SUPERSET_", "PRESET_", "TRINO_", "PYTHON"))}
@@ -48,8 +47,30 @@ async def check(binary: Path, key_file: Path, live: bool):
         private_key = folder / "input.key"
         descriptor = os.open(private_key, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
         with os.fdopen(descriptor, "w") as target:
-            target.write(key_file.read_text())
-        command("init", "--home", str(home), "--key-file", str(private_key))
+            target.write(key_file.read_text() if key_file else "offline-packaging-check-not-a-real-key")
+        source_secret = folder / "source.key"
+        descriptor = os.open(source_secret, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        with os.fdopen(descriptor, "w") as target:
+            target.write("offline-source-check-not-a-real-password")
+        command(
+            "setup", "--non-interactive", "--home", str(home),
+            "--key-file", str(private_key), "--source", "superset",
+            "--url", "http://127.0.0.1:8080", "--username", "packaging-user",
+            "--secret-file", str(source_secret), "--tenant", "local",
+            "--principal", "packaging-agent", "--agent", "codex",
+        )
+        # Assert persisted identity/source configuration, without exposing secrets.
+        import tomllib
+
+        settings = tomllib.loads((home / "config.toml").read_text())["environment"]
+        assert settings["SIGNALWEAVE_TENANT_ID"] == settings["SUPERSET_TENANT_ID"] == "local"
+        assert settings["SIGNALWEAVE_PRINCIPAL_ID"] == "packaging-agent"
+        assert settings["SUPERSET_URL"] == "http://127.0.0.1:8080"
+        assert "SUPERSET_PASSWORD_FILE" in settings and "SUPERSET_PASSWORD" not in settings
+        assert "TYPESAFE_API_KEY_FILE" in settings and "TYPESAFE_API_KEY" not in settings
+        # The original credential inputs can disappear; setup must have copied them.
+        private_key.unlink()
+        source_secret.unlink()
         assert "Offline configuration check" in command("doctor", "--home", str(home))
         snippet = json.loads(command("agent-config", "--agent", "claude", "--home", str(home)))
         assert str(binary) in json.dumps(snippet)
@@ -70,9 +91,22 @@ async def check(binary: Path, key_file: Path, live: bool):
             stderr.seek(0)
             for line in stderr:
                 _check_stderr(line)
-        result = {"standalone_startup": True, "private_init": True, "offline_doctor": True,
+        result = {"standalone_startup": True, "private_setup": True, "persisted_source_config": True,
+                  "offline_doctor": True, "agent_config": True,
                   "stdio_tools": len(names), "different_cwd": True, "live": live}
         if live:
+            # Test-only imports; neither trial fixtures nor this checker are bundled.
+            sys.path.insert(0, str(ROOT))
+            from evaluations.local_investigation_trial import cases, seed
+            from signalweave.models import (
+                DeliveryMethod,
+                InsightCard,
+                InsightCardStatus,
+                Outcome,
+                SourceRef,
+            )
+            from signalweave.store import SQLiteInsightCardStore
+
             database = folder / "company.sqlite"
             _, kind, rows, coverage, *_ = next(cases())
             seed(database, kind, rows, coverage)
@@ -88,6 +122,7 @@ async def check(binary: Path, key_file: Path, live: bool):
             store = SQLiteInsightCardStore(home / "state/signalweave.db")
             store.save_card(InsightCard(
                 id="binary-proof", title="Activity change", status=InsightCardStatus.APPROVED,
+                principal_tenant="local",
                 what_to_watch="Activity change and segment contributions", why_watch="Notify the owner about changed activity",
                 decision_guidance="Notify on a complete analysis with a nonzero delta. Insufficient data if required calculations fail. Decomposition is not causation.",
                 comparison_windows=["previous_period"], sources=[SourceRef(key="activity", adapter="company_metrics", resource="activity", label="Activity", required_comparison_keys=["activity-breakdown"])],
@@ -107,11 +142,13 @@ async def check(binary: Path, key_file: Path, live: bool):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--binary", type=Path, default=ROOT / "dist/signalweave")
-    parser.add_argument("--key-file", type=Path, required=True)
+    parser.add_argument("--key-file", type=Path, help="Required only for --live; offline smoke uses a dummy key")
     parser.add_argument("--live", action="store_true")
     args = parser.parse_args()
+    if args.live and not args.key_file:
+        parser.error("--live requires --key-file")
     os.umask(0o077)
-    asyncio.run(check(args.binary.resolve(), args.key_file.resolve(), args.live))
+    asyncio.run(check(args.binary.resolve(), args.key_file.resolve() if args.key_file else None, args.live))
 
 
 if __name__ == "__main__":

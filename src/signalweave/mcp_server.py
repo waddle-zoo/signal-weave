@@ -117,6 +117,25 @@ def create_mcp(
     idempotency_locks: dict[str, asyncio.Lock] = {}
     mcp = FastMCP(
         "signal-weave",
+        instructions=(
+            "SignalWeave saves and repeats reviewed investigations using TypeSafe Jev. "
+            "Start with the user's business question, not a JSON form: use "
+            "onboard_insight_card to discover sources and propose a draft. Read its "
+            "setup_questions and review blockers. Inspect the proposed sources; ask "
+            "the owner only for unresolved metric definitions, comparison periods, "
+            "materiality rules, or notification destinations. Never invent those answers. "
+            "Preserve the owner's rules in decision_guidance and required source "
+            "contracts. Simulate the draft and show the owner the selected sources, "
+            "calculations, uncertainties, and intended routes before requesting explicit "
+            "approval. Only call approve_insight_card after that approval; tool access "
+            "is not approval. For repeat runs, reuse the approved card instead of "
+            "recreating it. Use a stable idempotency key for retries and a new key for "
+            "new observations. Return the evidence, numerical analysis, limitations, "
+            "and workflow handoff. Correlation and accounting contributions are not "
+            "proof of causation. SignalWeave does not schedule runs or send messages; "
+            "your agent or scheduler owns those actions. Selected evidence is sent "
+            "to TypeSafe; local installation is not offline inference."
+        ),
         auth=auth_settings,
         token_verifier=token_verifier,
     )
