@@ -10,20 +10,18 @@ x64 with glibc 2.35+ (not Alpine/musl). macOS builds are not Developer-ID signed
 or notarized; company device-management policies may block them. Do not disable
 those controls—use an administrator-approved installation path instead.
 
-> Release status: the native release workflow is new. Until a release containing
-> `install.sh` and native archives is published, the download below is not
-> available. Use a tested [Actions artifact or source build](local-install-reference.md#release-builds)
-> to try this branch. The existing v0.1.0 tag alone does not imply native assets exist.
+> **Local preview:** `v0.2.0rc1` is a prerelease for trying the local runtime.
+> Installation and bounded live-Jev execution have been tested; the new paired
+> Luna onboarding benchmark is not complete. This is not an enterprise-readiness
+> or comparative-performance claim. The stable v0.1.0 release has no native assets.
 
 ## 1. Install and set up
-
-After the first native release is published:
 
 ```sh
 installer="$(mktemp)"
 curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' \
-  https://github.com/waddle-zoo/signal-weave/releases/latest/download/install.sh -o "$installer" &&
-  sh "$installer"
+  https://github.com/waddle-zoo/signal-weave/releases/download/v0.2.0rc1/install.sh -o "$installer" &&
+  sh "$installer" --version v0.2.0rc1
 ```
 
 ```sh
@@ -35,6 +33,8 @@ archive's SHA-256 checksum, and installs without `sudo`. Setup keeps your key
 and state private under `~/.signalweave`. Your Jev key is not your BI credential:
 source access must be configured too. Jev evaluations send configured evidence
 to TypeSafe; this is local storage, not offline inference.
+The pinned version explicitly opts into this preview; previews are never selected
+by the installer's default `latest` lookup.
 
 ## 2. Connect your agent
 

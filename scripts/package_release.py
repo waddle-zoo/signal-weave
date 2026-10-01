@@ -21,8 +21,8 @@ TARGETS = {("Darwin", "arm64"): "darwin-arm64", ("Darwin", "x86_64"): "darwin-x8
 
 def package(binary: Path, output: Path, version: str, target: str) -> Path:
     expected = "v" + tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]["version"]
-    if not re.fullmatch(r"v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)", version) or version != expected:
-        raise ValueError("Release tag must be stable vMAJOR.MINOR.PATCH and match pyproject.toml")
+    if not re.fullmatch(r"v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(rc[1-9][0-9]*)?", version) or version != expected:
+        raise ValueError("Release tag must be vMAJOR.MINOR.PATCH[rcN] and match pyproject.toml")
     if TARGETS.get((platform.system(), platform.machine())) != target:
         raise ValueError("Native platform does not match the requested artifact target")
     if binary.is_symlink() or not binary.is_file() or not binary.stat().st_size:

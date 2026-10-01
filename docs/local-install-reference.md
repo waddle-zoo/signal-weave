@@ -36,12 +36,16 @@ installs. Branch archives use the current package version but are **not stable
 releases**. `build-info.json` records their source commit and platform. Builds
 bundle Python, not source-server runtimes or company credentials.
 
-Only a pushed stable `vMAJOR.MINOR.PATCH` tag matching `pyproject.toml` can
-publish. All three builds must pass. Publication creates a new draft, uploads
+Only a pushed `vMAJOR.MINOR.PATCH` or `vMAJOR.MINOR.PATCHrcN` tag matching
+`pyproject.toml` can publish. The `rcN` form follows Python's release-candidate
+version spelling (for example `v0.2.0rc1`). All three builds must pass.
+Use an annotated tag: its annotation becomes the release notes.
+Publication creates a new draft, uploads
 archives, per-file checksums, `SHA256SUMS`, and the installer, and only then
 publishes it. Existing releases/assets are never overwritten. A failed draft
 requires manual review; the workflow does not delete or replace it on rerun.
-No version bump or release is implied by adding this workflow.
+Release candidates are marked prerelease and never replace GitHub's stable
+latest release. Publishing a preview does not certify analytical quality.
 
 Actions are pinned to verified upstream commits. Dependencies use `uv.lock`.
 Release files have GitHub build-provenance attestations; verify an archive with
@@ -61,12 +65,15 @@ signed/notarized. Do not disable security controls to make them run.
 ## Installer versions and upgrades
 
 Download `install.sh` from a published release (or inspect it in the repository),
-then select a stable version explicitly:
+then select a stable or preview version explicitly:
 
 ```sh
 sh install.sh --version vVERSION
 sh install.sh --version vVERSION --replace
 ```
+
+For this local preview, replace `vVERSION` with `v0.2.0rc1`. Default `latest`
+never accepts a prerelease; it does not silently opt users into preview builds.
 
 `--replace` opts into replacing an existing regular executable; without it the
 installer refuses an existing destination. Configuration and cards are untouched.

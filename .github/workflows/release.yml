@@ -45,7 +45,7 @@ jobs:
           python - <<'PY'
           import os, re, tomllib
           version = 'v' + tomllib.load(open('pyproject.toml', 'rb'))['project']['version']
-          assert re.fullmatch(r'v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)', version), 'Stable semver required'
+          assert re.fullmatch(r'v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(rc[1-9][0-9]*)?', version), 'Stable or rcN version required'
           if os.environ['RELEASE_REF_TYPE'] == 'tag':
               assert os.environ['RELEASE_REF_NAME'] == version, 'Tag/package version mismatch'
           with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
@@ -124,6 +124,12 @@ jobs:
             echo 'Release already exists; refusing to modify it.' >&2
             exit 1
           fi
-          gh release create "$RELEASE_TAG" release/* --verify-tag --draft \
-            --title "SignalWeave $RELEASE_TAG" --generate-notes
-          gh release edit "$RELEASE_TAG" --draft=false --latest
+          if [[ "$RELEASE_TAG" =~ rc[1-9][0-9]*$ ]]; then
+            gh release create "$RELEASE_TAG" release/* --verify-tag --draft --prerelease --latest=false \
+              --title "SignalWeave $RELEASE_TAG — local preview" --notes-from-tag
+            gh release edit "$RELEASE_TAG" --draft=false --prerelease --latest=false
+          else
+            gh release create "$RELEASE_TAG" release/* --verify-tag --draft \
+              --title "SignalWeave $RELEASE_TAG" --notes-from-tag
+            gh release edit "$RELEASE_TAG" --draft=false --latest
+          fi

@@ -18,6 +18,7 @@ from scripts.package_release import ROOT, TARGETS, package
 
 INSTALLER = ROOT / "scripts/install.sh"
 VERSION = "v" + tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]["version"]
+STABLE_VERSION = "v1.2.3"
 BASE = "https://github.com/waddle-zoo/signal-weave/releases"
 
 
@@ -53,13 +54,13 @@ else:
     uname.chmod(0o755)
     env = {key: value for key, value in os.environ.items() if not key.startswith("SIGNALWEAVE_")}
     env.update(HOME=str(home), FIXTURES=str(fixtures), REQUEST_LOG=str(tmp_path / "requests"),
-               TEST_OS="Linux", TEST_ARCH="x86_64", LATEST_URL=f"{BASE}/tag/{VERSION}",
+               TEST_OS="Linux", TEST_ARCH="x86_64", LATEST_URL=f"{BASE}/tag/{STABLE_VERSION}",
                PATH=str(commands) + os.pathsep + os.environ["PATH"])
     return env
 
 
-def release(env, *, target="linux-x86_64", members=None, executable=b"#!/bin/sh\nexit 0\n"):
-    asset = f"signalweave-{VERSION}-{target}.tar.gz"
+def release(env, *, version=VERSION, target="linux-x86_64", members=None, executable=b"#!/bin/sh\nexit 0\n"):
+    asset = f"signalweave-{version}-{target}.tar.gz"
     archive = Path(env["FIXTURES"]) / asset
     if members is None:
         members = [("signalweave", executable, tarfile.REGTYPE),
@@ -95,32 +96,33 @@ def installed(env):
 ])
 def test_native_detection_and_latest_install(install_env, system, arch, target):
     env = {**install_env, "TEST_OS": system, "TEST_ARCH": arch}
-    release(env, target=target)
+    release(env, target=target, version=STABLE_VERSION)
     result = run(env)
     assert result.returncode == 0, result.stderr
     assert installed(env).stat().st_mode & 0o777 == 0o755
-    assert VERSION in result.stdout
+    assert STABLE_VERSION in result.stdout
     assert '" setup' in result.stdout
     assert not list(installed(env).parent.glob(".signalweave-install.*"))
     assert not (Path(env["HOME"]) / ".signalweave").exists()
     requests = Path(env["REQUEST_LOG"]).read_text().splitlines()
-    assert requests == [f"{BASE}/latest", f"{BASE}/download/{VERSION}/signalweave-{VERSION}-{target}.tar.gz.sha256",
-                        f"{BASE}/download/{VERSION}/signalweave-{VERSION}-{target}.tar.gz"]
+    assert requests == [f"{BASE}/latest", f"{BASE}/download/{STABLE_VERSION}/signalweave-{STABLE_VERSION}-{target}.tar.gz.sha256",
+                        f"{BASE}/download/{STABLE_VERSION}/signalweave-{STABLE_VERSION}-{target}.tar.gz"]
 
 
-def test_explicit_version_no_latest_lookup(install_env):
-    release(install_env)
-    assert run(install_env, "--version", VERSION).returncode == 0
+@pytest.mark.parametrize("version", ["v1.2.3", "v1.2.3rc1", "v1.2.3rc12"])
+def test_explicit_version_no_latest_lookup(install_env, version):
+    release(install_env, version=version)
+    assert run(install_env, "--version", version).returncode == 0
     assert "/latest" not in Path(install_env["REQUEST_LOG"]).read_text()
 
 
-@pytest.mark.parametrize("version", ["../main", "v1.2.3/../../escape", "v1.2.3\nx", "v01.2.3", "1.2.3", "v1.2.3-rc.1", ""])
+@pytest.mark.parametrize("version", ["../main", "v1.2.3/../../escape", "v1.2.3\nx", "v01.2.3", "1.2.3", "v1.2.3-rc.1", "v1.2.3rc0", "v1.2.3rc01", "v1.2.3rc", "v1.2.3rc1/../x", ""])
 def test_version_injection_rejected_before_network(install_env, version):
     assert run(install_env, "--version", version).returncode != 0
     assert not Path(install_env["REQUEST_LOG"]).exists()
 
 
-@pytest.mark.parametrize("url", ["https://evil.example/tag/v1.2.3", f"{BASE}/tag/v1.2.3/../x", f"{BASE}/tag/v1.2.3-rc.1"])
+@pytest.mark.parametrize("url", ["https://evil.example/tag/v1.2.3", f"{BASE}/tag/v1.2.3/../x", f"{BASE}/tag/v1.2.3-rc.1", f"{BASE}/tag/v1.2.3rc1"])
 def test_latest_redirect_must_be_official_stable_tag(install_env, url):
     assert run({**install_env, "LATEST_URL": url}).returncode != 0
     assert not installed(install_env).exists()
@@ -240,6 +242,37 @@ def test_release_workflow_pins_actions_and_has_no_model_secrets():
     assert "secrets." not in workflow and "--clobber" not in workflow
     assert "uv sync --locked" in workflow and "scripts/check_binary.py" in workflow
     assert "github.event_name == 'push'" in workflow
+
+
+@pytest.mark.parametrize(("tag", "preview"), [("v1.2.3", False), ("v1.2.3rc1", True)])
+def test_actual_publish_script_preserves_preview_channel(install_env, tag, preview):
+    import textwrap
+
+    commands = Path(install_env["PATH"].split(os.pathsep)[0])
+    gh = commands / "gh"
+    gh.write_text(f"#!{sys.executable}\n" + '''
+import json, os, sys
+with open(os.environ['GH_CALLS'], 'a') as log:
+    log.write(json.dumps(sys.argv[1:]) + '\\n')
+''')
+    gh.chmod(0o755)
+    workflow = (ROOT / ".github/workflows/release.yml").read_text()
+    script = textwrap.dedent(workflow.rsplit("        run: |\n", 1)[1])
+    log = Path(install_env["HOME"]) / "gh-calls.jsonl"
+    env = {**install_env, "RELEASE_TAG": tag, "GITHUB_REPOSITORY": "waddle-zoo/signal-weave",
+           "GH_CALLS": str(log)}
+    result = subprocess.run(["bash", "-c", script], env=env, cwd=env["HOME"],
+                            capture_output=True, text=True, timeout=10)
+    assert result.returncode == 0, result.stderr
+    calls = [json.loads(line) for line in log.read_text().splitlines()]
+    create, edit = [call for call in calls if call[:1] == ["release"]]
+    assert create[:3] == ["release", "create", tag]
+    assert "--verify-tag" in create and "--draft" in create and "--notes-from-tag" in create
+    assert edit[:3] == ["release", "edit", tag] and "--draft=false" in edit
+    for call in (create, edit):
+        assert ("--prerelease" in call) is preview
+        assert ("--latest=false" in call) is preview
+    assert ("--latest" in edit) is not preview
 
 
 @pytest.mark.asyncio

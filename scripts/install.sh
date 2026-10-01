@@ -8,17 +8,17 @@ version=latest
 replace=false
 while [ "$#" -gt 0 ]; do
     case "$1" in
-        --version) [ "$#" -ge 2 ] || fail '--version needs vMAJOR.MINOR.PATCH'; version=$2; shift 2 ;;
+        --version) [ "$#" -ge 2 ] || fail '--version needs vMAJOR.MINOR.PATCH[rcN]'; version=$2; shift 2 ;;
         --replace) replace=true; shift ;;
-        --help) printf '%s\n' 'Usage: sh install.sh [--version vMAJOR.MINOR.PATCH] [--replace]' 'Installs to ~/.local/bin (or SIGNALWEAVE_INSTALL_DIR).'; exit 0 ;;
+        --help) printf '%s\n' 'Usage: sh install.sh [--version vMAJOR.MINOR.PATCH[rcN]] [--replace]' 'Installs to ~/.local/bin (or SIGNALWEAVE_INSTALL_DIR). Previews require an explicit version.'; exit 0 ;;
         *) fail "Unknown argument: $1" ;;
     esac
 done
 valid_version() {
-    case "$1" in *[!v0-9.]*) return 1 ;; esac
-    printf '%s\n' "$1" | LC_ALL=C grep -Eq '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
+    case "$1" in *[!vrc0-9.]*) return 1 ;; esac
+    printf '%s\n' "$1" | LC_ALL=C grep -Eq '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(rc[1-9][0-9]*)?$'
 }
-[ "$version" = latest ] || valid_version "$version" || fail 'Invalid stable release version'
+[ "$version" = latest ] || valid_version "$version" || fail 'Invalid release version'
 for tool in curl tar awk grep mktemp uname chmod mkdir ln mv; do
     command -v "$tool" >/dev/null 2>&1 || fail "Required command missing: $tool"
 done
@@ -44,6 +44,7 @@ if [ "$version" = latest ]; then
     resolved=$(download --output /dev/null --write-out '%{url_effective}' "$release_base/latest") || fail 'Cannot resolve latest published release'
     case "$resolved" in "$release_base/tag/"*) version=${resolved#"$release_base/tag/"} ;; *) fail 'Unexpected release redirect' ;; esac
     valid_version "$version" || fail 'Latest release is not a stable version'
+    case "$version" in *rc*) fail 'Latest must not resolve to a preview; select previews with --version' ;; esac
 fi
 install_dir=${SIGNALWEAVE_INSTALL_DIR:-"${HOME:?HOME must be set}/.local/bin"}
 case "$install_dir" in /*) ;; *) fail 'Install directory must be absolute' ;; esac

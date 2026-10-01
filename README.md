@@ -43,9 +43,9 @@ Follow the [two-step installation guide](docs/local-install.md): install and run
 `signalweave setup`, then connect it to Codex or Claude. Setup stores your Jev key
 privately and configures your data connection without hand-editing TOML.
 
-> Native release builds are being validated on this branch. The existing v0.1.0
-> release does not yet include the new installer; the guide includes a source-build
-> path until downloadable native assets are published.
+> The native installer is available as the **v0.2.0rc1 local preview**. Use the
+> pinned command in the guide. This is not a stable enterprise release; the new
+> Luna/Jev onboarding comparison is still pending. Stable v0.1.0 has no native assets.
 
 Then ask your agent:
 
