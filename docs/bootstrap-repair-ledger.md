@@ -395,3 +395,38 @@ delivery/version tests and found no scoped blocker. An earlier suite had importe
 the old evaluator while the test-first patch was being applied and reproduced
 seven delivery failures; it is not the final verification result. The probe and
 gate are frozen together before the one permitted research dispatch.
+
+The [12-request live policy probe](evidence/owner-policy-probe-v1-01.json) completed
+at `6529214d7525d110ac2aabc9674058d0b7bd6c1f`, observed `jev-1.13.0`, using
+12,106 input and 984 output tokens in 2.676 seconds summed request wall time.
+No retries/errors/malformed responses. Exact paired judgments matched 10/12;
+21/24 individual judgments matched. All four faithful controls accepted and all
+eight negative/unclear cases refused experimental acceptance at the frozen .80
+threshold, but this is not eight correct semantic detections. Missing support
+routing was mislabeled consistent at .58; the investigate-to-notify broadening
+was called consistent on rules at .94 and routes at .79. Its .01 margin below
+acceptance is not robust evidence. The exact-match requirement failed. No threshold
+was adjusted and no repeat was run. Full inputs, raw distributions and timing are
+retained. This broad fidelity classifier is not being installed as an approval gate.
+
+The next [v4 development protocol](bootstrap-owner-reviewed-v4.md) instead models
+an independent caller-owned reasoning review against original owner answers in
+both arms, with bounded explicit correction and all additional work counted.
+It does not replace the failed v3 results or pretend a model is an actual human.
+
+V4 preflight review blocked dispatch on mutable post-approval notes, lost review/
+tool counts after failures, and overly broad timeout wording. Five owner-gate
+tests reproduced the first two gaps before repair. Both arms now freeze policy
+notes during monitoring and verify their binding before each run; review attempts
+are reserved before dispatch and survive cancellation and binding-fetch failure.
+Role-tagged tool audit records preserve author/reviewer counts, including malformed
+stdout. Response timeouts explicitly exclude startup/cleanup; full wall time and
+overrun are retained. A separate reviewer cleared the bounded experiment after
+running 85 targeted tests. This is process/code clearance, not semantic or
+enterprise-performance evidence.
+
+Final v4 pre-dispatch verification: 1,509 tests passed, 3 opt-in skips in 94.04s,
+Ruff and whitespace checks clean. Credential/configuration preflight made zero
+requests. Reviewed code hashes match the final files; freeze this revision and
+run the one preregistered two-company trial, without editing its implementation,
+prompts, fixtures or scoring while active.

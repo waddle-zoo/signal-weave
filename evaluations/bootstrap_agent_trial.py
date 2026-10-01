@@ -338,7 +338,8 @@ def card_fingerprint(card: dict) -> str:
 
 
 class ToolSession:
-    def __init__(self, public: dict, adapter: PublicSourceAdapter, server, treatment: bool):
+    def __init__(self, public: dict, adapter: PublicSourceAdapter, server, treatment: bool,
+                 *, owner_reviewer=None):
         self.public = agent_context(public)
         self.owner = {"owner_answers": copy.deepcopy(public["owner_answers"])}
         self.adapter, self.server, self.treatment = adapter, server, treatment
@@ -352,16 +353,105 @@ class ToolSession:
         self.submission: dict | None = None
         self.phase = "onboarding"
         self.allowed_product: set[str] = set()
+        self.owner_reviewer = owner_reviewer
+        self.owner_review_records: list[dict] = []
+        self.owner_review_attempts = 0
+        self.semantic_approval: str | None = None
+
+    def approval_fingerprint(self, card: dict | None) -> str:
+        if self.owner_reviewer is None:
+            return card_fingerprint(card or {})
+        return digest({"card": card_fingerprint(card) if card else None, "notes": self.notes,
+                       "owner_answers": self.owner["owner_answers"],
+                       "public_owner_context": {key: self.public[key] for key in
+                                                ("brief", "glossary", "destinations")}})
+
+    async def semantic_owner_review(self, card: dict | None) -> dict:
+        """Research-only, capped independent review of the original owner text.
+
+        Does not authenticate a human or inspect future evidence/expected labels.
+        Both arms pay for reviews; fingerprint changes require a fresh review.
+        """
+        if not self.notes:
+            return {"approved": False, "reasons": ["Save reusable notes before owner review."]}
+        fingerprint = self.approval_fingerprint(card)
+        previous = next((r for r in self.owner_review_records if r["approval_fingerprint"] == fingerprint), None)
+        if previous is not None:
+            if previous["approved"]:
+                self.semantic_approval = fingerprint
+            return {**previous, "replayed": True}
+        if self.semantic_approval == fingerprint:
+            return {"approved": True, "replayed": True, "approval_fingerprint": fingerprint}
+        if self.owner_review_attempts >= 3:
+            return {"approved": False, "reasons": ["Three-attempt owner-review budget exhausted."],
+                    "budget_exhausted": True}
+        self.owner_review_attempts += 1
+        reservation = {"approval_fingerprint": fingerprint, "approved": False,
+                       "binding_status": "review_pending", "synthetic": True,
+                       "real_human_approval": False}
+        self.owner_review_records.append(reservation)
+        artifact = {"notes": self.notes}
+        if card is not None:
+            artifact["card"] = copy.deepcopy(card)
+        try:
+            decision = await self.owner_reviewer(
+                public=copy.deepcopy(self.public),
+                owner_answers=copy.deepcopy(self.owner["owner_answers"]), artifact=artifact)
+        except Exception as error:
+            decision = {"approved": False, "reasons": ["Owner review failed."],
+                        "error_type": type(error).__name__}
+        if not isinstance(decision, dict):
+            decision = {"approved": False, "reasons": ["Malformed owner review."]}
+        decision = {**decision, "approval_fingerprint": fingerprint,
+                    "approved": decision.get("approved") is True,
+                    "synthetic": True, "real_human_approval": False}
+        reservation.update(decision)
+        decision = reservation
+        # Retain the paid attempt even if the binding fetch fails or is cancelled.
+        proposed_acceptance = decision["approved"]
+        decision.update(approved=False, binding_status="pending")
+        try:
+            latest_card = await self.product("get_insight_card", {"card_id": card["id"]}) if card else None
+            if fingerprint != self.approval_fingerprint(latest_card):
+                decision.update(binding_status="changed", reasons=["Draft or notes changed during owner review."])
+            else:
+                decision.update(approved=proposed_acceptance, binding_status="matched")
+        except Exception as error:
+            decision.update(binding_status="failed", binding_error_type=type(error).__name__,
+                            reasons=["Could not validate the current draft binding."])
+        finally:
+            self.adapter.audit.emit("review.binding", approval_fingerprint=fingerprint,
+                                    approved=decision["approved"], binding_status=decision["binding_status"],
+                                    card_id=card["id"] if card else None)
+        if decision.get("approved") is True:
+            self.semantic_approval = fingerprint
+        return decision
+
+    async def assert_current_owner_review(self) -> None:
+        if self.owner_reviewer is None:
+            return
+        card = await self.product("get_insight_card", {"card_id": self.card_id}) if self.treatment else None
+        if self.semantic_approval != self.approval_fingerprint(card):
+            raise ValueError("Current policy has no matching independent owner review")
 
     async def specs(self) -> list[dict]:
         specs = common_tools(self.public, self.phase)
+        if self.owner_reviewer is not None and self.phase != "onboarding":
+            specs = [tool for tool in specs if tool["name"] != "save_notes"]
+        if self.owner_reviewer is not None and self.phase == "onboarding":
+            specs.append(function("request_synthetic_owner_approval",
+                "After saving notes, request independent simulated-owner review against original answers. "
+                "Rejections explain what needs correction. Three review attempts per arm/company. "
+                "This is model review, not actual human authorization. Treatment must inspect and simulate "
+                "the card first; baseline reviews notes and leaves card_id null.",
+                {"card_id": {"type": ["string", "null"]}}))
         if self.treatment:
             # Schemas stay coupled to real runtime code, never copied benchmark versions.
             self.allowed_product = set(PRODUCT_TOOLS)
             if self.phase != "onboarding":
                 self.allowed_product &= {"get_insight_card", "resolve_insight_sources",
                                          "evaluate_insight_card", "get_decision_receipt"}
-            else:
+            elif self.owner_reviewer is None:
                 specs.append(function("request_synthetic_owner_approval",
                                       "Present the inspected, simulated card to the simulated owner "
                                       "for procedural approval. This logs a mock human decision; "
@@ -397,6 +487,8 @@ class ToolSession:
             self.owner_topics.add(arguments["topic"])
             return ask_owner(self.owner, arguments["topic"])
         if name == "save_notes":
+            if self.owner_reviewer is not None and self.phase != "onboarding":
+                raise ValueError("Reviewed policy notes are frozen during monitoring in both trial arms")
             if not isinstance(arguments["notes"], str) or len(arguments["notes"]) > 20000:
                 raise ValueError("notes must be text up to 20000 characters")
             self.notes = arguments["notes"]
@@ -412,9 +504,16 @@ class ToolSession:
                 if card.get("status") != "approved" or card_id not in self.simulated:
                     raise ValueError("Card must pass dry run and explicit synthetic approval")
                 self.card_id = card_id
+            if self.owner_reviewer is not None:
+                card = (await self.product("get_insight_card", {"card_id": card_id})) if self.treatment else None
+                if self.semantic_approval != self.approval_fingerprint(card):
+                    return {"setup_complete": False, "reason": "Current card/notes need independent owner review.",
+                            "next_tools": ["request_synthetic_owner_approval", "finish_setup"]}
             self.setup_complete = True
             return {"setup_complete": True, "card_id": self.card_id,
-                    "human_approval": "synthetic procedural approval, not proof of policy correctness"}
+                    "human_approval": ("independent simulated-owner model review; not actual human authorization"
+                                       if self.owner_reviewer is not None else
+                                       "synthetic procedural approval, not proof of policy correctness")}
         if name == "submit_analysis" and self.phase == "monitoring":
             parsed = _Submission.model_validate(arguments).model_dump(mode="json")
             if any(c["fact"] not in self.public["numeric_vocabulary"] for c in parsed["numeric_claims"]):
@@ -422,12 +521,19 @@ class ToolSession:
                                  + ", ".join(self.public["numeric_vocabulary"]))
             self.submission = parsed
             return {"recorded": True, "delivery_enabled": False}
+        if (name == "request_synthetic_owner_approval" and not self.treatment
+                and self.owner_reviewer is not None and self.phase == "onboarding"):
+            return await self.semantic_owner_review(None)
         if name == "request_synthetic_owner_approval" and self.treatment and self.phase == "onboarding":
             card_id = arguments["card_id"]
             card = await self.product("get_insight_card", {"card_id": card_id})
             fingerprint = card_fingerprint(card)
             accepted = (self.reviewed.get(card_id) == fingerprint
                         and self.simulated.get(card_id) == fingerprint)
+            owner_review = None
+            if accepted and self.owner_reviewer is not None:
+                owner_review = await self.semantic_owner_review(card)
+                accepted = owner_review.get("approved") is True
             decision = {"card_id": card_id, "approved": accepted, "card_digest": fingerprint,
                         "synthetic": True, "policy_correctness_validated": False,
                         "reason": "Inspected stored card and preview; no hidden labels consulted."
@@ -435,9 +541,11 @@ class ToolSession:
                         "next_tools": (["approve_insight_card", "save_notes", "finish_setup"] if accepted
                                        else ["get_insight_card", "simulate_insight_card",
                                              "request_synthetic_owner_approval"])}
+            if owner_review is not None:
+                decision.update(owner_review=owner_review, reason="Independent simulated owner reviewed original instructions, draft and notes; not actual human approval.")
             self.adapter.audit.emit("owner.approval", **decision)
             if accepted:
-                self.owner_approvals[card_id] = fingerprint
+                self.owner_approvals[card_id] = self.approval_fingerprint(card)
             return decision
         if name not in self.allowed_product or not self.treatment:
             raise ValueError("tool not available in this arm/phase")
@@ -447,7 +555,7 @@ class ToolSession:
             before = card_fingerprint(await self.product("get_insight_card", {"card_id": card_id}))
         if name == "approve_insight_card":
             card = await self.product("get_insight_card", {"card_id": card_id})
-            fingerprint = card_fingerprint(card)
+            fingerprint = self.approval_fingerprint(card)
             if self.owner_approvals.get(card_id) != fingerprint:
                 raise ValueError("Synthetic owner requires get_insight_card inspection and successful "
                                  "simulate_insight_card then request_synthetic_owner_approval "
@@ -618,8 +726,9 @@ def write_exclusive(path: Path, payload: Any) -> None:
 def source_fingerprint() -> dict:
     root = Path(__file__).resolve().parents[1]
     paths = ("evaluations/bootstrap_agent_trial.py", "evaluations/bootstrap_scenarios.py",
-             "evaluations/codex_trial_transport.py",
-             "docs/bootstrap-benchmark-protocol.md", "docs/bootstrap-benchmark-v3.md", "uv.lock",
+             "evaluations/codex_trial_transport.py", "evaluations/bootstrap_owner_review.py",
+             "docs/bootstrap-benchmark-protocol.md", "docs/bootstrap-benchmark-v3.md",
+             "docs/bootstrap-owner-reviewed-v4.md", "uv.lock",
              "src/signalweave/engine.py", "src/signalweave/models.py", "src/signalweave/onboarding.py",
              "src/signalweave/diagnostics.py", "src/signalweave/mcp_server.py",
              "src/signalweave/typesafe_adapter.py")
@@ -670,6 +779,9 @@ def aggregate(rows: list[dict]) -> dict:
             r.get("score", {}).get("exact", False) for r in warm))
         system_rows = [r["raw_system_decision"] for r in warm if r.get("raw_system_decision")]
         output[arm]["raw_system_decision_runs"] = len(system_rows)
+        if any("owner_reviews" in row for row in arm_rows):
+            output[arm]["owner_review_attempts"] = sum(len(row.get("owner_reviews", [])) for row in arm_rows)
+            output[arm]["owner_review_tool_calls"] = sum(row.get("owner_review_tool_calls", 0) for row in arm_rows)
         for metric in ("outcome_correct", "recipients_correct", "agent_changed_outcome"):
             output[arm]["raw_system_" + metric + "_count"] = sum(r[metric] for r in system_rows)
     return output
@@ -692,6 +804,9 @@ def select_scenarios(scenarios: list[dict], scenario_ids: list[str] | None, limi
 
 
 async def run_trial(args) -> dict:
+    owner_review_mode = getattr(args, "owner_review", "procedural")
+    if owner_review_mode == "independent" and getattr(args, "agent_transport", "api") != "codex":
+        raise ValueError("Independent owner review currently requires the Codex research transport")
     openai_key, jev_key = credentials(args)  # Fail before creating output or calling a provider.
     scenarios = select_scenarios(build_scenarios(seed=args.seed, split=args.split),
                                  getattr(args, "scenario_id", None), args.limit)
@@ -719,6 +834,18 @@ async def run_trial(args) -> dict:
                          "Scorer checks structured fields, not narrative entailment; prose needs independent review.",
                          "Every warm run wakes Luna in both arms; no claimed wakeup savings."]}
     episode_runner = luna_episode
+    owner_reviewer = None
+    if owner_review_mode == "independent":
+        from evaluations.bootstrap_owner_review import review_owner_artifact
+
+        async def owner_reviewer(**kwargs):
+            return await review_owner_artifact(**kwargs, audit=audit, budget=budget)
+
+        config.update(protocol="bootstrap-owner-reviewed-v4", owner_review="independent_synthetic", owner_review_model=MODEL,
+                      owner_review_effort="high", owner_review_attempts_per_arm_company=3,
+                      owner_review_timeout_seconds=90)
+        config["limits"][1] = ("Approval uses an independent simulated owner model, not actual human validation. "
+                              "Both arms use the same reviewer and capped correction opportunities.")
     if getattr(args, "agent_transport", "api") == "codex":
         from evaluations.codex_trial_transport import codex_command, codex_episode
         episode_runner = codex_episode
@@ -730,7 +857,7 @@ async def run_trial(args) -> dict:
             "<empty-temporary-directory>", "<exclusive-loopback-mcp>", model=MODEL, effort=args.effort)
         config["limits"] += [
             "Codex uses saved ChatGPT login; reported OpenAI attempts mean agent invocations, not API requests.",
-            "Codex wall time includes CLI/MCP startup; max tool calls and 360-second episode timeout apply.",
+            "Codex wall time includes CLI/MCP startup and cleanup; the 360-second active-response timeout excludes them. Wall overrun is reported.",
             "Codex token prices are illustrative API-equivalent estimates, NOT subscription charges; cost advantage gate cannot be established.",
             "Codex internal request/retry count and per-response token cap are not observable or enforced by this harness."]
     write_exclusive(args.output / "config.json", config)
@@ -752,7 +879,8 @@ async def run_trial(args) -> dict:
                               metric_query_store=JsonMetricQueryCardStore(folder / "metric-cards.json"),
                               principal=PrincipalContext(principal_id="synthetic-owner",
                                                          tenant_id=public["scenario_id"]))
-            sessions[arm] = ToolSession(public, adapter, create_mcp(runtime), arm == ARMS[1])
+            sessions[arm] = ToolSession(public, adapter, create_mcp(runtime), arm == ARMS[1],
+                                        owner_reviewer=owner_reviewer)
         periods = [("onboarding", public["onboarding"])] + [("monitoring", p) for p in public["periods"]]
         for phase, period in periods:
             # Alternate pair order by period to reduce provider/cache ordering bias.
@@ -766,6 +894,7 @@ async def run_trial(args) -> dict:
                 session.adapter.set_period(period, period_clock)
                 audit.episode = f"{public['scenario_id']}/{arm}/{period['period_id']}"
                 offset = len(audit.events)
+                review_offset = len(session.owner_review_records)
                 started = time.perf_counter()
                 system_output = None
                 row = {"scenario_id": public["scenario_id"], "arm": arm, "phase": phase,
@@ -776,6 +905,8 @@ async def run_trial(args) -> dict:
                         raise BudgetExceeded("global_api_request_budget_exhausted")
                     if phase == "monitoring" and not session.setup_complete:
                         raise RuntimeError("onboarding_incomplete")
+                    if phase == "monitoring":
+                        await session.assert_current_owner_review()
                     if phase == "monitoring" and session.treatment:
                         system_started = time.perf_counter()
                         system_output = await session.product("evaluate_insight_card", {
@@ -791,11 +922,20 @@ async def run_trial(args) -> dict:
                     row["agent_seconds"] = episode["seconds"]
                 except Exception as error:
                     row["error"] = type(error).__name__
+                    row["tool_calls"] = sum(e["kind"] == "tool.result" and e.get("actor_role") != "owner_reviewer"
+                                            for e in audit.events[offset:])
                     audit.emit("episode.error", error_type=type(error).__name__)
                 row.update(seconds=time.perf_counter() - started, usage=usage_summary(audit.events[offset:]),
                            submission=session.submission, notes=session.notes, card_id=session.card_id,
                            system_output=system_output, inspected_refs=sorted(session.adapter.inspected),
                            source_reads=session.adapter.inspections, asked_owner_topics=sorted(session.owner_topics))
+                if owner_reviewer is not None:
+                    row["owner_reviews"] = session.owner_review_records[review_offset:]
+                    row["owner_review_tool_calls"] = sum(
+                        e["kind"] == "tool.result" and e.get("actor_role") == "owner_reviewer"
+                        for e in audit.events[offset:])
+                    row["author_tool_calls"] = row["tool_calls"]
+                    row["tool_calls"] += row["owner_review_tool_calls"]
                 # Scoring happens below, after ALL model calls; no oracle enters live traces.
                 rows.append(row)
                 write_exclusive(args.output / f"episode-{len(rows):03d}.json", row)
@@ -854,6 +994,7 @@ async def run_trial(args) -> dict:
 
 def parser() -> argparse.ArgumentParser:
     result = argparse.ArgumentParser(description=__doc__)
+    result.add_argument("--owner-review", choices=["procedural", "independent"], default="procedural")
     result.add_argument("--preflight", action="store_true", help="Offline configuration/credential check; no paid API calls")
     result.add_argument("--openai-env", type=Path, help="Explicit dotenv path; never auto-search user files")
     result.add_argument("--agent-transport", choices=["api", "codex"], default="api",
@@ -876,6 +1017,8 @@ def main() -> None:
     args = parser().parse_args()
     os.umask(0o077)
     try:
+        if args.owner_review == "independent" and args.agent_transport != "codex":
+            raise ValueError("Independent owner review currently requires the Codex research transport")
         if min(args.limit, args.max_api_requests, args.max_turns, args.max_tool_calls,
                args.max_output_tokens) < 1:
             raise ValueError("limits must be positive")

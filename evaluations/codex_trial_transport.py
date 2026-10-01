@@ -106,6 +106,7 @@ class TrialMCP:
                 result = {"error": type(error).__name__,
                           "message": self.audit.redact(str(error)[:2000])}
             self.audit.emit("tool.result", name=name, arguments=audited_arguments, result=result,
+                            actor_role=getattr(self.session, "audit_role", "author"),
                             seconds=time.perf_counter() - started)
             return types.CallToolResult(
                 content=[types.TextContent(type="text", text=json.dumps(result))],
@@ -149,23 +150,36 @@ async def serve_trial(bridge: TrialMCP):
 
 async def codex_episode(session, *, key, effort, budget, audit, max_turns,
                         max_tool_calls, max_output_tokens, bundle=None,
-                        timeout_seconds=360) -> dict:
+                        timeout_seconds=360, instructions_override=None,
+                        prompt_override=None) -> dict:
     from evaluations.bootstrap_agent_trial import COMMON_SYSTEM, MODEL, canonical
 
-    instructions = COMMON_SYSTEM
-    if session.treatment:
-        instructions += (
-            " SignalWeave is available. For setup: onboard or draft a card from the brief "
-            "and owner answers; inspect with get_insight_card, dry-run simulate_insight_card, "
-            "resolve blockers, request_synthetic_owner_approval, then approve_insight_card. "
-            "Save notes and finish_setup with the card ID. Approval is simulated, not real "
-            "human validation.\nProduction MCP instructions:\n" + (session.server.instructions or ""))
-    instructions += ("\nUse only the trial MCP tools. No filesystem, shell, web or other "
-                     "tools. After finish_setup or submit_analysis succeeds, stop immediately.")
-    prompt = instructions + "\n" + canonical({
-        "phase": session.phase, "period": session.adapter.period_context,
-        "business": session.public, "saved_notes": session.notes,
-        "signalweave_evaluation": bundle})
+    if instructions_override is not None or prompt_override is not None:
+        if instructions_override is None or prompt_override is None:
+            raise ValueError("Custom research episodes require both instructions and prompt")
+        prompt = instructions_override + "\n" + canonical(prompt_override)
+    else:
+        instructions = COMMON_SYSTEM
+        if session.treatment:
+            instructions += (
+                " SignalWeave is available. For setup: onboard or draft a card from the brief "
+                "and owner answers; inspect with get_insight_card, dry-run simulate_insight_card, "
+                "resolve blockers, request_synthetic_owner_approval, then approve_insight_card. "
+                "Save notes and finish_setup with the card ID. Approval is simulated, not real "
+                "human validation.\nProduction MCP instructions:\n" + (session.server.instructions or ""))
+        if getattr(session, "owner_reviewer", None) is not None:
+            instructions += (
+                " Before finishing onboarding, save notes then request_synthetic_owner_approval. "
+                "An independent model compares your notes (and card when present) with the original owner answers. "
+                "Correct rejected artifacts explicitly and request review again, at most three attempts. "
+                "Both arms need that review; it is not actual human approval. Changed notes/cards invalidate it. "
+                "For SignalWeave, inspect and simulate before requesting review, then approve the card only after acceptance.")
+        instructions += ("\nUse only the trial MCP tools. No filesystem, shell, web or other "
+                         "tools. After finish_setup or submit_analysis succeeds, stop immediately.")
+        prompt = instructions + "\n" + canonical({
+            "phase": session.phase, "period": session.adapter.period_context,
+            "business": session.public, "saved_notes": session.notes,
+            "signalweave_evaluation": bundle})
     bridge = TrialMCP(session, audit, await session.specs(), max_tool_calls)
     # Distinct IDs from positive Jev request IDs. A Codex invocation is NOT an API request.
     request_id = -(1 + sum(e["kind"] == "api.request" and e.get("provider") == "openai"
@@ -218,6 +232,12 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
                 error = "episode_timeout"
                 process.kill()
                 await process.wait()
+            except Exception as failure:
+                # Keep counters even when stdout parsing fails after tools ran.
+                error = type(failure).__name__
+                if process.returncode is None:
+                    process.kill()
+                await process.wait()
             finally:
                 if process.returncode is None:
                     process.kill()
@@ -234,7 +254,11 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
                    error_type=error or "missing_usage", usage_known=False)
     done = session.setup_complete if session.phase == "onboarding" else session.submission is not None
     success = done and not error and exit_code == 0
+    elapsed = time.perf_counter() - started
     return {"status": "complete" if success else "failed", "error": error if success else
             error or ("codex_exit" if exit_code else "no_structured_submission"),
-            "tool_calls": bridge.calls, "seconds": time.perf_counter() - started,
+            "tool_calls": bridge.calls, "seconds": elapsed,
+            "response_timeout_seconds": timeout_seconds,
+            "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+            "wall_time_overrun_seconds": max(0., elapsed - timeout_seconds),
             "transport": "codex_cli", "exit_code": exit_code, "foreign_tools": foreign_tools}

@@ -368,8 +368,28 @@ async def test_exhausted_shared_budget_stops_process(fake_episode):
 
 
 async def test_malformed_json_still_cleans_up_process_and_server(fake_episode):
-    with pytest.raises(json.JSONDecodeError):
-        await fake_episode.run([b"not-json\n"])
+    result = await fake_episode.run([b"not-json\n"])
+    assert result["status"] == "failed" and result["error"] == "JSONDecodeError"
     fake_episode.process.kill.assert_called_once()
     fake_episode.process.wait.assert_awaited_once()
     assert fake_episode.closed
+
+
+async def test_malformed_stdout_retains_already_spent_tools_and_timeout_scope(fake_episode):
+    fake = fake_episode
+
+    async def readline():
+        await fake.bridge.call("list_catalog", {})
+        return b"invalid-json\n"
+
+    fake.process.stdout.readline.side_effect = readline
+    result = await transport.codex_episode(fake.session, key="unused", effort="low",
+        budget=fake.budget, audit=fake.audit, max_turns=1, max_tool_calls=3,
+        max_output_tokens=100, timeout_seconds=90)
+    assert result["status"] == "failed" and result["tool_calls"] == 1
+    assert result["error"] == "JSONDecodeError"
+    assert result["response_timeout_seconds"] == 90
+    assert "excluding_startup_and_cleanup" in result["timeout_scope"]
+    assert result["wall_time_overrun_seconds"] == max(0, result["seconds"] - 90)
+    assert any(e["kind"] == "tool.result" and e["actor_role"] == "author" for e in fake.audit.events)
+    assert fake.audit.events[-1]["kind"] == "api.error"
