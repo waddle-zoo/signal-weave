@@ -4,6 +4,47 @@ Scope: a first local runtime and quantitative-analysis slice. This is simulated
 company data with **live Jev**, not production customer adoption, a causal-inference
 benchmark, or a claim of superiority to a frontier agent.
 
+## Published native preview: v0.2.0rc1
+
+The [local preview release](https://github.com/waddle-zoo/signal-weave/releases/tag/v0.2.0rc1)
+is built from `62c2e13e7add58621018a230de7cf679cf29beec`. Its
+[tag workflow](https://github.com/waddle-zoo/signal-weave/actions/runs/36807967494)
+passed all three native builds: macOS ARM64, macOS Intel, and Linux x64. Each
+build ran the installed executable through setup, persisted source/identity
+checks, offline doctor, agent configuration, and an actual MCP handshake.
+The local repository suite for this release passed **931 tests, with 3 skipped**.
+
+Publication was verified through GitHub: nine assets, `isDraft=false`, and
+`isPrerelease=true`. Stable Latest remained `v0.1.0`; main was not merged.
+The installer, three archives, per-file checksums, and aggregate checksum list
+are available through the pinned release URLs in the [short guide](local-install.md).
+Previews require an explicit version and are rejected by the default latest lookup.
+
+The actual published macOS ARM64 installer was then downloaded over HTTPS,
+compared with its reviewed source, and run into a fresh temporary installation
+directory. The installed executable passed `scripts/check_binary.py --live`:
+private setup, persisted source configuration, 28 MCP tools, a live-Jev synthetic
+investigation returning `notify` with numerical delta `-20`, and replay in a
+separate process. The downloaded archive also passed `gh attestation verify`
+against this repository. No existing user installation or agent configuration
+was changed, and no external notification was sent.
+
+Verified archive: `signalweave-v0.2.0rc1-darwin-arm64.tar.gz`.
+SHA-256: `416c7aef7a2c0b5e0bdd7fac608280eca45ef486ecddd27aa2fd2af157804bf0`.
+Machine-readable attestation verification returned one verified attestation.
+
+These are distribution and bounded-runtime checks. The binary smoke supplies an
+approved synthetic card; it is **not** novice onboarding or a Luna comparison.
+The [paired bootstrap protocol](bootstrap-benchmark-protocol.md) and independent
+scorer are implemented and reviewed for development testing. The live paired run
+remains unexecuted pending an authorized OpenAI credential. No new comparative
+accuracy, latency, cost, or enterprise-readiness claim follows from this release.
+
+macOS builds remain unsigned by a Developer ID and are not notarized; managed
+device acceptance has not been proven. Linux requires glibc 2.35+. This preview
+does not establish compatibility with arbitrary MCP responses or real company
+source credentials.
+
 ## Trial design
 
 One reviewed card is saved before the scenarios run. It asks for changed activity,
@@ -45,7 +86,7 @@ come from this example adapter's telemetry, not independent warehouse billing.
 
 ## Additional verification
 
-Final repository verification: **778 passed, 2 skipped**; Ruff and whitespace
+Initial runtime milestone verification: **778 passed, 2 skipped**; Ruff and whitespace
 checks passed. `make verify` ran with `UV_NO_SYNC=1` against the installed locked
 runtime because this execution sandbox blocks package downloads. The lock was
 updated separately with authorized package-index access for the binary extra.

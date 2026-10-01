@@ -130,8 +130,11 @@ definitions or permission to run all tools.
    Do not infer this benefit from subsecond Jev requests.
 4. **Revalidation.** Detect semantic/schema drift and require targeted reapproval;
    test against historical decisions before permitting a changed investigation.
-5. **Distribution.** Signed platform builds and real Codex/Claude user onboarding.
-   Current binary proof is local macOS ARM64, not a multiplatform release.
+5. **Distribution policy and user validation.** The v0.2.0rc1 preview is published
+   with macOS ARM64/Intel and Linux x64 builds, installed-binary CI checks, and a
+   live check of the published ARM Mac download. Developer-ID signing,
+   notarization, managed-device acceptance, and real Codex/Claude user onboarding
+   remain open; a working MCP handshake is not evidence that users succeed.
 
 The defensible product opportunity is the reviewed, reusable investigation and
 its accumulated evidence—not merely a faster classification API. These gates are
