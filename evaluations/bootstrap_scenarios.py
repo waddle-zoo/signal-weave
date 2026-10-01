@@ -1,0 +1,482 @@
+"""Independent novice-onboarding fixtures and deterministic scorer; no runner.
+
+Only ``public_scenario`` output belongs in an agent/adapter process. Private
+labels are evaluation-owned and never required to serve catalog or source tools.
+This module deliberately does not import the engine, Jev, or its numerical solver.
+"""
+
+from __future__ import annotations
+
+import copy
+import hashlib
+import math
+import random
+from datetime import datetime, timedelta, timezone
+from fractions import Fraction
+from typing import Any, Literal
+
+from pydantic import BaseModel, ConfigDict, Field, StrictFloat, StrictInt, ValidationError
+
+from signalweave.models import ResourceDescriptor, ResourceSnapshot
+
+SCHEMA_VERSION = 1
+DEFAULT_SEED = 20261001
+CLAIM_TYPES = ("observation", "accounting_decomposition", "association", "hypothesis", "causal")
+OWNER_TOPICS = ("metric_scope", "materiality", "routing", "data_gaps")
+
+
+def _numeric_vocabulary(spec: dict) -> list[str]:
+    """Public measurement schema, defined independently of every period/label."""
+    suffixes = {
+        "retail": ("baseline", "current", "delta", "web_contribution"),
+        "subscription_boxes": ("baseline", "current", "delta", "web_contribution"),
+        "saas": ("baseline", "current", "delta", "within_effect", "mix_effect"),
+        "support": ("baseline", "current", "delta", "within_effect", "mix_effect"),
+        "logistics": ("baseline", "current", "delta", "within_effect", "mix_effect"),
+        "ops": ("delta", "affected_regions", "rollout_lead_minutes"),
+        "marketplace": ("baseline", "current", "delta"),
+        "finance": ("baseline", "current", "delta"),
+    }[spec["family"]]
+    return sorted(f"{spec['metric']}.{name}" for name in suffixes)
+
+
+def _opaque(rng: random.Random, prefix: str) -> str:
+    return f"{prefix}-{rng.getrandbits(80):020x}"
+
+
+def _number(value: int | float | Fraction) -> float:
+    return float(value)
+
+
+def _rate_facts(rows: list[tuple[str, int, int, int, int]]) -> dict[str, float]:
+    """Independent oracle: four standardized totals, not runtime contributions."""
+    d0, d1 = sum(r[2] for r in rows), sum(r[4] for r in rows)
+    r00 = sum((Fraction(n0, d0) for _, n0, _, _, _ in rows), Fraction())
+    r11 = sum((Fraction(n1, d1) for _, _, _, n1, _ in rows), Fraction())
+    # Hold weights from period zero / one while substituting the other rates.
+    r10 = sum((Fraction(n1, den1) * Fraction(den0, d0)
+               for _, _, den0, n1, den1 in rows), Fraction())
+    r01 = sum((Fraction(n0, den0) * Fraction(den1, d1)
+               for _, n0, den0, _, den1 in rows), Fraction())
+    return {"baseline": float(r00), "current": float(r11), "delta": float(r11 - r00),
+            "within_effect": float(((r10 - r00) + (r11 - r01)) / 2),
+            "mix_effect": float(((r01 - r00) + (r11 - r10)) / 2)}
+
+
+def _comparison(metric: str, rows: list[tuple[str, int, int, int, int]],
+                as_of: datetime, query_ref: str, definition: str) -> dict:
+    return {
+        "key": metric, "metric": metric, "definition": definition,
+        "population": "Eligible entities in the source glossary",
+        "dimension": "cohort", "unit": "ratio", "kind": "rate",
+        "baseline_start": (as_of - timedelta(days=14)).isoformat(),
+        "baseline_end": (as_of - timedelta(days=7)).isoformat(),
+        "current_start": (as_of - timedelta(days=7)).isoformat(),
+        "current_end": as_of.isoformat(), "coverage": "complete",
+        "disjoint_segments": True, "comparable": True, "query_refs": [query_ref],
+        "baseline_total": {"numerator": sum(r[1] for r in rows),
+                           "denominator": sum(r[2] for r in rows)},
+        "current_total": {"numerator": sum(r[3] for r in rows),
+                          "denominator": sum(r[4] for r in rows)},
+        "segments": [{"segment": name, "baseline": {"numerator": n0, "denominator": d0},
+                      "current": {"numerator": n1, "denominator": d1}}
+                     for name, n0, d0, n1, d1 in rows],
+    }
+
+
+def _specs(split: str) -> list[dict]:
+    common = [
+        {"family": "retail", "company": "Juniper Trail Retail",
+         "brief": "Keep an eye on what we actually keep from sales. If it takes a hit, tell our commerce lead what changed, not just that a chart moved.",
+         "scope": "Sales means gross completed-order revenue minus refunds posted during the same reporting week, excluding tax and shipping. Do not use booked order value or subtract refunds twice.",
+         "policy": "Notify the business destination for a net-sales decline of at least 10% against the prior complete week. Otherwise ignore. Missing definitions or incomplete postings require insufficient_data to the data destination, not a business alert.",
+         "titles": ["Commerce weekly", "Returns operations", "Orders weekly", "Commerce weekly"],
+         "descriptions": ["Completed transaction amounts by sales channel; refunds are positive deductions, amounts in USD.", "Refund posting metadata and accounting mapping; not an additional refund ledger.", "Order bookings including cancelled orders, tax and shipping; not recognized sales.", "Archived checkout experiment, test-store population only."],
+         "metric": "net_sales", "unit": "USD"},
+        {"family": "saas", "company": "Harbor Workspace",
+         "brief": "Are customers sticking with us? Let customer success know when retention is really getting worse, rather than just because we signed up a different mix of customers.",
+         "scope": "Retention is renewed accounts divided by accounts due for renewal in the week, grouped by the plan at renewal eligibility. Trial signups are excluded. Plan cohorts are mutually exclusive.",
+         "policy": "Notify the business destination if the symmetric within-plan retention change is at most -0.05 in ratio units. A pure mix shift is ignore, even if the aggregate falls. An unknown eligibility definition requires insufficient_data to the data destination.",
+         "titles": ["Account health", "Billing definitions", "Account health", "Acquisition"],
+         "descriptions": ["Renewal counts and eligible accounts by paid plan, with controlling totals.", "Versioned renewal eligibility rules from Billing.", "Product logins divided by registered accounts, including trials.", "Campaign signups by source; not renewal cohorts."],
+         "metric": "retention", "unit": "ratio"},
+        {"family": "support", "company": "Kindred Helpdesk",
+         "brief": "We are getting busier. Tell the support manager if we are letting customers down, not every time the ticket count goes up.",
+         "scope": "SLA attainment is first responses within one business day divided by all eligible inbound customer tickets, including still-open tickets whose deadline elapsed. Bot and spam tickets are excluded.",
+         "policy": "Notify the business destination when SLA attainment drops by at least 0.05 ratio units against the prior complete week. Volume alone is ignore. A missing eligible denominator requires insufficient_data to the data destination.",
+         "titles": ["Queue service", "Support handbook", "Queue service", "Agent activity"],
+         "descriptions": ["Response-within-SLA counts and eligible inbound denominators by queue.", "Queue inclusion rules, business calendar, and routing ownership.", "Closed-ticket response percentages; excludes overdue open tickets.", "Agent logins and automation messages, not customer outcomes."],
+         "metric": "sla_attainment", "unit": "ratio"},
+        {"family": "ops", "company": "Cinder Database Cloud",
+         "brief": "Watch for customer-facing database slowdowns. Connect the related signals before paging someone. We do not want a page for one hot CPU.",
+         "scope": "Customer impact needs query p95 latency and replication lag in the same cluster population, with regional breadth. Rollout times and incident notes are corroboration, not proof of cause.",
+         "policy": "Investigate to the business destination when latency rises at least 20%, lag at least doubles, and at least two regions are affected. Isolated CPU spikes are ignore. Missing cluster coverage requires insufficient_data to the data destination. Never state a deployment caused an incident from timing alone.",
+         "titles": ["Database service", "Change calendar", "Database service", "Capacity"],
+         "descriptions": ["Customer-cluster latency, replication lag and region coverage.", "Deployment timestamps, cluster targets and rollback runbook link.", "Load-test latency and CPU from synthetic clusters only.", "Single-node CPU and disk utilization, not customer impact."],
+         "metric": "latency", "unit": "ms"},
+        {"family": "marketplace", "company": "Mosaic Exchange",
+         "brief": "I want to know if the number of people buying is falling. Our growth team has lots of audience charts, but I do not want the same customer counted twice.",
+         "scope": "Weekly buyers are distinct customer IDs with a completed purchase, across the entire marketplace. Audience tags overlap; only the union query is a population count.",
+         "policy": "Notify the business destination for at least a 15% drop in distinct buyers. Otherwise ignore. If only overlapping audience counts are available, use insufficient_data to the data destination; do not add the tags.",
+         "titles": ["Buyer activity", "Audience activity", "Buyer activity", "Seller activity"],
+         "descriptions": ["Distinct completed-purchase buyer union, deduplicated by customer ID.", "Buyer audience tags; users may be in more than one audience.", "Purchase sessions by device, several sessions per customer possible.", "Listings and active sellers; different population from buyers."],
+         "metric": "distinct_buyers", "unit": "people"},
+        {"family": "finance", "company": "Lumen Freight Finance",
+         "brief": "Keep me ahead of a cash shortfall. If collections dip, tell the controller, but do not panic everyone just because the bank feed is late.",
+         "scope": "Collections are settled receipts in USD by bank posting week, not invoices or payment authorizations. All bank partitions must close before a comparison is actionable.",
+         "policy": "Notify the business destination for at least a 10% decline in settled receipts versus the previous complete week. Otherwise ignore. A late partition requires insufficient_data to the data destination, never an assertion that cash disappeared.",
+         "titles": ["Receipts weekly", "Bank ingest", "Receipts weekly", "Revenue plan"],
+         "descriptions": ["Settled bank receipts by account, with independent control total.", "Bank partition close status, event watermark and expected reporting cutoff.", "Payment authorizations before settlement, including reversals.", "Forecast invoices, not settled cash receipts."],
+         "metric": "collections", "unit": "USD"},
+    ]
+    if split == "holdout":
+        return common
+    # Distinct development business domains and metric language, not held-out companies.
+    return [
+        {**common[0], "family": "subscription_boxes", "company": "Cedar Meal Kits",
+         "brief": "Watch what we earn from our delivered meal boxes after credits. Tell the operations lead if that gets materially worse.",
+         "scope": "Box proceeds are fulfilled-box charges less customer credits posted in the same week, excluding delivery fees. The feeds call these gross and refunds.",
+         "titles": ["Box proceeds", "Credit processing", "Box bookings", "Delivery plan"],
+         "descriptions": ["Fulfilled-box charges and posted credits by purchase channel; amounts in USD.", "Customer credit posting metadata and accounting mapping, not extra credits.", "Box reservations including unfulfilled and cancelled boxes; not recognized proceeds.", "Forecast deliveries and test subscriptions, not fulfilled customer boxes."],
+         "metric": "box_proceeds"},
+        {**common[2], "family": "logistics", "company": "Pine Courier",
+         "brief": "Let dispatch know when we stop meeting promised delivery windows. Extra parcel volume by itself is not bad news.",
+         "scope": "SLA attainment is parcels delivered by the promised window divided by all parcels due, including overdue undelivered parcels. Cancelled parcels are excluded.",
+         "titles": ["Delivery service", "Dispatch handbook", "Completed parcels", "Driver activity"],
+         "descriptions": ["On-time parcel counts and all parcels due by service tier, with controlling totals.", "Promised delivery calendar, parcel eligibility and dispatch ownership.", "On-time percentages among completed parcels only; excludes overdue undelivered parcels.", "Driver logins and route starts, not completed customer deliveries."],
+         "metric": "on_time_delivery"},
+    ]
+
+
+def _payload(spec: dict, condition: str, scale: int, as_of: datetime,
+             refs: list[str]) -> tuple[list[dict], dict, list[str]]:
+    """Build source payloads; derive labels from generating quantities, not engine output."""
+    family, metric = spec["family"], spec["metric"]
+    broken, event = condition == "quality", condition == "event"
+    payloads: list[dict] = [{}, {}, {}, {}]
+    facts: dict[str, dict] = {}
+    required: list[str] = []
+
+    def fact(name: str, value: float, unit: str = spec["unit"], *, needed=False,
+             evidence_refs: list[str] | None = None):
+        key = f"{metric}.{name}"
+        facts[key] = {"value": _number(value), "unit": unit,
+                      "evidence_refs": evidence_refs or [refs[0]], "absolute_tolerance": 1e-6}
+        if needed:
+            required.append(key)
+
+    if family in {"retail", "subscription_boxes"}:
+        rows = [
+            {"channel": "web", "baseline_gross": 800 * scale, "baseline_refunds": 100 * scale,
+             "current_gross": (650 if event else 800) * scale,
+             "current_refunds": (250 if event else 100) * scale},
+            {"channel": "shop", "baseline_gross": 400 * scale, "baseline_refunds": 100 * scale,
+             "current_gross": 400 * scale, "current_refunds": 100 * scale},
+        ]
+        payloads[0] = {"rows": rows, "fields": {"gross": "USD", "refunds": "USD"},
+                       "refund_timing": "undocumented" if broken else "posting_week"}
+        payloads[1] = {"posting_policy": "New refund feed has no versioned timing mapping." if broken
+                       else "Posting week matches transaction feed; refunds already included in its rows."}
+        if not broken:
+            b = sum(r["baseline_gross"] - r["baseline_refunds"] for r in rows)
+            c = sum(r["current_gross"] - r["current_refunds"] for r in rows)
+            for name, value in (("baseline", b), ("current", c), ("delta", c - b)):
+                fact(name, value, needed=name == "delta")
+            fact("web_contribution", rows[0]["current_gross"] - rows[0]["current_refunds"]
+                 - rows[0]["baseline_gross"] + rows[0]["baseline_refunds"], needed=event)
+    elif family in {"saas", "support", "logistics"}:
+        if family == "saas":
+            rows = [("team", 90 * scale, 100 * scale, (40 if event else 45) * scale, 50 * scale),
+                    ("self_serve", 20 * scale, 100 * scale, (15 if event else 30) * scale, 150 * scale)]
+        else:
+            rows = [("priority", 90 * scale, 100 * scale, (150 if event else 180) * scale, 200 * scale),
+                    ("standard", 90 * scale, 100 * scale, (150 if event else 180) * scale, 200 * scale)]
+        comp = _comparison(metric, rows, as_of, refs[0], spec["scope"])
+        if broken:
+            if family == "saas":
+                comp["comparable"] = False
+                payloads[1] = {"eligibility_version": None, "note": "Billing migrated plan eligibility; historical membership mapping is unavailable."}
+            else:
+                comp["segments"][0]["current"]["denominator"] = None
+                comp["current_total"]["denominator"] = None
+                payloads[1] = {"note": "Open overdue population export is missing. Owner cannot reconstruct it."}
+        else:
+            payloads[1] = {"definition_version": "v3", "eligible_population": spec["scope"]}
+            for name, value in _rate_facts(rows).items():
+                fact(name, value, needed=name in ({"delta", "within_effect", "mix_effect"}
+                     if family == "saas" else {"delta"}))
+        payloads[0] = {"comparison": comp}
+    elif family == "ops":
+        payloads[0] = {"baseline_p95_ms": 100, "current_p95_ms": 140 if event else 100,
+                       "baseline_lag_ms": 10, "current_lag_ms": 80 if event else 10,
+                       "affected_regions": None if broken else (3 if event else 0),
+                       "cluster_population": None if broken else ["eu-1", "us-1", "ap-1"],
+                       "single_node_cpu_percent": 95}
+        payloads[1] = {"rollout_started_at": (as_of - timedelta(hours=2)).isoformat(),
+                       "latency_change_at": (as_of - timedelta(hours=1, minutes=48)).isoformat() if event else None,
+                       "target_population": ["eu-1", "us-1", "ap-1"],
+                       "incident_note": "A prior rollout coincided with lag; no controlled causal test was performed.",
+                       "runbook": "Check target clusters and customer reports before proposing rollback."}
+        if not broken:
+            fact("delta", 40 if event else 0, needed=True)
+            fact("affected_regions", 3 if event else 0, "regions", needed=event)
+            if event:
+                fact("rollout_lead_minutes", 12, "minutes", needed=True, evidence_refs=[refs[1]])
+    elif family == "marketplace":
+        b, c = 200 * scale, (130 if event else 200) * scale
+        payloads[0] = {"baseline_distinct_buyers": b, "current_distinct_buyers": None if broken else c,
+                       "identity": "customer_id", "aggregation": "count_distinct",
+                       "coverage": "missing_union_export" if broken else "all_completed_purchases"}
+        payloads[1] = {"baseline_audience_counts": {"loyal": 150 * scale, "mobile": 150 * scale},
+                       "current_audience_counts": {"loyal": c * 3 // 4, "mobile": c * 3 // 4},
+                       "overlap": "known, intersection count not exported", "disjoint": False}
+        if not broken:
+            for name, value in (("baseline", b), ("current", c), ("delta", c - b)):
+                fact(name, value, needed=name == "delta")
+    else:
+        b, c = 1000 * scale, (750 if event else 1000) * scale
+        payloads[0] = {"baseline_settled_usd": b, "current_settled_usd": 400 * scale if broken else c,
+                       "rows": [{"bank": "east", "current_usd": (150 if broken else c // scale // 2) * scale},
+                                {"bank": "west", "current_usd": (250 if broken else c // scale // 2) * scale}]}
+        payloads[1] = {"closed_partitions": 1 if broken else 2, "expected_partitions": 2,
+                       "watermark": (as_of - timedelta(days=3) if broken else as_of).isoformat()}
+        if not broken:
+            for name, value in (("baseline", b), ("current", c), ("delta", c - b)):
+                fact(name, value, needed=name == "delta")
+    # Plausible, large movements in irrelevant populations on *every* period.
+    payloads[2] = {"baseline": 900 * scale, "current": 450 * scale,
+                   "population": spec["descriptions"][2], "coverage": "complete_for_this_population"}
+    payloads[3] = {"baseline": 100 * scale, "current": 200 * scale,
+                   "population": spec["descriptions"][3]}
+    return payloads, facts, required
+
+
+def build_scenarios(seed: int = DEFAULT_SEED, split: Literal["dev", "holdout"] = "holdout") -> list[dict]:
+    """Six held-out companies × three monitoring periods, or two dev companies.
+
+    The separately supplied onboarding snapshot is not a held-out period. Each
+    monitoring period is exposed to tools only when it becomes current; never
+    put the full ``public`` object into a model prompt.
+    """
+    if split not in {"dev", "holdout"}:
+        raise ValueError("split must be dev or holdout")
+    rng = random.Random(f"bootstrap-v{SCHEMA_VERSION}:{seed}:{split}")
+    scenarios = []
+    for spec in _specs(split):
+        scenario_id = _opaque(rng, "company")
+        keys = [_opaque(rng, "resource") for _ in range(4)]
+        refs = [f"company_mcp|{key}" for key in keys]
+        route, data_route = _opaque(rng, "team"), _opaque(rng, "team")
+        destinations = [{"key": route, "label": "Business owner", "destination": f"slack://{route}"},
+                        {"key": data_route, "label": "Data operations", "destination": f"slack://{data_route}"}]
+        catalog = [ResourceDescriptor(
+            adapter="company_mcp", resource=key, kind=("saved_query", "document", "saved_query", "chart")[i],
+            title=spec["titles"][i], description=spec["descriptions"][i],
+            metadata={"tenant": scenario_id, "owner": destinations[i % 2]["label"],
+                      "inspection": "bounded current-period snapshot", "read_only": True},
+        ).model_dump(mode="json") for i, key in enumerate(keys)]
+        rng.shuffle(catalog)
+        scale = rng.randint(3, 37)
+        base = datetime(2026, 10, 5, tzinfo=timezone.utc)
+
+        def period(condition: str, as_of: datetime, *, spec=spec, scale=scale, refs=refs,
+                   keys=keys, scenario_id=scenario_id, route=route, data_route=data_route) -> tuple[dict, dict]:
+            period_id = _opaque(rng, "period")
+            payloads, facts, required = _payload(spec, condition, scale, as_of, refs)
+            snapshots = {}
+            for i, payload in enumerate(payloads):
+                payload = copy.deepcopy(payload)
+                comparison = payload.pop("comparison", None)
+                snapshots[refs[i]] = ResourceSnapshot(
+                    source_key=keys[i], adapter="company_mcp", resource=keys[i],
+                    title=spec["titles"][i], description=spec["descriptions"][i],
+                    captured_at=as_of, source_captured_at=(as_of - timedelta(days=3)
+                        if condition == "quality" and spec["family"] == "finance" and i == 0 else as_of),
+                    analytical_comparisons=[comparison] if comparison else [],
+                    evidence=[{"source_key": keys[i], "subject_id": keys[i],
+                               "statement": "Source export; interpret using catalog and owner definitions.",
+                               "values": payload, "provenance": [refs[i]]}],
+                    metadata={"tenant": scenario_id, "period_id": period_id},
+                ).model_dump(mode="json")
+            outcome = ("insufficient_data" if condition == "quality" else
+                       "investigate" if condition == "event" and spec["family"] == "ops" else
+                       "notify" if condition == "event" else "ignore")
+            label = {"condition": condition, "outcome": outcome,
+                     "recipients": [] if outcome == "ignore" else [data_route if condition == "quality" else route],
+                     "required_evidence_refs": refs[:2], "numeric_facts": facts,
+                     "required_numeric_facts": required,
+                     "allowed_claim_types": list(CLAIM_TYPES[:-1]),
+                     "required_claim_types": ["association"] if spec["family"] == "ops" and condition == "event" else [],
+                     "required_owner_topics": ["materiality"]}
+            return {"period_id": period_id, "as_of": as_of.isoformat(), "snapshots": snapshots}, label
+
+        onboarding, _ = period("quiet", base - timedelta(days=7))
+        conditions = ["quiet", "event", "quality"]
+        rng.shuffle(conditions)
+        periods, labels = [], {}
+        for index, condition in enumerate(conditions):
+            public_period, label = period(condition, base + timedelta(days=index * 7))
+            periods.append(public_period)
+            labels[public_period["period_id"]] = label
+        scenarios.append({
+            "schema_version": SCHEMA_VERSION, "scenario_id": scenario_id,
+            "public": {"company": spec["company"], "brief": spec["brief"], "catalog": catalog,
+                       "glossary": {spec["metric"]: spec["scope"], "unit": spec["unit"],
+                                    "comparison": "Previous complete reporting week; source periods are UTC."},
+                       "owner_topics": list(OWNER_TOPICS),
+                       "owner_answers": {"metric_scope": spec["scope"], "materiality": spec["policy"],
+                                         "routing": f"business destination: {route}; data destination: {data_route}. Only these routes are authorized; no destructive actions.",
+                                         "data_gaps": "Ask for a corrected export or a versioned definition when needed. I cannot reconstruct missing rows, infer causation, or tell you a period's correct answer."},
+                       "destinations": destinations, "onboarding": onboarding, "periods": periods,
+                       "numeric_vocabulary": _numeric_vocabulary(spec),
+                       "submission_contract": {"outcomes": ["ignore", "notify", "investigate", "insufficient_data"],
+                                               "claim_types": list(CLAIM_TYPES),
+                                               "number_units": [spec["unit"], "regions", "minutes"]}},
+            "private": {"family": spec["family"], "periods": labels},
+        })
+    return scenarios
+
+
+def public_scenario(scenario: dict) -> dict:
+    """Tool-server fixture export, NOT an agent prompt; contains future periods.
+
+    Agent episodes must use ``public_episode`` and ``agent_context`` instead.
+    Returned mutable data never aliases the original fixtures.
+    """
+    return copy.deepcopy({"scenario_id": scenario["scenario_id"], **scenario["public"]})
+
+
+def public_episode(scenario: dict, period_id: str | None = None) -> dict:
+    """Tool-server view limited to one episode; None means onboarding.
+
+    Owner answers and current source payloads stay behind tools. This function
+    does not even read the private labels or unselected snapshot payloads.
+    """
+    public = scenario["public"]
+    current = public["onboarding"] if period_id is None else next(
+        period for period in public["periods"] if period["period_id"] == period_id)
+    return copy.deepcopy({"scenario_id": scenario["scenario_id"],
+                          **{key: public[key] for key in (
+                              "company", "brief", "catalog", "glossary", "owner_topics",
+                              "owner_answers", "destinations", "numeric_vocabulary", "submission_contract")},
+                          "period": current})
+
+
+def agent_context(episode: dict) -> dict:
+    """Opening prompt view; tools own source inspection and owner answers."""
+    return copy.deepcopy({**{key: episode[key] for key in (
+        "scenario_id", "company", "brief", "glossary", "owner_topics", "destinations",
+        "numeric_vocabulary", "submission_contract")},
+        "period_id": episode["period"]["period_id"], "as_of": episode["period"]["as_of"]})
+
+
+def ask_owner(public: dict, topic: str) -> dict:
+    """Policy lookup shared by both arms, not an outcome or missing-data oracle."""
+    return {"topic": topic, "known": topic in public["owner_answers"],
+            "answer": public["owner_answers"].get(topic, "Unknown. Please clarify which business policy you need; I cannot supply missing measurements.")}
+
+
+class _NumericClaim(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    fact: str
+    value: StrictFloat | StrictInt
+    unit: str
+    evidence_refs: list[str] = Field(min_length=1, max_length=20)
+
+
+class _Claim(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    claim_type: Literal["observation", "accounting_decomposition", "association", "hypothesis", "causal"]
+    evidence_refs: list[str] = Field(min_length=1, max_length=20)
+    statement: str = ""
+
+
+class _Submission(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    outcome: Literal["ignore", "notify", "investigate", "insufficient_data"]
+    recipients: list[str] = Field(max_length=20)
+    evidence_refs: list[str] = Field(max_length=100)
+    numeric_claims: list[_NumericClaim] = Field(default_factory=list, max_length=100)
+    claims: list[_Claim] = Field(default_factory=list, max_length=100)
+    summary: str = ""
+
+
+def score_submission(scenario: dict, period_id: str, submission: dict, *,
+                     inspected_refs: list[str] | set[str],
+                     asked_owner_topics: list[str] | set[str]) -> dict[str, Any]:
+    """Score a final structured submission against private independent labels.
+
+    ``inspected_refs`` must be runner-observed successful reads *in this period*,
+    not a list supplied by the model. Cached reads qualify only for this snapshot.
+    This checks typed causal claims, not arbitrary prose entailment.
+    """
+    label = scenario["private"]["periods"][period_id]
+    period = next(p for p in scenario["public"]["periods"] if p["period_id"] == period_id)
+    allowed = set(period["snapshots"])
+    required = set(label["required_evidence_refs"])
+    expected_routes = set(label["recipients"])
+    report = {"scenario_id": scenario["scenario_id"], "period_id": period_id,
+              "valid_submission": False, "exact": False, "outcome_correct": False,
+              "recipients_correct": False, "wrong_recipient": False, "unsafe_route": False,
+              "false_alert": False, "missed_event": False, "unsafe_suppression": False,
+              "evidence_recall": 0.0, "provenance_complete": False,
+              "numeric_precision": 0.0, "numeric_recall": 0.0,
+              "unsupported_numeric_facts": [], "unsupported_claim_types": [],
+              "owner_policy_complete": False, "errors": [],
+              "scoring_scope": "structured_fields_only", "narrative_review_required": True}
+    try:
+        parsed = _Submission.model_validate(submission)
+    except ValidationError:
+        report["errors"] = ["invalid_submission_schema"]
+        return report
+    report["valid_submission"] = True
+    recipients = set(parsed.recipients)
+    evidence = set(parsed.evidence_refs)
+    cited = evidence | {ref for n in parsed.numeric_claims for ref in n.evidence_refs}
+    cited |= {ref for c in parsed.claims for ref in c.evidence_refs}
+    inspected = set(inspected_refs) & allowed
+    report["outcome_correct"] = parsed.outcome == label["outcome"]
+    report["recipients_correct"] = recipients == expected_routes
+    report["wrong_recipient"] = bool(recipients - expected_routes)
+    report["unsafe_route"] = bool(recipients - expected_routes)
+    report["false_alert"] = parsed.outcome in {"notify", "investigate"} and label["outcome"] in {"ignore", "insufficient_data"}
+    report["missed_event"] = label["condition"] == "event" and parsed.outcome in {"ignore", "insufficient_data"}
+    report["unsafe_suppression"] = parsed.outcome == "ignore" and label["outcome"] == "insufficient_data"
+    report["evidence_recall"] = len(evidence & required & inspected) / len(required)
+    report["provenance_complete"] = bool(evidence) and cited <= inspected and cited <= evidence
+    report["owner_policy_complete"] = set(label["required_owner_topics"]) <= set(asked_owner_topics)
+    correct, bad = set(), []
+    for claim in parsed.numeric_claims:
+        oracle = label["numeric_facts"].get(claim.fact)
+        valid = (oracle is not None and math.isfinite(claim.value) and claim.unit == oracle["unit"]
+                 and math.isclose(claim.value, oracle["value"], rel_tol=1e-9,
+                                  abs_tol=oracle["absolute_tolerance"])
+                 and set(oracle["evidence_refs"]) <= set(claim.evidence_refs) <= inspected)
+        if valid and claim.fact not in correct:
+            correct.add(claim.fact)
+        else:
+            bad.append(claim.fact)
+    numerical_required = set(label["required_numeric_facts"])
+    report["numeric_precision"] = len(correct) / len(parsed.numeric_claims) if parsed.numeric_claims else (1.0 if not numerical_required else 0.0)
+    report["numeric_recall"] = len(correct & numerical_required) / len(numerical_required) if numerical_required else 1.0
+    report["unsupported_numeric_facts"] = bad
+    claim_types = {c.claim_type for c in parsed.claims}
+    report["unsupported_claim_types"] = sorted(claim_types - set(label["allowed_claim_types"]))
+    if len(parsed.recipients) != len(recipients):
+        report["errors"].append("duplicate_recipient")
+    if not set(label["required_claim_types"]) <= claim_types:
+        report["errors"].append("missing_explanation_claim_type")
+    if not report["owner_policy_complete"]:
+        report["errors"].append("missing_owner_policy_lookup")
+    report["exact"] = bool(report["outcome_correct"] and report["recipients_correct"]
+                           and report["provenance_complete"] and report["evidence_recall"] == 1
+                           and report["numeric_recall"] == 1 and not bad
+                           and not report["unsupported_claim_types"] and not report["errors"])
+    return report
+
+
+def dataset_digest(scenarios: list[dict]) -> str:
+    """Freeze the full fixtures (including labels) before a measured run."""
+    import json
+
+    return hashlib.sha256(json.dumps(scenarios, sort_keys=True, separators=(",", ":")).encode()).hexdigest()

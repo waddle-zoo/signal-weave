@@ -1,0 +1,384 @@
+"""Offline harness contracts; doubles are never trial evidence."""
+
+import copy
+import json
+from datetime import datetime, timedelta, timezone
+
+import httpx
+import pytest
+from typesafe_sdk import SystemOneResponse, Usage
+
+from evaluations import bootstrap_agent_trial as trial
+from evaluations.bootstrap_scenarios import build_scenarios, public_scenario
+from signalweave.engine import InsightEngine
+from signalweave.mcp_server import create_mcp
+from signalweave.models import InsightResult, PrincipalContext, SourceRef
+from signalweave.runtime import Runtime
+from signalweave.sources import SourceRegistry
+from signalweave.store import JsonInsightCardStore, JsonMetricQueryCardStore
+
+
+class OfflineJudger:
+    name = "offline-harness-contract-double"
+
+    async def compile_plan(self, state, card):
+        return {"capabilities": ["freshness_check"], "baseline": "previous_period"}
+
+    async def rank_resources(self, goal, resources):
+        return {f"{item.adapter}|{item.resource}": .99 for item in resources}
+
+    async def judge(self, state, card, plan, observations):
+        return InsightResult(card_id=card.id, outcome="ignore", summary="Test only",
+                             rationale="Not evidence", confidence=.99,
+                             evidence=state["evidence"], observations=observations,
+                             source_keys=[source.key for source in card.sources], evaluator=self.name)
+
+
+@pytest.fixture
+def public():
+    return public_scenario(build_scenarios(split="dev")[0])
+
+
+def make_session(tmp_path, public, treatment=True):
+    audit = trial.Audit()
+    adapter = trial.PublicSourceAdapter(public["catalog"], public["scenario_id"], audit)
+    adapter.set_period(public["onboarding"], datetime.now(timezone.utc))
+    registry = SourceRegistry([adapter])
+    runtime = Runtime(card_store=JsonInsightCardStore(tmp_path / "cards.json"), sources=registry,
+                      engine=InsightEngine(OfflineJudger(), registry),
+                      metric_query_store=JsonMetricQueryCardStore(tmp_path / "metric-cards.json"),
+                      principal=PrincipalContext(principal_id="offline", tenant_id=public["scenario_id"]))
+    return trial.ToolSession(public, adapter, create_mcp(runtime), treatment)
+
+
+def test_real_sdk_response_usage_serializes_and_is_counted():
+    response = SystemOneResponse(model="jev-1.13.0", usage=Usage(input_tokens=120, output_tokens=0), answers={})
+    audit = trial.Audit()
+    audit.emit("api.request", provider="jev", request_id=1)
+    audit.emit("api.response", provider="jev", request_id=1, response=response, usage=response.usage)
+    assert audit.events[1]["response"]["model"] == "jev-1.13.0"
+    usage = trial.usage_summary(audit.events)["jev"]
+    assert usage["input_tokens"] == 120
+    assert usage["unknown_usage_attempts"] == 0
+    assert usage["estimated_known_usage_usd"] == pytest.approx(120 * .042 / 1e6)
+
+
+async def test_measured_jev_real_sdk_shape_and_error_count(monkeypatch):
+    budget, audit = trial.RequestBudget(2), trial.Audit()
+    response = SystemOneResponse(model="jev-1.13.0", usage=Usage(input_tokens=12, output_tokens=0), answers={})
+
+    async def success(self, **kwargs):
+        return response
+
+    monkeypatch.setattr(trial.JevJudger, "_system_one_with_retry", success)
+    judger = trial.MeasuredJev("not-a-real-key", budget, audit)
+    assert await judger._system_one_with_retry(state={}, questions={}, stage="test") is response
+
+    async def failure(self, **kwargs):
+        raise RuntimeError("secret-text-must-not-enter-audit")
+
+    monkeypatch.setattr(trial.JevJudger, "_system_one_with_retry", failure)
+    with pytest.raises(RuntimeError):
+        await judger._system_one_with_retry(state={}, questions={}, stage="test")
+    with pytest.raises(trial.BudgetExceeded):
+        await judger._system_one_with_retry(state={}, questions={}, stage="test")
+    assert budget.used == 2
+    assert trial.usage_summary(audit.events)["jev"]["unknown_usage_attempts"] == 1
+    assert "secret-text" not in trial.canonical(audit.events)
+
+
+@pytest.mark.parametrize("expression,result", [("(800-100)+(400-100)", 1000),
+                                              ("(150/200)-(90/100)", -.15), ("-3*+2", -6)])
+def test_shared_arithmetic(expression, result):
+    assert trial.calculate(expression) == pytest.approx(result)
+
+
+@pytest.mark.parametrize("expression", ["__import__('os')", "2**20", "a.b", "True", "[1,2]",
+                                        "1/0", "1e999", "1+" * 501 + "1"])
+def test_arithmetic_rejects_code_and_nonfinite(expression):
+    with pytest.raises((ValueError, SyntaxError, ZeroDivisionError)):
+        trial.calculate(expression)
+
+
+def test_projection_excludes_labels_future_periods_and_owner_answers(public, tmp_path):
+    public["private"] = {"outcome": "SENTINEL_PRIVATE"}
+    public["periods"][2]["snapshots"] = {"SENTINEL_FUTURE": {}}
+    session = make_session(tmp_path, public)
+    context = trial.canonical(session.public)
+    assert "SENTINEL_PRIVATE" not in context
+    assert "SENTINEL_FUTURE" not in trial.canonical(session.adapter.snapshots)
+    assert "owner_answers" not in context
+    assert "periods" not in vars(session)
+    assert "periods" not in vars(session.adapter)
+    assert "snapshots" not in session.public
+    altered = copy.deepcopy(public)
+    altered["private"]["outcome"] = "OTHER_HIDDEN"
+    altered["periods"][2]["snapshots"] = {"OTHER_FUTURE": {}}
+    assert trial.agent_context(altered) == session.public
+
+
+async def test_both_arms_have_same_raw_tools_context_and_calculator(tmp_path, public):
+    baseline = make_session(tmp_path / "a", public, False)
+    treatment = make_session(tmp_path / "b", public, True)
+    a = {spec["name"]: spec for spec in await baseline.specs()}
+    b = {spec["name"]: spec for spec in await treatment.specs()}
+    assert all(a[name] == b[name] for name in a)
+    assert baseline.public == treatment.public
+    assert await baseline.call("ask_owner", {"topic": "materiality"}) == await treatment.call("ask_owner", {"topic": "materiality"})
+    assert await baseline.call("calculate", {"expression": "10/4"}) == await treatment.call("calculate", {"expression": "10/4"})
+    schemas = {tool.name: tool.inputSchema for tool in await treatment.server.list_tools()}
+    assert b["onboard_insight_card"]["parameters"] == schemas["onboard_insight_card"]
+    assert "onboard_insight_card" not in a
+    with pytest.raises(ValueError, match="not available"):
+        await baseline.call("onboard_insight_card", {})
+
+
+async def test_clock_preserves_staleness_and_nested_source_keys(tmp_path, public):
+    clock = datetime(2026, 9, 30, tzinfo=timezone.utc)
+    period = copy.deepcopy(public["onboarding"])
+    ref, snapshot = next(iter(period["snapshots"].items()))
+    snapshot["source_captured_at"] = (datetime.fromisoformat(period["as_of"]) - timedelta(days=3)).isoformat()
+    snapshot["evidence"][0]["values"]["event_at"] = snapshot["source_captured_at"]
+    session = make_session(tmp_path, public)
+    session.adapter.set_period(period, clock)
+    adapter, resource = ref.split("|", 1)
+    result = await session.adapter.inspect(SourceRef(key="caller-selected-key", adapter=adapter,
+                                                     resource=resource, label="selected"))
+    assert clock - result.source_captured_at == timedelta(days=3)
+    assert result.captured_at == clock
+    assert result.source_key == "caller-selected-key"
+    assert result.evidence[0].source_key == "caller-selected-key"
+    assert datetime.fromisoformat(result.evidence[0].values["event_at"]) == clock - timedelta(days=3)
+    assert ref in session.adapter.inspected
+    session.adapter.set_period(public["periods"][0], clock)
+    assert not session.adapter.inspected
+
+
+async def test_real_mcp_draft_preview_approval_roundtrip(tmp_path, public):
+    # All selected resources, no probability-dependent fixture discovery shortcuts.
+    public["catalog"] = public["catalog"][:1]
+    session = make_session(tmp_path, public)
+    await session.specs()
+    descriptor = session.adapter.catalog[0]
+    drafted = await session.call("draft_insight_card", {
+        "title": "Offline trial", "what_to_watch": "Changes in this source",
+        "why_watch": "Validate the transport contract", "watch_for": ["Source freshness"],
+        "sources": [{"key": "selected", "adapter": descriptor.adapter,
+                     "resource": descriptor.resource, "label": descriptor.title}],
+        "decision_guidance": "Ignore unchanged evidence, otherwise investigate.",
+    })
+    card_id = drafted["card"]["id"]
+    await session.call("get_insight_card", {"card_id": card_id})
+    with pytest.raises(ValueError, match="requires"):
+        await session.call("approve_insight_card", {"card_id": card_id})
+    preview = await session.call("simulate_insight_card", {"card_id": card_id})
+    assert preview["delivery_enabled"] is False
+    decision = await session.call("request_synthetic_owner_approval", {"card_id": card_id})
+    assert decision["approved"] and decision["synthetic"]
+    assert decision["policy_correctness_validated"] is False
+    approved = await session.call("approve_insight_card", {"card_id": card_id})
+    assert approved["status"] == "approved"
+    assert any(item["kind"] == "owner.approval" for item in session.adapter.audit.events)
+    await session.call("ask_owner", {"topic": "metric_scope"})
+    await session.call("save_notes", {"notes": "Remember the context, not old measurements."})
+    assert (await session.call("finish_setup", {"card_id": card_id}))["setup_complete"]
+    session.phase = "monitoring"
+    result = await session.product("evaluate_insight_card", {"card_id": card_id, "idempotency_key": "offline-one"})
+    assert result["result"]["evaluator"] == "offline-harness-contract-double"
+    assert result["receipt"]["delivery_enabled"] is False
+
+
+async def test_preview_expansion_uses_stored_fingerprint_and_edits_revoke_approval(tmp_path, public, monkeypatch):
+    session = make_session(tmp_path, public)
+    await session.specs()
+    card = {"id": "one", "what_to_watch": "original", "sources": [{"key": "anchor"}]}
+
+    async def product(name, arguments):
+        if name == "get_insight_card":
+            return copy.deepcopy(card)
+        if name == "simulate_insight_card":
+            return {"status": "preview", "card": {**card, "sources": [{"key": "anchor"}, {"key": "expanded"}]}}
+        raise AssertionError("unexpected tool")
+
+    monkeypatch.setattr(session, "product", product)
+    await session.call("get_insight_card", {"card_id": "one"})
+    await session.call("simulate_insight_card", {"card_id": "one"})
+    assert (await session.call("request_synthetic_owner_approval", {"card_id": "one"}))["approved"]
+    card["what_to_watch"] = "edited"
+    with pytest.raises(ValueError, match="requires"):
+        await session.call("approve_insight_card", {"card_id": "one"})
+
+
+async def test_responses_api_exact_model_instructions_usage_and_failure_no_retry(tmp_path, public):
+    session = make_session(tmp_path, public, True)
+    seen = []
+
+    def handle(request):
+        seen.append(json.loads(request.content))
+        return httpx.Response(429, json={"error": {"message": "secret-response-not-recorded"}})
+
+    audit, budget = trial.Audit(), trial.RequestBudget(5)
+    result = await trial.luna_episode(session, key="dummy", effort="low", budget=budget,
+                                     audit=audit, max_turns=5, max_tool_calls=20, max_output_tokens=100,
+                                     transport=httpx.MockTransport(handle))
+    assert result["status"] == "failed"
+    assert len(seen) == budget.used == 1
+    assert seen[0]["model"] == "gpt-5.6-luna"
+    assert session.server.instructions in seen[0]["instructions"]
+    assert "secret-response" not in trial.canonical(audit.events)
+    usage = trial.usage_summary(audit.events)["openai"]
+    assert usage["failed_attempts"] == usage["unknown_usage_attempts"] == 1
+
+
+async def test_responses_tool_loop_keeps_reasoning_and_notes(tmp_path, public):
+    session = make_session(tmp_path, public, False)
+    session.phase = "monitoring"
+    submission = {"outcome": "ignore", "recipients": [], "evidence_refs": [], "summary": "Test only"}
+    seen = []
+
+    def handle(request):
+        seen.append(json.loads(request.content))
+        if len(seen) == 1:
+            output = [{"type": "reasoning", "id": "rs_1", "summary": []},
+                      {"type": "function_call", "name": "save_notes", "call_id": "call_1",
+                       "arguments": json.dumps({"notes": "durable context"})}]
+        else:
+            output = [{"type": "function_call", "name": "submit_analysis", "call_id": "call_2",
+                       "arguments": json.dumps(submission)}]
+        return httpx.Response(200, json={"output": output,
+                                        "usage": {"input_tokens": 100, "output_tokens": 20,
+                                                  "input_tokens_details": {"cached_tokens": 50}}})
+
+    audit = trial.Audit()
+    result = await trial.luna_episode(session, key="dummy", effort="low", budget=trial.RequestBudget(3),
+                                     audit=audit, max_turns=3, max_tool_calls=5, max_output_tokens=100,
+                                     transport=httpx.MockTransport(handle))
+    assert result["status"] == "complete"
+    assert session.notes == "durable context"
+    assert any(item.get("type") == "reasoning" for item in seen[1]["input"])
+    assert any(item.get("type") == "function_call_output" for item in seen[1]["input"])
+    assert trial.usage_summary(audit.events)["openai"]["cached_input_tokens"] == 100
+
+
+def test_audit_redacts_escaped_secrets_and_nested_values(tmp_path):
+    secret = 'abc"secret'
+    audit = trial.Audit(tmp_path / "trace.jsonl", (secret,))
+    audit.emit("test", value={"nested": [secret, "prefix " + secret]})
+    assert "secret" not in (tmp_path / "trace.jsonl").read_text()
+    assert audit.events[0]["value"]["nested"][0] == "[REDACTED]"
+
+
+def test_dotenv_parses_quotes_and_preflight_missing_key_no_file_search(monkeypatch, tmp_path, capsys):
+    for key in ("OPENAI_API_KEY", "TYPESAFE_API_KEY", "TYPESAFE_API_KEY_FILE"):
+        monkeypatch.delenv(key, raising=False)
+    env = tmp_path / "explicit.env"
+    env.write_text('OPENAI_API_KEY="quoted-test-key"\n')
+    key = tmp_path / "jev.key"
+    key.write_text("test-jev-key")
+    args = trial.parser().parse_args(["--openai-env", str(env), "--jev-key-file", str(key)])
+    assert trial.credentials(args) == ("quoted-test-key", "test-jev-key")
+    monkeypatch.setattr("sys.argv", ["runner", "--preflight", "--output", str(tmp_path / "out")])
+    with pytest.raises(SystemExit) as caught:
+        trial.main()
+    assert caught.value.code == 2
+    assert "Missing credential" in capsys.readouterr().out
+    assert not (tmp_path / "out").exists()
+
+
+async def test_exhausted_budget_keeps_every_planned_period_in_denominator(monkeypatch, tmp_path):
+    monkeypatch.setenv("OPENAI_API_KEY", "offline-key")
+    monkeypatch.setenv("TYPESAFE_API_KEY", "offline-jev")
+
+    async def fail(*args, **kwargs):
+        kwargs["budget"].claim()
+        return {"status": "failed", "error": "offline_test", "seconds": 0, "tool_calls": 0}
+
+    monkeypatch.setattr(trial, "luna_episode", fail)
+    args = trial.parser().parse_args(["--limit", "1", "--max-api-requests", "1",
+                                     "--output", str(tmp_path / "new")])
+    report = await trial.run_trial(args)
+    assert report["status"] == "partial_or_failed"
+    assert report["comparative_eligible"] is False
+    assert report["budget_censored"] is True
+    assert len(report["config"]["source_fingerprint"]["sha256"]) == 3
+    assert len(report["rows"]) == 8
+    assert all(row["monitoring_denominator"] == 3 for row in report["summary"].values())
+    assert all(row["exact_count"] == 0 for row in report["summary"].values())
+    with pytest.raises(FileExistsError):
+        await trial.run_trial(args)
+    assert (args.output / "report.json").exists()
+
+
+def test_cost_counts_cold_warm_and_unknown_attempts_separately():
+    events = [{"kind": "api.request", "provider": "openai", "request_id": 1},
+              {"kind": "api.response", "provider": "openai", "request_id": 1,
+               "usage": {"input_tokens": 1000, "output_tokens": 100,
+                         "input_tokens_details": {"cached_tokens": 500}}},
+              {"kind": "api.request", "provider": "jev", "request_id": 2},
+              {"kind": "api.error", "provider": "jev", "request_id": 2}]
+    usage = trial.usage_summary(events)
+    assert usage["openai"]["estimated_known_usage_usd"] == pytest.approx(.00023)
+    row = {"arm": trial.ARMS[0], "status": "failed", "seconds": 3, "usage": usage}
+    report = trial.aggregate([{**row, "phase": "onboarding"}, {**row, "phase": "monitoring"}])
+    assert report[trial.ARMS[0]]["cost_complete"] is False
+    assert report[trial.ARMS[0]]["observed_cold_plus_warm_known_usage_usd"] == pytest.approx(.00046)
+
+
+@pytest.mark.parametrize("usage", [{"input_tokens": None, "output_tokens": None},
+                                   {"input_tokens": -1, "output_tokens": 0},
+                                   {"input_tokens": True, "output_tokens": 0},
+                                   {"input_tokens": "10", "output_tokens": 0}])
+def test_missing_or_invalid_token_usage_is_unknown_not_free(usage):
+    audit = trial.Audit()
+    audit.emit("api.request", provider="jev", request_id=1)
+    audit.emit("api.response", provider="jev", request_id=1, usage=usage)
+    row = trial.usage_summary(audit.events)["jev"]
+    assert row["unknown_usage_attempts"] == 1
+    assert row["input_tokens"] == 0
+
+
+def test_common_instructions_require_both_arms_finish_and_submit():
+    assert "finish_setup" in trial.COMMON_SYSTEM
+    assert "submit_analysis" in trial.COMMON_SYSTEM
+
+
+async def test_final_mcp_wrapped_budget_exhaustion_disables_comparative_claims(monkeypatch, tmp_path):
+    from mcp.server.fastmcp import FastMCP
+
+    monkeypatch.setenv("OPENAI_API_KEY", "offline-key")
+    monkeypatch.setenv("TYPESAFE_API_KEY", "offline-jev")
+    episodes = 0
+
+    async def episode(session, **kwargs):
+        nonlocal episodes
+        episodes += 1
+        session.setup_complete = True
+        if episodes == 8:  # No later episode exists to notice the depleted budget.
+            server = FastMCP("offline-budget-wrapper")
+            budget = kwargs["budget"]
+
+            @server.tool()
+            async def bounded_request() -> dict:
+                budget.claim()
+                assert budget.exhausted is False  # Spending exactly the cap is permitted.
+                budget.claim()  # FastMCP wraps this BudgetExceeded in ToolError.
+                return {}
+
+            await server.call_tool("bounded_request", {})
+        return {"status": "complete", "seconds": 0, "tool_calls": 0}
+
+    async def evaluation(self, name, arguments):
+        assert name == "evaluate_insight_card"
+        return {}  # Offline-only: skip semantic execution to isolate final-call accounting.
+
+    monkeypatch.setattr(trial, "luna_episode", episode)
+    monkeypatch.setattr(trial.ToolSession, "product", evaluation)
+    args = trial.parser().parse_args(["--limit", "1", "--max-api-requests", "1",
+                                     "--output", str(tmp_path / "final-call")])
+    report = await trial.run_trial(args)
+    assert episodes == 8
+    assert all(row["status"] == "complete" for row in report["rows"][:-1])
+    assert report["rows"][-1]["error"] == "ToolError"
+    assert report["api_attempts"] == 1
+    assert report["budget_censored"] is True
+    assert report["comparative_eligible"] is False
