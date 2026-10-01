@@ -105,6 +105,20 @@ can turn an otherwise answerable investigation into an incomplete one. Reporting
 preferences belong in `decision_guidance`; test the draft on both actionable and
 quiet snapshots before approval.
 
+Separate setup from recurring investigation. "What counts as material?" is a
+setup question for the owner; its answer belongs in `decision_guidance`.
+"Did the approved materiality condition occur, and what evidence explains it?"
+is a recurring question. Free-form wording remains supported, including changing
+ownership, workflow state and other non-numeric evidence. Nothing is silently
+rewritten or waived by the service.
+
+Check the actual `delivery_methods` entries against the owner's words. A rule
+that says investigate with Operations needs an `investigate` entry for that
+destination; a `notify` entry is not interchangeable. Prose does not create
+missing routes. Simulate each intended disposition, including quiet and missing
+evidence, rather than approving solely because a draft was saved successfully.
+The authoring MCP schemas expose these distinctions directly to local agents.
+
 Jev can return `insufficient_data` for semantic gaps even when every source is
 reachable, such as an undefined population or comparison basis. This reserved
 outcome does not invent a recipient: delivery still uses only the card's configured

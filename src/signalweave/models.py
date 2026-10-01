@@ -19,6 +19,26 @@ ComparisonWindows = Annotated[list[str], Field(
     ),
 )]
 
+WatchConditions = Annotated[list[str], Field(
+    max_length=100,
+    description=(
+        "Owner-defined conditions to check against fresh evidence on each run, in plain language. "
+        "Use the card's scope and rules, not bare topic names or a generic analysis checklist. "
+        "Unresolved items are required by default; use evidence_requirements only for "
+        "explicitly owner-reviewed advisory details. Do not invent materiality rules."
+    ),
+)]
+
+InvestigationQuestions = Annotated[list[str], Field(
+    max_length=100,
+    description=(
+        "Analytical questions the investigation should answer from evidence on each run. "
+        "Do not copy unanswered one-time setup questions here. Ask the owner first; preserve "
+        "resolved definitions and policy in decision_guidance and source contracts. "
+        "Questions about changing ownership or other non-numeric evidence remain supported."
+    ),
+)]
+
 
 class Outcome(StrEnum):
     """The small set of outcomes a card can produce."""
@@ -708,6 +728,18 @@ class InsightPlan(BaseModel):
     evidence_slots: list[EvidenceSlot] = Field(default_factory=list, max_length=200)
 
 
+CardDeliveryMethods = Annotated[list[DeliveryMethod], Field(
+    max_length=100,
+    description=(
+        "Exact owner-approved outcome-to-destination mappings. Match decision_guidance: "
+        "investigate and notify are different outcomes and need separate entries when both "
+        "should be routed. Policy prose does not create a route. Do not invent recipients "
+        "or change an investigation into a notification. Empty means no configured routes; "
+        "notify and escalate are unavailable. Actual delivery execution is always caller-owned."
+    ),
+)]
+
+
 class InsightCard(BaseModel):
     """The small, free-form contract a person authors for an insight."""
 
@@ -715,8 +747,8 @@ class InsightCard(BaseModel):
     title: str = Field(min_length=1, max_length=200)
     what_to_watch: str = Field(min_length=1, max_length=8000)
     why_watch: str = Field(min_length=1, max_length=4000)
-    watch_for: list[str] = Field(default_factory=list, max_length=100)
-    questions: list[str] = Field(default_factory=list, max_length=100)
+    watch_for: WatchConditions = Field(default_factory=list)
+    questions: InvestigationQuestions = Field(default_factory=list)
     evidence_requirements: dict[str, StrictBool] = Field(
         default_factory=dict,
         max_length=200,
@@ -750,7 +782,7 @@ class InsightCard(BaseModel):
     owner: str | None = Field(default=None, max_length=240)
     version: int = Field(default=1, ge=1)
     max_source_age_hours: float | None = Field(default=24.0, ge=0.0, le=876000.0)
-    delivery_methods: list[DeliveryMethod] = Field(default_factory=list, max_length=100)
+    delivery_methods: CardDeliveryMethods = Field(default_factory=list)
     retrieval_mode: RetrievalMode = RetrievalMode.FIXED
     investigation_mode: InvestigationMode = InvestigationMode.NONE
     max_investigation_sources: int = Field(default=3, ge=0, le=10)

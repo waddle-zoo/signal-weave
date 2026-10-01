@@ -290,3 +290,38 @@ execution was 5.34 seconds, excluding separate source preflight. The harness did
 not record the resolved model version. [Complete retained checks/analyses](evidence/local-investigation-admission-v2-01.json)
 omit only local absolute artifact paths. Original report SHA-256:
 `e26bbb607ffe8e89b26f679c4fb12bb6baf141453100b05ffd17c9a14f555f41`.
+
+### Authoring clarification and targeted bootstrap regression v3-04
+
+The v3-03 persisted cards mixed one-time owner questions with recurring evidence
+checks and left investigation routing in prose without its executable mapping.
+The next small repair exposes those distinctions in all three authoring MCP
+schemas and the card schema, using the same free-form arrays and existing
+100-item limits. It adds no mandatory form, inferred route, semantic rewrite,
+waiver, model call or approval bypass. Tests first showed 3 schema failures and
+3 unchanged-value controls passing; all six pass after the clarification.
+
+After full verification and independent review, freeze and rerun the same two
+known-failure companies/seed, all periods and both arms, into exclusive
+`artifacts/bootstrap-codex-regression-v3-04`. Keep v3 labels, raw fixtures,
+45-tool/360-second limits, Luna low effort and 60 total live Jev attempts.
+No field/default/context enrichment is injected into fixtures and no expert
+cards are supplied. Retain complete outputs, costs, native outcome AND recipient
+correctness, final corrections and uncertainty. Inspect no intermediate scores
+and make no changes while the run is active.
+
+This is a development rerun of the combined watch repair and authoring guidance,
+not a fresh confirmatory dataset or isolation of either change. Compare stored
+questions, conditions and routes with owner instructions, not just a successful
+approval transition. Preserve frozen scoring disagreements from v3-03 rather
+than treating its ambiguous explanation requirements as new public instructions.
+No success threshold is lowered and no repeat is scheduled merely to obtain a
+more flattering stochastic result.
+
+Pre-run verification passed 1,419 tests with 3 opt-in skips (92.94 seconds),
+Ruff and whitespace checks. The independent reviewer found no runtime/protocol
+blocker and checked six focused schema/preservation cases. One wording correction
+clarified that empty delivery methods mean no configured routes and no notify/
+escalate option; execution is caller-owned regardless. The focused tests were
+rerun after that wording correction. This is guidance, not a guarantee that an
+agent will preserve owner policy correctly.

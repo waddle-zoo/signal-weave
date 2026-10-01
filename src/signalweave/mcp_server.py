@@ -25,6 +25,7 @@ from .evaluation import (
     has_current_evidence_admission_policy,
 )
 from .models import (
+    CardDeliveryMethods,
     CertificationRecord,
     ComparisonWindows,
     ContextSnapshot,
@@ -35,6 +36,7 @@ from .models import (
     InsightCard,
     InsightCardStatus,
     InvestigationMode,
+    InvestigationQuestions,
     MetricQueryCard,
     OnboardingBlockerCode,
     OnboardingCorrection,
@@ -45,6 +47,7 @@ from .models import (
     ReceiptStatus,
     RetrievalMode,
     SourceRef,
+    WatchConditions,
 )
 from .onboarding import InsightAuthoringService, proposal_summary, resolve_comparison_windows
 from .query_planner import QueryWindow, compile_query, plan_query
@@ -136,6 +139,10 @@ def create_mcp(
             "setup_questions and review blockers. Inspect the proposed sources; ask "
             "the owner only for unresolved metric definitions, comparison periods, "
             "materiality rules, or notification destinations. Never invent those answers. "
+            "Keep one-time setup questions separate from recurring analytical questions. "
+            "After the owner answers, preserve the answer as policy or source meaning, "
+            "not as an unanswered check on every run. Match each requested outcome to "
+            "its exact delivery_methods entry; prose cannot supply a missing route. "
             "Preserve the owner's rules in decision_guidance and required source "
             "contracts. watch_for and questions are required evidence checks by default, "
             "not a generic analysis checklist. Use evidence_requirements with exact one-based "
@@ -863,8 +870,8 @@ def create_mcp(
     async def propose_insight_card(
         what_to_watch: str,
         why_watch: str,
-        watch_for: list[str] | None = None,
-        questions: list[str] | None = None,
+        watch_for: WatchConditions | None = None,
+        questions: InvestigationQuestions | None = None,
         evidence_requirements: dict[str, StrictBool] | None = None,
         decision_guidance: str | None = None,
         follow_up_guidance: str | None = None,
@@ -873,7 +880,7 @@ def create_mcp(
         limit: int = 10,
         title: str | None = None,
         comparison_windows: ComparisonWindows | None = None,
-        delivery_methods: list[DeliveryMethod] | None = None,
+        delivery_methods: CardDeliveryMethods | None = None,
         action_confidence_threshold: float = 0.70,
         owner: str | None = None,
         max_source_age_hours: float | None = 24.0,
@@ -929,8 +936,8 @@ def create_mcp(
     async def onboard_insight_card(
         what_to_watch: str,
         why_watch: str,
-        watch_for: list[str] | None = None,
-        questions: list[str] | None = None,
+        watch_for: WatchConditions | None = None,
+        questions: InvestigationQuestions | None = None,
         evidence_requirements: dict[str, StrictBool] | None = None,
         decision_guidance: str | None = None,
         follow_up_guidance: str | None = None,
@@ -939,7 +946,7 @@ def create_mcp(
         limit: int = 10,
         title: str | None = None,
         comparison_windows: ComparisonWindows | None = None,
-        delivery_methods: list[DeliveryMethod] | None = None,
+        delivery_methods: CardDeliveryMethods | None = None,
         action_confidence_threshold: float = 0.70,
         owner: str | None = None,
         max_source_age_hours: float | None = 24.0,
@@ -1007,12 +1014,12 @@ def create_mcp(
         what_to_watch: str,
         why_watch: str,
         sources: list[SourceRef],
-        watch_for: list[str] | None = None,
-        questions: list[str] | None = None,
+        watch_for: WatchConditions | None = None,
+        questions: InvestigationQuestions | None = None,
         evidence_requirements: dict[str, StrictBool] | None = None,
         decision_guidance: str | None = None,
         follow_up_guidance: str | None = None,
-        delivery_methods: list[DeliveryMethod] | None = None,
+        delivery_methods: CardDeliveryMethods | None = None,
         comparison_windows: ComparisonWindows | None = None,
         action_confidence_threshold: float = 0.70,
         owner: str | None = None,
