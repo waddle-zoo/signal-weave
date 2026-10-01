@@ -29,7 +29,8 @@ step, not the fresh-seed experiment.
 
 These estimates are not measured subscription charges. Slightly faster monitoring
 does not offset worse exact correctness, higher setup time, or higher estimated
-resource cost. No efficiency win is established. Narrative review is pending.
+resource cost. No efficiency win is established. [Internal narrative review](evidence/bootstrap-codex-regression-v3-01/reviews.md)
+found four supported outputs, one qualified output, and one unsupported output.
 
 The source-selection confirmation repaired the approval dead end on this case.
 It did not repair the full product:
@@ -40,7 +41,7 @@ It did not repair the full product:
 - The agent copied an inapplicable mix/within-rate reporting requirement into
   required watch conditions. The evidence-completeness gate correctly blocked
   an otherwise actionable notification. The agent later overrode the outcome.
-- The quiet-period answer reported 11,000 instead of 10,000. Outcome correctness
+- The quiet-period answer reported 7,000 instead of 10,000. Outcome correctness
   did not imply numerical correctness.
 - Repeat evaluations returned authoring history and duplicated the result inside
   the receipt. This inflated context without adding current evidence.
@@ -55,3 +56,53 @@ and [blind review packet](evidence/bootstrap-codex-regression-v3-01/blind-review
 are retained. Full traces remain in `artifacts/bootstrap-codex-regression-v3-01/`.
 The [v3 protocol](bootstrap-benchmark-v3.md) reserves seed `20261002` for a fresh
 six-company run only after regression repairs and implementation freeze.
+
+## Regression v3-02
+
+Frozen production implementation: `158f413` (the subsequent `d0bd06c` adds tests
+only). Same regression dataset and per-agent limits, separate empty state and
+retained attempt. Both arms completed setup and all three monitoring cases.
+Both achieved **3/3 exact structured submissions**. This small development result
+does not establish a general improvement; the second run also has agent variance.
+
+| Endpoint | Luna + source tools | Luna + SignalWeave/live Jev |
+| --- | ---: | ---: |
+| Native SignalWeave correct outcomes/routes | — | 1/3 |
+| Agent corrections of native outcome | — | 2/3 |
+| Onboarding time | 40.03 s | 73.36 s |
+| Monitoring total time | 83.96 s | 67.83 s |
+| Source reads, including setup | 10 | 10 |
+| Agent input + output tokens, including setup | 265,449 | 822,302 |
+| Agent input + output tokens, monitoring only | 169,399 | 207,107 |
+| Illustrative token-price estimate, including setup | $0.02577 | $0.04592 |
+
+Fourteen live Jev requests resolved to `jev-1.13.0`, with complete recorded usage.
+Jev's estimate is included in the treatment estimate. Subscription billing is
+not measured. Monitoring was 19.2% faster in total, but it used more agent tokens;
+different cache shares affect illustrative pricing. The full resource endpoint
+is not met. Do not advertise the timing observation without these qualifications.
+
+Jev selected `insufficient_data` for the semantic gap with support 0.55; the
+unchanged 0.70 policy sent it to investigation. The agent corrected that route.
+For the event, Jev selected notify with support 0.82, but an unresolved required
+watch condition blocked delivery. The agent's card still contained a conditional
+regional-decomposition request despite no regional evidence. These native results
+remain failures of the intended automated routing, even though the agent's final
+answers pass the structured scorer.
+
+The agent also passed an invalid context object during setup, recovered on retry,
+and performed redundant approval checks. Tool responses repeatedly included the
+same authoring review/history. Follow-up repairs expose the existing context
+schema and remove duplicate authoring response fields while retaining the latest
+review and plan at top level and full audit access through `get_insight_card`.
+No confidence threshold or evidence-completeness gate is relaxed.
+
+[Configuration, usage and submissions](evidence/bootstrap-codex-regression-v3-02/results.json)
+and [blind review packet](evidence/bootstrap-codex-regression-v3-02/blind-review.json)
+are retained. [Internal narrative review](evidence/bootstrap-codex-regression-v3-02/reviews.md)
+independently checked all six final outputs against the public evidence and found
+them supported, with minor wording notes. This review is imperfectly blinded and
+is not external peer review. It does not validate the native decisions or establish
+comparative benefit. These two
+regression attempts together consumed 16 Codex invocations and 26 Jev requests;
+neither is folded into a future fresh holdout or omitted from development effort.

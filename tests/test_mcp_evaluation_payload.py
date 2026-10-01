@@ -49,3 +49,45 @@ async def test_compact_evaluation_preserves_evidence_and_durable_audit(tmp_path,
     # Pure serialization saving, not a claim about model tokens or business speed.
     expanded = {**result, "card": stored, "receipt": full["receipt"]}
     assert len(json.dumps(result)) < len(json.dumps(expanded))
+
+
+async def test_authoring_responses_preserve_current_review_without_repeated_history(tmp_path):
+    server = make_server(tmp_path)
+    omitted = {"onboarding_review", "onboarding_review_history", "onboarding_corrections", "compiled_plan"}
+    for name in ("propose_insight_card", "onboard_insight_card"):
+        response = await tool(server, name)(
+            what_to_watch="Checkout conversion", why_watch="Decide whether Growth needs to act",
+            questions=["What changed?"],
+        )
+        response = response.get("proposal", response)
+        card_id = response["card"]["id"]
+        stored = tool(server, "get_insight_card")(card_id)
+        assert response["card"] == {k: v for k, v in stored.items() if k not in omitted}
+        review = response.get("onboarding_review", response.get("review"))
+        assert review == stored["onboarding_review"]
+        assert response["plan"] == stored["compiled_plan"]
+        for _ in range(2):
+            reviewed = await tool(server, "review_insight_card")(card_id)
+            stored = tool(server, "get_insight_card")(card_id)
+            assert reviewed["card"] == {k: v for k, v in stored.items() if k not in omitted}
+            assert reviewed["review"] == stored["onboarding_review"]
+        assert len(stored["onboarding_review_history"]) == 3
+
+
+async def test_context_shape_is_discoverable_and_cannot_claim_trusted_provenance(tmp_path):
+    server = make_server(tmp_path)
+    for spec in await server.list_tools():
+        if spec.name in {"simulate_insight_card", "evaluate_insight_card", "resolve_insight_sources"}:
+            shape = spec.inputSchema["$defs"]["ContextSnapshot"]
+            assert {"provider", "version"} <= set(shape["required"])
+            assert "facts" in shape["properties"]
+    drafted = await tool(server, "draft_insight_card")(
+        title="Context boundary", what_to_watch="Checkout conversion", why_watch="Growth health",
+        sources=[{"key": "growth", "adapter": "superset", "resource": "dashboard:7", "label": "Growth"}],
+    )
+    from signalweave.models import ContextSnapshot
+    preview = await tool(server, "simulate_insight_card")(
+        drafted["card"]["id"],
+        context=ContextSnapshot(provider="caller", version="v1", trust="trusted"),
+    )
+    assert preview["result"]["context"]["trust"] == "unverified"

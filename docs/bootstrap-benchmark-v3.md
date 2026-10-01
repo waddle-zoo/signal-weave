@@ -1,10 +1,19 @@
 # Bootstrap benchmark v3: evaluator repairs and proposed fresh-seed replay
 
-Status: evaluator repairs and development regression. The first cheap live
-regression completed; see the [repair ledger](bootstrap-repair-ledger.md), which
-retains its adverse findings and costs. The fresh-seed replay below remains a
-predeclared design to freeze with the final implementation and retained run
-configuration before running. It is not an already executed fresh experiment.
+Status: two development regressions completed; see the
+[repair ledger](bootstrap-repair-ledger.md), which retains adverse findings and
+costs. The next fresh-seed run will use the implementation commit and content
+hashes recorded in `artifacts/bootstrap-codex-holdout-v3-01/config.json`, with
+seed `20261002`, all six companies, 45 calls per agent episode, and 210 global
+Jev attempts. No monitored outputs from that seed have been inspected to choose
+this configuration. The criteria below remain unchanged. Do not edit the
+implementation, prompts, fixtures, scorer or this protocol during the run.
+
+Development now reaches both-agent 3/3 final structured correctness on retail,
+but native SignalWeave routing remains 1/3, requiring agent correction, and total
+agent tokens are higher. The fresh trial is not a declaration of expected
+success. Report native decisions and agent overrides separately; a successful
+combined-agent answer must not be presented as proof of autonomous Jev routing.
 
 ## Preserve the failed v2 result
 

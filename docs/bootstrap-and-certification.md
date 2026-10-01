@@ -115,6 +115,11 @@ resources, the compiled plan and the complete result. They omit repeated
 authoring reviews/corrections and the receipt's duplicate result. Full audit data
 remains available through `get_insight_card` and `get_decision_receipt` and is
 unchanged in storage; consumers should read the top-level evaluation `result`.
+Authoring responses likewise return active card policy without repeated history:
+the current review and compiled plan remain at top level where applicable.
+Optional caller context exposes the `ContextSnapshot` schema (`provider`,
+`version`, and optional facts); it is not an arbitrary scheduling object, and
+caller-supplied context is always marked unverified.
 
 Use `CardWorkflowEvaluator` directly or the MCP tool `evaluate_card_workflow`.
 The MCP form takes a stored `card_id` and cases without repeating the card

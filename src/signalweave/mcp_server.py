@@ -901,7 +901,9 @@ def create_mcp(
         runtime.card_store.save_card(stored_card)
         proposal = proposal.model_copy(update={"card": stored_card})
         return {
-            "proposal": proposal.model_dump(mode="json"),
+            "proposal": proposal.model_dump(mode="json", exclude={"card": {
+                "onboarding_review", "onboarding_review_history", "onboarding_corrections", "compiled_plan"
+            }}),
             "summary": proposal_summary(proposal),
         }
 
@@ -1034,7 +1036,7 @@ def create_mcp(
         card = card.model_copy(update={"compiled_plan": plan})
         runtime.card_store.save_card(card)
         return {
-            "card": card.model_dump(mode="json"),
+            "card": _evaluation_card(card),
             "plan": plan.model_dump(mode="json"),
             "status": card.status.value,
         }
@@ -1150,7 +1152,7 @@ def create_mcp(
         card_id: str,
         idempotency_key: str | None = None,
         actor: str = "mcp-client",
-        context: dict[str, Any] | None = None,
+        context: ContextSnapshot | None = None,
         parent_receipt_id: str | None = None,
         workflow_step_key: str | None = None,
         ctx: Context | None = None,
@@ -1218,7 +1220,7 @@ def create_mcp(
     @mcp.tool()
     async def resolve_insight_sources(
         card_id: str,
-        context: dict[str, Any] | None = None,
+        context: ContextSnapshot | None = None,
         ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Preview the bounded Jev-ranked evidence bundle for a stored card."""
@@ -1235,7 +1237,7 @@ def create_mcp(
             card, context_snapshot, principal=principal
         )
         return {
-            "card": card.model_dump(mode="json"),
+            "card": _evaluation_card(card),
             "bundle": bundle.model_dump(mode="json"),
         }
 
@@ -1267,14 +1269,14 @@ def create_mcp(
         card = append_onboarding_review(card, review)
         runtime.card_store.save_card(card)
         return {
-            "card": card.model_dump(mode="json"),
+            "card": _evaluation_card(card),
             "review": review.model_dump(mode="json"),
         }
 
     @mcp.tool()
     async def simulate_insight_card(
         card_id: str,
-        context: dict[str, Any] | None = None,
+        context: ContextSnapshot | None = None,
         ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Evaluate a draft without treating the result as an approved push action."""
@@ -1549,7 +1551,7 @@ def create_mcp(
         runtime.card_store.save_card(approved)
         return {
             "status": approved.status.value,
-            "card": approved.model_dump(mode="json"),
+            "card": _evaluation_card(approved),
             "onboarding_review": onboarding_review.model_dump(mode="json"),
         }
 
