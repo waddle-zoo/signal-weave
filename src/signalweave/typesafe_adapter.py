@@ -878,7 +878,9 @@ class JevJudger:
             summary=summary,
             rationale=(
                 f"Jev evaluated the card's typed watch, question, and outcome judgments; "
-                f"selected={outcome.value}, support={confidence:.2f}."
+                f"selected={selected_outcome}, support={confidence:.2f}; routed={outcome.value}."
+                + (" Code used the investigation fallback because support was below the card's confidence threshold."
+                   if confidence < card.action_confidence_threshold else "")
             ),
             confidence=confidence,
             probabilities=action_probabilities,

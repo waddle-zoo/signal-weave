@@ -40,7 +40,7 @@ GUIDANCE = "After investigation, ask the owner for corrected or additional evide
 
 @pytest.mark.parametrize("semantic,status,outcome", [
     ("unknown", "pending", "investigate"),
-    ("not_supported", "conflicting", "investigate"),
+    ("not_supported", "pending", "investigate"),
     ("supported", "fulfilled", "notify"),
 ])
 async def test_trusted_context_tag_does_not_bypass_question_evidence(semantic, status, outcome):
@@ -55,6 +55,23 @@ async def test_trusted_context_tag_does_not_bypass_question_evidence(semantic, s
     assert slot.status == status
     assert slot.evidence_fact_ids == ["answer-context"]
     assert run.result.outcome.value == outcome
+
+
+@pytest.mark.parametrize("semantic", ["not_supported", "unknown"])
+@pytest.mark.parametrize("guidance", ["", GUIDANCE])
+async def test_unanswered_question_is_missing_not_a_claim_of_conflicting_evidence(semantic, guidance):
+    run = await InsightEngine(FixedJudger(question=semantic)).evaluate(
+        make_card(guidance=guidance), [snapshot()],
+    )
+    evidence = run.result.evidence_plan
+    assert "question:1" in evidence.missing_slot_keys
+    assert "question:1" not in evidence.conflicting_slot_keys
+    assert evidence.status == "incomplete"
+    assert not evidence.warnings
+    assert run.result.outcome == Outcome.INVESTIGATE
+    assert run.result.workflow.evidence_plan == evidence
+    slot = next(s for s in evidence.slots if s.key == "question:1")
+    assert "concrete answer" in slot.completion_criteria
 
 
 @pytest.fixture(autouse=True)

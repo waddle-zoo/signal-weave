@@ -11,7 +11,7 @@ Superset coupling.  Each scenario checks a different boundary:
 * cross-source, cross-vendor evidence;
 * optional versus required source failure;
 * empty or stale source snapshots;
-* missing, fulfilled, conflicting, and unknown evidence slots;
+* missing, fulfilled, unanswerable, and unknown evidence slots;
 * trusted versus unverified caller context; and
 * single-step versus multi-step handoffs.
 """
@@ -336,10 +336,10 @@ def _case_definitions() -> list[tuple[InsightCard, list[ResourceSnapshot], Conte
         )
     )
 
-    conflict_card = multistep_card.model_copy(update={"id": "multistep-conflict"})
+    unanswered_card = multistep_card.model_copy(update={"id": "multistep-unanswered"})
     cases.append(
         (
-            conflict_card,
+            unanswered_card,
             [_resource(source) for source in multistep_sources],
             None,
             JudgmentFixture(
@@ -349,7 +349,7 @@ def _case_definitions() -> list[tuple[InsightCard, list[ResourceSnapshot], Conte
             ),
             {
                 "plan": "incomplete",
-                "conflict": "question:1",
+                "unanswered": "question:1",
                 "outcome": "investigate",
                 "workflow": "retrieve_evidence",
             },
@@ -484,8 +484,11 @@ async def run_matrix() -> dict[str, Any]:
         }
         if "optional_slot" in expected:
             checks["optional_slot"] = slots.get("source:deployments") is not None and slots["source:deployments"].status == expected["optional_slot"]
-        if "conflict" in expected:
-            checks["conflict"] = expected["conflict"] in (plan.conflicting_slot_keys if plan else [])
+        if "unanswered" in expected:
+            checks["unanswered"] = (
+                plan is not None and expected["unanswered"] in plan.missing_slot_keys
+                and expected["unanswered"] not in plan.conflicting_slot_keys
+            )
         if "warning" in expected:
             checks["warning"] = any("unknown evidence slots" in warning for warning in (plan.warnings if plan else []))
         rows.append(

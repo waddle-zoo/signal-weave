@@ -65,7 +65,7 @@ def _evidence_slots(card: InsightCard) -> list[EvidenceSlot]:
             question=question,
             source_keys=[source.key for source in card.sources],
             required=card.evidence_requirements.get(f"question:{index + 1}", True),
-            completion_criteria="Return evidence that supports, contradicts, or leaves the question unknown.",
+            completion_criteria="Return applicable evidence for a concrete answer, including a known no or zero; missing or unresolved evidence does not complete this question.",
         )
         for index, question in enumerate(card.questions)
     )

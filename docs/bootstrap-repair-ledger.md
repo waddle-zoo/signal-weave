@@ -461,3 +461,46 @@ passed with network/credentials blocked. Final unchanged-tree `make verify`:
 1,557 passed, 3 opt-in skips in 95.24 seconds; Ruff and diff checks clean.
 Freeze the reviewed source and run the single capped 20-request probe. No
 production question template has been changed yet.
+
+The [live paired probe](evidence/question-answerability-v1-01.json) ran once at
+`f14012b`, using 20 requests, 16,346 input and 720 output tokens; resolved model
+`jev-1.13.0`; summed request wall time 3.924 seconds. Both templates scored
+19/20 exact with nine answerable cases accepted, zero false support, zero known-no
+refusals, and one uncertain answer. No errors, malformed answers or retries.
+Both are uncertain on the partial compound question (rollback known, authorizer
+missing): old .31, candidate .36. That is safe refusal, not an exact negative
+classification. The preregistered 20/20 candidate gate failed; no comparative
+improvement was demonstrated. Do not install the candidate as a proven fix, lower
+thresholds, repeat for a favorable result or conflate this probe with full runtime
+quality. The existing production question template remains unchanged.
+
+### Truthful evidence handoff repair (policy version 4)
+
+Separate from the failed prompt probe, code inspection established two reporting
+defects: low answerability was labeled a contradiction, and the rationale assigned
+the original selected probability to the code's fallback outcome. Six targeted
+tests reproduced these defects before repair. Unanswered questions now remain
+pending/missing, while required-source failure keeps unavailable precedence;
+automatic notify/escalate remains blocked by unresolved required evidence.
+Rationales distinguish Jev selection from confidence fallback without changing
+thresholds, probabilities or routing control. The compiler completion text changes
+serialized model state, so no identical-output or accuracy-improvement claim is made.
+
+Six offline replays of retained v4 live judgments validate the changed handoff
+without new API calls or rewriting historical evidence. Plan status remains
+unchanged in all six. An independent reviewer passed 144 focused contract tests
+and the seven matrix/replay tests. Full verification initially caught the old
+offline matrix's erroneous not_supported→conflicting expectation; that case now
+asserts missing AND not conflicting, with its original conservative outcome and
+handoff unchanged. Final `make verify`: 1,569 passed, 3 opt-in skips in 94.59 seconds,
+Ruff and diff checks clean. Policy version 4 requires recertification instead of
+silently upgrading previous reports.
+
+The adoption goal remains unmet. The next onboarding gap is empirical review:
+the current model owner checks policy prose, not whether the actual preview and
+selected source contracts can execute that policy. Use the existing simulation
+and labeled workflow-evaluation boundaries to test that, with source coverage
+defined explicitly and equally for both arms. Keep future snapshots and expected
+answers out of setup, count extra review/correction costs, and retain original
+failed trials. Do not add another agent framework or call an accepted draft a
+certified recurring investigation.

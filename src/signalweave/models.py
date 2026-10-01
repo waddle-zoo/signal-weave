@@ -897,7 +897,10 @@ class QuestionResult(BaseModel):
     key: str
     question: str
     status: QuestionStatus
-    probability: float = Field(ge=0.0, le=1.0)
+    probability: float = Field(
+        ge=0.0, le=1.0,
+        description="Probability the evidence supports a concrete answer, not probability the answer is yes. Low support does not establish contradictory evidence.",
+    )
 
 
 class EvidenceFinding(BaseModel):

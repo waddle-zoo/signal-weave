@@ -53,6 +53,13 @@ missing or conflicting slots into the next handoff. A source adapter still owns
 the actual query and permission boundary; SignalWeave does not generate
 arbitrary SQL or grant access to a source.
 
+Question judgments measure **answerability**, not whether the answer is yes.
+A known no or zero can be a supported answer. `not_supported` means the evidence
+does not supply a concrete answer; it does not identify a contradiction. Both
+low support and uncertainty therefore leave the question `pending` and listed
+under `missing_slot_keys`. Required source failures still make it `unavailable`.
+An unresolved required question continues to block automatic notify/escalate.
+
 Each evaluated observation also receives an `evidence_finding` when the Jev
 provider returns one. Its typed role is `driver`, `corroborates`, `diagnostic`,
 `contradicts`, `quality`, `unrelated`, or `unknown`, with a probability and optional
@@ -155,7 +162,7 @@ Even unchanged cards without follow-up prose may now conservatively withhold an
 automatic route when required evidence is unresolved.
 
 New `CardEvaluationReport` objects emitted by `CardWorkflowEvaluator` record
-`evidence_admission_policy_version=3`. Reports lacking the field load as legacy
+`evidence_admission_policy_version=4`. Reports lacking the field load as legacy
 version `0`; they remain readable audit evidence, not current certification.
 Readiness must require the current policy version in addition to the existing
 card-version, approval, and certification gates. Re-run certification rather than
@@ -175,8 +182,17 @@ mismatch and still promote; they must be replayed. Unlabeled delivery remains
 unassessed, not proof of correct recipients. This fixes certification promotion;
 it does not add a route, change a live outcome or grant delivery authorization.
 
+Version **4** stops labeling low question-answerability as conflicting evidence.
+Question handoffs now ask for missing answers without asserting an unmeasured
+contradiction. Confidence-fallback rationales also distinguish Jev's selected
+outcome/probability from code's final route. Thresholds and automatic-action
+gates are unchanged; serialized completion-criteria text changes, so prior live
+measurements are not silently upgraded to this version. Replay labeled evidence
+before promotion. This is a handoff-correctness repair, not a measured increase
+in Jev accuracy or bootstrap success.
+
 The historical live trial for the earlier handoff contract is in
 `evaluations/northstar_multistep_trial.py` and
 `examples/northstar-multistep-trial.json`. It uses live Jev over the same local
 Northstar rows as the single-step historical replay; expected dispositions stay
-outside the Jev state. Those retained results do not certify the current version 3.
+outside the Jev state. Those retained results do not certify the current version 4.

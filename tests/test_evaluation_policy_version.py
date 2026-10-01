@@ -55,7 +55,7 @@ def test_missing_policy_version_loads_as_legacy_without_upgrading_old_approval()
     serialized = json.dumps(payload)
     report = CardEvaluationReport.model_validate_json(serialized)
 
-    assert EVIDENCE_ADMISSION_POLICY_VERSION == 3
+    assert EVIDENCE_ADMISSION_POLICY_VERSION == 4
     assert report.evidence_admission_policy_version == 0
     assert report.status == "approved"
     assert report.evaluation_id == payload["evaluation_id"]
@@ -69,7 +69,7 @@ def test_missing_policy_version_loads_as_legacy_without_upgrading_old_approval()
     ).evidence_admission_policy_version == 0
 
 
-@pytest.mark.parametrize("version", [0, 1, 2, EVIDENCE_ADMISSION_POLICY_VERSION + 1, -1, True, False, 1.0, "1", None, []])
+@pytest.mark.parametrize("version", [0, 1, 2, 3, EVIDENCE_ADMISSION_POLICY_VERSION + 1, -1, True, False, 1.0, "1", None, []])
 def test_stored_report_compatibility_fails_closed_for_noncurrent_or_malformed_version(version):
     payload = {**legacy_report(), "evidence_admission_policy_version": version}
     assert not has_current_evidence_admission_policy(payload)

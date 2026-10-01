@@ -26,7 +26,9 @@ from .models import ContextSnapshot, InsightCard, Outcome, ResourceSnapshot
 # Version 3 also gates promotion on owner-labeled delivery exactness; version 2
 # reports recorded delivery failures but could still approve them. Keep the
 # existing marker name so readiness invalidates those reports without migration.
-EVIDENCE_ADMISSION_POLICY_VERSION = 3
+# Version 4 corrects question handoffs: low answerability is pending, not proof
+# of conflict. Re-evaluate serialized plan wording; do not relabel old reports.
+EVIDENCE_ADMISSION_POLICY_VERSION = 4
 
 
 def has_current_evidence_admission_policy(report: Mapping[str, object]) -> bool:

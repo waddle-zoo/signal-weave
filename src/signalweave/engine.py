@@ -486,8 +486,10 @@ class InsightEngine:
                     question_result = None
                 if question_result is not None and question_result.status.value == "supported":
                     status = "fulfilled"
-                elif question_result is not None and question_result.status.value == "not_supported":
-                    status = "conflicting"
+                else:
+                    # This judgment measures answerability, not contradiction.
+                    # Low support cannot identify why an answer is unavailable.
+                    status = "pending"
             elif slot.role == "watch":
                 index_text = slot.key.removeprefix("watch:")
                 try:

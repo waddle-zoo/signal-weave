@@ -120,6 +120,26 @@ class FakeClient:
         return FakeResponse(questions)
 
 
+async def test_low_confidence_rationale_separates_jev_selection_from_code_fallback(monkeypatch):
+    async def transport(self, **kwargs):
+        return SimpleNamespace(
+            choices={"outcome": SimpleNamespace(choice="insufficient_data", probabilities={
+                "ignore": .31, "investigate": .0, "insufficient_data": .69,
+            })}, nouls={}, usage=None,
+        )
+
+    monkeypatch.setattr(JevJudger, "_system_one_with_retry", transport)
+    card = InsightCard(id="uncertain", title="Uncertain evidence", what_to_watch="Supplied context",
+                       why_watch="Review before action", sources=[], action_confidence_threshold=.7)
+    result = await JevJudger(api_key="offline-test").judge({"evidence": []}, card, base_plan(card), [])
+    assert result.outcome == Outcome.INVESTIGATE
+    assert result.probabilities["investigate"] == 0
+    assert result.confidence == .69
+    assert "selected=insufficient_data, support=0.69" in result.rationale
+    assert "routed=investigate" in result.rationale
+    assert "confidence threshold" in result.rationale
+
+
 @pytest.mark.parametrize("value", ["replace-me", "placeholder", "your-typesafe-key"])
 def test_load_api_key_rejects_copied_example_sentinel(monkeypatch, value):
     monkeypatch.setenv("TYPESAFE_API_KEY", value)
