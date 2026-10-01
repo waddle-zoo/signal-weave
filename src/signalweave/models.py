@@ -178,6 +178,8 @@ class DecisionReceipt(BaseModel):
     card_id: str = Field(min_length=1, max_length=160)
     card_version: int = Field(ge=1)
     actor: str = Field(min_length=1, max_length=240)
+    parent_receipt_id: str | None = Field(default=None, max_length=160)
+    workflow_step_key: str | None = Field(default=None, max_length=160)
     context_provider: str | None = Field(default=None, max_length=160)
     context_version: str | None = Field(default=None, max_length=240)
     delivery_mode: Literal["shadow", "live"] = "shadow"
@@ -331,6 +333,11 @@ class ContextFact(BaseModel):
     """A versioned, provenance-bearing fact supplied by an external context system."""
 
     fact_id: str = Field(min_length=1, max_length=240)
+    slot_key: str | None = Field(
+        default=None,
+        max_length=160,
+        description="Optional evidence-plan slot this fact fulfills.",
+    )
     subject_ref: str = Field(min_length=1, max_length=500)
     relation: str = Field(min_length=1, max_length=160)
     object_ref: str | None = Field(default=None, max_length=500)
@@ -596,6 +603,34 @@ class DeliveryMethod(BaseModel):
     instructions: str = Field(default="", max_length=4000)
 
 
+class EvidenceSlot(BaseModel):
+    """One bounded evidence request derived from an approved insight card."""
+
+    key: str = Field(min_length=1, max_length=160)
+    role: Literal["primary", "diagnostic", "question", "watch", "quality", "ownership"]
+    question: str = Field(min_length=1, max_length=4000)
+    source_keys: list[str] = Field(default_factory=list, max_length=100)
+    source_refs: list[SourceRef] = Field(default_factory=list, max_length=100)
+    required: bool = False
+    completion_criteria: str = Field(default="", max_length=2000)
+    status: Literal["pending", "fulfilled", "conflicting", "unavailable"] = "pending"
+    evidence_fact_ids: list[str] = Field(default_factory=list, max_length=100)
+    evidence_source_keys: list[str] = Field(default_factory=list, max_length=100)
+
+
+class EvidencePlan(BaseModel):
+    """Inspectable evidence work needed before an agent should deliver."""
+
+    objective: str = Field(min_length=1, max_length=4000)
+    slots: list[EvidenceSlot] = Field(default_factory=list, max_length=200)
+    status: Literal["incomplete", "complete", "blocked"] = "incomplete"
+    missing_slot_keys: list[str] = Field(default_factory=list, max_length=200)
+    conflicting_slot_keys: list[str] = Field(default_factory=list, max_length=200)
+    warnings: list[str] = Field(default_factory=list, max_length=50)
+    generated_by: str = "signalweave"
+    context_version: str | None = Field(default=None, max_length=240)
+
+
 class InsightPlan(BaseModel):
     """Jev's bounded execution plan for one insight card."""
 
@@ -612,6 +647,7 @@ class InsightPlan(BaseModel):
     metric_query_plans: list[MetricQueryPlan] = Field(default_factory=list, max_length=50)
     investigation_mode: InvestigationMode = InvestigationMode.NONE
     max_investigation_sources: int = Field(default=0, ge=0, le=10)
+    evidence_slots: list[EvidenceSlot] = Field(default_factory=list, max_length=200)
 
 
 class InsightCard(BaseModel):
@@ -629,6 +665,14 @@ class InsightCard(BaseModel):
         description=(
             "Human-authored guidance describing what ignore, investigate, notify, "
             "escalate, and insufficient_data mean for this card."
+        ),
+    )
+    follow_up_guidance: str = Field(
+        default="",
+        max_length=8000,
+        description=(
+            "Optional free-form instructions for an agent after an investigate or "
+            "insufficient_data outcome. The caller owns execution and re-evaluation."
         ),
     )
     sources: list[SourceRef] = Field(default_factory=list, max_length=200)
@@ -752,6 +796,7 @@ class EvidenceFinding(BaseModel):
     role: Literal[
         "driver",
         "corroborates",
+        "diagnostic",
         "contradicts",
         "quality",
         "unrelated",
@@ -761,6 +806,7 @@ class EvidenceFinding(BaseModel):
     suggested_role: Literal[
         "driver",
         "corroborates",
+        "diagnostic",
         "contradicts",
         "quality",
         "unrelated",
@@ -796,6 +842,27 @@ class InvestigationTrace(BaseModel):
     evaluator: str
     context_version: str | None = None
     warnings: list[str] = Field(default_factory=list, max_length=50)
+
+
+class WorkflowHandoff(BaseModel):
+    """A typed, caller-owned next step for continuing one card decision."""
+
+    status: Literal["complete", "ready", "pending", "blocked"]
+    step_key: str = Field(min_length=1, max_length=160)
+    action: Literal[
+        "suppress",
+        "retrieve_evidence",
+        "deliver",
+        "repair_source",
+        "request_review",
+        "re_evaluate",
+    ]
+    objective: str = Field(min_length=1, max_length=4000)
+    instructions: str = Field(default="", max_length=8000)
+    required_source_keys: list[str] = Field(default_factory=list, max_length=100)
+    completion_criteria: str = Field(default="", max_length=4000)
+    delivery_method_keys: list[str] = Field(default_factory=list, max_length=100)
+    evidence_plan: EvidencePlan | None = None
 
 
 class RunTelemetry(BaseModel):
@@ -843,6 +910,8 @@ class InsightResult(BaseModel):
     retrieval: EvidenceBundle | None = None
     context: ContextSnapshot | None = None
     investigation: InvestigationTrace | None = None
+    evidence_plan: EvidencePlan | None = None
+    workflow: WorkflowHandoff | None = None
     telemetry: RunTelemetry = Field(default_factory=RunTelemetry)
     evaluated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     evaluator: str

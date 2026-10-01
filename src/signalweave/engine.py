@@ -13,6 +13,8 @@ from .models import (
     ContextSnapshot,
     DeliveryMethod,
     Evidence,
+    EvidencePlan,
+    EvidenceSlot,
     InsightCard,
     InsightPlan,
     InsightResult,
@@ -25,6 +27,7 @@ from .models import (
     ResourceSnapshot,
     RunTelemetry,
     SourceRef,
+    WorkflowHandoff,
 )
 from .retrieval import build_candidate_pool, resource_ref
 from .sources import SourceRegistry
@@ -50,7 +53,6 @@ class _EvaluationMaterials:
     evidence: list[Evidence]
     state: dict[str, Any]
     blocking_source_errors: list[dict[str, Any]]
-    blocking_partial_source_errors: list[dict[str, Any]]
     source_error_evidence: list[Evidence]
     source_errors: list[dict[str, Any]]
 
@@ -330,7 +332,17 @@ class InsightEngine:
             materials.state, evaluation_card, plan, materials.observations
         )
         result = result.model_copy(
-            update={"context": context, "investigation": investigation}
+            update={
+                "context": context,
+                "investigation": investigation,
+                "evidence_plan": self._build_evidence_plan(
+                    card=evaluation_card,
+                    plan=plan,
+                    result=result,
+                    resources=resources,
+                    context=context,
+                ),
+            }
         )
         result = self._apply_safety_gates(
             result,
@@ -338,9 +350,11 @@ class InsightEngine:
             plan,
             materials.observations,
             materials.blocking_source_errors,
-            materials.blocking_partial_source_errors,
             materials.source_error_evidence,
             materials.source_errors,
+        )
+        result = result.model_copy(
+            update={"workflow": self._workflow_handoff(evaluation_card, result)}
         )
         result = result.model_copy(
             update={
@@ -359,6 +373,234 @@ class InsightEngine:
             resources=resources,
             plan=plan,
             result=result,
+        )
+
+    @staticmethod
+    def _build_evidence_plan(
+        *,
+        card: InsightCard,
+        plan: InsightPlan,
+        result: InsightResult,
+        resources: list[ResourceSnapshot],
+        context: ContextSnapshot | None,
+    ) -> EvidencePlan:
+        """Resolve the compiled evidence checklist against this run's facts."""
+
+        resources_by_key = {resource.source_key: resource for resource in resources}
+        context_by_slot: dict[str, list[Any]] = {}
+        if context is not None:
+            for fact in context.facts:
+                if fact.slot_key:
+                    context_by_slot.setdefault(fact.slot_key, []).append(fact)
+        slots: list[EvidenceSlot] = []
+        warnings: list[str] = []
+        for slot in plan.evidence_slots:
+            status = slot.status
+            fact_ids = list(slot.evidence_fact_ids)
+            evidence_source_keys = list(slot.evidence_source_keys)
+            slot_facts = context_by_slot.get(slot.key, [])
+            if slot_facts:
+                status = "fulfilled"
+                fact_ids = [fact.fact_id for fact in slot_facts]
+                evidence_source_keys = sorted(
+                    {
+                        fact.subject_ref.split("|", 1)[0]
+                        for fact in slot_facts
+                    }
+                )
+            elif slot.role == "primary":
+                relevant = [
+                    resources_by_key[key]
+                    for key in slot.source_keys
+                    if key in resources_by_key
+                ]
+                if any(
+                    resource.error or resource.contract.source_status == "failed"
+                    for resource in relevant
+                ):
+                    status = "unavailable"
+                elif any(resource.observations or resource.evidence for resource in relevant):
+                    status = "fulfilled"
+                    evidence_source_keys = sorted(resource.source_key for resource in relevant)
+                else:
+                    status = "pending"
+            elif slot.role == "question":
+                index_text = slot.key.removeprefix("question:")
+                try:
+                    question_result = result.question_results[int(index_text) - 1]
+                except (ValueError, IndexError):
+                    question_result = None
+                if question_result is not None and question_result.status.value == "supported":
+                    status = "fulfilled"
+                elif question_result is not None and question_result.status.value == "not_supported":
+                    status = "conflicting"
+            elif slot.role == "watch":
+                index_text = slot.key.removeprefix("watch:")
+                try:
+                    watch_result = result.watch_results[int(index_text) - 1]
+                except (ValueError, IndexError):
+                    watch_result = None
+                if watch_result is not None and watch_result.status.value == "present":
+                    status = "fulfilled"
+                elif watch_result is not None and watch_result.status.value == "absent":
+                    status = "fulfilled"
+            slots.append(
+                slot.model_copy(
+                    update={
+                        "status": status,
+                        "evidence_fact_ids": fact_ids,
+                        "evidence_source_keys": evidence_source_keys,
+                    }
+                )
+            )
+
+        known_slots = {slot.key for slot in plan.evidence_slots}
+        unknown_fact_slots = sorted(
+            {fact.slot_key for fact in (context.facts if context else []) if fact.slot_key}
+            - known_slots
+        )
+        if unknown_fact_slots:
+            warnings.append(
+                "Context supplied facts for unknown evidence slots: "
+                + ", ".join(unknown_fact_slots)
+            )
+        missing = [slot.key for slot in slots if slot.status in {"pending", "unavailable"}]
+        conflicting = [slot.key for slot in slots if slot.status == "conflicting"]
+        required_missing = [
+            slot.key
+            for slot in slots
+            if slot.required and slot.status != "fulfilled"
+        ]
+        status = "complete" if not required_missing else "incomplete"
+        if any(slot.status == "unavailable" and slot.required for slot in slots):
+            status = "blocked"
+        if conflicting:
+            warnings.append(
+                "Some owner-authored evidence questions or watch items remain conflicting."
+            )
+        return EvidencePlan(
+            objective=card.why_watch or card.what_to_watch,
+            slots=slots,
+            status=status,
+            missing_slot_keys=missing,
+            conflicting_slot_keys=conflicting,
+            warnings=warnings,
+            context_version=context.version if context else None,
+        )
+
+    @staticmethod
+    def _workflow_handoff(card: InsightCard, result: InsightResult) -> WorkflowHandoff:
+        """Turn the final outcome into a bounded caller-owned next step."""
+
+        objective = card.why_watch or card.what_to_watch
+        delivery_keys = [method.key for method in result.delivery_methods]
+        evidence_plan = result.evidence_plan
+        pending_sources = (
+            sorted(
+                {
+                    source_key
+                    for slot in evidence_plan.slots
+                    if slot.status in {"pending", "unavailable"}
+                    for source_key in slot.source_keys
+                }
+            )
+            if evidence_plan
+            else []
+        )
+        plan_instructions = ""
+        if evidence_plan and evidence_plan.missing_slot_keys:
+            plan_slots = {
+                slot.key: slot
+                for slot in evidence_plan.slots
+                if slot.key in evidence_plan.missing_slot_keys
+            }
+            plan_instructions = "Evidence slots to complete:\n" + "\n".join(
+                f"- {slot.key}: {slot.question} "
+                f"(sources: {', '.join(slot.source_keys) or 'caller-authorized catalog'})"
+                for slot in plan_slots.values()
+            )
+        if result.outcome == Outcome.IGNORE:
+            return WorkflowHandoff(
+                status="complete",
+                step_key="suppress",
+                action="suppress",
+                objective=objective,
+                instructions="Record the result and suppress delivery for this run.",
+                completion_criteria="No further workflow step is required unless new evidence arrives.",
+                evidence_plan=evidence_plan,
+            )
+        if result.outcome in {Outcome.NOTIFY, Outcome.ESCALATE}:
+            return WorkflowHandoff(
+                status="ready",
+                step_key="deliver",
+                action="deliver",
+                objective=objective,
+                instructions=(
+                    "Deliver the evidence bundle to the configured destination. "
+                    "Do not invent a destination or change the outcome."
+                ),
+                required_source_keys=sorted(set([*result.source_keys, *pending_sources])),
+                completion_criteria="The caller-owned delivery adapter accepted the evidence bundle.",
+                delivery_method_keys=delivery_keys,
+                evidence_plan=evidence_plan,
+            )
+        if result.outcome == Outcome.INSUFFICIENT_DATA:
+            required_sources = sorted(source.key for source in card.sources if source.required)
+            return WorkflowHandoff(
+                status="blocked",
+                step_key="repair-source",
+                action="repair_source",
+                objective=objective,
+                instructions=(
+                    card.follow_up_guidance
+                    or "Repair or validate the required source, then re-evaluate the same card."
+                ),
+                required_source_keys=required_sources,
+                completion_criteria="Required sources are healthy and a new evaluation is submitted.",
+                delivery_method_keys=delivery_keys,
+                evidence_plan=evidence_plan,
+            )
+
+        selected_sources = (
+            [selection.source.key for selection in result.investigation.selected]
+            if result.investigation is not None
+            else []
+        )
+        has_follow_up_guidance = bool(card.follow_up_guidance.strip())
+        if not has_follow_up_guidance and delivery_keys:
+            return WorkflowHandoff(
+                status="ready",
+                step_key="deliver",
+                action="deliver",
+                objective=objective,
+                instructions=(
+                    "Deliver the configured investigation route. This card does not define "
+                    "a follow-up step, so the existing single-step behavior is terminal."
+                ),
+                required_source_keys=sorted(set([*result.source_keys, *pending_sources])),
+                completion_criteria="The caller-owned delivery adapter accepted the evidence bundle.",
+                delivery_method_keys=delivery_keys,
+                evidence_plan=evidence_plan,
+            )
+        return WorkflowHandoff(
+            status="pending" if has_follow_up_guidance else "blocked",
+            step_key="investigate",
+            action="retrieve_evidence" if has_follow_up_guidance else "request_review",
+            objective=objective,
+            instructions=(
+                (card.follow_up_guidance or "Review the evidence and gather the missing context before deciding whether to notify.")
+                + (f"\n\n{plan_instructions}" if plan_instructions else "")
+            ),
+            required_source_keys=sorted(set([*selected_sources, *pending_sources])),
+            completion_criteria=(
+                "Submit the follow-up evidence after completing the required evidence slots "
+                "as a versioned context snapshot to the same card for re-evaluation before "
+                "leadership delivery."
+                if has_follow_up_guidance
+                else "A human or caller-owned agent must review the evidence and decide the next retrieval."
+            ),
+            delivery_method_keys=delivery_keys,
+            evidence_plan=evidence_plan,
         )
 
     async def _load_context(
@@ -592,11 +834,6 @@ class InsightEngine:
         observations = self._apply_comparison_window(observations, plan)
         source_errors = self._source_errors(card, resources)
         blocking_source_errors = [error for error in source_errors if error["blocking"]]
-        blocking_partial_source_errors = [
-            error
-            for error in source_errors
-            if error.get("quality_status") == "partial" and error["blocking"]
-        ]
         priority_observations = candidate_observations(observations)
         priority_keys = {
             (observation.source_key, observation.subject_id, observation.metric)
@@ -682,7 +919,6 @@ class InsightEngine:
             evidence=evidence,
             state=state,
             blocking_source_errors=blocking_source_errors,
-            blocking_partial_source_errors=blocking_partial_source_errors,
             source_error_evidence=source_error_evidence,
             source_errors=source_errors,
         )
@@ -860,7 +1096,6 @@ class InsightEngine:
         plan: InsightPlan,
         observations: list[Observation],
         blocking_source_errors: list[dict[str, Any]],
-        blocking_partial_source_errors: list[dict[str, Any]],
         source_error_evidence: list[Evidence],
         source_errors: list[dict[str, Any]],
     ) -> InsightResult:
@@ -927,26 +1162,20 @@ class InsightEngine:
                 ),
             )
 
-        if blocking_partial_source_errors:
-            existing_evidence = {
-                (item.source_key, item.subject_id, item.statement) for item in result.evidence
-            }
-            new_evidence = list(result.evidence)
-            new_evidence.extend(
-                item
-                for item in source_error_evidence
-                if (item.source_key, item.subject_id, item.statement) not in existing_evidence
-            )
+        if (
+            result.evidence_plan is not None
+            and result.outcome in {Outcome.NOTIFY, Outcome.ESCALATE}
+            and card.follow_up_guidance.strip()
+            and result.evidence_plan.status != "complete"
+        ):
             return cls._with_outcome(
                 result,
                 card,
-                Outcome.INSUFFICIENT_DATA,
+                Outcome.INVESTIGATE,
                 rationale=(
-                    "One or more required sources returned partial evidence, so no automatic "
-                    "interpretation is safe until the missing dashboard data is resolved."
+                    "The card-defined evidence plan is not complete, so the agent must "
+                    "retrieve the missing or conflicting evidence before automatic delivery."
                 ),
-                confidence=max(result.confidence or 0.0, 0.95),
-                evidence=new_evidence,
             )
 
         required_source_keys = {

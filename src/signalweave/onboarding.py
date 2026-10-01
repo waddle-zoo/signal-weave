@@ -52,6 +52,7 @@ def insight_goal(
     watch_for: list[str] | None = None,
     questions: list[str] | None = None,
     decision_guidance: str | None = None,
+    follow_up_guidance: str | None = None,
 ) -> str:
     """Create the discovery query without adding another card concept."""
     parts = [what_to_watch.strip(), f"Purpose: {why_watch.strip()}"]
@@ -61,6 +62,8 @@ def insight_goal(
         parts.append("Questions: " + "; ".join(questions))
     if decision_guidance and decision_guidance.strip():
         parts.append("Decision guidance: " + decision_guidance.strip())
+    if follow_up_guidance and follow_up_guidance.strip():
+        parts.append("Follow-up guidance: " + follow_up_guidance.strip())
     return "\n".join(parts)
 
 
@@ -565,6 +568,7 @@ class InsightAuthoringService:
             card.watch_for,
             card.questions,
             card.decision_guidance,
+            card.follow_up_guidance,
         )
         effective_principal = self._effective_principal(principal)
         discovery = await self.discover(
@@ -773,6 +777,7 @@ class InsightAuthoringService:
         watch_for: list[str] | None = None,
         questions: list[str] | None = None,
         decision_guidance: str | None = None,
+        follow_up_guidance: str | None = None,
         selected_sources: list[dict[str, Any]] | None = None,
         adapter: str | None = None,
         limit: int = 10,
@@ -796,8 +801,14 @@ class InsightAuthoringService:
         questions = list(questions or [])
         delivery_methods = list(delivery_methods or [])
         decision_guidance = (decision_guidance or "").strip()
+        follow_up_guidance = (follow_up_guidance or "").strip()
         goal = insight_goal(
-            what_to_watch, why_watch, watch_for, questions, decision_guidance
+            what_to_watch,
+            why_watch,
+            watch_for,
+            questions,
+            decision_guidance,
+            follow_up_guidance,
         )
         effective_principal = self._effective_principal(principal)
         discovery = await self.discover(
@@ -833,6 +844,7 @@ class InsightAuthoringService:
             watch_for=watch_for,
             questions=questions,
             decision_guidance=decision_guidance,
+            follow_up_guidance=follow_up_guidance,
             sources=source_refs,
             comparison_windows=comparison_windows
             or ["previous_period", "trailing_4_period_average"],
@@ -894,6 +906,7 @@ class InsightAuthoringService:
             card.watch_for,
             card.questions,
             card.decision_guidance,
+            card.follow_up_guidance,
         )
         effective_principal = self._effective_principal(principal)
         anchors = list(card.sources)

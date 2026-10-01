@@ -62,6 +62,7 @@ class ChartCase:
     descriptors: tuple[ResourceDescriptor, ...]
     snapshots: dict[str, ResourceSnapshot]
     gold_roles: dict[str, str]
+    gold_evidence_roles: dict[str, str]
     expected_outcome: str
 
 
@@ -199,6 +200,7 @@ def build_cases(
             ]
             snapshots: dict[str, ResourceSnapshot] = {}
             gold_roles: dict[str, str] = {}
+            gold_evidence_roles: dict[str, str] = {}
             chart_ids: list[str] = []
             for index in range(chart_count):
                 override = overrides.get(index, {})
@@ -298,6 +300,17 @@ def build_cases(
                     gold_role = "contradicts"
                 if gold_role in ROLE_VALUES:
                     gold_roles[chart_id] = gold_role
+                gold_evidence_role = str(override.get("gold_evidence_role", ""))
+                if gold_evidence_role in {
+                    "driver",
+                    "corroborates",
+                    "diagnostic",
+                    "contradicts",
+                    "quality",
+                    "unrelated",
+                    "unknown",
+                }:
+                    gold_evidence_roles[chart_id] = gold_evidence_role
             cases.append(
                 ChartCase(
                     case_id=f"{scenario_id}:r{repeat}",
@@ -307,6 +320,7 @@ def build_cases(
                     descriptors=tuple(descriptors),
                     snapshots=snapshots,
                     gold_roles=gold_roles,
+                    gold_evidence_roles=gold_evidence_roles,
                     expected_outcome=expected,
                 )
             )
@@ -415,6 +429,7 @@ def _finding_map(findings: list[Any]) -> dict[str, dict[str, Any]]:
         output[str(item.get("subject_id"))] = {
             "role": str(item.get("role", "unknown")),
             "probability": float(item.get("probability", 0.0) or 0.0),
+            "suggested_role": item.get("suggested_role"),
         }
     return output
 
@@ -520,6 +535,7 @@ def _score(
     elapsed_ms: float,
 ) -> dict[str, Any]:
     gold = set(case.gold_roles)
+    evidence_gold = set(case.gold_evidence_roles)
     selected = set(selected_ids)
     tp = len(gold & selected)
     precision = tp / len(selected) if selected else (1.0 if not gold else 0.0)
@@ -531,9 +547,17 @@ def _score(
         for chart_id, finding in findings.items()
         if finding.get("role") in ROLE_VALUES
     }
-    finding_tp = len(gold & meaningful_predictions)
-    finding_precision = finding_tp / len(meaningful_predictions) if meaningful_predictions else (1.0 if not gold else 0.0)
-    finding_recall = finding_tp / len(gold) if gold else (1.0 if not meaningful_predictions else 0.0)
+    finding_tp = len(evidence_gold & meaningful_predictions)
+    finding_precision = (
+        finding_tp / len(meaningful_predictions)
+        if meaningful_predictions
+        else (1.0 if not evidence_gold else 0.0)
+    )
+    finding_recall = (
+        finding_tp / len(evidence_gold)
+        if evidence_gold
+        else (1.0 if not meaningful_predictions else 0.0)
+    )
     finding_f1 = (
         2 * finding_precision * finding_recall / (finding_precision + finding_recall)
         if finding_precision + finding_recall
@@ -541,12 +565,35 @@ def _score(
     )
     role_correct = sum(
         1
-        for chart_id, role in case.gold_roles.items()
+        for chart_id, role in case.gold_evidence_roles.items()
         if findings.get(chart_id, {}).get("role") == role
     )
-    driver_ids = {chart_id for chart_id, role in case.gold_roles.items() if role == "driver"}
+    effective_roles = {
+        chart_id: (
+            finding.get("role")
+            if finding.get("role") != "unknown"
+            else finding.get("suggested_role")
+        )
+        for chart_id, finding in findings.items()
+    }
+    effective_role_correct = sum(
+        1
+        for chart_id, role in case.gold_evidence_roles.items()
+        if effective_roles.get(chart_id) == role
+    )
+    promoted_count = sum(
+        finding.get("role") != "unknown" for finding in findings.values()
+    )
+    driver_ids = {
+        chart_id for chart_id, role in case.gold_evidence_roles.items() if role == "driver"
+    }
     driver_found = {
         chart_id for chart_id, finding in findings.items() if finding.get("role") == "driver"
+    }
+    suggested_driver_found = {
+        chart_id
+        for chart_id, finding in findings.items()
+        if effective_roles.get(chart_id) == "driver"
     }
     return {
         "case_id": case.case_id,
@@ -563,13 +610,32 @@ def _score(
         "decision_precision": round(finding_precision, 4),
         "decision_recall": round(finding_recall, 4),
         "decision_f1": round(finding_f1, 4),
-        "decision_role_accuracy": round(role_correct / len(case.gold_roles), 4) if case.gold_roles else 1.0,
+        "decision_role_accuracy": round(role_correct / len(case.gold_evidence_roles), 4)
+        if case.gold_evidence_roles
+        else 1.0,
+        "suggested_role_accuracy": round(
+            effective_role_correct / len(case.gold_evidence_roles), 4
+        )
+        if case.gold_evidence_roles
+        else 1.0,
+        "promoted_role_coverage": round(
+            promoted_count / len(findings), 4
+        )
+        if findings
+        else 1.0,
         "driver_recall": round(len(driver_ids & driver_found) / len(driver_ids), 4) if driver_ids else 1.0,
+        "suggested_driver_recall": round(
+            len(driver_ids & suggested_driver_found) / len(driver_ids), 4
+        )
+        if driver_ids
+        else 1.0,
         "outcome": decision.get("outcome"),
         "expected_outcome": case.expected_outcome,
         "outcome_correct": decision.get("outcome") == case.expected_outcome,
         "selected_ids": selected_ids,
         "gold_ids": sorted(gold),
+        "gold_evidence_roles": case.gold_evidence_roles,
+        "findings": findings,
         "decision_confidence": decision.get("confidence"),
         "api_requests": usage.requests,
         "input_tokens": usage.input_tokens,
@@ -597,7 +663,10 @@ def _aggregate(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "decision_recall": avg("decision_recall"),
         "decision_f1": avg("decision_f1"),
         "decision_role_accuracy": avg("decision_role_accuracy"),
+        "suggested_role_accuracy": avg("suggested_role_accuracy"),
+        "promoted_role_coverage": avg("promoted_role_coverage"),
         "driver_recall": avg("driver_recall"),
+        "suggested_driver_recall": avg("suggested_driver_recall"),
         "outcome_accuracy": round(
             sum(bool(row["outcome_correct"]) for row in rows) / len(rows), 4
         ) if rows else 0.0,
@@ -721,6 +790,7 @@ async def run_benchmark(args: argparse.Namespace) -> dict[str, Any]:
             "Chart metadata represents what a catalog adapter could expose; no raw pixels or SQL are sent.",
             "The lexical and gold arms use the same Jev decision stage; they isolate retrieval quality.",
             "Estimated cost uses configured TypeSafe list pricing and provider-reported usage.",
+            "Retrieval gold roles and evidence-role labels are separate evaluator labels; a diagnostic source is not automatically a causal driver.",
         ],
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
@@ -750,7 +820,10 @@ def render_markdown(report: dict[str, Any]) -> str:
         ("Retrieval F1", "retrieval_f1", ".1%"),
         ("Decision F1", "decision_f1", ".1%"),
         ("Decision role accuracy", "decision_role_accuracy", ".1%"),
+        ("Suggested role accuracy", "suggested_role_accuracy", ".1%"),
+        ("Promoted role coverage", "promoted_role_coverage", ".1%"),
         ("Driver recall", "driver_recall", ".1%"),
+        ("Suggested driver recall", "suggested_driver_recall", ".1%"),
         ("Outcome accuracy", "outcome_accuracy", ".1%"),
     ]:
         lines.append(

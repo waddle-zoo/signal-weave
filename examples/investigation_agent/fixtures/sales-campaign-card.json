@@ -1,0 +1,50 @@
+{
+  "id": "sales-campaign-health",
+  "title": "Sales and campaign health",
+  "what_to_watch": "Sales performance and the connected acquisition and conversion signals that explain material movement.",
+  "why_watch": "Determine whether a material sales movement needs coordinated leadership, marketing, and sales action.",
+  "watch_for": [
+    "A material decline in total sales or an important channel.",
+    "A time-linked acquisition or conversion change that explains the movement.",
+    "Conflicting evidence, missing data, or a data-quality issue."
+  ],
+  "questions": [
+    "Which channel or customer journey explains the movement?",
+    "What changed recently that is supported by independent evidence?",
+    "Who should be involved if the evidence supports a coordinated response?"
+  ],
+  "decision_guidance": "Ignore ordinary movement. Investigate material movement when the cause is not yet supported. Notify only when the evidence bundle supports a significant business impact and a credible explanation; do not treat one correlated signal as proof of causation.",
+  "follow_up_guidance": "Inspect authorized channel, acquisition, funnel, campaign, ownership, deployment, and data-quality sources. Preserve the comparison window and time relationship for each finding, then re-evaluate this same card before delivery.",
+  "investigation_mode": "bounded",
+  "max_investigation_sources": 6,
+  "sources": [
+    {
+      "key": "sales-dashboard",
+      "adapter": "superset",
+      "resource": "dashboard:sales",
+      "label": "Sales dashboard",
+      "required": true
+    }
+  ],
+  "delivery_methods": [
+    {
+      "key": "leadership",
+      "outcome": "notify",
+      "label": "Leadership",
+      "destination": "slack://sales-campaign-health"
+    },
+    {
+      "key": "marketing",
+      "outcome": "notify",
+      "label": "Marketing",
+      "destination": "slack://sales-campaign-health"
+    },
+    {
+      "key": "sales",
+      "outcome": "notify",
+      "label": "Sales",
+      "destination": "slack://sales-campaign-health"
+    }
+  ],
+  "status": "draft"
+}

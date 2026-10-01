@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "trial_id": "northstar-longitudinal-panel-v1",
+  "company": {
+    "name": "Northstar Outfitters Co.",
+    "description": "A simulated omnichannel company running a shared analytical operating cadence over eight months.",
+    "historical_fixture": "examples/northstar-growth-historical-decisions.json",
+    "card_fixture": "examples/northstar-multistep-trial.json"
+  },
+  "months": [
+    {"id": "2026-07", "period_id": "week-01"},
+    {"id": "2026-08", "period_id": "week-02"},
+    {"id": "2026-09", "period_id": "week-03"},
+    {"id": "2026-10", "period_id": "week-04", "overrides": {"isolated-online-drop-with-checkout-regression": {"expected_final": "investigate", "feedback_note": "The diagnostic cause was credible, but total movement stayed below the 15% leadership materiality threshold."}}},
+    {"id": "2026-11", "period_id": "week-05", "overrides": {"ordinary-modest-movement": {"expected_initial": "ignore", "expected_final": "ignore", "feedback_note": "The movement reached the 10% boundary and the explicit at-or-below policy suppressed it without leadership delivery."}}},
+    {"id": "2026-12", "period_id": "week-06"},
+    {"id": "2027-01", "period_id": "week-07"},
+    {"id": "2027-02", "period_id": "week-08", "overrides": {"isolated-online-drop-with-checkout-regression": {"expected_final": "investigate", "feedback_note": "The diagnostic cause was credible, but total movement stayed below the 15% leadership materiality threshold."}}}
+  ],
+  "decision_templates": [
+    {
+      "id": "ordinary-no-change",
+      "base_case_id": "day-01-no-change",
+      "expected_initial": "ignore",
+      "expected_final": "ignore",
+      "feedback_kind": "useful",
+      "manual_minutes": 18,
+      "signalweave_minutes": 1,
+      "feedback_note": "The scheduled run suppressed ordinary operating noise."
+    },
+    {
+      "id": "ordinary-modest-movement",
+      "base_case_id": "day-02-modest-movement",
+      "expected_initial": "ignore",
+      "expected_final": "ignore",
+      "feedback_kind": "useful",
+      "manual_minutes": 22,
+      "signalweave_minutes": 1,
+      "feedback_note": "The scheduled run did not create a needless investigation for sub-threshold movement."
+    },
+    {
+      "id": "isolated-online-drop-with-checkout-regression",
+      "base_case_id": "day-03-isolated-channel",
+      "expected_initial": "investigate",
+      "expected_final": "notify",
+      "feedback_kind": "useful",
+      "manual_minutes": 36,
+      "signalweave_minutes": 15,
+      "feedback_note": "Analytics confirmed the checkout regression and leadership received the material cause."
+    },
+    {
+      "id": "corroborated-broad-decline",
+      "base_case_id": "day-04-corroborated-decline",
+      "expected_initial": "notify",
+      "expected_final": "notify",
+      "feedback_kind": "useful",
+      "manual_minutes": 42,
+      "signalweave_minutes": 5,
+      "feedback_note": "Cross-source corroboration supported immediate leadership delivery."
+    },
+    {
+      "id": "conflicting-definition-lag",
+      "base_case_id": "day-05-conflicting-sources",
+      "expected_initial": "investigate",
+      "expected_final": "investigate",
+      "feedback_kind": "useful",
+      "manual_minutes": 48,
+      "signalweave_minutes": 15,
+      "feedback_note": "The workflow kept the definition conflict with Analytics and Data Trust instead of escalating it as business impact."
+    },
+    {
+      "id": "primary-source-unavailable",
+      "base_case_id": "day-06-source-unavailable",
+      "expected_initial": "insufficient_data",
+      "expected_final": "insufficient_data",
+      "feedback_kind": "useful",
+      "manual_minutes": 27,
+      "signalweave_minutes": 5,
+      "feedback_note": "The workflow blocked interpretation and routed the source problem for repair."
+    }
+  ],
+  "panel": [
+    {"id": "growth-card-curator", "group": "curator", "expertise": "human intent, decision policy, and approved source scope"},
+    {"id": "growth-analytics-agent", "group": "analytics", "expertise": "cross-source diagnosis and evidence completeness"},
+    {"id": "data-trust-agent", "group": "data_trust", "expertise": "freshness, source failures, definitions, and provenance"},
+    {"id": "operations-coordinator", "group": "operations", "expertise": "handoff safety, workflow completion, and ownership"},
+    {"id": "executive-briefing-agent", "group": "communications", "expertise": "evidence-backed brief delivery to the right leadership owner"},
+    {"id": "growth-leadership-agent", "group": "leadership", "expertise": "whether a delivered result is decision-useful"},
+    {"id": "feedback-steward", "group": "feedback", "expertise": "recording human acknowledgement without rewriting facts"},
+    {"id": "adversarial-reviewer", "group": "adversarial", "expertise": "independent safety, correctness, and longitudinal integrity checks"}
+  ]
+}

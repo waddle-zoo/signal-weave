@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from .models import InsightCard, InsightPlan
+from .models import EvidenceSlot, InsightCard, InsightPlan
 
 # This is deliberately a small capability vocabulary. Jev can select which
 # capabilities fit a card, but it cannot invent executable operations.
@@ -31,6 +31,57 @@ def _base_capabilities(card: InsightCard) -> list[str]:
     return capabilities
 
 
+def _evidence_slots(card: InsightCard) -> list[EvidenceSlot]:
+    """Compile owner language into bounded evidence questions.
+
+    Source execution stays adapter-owned.  The compiled plan gives a caller an
+    explicit checklist instead of making it reverse-engineer a free-form
+    follow-up paragraph.
+    """
+
+    slots = [
+        EvidenceSlot(
+            key=f"source:{source.key}",
+            role="primary",
+            question=(
+                f"What changed in {source.label} that is relevant to the card's stated "
+                "purpose and comparison window?"
+            ),
+            source_keys=[source.key],
+            source_refs=[source],
+            required=source.required,
+            completion_criteria=(
+                "Return a bounded observation or evidence statement with its source and "
+                "comparison window."
+            ),
+        )
+        for source in card.sources
+    ]
+    slots.extend(
+        EvidenceSlot(
+            key=f"question:{index + 1}",
+            role="question",
+            question=question,
+            source_keys=[source.key for source in card.sources],
+            required=True,
+            completion_criteria="Return evidence that supports, contradicts, or leaves the question unknown.",
+        )
+        for index, question in enumerate(card.questions)
+    )
+    slots.extend(
+        EvidenceSlot(
+            key=f"watch:{index + 1}",
+            role="watch",
+            question=watch_item,
+            source_keys=[source.key for source in card.sources],
+            required=True,
+            completion_criteria="Return evidence that shows whether this watch item is present or absent.",
+        )
+        for index, watch_item in enumerate(card.watch_for)
+    )
+    return slots
+
+
 def base_plan(card: InsightCard) -> InsightPlan:
     """Build the minimum safe plan; it never invents source-specific execution."""
     return InsightPlan(
@@ -46,6 +97,7 @@ def base_plan(card: InsightCard) -> InsightPlan:
         card_scope=f"{card.what_to_watch}\nWhy: {card.why_watch}",
         investigation_mode=card.investigation_mode,
         max_investigation_sources=card.max_investigation_sources,
+        evidence_slots=_evidence_slots(card),
     )
 
 

@@ -1,0 +1,68 @@
+{
+  "tools": [
+    {
+      "key": "sales-channel-breakdown",
+      "description": "Authorized channel-level sales breakdown for the same comparison window as the sales card.",
+      "slot_key": "question:1",
+      "facts": [
+        {
+          "fact_id": "online-sales-drop",
+          "subject_ref": "superset|dashboard:sales",
+          "relation": "affected_channel",
+          "object_ref": "business|online-sales",
+          "statement": "Online sales declined 18% and explain most of the total sales decline in the comparison window.",
+          "source_url": "https://analytics.example.invalid/sales?view=channels",
+          "provenance": ["source:sales-channel-breakdown", "window:previous-period"]
+        }
+      ]
+    },
+    {
+      "key": "campaign-performance",
+      "description": "Authorized campaign and paid acquisition measurements, including campaign change timing.",
+      "slot_key": "question:2",
+      "facts": [
+        {
+          "fact_id": "campaign-ctr-drop",
+          "subject_ref": "ads|campaign:latest",
+          "relation": "changed_before",
+          "object_ref": "business|online-sales",
+          "statement": "The latest campaign launched 18 hours before the movement; ad click-through declined 6% afterward.",
+          "source_url": "https://ads.example.invalid/campaign/latest",
+          "provenance": ["source:campaign-performance", "event:campaign-launch"]
+        }
+      ]
+    },
+    {
+      "key": "purchase-funnel",
+      "description": "Authorized user journey and purchase conversion measurements split by acquisition cohort.",
+      "slot_key": "question:2",
+      "facts": [
+        {
+          "fact_id": "purchase-conversion-collapse",
+          "subject_ref": "warehouse|funnel:purchase",
+          "relation": "supports_driver",
+          "object_ref": "ads|campaign:latest",
+          "statement": "Click-to-purchase conversion declined 61% for traffic from the latest campaign while overall site sessions were comparatively stable.",
+          "source_url": "https://analytics.example.invalid/funnel/purchase",
+          "provenance": ["source:purchase-funnel", "cohort:latest-campaign"]
+        }
+      ]
+    },
+    {
+      "key": "ownership-graph",
+      "description": "Authorized ownership graph mapping campaign and funnel assets to accountable teams.",
+      "slot_key": "question:3",
+      "facts": [
+        {
+          "fact_id": "campaign-owner",
+          "subject_ref": "ads|campaign:latest",
+          "relation": "owned_by",
+          "object_ref": "team|marketing-growth",
+          "statement": "The latest campaign is owned by Growth Marketing; Sales owns the downstream conversion follow-up.",
+          "source_url": "https://graph.example.invalid/ownership/campaign/latest",
+          "provenance": ["source:ownership-graph", "owner:business-systems"]
+        }
+      ]
+    }
+  ]
+}

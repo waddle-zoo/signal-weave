@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "dataset_id": "northstar-blog-showcase-v1",
+  "title": "Northstar Outfitters: the week the dashboard changed",
+  "description": "A small, presentation-ready replay of business situations a leadership team would actually care about.",
+  "scenarios": [
+    {
+      "id": "companywide-revenue-drop",
+      "headline": "Revenue is down everywhere, not just in one chart.",
+      "why_it_matters": "This is the kind of movement that deserves a leadership push with the evidence attached.",
+      "expected_outcome": "notify",
+      "expected_route": "leadership",
+      "adjustments": {
+        "revenue": -22,
+        "channel:Online": -24,
+        "channel:Store": -18,
+        "channel:Mobile": -20,
+        "channel:Marketplace": -16,
+        "conversion_rate": -15,
+        "sessions": -10,
+        "support_backlog": 28,
+        "finance_revenue": -21
+      }
+    },
+    {
+      "id": "mobile-checkout-collapse",
+      "headline": "Mobile conversion collapsed while the rest of the business held steady.",
+      "why_it_matters": "A severe mobile funnel failure deserves a leadership push with the affected surface attached, even though the other channels are holding steady.",
+      "expected_outcome": "notify",
+      "expected_route": "leadership",
+      "adjustments": {
+        "revenue": -17,
+        "channel:Online": -4,
+        "channel:Store": -2,
+        "channel:Mobile": -42,
+        "channel:Marketplace": -3,
+        "conversion_rate": -31,
+        "sessions": 1,
+        "support_backlog": 22,
+        "finance_revenue": -16
+      }
+    },
+    {
+      "id": "ordinary-seasonal-softness",
+      "headline": "Every channel softened, but nothing crossed the team’s action boundary.",
+      "why_it_matters": "A dashboard movement is not automatically a leadership problem. This should be suppressed without waking an agent for a deep analysis.",
+      "expected_outcome": "ignore",
+      "expected_route": "none",
+      "adjustments": {
+        "revenue": -8,
+        "channel:Online": -8,
+        "channel:Store": -8,
+        "channel:Mobile": -8,
+        "channel:Marketplace": -8,
+        "conversion_rate": -4,
+        "sessions": -3,
+        "support_backlog": 2,
+        "finance_revenue": -7
+      }
+    },
+    {
+      "id": "dashboard-data-failure",
+      "headline": "The dashboard stopped reporting. Do not invent a business story.",
+      "why_it_matters": "A missing source is a data-trust incident, not evidence that revenue moved.",
+      "expected_outcome": "insufficient_data",
+      "expected_route": "data-trust",
+      "adjustments": {},
+      "failed_sources": ["superset|dashboard:1"]
+    }
+  ]
+}

@@ -832,6 +832,67 @@ async def test_provider_neutral_partial_quality_can_block_a_required_source():
     assert any("1 quality issue(s)" in item.statement for item in run.result.evidence)
 
 
+async def test_partial_quality_blocks_before_incomplete_follow_up_plan():
+    source = SourceRef(
+        key="partial-follow-up-source",
+        adapter="trino",
+        resource="query:revenue",
+        label="Revenue query",
+    )
+    card = card_for(
+        card_id="card-partial-follow-up-priority",
+        title="Partial source with follow-up",
+        source=source,
+        questions=["Which segment explains the movement?"],
+        follow_up_guidance="Retrieve the segment breakdown before notifying leadership.",
+        delivery_methods=[
+            DeliveryMethod(
+                key="leadership",
+                outcome=Outcome.NOTIFY,
+                label="Leadership",
+                destination="slack://leadership",
+            )
+        ],
+    )
+    resource = ResourceSnapshot(
+        source_key=source.key,
+        adapter=source.adapter,
+        resource=source.resource,
+        title=source.label,
+        metadata={
+            "data_quality": {
+                "status": "partial",
+                "issues": ["segment partition is unavailable"],
+                "blocking": True,
+            }
+        },
+        observations=[
+            Observation(
+                source_key=source.key,
+                subject_id="revenue",
+                subject_label="Revenue",
+                metric="revenue",
+                current=110,
+                baseline=100,
+                change_pct=10,
+            )
+        ],
+    )
+
+    class NotifyFollowUp(SafetyTestDouble):
+        async def judge(self, state, card, plan, observations):
+            result = await super().judge(state, card, plan, observations)
+            return result.model_copy(update={"outcome": Outcome.NOTIFY})
+
+    run = await InsightEngine(NotifyFollowUp()).evaluate(card, [resource])
+
+    assert run.result.evidence_plan is not None
+    assert run.result.evidence_plan.status == "incomplete"
+    assert run.result.outcome == Outcome.INSUFFICIENT_DATA
+    assert run.result.delivery_methods == []
+    assert any("1 quality issue(s)" in item.statement for item in run.result.evidence)
+
+
 async def test_missing_baselines_warn_without_blocking_healthy_chart_evidence():
     source = SourceRef(
         key="mixed-dashboard",

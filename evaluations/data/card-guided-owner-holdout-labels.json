@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "label_source": "independent-owner-review-v1",
+  "cases": {
+    "documentdb-performance-regression": {
+      "query-latency": {"retrieval_role": "driver", "evidence_role": "driver"},
+      "replication-lag": {"retrieval_role": "corroborates", "evidence_role": "corroborates"},
+      "throttled-requests": {"retrieval_role": "diagnostic", "evidence_role": "diagnostic"},
+      "deployment-timeline": {"retrieval_role": "diagnostic", "evidence_role": "diagnostic"}
+    },
+    "checkout-conversion-regression": {
+      "completed-purchases": {"retrieval_role": "driver", "evidence_role": "driver"},
+      "checkout-errors": {"retrieval_role": "corroborates", "evidence_role": "corroborates"},
+      "ad-click-through": {"retrieval_role": "diagnostic", "evidence_role": "diagnostic"},
+      "latest-release": {"retrieval_role": "diagnostic", "evidence_role": "diagnostic"}
+    },
+    "warehouse-stockout-risk": {
+      "stockout-rate": {"retrieval_role": "driver", "evidence_role": "driver"},
+      "fulfillment-failures": {"retrieval_role": "corroborates", "evidence_role": "corroborates"},
+      "supplier-lead-time": {"retrieval_role": "diagnostic", "evidence_role": "diagnostic"},
+      "inventory-freshness": {"retrieval_role": "quality", "evidence_role": "quality"}
+    },
+    "support-backlog-noise": {
+      "sla-breach-rate": {"retrieval_role": "driver", "evidence_role": "driver"},
+      "support-backlog": {"retrieval_role": "corroborates", "evidence_role": "corroborates"},
+      "ticket-mix": {"retrieval_role": "diagnostic", "evidence_role": "diagnostic"},
+      "staffing-schedule": {"retrieval_role": "contradicts", "evidence_role": "contradicts"}
+    },
+    "identity-region-incident": {
+      "login-failure-rate": {"retrieval_role": "driver", "evidence_role": "driver"},
+      "affected-regions": {"retrieval_role": "corroborates", "evidence_role": "corroborates"},
+      "identity-deploys": {"retrieval_role": "diagnostic", "evidence_role": "diagnostic"},
+      "auth-event-freshness": {"retrieval_role": "quality", "evidence_role": "quality"}
+    },
+    "data-pipeline-latency": {
+      "table-freshness": {"retrieval_role": "quality", "evidence_role": "driver"},
+      "dashboard-freshness": {"retrieval_role": "corroborates", "evidence_role": "corroborates"},
+      "warehouse-query-latency": {"retrieval_role": "diagnostic", "evidence_role": "diagnostic"},
+      "partition-completeness": {"retrieval_role": "quality", "evidence_role": "quality"}
+    }
+  }
+}

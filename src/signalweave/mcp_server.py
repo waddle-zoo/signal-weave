@@ -68,11 +68,15 @@ def _evaluation_fingerprint(
     *,
     actor: str,
     context: ContextSnapshot | None,
+    parent_receipt_id: str | None = None,
+    workflow_step_key: str | None = None,
 ) -> str:
     payload = {
         "card_id": card.id,
         "card_version": card.version,
         "actor": actor or "mcp-client",
+        "parent_receipt_id": parent_receipt_id,
+        "workflow_step_key": workflow_step_key,
         "principal_tenant": card.principal_tenant,
         # Version numbers are useful audit labels but are not an integrity
         # boundary by themselves. Include the executable card contract so a
@@ -266,6 +270,8 @@ def create_mcp(
         actor: str,
         context: ContextSnapshot | None = None,
         principal: PrincipalContext | None = None,
+        parent_receipt_id: str | None = None,
+        workflow_step_key: str | None = None,
     ) -> dict[str, Any]:
         card = runtime.card_store.get_card(card_id)
         assert_card_scope(card, principal)
@@ -276,8 +282,24 @@ def create_mcp(
         key = (idempotency_key or f"manual:{card_id}:{uuid4().hex}").strip()
         if not key:
             raise ValueError("idempotency_key must not be empty")
+        parent_id = parent_receipt_id.strip() if parent_receipt_id else None
+        step_key = workflow_step_key.strip() if workflow_step_key else None
+        if step_key and not parent_id:
+            raise ValueError("workflow_step_key requires parent_receipt_id")
+        if parent_id:
+            parent = decision_receipts.get_by_receipt_id(parent_id)
+            if parent is None:
+                raise ValueError("parent_receipt_id does not identify a decision receipt")
+            if parent.card_id != card.id:
+                raise ValueError("parent_receipt_id belongs to a different insight card")
         context = await context_for_card(card, context, principal)
-        fingerprint = _evaluation_fingerprint(card, actor=actor, context=context)
+        fingerprint = _evaluation_fingerprint(
+            card,
+            actor=actor,
+            context=context,
+            parent_receipt_id=parent_id,
+            workflow_step_key=step_key,
+        )
         existing = decision_receipts.get_by_idempotency_key(key)
         if existing is not None:
             if existing.request_fingerprint and existing.request_fingerprint != fingerprint:
@@ -301,6 +323,8 @@ def create_mcp(
             card_id=card.id,
             card_version=card.version,
             actor=actor or "mcp-client",
+            parent_receipt_id=parent_id,
+            workflow_step_key=step_key,
             context_provider=context.provider if context else None,
             context_version=context.version if context else None,
             status=ReceiptStatus.PREPARED,
@@ -379,6 +403,8 @@ def create_mcp(
         actor: str,
         context: ContextSnapshot | None = None,
         principal: PrincipalContext | None = None,
+        parent_receipt_id: str | None = None,
+        workflow_step_key: str | None = None,
     ) -> dict[str, Any]:
         key = (idempotency_key or f"manual:{card_id}:{uuid4().hex}").strip()
         if not key:
@@ -391,6 +417,8 @@ def create_mcp(
                 actor=actor,
                 context=context,
                 principal=principal,
+                parent_receipt_id=parent_receipt_id,
+                workflow_step_key=workflow_step_key,
             )
 
     async def selected_query_sources(
@@ -785,6 +813,7 @@ def create_mcp(
         watch_for: list[str] | None = None,
         questions: list[str] | None = None,
         decision_guidance: str | None = None,
+        follow_up_guidance: str | None = None,
         selected_sources: list[dict[str, Any]] | None = None,
         adapter: str | None = None,
         limit: int = 10,
@@ -813,6 +842,7 @@ def create_mcp(
             watch_for=watch_for,
             questions=questions,
             decision_guidance=decision_guidance,
+            follow_up_guidance=follow_up_guidance,
             selected_sources=selected_sources,
             adapter=adapter,
             limit=limit,
@@ -845,6 +875,7 @@ def create_mcp(
         watch_for: list[str] | None = None,
         questions: list[str] | None = None,
         decision_guidance: str | None = None,
+        follow_up_guidance: str | None = None,
         selected_sources: list[dict[str, Any]] | None = None,
         adapter: str | None = None,
         limit: int = 10,
@@ -874,6 +905,7 @@ def create_mcp(
             watch_for=watch_for,
             questions=questions,
             decision_guidance=decision_guidance,
+            follow_up_guidance=follow_up_guidance,
             selected_sources=selected_sources,
             adapter=adapter,
             limit=limit,
@@ -919,6 +951,7 @@ def create_mcp(
         watch_for: list[str] | None = None,
         questions: list[str] | None = None,
         decision_guidance: str | None = None,
+        follow_up_guidance: str | None = None,
         delivery_methods: list[dict[str, Any]] | None = None,
         comparison_windows: list[str] | None = None,
         action_confidence_threshold: float = 0.70,
@@ -943,6 +976,7 @@ def create_mcp(
             watch_for=watch_for or [],
             questions=questions or [],
             decision_guidance=(decision_guidance or "").strip(),
+            follow_up_guidance=(follow_up_guidance or "").strip(),
             sources=source_refs,
             comparison_windows=comparison_windows
             or ["previous_period", "trailing_4_period_average"],
@@ -1080,6 +1114,8 @@ def create_mcp(
         idempotency_key: str | None = None,
         actor: str = "mcp-client",
         context: dict[str, Any] | None = None,
+        parent_receipt_id: str | None = None,
+        workflow_step_key: str | None = None,
         ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Run an approved card in delivery-disabled shadow mode.
@@ -1101,6 +1137,8 @@ def create_mcp(
             actor=trusted_actor,
             context=context_snapshot,
             principal=principal,
+            parent_receipt_id=parent_receipt_id,
+            workflow_step_key=workflow_step_key,
         )
 
     @mcp.tool()
@@ -1542,6 +1580,16 @@ def create_mcp(
                 actor=actor,
                 context=context,
                 principal=principal,
+                parent_receipt_id=(
+                    str(payload["parent_receipt_id"])
+                    if payload.get("parent_receipt_id")
+                    else None
+                ),
+                workflow_step_key=(
+                    str(payload["workflow_step_key"])
+                    if payload.get("workflow_step_key")
+                    else None
+                ),
             )
         except (KeyError, ValueError) as error:
             message = str(error)
