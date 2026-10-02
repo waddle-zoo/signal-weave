@@ -54,6 +54,11 @@ also failed its gate: final routing was correct on 5/6 runs versus Luna's 6/6,
 with higher setup effort and token cost. Existing curated-card results do not
 establish that novice onboarding delivers the same benefit.
 
+The [latest bounded onboarding repair](docs/bootstrap-empirical-repair-v2-results.md)
+accepted three agent-authored cards and passed 12/12 live Jev monitoring cases.
+Those were previously inspected synthetic cases—not fresh enterprise proof or
+an advantage over Luna. Failed attempts and raw evidence are retained.
+
 Then ask your agent:
 
 > Use SignalWeave to monitor why online sales changed and how that affected net
