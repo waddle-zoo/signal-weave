@@ -182,7 +182,8 @@ discover_insight_sources(goal, adapter?, limit?)
 propose_insight_card(what_to_watch, why_watch, watch_for?, questions?, ...)
 resolve_insight_sources(card_id)
 simulate_insight_card(card_id)
-approve_insight_card(card_id)
+evaluate_card_workflow(card_id, cases=owner_labeled_cases, acceptance_outcomes=owner_outcomes)
+approve_insight_card(card_id, workflow_report_id=certification_report_id)
 evaluate_insight_card(card_id)
 get_decision_receipt(idempotency_key? | receipt_id?)
 ```
@@ -202,6 +203,11 @@ draft_insight_card(title, what_to_watch, why_watch, sources, ...)
 
 The proposal path uses Jev to rank a bounded source catalog, stores a draft, and
 returns setup questions. Preview is delivery-disabled. Approval is explicit.
+Before calling a workflow tested, replay owner-labeled actionable, quiet and
+missing-evidence examples. The acceptance report checks actual outcomes and
+destinations, and exposes unresolved evidence for correction. Pass its report ID
+when approving; a preview alone is not proof. See the
+[onboarding acceptance flow](docs/bootstrap-and-certification.md#test-onboarding-not-just-the-prose).
 Proposal-created cards default to `retrieval_mode="expand"`: the selected source
 stays a human-approved anchor, while Jev can add a bounded set of authorized,
 optional context sources at evaluation time. `resolve_insight_sources` previews

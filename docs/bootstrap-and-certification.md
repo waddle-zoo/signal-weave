@@ -98,6 +98,52 @@ prevents an old green report from being mistaken for proof about a newer card.
 
 ## 2. Certify a card/workflow
 
+### Test onboarding, not just the prose
+
+A successful preview means the engine ran. It does not mean it followed the
+owner's rule. Likewise, approving a card authorizes it; that alone is not evidence
+of correct behavior. The recommended onboarding path is:
+
+1. Inspect the selected source exports and establish the population, comparison
+   basis, completeness and source meanings needed by this investigation. Ask the
+   owner about missing definitions; never manufacture coverage from a list of rows.
+2. Have the owner supply expected outcomes for setup examples: an actionable
+   change, a quiet situation, and missing or conflicting evidence. Cover additional
+   intended routes too. These can be historical or explicitly synthetic examples;
+   keep later evaluation periods out of this correction loop.
+3. Call `evaluate_card_workflow` with `acceptance_outcomes` listing the intended
+   outcomes. Each case needs explicit `expected_delivery_method_keys` and
+   `expected_delivery_destinations` (a method-key-to-exact-endpoint object; `{}`
+   means no delivery). Supply evidence and retrieval labels for the assertions
+   being tested. Do not derive labels from Jev's response.
+4. Inspect any failed case's `evidence_plan`, `workflow`, and failure reasons.
+   A required question that cannot be answered is not automatically a contradiction.
+   Fix the source contract, ask the owner to clarify the rule, or mark a detail
+   advisory **only if it is genuinely not a prerequisite**. Do not lower confidence
+   thresholds or rewrite expected outcomes merely to get a passing test.
+5. After a passing acceptance replay and explicit owner approval, call
+   `approve_insight_card(card_id, workflow_report_id=certification_report_id)`.
+
+Acceptance is strict about tested outcomes, recipients and endpoint strings.
+Coverage follows the owner's declared outcomes, not a fixed alert taxonomy:
+an always-investigate policy can legitimately route quiet situations for review.
+The evaluator cannot infer whether those declared outcomes cover the entire
+business policy; the owner must review that coverage as well as the labels.
+It binds the saved report to the executable card, source parameters, plan and
+destinations. Changing those requires another replay, including same-version
+edits. No message is delivered by the evaluator. Owner labels are used for scoring
+only, never sent as Jev instructions or evidence.
+
+The low-level approval call remains available without a report for caller-managed
+review, but reports `workflow_acceptance.status="unassessed"`. Enterprise readiness
+does not treat that or a partial diagnostic replay as successful onboarding.
+A passing setup set is still not proof of generalization: follow it with an
+independent holdout and shadow monitoring. Neither the service nor a model review
+authenticates the owner's labels or guarantees upstream data completeness.
+This replay evaluates the supplied snapshots. It does not certify live connector
+fetches or dynamic catalog retrieval; validate those through the existing adapter
+bootstrap, retrieval evaluation and live shadow tools separately.
+
 Keep `watch_for` specific to the owner's required business conditions. Each item
 is assessed on every run and unresolved required evidence can block notification.
 Do not copy a general analysis checklist into it: an inapplicable decomposition

@@ -504,3 +504,37 @@ defined explicitly and equally for both arms. Keep future snapshots and expected
 answers out of setup, count extra review/correction costs, and retain original
 failed trials. Do not add another agent framework or call an accepted draft a
 certified recurring investigation.
+
+### Empirical acceptance instead of policy-only approval
+
+The existing workflow evaluator now supports `acceptance_outcomes`: exact replay
+of owner-labeled setup cases with explicit evidence/resource labels and exact
+delivery endpoints. Failed cases retain their evidence plans, workflow handoffs,
+watch/question results and failure reasons. A successful report binds the tested
+policy, sources, stored plan, principal and destinations, including same-version
+edits. MCP approval can require that report through `workflow_report_id`; low-level
+approval without it is explicitly unassessed, and enterprise readiness requires
+current empirical acceptance. Neither route authenticates human approval.
+
+Independent review rejected a universal ignore/insufficient-data requirement:
+valid always-investigate workflows must be supported. Coverage now follows the
+owner's explicit outcome set, not an invented enterprise policy. Snapshot replay
+also does not claim live connector or dynamic catalog-retrieval certification.
+
+The [bounded live regression](onboarding-acceptance-regression.md) passed 12/12
+exact outcomes/endpoints and watch states across three reviewed-card domains,
+using 12 live Jev requests and no retries. The retained v4 failure diagnostic
+still yields only 2/6 exact native outcomes/endpoints; missing historical compiled
+plans cannot be fabricated to turn old exports into current acceptance proof.
+Those are offline historical checks, not new model accuracy measurements.
+
+This closes the missing reusable acceptance/diagnostic boundary, not the full
+adoption goal. Still required: an authoring-agent trial that actually consumes
+these empirical failures, corrects its drafts within a frozen budget using setup
+examples available to both arms, and then succeeds on unseen periods. Do not
+report the reviewed-card regression as evidence of automatic bootstrap repair,
+Luna superiority, or reduced recurring agent costs.
+
+Final verification for this change: `make verify` passed 1,640 tests with three
+opt-in skips in 96.96 seconds; Ruff and whitespace checks passed. Independent
+post-run review recomputed all 40 live-report checks without inference calls.

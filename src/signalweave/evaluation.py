@@ -20,7 +20,16 @@ from typing import Literal
 from pydantic import BaseModel, Field, model_validator
 
 from .engine import InsightEngine
-from .models import ContextSnapshot, InsightCard, Outcome, ResourceSnapshot
+from .models import (
+    ContextSnapshot,
+    EvidencePlan,
+    InsightCard,
+    Outcome,
+    QuestionResult,
+    ResourceSnapshot,
+    WatchResult,
+    WorkflowHandoff,
+)
 
 # Increment when admission or promotion semantics require fresh certification.
 # Version 3 also gates promotion on owner-labeled delivery exactness; version 2
@@ -85,6 +94,23 @@ def _stable_digest(payload: object) -> str:
     return hashlib.sha256(encoded).hexdigest()
 
 
+def card_acceptance_digest(card: InsightCard) -> str:
+    """Bind tested policy, source parameters, routes, principal and stored plan.
+
+    Approval/review audit is deliberately excluded. The semantic execution payload
+    alone is insufficient: it omits endpoints, identity and the compiled plan.
+    This digest is an integrity check, not human authorization or source freshness.
+    """
+
+    return _stable_digest({
+        "execution_payload": card.execution_payload(),
+        "delivery_methods": [method.model_dump(mode="json") for method in card.delivery_methods],
+        "principal_id": card.principal_id,
+        "principal_tenant": card.principal_tenant,
+        "compiled_plan": card.compiled_plan.model_dump(mode="json") if card.compiled_plan else None,
+    })
+
+
 def _case_input(case: CardEvaluationCase) -> dict[str, object]:
     """Return exactly the material allowed into the production evaluation path."""
 
@@ -104,6 +130,7 @@ def _case_labels(case: CardEvaluationCase) -> dict[str, object]:
         "expected_outcome": case.expected_outcome,
         "allowed_outcomes": case.allowed_outcomes,
         "expected_delivery_method_keys": case.expected_delivery_method_keys,
+        "expected_delivery_destinations": case.expected_delivery_destinations,
         "required_evidence_source_keys": case.required_evidence_source_keys,
         "expected_retrieval_refs": case.expected_retrieval_refs,
     }
@@ -127,6 +154,7 @@ class CardEvaluationCase(BaseModel):
     expected_outcome: Outcome
     allowed_outcomes: list[Outcome] | None = None
     expected_delivery_method_keys: list[str] | None = None
+    expected_delivery_destinations: dict[str, str] | None = None
     required_evidence_source_keys: list[str] = Field(default_factory=list, max_length=500)
     expected_retrieval_refs: list[str] = Field(default_factory=list, max_length=500)
     tags: list[str] = Field(default_factory=list, max_length=50)
@@ -173,10 +201,12 @@ class CardEvaluationCaseResult(BaseModel):
     safe_action: bool = False
     unsafe_action: bool = False
     delivery_exact: bool = False
+    delivery_destinations_exact: bool | None = None
     evidence_recall: float = Field(default=0.0, ge=0.0, le=1.0)
     retrieval_precision: float = Field(default=0.0, ge=0.0, le=1.0)
     retrieval_recall: float = Field(default=0.0, ge=0.0, le=1.0)
     actual_delivery_method_keys: list[str] = Field(default_factory=list)
+    actual_delivery_destinations: dict[str, str] = Field(default_factory=dict)
     actual_evidence_source_keys: list[str] = Field(default_factory=list)
     actual_retrieval_refs: list[str] = Field(default_factory=list)
     confidence: float | None = Field(default=None, ge=0.0, le=1.0)
@@ -192,6 +222,11 @@ class CardEvaluationCaseResult(BaseModel):
     tags: list[str] = Field(default_factory=list)
     dataset_id: str = ""
     split: str = "unspecified"
+    evidence_plan: EvidencePlan | None = None
+    workflow: WorkflowHandoff | None = None
+    watch_results: list[WatchResult] = Field(default_factory=list)
+    question_results: list[QuestionResult] = Field(default_factory=list)
+    failure_reasons: list[str] = Field(default_factory=list)
 
 
 class CardEvaluationReport(BaseModel):
@@ -203,6 +238,16 @@ class CardEvaluationReport(BaseModel):
     )
     card_ids: list[str] = Field(default_factory=list, max_length=10_000)
     card_versions: dict[str, int] = Field(default_factory=dict)
+    acceptance_outcomes: list[Outcome] | None = Field(
+        default=None,
+        description="Exactly the owner-declared outcome coverage requested per card; passing is limited to supplied cases, not proof of the entire policy.",
+    )
+    card_execution_digests: dict[str, str] = Field(default_factory=dict)
+    acceptance_passed: bool | None = None
+    acceptance_scope: Literal["supplied_snapshot_replay"] | None = Field(
+        default=None,
+        description="Acceptance tests supplied snapshots; it does not certify live adapter resolution or dynamic catalog retrieval.",
+    )
     case_count: int = Field(ge=0)
     successful_case_count: int = Field(ge=0)
     error_count: int = Field(ge=0)
@@ -252,10 +297,34 @@ class CardWorkflowEvaluator:
         cases: list[CardEvaluationCase],
         *,
         thresholds: CardEvaluationThresholds | None = None,
+        acceptance_outcomes: list[Outcome] | None = None,
     ) -> CardEvaluationReport:
+        """Optionally require exact onboarding replay acceptance for every card.
+
+        Acceptance requires explicit caller-owned labels, a stored compiled plan,
+        and coverage of exactly the owner-declared requested outcomes per card.
+        Callers explicitly request policy-applicable quiet and missing-data cases.
+        Labels must be supplied independently of
+        predictions; none are inferred from results or passed into the engine.
+        This certifies supplied snapshots, not live adapter resolution or a human.
+        """
         thresholds = thresholds or CardEvaluationThresholds()
+        if acceptance_outcomes is not None:
+            acceptance_outcomes = sorted({Outcome(value) for value in acceptance_outcomes})
+            # Freeze what is tested across awaited execution and retain any stronger
+            # caller requirements (case count, provenance and split constraints).
+            cases = [case.model_copy(deep=True) for case in cases]
+            thresholds = thresholds.model_copy(update={
+                "min_outcome_accuracy": 1.0,
+                "min_evidence_recall": 1.0,
+                "min_retrieval_recall": 1.0,
+                "max_unsafe_action_rate": 0.0,
+                "max_error_rate": 0.0,
+            })
         metrics_before = self._judger_metrics()
         preflight_blockers = self._preflight(cases, thresholds)
+        if acceptance_outcomes is not None:
+            preflight_blockers.extend(self._acceptance_preflight(cases, acceptance_outcomes))
         if preflight_blockers:
             self._metrics_delta = self._metrics_delta_from(metrics_before)
             return self._report(
@@ -265,6 +334,7 @@ class CardWorkflowEvaluator:
                 card_ids=sorted({case.card.id for case in cases}),
                 card_versions={case.card.id: case.card.version for case in cases},
                 cases=cases,
+                acceptance_outcomes=acceptance_outcomes,
             )
         semaphore = asyncio.Semaphore(self.max_concurrency)
 
@@ -274,7 +344,7 @@ class CardWorkflowEvaluator:
 
         results = list(await asyncio.gather(*(run_one(case) for case in cases)))
         self._metrics_delta = self._metrics_delta_from(metrics_before)
-        return self._report(results, thresholds, cases=cases)
+        return self._report(results, thresholds, cases=cases, acceptance_outcomes=acceptance_outcomes)
 
     def _judger_metrics(self) -> dict[str, int]:
         metrics = getattr(getattr(self.engine, "judger", None), "metrics", None)
@@ -326,6 +396,47 @@ class CardWorkflowEvaluator:
             blockers.append("evaluation dataset time partitions overlap across splits")
         return blockers
 
+    @staticmethod
+    def _acceptance_preflight(
+        cases: list[CardEvaluationCase], acceptance_outcomes: list[Outcome],
+    ) -> list[str]:
+        blockers: list[str] = []
+        if not acceptance_outcomes:
+            blockers.append("acceptance_outcomes must explicitly name at least one outcome")
+        seen_ids: set[str] = set()
+        by_card: dict[str, list[CardEvaluationCase]] = {}
+        for case in cases:
+            if case.id in seen_ids:
+                blockers.append(f"{case.id}: duplicate acceptance case id")
+            seen_ids.add(case.id)
+            by_card.setdefault(case.card.id, []).append(case)
+            if case.expected_delivery_method_keys is None or case.expected_delivery_destinations is None:
+                blockers.append(f"{case.id}: acceptance requires explicit delivery keys and destinations (use [] and {{}} for no route)")
+            elif set(case.expected_delivery_method_keys) != set(case.expected_delivery_destinations):
+                blockers.append(f"{case.id}: delivery destination label keys must match delivery method labels")
+            for name in ("required_evidence_source_keys", "expected_retrieval_refs"):
+                if name not in case.model_fields_set:
+                    blockers.append(f"{case.id}: acceptance requires explicit {name} labels (use [] when none are expected)")
+            sources = {source.key: source for source in case.card.sources}
+            seen_sources: set[str] = set()
+            for resource in case.resources:
+                source = sources.get(resource.source_key)
+                if resource.source_key in seen_sources:
+                    blockers.append(f"{case.id}: duplicate snapshot source key {resource.source_key}")
+                seen_sources.add(resource.source_key)
+                if source is not None and (source.adapter, source.resource) != (resource.adapter, resource.resource):
+                    blockers.append(f"{case.id}: snapshot identity does not match a selected source: {resource.source_key}")
+        for card_id, card_cases in by_card.items():
+            if len({card_acceptance_digest(case.card) for case in card_cases}) != 1:
+                blockers.append(f"{card_id}: acceptance mixes differing execution contracts")
+            if any(case.card.compiled_plan is None for case in card_cases):
+                blockers.append(f"{card_id}: acceptance requires a stored compiled_plan")
+            required = set(acceptance_outcomes)
+            missing = required - {case.expected_outcome for case in card_cases}
+            if missing:
+                blockers.append(f"{card_id}: acceptance outcome coverage missing: " + ", ".join(sorted(missing)))
+        return blockers
+
     async def _evaluate_case(self, case: CardEvaluationCase) -> CardEvaluationCaseResult:
         started = time.perf_counter()
         try:
@@ -342,6 +453,7 @@ class CardWorkflowEvaluator:
                 expected_outcome=case.expected_outcome,
                 latency_ms=(time.perf_counter() - started) * 1000,
                 error=f"{type(error).__name__}: {error}",
+                failure_reasons=["runtime_error"],
                 tags=case.tags,
                 dataset_id=case.dataset.dataset_id,
                 split=case.dataset.split,
@@ -349,6 +461,12 @@ class CardWorkflowEvaluator:
 
         result = run.result
         actual_delivery = sorted(method.key for method in result.delivery_methods)
+        actual_destinations = {method.key: method.destination for method in result.delivery_methods}
+        destinations_exact = (
+            actual_destinations == case.expected_delivery_destinations
+            and len(actual_destinations) == len(result.delivery_methods)
+            if case.expected_delivery_destinations is not None else None
+        )
         expected_delivery = (
             sorted(case.expected_delivery_method_keys)
             if case.expected_delivery_method_keys is not None
@@ -384,6 +502,20 @@ class CardWorkflowEvaluator:
         )
         allowed_outcomes = set(case.allowed_outcomes or [case.expected_outcome])
         safe_action = result.outcome in allowed_outcomes
+        delivery_exact = (expected_delivery is None or actual_delivery == expected_delivery) and destinations_exact is not False
+        failure_reasons = []
+        if result.outcome != case.expected_outcome:
+            failure_reasons.append("outcome_mismatch")
+        if expected_delivery is not None and actual_delivery != expected_delivery:
+            failure_reasons.append("delivery_keys_mismatch")
+        if destinations_exact is False:
+            failure_reasons.append("delivery_destinations_mismatch")
+        if evidence_recall < 1:
+            failure_reasons.append("missing_required_evidence")
+        if retrieval_recall < 1:
+            failure_reasons.append("missing_expected_retrieval")
+        if retrieval_precision < 1:
+            failure_reasons.append("unexpected_retrieval")
         return CardEvaluationCaseResult(
             case_id=case.id,
             card_id=case.card.id,
@@ -393,11 +525,13 @@ class CardWorkflowEvaluator:
             exact_outcome=result.outcome == case.expected_outcome,
             safe_action=safe_action,
             unsafe_action=not safe_action,
-            delivery_exact=expected_delivery is None or actual_delivery == expected_delivery,
+            delivery_exact=delivery_exact,
+            delivery_destinations_exact=destinations_exact,
             evidence_recall=evidence_recall,
             retrieval_precision=retrieval_precision,
             retrieval_recall=retrieval_recall,
             actual_delivery_method_keys=actual_delivery,
+            actual_delivery_destinations=actual_destinations,
             actual_evidence_source_keys=actual_evidence,
             actual_retrieval_refs=actual_retrieval,
             confidence=result.confidence,
@@ -412,6 +546,11 @@ class CardWorkflowEvaluator:
             tags=case.tags,
             dataset_id=case.dataset.dataset_id,
             split=case.dataset.split,
+            evidence_plan=result.evidence_plan,
+            workflow=result.workflow,
+            watch_results=result.watch_results,
+            question_results=result.question_results,
+            failure_reasons=failure_reasons,
         )
 
     def _report(
@@ -423,6 +562,7 @@ class CardWorkflowEvaluator:
         card_ids: list[str] | None = None,
         card_versions: dict[str, int] | None = None,
         cases: list[CardEvaluationCase] | None = None,
+        acceptance_outcomes: list[Outcome] | None = None,
     ) -> CardEvaluationReport:
         preflight_blockers = preflight_blockers or []
         successful = [case for case in results if case.error is None]
@@ -453,6 +593,7 @@ class CardWorkflowEvaluator:
             and retrieval_recall >= thresholds.min_retrieval_recall
             and unsafe_action_rate <= thresholds.max_unsafe_action_rate
             and error_rate <= thresholds.max_error_rate
+            and (acceptance_outcomes is None or all(case.retrieval_precision == 1.0 for case in successful))
         )
         status = PromotionStatus.APPROVED if meets else PromotionStatus.SHADOW
         if (
@@ -464,11 +605,19 @@ class CardWorkflowEvaluator:
         case_inputs = [_case_input(case) for case in (cases or [])]
         case_labels = [_case_labels(case) for case in (cases or [])]
         metrics = getattr(self, "_metrics_delta", {})
+        execution_digests: dict[str, set[str]] = {}
+        if acceptance_outcomes is not None:
+            for case in cases or []:
+                execution_digests.setdefault(case.card.id, set()).add(card_acceptance_digest(case.card))
         return CardEvaluationReport(
             evidence_admission_policy_version=EVIDENCE_ADMISSION_POLICY_VERSION,
             card_ids=card_ids or sorted({case.card_id for case in results}),
             card_versions=card_versions
             or {case.card_id: case.card_version for case in results},
+            acceptance_outcomes=acceptance_outcomes,
+            card_execution_digests={key: next(iter(values)) for key, values in execution_digests.items() if len(values) == 1},
+            acceptance_passed=(status == PromotionStatus.APPROVED) if acceptance_outcomes is not None else None,
+            acceptance_scope="supplied_snapshot_replay" if acceptance_outcomes is not None else None,
             case_count=len(results),
             successful_case_count=len(successful),
             error_count=errors,

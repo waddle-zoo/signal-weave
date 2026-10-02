@@ -227,14 +227,17 @@ async def test_actual_mcp_readiness_requires_current_policy_and_preserves_report
 
     result = await mcp_readiness(server)
 
-    assert result["status"] == ("ready_for_shadow" if current else "blocked")
+    # A current policy marker is necessary, not empirical onboarding acceptance.
+    assert result["status"] == ("needs_review" if current else "blocked")
+    if current:
+        assert "workflow-acceptance-missing-or-stale" in {gate["code"] for gate in result["gates"]}
     summary = result["cards"][0]["workflow_certification"]
     assert summary["evidence_admission_policy_current"] is current
     assert summary["stale"] is (not current)
     assert summary["status"] == "approved"  # Historical verdict is not rewritten.
     assert summary["subject_version"] == "1"
     assert {gate["code"] for gate in result["gates"]} == (
-        set() if current else {"workflow-admission-policy-stale"}
+        {"workflow-acceptance-missing-or-stale"} if current else {"workflow-admission-policy-stale"}
     )
     if not current:
         assert result["gates"][0]["severity"] == "blocked"

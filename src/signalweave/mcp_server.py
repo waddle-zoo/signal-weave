@@ -22,6 +22,7 @@ from .evaluation import (
     CardEvaluationCase,
     CardEvaluationThresholds,
     CardWorkflowEvaluator,
+    card_acceptance_digest,
     has_current_evidence_admission_policy,
 )
 from .models import (
@@ -151,7 +152,16 @@ def create_mcp(
             "Review the effective requirements; follow_up_guidance cannot change them. Simulate the "
             "draft and show the owner the selected sources, "
             "calculations, uncertainties, and intended routes before requesting explicit "
-            "approval. Only call approve_insight_card after that approval; tool access "
+            "approval. Before claiming onboarding is tested, replay owner-labeled setup examples "
+            "with evaluate_card_workflow(acceptance_outcomes=[the owner's intended outcomes]). "
+            "Choose examples covering actionable, quiet, and missing-evidence situations under "
+            "the owner's policy (these need not map to three different outcomes), exact delivery keys and "
+            "expected_delivery_destinations, plus required evidence and retrieval references. "
+            "Labels come from the owner, never from the model's result. Inspect failed cases' "
+            "evidence_plan and workflow; repair missing source context or an unintended required "
+            "check, not thresholds or expected answers. Repeat on the revised card. Supply the "
+            "passing certification_report_id as workflow_report_id when approving. A successful "
+            "preview or policy-only review is not an acceptance test. Only call approve_insight_card after that approval; tool access "
             "is not approval. Similar catalog titles are not automatically the same metric. "
             "If the owner confirms a bounded source selection despite duplicate titles or "
             "omitted suggestions, use a fixed card with investigation_mode=none, call "
@@ -587,6 +597,7 @@ def create_mcp(
         cases: list[dict[str, Any]],
         thresholds: dict[str, Any] | None = None,
         max_concurrency: int = 8,
+        acceptance_outcomes: list[Outcome] | None = None,
         ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Replay one stored card against owner-labeled snapshots before promotion.
@@ -595,6 +606,9 @@ def create_mcp(
         optional evidence/retrieval labels. Labels stay in the evaluator and
         are never included in the Jev state. Historical snapshots are supplied
         by the caller; production delivery is not performed by this tool.
+        Set acceptance_outcomes to the owner's intended dispositions to test
+        onboarding with strict behavioral coverage and exact endpoint labels.
+        This is empirical evidence, not human authorization or causal proof.
         """
         principal = request_principal(ctx)
         card = get_scoped_card(card_id, principal)
@@ -613,6 +627,7 @@ def create_mcp(
                 if thresholds is not None
                 else None
             ),
+            acceptance_outcomes=acceptance_outcomes,
         )
         payload = report.model_dump(mode="json")
         record = persist_certification(
@@ -754,6 +769,10 @@ def create_mcp(
             )
             workflow = latest(kind="card_workflow", subject_id=card.id)
             policy_current = bool(workflow and has_current_evidence_admission_policy(workflow.report))
+            acceptance_current = bool(
+                workflow and workflow.report.get("acceptance_passed") is True
+                and workflow.report.get("card_execution_digests", {}).get(card.id) == card_acceptance_digest(card)
+            )
             summary = {
                 "card_id": card.id,
                 "version": card.version,
@@ -767,6 +786,7 @@ def create_mcp(
                         "subject_version": workflow.subject_version,
                         "stale": workflow.subject_version != str(card.version) or not policy_current,
                         "evidence_admission_policy_current": policy_current,
+                        "acceptance_current": acceptance_current,
                     }
                     if workflow
                     else None
@@ -826,6 +846,14 @@ def create_mcp(
                         "message": f"Card {card.id} workflow certification is {workflow.status}.",
                     }
                 )
+            elif not acceptance_current:
+                gates.append({
+                    "code": "workflow-acceptance-missing-or-stale",
+                    "severity": "review",
+                    "message": f"Card {card.id} needs a passing acceptance replay of its current "
+                               "policy, sources, plan and destinations. A preview or partial "
+                               "certification does not prove onboarding works.",
+                })
 
         retrieval = latest(kind="retrieval_quality", subject_id="retrieval-catalog")
         if retrieval is None:
@@ -1508,6 +1536,7 @@ def create_mcp(
         actor: str = "mcp-client",
         source_selection_fingerprint: str | None = None,
         source_selection_reason: str | None = None,
+        workflow_report_id: str | None = None,
         ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Approve only after explicit owner review and a delivery-disabled simulation.
@@ -1519,12 +1548,30 @@ def create_mcp(
         and why. Changed policy/catalog invalidates that confirmation. This cannot
         override source health, permissions, missing policy or other blockers.
         Feedback corrections alone never approve or resolve a card.
+        Pass a successful acceptance-mode evaluate_card_workflow report as
+        workflow_report_id to bind approval to tested policy, sources, plan and
+        endpoints. Without it this is owner authorization only, not certification.
         """
         principal = request_principal(ctx)
         card = get_scoped_card(card_id, principal)
         original = card.model_dump(mode="json")
         if not card.sources:
             raise ValueError("an insight card needs at least one selected source before approval")
+        acceptance_record = None
+        if workflow_report_id is not None:
+            acceptance_record = certification_reports.get(workflow_report_id)
+            report = acceptance_record.report
+            if (acceptance_record.kind != "card_workflow"
+                    or acceptance_record.subject_id != card.id
+                    or acceptance_record.tenant_id != (card.principal_tenant or (principal.tenant_id if principal else "deployment"))
+                    or acceptance_record.subject_version != str(card.version)
+                    or acceptance_record.status != "approved"
+                    or report.get("acceptance_passed") is not True
+                    or not has_current_evidence_admission_policy(report)
+                    or report.get("card_execution_digests", {}).get(card.id) != card_acceptance_digest(card)):
+                raise ValueError("Workflow acceptance report is failed, stale, outside this card/tenant, "
+                                 "or not an acceptance test. Replay owner-labeled setup cases for the "
+                                 "current card with evaluate_card_workflow(acceptance_outcomes=...).")
         onboarding_review = await authoring.review(card, principal=principal)
         if source_selection_fingerprint is not None or source_selection_reason is not None:
             reason = (source_selection_reason or "").strip()
@@ -1589,6 +1636,11 @@ def create_mcp(
             "status": approved.status.value,
             "card": _evaluation_card(approved),
             "onboarding_review": onboarding_review.model_dump(mode="json"),
+            "workflow_acceptance": {
+                "status": "passed" if acceptance_record else "unassessed",
+                "report_id": acceptance_record.report_id if acceptance_record else None,
+                "human_authorization_required": True,
+            },
         }
 
     @mcp.tool()
