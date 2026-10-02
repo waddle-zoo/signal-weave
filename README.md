@@ -63,6 +63,9 @@ The newer [end-to-end report trial](docs/business-outcome-trial.md) includes the
 final LLM-written message and persistent agents in both arms: SignalWeave passed
 10/12 cases versus Luna's 12/12, with no measured speed or cost advantage. A
 separate six-case repair probe passed 5/6; the remaining failure is unresolved.
+The [follow-up investigation](docs/policy-composition-investigation.md) tests
+why: direct Jev decisions matched Luna on a new bounded set, while added
+rule-composition worsened results. The experimental layer is not shipped.
 
 Then ask your agent:
 

@@ -1,0 +1,30 @@
+{
+  "algorithm": "sha256",
+  "files": {
+    "judgment-input-ablation-dns-failure/events.jsonl.gz": "1655e9a422962509f7226eb91c45e1abde90c9987ca806b6dee9a169cedf47e1",
+    "judgment-input-ablation-dns-failure/manifest.json": "46c81b32acb8b5d1243d755af0a346050c9c43650c7891beffb01ce853d834e7",
+    "judgment-input-ablation-dns-failure/report.json": "afe21f946ae907e3d4fa95becb8f6fe853833b0b25d44ef76b67cc3f1df46f55",
+    "judgment-input-ablation-live-02/events.jsonl.gz": "83860fd70c589c4b5a5a0caa9625bca8c1f92366c6922cb8e4d23a9bc71a35a5",
+    "judgment-input-ablation-live-02/manifest.json": "46c81b32acb8b5d1243d755af0a346050c9c43650c7891beffb01ce853d834e7",
+    "judgment-input-ablation-live-02/report.json": "0b1be3a6e34752356248af247d74f23fdd711323388aba5fab3d4136010a45dc",
+    "policy-composition-startup-failure/events.jsonl.gz": "37c5494984f3ee7fe05cb576ff1089cd775c729dd3fb1315322fdb95b8dc8bd1",
+    "policy-composition-startup-failure/manifest.json": "e391c5f81a2c9e3ae0cba801aa2b1b04e08e1552692cc8fc2a86872ab8cb7f81",
+    "policy-composition-startup-failure/plans.json": "524bcaadbb0f4456a0379009b73119be8d17f24b30c12084825c385a3dde2e45",
+    "policy-composition-startup-failure/report.json": "45567c9a486fb44539f30a164ded2d9f3845a4ca6dae326c105d5f38b6024950",
+    "policy-composition-live-02/events.jsonl.gz": "c18038abe84a006a0e9373b368b020d1fff532f26e72844207365e6c38c5b187",
+    "policy-composition-live-02/manifest.json": "e391c5f81a2c9e3ae0cba801aa2b1b04e08e1552692cc8fc2a86872ab8cb7f81",
+    "policy-composition-live-02/plans.json": "c7944d8a83c0d0b03dcf75ca1c355f0c2536f8400b82be598bffe3545ba89949",
+    "policy-composition-live-02/rejected-review-plan.json": "d99b0aa77f5c6a0df85fde7e9ca4ef236097d75863768e8eaba95057c1b75904",
+    "policy-composition-live-02/report.json": "23e4797d044fdeb936fb6e5216c4c2d7c8b61a8c53aea89e1e0f9d65aab2debd",
+    "policy-composition-live-02/reviews.json": "b789751410c445a404a99d07fb5f4ecbecf7a36cccff98ae25f3284c5b1f40ad",
+    "policy-composition-transfer-live-01/events.jsonl.gz": "d37ba7fca8c0cfc1b7f717d67692b5981c71c8af74440afc6cf4c85329fbfa64",
+    "policy-composition-transfer-live-01/manifest.json": "356b2e9d31cb397c3c96ff4e9adba6e5924d86216ab2fea017c33f8838b87cf4",
+    "policy-composition-transfer-live-01/method-review.json": "060faa864c15465568b3c1cde9196fc0b239957e6929a78439ae331c9e50f12c",
+    "policy-composition-transfer-live-01/plans.json": "46f2fcb49b551f31f9fa3061ce5d8defa3b490c322135d725e933d36847dabf7",
+    "policy-composition-transfer-live-01/prose-review-initial.json": "c2285e6b1c971a5e4f3b5b10e7525ca39c2ce05ef509144347333a0648581ff9",
+    "policy-composition-transfer-live-01/prose-review.json": "e3ded96d65b8079afdd87d814e9e9c4794c99dbaf2c75f909330ba1955072913",
+    "policy-composition-transfer-live-01/report.json": "275d182999c9072d845edee530aa76d4b27721c5db5e068c65ca03c2dc49b797",
+    "policy-composition-transfer-live-01/review-input.json": "67389340d56855e09f90c8cabef0469c654e7d326ba60673b4b869e159b0b163",
+    "policy-composition-transfer-live-01/review-key.json": "70d1221cb204f0ba72a9df7f34113797e07bb6ea37523da4cf174681a3aedf52"
+  }
+}

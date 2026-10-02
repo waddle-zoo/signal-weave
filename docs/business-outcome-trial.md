@@ -102,6 +102,11 @@ primary 10/12 score. Total new live usage for this work was **18 Jev attempts an
 
 The branch is not ready for an enterprise-success claim on this evidence.
 
+The [follow-up investigation](policy-composition-investigation.md) did not find
+a simple state-cleanup fix. Its new transfer cases gave a direct Jev decision
+12/12, matching Luna, but an experimental code-composed path only 8/12. That
+experiment is not a production repair or an end-to-end superiority claim.
+
 ## Frozen design
 
 Three synthetic businesses—retail sales, support operations, and fulfillment—each
