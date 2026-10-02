@@ -154,3 +154,49 @@ def test_operator_principal_rejects_mixed_tenants():
     company["descriptors"][1]["contract"]["tenant_id"] = "different"
     with pytest.raises(ValueError, match="one explicitly"):
         operator_principal(company)
+
+
+async def test_compact_baseline_only_resolves_current_inspected_analyses():
+    from evaluations.bootstrap_agent_trial import Audit
+    from evaluations.first_report_cases import cases
+    from evaluations.first_report_trial import PeriodAdapter, Session
+
+    company = cases()[0]
+    adapter = PeriodAdapter(company["descriptors"], Audit(), company["sources"])
+    adapter.set_period(company["periods"][0])
+    session = Session(company=company, adapter=adapter, server=None, phase="monitoring", audit=Audit())
+    source = company["sources"][0]["key"]
+    inspected = await session.call("inspect_source", {"source_key": source})
+    analysis = inspected["analyses"][0]
+    ref = {"source_key": source, "comparison_key": analysis["comparison_key"]}
+    payload = {"status": "complete", "outcome": "notify", "recipients": [],
+               "analysis_refs": [ref], "narrative": "Observed change, not a causal claim."}
+    await session.call("submit_report", payload)
+    assert session.submission["analyses"] == [analysis]
+    inspected["analyses"][0]["current"] = -123456
+    assert session.submission["analyses"][0]["current"] != -123456
+    with pytest.raises(ValueError, match="Duplicate"):
+        await session.call("submit_report", {**payload, "analysis_refs": [ref, ref]})
+    new_session = Session(company=company, adapter=adapter, server=None, phase="monitoring", audit=Audit())
+    with pytest.raises(ValueError, match="Inspect every"):
+        await new_session.call("submit_report", payload)
+    adapter.set_period(company["periods"][1])
+    with pytest.raises(ValueError, match="current-period"):
+        await session.call("submit_report", payload)
+    await session.call("inspect_source", {"source_key": source})
+    await session.call("submit_report", payload)
+    assert session.submission["analyses"][0]["current"] != analysis["current"]
+
+
+def test_baseline_schema_provides_exact_outcomes_and_no_table_copying():
+    from pydantic import ValidationError
+
+    from evaluations.first_report_trial import Submission
+
+    payload = {"status": "complete", "outcome": "ignore", "recipients": [],
+               "analysis_refs": [], "narrative": "No material change."}
+    assert Submission.model_validate(payload).outcome.value == "ignore"
+    with pytest.raises(ValidationError):
+        Submission.model_validate({**payload, "outcome": "no_action"})
+    with pytest.raises(ValidationError):
+        Submission.model_validate({**payload, "analyses": []})

@@ -1,0 +1,35 @@
+{
+  "type": "post_hoc_diagnostic_not_replacement_primary_score",
+  "frozen_primary": {"native_passed": 7, "baseline_passed": 5, "paired_periods": 8},
+  "oracle_correction_only": {"native_passed": 8, "baseline_passed": 6, "paired_periods": 8},
+  "oracle_correction_and_semantic_outcome_alias": {"native_passed": 8, "baseline_passed": 7, "paired_periods": 8},
+  "issues": [
+    {
+      "case": "harbor-help:p03",
+      "category": "oracle_error",
+      "original_expected_recipients": [],
+      "policy_supported_recipients": ["support-data-steward"],
+      "finding": "Both systems followed the written owner policy. The frozen oracle omitted the route. Original artifacts remain unchanged."
+    },
+    {
+      "case": "northstar-cart:p03",
+      "category": "baseline_interface_mismatch",
+      "baseline_outcome": "no_action",
+      "expected_outcome": "ignore",
+      "finding": "Semantically quiet, but invalid for the controlled interface. Future baselines use the same Outcome enum. The original strict failure remains."
+    },
+    {
+      "case": "orbit-subscriptions:p02",
+      "category": "contested_policy_interpretation",
+      "finding": "Reviewers disagreed whether segment contribution unambiguously means between-period difference rather than current magnitude. Neither the synthetic owner's acceptance nor one matching model output resolves that business ambiguity.",
+      "supports_unqualified_native_accuracy_advantage": false
+    }
+  ],
+  "future_oracle_repair": "Harbor's written rule uses current weighted rate >= 12% OR absolute change >= 4 percentage points. The old oracle incorrectly substituted a segment-contribution condition. Complete original sample labels happened to coincide; a separate stable-high development probe tests the difference.",
+  "review_limitations": [
+    "Internal AI reviewers, not external peer review or a human owner study.",
+    "Eight periods from four known synthetic companies, not eight independent workflows.",
+    "Numerical/provenance scores do not automatically validate prose or causal claims.",
+    "Timing compares a compiled recurring path with fresh CLI episodes, not an optimized persistent baseline."
+  ]
+}

@@ -51,6 +51,8 @@ def test_server_exposes_shared_authoring_guidance(tmp_path):
     assert "every owner-requested delivery rule" in CARD_AUTHORING_GUIDANCE
     assert "outcomes meant to stay silent need no delivery entry" in CARD_AUTHORING_GUIDANCE
     assert "Never invent a recipient" in CARD_AUTHORING_GUIDANCE
+    assert "large but unchanged level" in CARD_AUTHORING_GUIDANCE
+    assert "independently of the model's answers" in CARD_AUTHORING_GUIDANCE
 
 
 @pytest.mark.parametrize("name", ["draft_insight_card", "propose_insight_card", "onboard_insight_card"])

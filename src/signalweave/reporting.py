@@ -17,7 +17,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, FiniteFloat, ValidationError
 
 from .diagnostics import AnalysisReport, SegmentContribution, analyze_comparison
-from .models import EvidencePlan, InsightCard, InsightResult, ResourceSnapshot
+from .models import EvidencePlan, InsightCard, InsightResult, ResourceSnapshot, SourceRef
 
 ReportStatus = Literal["complete", "partial", "blocked"]
 CoverageStatus = Literal[
@@ -83,6 +83,8 @@ class CoverageRecord(BaseModel):
     status: CoverageStatus
     source_keys: list[str] = Field(default_factory=list)
     detail: str = ""
+    judgment: str | None = None
+    probability: FiniteFloat | None = Field(default=None, ge=0.0, le=1.0)
 
 
 class ReportIssue(BaseModel):
@@ -113,6 +115,7 @@ class InvestigationReport(BaseModel):
     title: str
     outcome: str
     purpose: str
+    intended_audience: str
     next_step: str | None = None
     status: ReportStatus
     numeric_claims: list[NumericClaim] = Field(default_factory=list)
@@ -195,27 +198,24 @@ def _validated_recomputed_analysis(
 
 
 def _source_requirements(
-    card: InsightCard, resources: list[ResourceSnapshot] | None
+    sources: dict[str, SourceRef],
+    resources_by_key: dict[str, ResourceSnapshot],
 ) -> set[tuple[str, str]]:
-    requirements = _required_analysis_keys(card)
-    if resources is not None:
-        for resource in resources:
-            source = next((item for item in card.sources if item.key == resource.source_key), None)
-            if source is not None and source.required:
-                requirements.update(
-                    (resource.source_key, key)
-                    for key in resource.contract.required_comparison_keys
-                )
-    return requirements
-
-
-def _required_analysis_keys(card: InsightCard) -> set[tuple[str, str]]:
-    return {
+    requirements = {
         (source.key, comparison_key)
-        for source in card.sources
+        for source in sources.values()
         if source.required
         for comparison_key in source.required_comparison_keys
     }
+    for source in sources.values():
+        resource = resources_by_key.get(source.key)
+        if source.required and resource is not None:
+            requirements.update(
+                (source.key, comparison.key)
+                for comparison in resource.analytical_comparisons
+                if comparison.required
+            )
+    return requirements
 
 
 def _append_plan_coverage(
@@ -258,7 +258,7 @@ def _append_plan_coverage(
                     source_keys=list(slot.source_keys),
                 ))
             else:
-                warnings.append(message)
+                warnings.append(f"Optional evidence slot {slot.key} is {slot.status}: {slot.question}")
 
 
 def _append_semantic_coverage(
@@ -275,13 +275,15 @@ def _append_semantic_coverage(
         matched_status = (
             getattr(matched.status, "value", matched.status) if matched is not None else None
         )
-        supported = matched_status in {"supported", "not_supported", "contradicted"}
+        supported = matched_status == "supported"
         coverage.append(CoverageRecord(
             key=f"question:{index}",
             kind="question",
             required=card.evidence_requirements.get(f"question:{index}", True),
             status="satisfied" if supported else "missing",
             detail=question,
+            judgment=matched_status,
+            probability=matched.probability if matched is not None else None,
         ))
         if not supported:
             unresolved.append(question)
@@ -291,13 +293,21 @@ def _append_semantic_coverage(
     for index, watch in enumerate(card.watch_for, start=1):
         candidate_keys = {f"watch:{index}", f"watch_{index - 1}", str(index - 1)}
         matched = next((item for item in result.watch_results if item.key in candidate_keys), None)
-        fulfilled = matched is not None and matched.status.value in {"present", "absent"}
+        matched_status = (
+            getattr(matched.status, "value", matched.status) if matched is not None else None
+        )
+        fulfilled = matched_status in {"present", "absent"}
         coverage.append(CoverageRecord(
             key=f"watch:{index}",
             kind="watch",
             required=card.evidence_requirements.get(f"watch:{index}", True),
             status="satisfied" if fulfilled else "missing",
             detail=watch,
+            judgment=(
+                matched_status
+                if matched is not None else None
+            ),
+            probability=matched.probability if matched is not None else None,
         ))
         if not fulfilled:
             unresolved.append(watch)
@@ -311,7 +321,17 @@ def _route_records(
     configured = {method.key: method for method in card.delivery_methods}
     selected: list[IntendedRoute] = []
     blockers: list[ReportIssue] = []
+    seen_keys: set[str] = set()
+    outcome = result.outcome.value
     for method in result.delivery_methods:
+        if method.key in seen_keys:
+            blockers.append(_issue(
+                "duplicate_route_selection",
+                f"Result selected route {method.key} more than once.",
+                reference=method.key,
+            ))
+            continue
+        seen_keys.add(method.key)
         approved = configured.get(method.key)
         if approved is None:
             blockers.append(_issue(
@@ -324,6 +344,13 @@ def _route_records(
             blockers.append(_issue(
                 "route_outcome_mismatch",
                 f"Result route {method.key} does not match its configured outcome.",
+                reference=method.key,
+            ))
+            continue
+        if method.outcome.value != outcome:
+            blockers.append(_issue(
+                "route_result_outcome_mismatch",
+                f"Result route {method.key} does not match result outcome {outcome}.",
                 reference=method.key,
             ))
             continue
@@ -341,7 +368,15 @@ def _route_records(
             destination=approved.destination,
             reason="Caller owns delivery; not sent.",
         ))
-    outcome = result.outcome.value
+    configured_for_outcome = [
+        method for method in card.delivery_methods if method.outcome.value == outcome
+    ]
+    if outcome in {"notify", "escalate"} and not configured_for_outcome:
+        blockers.append(_issue(
+            "route_not_configured",
+            f"Outcome {outcome} has no configured delivery route; the report cannot complete.",
+            reference=outcome,
+        ))
     selected_keys = {item.key for item in selected}
     gaps = [
         f"Configured route {method.key} was not selected for outcome {outcome}."
@@ -349,6 +384,100 @@ def _route_records(
         if method.outcome.value == outcome and method.key not in selected_keys
     ]
     return selected, gaps, blockers
+
+
+def _analysis_required(
+    sources: dict[str, SourceRef],
+    key: tuple[str, str],
+    comparison: Any | None = None,
+) -> bool:
+    source_key, comparison_key = key
+    source = sources.get(source_key)
+    return bool(
+        source is not None
+        and source.required
+        and (
+            comparison_key in source.required_comparison_keys
+            or (comparison is not None and comparison.required)
+        )
+    )
+
+
+def _analysis_snapshot_error(
+    sources: dict[str, SourceRef],
+    analysis: AnalysisReport,
+    recomputed: AnalysisReport,
+    resources_by_key: dict[str, ResourceSnapshot],
+    duplicate_resource_keys: set[str],
+) -> tuple[str, str] | None:
+    source = sources.get(analysis.source_key)
+    if source is None:
+        return (
+            "analysis_source_not_approved",
+            f"Analysis source {analysis.source_key} is not an approved card source.",
+        )
+    if analysis.source_key in duplicate_resource_keys:
+        return (
+            "duplicate_source_snapshot",
+            f"More than one source snapshot was supplied for source {analysis.source_key}.",
+        )
+    resource = resources_by_key.get(analysis.source_key)
+    if resource is None:
+        return (
+            "analysis_source_snapshot_missing",
+            f"No source snapshot was supplied for analysis source {analysis.source_key}.",
+        )
+    if (resource.adapter, resource.resource) != (source.adapter, source.resource):
+        return (
+            "analysis_source_identity_mismatch",
+            f"Analysis source {analysis.source_key} does not match the approved adapter/resource.",
+        )
+    matches = [
+        comparison
+        for comparison in resource.analytical_comparisons
+        if comparison.key == analysis.comparison_key
+    ]
+    if not matches:
+        return (
+            "analysis_snapshot_comparison_missing",
+            f"Analysis comparison {analysis.comparison_key} was not returned by source {analysis.source_key}.",
+        )
+    if len(matches) > 1:
+        return (
+            "analysis_snapshot_comparison_duplicate",
+            f"Source {analysis.source_key} returned comparison {analysis.comparison_key} more than once.",
+        )
+    if matches[0].model_dump(mode="python") != recomputed.comparison.model_dump(mode="python"):
+        return (
+            "analysis_snapshot_comparison_mismatch",
+            f"Analysis comparison {analysis.comparison_key} does not match the returned source snapshot.",
+        )
+    return None
+
+
+def _authorized_sources(
+    card: InsightCard, result: InsightResult
+) -> tuple[dict[str, SourceRef], list[ReportIssue]]:
+    sources = {source.key: source for source in card.sources}
+    blockers: list[ReportIssue] = []
+    investigation = result.investigation
+    if card.investigation_mode.value != "bounded" or investigation is None:
+        return sources, blockers
+    if investigation.mode.value != "bounded":
+        return sources, blockers
+    for selection in investigation.selected:
+        selected = selection.source
+        existing = sources.get(selected.key)
+        if existing is not None:
+            if (existing.adapter, existing.resource) != (selected.adapter, selected.resource):
+                blockers.append(_issue(
+                    "investigation_source_identity_mismatch",
+                    f"Investigation source {selected.key} conflicts with the approved source identity.",
+                    reference=selected.key,
+                ))
+            continue
+        sources[selected.key] = selected
+    return sources, blockers
 
 
 def build_investigation_report(
@@ -368,6 +497,24 @@ def build_investigation_report(
     coverage: list[CoverageRecord] = []
     provenance: list[AnalysisProvenance] = []
     numeric_claims: list[NumericClaim] = []
+    authorized_sources, source_authorization_blockers = _authorized_sources(card, result)
+    blockers.extend(source_authorization_blockers)
+    resources_by_key: dict[str, ResourceSnapshot] = {}
+    duplicate_resource_keys: set[str] = set()
+    if resources is not None:
+        for resource in resources:
+            if resource.source_key in resources_by_key:
+                duplicate_resource_keys.add(resource.source_key)
+            resources_by_key[resource.source_key] = resource
+            if resource.source_key not in authorized_sources:
+                blockers.append(_issue(
+                    "foreign_resource",
+                    f"Source snapshot {resource.source_key} is not authorized by the card or bounded investigation selection.",
+                    reference=resource.source_key,
+                    source_keys=[resource.source_key],
+                ))
+    else:
+        warnings.append("Source health was not supplied; source contract coverage is unassessed.")
 
     if result.card_id != card.id:
         blockers.append(_issue(
@@ -395,6 +542,7 @@ def build_investigation_report(
         key = _analysis_key(analysis)
         recomputed, error = _validated_recomputed_analysis(analysis)
         if error:
+            required = _analysis_required(authorized_sources, key)
             blockers.append(_issue(
                 "invalid_analysis",
                 error,
@@ -404,25 +552,68 @@ def build_investigation_report(
             coverage.append(CoverageRecord(
                 key=_analysis_label(key),
                 kind="analysis",
-                required=analysis.required,
+                required=required,
                 status="failed" if analysis.status == "complete" else "insufficient_data",
                 source_keys=[analysis.source_key],
                 detail=error,
             ))
             continue
         assert recomputed is not None
+        required = _analysis_required(authorized_sources, key, recomputed.comparison)
+        if analysis.source_key not in authorized_sources:
+            message = f"Analysis source {analysis.source_key} is not an approved card source."
+            blockers.append(_issue(
+                "analysis_source_not_approved",
+                message,
+                reference=_analysis_label(key),
+                source_keys=[analysis.source_key],
+            ))
+            coverage.append(CoverageRecord(
+                key=_analysis_label(key),
+                kind="analysis",
+                required=False,
+                status="failed",
+                source_keys=[analysis.source_key],
+                detail=message,
+            ))
+            continue
+        if resources is not None:
+            binding_error = _analysis_snapshot_error(
+                authorized_sources,
+                analysis,
+                recomputed,
+                resources_by_key,
+                duplicate_resource_keys,
+            )
+            if binding_error is not None:
+                code, message = binding_error
+                blockers.append(_issue(
+                    code,
+                    message,
+                    reference=_analysis_label(key),
+                    source_keys=[analysis.source_key],
+                ))
+                coverage.append(CoverageRecord(
+                    key=_analysis_label(key),
+                    kind="analysis",
+                    required=required,
+                    status="failed",
+                    source_keys=[analysis.source_key],
+                    detail=message,
+                ))
+                continue
         recomputed_by_key[key] = recomputed
         coverage.append(CoverageRecord(
             key=_analysis_label(key),
             kind="analysis",
-            required=analysis.required,
+            required=required,
             status="satisfied" if recomputed.status == "complete" else "insufficient_data",
             source_keys=[analysis.source_key],
             detail="Validated and recomputed from the source comparison contract.",
         ))
         if recomputed.status != "complete":
             message = "Analysis is insufficient_data and supplies no numeric claim."
-            if analysis.required:
+            if required:
                 blockers.append(_issue(
                     "required_analysis_insufficient_data",
                     message,
@@ -510,7 +701,7 @@ def build_investigation_report(
             continue
         numeric_claims.append(claim)
 
-    required_keys = _source_requirements(card, resources)
+    required_keys = _source_requirements(authorized_sources, resources_by_key)
     present_pairs = {
         (item.source_key, item.comparison_key) for item in recomputed_by_key.values()
     }
@@ -536,16 +727,7 @@ def build_investigation_report(
         for slot in result.evidence_plan.slots:
             if slot.required and slot.status in {"unavailable", "conflicting"}:
                 structured_failed_sources.update(slot.source_keys)
-    resources_by_key: dict[str, ResourceSnapshot] = {}
-    duplicate_resource_keys: set[str] = set()
-    if resources is not None:
-        for resource in resources:
-            if resource.source_key in resources_by_key:
-                duplicate_resource_keys.add(resource.source_key)
-            resources_by_key[resource.source_key] = resource
-    else:
-        warnings.append("Source health was not supplied; source contract coverage is unassessed.")
-    for source in card.sources:
+    for source in authorized_sources.values():
         resource = resources_by_key.get(source.key)
         if source.key in structured_failed_sources:
             status = "failed"
@@ -556,6 +738,15 @@ def build_investigation_report(
         elif resources is not None and resource is None:
             status = "missing"
             detail = "No source snapshot was supplied for this card source."
+        elif resource is not None and (
+            resource.adapter != source.adapter or resource.resource != source.resource
+        ):
+            status = "failed"
+            detail = (
+                "Returned source snapshot identity does not match the approved source reference "
+                f"(expected {source.adapter}:{source.resource}, "
+                f"got {resource.adapter}:{resource.resource})."
+            )
         elif resource is not None and (resource.error or resource.contract.source_status == "failed"):
             status = "failed"
             detail = resource.error or "Source contract status is failed."
@@ -577,7 +768,7 @@ def build_investigation_report(
             detail=detail,
         ))
         if status != "satisfied":
-            message = f"Source {source.key} is {status}."
+            message = f"Source {source.key} is {status}: {detail}"
             if source.required:
                 blockers.append(_issue(
                     "required_source_failed" if status == "failed" else "required_source_missing",
@@ -586,7 +777,7 @@ def build_investigation_report(
                     source_keys=[source.key],
                 ))
             else:
-                warnings.append(f"Optional source {source.key} is {status}.")
+                warnings.append(f"Optional source {source.key} is {status}: {detail}")
 
     if result.outcome.value == "insufficient_data":
         blockers.append(_issue(
@@ -634,6 +825,9 @@ def build_investigation_report(
         title=card.title,
         outcome=result.outcome.value,
         purpose=card.why_watch,
+        intended_audience=(
+            f"Card owner: {card.owner}" if card.owner else "Card owner and caller-owned delivery workflow"
+        ),
         next_step=(result.workflow.instructions if result.workflow is not None else None),
         status=status,
         numeric_claims=numeric_claims,
@@ -661,64 +855,190 @@ def _number(value: float | None) -> str:
     return "—" if value is None else format(value, ".12g")
 
 
-def render_investigation_report(report: InvestigationReport) -> str:
-    """Render a concise Markdown artifact without adding interpretation."""
+def _claim_is_provisional(report: InvestigationReport, claim: NumericClaim) -> bool:
+    return any(
+        item.kind == "source"
+        and claim.source_key in item.source_keys
+        and item.status != "satisfied"
+        for item in report.coverage
+    )
 
+
+def _route_audience(report: InvestigationReport) -> str:
+    if report.outcome == "ignore":
+        return "No notification intended (quiet outcome)."
+    if report.intended_routes_not_delivered:
+        audiences = []
+        for route in report.intended_routes_not_delivered:
+            audience = f"{route.label} ({route.destination})"
+            if audience not in audiences:
+                audiences.append(audience)
+        return "; ".join(audiences)
+    return "Card owner"
+
+
+def _unique_text(values: list[str]) -> list[str]:
+    return list(dict.fromkeys(value for value in values if value))
+
+
+def _sorted_claims(claims: list[NumericClaim]) -> list[NumericClaim]:
+    """Preserve caller/analysis order across unlike metrics and units."""
+
+    return list(claims)
+
+
+def _claim_markdown(claim: NumericClaim) -> str:
+    line = (
+        f"- **{_md(claim.metric)}** ({_md(claim.unit)}): "
+        f"{_number(claim.baseline)} → {_number(claim.current)} "
+        f"(Δ {_number(claim.delta)}; method `{_md(claim.method)}`)"
+    )
+    if claim.contributions:
+        top = sorted(
+            claim.contributions,
+            key=lambda item: abs(item.contribution),
+            reverse=True,
+        )[:3]
+        contributions = ", ".join(
+            f"{_md(item.segment)}: {_number(item.contribution)}" for item in top
+        )
+        line += f"; top contributors: {contributions}"
+        if len(claim.contributions) > len(top):
+            line += f"; plus {len(claim.contributions) - len(top)} smaller"
+    return line + "."
+
+
+def _front_gap_messages(report: InvestigationReport) -> list[str]:
+    priority = {
+        "result_card_mismatch": 0,
+        "required_source_failed": 0,
+        "required_source_missing": 0,
+        "invalid_analysis": 0,
+        "invalid_numeric_claim": 0,
+        "non_finite_numeric_claim": 0,
+        "duplicate_analysis": 0,
+        "required_analysis_missing": 0,
+        "required_analysis_insufficient_data": 0,
+        "required_evidence_failed": 0,
+        "evidence_plan_blocked": 0,
+        "result_insufficient_data": 0,
+        "required_semantic_evidence_missing": 2,
+    }
+    indexed = [
+        (priority.get(item.code, 1), index, item.message)
+        for index, item in enumerate(report.blockers)
+    ]
+    indexed.extend((3, index, message) for index, message in enumerate(report.warnings))
+    indexed.sort(key=lambda item: (item[0], item[1]))
+    return _unique_text([message for _, _, message in indexed])
+
+
+def render_investigation_report(report: InvestigationReport) -> str:
+    """Render concise decision front matter plus one collapsed audit appendix."""
+
+    claims = _sorted_claims(report.numeric_claims)
+    provisional = any(_claim_is_provisional(report, claim) for claim in claims)
     lines = [
         f"# Investigation report: {_md(report.title)}",
         "",
-        f"- Status: **{_md(report.status)}**",
-        f"- Decision: **{_md(report.outcome)}**",
-        f"- Purpose: {_md(report.purpose)}",
-        f"- Card: `{_md(report.card_id)}`",
-        f"- Evaluator: {_md(report.evaluator)}",
+        f"- Decision: **{_md(report.outcome)}** · Status: **{_md(report.status)}**",
+        f"- Intended route audience: {_md(_route_audience(report))}",
+        f"- Goal: {_md(report.purpose)}",
     ]
+    if report.status == "blocked":
+        lines.extend([
+            "",
+            "**No complete business conclusion is available. Resolve the listed gaps before relying on this report.**",
+        ])
+    if provisional:
+        lines.extend([
+            "",
+            "**Measurements are provisional: source or coverage requirements are not fully satisfied.**",
+        ])
+
+    if claims:
+        heading = "## Measured changes (first 3)" if len(claims) > 3 else "## Measured changes"
+        lines.extend(["", heading])
+        lines.extend(_claim_markdown(claim) for claim in claims[:3])
+    else:
+        lines.extend(["", "## Measured changes", "- No validated quantitative claims are available."])
+
+    gap_text = _front_gap_messages(report)
+    if gap_text:
+        lines.extend(["", "## Gaps requiring attention"])
+        visible_gaps = gap_text[:3]
+        lines.extend(f"- {_md(item)}" for item in visible_gaps)
+        if len(gap_text) > len(visible_gaps):
+            lines.append(f"- {len(gap_text) - len(visible_gaps)} additional gap(s) in the audit appendix.")
+
     if report.next_step:
         lines.extend([
             "",
-            "## Suggested next step",
+            "## Next step",
             f"- {_md(report.next_step)} (caller-owned handoff; not a verified fact.)",
         ])
-    if report.intended_routes_not_delivered:
-        lines.extend([
-            "",
-            "## Intended destinations not sent",
-            *(
-                f"- `{_md(route.key)}` → {_md(route.destination)}: {_md(route.reason)}"
-                for route in report.intended_routes_not_delivered
-            ),
-        ])
-    lines.extend(["", "## Validated measurements"])
-    if report.numeric_claims:
-        for claim in report.numeric_claims:
-            lines.append(
-                f"- **{_md(claim.metric)}** ({_md(claim.unit)}): "
-                f"{_number(claim.baseline)} → {_number(claim.current)} "
-                f"(measured difference {_number(claim.delta)}; method `{_md(claim.method)}`)."
-            )
-            if claim.within_effect is not None or claim.mix_effect is not None:
-                lines.append(
-                    f"  - Accounting effects: within {_number(claim.within_effect)}, "
-                    f"mix {_number(claim.mix_effect)}. These do not establish causality."
-                )
-            if claim.contributions:
-                contributions = ", ".join(
-                    f"{_md(item.segment)}: {_number(item.contribution)}"
-                    for item in claim.contributions
-                )
-                lines.append(f"  - Accounting contributions: {contributions}.")
-    else:
-        lines.append("- No validated quantitative claims.")
 
-    lines.extend(["", "## Coverage"])
-    for item in report.coverage:
-        requirement = "required" if item.required else "optional"
-        lines.append(f"- `{_md(item.key)}` — {_md(item.status)} ({requirement}).")
-    if not report.coverage:
-        lines.append("- No evidence coverage was supplied.")
+    lines.extend([
+        "",
+        "<details>",
+        "<summary>Audit appendix: policy checks, coverage, limitations, and provenance</summary>",
+        "",
+    ])
+
+    policy_checks = [item for item in report.coverage if item.kind in {"question", "watch"}]
+    if policy_checks:
+        lines.extend([
+            "### Policy checks (Jev judgments)",
+            "These are routing signals from evaluated evidence, not proof or confidence in truth.",
+        ])
+        for item in policy_checks:
+            probability_label = "P(present)" if item.kind == "watch" else "P(supported)"
+            probability = (
+                f"; {probability_label} {_number(item.probability)}"
+                if item.probability is not None
+                else ""
+            )
+            lines.append(
+                f"- {_md(item.detail)} — judgment: **{_md(item.judgment or 'unassessed')}**"
+                f"{probability}."
+            )
+
+    if report.blockers:
+        lines.extend(["", "### Technical blockers"])
+        lines.extend(
+            f"- `{_md(item.code)}`: {_md(item.message)}" for item in report.blockers
+        )
+
+    if report.intended_routes_not_delivered:
+        lines.extend(["", "### Intended routes not delivered"])
+        lines.extend(
+            f"- `{_md(route.key)}` → `{_md(route.destination)}` "
+            f"({_md(route.label)}): {_md(route.reason)}"
+            for route in report.intended_routes_not_delivered
+        )
+
+    lines.extend(["", "### Coverage"])
+    audit_coverage = [item for item in report.coverage if item.kind not in {"question", "watch"}]
+    if audit_coverage:
+        for item in audit_coverage:
+            requirement = "required" if item.required else "optional"
+            lines.append(f"- `{_md(item.key)}` — {_md(item.status)} ({requirement}): {_md(item.detail)}")
+    else:
+        lines.append("- No non-semantic coverage records.")
+
+    if len(claims) > 3:
+        lines.extend(["", "### Additional measured changes"])
+        lines.extend(_claim_markdown(claim) for claim in claims[3:])
+
+    if report.limitations:
+        lines.extend(["", "### Limitations"])
+        lines.extend(f"- {_md(item)}" for item in report.limitations)
+    if report.warnings:
+        lines.extend(["", "### Warnings"])
+        lines.extend(f"- {_md(item)}" for item in report.warnings)
 
     if report.provenance:
-        lines.extend(["", "## Provenance"])
+        lines.extend(["", "### Provenance"])
         for item in report.provenance:
             lines.append(
                 f"- `{_md(item.source_key)}:{_md(item.comparison_key)}` — "
@@ -729,17 +1049,5 @@ def render_investigation_report(report: InvestigationReport) -> str:
                 f"{_md(item.current_period.start.isoformat())} to "
                 f"{_md(item.current_period.end.isoformat())}."
             )
-
-    if report.limitations:
-        lines.extend(["", "## Limitations"])
-        lines.extend(f"- {_md(item)}" for item in report.limitations)
-    if report.unresolved_questions:
-        lines.extend(["", "## Unresolved questions"])
-        lines.extend(f"- {_md(item)}" for item in report.unresolved_questions)
-    if report.blockers:
-        lines.extend(["", "## Blockers"])
-        lines.extend(f"- `{_md(item.code)}`: {_md(item.message)}" for item in report.blockers)
-    if report.warnings:
-        lines.extend(["", "## Warnings"])
-        lines.extend(f"- {_md(item)}" for item in report.warnings)
+    lines.extend(["", "</details>"])
     return "\n".join(lines).strip() + "\n"

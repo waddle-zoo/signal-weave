@@ -66,6 +66,26 @@ async def test_local_run_writes_private_report_artifacts(tmp_path):
     assert Path(response["artifacts"]["report_markdown"]).read_text() == response["report_markdown"]
 
 
+async def test_older_receipt_never_invents_a_historical_report(tmp_path, monkeypatch):
+    runtime, source, judger = make_runtime(tmp_path)
+    server = create_mcp(runtime)
+    args = {"card_id": "repeat", "idempotency_key": "before-reports"}
+    await dispatch(server, "evaluate_insight_card", args)
+    receipt = runtime.decision_receipts.get_by_idempotency_key("before-reports")
+    original = {k: v for k, v in receipt.result.items() if k not in {"report", "report_markdown"}}
+    runtime.decision_receipts.save(receipt.model_copy(update={"result": original}))
+
+    def forbidden(*args, **kwargs):
+        raise AssertionError("Historical report must not be reconstructed")
+
+    monkeypatch.setattr("signalweave.mcp_server.build_investigation_report", forbidden)
+    replay = await dispatch(server, "evaluate_insight_card", args)
+    assert replay["replayed"] and replay["result"] == original
+    assert "report" not in replay and "report_markdown" not in replay
+    assert "no archived" in replay["report_unavailable_reason"]
+    assert source.calls == 1 and len(judger.states) == 1
+
+
 async def test_incomplete_comparison_does_not_become_successful_first_report(tmp_path):
     from tests.test_diagnostics import comparison
 

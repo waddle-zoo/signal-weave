@@ -36,7 +36,6 @@ from .models import (
     DeliveryMethod,
     InsightCard,
     InsightCardStatus,
-    InsightResult,
     InvestigationMode,
     InvestigationQuestions,
     MetricQueryCard,
@@ -132,6 +131,11 @@ CARD_AUTHORING_GUIDANCE = (
     "Compare definitions within the same intended population and metric; clarify ambiguous owner "
     "wording before making it a recurring condition. A complete report "
     "means its bounded evidence checks passed, not that the full business policy is certified. "
+    "For threshold rules, distinguish a current level, absolute between-period change, relative "
+    "change, and a segment's contribution to that change. Do not silently choose among them. "
+    "Review counterexamples such as a large but unchanged level, offsetting segment changes, "
+    "a threshold-boundary case, and missing population coverage. Derive expected actions from "
+    "the owner's policy independently of the model's answers; surface disagreements for review. "
     "Test other periods and negative cases with independent expectations before requesting "
     "owner approval. Never infer causation from a contribution breakdown. Scheduling, final "
     "narrative generation and delivery remain with the caller-owned agent."
@@ -520,14 +524,12 @@ def create_mcp(
                     response["report"] = response["result"]["report"]
                     response["report_markdown"] = response["result"]["report_markdown"]
                 else:
-                    # Older receipts remain readable; their source health cannot
-                    # be reassessed without making a new run with a new key.
-                    report = build_investigation_report(
-                        get_scoped_card(card_id, principal),
-                        InsightResult.model_validate(response["result"]),
+                    # Do not fabricate a historical report using today's card
+                    # or renderer. The original decision remains readable.
+                    response["report_unavailable_reason"] = (
+                        "This receipt has no archived investigation report. "
+                        "Use a new run key to evaluate current evidence."
                     )
-                    response["report"] = report.model_dump(mode="json")
-                    response["report_markdown"] = render_investigation_report(report)
             return response
 
     async def selected_query_sources(

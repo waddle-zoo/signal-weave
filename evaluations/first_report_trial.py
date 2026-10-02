@@ -16,7 +16,7 @@ import math
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -30,6 +30,7 @@ from signalweave.engine import InsightEngine
 from signalweave.mcp_server import CARD_AUTHORING_GUIDANCE, create_mcp
 from signalweave.models import (
     InsightCard,
+    Outcome,
     PrincipalContext,
     ResourceDescriptor,
     ResourceSnapshot,
@@ -41,12 +42,18 @@ from signalweave.store import SQLiteDecisionReceiptStore, SQLiteInsightCardStore
 from signalweave.typesafe_adapter import load_api_key
 
 
+class AnalysisRef(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    source_key: str
+    comparison_key: str
+
+
 class Submission(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    status: str
-    outcome: str
+    status: Literal["complete", "partial", "blocked"]
+    outcome: Outcome
     recipients: list[str]
-    analyses: list[dict[str, Any]] = Field(default_factory=list)
+    analysis_refs: list[AnalysisRef] = Field(default_factory=list)
     narrative: str
 
 
@@ -116,6 +123,8 @@ class Session:
         self.preview_card = None
         self.drafts = 0
         self.notes = ""
+        self.inspected_analyses = {}
+        self.inspected_period = adapter.clock
         self.directory = {source["key"]: source for source in company["sources"]}
 
     async def specs(self):
@@ -133,7 +142,7 @@ class Session:
                      {"card_id": {"type": "string"}, "notes": {"type": "string"}}, ["card_id", "notes"]),
             ]
         else:
-            specs.append(tool("submit_report", "Submit the final report. analyses use current inspect_source analysis objects, not previous-period data. Include supported calculations and explanations; no invented causal mechanism.", schema=Submission.model_json_schema()))
+            specs.append(tool("submit_report", "Submit the final report. Select analysis_refs from current inspect_source results; code attaches their exact calculations. No copying tables or invented causal mechanism.", schema=Submission.model_json_schema()))
         return specs
 
     async def call(self, name, args):
@@ -141,10 +150,19 @@ class Session:
             return {"descriptors": [d.model_dump(mode="json") for d in self.adapter.descriptors],
                     "sources": list(self.directory.values()), "destinations": self.company["destinations"]}
         if name == "inspect_source":
+            if self.inspected_period != self.adapter.clock:
+                self.inspected_analyses.clear()
+                self.inspected_period = self.adapter.clock
             source = SourceRef.model_validate(self.directory[args["source_key"]])
             snapshot = await self.adapter.inspect(source)
             analyses = [analyze_comparison(source.key, item).model_dump(mode="json")
                         for item in snapshot.analytical_comparisons]
+            identities = [(a["source_key"], a["comparison_key"]) for a in analyses]
+            if len(set(identities)) != len(identities):
+                raise ValueError("Ambiguous analysis references in source")
+            for analysis in analyses:
+                identity = (analysis["source_key"], analysis["comparison_key"])
+                self.inspected_analyses[identity] = copy.deepcopy(analysis)
             return {"resource": snapshot.model_dump(mode="json"), "analyses": analyses}
         if name == "draft_from_intent":
             if self.drafts >= 2:
@@ -170,7 +188,17 @@ class Session:
             self.setup_complete = True
             return {"frozen": True, "approval_required": True}
         if name == "submit_report":
-            self.submission = Submission.model_validate(args).model_dump(mode="json")
+            if self.inspected_period != self.adapter.clock:
+                raise ValueError("Inspect current-period analyses before submitting")
+            submission = Submission.model_validate(args).model_dump(mode="json")
+            refs = submission.pop("analysis_refs")
+            identities = [(ref["source_key"], ref["comparison_key"]) for ref in refs]
+            if len(set(identities)) != len(identities):
+                raise ValueError("Duplicate analysis reference")
+            if any(identity not in self.inspected_analyses for identity in identities):
+                raise ValueError("Inspect every referenced analysis in this episode")
+            submission["analyses"] = [copy.deepcopy(self.inspected_analyses[key]) for key in identities]
+            self.submission = submission
             return {"submitted": True}
         raise ValueError("Unknown tool")
 
@@ -405,7 +433,8 @@ async def run_trial(output: Path, *, live=False, key_file=None, company_limit=4,
                 max_turns=12, max_tool_calls=10, max_output_tokens=5000, timeout_seconds=120,
                 instructions_override=("Produce the recurring analytical report using only the provided MCP tools. "
                                        "Read catalog as needed and inspect current sources. inspect_source supplies "
-                                       "validated deterministic analyses; you may reuse their full objects in analyses. "
+                                       "validated deterministic analyses; select their source_key/comparison_key in analysis_refs, "
+                                       "and code attaches the exact calculations without copying the tables. "
                                        "Apply the English owner policy, including the right audience. recipients are the "
                                        "exact approved destination keys, not URLs or card method aliases. status is complete, "
                                        "partial or blocked; missing required comparisons means blocked, not quiet. "

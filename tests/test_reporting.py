@@ -5,8 +5,8 @@ from copy import deepcopy
 import pytest
 from pydantic import ValidationError
 
-from signalweave.diagnostics import AnalyticalComparison, analyze_comparison
-from signalweave.models import InsightCard, InsightResult, ResourceSnapshot
+from signalweave.diagnostics import AnalyticalComparison, SegmentContribution, analyze_comparison
+from signalweave.models import InsightCard, InsightResult, InvestigationMode, ResourceSnapshot
 from signalweave.reporting import (
     build_investigation_report,
     render_investigation_report,
@@ -104,6 +104,7 @@ def healthy_resources(*, source_status: str = "healthy", error: str | None = Non
         adapter="test",
         resource="query:sales",
         title="Sales query",
+        analytical_comparisons=[comparison()],
         error=error,
         contract={"source_status": source_status},
     )]
@@ -227,8 +228,190 @@ def test_required_unhealthy_source_cannot_be_complete_even_with_valid_arithmetic
     )
 
     assert report.status == "blocked"
-    assert report.numeric_claims
-    assert any(item.code == "required_source_failed" for item in report.blockers)
+
+
+def test_analysis_must_match_the_returned_snapshot_comparison():
+    actual = comparison(
+        current_total={"value": 90},
+        segments=[
+            {"segment": "online", "baseline": {"value": 60}, "current": {"value": 40}},
+            {"segment": "store", "baseline": {"value": 40}, "current": {"value": 50}},
+        ],
+    )
+    resources = [ResourceSnapshot(
+        source_key="sales",
+        adapter="test",
+        resource="query:sales",
+        title="Sales query",
+        analytical_comparisons=[actual],
+    )]
+    report = build_investigation_report(card(), result(complete_analysis()), resources)
+
+    assert report.status == "blocked"
+    assert report.numeric_claims == []
+    assert any(item.code == "analysis_snapshot_comparison_mismatch" for item in report.blockers)
+
+
+def test_fixed_card_rejects_unselected_foreign_resource_snapshot():
+    foreign = ResourceSnapshot(
+        source_key="rogue",
+        adapter="test",
+        resource="query:rogue",
+        title="Rogue query",
+        analytical_comparisons=[comparison()],
+    )
+    report = build_investigation_report(
+        card(), result(complete_analysis()), [*healthy_resources(), foreign]
+    )
+
+    assert report.status == "blocked"
+    assert any(item.code == "foreign_resource" for item in report.blockers)
+
+
+def test_foreign_analysis_is_blocked_even_without_source_snapshots():
+    foreign = analyze_comparison("rogue", comparison())
+    report = build_investigation_report(card(), result(foreign))
+
+    assert report.status == "blocked"
+    assert report.numeric_claims == []
+    assert any(item.code == "analysis_source_not_approved" for item in report.blockers)
+
+
+def test_analysis_requiredness_ignores_mutated_analysis_required_flag():
+    report = build_investigation_report(
+        card(), result(complete_analysis(required=False)), healthy_resources()
+    )
+
+    assert report.status == "complete"
+    analysis_coverage = next(item for item in report.coverage if item.kind == "analysis")
+    assert analysis_coverage.required is True
+
+
+def test_missing_card_declared_comparison_still_blocks():
+    missing = ResourceSnapshot(
+        source_key="sales",
+        adapter="test",
+        resource="query:sales",
+        title="Sales query",
+    )
+    report = build_investigation_report(card(), result(analyses=[]), [missing])
+
+    assert report.status == "blocked"
+    assert any(item.code == "required_analysis_missing" for item in report.blockers)
+
+
+def test_optional_comparison_within_required_source_is_partial_not_blocked():
+    optional_source = card().sources[0].model_copy(update={"required_comparison_keys": []})
+    required_card = card().model_copy(update={"sources": [optional_source]})
+    optional_comparison = comparison(required=False, coverage="partial")
+    optional_analysis = analyze_comparison("sales", optional_comparison)
+    resources = [ResourceSnapshot(
+        source_key="sales",
+        adapter="test",
+        resource="query:sales",
+        title="Sales query",
+        analytical_comparisons=[optional_comparison],
+    )]
+    report = build_investigation_report(
+        required_card, result(optional_analysis), resources
+    )
+
+    assert report.status == "partial"
+    assert not any(item.code == "required_analysis_insufficient_data" for item in report.blockers)
+
+
+def test_bounded_investigation_selected_source_is_authorized_and_bound():
+    investigated = card().model_copy(update={"investigation_mode": InvestigationMode.BOUNDED})
+    selected_source = {
+        "key": "diagnostic",
+        "adapter": "test",
+        "resource": "query:diagnostic",
+        "label": "Diagnostic query",
+        "required": False,
+    }
+    selected_comparison = comparison(key="diagnostic-comparison")
+    extra_analysis = analyze_comparison("diagnostic", selected_comparison)
+    trace = {
+        "mode": "bounded",
+        "attempted": True,
+        "candidate_count": 1,
+        "candidate_limit": 1,
+        "selected": [{
+            "source": selected_source,
+            "score": 0.9,
+            "confidence": 0.9,
+            "selection_reason": "Approved bounded diagnostic selection.",
+            "retrieval_status": "succeeded",
+        }],
+        "evaluator": "test",
+    }
+    report = build_investigation_report(
+        investigated,
+        result(
+            complete_analysis(),
+            source_keys=["sales", "diagnostic"],
+            analyses=[complete_analysis(), extra_analysis],
+            investigation=trace,
+        ),
+        [
+            *healthy_resources(),
+            ResourceSnapshot(
+                source_key="diagnostic",
+                adapter="test",
+                resource="query:diagnostic",
+                title="Diagnostic query",
+                analytical_comparisons=[selected_comparison],
+            ),
+        ],
+    )
+
+    assert report.status == "complete"
+    assert {claim.source_key for claim in report.numeric_claims} == {"sales", "diagnostic"}
+
+
+def test_notify_route_without_configuration_and_duplicate_selection_block():
+    no_route_card = card().model_copy(update={"delivery_methods": []})
+    no_route = build_investigation_report(
+        no_route_card,
+        result(complete_analysis(), delivery_methods=[]),
+        healthy_resources(),
+    )
+    assert no_route.status == "blocked"
+    assert any(item.code == "route_not_configured" for item in no_route.blockers)
+
+    duplicate = result(
+        complete_analysis(),
+        delivery_methods=[
+            {"key": "owner", "outcome": "notify", "label": "Owner", "destination": "slack://owner|weekly"},
+            {"key": "owner", "outcome": "notify", "label": "Owner", "destination": "slack://owner|weekly"},
+        ],
+    )
+    duplicate_report = build_investigation_report(card(), duplicate, healthy_resources())
+    assert duplicate_report.status == "blocked"
+    assert any(item.code == "duplicate_route_selection" for item in duplicate_report.blockers)
+
+
+def test_route_must_match_result_outcome_and_appendix_preserves_delivery_contract():
+    mismatched = result(
+        complete_analysis(),
+        outcome="notify",
+        delivery_methods=[{
+            "key": "owner",
+            "outcome": "investigate",
+            "label": "Owner",
+            "destination": "slack://owner|weekly",
+        }],
+    )
+    report = build_investigation_report(card(), mismatched, healthy_resources())
+    assert report.status == "blocked"
+    assert any(item.code == "route_outcome_mismatch" for item in report.blockers)
+
+    good_markdown = render_investigation_report(
+        build_investigation_report(card(), result(complete_analysis()), healthy_resources())
+    )
+    assert "owner" in good_markdown
+    assert "slack://owner" in good_markdown
+    assert "Caller owns delivery; not sent." in good_markdown
 
 
 def test_optional_source_health_failure_is_partial():
@@ -313,6 +496,163 @@ def test_markdown_escapes_link_and_emphasis_metacharacters():
     assert r"\[click\]\(https://bad\) \*bold\*\! \_italics\_" in markdown
 
 
+def test_semantic_coverage_retains_jev_judgment_and_probability():
+    report = build_investigation_report(
+        card(question=True),
+        result(
+            complete_analysis(),
+            question_results=[{
+                "key": "question_0",
+                "question": "Which approved question remains unresolved?",
+                "status": "not_supported",
+                "probability": 0.9,
+            }],
+        ),
+        resources=healthy_resources(),
+    )
+    item = next(item for item in report.coverage if item.kind == "question")
+    assert item.judgment == "not_supported"
+    assert item.probability == 0.9
+
+
+def test_reader_labels_semantic_probability_by_what_it_measures():
+    watched = card(question=True).model_copy(
+        update={
+            "watch_for": ["Movement is present"],
+            "evidence_requirements": {"question:1": False, "watch:1": False},
+        }
+    )
+    report = build_investigation_report(
+        watched,
+        result(
+            complete_analysis(),
+            watch_results=[{
+                "key": "watch_0",
+                "watch_for": "Movement is present",
+                "status": "absent",
+                "probability": 0.03,
+            }],
+            question_results=[{
+                "key": "question_0",
+                "question": "Which approved question remains unresolved?",
+                "status": "not_supported",
+                "probability": 0.03,
+            }],
+        ),
+        resources=healthy_resources(),
+    )
+
+    markdown = render_investigation_report(report)
+    assert "P(present) 0.03" in markdown
+    assert "P(supported) 0.03" in markdown
+    assert "; probability 0.03" not in markdown
+
+
+def test_reader_markdown_surfaces_goal_policy_checks_gaps_and_audit_once():
+    report = build_investigation_report(
+        card(question=True),
+        result(
+            complete_analysis(),
+            question_results=[{
+                "key": "question_0",
+                "question": "Which approved question remains unresolved?",
+                "status": "unknown",
+                "probability": 0.5,
+            }],
+        ),
+        resources=healthy_resources(source_status="ambiguous"),
+    )
+    markdown = render_investigation_report(report)
+    assert "- Goal:" in markdown
+    assert "- Decision:" in markdown
+    assert "- Intended route audience: Owner \\(slack://owner\\|weekly\\)" in markdown
+    assert "### Policy checks (Jev judgments)" in markdown
+    assert markdown.index("<details>") < markdown.index("### Policy checks")
+    assert "Measurements are provisional" in markdown
+    assert "No complete business conclusion" in markdown
+    assert "Source sales is failed: Source contract status is ambiguous." in markdown
+    assert "<details>" in markdown and "### Provenance" in markdown
+    assert "\n## Coverage" not in markdown
+
+
+def test_front_matter_is_compact_and_route_audience_has_quiet_fallback():
+    report = build_investigation_report(
+        card(),
+        result(complete_analysis(), outcome="ignore", delivery_methods=[]),
+        resources=healthy_resources(),
+    )
+    markdown = render_investigation_report(report)
+    front_matter = markdown.split("<details>", 1)[0]
+    assert len(front_matter) < 1200
+    assert "Intended route audience: No notification intended \\(quiet outcome\\)." in markdown
+    assert "## Policy checks" not in front_matter
+
+
+def test_renderer_sorts_top_contributions_by_absolute_change():
+    report = build_investigation_report(
+        card(), result(complete_analysis()), resources=healthy_resources()
+    )
+    claim = report.numeric_claims[0].model_copy(
+        update={
+            "contributions": [
+                SegmentContribution(segment="small", baseline=1, current=2, contribution=1),
+                SegmentContribution(
+                    segment="large-negative", baseline=20, current=0, contribution=-20
+                ),
+                SegmentContribution(segment="medium", baseline=7, current=14, contribution=7),
+                SegmentContribution(
+                    segment="large-positive", baseline=12, current=24, contribution=12
+                ),
+            ]
+        }
+    )
+    rendered = render_investigation_report(
+        report.model_copy(update={"numeric_claims": [claim]})
+    )
+
+    assert rendered.index("large-negative: -20") < rendered.index("large-positive: 12")
+    assert rendered.index("large-positive: 12") < rendered.index("medium: 7")
+    assert "small: 1" not in rendered
+    assert "plus 1 smaller" in rendered
+
+
+def test_renderer_preserves_claim_order_across_metrics_and_marks_truncation():
+    report = build_investigation_report(
+        card(), result(complete_analysis()), resources=healthy_resources()
+    )
+    claims = [
+        report.numeric_claims[0].model_copy(update={"metric": "first", "delta": 1}),
+        report.numeric_claims[0].model_copy(update={"metric": "second", "delta": -100}),
+        report.numeric_claims[0].model_copy(update={"metric": "third", "delta": 50}),
+        report.numeric_claims[0].model_copy(update={"metric": "fourth", "delta": 25}),
+    ]
+    front_matter = render_investigation_report(
+        report.model_copy(update={"numeric_claims": claims})
+    ).split("<details>", 1)[0]
+
+    assert "## Measured changes (first 3)" in front_matter
+    assert front_matter.index("**first**") < front_matter.index("**second**")
+    assert front_matter.index("**second**") < front_matter.index("**third**")
+    assert "**fourth**" not in front_matter
+
+
+def test_resource_identity_mismatch_blocks_at_approved_source_boundary():
+    report = build_investigation_report(
+        card(),
+        result(complete_analysis()),
+        resources=[ResourceSnapshot(
+            source_key="sales",
+            adapter="test",
+            resource="query:other",
+            title="Wrong resource",
+        )],
+    )
+    assert report.status == "blocked"
+    assert any(
+        "identity does not match" in item.message for item in report.blockers
+    )
+
+
 def test_report_models_reject_extra_fields():
     report = build_investigation_report(card(), result(complete_analysis()))
     with pytest.raises(ValidationError):
@@ -331,8 +671,20 @@ def test_colon_containing_analysis_identities_do_not_collide():
         InsightCard.model_validate(payload),
         result(first, second, source_keys=["source:one", "source"]),
         resources=[
-            ResourceSnapshot(source_key="source:one", adapter="test", resource="one", title="one"),
-            ResourceSnapshot(source_key="source", adapter="test", resource="two", title="two"),
+            ResourceSnapshot(
+                source_key="source:one",
+                adapter="test",
+                resource="query:sales",
+                title="one",
+                analytical_comparisons=[comparison(key="comparison:shared")],
+            ),
+            ResourceSnapshot(
+                source_key="source",
+                adapter="test",
+                resource="query:sales",
+                title="two",
+                analytical_comparisons=[comparison(key="one:comparison:shared")],
+            ),
         ],
     )
     assert report.status == "complete"
@@ -378,9 +730,10 @@ def test_changed_endpoint_and_foreign_route_are_blockers_not_new_routes():
     assert any(item.code == "unauthorized_route" for item in report.blockers)
 
 
-def test_known_negative_question_is_resolved_not_missing():
+def test_required_not_supported_question_is_missing_even_with_a_result():
+    required = card(question=True).model_copy(update={"evidence_requirements": {}})
     report = build_investigation_report(
-        card(question=True),
+        required,
         result(
             complete_analysis(),
             question_results=[{
@@ -389,11 +742,41 @@ def test_known_negative_question_is_resolved_not_missing():
                 "status": "not_supported",
                 "probability": 0.9,
             }],
+            evidence_plan={
+                "objective": "Bounded source evidence",
+                "status": "complete",
+                "slots": [{
+                    "key": "question:1",
+                    "role": "question",
+                    "question": required.questions[0],
+                    "required": True,
+                    "status": "fulfilled",
+                }],
+            },
         ),
         resources=healthy_resources(),
     )
-    assert report.status == "complete"
-    assert report.unresolved_questions == []
+    assert report.status == "blocked"
+    assert report.unresolved_questions == required.questions
+    assert any(item.code == "required_semantic_evidence_missing" for item in report.blockers)
+
+
+def test_optional_not_supported_question_is_partial_not_resolved():
+    report = build_investigation_report(
+        card(question=True),
+        result(
+            complete_analysis(),
+            question_results=[{
+                "key": "question_0",
+                "question": "Which approved question remains unresolved?",
+                "status": "not_supported",
+                "probability": 0.03,
+            }],
+        ),
+        resources=healthy_resources(),
+    )
+    assert report.status == "partial"
+    assert report.unresolved_questions == ["Which approved question remains unresolved?"]
 
 
 @pytest.mark.parametrize("slot_status", ["unavailable", "conflicting"])
@@ -454,4 +837,4 @@ def test_decision_purpose_and_handoff_are_exposed_without_using_summary_as_fact(
     assert report.purpose == card().why_watch
     assert report.next_step == "Check the approved source before delivery."
     assert "Invented narrative" not in markdown
-    assert "Suggested next step" in markdown
+    assert "## Next step" in markdown

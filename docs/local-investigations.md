@@ -67,6 +67,10 @@ new source or Jev calls. `signalweave run ... --output ...` also writes
 a richer narrative, investigate gaps, or send a digest. SignalWeave does not
 verify that additional prose or deliver it automatically.
 
+Receipts created before report archiving return their original decision and an
+explicit report-unavailable reason. They never synthesize a historical report
+from today's card or renderer; use a new run key for a new evaluation.
+
 The opt-in feasibility experiment is `python -m evaluations.first_report_trial`.
 Without `--live` it creates only a frozen manifest. Live mode uses four small
 synthetic companies, a maximum of 48 Jev attempts without retries, at most two
@@ -77,6 +81,65 @@ superiority. Initial setup periods are development examples; later periods are
 unseen by the author. Narrative usefulness still requires separate review. No
 real source connections, human usability study, or enterprise-readiness claim
 follows from this fixture trial.
+
+### Recorded first-report results
+
+The [initial attempt](evidence/first-report-live-01/report.json) and
+[paired rerun](evidence/first-report-live-02/report.json) retain every attempt,
+frozen inputs, authored cards, raw model journals and token usage. The rerun used
+commit `cee8d0d`; the initial attempt records working-file hashes rather than a
+complete committed source snapshot. These are small development experiments,
+not an enterprise benchmark or an independently peer-reviewed study.
+
+Four synthetic businesses cover net sales, weighted support SLA rates, shipment
+lateness and signed subscription movements. Luna authored the cards using existing
+definitions and inspected comparisons. The operator supplied the business rules
+and routing directory; this was not onboarding from an undocumented data lake.
+The initial harness omitted the operator identity, so approval correctly failed.
+One shipping policy was also ambiguous and was clarified before the rerun. The
+other three authored drafts were reused, not regenerated until they passed.
+
+All four workflows reached approval in the rerun. Eight paired, author-unseen
+periods produced these **original strict scores**, which remain unchanged:
+
+| Check | SignalWeave + Jev | Luna + the same card and analysis tools |
+| --- | ---: | ---: |
+| Status, outcome, route and numerical/provenance checks | 7/8 | 5/8 |
+| Exact archived report replay without new model calls | 8/8 | Not tested |
+| Median recurring elapsed time, cached synthetic inputs | 0.278 s | 29.146 s |
+
+The apparent correctness gap is not a defensible model-quality win. A support
+case's expected recipient contradicted the owner policy; both systems correctly
+chose the Data Steward. Correcting that oracle alone gives 8/8 versus 6/8.
+Luna's `no_action` instead of `ignore` accounts for another strict failure.
+The remaining subscription case depends on an underdefined distinction between
+a current movement's magnitude and its contribution to a between-period change.
+The reviewers disagreed about that interpretation. We do not count it as proof
+of superior judgment. Future trials expose exact outcome enums and let the
+baseline select analysis references instead of copying full tables.
+
+Timing compares a saved workflow with a fresh CLI agent episode, including tool
+discovery, prose and JSON output. It excludes warehouse-query time, uses cached
+synthetic inputs, and does not compare an optimized persistent agent or scripted
+baseline. It demonstrates a shorter repeatable execution path in this fixture, **not** a measured
+dollar saving or a claim that Jev is 100 times better at analysis. Setup cost is
+retained separately: the two attempts used 46 Jev calls and 13 Luna episodes in
+total, including approval and failed setup work. No notifications were delivered.
+
+Two separate Luna reviewers examined methodology and owner-facing report quality:
+[method review](evidence/first-report-live-02/adversarial-method-review.json) and
+[quality review](evidence/first-report-live-02/independent-quality-review.json).
+They found stronger auditability in the native reports but clearer prose in the
+baseline. Those findings prompted a concise report lead, explicit gaps, labeled
+Jev judgments and a collapsible audit appendix. Revised presentation is an
+offline re-render, not a new successful model trial. Internal AI review is not
+external peer review, a human usability test, or customer adoption evidence.
+
+The bounded result: agent-authored, owner-context-backed investigations can be
+approved, run repeatedly through live Jev, and return checked measurements with
+durable evidence. Automatic recovery of trustworthy definitions from arbitrary
+BI assets, broad method coverage, report usefulness to actual owners, and a fair
+end-to-end cost advantage remain unproven.
 
 ## Quantitative methods available now
 

@@ -298,6 +298,7 @@ def _oracle(
     notify_route: str,
     investigate_route: str,
     destinations: list[dict[str, str]],
+    coverage_route: str | None = None,
 ) -> dict[str, Any]:
     if kind == "additive":
         baseline, current = _group_additive(rows)
@@ -382,18 +383,27 @@ def _oracle(
             "within_effect": float(within) if coverage == "complete" and complete_segments else None,
             "mix_effect": float(mix) if coverage == "complete" and complete_segments else None,
         }
-        material = (
-            quantitative["delta"] is not None
-            and abs(quantitative["delta"]) >= materiality["aggregate_delta"]
-        ) or any(
-            abs(item["contribution"]) >= materiality["segment_contribution"]
-            for item in contributions
-        )
+        if "current_rate" in materiality:
+            material = (
+                quantitative["current"] is not None
+                and quantitative["current"] >= materiality["current_rate"]
+            ) or (
+                quantitative["delta"] is not None
+                and abs(quantitative["delta"]) >= materiality["aggregate_delta"]
+            )
+        else:
+            material = (
+                quantitative["delta"] is not None
+                and abs(quantitative["delta"]) >= materiality["aggregate_delta"]
+            ) or any(
+                abs(item["contribution"]) >= materiality["segment_contribution"]
+                for item in contributions
+            )
 
     status = "complete" if coverage == "complete" and semantic_status != "definition-conflict" else "blocked"
     if coverage != "complete":
         outcome = "insufficient_data"
-        route_keys: list[str] = []
+        route_keys = [coverage_route] if coverage_route else []
     elif semantic_status == "definition-conflict":
         outcome = "investigate"
         route_keys = [investigate_route]
@@ -479,7 +489,7 @@ def _build_run(spec: dict[str, Any], period: dict[str, Any], index: int) -> dict
         kind=spec["kind"], rows=primary_rows, coverage=period["coverage"],
         semantic_status=period["semantic_status"], materiality=spec["materiality"],
         notify_route=notify_route, investigate_route=investigate_route,
-        destinations=spec["destinations"],
+        destinations=spec["destinations"], coverage_route=spec.get("coverage_route"),
     )
     if period["semantic_status"] == "definition-conflict":
         # This refers to the selected export itself, not a different nearby
@@ -655,7 +665,8 @@ _COMPANIES: list[dict[str, Any]] = [
         "distractor_title": "First-response SLA by support tier", "distractor_metric": "first_response_miss_rate", "distractor_definition": "Missed first-response SLA divided by tickets with a response clock.",
         "distractor_population": "tickets with a first-response clock", "distractor_description": "A support export with a similar label but a different service clock.",
         "distractor_disagreement": "semantic disagreement: first-response SLA is not resolution SLA and uses a different eligible population",
-        "materiality": {"aggregate_delta": 0.04, "segment_contribution": 0.025},
+        "materiality": {"current_rate": 0.12, "aggregate_delta": 0.04},
+        "coverage_route": "support-data-steward",
         "destinations": [
             {"key": "support-operations", "label": "Support Operations", "destination": "agent://support-operations"},
             {"key": "support-data-steward", "label": "Support Data Steward", "destination": "agent://support-data-steward"},

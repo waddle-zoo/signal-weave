@@ -3,7 +3,7 @@ import json
 from datetime import timedelta
 from fractions import Fraction
 
-from evaluations.first_report_cases import cases
+from evaluations.first_report_cases import _COMPANIES, _build_run, cases
 from signalweave.models import ResourceDescriptor, ResourceSnapshot, SourceRef
 
 
@@ -114,7 +114,7 @@ def test_oracle_analysis_matches_primary_comparison_totals_and_contributions():
 
 def test_rate_oracle_is_weighted_and_keeps_mix_and_within_effects_separate():
     company = next(company for company in cases() if company["id"] == "harbor-help")
-    period = next(period for period in company["periods"] if period["id"] == "p02")
+    period = next(period for period in company["periods"] if period["id"] == "p01")
     comparison = _primary(period).analytical_comparisons[0]
     analysis = period["oracle"]["analyses"][0]
     d0, d1 = int(comparison.baseline_total.denominator), int(comparison.current_total.denominator)
@@ -132,6 +132,25 @@ def test_rate_oracle_is_weighted_and_keeps_mix_and_within_effects_separate():
     assert analysis["within_effect"] != analysis["mix_effect"]
 
 
+def test_support_stable_high_rate_notifies_with_zero_delta():
+    spec = copy.deepcopy(next(spec for spec in _COMPANIES if spec["id"] == "harbor-help"))
+    period = copy.deepcopy(spec["periods"][1])
+    period["id"] = "p04"
+    period["primary"] = [
+        ("enterprise", 14, 100, 14, 100),
+        ("self_serve", 14, 100, 14, 100),
+    ]
+    run = _build_run(spec, period, 3)
+    oracle = run["oracle"]
+    analysis = oracle["baseline"], oracle["current"], oracle["delta"]
+    assert analysis == (0.14, 0.14, 0.0)
+    assert oracle["expected_outcome"] == "notify"
+    assert oracle["expected_route_keys"] == ["support-operations"]
+    assert [period["id"] for company in cases() for period in company["periods"]] == [
+        "p01", "p02", "p03", "p01", "p02", "p03", "p01", "p02", "p03", "p01", "p02", "p03",
+    ]
+
+
 def test_distribution_contains_quiet_partial_definition_conflict_and_routes():
     periods = [period for _, period in _periods()]
     assert any(period["oracle"]["outcome"] == "ignore" for period in periods)
@@ -140,7 +159,7 @@ def test_distribution_contains_quiet_partial_definition_conflict_and_routes():
     partial = next(period for period in periods if period["oracle"]["status"] == "blocked" and not period["oracle"]["analyses"])
     assert partial["oracle"]["status"] == "blocked"  # report status; outcome remains the engine's insufficient-data route
     assert partial["oracle"]["outcome"] == "insufficient_data"
-    assert partial["oracle"]["recipients"] == []
+    assert partial["oracle"]["recipients"] == ["support-data-steward"]
     conflict = next(period for period in periods if period["oracle"]["semantic_status"] == "definition-conflict")
     assert conflict["oracle"]["status"] == "blocked"
     assert len(conflict["oracle"]["analyses"]) == 1

@@ -1,0 +1,205 @@
+{
+  "review_type": "offline_presentation_review",
+  "review_status": "complete",
+  "review_mode": "read_only",
+  "paid_calls_made": false,
+  "production_files_changed": false,
+  "original_artifacts_changed": false,
+  "generated_file": "artifacts/first-report-live-02/presentation-review.json",
+  "renderer_api_used": [
+    "signalweave.reporting.build_investigation_report",
+    "signalweave.reporting.render_investigation_report"
+  ],
+  "rerender_method": "Offline reconstruction of each archived native card, InsightResult, and ResourceSnapshot from first-report-live-02/report.json, followed by the current working-tree reporting.py API. No model, source adapter, database, or network call was used.",
+  "source_hashes": {
+    "artifacts/first-report-live-02/manifest.json": "bd18b98b9ac284f2c40fde2e424024ac38d0d2b6301b57cd9707d3bd20bc3680",
+    "artifacts/first-report-live-02/report.json": "4f89f7305a3c171f743f6c3cbfd1a0a4f5ca8ab14de382df0c6402af8bc9c1ee",
+    "source_bundle_manifest_then_report": "59448e00c1928f4f3dfdc79298abde09b06d20c2a93da84464bee1a8fd8ae581",
+    "src/signalweave/reporting.py": "8fe67bd66f43c2e71b88b900555a0c806eae9e15943fdc0b69343d77437e76e0"
+  },
+  "semantic_preservation_check": {
+    "cases_rerendered": 8,
+    "build_failures": 0,
+    "render_failures": 0,
+    "status_unchanged": "8/8",
+    "outcome_unchanged": "8/8",
+    "numeric_claims_unchanged": "8/8",
+    "routes_unchanged": "8/8",
+    "provenance_unchanged": "8/8",
+    "interpretation": "The renderer change did not alter the archived decisions or recomputed facts. This is a presentation-only comparison, not a fresh evaluation."
+  },
+  "post_fix_regression_checks": {
+    "required_not_supported_question_blocks": true,
+    "required_not_supported_question_result": "status=blocked; question coverage=missing; required_semantic_evidence_missing emitted",
+    "absent_watch_remains_fulfilled": true,
+    "question_probability_label": "P(supported)",
+    "watch_probability_label": "P(present)",
+    "mismatched_probability_labels_found": false,
+    "archived_case_status_changes_after_fix": "none",
+    "finding": "The semantic fix is correct: QuestionResult.not_supported is no longer treated as fulfilled, while WatchResult.absent remains a valid completed watch judgment. The renderer now labels the two scalar probabilities according to their actual API meanings."
+  },
+  "size_summary": {
+    "before_source": "native.report_markdown in archived report.json",
+    "after_source": "render_investigation_report output from current reporting.py",
+    "before_total_characters": 19211,
+    "after_total_characters": 32402,
+    "total_delta_characters": 13191,
+    "total_ratio": 1.687,
+    "before_mean_characters": 2401.4,
+    "after_mean_characters": 4050.2,
+    "before_median_characters": 2113.5,
+    "after_median_characters": 3860.0,
+    "median_ratio": 1.799,
+    "critical_read": "The new renderer is not concise at whole-report level. It moves detail into a collapsible appendix in intent, but the serialized Markdown still contains the full appendix and adds all question/watch checks. The lead is more structured; the artifact is materially longer."
+  },
+  "case_comparisons": [
+    {
+      "case": "northstar-cart:p02",
+      "before_characters": 2045,
+      "after_characters": 3596,
+      "delta_characters": 1551,
+      "ratio": 1.758,
+      "policy_checks_in_new_lead": 6,
+      "blocked": false,
+      "provisional_math": false,
+      "critical_conclusion": "Decision, arithmetic, route, and provenance are preserved. The structured lead is clearer than the old technical opening, but six policy-check bullets plus the appendix make the owner read longer rather than shorter. The new intended-audience value is the fallback string 'Card owner and caller-owned delivery workflow', which is not an actual audience.",
+      "owner_usefulness": "mixed",
+      "minimal_fix": "Derive audience from configured route labels when card.owner is null, and put one concise threshold sentence above the full policy checks."
+    },
+    {
+      "case": "northstar-cart:p03",
+      "before_characters": 1875,
+      "after_characters": 3429,
+      "delta_characters": 1554,
+      "ratio": 1.829,
+      "policy_checks_in_new_lead": 6,
+      "blocked": false,
+      "provisional_math": false,
+      "critical_conclusion": "The quiet result remains correct and the suppression next step is clear. The new lead still spends more words on judgment probabilities and audit coverage than this no-alert case needs.",
+      "owner_usefulness": "mixed",
+      "minimal_fix": "Collapse or summarize absent policy checks for quiet runs; retain the audit appendix for inspection."
+    },
+    {
+      "case": "harbor-help:p02",
+      "before_characters": 2326,
+      "after_characters": 4348,
+      "delta_characters": 2022,
+      "ratio": 1.869,
+      "policy_checks_in_new_lead": 7,
+      "blocked": false,
+      "provisional_math": false,
+      "critical_conclusion": "The new lead makes the decision state and route easy to find, and preserves the correct weighted result. It still reports raw 0.1 to 0.14 rather than the owner-friendly 10.0% to 14.0% and does not synthesize the two threshold hits into one sentence. The baseline paragraph remains more useful for routine review.",
+      "owner_usefulness": "not improved",
+      "minimal_fix": "Format rate metrics as percentages with percentage-point deltas when the unit is ratio, and summarize the threshold result before listing individual judgments."
+    },
+    {
+      "case": "harbor-help:p03",
+      "before_characters": 4130,
+      "after_characters": 5602,
+      "delta_characters": 1472,
+      "ratio": 1.356,
+      "policy_checks_in_new_lead": 7,
+      "blocked": true,
+      "provisional_math": false,
+      "critical_conclusion": "This is a real improvement in safety signaling: the report now leads with no complete business conclusion, emits no numeric claim, and makes the Data Steward route visible. The probability labels are now correct after the fix. It is still not owner-concise because it lists 19 repeated internal gap records.",
+      "owner_usefulness": "improved_safety_but_not_conciseness",
+      "minimal_fix": "Coalesce repeated evidence-slot blockers into source-level remediation bullets; keep the corrected P(present) label and expose the full watch distribution only when uncertainty needs explanation."
+    },
+    {
+      "case": "redwood-fulfillment:p02",
+      "before_characters": 1977,
+      "after_characters": 3526,
+      "delta_characters": 1549,
+      "ratio": 1.784,
+      "policy_checks_in_new_lead": 5,
+      "blocked": false,
+      "provisional_math": false,
+      "critical_conclusion": "The new report preserves the correct boundary notify result and makes policy checks visible. It does not carry the baseline's compact explanation that the selected export was reconciled and fresh; those facts remain buried in source/provenance context rather than the owner lead.",
+      "owner_usefulness": "mixed",
+      "minimal_fix": "Add a one-line owner summary stating +15 shipments, north +15, complete/reconciled/fresh, notify Fulfillment."
+    },
+    {
+      "case": "redwood-fulfillment:p03",
+      "before_characters": 2681,
+      "after_characters": 4180,
+      "delta_characters": 1499,
+      "ratio": 1.559,
+      "policy_checks_in_new_lead": 5,
+      "blocked": true,
+      "provisional_math": true,
+      "critical_conclusion": "The new blocked warning and 'Provisional measured changes' heading are meaningful improvements. The +8 result is visibly conditional in status, but the lead still says only 'Source contract status is ambiguous' rather than naming the competing same-export definitions. The suggested next step remains an internal engine instruction instead of the owner action: resolve the definition with Fulfillment data review and do not alert.",
+      "owner_usefulness": "improved_but_incomplete",
+      "minimal_fix": "Put the actual ambiguity and no-alert consequence in the lead; keep engine/evidence-slot mechanics in the appendix."
+    },
+    {
+      "case": "orbit-subscriptions:p02",
+      "before_characters": 1995,
+      "after_characters": 3766,
+      "delta_characters": 1771,
+      "ratio": 1.889,
+      "policy_checks_in_new_lead": 6,
+      "blocked": false,
+      "provisional_math": false,
+      "critical_conclusion": "The archived native ignore decision and delta math are preserved, but the presentation still does not expose the unresolved owner-policy ambiguity between current segment level and period-over-period contribution. It also truncates four contributions to three and says only 'Plus 1 smaller contribution(s)', which weakens category completeness even though the omitted value is zero here.",
+      "owner_usefulness": "not improved",
+      "minimal_fix": "Surface the policy interpretation or clarification requirement, and render all segment labels or a complete contribution table rather than an unlabeled count of omitted items."
+    },
+    {
+      "case": "orbit-subscriptions:p03",
+      "before_characters": 2182,
+      "after_characters": 3954,
+      "delta_characters": 1772,
+      "ratio": 1.813,
+      "policy_checks_in_new_lead": 6,
+      "blocked": false,
+      "provisional_math": false,
+      "critical_conclusion": "The notify outcome is robust under either Orbit p02 interpretation and all archived facts are preserved. The same ambiguity is not carried forward, so the new report can look more policy-settled than the evidence warrants. It also truncates the four-way contribution breakdown.",
+      "owner_usefulness": "mixed",
+      "minimal_fix": "Carry forward a short policy note that segment thresholds are currently interpreted as changes between closed intervals pending owner confirmation."
+    }
+  ],
+  "critical_findings": [
+    {
+      "id": "P1-audience-fallback",
+      "severity": "material_owner_labeling_issue",
+      "finding": "All eight archived cards have owner null, so every new report labels its intended audience 'Card owner and caller-owned delivery workflow'. That is a workflow/ownership phrase, not an audience, and it obscures the actual configured destinations such as Commerce owner, Support Operations, Fulfillment data review, or Subscription Operations.",
+      "impact": "Weakens owner usefulness and can misroute human attention even though exact destination records remain present below.",
+      "minimal_fix": "Use configured route labels as the audience when card.owner is absent; if multiple routes exist, state the outcome-specific audience or 'configured destination: ...'."
+    },
+    {
+      "id": "P1-blocker-overexpansion",
+      "severity": "owner_usability_issue",
+      "finding": "Harbor p03 expands one missing source into 19 gap bullets, including repeated source, question, watch, semantic, and plan records. The report is technically inspectable but the repeated internal keys bury the single remediation: restore complete eligible-tier data and re-evaluate.",
+      "impact": "Blocked reports become longer and less actionable despite the new blocked headline.",
+      "minimal_fix": "Deduplicate gaps by source and root cause in the lead; preserve the full slot ledger only in the audit appendix."
+    },
+    {
+      "id": "P2-provisional-context-too-weak",
+      "severity": "material_context_issue",
+      "finding": "Redwood p03 correctly changes the heading to provisional, but the lead does not state the actual competing definitions that caused the block. A reader sees 50 to 58 and +8 before reaching the provenance, so the conditional nature is structurally clear but semantically under-explained.",
+      "impact": "A provisional number can still be reused as if it were the business metric.",
+      "minimal_fix": "Attach the source conflict and 'no business alert' consequence to the provisional heading or first measurement bullet."
+    },
+    {
+      "id": "P2-contribution-truncation",
+      "severity": "completeness_and_readability_issue",
+      "finding": "The renderer shows only the first three contributions, now sorted by absolute size, and replaces the rest with 'Plus 1 smaller contribution(s)'. In both Orbit cases the omitted fourth value is zero, but the generic truncation is not safe as a reporting rule because a future fourth material segment could still be hidden and the appendix does not restore its value.",
+      "impact": "Owner cannot verify a complete decomposition from the lead, and the appendix does not restore the omitted segment values.",
+      "minimal_fix": "Show all contributions for small segment sets, or sort by absolute contribution and explicitly list omitted labels/values in the audit appendix."
+    }
+  ],
+  "what_improved": [
+    "Blocked reports now state that no complete business conclusion is available before showing details.",
+    "Redwood p03 now labels its numeric section provisional when source coverage is blocked.",
+    "The semantic fix now blocks required not_supported questions while preserving absent watch judgments as fulfilled, and the renderer labels P(supported) and P(present) correctly.",
+    "Policy checks and exact intended destinations are easier to find than in the old technical coverage layout.",
+    "The offline reconstruction preserved all archived decisions and numeric facts across 8/8 cases."
+  ],
+  "what_did_not_improve": [
+    "The complete artifact became longer, not shorter, because all policy checks and the audit appendix are serialized into the Markdown.",
+    "The main lead still lacks a real audience, owner-friendly rate formatting, and concise threshold synthesis.",
+    "Blocked-case remediation is still expressed partly as internal evidence-slot mechanics.",
+    "The Orbit p02 policy ambiguity remains hidden rather than surfaced."
+  ],
+  "final_conclusion": "The semantic fix is correct and verified offline: required unsupported questions now block, absent watches remain valid, and the rendered probability labels match the API meanings. The renderer remains a useful audit-structure change with better blocked/provisional signaling, but it is not yet concise or fully owner-ready: the audience fallback is mislabeled, blocker repetition overwhelms Harbor p03, Redwood p03 needs the actual definition conflict in the lead, contribution truncation remains incomplete, and Orbit's underdefined threshold still needs an explicit policy caveat."
+}

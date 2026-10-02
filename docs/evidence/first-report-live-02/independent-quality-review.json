@@ -1,0 +1,253 @@
+{
+  "review_type": "independent_report_quality_and_business_value_review",
+  "review_status": "complete",
+  "review_mode": "read_only",
+  "paid_calls_made": false,
+  "source_edits_made": false,
+  "original_scores_immutable": true,
+  "scope": "Eight paired recurring reports in first-report-live-02, checked against the frozen source comparisons, the English owner policies in the manifest, the authored cards, and the separately rendered baseline narratives and native report_markdown.",
+  "presentation_note": "The baseline narrative and native report_markdown are identifiable presentation variants; they were reviewed separately.",
+  "evidence_read": [
+    "artifacts/first-report-live-01/manifest.json",
+    "artifacts/first-report-live-01/report.json",
+    "artifacts/first-report-live-02/manifest.json",
+    "artifacts/first-report-live-02/report.json",
+    "artifacts/first-report-live-02/adversarial-method-review.json",
+    "evaluations/first_report_cases.py",
+    "tests/test_first_report_cases.py",
+    "AGENTS.md"
+  ],
+  "grading_scale": {
+    "2": "Sound for this case and dimension; no material repair needed.",
+    "1": "Mostly usable but needs a caveat, clearer scoping, or a small repair.",
+    "0": "Materially wrong, unsafe, or unusable for the stated purpose."
+  },
+  "frozen_strict_scores": {
+    "source": "artifacts/first-report-live-02/report.json",
+    "summary": {
+      "native_passed": 7,
+      "native_total": 8,
+      "baseline_passed": 5,
+      "baseline_total": 8
+    },
+    "per_case": [
+      {"company": "northstar-cart", "period": "p02", "native": {"passed": true, "errors": []}, "baseline": {"passed": true, "errors": []}},
+      {"company": "northstar-cart", "period": "p03", "native": {"passed": true, "errors": []}, "baseline": {"passed": false, "errors": ["outcome"]}},
+      {"company": "harbor-help", "period": "p02", "native": {"passed": true, "errors": []}, "baseline": {"passed": true, "errors": []}},
+      {"company": "harbor-help", "period": "p03", "native": {"passed": false, "errors": ["recipients"]}, "baseline": {"passed": false, "errors": ["recipients"]}},
+      {"company": "redwood-fulfillment", "period": "p02", "native": {"passed": true, "errors": []}, "baseline": {"passed": true, "errors": []}},
+      {"company": "redwood-fulfillment", "period": "p03", "native": {"passed": true, "errors": []}, "baseline": {"passed": true, "errors": []}},
+      {"company": "orbit-subscriptions", "period": "p02", "native": {"passed": true, "errors": []}, "baseline": {"passed": false, "errors": ["outcome", "recipients"]}},
+      {"company": "orbit-subscriptions", "period": "p03", "native": {"passed": true, "errors": []}, "baseline": {"passed": true, "errors": []}}
+    ]
+  },
+  "score_flag_audit": [
+    {
+      "company": "northstar-cart",
+      "period": "p03",
+      "frozen_flag": "baseline outcome",
+      "independent_classification": "harness_label_mismatch",
+      "finding": "Baseline uses no_action while the frozen label is ignore. The narrative says suppress delivery and no Commerce notification, so the business meaning is equivalent for this review. Keep the strict score unchanged."
+    },
+    {
+      "company": "harbor-help",
+      "period": "p03",
+      "frozen_flag": "native and baseline recipients",
+      "independent_classification": "oracle_route_error",
+      "finding": "The English policy explicitly routes missing eligible-tier coverage to the Data Steward. Both reports identify support-data-steward; the frozen oracle omitted that recipient. This is not a report-model error. Keep the strict scores unchanged."
+    },
+    {
+      "company": "orbit-subscriptions",
+      "period": "p02",
+      "frozen_flag": "baseline outcome and recipient",
+      "independent_classification": "substantive_policy_interpretation_risk",
+      "finding": "The baseline applies the $60 test to current segment levels and notifies; native applies it to period-over-period segment deltas and ignores. The owner policy does not specify which meaning is intended, so this is not a clean harness error or a conclusive native win."
+    }
+  ],
+  "overall_assessment": {
+    "status": "needs_revision_before_routine_dashboard_replacement",
+    "quantitative_definition_population": {
+      "native": {"score": 2, "summary": "All eight native numeric outputs are reproducible from the frozen comparisons; Harbor p03 correctly makes no aggregate numeric claim."},
+      "baseline": {"score": 1, "summary": "Complete-case arithmetic is sound. Harbor p03's enterprise-only comparison is factual but can be mistaken for a population-level delta; Orbit p02's trigger interpretation is unresolved by the owner wording."}
+    },
+    "business_policy": {
+      "native": {"score": 1, "summary": "The routing and threshold decisions are aligned in seven cases, and Harbor p03 is correctly routed. Orbit p02 depends on an authored delta interpretation that the original owner policy did not explicitly authorize."},
+      "baseline": {"score": 1, "summary": "The narrative decisions are useful and mostly aligned, but Orbit p02 chooses the competing current-level interpretation; Northstar p03's label is only a schema issue."
+      }
+    },
+    "audience_and_next_step": {
+      "native": {"score": 1, "summary": "Exact destinations and blocked-state behavior are auditable, but most complete reports say only to deliver an evidence bundle and do not restate the threshold reason in owner language."},
+      "baseline": {"score": 2, "summary": "Baseline prose usually states the relevant threshold and intended audience directly; Harbor p03 and Redwood p03 are especially actionable. It should still use exact route keys when delivery matters."}
+    },
+    "unsupported_causal_or_comparative_claims": {
+      "native": {"score": 2, "summary": "No unsupported causal claims found; the reports consistently label contributions as accounting decomposition."},
+      "baseline": {"score": 1, "summary": "No unsupported causal claims found. Harbor p03's +5 pp enterprise-only comparison needs stronger non-aggregate labeling, and Orbit p02 needs an explicit policy-interpretation caveat."}
+    },
+    "readability_and_routine_use": {
+      "native": {"score": 1, "summary": "The native markdown is inspectable but dominated by technical coverage IDs, provenance, duplicate slots, raw ratios, and generic handoff language. It is better as an audit record than as a routine owner readout."},
+      "baseline": {"score": 2, "summary": "The paragraph narratives are substantially easier to scan and generally carry the numbers, thresholds, caveats, and audience in one pass. Their weakness is that a short paragraph can bury scope caveats unless the headline is carefully written."}
+    },
+    "supported_advantages": [
+      "Native reports have the clearest machine-auditable status, coverage, provenance, exact route, and insufficient-data blocking behavior.",
+      "Baseline narratives have the clearest owner-facing numeric explanation, threshold reasoning, and immediate action language.",
+      "No overall variant wins all dimensions, and no report in this eight-case sample proves it can replace routine dashboard review without a concise owner layer plus the audit detail."
+    ],
+    "not_proven": [
+      "No native report-quality advantage over the baseline is proven by the strict 7/8 versus 5/8 counts because one frozen recipient failure is an oracle omission, one baseline failure is a quiet-label mismatch, and Orbit p02 is underdefined policy rather than a settled semantic test.",
+      "No causal explanation, forecasting value, or enterprise operating reliability is established by these reports."
+    ]
+  },
+  "case_audits": [
+    {
+      "company": "northstar-cart",
+      "period": "p02",
+      "source_facts": "Completed net sales are 680 to 740, delta +60; marketplace +100, web -40, store 0; coverage is complete and comparable.",
+      "owner_policy_check": "Notify Commerce if total change is at least 100 or any channel contribution is at least 80; ignore only smaller complete movements.",
+      "native": {
+        "scores": {"numeric_definition_population": 2, "business_policy": 2, "audience_next_step": 1, "readability_routine_use": 1},
+        "judgment": "Correct notify decision because marketplace contributes +100 even though the total-change threshold is not met. The formal report exposes the exact route and accounting caveat but does not explain the trigger in owner language."
+      },
+      "baseline": {
+        "scores": {"numeric_definition_population": 2, "business_policy": 2, "audience_next_step": 1, "readability_routine_use": 2},
+        "judgment": "Numbers and policy logic are correct and easy to read, but the paragraph does not itself name the Commerce destination or state the next action as directly as it could."
+      },
+      "unsupported_claims": "None material; both avoid causal language.",
+      "missed_material_findings": "None.",
+      "minimal_fix": "Add one owner-facing sentence to either rendering: Notify Commerce because marketplace contributed +$100; delivery remains caller-owned and unsent."
+    },
+    {
+      "company": "northstar-cart",
+      "period": "p03",
+      "source_facts": "Completed net sales are 500 to 500, delta 0; web +20, store -20, marketplace 0; coverage is complete and comparable.",
+      "owner_policy_check": "Both total and absolute channel thresholds are unmet, so suppress delivery.",
+      "native": {
+        "scores": {"numeric_definition_population": 2, "business_policy": 2, "audience_next_step": 2, "readability_routine_use": 1},
+        "judgment": "Correct ignore decision and clear suppression next step. Strict score passes. The formal report is still much longer and more technical than needed for a quiet run."
+      },
+      "baseline": {
+        "scores": {"numeric_definition_population": 2, "business_policy": 2, "audience_next_step": 2, "readability_routine_use": 2},
+        "judgment": "Semantically correct quiet result. The no_action label is a frozen schema mismatch with ignore, not a business error. The paragraph is the better routine readout."
+      },
+      "unsupported_claims": "None material; the date and comparison statements are supported.",
+      "missed_material_findings": "None.",
+      "minimal_fix": "Normalize no_action to the controlled ignore label in the baseline harness; retain the concise narrative."
+    },
+    {
+      "company": "harbor-help",
+      "period": "p02",
+      "source_facts": "Weighted miss rate is 20/200 = 10.0% to 28/200 = 14.0%, delta +4.0 percentage points; complete enterprise and self-serve coverage; within effect +3.667 pp and mix effect +0.333 pp.",
+      "owner_policy_check": "Use ticket-count weighting; notify Support Operations at current rate >=12% or absolute change >=4 pp.",
+      "native": {
+        "scores": {"numeric_definition_population": 2, "business_policy": 2, "audience_next_step": 1, "readability_routine_use": 1},
+        "judgment": "Correct notify decision and decomposition. The formal report exposes raw 0.10 and 0.14 ratios and long coverage IDs but omits the 28/200 and 20/200 explanation and does not plainly state why both thresholds fire."
+      },
+      "baseline": {
+        "scores": {"numeric_definition_population": 2, "business_policy": 2, "audience_next_step": 2, "readability_routine_use": 2},
+        "judgment": "Strongest owner-facing rendering in the set: weighted denominators, threshold comparison, route, and descriptive effects are all explicit and correctly scoped."
+      },
+      "unsupported_claims": "None material; rate and mix effects are explicitly non-causal.",
+      "missed_material_findings": "None.",
+      "minimal_fix": "Put the baseline-style one-sentence metric and threshold explanation above the native audit sections; retain native provenance below it."
+    },
+    {
+      "company": "harbor-help",
+      "period": "p03",
+      "source_facts": "Enterprise alone is 12/120 = 10.0% to 15/100 = 15.0%; self-serve has no current numerator or denominator; overall weighted current rate and delta are not reportable.",
+      "owner_policy_check": "If any eligible tier is missing, do not estimate a rate; route to the Data Steward.",
+      "native": {
+        "scores": {"numeric_definition_population": 2, "business_policy": 2, "audience_next_step": 2, "readability_routine_use": 1},
+        "judgment": "Safest quantitative treatment: no validated numeric claim, blocked status, exact support-data-steward route, and re-evaluation instruction. The frozen recipient failure is an oracle omission, not a native error."
+      },
+      "baseline": {
+        "scores": {"numeric_definition_population": 1, "business_policy": 2, "audience_next_step": 2, "readability_routine_use": 1},
+        "judgment": "The enterprise-only arithmetic is correct and the narrative explicitly refuses to estimate the weighted population result. However, leading with +5.0 pp creates a real risk that a reader treats it as the overall change despite the caveat."
+      },
+      "unsupported_claims": "No causal claim. The comparative +5.0 pp is not false for enterprise, but it is unsafe as an unqualified headline while population coverage is partial.",
+      "missed_material_findings": "The baseline misses a strong visual or wording guard that the enterprise-only delta is contextual only; the native report is safer but overly technical.",
+      "minimal_fix": "Lead with: No population-level rate or delta can be reported because self-serve current data is missing. Optional context: enterprise-only rose 10% to 15% (+5 pp), not valid for overall threshold evaluation. Route to the Data Steward."
+    },
+    {
+      "company": "redwood-fulfillment",
+      "period": "p02",
+      "source_facts": "Late completed shipments are 70 to 85, delta +15; north +15 and south 0; selected comparison is complete, comparable, reconciled, and within freshness SLA.",
+      "owner_policy_check": "Notify Fulfillment at total change >=15 or warehouse contribution >=15; selected export is usable when its contract is explicit, complete, and reconciled.",
+      "native": {
+        "scores": {"numeric_definition_population": 2, "business_policy": 2, "audience_next_step": 1, "readability_routine_use": 1},
+        "judgment": "Correct boundary notify decision and exact fulfillment-owner route. The formal report does not surface the reconciliation/freshness checks or threshold reason in its readable layer."
+      },
+      "baseline": {
+        "scores": {"numeric_definition_population": 2, "business_policy": 2, "audience_next_step": 2, "readability_routine_use": 2},
+        "judgment": "Correct and useful paragraph: it states the interval, source contract, reconciliation, freshness, warehouse contribution, and trigger."
+      },
+      "unsupported_claims": "None material; accounting contributions are correctly separated from causal mechanisms.",
+      "missed_material_findings": "None material.",
+      "minimal_fix": "Use the baseline summary as the native report lead, retaining the technical coverage/provenance sections underneath."
+    },
+    {
+      "company": "redwood-fulfillment",
+      "period": "p03",
+      "source_facts": "Under the catalog definition, late completed shipments are 50 to 58, delta +8; north +5 and south +3. The same selected export also has release-note wording covering orders with elapsed promises, including unshipped orders, so the implemented population is ambiguous.",
+      "owner_policy_check": "Investigate unresolved same-export definition ambiguity, route Fulfillment data review, and do not issue a business alert.",
+      "native": {
+        "scores": {"numeric_definition_population": 1, "business_policy": 2, "audience_next_step": 1, "readability_routine_use": 1},
+        "judgment": "The conditional numbers and investigate decision are defensible, but the formal blocked report presents 50 to 58 as a validated measurement without putting the competing definition in the main narrative. Its next step says use fixed retrieval/no engine actions, not what the owner should resolve."
+      },
+      "baseline": {
+        "scores": {"numeric_definition_population": 1, "business_policy": 2, "audience_next_step": 2, "readability_routine_use": 2},
+        "judgment": "Better report: it explicitly makes the numbers conditional on the catalog definition, names the conflicting release-note definition, avoids a business alert, and routes to Fulfillment data review."
+      },
+      "unsupported_claims": "No causal claim. The same-export conflict is supported by the supplied source evidence; it is not merely a comparison of two nearby metrics.",
+      "missed_material_findings": "Native misses the reason for the block in its headline-level prose; baseline does not.",
+      "minimal_fix": "Replace the native next-step lead with: Resolve which definition the selected export implements with Fulfillment data review; the +8 result is conditional and no business alert is issued."
+    },
+    {
+      "company": "orbit-subscriptions",
+      "period": "p02",
+      "source_facts": "Net signed MRR is 140 to 140, delta 0. Current segment levels are expansion +210, contraction -95, new-logo +40, churn -15. Period-over-period segment deltas are expansion +10, contraction -15, new-logo 0, churn +5.",
+      "owner_policy_check": "The original English policy says notify when net MRR changes by at least $50 or any expansion/contraction segment contributes at least $60, but does not say whether segment contributes means current segment level or contribution to the period difference.",
+      "native": {
+        "scores": {"numeric_definition_population": 2, "business_policy": 1, "audience_next_step": 1, "readability_routine_use": 1},
+        "judgment": "The delta contributions are arithmetically correct and the authored card consistently operationalizes the rule as a period-over-period contribution, yielding ignore. That is a plausible clarification, not an independently established owner policy. The formal report omits the current segment levels, making its interpretation hard to challenge from the report alone."
+      },
+      "baseline": {
+        "scores": {"numeric_definition_population": 2, "business_policy": 1, "audience_next_step": 1, "readability_routine_use": 2},
+        "judgment": "The current segment levels and delta contributions are both factual, but the notify decision applies the threshold to current levels without saying that this is an interpretation of ambiguous policy. The frozen outcome/recipient error is therefore a substantive interpretation risk, not a clean harness-only error."
+      },
+      "unsupported_claims": "Neither report makes a causal claim. The material unsupported step is semantic: each report treats one of two plausible meanings as settled.",
+      "missed_material_findings": "Both reports miss the need to surface the policy ambiguity. The baseline should not imply that current levels are the declared trigger; the native report should not imply that delta contributions were owner-confirmed.",
+      "minimal_fix": "Ask the owner to choose and record either current segment magnitude or period-over-period segment contribution. Until resolved, mark the recurring decision underdefined and route for policy clarification rather than notify or ignore."
+    },
+    {
+      "company": "orbit-subscriptions",
+      "period": "p03",
+      "source_facts": "Net signed MRR is 110 to 140, delta +30; expansion contributes +70, contraction -40, churn 0, new-logo 0 to the period difference; coverage is complete and comparable.",
+      "owner_policy_check": "The outcome is notify under either interpretation because the period-difference expansion contribution is +70, and the current expansion level is also above $60. The ambiguity still affects the meaning of the report, even though it does not change this case's action.",
+      "native": {
+        "scores": {"numeric_definition_population": 2, "business_policy": 2, "audience_next_step": 1, "readability_routine_use": 1},
+        "judgment": "Correct notify outcome and delta decomposition. The report should state that the trigger is being evaluated as a period-over-period contribution until the owner wording is clarified."
+      },
+      "baseline": {
+        "scores": {"numeric_definition_population": 2, "business_policy": 2, "audience_next_step": 2, "readability_routine_use": 2},
+        "judgment": "Correct notify outcome and readable explanation. It is still vulnerable to the same unresolved policy semantics, although the action is robust here."
+      },
+      "unsupported_claims": "None material beyond the unspoken interpretation of segment contribution.",
+      "missed_material_findings": "The reports do not carry forward the Orbit p02 policy ambiguity into this later case.",
+      "minimal_fix": "Add a short policy note: segment contributions are evaluated as changes between the two closed intervals, pending owner confirmation."
+    }
+  ],
+  "readability_audit": {
+    "measured_lengths_characters": {
+      "northstar-cart:p02": {"baseline_narrative": 456, "native_report_markdown": 2045},
+      "northstar-cart:p03": {"baseline_narrative": 513, "native_report_markdown": 1875},
+      "harbor-help:p02": {"baseline_narrative": 761, "native_report_markdown": 2326},
+      "harbor-help:p03": {"baseline_narrative": 670, "native_report_markdown": 4130},
+      "redwood-fulfillment:p02": {"baseline_narrative": 648, "native_report_markdown": 1977},
+      "redwood-fulfillment:p03": {"baseline_narrative": 952, "native_report_markdown": 2681},
+      "orbit-subscriptions:p02": {"baseline_narrative": 759, "native_report_markdown": 1995},
+      "orbit-subscriptions:p03": {"baseline_narrative": 534, "native_report_markdown": 2182}
+    },
+    "finding": "Native markdown is roughly 2.5 to 6.2 times the baseline paragraph length and spends much of that space on duplicate coverage keys, technical IDs, raw method names, and provenance. That detail is valuable for auditability but is not a substitute for a concise owner summary.",
+    "recommended_shape": "Owner-readable headline with metric, population, periods, threshold result, audience, and next step; technical coverage, provenance, and limitations below it."
+  },
+  "bottom_line": "The frozen native 7/8 and baseline 5/8 strict counts remain unchanged. Independently, all eight source calculations are numerically grounded, but the report-quality result is mixed: native is stronger as an audit record, baseline is stronger as an owner readout, and Orbit p02 prevents an unqualified semantic winner because the original policy is underdefined. No overall advantage or routine-dashboard replacement claim is proven."
+}
