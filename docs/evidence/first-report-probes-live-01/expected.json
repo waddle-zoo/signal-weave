@@ -1,0 +1,82 @@
+{
+  "scope": "parent-only expected labels; excluded from agent inputs",
+  "expected": {
+    "harbor-help": {
+      "status": "complete",
+      "outcome": "notify",
+      "recipients": [
+        "support-operations"
+      ],
+      "analyses": [
+        {
+          "source_key": "harbor-help-reporting",
+          "comparison_key": "resolution-sla-rate",
+          "metric": "sla_miss_rate",
+          "unit": "ratio",
+          "dimension": "support_tier",
+          "definition": "Missed resolution-SLA tickets divided by eligible resolved tickets.",
+          "population": "resolved priority tickets with an eligible resolution clock",
+          "baseline_start": "2026-09-12T00:00:00+00:00",
+          "baseline_end": "2026-09-19T00:00:00+00:00",
+          "current_start": "2026-09-19T00:00:00+00:00",
+          "current_end": "2026-09-26T00:00:00+00:00",
+          "baseline": 0.13,
+          "current": 0.13,
+          "delta": 0.0,
+          "within_effect": 0.0,
+          "mix_effect": 0.0,
+          "contributions": {
+            "enterprise": 0.0,
+            "self_serve": 0.0
+          },
+          "query_refs": [
+            "query:harbor-help:reporting:p04"
+          ]
+        }
+      ],
+      "semantic_status": "aligned",
+      "period": "p04",
+      "oracle_version": "corrected-fixture-builder"
+    },
+    "northstar-cart": {
+      "status": "complete",
+      "outcome": "ignore",
+      "recipients": [],
+      "analyses": [
+        {
+          "source_key": "northstar-cart-reporting",
+          "comparison_key": "completed-net-sales",
+          "metric": "net_sales",
+          "unit": "USD",
+          "dimension": "channel",
+          "definition": "Completed order value after refunds, excluding tax and shipping.",
+          "population": "completed orders in the reporting channels",
+          "baseline_start": "2026-09-12T00:00:00+00:00",
+          "baseline_end": "2026-09-19T00:00:00+00:00",
+          "current_start": "2026-09-19T00:00:00+00:00",
+          "current_end": "2026-09-26T00:00:00+00:00",
+          "baseline": 1000,
+          "current": 1000,
+          "delta": 0,
+          "within_effect": null,
+          "mix_effect": null,
+          "contributions": {
+            "marketplace": 0,
+            "store": 0,
+            "web": 0
+          },
+          "query_refs": [
+            "query:northstar-cart:reporting:p04"
+          ]
+        }
+      ],
+      "semantic_status": "aligned",
+      "period": "p04",
+      "oracle_version": "corrected-fixture-builder"
+    }
+  },
+  "policy_basis": {
+    "harbor-help": "complete weighted current rate >= 12% OR between-period absolute delta >= 4pp; route support-operations",
+    "northstar-cart": "complete total change versus the immediately previous period >= $100 OR channel contribution to that change >= $80; zero-change high levels ignore"
+  }
+}

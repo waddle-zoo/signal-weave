@@ -1,0 +1,3608 @@
+{
+  "kind": "first-report-counterexample-probe-report",
+  "manifest_sha256": "01b49ef5607c74135a9bcfb968c247e109eb33bb6d3bdb62f35170860d1696c6",
+  "results": [
+    {
+      "company": "harbor-help",
+      "period": "p04",
+      "native": {
+        "receipt": {
+          "receipt_id": "receipt-98f80f7a96454a40b15cfb8b37fc03cd",
+          "idempotency_key": "probe:p04:harbor-help:native",
+          "request_fingerprint": "41d1d3973ed7c1866ef0d22b3b673932dceea4a8b157a21c1b2c3850c903ef4a",
+          "card_id": "card-weighted-resolution-sla-miss-rate-by-support-tier-eb23790c69a0",
+          "card_version": 1,
+          "actor": "harbor-help-owner",
+          "parent_receipt_id": null,
+          "workflow_step_key": null,
+          "context_provider": null,
+          "context_version": null,
+          "delivery_mode": "shadow",
+          "status": "delivery_disabled",
+          "outcome": "notify",
+          "delivery_enabled": false,
+          "delivery_method_keys": [
+            "support-operations"
+          ],
+          "created_at": "2026-10-02T15:19:27.080584Z"
+        },
+        "replayed": false,
+        "card": {
+          "id": "card-weighted-resolution-sla-miss-rate-by-support-tier-eb23790c69a0",
+          "title": "Weighted resolution-SLA miss rate by support tier",
+          "what_to_watch": "Weighted resolution-SLA miss rate for eligible resolved tickets by support tier.",
+          "why_watch": "Detect when the weighted current miss rate or its absolute change reaches the owner-defined notification threshold, and identify incomplete tier coverage.",
+          "watch_for": [
+            "Weighted current resolution-SLA miss rate is at least 12%.",
+            "Absolute change in weighted resolution-SLA miss rate versus the previous interval is at least 4 percentage points.",
+            "Any eligible support tier is missing."
+          ],
+          "questions": [
+            "What is the weighted current resolution-SLA miss rate across eligible resolved tickets, and does it meet or exceed 12%?",
+            "What is the absolute change in the weighted miss rate versus the immediately previous interval, and does it meet or exceed 4 percentage points?",
+            "Are all eligible support tiers present in the comparison population; if not, report insufficient data without estimating a rate?",
+            "What descriptive rate and mix effects account for the measured difference, without causal interpretation?"
+          ],
+          "evidence_requirements": {},
+          "decision_guidance": "Use eligible resolved tickets and weight the SLA miss rate by ticket count, not by averaging tier percentages. Notify Support Operations when the weighted current miss rate is at least 12% or its absolute change is at least 4 percentage points. If any eligible tier is missing, do not estimate a rate; route to the Data Steward. Keep rate and mix effects descriptive, not causal.",
+          "follow_up_guidance": "",
+          "sources": [
+            {
+              "key": "harbor-help-reporting",
+              "adapter": "company_mcp",
+              "resource": "report:resolution-sla",
+              "label": "Resolution SLA by support tier",
+              "parameters": {
+                "business_role": "reporting",
+                "available_comparison_windows": [
+                  "previous_period"
+                ]
+              },
+              "required": true,
+              "required_comparison_keys": [
+                "resolution-sla-rate"
+              ]
+            }
+          ],
+          "comparison_windows": [
+            "previous_period"
+          ],
+          "action_confidence_threshold": 0.7,
+          "owner": null,
+          "version": 1,
+          "max_source_age_hours": 24.0,
+          "delivery_methods": [
+            {
+              "key": "support-operations",
+              "outcome": "notify",
+              "label": "Support Operations",
+              "destination": "agent://support-operations",
+              "instructions": ""
+            },
+            {
+              "key": "support-data-steward",
+              "outcome": "insufficient_data",
+              "label": "Support Data Steward",
+              "destination": "agent://support-data-steward",
+              "instructions": ""
+            }
+          ],
+          "retrieval_mode": "fixed",
+          "investigation_mode": "none",
+          "max_investigation_sources": 3,
+          "investigation_threshold": 0.6,
+          "principal_id": "harbor-help-owner",
+          "principal_tenant": "synthetic-first-report",
+          "status": "approved",
+          "approved_by": "harbor-help-owner",
+          "approved_at": "2026-10-02T14:25:30.961723Z"
+        },
+        "retrieval": {
+          "card_id": "card-weighted-resolution-sla-miss-rate-by-support-tier-eb23790c69a0",
+          "goal": "Weighted resolution-SLA miss rate for eligible resolved tickets by support tier.\nPurpose: Detect when the weighted current miss rate or its absolute change reaches the owner-defined notification threshold, and identify incomplete tier coverage.\nLook for: Weighted current resolution-SLA miss rate is at least 12%.; Absolute change in weighted resolution-SLA miss rate versus the previous interval is at least 4 percentage points.; Any eligible support tier is missing.\nQuestions: What is the weighted current resolution-SLA miss rate across eligible resolved tickets, and does it meet or exceed 12%?; What is the absolute change in the weighted miss rate versus the immediately previous interval, and does it meet or exceed 4 percentage points?; Are all eligible support tiers present in the comparison population; if not, report insufficient data without estimating a rate?; What descriptive rate and mix effects account for the measured difference, without causal interpretation?\nDecision guidance: Use eligible resolved tickets and weight the SLA miss rate by ticket count, not by averaging tier percentages. Notify Support Operations when the weighted current miss rate is at least 12% or its absolute change is at least 4 percentage points. If any eligible tier is missing, do not estimate a rate; route to the Data Steward. Keep rate and mix effects descriptive, not causal.",
+          "anchor_source_keys": [
+            "harbor-help-reporting"
+          ],
+          "selected_sources": [
+            {
+              "key": "harbor-help-reporting",
+              "adapter": "company_mcp",
+              "resource": "report:resolution-sla",
+              "label": "Resolution SLA by support tier",
+              "parameters": {
+                "business_role": "reporting",
+                "available_comparison_windows": [
+                  "previous_period"
+                ]
+              },
+              "required": true,
+              "required_comparison_keys": [
+                "resolution-sla-rate"
+              ]
+            }
+          ],
+          "related_matches": [],
+          "omitted_matches": [],
+          "candidate_count": 0,
+          "candidate_limit": 40,
+          "truncated": false,
+          "candidate_strategy": "fixed-card-sources",
+          "context_version": null,
+          "evaluator": "fixed-card-sources",
+          "warnings": [
+            "Card retrieval_mode is fixed; no related source expansion was requested."
+          ]
+        },
+        "resources": [
+          {
+            "source_key": "harbor-help-reporting",
+            "adapter": "company_mcp",
+            "resource": "report:resolution-sla",
+            "title": "Resolution SLA by support tier",
+            "description": "Weighted resolution-SLA measurement over eligible resolved tickets.",
+            "observations": [],
+            "analytical_comparisons": [
+              {
+                "key": "resolution-sla-rate",
+                "metric": "sla_miss_rate",
+                "definition": "Missed resolution-SLA tickets divided by eligible resolved tickets.",
+                "population": "resolved priority tickets with an eligible resolution clock",
+                "unit": "ratio",
+                "dimension": "support_tier",
+                "kind": "rate",
+                "baseline_start": "2026-09-12T00:00:00Z",
+                "baseline_end": "2026-09-19T00:00:00Z",
+                "current_start": "2026-09-19T00:00:00Z",
+                "current_end": "2026-09-26T00:00:00Z",
+                "comparison_window": "previous_period",
+                "coverage": "complete",
+                "disjoint_segments": true,
+                "comparable": true,
+                "require_equal_duration": false,
+                "required": true,
+                "query_refs": [
+                  "query:harbor-help:reporting:p04"
+                ],
+                "baseline_total": {
+                  "value": null,
+                  "numerator": 26.0,
+                  "denominator": 200.0
+                },
+                "current_total": {
+                  "value": null,
+                  "numerator": 26.0,
+                  "denominator": 200.0
+                },
+                "segments": [
+                  {
+                    "segment": "enterprise",
+                    "baseline": {
+                      "value": null,
+                      "numerator": 10.0,
+                      "denominator": 80.0
+                    },
+                    "current": {
+                      "value": null,
+                      "numerator": 10.0,
+                      "denominator": 80.0
+                    }
+                  },
+                  {
+                    "segment": "self_serve",
+                    "baseline": {
+                      "value": null,
+                      "numerator": 16.0,
+                      "denominator": 120.0
+                    },
+                    "current": {
+                      "value": null,
+                      "numerator": 16.0,
+                      "denominator": 120.0
+                    }
+                  }
+                ]
+              }
+            ],
+            "evidence": [
+              {
+                "source_key": "harbor-help-reporting",
+                "subject_id": "harbor-help-p04-harbor-help-reporting",
+                "subject_label": "Resolution SLA by support tier",
+                "statement": "Bounded source result; interpret the comparison using the directory definition.",
+                "values": {
+                  "row_count": 400
+                },
+                "source_url": null,
+                "origin": "source",
+                "provenance": [
+                  "source:harbor-help-reporting:p04"
+                ]
+              }
+            ],
+            "metadata": {
+              "company_id": "harbor-help",
+              "period_id": "p04",
+              "as_of": "2026-09-26T02:00:00+00:00",
+              "period_contract": "closed UTC intervals compared to the immediately previous interval",
+              "replay_clock": "2026-09-26T02:00:00+00:00",
+              "signalweave_resolution": {
+                "authorized": true,
+                "reason": "authorized"
+              }
+            },
+            "error": null,
+            "source_url": null,
+            "captured_at": "2026-09-26T02:00:00Z",
+            "source_captured_at": "2026-09-26T01:00:00Z",
+            "contract": {
+              "tenant_id": "synthetic-first-report",
+              "domain": "harbor-help-reporting",
+              "scope": "resolved priority tickets with an eligible resolution clock",
+              "metric_names": [
+                "sla_miss_rate"
+              ],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [
+                "resolution-sla-rate"
+              ],
+              "population": "resolved priority tickets with an eligible resolution clock",
+              "grain": "weekly support interval",
+              "freshness_sla_hours": 48.0,
+              "lineage": [],
+              "roles": [
+                "reporting"
+              ],
+              "source_status": "healthy",
+              "authorized": true
+            }
+          }
+        ],
+        "plan": {
+          "card_id": "card-weighted-resolution-sla-miss-rate-by-support-tier-eb23790c69a0",
+          "card_version": 1,
+          "selected_source_keys": [
+            "harbor-help-reporting"
+          ],
+          "comparison_windows": [
+            "previous_period"
+          ],
+          "capabilities": [
+            "baseline_comparison",
+            "freshness_check",
+            "watch_for_checks",
+            "question_checks"
+          ],
+          "watch_for": [
+            "Weighted current resolution-SLA miss rate is at least 12%.",
+            "Absolute change in weighted resolution-SLA miss rate versus the previous interval is at least 4 percentage points.",
+            "Any eligible support tier is missing."
+          ],
+          "questions": [
+            "What is the weighted current resolution-SLA miss rate across eligible resolved tickets, and does it meet or exceed 12%?",
+            "What is the absolute change in the weighted miss rate versus the immediately previous interval, and does it meet or exceed 4 percentage points?",
+            "Are all eligible support tiers present in the comparison population; if not, report insufficient data without estimating a rate?",
+            "What descriptive rate and mix effects account for the measured difference, without causal interpretation?"
+          ],
+          "delivery_method_keys": [
+            "support-operations",
+            "support-data-steward"
+          ],
+          "compiled_by": "jev-latest",
+          "card_scope": "Weighted resolution-SLA miss rate for eligible resolved tickets by support tier.\nWhy: Detect when the weighted current miss rate or its absolute change reaches the owner-defined notification threshold, and identify incomplete tier coverage.",
+          "metric_query_plans": [],
+          "investigation_mode": "none",
+          "max_investigation_sources": 3,
+          "evidence_slots": [
+            {
+              "key": "source:harbor-help-reporting",
+              "role": "primary",
+              "question": "What changed in Resolution SLA by support tier that is relevant to the card's stated purpose and comparison window?",
+              "source_keys": [
+                "harbor-help-reporting"
+              ],
+              "source_refs": [
+                {
+                  "key": "harbor-help-reporting",
+                  "adapter": "company_mcp",
+                  "resource": "report:resolution-sla",
+                  "label": "Resolution SLA by support tier",
+                  "parameters": {
+                    "business_role": "reporting",
+                    "available_comparison_windows": [
+                      "previous_period"
+                    ]
+                  },
+                  "required": true,
+                  "required_comparison_keys": [
+                    "resolution-sla-rate"
+                  ]
+                }
+              ],
+              "required": true,
+              "completion_criteria": "Return complete, reconciled analytical comparisons: resolution-sla-rate",
+              "status": "pending",
+              "evidence_fact_ids": [],
+              "evidence_source_keys": []
+            },
+            {
+              "key": "question:1",
+              "role": "question",
+              "question": "What is the weighted current resolution-SLA miss rate across eligible resolved tickets, and does it meet or exceed 12%?",
+              "source_keys": [
+                "harbor-help-reporting"
+              ],
+              "source_refs": [],
+              "required": true,
+              "completion_criteria": "Return applicable evidence for a concrete answer, including a known no or zero; missing or unresolved evidence does not complete this question.",
+              "status": "pending",
+              "evidence_fact_ids": [],
+              "evidence_source_keys": []
+            },
+            {
+              "key": "question:2",
+              "role": "question",
+              "question": "What is the absolute change in the weighted miss rate versus the immediately previous interval, and does it meet or exceed 4 percentage points?",
+              "source_keys": [
+                "harbor-help-reporting"
+              ],
+              "source_refs": [],
+              "required": true,
+              "completion_criteria": "Return applicable evidence for a concrete answer, including a known no or zero; missing or unresolved evidence does not complete this question.",
+              "status": "pending",
+              "evidence_fact_ids": [],
+              "evidence_source_keys": []
+            },
+            {
+              "key": "question:3",
+              "role": "question",
+              "question": "Are all eligible support tiers present in the comparison population; if not, report insufficient data without estimating a rate?",
+              "source_keys": [
+                "harbor-help-reporting"
+              ],
+              "source_refs": [],
+              "required": true,
+              "completion_criteria": "Return applicable evidence for a concrete answer, including a known no or zero; missing or unresolved evidence does not complete this question.",
+              "status": "pending",
+              "evidence_fact_ids": [],
+              "evidence_source_keys": []
+            },
+            {
+              "key": "question:4",
+              "role": "question",
+              "question": "What descriptive rate and mix effects account for the measured difference, without causal interpretation?",
+              "source_keys": [
+                "harbor-help-reporting"
+              ],
+              "source_refs": [],
+              "required": true,
+              "completion_criteria": "Return applicable evidence for a concrete answer, including a known no or zero; missing or unresolved evidence does not complete this question.",
+              "status": "pending",
+              "evidence_fact_ids": [],
+              "evidence_source_keys": []
+            },
+            {
+              "key": "watch:1",
+              "role": "watch",
+              "question": "Weighted current resolution-SLA miss rate is at least 12%.",
+              "source_keys": [
+                "harbor-help-reporting"
+              ],
+              "source_refs": [],
+              "required": true,
+              "completion_criteria": "Return evidence that shows whether this watch item is present or absent.",
+              "status": "pending",
+              "evidence_fact_ids": [],
+              "evidence_source_keys": []
+            },
+            {
+              "key": "watch:2",
+              "role": "watch",
+              "question": "Absolute change in weighted resolution-SLA miss rate versus the previous interval is at least 4 percentage points.",
+              "source_keys": [
+                "harbor-help-reporting"
+              ],
+              "source_refs": [],
+              "required": true,
+              "completion_criteria": "Return evidence that shows whether this watch item is present or absent.",
+              "status": "pending",
+              "evidence_fact_ids": [],
+              "evidence_source_keys": []
+            },
+            {
+              "key": "watch:3",
+              "role": "watch",
+              "question": "Any eligible support tier is missing.",
+              "source_keys": [
+                "harbor-help-reporting"
+              ],
+              "source_refs": [],
+              "required": true,
+              "completion_criteria": "Return evidence that shows whether this watch item is present or absent.",
+              "status": "pending",
+              "evidence_fact_ids": [],
+              "evidence_source_keys": []
+            }
+          ]
+        },
+        "result": {
+          "card_id": "card-weighted-resolution-sla-miss-rate-by-support-tier-eb23790c69a0",
+          "outcome": "notify",
+          "delivery_methods": [
+            {
+              "key": "support-operations",
+              "outcome": "notify",
+              "label": "Support Operations",
+              "destination": "agent://support-operations",
+              "instructions": ""
+            }
+          ],
+          "summary": "Evaluated 0 observations and 1 computed analyses across 1 sources; 3 watch items and 4 questions were checked.",
+          "rationale": "Jev evaluated the card's typed watch, question, and outcome judgments; selected=notify, support=0.88; routed=notify.",
+          "confidence": 0.88,
+          "probabilities": {
+            "ignore": 0.07,
+            "investigate": 0.01,
+            "insufficient_data": 0.04,
+            "notify": 0.88
+          },
+          "watch_results": [
+            {
+              "key": "watch_0",
+              "watch_for": "Weighted current resolution-SLA miss rate is at least 12%.",
+              "status": "present",
+              "probability": 1.0,
+              "probabilities": {
+                "present": 1.0,
+                "unknown": 0.0,
+                "absent": 0.0
+              }
+            },
+            {
+              "key": "watch_1",
+              "watch_for": "Absolute change in weighted resolution-SLA miss rate versus the previous interval is at least 4 percentage points.",
+              "status": "absent",
+              "probability": 0.0,
+              "probabilities": {
+                "present": 0.0,
+                "unknown": 0.0,
+                "absent": 1.0
+              }
+            },
+            {
+              "key": "watch_2",
+              "watch_for": "Any eligible support tier is missing.",
+              "status": "absent",
+              "probability": 0.01,
+              "probabilities": {
+                "present": 0.01,
+                "unknown": 0.12,
+                "absent": 0.87
+              }
+            }
+          ],
+          "question_results": [
+            {
+              "key": "question_0",
+              "question": "What is the weighted current resolution-SLA miss rate across eligible resolved tickets, and does it meet or exceed 12%?",
+              "status": "supported",
+              "probability": 0.94
+            },
+            {
+              "key": "question_1",
+              "question": "What is the absolute change in the weighted miss rate versus the immediately previous interval, and does it meet or exceed 4 percentage points?",
+              "status": "supported",
+              "probability": 0.92
+            },
+            {
+              "key": "question_2",
+              "question": "Are all eligible support tiers present in the comparison population; if not, report insufficient data without estimating a rate?",
+              "status": "supported",
+              "probability": 0.93
+            },
+            {
+              "key": "question_3",
+              "question": "What descriptive rate and mix effects account for the measured difference, without causal interpretation?",
+              "status": "supported",
+              "probability": 0.81
+            }
+          ],
+          "evidence_findings": [],
+          "evidence": [
+            {
+              "source_key": "harbor-help-reporting",
+              "subject_id": "harbor-help-p04-harbor-help-reporting",
+              "subject_label": "Resolution SLA by support tier",
+              "statement": "Bounded source result; interpret the comparison using the directory definition.",
+              "values": {
+                "row_count": 400
+              },
+              "source_url": null,
+              "origin": "source",
+              "provenance": [
+                "source:harbor-help-reporting:p04"
+              ]
+            },
+            {
+              "source_key": "harbor-help-reporting",
+              "subject_id": "resolution-sla-rate",
+              "subject_label": "sla_miss_rate",
+              "statement": "sla_miss_rate: 0.13 to 0.13; measured difference 0. symmetric_rate_decomposition_v1 reconciles 2 segments. This is an accounting decomposition, not a causal explanation.",
+              "values": {
+                "source_key": "harbor-help-reporting",
+                "comparison_key": "resolution-sla-rate",
+                "metric": "sla_miss_rate",
+                "dimension": "support_tier",
+                "unit": "ratio",
+                "method": "symmetric_rate_decomposition_v1",
+                "status": "complete",
+                "required": true,
+                "input_digest": "91899e10bbbbfa399f8ebd2670d802b46ea446c148b2414e6046d5fe2a74fd9d",
+                "query_refs": [
+                  "query:harbor-help:reporting:p04"
+                ],
+                "comparison": {
+                  "key": "resolution-sla-rate",
+                  "metric": "sla_miss_rate",
+                  "definition": "Missed resolution-SLA tickets divided by eligible resolved tickets.",
+                  "population": "resolved priority tickets with an eligible resolution clock",
+                  "unit": "ratio",
+                  "dimension": "support_tier",
+                  "kind": "rate",
+                  "baseline_start": "2026-09-12T00:00:00Z",
+                  "baseline_end": "2026-09-19T00:00:00Z",
+                  "current_start": "2026-09-19T00:00:00Z",
+                  "current_end": "2026-09-26T00:00:00Z",
+                  "comparison_window": "previous_period",
+                  "coverage": "complete",
+                  "disjoint_segments": true,
+                  "comparable": true,
+                  "require_equal_duration": false,
+                  "required": true,
+                  "query_refs": [
+                    "query:harbor-help:reporting:p04"
+                  ],
+                  "baseline_total": {
+                    "value": null,
+                    "numerator": 26.0,
+                    "denominator": 200.0
+                  },
+                  "current_total": {
+                    "value": null,
+                    "numerator": 26.0,
+                    "denominator": 200.0
+                  },
+                  "segments": [
+                    {
+                      "segment": "enterprise",
+                      "baseline": {
+                        "value": null,
+                        "numerator": 10.0,
+                        "denominator": 80.0
+                      },
+                      "current": {
+                        "value": null,
+                        "numerator": 10.0,
+                        "denominator": 80.0
+                      }
+                    },
+                    {
+                      "segment": "self_serve",
+                      "baseline": {
+                        "value": null,
+                        "numerator": 16.0,
+                        "denominator": 120.0
+                      },
+                      "current": {
+                        "value": null,
+                        "numerator": 16.0,
+                        "denominator": 120.0
+                      }
+                    }
+                  ]
+                },
+                "baseline": 0.13,
+                "current": 0.13,
+                "delta": 0.0,
+                "residual": 0.0,
+                "within_effect": 0.0,
+                "mix_effect": 0.0,
+                "contributions": [
+                  {
+                    "segment": "enterprise",
+                    "baseline": 0.125,
+                    "current": 0.125,
+                    "contribution": 0.0,
+                    "within_effect": 0.0,
+                    "mix_effect": 0.0
+                  },
+                  {
+                    "segment": "self_serve",
+                    "baseline": 0.13333333333333333,
+                    "current": 0.13333333333333333,
+                    "contribution": 0.0,
+                    "within_effect": 0.0,
+                    "mix_effect": 0.0
+                  }
+                ],
+                "issues": [],
+                "claim_type": "accounting_decomposition",
+                "limitations": [
+                  "Contributions explain the measured difference, not its causal mechanism.",
+                  "No sampling uncertainty or statistical significance is estimated from these aggregates.",
+                  "Coverage, population and comparability depend on the source measurement contract."
+                ]
+              },
+              "source_url": null,
+              "origin": "derived",
+              "provenance": [
+                "query:harbor-help:reporting:p04"
+              ]
+            }
+          ],
+          "observations": [],
+          "analyses": [
+            {
+              "source_key": "harbor-help-reporting",
+              "comparison_key": "resolution-sla-rate",
+              "metric": "sla_miss_rate",
+              "dimension": "support_tier",
+              "unit": "ratio",
+              "method": "symmetric_rate_decomposition_v1",
+              "status": "complete",
+              "required": true,
+              "input_digest": "91899e10bbbbfa399f8ebd2670d802b46ea446c148b2414e6046d5fe2a74fd9d",
+              "query_refs": [
+                "query:harbor-help:reporting:p04"
+              ],
+              "comparison": {
+                "key": "resolution-sla-rate",
+                "metric": "sla_miss_rate",
+                "definition": "Missed resolution-SLA tickets divided by eligible resolved tickets.",
+                "population": "resolved priority tickets with an eligible resolution clock",
+                "unit": "ratio",
+                "dimension": "support_tier",
+                "kind": "rate",
+                "baseline_start": "2026-09-12T00:00:00Z",
+                "baseline_end": "2026-09-19T00:00:00Z",
+                "current_start": "2026-09-19T00:00:00Z",
+                "current_end": "2026-09-26T00:00:00Z",
+                "comparison_window": "previous_period",
+                "coverage": "complete",
+                "disjoint_segments": true,
+                "comparable": true,
+                "require_equal_duration": false,
+                "required": true,
+                "query_refs": [
+                  "query:harbor-help:reporting:p04"
+                ],
+                "baseline_total": {
+                  "value": null,
+                  "numerator": 26.0,
+                  "denominator": 200.0
+                },
+                "current_total": {
+                  "value": null,
+                  "numerator": 26.0,
+                  "denominator": 200.0
+                },
+                "segments": [
+                  {
+                    "segment": "enterprise",
+                    "baseline": {
+                      "value": null,
+                      "numerator": 10.0,
+                      "denominator": 80.0
+                    },
+                    "current": {
+                      "value": null,
+                      "numerator": 10.0,
+                      "denominator": 80.0
+                    }
+                  },
+                  {
+                    "segment": "self_serve",
+                    "baseline": {
+                      "value": null,
+                      "numerator": 16.0,
+                      "denominator": 120.0
+                    },
+                    "current": {
+                      "value": null,
+                      "numerator": 16.0,
+                      "denominator": 120.0
+                    }
+                  }
+                ]
+              },
+              "baseline": 0.13,
+              "current": 0.13,
+              "delta": 0.0,
+              "residual": 0.0,
+              "within_effect": 0.0,
+              "mix_effect": 0.0,
+              "contributions": [
+                {
+                  "segment": "enterprise",
+                  "baseline": 0.125,
+                  "current": 0.125,
+                  "contribution": 0.0,
+                  "within_effect": 0.0,
+                  "mix_effect": 0.0
+                },
+                {
+                  "segment": "self_serve",
+                  "baseline": 0.13333333333333333,
+                  "current": 0.13333333333333333,
+                  "contribution": 0.0,
+                  "within_effect": 0.0,
+                  "mix_effect": 0.0
+                }
+              ],
+              "issues": [],
+              "claim_type": "accounting_decomposition",
+              "limitations": [
+                "Contributions explain the measured difference, not its causal mechanism.",
+                "No sampling uncertainty or statistical significance is estimated from these aggregates.",
+                "Coverage, population and comparability depend on the source measurement contract."
+              ]
+            }
+          ],
+          "source_keys": [
+            "harbor-help-reporting"
+          ],
+          "retrieval": {
+            "card_id": "card-weighted-resolution-sla-miss-rate-by-support-tier-eb23790c69a0",
+            "goal": "Weighted resolution-SLA miss rate for eligible resolved tickets by support tier.\nPurpose: Detect when the weighted current miss rate or its absolute change reaches the owner-defined notification threshold, and identify incomplete tier coverage.\nLook for: Weighted current resolution-SLA miss rate is at least 12%.; Absolute change in weighted resolution-SLA miss rate versus the previous interval is at least 4 percentage points.; Any eligible support tier is missing.\nQuestions: What is the weighted current resolution-SLA miss rate across eligible resolved tickets, and does it meet or exceed 12%?; What is the absolute change in the weighted miss rate versus the immediately previous interval, and does it meet or exceed 4 percentage points?; Are all eligible support tiers present in the comparison population; if not, report insufficient data without estimating a rate?; What descriptive rate and mix effects account for the measured difference, without causal interpretation?\nDecision guidance: Use eligible resolved tickets and weight the SLA miss rate by ticket count, not by averaging tier percentages. Notify Support Operations when the weighted current miss rate is at least 12% or its absolute change is at least 4 percentage points. If any eligible tier is missing, do not estimate a rate; route to the Data Steward. Keep rate and mix effects descriptive, not causal.",
+            "anchor_source_keys": [
+              "harbor-help-reporting"
+            ],
+            "selected_sources": [
+              {
+                "key": "harbor-help-reporting",
+                "adapter": "company_mcp",
+                "resource": "report:resolution-sla",
+                "label": "Resolution SLA by support tier",
+                "parameters": {
+                  "business_role": "reporting",
+                  "available_comparison_windows": [
+                    "previous_period"
+                  ]
+                },
+                "required": true,
+                "required_comparison_keys": [
+                  "resolution-sla-rate"
+                ]
+              }
+            ],
+            "related_matches": [],
+            "omitted_matches": [],
+            "candidate_count": 0,
+            "candidate_limit": 40,
+            "truncated": false,
+            "candidate_strategy": "fixed-card-sources",
+            "context_version": null,
+            "evaluator": "fixed-card-sources",
+            "warnings": [
+              "Card retrieval_mode is fixed; no related source expansion was requested."
+            ]
+          },
+          "context": null,
+          "investigation": null,
+          "evidence_plan": {
+            "objective": "Detect when the weighted current miss rate or its absolute change reaches the owner-defined notification threshold, and identify incomplete tier coverage.",
+            "slots": [
+              {
+                "key": "source:harbor-help-reporting",
+                "role": "primary",
+                "question": "What changed in Resolution SLA by support tier that is relevant to the card's stated purpose and comparison window?",
+                "source_keys": [
+                  "harbor-help-reporting"
+                ],
+                "source_refs": [
+                  {
+                    "key": "harbor-help-reporting",
+                    "adapter": "company_mcp",
+                    "resource": "report:resolution-sla",
+                    "label": "Resolution SLA by support tier",
+                    "parameters": {
+                      "business_role": "reporting",
+                      "available_comparison_windows": [
+                        "previous_period"
+                      ]
+                    },
+                    "required": true,
+                    "required_comparison_keys": [
+                      "resolution-sla-rate"
+                    ]
+                  }
+                ],
+                "required": true,
+                "completion_criteria": "Return complete, reconciled analytical comparisons: resolution-sla-rate",
+                "status": "fulfilled",
+                "evidence_fact_ids": [],
+                "evidence_source_keys": [
+                  "harbor-help-reporting"
+                ]
+              },
+              {
+                "key": "question:1",
+                "role": "question",
+                "question": "What is the weighted current resolution-SLA miss rate across eligible resolved tickets, and does it meet or exceed 12%?",
+                "source_keys": [
+                  "harbor-help-reporting"
+                ],
+                "source_refs": [],
+                "required": true,
+                "completion_criteria": "Return applicable evidence for a concrete answer, including a known no or zero; missing or unresolved evidence does not complete this question.",
+                "status": "fulfilled",
+                "evidence_fact_ids": [],
+                "evidence_source_keys": []
+              },
+              {
+                "key": "question:2",
+                "role": "question",
+                "question": "What is the absolute change in the weighted miss rate versus the immediately previous interval, and does it meet or exceed 4 percentage points?",
+                "source_keys": [
+                  "harbor-help-reporting"
+                ],
+                "source_refs": [],
+                "required": true,
+                "completion_criteria": "Return applicable evidence for a concrete answer, including a known no or zero; missing or unresolved evidence does not complete this question.",
+                "status": "fulfilled",
+                "evidence_fact_ids": [],
+                "evidence_source_keys": []
+              },
+              {
+                "key": "question:3",
+                "role": "question",
+                "question": "Are all eligible support tiers present in the comparison population; if not, report insufficient data without estimating a rate?",
+                "source_keys": [
+                  "harbor-help-reporting"
+                ],
+                "source_refs": [],
+                "required": true,
+                "completion_criteria": "Return applicable evidence for a concrete answer, including a known no or zero; missing or unresolved evidence does not complete this question.",
+                "status": "fulfilled",
+                "evidence_fact_ids": [],
+                "evidence_source_keys": []
+              },
+              {
+                "key": "question:4",
+                "role": "question",
+                "question": "What descriptive rate and mix effects account for the measured difference, without causal interpretation?",
+                "source_keys": [
+                  "harbor-help-reporting"
+                ],
+                "source_refs": [],
+                "required": true,
+                "completion_criteria": "Return applicable evidence for a concrete answer, including a known no or zero; missing or unresolved evidence does not complete this question.",
+                "status": "fulfilled",
+                "evidence_fact_ids": [],
+                "evidence_source_keys": []
+              },
+              {
+                "key": "watch:1",
+                "role": "watch",
+                "question": "Weighted current resolution-SLA miss rate is at least 12%.",
+                "source_keys": [
+                  "harbor-help-reporting"
+                ],
+                "source_refs": [],
+                "required": true,
+                "completion_criteria": "Return evidence that shows whether this watch item is present or absent.",
+                "status": "fulfilled",
+                "evidence_fact_ids": [],
+                "evidence_source_keys": []
+              },
+              {
+                "key": "watch:2",
+                "role": "watch",
+                "question": "Absolute change in weighted resolution-SLA miss rate versus the previous interval is at least 4 percentage points.",
+                "source_keys": [
+                  "harbor-help-reporting"
+                ],
+                "source_refs": [],
+                "required": true,
+                "completion_criteria": "Return evidence that shows whether this watch item is present or absent.",
+                "status": "fulfilled",
+                "evidence_fact_ids": [],
+                "evidence_source_keys": []
+              },
+              {
+                "key": "watch:3",
+                "role": "watch",
+                "question": "Any eligible support tier is missing.",
+                "source_keys": [
+                  "harbor-help-reporting"
+                ],
+                "source_refs": [],
+                "required": true,
+                "completion_criteria": "Return evidence that shows whether this watch item is present or absent.",
+                "status": "fulfilled",
+                "evidence_fact_ids": [],
+                "evidence_source_keys": []
+              }
+            ],
+            "status": "complete",
+            "missing_slot_keys": [],
+            "conflicting_slot_keys": [],
+            "warnings": [],
+            "generated_by": "signalweave",
+            "context_version": null
+          },
+          "workflow": {
+            "status": "ready",
+            "step_key": "deliver",
+            "action": "deliver",
+            "objective": "Detect when the weighted current miss rate or its absolute change reaches the owner-defined notification threshold, and identify incomplete tier coverage.",
+            "instructions": "Deliver the evidence bundle to the configured destination. Do not invent a destination or change the outcome.",
+            "required_source_keys": [
+              "harbor-help-reporting"
+            ],
+            "completion_criteria": "The caller-owned delivery adapter accepted the evidence bundle.",
+            "delivery_method_keys": [
+              "support-operations"
+            ],
+            "evidence_plan": {
+              "objective": "Detect when the weighted current miss rate or its absolute change reaches the owner-defined notification threshold, and identify incomplete tier coverage.",
+              "slots": [
+                {
+                  "key": "source:harbor-help-reporting",
+                  "role": "primary",
+                  "question": "What changed in Resolution SLA by support tier that is relevant to the card's stated purpose and comparison window?",
+                  "source_keys": [
+                    "harbor-help-reporting"
+                  ],
+                  "source_refs": [
+                    {
+                      "key": "harbor-help-reporting",
+                      "adapter": "company_mcp",
+                      "resource": "report:resolution-sla",
+                      "label": "Resolution SLA by support tier",
+                      "parameters": {
+                        "business_role": "reporting",
+                        "available_comparison_windows": [
+                          "previous_period"
+                        ]
+                      },
+                      "required": true,
+                      "required_comparison_keys": [
+                        "resolution-sla-rate"
+                      ]
+                    }
+                  ],
+                  "required": true,
+                  "completion_criteria": "Return complete, reconciled analytical comparisons: resolution-sla-rate",
+                  "status": "fulfilled",
+                  "evidence_fact_ids": [],
+                  "evidence_source_keys": [
+                    "harbor-help-reporting"
+                  ]
+                },
+                {
+                  "key": "question:1",
+                  "role": "question",
+                  "question": "What is the weighted current resolution-SLA miss rate across eligible resolved tickets, and does it meet or exceed 12%?",
+                  "source_keys": [
+                    "harbor-help-reporting"
+                  ],
+                  "source_refs": [],
+                  "required": true,
+                  "completion_criteria": "Return applicable evidence for a concrete answer, including a known no or zero; missing or unresolved evidence does not complete this question.",
+                  "status": "fulfilled",
+                  "evidence_fact_ids": [],
+                  "evidence_source_keys": []
+                },
+                {
+                  "key": "question:2",
+                  "role": "question",
+                  "question": "What is the absolute change in the weighted miss rate versus the immediately previous interval, and does it meet or exceed 4 percentage points?",
+                  "source_keys": [
+                    "harbor-help-reporting"
+                  ],
+                  "source_refs": [],
+                  "required": true,
+                  "completion_criteria": "Return applicable evidence for a concrete answer, including a known no or zero; missing or unresolved evidence does not complete this question.",
+                  "status": "fulfilled",
+                  "evidence_fact_ids": [],
+                  "evidence_source_keys": []
+                },
+                {
+                  "key": "question:3",
+                  "role": "question",
+                  "question": "Are all eligible support tiers present in the comparison population; if not, report insufficient data without estimating a rate?",
+                  "source_keys": [
+                    "harbor-help-reporting"
+                  ],
+                  "source_refs": [],
+                  "required": true,
+                  "completion_criteria": "Return applicable evidence for a concrete answer, including a known no or zero; missing or unresolved evidence does not complete this question.",
+                  "status": "fulfilled",
+                  "evidence_fact_ids": [],
+                  "evidence_source_keys": []
+                },
+                {
+                  "key": "question:4",
+                  "role": "question",
+                  "question": "What descriptive rate and mix effects account for the measured difference, without causal interpretation?",
+                  "source_keys": [
+                    "harbor-help-reporting"
+                  ],
+                  "source_refs": [],
+                  "required": true,
+                  "completion_criteria": "Return applicable evidence for a concrete answer, including a known no or zero; missing or unresolved evidence does not complete this question.",
+                  "status": "fulfilled",
+                  "evidence_fact_ids": [],
+                  "evidence_source_keys": []
+                },
+                {
+                  "key": "watch:1",
+                  "role": "watch",
+                  "question": "Weighted current resolution-SLA miss rate is at least 12%.",
+                  "source_keys": [
+                    "harbor-help-reporting"
+                  ],
+                  "source_refs": [],
+                  "required": true,
+                  "completion_criteria": "Return evidence that shows whether this watch item is present or absent.",
+                  "status": "fulfilled",
+                  "evidence_fact_ids": [],
+                  "evidence_source_keys": []
+                },
+                {
+                  "key": "watch:2",
+                  "role": "watch",
+                  "question": "Absolute change in weighted resolution-SLA miss rate versus the previous interval is at least 4 percentage points.",
+                  "source_keys": [
+                    "harbor-help-reporting"
+                  ],
+                  "source_refs": [],
+                  "required": true,
+                  "completion_criteria": "Return evidence that shows whether this watch item is present or absent.",
+                  "status": "fulfilled",
+                  "evidence_fact_ids": [],
+                  "evidence_source_keys": []
+                },
+                {
+                  "key": "watch:3",
+                  "role": "watch",
+                  "question": "Any eligible support tier is missing.",
+                  "source_keys": [
+                    "harbor-help-reporting"
+                  ],
+                  "source_refs": [],
+                  "required": true,
+                  "completion_criteria": "Return evidence that shows whether this watch item is present or absent.",
+                  "status": "fulfilled",
+                  "evidence_fact_ids": [],
+                  "evidence_source_keys": []
+                }
+              ],
+              "status": "complete",
+              "missing_slot_keys": [],
+              "conflicting_slot_keys": [],
+              "warnings": [],
+              "generated_by": "signalweave",
+              "context_version": null
+            }
+          },
+          "telemetry": {
+            "wall_time_ms": 368.54916700394824,
+            "source_fetch_ms": 7.293583010323346,
+            "source_count": 1,
+            "observation_count": 0,
+            "evidence_count": 2,
+            "jev_requests": 1,
+            "jev_input_tokens": 8040,
+            "jev_output_tokens": 241,
+            "jev_payload_bytes": 24561,
+            "jev_payload_budget_bytes": 4000000,
+            "query_calls": 0,
+            "query_bytes_scanned": 0,
+            "query_cache_hits": 0,
+            "query_cache_misses": 0,
+            "warnings": []
+          },
+          "evaluated_at": "2026-10-02T15:19:27.453526Z",
+          "evaluator": "jev-latest",
+          "report": {
+            "card_id": "card-weighted-resolution-sla-miss-rate-by-support-tier-eb23790c69a0",
+            "title": "Weighted resolution-SLA miss rate by support tier",
+            "outcome": "notify",
+            "purpose": "Detect when the weighted current miss rate or its absolute change reaches the owner-defined notification threshold, and identify incomplete tier coverage.",
+            "intended_audience": "Card owner and caller-owned delivery workflow",
+            "next_step": "Deliver the evidence bundle to the configured destination. Do not invent a destination or change the outcome.",
+            "status": "complete",
+            "numeric_claims": [
+              {
+                "source_key": "harbor-help-reporting",
+                "comparison_key": "resolution-sla-rate",
+                "metric": "sla_miss_rate",
+                "dimension": "support_tier",
+                "unit": "ratio",
+                "method": "symmetric_rate_decomposition_v1",
+                "claim_type": "accounting_decomposition",
+                "baseline": 0.13,
+                "current": 0.13,
+                "delta": 0.0,
+                "residual": 0.0,
+                "within_effect": 0.0,
+                "mix_effect": 0.0,
+                "contributions": [
+                  {
+                    "segment": "enterprise",
+                    "baseline": 0.125,
+                    "current": 0.125,
+                    "contribution": 0.0,
+                    "within_effect": 0.0,
+                    "mix_effect": 0.0
+                  },
+                  {
+                    "segment": "self_serve",
+                    "baseline": 0.13333333333333333,
+                    "current": 0.13333333333333333,
+                    "contribution": 0.0,
+                    "within_effect": 0.0,
+                    "mix_effect": 0.0
+                  }
+                ],
+                "provenance_key": "[\"harbor-help-reporting\",\"resolution-sla-rate\"]"
+              }
+            ],
+            "provenance": [
+              {
+                "source_key": "harbor-help-reporting",
+                "comparison_key": "resolution-sla-rate",
+                "query_refs": [
+                  "query:harbor-help:reporting:p04"
+                ],
+                "definition": "Missed resolution-SLA tickets divided by eligible resolved tickets.",
+                "population": "resolved priority tickets with an eligible resolution clock",
+                "metric": "sla_miss_rate",
+                "dimension": "support_tier",
+                "unit": "ratio",
+                "baseline_period": {
+                  "start": "2026-09-12T00:00:00Z",
+                  "end": "2026-09-19T00:00:00Z"
+                },
+                "current_period": {
+                  "start": "2026-09-19T00:00:00Z",
+                  "end": "2026-09-26T00:00:00Z"
+                },
+                "coverage": "complete",
+                "comparable": true,
+                "input_digest": "91899e10bbbbfa399f8ebd2670d802b46ea446c148b2414e6046d5fe2a74fd9d"
+              }
+            ],
+            "coverage": [
+              {
+                "key": "[\"harbor-help-reporting\",\"resolution-sla-rate\"]",
+                "kind": "analysis",
+                "required": true,
+                "status": "satisfied",
+                "source_keys": [
+                  "harbor-help-reporting"
+                ],
+                "detail": "Validated and recomputed from the source comparison contract.",
+                "judgment": null,
+                "probability": null
+              },
+              {
+                "key": "harbor-help-reporting",
+                "kind": "source",
+                "required": true,
+                "status": "satisfied",
+                "source_keys": [
+                  "harbor-help-reporting"
+                ],
+                "detail": "Source evidence was returned; analytical completeness is assessed separately.",
+                "judgment": null,
+                "probability": null
+              },
+              {
+                "key": "source:harbor-help-reporting",
+                "kind": "evidence_slot",
+                "required": true,
+                "status": "satisfied",
+                "source_keys": [
+                  "harbor-help-reporting"
+                ],
+                "detail": "Return complete, reconciled analytical comparisons: resolution-sla-rate",
+                "judgment": null,
+                "probability": null
+              },
+              {
+                "key": "question:1",
+                "kind": "evidence_slot",
+                "required": true,
+                "status": "satisfied",
+                "source_keys": [
+                  "harbor-help-reporting"
+                ],
+                "detail": "Return applicable evidence for a concrete answer, including a known no or zero; missing or unresolved evidence does not complete this question.",
+                "judgment": null,
+                "probability": null
+              },
+              {
+                "key": "question:2",
+                "kind": "evidence_slot",
+                "required": true,
+                "status": "satisfied",
+                "source_keys": [
+                  "harbor-help-reporting"
+                ],
+                "detail": "Return applicable evidence for a concrete answer, including a known no or zero; missing or unresolved evidence does not complete this question.",
+                "judgment": null,
+                "probability": null
+              },
+              {
+                "key": "question:3",
+                "kind": "evidence_slot",
+                "required": true,
+                "status": "satisfied",
+                "source_keys": [
+                  "harbor-help-reporting"
+                ],
+                "detail": "Return applicable evidence for a concrete answer, including a known no or zero; missing or unresolved evidence does not complete this question.",
+                "judgment": null,
+                "probability": null
+              },
+              {
+                "key": "question:4",
+                "kind": "evidence_slot",
+                "required": true,
+                "status": "satisfied",
+                "source_keys": [
+                  "harbor-help-reporting"
+                ],
+                "detail": "Return applicable evidence for a concrete answer, including a known no or zero; missing or unresolved evidence does not complete this question.",
+                "judgment": null,
+                "probability": null
+              },
+              {
+                "key": "watch:1",
+                "kind": "evidence_slot",
+                "required": true,
+                "status": "satisfied",
+                "source_keys": [
+                  "harbor-help-reporting"
+                ],
+                "detail": "Return evidence that shows whether this watch item is present or absent.",
+                "judgment": null,
+                "probability": null
+              },
+              {
+                "key": "watch:2",
+                "kind": "evidence_slot",
+                "required": true,
+                "status": "satisfied",
+                "source_keys": [
+                  "harbor-help-reporting"
+                ],
+                "detail": "Return evidence that shows whether this watch item is present or absent.",
+                "judgment": null,
+                "probability": null
+              },
+              {
+                "key": "watch:3",
+                "kind": "evidence_slot",
+                "required": true,
+                "status": "satisfied",
+                "source_keys": [
+                  "harbor-help-reporting"
+                ],
+                "detail": "Return evidence that shows whether this watch item is present or absent.",
+                "judgment": null,
+                "probability": null
+              },
+              {
+                "key": "question:1",
+                "kind": "question",
+                "required": true,
+                "status": "satisfied",
+                "source_keys": [],
+                "detail": "What is the weighted current resolution-SLA miss rate across eligible resolved tickets, and does it meet or exceed 12%?",
+                "judgment": "supported",
+                "probability": 0.94
+              },
+              {
+                "key": "question:2",
+                "kind": "question",
+                "required": true,
+                "status": "satisfied",
+                "source_keys": [],
+                "detail": "What is the absolute change in the weighted miss rate versus the immediately previous interval, and does it meet or exceed 4 percentage points?",
+                "judgment": "supported",
+                "probability": 0.92
+              },
+              {
+                "key": "question:3",
+                "kind": "question",
+                "required": true,
+                "status": "satisfied",
+                "source_keys": [],
+                "detail": "Are all eligible support tiers present in the comparison population; if not, report insufficient data without estimating a rate?",
+                "judgment": "supported",
+                "probability": 0.93
+              },
+              {
+                "key": "question:4",
+                "kind": "question",
+                "required": true,
+                "status": "satisfied",
+                "source_keys": [],
+                "detail": "What descriptive rate and mix effects account for the measured difference, without causal interpretation?",
+                "judgment": "supported",
+                "probability": 0.81
+              },
+              {
+                "key": "watch:1",
+                "kind": "watch",
+                "required": true,
+                "status": "satisfied",
+                "source_keys": [],
+                "detail": "Weighted current resolution-SLA miss rate is at least 12%.",
+                "judgment": "present",
+                "probability": 1.0
+              },
+              {
+                "key": "watch:2",
+                "kind": "watch",
+                "required": true,
+                "status": "satisfied",
+                "source_keys": [],
+                "detail": "Absolute change in weighted resolution-SLA miss rate versus the previous interval is at least 4 percentage points.",
+                "judgment": "absent",
+                "probability": 0.0
+              },
+              {
+                "key": "watch:3",
+                "kind": "watch",
+                "required": true,
+                "status": "satisfied",
+                "source_keys": [],
+                "detail": "Any eligible support tier is missing.",
+                "judgment": "absent",
+                "probability": 0.01
+              }
+            ],
+            "limitations": [
+              "This artifact reports bounded analytical coverage; it is not independently certified truth.",
+              "Accounting contributions explain measured differences and do not establish causality or mechanism."
+            ],
+            "unresolved_questions": [],
+            "intended_routes_not_delivered": [
+              {
+                "key": "support-operations",
+                "outcome": "notify",
+                "label": "Support Operations",
+                "destination": "agent://support-operations",
+                "reason": "Caller owns delivery; not sent."
+              }
+            ],
+            "blockers": [],
+            "warnings": [],
+            "evaluated_at": "2026-10-02T15:19:27.453526Z",
+            "evaluator": "jev-latest"
+          },
+          "report_markdown": "# Investigation report: Weighted resolution-SLA miss rate by support tier\n\n- Decision: **notify** \u00b7 Status: **complete**\n- Intended route audience: Support Operations \\(agent://support-operations\\)\n- Goal: Detect when the weighted current miss rate or its absolute change reaches the owner-defined notification threshold, and identify incomplete tier coverage.\n\n## Measured changes\n- **sla\\_miss\\_rate** (ratio): 0.13 \u2192 0.13 (\u0394 0; method `symmetric\\_rate\\_decomposition\\_v1`); top contributors: enterprise: 0, self\\_serve: 0.\n\n## Next step\n- Deliver the evidence bundle to the configured destination. Do not invent a destination or change the outcome. (caller-owned handoff; not a verified fact.)\n\n<details>\n<summary>Audit appendix: policy checks, coverage, limitations, and provenance</summary>\n\n### Policy checks (Jev judgments)\nThese are routing signals from evaluated evidence, not proof or confidence in truth.\n- What is the weighted current resolution-SLA miss rate across eligible resolved tickets, and does it meet or exceed 12%? \u2014 judgment: **supported**; P(supported) 0.94.\n- What is the absolute change in the weighted miss rate versus the immediately previous interval, and does it meet or exceed 4 percentage points? \u2014 judgment: **supported**; P(supported) 0.92.\n- Are all eligible support tiers present in the comparison population; if not, report insufficient data without estimating a rate? \u2014 judgment: **supported**; P(supported) 0.93.\n- What descriptive rate and mix effects account for the measured difference, without causal interpretation? \u2014 judgment: **supported**; P(supported) 0.81.\n- Weighted current resolution-SLA miss rate is at least 12%. \u2014 judgment: **present**; P(present) 1.\n- Absolute change in weighted resolution-SLA miss rate versus the previous interval is at least 4 percentage points. \u2014 judgment: **absent**; P(present) 0.\n- Any eligible support tier is missing. \u2014 judgment: **absent**; P(present) 0.01.\n\n### Intended routes not delivered\n- `support-operations` \u2192 `agent://support-operations` (Support Operations): Caller owns delivery; not sent.\n\n### Coverage\n- `\\[\"harbor-help-reporting\",\"resolution-sla-rate\"\\]` \u2014 satisfied (required): Validated and recomputed from the source comparison contract.\n- `harbor-help-reporting` \u2014 satisfied (required): Source evidence was returned; analytical completeness is assessed separately.\n- `source:harbor-help-reporting` \u2014 satisfied (required): Return complete, reconciled analytical comparisons: resolution-sla-rate\n- `question:1` \u2014 satisfied (required): Return applicable evidence for a concrete answer, including a known no or zero; missing or unresolved evidence does not complete this question.\n- `question:2` \u2014 satisfied (required): Return applicable evidence for a concrete answer, including a known no or zero; missing or unresolved evidence does not complete this question.\n- `question:3` \u2014 satisfied (required): Return applicable evidence for a concrete answer, including a known no or zero; missing or unresolved evidence does not complete this question.\n- `question:4` \u2014 satisfied (required): Return applicable evidence for a concrete answer, including a known no or zero; missing or unresolved evidence does not complete this question.\n- `watch:1` \u2014 satisfied (required): Return evidence that shows whether this watch item is present or absent.\n- `watch:2` \u2014 satisfied (required): Return evidence that shows whether this watch item is present or absent.\n- `watch:3` \u2014 satisfied (required): Return evidence that shows whether this watch item is present or absent.\n\n### Limitations\n- This artifact reports bounded analytical coverage; it is not independently certified truth.\n- Accounting contributions explain measured differences and do not establish causality or mechanism.\n\n### Provenance\n- `harbor-help-reporting:resolution-sla-rate` \u2014 definition: Missed resolution-SLA tickets divided by eligible resolved tickets.; population: resolved priority tickets with an eligible resolution clock; queries: query:harbor-help:reporting:p04; periods: 2026-09-12T00:00:00+00:00 to 2026-09-19T00:00:00+00:00, then 2026-09-19T00:00:00+00:00 to 2026-09-26T00:00:00+00:00.\n\n</details>\n"
+        },
+        "report": {
+          "card_id": "card-weighted-resolution-sla-miss-rate-by-support-tier-eb23790c69a0",
+          "title": "Weighted resolution-SLA miss rate by support tier",
+          "outcome": "notify",
+          "purpose": "Detect when the weighted current miss rate or its absolute change reaches the owner-defined notification threshold, and identify incomplete tier coverage.",
+          "intended_audience": "Card owner and caller-owned delivery workflow",
+          "next_step": "Deliver the evidence bundle to the configured destination. Do not invent a destination or change the outcome.",
+          "status": "complete",
+          "numeric_claims": [
+            {
+              "source_key": "harbor-help-reporting",
+              "comparison_key": "resolution-sla-rate",
+              "metric": "sla_miss_rate",
+              "dimension": "support_tier",
+              "unit": "ratio",
+              "method": "symmetric_rate_decomposition_v1",
+              "claim_type": "accounting_decomposition",
+              "baseline": 0.13,
+              "current": 0.13,
+              "delta": 0.0,
+              "residual": 0.0,
+              "within_effect": 0.0,
+              "mix_effect": 0.0,
+              "contributions": [
+                {
+                  "segment": "enterprise",
+                  "baseline": 0.125,
+                  "current": 0.125,
+                  "contribution": 0.0,
+                  "within_effect": 0.0,
+                  "mix_effect": 0.0
+                },
+                {
+                  "segment": "self_serve",
+                  "baseline": 0.13333333333333333,
+                  "current": 0.13333333333333333,
+                  "contribution": 0.0,
+                  "within_effect": 0.0,
+                  "mix_effect": 0.0
+                }
+              ],
+              "provenance_key": "[\"harbor-help-reporting\",\"resolution-sla-rate\"]"
+            }
+          ],
+          "provenance": [
+            {
+              "source_key": "harbor-help-reporting",
+              "comparison_key": "resolution-sla-rate",
+              "query_refs": [
+                "query:harbor-help:reporting:p04"
+              ],
+              "definition": "Missed resolution-SLA tickets divided by eligible resolved tickets.",
+              "population": "resolved priority tickets with an eligible resolution clock",
+              "metric": "sla_miss_rate",
+              "dimension": "support_tier",
+              "unit": "ratio",
+              "baseline_period": {
+                "start": "2026-09-12T00:00:00Z",
+                "end": "2026-09-19T00:00:00Z"
+              },
+              "current_period": {
+                "start": "2026-09-19T00:00:00Z",
+                "end": "2026-09-26T00:00:00Z"
+              },
+              "coverage": "complete",
+              "comparable": true,
+              "input_digest": "91899e10bbbbfa399f8ebd2670d802b46ea446c148b2414e6046d5fe2a74fd9d"
+            }
+          ],
+          "coverage": [
+            {
+              "key": "[\"harbor-help-reporting\",\"resolution-sla-rate\"]",
+              "kind": "analysis",
+              "required": true,
+              "status": "satisfied",
+              "source_keys": [
+                "harbor-help-reporting"
+              ],
+              "detail": "Validated and recomputed from the source comparison contract.",
+              "judgment": null,
+              "probability": null
+            },
+            {
+              "key": "harbor-help-reporting",
+              "kind": "source",
+              "required": true,
+              "status": "satisfied",
+              "source_keys": [
+                "harbor-help-reporting"
+              ],
+              "detail": "Source evidence was returned; analytical completeness is assessed separately.",
+              "judgment": null,
+              "probability": null
+            },
+            {
+              "key": "source:harbor-help-reporting",
+              "kind": "evidence_slot",
+              "required": true,
+              "status": "satisfied",
+              "source_keys": [
+                "harbor-help-reporting"
+              ],
+              "detail": "Return complete, reconciled analytical comparisons: resolution-sla-rate",
+              "judgment": null,
+              "probability": null
+            },
+            {
+              "key": "question:1",
+              "kind": "evidence_slot",
+              "required": true,
+              "status": "satisfied",
+              "source_keys": [
+                "harbor-help-reporting"
+              ],
+              "detail": "Return applicable evidence for a concrete answer, including a known no or zero; missing or unresolved evidence does not complete this question.",
+              "judgment": null,
+              "probability": null
+            },
+            {
+              "key": "question:2",
+              "kind": "evidence_slot",
+              "required": true,
+              "status": "satisfied",
+              "source_keys": [
+                "harbor-help-reporting"
+              ],
+              "detail": "Return applicable evidence for a concrete answer, including a known no or zero; missing or unresolved evidence does not complete this question.",
+              "judgment": null,
+              "probability": null
+            },
+            {
+              "key": "question:3",
+              "kind": "evidence_slot",
+              "required": true,
+              "status": "satisfied",
+              "source_keys": [
+                "harbor-help-reporting"
+              ],
+              "detail": "Return applicable evidence for a concrete answer, including a known no or zero; missing or unresolved evidence does not complete this question.",
+              "judgment": null,
+              "probability": null
+            },
+            {
+              "key": "question:4",
+              "kind": "evidence_slot",
+              "required": true,
+              "status": "satisfied",
+              "source_keys": [
+                "harbor-help-reporting"
+              ],
+              "detail": "Return applicable evidence for a concrete answer, including a known no or zero; missing or unresolved evidence does not complete this question.",
+              "judgment": null,
+              "probability": null
+            },
+            {
+              "key": "watch:1",
+              "kind": "evidence_slot",
+              "required": true,
+              "status": "satisfied",
+              "source_keys": [
+                "harbor-help-reporting"
+              ],
+              "detail": "Return evidence that shows whether this watch item is present or absent.",
+              "judgment": null,
+              "probability": null
+            },
+            {
+              "key": "watch:2",
+              "kind": "evidence_slot",
+              "required": true,
+              "status": "satisfied",
+              "source_keys": [
+                "harbor-help-reporting"
+              ],
+              "detail": "Return evidence that shows whether this watch item is present or absent.",
+              "judgment": null,
+              "probability": null
+            },
+            {
+              "key": "watch:3",
+              "kind": "evidence_slot",
+              "required": true,
+              "status": "satisfied",
+              "source_keys": [
+                "harbor-help-reporting"
+              ],
+              "detail": "Return evidence that shows whether this watch item is present or absent.",
+              "judgment": null,
+              "probability": null
+            },
+            {
+              "key": "question:1",
+              "kind": "question",
+              "required": true,
+              "status": "satisfied",
+              "source_keys": [],
+              "detail": "What is the weighted current resolution-SLA miss rate across eligible resolved tickets, and does it meet or exceed 12%?",
+              "judgment": "supported",
+              "probability": 0.94
+            },
+            {
+              "key": "question:2",
+              "kind": "question",
+              "required": true,
+              "status": "satisfied",
+              "source_keys": [],
+              "detail": "What is the absolute change in the weighted miss rate versus the immediately previous interval, and does it meet or exceed 4 percentage points?",
+              "judgment": "supported",
+              "probability": 0.92
+            },
+            {
+              "key": "question:3",
+              "kind": "question",
+              "required": true,
+              "status": "satisfied",
+              "source_keys": [],
+              "detail": "Are all eligible support tiers present in the comparison population; if not, report insufficient data without estimating a rate?",
+              "judgment": "supported",
+              "probability": 0.93
+            },
+            {
+              "key": "question:4",
+              "kind": "question",
+              "required": true,
+              "status": "satisfied",
+              "source_keys": [],
+              "detail": "What descriptive rate and mix effects account for the measured difference, without causal interpretation?",
+              "judgment": "supported",
+              "probability": 0.81
+            },
+            {
+              "key": "watch:1",
+              "kind": "watch",
+              "required": true,
+              "status": "satisfied",
+              "source_keys": [],
+              "detail": "Weighted current resolution-SLA miss rate is at least 12%.",
+              "judgment": "present",
+              "probability": 1.0
+            },
+            {
+              "key": "watch:2",
+              "kind": "watch",
+              "required": true,
+              "status": "satisfied",
+              "source_keys": [],
+              "detail": "Absolute change in weighted resolution-SLA miss rate versus the previous interval is at least 4 percentage points.",
+              "judgment": "absent",
+              "probability": 0.0
+            },
+            {
+              "key": "watch:3",
+              "kind": "watch",
+              "required": true,
+              "status": "satisfied",
+              "source_keys": [],
+              "detail": "Any eligible support tier is missing.",
+              "judgment": "absent",
+              "probability": 0.01
+            }
+          ],
+          "limitations": [
+            "This artifact reports bounded analytical coverage; it is not independently certified truth.",
+            "Accounting contributions explain measured differences and do not establish causality or mechanism."
+          ],
+          "unresolved_questions": [],
+          "intended_routes_not_delivered": [
+            {
+              "key": "support-operations",
+              "outcome": "notify",
+              "label": "Support Operations",
+              "destination": "agent://support-operations",
+              "reason": "Caller owns delivery; not sent."
+            }
+          ],
+          "blockers": [],
+          "warnings": [],
+          "evaluated_at": "2026-10-02T15:19:27.453526Z",
+          "evaluator": "jev-latest"
+        },
+        "report_markdown": "# Investigation report: Weighted resolution-SLA miss rate by support tier\n\n- Decision: **notify** \u00b7 Status: **complete**\n- Intended route audience: Support Operations \\(agent://support-operations\\)\n- Goal: Detect when the weighted current miss rate or its absolute change reaches the owner-defined notification threshold, and identify incomplete tier coverage.\n\n## Measured changes\n- **sla\\_miss\\_rate** (ratio): 0.13 \u2192 0.13 (\u0394 0; method `symmetric\\_rate\\_decomposition\\_v1`); top contributors: enterprise: 0, self\\_serve: 0.\n\n## Next step\n- Deliver the evidence bundle to the configured destination. Do not invent a destination or change the outcome. (caller-owned handoff; not a verified fact.)\n\n<details>\n<summary>Audit appendix: policy checks, coverage, limitations, and provenance</summary>\n\n### Policy checks (Jev judgments)\nThese are routing signals from evaluated evidence, not proof or confidence in truth.\n- What is the weighted current resolution-SLA miss rate across eligible resolved tickets, and does it meet or exceed 12%? \u2014 judgment: **supported**; P(supported) 0.94.\n- What is the absolute change in the weighted miss rate versus the immediately previous interval, and does it meet or exceed 4 percentage points? \u2014 judgment: **supported**; P(supported) 0.92.\n- Are all eligible support tiers present in the comparison population; if not, report insufficient data without estimating a rate? \u2014 judgment: **supported**; P(supported) 0.93.\n- What descriptive rate and mix effects account for the measured difference, without causal interpretation? \u2014 judgment: **supported**; P(supported) 0.81.\n- Weighted current resolution-SLA miss rate is at least 12%. \u2014 judgment: **present**; P(present) 1.\n- Absolute change in weighted resolution-SLA miss rate versus the previous interval is at least 4 percentage points. \u2014 judgment: **absent**; P(present) 0.\n- Any eligible support tier is missing. \u2014 judgment: **absent**; P(present) 0.01.\n\n### Intended routes not delivered\n- `support-operations` \u2192 `agent://support-operations` (Support Operations): Caller owns delivery; not sent.\n\n### Coverage\n- `\\[\"harbor-help-reporting\",\"resolution-sla-rate\"\\]` \u2014 satisfied (required): Validated and recomputed from the source comparison contract.\n- `harbor-help-reporting` \u2014 satisfied (required): Source evidence was returned; analytical completeness is assessed separately.\n- `source:harbor-help-reporting` \u2014 satisfied (required): Return complete, reconciled analytical comparisons: resolution-sla-rate\n- `question:1` \u2014 satisfied (required): Return applicable evidence for a concrete answer, including a known no or zero; missing or unresolved evidence does not complete this question.\n- `question:2` \u2014 satisfied (required): Return applicable evidence for a concrete answer, including a known no or zero; missing or unresolved evidence does not complete this question.\n- `question:3` \u2014 satisfied (required): Return applicable evidence for a concrete answer, including a known no or zero; missing or unresolved evidence does not complete this question.\n- `question:4` \u2014 satisfied (required): Return applicable evidence for a concrete answer, including a known no or zero; missing or unresolved evidence does not complete this question.\n- `watch:1` \u2014 satisfied (required): Return evidence that shows whether this watch item is present or absent.\n- `watch:2` \u2014 satisfied (required): Return evidence that shows whether this watch item is present or absent.\n- `watch:3` \u2014 satisfied (required): Return evidence that shows whether this watch item is present or absent.\n\n### Limitations\n- This artifact reports bounded analytical coverage; it is not independently certified truth.\n- Accounting contributions explain measured differences and do not establish causality or mechanism.\n\n### Provenance\n- `harbor-help-reporting:resolution-sla-rate` \u2014 definition: Missed resolution-SLA tickets divided by eligible resolved tickets.; population: resolved priority tickets with an eligible resolution clock; queries: query:harbor-help:reporting:p04; periods: 2026-09-12T00:00:00+00:00 to 2026-09-19T00:00:00+00:00, then 2026-09-19T00:00:00+00:00 to 2026-09-26T00:00:00+00:00.\n\n</details>\n"
+      },
+      "native_score": {
+        "passed": true,
+        "errors": [],
+        "narrative_review": "requires_independent_review"
+      },
+      "native_seconds": 0.37996037502307445,
+      "replay_exact": true,
+      "baseline_episode": {
+        "status": "complete",
+        "error": null,
+        "tool_calls": 3,
+        "seconds": 17.98206658399431,
+        "response_timeout_seconds": 120,
+        "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+        "wall_time_overrun_seconds": 0.0,
+        "transport": "codex_cli",
+        "exit_code": 0,
+        "foreign_tools": []
+      },
+      "baseline": {
+        "status": "complete",
+        "outcome": "notify",
+        "recipients": [
+          "support-operations"
+        ],
+        "narrative": "As of 2026-09-26T02:00:00Z, weighted resolution-SLA miss rate was 13.0% (26/200) for eligible resolved tickets, versus 13.0% previously (26/200); absolute change 0.0 percentage points. Eligible tier coverage was complete: enterprise and self_serve. The 12% current-rate threshold is met; the 4-point change threshold is not. Descriptive decomposition: rate effect 0.0 points, mix effect 0.0 points. Notify Support Operations.",
+        "analyses": [
+          {
+            "source_key": "harbor-help-reporting",
+            "comparison_key": "resolution-sla-rate",
+            "metric": "sla_miss_rate",
+            "dimension": "support_tier",
+            "unit": "ratio",
+            "method": "symmetric_rate_decomposition_v1",
+            "status": "complete",
+            "required": true,
+            "input_digest": "91899e10bbbbfa399f8ebd2670d802b46ea446c148b2414e6046d5fe2a74fd9d",
+            "query_refs": [
+              "query:harbor-help:reporting:p04"
+            ],
+            "comparison": {
+              "key": "resolution-sla-rate",
+              "metric": "sla_miss_rate",
+              "definition": "Missed resolution-SLA tickets divided by eligible resolved tickets.",
+              "population": "resolved priority tickets with an eligible resolution clock",
+              "unit": "ratio",
+              "dimension": "support_tier",
+              "kind": "rate",
+              "baseline_start": "2026-09-12T00:00:00Z",
+              "baseline_end": "2026-09-19T00:00:00Z",
+              "current_start": "2026-09-19T00:00:00Z",
+              "current_end": "2026-09-26T00:00:00Z",
+              "comparison_window": "previous_period",
+              "coverage": "complete",
+              "disjoint_segments": true,
+              "comparable": true,
+              "require_equal_duration": false,
+              "required": true,
+              "query_refs": [
+                "query:harbor-help:reporting:p04"
+              ],
+              "baseline_total": {
+                "value": null,
+                "numerator": 26.0,
+                "denominator": 200.0
+              },
+              "current_total": {
+                "value": null,
+                "numerator": 26.0,
+                "denominator": 200.0
+              },
+              "segments": [
+                {
+                  "segment": "enterprise",
+                  "baseline": {
+                    "value": null,
+                    "numerator": 10.0,
+                    "denominator": 80.0
+                  },
+                  "current": {
+                    "value": null,
+                    "numerator": 10.0,
+                    "denominator": 80.0
+                  }
+                },
+                {
+                  "segment": "self_serve",
+                  "baseline": {
+                    "value": null,
+                    "numerator": 16.0,
+                    "denominator": 120.0
+                  },
+                  "current": {
+                    "value": null,
+                    "numerator": 16.0,
+                    "denominator": 120.0
+                  }
+                }
+              ]
+            },
+            "baseline": 0.13,
+            "current": 0.13,
+            "delta": 0.0,
+            "residual": 0.0,
+            "within_effect": 0.0,
+            "mix_effect": 0.0,
+            "contributions": [
+              {
+                "segment": "enterprise",
+                "baseline": 0.125,
+                "current": 0.125,
+                "contribution": 0.0,
+                "within_effect": 0.0,
+                "mix_effect": 0.0
+              },
+              {
+                "segment": "self_serve",
+                "baseline": 0.13333333333333333,
+                "current": 0.13333333333333333,
+                "contribution": 0.0,
+                "within_effect": 0.0,
+                "mix_effect": 0.0
+              }
+            ],
+            "issues": [],
+            "claim_type": "accounting_decomposition",
+            "limitations": [
+              "Contributions explain the measured difference, not its causal mechanism.",
+              "No sampling uncertainty or statistical significance is estimated from these aggregates.",
+              "Coverage, population and comparability depend on the source measurement contract."
+            ]
+          }
+        ]
+      },
+      "baseline_score": {
+        "passed": true,
+        "errors": [],
+        "narrative_review": "requires_independent_review"
+      },
+      "baseline_seconds": 17.987595207989216
+    },
+    {
+      "company": "northstar-cart",
+      "period": "p04",
+      "native": {
+        "receipt": {
+          "receipt_id": "receipt-811c95ec59b948fe894e80f9b6ebb509",
+          "idempotency_key": "probe:p04:northstar-cart:native",
+          "request_fingerprint": "4c084b0bd62932f2a5969ff7a7952fc89109b17155db8e47d8b3b0063afcda74",
+          "card_id": "card-monitor-completed-net-sales-across-channels-842749db4416",
+          "card_version": 1,
+          "actor": "northstar-cart-owner",
+          "parent_receipt_id": null,
+          "workflow_step_key": null,
+          "context_provider": null,
+          "context_version": null,
+          "delivery_mode": "shadow",
+          "status": "delivery_disabled",
+          "outcome": "ignore",
+          "delivery_enabled": false,
+          "delivery_method_keys": [],
+          "created_at": "2026-10-02T15:19:45.499370Z"
+        },
+        "replayed": false,
+        "card": {
+          "id": "card-monitor-completed-net-sales-across-channels-842749db4416",
+          "title": "Monitor completed net sales across channels",
+          "what_to_watch": "Completed net sales across web, marketplace, and store channels.",
+          "why_watch": "Detect material changes in completed net sales and route incomplete population or period coverage.",
+          "watch_for": [
+            "A total completed net sales change of at least $100 versus the immediately previous period.",
+            "A channel contribution of at least $80 in absolute terms.",
+            "Incomplete population or period coverage."
+          ],
+          "questions": [
+            "What is the completed net sales total change versus the immediately previous period?",
+            "Which channels contribute at least $80 in absolute terms to that change?",
+            "Is the population and period coverage complete?"
+          ],
+          "evidence_requirements": {},
+          "decision_guidance": "Use the approved completed-net-sales comparison for completed orders after refunds, excluding tax and shipping. Notify Commerce when the total changes by at least $100 or any channel contributes at least $80 in absolute terms. Ignore smaller complete movements. If the population or period coverage is incomplete, do not estimate the total; route the gap to Data Operations. Contributions describe the measured difference only and do not establish causation.",
+          "follow_up_guidance": "",
+          "sources": [
+            {
+              "key": "northstar-cart-reporting",
+              "adapter": "company_mcp",
+              "resource": "report:completed-net-sales",
+              "label": "Completed net sales by channel",
+              "parameters": {
+                "business_role": "reporting",
+                "available_comparison_windows": [
+                  "previous_period"
+                ]
+              },
+              "required": true,
+              "required_comparison_keys": [
+                "completed-net-sales"
+              ]
+            }
+          ],
+          "comparison_windows": [
+            "previous_period"
+          ],
+          "action_confidence_threshold": 0.7,
+          "owner": null,
+          "version": 1,
+          "max_source_age_hours": 24.0,
+          "delivery_methods": [
+            {
+              "key": "commerce-owner",
+              "outcome": "notify",
+              "label": "Commerce owner",
+              "destination": "agent://commerce-owner",
+              "instructions": ""
+            },
+            {
+              "key": "data-operations",
+              "outcome": "insufficient_data",
+              "label": "Data Operations",
+              "destination": "agent://data-operations",
+              "instructions": ""
+            }
+          ],
+          "retrieval_mode": "fixed",
+          "investigation_mode": "none",
+          "max_investigation_sources": 3,
+          "investigation_threshold": 0.6,
+          "principal_id": "northstar-cart-owner",
+          "principal_tenant": "synthetic-first-report",
+          "status": "approved",
+          "approved_by": "northstar-cart-owner",
+          "approved_at": "2026-10-02T14:24:29.567109Z"
+        },
+        "retrieval": {
+          "card_id": "card-monitor-completed-net-sales-across-channels-842749db4416",
+          "goal": "Completed net sales across web, marketplace, and store channels.\nPurpose: Detect material changes in completed net sales and route incomplete population or period coverage.\nLook for: A total completed net sales change of at least $100 versus the immediately previous period.; A channel contribution of at least $80 in absolute terms.; Incomplete population or period coverage.\nQuestions: What is the completed net sales total change versus the immediately previous period?; Which channels contribute at least $80 in absolute terms to that change?; Is the population and period coverage complete?\nDecision guidance: Use the approved completed-net-sales comparison for completed orders after refunds, excluding tax and shipping. Notify Commerce when the total changes by at least $100 or any channel contributes at least $80 in absolute terms. Ignore smaller complete movements. If the population or period coverage is incomplete, do not estimate the total; route the gap to Data Operations. Contributions describe the measured difference only and do not establish causation.",
+          "anchor_source_keys": [
+            "northstar-cart-reporting"
+          ],
+          "selected_sources": [
+            {
+              "key": "northstar-cart-reporting",
+              "adapter": "company_mcp",
+              "resource": "report:completed-net-sales",
+              "label": "Completed net sales by channel",
+              "parameters": {
+                "business_role": "reporting",
+                "available_comparison_windows": [
+                  "previous_period"
+                ]
+              },
+              "required": true,
+              "required_comparison_keys": [
+                "completed-net-sales"
+              ]
+            }
+          ],
+          "related_matches": [],
+          "omitted_matches": [],
+          "candidate_count": 0,
+          "candidate_limit": 40,
+          "truncated": false,
+          "candidate_strategy": "fixed-card-sources",
+          "context_version": null,
+          "evaluator": "fixed-card-sources",
+          "warnings": [
+            "Card retrieval_mode is fixed; no related source expansion was requested."
+          ]
+        },
+        "resources": [
+          {
+            "source_key": "northstar-cart-reporting",
+            "adapter": "company_mcp",
+            "resource": "report:completed-net-sales",
+            "title": "Completed net sales by channel",
+            "description": "Completed-order net sales export.",
+            "observations": [],
+            "analytical_comparisons": [
+              {
+                "key": "completed-net-sales",
+                "metric": "net_sales",
+                "definition": "Completed order value after refunds, excluding tax and shipping.",
+                "population": "completed orders in the reporting channels",
+                "unit": "USD",
+                "dimension": "channel",
+                "kind": "additive",
+                "baseline_start": "2026-09-12T00:00:00Z",
+                "baseline_end": "2026-09-19T00:00:00Z",
+                "current_start": "2026-09-19T00:00:00Z",
+                "current_end": "2026-09-26T00:00:00Z",
+                "comparison_window": "previous_period",
+                "coverage": "complete",
+                "disjoint_segments": true,
+                "comparable": true,
+                "require_equal_duration": false,
+                "required": true,
+                "query_refs": [
+                  "query:northstar-cart:reporting:p04"
+                ],
+                "baseline_total": {
+                  "value": 1000.0,
+                  "numerator": null,
+                  "denominator": null
+                },
+                "current_total": {
+                  "value": 1000.0,
+                  "numerator": null,
+                  "denominator": null
+                },
+                "segments": [
+                  {
+                    "segment": "marketplace",
+                    "baseline": {
+                      "value": 250.0,
+                      "numerator": null,
+                      "denominator": null
+                    },
+                    "current": {
+                      "value": 250.0,
+                      "numerator": null,
+                      "denominator": null
+                    }
+                  },
+                  {
+                    "segment": "store",
+                    "baseline": {
+                      "value": 150.0,
+                      "numerator": null,
+                      "denominator": null
+                    },
+                    "current": {
+                      "value": 150.0,
+                      "numerator": null,
+                      "denominator": null
+                    }
+                  },
+                  {
+                    "segment": "web",
+                    "baseline": {
+                      "value": 600.0,
+                      "numerator": null,
+                      "denominator": null
+                    },
+                    "current": {
+                      "value": 600.0,
+                      "numerator": null,
+                      "denominator": null
+                    }
+                  }
+                ]
+              }
+            ],
+            "evidence": [
+              {
+                "source_key": "northstar-cart-reporting",
+                "subject_id": "northstar-cart-p04-northstar-cart-reporting",
+                "subject_label": "Completed net sales by channel",
+                "statement": "Bounded source result; interpret the comparison using the directory definition.",
+                "values": {
+                  "row_count": 6
+                },
+                "source_url": null,
+                "origin": "source",
+                "provenance": [
+                  "source:northstar-cart-reporting:p04"
+                ]
+              }
+            ],
+            "metadata": {
+              "company_id": "northstar-cart",
+              "period_id": "p04",
+              "as_of": "2026-09-26T02:00:00+00:00",
+              "period_contract": "closed UTC intervals compared to the immediately previous interval",
+              "replay_clock": "2026-09-26T02:00:00+00:00",
+              "signalweave_resolution": {
+                "authorized": true,
+                "reason": "authorized"
+              }
+            },
+            "error": null,
+            "source_url": null,
+            "captured_at": "2026-09-26T02:00:00Z",
+            "source_captured_at": "2026-09-26T01:00:00Z",
+            "contract": {
+              "tenant_id": "synthetic-first-report",
+              "domain": "northstar-cart-reporting",
+              "scope": "completed orders in the reporting channels",
+              "metric_names": [
+                "net_sales"
+              ],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [
+                "completed-net-sales"
+              ],
+              "population": "completed orders in the reporting channels",
+              "grain": "weekly channel interval",
+              "freshness_sla_hours": 48.0,
+              "lineage": [],
+              "roles": [
+                "reporting"
+              ],
+              "source_status": "healthy",
+              "authorized": true
+            }
+          }
+        ],
+        "plan": {
+          "card_id": "card-monitor-completed-net-sales-across-channels-842749db4416",
+          "card_version": 1,
+          "selected_source_keys": [
+            "northstar-cart-reporting"
+          ],
+          "comparison_windows": [
+            "previous_period"
+          ],
+          "capabilities": [
+            "baseline_comparison",
+            "freshness_check",
+            "dimension_contribution",
+            "watch_for_checks",
+            "question_checks"
+          ],
+          "watch_for": [
+            "A total completed net sales change of at least $100 versus the immediately previous period.",
+            "A channel contribution of at least $80 in absolute terms.",
+            "Incomplete population or period coverage."
+          ],
+          "questions": [
+            "What is the completed net sales total change versus the immediately previous period?",
+            "Which channels contribute at least $80 in absolute terms to that change?",
+            "Is the population and period coverage complete?"
+          ],
+          "delivery_method_keys": [
+            "commerce-owner",
+            "data-operations"
+          ],
+          "compiled_by": "jev-latest",
+          "card_scope": "Completed net sales across web, marketplace, and store channels.\nWhy: Detect material changes in completed net sales and route incomplete population or period coverage.",
+          "metric_query_plans": [],
+          "investigation_mode": "none",
+          "max_investigation_sources": 3,
+          "evidence_slots": [
+            {
+              "key": "source:northstar-cart-reporting",
+              "role": "primary",
+              "question": "What changed in Completed net sales by channel that is relevant to the card's stated purpose and comparison window?",
+              "source_keys": [
+                "northstar-cart-reporting"
+              ],
+              "source_refs": [
+                {
+                  "key": "northstar-cart-reporting",
+                  "adapter": "company_mcp",
+                  "resource": "report:completed-net-sales",
+                  "label": "Completed net sales by channel",
+                  "parameters": {
+                    "business_role": "reporting",
+                    "available_comparison_windows": [
+                      "previous_period"
+                    ]
+                  },
+                  "required": true,
+                  "required_comparison_keys": [
+                    "completed-net-sales"
+                  ]
+                }
+              ],
+              "required": true,
+              "completion_criteria": "Return complete, reconciled analytical comparisons: completed-net-sales",
+              "status": "pending",
+              "evidence_fact_ids": [],
+              "evidence_source_keys": []
+            },
+            {
+              "key": "question:1",
+              "role": "question",
+              "question": "What is the completed net sales total change versus the immediately previous period?",
+              "source_keys": [
+                "northstar-cart-reporting"
+              ],
+              "source_refs": [],
+              "required": true,
+              "completion_criteria": "Return applicable evidence for a concrete answer, including a known no or zero; missing or unresolved evidence does not complete this question.",
+              "status": "pending",
+              "evidence_fact_ids": [],
+              "evidence_source_keys": []
+            },
+            {
+              "key": "question:2",
+              "role": "question",
+              "question": "Which channels contribute at least $80 in absolute terms to that change?",
+              "source_keys": [
+                "northstar-cart-reporting"
+              ],
+              "source_refs": [],
+              "required": true,
+              "completion_criteria": "Return applicable evidence for a concrete answer, including a known no or zero; missing or unresolved evidence does not complete this question.",
+              "status": "pending",
+              "evidence_fact_ids": [],
+              "evidence_source_keys": []
+            },
+            {
+              "key": "question:3",
+              "role": "question",
+              "question": "Is the population and period coverage complete?",
+              "source_keys": [
+                "northstar-cart-reporting"
+              ],
+              "source_refs": [],
+              "required": true,
+              "completion_criteria": "Return applicable evidence for a concrete answer, including a known no or zero; missing or unresolved evidence does not complete this question.",
+              "status": "pending",
+              "evidence_fact_ids": [],
+              "evidence_source_keys": []
+            },
+            {
+              "key": "watch:1",
+              "role": "watch",
+              "question": "A total completed net sales change of at least $100 versus the immediately previous period.",
+              "source_keys": [
+                "northstar-cart-reporting"
+              ],
+              "source_refs": [],
+              "required": true,
+              "completion_criteria": "Return evidence that shows whether this watch item is present or absent.",
+              "status": "pending",
+              "evidence_fact_ids": [],
+              "evidence_source_keys": []
+            },
+            {
+              "key": "watch:2",
+              "role": "watch",
+              "question": "A channel contribution of at least $80 in absolute terms.",
+              "source_keys": [
+                "northstar-cart-reporting"
+              ],
+              "source_refs": [],
+              "required": true,
+              "completion_criteria": "Return evidence that shows whether this watch item is present or absent.",
+              "status": "pending",
+              "evidence_fact_ids": [],
+              "evidence_source_keys": []
+            },
+            {
+              "key": "watch:3",
+              "role": "watch",
+              "question": "Incomplete population or period coverage.",
+              "source_keys": [
+                "northstar-cart-reporting"
+              ],
+              "source_refs": [],
+              "required": true,
+              "completion_criteria": "Return evidence that shows whether this watch item is present or absent.",
+              "status": "pending",
+              "evidence_fact_ids": [],
+              "evidence_source_keys": []
+            }
+          ]
+        },
+        "result": {
+          "card_id": "card-monitor-completed-net-sales-across-channels-842749db4416",
+          "outcome": "ignore",
+          "delivery_methods": [],
+          "summary": "Evaluated 0 observations and 1 computed analyses across 1 sources; 3 watch items and 3 questions were checked.",
+          "rationale": "Jev evaluated the card's typed watch, question, and outcome judgments; selected=ignore, support=0.99; routed=ignore.",
+          "confidence": 0.99,
+          "probabilities": {
+            "ignore": 0.99,
+            "investigate": 0.0,
+            "insufficient_data": 0.0,
+            "notify": 0.01
+          },
+          "watch_results": [
+            {
+              "key": "watch_0",
+              "watch_for": "A total completed net sales change of at least $100 versus the immediately previous period.",
+              "status": "absent",
+              "probability": 0.0,
+              "probabilities": {
+                "unknown": 0.0,
+                "absent": 1.0,
+                "present": 0.0
+              }
+            },
+            {
+              "key": "watch_1",
+              "watch_for": "A channel contribution of at least $80 in absolute terms.",
+              "status": "absent",
+              "probability": 0.0,
+              "probabilities": {
+                "unknown": 0.0,
+                "present": 0.0,
+                "absent": 1.0
+              }
+            },
+            {
+              "key": "watch_2",
+              "watch_for": "Incomplete population or period coverage.",
+              "status": "absent",
+              "probability": 0.0,
+              "probabilities": {
+                "unknown": 0.0,
+                "present": 0.0,
+                "absent": 1.0
+              }
+            }
+          ],
+          "question_results": [
+            {
+              "key": "question_0",
+              "question": "What is the completed net sales total change versus the immediately previous period?",
+              "status": "supported",
+              "probability": 0.97
+            },
+            {
+              "key": "question_1",
+              "question": "Which channels contribute at least $80 in absolute terms to that change?",
+              "status": "supported",
+              "probability": 0.9
+            },
+            {
+              "key": "question_2",
+              "question": "Is the population and period coverage complete?",
+              "status": "supported",
+              "probability": 0.89
+            }
+          ],
+          "evidence_findings": [],
+          "evidence": [
+            {
+              "source_key": "northstar-cart-reporting",
+              "subject_id": "northstar-cart-p04-northstar-cart-reporting",
+              "subject_label": "Completed net sales by channel",
+              "statement": "Bounded source result; interpret the comparison using the directory definition.",
+              "values": {
+                "row_count": 6
+              },
+              "source_url": null,
+              "origin": "source",
+              "provenance": [
+                "source:northstar-cart-reporting:p04"
+              ]
+            },
+            {
+              "source_key": "northstar-cart-reporting",
+              "subject_id": "completed-net-sales",
+              "subject_label": "net_sales",
+              "statement": "net_sales: 1000 to 1000; measured difference 0. additive_contribution_v1 reconciles 3 segments. This is an accounting decomposition, not a causal explanation.",
+              "values": {
+                "source_key": "northstar-cart-reporting",
+                "comparison_key": "completed-net-sales",
+                "metric": "net_sales",
+                "dimension": "channel",
+                "unit": "USD",
+                "method": "additive_contribution_v1",
+                "status": "complete",
+                "required": true,
+                "input_digest": "25f75fe6ddadcdd3deecfc4ef46c405d9e20f5a38f470dbbf4d7480816fee6fa",
+                "query_refs": [
+                  "query:northstar-cart:reporting:p04"
+                ],
+                "comparison": {
+                  "key": "completed-net-sales",
+                  "metric": "net_sales",
+                  "definition": "Completed order value after refunds, excluding tax and shipping.",
+                  "population": "completed orders in the reporting channels",
+                  "unit": "USD",
+                  "dimension": "channel",
+                  "kind": "additive",
+                  "baseline_start": "2026-09-12T00:00:00Z",
+                  "baseline_end": "2026-09-19T00:00:00Z",
+                  "current_start": "2026-09-19T00:00:00Z",
+                  "current_end": "2026-09-26T00:00:00Z",
+                  "comparison_window": "previous_period",
+                  "coverage": "complete",
+                  "disjoint_segments": true,
+                  "comparable": true,
+                  "require_equal_duration": false,
+                  "required": true,
+                  "query_refs": [
+                    "query:northstar-cart:reporting:p04"
+                  ],
+                  "baseline_total": {
+                    "value": 1000.0,
+                    "numerator": null,
+                    "denominator": null
+                  },
+                  "current_total": {
+                    "value": 1000.0,
+                    "numerator": null,
+                    "denominator": null
+                  },
+                  "segments": [
+                    {
+                      "segment": "marketplace",
+                      "baseline": {
+                        "value": 250.0,
+                        "numerator": null,
+                        "denominator": null
+                      },
+                      "current": {
+                        "value": 250.0,
+                        "numerator": null,
+                        "denominator": null
+                      }
+                    },
+                    {
+                      "segment": "store",
+                      "baseline": {
+                        "value": 150.0,
+                        "numerator": null,
+                        "denominator": null
+                      },
+                      "current": {
+                        "value": 150.0,
+                        "numerator": null,
+                        "denominator": null
+                      }
+                    },
+                    {
+                      "segment": "web",
+                      "baseline": {
+                        "value": 600.0,
+                        "numerator": null,
+                        "denominator": null
+                      },
+                      "current": {
+                        "value": 600.0,
+                        "numerator": null,
+                        "denominator": null
+                      }
+                    }
+                  ]
+                },
+                "baseline": 1000.0,
+                "current": 1000.0,
+                "delta": 0.0,
+                "residual": 0.0,
+                "within_effect": null,
+                "mix_effect": null,
+                "contributions": [
+                  {
+                    "segment": "marketplace",
+                    "baseline": 250.0,
+                    "current": 250.0,
+                    "contribution": 0.0,
+                    "within_effect": null,
+                    "mix_effect": null
+                  },
+                  {
+                    "segment": "store",
+                    "baseline": 150.0,
+                    "current": 150.0,
+                    "contribution": 0.0,
+                    "within_effect": null,
+                    "mix_effect": null
+                  },
+                  {
+                    "segment": "web",
+                    "baseline": 600.0,
+                    "current": 600.0,
+                    "contribution": 0.0,
+                    "within_effect": null,
+                    "mix_effect": null
+                  }
+                ],
+                "issues": [],
+                "claim_type": "accounting_decomposition",
+                "limitations": [
+                  "Contributions explain the measured difference, not its causal mechanism.",
+                  "No sampling uncertainty or statistical significance is estimated from these aggregates.",
+                  "Coverage, population and comparability depend on the source measurement contract."
+                ]
+              },
+              "source_url": null,
+              "origin": "derived",
+              "provenance": [
+                "query:northstar-cart:reporting:p04"
+              ]
+            }
+          ],
+          "observations": [],
+          "analyses": [
+            {
+              "source_key": "northstar-cart-reporting",
+              "comparison_key": "completed-net-sales",
+              "metric": "net_sales",
+              "dimension": "channel",
+              "unit": "USD",
+              "method": "additive_contribution_v1",
+              "status": "complete",
+              "required": true,
+              "input_digest": "25f75fe6ddadcdd3deecfc4ef46c405d9e20f5a38f470dbbf4d7480816fee6fa",
+              "query_refs": [
+                "query:northstar-cart:reporting:p04"
+              ],
+              "comparison": {
+                "key": "completed-net-sales",
+                "metric": "net_sales",
+                "definition": "Completed order value after refunds, excluding tax and shipping.",
+                "population": "completed orders in the reporting channels",
+                "unit": "USD",
+                "dimension": "channel",
+                "kind": "additive",
+                "baseline_start": "2026-09-12T00:00:00Z",
+                "baseline_end": "2026-09-19T00:00:00Z",
+                "current_start": "2026-09-19T00:00:00Z",
+                "current_end": "2026-09-26T00:00:00Z",
+                "comparison_window": "previous_period",
+                "coverage": "complete",
+                "disjoint_segments": true,
+                "comparable": true,
+                "require_equal_duration": false,
+                "required": true,
+                "query_refs": [
+                  "query:northstar-cart:reporting:p04"
+                ],
+                "baseline_total": {
+                  "value": 1000.0,
+                  "numerator": null,
+                  "denominator": null
+                },
+                "current_total": {
+                  "value": 1000.0,
+                  "numerator": null,
+                  "denominator": null
+                },
+                "segments": [
+                  {
+                    "segment": "marketplace",
+                    "baseline": {
+                      "value": 250.0,
+                      "numerator": null,
+                      "denominator": null
+                    },
+                    "current": {
+                      "value": 250.0,
+                      "numerator": null,
+                      "denominator": null
+                    }
+                  },
+                  {
+                    "segment": "store",
+                    "baseline": {
+                      "value": 150.0,
+                      "numerator": null,
+                      "denominator": null
+                    },
+                    "current": {
+                      "value": 150.0,
+                      "numerator": null,
+                      "denominator": null
+                    }
+                  },
+                  {
+                    "segment": "web",
+                    "baseline": {
+                      "value": 600.0,
+                      "numerator": null,
+                      "denominator": null
+                    },
+                    "current": {
+                      "value": 600.0,
+                      "numerator": null,
+                      "denominator": null
+                    }
+                  }
+                ]
+              },
+              "baseline": 1000.0,
+              "current": 1000.0,
+              "delta": 0.0,
+              "residual": 0.0,
+              "within_effect": null,
+              "mix_effect": null,
+              "contributions": [
+                {
+                  "segment": "marketplace",
+                  "baseline": 250.0,
+                  "current": 250.0,
+                  "contribution": 0.0,
+                  "within_effect": null,
+                  "mix_effect": null
+                },
+                {
+                  "segment": "store",
+                  "baseline": 150.0,
+                  "current": 150.0,
+                  "contribution": 0.0,
+                  "within_effect": null,
+                  "mix_effect": null
+                },
+                {
+                  "segment": "web",
+                  "baseline": 600.0,
+                  "current": 600.0,
+                  "contribution": 0.0,
+                  "within_effect": null,
+                  "mix_effect": null
+                }
+              ],
+              "issues": [],
+              "claim_type": "accounting_decomposition",
+              "limitations": [
+                "Contributions explain the measured difference, not its causal mechanism.",
+                "No sampling uncertainty or statistical significance is estimated from these aggregates.",
+                "Coverage, population and comparability depend on the source measurement contract."
+              ]
+            }
+          ],
+          "source_keys": [
+            "northstar-cart-reporting"
+          ],
+          "retrieval": {
+            "card_id": "card-monitor-completed-net-sales-across-channels-842749db4416",
+            "goal": "Completed net sales across web, marketplace, and store channels.\nPurpose: Detect material changes in completed net sales and route incomplete population or period coverage.\nLook for: A total completed net sales change of at least $100 versus the immediately previous period.; A channel contribution of at least $80 in absolute terms.; Incomplete population or period coverage.\nQuestions: What is the completed net sales total change versus the immediately previous period?; Which channels contribute at least $80 in absolute terms to that change?; Is the population and period coverage complete?\nDecision guidance: Use the approved completed-net-sales comparison for completed orders after refunds, excluding tax and shipping. Notify Commerce when the total changes by at least $100 or any channel contributes at least $80 in absolute terms. Ignore smaller complete movements. If the population or period coverage is incomplete, do not estimate the total; route the gap to Data Operations. Contributions describe the measured difference only and do not establish causation.",
+            "anchor_source_keys": [
+              "northstar-cart-reporting"
+            ],
+            "selected_sources": [
+              {
+                "key": "northstar-cart-reporting",
+                "adapter": "company_mcp",
+                "resource": "report:completed-net-sales",
+                "label": "Completed net sales by channel",
+                "parameters": {
+                  "business_role": "reporting",
+                  "available_comparison_windows": [
+                    "previous_period"
+                  ]
+                },
+                "required": true,
+                "required_comparison_keys": [
+                  "completed-net-sales"
+                ]
+              }
+            ],
+            "related_matches": [],
+            "omitted_matches": [],
+            "candidate_count": 0,
+            "candidate_limit": 40,
+            "truncated": false,
+            "candidate_strategy": "fixed-card-sources",
+            "context_version": null,
+            "evaluator": "fixed-card-sources",
+            "warnings": [
+              "Card retrieval_mode is fixed; no related source expansion was requested."
+            ]
+          },
+          "context": null,
+          "investigation": null,
+          "evidence_plan": {
+            "objective": "Detect material changes in completed net sales and route incomplete population or period coverage.",
+            "slots": [
+              {
+                "key": "source:northstar-cart-reporting",
+                "role": "primary",
+                "question": "What changed in Completed net sales by channel that is relevant to the card's stated purpose and comparison window?",
+                "source_keys": [
+                  "northstar-cart-reporting"
+                ],
+                "source_refs": [
+                  {
+                    "key": "northstar-cart-reporting",
+                    "adapter": "company_mcp",
+                    "resource": "report:completed-net-sales",
+                    "label": "Completed net sales by channel",
+                    "parameters": {
+                      "business_role": "reporting",
+                      "available_comparison_windows": [
+                        "previous_period"
+                      ]
+                    },
+                    "required": true,
+                    "required_comparison_keys": [
+                      "completed-net-sales"
+                    ]
+                  }
+                ],
+                "required": true,
+                "completion_criteria": "Return complete, reconciled analytical comparisons: completed-net-sales",
+                "status": "fulfilled",
+                "evidence_fact_ids": [],
+                "evidence_source_keys": [
+                  "northstar-cart-reporting"
+                ]
+              },
+              {
+                "key": "question:1",
+                "role": "question",
+                "question": "What is the completed net sales total change versus the immediately previous period?",
+                "source_keys": [
+                  "northstar-cart-reporting"
+                ],
+                "source_refs": [],
+                "required": true,
+                "completion_criteria": "Return applicable evidence for a concrete answer, including a known no or zero; missing or unresolved evidence does not complete this question.",
+                "status": "fulfilled",
+                "evidence_fact_ids": [],
+                "evidence_source_keys": []
+              },
+              {
+                "key": "question:2",
+                "role": "question",
+                "question": "Which channels contribute at least $80 in absolute terms to that change?",
+                "source_keys": [
+                  "northstar-cart-reporting"
+                ],
+                "source_refs": [],
+                "required": true,
+                "completion_criteria": "Return applicable evidence for a concrete answer, including a known no or zero; missing or unresolved evidence does not complete this question.",
+                "status": "fulfilled",
+                "evidence_fact_ids": [],
+                "evidence_source_keys": []
+              },
+              {
+                "key": "question:3",
+                "role": "question",
+                "question": "Is the population and period coverage complete?",
+                "source_keys": [
+                  "northstar-cart-reporting"
+                ],
+                "source_refs": [],
+                "required": true,
+                "completion_criteria": "Return applicable evidence for a concrete answer, including a known no or zero; missing or unresolved evidence does not complete this question.",
+                "status": "fulfilled",
+                "evidence_fact_ids": [],
+                "evidence_source_keys": []
+              },
+              {
+                "key": "watch:1",
+                "role": "watch",
+                "question": "A total completed net sales change of at least $100 versus the immediately previous period.",
+                "source_keys": [
+                  "northstar-cart-reporting"
+                ],
+                "source_refs": [],
+                "required": true,
+                "completion_criteria": "Return evidence that shows whether this watch item is present or absent.",
+                "status": "fulfilled",
+                "evidence_fact_ids": [],
+                "evidence_source_keys": []
+              },
+              {
+                "key": "watch:2",
+                "role": "watch",
+                "question": "A channel contribution of at least $80 in absolute terms.",
+                "source_keys": [
+                  "northstar-cart-reporting"
+                ],
+                "source_refs": [],
+                "required": true,
+                "completion_criteria": "Return evidence that shows whether this watch item is present or absent.",
+                "status": "fulfilled",
+                "evidence_fact_ids": [],
+                "evidence_source_keys": []
+              },
+              {
+                "key": "watch:3",
+                "role": "watch",
+                "question": "Incomplete population or period coverage.",
+                "source_keys": [
+                  "northstar-cart-reporting"
+                ],
+                "source_refs": [],
+                "required": true,
+                "completion_criteria": "Return evidence that shows whether this watch item is present or absent.",
+                "status": "fulfilled",
+                "evidence_fact_ids": [],
+                "evidence_source_keys": []
+              }
+            ],
+            "status": "complete",
+            "missing_slot_keys": [],
+            "conflicting_slot_keys": [],
+            "warnings": [],
+            "generated_by": "signalweave",
+            "context_version": null
+          },
+          "workflow": {
+            "status": "complete",
+            "step_key": "suppress",
+            "action": "suppress",
+            "objective": "Detect material changes in completed net sales and route incomplete population or period coverage.",
+            "instructions": "Record the result and suppress delivery for this run.",
+            "required_source_keys": [],
+            "completion_criteria": "No further workflow step is required unless new evidence arrives.",
+            "delivery_method_keys": [],
+            "evidence_plan": {
+              "objective": "Detect material changes in completed net sales and route incomplete population or period coverage.",
+              "slots": [
+                {
+                  "key": "source:northstar-cart-reporting",
+                  "role": "primary",
+                  "question": "What changed in Completed net sales by channel that is relevant to the card's stated purpose and comparison window?",
+                  "source_keys": [
+                    "northstar-cart-reporting"
+                  ],
+                  "source_refs": [
+                    {
+                      "key": "northstar-cart-reporting",
+                      "adapter": "company_mcp",
+                      "resource": "report:completed-net-sales",
+                      "label": "Completed net sales by channel",
+                      "parameters": {
+                        "business_role": "reporting",
+                        "available_comparison_windows": [
+                          "previous_period"
+                        ]
+                      },
+                      "required": true,
+                      "required_comparison_keys": [
+                        "completed-net-sales"
+                      ]
+                    }
+                  ],
+                  "required": true,
+                  "completion_criteria": "Return complete, reconciled analytical comparisons: completed-net-sales",
+                  "status": "fulfilled",
+                  "evidence_fact_ids": [],
+                  "evidence_source_keys": [
+                    "northstar-cart-reporting"
+                  ]
+                },
+                {
+                  "key": "question:1",
+                  "role": "question",
+                  "question": "What is the completed net sales total change versus the immediately previous period?",
+                  "source_keys": [
+                    "northstar-cart-reporting"
+                  ],
+                  "source_refs": [],
+                  "required": true,
+                  "completion_criteria": "Return applicable evidence for a concrete answer, including a known no or zero; missing or unresolved evidence does not complete this question.",
+                  "status": "fulfilled",
+                  "evidence_fact_ids": [],
+                  "evidence_source_keys": []
+                },
+                {
+                  "key": "question:2",
+                  "role": "question",
+                  "question": "Which channels contribute at least $80 in absolute terms to that change?",
+                  "source_keys": [
+                    "northstar-cart-reporting"
+                  ],
+                  "source_refs": [],
+                  "required": true,
+                  "completion_criteria": "Return applicable evidence for a concrete answer, including a known no or zero; missing or unresolved evidence does not complete this question.",
+                  "status": "fulfilled",
+                  "evidence_fact_ids": [],
+                  "evidence_source_keys": []
+                },
+                {
+                  "key": "question:3",
+                  "role": "question",
+                  "question": "Is the population and period coverage complete?",
+                  "source_keys": [
+                    "northstar-cart-reporting"
+                  ],
+                  "source_refs": [],
+                  "required": true,
+                  "completion_criteria": "Return applicable evidence for a concrete answer, including a known no or zero; missing or unresolved evidence does not complete this question.",
+                  "status": "fulfilled",
+                  "evidence_fact_ids": [],
+                  "evidence_source_keys": []
+                },
+                {
+                  "key": "watch:1",
+                  "role": "watch",
+                  "question": "A total completed net sales change of at least $100 versus the immediately previous period.",
+                  "source_keys": [
+                    "northstar-cart-reporting"
+                  ],
+                  "source_refs": [],
+                  "required": true,
+                  "completion_criteria": "Return evidence that shows whether this watch item is present or absent.",
+                  "status": "fulfilled",
+                  "evidence_fact_ids": [],
+                  "evidence_source_keys": []
+                },
+                {
+                  "key": "watch:2",
+                  "role": "watch",
+                  "question": "A channel contribution of at least $80 in absolute terms.",
+                  "source_keys": [
+                    "northstar-cart-reporting"
+                  ],
+                  "source_refs": [],
+                  "required": true,
+                  "completion_criteria": "Return evidence that shows whether this watch item is present or absent.",
+                  "status": "fulfilled",
+                  "evidence_fact_ids": [],
+                  "evidence_source_keys": []
+                },
+                {
+                  "key": "watch:3",
+                  "role": "watch",
+                  "question": "Incomplete population or period coverage.",
+                  "source_keys": [
+                    "northstar-cart-reporting"
+                  ],
+                  "source_refs": [],
+                  "required": true,
+                  "completion_criteria": "Return evidence that shows whether this watch item is present or absent.",
+                  "status": "fulfilled",
+                  "evidence_fact_ids": [],
+                  "evidence_source_keys": []
+                }
+              ],
+              "status": "complete",
+              "missing_slot_keys": [],
+              "conflicting_slot_keys": [],
+              "warnings": [],
+              "generated_by": "signalweave",
+              "context_version": null
+            }
+          },
+          "telemetry": {
+            "wall_time_ms": 252.04579101409763,
+            "source_fetch_ms": 0.6352500058710575,
+            "source_count": 1,
+            "observation_count": 0,
+            "evidence_count": 2,
+            "jev_requests": 1,
+            "jev_input_tokens": 7620,
+            "jev_output_tokens": 224,
+            "jev_payload_bytes": 22519,
+            "jev_payload_budget_bytes": 4000000,
+            "query_calls": 0,
+            "query_bytes_scanned": 0,
+            "query_cache_hits": 0,
+            "query_cache_misses": 0,
+            "warnings": []
+          },
+          "evaluated_at": "2026-10-02T15:19:45.762648Z",
+          "evaluator": "jev-latest",
+          "report": {
+            "card_id": "card-monitor-completed-net-sales-across-channels-842749db4416",
+            "title": "Monitor completed net sales across channels",
+            "outcome": "ignore",
+            "purpose": "Detect material changes in completed net sales and route incomplete population or period coverage.",
+            "intended_audience": "Card owner and caller-owned delivery workflow",
+            "next_step": "Record the result and suppress delivery for this run.",
+            "status": "complete",
+            "numeric_claims": [
+              {
+                "source_key": "northstar-cart-reporting",
+                "comparison_key": "completed-net-sales",
+                "metric": "net_sales",
+                "dimension": "channel",
+                "unit": "USD",
+                "method": "additive_contribution_v1",
+                "claim_type": "accounting_decomposition",
+                "baseline": 1000.0,
+                "current": 1000.0,
+                "delta": 0.0,
+                "residual": 0.0,
+                "within_effect": null,
+                "mix_effect": null,
+                "contributions": [
+                  {
+                    "segment": "marketplace",
+                    "baseline": 250.0,
+                    "current": 250.0,
+                    "contribution": 0.0,
+                    "within_effect": null,
+                    "mix_effect": null
+                  },
+                  {
+                    "segment": "store",
+                    "baseline": 150.0,
+                    "current": 150.0,
+                    "contribution": 0.0,
+                    "within_effect": null,
+                    "mix_effect": null
+                  },
+                  {
+                    "segment": "web",
+                    "baseline": 600.0,
+                    "current": 600.0,
+                    "contribution": 0.0,
+                    "within_effect": null,
+                    "mix_effect": null
+                  }
+                ],
+                "provenance_key": "[\"northstar-cart-reporting\",\"completed-net-sales\"]"
+              }
+            ],
+            "provenance": [
+              {
+                "source_key": "northstar-cart-reporting",
+                "comparison_key": "completed-net-sales",
+                "query_refs": [
+                  "query:northstar-cart:reporting:p04"
+                ],
+                "definition": "Completed order value after refunds, excluding tax and shipping.",
+                "population": "completed orders in the reporting channels",
+                "metric": "net_sales",
+                "dimension": "channel",
+                "unit": "USD",
+                "baseline_period": {
+                  "start": "2026-09-12T00:00:00Z",
+                  "end": "2026-09-19T00:00:00Z"
+                },
+                "current_period": {
+                  "start": "2026-09-19T00:00:00Z",
+                  "end": "2026-09-26T00:00:00Z"
+                },
+                "coverage": "complete",
+                "comparable": true,
+                "input_digest": "25f75fe6ddadcdd3deecfc4ef46c405d9e20f5a38f470dbbf4d7480816fee6fa"
+              }
+            ],
+            "coverage": [
+              {
+                "key": "[\"northstar-cart-reporting\",\"completed-net-sales\"]",
+                "kind": "analysis",
+                "required": true,
+                "status": "satisfied",
+                "source_keys": [
+                  "northstar-cart-reporting"
+                ],
+                "detail": "Validated and recomputed from the source comparison contract.",
+                "judgment": null,
+                "probability": null
+              },
+              {
+                "key": "northstar-cart-reporting",
+                "kind": "source",
+                "required": true,
+                "status": "satisfied",
+                "source_keys": [
+                  "northstar-cart-reporting"
+                ],
+                "detail": "Source evidence was returned; analytical completeness is assessed separately.",
+                "judgment": null,
+                "probability": null
+              },
+              {
+                "key": "source:northstar-cart-reporting",
+                "kind": "evidence_slot",
+                "required": true,
+                "status": "satisfied",
+                "source_keys": [
+                  "northstar-cart-reporting"
+                ],
+                "detail": "Return complete, reconciled analytical comparisons: completed-net-sales",
+                "judgment": null,
+                "probability": null
+              },
+              {
+                "key": "question:1",
+                "kind": "evidence_slot",
+                "required": true,
+                "status": "satisfied",
+                "source_keys": [
+                  "northstar-cart-reporting"
+                ],
+                "detail": "Return applicable evidence for a concrete answer, including a known no or zero; missing or unresolved evidence does not complete this question.",
+                "judgment": null,
+                "probability": null
+              },
+              {
+                "key": "question:2",
+                "kind": "evidence_slot",
+                "required": true,
+                "status": "satisfied",
+                "source_keys": [
+                  "northstar-cart-reporting"
+                ],
+                "detail": "Return applicable evidence for a concrete answer, including a known no or zero; missing or unresolved evidence does not complete this question.",
+                "judgment": null,
+                "probability": null
+              },
+              {
+                "key": "question:3",
+                "kind": "evidence_slot",
+                "required": true,
+                "status": "satisfied",
+                "source_keys": [
+                  "northstar-cart-reporting"
+                ],
+                "detail": "Return applicable evidence for a concrete answer, including a known no or zero; missing or unresolved evidence does not complete this question.",
+                "judgment": null,
+                "probability": null
+              },
+              {
+                "key": "watch:1",
+                "kind": "evidence_slot",
+                "required": true,
+                "status": "satisfied",
+                "source_keys": [
+                  "northstar-cart-reporting"
+                ],
+                "detail": "Return evidence that shows whether this watch item is present or absent.",
+                "judgment": null,
+                "probability": null
+              },
+              {
+                "key": "watch:2",
+                "kind": "evidence_slot",
+                "required": true,
+                "status": "satisfied",
+                "source_keys": [
+                  "northstar-cart-reporting"
+                ],
+                "detail": "Return evidence that shows whether this watch item is present or absent.",
+                "judgment": null,
+                "probability": null
+              },
+              {
+                "key": "watch:3",
+                "kind": "evidence_slot",
+                "required": true,
+                "status": "satisfied",
+                "source_keys": [
+                  "northstar-cart-reporting"
+                ],
+                "detail": "Return evidence that shows whether this watch item is present or absent.",
+                "judgment": null,
+                "probability": null
+              },
+              {
+                "key": "question:1",
+                "kind": "question",
+                "required": true,
+                "status": "satisfied",
+                "source_keys": [],
+                "detail": "What is the completed net sales total change versus the immediately previous period?",
+                "judgment": "supported",
+                "probability": 0.97
+              },
+              {
+                "key": "question:2",
+                "kind": "question",
+                "required": true,
+                "status": "satisfied",
+                "source_keys": [],
+                "detail": "Which channels contribute at least $80 in absolute terms to that change?",
+                "judgment": "supported",
+                "probability": 0.9
+              },
+              {
+                "key": "question:3",
+                "kind": "question",
+                "required": true,
+                "status": "satisfied",
+                "source_keys": [],
+                "detail": "Is the population and period coverage complete?",
+                "judgment": "supported",
+                "probability": 0.89
+              },
+              {
+                "key": "watch:1",
+                "kind": "watch",
+                "required": true,
+                "status": "satisfied",
+                "source_keys": [],
+                "detail": "A total completed net sales change of at least $100 versus the immediately previous period.",
+                "judgment": "absent",
+                "probability": 0.0
+              },
+              {
+                "key": "watch:2",
+                "kind": "watch",
+                "required": true,
+                "status": "satisfied",
+                "source_keys": [],
+                "detail": "A channel contribution of at least $80 in absolute terms.",
+                "judgment": "absent",
+                "probability": 0.0
+              },
+              {
+                "key": "watch:3",
+                "kind": "watch",
+                "required": true,
+                "status": "satisfied",
+                "source_keys": [],
+                "detail": "Incomplete population or period coverage.",
+                "judgment": "absent",
+                "probability": 0.0
+              }
+            ],
+            "limitations": [
+              "This artifact reports bounded analytical coverage; it is not independently certified truth.",
+              "Accounting contributions explain measured differences and do not establish causality or mechanism."
+            ],
+            "unresolved_questions": [],
+            "intended_routes_not_delivered": [],
+            "blockers": [],
+            "warnings": [],
+            "evaluated_at": "2026-10-02T15:19:45.762648Z",
+            "evaluator": "jev-latest"
+          },
+          "report_markdown": "# Investigation report: Monitor completed net sales across channels\n\n- Decision: **ignore** \u00b7 Status: **complete**\n- Intended route audience: No notification intended \\(quiet outcome\\).\n- Goal: Detect material changes in completed net sales and route incomplete population or period coverage.\n\n## Measured changes\n- **net\\_sales** (USD): 1000 \u2192 1000 (\u0394 0; method `additive\\_contribution\\_v1`); top contributors: marketplace: 0, store: 0, web: 0.\n\n## Next step\n- Record the result and suppress delivery for this run. (caller-owned handoff; not a verified fact.)\n\n<details>\n<summary>Audit appendix: policy checks, coverage, limitations, and provenance</summary>\n\n### Policy checks (Jev judgments)\nThese are routing signals from evaluated evidence, not proof or confidence in truth.\n- What is the completed net sales total change versus the immediately previous period? \u2014 judgment: **supported**; P(supported) 0.97.\n- Which channels contribute at least $80 in absolute terms to that change? \u2014 judgment: **supported**; P(supported) 0.9.\n- Is the population and period coverage complete? \u2014 judgment: **supported**; P(supported) 0.89.\n- A total completed net sales change of at least $100 versus the immediately previous period. \u2014 judgment: **absent**; P(present) 0.\n- A channel contribution of at least $80 in absolute terms. \u2014 judgment: **absent**; P(present) 0.\n- Incomplete population or period coverage. \u2014 judgment: **absent**; P(present) 0.\n\n### Coverage\n- `\\[\"northstar-cart-reporting\",\"completed-net-sales\"\\]` \u2014 satisfied (required): Validated and recomputed from the source comparison contract.\n- `northstar-cart-reporting` \u2014 satisfied (required): Source evidence was returned; analytical completeness is assessed separately.\n- `source:northstar-cart-reporting` \u2014 satisfied (required): Return complete, reconciled analytical comparisons: completed-net-sales\n- `question:1` \u2014 satisfied (required): Return applicable evidence for a concrete answer, including a known no or zero; missing or unresolved evidence does not complete this question.\n- `question:2` \u2014 satisfied (required): Return applicable evidence for a concrete answer, including a known no or zero; missing or unresolved evidence does not complete this question.\n- `question:3` \u2014 satisfied (required): Return applicable evidence for a concrete answer, including a known no or zero; missing or unresolved evidence does not complete this question.\n- `watch:1` \u2014 satisfied (required): Return evidence that shows whether this watch item is present or absent.\n- `watch:2` \u2014 satisfied (required): Return evidence that shows whether this watch item is present or absent.\n- `watch:3` \u2014 satisfied (required): Return evidence that shows whether this watch item is present or absent.\n\n### Limitations\n- This artifact reports bounded analytical coverage; it is not independently certified truth.\n- Accounting contributions explain measured differences and do not establish causality or mechanism.\n\n### Provenance\n- `northstar-cart-reporting:completed-net-sales` \u2014 definition: Completed order value after refunds, excluding tax and shipping.; population: completed orders in the reporting channels; queries: query:northstar-cart:reporting:p04; periods: 2026-09-12T00:00:00+00:00 to 2026-09-19T00:00:00+00:00, then 2026-09-19T00:00:00+00:00 to 2026-09-26T00:00:00+00:00.\n\n</details>\n"
+        },
+        "report": {
+          "card_id": "card-monitor-completed-net-sales-across-channels-842749db4416",
+          "title": "Monitor completed net sales across channels",
+          "outcome": "ignore",
+          "purpose": "Detect material changes in completed net sales and route incomplete population or period coverage.",
+          "intended_audience": "Card owner and caller-owned delivery workflow",
+          "next_step": "Record the result and suppress delivery for this run.",
+          "status": "complete",
+          "numeric_claims": [
+            {
+              "source_key": "northstar-cart-reporting",
+              "comparison_key": "completed-net-sales",
+              "metric": "net_sales",
+              "dimension": "channel",
+              "unit": "USD",
+              "method": "additive_contribution_v1",
+              "claim_type": "accounting_decomposition",
+              "baseline": 1000.0,
+              "current": 1000.0,
+              "delta": 0.0,
+              "residual": 0.0,
+              "within_effect": null,
+              "mix_effect": null,
+              "contributions": [
+                {
+                  "segment": "marketplace",
+                  "baseline": 250.0,
+                  "current": 250.0,
+                  "contribution": 0.0,
+                  "within_effect": null,
+                  "mix_effect": null
+                },
+                {
+                  "segment": "store",
+                  "baseline": 150.0,
+                  "current": 150.0,
+                  "contribution": 0.0,
+                  "within_effect": null,
+                  "mix_effect": null
+                },
+                {
+                  "segment": "web",
+                  "baseline": 600.0,
+                  "current": 600.0,
+                  "contribution": 0.0,
+                  "within_effect": null,
+                  "mix_effect": null
+                }
+              ],
+              "provenance_key": "[\"northstar-cart-reporting\",\"completed-net-sales\"]"
+            }
+          ],
+          "provenance": [
+            {
+              "source_key": "northstar-cart-reporting",
+              "comparison_key": "completed-net-sales",
+              "query_refs": [
+                "query:northstar-cart:reporting:p04"
+              ],
+              "definition": "Completed order value after refunds, excluding tax and shipping.",
+              "population": "completed orders in the reporting channels",
+              "metric": "net_sales",
+              "dimension": "channel",
+              "unit": "USD",
+              "baseline_period": {
+                "start": "2026-09-12T00:00:00Z",
+                "end": "2026-09-19T00:00:00Z"
+              },
+              "current_period": {
+                "start": "2026-09-19T00:00:00Z",
+                "end": "2026-09-26T00:00:00Z"
+              },
+              "coverage": "complete",
+              "comparable": true,
+              "input_digest": "25f75fe6ddadcdd3deecfc4ef46c405d9e20f5a38f470dbbf4d7480816fee6fa"
+            }
+          ],
+          "coverage": [
+            {
+              "key": "[\"northstar-cart-reporting\",\"completed-net-sales\"]",
+              "kind": "analysis",
+              "required": true,
+              "status": "satisfied",
+              "source_keys": [
+                "northstar-cart-reporting"
+              ],
+              "detail": "Validated and recomputed from the source comparison contract.",
+              "judgment": null,
+              "probability": null
+            },
+            {
+              "key": "northstar-cart-reporting",
+              "kind": "source",
+              "required": true,
+              "status": "satisfied",
+              "source_keys": [
+                "northstar-cart-reporting"
+              ],
+              "detail": "Source evidence was returned; analytical completeness is assessed separately.",
+              "judgment": null,
+              "probability": null
+            },
+            {
+              "key": "source:northstar-cart-reporting",
+              "kind": "evidence_slot",
+              "required": true,
+              "status": "satisfied",
+              "source_keys": [
+                "northstar-cart-reporting"
+              ],
+              "detail": "Return complete, reconciled analytical comparisons: completed-net-sales",
+              "judgment": null,
+              "probability": null
+            },
+            {
+              "key": "question:1",
+              "kind": "evidence_slot",
+              "required": true,
+              "status": "satisfied",
+              "source_keys": [
+                "northstar-cart-reporting"
+              ],
+              "detail": "Return applicable evidence for a concrete answer, including a known no or zero; missing or unresolved evidence does not complete this question.",
+              "judgment": null,
+              "probability": null
+            },
+            {
+              "key": "question:2",
+              "kind": "evidence_slot",
+              "required": true,
+              "status": "satisfied",
+              "source_keys": [
+                "northstar-cart-reporting"
+              ],
+              "detail": "Return applicable evidence for a concrete answer, including a known no or zero; missing or unresolved evidence does not complete this question.",
+              "judgment": null,
+              "probability": null
+            },
+            {
+              "key": "question:3",
+              "kind": "evidence_slot",
+              "required": true,
+              "status": "satisfied",
+              "source_keys": [
+                "northstar-cart-reporting"
+              ],
+              "detail": "Return applicable evidence for a concrete answer, including a known no or zero; missing or unresolved evidence does not complete this question.",
+              "judgment": null,
+              "probability": null
+            },
+            {
+              "key": "watch:1",
+              "kind": "evidence_slot",
+              "required": true,
+              "status": "satisfied",
+              "source_keys": [
+                "northstar-cart-reporting"
+              ],
+              "detail": "Return evidence that shows whether this watch item is present or absent.",
+              "judgment": null,
+              "probability": null
+            },
+            {
+              "key": "watch:2",
+              "kind": "evidence_slot",
+              "required": true,
+              "status": "satisfied",
+              "source_keys": [
+                "northstar-cart-reporting"
+              ],
+              "detail": "Return evidence that shows whether this watch item is present or absent.",
+              "judgment": null,
+              "probability": null
+            },
+            {
+              "key": "watch:3",
+              "kind": "evidence_slot",
+              "required": true,
+              "status": "satisfied",
+              "source_keys": [
+                "northstar-cart-reporting"
+              ],
+              "detail": "Return evidence that shows whether this watch item is present or absent.",
+              "judgment": null,
+              "probability": null
+            },
+            {
+              "key": "question:1",
+              "kind": "question",
+              "required": true,
+              "status": "satisfied",
+              "source_keys": [],
+              "detail": "What is the completed net sales total change versus the immediately previous period?",
+              "judgment": "supported",
+              "probability": 0.97
+            },
+            {
+              "key": "question:2",
+              "kind": "question",
+              "required": true,
+              "status": "satisfied",
+              "source_keys": [],
+              "detail": "Which channels contribute at least $80 in absolute terms to that change?",
+              "judgment": "supported",
+              "probability": 0.9
+            },
+            {
+              "key": "question:3",
+              "kind": "question",
+              "required": true,
+              "status": "satisfied",
+              "source_keys": [],
+              "detail": "Is the population and period coverage complete?",
+              "judgment": "supported",
+              "probability": 0.89
+            },
+            {
+              "key": "watch:1",
+              "kind": "watch",
+              "required": true,
+              "status": "satisfied",
+              "source_keys": [],
+              "detail": "A total completed net sales change of at least $100 versus the immediately previous period.",
+              "judgment": "absent",
+              "probability": 0.0
+            },
+            {
+              "key": "watch:2",
+              "kind": "watch",
+              "required": true,
+              "status": "satisfied",
+              "source_keys": [],
+              "detail": "A channel contribution of at least $80 in absolute terms.",
+              "judgment": "absent",
+              "probability": 0.0
+            },
+            {
+              "key": "watch:3",
+              "kind": "watch",
+              "required": true,
+              "status": "satisfied",
+              "source_keys": [],
+              "detail": "Incomplete population or period coverage.",
+              "judgment": "absent",
+              "probability": 0.0
+            }
+          ],
+          "limitations": [
+            "This artifact reports bounded analytical coverage; it is not independently certified truth.",
+            "Accounting contributions explain measured differences and do not establish causality or mechanism."
+          ],
+          "unresolved_questions": [],
+          "intended_routes_not_delivered": [],
+          "blockers": [],
+          "warnings": [],
+          "evaluated_at": "2026-10-02T15:19:45.762648Z",
+          "evaluator": "jev-latest"
+        },
+        "report_markdown": "# Investigation report: Monitor completed net sales across channels\n\n- Decision: **ignore** \u00b7 Status: **complete**\n- Intended route audience: No notification intended \\(quiet outcome\\).\n- Goal: Detect material changes in completed net sales and route incomplete population or period coverage.\n\n## Measured changes\n- **net\\_sales** (USD): 1000 \u2192 1000 (\u0394 0; method `additive\\_contribution\\_v1`); top contributors: marketplace: 0, store: 0, web: 0.\n\n## Next step\n- Record the result and suppress delivery for this run. (caller-owned handoff; not a verified fact.)\n\n<details>\n<summary>Audit appendix: policy checks, coverage, limitations, and provenance</summary>\n\n### Policy checks (Jev judgments)\nThese are routing signals from evaluated evidence, not proof or confidence in truth.\n- What is the completed net sales total change versus the immediately previous period? \u2014 judgment: **supported**; P(supported) 0.97.\n- Which channels contribute at least $80 in absolute terms to that change? \u2014 judgment: **supported**; P(supported) 0.9.\n- Is the population and period coverage complete? \u2014 judgment: **supported**; P(supported) 0.89.\n- A total completed net sales change of at least $100 versus the immediately previous period. \u2014 judgment: **absent**; P(present) 0.\n- A channel contribution of at least $80 in absolute terms. \u2014 judgment: **absent**; P(present) 0.\n- Incomplete population or period coverage. \u2014 judgment: **absent**; P(present) 0.\n\n### Coverage\n- `\\[\"northstar-cart-reporting\",\"completed-net-sales\"\\]` \u2014 satisfied (required): Validated and recomputed from the source comparison contract.\n- `northstar-cart-reporting` \u2014 satisfied (required): Source evidence was returned; analytical completeness is assessed separately.\n- `source:northstar-cart-reporting` \u2014 satisfied (required): Return complete, reconciled analytical comparisons: completed-net-sales\n- `question:1` \u2014 satisfied (required): Return applicable evidence for a concrete answer, including a known no or zero; missing or unresolved evidence does not complete this question.\n- `question:2` \u2014 satisfied (required): Return applicable evidence for a concrete answer, including a known no or zero; missing or unresolved evidence does not complete this question.\n- `question:3` \u2014 satisfied (required): Return applicable evidence for a concrete answer, including a known no or zero; missing or unresolved evidence does not complete this question.\n- `watch:1` \u2014 satisfied (required): Return evidence that shows whether this watch item is present or absent.\n- `watch:2` \u2014 satisfied (required): Return evidence that shows whether this watch item is present or absent.\n- `watch:3` \u2014 satisfied (required): Return evidence that shows whether this watch item is present or absent.\n\n### Limitations\n- This artifact reports bounded analytical coverage; it is not independently certified truth.\n- Accounting contributions explain measured differences and do not establish causality or mechanism.\n\n### Provenance\n- `northstar-cart-reporting:completed-net-sales` \u2014 definition: Completed order value after refunds, excluding tax and shipping.; population: completed orders in the reporting channels; queries: query:northstar-cart:reporting:p04; periods: 2026-09-12T00:00:00+00:00 to 2026-09-19T00:00:00+00:00, then 2026-09-19T00:00:00+00:00 to 2026-09-26T00:00:00+00:00.\n\n</details>\n"
+      },
+      "native_score": {
+        "passed": true,
+        "errors": [],
+        "narrative_review": "requires_independent_review"
+      },
+      "native_seconds": 0.2694150829920545,
+      "replay_exact": true,
+      "baseline_episode": {
+        "status": "complete",
+        "error": null,
+        "tool_calls": 3,
+        "seconds": 14.791136499959975,
+        "response_timeout_seconds": 120,
+        "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+        "wall_time_overrun_seconds": 0.0,
+        "transport": "codex_cli",
+        "exit_code": 0,
+        "foreign_tools": []
+      },
+      "baseline": {
+        "status": "complete",
+        "outcome": "ignore",
+        "recipients": [],
+        "narrative": "Completed net sales were unchanged versus the immediately previous period ($0 change). No channel contributed at least $80. Population and period coverage are complete. Complete movement is below notification thresholds.",
+        "analyses": [
+          {
+            "source_key": "northstar-cart-reporting",
+            "comparison_key": "completed-net-sales",
+            "metric": "net_sales",
+            "dimension": "channel",
+            "unit": "USD",
+            "method": "additive_contribution_v1",
+            "status": "complete",
+            "required": true,
+            "input_digest": "25f75fe6ddadcdd3deecfc4ef46c405d9e20f5a38f470dbbf4d7480816fee6fa",
+            "query_refs": [
+              "query:northstar-cart:reporting:p04"
+            ],
+            "comparison": {
+              "key": "completed-net-sales",
+              "metric": "net_sales",
+              "definition": "Completed order value after refunds, excluding tax and shipping.",
+              "population": "completed orders in the reporting channels",
+              "unit": "USD",
+              "dimension": "channel",
+              "kind": "additive",
+              "baseline_start": "2026-09-12T00:00:00Z",
+              "baseline_end": "2026-09-19T00:00:00Z",
+              "current_start": "2026-09-19T00:00:00Z",
+              "current_end": "2026-09-26T00:00:00Z",
+              "comparison_window": "previous_period",
+              "coverage": "complete",
+              "disjoint_segments": true,
+              "comparable": true,
+              "require_equal_duration": false,
+              "required": true,
+              "query_refs": [
+                "query:northstar-cart:reporting:p04"
+              ],
+              "baseline_total": {
+                "value": 1000.0,
+                "numerator": null,
+                "denominator": null
+              },
+              "current_total": {
+                "value": 1000.0,
+                "numerator": null,
+                "denominator": null
+              },
+              "segments": [
+                {
+                  "segment": "marketplace",
+                  "baseline": {
+                    "value": 250.0,
+                    "numerator": null,
+                    "denominator": null
+                  },
+                  "current": {
+                    "value": 250.0,
+                    "numerator": null,
+                    "denominator": null
+                  }
+                },
+                {
+                  "segment": "store",
+                  "baseline": {
+                    "value": 150.0,
+                    "numerator": null,
+                    "denominator": null
+                  },
+                  "current": {
+                    "value": 150.0,
+                    "numerator": null,
+                    "denominator": null
+                  }
+                },
+                {
+                  "segment": "web",
+                  "baseline": {
+                    "value": 600.0,
+                    "numerator": null,
+                    "denominator": null
+                  },
+                  "current": {
+                    "value": 600.0,
+                    "numerator": null,
+                    "denominator": null
+                  }
+                }
+              ]
+            },
+            "baseline": 1000.0,
+            "current": 1000.0,
+            "delta": 0.0,
+            "residual": 0.0,
+            "within_effect": null,
+            "mix_effect": null,
+            "contributions": [
+              {
+                "segment": "marketplace",
+                "baseline": 250.0,
+                "current": 250.0,
+                "contribution": 0.0,
+                "within_effect": null,
+                "mix_effect": null
+              },
+              {
+                "segment": "store",
+                "baseline": 150.0,
+                "current": 150.0,
+                "contribution": 0.0,
+                "within_effect": null,
+                "mix_effect": null
+              },
+              {
+                "segment": "web",
+                "baseline": 600.0,
+                "current": 600.0,
+                "contribution": 0.0,
+                "within_effect": null,
+                "mix_effect": null
+              }
+            ],
+            "issues": [],
+            "claim_type": "accounting_decomposition",
+            "limitations": [
+              "Contributions explain the measured difference, not its causal mechanism.",
+              "No sampling uncertainty or statistical significance is estimated from these aggregates.",
+              "Coverage, population and comparability depend on the source measurement contract."
+            ]
+          }
+        ]
+      },
+      "baseline_score": {
+        "passed": true,
+        "errors": [],
+        "narrative_review": "requires_independent_review"
+      },
+      "baseline_seconds": 14.79783325002063
+    }
+  ],
+  "jev_calls": 2,
+  "luna_episodes": 2,
+  "usage": {
+    "jev": {
+      "input_tokens": 15660,
+      "output_tokens": 465
+    },
+    "openai": {
+      "input_tokens": 141262,
+      "output_tokens": 785
+    }
+  },
+  "primary_scores_replaced": false
+}

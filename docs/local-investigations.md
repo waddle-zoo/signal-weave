@@ -141,6 +141,40 @@ durable evidence. Automatic recovery of trustworthy definitions from arbitrary
 BI assets, broad method coverage, report usefulness to actual owners, and a fair
 end-to-end cost advantage remain unproven.
 
+### Development counterexamples after review
+
+The final [two live probes](evidence/first-report-probes-live-01/report.json)
+froze inputs and independent expected results at commit `d9c5945`, reused the
+approved cards without re-authoring or approval calls, and used the compact
+baseline interface. Neither model received the expected labels. These are
+targeted development counterexamples, separate from the original denominator:
+
+| Probe | Expected action | SignalWeave + Jev | Compact Luna baseline |
+| --- | --- | --- | --- |
+| SLA miss rate stays at 13%; current-rate threshold is 12% | Notify Support Operations | Correct; 0.380 s | Correct; 17.988 s |
+| Net sales stay at $1,000; all channel changes are zero | Ignore; no recipient | Correct; 0.269 s | Correct; 14.798 s |
+
+Both reports passed the numerical, provenance, outcome and recipient checks.
+Both SignalWeave replays were exact with no new model calls. This distinguishes
+a level-based rule from a change-based rule without changing the approved
+workflows. It does not establish an accuracy advantage, population-level error
+rate, warehouse-query savings, or performance against an optimized persistent
+Luna executor. Two successful cases are not enterprise certification.
+
+The probes used exactly 2 Jev calls (15,660 input / 465 output tokens) and 2 Luna
+episodes (141,262 input / 785 output tokens, provider-reported episode accounting).
+Across all three retained runs: **48 Jev calls, 15 Luna episodes, no Jev retries**.
+No real notifications were sent. The code review repairs bind claims to actual
+source comparisons, enforce required evidence and configured routes, and prevent
+replays from inventing reports that were never archived. The original eight
+reports preserve their decisions and measured values under these stricter checks.
+
+The [code-review close-out](evidence/first-report-live-02/code-review.json)
+records five resolved findings. The [separate probe review](evidence/first-report-probes-live-01/review.json)
+rechecked calculations and policy outcomes, found no expected-label leakage, and
+still preferred Luna's owner-facing prose. Passing the code review does not
+close the broader onboarding and adoption gaps listed below.
+
 ## Quantitative methods available now
 
 | Method | What it answers | What it does not establish |

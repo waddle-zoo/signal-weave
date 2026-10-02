@@ -104,3 +104,27 @@ def test_current_report_checks_preserve_archived_live_measurements():
             assert [r.model_dump(mode="json") for r in rebuilt.intended_routes_not_delivered] == native["report"]["intended_routes_not_delivered"]
             checked += 1
     assert checked == 8  # Offline report validation, not eight additional Jev runs.
+
+
+def test_frozen_counterexamples_use_live_jev_and_compact_baseline_within_budget():
+    manifest, report, events = recorded("first-report-probes-live-01")
+    assert manifest["source_freeze"]["git_revision"].startswith("d9c5945")
+    assert manifest["source_freeze"]["git_status"] == ""
+    assert report["jev_calls"] == report["luna_episodes"] == 2
+    assert not report["primary_scores_replaced"]
+    assert manifest["budget"]["prior_jev"] + report["jev_calls"] == 48
+    assert manifest["budget"]["prior_luna"] + report["luna_episodes"] == 15
+    assert sum(e["kind"] == "api.request" and e.get("provider") == "jev" for e in events) == 2
+    assert sum(e["kind"] == "api.request" and e.get("provider") == "openai" for e in events) == 2
+    assert not any(e["kind"] == "api.error" for e in events)
+    assert len(report["results"]) == 2
+    expected = json.loads((ROOT / "first-report-probes-live-01/expected.json").read_text())["expected"]
+    for row in report["results"]:
+        assert row["native_score"]["passed"] and row["baseline_score"]["passed"]
+        assert row["replay_exact"]
+        assert row["baseline_episode"]["status"] == "complete"
+        assert not row["baseline_episode"]["foreign_tools"]
+        assert score(row["baseline"], expected[row["company"]])["passed"]
+    submissions = [e for e in events if e["kind"] == "tool.result" and e.get("name") == "submit_report"]
+    assert len(submissions) == 2
+    assert all("analysis_refs" in e["arguments"] and "analyses" not in e["arguments"] for e in submissions)
