@@ -17,6 +17,7 @@ destinations, generate SQL, or treat an LLM explanation as evidence.
 - `mcp_gateway.py` — a streamable-HTTP MCP client for a deployed SignalWeave;
 - `context_tools.py` — a safe JSON fixture loader for local testing;
 - `delivery.py` — stdout delivery and an opt-in Slack channel adapter;
+- `briefing.py` — an optional caller-owned final-message writer boundary;
 - `cli.py` — a small deployable entry point; and
 - `fixtures/` — a replaceable sales → campaign → conversion example.
 
@@ -106,6 +107,26 @@ PYTHONPATH=src python -m examples.investigation_agent.cli \
 The Slack adapter uses one stable channel name, so a retry reuses the channel.
 Production deployments should put channel/member policy in a durable, audited
 configuration rather than allowing arbitrary model-provided invites.
+
+## Optional final message
+
+After the native report is complete, a caller may provide its own async writer
+function to produce concise prose. `build_briefing_writer_input(report,
+report_markdown, recipient_keys)` validates the native `InvestigationReport`
+and passes only a compact projection of its claims, provenance, coverage,
+limitations, outcome/status, configured recipient keys, and known
+`source_key`/`comparison_key` refs. It does not send the full report and
+Markdown twice. The writer returns only `narrative` plus `citations`; unknown
+refs, empty prose, and uncited numeric claims are rejected. The returned
+payload archives the exact native report and Markdown, so the writer cannot
+choose or rewrite a destination or authoritative result.
+
+This is a message-formatting aid, not an arbitrary prose truth verifier. A
+numeric citation makes a claim inspectable but does not prove it, and the
+writer must not make unsupported causal claims. Independent review remains
+necessary. `ignore` is quiet and does not invoke the writer; partial or blocked
+reports retain their warnings visibly in the payload. No external API gateway
+is required—the caller owns the async writer and any model configuration.
 
 ## Replacing the fixture tools
 
