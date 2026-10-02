@@ -54,10 +54,12 @@ def test_policy_audit_preserves_exact_segments_and_never_uses_holdouts():
 
 
 @pytest.mark.parametrize("company_index", range(3))
-def test_independent_numeric_labels_cover_all_periods(company_index):
-    from evaluations.recurring_runtime_cases import cases
+@pytest.mark.parametrize("case_set", ["initial", "transfer"])
+def test_independent_numeric_labels_cover_all_periods(company_index, case_set):
+    from evaluations.recurring_runtime_cases import cases as initial
+    from evaluations.recurring_runtime_transfer_cases import cases as transfer
 
-    company = cases()[company_index]
+    company = (initial if case_set == "initial" else transfer)()[company_index]
     card = policy_card(company)
     assert audit_numeric_policy(card, company)["passed"]
     for period in company["periods"]:

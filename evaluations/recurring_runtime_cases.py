@@ -727,7 +727,7 @@ def _build_company(spec: dict[str, Any]) -> dict[str, Any]:
     primary = _descriptor(
         source_key=f"{spec['company_id']}-reporting",
         resource=f"report:{spec['primary_resource']}",
-        title={
+        title=spec.get("title") or {
             "juniper-bookings": "Paid cancellations by booking channel",
             "mosaic-payments": "Weighted authorization failure rate by payment rail",
             "saffron-cloud": "Signed MRR movement by movement type",

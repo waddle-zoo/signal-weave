@@ -687,14 +687,21 @@ async def _author_company(company, audit, judger, output):
             "previewed_periods": sorted(session.previewed_periods)}
 
 
-async def run_trial(output: Path, *, live: bool = False, key_file: str | None = None, company_limit: int = 3):
-    from evaluations.recurring_runtime_cases import cases
+async def run_trial(output: Path, *, live: bool = False, key_file: str | None = None,
+                    company_limit: int = 3, case_set: str = "initial"):
+    if case_set == "initial":
+        from evaluations.recurring_runtime_cases import cases
+    elif case_set == "transfer":
+        from evaluations.recurring_runtime_transfer_cases import cases
+    else:
+        raise ValueError("Unknown frozen case set")
 
     all_companies = cases()
     if len(all_companies) != 3:
         raise ValueError("Recurring runtime requires exactly three companies")
     companies = all_companies[:company_limit]
     manifest = _manifest(companies, live=live)
+    manifest["case_set"] = case_set
     output.mkdir(parents=True, exist_ok=False)
     _write_json(output / "manifest.json", manifest)
     if not live:
@@ -861,8 +868,10 @@ def main():
     parser.add_argument("--live", action="store_true")
     parser.add_argument("--jev-key-file")
     parser.add_argument("--company-limit", type=int, choices=(1, 2, 3), default=3)
+    parser.add_argument("--case-set", choices=("initial", "transfer"), default="initial")
     args = parser.parse_args()
-    result = asyncio.run(run_trial(args.output, live=args.live, key_file=args.jev_key_file, company_limit=args.company_limit))
+    result = asyncio.run(run_trial(args.output, live=args.live, key_file=args.jev_key_file,
+                                   company_limit=args.company_limit, case_set=args.case_set))
     print(json.dumps({"output": str(args.output), "status": result.get("status"), "jev_attempts": result.get("jev_attempts", 0)}))
 
 

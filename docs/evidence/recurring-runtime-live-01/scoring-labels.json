@@ -1,0 +1,1262 @@
+{
+  "juniper-bookings": {
+    "p03": {
+      "numeric_policy": [
+        {
+          "source_key": "juniper-bookings-reporting",
+          "comparison_key": "paid-cancellations",
+          "unit": "reservations",
+          "measurement": "delta",
+          "segment": null,
+          "absolute": false,
+          "comparator": ">=",
+          "threshold": 24
+        },
+        {
+          "source_key": "juniper-bookings-reporting",
+          "comparison_key": "paid-cancellations",
+          "unit": "reservations",
+          "measurement": "contribution",
+          "segment": null,
+          "absolute": false,
+          "comparator": ">=",
+          "threshold": 18
+        }
+      ],
+      "status": "complete",
+      "outcome": "notify",
+      "recipients": [
+        "booking-operations"
+      ],
+      "analyses": [
+        {
+          "source_key": "juniper-bookings-reporting",
+          "comparison_key": "paid-cancellations",
+          "metric": "canceled_paid_reservations",
+          "unit": "reservations",
+          "dimension": "booking_channel",
+          "definition": "Paid reservations canceled in the closed interval after duplicate removal and test-reservation exclusion.",
+          "population": "paid reservations with a cancellation timestamp, excluding test reservations",
+          "baseline_start": "2027-03-01T00:00:00+00:00",
+          "baseline_end": "2027-03-08T00:00:00+00:00",
+          "current_start": "2027-03-08T00:00:00+00:00",
+          "current_end": "2027-03-15T00:00:00+00:00",
+          "baseline": 440,
+          "current": 450,
+          "delta": 10,
+          "within_effect": null,
+          "mix_effect": null,
+          "contributions": [
+            {
+              "segment": "direct",
+              "baseline": 160,
+              "current": 135,
+              "contribution": -25
+            },
+            {
+              "segment": "mobile",
+              "baseline": 210,
+              "current": 238,
+              "contribution": 28
+            },
+            {
+              "segment": "partner",
+              "baseline": 70,
+              "current": 77,
+              "contribution": 7
+            }
+          ],
+          "query_refs": [
+            "query:juniper-bookings:reporting:p03"
+          ]
+        }
+      ],
+      "semantic_status": "not_applicable",
+      "context_status": "not_applicable",
+      "measurements": {
+        "baseline": 440,
+        "current": 450,
+        "delta": 10,
+        "contributions": [
+          {
+            "segment": "direct",
+            "baseline": 160,
+            "current": 135,
+            "contribution": -25
+          },
+          {
+            "segment": "mobile",
+            "baseline": 210,
+            "current": 238,
+            "contribution": 28
+          },
+          {
+            "segment": "partner",
+            "baseline": 70,
+            "current": 77,
+            "contribution": 7
+          }
+        ],
+        "within_effect": null,
+        "mix_effect": null
+      },
+      "materiality": {
+        "delta_threshold": 24,
+        "contribution_threshold": 18
+      }
+    },
+    "p04": {
+      "numeric_policy": [
+        {
+          "source_key": "juniper-bookings-reporting",
+          "comparison_key": "paid-cancellations",
+          "unit": "reservations",
+          "measurement": "delta",
+          "segment": null,
+          "absolute": false,
+          "comparator": ">=",
+          "threshold": 24
+        },
+        {
+          "source_key": "juniper-bookings-reporting",
+          "comparison_key": "paid-cancellations",
+          "unit": "reservations",
+          "measurement": "contribution",
+          "segment": null,
+          "absolute": false,
+          "comparator": ">=",
+          "threshold": 18
+        }
+      ],
+      "status": "complete",
+      "outcome": "notify",
+      "recipients": [
+        "booking-operations"
+      ],
+      "analyses": [
+        {
+          "source_key": "juniper-bookings-reporting",
+          "comparison_key": "paid-cancellations",
+          "metric": "canceled_paid_reservations",
+          "unit": "reservations",
+          "dimension": "booking_channel",
+          "definition": "Paid reservations canceled in the closed interval after duplicate removal and test-reservation exclusion.",
+          "population": "paid reservations with a cancellation timestamp, excluding test reservations",
+          "baseline_start": "2027-03-15T00:00:00+00:00",
+          "baseline_end": "2027-03-22T00:00:00+00:00",
+          "current_start": "2027-03-22T00:00:00+00:00",
+          "current_end": "2027-03-29T00:00:00+00:00",
+          "baseline": 470,
+          "current": 495,
+          "delta": 25,
+          "within_effect": null,
+          "mix_effect": null,
+          "contributions": [
+            {
+              "segment": "direct",
+              "baseline": 240,
+              "current": 250,
+              "contribution": 10
+            },
+            {
+              "segment": "mobile",
+              "baseline": 150,
+              "current": 160,
+              "contribution": 10
+            },
+            {
+              "segment": "partner",
+              "baseline": 80,
+              "current": 85,
+              "contribution": 5
+            }
+          ],
+          "query_refs": [
+            "query:juniper-bookings:reporting:p04"
+          ]
+        }
+      ],
+      "semantic_status": "not_applicable",
+      "context_status": "not_applicable",
+      "measurements": {
+        "baseline": 470,
+        "current": 495,
+        "delta": 25,
+        "contributions": [
+          {
+            "segment": "direct",
+            "baseline": 240,
+            "current": 250,
+            "contribution": 10
+          },
+          {
+            "segment": "mobile",
+            "baseline": 150,
+            "current": 160,
+            "contribution": 10
+          },
+          {
+            "segment": "partner",
+            "baseline": 80,
+            "current": 85,
+            "contribution": 5
+          }
+        ],
+        "within_effect": null,
+        "mix_effect": null
+      },
+      "materiality": {
+        "delta_threshold": 24,
+        "contribution_threshold": 18
+      }
+    },
+    "p05": {
+      "numeric_policy": [
+        {
+          "source_key": "juniper-bookings-reporting",
+          "comparison_key": "paid-cancellations",
+          "unit": "reservations",
+          "measurement": "delta",
+          "segment": null,
+          "absolute": false,
+          "comparator": ">=",
+          "threshold": 24
+        },
+        {
+          "source_key": "juniper-bookings-reporting",
+          "comparison_key": "paid-cancellations",
+          "unit": "reservations",
+          "measurement": "contribution",
+          "segment": null,
+          "absolute": false,
+          "comparator": ">=",
+          "threshold": 18
+        }
+      ],
+      "status": "complete",
+      "outcome": "ignore",
+      "recipients": [],
+      "analyses": [
+        {
+          "source_key": "juniper-bookings-reporting",
+          "comparison_key": "paid-cancellations",
+          "metric": "canceled_paid_reservations",
+          "unit": "reservations",
+          "dimension": "booking_channel",
+          "definition": "Paid reservations canceled in the closed interval after duplicate removal and test-reservation exclusion.",
+          "population": "paid reservations with a cancellation timestamp, excluding test reservations",
+          "baseline_start": "2027-03-29T00:00:00+00:00",
+          "baseline_end": "2027-04-05T00:00:00+00:00",
+          "current_start": "2027-04-05T00:00:00+00:00",
+          "current_end": "2027-04-12T00:00:00+00:00",
+          "baseline": 520,
+          "current": 521,
+          "delta": 1,
+          "within_effect": null,
+          "mix_effect": null,
+          "contributions": [
+            {
+              "segment": "direct",
+              "baseline": 260,
+              "current": 266,
+              "contribution": 6
+            },
+            {
+              "segment": "mobile",
+              "baseline": 170,
+              "current": 165,
+              "contribution": -5
+            },
+            {
+              "segment": "partner",
+              "baseline": 90,
+              "current": 90,
+              "contribution": 0
+            }
+          ],
+          "query_refs": [
+            "query:juniper-bookings:reporting:p05"
+          ]
+        }
+      ],
+      "semantic_status": "not_applicable",
+      "context_status": "not_applicable",
+      "measurements": {
+        "baseline": 520,
+        "current": 521,
+        "delta": 1,
+        "contributions": [
+          {
+            "segment": "direct",
+            "baseline": 260,
+            "current": 266,
+            "contribution": 6
+          },
+          {
+            "segment": "mobile",
+            "baseline": 170,
+            "current": 165,
+            "contribution": -5
+          },
+          {
+            "segment": "partner",
+            "baseline": 90,
+            "current": 90,
+            "contribution": 0
+          }
+        ],
+        "within_effect": null,
+        "mix_effect": null
+      },
+      "materiality": {
+        "delta_threshold": 24,
+        "contribution_threshold": 18
+      }
+    },
+    "p06": {
+      "numeric_policy": [
+        {
+          "source_key": "juniper-bookings-reporting",
+          "comparison_key": "paid-cancellations",
+          "unit": "reservations",
+          "measurement": "delta",
+          "segment": null,
+          "absolute": false,
+          "comparator": ">=",
+          "threshold": 24
+        },
+        {
+          "source_key": "juniper-bookings-reporting",
+          "comparison_key": "paid-cancellations",
+          "unit": "reservations",
+          "measurement": "contribution",
+          "segment": null,
+          "absolute": false,
+          "comparator": ">=",
+          "threshold": 18
+        }
+      ],
+      "status": "blocked",
+      "outcome": "insufficient_data",
+      "recipients": [
+        "booking-data-quality"
+      ],
+      "analyses": [],
+      "semantic_status": "not_applicable",
+      "context_status": "not_applicable",
+      "measurements": {
+        "baseline": 500,
+        "current": null,
+        "delta": null,
+        "contributions": [],
+        "within_effect": null,
+        "mix_effect": null
+      },
+      "materiality": {
+        "delta_threshold": 24,
+        "contribution_threshold": 18
+      }
+    }
+  },
+  "mosaic-payments": {
+    "p03": {
+      "numeric_policy": [
+        {
+          "source_key": "mosaic-payments-reporting",
+          "comparison_key": "authorization-failure-rate",
+          "unit": "ratio",
+          "measurement": "current",
+          "segment": null,
+          "absolute": false,
+          "comparator": ">=",
+          "threshold": 0.048
+        },
+        {
+          "source_key": "mosaic-payments-reporting",
+          "comparison_key": "authorization-failure-rate",
+          "unit": "ratio",
+          "measurement": "delta",
+          "segment": null,
+          "absolute": false,
+          "comparator": ">=",
+          "threshold": 0.012
+        }
+      ],
+      "status": "complete",
+      "outcome": "notify",
+      "recipients": [
+        "payments-operations"
+      ],
+      "analyses": [
+        {
+          "source_key": "mosaic-payments-reporting",
+          "comparison_key": "authorization-failure-rate",
+          "metric": "payment_authorization_failure_rate",
+          "unit": "ratio",
+          "dimension": "payment_rail",
+          "definition": "Failed eligible payment authorization attempts divided by all eligible authorization attempts.",
+          "population": "eligible payment authorization attempts with a rail and outcome",
+          "baseline_start": "2027-03-01T00:00:00+00:00",
+          "baseline_end": "2027-03-08T00:00:00+00:00",
+          "current_start": "2027-03-08T00:00:00+00:00",
+          "current_end": "2027-03-15T00:00:00+00:00",
+          "baseline": 0.04375,
+          "current": 0.05,
+          "delta": 0.00625,
+          "within_effect": 0.005902777777777778,
+          "mix_effect": 0.00034722222222222224,
+          "contributions": [
+            {
+              "segment": "bank_transfer",
+              "baseline": 0.04,
+              "current": 0.05,
+              "contribution": 0.0016666666666666668,
+              "within_effect": 0.0035416666666666665,
+              "mix_effect": -0.001875
+            },
+            {
+              "segment": "card",
+              "baseline": 0.05,
+              "current": 0.05,
+              "contribution": 0.003472222222222222,
+              "within_effect": 0.0,
+              "mix_effect": 0.003472222222222222
+            },
+            {
+              "segment": "wallet",
+              "baseline": 0.04,
+              "current": 0.05,
+              "contribution": 0.0011111111111111111,
+              "within_effect": 0.002361111111111111,
+              "mix_effect": -0.00125
+            }
+          ],
+          "query_refs": [
+            "query:mosaic-payments:reporting:p03"
+          ]
+        }
+      ],
+      "semantic_status": "not_applicable",
+      "context_status": "not_applicable",
+      "measurements": {
+        "baseline": 0.04375,
+        "current": 0.05,
+        "delta": 0.00625,
+        "contributions": [
+          {
+            "segment": "bank_transfer",
+            "baseline": 0.04,
+            "current": 0.05,
+            "contribution": 0.0016666666666666668,
+            "within_effect": 0.0035416666666666665,
+            "mix_effect": -0.001875
+          },
+          {
+            "segment": "card",
+            "baseline": 0.05,
+            "current": 0.05,
+            "contribution": 0.003472222222222222,
+            "within_effect": 0.0,
+            "mix_effect": 0.003472222222222222
+          },
+          {
+            "segment": "wallet",
+            "baseline": 0.04,
+            "current": 0.05,
+            "contribution": 0.0011111111111111111,
+            "within_effect": 0.002361111111111111,
+            "mix_effect": -0.00125
+          }
+        ],
+        "within_effect": 0.005902777777777778,
+        "mix_effect": 0.00034722222222222224
+      },
+      "materiality": {
+        "delta_threshold": 0.012,
+        "current_threshold": 0.048
+      }
+    },
+    "p04": {
+      "numeric_policy": [
+        {
+          "source_key": "mosaic-payments-reporting",
+          "comparison_key": "authorization-failure-rate",
+          "unit": "ratio",
+          "measurement": "current",
+          "segment": null,
+          "absolute": false,
+          "comparator": ">=",
+          "threshold": 0.048
+        },
+        {
+          "source_key": "mosaic-payments-reporting",
+          "comparison_key": "authorization-failure-rate",
+          "unit": "ratio",
+          "measurement": "delta",
+          "segment": null,
+          "absolute": false,
+          "comparator": ">=",
+          "threshold": 0.012
+        }
+      ],
+      "status": "complete",
+      "outcome": "notify",
+      "recipients": [
+        "payments-operations"
+      ],
+      "analyses": [
+        {
+          "source_key": "mosaic-payments-reporting",
+          "comparison_key": "authorization-failure-rate",
+          "metric": "payment_authorization_failure_rate",
+          "unit": "ratio",
+          "dimension": "payment_rail",
+          "definition": "Failed eligible payment authorization attempts divided by all eligible authorization attempts.",
+          "population": "eligible payment authorization attempts with a rail and outcome",
+          "baseline_start": "2027-03-15T00:00:00+00:00",
+          "baseline_end": "2027-03-22T00:00:00+00:00",
+          "current_start": "2027-03-22T00:00:00+00:00",
+          "current_end": "2027-03-29T00:00:00+00:00",
+          "baseline": 0.025,
+          "current": 0.04111111111111111,
+          "delta": 0.01611111111111111,
+          "within_effect": 0.01623611111111111,
+          "mix_effect": -0.000125,
+          "contributions": [
+            {
+              "segment": "bank_transfer",
+              "baseline": 0.02666666666666667,
+              "current": 0.043333333333333335,
+              "contribution": 0.0044444444444444444,
+              "within_effect": 0.005902777777777778,
+              "mix_effect": -0.0014583333333333334
+            },
+            {
+              "segment": "card",
+              "baseline": 0.02666666666666667,
+              "current": 0.03888888888888889,
+              "contribution": 0.005555555555555556,
+              "within_effect": 0.004736111111111111,
+              "mix_effect": 0.0008194444444444445
+            },
+            {
+              "segment": "wallet",
+              "baseline": 0.02,
+              "current": 0.041666666666666664,
+              "contribution": 0.006111111111111111,
+              "within_effect": 0.005597222222222222,
+              "mix_effect": 0.0005138888888888889
+            }
+          ],
+          "query_refs": [
+            "query:mosaic-payments:reporting:p04"
+          ]
+        }
+      ],
+      "semantic_status": "not_applicable",
+      "context_status": "not_applicable",
+      "measurements": {
+        "baseline": 0.025,
+        "current": 0.04111111111111111,
+        "delta": 0.01611111111111111,
+        "contributions": [
+          {
+            "segment": "bank_transfer",
+            "baseline": 0.02666666666666667,
+            "current": 0.043333333333333335,
+            "contribution": 0.0044444444444444444,
+            "within_effect": 0.005902777777777778,
+            "mix_effect": -0.0014583333333333334
+          },
+          {
+            "segment": "card",
+            "baseline": 0.02666666666666667,
+            "current": 0.03888888888888889,
+            "contribution": 0.005555555555555556,
+            "within_effect": 0.004736111111111111,
+            "mix_effect": 0.0008194444444444445
+          },
+          {
+            "segment": "wallet",
+            "baseline": 0.02,
+            "current": 0.041666666666666664,
+            "contribution": 0.006111111111111111,
+            "within_effect": 0.005597222222222222,
+            "mix_effect": 0.0005138888888888889
+          }
+        ],
+        "within_effect": 0.01623611111111111,
+        "mix_effect": -0.000125
+      },
+      "materiality": {
+        "delta_threshold": 0.012,
+        "current_threshold": 0.048
+      }
+    },
+    "p05": {
+      "numeric_policy": [
+        {
+          "source_key": "mosaic-payments-reporting",
+          "comparison_key": "authorization-failure-rate",
+          "unit": "ratio",
+          "measurement": "current",
+          "segment": null,
+          "absolute": false,
+          "comparator": ">=",
+          "threshold": 0.048
+        },
+        {
+          "source_key": "mosaic-payments-reporting",
+          "comparison_key": "authorization-failure-rate",
+          "unit": "ratio",
+          "measurement": "delta",
+          "segment": null,
+          "absolute": false,
+          "comparator": ">=",
+          "threshold": 0.012
+        }
+      ],
+      "status": "complete",
+      "outcome": "ignore",
+      "recipients": [],
+      "analyses": [
+        {
+          "source_key": "mosaic-payments-reporting",
+          "comparison_key": "authorization-failure-rate",
+          "metric": "payment_authorization_failure_rate",
+          "unit": "ratio",
+          "dimension": "payment_rail",
+          "definition": "Failed eligible payment authorization attempts divided by all eligible authorization attempts.",
+          "population": "eligible payment authorization attempts with a rail and outcome",
+          "baseline_start": "2027-03-29T00:00:00+00:00",
+          "baseline_end": "2027-04-05T00:00:00+00:00",
+          "current_start": "2027-04-05T00:00:00+00:00",
+          "current_end": "2027-04-12T00:00:00+00:00",
+          "baseline": 0.0375,
+          "current": 0.03780487804878049,
+          "delta": 0.0003048780487804878,
+          "within_effect": 0.00023913871951219512,
+          "mix_effect": 6.573932926829269e-05,
+          "contributions": [
+            {
+              "segment": "bank_transfer",
+              "baseline": 0.03333333333333333,
+              "current": 0.03333333333333333,
+              "contribution": -0.0003048780487804878,
+              "within_effect": 0.0,
+              "mix_effect": -0.0003048780487804878
+            },
+            {
+              "segment": "card",
+              "baseline": 0.04,
+              "current": 0.040625,
+              "contribution": 0.0008536585365853659,
+              "within_effect": 0.00023913871951219512,
+              "mix_effect": 0.0006145198170731707
+            },
+            {
+              "segment": "wallet",
+              "baseline": 0.04,
+              "current": 0.04,
+              "contribution": -0.00024390243902439024,
+              "within_effect": 0.0,
+              "mix_effect": -0.00024390243902439024
+            }
+          ],
+          "query_refs": [
+            "query:mosaic-payments:reporting:p05"
+          ]
+        }
+      ],
+      "semantic_status": "not_applicable",
+      "context_status": "not_applicable",
+      "measurements": {
+        "baseline": 0.0375,
+        "current": 0.03780487804878049,
+        "delta": 0.0003048780487804878,
+        "contributions": [
+          {
+            "segment": "bank_transfer",
+            "baseline": 0.03333333333333333,
+            "current": 0.03333333333333333,
+            "contribution": -0.0003048780487804878,
+            "within_effect": 0.0,
+            "mix_effect": -0.0003048780487804878
+          },
+          {
+            "segment": "card",
+            "baseline": 0.04,
+            "current": 0.040625,
+            "contribution": 0.0008536585365853659,
+            "within_effect": 0.00023913871951219512,
+            "mix_effect": 0.0006145198170731707
+          },
+          {
+            "segment": "wallet",
+            "baseline": 0.04,
+            "current": 0.04,
+            "contribution": -0.00024390243902439024,
+            "within_effect": 0.0,
+            "mix_effect": -0.00024390243902439024
+          }
+        ],
+        "within_effect": 0.00023913871951219512,
+        "mix_effect": 6.573932926829269e-05
+      },
+      "materiality": {
+        "delta_threshold": 0.012,
+        "current_threshold": 0.048
+      }
+    },
+    "p06": {
+      "numeric_policy": [
+        {
+          "source_key": "mosaic-payments-reporting",
+          "comparison_key": "authorization-failure-rate",
+          "unit": "ratio",
+          "measurement": "current",
+          "segment": null,
+          "absolute": false,
+          "comparator": ">=",
+          "threshold": 0.048
+        },
+        {
+          "source_key": "mosaic-payments-reporting",
+          "comparison_key": "authorization-failure-rate",
+          "unit": "ratio",
+          "measurement": "delta",
+          "segment": null,
+          "absolute": false,
+          "comparator": ">=",
+          "threshold": 0.012
+        }
+      ],
+      "status": "blocked",
+      "outcome": "insufficient_data",
+      "recipients": [
+        "payments-data"
+      ],
+      "analyses": [],
+      "semantic_status": "not_applicable",
+      "context_status": "not_applicable",
+      "measurements": {
+        "baseline": null,
+        "current": null,
+        "delta": null,
+        "contributions": [],
+        "within_effect": null,
+        "mix_effect": null
+      },
+      "materiality": {
+        "delta_threshold": 0.012,
+        "current_threshold": 0.048
+      }
+    }
+  },
+  "saffron-cloud": {
+    "p03": {
+      "numeric_policy": [
+        {
+          "source_key": "saffron-cloud-reporting",
+          "comparison_key": "signed-mrr-movement",
+          "unit": "USD",
+          "measurement": "delta",
+          "segment": null,
+          "absolute": false,
+          "comparator": "<=",
+          "threshold": -90
+        },
+        {
+          "source_key": "saffron-cloud-reporting",
+          "comparison_key": "signed-mrr-movement",
+          "unit": "USD",
+          "measurement": "contribution",
+          "segment": "contraction",
+          "absolute": false,
+          "comparator": "<=",
+          "threshold": -60
+        },
+        {
+          "source_key": "saffron-cloud-reporting",
+          "comparison_key": "signed-mrr-movement",
+          "unit": "USD",
+          "measurement": "contribution",
+          "segment": "churn",
+          "absolute": false,
+          "comparator": "<=",
+          "threshold": -60
+        }
+      ],
+      "status": "complete",
+      "outcome": "notify",
+      "recipients": [
+        "revenue-operations"
+      ],
+      "analyses": [
+        {
+          "source_key": "saffron-cloud-reporting",
+          "comparison_key": "signed-mrr-movement",
+          "metric": "signed_mrr_movement",
+          "unit": "USD",
+          "dimension": "movement_type",
+          "definition": "Signed monthly recurring-revenue movement recorded for effective subscription changes; contraction and churn are negative.",
+          "population": "billed subscription accounts with an effective subscription-change record",
+          "baseline_start": "2027-05-24T00:00:00+00:00",
+          "baseline_end": "2027-06-21T00:00:00+00:00",
+          "current_start": "2027-06-21T00:00:00+00:00",
+          "current_end": "2027-07-19T00:00:00+00:00",
+          "baseline": 75,
+          "current": 10,
+          "delta": -65,
+          "within_effect": null,
+          "mix_effect": null,
+          "contributions": [
+            {
+              "segment": "churn",
+              "baseline": -35,
+              "current": -100,
+              "contribution": -65
+            },
+            {
+              "segment": "contraction",
+              "baseline": -80,
+              "current": -85,
+              "contribution": -5
+            },
+            {
+              "segment": "expansion",
+              "baseline": 140,
+              "current": 150,
+              "contribution": 10
+            },
+            {
+              "segment": "new_logo",
+              "baseline": 50,
+              "current": 45,
+              "contribution": -5
+            }
+          ],
+          "query_refs": [
+            "query:saffron-cloud:reporting:p03"
+          ]
+        }
+      ],
+      "semantic_status": "none",
+      "context_status": "none",
+      "measurements": {
+        "baseline": 75,
+        "current": 10,
+        "delta": -65,
+        "contributions": [
+          {
+            "segment": "churn",
+            "baseline": -35,
+            "current": -100,
+            "contribution": -65
+          },
+          {
+            "segment": "contraction",
+            "baseline": -80,
+            "current": -85,
+            "contribution": -5
+          },
+          {
+            "segment": "expansion",
+            "baseline": 140,
+            "current": 150,
+            "contribution": 10
+          },
+          {
+            "segment": "new_logo",
+            "baseline": 50,
+            "current": 45,
+            "contribution": -5
+          }
+        ],
+        "within_effect": null,
+        "mix_effect": null
+      },
+      "materiality": {
+        "delta_threshold": -90,
+        "contribution_threshold": -60
+      }
+    },
+    "p04": {
+      "numeric_policy": [
+        {
+          "source_key": "saffron-cloud-reporting",
+          "comparison_key": "signed-mrr-movement",
+          "unit": "USD",
+          "measurement": "delta",
+          "segment": null,
+          "absolute": false,
+          "comparator": "<=",
+          "threshold": -90
+        },
+        {
+          "source_key": "saffron-cloud-reporting",
+          "comparison_key": "signed-mrr-movement",
+          "unit": "USD",
+          "measurement": "contribution",
+          "segment": "contraction",
+          "absolute": false,
+          "comparator": "<=",
+          "threshold": -60
+        },
+        {
+          "source_key": "saffron-cloud-reporting",
+          "comparison_key": "signed-mrr-movement",
+          "unit": "USD",
+          "measurement": "contribution",
+          "segment": "churn",
+          "absolute": false,
+          "comparator": "<=",
+          "threshold": -60
+        }
+      ],
+      "status": "complete",
+      "outcome": "ignore",
+      "recipients": [],
+      "analyses": [
+        {
+          "source_key": "saffron-cloud-reporting",
+          "comparison_key": "signed-mrr-movement",
+          "metric": "signed_mrr_movement",
+          "unit": "USD",
+          "dimension": "movement_type",
+          "definition": "Signed monthly recurring-revenue movement recorded for effective subscription changes; contraction and churn are negative.",
+          "population": "billed subscription accounts with an effective subscription-change record",
+          "baseline_start": "2027-07-19T00:00:00+00:00",
+          "baseline_end": "2027-08-16T00:00:00+00:00",
+          "current_start": "2027-08-16T00:00:00+00:00",
+          "current_end": "2027-09-13T00:00:00+00:00",
+          "baseline": 50,
+          "current": 35,
+          "delta": -15,
+          "within_effect": null,
+          "mix_effect": null,
+          "contributions": [
+            {
+              "segment": "churn",
+              "baseline": -50,
+              "current": -60,
+              "contribution": -10
+            },
+            {
+              "segment": "contraction",
+              "baseline": -75,
+              "current": -80,
+              "contribution": -5
+            },
+            {
+              "segment": "expansion",
+              "baseline": 130,
+              "current": 60,
+              "contribution": -70
+            },
+            {
+              "segment": "new_logo",
+              "baseline": 45,
+              "current": 115,
+              "contribution": 70
+            }
+          ],
+          "query_refs": [
+            "query:saffron-cloud:reporting:p04"
+          ]
+        }
+      ],
+      "semantic_status": "none",
+      "context_status": "none",
+      "measurements": {
+        "baseline": 50,
+        "current": 35,
+        "delta": -15,
+        "contributions": [
+          {
+            "segment": "churn",
+            "baseline": -50,
+            "current": -60,
+            "contribution": -10
+          },
+          {
+            "segment": "contraction",
+            "baseline": -75,
+            "current": -80,
+            "contribution": -5
+          },
+          {
+            "segment": "expansion",
+            "baseline": 130,
+            "current": 60,
+            "contribution": -70
+          },
+          {
+            "segment": "new_logo",
+            "baseline": 45,
+            "current": 115,
+            "contribution": 70
+          }
+        ],
+        "within_effect": null,
+        "mix_effect": null
+      },
+      "materiality": {
+        "delta_threshold": -90,
+        "contribution_threshold": -60
+      }
+    },
+    "p05": {
+      "numeric_policy": [
+        {
+          "source_key": "saffron-cloud-reporting",
+          "comparison_key": "signed-mrr-movement",
+          "unit": "USD",
+          "measurement": "delta",
+          "segment": null,
+          "absolute": false,
+          "comparator": "<=",
+          "threshold": -90
+        },
+        {
+          "source_key": "saffron-cloud-reporting",
+          "comparison_key": "signed-mrr-movement",
+          "unit": "USD",
+          "measurement": "contribution",
+          "segment": "contraction",
+          "absolute": false,
+          "comparator": "<=",
+          "threshold": -60
+        },
+        {
+          "source_key": "saffron-cloud-reporting",
+          "comparison_key": "signed-mrr-movement",
+          "unit": "USD",
+          "measurement": "contribution",
+          "segment": "churn",
+          "absolute": false,
+          "comparator": "<=",
+          "threshold": -60
+        }
+      ],
+      "status": "complete",
+      "outcome": "ignore",
+      "recipients": [],
+      "analyses": [
+        {
+          "source_key": "saffron-cloud-reporting",
+          "comparison_key": "signed-mrr-movement",
+          "metric": "signed_mrr_movement",
+          "unit": "USD",
+          "dimension": "movement_type",
+          "definition": "Signed monthly recurring-revenue movement recorded for effective subscription changes; contraction and churn are negative.",
+          "population": "billed subscription accounts with an effective subscription-change record",
+          "baseline_start": "2027-09-13T00:00:00+00:00",
+          "baseline_end": "2027-10-11T00:00:00+00:00",
+          "current_start": "2027-10-11T00:00:00+00:00",
+          "current_end": "2027-11-08T00:00:00+00:00",
+          "baseline": 90,
+          "current": -95,
+          "delta": -185,
+          "within_effect": null,
+          "mix_effect": null,
+          "contributions": [
+            {
+              "segment": "churn",
+              "baseline": -40,
+              "current": -100,
+              "contribution": -60
+            },
+            {
+              "segment": "contraction",
+              "baseline": -80,
+              "current": -120,
+              "contribution": -40
+            },
+            {
+              "segment": "expansion",
+              "baseline": 160,
+              "current": 90,
+              "contribution": -70
+            },
+            {
+              "segment": "new_logo",
+              "baseline": 50,
+              "current": 35,
+              "contribution": -15
+            }
+          ],
+          "query_refs": [
+            "query:saffron-cloud:reporting:p05"
+          ]
+        }
+      ],
+      "semantic_status": "approved",
+      "context_status": "approved",
+      "measurements": {
+        "baseline": 90,
+        "current": -95,
+        "delta": -185,
+        "contributions": [
+          {
+            "segment": "churn",
+            "baseline": -40,
+            "current": -100,
+            "contribution": -60
+          },
+          {
+            "segment": "contraction",
+            "baseline": -80,
+            "current": -120,
+            "contribution": -40
+          },
+          {
+            "segment": "expansion",
+            "baseline": 160,
+            "current": 90,
+            "contribution": -70
+          },
+          {
+            "segment": "new_logo",
+            "baseline": 50,
+            "current": 35,
+            "contribution": -15
+          }
+        ],
+        "within_effect": null,
+        "mix_effect": null
+      },
+      "materiality": {
+        "delta_threshold": -90,
+        "contribution_threshold": -60
+      }
+    },
+    "p06": {
+      "numeric_policy": [
+        {
+          "source_key": "saffron-cloud-reporting",
+          "comparison_key": "signed-mrr-movement",
+          "unit": "USD",
+          "measurement": "delta",
+          "segment": null,
+          "absolute": false,
+          "comparator": "<=",
+          "threshold": -90
+        },
+        {
+          "source_key": "saffron-cloud-reporting",
+          "comparison_key": "signed-mrr-movement",
+          "unit": "USD",
+          "measurement": "contribution",
+          "segment": "contraction",
+          "absolute": false,
+          "comparator": "<=",
+          "threshold": -60
+        },
+        {
+          "source_key": "saffron-cloud-reporting",
+          "comparison_key": "signed-mrr-movement",
+          "unit": "USD",
+          "measurement": "contribution",
+          "segment": "churn",
+          "absolute": false,
+          "comparator": "<=",
+          "threshold": -60
+        }
+      ],
+      "status": "complete",
+      "outcome": "investigate",
+      "recipients": [
+        "revenue-data-review"
+      ],
+      "analyses": [
+        {
+          "source_key": "saffron-cloud-reporting",
+          "comparison_key": "signed-mrr-movement",
+          "metric": "signed_mrr_movement",
+          "unit": "USD",
+          "dimension": "movement_type",
+          "definition": "Signed monthly recurring-revenue movement recorded for effective subscription changes; contraction and churn are negative.",
+          "population": "billed subscription accounts with an effective subscription-change record",
+          "baseline_start": "2027-11-08T00:00:00+00:00",
+          "baseline_end": "2027-12-06T00:00:00+00:00",
+          "current_start": "2027-12-06T00:00:00+00:00",
+          "current_end": "2028-01-03T00:00:00+00:00",
+          "baseline": 75,
+          "current": -80,
+          "delta": -155,
+          "within_effect": null,
+          "mix_effect": null,
+          "contributions": [
+            {
+              "segment": "churn",
+              "baseline": -35,
+              "current": -85,
+              "contribution": -50
+            },
+            {
+              "segment": "contraction",
+              "baseline": -85,
+              "current": -125,
+              "contribution": -40
+            },
+            {
+              "segment": "expansion",
+              "baseline": 150,
+              "current": 100,
+              "contribution": -50
+            },
+            {
+              "segment": "new_logo",
+              "baseline": 45,
+              "current": 30,
+              "contribution": -15
+            }
+          ],
+          "query_refs": [
+            "query:saffron-cloud:reporting:p06"
+          ]
+        }
+      ],
+      "semantic_status": "unavailable",
+      "context_status": "unavailable",
+      "measurements": {
+        "baseline": 75,
+        "current": -80,
+        "delta": -155,
+        "contributions": [
+          {
+            "segment": "churn",
+            "baseline": -35,
+            "current": -85,
+            "contribution": -50
+          },
+          {
+            "segment": "contraction",
+            "baseline": -85,
+            "current": -125,
+            "contribution": -40
+          },
+          {
+            "segment": "expansion",
+            "baseline": 150,
+            "current": 100,
+            "contribution": -50
+          },
+          {
+            "segment": "new_logo",
+            "baseline": 45,
+            "current": 30,
+            "contribution": -15
+          }
+        ],
+        "within_effect": null,
+        "mix_effect": null
+      },
+      "materiality": {
+        "delta_threshold": -90,
+        "contribution_threshold": -60
+      }
+    }
+  }
+}

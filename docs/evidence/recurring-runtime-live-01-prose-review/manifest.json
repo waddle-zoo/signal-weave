@@ -1,0 +1,18 @@
+{
+  "scope": "isolated arm-masked prose review; evaluation artifact only",
+  "live": true,
+  "model": "gpt-5.6-luna",
+  "effort": "high",
+  "episode_count": 2,
+  "cases_per_episode": 6,
+  "case_count": 12,
+  "timeout_seconds": 240,
+  "max_tool_calls_per_episode": 12,
+  "retries": 0,
+  "input_digest": "d750c450665643fb417e1588971503a457f5bb92ef6b3292850636bf5ec9dccd",
+  "instructions_digest": "b4049f9dec40b41f1d14e04c0c96b8d124cfaaa56e5aeb5de8495c8ed086f548",
+  "correctness_claim": false,
+  "human_usability_claim": false,
+  "private_inputs_read": [],
+  "scoring_key_read": false
+}

@@ -1,0 +1,169 @@
+{
+  "status": "partial",
+  "review_status": "incomplete",
+  "case_count": 12,
+  "completed_case_count": 0,
+  "episodes": [
+    {
+      "episode": 1,
+      "case_ids": [
+        "juniper-bookings:p03",
+        "juniper-bookings:p05",
+        "mosaic-payments:p03",
+        "mosaic-payments:p05",
+        "saffron-cloud:p03",
+        "saffron-cloud:p05"
+      ],
+      "input_digest": "4fe46bd48062a900bf4524384d42a3b922d81b2a057ed2af2ebd11575ded909c",
+      "instructions_digest": "b4049f9dec40b41f1d14e04c0c96b8d124cfaaa56e5aeb5de8495c8ed086f548",
+      "episode_result": {
+        "status": "failed",
+        "error": "budget_exhausted",
+        "tool_calls": 12,
+        "seconds": 82.75872758298647,
+        "response_timeout_seconds": 240,
+        "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+        "wall_time_overrun_seconds": 0.0,
+        "transport": "codex_cli",
+        "exit_code": -15,
+        "foreign_tools": []
+      },
+      "session": {
+        "case_ids": [
+          "juniper-bookings:p03",
+          "juniper-bookings:p05",
+          "mosaic-payments:p03",
+          "mosaic-payments:p05",
+          "saffron-cloud:p03",
+          "saffron-cloud:p05"
+        ],
+        "read_case_ids": [
+          "juniper-bookings:p03",
+          "juniper-bookings:p05",
+          "mosaic-payments:p03",
+          "mosaic-payments:p05",
+          "saffron-cloud:p03",
+          "saffron-cloud:p05"
+        ],
+        "reviews": [],
+        "submission": null
+      },
+      "output_digest": "5a144a2a89339e510dd893d74539c573365e2963692388d7606632d873919488",
+      "event_digest": "b5f6e47536f8529f6db3ddab8f21c3a409385ec8813fdfe16690a13834e315a6",
+      "submission_complete": false
+    },
+    {
+      "episode": 2,
+      "case_ids": [
+        "juniper-bookings:p04",
+        "juniper-bookings:p06",
+        "mosaic-payments:p04",
+        "mosaic-payments:p06",
+        "saffron-cloud:p04",
+        "saffron-cloud:p06"
+      ],
+      "input_digest": "a8022d3820482754ad983630fe9104ef44142ac991a2f0561c367d1cc2a24272",
+      "instructions_digest": "b4049f9dec40b41f1d14e04c0c96b8d124cfaaa56e5aeb5de8495c8ed086f548",
+      "episode_result": {
+        "status": "failed",
+        "error": "budget_exhausted",
+        "tool_calls": 12,
+        "seconds": 83.21753845899366,
+        "response_timeout_seconds": 240,
+        "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+        "wall_time_overrun_seconds": 0.0,
+        "transport": "codex_cli",
+        "exit_code": -15,
+        "foreign_tools": []
+      },
+      "session": {
+        "case_ids": [
+          "juniper-bookings:p04",
+          "juniper-bookings:p06",
+          "mosaic-payments:p04",
+          "mosaic-payments:p06",
+          "saffron-cloud:p04",
+          "saffron-cloud:p06"
+        ],
+        "read_case_ids": [
+          "juniper-bookings:p04",
+          "juniper-bookings:p06",
+          "mosaic-payments:p04",
+          "mosaic-payments:p06",
+          "saffron-cloud:p04",
+          "saffron-cloud:p06"
+        ],
+        "reviews": [],
+        "submission": null
+      },
+      "output_digest": "9337ddc90d95dcd05e912ba2faf326744dd3852efdc365bc6a30ba665fa09aec",
+      "event_digest": "0456cfc9d981e4a9fdeac3c9215404305ef07dbdf7ea00b5ceaed6fdaa825c65",
+      "submission_complete": false
+    }
+  ],
+  "reviews": [],
+  "failures": [
+    {
+      "episode": 1,
+      "error": "budget_exhausted",
+      "completed_cases": 0,
+      "case_count": 6
+    },
+    {
+      "episode": 2,
+      "error": "budget_exhausted",
+      "completed_cases": 0,
+      "case_count": 6
+    }
+  ],
+  "usage": {
+    "by_episode": {
+      "review:1": {
+        "requests": 1,
+        "responses": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "cached_input_tokens": 0
+      },
+      "review:2": {
+        "requests": 1,
+        "responses": 0,
+        "input_tokens": 0,
+        "output_tokens": 0,
+        "cached_input_tokens": 0
+      }
+    },
+    "unknown_usage": [
+      {
+        "episode": "review:1",
+        "reason": "budget_exhausted"
+      },
+      {
+        "episode": "review:2",
+        "reason": "budget_exhausted"
+      },
+      {
+        "episode": "review:1",
+        "reason": "request_response_mismatch"
+      },
+      {
+        "episode": "review:1",
+        "reason": "missing_usage"
+      },
+      {
+        "episode": "review:2",
+        "reason": "request_response_mismatch"
+      },
+      {
+        "episode": "review:2",
+        "reason": "missing_usage"
+      }
+    ],
+    "usage_status": "unknown"
+  },
+  "input_digest": "d750c450665643fb417e1588971503a457f5bb92ef6b3292850636bf5ec9dccd",
+  "instructions_digest": "b4049f9dec40b41f1d14e04c0c96b8d124cfaaa56e5aeb5de8495c8ed086f548",
+  "correctness_claim": false,
+  "human_usability_claim": false,
+  "events_file": "events.jsonl"
+}

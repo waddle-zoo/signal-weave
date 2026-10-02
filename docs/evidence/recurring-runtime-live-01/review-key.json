@@ -1,0 +1,50 @@
+{
+  "juniper-bookings:p03": {
+    "A": "baseline",
+    "B": "signalweave"
+  },
+  "juniper-bookings:p04": {
+    "A": "baseline",
+    "B": "signalweave"
+  },
+  "juniper-bookings:p05": {
+    "A": "baseline",
+    "B": "signalweave"
+  },
+  "juniper-bookings:p06": {
+    "A": "baseline",
+    "B": "signalweave"
+  },
+  "mosaic-payments:p03": {
+    "A": "signalweave",
+    "B": "baseline"
+  },
+  "mosaic-payments:p04": {
+    "A": "baseline",
+    "B": "signalweave"
+  },
+  "mosaic-payments:p05": {
+    "A": "baseline",
+    "B": "signalweave"
+  },
+  "mosaic-payments:p06": {
+    "A": "baseline",
+    "B": "signalweave"
+  },
+  "saffron-cloud:p03": {
+    "A": "signalweave",
+    "B": "baseline"
+  },
+  "saffron-cloud:p04": {
+    "A": "signalweave",
+    "B": "baseline"
+  },
+  "saffron-cloud:p05": {
+    "A": "baseline",
+    "B": "signalweave"
+  },
+  "saffron-cloud:p06": {
+    "A": "signalweave",
+    "B": "baseline"
+  }
+}

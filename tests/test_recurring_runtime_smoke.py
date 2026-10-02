@@ -12,6 +12,8 @@ from __future__ import annotations
 import asyncio
 import json
 
+import pytest
+
 from evaluations import recurring_runtime_trial as trial
 from evaluations.first_report_trial import dispatch
 from signalweave.models import InsightResult, Outcome, WatchResult, WatchStatus
@@ -21,8 +23,9 @@ def _author_intent(company: dict, catalog: dict) -> dict:
     """Build a deterministic valid draft request without entering the agent view."""
 
     from evaluations.recurring_runtime_cases import cases
+    from evaluations.recurring_runtime_transfer_cases import cases as transfer_cases
 
-    private_company = next(item for item in cases() if item["id"] == company["id"])
+    private_company = next(item for item in [*cases(), *transfer_cases()] if item["id"] == company["id"])
     conditions = [
         {**condition, "text": "Owner numeric policy"}
         for condition in private_company["periods"][0]["oracle"]["numeric_policy"]
@@ -199,7 +202,8 @@ async def _fake_episode(session, *, receipt_ids: list[str], **kwargs):
     }
 
 
-def test_full_offline_run_trial_smoke_exercises_real_runtime_artifacts(tmp_path, monkeypatch):
+@pytest.mark.parametrize("case_set", ["initial", "transfer"])
+def test_full_offline_run_trial_smoke_exercises_real_runtime_artifacts(tmp_path, monkeypatch, case_set):
     receipt_ids: list[str] = []
 
     async def fake_episode(session, **kwargs):
@@ -210,7 +214,7 @@ def test_full_offline_run_trial_smoke_exercises_real_runtime_artifacts(tmp_path,
     monkeypatch.setattr("signalweave.typesafe_adapter.load_api_key", lambda _: "offline-smoke-key")
 
     output = tmp_path / "recurring-runtime-full-offline-smoke"
-    report = asyncio.run(trial.run_trial(output, live=True))
+    report = asyncio.run(trial.run_trial(output, live=True, case_set=case_set))
 
     expected_artifacts = {
         "manifest.json",

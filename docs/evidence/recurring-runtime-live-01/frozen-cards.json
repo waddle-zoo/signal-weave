@@ -1,0 +1,742 @@
+{
+  "juniper-bookings": {
+    "company": "juniper-bookings",
+    "episode": {
+      "status": "complete",
+      "error": null,
+      "tool_calls": 9,
+      "seconds": 45.84409216698259,
+      "response_timeout_seconds": 240,
+      "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+      "wall_time_overrun_seconds": 0.0,
+      "transport": "codex_cli",
+      "exit_code": 0,
+      "foreign_tools": []
+    },
+    "setup_complete": true,
+    "drafts": 2,
+    "card": null,
+    "draft_card": {
+      "id": "card-weekly-canceled-paid-reservations-by-booking-channel-02059f43f3a7",
+      "title": "Weekly canceled paid reservations by booking channel",
+      "what_to_watch": "Canceled paid reservations in each closed weekly interval versus the immediately preceding closed week, using the same channel population after duplicate removal and test-reservation exclusion.",
+      "why_watch": "Identify complete, comparable increases that require Booking Operations attention while routing incomplete or non-comparable evidence to Booking Data Quality.",
+      "watch_for": [
+        "The source explicitly flags same population, same definition, adjacent periods, a complete disjoint channel partition, and reconciled totals."
+      ],
+      "questions": [],
+      "numeric_conditions": [
+        {
+          "text": "Total canceled paid reservations increased by at least 24 reservations versus baseline.",
+          "source_key": "juniper-bookings-reporting",
+          "comparison_key": "paid-cancellations",
+          "measurement": "delta",
+          "segment": null,
+          "unit": "reservations",
+          "threshold": 24.0,
+          "comparator": ">=",
+          "absolute": true
+        },
+        {
+          "text": "A booking channel's canceled paid reservations increased by at least 18 reservations versus baseline.",
+          "source_key": "juniper-bookings-reporting",
+          "comparison_key": "paid-cancellations",
+          "measurement": "contribution",
+          "segment": null,
+          "unit": "reservations",
+          "threshold": 18.0,
+          "comparator": ">=",
+          "absolute": true
+        }
+      ],
+      "evidence_requirements": {},
+      "decision_guidance": "Use the paid-cancellations comparison from juniper-bookings-reporting. Accept the movement only when the source explicitly provides positive flags for the same population, same definition, adjacent periods, a complete disjoint channel partition, and reconciled totals. For accepted complete movements, calculate current minus baseline: notify Booking Operations if total delta is at least 24 or any channel contribution is at least 18; negative contributions are not increases. If coverage is partial or any required comparability flag is absent or not positive, route insufficient_data to Booking Data Quality. If complete movement meets neither threshold, ignore. Describe channel contributions as an accounting decomposition of the measured difference, not as causes. Numeric checks do not select actions; derive routing from this policy and keep incomplete matching reports unknown.",
+      "follow_up_guidance": "",
+      "sources": [
+        {
+          "key": "juniper-bookings-reporting",
+          "adapter": "company_mcp",
+          "resource": "report:paid-cancellations",
+          "label": "Paid cancellations by booking channel",
+          "parameters": {
+            "business_role": "reporting",
+            "available_comparison_windows": [
+              "previous_period"
+            ]
+          },
+          "required": true,
+          "required_comparison_keys": [
+            "paid-cancellations"
+          ]
+        }
+      ],
+      "comparison_windows": [
+        "previous_period"
+      ],
+      "action_confidence_threshold": 0.7,
+      "owner": null,
+      "version": 1,
+      "max_source_age_hours": 24.0,
+      "delivery_methods": [
+        {
+          "key": "booking-operations",
+          "outcome": "notify",
+          "label": "Booking Operations",
+          "destination": "agent://booking-operations",
+          "instructions": ""
+        },
+        {
+          "key": "booking-data-quality",
+          "outcome": "insufficient_data",
+          "label": "Booking Data Quality",
+          "destination": "agent://booking-data-quality",
+          "instructions": ""
+        }
+      ],
+      "retrieval_mode": "fixed",
+      "investigation_mode": "none",
+      "max_investigation_sources": 3,
+      "investigation_threshold": 0.6,
+      "principal_id": "juniper-bookings-owner",
+      "principal_tenant": "synthetic-recurring-runtime",
+      "compiled_plan": {
+        "card_id": "card-weekly-canceled-paid-reservations-by-booking-channel-02059f43f3a7",
+        "card_version": 1,
+        "selected_source_keys": [
+          "juniper-bookings-reporting"
+        ],
+        "comparison_windows": [
+          "previous_period"
+        ],
+        "capabilities": [
+          "baseline_comparison",
+          "freshness_check",
+          "dimension_contribution",
+          "watch_for_checks"
+        ],
+        "watch_for": [
+          "The source explicitly flags same population, same definition, adjacent periods, a complete disjoint channel partition, and reconciled totals."
+        ],
+        "questions": [],
+        "delivery_method_keys": [
+          "booking-operations",
+          "booking-data-quality"
+        ],
+        "compiled_by": "jev-latest",
+        "card_scope": "Canceled paid reservations in each closed weekly interval versus the immediately preceding closed week, using the same channel population after duplicate removal and test-reservation exclusion.\nWhy: Identify complete, comparable increases that require Booking Operations attention while routing incomplete or non-comparable evidence to Booking Data Quality.",
+        "metric_query_plans": [],
+        "investigation_mode": "none",
+        "max_investigation_sources": 3,
+        "evidence_slots": [
+          {
+            "key": "source:juniper-bookings-reporting",
+            "role": "primary",
+            "question": "What changed in Paid cancellations by booking channel that is relevant to the card's stated purpose and comparison window?",
+            "source_keys": [
+              "juniper-bookings-reporting"
+            ],
+            "source_refs": [
+              {
+                "key": "juniper-bookings-reporting",
+                "adapter": "company_mcp",
+                "resource": "report:paid-cancellations",
+                "label": "Paid cancellations by booking channel",
+                "parameters": {
+                  "business_role": "reporting",
+                  "available_comparison_windows": [
+                    "previous_period"
+                  ]
+                },
+                "required": true,
+                "required_comparison_keys": [
+                  "paid-cancellations"
+                ]
+              }
+            ],
+            "required": true,
+            "completion_criteria": "Return complete, reconciled analytical comparisons: paid-cancellations",
+            "status": "pending",
+            "evidence_fact_ids": [],
+            "evidence_source_keys": []
+          },
+          {
+            "key": "watch:1",
+            "role": "watch",
+            "question": "The source explicitly flags same population, same definition, adjacent periods, a complete disjoint channel partition, and reconciled totals.",
+            "source_keys": [
+              "juniper-bookings-reporting"
+            ],
+            "source_refs": [],
+            "required": true,
+            "completion_criteria": "Return evidence that shows whether this watch item is present or absent.",
+            "status": "pending",
+            "evidence_fact_ids": [],
+            "evidence_source_keys": []
+          }
+        ]
+      },
+      "onboarding_review": null,
+      "onboarding_review_history": [],
+      "onboarding_corrections": [],
+      "status": "draft",
+      "approved_by": null,
+      "approved_at": null
+    },
+    "approval": {
+      "status": "failed",
+      "error": "numeric_policy_audit_failed",
+      "details": {
+        "passed": false,
+        "errors": [
+          "numeric_policy_coverage"
+        ]
+      }
+    },
+    "numeric_policy_audit": {
+      "passed": false,
+      "errors": [
+        "numeric_policy_coverage"
+      ]
+    },
+    "previewed_periods": [
+      "p01",
+      "p02"
+    ]
+  },
+  "mosaic-payments": {
+    "company": "mosaic-payments",
+    "episode": {
+      "status": "complete",
+      "error": null,
+      "tool_calls": 9,
+      "seconds": 43.88168166700052,
+      "response_timeout_seconds": 240,
+      "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+      "wall_time_overrun_seconds": 0.0,
+      "transport": "codex_cli",
+      "exit_code": 0,
+      "foreign_tools": []
+    },
+    "setup_complete": true,
+    "drafts": 1,
+    "card": {
+      "id": "card-weighted-payment-authorization-failure-rate-across-payment-rails-25522141970b",
+      "title": "Weighted payment-authorization failure rate across payment rails",
+      "what_to_watch": "Weighted payment-authorization failure rate across eligible card, bank-transfer, and wallet authorization attempts, using attempt-count weighting rather than averaging rail percentages.",
+      "why_watch": "Detect a high current weighted failure rate or a material increase from the immediately preceding period while preserving the owner's completeness and comparability policy.",
+      "watch_for": [
+        "The source explicitly confirms the same eligible population, same definition, adjacent periods, a complete rail partition, and reconciled totals before using the comparison; otherwise the result is insufficient_data.",
+        "Report weighted rate and mix effects as descriptive accounting terms only; do not infer causes."
+      ],
+      "questions": [],
+      "numeric_conditions": [
+        {
+          "text": "Weighted current payment-authorization failure rate is at least 4.8%.",
+          "source_key": "mosaic-payments-reporting",
+          "comparison_key": "authorization-failure-rate",
+          "measurement": "current",
+          "segment": null,
+          "unit": "ratio",
+          "threshold": 0.048,
+          "comparator": ">=",
+          "absolute": false
+        },
+        {
+          "text": "Weighted current-minus-baseline failure-rate change is at least 1.2 percentage points.",
+          "source_key": "mosaic-payments-reporting",
+          "comparison_key": "authorization-failure-rate",
+          "measurement": "delta",
+          "segment": null,
+          "unit": "ratio",
+          "threshold": 0.012,
+          "comparator": ">=",
+          "absolute": false
+        }
+      ],
+      "evidence_requirements": {},
+      "decision_guidance": "If the required source comparison is incomplete or any eligible rail is missing, or the source does not positively flag same population, same definition, adjacent periods, complete rail partition, and reconciled totals, route insufficient_data to Payments Data. If the comparison is valid and either numeric condition is met, notify Payments Operations. If valid and neither condition is met, ignore. Use current minus baseline for change. Describe rate and mix effects as accounting terms, not causes.",
+      "follow_up_guidance": "",
+      "sources": [
+        {
+          "key": "mosaic-payments-reporting",
+          "adapter": "company_mcp",
+          "resource": "report:authorization-failure-rate",
+          "label": "Weighted authorization failure rate by payment rail",
+          "parameters": {
+            "business_role": "reporting",
+            "available_comparison_windows": [
+              "previous_period"
+            ]
+          },
+          "required": true,
+          "required_comparison_keys": [
+            "authorization-failure-rate"
+          ]
+        }
+      ],
+      "comparison_windows": [
+        "previous_period"
+      ],
+      "action_confidence_threshold": 0.7,
+      "owner": null,
+      "version": 1,
+      "max_source_age_hours": 24.0,
+      "delivery_methods": [
+        {
+          "key": "payments-operations",
+          "outcome": "notify",
+          "label": "Payments Operations",
+          "destination": "agent://payments-operations",
+          "instructions": ""
+        },
+        {
+          "key": "payments-data",
+          "outcome": "insufficient_data",
+          "label": "Payments Data",
+          "destination": "agent://payments-data",
+          "instructions": ""
+        }
+      ],
+      "retrieval_mode": "fixed",
+      "investigation_mode": "none",
+      "max_investigation_sources": 3,
+      "investigation_threshold": 0.6,
+      "principal_id": "mosaic-payments-owner",
+      "principal_tenant": "synthetic-recurring-runtime",
+      "compiled_plan": null,
+      "onboarding_review": null,
+      "onboarding_review_history": [],
+      "onboarding_corrections": [],
+      "status": "approved",
+      "approved_by": "mosaic-payments-owner",
+      "approved_at": "2026-10-02T23:15:43.707588Z"
+    },
+    "draft_card": {
+      "id": "card-weighted-payment-authorization-failure-rate-across-payment-rails-25522141970b",
+      "title": "Weighted payment-authorization failure rate across payment rails",
+      "what_to_watch": "Weighted payment-authorization failure rate across eligible card, bank-transfer, and wallet authorization attempts, using attempt-count weighting rather than averaging rail percentages.",
+      "why_watch": "Detect a high current weighted failure rate or a material increase from the immediately preceding period while preserving the owner's completeness and comparability policy.",
+      "watch_for": [
+        "The source explicitly confirms the same eligible population, same definition, adjacent periods, a complete rail partition, and reconciled totals before using the comparison; otherwise the result is insufficient_data.",
+        "Report weighted rate and mix effects as descriptive accounting terms only; do not infer causes."
+      ],
+      "questions": [],
+      "numeric_conditions": [
+        {
+          "text": "Weighted current payment-authorization failure rate is at least 4.8%.",
+          "source_key": "mosaic-payments-reporting",
+          "comparison_key": "authorization-failure-rate",
+          "measurement": "current",
+          "segment": null,
+          "unit": "ratio",
+          "threshold": 0.048,
+          "comparator": ">=",
+          "absolute": false
+        },
+        {
+          "text": "Weighted current-minus-baseline failure-rate change is at least 1.2 percentage points.",
+          "source_key": "mosaic-payments-reporting",
+          "comparison_key": "authorization-failure-rate",
+          "measurement": "delta",
+          "segment": null,
+          "unit": "ratio",
+          "threshold": 0.012,
+          "comparator": ">=",
+          "absolute": false
+        }
+      ],
+      "evidence_requirements": {},
+      "decision_guidance": "If the required source comparison is incomplete or any eligible rail is missing, or the source does not positively flag same population, same definition, adjacent periods, complete rail partition, and reconciled totals, route insufficient_data to Payments Data. If the comparison is valid and either numeric condition is met, notify Payments Operations. If valid and neither condition is met, ignore. Use current minus baseline for change. Describe rate and mix effects as accounting terms, not causes.",
+      "follow_up_guidance": "",
+      "sources": [
+        {
+          "key": "mosaic-payments-reporting",
+          "adapter": "company_mcp",
+          "resource": "report:authorization-failure-rate",
+          "label": "Weighted authorization failure rate by payment rail",
+          "parameters": {
+            "business_role": "reporting",
+            "available_comparison_windows": [
+              "previous_period"
+            ]
+          },
+          "required": true,
+          "required_comparison_keys": [
+            "authorization-failure-rate"
+          ]
+        }
+      ],
+      "comparison_windows": [
+        "previous_period"
+      ],
+      "action_confidence_threshold": 0.7,
+      "owner": null,
+      "version": 1,
+      "max_source_age_hours": 24.0,
+      "delivery_methods": [
+        {
+          "key": "payments-operations",
+          "outcome": "notify",
+          "label": "Payments Operations",
+          "destination": "agent://payments-operations",
+          "instructions": ""
+        },
+        {
+          "key": "payments-data",
+          "outcome": "insufficient_data",
+          "label": "Payments Data",
+          "destination": "agent://payments-data",
+          "instructions": ""
+        }
+      ],
+      "retrieval_mode": "fixed",
+      "investigation_mode": "none",
+      "max_investigation_sources": 3,
+      "investigation_threshold": 0.6,
+      "principal_id": "mosaic-payments-owner",
+      "principal_tenant": "synthetic-recurring-runtime",
+      "compiled_plan": {
+        "card_id": "card-weighted-payment-authorization-failure-rate-across-payment-rails-25522141970b",
+        "card_version": 1,
+        "selected_source_keys": [
+          "mosaic-payments-reporting"
+        ],
+        "comparison_windows": [
+          "previous_period"
+        ],
+        "capabilities": [
+          "baseline_comparison",
+          "freshness_check",
+          "watch_for_checks"
+        ],
+        "watch_for": [
+          "The source explicitly confirms the same eligible population, same definition, adjacent periods, a complete rail partition, and reconciled totals before using the comparison; otherwise the result is insufficient_data.",
+          "Report weighted rate and mix effects as descriptive accounting terms only; do not infer causes."
+        ],
+        "questions": [],
+        "delivery_method_keys": [
+          "payments-operations",
+          "payments-data"
+        ],
+        "compiled_by": "jev-latest",
+        "card_scope": "Weighted payment-authorization failure rate across eligible card, bank-transfer, and wallet authorization attempts, using attempt-count weighting rather than averaging rail percentages.\nWhy: Detect a high current weighted failure rate or a material increase from the immediately preceding period while preserving the owner's completeness and comparability policy.",
+        "metric_query_plans": [],
+        "investigation_mode": "none",
+        "max_investigation_sources": 3,
+        "evidence_slots": [
+          {
+            "key": "source:mosaic-payments-reporting",
+            "role": "primary",
+            "question": "What changed in Weighted authorization failure rate by payment rail that is relevant to the card's stated purpose and comparison window?",
+            "source_keys": [
+              "mosaic-payments-reporting"
+            ],
+            "source_refs": [
+              {
+                "key": "mosaic-payments-reporting",
+                "adapter": "company_mcp",
+                "resource": "report:authorization-failure-rate",
+                "label": "Weighted authorization failure rate by payment rail",
+                "parameters": {
+                  "business_role": "reporting",
+                  "available_comparison_windows": [
+                    "previous_period"
+                  ]
+                },
+                "required": true,
+                "required_comparison_keys": [
+                  "authorization-failure-rate"
+                ]
+              }
+            ],
+            "required": true,
+            "completion_criteria": "Return complete, reconciled analytical comparisons: authorization-failure-rate",
+            "status": "pending",
+            "evidence_fact_ids": [],
+            "evidence_source_keys": []
+          },
+          {
+            "key": "watch:1",
+            "role": "watch",
+            "question": "The source explicitly confirms the same eligible population, same definition, adjacent periods, a complete rail partition, and reconciled totals before using the comparison; otherwise the result is insufficient_data.",
+            "source_keys": [
+              "mosaic-payments-reporting"
+            ],
+            "source_refs": [],
+            "required": true,
+            "completion_criteria": "Return evidence that shows whether this watch item is present or absent.",
+            "status": "pending",
+            "evidence_fact_ids": [],
+            "evidence_source_keys": []
+          },
+          {
+            "key": "watch:2",
+            "role": "watch",
+            "question": "Report weighted rate and mix effects as descriptive accounting terms only; do not infer causes.",
+            "source_keys": [
+              "mosaic-payments-reporting"
+            ],
+            "source_refs": [],
+            "required": true,
+            "completion_criteria": "Return evidence that shows whether this watch item is present or absent.",
+            "status": "pending",
+            "evidence_fact_ids": [],
+            "evidence_source_keys": []
+          }
+        ]
+      },
+      "onboarding_review": null,
+      "onboarding_review_history": [],
+      "onboarding_corrections": [],
+      "status": "draft",
+      "approved_by": null,
+      "approved_at": null
+    },
+    "approval": {
+      "status": "approved",
+      "card": {
+        "id": "card-weighted-payment-authorization-failure-rate-across-payment-rails-25522141970b",
+        "title": "Weighted payment-authorization failure rate across payment rails",
+        "what_to_watch": "Weighted payment-authorization failure rate across eligible card, bank-transfer, and wallet authorization attempts, using attempt-count weighting rather than averaging rail percentages.",
+        "why_watch": "Detect a high current weighted failure rate or a material increase from the immediately preceding period while preserving the owner's completeness and comparability policy.",
+        "watch_for": [
+          "The source explicitly confirms the same eligible population, same definition, adjacent periods, a complete rail partition, and reconciled totals before using the comparison; otherwise the result is insufficient_data.",
+          "Report weighted rate and mix effects as descriptive accounting terms only; do not infer causes."
+        ],
+        "questions": [],
+        "numeric_conditions": [
+          {
+            "text": "Weighted current payment-authorization failure rate is at least 4.8%.",
+            "source_key": "mosaic-payments-reporting",
+            "comparison_key": "authorization-failure-rate",
+            "measurement": "current",
+            "segment": null,
+            "unit": "ratio",
+            "threshold": 0.048,
+            "comparator": ">=",
+            "absolute": false
+          },
+          {
+            "text": "Weighted current-minus-baseline failure-rate change is at least 1.2 percentage points.",
+            "source_key": "mosaic-payments-reporting",
+            "comparison_key": "authorization-failure-rate",
+            "measurement": "delta",
+            "segment": null,
+            "unit": "ratio",
+            "threshold": 0.012,
+            "comparator": ">=",
+            "absolute": false
+          }
+        ],
+        "evidence_requirements": {},
+        "decision_guidance": "If the required source comparison is incomplete or any eligible rail is missing, or the source does not positively flag same population, same definition, adjacent periods, complete rail partition, and reconciled totals, route insufficient_data to Payments Data. If the comparison is valid and either numeric condition is met, notify Payments Operations. If valid and neither condition is met, ignore. Use current minus baseline for change. Describe rate and mix effects as accounting terms, not causes.",
+        "follow_up_guidance": "",
+        "sources": [
+          {
+            "key": "mosaic-payments-reporting",
+            "adapter": "company_mcp",
+            "resource": "report:authorization-failure-rate",
+            "label": "Weighted authorization failure rate by payment rail",
+            "parameters": {
+              "business_role": "reporting",
+              "available_comparison_windows": [
+                "previous_period"
+              ]
+            },
+            "required": true,
+            "required_comparison_keys": [
+              "authorization-failure-rate"
+            ]
+          }
+        ],
+        "comparison_windows": [
+          "previous_period"
+        ],
+        "action_confidence_threshold": 0.7,
+        "owner": null,
+        "version": 1,
+        "max_source_age_hours": 24.0,
+        "delivery_methods": [
+          {
+            "key": "payments-operations",
+            "outcome": "notify",
+            "label": "Payments Operations",
+            "destination": "agent://payments-operations",
+            "instructions": ""
+          },
+          {
+            "key": "payments-data",
+            "outcome": "insufficient_data",
+            "label": "Payments Data",
+            "destination": "agent://payments-data",
+            "instructions": ""
+          }
+        ],
+        "retrieval_mode": "fixed",
+        "investigation_mode": "none",
+        "max_investigation_sources": 3,
+        "investigation_threshold": 0.6,
+        "principal_id": "mosaic-payments-owner",
+        "principal_tenant": "synthetic-recurring-runtime",
+        "status": "approved",
+        "approved_by": "mosaic-payments-owner",
+        "approved_at": "2026-10-02T23:15:43.707588Z"
+      },
+      "onboarding_review": {
+        "card_id": "card-weighted-payment-authorization-failure-rate-across-payment-rails-25522141970b",
+        "status": "ready_for_approval",
+        "readiness_status": "ready_for_approval",
+        "blockers": [],
+        "source_selection_fingerprint": "9f57d4ca6b511a4a8858acebdd8efb10aa9aa7d8c183379e250f2d206d8b22a5",
+        "source_selection_confirmation": null,
+        "confirmed_blocker_codes": [],
+        "principal_id": "mosaic-payments-owner",
+        "principal_tenant": "synthetic-recurring-runtime",
+        "authorization_evidence": "deployment",
+        "discovery_receipt": {
+          "principal_id": "mosaic-payments-owner",
+          "principal_tenant": "synthetic-recurring-runtime",
+          "authorization_evidence": "deployment",
+          "catalog_provider": "company_mcp",
+          "catalog_strategy": "local-scan-fallback",
+          "catalog_cursor": null,
+          "candidate_refs": [
+            "company_mcp|report:authorization-failure-rate"
+          ],
+          "candidate_count": 1,
+          "candidate_limit": 40,
+          "truncated": false,
+          "evaluator": "jev-latest"
+        },
+        "selected_source_refs": [
+          "company_mcp|report:authorization-failure-rate"
+        ],
+        "recommended_source_refs": [
+          "company_mcp|report:authorization-failure-rate"
+        ],
+        "missing_recommended_refs": [],
+        "selected_outside_bounded_candidates": [],
+        "ambiguous_candidate_groups": [],
+        "source_candidates": [
+          {
+            "ref": "company_mcp|report:authorization-failure-rate",
+            "adapter": "company_mcp",
+            "resource": "report:authorization-failure-rate",
+            "kind": "saved_query",
+            "title": "Weighted authorization failure rate by payment rail",
+            "description": "Failed eligible payment authorization attempts divided by all eligible authorization attempts.",
+            "source_url": null,
+            "domain": "mosaic-payments-reporting",
+            "tenant_id": "synthetic-recurring-runtime",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "synthetic-recurring-runtime",
+              "domain": "mosaic-payments-reporting",
+              "scope": "eligible payment authorization attempts with a rail and outcome",
+              "metric_names": [
+                "payment_authorization_failure_rate"
+              ],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [
+                "authorization-failure-rate"
+              ],
+              "population": "eligible payment authorization attempts with a rail and outcome",
+              "grain": "weekly authorization interval",
+              "freshness_sla_hours": 48.0,
+              "lineage": [],
+              "roles": [
+                "reporting"
+              ],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "source_key": "mosaic-payments-reporting",
+                "business_role": "reporting",
+                "required": true,
+                "read_only": true,
+                "period_contract": "closed UTC intervals compared with the immediately preceding closed interval",
+                "comparability_contract": {
+                  "population_identity": "eligible payment authorization attempts with a rail and outcome",
+                  "period_alignment": "adjacent closed intervals with the same calendar grain",
+                  "segment_partition": "declared disjoint segments; incomplete partitions are not comparable",
+                  "definition_version": "synthetic-contract-v1"
+                }
+              }
+            },
+            "selected": true,
+            "recommended": true,
+            "relevance": 0.95,
+            "suggested_role": "primary",
+            "role_probability": 0.99,
+            "reason": "Jev judged it materially relevant to the stated goal; its catalog domain is mosaic-payments-reporting; Jev classified its evidence role as primary (0.99).",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          }
+        ],
+        "questions": [],
+        "warnings": [],
+        "evidence_requirements": [
+          {
+            "key": "watch:1",
+            "question": "The source explicitly confirms the same eligible population, same definition, adjacent periods, a complete rail partition, and reconciled totals before using the comparison; otherwise the result is insufficient_data.",
+            "required": true
+          },
+          {
+            "key": "watch:2",
+            "question": "Report weighted rate and mix effects as descriptive accounting terms only; do not infer causes.",
+            "required": true
+          }
+        ]
+      },
+      "workflow_acceptance": {
+        "status": "unassessed",
+        "report_id": null,
+        "human_authorization_required": true
+      }
+    },
+    "numeric_policy_audit": {
+      "passed": true,
+      "errors": []
+    },
+    "previewed_periods": [
+      "p01",
+      "p02"
+    ]
+  },
+  "saffron-cloud": {
+    "company": "saffron-cloud",
+    "episode": {
+      "status": "failed",
+      "error": "no_structured_submission",
+      "tool_calls": 7,
+      "seconds": 57.84148724999977,
+      "response_timeout_seconds": 240,
+      "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+      "wall_time_overrun_seconds": 0.0,
+      "transport": "codex_cli",
+      "exit_code": 0,
+      "foreign_tools": []
+    },
+    "setup_complete": false,
+    "drafts": 2,
+    "card": null,
+    "draft_card": null,
+    "approval": {
+      "status": "not_attempted"
+    },
+    "numeric_policy_audit": {
+      "passed": false,
+      "errors": [
+        "no_draft"
+      ]
+    },
+    "previewed_periods": []
+  }
+}
