@@ -114,6 +114,41 @@ def complete_analysis(*, required: bool = True):
     return analyze_comparison("sales", comparison()).model_copy(update={"required": required})
 
 
+def test_semantic_uncertainty_is_not_reported_as_observed_source_failure():
+    from examples.investigation_agent.briefing import build_briefing_writer_input
+
+    configured = card().model_copy(update={"watch_for": ["An exception applies."]})
+    evaluated = result(complete_analysis(), outcome="investigate", delivery_methods=[],
+                       confidence=.95, probabilities={"investigate": .95, "notify": .05},
+                       watch_results=[{"key": "watch_0", "watch_for": "An exception applies.",
+                                       "status": "unknown", "probability": .03,
+                                       "probabilities": {"present": .03, "absent": .62, "unknown": .35}}],
+                       evidence_plan={"objective": "Review policy", "status": "incomplete", "slots": [{
+                           "key": "watch:1", "role": "watch", "question": "An exception applies.",
+                           "required": True, "status": "pending", "source_keys": ["sales"],
+                           "completion_criteria": "Establish whether an exception applies."}]})
+    report = build_investigation_report(configured, evaluated, resources=healthy_resources())
+    assert report.status == "blocked"  # Keep the reviewed requirement; do not waive it.
+    assert next(c for c in report.coverage if c.kind == "source").status == "satisfied"
+    watch = next(j for j in report.judgments if j.reference == "watch_0")
+    assert watch.status == "unknown" and watch.support == .62
+    assert watch.probabilities["absent"] == .62
+    assert "does not establish" in watch.interpretation
+    assert any("semantic assessment is unresolved" in b.message for b in report.blockers)
+    projected = build_briefing_writer_input(report, render_investigation_report(report), [])
+    assert projected["report"]["judgments"][1]["support"] == .62
+    semantic = [item for item in projected["report"]["coverage"] if item["kind"] in {"watch", "evidence_slot"}]
+    assert semantic and all(item["status"] == "unresolved" for item in semantic)
+    assert "do not call a document" in projected["instructions"]
+
+
+def test_actual_missing_sources_remain_explicit_when_judgments_are_available():
+    report = build_investigation_report(card(), result(analyses=[]), resources=[])
+    assert report.status == "blocked"
+    assert any(b.code == "required_source_missing" for b in report.blockers)
+    assert report.judgments[0].reference == "outcome"
+
+
 def test_complete_report_contains_only_recomputed_numeric_facts_and_provenance():
     report = build_investigation_report(
         card(), result(complete_analysis()), resources=healthy_resources()
@@ -453,7 +488,7 @@ def test_required_evidence_slot_blocks_optional_slot_only_warns():
     required_card.evidence_requirements = {"question:1": True}
     blocked = build_investigation_report(required_card, required_result)
     assert blocked.status == "blocked"
-    assert any(item.code == "required_evidence_missing" for item in blocked.blockers)
+    assert any(item.code == "required_semantic_assessment_unresolved" for item in blocked.blockers)
 
     optional_result = result(
         complete_analysis(),
@@ -730,7 +765,7 @@ def test_changed_endpoint_and_foreign_route_are_blockers_not_new_routes():
     assert any(item.code == "unauthorized_route" for item in report.blockers)
 
 
-def test_required_not_supported_question_is_missing_even_with_a_result():
+def test_required_not_supported_question_is_unresolved_even_with_a_result():
     required = card(question=True).model_copy(update={"evidence_requirements": {}})
     report = build_investigation_report(
         required,
@@ -758,7 +793,7 @@ def test_required_not_supported_question_is_missing_even_with_a_result():
     )
     assert report.status == "blocked"
     assert report.unresolved_questions == required.questions
-    assert any(item.code == "required_semantic_evidence_missing" for item in report.blockers)
+    assert any(item.code == "required_semantic_assessment_unresolved" for item in report.blockers)
 
 
 def test_optional_not_supported_question_is_partial_not_resolved():

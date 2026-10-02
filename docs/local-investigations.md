@@ -290,6 +290,50 @@ residual. This is not decimal-currency precision or evidence of source accuracy.
 
 ## What Jev contributes
 
+### Exact policy numbers
+
+When a policy contains an exact numerical boundary, the onboarding agent can add
+`numeric_conditions` to the draft. The owner still reviews the English policy,
+measurement binding and first result. For example:
+
+```json
+{
+  "text": "Any channel accounts for at least 80 units of movement",
+  "source_key": "sales",
+  "comparison_key": "net-sales-by-channel",
+  "measurement": "contribution",
+  "segment": null,
+  "unit": "USD",
+  "absolute": true,
+  "comparator": ">=",
+  "threshold": 80
+}
+```
+
+Code computes the check from a complete, reproducible analytical comparison.
+The source and comparison must be explicitly bound to the card. Units must match;
+rate results use fractions, so 12% is `0.12`, not `12`. Supported measurements
+are aggregate `baseline`, `current`, `delta`, and segment `contribution`.
+For contributions, null means any segment; a string selects that exact segment,
+including a segment literally named `any`. Absolute magnitude is opt-in.
+
+These are **facts for Jev, not action rules**. Keep alternatives, conjunctions,
+exceptions and the outcome policy in `decision_guidance`. There is no new workflow
+language. Missing, ambiguous or unhealthy inputs produce `unknown`, never false.
+Optional context does not waive required-source gates. Editing the checks changes
+the reviewed card contract and requires a new approval.
+
+Do not add a required watch item for every possible explanation. Required watch
+and question slots are unconditional evidence prerequisites; speculative/advisory
+detail should be omitted or explicitly marked advisory by the owner. Jev still
+decides the outcome from the whole policy; numerical checks do not certify the
+policy's completeness or the source's truth.
+
+Reports and the optional writer projection retain both the computed checks and
+separately labeled model judgments. An unresolved semantic assessment can reflect
+model uncertainty; it is not proof that a source is missing or that records
+conflict. Actual source failures remain independently visible and blocking.
+
 Jev evaluates the English business rules, relevance and evidence against a bounded
 typed contract. It does not invent arithmetic, SQL authority, p-values, or causal
 conclusions. The production path has no alternate offline semantic engine. Unit

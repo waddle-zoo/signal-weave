@@ -18,10 +18,11 @@ from pydantic import BaseModel, ConfigDict, Field, FiniteFloat, ValidationError
 
 from .diagnostics import AnalysisReport, SegmentContribution, analyze_comparison
 from .models import EvidencePlan, InsightCard, InsightResult, ResourceSnapshot, SourceRef
+from .numeric_conditions import NumericConditionResult, evaluate_numeric_conditions
 
 ReportStatus = Literal["complete", "partial", "blocked"]
 CoverageStatus = Literal[
-    "satisfied", "missing", "insufficient_data", "failed", "not_requested"
+    "satisfied", "missing", "unresolved", "insufficient_data", "failed", "not_requested"
 ]
 
 
@@ -106,6 +107,18 @@ class IntendedRoute(BaseModel):
     reason: str
 
 
+class JudgmentRecord(BaseModel):
+    """Model output, never an observed source fact or a causal explanation."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    reference: str
+    status: str
+    probabilities: dict[str, FiniteFloat] = Field(default_factory=dict)
+    support: FiniteFloat | None = Field(default=None, ge=0, le=1)
+    interpretation: str
+
+
 class InvestigationReport(BaseModel):
     """A bounded report artifact, not a certification of source truth."""
 
@@ -128,6 +141,45 @@ class InvestigationReport(BaseModel):
     warnings: list[str] = Field(default_factory=list)
     evaluated_at: datetime
     evaluator: str
+    judgments: list[JudgmentRecord] = Field(default_factory=list)
+    numeric_conditions: list[NumericConditionResult] = Field(default_factory=list)
+
+
+def _judgment_records(result: InsightResult) -> list[JudgmentRecord]:
+    records = [JudgmentRecord(
+        reference="outcome", status=result.outcome.value,
+        probabilities=result.probabilities, support=result.confidence,
+        interpretation=(
+            "Routed outcome after code safety gates; distribution is the model's original "
+            "judgment, not source truth or probability of causation. The routed outcome "
+            "may differ from the model's preferred outcome after confidence or evidence gates."
+        ),
+    )]
+    for item in result.watch_results:
+        unresolved = item.status.value == "unknown"
+        selected = max(item.probabilities, key=item.probabilities.get) if item.probabilities else None
+        records.append(JudgmentRecord(
+            reference=item.key, status=item.status.value,
+            probabilities=item.probabilities,
+            support=item.probabilities.get(selected) if selected else None,
+            interpretation=(
+                "Unresolved semantic assessment. This can reflect model uncertainty, invalid "
+                "output, insufficient context, or a source gate; it does not establish "
+                "that records are missing or conflicting. Check source coverage separately."
+                if unresolved else
+                "Semantic assessment of the watch condition, not an independently verified fact."
+            ),
+        ))
+    for item in result.question_results:
+        records.append(JudgmentRecord(
+            reference=item.key, status=item.status.value, support=item.probability,
+            interpretation=(
+                "Probability that the evidence supports a concrete answer, not probability "
+                "the answer is yes. An unresolved assessment does not identify a missing "
+                "source or establish a conflict."
+            ),
+        ))
+    return records
 
 
 def _analysis_key(report: AnalysisReport) -> tuple[str, str]:
@@ -238,6 +290,8 @@ def _append_plan_coverage(
             status = "failed"
         elif slot.status == "conflicting":
             status = "insufficient_data"
+        elif slot.role in {"watch", "question"}:
+            status = "unresolved"
         else:
             status = "missing"
         coverage.append(CoverageRecord(
@@ -250,9 +304,15 @@ def _append_plan_coverage(
         ))
         if status != "satisfied":
             message = f"Evidence slot {slot.key} is {slot.status}."
+            if slot.role in {"watch", "question"} and slot.status == "pending":
+                message += (
+                    " Its semantic assessment is unresolved; this alone does not establish "
+                    "missing records, conflicting facts, or a source failure."
+                )
             if slot.required:
                 blockers.append(_issue(
-                    "required_evidence_missing" if status == "missing" else "required_evidence_failed",
+                    ("required_semantic_assessment_unresolved" if status == "unresolved" else
+                     "required_evidence_missing" if status == "missing" else "required_evidence_failed"),
                     message,
                     reference=slot.key,
                     source_keys=list(slot.source_keys),
@@ -280,7 +340,7 @@ def _append_semantic_coverage(
             key=f"question:{index}",
             kind="question",
             required=card.evidence_requirements.get(f"question:{index}", True),
-            status="satisfied" if supported else "missing",
+            status="satisfied" if supported else "unresolved",
             detail=question,
             judgment=matched_status,
             probability=matched.probability if matched is not None else None,
@@ -301,7 +361,7 @@ def _append_semantic_coverage(
             key=f"watch:{index}",
             kind="watch",
             required=card.evidence_requirements.get(f"watch:{index}", True),
-            status="satisfied" if fulfilled else "missing",
+            status="satisfied" if fulfilled else "unresolved",
             detail=watch,
             judgment=(
                 matched_status
@@ -794,10 +854,10 @@ def build_investigation_report(
     unresolved: list[str] = []
     _append_semantic_coverage(card, result, coverage, unresolved, warnings)
     for item in coverage:
-        if item.status == "missing" and item.required and item.kind in {"question", "watch"}:
+        if item.status == "unresolved" and item.required and item.kind in {"question", "watch"}:
             blockers.append(_issue(
-                "required_semantic_evidence_missing",
-                f"Required {item.kind} evidence {item.key} is unresolved.",
+                "required_semantic_assessment_unresolved",
+                f"Required {item.kind} assessment {item.key} is unresolved; this is not an observed source failure.",
                 reference=item.key,
                 source_keys=item.source_keys,
             ))
@@ -840,6 +900,15 @@ def build_investigation_report(
         warnings=list(dict.fromkeys(warnings)),
         evaluated_at=result.evaluated_at,
         evaluator=result.evaluator,
+        judgments=_judgment_records(result),
+        numeric_conditions=evaluate_numeric_conditions(
+            card,
+            [analysis for analysis in recomputed_by_key.values()
+             if any(item.kind == "source" and item.key == analysis.source_key
+                    and item.status == "satisfied" for item in coverage)
+             and any(claim.source_key == analysis.source_key
+                     and claim.comparison_key == analysis.comparison_key for claim in numeric_claims)],
+        ),
     )
 
 
@@ -922,7 +991,7 @@ def _front_gap_messages(report: InvestigationReport) -> list[str]:
         "required_evidence_failed": 0,
         "evidence_plan_blocked": 0,
         "result_insufficient_data": 0,
-        "required_semantic_evidence_missing": 2,
+        "required_semantic_assessment_unresolved": 2,
     }
     indexed = [
         (priority.get(item.code, 1), index, item.message)
@@ -986,6 +1055,18 @@ def render_investigation_report(report: InvestigationReport) -> str:
     ])
 
     policy_checks = [item for item in report.coverage if item.kind in {"question", "watch"}]
+    if report.numeric_conditions:
+        lines.extend(["### Numeric checks (computed, not action rules)"])
+        for item in report.numeric_conditions:
+            lines.append(f"- {_md(item.condition_text)}: **{_md(item.status)}** "
+                         f"({_md(item.source_key)} / {_md(item.comparison_key)}).")
+    if report.judgments:
+        lines.extend(["### Decision assessment", report.judgments[0].interpretation, ""])
+        if any(item.status == "unknown" for item in report.judgments):
+            lines.append(
+                "An unresolved semantic judgment is not itself evidence of missing records "
+                "or conflicting facts. Source coverage and model uncertainty are separate."
+            )
     if policy_checks:
         lines.extend([
             "### Policy checks (Jev judgments)",

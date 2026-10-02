@@ -5,6 +5,7 @@ from pydantic import ValidationError
 
 from examples.investigation_agent.onboarding import DraftIntent, RouteIntent, draft_arguments
 from signalweave.models import InsightCard, Outcome, SourceRef
+from signalweave.numeric_conditions import NumericCondition
 
 
 def source(key: str, *, required: bool, parameters: dict) -> SourceRef:
@@ -42,6 +43,7 @@ def test_bridges_two_unrelated_approved_directories_without_invention():
 
     assert set(result) == {
         "title", "what_to_watch", "why_watch", "watch_for", "questions",
+        "numeric_conditions",
         "evidence_requirements", "decision_guidance", "follow_up_guidance",
         "sources", "delivery_methods",
     }
@@ -49,6 +51,26 @@ def test_bridges_two_unrelated_approved_directories_without_invention():
     assert result["delivery_methods"] == [{
         "key": "owner", "outcome": "notify", "label": "Operations", "destination": "sink://ops",
     }]
+
+
+def test_numeric_conditions_are_forwarded_without_becoming_action_policy():
+    approved = [
+        source("primary", required=True, parameters={}).model_copy(
+            update={"required_comparison_keys": ["comparison-a"]}
+        )
+    ]
+    numeric = NumericCondition(
+        text="The approved metric falls by at least ten units",
+        source_key="primary",
+        comparison_key="comparison-a",
+        measurement="delta",
+        unit="number",
+        threshold=10,
+        comparator="<=",
+    )
+    result = draft_arguments(intent(numeric_conditions=[numeric], routes=[]), approved, [])
+    assert result["numeric_conditions"] == [numeric.model_dump(mode="python")]
+    assert not any(key in result for key in ("outcome", "action", "policy"))
 
 
 def test_required_sources_are_forced_and_optional_sources_may_be_omitted():

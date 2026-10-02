@@ -58,6 +58,7 @@ def _writer_report(report: InvestigationReport) -> dict[str, Any]:
         "card_id", "title", "outcome", "purpose", "intended_audience", "next_step",
         "status", "numeric_claims", "provenance", "limitations", "unresolved_questions",
         "intended_routes_not_delivered", "blockers", "warnings", "evaluator",
+        "judgments", "numeric_conditions",
     )
     compact = {field: native[field] for field in fields if field != "intended_routes_not_delivered"}
     compact["intended_routes_not_delivered"] = [
@@ -98,7 +99,11 @@ def build_briefing_writer_input(
             "Write concise supported prose from the report projection. Preserve its "
             "outcome, status, configured recipient keys, numeric claims, and visible "
             "limitations or blockers. Do not invent destinations or make unsupported "
-            "causal claims. Cite exact source_key/comparison_key references in the caller's output schema. "
+            "causal claims. Judgments are model assessments, not observed facts. Distinguish "
+            "uncertain interpretation from known source failures: do not call a document "
+            "missing or conflicting merely because a semantic assessment is unresolved. "
+            "Do not claim the support probability measures a causal explanation's likelihood. "
+            "Cite exact source_key/comparison_key references in the caller's output schema. "
             "Independent review remains necessary."
         ),
     }

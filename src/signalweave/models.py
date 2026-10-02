@@ -7,6 +7,7 @@ from typing import Annotated, Any, Literal
 from pydantic import BaseModel, Field, StrictBool, field_validator, model_validator
 
 from .diagnostics import AnalysisReport, AnalyticalComparison
+from .numeric_conditions import NumericCondition
 
 ComparisonWindows = Annotated[list[str], Field(
     min_length=1, max_length=20,
@@ -749,6 +750,14 @@ class InsightCard(BaseModel):
     why_watch: str = Field(min_length=1, max_length=4000)
     watch_for: WatchConditions = Field(default_factory=list)
     questions: InvestigationQuestions = Field(default_factory=list)
+    numeric_conditions: list[NumericCondition] = Field(
+        default_factory=list,
+        max_length=100,
+        description=(
+            "Approved numeric projections bound to a card source and analytical comparison. "
+            "They are evidence checks only; action selection remains owner/Jev state."
+        ),
+    )
     evidence_requirements: dict[str, StrictBool] = Field(
         default_factory=dict,
         max_length=200,
@@ -834,6 +843,18 @@ class InsightCard(BaseModel):
             values = getattr(self, field_name)
             if any(not value.strip() for value in values):
                 raise ValueError(f"{field_name} entries must not be empty")
+        source_by_key = {source.key: source for source in self.sources}
+        for condition in self.numeric_conditions:
+            source = source_by_key.get(condition.source_key)
+            if source is None:
+                raise ValueError(
+                    f"numeric condition source_key must reference a card source: {condition.source_key}"
+                )
+            if condition.comparison_key not in source.required_comparison_keys:
+                raise ValueError(
+                    "numeric condition comparison_key must be listed in the bound source's "
+                    f"required_comparison_keys: {condition.comparison_key}"
+                )
         requirement_keys = {
             *(f"question:{i + 1}" for i in range(len(self.questions))),
             *(f"watch:{i + 1}" for i in range(len(self.watch_for))),

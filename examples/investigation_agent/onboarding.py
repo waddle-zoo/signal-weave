@@ -18,6 +18,7 @@ from signalweave.models import (
     SourceRef,
     WatchConditions,
 )
+from signalweave.numeric_conditions import NumericCondition
 
 
 class RouteIntent(BaseModel):
@@ -43,6 +44,7 @@ class DraftIntent(BaseModel):
     routes: list[RouteIntent]
     watch_for: WatchConditions = Field(default_factory=list)
     questions: InvestigationQuestions = Field(default_factory=list)
+    numeric_conditions: list[NumericCondition] = Field(default_factory=list, max_length=100)
     evidence_requirements: dict[str, StrictBool] = Field(default_factory=dict)
     follow_up_guidance: str = ""
 
@@ -136,6 +138,9 @@ def draft_arguments(
         "why_watch": draft.why_watch,
         "watch_for": list(draft.watch_for),
         "questions": list(draft.questions),
+        "numeric_conditions": [
+            condition.model_dump(mode="python") for condition in draft.numeric_conditions
+        ],
         "evidence_requirements": deepcopy(draft.evidence_requirements),
         "decision_guidance": draft.decision_guidance,
         "follow_up_guidance": draft.follow_up_guidance,

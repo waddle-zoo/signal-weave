@@ -1019,6 +1019,12 @@ class InsightEngine:
         evidence.extend(source_error_evidence)
         evidence.extend(context_facts_as_evidence(context))
         evidence.extend(analytical_evidence)
+        from .numeric_conditions import evaluate_numeric_conditions
+
+        unhealthy_keys = {error["source_key"] for error in source_errors}
+        numeric_conditions = evaluate_numeric_conditions(
+            card, [report for report in analyses if report.source_key not in unhealthy_keys]
+        )
         state: dict[str, Any] = {
             "card": card.execution_payload(),
             "insight_card": card.execution_payload(),
@@ -1031,6 +1037,7 @@ class InsightEngine:
             "source_errors": source_errors,
             "evidence": [item.model_dump(mode="json") for item in evidence],
             "analyses": [item.model_dump(mode="json") for item in analyses],
+            "numeric_conditions": [item.model_dump(mode="json") for item in numeric_conditions],
             "context": context.model_dump(mode="json") if context else None,
             "investigation": investigation.model_dump(mode="json") if investigation else None,
         }

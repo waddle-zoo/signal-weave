@@ -50,7 +50,13 @@ from .models import (
     SourceRef,
     WatchConditions,
 )
-from .onboarding import InsightAuthoringService, proposal_summary, resolve_comparison_windows
+from .numeric_conditions import NumericCondition
+from .onboarding import (
+    InsightAuthoringService,
+    bind_numeric_condition_requirements,
+    proposal_summary,
+    resolve_comparison_windows,
+)
 from .query_planner import QueryWindow, compile_query, plan_query
 from .reporting import build_investigation_report, render_investigation_report
 from .retrieval_quality import (
@@ -133,6 +139,14 @@ CARD_AUTHORING_GUIDANCE = (
     "means its bounded evidence checks passed, not that the full business policy is certified. "
     "For threshold rules, distinguish a current level, absolute between-period change, relative "
     "change, and a segment's contribution to that change. Do not silently choose among them. "
+    "For exact numerical boundaries over available analytical comparisons, add numeric_conditions "
+    "bound to the inspected source, comparison key, measurement and exact unit; let code perform "
+    "those comparisons. Rates use fractions (12% is 0.12); do not infer a unit conversion. "
+    "Keep the owner's action policy in decision_guidance. Numeric checks do not select actions, "
+    "and incomplete matching reports stay unknown. Do not duplicate numerical checks as "
+    "required semantic watch items merely to restate the policy. A required watch/question is "
+    "an unconditional evidence prerequisite; speculative details need explicit owner review "
+    "as advisory or should be omitted. "
     "Review counterexamples such as a large but unchanged level, offsetting segment changes, "
     "a threshold-boundary case, and missing population coverage. Derive expected actions from "
     "the owner's policy independently of the model's answers; surface disagreements for review. "
@@ -952,6 +966,7 @@ def create_mcp(
         why_watch: str,
         watch_for: WatchConditions | None = None,
         questions: InvestigationQuestions | None = None,
+        numeric_conditions: list[NumericCondition] | None = None,
         evidence_requirements: dict[str, StrictBool] | None = None,
         decision_guidance: str | None = None,
         follow_up_guidance: str | None = None,
@@ -1009,6 +1024,7 @@ def create_mcp(
             why_watch,
             watch_for=watch_for,
             questions=questions,
+            numeric_conditions=numeric_conditions,
             evidence_requirements=evidence_requirements,
             decision_guidance=decision_guidance,
             follow_up_guidance=follow_up_guidance,
@@ -1045,6 +1061,7 @@ def create_mcp(
         why_watch: str,
         watch_for: WatchConditions | None = None,
         questions: InvestigationQuestions | None = None,
+        numeric_conditions: list[NumericCondition] | None = None,
         evidence_requirements: dict[str, StrictBool] | None = None,
         decision_guidance: str | None = None,
         follow_up_guidance: str | None = None,
@@ -1103,6 +1120,7 @@ def create_mcp(
             why_watch=why_watch,
             watch_for=watch_for,
             questions=questions,
+            numeric_conditions=numeric_conditions,
             evidence_requirements=evidence_requirements,
             decision_guidance=decision_guidance,
             follow_up_guidance=follow_up_guidance,
@@ -1150,6 +1168,7 @@ def create_mcp(
         sources: list[SourceRef],
         watch_for: WatchConditions | None = None,
         questions: InvestigationQuestions | None = None,
+        numeric_conditions: list[NumericCondition] | None = None,
         evidence_requirements: dict[str, StrictBool] | None = None,
         decision_guidance: str | None = None,
         follow_up_guidance: str | None = None,
@@ -1200,6 +1219,11 @@ def create_mcp(
             raise ValueError("at least one source reference is required")
         principal = request_principal(ctx)
         source_refs = [SourceRef.model_validate(source) for source in sources]
+        numeric_conditions = [
+            NumericCondition.model_validate(condition)
+            for condition in (numeric_conditions or [])
+        ]
+        source_refs = bind_numeric_condition_requirements(source_refs, numeric_conditions)
         contracts = {}
         if comparison_windows is None:
             for source in source_refs:
@@ -1215,6 +1239,7 @@ def create_mcp(
             why_watch=why_watch,
             watch_for=watch_for or [],
             questions=questions or [],
+            numeric_conditions=numeric_conditions,
             evidence_requirements=evidence_requirements or {},
             decision_guidance=(decision_guidance or "").strip(),
             follow_up_guidance=(follow_up_guidance or "").strip(),

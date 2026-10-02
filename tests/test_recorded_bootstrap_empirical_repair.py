@@ -1,10 +1,10 @@
 """Audit retained live results; these assertions do not make new model calls."""
 
 import gzip
+import hashlib
 import json
 from pathlib import Path
 
-from signalweave.evaluation import card_acceptance_digest
 from signalweave.models import InsightCard
 
 
@@ -29,7 +29,20 @@ def test_retained_repair_has_three_frozen_cards_and_twelve_exact_native_results(
         card = InsightCard.model_validate(author["accepted_card"])
         acceptance = author["acceptance_report"]
         assert acceptance["acceptance_passed"]
-        assert acceptance["card_execution_digests"][card.id] == card_acceptance_digest(card)
+        # Audit the historical schema, not a newly approved current-schema card.
+        # Adding numeric_conditions intentionally changes today's acceptance
+        # digest. Do not rewrite the frozen evidence or preserve old approval.
+        payload = card.execution_payload()
+        assert "numeric_conditions" not in author["accepted_card"]
+        assert payload.pop("numeric_conditions") == []
+        historical = {
+            "execution_payload": payload,
+            "delivery_methods": [method.model_dump(mode="json") for method in card.delivery_methods],
+            "principal_id": card.principal_id, "principal_tenant": card.principal_tenant,
+            "compiled_plan": card.compiled_plan.model_dump(mode="json") if card.compiled_plan else None,
+        }
+        digest = hashlib.sha256(json.dumps(historical, sort_keys=True, separators=(",", ":"), default=str).encode()).hexdigest()
+        assert acceptance["card_execution_digests"][card.id] == digest
         arm = report["execution_comparison"][company["id"]]
         assert arm["expert_native_jev"] is None and arm["raw_luna"] == []
         assert not arm["paired_with_authored_card"]

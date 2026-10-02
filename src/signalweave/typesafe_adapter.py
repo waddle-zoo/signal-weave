@@ -645,6 +645,17 @@ class JevJudger:
     ) -> InsightResult:
         from typesafe_sdk import Choice, Noul
 
+        if state.get("numeric_conditions"):
+            state = {**state, "numeric_condition_semantics": (
+                "numeric_conditions are code-computed checks from the owner's approved "
+                "measurement bindings and thresholds. Use their true/false values rather "
+                "than recalculating comparisons. Unknown means that exact computation could "
+                "not be established, not false. Checks are facts, not standalone action rules: "
+                "apply decision_guidance to combine them with relevant semantic evidence, "
+                "including alternatives, conjunctions and exceptions. Do not require an "
+                "answer to an irrelevant branch. These checks cannot prove causation."
+            )}
+
         if state.get("analyses"):
             # Define the calculation contract, not company-specific trigger rules.
             # Net movement can cancel even when individual effects are material.
@@ -820,6 +831,9 @@ class JevJudger:
                 "insufficient_data are always available; other outcomes require a "
                 "configured delivery route. Delivery is separately controlled by code. Do not invent "
                 "facts, sources, or destinations."
+                " Use code-computed numeric_conditions when supplied; apply the full policy "
+                "once to those facts and relevant context. Other questions in this request "
+                "are independent diagnostics, not additional policy prerequisites."
             ),
             criteria=outcome_criteria,
         )

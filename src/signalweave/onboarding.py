@@ -32,6 +32,7 @@ from .models import (
     RetrievalMode,
     SourceRef,
 )
+from .numeric_conditions import NumericCondition
 from .retrieval import _search_text, build_candidate_pool, resource_ref
 from .sources import SourceRegistry
 
@@ -88,6 +89,7 @@ def insight_goal(
     questions: list[str] | None = None,
     decision_guidance: str | None = None,
     follow_up_guidance: str | None = None,
+    numeric_conditions: list[NumericCondition] | None = None,
 ) -> str:
     """Create the discovery query without adding another card concept."""
     parts = [what_to_watch.strip(), f"Purpose: {why_watch.strip()}"]
@@ -99,7 +101,31 @@ def insight_goal(
         parts.append("Decision guidance: " + decision_guidance.strip())
     if follow_up_guidance and follow_up_guidance.strip():
         parts.append("Follow-up guidance: " + follow_up_guidance.strip())
+    if numeric_conditions:
+        parts.append(
+            "Numeric checks: " + "; ".join(condition.text for condition in numeric_conditions)
+        )
     return "\n".join(parts)
+
+
+def bind_numeric_condition_requirements(
+    sources: list[SourceRef], conditions: list[NumericCondition]
+) -> list[SourceRef]:
+    """Make each authored analytical binding an explicit source requirement."""
+    required_by_source: dict[str, set[str]] = defaultdict(set)
+    for condition in conditions:
+        required_by_source[condition.source_key].add(condition.comparison_key)
+    return [
+        source.model_copy(
+            update={
+                "required_comparison_keys": sorted(
+                    set(source.required_comparison_keys)
+                    | required_by_source.get(source.key, set())
+                )
+            }
+        )
+        for source in sources
+    ]
 
 
 @dataclass
@@ -673,6 +699,7 @@ class InsightAuthoringService:
             card.questions,
             card.decision_guidance,
             card.follow_up_guidance,
+            card.numeric_conditions,
         )
         effective_principal = self._effective_principal(principal)
         discovery = await self.discover(
@@ -882,6 +909,7 @@ class InsightAuthoringService:
         *,
         watch_for: list[str] | None = None,
         questions: list[str] | None = None,
+        numeric_conditions: list[NumericCondition] | None = None,
         evidence_requirements: dict[str, StrictBool] | None = None,
         decision_guidance: str | None = None,
         follow_up_guidance: str | None = None,
@@ -906,6 +934,9 @@ class InsightAuthoringService:
             raise ValueError("why_watch must not be empty")
         watch_for = list(watch_for or [])
         questions = list(questions or [])
+        numeric_conditions = [
+            NumericCondition.model_validate(item) for item in (numeric_conditions or [])
+        ]
         delivery_methods = list(delivery_methods or [])
         decision_guidance = (decision_guidance or "").strip()
         follow_up_guidance = (follow_up_guidance or "").strip()
@@ -916,6 +947,7 @@ class InsightAuthoringService:
             questions,
             decision_guidance,
             follow_up_guidance,
+            numeric_conditions,
         )
         effective_principal = self._effective_principal(principal)
         discovery = await self.discover(
@@ -933,7 +965,7 @@ class InsightAuthoringService:
             )
         source_refs = [
             SourceRef(
-                key=f"source-{_slug(str(item['ref']))}",
+                key=str(item.get("key") or f"source-{_slug(str(item['ref']))}"),
                 adapter=matches[item["ref"]].adapter,
                 resource=matches[item["ref"]].resource,
                 label=str(item.get("label") or matches[item["ref"]].title),
@@ -943,6 +975,7 @@ class InsightAuthoringService:
             )
             for item in requested
         ]
+        source_refs = bind_numeric_condition_requirements(source_refs, numeric_conditions)
         card_title = (title or what_to_watch.strip().rstrip("."))[:200] or "Untitled insight"
         card = InsightCard(
             id=f"card-{_slug(card_title)}-{uuid4().hex[:8]}",
@@ -951,6 +984,7 @@ class InsightAuthoringService:
             why_watch=why_watch,
             watch_for=watch_for,
             questions=questions,
+            numeric_conditions=numeric_conditions,
             evidence_requirements=evidence_requirements or {},
             decision_guidance=decision_guidance,
             follow_up_guidance=follow_up_guidance,
@@ -1017,6 +1051,7 @@ class InsightAuthoringService:
             card.questions,
             card.decision_guidance,
             card.follow_up_guidance,
+            card.numeric_conditions,
         )
         effective_principal = self._effective_principal(principal)
         anchors = list(card.sources)
