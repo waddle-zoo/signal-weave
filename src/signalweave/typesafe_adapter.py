@@ -645,6 +645,25 @@ class JevJudger:
     ) -> InsightResult:
         from typesafe_sdk import Choice, Noul
 
+        if state.get("analyses"):
+            # Define the calculation contract, not company-specific trigger rules.
+            # Net movement can cancel even when individual effects are material.
+            state = {**state, "computed_analysis_semantics": {
+                "delta": "Current aggregate minus baseline aggregate, in the comparison unit.",
+                "contribution": (
+                    "A segment's signed additive contribution to delta, in the same unit as delta; "
+                    "not a percentage share of delta and not proof of a causal mechanism. "
+                    "Opposing contributions can cancel to zero aggregate delta without either "
+                    "contribution being zero. Use the computed contribution values for segment "
+                    "conditions, and aggregate delta for aggregate conditions."
+                ),
+                "policy": (
+                    "Apply only the owner's stated conditions, alternatives, conjunctions and "
+                    "exceptions. A present watch item is not automatically an action trigger; "
+                    "decision_guidance determines which conditions warrant each outcome."
+                ),
+            }}
+
         # Each owner-authored item gets a typed judgment. That is what makes a
         # result useful for cards with many metrics: the caller gets the exact
         # items that were supported, not just one opaque alert explanation.
@@ -775,6 +794,11 @@ class JevJudger:
             elif methods:
                 condition = "\n".join(
                     [
+                        f"The available evidence satisfies the owner's decision_guidance for {outcome.value}. "
+                        "Apply its stated trigger conditions and exceptions, including the distinction "
+                        "between overall and segment-level conditions. A recipient label identifies "
+                        "a destination, not a trigger or an additional prerequisite. Configured routes:",
+                    ] + [
                         f"Delivery method {method.key}: {method.instructions or method.label}"
                         for method in methods
                     ]

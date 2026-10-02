@@ -140,6 +140,28 @@ async def test_low_confidence_rationale_separates_jev_selection_from_code_fallba
     assert "confidence threshold" in result.rationale
 
 
+async def test_computed_contribution_contract_and_action_criteria_are_policy_bound(monkeypatch):
+    FakeClient.calls = []
+    monkeypatch.setattr(typesafe_sdk, "AsyncTypeSafeClient", FakeClient)
+    card = InsightCard(
+        id="generic", title="Capacity review", what_to_watch="Capacity by segment",
+        why_watch="Apply the configured policy", sources=[],
+        decision_guidance="Only notify when the total changes; segment changes alone are advisory.",
+        delivery_methods=[DeliveryMethod(key="team", label="Capacity team", outcome=Outcome.NOTIFY,
+                                         destination="agent://team")])
+    original = {"analyses": [{"delta": 0, "contributions": []}], "card": card.model_dump(mode="json"), "evidence": []}
+    await JevJudger(api_key="offline-test").judge(original, card, base_plan(card), [])
+    call = FakeClient.calls[0]
+    assert "computed_analysis_semantics" not in original
+    meanings = call["state"]["computed_analysis_semantics"]
+    assert "not a percentage share" in meanings["contribution"]
+    assert "not automatically an action trigger" in meanings["policy"]
+    criterion = call["questions"]["outcome"].criteria["notify"]
+    assert "decision_guidance" in criterion and "trigger conditions and exceptions" in criterion
+    assert "Capacity team" in criterion
+    assert card.action_confidence_threshold == .7
+
+
 @pytest.mark.parametrize("value", ["replace-me", "placeholder", "your-typesafe-key"])
 def test_load_api_key_rejects_copied_example_sentinel(monkeypatch, value):
     monkeypatch.setenv("TYPESAFE_API_KEY", value)

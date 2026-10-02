@@ -1,0 +1,50 @@
+{
+  "northstar-cart:p05": {
+    "A": "signalweave",
+    "B": "baseline"
+  },
+  "northstar-cart:p06": {
+    "A": "baseline",
+    "B": "signalweave"
+  },
+  "northstar-cart:p07": {
+    "A": "signalweave",
+    "B": "baseline"
+  },
+  "northstar-cart:p08": {
+    "A": "signalweave",
+    "B": "baseline"
+  },
+  "harbor-help:p05": {
+    "A": "baseline",
+    "B": "signalweave"
+  },
+  "harbor-help:p06": {
+    "A": "baseline",
+    "B": "signalweave"
+  },
+  "harbor-help:p07": {
+    "A": "baseline",
+    "B": "signalweave"
+  },
+  "harbor-help:p08": {
+    "A": "signalweave",
+    "B": "baseline"
+  },
+  "redwood-fulfillment:p05": {
+    "A": "baseline",
+    "B": "signalweave"
+  },
+  "redwood-fulfillment:p06": {
+    "A": "baseline",
+    "B": "signalweave"
+  },
+  "redwood-fulfillment:p07": {
+    "A": "signalweave",
+    "B": "baseline"
+  },
+  "redwood-fulfillment:p08": {
+    "A": "signalweave",
+    "B": "baseline"
+  }
+}

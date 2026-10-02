@@ -1,0 +1,373 @@
+{
+  "northstar-cart": {
+    "p05": {
+      "status": "complete",
+      "outcome": "notify",
+      "recipients": [
+        "commerce-owner"
+      ],
+      "analyses": [
+        {
+          "source_key": "northstar-cart-reporting",
+          "comparison_key": "completed-net-sales",
+          "metric": "net_sales",
+          "unit": "USD",
+          "dimension": "channel",
+          "definition": "Completed order value after refunds, excluding tax and shipping.",
+          "population": "completed orders in the reporting channels",
+          "baseline_start": "2026-09-26T00:00:00+00:00",
+          "baseline_end": "2026-10-03T00:00:00+00:00",
+          "current_start": "2026-10-03T00:00:00+00:00",
+          "current_end": "2026-10-10T00:00:00+00:00",
+          "baseline": 600,
+          "current": 715,
+          "delta": 115,
+          "within_effect": null,
+          "mix_effect": null,
+          "contributions": {
+            "marketplace": -5,
+            "store": 0,
+            "web": 120
+          },
+          "query_refs": [
+            "query:northstar-cart:reporting:p05"
+          ]
+        }
+      ],
+      "semantic_status": "aligned"
+    },
+    "p06": {
+      "status": "complete",
+      "outcome": "ignore",
+      "recipients": [],
+      "analyses": [
+        {
+          "source_key": "northstar-cart-reporting",
+          "comparison_key": "completed-net-sales",
+          "metric": "net_sales",
+          "unit": "USD",
+          "dimension": "channel",
+          "definition": "Completed order value after refunds, excluding tax and shipping.",
+          "population": "completed orders in the reporting channels",
+          "baseline_start": "2026-10-10T00:00:00+00:00",
+          "baseline_end": "2026-10-17T00:00:00+00:00",
+          "current_start": "2026-10-17T00:00:00+00:00",
+          "current_end": "2026-10-24T00:00:00+00:00",
+          "baseline": 600,
+          "current": 605,
+          "delta": 5,
+          "within_effect": null,
+          "mix_effect": null,
+          "contributions": {
+            "marketplace": -65,
+            "store": 0,
+            "web": 70
+          },
+          "query_refs": [
+            "query:northstar-cart:reporting:p06"
+          ]
+        }
+      ],
+      "semantic_status": "aligned"
+    },
+    "p07": {
+      "status": "complete",
+      "outcome": "notify",
+      "recipients": [
+        "commerce-owner"
+      ],
+      "analyses": [
+        {
+          "source_key": "northstar-cart-reporting",
+          "comparison_key": "completed-net-sales",
+          "metric": "net_sales",
+          "unit": "USD",
+          "dimension": "channel",
+          "definition": "Completed order value after refunds, excluding tax and shipping.",
+          "population": "completed orders in the reporting channels",
+          "baseline_start": "2026-10-24T00:00:00+00:00",
+          "baseline_end": "2026-10-31T00:00:00+00:00",
+          "current_start": "2026-10-31T00:00:00+00:00",
+          "current_end": "2026-11-07T00:00:00+00:00",
+          "baseline": 540,
+          "current": 540,
+          "delta": 0,
+          "within_effect": null,
+          "mix_effect": null,
+          "contributions": {
+            "marketplace": -90,
+            "store": 0,
+            "web": 90
+          },
+          "query_refs": [
+            "query:northstar-cart:reporting:p07"
+          ]
+        }
+      ],
+      "semantic_status": "aligned"
+    },
+    "p08": {
+      "status": "blocked",
+      "outcome": "insufficient_data",
+      "recipients": [
+        "data-operations"
+      ],
+      "analyses": [],
+      "semantic_status": "aligned"
+    }
+  },
+  "harbor-help": {
+    "p05": {
+      "status": "complete",
+      "outcome": "ignore",
+      "recipients": [],
+      "analyses": [
+        {
+          "source_key": "harbor-help-reporting",
+          "comparison_key": "resolution-sla-rate",
+          "metric": "sla_miss_rate",
+          "unit": "ratio",
+          "dimension": "support_tier",
+          "definition": "Missed resolution-SLA tickets divided by eligible resolved tickets.",
+          "population": "resolved priority tickets with an eligible resolution clock",
+          "baseline_start": "2026-09-26T00:00:00+00:00",
+          "baseline_end": "2026-10-03T00:00:00+00:00",
+          "current_start": "2026-10-03T00:00:00+00:00",
+          "current_end": "2026-10-10T00:00:00+00:00",
+          "baseline": 0.1,
+          "current": 0.1,
+          "delta": 0.0,
+          "within_effect": 0.0,
+          "mix_effect": 0.0,
+          "contributions": {
+            "enterprise": 0.002857142857142857,
+            "self_serve": -0.002857142857142857
+          },
+          "query_refs": [
+            "query:harbor-help:reporting:p05"
+          ]
+        }
+      ],
+      "semantic_status": "aligned"
+    },
+    "p06": {
+      "status": "blocked",
+      "outcome": "insufficient_data",
+      "recipients": [
+        "support-data-steward"
+      ],
+      "analyses": [],
+      "semantic_status": "aligned"
+    },
+    "p07": {
+      "status": "complete",
+      "outcome": "notify",
+      "recipients": [
+        "support-operations"
+      ],
+      "analyses": [
+        {
+          "source_key": "harbor-help-reporting",
+          "comparison_key": "resolution-sla-rate",
+          "metric": "sla_miss_rate",
+          "unit": "ratio",
+          "dimension": "support_tier",
+          "definition": "Missed resolution-SLA tickets divided by eligible resolved tickets.",
+          "population": "resolved priority tickets with an eligible resolution clock",
+          "baseline_start": "2026-10-24T00:00:00+00:00",
+          "baseline_end": "2026-10-31T00:00:00+00:00",
+          "current_start": "2026-10-31T00:00:00+00:00",
+          "current_end": "2026-11-07T00:00:00+00:00",
+          "baseline": 0.14,
+          "current": 0.14,
+          "delta": 0.0,
+          "within_effect": 0.0,
+          "mix_effect": 0.0,
+          "contributions": {
+            "enterprise": 0.0,
+            "self_serve": 0.0
+          },
+          "query_refs": [
+            "query:harbor-help:reporting:p07"
+          ]
+        }
+      ],
+      "semantic_status": "aligned"
+    },
+    "p08": {
+      "status": "complete",
+      "outcome": "notify",
+      "recipients": [
+        "support-operations"
+      ],
+      "analyses": [
+        {
+          "source_key": "harbor-help-reporting",
+          "comparison_key": "resolution-sla-rate",
+          "metric": "sla_miss_rate",
+          "unit": "ratio",
+          "dimension": "support_tier",
+          "definition": "Missed resolution-SLA tickets divided by eligible resolved tickets.",
+          "population": "resolved priority tickets with an eligible resolution clock",
+          "baseline_start": "2026-11-07T00:00:00+00:00",
+          "baseline_end": "2026-11-14T00:00:00+00:00",
+          "current_start": "2026-11-14T00:00:00+00:00",
+          "current_end": "2026-11-21T00:00:00+00:00",
+          "baseline": 0.1,
+          "current": 0.12,
+          "delta": 0.02,
+          "within_effect": 0.014285714285714285,
+          "mix_effect": 0.005714285714285714,
+          "contributions": {
+            "enterprise": 0.04,
+            "self_serve": -0.02
+          },
+          "query_refs": [
+            "query:harbor-help:reporting:p08"
+          ]
+        }
+      ],
+      "semantic_status": "aligned"
+    }
+  },
+  "redwood-fulfillment": {
+    "p05": {
+      "status": "blocked",
+      "outcome": "investigate",
+      "recipients": [
+        "fulfillment-data"
+      ],
+      "analyses": [
+        {
+          "source_key": "redwood-fulfillment-reporting",
+          "comparison_key": "late-shipments",
+          "metric": "late_shipments",
+          "unit": "shipments",
+          "dimension": "warehouse",
+          "definition": "Completed shipments delivered after their promised date.",
+          "population": "completed shipments with a promised delivery date",
+          "baseline_start": "2026-09-26T00:00:00+00:00",
+          "baseline_end": "2026-10-03T00:00:00+00:00",
+          "current_start": "2026-10-03T00:00:00+00:00",
+          "current_end": "2026-10-10T00:00:00+00:00",
+          "baseline": 50,
+          "current": 58,
+          "delta": 8,
+          "within_effect": null,
+          "mix_effect": null,
+          "contributions": {
+            "north": 5,
+            "south": 3
+          },
+          "query_refs": [
+            "query:redwood-fulfillment:reporting:p05"
+          ]
+        }
+      ],
+      "semantic_status": "definition-conflict"
+    },
+    "p06": {
+      "status": "complete",
+      "outcome": "notify",
+      "recipients": [
+        "fulfillment-owner"
+      ],
+      "analyses": [
+        {
+          "source_key": "redwood-fulfillment-reporting",
+          "comparison_key": "late-shipments",
+          "metric": "late_shipments",
+          "unit": "shipments",
+          "dimension": "warehouse",
+          "definition": "Completed shipments delivered after their promised date.",
+          "population": "completed shipments with a promised delivery date",
+          "baseline_start": "2026-10-10T00:00:00+00:00",
+          "baseline_end": "2026-10-17T00:00:00+00:00",
+          "current_start": "2026-10-17T00:00:00+00:00",
+          "current_end": "2026-10-24T00:00:00+00:00",
+          "baseline": 50,
+          "current": 75,
+          "delta": 25,
+          "within_effect": null,
+          "mix_effect": null,
+          "contributions": {
+            "north": 20,
+            "south": 5
+          },
+          "query_refs": [
+            "query:redwood-fulfillment:reporting:p06"
+          ]
+        }
+      ],
+      "semantic_status": "aligned"
+    },
+    "p07": {
+      "status": "complete",
+      "outcome": "ignore",
+      "recipients": [],
+      "analyses": [
+        {
+          "source_key": "redwood-fulfillment-reporting",
+          "comparison_key": "late-shipments",
+          "metric": "late_shipments",
+          "unit": "shipments",
+          "dimension": "warehouse",
+          "definition": "Completed shipments delivered after their promised date.",
+          "population": "completed shipments with a promised delivery date",
+          "baseline_start": "2026-10-24T00:00:00+00:00",
+          "baseline_end": "2026-10-31T00:00:00+00:00",
+          "current_start": "2026-10-31T00:00:00+00:00",
+          "current_end": "2026-11-07T00:00:00+00:00",
+          "baseline": 70,
+          "current": 72,
+          "delta": 2,
+          "within_effect": null,
+          "mix_effect": null,
+          "contributions": {
+            "north": 10,
+            "south": -8
+          },
+          "query_refs": [
+            "query:redwood-fulfillment:reporting:p07"
+          ]
+        }
+      ],
+      "semantic_status": "aligned"
+    },
+    "p08": {
+      "status": "complete",
+      "outcome": "notify",
+      "recipients": [
+        "fulfillment-owner"
+      ],
+      "analyses": [
+        {
+          "source_key": "redwood-fulfillment-reporting",
+          "comparison_key": "late-shipments",
+          "metric": "late_shipments",
+          "unit": "shipments",
+          "dimension": "warehouse",
+          "definition": "Completed shipments delivered after their promised date.",
+          "population": "completed shipments with a promised delivery date",
+          "baseline_start": "2026-11-07T00:00:00+00:00",
+          "baseline_end": "2026-11-14T00:00:00+00:00",
+          "current_start": "2026-11-14T00:00:00+00:00",
+          "current_end": "2026-11-21T00:00:00+00:00",
+          "baseline": 70,
+          "current": 70,
+          "delta": 0,
+          "within_effect": null,
+          "mix_effect": null,
+          "contributions": {
+            "north": 20,
+            "south": -20
+          },
+          "query_refs": [
+            "query:redwood-fulfillment:reporting:p08"
+          ]
+        }
+      ],
+      "semantic_status": "aligned"
+    }
+  }
+}

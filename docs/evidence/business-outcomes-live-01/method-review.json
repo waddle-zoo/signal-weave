@@ -1,0 +1,91 @@
+{
+  "review_version": "1",
+  "artifact": "business-outcomes-live-01",
+  "scope": "Read-only adversarial audit of the frozen live artifact; primary report, manifest, expected labels, and events remain unchanged.",
+  "source_revision": "7030068bef313e9803bde9d7a0d36499bb917d54",
+  "verdict": "bounded_trial_valid_but_structured_gate_failed",
+  "release_decision": "no_go_for_signalweave_success_headline",
+  "integrity": {
+    "baseline_periods": 12,
+    "signalweave_periods": 12,
+    "jev_requests": 12,
+    "jev_retries": 0,
+    "luna_episodes": 6,
+    "api_errors": 0,
+    "unknown_usage_events": 0,
+    "usage_reconciles_to_events": true,
+    "tool_calls": {
+      "baseline": 35,
+      "signalweave": 46
+    },
+    "source_reads": {
+      "baseline": 12,
+      "signalweave": 24
+    },
+    "replay_flags_true": 12,
+    "replay_added_jev_requests": 0,
+    "usage_units": "tokens_only; no USD accounting"
+  },
+  "primary_result": {
+    "baseline_strict_passed": 12,
+    "signalweave_strict_passed": 10,
+    "intended_periods_per_arm": 12,
+    "structured_gate_passed": false,
+    "overall_status": "failed_structured_gate",
+    "narrative_review": "pending_independent_review",
+    "failures": [
+      {
+        "company": "northstar",
+        "period": "p07",
+        "expected": "complete/notify/commerce-owner",
+        "actual": "complete/investigate/no recipients",
+        "error_fields": ["outcome", "recipients"]
+      },
+      {
+        "company": "redwood",
+        "period": "p08",
+        "expected": "complete/notify/fulfillment-owner",
+        "actual": "blocked/ignore/no recipients",
+        "error_fields": ["outcome", "recipients", "status"]
+      }
+    ]
+  },
+  "leakage_and_fairness": {
+    "agent_visible_oracle_labels": false,
+    "historical_saved_notes_sent_to_agents": false,
+    "expected_labels_in_agent_event_prompts": false,
+    "treatment_received_authoritative_native_result": true,
+    "comparability": "This is a workflow-vs-baseline comparison, not an equal-information Luna decision test; the treatment writer receives the native workflow projection while baseline Luna applies policy directly."
+  },
+  "critical_findings": [
+    {
+      "id": "native_correctness_regressions",
+      "severity": "critical",
+      "finding": "The treatment arm has two primary structured failures. Northstar p07 is complete but investigates without the required recipient despite the notifying policy case. Redwood p08 is blocked/ignore with no recipient even though the native numeric evidence contains the +20 and -20 warehouse contributions that satisfy the notify policy.",
+      "generalized_issue": "Do not convert these into writer or reviewer failures: the treatment native workflow result is the scored production decision. Future gates need regression tests for offsetting contributions and for a typed evidence slot remaining pending after the triggering arithmetic is already established."
+    },
+    {
+      "id": "resource_asymmetry",
+      "severity": "high",
+      "finding": "The event log and report reconcile, but resource paths are asymmetric: baseline used 12 source reads and 35 tool calls, while treatment used 24 source reads and 46 tool calls. Treatment also added 12 Jev requests and replay bookkeeping. Episode time was approximately 112.6 seconds baseline versus 119.2 seconds treatment.",
+      "generalized_issue": "Raw reads, calls, latency, or token totals cannot headline as savings or efficiency wins without normalizing the treatment-only inspection and workflow steps."
+    },
+    {
+      "id": "headline_scope",
+      "severity": "critical",
+      "finding": "The frozen report is a valid bounded feasibility artifact with a failed structured gate, not evidence of a SignalWeave quality win. Baseline is 12/12 and treatment is 10/12; narrative review is still pending.",
+      "generalized_issue": "Keep the failed primary score immutable and report any later semantic or narrative audit separately; do not use corrected labels or a prose review to replace the preregistered structured result."
+    }
+  ],
+  "positive_controls": [
+    "All 12 Jev requests are present with no retries or extra requests.",
+    "All 6 Luna episodes completed successfully.",
+    "Usage totals reconcile to the event stream and are reported as tokens, not dollars.",
+    "The 12 treatment replay flags are true without increasing Jev request count.",
+    "No external notification delivery was observed; submissions are simulated/internal."
+  ],
+  "audit_limitations": [
+    "The expected-label packet is parent-side review material, not an independent external peer review.",
+    "Full narrative quality remains pending and cannot repair the failed structured gate."
+  ]
+}
