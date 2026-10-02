@@ -6,6 +6,9 @@ import pytest
 from test_onboarding import make_server
 from test_onboarding_windows import arguments, dispatch
 
+from signalweave.mcp_server import CARD_AUTHORING_GUIDANCE
+from signalweave.models import InsightCard, InvestigationMode, RetrievalMode
+
 
 @pytest.mark.parametrize("name", ["draft_insight_card", "propose_insight_card", "onboard_insight_card"])
 async def test_schema_distinguishes_recurring_evidence_from_setup_and_route_policy(tmp_path, name):
@@ -37,3 +40,41 @@ async def test_guidance_preserves_freeform_questions_and_exact_owner_routes(tmp_
     assert payload["card"]["delivery_methods"] == methods
     assert payload["card"]["evidence_requirements"] == {"question:2": False}
     assert payload["card"]["status"] == "draft"
+
+
+def test_server_exposes_shared_authoring_guidance(tmp_path):
+    server = make_server(tmp_path)
+
+    assert CARD_AUTHORING_GUIDANCE in server.instructions
+    assert "minimal business fields" in CARD_AUTHORING_GUIDANCE
+    assert "SourceRef" in CARD_AUTHORING_GUIDANCE
+    assert "every owner-requested delivery rule" in CARD_AUTHORING_GUIDANCE
+    assert "outcomes meant to stay silent need no delivery entry" in CARD_AUTHORING_GUIDANCE
+    assert "Never invent a recipient" in CARD_AUTHORING_GUIDANCE
+
+
+@pytest.mark.parametrize("name", ["draft_insight_card", "propose_insight_card", "onboard_insight_card"])
+async def test_native_mcp_authoring_schema_preserves_defaults_and_allows_advanced_threshold(tmp_path, name):
+    server = make_server(tmp_path)
+    spec = next(tool for tool in await server.list_tools() if tool.name == name)
+    properties = spec.inputSchema["properties"]
+
+    if name == "draft_insight_card":
+        assert "minimal business fields" in spec.description
+    assert properties["action_confidence_threshold"]["default"] == 0.70
+    assert properties["action_confidence_threshold"]["maximum"] == 1.0
+    assert "model-support floor" in properties["action_confidence_threshold"]["description"].lower()
+    assert properties["retrieval_mode"]["default"] == ("fixed" if name == "draft_insight_card" else "expand")
+    assert properties["investigation_mode"]["default"] == ("none" if name == "draft_insight_card" else "bounded")
+    assert "selected source references" in properties["retrieval_mode"]["description"]
+    assert "additional authorized sources" in properties["retrieval_mode"]["description"]
+    assert "none disables follow-up" in properties["investigation_mode"]["description"]
+    assert "live SourceRegistry" in properties["investigation_mode"]["description"]
+
+
+def test_stored_insight_card_defaults_remain_conservative():
+    fields = InsightCard.model_fields
+
+    assert fields["action_confidence_threshold"].default == 0.70
+    assert fields["retrieval_mode"].default is RetrievalMode.FIXED
+    assert fields["investigation_mode"].default is InvestigationMode.NONE

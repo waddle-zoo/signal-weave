@@ -71,6 +71,24 @@ def _accepted_report(company, card):
     )
 
 
+def _flat_intent(company, **overrides):
+    card = company["expert_card"]
+    intent = {
+        "title": card["title"],
+        "what_to_watch": card["what_to_watch"],
+        "why_watch": card["why_watch"],
+        "decision_guidance": card["decision_guidance"],
+        "source_keys": [source["key"] for source in company["sources"]],
+        "routes": [
+            {"destination_key": method["key"], "outcome": method["outcome"]}
+            for method in card["delivery_methods"]
+        ],
+        "watch_for": card["watch_for"],
+        "questions": card["questions"],
+    }
+    return {**intent, **overrides}
+
+
 def test_runner_uses_one_fixture_worker_and_dynamic_setup_outcomes():
     companies = trial.build_companies()
     assert trial.build_companies.__module__ == "evaluations.bootstrap_empirical_trial"
@@ -133,6 +151,18 @@ def test_historical_engine_sets_clock_from_each_case_capture(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_author_proposal_schema_is_flat_draft_intent():
+    session = trial.AuthorSession(trial.build_companies()[0], SimpleNamespace(), Audit())
+    spec = (await session.specs())[0]
+
+    assert set(spec["parameters"]["required"]) == {
+        "title", "what_to_watch", "why_watch", "decision_guidance", "source_keys", "routes",
+    }
+    assert "card" not in spec["parameters"]["properties"]
+    assert spec["parameters"]["additionalProperties"] is False
+
+
+@pytest.mark.asyncio
 async def test_native_raw_evidence_uses_real_engine_and_serializes_all_four_runs():
     audit = Audit()
     for company in trial.build_companies():
@@ -173,7 +203,7 @@ async def test_author_uses_custom_prompt_and_conservative_codex_timeout(monkeypa
         assert session.submission is None
         bridge = codex_trial_transport.TrialMCP(session, kwargs["audit"], await session.specs(), max_calls=8)
         for name, arguments in (
-            ("propose_card", {"card": company["expert_card"]}),
+            ("propose_card", _flat_intent(company)),
             ("test_card", {}),
             ("finish_setup", {"notes": "Use the accepted owner policy."}),
         ):
@@ -201,9 +231,9 @@ async def test_candidate_attempt_is_reserved_before_paid_evaluation_and_invalid_
     company = trial.build_companies()[0]
     session = trial.AuthorSession(company, SimpleNamespace(), Audit())
     with pytest.raises(ValueError, match="invalid_candidate_schema"):
-        await session.call("propose_card", {"card": {"not": "an InsightCard"}})
+        await session.call("propose_card", {"not": "a DraftIntent"})
     assert session.candidate_evaluations == 0
-    await session.call("propose_card", {"card": company["expert_card"]})
+    await session.call("propose_card", _flat_intent(company))
 
     async def fails(*args, **kwargs):
         raise TimeoutError("offline provider")
@@ -215,7 +245,7 @@ async def test_candidate_attempt_is_reserved_before_paid_evaluation_and_invalid_
         await session.call("test_card", {})
     assert session.candidate_evaluations == 1
 
-    await session.call("propose_card", {"card": {**company["expert_card"], "title": "revised"}})
+    await session.call("propose_card", _flat_intent(company, title="revised"))
     second = await session.call("test_card", {})
     assert second["accepted"] is False
     assert session.candidate_evaluations == 2
@@ -231,14 +261,14 @@ async def test_failed_or_invalid_reproposal_cannot_reuse_stale_acceptance(monkey
         return _accepted_report(company, card)
 
     monkeypatch.setattr(trial, "evaluate_candidate", accepted)
-    await session.call("propose_card", {"card": company["expert_card"]})
+    await session.call("propose_card", _flat_intent(company))
     assert (await session.call("test_card", {}))["accepted"] is True
     with pytest.raises(ValueError, match="invalid_candidate_schema"):
-        await session.call("propose_card", {"card": {"invalid": True}})
+        await session.call("propose_card", {"invalid": True})
     with pytest.raises(ValueError, match="strict_setup_acceptance_required"):
         await session.call("finish_setup", {"notes": "stale acceptance must not finish"})
 
-    await session.call("propose_card", {"card": {**company["expert_card"], "title": "repaired"}})
+    await session.call("propose_card", _flat_intent(company, title="repaired"))
 
     async def failed(*args, **kwargs):
         raise TimeoutError("candidate provider failure")
@@ -259,7 +289,7 @@ async def test_acceptance_digest_binds_current_candidate_signature(monkeypatch):
         return _accepted_report(company, card)
 
     monkeypatch.setattr(trial, "evaluate_candidate", accepted)
-    await session.call("propose_card", {"card": company["expert_card"]})
+    await session.call("propose_card", _flat_intent(company))
     assert (await session.call("test_card", {}))["accepted"] is True
     session.candidate.title = "mutated after acceptance"
     with pytest.raises(ValueError, match="strict_setup_acceptance_required"):
@@ -395,6 +425,18 @@ def test_candidate_requires_only_declared_required_sources_and_rejects_other_cha
         trial._candidate(changed, company)
 
 
+def test_candidate_accepts_explicit_route_key_when_label_and_endpoint_are_exact():
+    company = copy.deepcopy(trial.build_companies()[0])
+    card = copy.deepcopy(company["expert_card"])
+    card["delivery_methods"][0]["key"] = "explicit-method-key"
+    card["compiled_plan"] = None
+
+    candidate = trial._candidate(card, company)
+
+    assert candidate.delivery_methods[0].key == "explicit-method-key"
+    assert candidate.delivery_methods[0].label == company["destinations"][0]["label"]
+
+
 def test_public_card_payload_keeps_compiled_plan_but_strips_approval_history():
     card = trial.InsightCard.model_validate(trial.build_companies()[0]["expert_card"])
     payload = trial.public_card_payload(card)
@@ -424,7 +466,7 @@ async def test_candidate_audit_and_failed_author_result_retain_full_artifacts(mo
 
     async def failed_episode(session, **kwargs):
         bridge = codex_trial_transport.TrialMCP(session, kwargs["audit"], await session.specs(), max_calls=8)
-        assert (await bridge.call("propose_card", {"card": company["expert_card"]})).isError is False
+        assert (await bridge.call("propose_card", _flat_intent(company))).isError is False
         result = await bridge.call("test_card", {})
         assert result.isError is False
         return {"status": "failed", "error": "timeout", "exit_code": 1, "foreign_tools": []}

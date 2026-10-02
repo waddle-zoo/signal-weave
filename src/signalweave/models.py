@@ -778,13 +778,34 @@ class InsightCard(BaseModel):
     comparison_windows: ComparisonWindows = Field(
         default_factory=lambda: ["previous_period", "trailing_4_period_average"],
     )
-    action_confidence_threshold: float = Field(default=0.70, ge=0.0, le=1.0)
+    action_confidence_threshold: float = Field(
+        default=0.70,
+        ge=0.0,
+        le=1.0,
+        description=(
+            "Model-support floor for automatic action, not an accuracy guarantee. "
+            "The normal default is 0.70; 1.0 is an advanced override that may prevent automation."
+        ),
+    )
     owner: str | None = Field(default=None, max_length=240)
     version: int = Field(default=1, ge=1)
     max_source_age_hours: float | None = Field(default=24.0, ge=0.0, le=876000.0)
     delivery_methods: CardDeliveryMethods = Field(default_factory=list)
-    retrieval_mode: RetrievalMode = RetrievalMode.FIXED
-    investigation_mode: InvestigationMode = InvestigationMode.NONE
+    retrieval_mode: RetrievalMode = Field(
+        default=RetrievalMode.FIXED,
+        description=(
+            "Retrieval scope: fixed uses the selected source references as provided; expand "
+            "allows additional authorized sources when the adapter registry supports bounded "
+            "related-source retrieval."
+        ),
+    )
+    investigation_mode: InvestigationMode = Field(
+        default=InvestigationMode.NONE,
+        description=(
+            "Investigation scope: none disables follow-up; bounded enables bounded follow-up "
+            "investigation and requires a live SourceRegistry."
+        ),
+    )
     max_investigation_sources: int = Field(default=3, ge=0, le=10)
     investigation_threshold: float = Field(default=0.60, ge=0.0, le=1.0)
     principal_id: str | None = Field(default=None, max_length=240)

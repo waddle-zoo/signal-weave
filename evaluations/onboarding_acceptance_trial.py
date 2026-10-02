@@ -96,7 +96,8 @@ def require_acceptance_contract():
 def source_freeze():
     """Hash working bytes, including dirty/untracked Python sources, not just HEAD."""
     paths = sorted(set(ROOT.glob("src/**/*.py")) | set(ROOT.glob("tests/**/*.py"))
-                   | set(ROOT.glob("evaluations/**/*.py")) | set(ROOT.glob("docs/**/*.md")) | {
+                   | set(ROOT.glob("evaluations/**/*.py")) | set(ROOT.glob("examples/**/*.py"))
+                   | set(ROOT.glob("docs/**/*.md")) | {
         Path(__file__), ROOT / "evaluations/watch_evidence_trial.py",
         ROOT / "tests/test_onboarding_acceptance_trial.py", ROOT / "pyproject.toml", ROOT / "uv.lock",
         ROOT / "README.md", ROOT / "AGENTS.md",

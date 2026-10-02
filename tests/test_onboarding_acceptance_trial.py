@@ -278,6 +278,7 @@ def test_freeze_hashes_working_bytes_including_dirty_sources(monkeypatch, tmp_pa
     source.parent.mkdir(parents=True)
     source.write_text("dirty working bytes")
     paths = ["evaluations/onboarding_acceptance_trial.py", "evaluations/watch_evidence_trial.py",
+             "examples/investigation_agent/onboarding.py",
              "tests/test_onboarding_acceptance_trial.py", "pyproject.toml", "uv.lock",
              "README.md", "AGENTS.md"]
     for name in paths:
@@ -291,5 +292,10 @@ def test_freeze_hashes_working_bytes_including_dirty_sources(monkeypatch, tmp_pa
     frozen = harness.source_freeze()
     assert frozen["source_sha256"]["src/signalweave/engine.py"] == hashlib.sha256(source.read_bytes()).hexdigest()
     assert frozen["git_status"].startswith(" M ")
+    helper = tmp_path / "examples/investigation_agent/onboarding.py"
+    assert frozen["source_sha256"][str(helper.relative_to(tmp_path))] == hashlib.sha256(helper.read_bytes()).hexdigest()
+    helper.write_text("changed caller-owned bridge")
+    assert harness.source_freeze()["source_sha256"] != frozen["source_sha256"]
+    helper.write_text("fixture")
     source.write_text("changed after freeze")
     assert harness.source_freeze()["source_sha256"] != frozen["source_sha256"]

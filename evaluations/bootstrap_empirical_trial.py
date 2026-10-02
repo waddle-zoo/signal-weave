@@ -30,6 +30,7 @@ from evaluations.bootstrap_agent_trial import (
 )
 from evaluations.bootstrap_empirical_cases import build_companies as fixture_build_companies
 from evaluations.onboarding_acceptance_trial import source_freeze
+from examples.investigation_agent.onboarding import DraftIntent, draft_arguments
 from signalweave.engine import InsightEngine
 from signalweave.evaluation import (
     CardEvaluationCase,
@@ -37,6 +38,7 @@ from signalweave.evaluation import (
     CardWorkflowEvaluator,
     card_acceptance_digest,
 )
+from signalweave.mcp_server import CARD_AUTHORING_GUIDANCE
 from signalweave.models import InsightCard, InsightCardStatus, Outcome, ResourceSnapshot, SourceRef
 from signalweave.typesafe_adapter import JevJudger, load_api_key
 
@@ -49,7 +51,13 @@ MAX_CANDIDATE_EVALUATIONS = 2
 MIN_CONFIDENCE_FLOOR = 0.70
 SETUP_CASE_COUNT = 3
 HOLDOUT_CASE_COUNT = 4
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
+FIXED_SNAPSHOT_PROFILE = {
+    "retrieval_mode": "fixed",
+    "investigation_mode": "none",
+    "action_confidence_threshold": 0.70,
+    "max_source_age_hours": 24.0,
+}
 SCOPE = (
     "bounded card authoring and native Jev holdout comparison; numeric claim scoring is out of scope"
 )
@@ -104,6 +112,7 @@ def public_company(company: dict[str, Any]) -> dict[str, Any]:
         "brief": company["brief"],
         "owner_policy": company["owner_policy"],
         "as_of": company["as_of"],
+        "execution_profile": copy.deepcopy(FIXED_SNAPSHOT_PROFILE),
         "destinations": copy.deepcopy(company["destinations"]),
         "sources": copy.deepcopy(company["sources"]),
         "setup_examples": [_case_public(case, labels=True) for case in company["setup_cases"]],
@@ -126,6 +135,33 @@ def public_card_payload(card: InsightCard) -> dict[str, Any]:
     ):
         payload.pop(key, None)
     return payload
+
+
+def canonical_evidence_refs(resources: list[dict[str, Any]], citations: list[str]) -> list[str]:
+    """Resolve only exact identifiers actually present in this case's evidence.
+
+    A source key or observed fact provenance is not an invented citation just
+    because the caller did not spell it as adapter|resource. Never guess a
+    prefix, accept a different period's fact, or resolve an ambiguous alias.
+    """
+    aliases: dict[str, set[str]] = {}
+    for resource in resources:
+        ref = f"{resource['adapter']}|{resource['resource']}"
+        names = [ref, resource["source_key"]]
+        for fact in [*resource.get("evidence", []), *resource.get("observations", [])]:
+            names.extend(fact.get("provenance", []))
+        for name in names:
+            if isinstance(name, str):
+                aliases.setdefault(name, set()).add(ref)
+    resolved = []
+    for citation in citations:
+        matches = aliases.get(citation, set())
+        if len(matches) != 1:
+            raise ValueError("unknown_or_ambiguous_current_evidence_ref")
+        ref = next(iter(matches))
+        if ref not in resolved:
+            resolved.append(ref)
+    return resolved
 
 
 def acceptance_outcomes(company: dict[str, Any]) -> list[Outcome]:
@@ -161,10 +197,20 @@ def _candidate(raw: dict[str, Any], company: dict[str, Any]) -> InsightCard:
     destinations = {item["key"]: item for item in company["destinations"]}
     for method in card.delivery_methods:
         expected = destinations.get(method.key)
+        if expected is None:
+            matches = [
+                item for item in company["destinations"]
+                if method.label == item["label"] and method.destination == item["destination"]
+            ]
+            if len(matches) == 1:
+                expected = matches[0]
         if expected is None or method.label != expected["label"] or method.destination != expected["destination"]:
             raise ValueError(f"candidate changed destination declaration: {method.key}")
     if card.action_confidence_threshold < MIN_CONFIDENCE_FLOOR:
         raise ValueError(f"candidate confidence floor must be at least {MIN_CONFIDENCE_FLOOR:.2f}")
+    for field, expected in FIXED_SNAPSHOT_PROFILE.items():
+        if getattr(card, field) != expected:
+            raise ValueError(f"operator execution profile requires {field}={expected!r}; author business policy, not runtime settings")
     if card.max_source_age_hours is None or card.max_source_age_hours > 24:
         raise ValueError("candidate max_source_age_hours must be finite and no greater than 24")
     return card.model_copy(
@@ -368,15 +414,7 @@ def has_paid_audit_requests(audit: Audit | None) -> bool:
 
 
 def _propose_parameters() -> dict[str, Any]:
-    card_schema = InsightCard.model_json_schema()
-    definitions = card_schema.pop("$defs", {})
-    return {
-        "type": "object",
-        "properties": {"card": card_schema},
-        "required": ["card"],
-        "additionalProperties": False,
-        "$defs": definitions,
-    }
+    return DraftIntent.model_json_schema()
 
 
 @dataclass
@@ -407,7 +445,7 @@ class AuthorSession:
             {
                 "type": "function",
                 "name": "propose_card",
-                "description": "Propose a full InsightCard using only the exact approved sources and destinations.",
+                "description": "Propose flat business intent using exact keys from the approved source shortlist and destination directory; the bridge builds the draft card.",
                 "strict": True,
                 "parameters": _propose_parameters(),
             },
@@ -445,7 +483,22 @@ class AuthorSession:
             self.report = None
             self.accepted_card = None
             try:
-                candidate = _candidate(arguments["card"], self.company)
+                try:
+                    draft = draft_arguments(
+                        arguments,
+                        self.company["sources"],
+                        self.company["destinations"],
+                    )
+                except (KeyError, TypeError, ValueError, ValidationError) as error:
+                    raise ValueError(f"invalid_candidate_schema: {error}") from error
+                candidate = _candidate(
+                    {
+                        "id": f"author-{self.company['id']}",
+                        **FIXED_SNAPSHOT_PROFILE,
+                        **draft,
+                    },
+                    self.company,
+                )
             except (KeyError, TypeError, ValueError, ValidationError) as error:
                 raise ValueError(str(error)) from error
             candidate_digest = digest(candidate.execution_payload())
@@ -570,9 +623,12 @@ class RawLunaSession:
         allowed = {item["key"] for item in self.company["destinations"]}
         if any(item not in allowed for item in submission["recipients"]):
             raise ValueError("unapproved_recipient_key")
-        refs = {f"{item['adapter']}|{item['resource']}" for item in self.company["sources"]}
-        if any(item not in refs for item in submission["evidence_refs"]):
-            raise ValueError("uninspected_evidence_ref")
+        try:
+            submission["evidence_refs"] = canonical_evidence_refs(
+                self.case["resources"], submission["evidence_refs"],
+            )
+        except ValueError:
+            raise ValueError("uninspected_evidence_ref") from None
         self.submission = submission
         return {"recorded": True, "delivery_enabled": False}
 
@@ -598,11 +654,30 @@ PRODUCTION_MCP_INSTRUCTIONS = (
 
 AUTHOR_INSTRUCTIONS = (
     "You are the card author in a synthetic read-only trial. Use only the supplied owner policy, "
-    "exact source declarations, exact destinations, and three labeled setup examples. Do not ask "
+    "the caller's bounded approved source shortlist (not the entire enterprise catalog), exact "
+    "destination directory, and three labeled setup examples. Every approved source with required=true "
+    "is forced into the draft; optional required=false sources may be omitted. Do not ask "
     "for or infer holdout labels. Use propose_card, test_card, inspect_diagnostics, and finish_setup. "
+    "propose_card accepts one flat DraftIntent: title, what_to_watch, why_watch, decision_guidance, "
+    "source_keys, routes, and optional watch_for, questions, evidence_requirements, and "
+    "follow_up_guidance. source_keys and routes are exact approved directory selectors; a route's "
+    "destination_key selects a directory entry, and method_key is optional for an explicit distinct "
+    "delivery key. Do not send a persisted InsightCard, id, compiled plan, approval, profile, "
+    "confidence, retrieval, or investigation fields. "
     "You may test at most two distinct candidates; an unchanged retry is forbidden. Inspect the full "
     "diagnostics before repairing. Finish only after strict setup acceptance passes. No external delivery.\n\n"
     + PRODUCTION_MCP_INSTRUCTIONS
+    + " The operator supplies a fixed-snapshot execution_profile: no live source registry or "
+    "follow-up retrieval is available in this trial. Keep that profile unchanged. It uses the "
+    "normal 0.70 support floor, not a claim of 70% accuracy. Do not invent a 1.0 requirement. "
+    "Copy approved source declarations exactly; do not reconstruct or rename their parameters. "
+    "Represent every outcome-to-recipient rule in the full owner policy, including branches "
+    "not illustrated by setup examples. An example set is not the entire policy."
+    + CARD_AUTHORING_GUIDANCE
+    + " In this research bridge, propose_card is the drafting tool and test_card performs "
+    "compilation and workflow replay. Only the four advertised bridge tools are available; "
+    "do not call production tool names. Supply minimal new-card fields, not plan, approval "
+    "or review-history objects."
 )
 
 
@@ -699,6 +774,8 @@ def score_raw_submission(company: dict[str, Any], case: dict[str, Any], row: dic
 
 
 def recompute_report(companies: list[dict[str, Any]], report: dict[str, Any]) -> dict[str, Any]:
+    if report.get("authoring_regression"):
+        return {"status": "not_run", "reason": "no new baseline episodes in the authoring regression"}
     result = {}
     for company in companies:
         rows = report.get("execution_comparison", {}).get(company["id"], {}).get("raw_luna", [])
@@ -719,17 +796,21 @@ def _assert_live_freeze(companies: list[dict[str, Any]], fixture_hash: str, code
         raise RuntimeError("code_prompt_dependency_freeze_changed")
 
 
-async def run_trial(output: Path, *, seed: int = 20261002, live: bool = False, jev_key_file: str | Path | None = None) -> dict[str, Any]:
+async def run_trial(output: Path, *, seed: int = 20261002, live: bool = False, jev_key_file: str | Path | None = None, authoring_regression: bool = False) -> dict[str, Any]:
     companies = build_companies(seed)
     output.mkdir(parents=False, exist_ok=False)
     frozen_code = source_freeze()
+    attempt_limit = 40 if authoring_regression else MAX_JEV_ATTEMPTS
+    scope = "development authoring regression on previously observed cases; no new baseline or expert control" if authoring_regression else SCOPE
     fixture_hash = digest(companies)
     manifest = {
         "schema_version": SCHEMA_VERSION,
-        "scope": SCOPE,
+        "scope": scope,
+        "authoring_regression": authoring_regression,
+        "execution_profile": FIXED_SNAPSHOT_PROFILE,
         "model": MODEL,
         "effort": EFFORT,
-        "max_jev_attempts": MAX_JEV_ATTEMPTS,
+        "max_jev_attempts": attempt_limit,
         "jev_retries": 0,
         "jev_timeout_seconds": JEV_TIMEOUT_SECONDS,
         "codex_episode_timeout_seconds": CODEX_EPISODE_TIMEOUT_SECONDS,
@@ -742,7 +823,7 @@ async def run_trial(output: Path, *, seed: int = 20261002, live: bool = False, j
         "numeric_claim_scoring": "out_of_scope",
     }
     (output / "manifest.json").write_text(json.dumps(manifest, indent=2, allow_nan=False) + "\n")
-    report: dict[str, Any] = {"schema_version": SCHEMA_VERSION, "scope": SCOPE, "status": "not_run" if not live else "running", "paid_calls_made": False, "fixture_digest_before": fixture_hash, "bootstrap_quality": {}, "execution_comparison": {}, "failures": []}
+    report: dict[str, Any] = {"schema_version": SCHEMA_VERSION, "scope": scope, "authoring_regression": authoring_regression, "status": "not_run" if not live else "running", "paid_calls_made": False, "fixture_digest_before": fixture_hash, "bootstrap_quality": {}, "execution_comparison": {}, "failures": []}
     (output / "report.json").write_text(json.dumps(report, indent=2) + "\n")
     if not live:
         return report
@@ -751,7 +832,7 @@ async def run_trial(output: Path, *, seed: int = 20261002, live: bool = False, j
     key = load_api_key(str(jev_key_file))
     if not key:
         raise ValueError("empty TypeSafe key; no live run attempted")
-    budget = RequestBudget(MAX_JEV_ATTEMPTS)
+    budget = RequestBudget(attempt_limit)
     events = output / "events.jsonl"
     audit: Audit | None = Audit(events, secrets=(key,), episode="bootstrap-empirical")
     treatment_jev = TrialJev(key, budget, audit)
@@ -771,13 +852,13 @@ async def run_trial(output: Path, *, seed: int = 20261002, live: bool = False, j
             expert = InsightCard.model_validate(company["expert_card"])
             expert_raw: list[dict[str, Any]] = []
             audit.episode = f"{company['id']}:expert_native"
-            expert_report = await run_native_holdout(company, expert, expert_jev, audit=audit, arm="expert", raw_output=expert_raw)
+            expert_report = None if authoring_regression else await run_native_holdout(company, expert, expert_jev, audit=audit, arm="expert", raw_output=expert_raw)
             treatment_raw: list[dict[str, Any]] = []
             audit.episode = f"{company['id']}:treatment_native"
             treatment_report = await run_native_holdout(company, authored, treatment_jev, audit=audit, arm="treatment", raw_output=treatment_raw) if authored else None
             _assert_live_freeze(companies, fixture_hash, frozen_code)
             baseline = []
-            for case in company["holdout_cases"]:
+            for case in ([] if authoring_regression else company["holdout_cases"]):
                 audit.episode = f"{company['id']}:baseline:{case['id']}"
                 try:
                     baseline.append(await run_raw_holdout(company, case, accepted_card=public_card_payload(authored) if authored else None, notes=author.get("notes", ""), budget=budget, audit=audit))
@@ -786,9 +867,9 @@ async def run_trial(output: Path, *, seed: int = 20261002, live: bool = False, j
                     report["failures"].append({"company": company["id"], "stage": "baseline", "case": case["id"], "error": type(error).__name__})
                 _assert_live_freeze(companies, fixture_hash, frozen_code)
             report["execution_comparison"][company["id"]] = {
-                "paired_with_authored_card": authored is not None,
+                "paired_with_authored_card": authored is not None and not authoring_regression,
                 "author_failed": authored is None,
-                "expert_native_jev": expert_report.model_dump(mode="json"),
+                "expert_native_jev": expert_report.model_dump(mode="json") if expert_report else None,
                 "treatment_native_jev": treatment_report.model_dump(mode="json") if treatment_report else None,
                 "expert_native_raw": expert_raw,
                 "treatment_native_raw": treatment_raw,
@@ -826,6 +907,7 @@ def parser() -> argparse.ArgumentParser:
     result.add_argument("--seed", type=int, default=20261002)
     result.add_argument("--live", action="store_true")
     result.add_argument("--jev-key-file", type=Path)
+    result.add_argument("--authoring-regression", action="store_true", help="Previously observed cases; at most three authors and 40 Jev attempts, no baseline/control reruns")
     return result
 
 
@@ -833,7 +915,7 @@ def main(argv: list[str] | None = None) -> None:
     args = parser().parse_args(argv)
     if args.live and args.jev_key_file is None:
         parser().error("--jev-key-file is required with --live")
-    report = asyncio.run(run_trial(args.output, seed=args.seed, live=args.live, jev_key_file=args.jev_key_file))
+    report = asyncio.run(run_trial(args.output, seed=args.seed, live=args.live, jev_key_file=args.jev_key_file, authoring_regression=args.authoring_regression))
     raise SystemExit(0 if report["status"] in {"not_run", "complete"} else 1)
 
 

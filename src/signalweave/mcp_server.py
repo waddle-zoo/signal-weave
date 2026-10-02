@@ -8,11 +8,11 @@ import os
 import re
 from collections.abc import Callable
 from datetime import datetime, timezone
-from typing import Any
+from typing import Annotated, Any
 from uuid import uuid4
 
 from mcp.server.fastmcp import Context, FastMCP
-from pydantic import StrictBool
+from pydantic import Field, StrictBool
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
@@ -106,6 +106,23 @@ def _evaluation_card(card: InsightCard) -> dict[str, Any]:
     )
 
 
+CARD_AUTHORING_GUIDANCE = (
+    "\n\nAuthoring guidance: use the minimal business fields accepted by draft_insight_card, "
+    "propose_insight_card, or onboard_insight_card; do not copy a stored InsightCard, "
+    "plan, review, or history object back as authoring input. Preserve the normal technical "
+    "defaults unless an operator explicitly changes them: the default action confidence "
+    "threshold is 0.70, a model-support floor rather than an accuracy guarantee, and a "
+    "threshold of 1.0 may prevent automation. Keep fixed source references and operator "
+    "profiles as provided; do not invent bounded expansion or investigation. Treat each "
+    "SourceRef and its parameters as authoritative: reuse exact approved declarations and "
+    "returned evidence; never reconstruct, rename, or invent keys or parameters. Keep the owner's intent "
+    "free-form. Map every owner-requested delivery rule to its outcome and exact destination, "
+    "not only the setup examples; outcomes meant to stay silent need no delivery entry. "
+    "Never invent a recipient; ask for missing expected cases when an intended route is not covered. "
+    "Passing partial examples is not proof of the whole policy."
+)
+
+
 def create_mcp(
     runtime: Runtime | None = None,
     *,
@@ -175,6 +192,7 @@ def create_mcp(
             "proof of causation. SignalWeave does not schedule runs or send messages; "
             "your agent or scheduler owns those actions. Selected evidence is sent "
             "to TypeSafe; local installation is not offline inference."
+            + CARD_AUTHORING_GUIDANCE
         ),
         auth=auth_settings,
         token_verifier=token_verifier,
@@ -909,11 +927,38 @@ def create_mcp(
         title: str | None = None,
         comparison_windows: ComparisonWindows | None = None,
         delivery_methods: CardDeliveryMethods | None = None,
-        action_confidence_threshold: float = 0.70,
+        action_confidence_threshold: Annotated[
+            float,
+            Field(
+                ge=0.0,
+                le=1.0,
+                description=(
+                    "Model-support floor for automatic action, not an accuracy guarantee. "
+                    "The normal default is 0.70; 1.0 may prevent automation."
+                ),
+            ),
+        ] = 0.70,
         owner: str | None = None,
         max_source_age_hours: float | None = 24.0,
-        retrieval_mode: RetrievalMode = RetrievalMode.EXPAND,
-        investigation_mode: InvestigationMode = InvestigationMode.BOUNDED,
+        retrieval_mode: Annotated[
+            RetrievalMode,
+            Field(
+                description=(
+                    "Retrieval scope: fixed uses the selected source references as provided; "
+                    "expand allows additional authorized sources when the adapter registry "
+                    "supports bounded related-source retrieval."
+                )
+            ),
+        ] = RetrievalMode.EXPAND,
+        investigation_mode: Annotated[
+            InvestigationMode,
+            Field(
+                description=(
+                    "Investigation scope: none disables follow-up; bounded enables bounded "
+                    "follow-up investigation and requires a live SourceRegistry."
+                )
+            ),
+        ] = InvestigationMode.BOUNDED,
         max_investigation_sources: int = 3,
         investigation_threshold: float = 0.60,
         ctx: Context | None = None,
@@ -975,11 +1020,38 @@ def create_mcp(
         title: str | None = None,
         comparison_windows: ComparisonWindows | None = None,
         delivery_methods: CardDeliveryMethods | None = None,
-        action_confidence_threshold: float = 0.70,
+        action_confidence_threshold: Annotated[
+            float,
+            Field(
+                ge=0.0,
+                le=1.0,
+                description=(
+                    "Model-support floor for automatic action, not an accuracy guarantee. "
+                    "The normal default is 0.70; 1.0 may prevent automation."
+                ),
+            ),
+        ] = 0.70,
         owner: str | None = None,
         max_source_age_hours: float | None = 24.0,
-        retrieval_mode: RetrievalMode = RetrievalMode.EXPAND,
-        investigation_mode: InvestigationMode = InvestigationMode.BOUNDED,
+        retrieval_mode: Annotated[
+            RetrievalMode,
+            Field(
+                description=(
+                    "Retrieval scope: fixed uses the selected source references as provided; "
+                    "expand allows additional authorized sources when the adapter registry "
+                    "supports bounded related-source retrieval."
+                )
+            ),
+        ] = RetrievalMode.EXPAND,
+        investigation_mode: Annotated[
+            InvestigationMode,
+            Field(
+                description=(
+                    "Investigation scope: none disables follow-up; bounded enables bounded "
+                    "follow-up investigation and requires a live SourceRegistry."
+                )
+            ),
+        ] = InvestigationMode.BOUNDED,
         max_investigation_sources: int = 3,
         investigation_threshold: float = 0.60,
         ctx: Context | None = None,
@@ -1049,16 +1121,47 @@ def create_mcp(
         follow_up_guidance: str | None = None,
         delivery_methods: CardDeliveryMethods | None = None,
         comparison_windows: ComparisonWindows | None = None,
-        action_confidence_threshold: float = 0.70,
+        action_confidence_threshold: Annotated[
+            float,
+            Field(
+                ge=0.0,
+                le=1.0,
+                description=(
+                    "Model-support floor for automatic action, not an accuracy guarantee. "
+                    "The normal default is 0.70; 1.0 may prevent automation."
+                ),
+            ),
+        ] = 0.70,
         owner: str | None = None,
         max_source_age_hours: float | None = 24.0,
-        retrieval_mode: RetrievalMode = RetrievalMode.FIXED,
-        investigation_mode: InvestigationMode = InvestigationMode.NONE,
+        retrieval_mode: Annotated[
+            RetrievalMode,
+            Field(
+                description=(
+                    "Retrieval scope: fixed uses the selected source references as provided; "
+                    "expand allows additional authorized sources when the adapter registry "
+                    "supports bounded related-source retrieval."
+                )
+            ),
+        ] = RetrievalMode.FIXED,
+        investigation_mode: Annotated[
+            InvestigationMode,
+            Field(
+                description=(
+                    "Investigation scope: none disables follow-up; bounded enables bounded "
+                    "follow-up investigation and requires a live SourceRegistry."
+                )
+            ),
+        ] = InvestigationMode.NONE,
         max_investigation_sources: int = 3,
         investigation_threshold: float = 0.60,
         ctx: Context | None = None,
     ) -> dict[str, Any]:
-        """Draft a card over explicit source resources; no push is sent."""
+        """Draft a card over explicit source resources; no push is sent.
+
+        Use the minimal business fields described in ``CARD_AUTHORING_GUIDANCE``;
+        returned storage objects are not draft inputs.
+        """
         if not sources:
             raise ValueError("at least one source reference is required")
         principal = request_principal(ctx)

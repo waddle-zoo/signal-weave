@@ -31,6 +31,34 @@ the caller's already-authorized read-only evidence tools. Its output is a
 closed-set list of tool keys. It cannot select an outcome, destination, or
 action. Any other OpenAI-compatible gateway can be used by setting its base URL.
 
+## Drafting from approved context
+
+The caller can bridge flat business intent to the existing
+`draft_insight_card` MCP tool. `approved_sources` is the caller's bounded
+workflow shortlist, not the entire enterprise catalog; every `required=True`
+source is included, while optional sources may be omitted. Selectors must match
+approved keys exactly, and route destinations come from the approved directory.
+The helper returns ordinary kwargs for the existing tool—there is no new MCP
+endpoint and no persisted-card input:
+
+```python
+from examples.investigation_agent.onboarding import DraftIntent, RouteIntent, draft_arguments
+
+kwargs = draft_arguments(
+    DraftIntent(
+        title="Sales pulse",
+        what_to_watch="Online sales and checkout conversion.",
+        why_watch="Help Revenue Operations decide whether to respond.",
+        decision_guidance="Investigate material movement; notify only when supported.",
+        source_keys=["sales-dashboard"],
+        routes=[RouteIntent(destination_key="revenue-operations", outcome="notify")],
+    ),
+    approved_sources,       # caller-owned bounded shortlist
+    approved_destinations,  # caller-owned exact key/label/endpoint directory
+)
+await existing_mcp.call_tool("draft_insight_card", kwargs)
+```
+
 ## Run against a deployed SignalWeave
 
 The card must already be onboarded, reviewed, and approved in SignalWeave. The
