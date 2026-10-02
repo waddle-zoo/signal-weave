@@ -84,6 +84,12 @@ follows from this fixture trial.
 
 ### Recorded first-report results
 
+For the newer comparison including a persistent LLM and final owner-facing prose,
+see the [business-outcome trial](business-outcome-trial.md). It found 10/12 strict
+passes for SignalWeave versus 12/12 for the baseline and **no end-to-end speed or
+cost advantage** in that small sample. The earlier timings below measure a
+different boundary and must not be used as a final-report efficiency claim.
+
 The [initial attempt](evidence/first-report-live-01/report.json) and
 [paired rerun](evidence/first-report-live-02/report.json) retain every attempt,
 frozen inputs, authored cards, raw model journals and token usage. The rerun used
@@ -141,9 +147,13 @@ durable evidence. Automatic recovery of trustworthy definitions from arbitrary
 BI assets, broad method coverage, report usefulness to actual owners, and a fair
 end-to-end cost advantage remain unproven.
 
-### Development counterexamples after review
+### Earlier first-report development counterexamples
 
-The final [two live probes](evidence/first-report-probes-live-01/report.json)
+This historical subsection covers only the first-report experiment series. Its
+counts and reviews exclude the later [business-outcome trial and six-case repair
+probe](business-outcome-trial.md), which include the unresolved failures.
+
+That series' final [two live probes](evidence/first-report-probes-live-01/report.json)
 froze inputs and independent expected results at commit `d9c5945`, reused the
 approved cards without re-authoring or approval calls, and used the compact
 baseline interface. Neither model received the expected labels. These are
@@ -163,7 +173,7 @@ Luna executor. Two successful cases are not enterprise certification.
 
 The probes used exactly 2 Jev calls (15,660 input / 465 output tokens) and 2 Luna
 episodes (141,262 input / 785 output tokens, provider-reported episode accounting).
-Across all three retained runs: **48 Jev calls, 15 Luna episodes, no Jev retries**.
+Across those three retained first-report runs: **48 Jev calls, 15 Luna episodes, no Jev retries**.
 No real notifications were sent. The code review repairs bind claims to actual
 source comparisons, enforce required evidence and configured routes, and prevent
 replays from inventing reports that were never archived. The original eight

@@ -51,3 +51,18 @@ def test_frozen_scores_and_review_mask_reconcile_with_independent_expectations()
         wins["tie" if choice == "tie" else key[case["case_id"]][choice]] += 1
     assert usable == {"baseline": 12, "signalweave": 10}
     assert wins == {"baseline": 3, "signalweave": 1, "tie": 8}
+
+
+def test_separate_semantic_probe_retains_remaining_failure_and_budget():
+    manifest, report, events = recorded("business-outcomes-probe-live-01")
+    assert manifest["freeze"]["git_revision"].startswith("dc619d7")
+    assert manifest["freeze"]["git_status"] == ""
+    assert report["passed"] == 5 and report["intended"] == 6
+    assert report["jev_attempts"] == 6 and report["luna_episodes"] == 0
+    assert not report["primary_scores_replaced"]
+    assert Counter(e.get("provider") for e in events if e["kind"] == "api.request") == {"jev": 6}
+    remaining = [r for r in report["results"] if not r["score"]["passed"]]
+    assert [(r["company"], r["period"]) for r in remaining] == [("northstar-cart", "p07")]
+    result = remaining[0]["native"]["result"]
+    assert result["outcome"] == "investigate"
+    assert result["probabilities"]["notify"] == .52

@@ -54,10 +54,15 @@ also failed its gate: final routing was correct on 5/6 runs versus Luna's 6/6,
 with higher setup effort and token cost. Existing curated-card results do not
 establish that novice onboarding delivers the same benefit.
 
-The [latest bounded onboarding repair](docs/bootstrap-empirical-repair-v2-results.md)
+The [bounded onboarding repair](docs/bootstrap-empirical-repair-v2-results.md)
 accepted three agent-authored cards and passed 12/12 live Jev monitoring cases.
 Those were previously inspected synthetic cases—not fresh enterprise proof or
 an advantage over Luna. Failed attempts and raw evidence are retained.
+
+The newer [end-to-end report trial](docs/business-outcome-trial.md) includes the
+final LLM-written message and persistent agents in both arms: SignalWeave passed
+10/12 cases versus Luna's 12/12, with no measured speed or cost advantage. A
+separate six-case repair probe passed 5/6; the remaining failure is unresolved.
 
 Then ask your agent:
 

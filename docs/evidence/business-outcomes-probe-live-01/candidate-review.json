@@ -1,0 +1,30 @@
+{
+  "decision": "retain_candidate_branch",
+  "assessment": "partial_improvement",
+  "scope": "Six seen-input Jev attempts only; no Luna, no baseline rerun, and not generalized proof.",
+  "evidence": "docs/evidence/business-outcomes-probe-live-01",
+  "result": {
+    "passed": 5,
+    "attempted": 6,
+    "northstar_cart_p07": {
+      "observed": "notify",
+      "probability": 0.52,
+      "action_threshold": 0.7,
+      "effective_result": "investigate",
+      "route": "none"
+    },
+    "redwood_fulfillment_p08": {
+      "observed": "notify",
+      "probability": 0.75,
+      "passed": true
+    },
+    "controls": "northstar p06, redwood p05, harbor p07, and harbor p06 passed unchanged"
+  },
+  "unit_assessment": "No demonstrated weighted-rate unit error. The complete Harbor rate analysis uses symmetric_rate_decomposition_v1 with unit ratio and ratio-valued contributions/effects; the partial Harbor case has no contributions. The additive Northstar case uses USD throughout.",
+  "guard_decision": "Keep the existing 0.70 action-confidence threshold and investigation fallback; do not lower it or convert the remaining Northstar miss into notify.",
+  "limitations": [
+    "This is evidence of a partial prompt-semantic improvement, not generalized correctness.",
+    "It does not establish outcome accuracy beyond these six seen inputs or prove causality semantics.",
+    "The remaining Northstar failure is unresolved and has no delivery route by design."
+  ]
+}

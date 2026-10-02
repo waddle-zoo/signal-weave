@@ -1,0 +1,18 @@
+{
+  "manifest.json": {
+    "sha256": "8151649a8c568dbc9013d8dce041cf753919457c8c8d906ed7283c403dc21502",
+    "uncompressed_sha256": "8151649a8c568dbc9013d8dce041cf753919457c8c8d906ed7283c403dc21502"
+  },
+  "report.json": {
+    "sha256": "45deb71a5ba75a0a057e39b90a14b3abd881338fc0feb6afe12617e686df94bf",
+    "uncompressed_sha256": "45deb71a5ba75a0a057e39b90a14b3abd881338fc0feb6afe12617e686df94bf"
+  },
+  "events.jsonl.gz": {
+    "sha256": "c38d4c739ed856a3a2550ceee78c64223a15a6ff09d3d02f26af76a49abf509b",
+    "uncompressed_sha256": "63c0851092afd9c11267bf79b685ddac8cbf1d638f4da72062019113d7e5952e"
+  },
+  "candidate-review.json": {
+    "sha256": "a469260f6c5b69ca9eae9fa556414a0fda2782a800f37cc49a871a3dae5dc178",
+    "uncompressed_sha256": "a469260f6c5b69ca9eae9fa556414a0fda2782a800f37cc49a871a3dae5dc178"
+  }
+}
