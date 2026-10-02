@@ -1,3 +1,5 @@
+import pytest
+
 from signalweave.engine import InsightEngine
 from signalweave.mcp_server import create_mcp
 from signalweave.runtime import Runtime
@@ -50,3 +52,36 @@ def test_server_exposes_mcp_object():
     assert "Only call approve_insight_card after that approval" in server.instructions
     assert "not offline inference" in server.instructions
     assert "not proof of causation" in server.instructions
+
+
+async def test_native_authoring_schema_and_dispatch_enforce_evidence_slots(tmp_path):
+    from tests.test_onboarding import make_server
+
+    server = make_server(tmp_path)
+    pattern = r"^(question|watch):[1-9][0-9]*$"
+    authoring_tools = ("draft_insight_card", "propose_insight_card", "onboard_insight_card")
+    for name in authoring_tools:
+        spec = next(item for item in await server.list_tools() if item.name == name)
+        field = spec.inputSchema["properties"]["evidence_requirements"]
+        object_schema = next(item for item in field["anyOf"] if item.get("type") == "object")
+        assert object_schema["patternProperties"] == {pattern: {"type": "boolean"}}
+
+        arguments = {
+            "what_to_watch": "Checkout conversion",
+            "why_watch": "Decide whether Growth should act.",
+            "questions": ["Is there a material decline?"],
+            "evidence_requirements": {"question:2": False},
+        }
+        if name == "draft_insight_card":
+            arguments.update({
+                "title": "Evidence slot boundary",
+                "sources": [{
+                    "key": "growth", "adapter": "superset", "resource": "dashboard:7",
+                    "label": "Growth overview",
+                }],
+            })
+        else:
+            arguments["selected_sources"] = [{"ref": "superset|dashboard:7"}]
+        with pytest.raises(Exception, match="evidence_requirements"):
+            await server.call_tool(name, arguments)
+    assert server._test_runtime.card_store.list_cards() == []

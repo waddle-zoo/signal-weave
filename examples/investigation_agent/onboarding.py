@@ -9,9 +9,10 @@ from __future__ import annotations
 from copy import deepcopy
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, StrictBool
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, model_validator
 
 from signalweave.models import (
+    EvidenceRequirementKey,
     InsightCard,
     InvestigationQuestions,
     Outcome,
@@ -45,8 +46,30 @@ class DraftIntent(BaseModel):
     watch_for: WatchConditions = Field(default_factory=list)
     questions: InvestigationQuestions = Field(default_factory=list)
     numeric_conditions: list[NumericCondition] = Field(default_factory=list, max_length=100)
-    evidence_requirements: dict[str, StrictBool] = Field(default_factory=dict)
+    evidence_requirements: dict[EvidenceRequirementKey, StrictBool] = Field(
+        default_factory=dict,
+        max_length=200,
+        description=(
+            "Optional overrides for existing one-based question:N or watch:N slots. "
+            "The numeric suffix must identify a slot present in questions or watch_for."
+        ),
+    )
     follow_up_guidance: str = ""
+
+    @model_validator(mode="after")
+    def validate_evidence_requirement_slots(self) -> DraftIntent:
+        invalid = []
+        for key in self.evidence_requirements:
+            kind, raw_index = key.split(":", 1)
+            limit = len(self.questions if kind == "question" else self.watch_for)
+            if int(raw_index) > limit:
+                invalid.append(key)
+        if invalid:
+            raise ValueError(
+                "evidence_requirements must identify existing question:N or watch:N slots: "
+                + ", ".join(sorted(invalid))
+            )
+        return self
 
 
 class _ApprovedDestination(BaseModel):
@@ -108,12 +131,11 @@ def draft_arguments(
         raise ValueError("at least one approved source must be selected")
 
     routes: list[dict[str, Any]] = []
-    endpoint_routes: dict[str, list[RouteIntent]] = {}
     for route in draft.routes:
         destination = destination_directory.get(route.destination_key)
         if destination is None:
             raise ValueError(f"unknown approved destination key: {route.destination_key}")
-        method_key = route.method_key or route.destination_key
+        method_key = route.method_key or f"{route.destination_key}:{route.outcome.value}"
         method = {
             "key": method_key,
             "outcome": route.outcome.value,
@@ -123,14 +145,6 @@ def draft_arguments(
         if any(existing["key"] == method_key for existing in routes):
             raise ValueError(f"duplicate delivery method key: {method_key}")
         routes.append(method)
-        endpoint_routes.setdefault(destination.destination, []).append(route)
-
-    for endpoint, endpoint_intents in endpoint_routes.items():
-        if len(endpoint_intents) > 1 and any(route.method_key is None for route in endpoint_intents):
-            raise ValueError(
-                "routes sharing an endpoint require explicit distinct method_key values: "
-                + endpoint
-            )
 
     arguments = {
         "title": draft.title,

@@ -4,10 +4,21 @@ from datetime import datetime, timezone
 from enum import StrEnum
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, Field, StrictBool, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    Field,
+    StrictBool,
+    StringConstraints,
+    field_validator,
+    model_validator,
+)
 
 from .diagnostics import AnalysisReport, AnalyticalComparison
 from .numeric_conditions import NumericCondition
+
+EvidenceRequirementKey = Annotated[
+    str, StringConstraints(pattern=r"^(question|watch):[1-9][0-9]*$"),
+]
 
 ComparisonWindows = Annotated[list[str], Field(
     min_length=1, max_length=20,
@@ -758,7 +769,7 @@ class InsightCard(BaseModel):
             "They are evidence checks only; action selection remains owner/Jev state."
         ),
     )
-    evidence_requirements: dict[str, StrictBool] = Field(
+    evidence_requirements: dict[EvidenceRequirementKey, StrictBool] = Field(
         default_factory=dict,
         max_length=200,
         description=(

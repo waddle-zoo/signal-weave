@@ -34,6 +34,7 @@ from .models import (
     DecisionFeedbackKind,
     DecisionReceipt,
     DeliveryMethod,
+    EvidenceRequirementKey,
     InsightCard,
     InsightCardStatus,
     InvestigationMode,
@@ -137,16 +138,22 @@ CARD_AUTHORING_GUIDANCE = (
     "Compare definitions within the same intended population and metric; clarify ambiguous owner "
     "wording before making it a recurring condition. A complete report "
     "means its bounded evidence checks passed, not that the full business policy is certified. "
-    "For threshold rules, distinguish a current level, absolute between-period change, relative "
+    "For threshold rules, distinguish a current level, signed between-period change in units, relative "
     "change, and a segment's contribution to that change. Do not silently choose among them. "
     "For exact numerical boundaries over available analytical comparisons, add numeric_conditions "
     "bound to the inspected source, comparison key, measurement and exact unit; let code perform "
     "those comparisons. Rates use fractions (12% is 0.12); do not infer a unit conversion. "
+    "Leave absolute=false for directional increases or decreases. absolute=true compares "
+    "magnitude in BOTH directions; it is not a synonym for a change measured in units. "
     "Keep the owner's action policy in decision_guidance. Numeric checks do not select actions, "
     "and incomplete matching reports stay unknown. Do not duplicate numerical checks as "
     "required semantic watch items merely to restate the policy. A required watch/question is "
     "an unconditional evidence prerequisite; speculative details need explicit owner review "
     "as advisory or should be omitted. "
+    "Instructions about how to write a report (for example, avoid causal claims) belong in "
+    "follow_up_guidance, not watch_for: writing instructions are not observable evidence. "
+    "watch_for and questions may be empty when the policy requires no separate semantic assessment. "
+    "evidence_requirements maps only existing one-based watch:N or question:N slots to booleans. "
     "Review counterexamples such as a large but unchanged level, offsetting segment changes, "
     "a threshold-boundary case, and missing population coverage. Derive expected actions from "
     "the owner's policy independently of the model's answers; surface disagreements for review. "
@@ -967,7 +974,7 @@ def create_mcp(
         watch_for: WatchConditions | None = None,
         questions: InvestigationQuestions | None = None,
         numeric_conditions: list[NumericCondition] | None = None,
-        evidence_requirements: dict[str, StrictBool] | None = None,
+        evidence_requirements: dict[EvidenceRequirementKey, StrictBool] | None = None,
         decision_guidance: str | None = None,
         follow_up_guidance: str | None = None,
         selected_sources: list[dict[str, Any]] | None = None,
@@ -1062,7 +1069,7 @@ def create_mcp(
         watch_for: WatchConditions | None = None,
         questions: InvestigationQuestions | None = None,
         numeric_conditions: list[NumericCondition] | None = None,
-        evidence_requirements: dict[str, StrictBool] | None = None,
+        evidence_requirements: dict[EvidenceRequirementKey, StrictBool] | None = None,
         decision_guidance: str | None = None,
         follow_up_guidance: str | None = None,
         selected_sources: list[dict[str, Any]] | None = None,
@@ -1169,7 +1176,7 @@ def create_mcp(
         watch_for: WatchConditions | None = None,
         questions: InvestigationQuestions | None = None,
         numeric_conditions: list[NumericCondition] | None = None,
-        evidence_requirements: dict[str, StrictBool] | None = None,
+        evidence_requirements: dict[EvidenceRequirementKey, StrictBool] | None = None,
         decision_guidance: str | None = None,
         follow_up_guidance: str | None = None,
         delivery_methods: CardDeliveryMethods | None = None,

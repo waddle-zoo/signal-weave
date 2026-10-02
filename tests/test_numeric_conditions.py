@@ -1,3 +1,4 @@
+import json
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -104,6 +105,13 @@ def test_absolute_strict_and_inclusive_boundaries(comparator, expected):
     assert result.unit == result.expected_unit == "number"
     assert result.condition_text.startswith("The metric")
     assert result.query_refs == result.provenance == ["query-a"]
+
+
+def test_numeric_condition_schema_separates_unit_from_absolute_magnitude():
+    properties = NumericCondition.model_json_schema()["properties"]
+    assert properties["unit"]["type"] == "string"
+    assert "magnitude" not in json.dumps(properties["unit"]).lower()
+    assert "magnitude" in properties["absolute"]["description"].lower()
 
 
 def test_contribution_checks_support_any_and_exact_segment_without_reserved_label():

@@ -49,7 +49,7 @@ def test_bridges_two_unrelated_approved_directories_without_invention():
     }
     assert result["sources"][0]["parameters"] == {"metadata": {"code": "A-17"}}
     assert result["delivery_methods"] == [{
-        "key": "owner", "outcome": "notify", "label": "Operations", "destination": "sink://ops",
+        "key": "owner:notify", "outcome": "notify", "label": "Operations", "destination": "sink://ops",
     }]
 
 
@@ -125,7 +125,7 @@ def test_duplicate_approved_directory_identifiers_are_rejected():
         )
 
 
-def test_unknown_destination_and_duplicate_route_keys_are_rejected():
+def test_unknown_destination_is_rejected_and_implicit_route_keys_are_deterministic():
     approved = [{"key": "owner", "label": "Owner", "destination": "agent://owner"}]
     with pytest.raises(ValueError, match="unknown approved destination"):
         draft_arguments(
@@ -135,6 +135,18 @@ def test_unknown_destination_and_duplicate_route_keys_are_rejected():
     routes = [
         RouteIntent(destination_key="owner", outcome=Outcome.NOTIFY),
         RouteIntent(destination_key="owner", outcome=Outcome.INVESTIGATE),
+    ]
+    result = draft_arguments(intent(routes=routes), [source("primary", required=True, parameters={})], approved)
+    assert [route["key"] for route in result["delivery_methods"]] == [
+        "owner:notify", "owner:investigate",
+    ]
+
+
+def test_explicit_duplicate_route_keys_are_rejected():
+    approved = [{"key": "owner", "label": "Owner", "destination": "agent://owner"}]
+    routes = [
+        RouteIntent(destination_key="owner", outcome=Outcome.NOTIFY, method_key="shared"),
+        RouteIntent(destination_key="owner", outcome=Outcome.INVESTIGATE, method_key="shared"),
     ]
     with pytest.raises(ValueError, match="duplicate delivery method key"):
         draft_arguments(intent(routes=routes), [source("primary", required=True, parameters={})], approved)
@@ -187,6 +199,30 @@ def test_existing_insight_card_validates_generated_kwargs_and_one_based_requirem
     card = InsightCard(id="temporary", **result)
     assert card.evidence_requirements == {"question:1": False, "watch:1": True}
 
-    invalid = intent(evidence_requirements={"question:2": False}, routes=[]).model_dump()
+    invalid = intent(routes=[]).model_dump()
+    invalid["evidence_requirements"] = {"question:2": False}
     with pytest.raises(ValidationError):
         draft_arguments(invalid, [source("primary", required=True, parameters={})], [])
+
+
+def test_evidence_requirement_schema_is_typed_and_slot_bounded():
+    schema = DraftIntent.model_json_schema()["properties"]["evidence_requirements"]
+    assert schema["description"].startswith("Optional overrides")
+    assert list(schema["patternProperties"]) == [r"^(question|watch):[1-9][0-9]*$"]
+
+    valid = intent(
+        questions=["Should the owner act?"],
+        watch_for=["A material change"],
+        evidence_requirements={"question:1": False, "watch:1": True},
+        routes=[],
+    )
+    assert valid.evidence_requirements == {"question:1": False, "watch:1": True}
+
+    for key in ("question:0", "question:2", "watch:0", "watch:2", "other:1"):
+        with pytest.raises(ValidationError):
+            intent(
+                questions=["Should the owner act?"],
+                watch_for=["A material change"],
+                evidence_requirements={key: False},
+                routes=[],
+            )

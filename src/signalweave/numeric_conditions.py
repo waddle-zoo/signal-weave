@@ -50,7 +50,12 @@ class NumericCondition(BaseModel):
     unit: str = Field(min_length=1, max_length=80)
     threshold: FiniteFloat
     comparator: NumericComparator
-    absolute: StrictBool = False
+    absolute: StrictBool = Field(default=False, description=(
+        "False preserves the signed value (including current-minus-baseline changes). "
+        "True takes abs(value) and can match BOTH increases and decreases. Use true only "
+        "when the owner explicitly asks for magnitude regardless of direction, never "
+        "merely because a threshold is expressed in units rather than percent."
+    ))
 
     @field_validator("threshold", mode="before")
     @classmethod
