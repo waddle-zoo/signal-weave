@@ -72,6 +72,7 @@ async def run(primary, output, *, live=False, key_file=None):
         "journal_sha256": hashlib.sha256((primary / "events.jsonl.gz").read_bytes()).hexdigest(),
         "limitations": ["Known cases, single repetition per cell, no final prose or baseline",
                         "Original questions unchanged; original model alias may have evolved",
+                        "Retained structured inputs, not wire-byte replay; journal canonicalization sorts keys",
                         "without_plan removes unique plan context, not just duplicates",
                         "Scores cover gated outcome only, not full engine evidence/recipient gates"],
     })
