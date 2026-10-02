@@ -80,5 +80,48 @@ localhost MCP and no shell, workspace, web or private-label access.
 
 ## Results
 
-Results and reviewer findings are appended after the frozen run. Research code
-and fixtures stay outside `src/`; the shipped runtime remains unchanged.
+The retained state ablation produced 3/6 gated outcomes for original structured
+inputs, 4/6 after exact-alias removal, and 3/6 after plan removal. Neither old
+miss cleared in any arm. This is not a demonstrated cleanup fix. Historical
+requests were reconstructed from canonicalized journals, not original wire
+bytes; key order may differ. Both histories report `jev-1.13.0`, but neither pins
+a provider implementation. Probability differences are not attributed to one
+cause. The initial DNS-failed attempt is retained separately as infrastructure
+failure, not a model accuracy result.
+
+The first composition run completed every report: baseline **11/12**, broad
+Jev **11/12**, code-composed Jev **9/12**. The initial three CLI startups failed
+locally before model output; the identical permitted rerun is the measured run.
+The policy-only reviewer found defects in all three generated plans. In the
+quiet retail case, every semantic/numeric check was correct, but the plan's
+default routed to investigation. Blind execution of a syntactically valid plan
+is therefore not a solution. Setup took 97.1 seconds; recurring baseline reports
+took 124.5 seconds versus 138.0 seconds composed. Neither correctness nor
+whole-report resource advantage passed.
+
+### Bounded review/repair transfer protocol
+
+Before further calls, the plan reviewer repairs the plans against policies and
+catalogs only. Another agent independently freezes twelve new transfer cases;
+the plan-repair agent does not inspect those cases. An initial review draft with
+an overbroad unknown-to-investigate guard was rejected and retained. Revised
+plans must pass abstract policy truth-table checks before live execution.
+This includes assistant review intervention, not unattended first-shot onboarding.
+
+The final transfer budget is **12 Jev requests and 6 Luna report episodes**,
+with no new author episodes in that runner. Both reporting arms get the same
+reviewed plans. Recurring costs are measured; policy-review/repair subagent costs
+are not measured by the runner and must not be treated as free onboarding.
+Cases cover new values, wording and branches of the same three policies, not
+three additional enterprises. Ambiguous combinations of approved exceptions
+and missing data are explicitly outside this bounded transfer claim.
+
+```sh
+python -m evaluations.policy_composition_trial \
+  --reviewed-plans evaluations/data/policy-composition-reviewed-plans.json \
+  --output artifacts/policy-composition-transfer-new
+```
+
+Research code, experiment plans and fixtures stay outside `src/`; the shipped
+runtime remains unchanged. The transfer result does not replace either failed
+primary experiment.

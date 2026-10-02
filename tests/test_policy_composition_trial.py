@@ -10,6 +10,7 @@ from evaluations.policy_composition_trial import (
     compose,
     numeric_checks,
     public_case,
+    review_packet,
     run,
     summary,
 )
@@ -69,6 +70,10 @@ async def test_dry_run_and_private_label_boundary(tmp_path):
     result = await run(tmp_path / "trial")
     assert result["jev_attempts"] == result["luna_episodes"] == 0
     assert all(row["correct"] == 0 and row["intended"] == 12 for row in summary([], cases()).values())
+    assert summary([], cases())["composed"]["missed_business_notifications"] == 3
+    packet, key = review_packet([], cases())
+    assert len(packet["cases"]) == len(key) == 12
+    assert all(set(row["candidates"]) == {"A", "B"} for row in packet["cases"])
 
 
 async def test_source_cache_and_fake_recipient_boundaries():

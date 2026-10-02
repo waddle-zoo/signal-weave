@@ -1,0 +1,145 @@
+{
+  "results": [
+    {
+      "id": "northstar-cart:p07",
+      "arm": "original",
+      "expected": "notify",
+      "error": "Connection error: [Errno 8] nodename nor servname provided, or not known",
+      "passed": false
+    },
+    {
+      "id": "northstar-cart:p07",
+      "arm": "deduplicated",
+      "expected": "notify",
+      "error": "Connection error: [Errno 8] nodename nor servname provided, or not known",
+      "passed": false
+    },
+    {
+      "id": "northstar-cart:p07",
+      "arm": "without_plan",
+      "expected": "notify",
+      "error": "Connection error: [Errno 8] nodename nor servname provided, or not known",
+      "passed": false
+    },
+    {
+      "id": "redwood-fulfillment:p08",
+      "arm": "deduplicated",
+      "expected": "notify",
+      "error": "Connection error: [Errno 8] nodename nor servname provided, or not known",
+      "passed": false
+    },
+    {
+      "id": "redwood-fulfillment:p08",
+      "arm": "without_plan",
+      "expected": "notify",
+      "error": "Connection error: [Errno 8] nodename nor servname provided, or not known",
+      "passed": false
+    },
+    {
+      "id": "redwood-fulfillment:p08",
+      "arm": "original",
+      "expected": "notify",
+      "error": "Connection error: [Errno 8] nodename nor servname provided, or not known",
+      "passed": false
+    },
+    {
+      "id": "northstar-cart:p06",
+      "arm": "without_plan",
+      "expected": "ignore",
+      "error": "Connection error: [Errno 8] nodename nor servname provided, or not known",
+      "passed": false
+    },
+    {
+      "id": "northstar-cart:p06",
+      "arm": "original",
+      "expected": "ignore",
+      "error": "Connection error: [Errno 8] nodename nor servname provided, or not known",
+      "passed": false
+    },
+    {
+      "id": "northstar-cart:p06",
+      "arm": "deduplicated",
+      "expected": "ignore",
+      "error": "Connection error: [Errno 8] nodename nor servname provided, or not known",
+      "passed": false
+    },
+    {
+      "id": "redwood-fulfillment:p05",
+      "arm": "original",
+      "expected": "investigate",
+      "error": "Connection error: [Errno 8] nodename nor servname provided, or not known",
+      "passed": false
+    },
+    {
+      "id": "redwood-fulfillment:p05",
+      "arm": "deduplicated",
+      "expected": "investigate",
+      "error": "Connection error: [Errno 8] nodename nor servname provided, or not known",
+      "passed": false
+    },
+    {
+      "id": "redwood-fulfillment:p05",
+      "arm": "without_plan",
+      "expected": "investigate",
+      "error": "Connection error: [Errno 8] nodename nor servname provided, or not known",
+      "passed": false
+    },
+    {
+      "id": "harbor-help:p07",
+      "arm": "deduplicated",
+      "expected": "notify",
+      "error": "Connection error: [Errno 8] nodename nor servname provided, or not known",
+      "passed": false
+    },
+    {
+      "id": "harbor-help:p07",
+      "arm": "without_plan",
+      "expected": "notify",
+      "error": "Connection error: [Errno 8] nodename nor servname provided, or not known",
+      "passed": false
+    },
+    {
+      "id": "harbor-help:p07",
+      "arm": "original",
+      "expected": "notify",
+      "error": "Connection error: [Errno 8] nodename nor servname provided, or not known",
+      "passed": false
+    },
+    {
+      "id": "harbor-help:p06",
+      "arm": "without_plan",
+      "expected": "insufficient_data",
+      "error": "Connection error: [Errno 8] nodename nor servname provided, or not known",
+      "passed": false
+    },
+    {
+      "id": "harbor-help:p06",
+      "arm": "original",
+      "expected": "insufficient_data",
+      "error": "Connection error: [Errno 8] nodename nor servname provided, or not known",
+      "passed": false
+    },
+    {
+      "id": "harbor-help:p06",
+      "arm": "deduplicated",
+      "expected": "insufficient_data",
+      "error": "Connection error: [Errno 8] nodename nor servname provided, or not known",
+      "passed": false
+    }
+  ],
+  "attempts": 18,
+  "summary": {
+    "original": {
+      "passed": 0,
+      "intended": 6
+    },
+    "deduplicated": {
+      "passed": 0,
+      "intended": 6
+    },
+    "without_plan": {
+      "passed": 0,
+      "intended": 6
+    }
+  }
+}

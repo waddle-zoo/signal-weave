@@ -1,0 +1,43 @@
+{
+  "scope": "Summaries of internal AI review messages, not external peer review or full reviewer transcripts",
+  "reviewers": [
+    {
+      "id": "01a0fe7f-941e-7be2-a7f5-a4beee2bf6e7",
+      "configured_model": "gpt-5.6-luna",
+      "configured_effort": "high",
+      "role": "method and code preflight",
+      "verdict": "go for bounded experiment, no enterprise claim",
+      "findings": [
+        "Author episodes receive policies and catalogs, not measurements or labels.",
+        "Both runtime arms receive the same plan, evidence and code-computed checks.",
+        "Plan syntax is not semantic approval; plan failures must be separated from model failures.",
+        "Broad and narrow questions share one request; their latency cannot be compared independently."
+      ]
+    },
+    {
+      "id": "01a0fe7f-93b7-75f0-9500-2b149ec14548",
+      "configured_model": "gpt-5.6-luna",
+      "configured_effort": "high",
+      "role": "plan-only review, without runtime results",
+      "verdict": "fail semantic preflight",
+      "findings": [
+        "Cobalt omits the quiet ignore branch and misroutes some unresolved comparability states.",
+        "Maple needs careful distinction between absent exceptions and uncertain exception evidence; combined exception/missing-data precedence is not fully specified.",
+        "Quartz incorrectly combines some missing-data conditions, omits a signed-reconciliation ignore branch and has an unsafe notify default."
+      ]
+    }
+  ],
+  "repair_history": [
+    "A policy-only reviewer proposed a repair without viewing the new transfer cases.",
+    "The main reviewer rejected its blanket unknown-to-investigate guard: explicit missing-data branches were preempted. The rejected plan is retained in rejected-review-plan.json.",
+    "A second static revision moved policy-specific data-gap handling before unrelated unknown guards and removed duplicate Quartz high/routine checks.",
+    "Nineteen abstract truth-vector checks passed against both a reference matcher and the actual experimental composer before live transfer testing. These are not live model cases."
+  ],
+  "primary_result": {
+    "baseline_correct": 11,
+    "broad_jev_correct": 11,
+    "composed_correct": 9,
+    "intended": 12,
+    "claims": "No correctness or end-to-end resource advantage. No production runtime change."
+  }
+}

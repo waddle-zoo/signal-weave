@@ -1,0 +1,1297 @@
+{
+  "results": [
+    {
+      "id": "northstar-cart:p07",
+      "arm": "original",
+      "expected": "notify",
+      "response": {
+        "model": "jev-1.13.0",
+        "usage": {
+          "input_tokens": 7615,
+          "output_tokens": 223
+        },
+        "answers": {
+          "outcome": {
+            "type": "choice",
+            "choice": "notify",
+            "confidence": 0.43,
+            "probabilities": {
+              "investigate": 0.08,
+              "insufficient_data": 0.0,
+              "notify": 0.58,
+              "ignore": 0.34
+            }
+          },
+          "question_0": {
+            "type": "noul",
+            "noul": 0.97
+          },
+          "question_1": {
+            "type": "noul",
+            "noul": 0.89
+          },
+          "question_2": {
+            "type": "noul",
+            "noul": 0.88
+          },
+          "watch_0": {
+            "type": "choice",
+            "choice": "absent",
+            "confidence": 1.0,
+            "probabilities": {
+              "unknown": 0.0,
+              "present": 0.0,
+              "absent": 1.0
+            }
+          },
+          "watch_1": {
+            "type": "choice",
+            "choice": "present",
+            "confidence": 0.95,
+            "probabilities": {
+              "unknown": 0.0,
+              "present": 0.97,
+              "absent": 0.03
+            }
+          },
+          "watch_2": {
+            "type": "choice",
+            "choice": "absent",
+            "confidence": 1.0,
+            "probabilities": {
+              "unknown": 0.0,
+              "present": 0.0,
+              "absent": 1.0
+            }
+          }
+        }
+      },
+      "outcome": "investigate",
+      "selected": "notify",
+      "support": 0.58,
+      "passed": false
+    },
+    {
+      "id": "northstar-cart:p07",
+      "arm": "deduplicated",
+      "expected": "notify",
+      "response": {
+        "model": "jev-1.13.0",
+        "usage": {
+          "input_tokens": 6998,
+          "output_tokens": 223
+        },
+        "answers": {
+          "outcome": {
+            "type": "choice",
+            "choice": "notify",
+            "confidence": 0.4,
+            "probabilities": {
+              "investigate": 0.13,
+              "notify": 0.56,
+              "ignore": 0.31,
+              "insufficient_data": 0.0
+            }
+          },
+          "question_0": {
+            "type": "noul",
+            "noul": 0.97
+          },
+          "question_1": {
+            "type": "noul",
+            "noul": 0.91
+          },
+          "question_2": {
+            "type": "noul",
+            "noul": 0.89
+          },
+          "watch_0": {
+            "type": "choice",
+            "choice": "absent",
+            "confidence": 1.0,
+            "probabilities": {
+              "absent": 1.0,
+              "present": 0.0,
+              "unknown": 0.0
+            }
+          },
+          "watch_1": {
+            "type": "choice",
+            "choice": "present",
+            "confidence": 0.95,
+            "probabilities": {
+              "absent": 0.03,
+              "present": 0.97,
+              "unknown": 0.0
+            }
+          },
+          "watch_2": {
+            "type": "choice",
+            "choice": "absent",
+            "confidence": 1.0,
+            "probabilities": {
+              "absent": 1.0,
+              "present": 0.0,
+              "unknown": 0.0
+            }
+          }
+        }
+      },
+      "outcome": "investigate",
+      "selected": "notify",
+      "support": 0.56,
+      "passed": false
+    },
+    {
+      "id": "northstar-cart:p07",
+      "arm": "without_plan",
+      "expected": "notify",
+      "response": {
+        "model": "jev-1.13.0",
+        "usage": {
+          "input_tokens": 6266,
+          "output_tokens": 223
+        },
+        "answers": {
+          "outcome": {
+            "type": "choice",
+            "choice": "notify",
+            "confidence": 0.39,
+            "probabilities": {
+              "insufficient_data": 0.0,
+              "ignore": 0.34,
+              "notify": 0.54,
+              "investigate": 0.11
+            }
+          },
+          "question_0": {
+            "type": "noul",
+            "noul": 0.98
+          },
+          "question_1": {
+            "type": "noul",
+            "noul": 0.87
+          },
+          "question_2": {
+            "type": "noul",
+            "noul": 0.95
+          },
+          "watch_0": {
+            "type": "choice",
+            "choice": "absent",
+            "confidence": 1.0,
+            "probabilities": {
+              "present": 0.0,
+              "unknown": 0.0,
+              "absent": 1.0
+            }
+          },
+          "watch_1": {
+            "type": "choice",
+            "choice": "present",
+            "confidence": 0.96,
+            "probabilities": {
+              "present": 0.98,
+              "unknown": 0.0,
+              "absent": 0.02
+            }
+          },
+          "watch_2": {
+            "type": "choice",
+            "choice": "absent",
+            "confidence": 0.99,
+            "probabilities": {
+              "present": 0.0,
+              "unknown": 0.0,
+              "absent": 1.0
+            }
+          }
+        }
+      },
+      "outcome": "investigate",
+      "selected": "notify",
+      "support": 0.54,
+      "passed": false
+    },
+    {
+      "id": "redwood-fulfillment:p08",
+      "arm": "deduplicated",
+      "expected": "notify",
+      "response": {
+        "model": "jev-1.13.0",
+        "usage": {
+          "input_tokens": 6659,
+          "output_tokens": 205
+        },
+        "answers": {
+          "outcome": {
+            "type": "choice",
+            "choice": "ignore",
+            "confidence": 0.45,
+            "probabilities": {
+              "insufficient_data": 0.02,
+              "ignore": 0.58,
+              "investigate": 0.06,
+              "notify": 0.34
+            }
+          },
+          "question_0": {
+            "type": "noul",
+            "noul": 0.95
+          },
+          "question_1": {
+            "type": "noul",
+            "noul": 0.87
+          },
+          "watch_0": {
+            "type": "choice",
+            "choice": "absent",
+            "confidence": 1.0,
+            "probabilities": {
+              "absent": 1.0,
+              "unknown": 0.0,
+              "present": 0.0
+            }
+          },
+          "watch_1": {
+            "type": "choice",
+            "choice": "present",
+            "confidence": 0.65,
+            "probabilities": {
+              "present": 0.77,
+              "unknown": 0.01,
+              "absent": 0.22
+            }
+          },
+          "watch_2": {
+            "type": "choice",
+            "choice": "absent",
+            "confidence": 0.93,
+            "probabilities": {
+              "absent": 0.95,
+              "unknown": 0.05,
+              "present": 0.0
+            }
+          }
+        }
+      },
+      "outcome": "investigate",
+      "selected": "ignore",
+      "support": 0.58,
+      "passed": false
+    },
+    {
+      "id": "redwood-fulfillment:p08",
+      "arm": "without_plan",
+      "expected": "notify",
+      "response": {
+        "model": "jev-1.13.0",
+        "usage": {
+          "input_tokens": 6058,
+          "output_tokens": 205
+        },
+        "answers": {
+          "outcome": {
+            "type": "choice",
+            "choice": "ignore",
+            "confidence": 0.59,
+            "probabilities": {
+              "investigate": 0.05,
+              "notify": 0.25,
+              "insufficient_data": 0.01,
+              "ignore": 0.69
+            }
+          },
+          "question_0": {
+            "type": "noul",
+            "noul": 0.96
+          },
+          "question_1": {
+            "type": "noul",
+            "noul": 0.65
+          },
+          "watch_0": {
+            "type": "choice",
+            "choice": "absent",
+            "confidence": 1.0,
+            "probabilities": {
+              "unknown": 0.0,
+              "present": 0.0,
+              "absent": 1.0
+            }
+          },
+          "watch_1": {
+            "type": "choice",
+            "choice": "present",
+            "confidence": 0.81,
+            "probabilities": {
+              "unknown": 0.01,
+              "present": 0.87,
+              "absent": 0.12
+            }
+          },
+          "watch_2": {
+            "type": "choice",
+            "choice": "absent",
+            "confidence": 0.97,
+            "probabilities": {
+              "unknown": 0.02,
+              "present": 0.0,
+              "absent": 0.98
+            }
+          }
+        }
+      },
+      "outcome": "investigate",
+      "selected": "ignore",
+      "support": 0.69,
+      "passed": false
+    },
+    {
+      "id": "redwood-fulfillment:p08",
+      "arm": "original",
+      "expected": "notify",
+      "response": {
+        "model": "jev-1.13.0",
+        "usage": {
+          "input_tokens": 7359,
+          "output_tokens": 205
+        },
+        "answers": {
+          "outcome": {
+            "type": "choice",
+            "choice": "ignore",
+            "confidence": 0.45,
+            "probabilities": {
+              "investigate": 0.06,
+              "insufficient_data": 0.04,
+              "ignore": 0.58,
+              "notify": 0.32
+            }
+          },
+          "question_0": {
+            "type": "noul",
+            "noul": 0.95
+          },
+          "question_1": {
+            "type": "noul",
+            "noul": 0.81
+          },
+          "watch_0": {
+            "type": "choice",
+            "choice": "absent",
+            "confidence": 1.0,
+            "probabilities": {
+              "absent": 1.0,
+              "present": 0.0,
+              "unknown": 0.0
+            }
+          },
+          "watch_1": {
+            "type": "choice",
+            "choice": "present",
+            "confidence": 0.5,
+            "probabilities": {
+              "absent": 0.32,
+              "present": 0.66,
+              "unknown": 0.02
+            }
+          },
+          "watch_2": {
+            "type": "choice",
+            "choice": "absent",
+            "confidence": 0.85,
+            "probabilities": {
+              "absent": 0.9,
+              "present": 0.0,
+              "unknown": 0.1
+            }
+          }
+        }
+      },
+      "outcome": "investigate",
+      "selected": "ignore",
+      "support": 0.58,
+      "passed": false
+    },
+    {
+      "id": "northstar-cart:p06",
+      "arm": "without_plan",
+      "expected": "ignore",
+      "response": {
+        "model": "jev-1.13.0",
+        "usage": {
+          "input_tokens": 6260,
+          "output_tokens": 224
+        },
+        "answers": {
+          "outcome": {
+            "type": "choice",
+            "choice": "ignore",
+            "confidence": 0.97,
+            "probabilities": {
+              "ignore": 0.98,
+              "investigate": 0.01,
+              "notify": 0.01,
+              "insufficient_data": 0.0
+            }
+          },
+          "question_0": {
+            "type": "noul",
+            "noul": 0.98
+          },
+          "question_1": {
+            "type": "noul",
+            "noul": 0.92
+          },
+          "question_2": {
+            "type": "noul",
+            "noul": 0.96
+          },
+          "watch_0": {
+            "type": "choice",
+            "choice": "absent",
+            "confidence": 1.0,
+            "probabilities": {
+              "absent": 1.0,
+              "unknown": 0.0,
+              "present": 0.0
+            }
+          },
+          "watch_1": {
+            "type": "choice",
+            "choice": "absent",
+            "confidence": 0.95,
+            "probabilities": {
+              "absent": 0.97,
+              "unknown": 0.0,
+              "present": 0.03
+            }
+          },
+          "watch_2": {
+            "type": "choice",
+            "choice": "absent",
+            "confidence": 0.99,
+            "probabilities": {
+              "unknown": 0.0,
+              "absent": 1.0,
+              "present": 0.0
+            }
+          }
+        }
+      },
+      "outcome": "ignore",
+      "selected": "ignore",
+      "support": 0.98,
+      "passed": true
+    },
+    {
+      "id": "northstar-cart:p06",
+      "arm": "original",
+      "expected": "ignore",
+      "response": {
+        "model": "jev-1.13.0",
+        "usage": {
+          "input_tokens": 7609,
+          "output_tokens": 224
+        },
+        "answers": {
+          "outcome": {
+            "type": "choice",
+            "choice": "ignore",
+            "confidence": 0.97,
+            "probabilities": {
+              "investigate": 0.01,
+              "notify": 0.01,
+              "insufficient_data": 0.0,
+              "ignore": 0.98
+            }
+          },
+          "question_0": {
+            "type": "noul",
+            "noul": 0.97
+          },
+          "question_1": {
+            "type": "noul",
+            "noul": 0.92
+          },
+          "question_2": {
+            "type": "noul",
+            "noul": 0.88
+          },
+          "watch_0": {
+            "type": "choice",
+            "choice": "absent",
+            "confidence": 1.0,
+            "probabilities": {
+              "absent": 1.0,
+              "unknown": 0.0,
+              "present": 0.0
+            }
+          },
+          "watch_1": {
+            "type": "choice",
+            "choice": "absent",
+            "confidence": 0.98,
+            "probabilities": {
+              "absent": 0.99,
+              "unknown": 0.0,
+              "present": 0.01
+            }
+          },
+          "watch_2": {
+            "type": "choice",
+            "choice": "absent",
+            "confidence": 1.0,
+            "probabilities": {
+              "absent": 1.0,
+              "unknown": 0.0,
+              "present": 0.0
+            }
+          }
+        }
+      },
+      "outcome": "ignore",
+      "selected": "ignore",
+      "support": 0.98,
+      "passed": true
+    },
+    {
+      "id": "northstar-cart:p06",
+      "arm": "deduplicated",
+      "expected": "ignore",
+      "response": {
+        "model": "jev-1.13.0",
+        "usage": {
+          "input_tokens": 6992,
+          "output_tokens": 224
+        },
+        "answers": {
+          "outcome": {
+            "type": "choice",
+            "choice": "ignore",
+            "confidence": 0.97,
+            "probabilities": {
+              "ignore": 0.98,
+              "insufficient_data": 0.0,
+              "investigate": 0.01,
+              "notify": 0.01
+            }
+          },
+          "question_0": {
+            "type": "noul",
+            "noul": 0.97
+          },
+          "question_1": {
+            "type": "noul",
+            "noul": 0.9
+          },
+          "question_2": {
+            "type": "noul",
+            "noul": 0.85
+          },
+          "watch_0": {
+            "type": "choice",
+            "choice": "absent",
+            "confidence": 1.0,
+            "probabilities": {
+              "absent": 1.0,
+              "present": 0.0,
+              "unknown": 0.0
+            }
+          },
+          "watch_1": {
+            "type": "choice",
+            "choice": "absent",
+            "confidence": 0.82,
+            "probabilities": {
+              "absent": 0.88,
+              "present": 0.12,
+              "unknown": 0.0
+            }
+          },
+          "watch_2": {
+            "type": "choice",
+            "choice": "absent",
+            "confidence": 1.0,
+            "probabilities": {
+              "absent": 1.0,
+              "present": 0.0,
+              "unknown": 0.0
+            }
+          }
+        }
+      },
+      "outcome": "ignore",
+      "selected": "ignore",
+      "support": 0.98,
+      "passed": true
+    },
+    {
+      "id": "redwood-fulfillment:p05",
+      "arm": "original",
+      "expected": "investigate",
+      "response": {
+        "model": "jev-1.13.0",
+        "usage": {
+          "input_tokens": 7844,
+          "output_tokens": 208
+        },
+        "answers": {
+          "outcome": {
+            "type": "choice",
+            "choice": "investigate",
+            "confidence": 0.88,
+            "probabilities": {
+              "ignore": 0.0,
+              "insufficient_data": 0.09,
+              "investigate": 0.91,
+              "notify": 0.0
+            }
+          },
+          "question_0": {
+            "type": "noul",
+            "noul": 0.86
+          },
+          "question_1": {
+            "type": "noul",
+            "noul": 0.57
+          },
+          "watch_0": {
+            "type": "choice",
+            "choice": "absent",
+            "confidence": 0.92,
+            "probabilities": {
+              "absent": 0.94,
+              "present": 0.01,
+              "unknown": 0.05
+            }
+          },
+          "watch_1": {
+            "type": "choice",
+            "choice": "absent",
+            "confidence": 0.95,
+            "probabilities": {
+              "absent": 0.97,
+              "present": 0.0,
+              "unknown": 0.03
+            }
+          },
+          "watch_2": {
+            "type": "choice",
+            "choice": "present",
+            "confidence": 1.0,
+            "probabilities": {
+              "absent": 0.0,
+              "present": 1.0,
+              "unknown": 0.0
+            }
+          }
+        }
+      },
+      "outcome": "investigate",
+      "selected": "investigate",
+      "support": 0.91,
+      "passed": true
+    },
+    {
+      "id": "redwood-fulfillment:p05",
+      "arm": "deduplicated",
+      "expected": "investigate",
+      "response": {
+        "model": "jev-1.13.0",
+        "usage": {
+          "input_tokens": 7144,
+          "output_tokens": 208
+        },
+        "answers": {
+          "outcome": {
+            "type": "choice",
+            "choice": "investigate",
+            "confidence": 0.93,
+            "probabilities": {
+              "ignore": 0.0,
+              "investigate": 0.95,
+              "insufficient_data": 0.05,
+              "notify": 0.0
+            }
+          },
+          "question_0": {
+            "type": "noul",
+            "noul": 0.89
+          },
+          "question_1": {
+            "type": "noul",
+            "noul": 0.67
+          },
+          "watch_0": {
+            "type": "choice",
+            "choice": "absent",
+            "confidence": 0.94,
+            "probabilities": {
+              "absent": 0.96,
+              "present": 0.01,
+              "unknown": 0.03
+            }
+          },
+          "watch_1": {
+            "type": "choice",
+            "choice": "absent",
+            "confidence": 0.94,
+            "probabilities": {
+              "absent": 0.96,
+              "present": 0.0,
+              "unknown": 0.04
+            }
+          },
+          "watch_2": {
+            "type": "choice",
+            "choice": "present",
+            "confidence": 1.0,
+            "probabilities": {
+              "absent": 0.0,
+              "present": 1.0,
+              "unknown": 0.0
+            }
+          }
+        }
+      },
+      "outcome": "investigate",
+      "selected": "investigate",
+      "support": 0.95,
+      "passed": true
+    },
+    {
+      "id": "redwood-fulfillment:p05",
+      "arm": "without_plan",
+      "expected": "investigate",
+      "response": {
+        "model": "jev-1.13.0",
+        "usage": {
+          "input_tokens": 6543,
+          "output_tokens": 208
+        },
+        "answers": {
+          "outcome": {
+            "type": "choice",
+            "choice": "investigate",
+            "confidence": 0.87,
+            "probabilities": {
+              "insufficient_data": 0.1,
+              "ignore": 0.0,
+              "investigate": 0.9,
+              "notify": 0.0
+            }
+          },
+          "question_0": {
+            "type": "noul",
+            "noul": 0.87
+          },
+          "question_1": {
+            "type": "noul",
+            "noul": 0.63
+          },
+          "watch_0": {
+            "type": "choice",
+            "choice": "absent",
+            "confidence": 0.89,
+            "probabilities": {
+              "present": 0.01,
+              "unknown": 0.07,
+              "absent": 0.92
+            }
+          },
+          "watch_1": {
+            "type": "choice",
+            "choice": "absent",
+            "confidence": 0.92,
+            "probabilities": {
+              "present": 0.01,
+              "unknown": 0.05,
+              "absent": 0.94
+            }
+          },
+          "watch_2": {
+            "type": "choice",
+            "choice": "present",
+            "confidence": 1.0,
+            "probabilities": {
+              "present": 1.0,
+              "unknown": 0.0,
+              "absent": 0.0
+            }
+          }
+        }
+      },
+      "outcome": "investigate",
+      "selected": "investigate",
+      "support": 0.9,
+      "passed": true
+    },
+    {
+      "id": "harbor-help:p07",
+      "arm": "deduplicated",
+      "expected": "notify",
+      "response": {
+        "model": "jev-1.13.0",
+        "usage": {
+          "input_tokens": 7294,
+          "output_tokens": 241
+        },
+        "answers": {
+          "question_1": {
+            "type": "noul",
+            "noul": 0.93
+          },
+          "question_2": {
+            "type": "noul",
+            "noul": 0.91
+          },
+          "question_3": {
+            "type": "noul",
+            "noul": 0.91
+          },
+          "watch_0": {
+            "type": "choice",
+            "choice": "present",
+            "confidence": 0.97,
+            "probabilities": {
+              "present": 0.97,
+              "absent": 0.02,
+              "unknown": 0.01
+            }
+          },
+          "watch_1": {
+            "type": "choice",
+            "choice": "absent",
+            "confidence": 0.99,
+            "probabilities": {
+              "present": 0.0,
+              "absent": 1.0,
+              "unknown": 0.0
+            }
+          },
+          "watch_2": {
+            "type": "choice",
+            "choice": "absent",
+            "confidence": 0.97,
+            "probabilities": {
+              "present": 0.0,
+              "absent": 0.98,
+              "unknown": 0.02
+            }
+          },
+          "outcome": {
+            "type": "choice",
+            "choice": "notify",
+            "confidence": 0.69,
+            "probabilities": {
+              "ignore": 0.2,
+              "insufficient_data": 0.02,
+              "investigate": 0.01,
+              "notify": 0.77
+            }
+          },
+          "question_0": {
+            "type": "noul",
+            "noul": 0.94
+          }
+        }
+      },
+      "outcome": "notify",
+      "selected": "notify",
+      "support": 0.77,
+      "passed": true
+    },
+    {
+      "id": "harbor-help:p07",
+      "arm": "without_plan",
+      "expected": "notify",
+      "response": {
+        "model": "jev-1.13.0",
+        "usage": {
+          "input_tokens": 6394,
+          "output_tokens": 241
+        },
+        "answers": {
+          "outcome": {
+            "type": "choice",
+            "choice": "notify",
+            "confidence": 0.57,
+            "probabilities": {
+              "ignore": 0.31,
+              "investigate": 0.01,
+              "notify": 0.67,
+              "insufficient_data": 0.01
+            }
+          },
+          "question_0": {
+            "type": "noul",
+            "noul": 0.97
+          },
+          "question_1": {
+            "type": "noul",
+            "noul": 0.96
+          },
+          "question_2": {
+            "type": "noul",
+            "noul": 0.89
+          },
+          "question_3": {
+            "type": "noul",
+            "noul": 0.9
+          },
+          "watch_0": {
+            "type": "choice",
+            "choice": "present",
+            "confidence": 0.97,
+            "probabilities": {
+              "absent": 0.02,
+              "unknown": 0.0,
+              "present": 0.98
+            }
+          },
+          "watch_1": {
+            "type": "choice",
+            "choice": "absent",
+            "confidence": 1.0,
+            "probabilities": {
+              "absent": 1.0,
+              "unknown": 0.0,
+              "present": 0.0
+            }
+          },
+          "watch_2": {
+            "type": "choice",
+            "choice": "absent",
+            "confidence": 0.98,
+            "probabilities": {
+              "absent": 0.98,
+              "unknown": 0.01,
+              "present": 0.01
+            }
+          }
+        }
+      },
+      "outcome": "investigate",
+      "selected": "notify",
+      "support": 0.67,
+      "passed": false
+    },
+    {
+      "id": "harbor-help:p07",
+      "arm": "original",
+      "expected": "notify",
+      "response": {
+        "model": "jev-1.13.0",
+        "usage": {
+          "input_tokens": 7992,
+          "output_tokens": 241
+        },
+        "answers": {
+          "outcome": {
+            "type": "choice",
+            "choice": "notify",
+            "confidence": 0.47,
+            "probabilities": {
+              "insufficient_data": 0.01,
+              "ignore": 0.38,
+              "notify": 0.6,
+              "investigate": 0.01
+            }
+          },
+          "question_0": {
+            "type": "noul",
+            "noul": 0.96
+          },
+          "question_1": {
+            "type": "noul",
+            "noul": 0.94
+          },
+          "question_2": {
+            "type": "noul",
+            "noul": 0.92
+          },
+          "question_3": {
+            "type": "noul",
+            "noul": 0.9
+          },
+          "watch_0": {
+            "type": "choice",
+            "choice": "present",
+            "confidence": 0.95,
+            "probabilities": {
+              "unknown": 0.01,
+              "present": 0.97,
+              "absent": 0.02
+            }
+          },
+          "watch_1": {
+            "type": "choice",
+            "choice": "absent",
+            "confidence": 1.0,
+            "probabilities": {
+              "unknown": 0.0,
+              "present": 0.0,
+              "absent": 1.0
+            }
+          },
+          "watch_2": {
+            "type": "choice",
+            "choice": "absent",
+            "confidence": 0.99,
+            "probabilities": {
+              "unknown": 0.01,
+              "present": 0.0,
+              "absent": 0.99
+            }
+          }
+        }
+      },
+      "outcome": "investigate",
+      "selected": "notify",
+      "support": 0.6,
+      "passed": false
+    },
+    {
+      "id": "harbor-help:p06",
+      "arm": "without_plan",
+      "expected": "insufficient_data",
+      "response": {
+        "model": "jev-1.13.0",
+        "usage": {
+          "input_tokens": 6331,
+          "output_tokens": 243
+        },
+        "answers": {
+          "outcome": {
+            "type": "choice",
+            "choice": "insufficient_data",
+            "confidence": 1.0,
+            "probabilities": {
+              "notify": 0.0,
+              "investigate": 0.0,
+              "ignore": 0.0,
+              "insufficient_data": 1.0
+            }
+          },
+          "question_0": {
+            "type": "noul",
+            "noul": 0.12
+          },
+          "question_1": {
+            "type": "noul",
+            "noul": 0.11
+          },
+          "question_2": {
+            "type": "noul",
+            "noul": 0.93
+          },
+          "question_3": {
+            "type": "noul",
+            "noul": 0.62
+          },
+          "watch_0": {
+            "type": "choice",
+            "choice": "unknown",
+            "confidence": 0.96,
+            "probabilities": {
+              "unknown": 0.97,
+              "present": 0.01,
+              "absent": 0.02
+            }
+          },
+          "watch_1": {
+            "type": "choice",
+            "choice": "unknown",
+            "confidence": 0.98,
+            "probabilities": {
+              "unknown": 0.99,
+              "present": 0.0,
+              "absent": 0.01
+            }
+          },
+          "watch_2": {
+            "type": "choice",
+            "choice": "present",
+            "confidence": 0.96,
+            "probabilities": {
+              "unknown": 0.02,
+              "present": 0.97,
+              "absent": 0.01
+            }
+          }
+        }
+      },
+      "outcome": "insufficient_data",
+      "selected": "insufficient_data",
+      "support": 1.0,
+      "passed": true
+    },
+    {
+      "id": "harbor-help:p06",
+      "arm": "original",
+      "expected": "insufficient_data",
+      "response": {
+        "model": "jev-1.13.0",
+        "usage": {
+          "input_tokens": 7929,
+          "output_tokens": 243
+        },
+        "answers": {
+          "outcome": {
+            "type": "choice",
+            "choice": "insufficient_data",
+            "confidence": 1.0,
+            "probabilities": {
+              "notify": 0.0,
+              "investigate": 0.0,
+              "ignore": 0.0,
+              "insufficient_data": 1.0
+            }
+          },
+          "question_0": {
+            "type": "noul",
+            "noul": 0.11
+          },
+          "question_1": {
+            "type": "noul",
+            "noul": 0.11
+          },
+          "question_2": {
+            "type": "noul",
+            "noul": 0.29
+          },
+          "question_3": {
+            "type": "noul",
+            "noul": 0.8
+          },
+          "watch_0": {
+            "type": "choice",
+            "choice": "unknown",
+            "confidence": 0.97,
+            "probabilities": {
+              "absent": 0.01,
+              "present": 0.01,
+              "unknown": 0.98
+            }
+          },
+          "watch_1": {
+            "type": "choice",
+            "choice": "unknown",
+            "confidence": 0.99,
+            "probabilities": {
+              "absent": 0.01,
+              "present": 0.0,
+              "unknown": 0.99
+            }
+          },
+          "watch_2": {
+            "type": "choice",
+            "choice": "present",
+            "confidence": 0.94,
+            "probabilities": {
+              "absent": 0.01,
+              "present": 0.96,
+              "unknown": 0.03
+            }
+          }
+        }
+      },
+      "outcome": "insufficient_data",
+      "selected": "insufficient_data",
+      "support": 1.0,
+      "passed": true
+    },
+    {
+      "id": "harbor-help:p06",
+      "arm": "deduplicated",
+      "expected": "insufficient_data",
+      "response": {
+        "model": "jev-1.13.0",
+        "usage": {
+          "input_tokens": 7231,
+          "output_tokens": 243
+        },
+        "answers": {
+          "outcome": {
+            "type": "choice",
+            "choice": "insufficient_data",
+            "confidence": 1.0,
+            "probabilities": {
+              "investigate": 0.0,
+              "insufficient_data": 1.0,
+              "notify": 0.0,
+              "ignore": 0.0
+            }
+          },
+          "question_0": {
+            "type": "noul",
+            "noul": 0.11
+          },
+          "question_1": {
+            "type": "noul",
+            "noul": 0.1
+          },
+          "question_2": {
+            "type": "noul",
+            "noul": 0.33
+          },
+          "question_3": {
+            "type": "noul",
+            "noul": 0.74
+          },
+          "watch_0": {
+            "type": "choice",
+            "choice": "unknown",
+            "confidence": 0.92,
+            "probabilities": {
+              "absent": 0.02,
+              "unknown": 0.95,
+              "present": 0.03
+            }
+          },
+          "watch_1": {
+            "type": "choice",
+            "choice": "unknown",
+            "confidence": 0.97,
+            "probabilities": {
+              "absent": 0.02,
+              "present": 0.01,
+              "unknown": 0.97
+            }
+          },
+          "watch_2": {
+            "type": "choice",
+            "choice": "present",
+            "confidence": 0.92,
+            "probabilities": {
+              "absent": 0.01,
+              "present": 0.94,
+              "unknown": 0.05
+            }
+          }
+        }
+      },
+      "outcome": "insufficient_data",
+      "selected": "insufficient_data",
+      "support": 1.0,
+      "passed": true
+    }
+  ],
+  "attempts": 18,
+  "summary": {
+    "original": {
+      "passed": 3,
+      "intended": 6
+    },
+    "deduplicated": {
+      "passed": 4,
+      "intended": 6
+    },
+    "without_plan": {
+      "passed": 3,
+      "intended": 6
+    }
+  }
+}

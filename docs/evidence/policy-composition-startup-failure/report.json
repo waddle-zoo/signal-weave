@@ -1,0 +1,101 @@
+{
+  "results": [],
+  "summary": {
+    "baseline": {
+      "correct": 0,
+      "intended": 12,
+      "submitted": 0,
+      "false_business_notifications": 0,
+      "missed_business_notifications": 0
+    },
+    "composed": {
+      "correct": 0,
+      "intended": 12,
+      "submitted": 0,
+      "false_business_notifications": 0,
+      "missed_business_notifications": 0
+    },
+    "broad": {
+      "correct": 0,
+      "intended": 12,
+      "submitted": 0,
+      "false_business_notifications": 0,
+      "missed_business_notifications": 0
+    }
+  },
+  "episodes": [
+    {
+      "company": "cobalt-market",
+      "phase": "author",
+      "status": "failed",
+      "error": "codex_exit",
+      "tool_calls": 0,
+      "seconds": 0.43644779204623774,
+      "response_timeout_seconds": 180,
+      "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+      "wall_time_overrun_seconds": 0.0,
+      "transport": "codex_cli",
+      "exit_code": 1,
+      "foreign_tools": []
+    },
+    {
+      "company": "maple-mobility",
+      "phase": "author",
+      "status": "failed",
+      "error": "codex_exit",
+      "tool_calls": 0,
+      "seconds": 0.3273888339754194,
+      "response_timeout_seconds": 180,
+      "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+      "wall_time_overrun_seconds": 0.0,
+      "transport": "codex_cli",
+      "exit_code": 1,
+      "foreign_tools": []
+    },
+    {
+      "company": "quartz-care",
+      "phase": "author",
+      "status": "failed",
+      "error": "codex_exit",
+      "tool_calls": 0,
+      "seconds": 0.40876879199640825,
+      "response_timeout_seconds": 180,
+      "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+      "wall_time_overrun_seconds": 0.0,
+      "transport": "codex_cli",
+      "exit_code": 1,
+      "foreign_tools": []
+    }
+  ],
+  "plans": {},
+  "jev_attempts": 0,
+  "luna_episodes": 3,
+  "review_status": "pending_internal_review",
+  "usage": [
+    {
+      "episode": "cobalt-market:author",
+      "error_type": "missing_usage",
+      "kind": "api.error",
+      "provider": "openai",
+      "request_id": -1,
+      "usage_known": false
+    },
+    {
+      "episode": "maple-mobility:author",
+      "error_type": "missing_usage",
+      "kind": "api.error",
+      "provider": "openai",
+      "request_id": -2,
+      "usage_known": false
+    },
+    {
+      "episode": "quartz-care:author",
+      "error_type": "missing_usage",
+      "kind": "api.error",
+      "provider": "openai",
+      "request_id": -3,
+      "usage_known": false
+    }
+  ],
+  "production_changed": false
+}

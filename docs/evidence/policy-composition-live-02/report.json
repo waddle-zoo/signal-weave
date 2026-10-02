@@ -1,0 +1,3113 @@
+{
+  "results": [
+    {
+      "company": "cobalt-market",
+      "arm": "baseline",
+      "episode": {
+        "status": "complete",
+        "error": null,
+        "tool_calls": 9,
+        "seconds": 65.06882133404724,
+        "response_timeout_seconds": 180,
+        "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+        "wall_time_overrun_seconds": 0.0,
+        "transport": "codex_cli",
+        "exit_code": 0,
+        "foreign_tools": []
+      },
+      "source_reads": 4,
+      "runs": [
+        {
+          "id": "cobalt-orders-flat-total",
+          "outcome": "notify",
+          "citations": [
+            "f1",
+            "f2",
+            "f3",
+            "f4",
+            "f5"
+          ],
+          "narrative": "Notify the primary owner: comparable settled-order populations are established (f4), and no approved migration-freeze exception applies (f5). Total orders were flat (f1; total_decline_pct=0.0, total_decline_ge_10=false), but East declined from 500 to 400 (f2), with the computed regional maximum decline at 20.0% (regional_decline_ge_15=true). Review East\u2019s decline.",
+          "recipients": [
+            "primary-owner"
+          ],
+          "workflow": null
+        },
+        {
+          "id": "cobalt-orders-quiet",
+          "outcome": "ignore",
+          "citations": [
+            "f1",
+            "f2",
+            "f3",
+            "f4",
+            "f5"
+          ],
+          "narrative": "Ignore this period: comparable populations are established (f4), with no approved freeze exception (f5). Computed declines remain below policy thresholds: total 5.0% and maximum regional 8.0% (f1\u2013f3). Continue weekly monitoring.",
+          "recipients": [],
+          "workflow": null
+        },
+        {
+          "id": "cobalt-orders-exception",
+          "outcome": "ignore",
+          "citations": [
+            "f1",
+            "f2",
+            "f3",
+            "f4"
+          ],
+          "narrative": "Ignore this period because the signed owner notice approves a migration freeze for this exact week (f4), which overrides the triggers. Although comparable populations are established (f3) and computed declines are 20.0% total and 22.0% regional (f1\u2013f2; both checks true), no action is required.",
+          "recipients": [],
+          "workflow": null
+        },
+        {
+          "id": "cobalt-orders-missing-context",
+          "outcome": "investigate",
+          "citations": [
+            "f1",
+            "f2",
+            "f3",
+            "f4"
+          ],
+          "narrative": "Investigate and route to the review owner: no approved migration-freeze exception is available (f4), but comparability is not established (f3) and the regional breakdown is absent (f2). Total decline is computed at 16.0% with total_decline_ge_10=true (f1); regional decline is unknown. Confirm populations and regional data before action.",
+          "recipients": [
+            "review-owner"
+          ],
+          "workflow": null
+        }
+      ]
+    },
+    {
+      "company": "cobalt-market",
+      "arm": "composed",
+      "episode": {
+        "status": "complete",
+        "error": null,
+        "tool_calls": 9,
+        "seconds": 40.43434466602048,
+        "response_timeout_seconds": 180,
+        "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+        "wall_time_overrun_seconds": 0.0,
+        "transport": "codex_cli",
+        "exit_code": 0,
+        "foreign_tools": []
+      },
+      "source_reads": 4,
+      "runs": [
+        {
+          "id": "cobalt-orders-flat-total",
+          "outcome": "notify",
+          "citations": [
+            "f2",
+            "f4",
+            "f5"
+          ],
+          "narrative": "Significance: comparable regional orders triggered notification because the exact computed maximum regional decline is 20.0%, meeting the 15% threshold, while total orders changed 0.0%. Evidence: East fell from 500 to 400; populations share the settled-order definition, and no approved freeze exception applies. Caveat: this establishes a threshold breach, not causation. Next: notify the primary owner.",
+          "recipients": [
+            "primary-owner"
+          ],
+          "workflow": {
+            "outcome": "notify",
+            "broad_outcome": "notify",
+            "answers": {
+              "total_decline_ge_10": "false",
+              "regional_decline_ge_15": "true",
+              "freeze_approved": "false",
+              "total_comparable": "true",
+              "regional_comparable": "true",
+              "freeze_unresolved": "false",
+              "total_comp_unresolved": "false",
+              "regional_comp_unresolved": "false"
+            },
+            "response": {
+              "model": "jev-1.13.0",
+              "usage": {
+                "input_tokens": 2566,
+                "output_tokens": 289
+              },
+              "answers": {
+                "freeze_approved": {
+                  "type": "choice",
+                  "choice": "false",
+                  "confidence": 0.99,
+                  "probabilities": {
+                    "unknown": 0.01,
+                    "true": 0.0,
+                    "false": 0.99
+                  }
+                },
+                "total_comparable": {
+                  "type": "choice",
+                  "choice": "true",
+                  "confidence": 0.9,
+                  "probabilities": {
+                    "unknown": 0.06,
+                    "true": 0.9400000000000001,
+                    "false": 0.0
+                  }
+                },
+                "regional_comparable": {
+                  "type": "choice",
+                  "choice": "true",
+                  "confidence": 0.81,
+                  "probabilities": {
+                    "unknown": 0.12,
+                    "true": 0.87,
+                    "false": 0.01
+                  }
+                },
+                "freeze_unresolved": {
+                  "type": "choice",
+                  "choice": "false",
+                  "confidence": 0.93,
+                  "probabilities": {
+                    "unknown": 0.02,
+                    "true": 0.03,
+                    "false": 0.95
+                  }
+                },
+                "total_comp_unresolved": {
+                  "type": "choice",
+                  "choice": "false",
+                  "confidence": 0.96,
+                  "probabilities": {
+                    "unknown": 0.01,
+                    "true": 0.01,
+                    "false": 0.98
+                  }
+                },
+                "regional_comp_unresolved": {
+                  "type": "choice",
+                  "choice": "false",
+                  "confidence": 0.86,
+                  "probabilities": {
+                    "unknown": 0.02,
+                    "true": 0.07,
+                    "false": 0.91
+                  }
+                },
+                "overall_outcome": {
+                  "type": "choice",
+                  "choice": "notify",
+                  "confidence": 0.97,
+                  "probabilities": {
+                    "notify": 0.98,
+                    "ignore": 0.0,
+                    "investigate": 0.01,
+                    "insufficient_data": 0.01
+                  }
+                }
+              }
+            },
+            "seconds": 0.270300958014559,
+            "numeric_checks": {
+              "total_decline_ge_10": "false",
+              "regional_decline_ge_15": "true"
+            }
+          }
+        },
+        {
+          "id": "cobalt-orders-quiet",
+          "outcome": "investigate",
+          "citations": [
+            "f1",
+            "f2",
+            "f3",
+            "f4",
+            "f5"
+          ],
+          "narrative": "Quiet period: comparable orders declined 5.0% in total and at most 8.0% regionally, below both policy thresholds. No approved freeze exception applies. Caveat: the authoritative outcome is investigate despite no trigger; do not infer a cause. Next: review the period with the review owner.",
+          "recipients": [
+            "review-owner"
+          ],
+          "workflow": {
+            "outcome": "investigate",
+            "broad_outcome": "investigate",
+            "answers": {
+              "total_decline_ge_10": "false",
+              "regional_decline_ge_15": "false",
+              "freeze_approved": "false",
+              "total_comparable": "true",
+              "regional_comparable": "true",
+              "freeze_unresolved": "false",
+              "total_comp_unresolved": "false",
+              "regional_comp_unresolved": "false"
+            },
+            "response": {
+              "model": "jev-1.13.0",
+              "usage": {
+                "input_tokens": 2564,
+                "output_tokens": 289
+              },
+              "answers": {
+                "freeze_approved": {
+                  "type": "choice",
+                  "choice": "false",
+                  "confidence": 0.99,
+                  "probabilities": {
+                    "true": 0.0,
+                    "false": 0.99,
+                    "unknown": 0.01
+                  }
+                },
+                "total_comparable": {
+                  "type": "choice",
+                  "choice": "true",
+                  "confidence": 0.89,
+                  "probabilities": {
+                    "true": 0.93,
+                    "false": 0.0,
+                    "unknown": 0.07
+                  }
+                },
+                "regional_comparable": {
+                  "type": "choice",
+                  "choice": "true",
+                  "confidence": 0.86,
+                  "probabilities": {
+                    "true": 0.9,
+                    "false": 0.01,
+                    "unknown": 0.09
+                  }
+                },
+                "freeze_unresolved": {
+                  "type": "choice",
+                  "choice": "false",
+                  "confidence": 0.93,
+                  "probabilities": {
+                    "true": 0.02,
+                    "false": 0.96,
+                    "unknown": 0.02
+                  }
+                },
+                "total_comp_unresolved": {
+                  "type": "choice",
+                  "choice": "false",
+                  "confidence": 0.96,
+                  "probabilities": {
+                    "true": 0.01,
+                    "false": 0.98,
+                    "unknown": 0.01
+                  }
+                },
+                "regional_comp_unresolved": {
+                  "type": "choice",
+                  "choice": "false",
+                  "confidence": 0.88,
+                  "probabilities": {
+                    "true": 0.06,
+                    "false": 0.92,
+                    "unknown": 0.02
+                  }
+                },
+                "overall_outcome": {
+                  "type": "choice",
+                  "choice": "ignore",
+                  "confidence": 0.29,
+                  "probabilities": {
+                    "insufficient_data": 0.06,
+                    "notify": 0.03,
+                    "investigate": 0.45,
+                    "ignore": 0.45999999999999996
+                  }
+                }
+              }
+            },
+            "seconds": 0.2043651249841787,
+            "numeric_checks": {
+              "total_decline_ge_10": "false",
+              "regional_decline_ge_15": "false"
+            }
+          }
+        },
+        {
+          "id": "cobalt-orders-exception",
+          "outcome": "ignore",
+          "citations": [
+            "f1",
+            "f2",
+            "f3",
+            "f4"
+          ],
+          "narrative": "Significance: total and regional declines reached 20.0% and 22.0%, but the authoritative outcome is ignore. Evidence: the populations remain comparable and the signed owner notice approves a migration freeze for this exact week. Caveat: the freeze overrides the numeric triggers; no causation is established. Next: take no action.",
+          "recipients": [],
+          "workflow": {
+            "outcome": "ignore",
+            "broad_outcome": "ignore",
+            "answers": {
+              "total_decline_ge_10": "true",
+              "regional_decline_ge_15": "true",
+              "freeze_approved": "true",
+              "total_comparable": "true",
+              "regional_comparable": "true",
+              "freeze_unresolved": "false",
+              "total_comp_unresolved": "false",
+              "regional_comp_unresolved": "false"
+            },
+            "response": {
+              "model": "jev-1.13.0",
+              "usage": {
+                "input_tokens": 2522,
+                "output_tokens": 289
+              },
+              "answers": {
+                "freeze_approved": {
+                  "type": "choice",
+                  "choice": "true",
+                  "confidence": 0.99,
+                  "probabilities": {
+                    "false": 0.0,
+                    "unknown": 0.0,
+                    "true": 1.0
+                  }
+                },
+                "total_comparable": {
+                  "type": "choice",
+                  "choice": "true",
+                  "confidence": 0.99,
+                  "probabilities": {
+                    "false": 0.0,
+                    "unknown": 0.01,
+                    "true": 0.99
+                  }
+                },
+                "regional_comparable": {
+                  "type": "choice",
+                  "choice": "true",
+                  "confidence": 0.99,
+                  "probabilities": {
+                    "false": 0.0,
+                    "unknown": 0.0,
+                    "true": 1.0
+                  }
+                },
+                "freeze_unresolved": {
+                  "type": "choice",
+                  "choice": "false",
+                  "confidence": 0.99,
+                  "probabilities": {
+                    "false": 0.99,
+                    "unknown": 0.01,
+                    "true": 0.0
+                  }
+                },
+                "total_comp_unresolved": {
+                  "type": "choice",
+                  "choice": "false",
+                  "confidence": 0.99,
+                  "probabilities": {
+                    "false": 1.0,
+                    "unknown": 0.0,
+                    "true": 0.0
+                  }
+                },
+                "regional_comp_unresolved": {
+                  "type": "choice",
+                  "choice": "false",
+                  "confidence": 0.99,
+                  "probabilities": {
+                    "false": 1.0,
+                    "unknown": 0.0,
+                    "true": 0.0
+                  }
+                },
+                "overall_outcome": {
+                  "type": "choice",
+                  "choice": "ignore",
+                  "confidence": 1.0,
+                  "probabilities": {
+                    "notify": 0.0,
+                    "ignore": 1.0,
+                    "insufficient_data": 0.0,
+                    "investigate": 0.0
+                  }
+                }
+              }
+            },
+            "seconds": 0.18834637495456263,
+            "numeric_checks": {
+              "total_decline_ge_10": "true",
+              "regional_decline_ge_15": "true"
+            }
+          }
+        },
+        {
+          "id": "cobalt-orders-missing-context",
+          "outcome": "investigate",
+          "citations": [
+            "f1",
+            "f2",
+            "f3",
+            "f4"
+          ],
+          "narrative": "Significance: total orders declined 16.0%, but the regional trigger cannot be computed because the regional breakdown is absent. Evidence: the source does not establish population matching, and no approved freeze exception is available. Caveat: comparability is unresolved; do not infer regional performance or causation. Next: review with the review owner and resolve the population and regional evidence.",
+          "recipients": [
+            "review-owner"
+          ],
+          "workflow": {
+            "outcome": "investigate",
+            "broad_outcome": "insufficient_data",
+            "answers": {
+              "total_decline_ge_10": "true",
+              "regional_decline_ge_15": "unknown",
+              "freeze_approved": "false",
+              "total_comparable": "unknown",
+              "regional_comparable": "false",
+              "freeze_unresolved": "false",
+              "total_comp_unresolved": "true",
+              "regional_comp_unresolved": "true"
+            },
+            "response": {
+              "model": "jev-1.13.0",
+              "usage": {
+                "input_tokens": 2514,
+                "output_tokens": 293
+              },
+              "answers": {
+                "freeze_approved": {
+                  "type": "choice",
+                  "choice": "false",
+                  "confidence": 0.98,
+                  "probabilities": {
+                    "false": 0.99,
+                    "unknown": 0.01,
+                    "true": 0.0
+                  }
+                },
+                "total_comparable": {
+                  "type": "choice",
+                  "choice": "unknown",
+                  "confidence": 0.55,
+                  "probabilities": {
+                    "false": 0.3,
+                    "unknown": 0.7,
+                    "true": 0.0
+                  }
+                },
+                "regional_comparable": {
+                  "type": "choice",
+                  "choice": "false",
+                  "confidence": 0.55,
+                  "probabilities": {
+                    "false": 0.7,
+                    "unknown": 0.3,
+                    "true": 0.0
+                  }
+                },
+                "freeze_unresolved": {
+                  "type": "choice",
+                  "choice": "false",
+                  "confidence": 0.72,
+                  "probabilities": {
+                    "false": 0.81,
+                    "unknown": 0.04,
+                    "true": 0.14
+                  }
+                },
+                "total_comp_unresolved": {
+                  "type": "choice",
+                  "choice": "true",
+                  "confidence": 0.9,
+                  "probabilities": {
+                    "false": 0.01,
+                    "unknown": 0.05,
+                    "true": 0.93
+                  }
+                },
+                "regional_comp_unresolved": {
+                  "type": "choice",
+                  "choice": "true",
+                  "confidence": 0.99,
+                  "probabilities": {
+                    "false": 0.0,
+                    "unknown": 0.01,
+                    "true": 0.99
+                  }
+                },
+                "overall_outcome": {
+                  "type": "choice",
+                  "choice": "insufficient_data",
+                  "confidence": 0.89,
+                  "probabilities": {
+                    "insufficient_data": 0.92,
+                    "notify": 0.0,
+                    "investigate": 0.08,
+                    "ignore": 0.0
+                  }
+                }
+              }
+            },
+            "seconds": 0.18577887496212497,
+            "numeric_checks": {
+              "total_decline_ge_10": "true",
+              "regional_decline_ge_15": "unknown"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "company": "maple-mobility",
+      "arm": "composed",
+      "episode": {
+        "status": "complete",
+        "error": null,
+        "tool_calls": 8,
+        "seconds": 32.64149449998513,
+        "response_timeout_seconds": 180,
+        "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+        "wall_time_overrun_seconds": 0.0,
+        "transport": "codex_cli",
+        "exit_code": 0,
+        "foreign_tools": []
+      },
+      "source_reads": 4,
+      "runs": [
+        {
+          "id": "maple-delivery-both-triggers",
+          "outcome": "notify",
+          "citations": [
+            "f1",
+            "f2",
+            "f3"
+          ],
+          "narrative": "Significance: both policy triggers hold for the same fleet\u2014on-time delivery is 90%, below 92%, and cancellation rate rose 3 percentage points. Evidence: f1, f2; no weather-closure exception covers the week (f3). Caveat: this establishes a threshold breach, not its cause. Next step: notify the primary owner for review.",
+          "recipients": [
+            "primary-owner"
+          ],
+          "workflow": {
+            "outcome": "notify",
+            "broad_outcome": "notify",
+            "answers": {
+              "on_time_below": "true",
+              "cancellation_rise": "true",
+              "exception_conflict": "false",
+              "exception_covers_week": "false"
+            },
+            "response": {
+              "model": "jev-1.13.0",
+              "usage": {
+                "input_tokens": 1647,
+                "output_tokens": 130
+              },
+              "answers": {
+                "overall_outcome": {
+                  "type": "choice",
+                  "choice": "notify",
+                  "confidence": 0.98,
+                  "probabilities": {
+                    "notify": 0.99,
+                    "investigate": 0.01,
+                    "ignore": 0.0,
+                    "insufficient_data": 0.0
+                  }
+                },
+                "exception_conflict": {
+                  "type": "choice",
+                  "choice": "false",
+                  "confidence": 0.68,
+                  "probabilities": {
+                    "unknown": 0.21,
+                    "true": 0.0,
+                    "false": 0.79
+                  }
+                },
+                "exception_covers_week": {
+                  "type": "choice",
+                  "choice": "false",
+                  "confidence": 1.0,
+                  "probabilities": {
+                    "unknown": 0.0,
+                    "true": 0.0,
+                    "false": 1.0
+                  }
+                }
+              }
+            },
+            "seconds": 0.2957155829644762,
+            "numeric_checks": {
+              "on_time_below": "true",
+              "cancellation_rise": "true"
+            }
+          }
+        },
+        {
+          "id": "maple-delivery-one-sided",
+          "outcome": "ignore",
+          "citations": [
+            "f1",
+            "f2",
+            "f3"
+          ],
+          "narrative": "Quiet: cancellation rate rose 3 percentage points, but on-time delivery is 95%, above the 92% policy threshold (f1, f2). No weather-closure exception covers the comparison week (f3). Caveat: the single cancellation trigger does not establish a cause or require action under policy. Next step: ignore this period.",
+          "recipients": [],
+          "workflow": {
+            "outcome": "ignore",
+            "broad_outcome": "ignore",
+            "answers": {
+              "on_time_below": "false",
+              "cancellation_rise": "true",
+              "exception_conflict": "false",
+              "exception_covers_week": "false"
+            },
+            "response": {
+              "model": "jev-1.13.0",
+              "usage": {
+                "input_tokens": 1647,
+                "output_tokens": 130
+              },
+              "answers": {
+                "exception_conflict": {
+                  "type": "choice",
+                  "choice": "false",
+                  "confidence": 0.67,
+                  "probabilities": {
+                    "unknown": 0.22,
+                    "false": 0.78,
+                    "true": 0.0
+                  }
+                },
+                "exception_covers_week": {
+                  "type": "choice",
+                  "choice": "false",
+                  "confidence": 1.0,
+                  "probabilities": {
+                    "unknown": 0.0,
+                    "false": 1.0,
+                    "true": 0.0
+                  }
+                },
+                "overall_outcome": {
+                  "type": "choice",
+                  "choice": "ignore",
+                  "confidence": 0.99,
+                  "probabilities": {
+                    "investigate": 0.0,
+                    "ignore": 1.0,
+                    "insufficient_data": 0.0,
+                    "notify": 0.0
+                  }
+                }
+              }
+            },
+            "seconds": 0.2124116250197403,
+            "numeric_checks": {
+              "on_time_below": "false",
+              "cancellation_rise": "true"
+            }
+          }
+        },
+        {
+          "id": "maple-delivery-exception-conflict",
+          "outcome": "investigate",
+          "citations": [
+            "f1",
+            "f2",
+            "f3",
+            "f4"
+          ],
+          "narrative": "Significance: the numeric triggers both hold\u2014on-time delivery is 89% and cancellation rate rose 4 percentage points (f1, f2). Evidence: weather-closure scope conflicts between schedules covering the whole fleet versus two depots (f3, f4). Caveat: the conflicting exception prevents a reliable override determination. Next step: investigate the approval and scope conflict with the review owner.",
+          "recipients": [
+            "review-owner"
+          ],
+          "workflow": {
+            "outcome": "investigate",
+            "broad_outcome": "investigate",
+            "answers": {
+              "on_time_below": "true",
+              "cancellation_rise": "true",
+              "exception_conflict": "true",
+              "exception_covers_week": "unknown"
+            },
+            "response": {
+              "model": "jev-1.13.0",
+              "usage": {
+                "input_tokens": 1682,
+                "output_tokens": 133
+              },
+              "answers": {
+                "exception_conflict": {
+                  "type": "choice",
+                  "choice": "true",
+                  "confidence": 0.58,
+                  "probabilities": {
+                    "unknown": 0.28,
+                    "false": 0.0,
+                    "true": 0.72
+                  }
+                },
+                "exception_covers_week": {
+                  "type": "choice",
+                  "choice": "unknown",
+                  "confidence": 0.99,
+                  "probabilities": {
+                    "false": 0.01,
+                    "unknown": 0.99,
+                    "true": 0.0
+                  }
+                },
+                "overall_outcome": {
+                  "type": "choice",
+                  "choice": "investigate",
+                  "confidence": 0.99,
+                  "probabilities": {
+                    "ignore": 0.0,
+                    "investigate": 1.0,
+                    "insufficient_data": 0.0,
+                    "notify": 0.0
+                  }
+                }
+              }
+            },
+            "seconds": 0.19418862502789125,
+            "numeric_checks": {
+              "on_time_below": "true",
+              "cancellation_rise": "true"
+            }
+          }
+        },
+        {
+          "id": "maple-delivery-missing-rate",
+          "outcome": "insufficient_data",
+          "citations": [
+            "f1",
+            "f2",
+            "f3"
+          ],
+          "narrative": "Significance: on-time delivery is 89%, below the 92% threshold (f1), but the cancellation-rate value is missing (f2), so the combined policy test cannot be completed. No weather-closure exception covers the week (f3). Caveat: no causation can be inferred. Next step: send insufficient_data to the data owner and obtain the missing cancellation metric.",
+          "recipients": [
+            "data-owner"
+          ],
+          "workflow": {
+            "outcome": "insufficient_data",
+            "broad_outcome": "insufficient_data",
+            "answers": {
+              "on_time_below": "true",
+              "cancellation_rise": "unknown",
+              "exception_conflict": "false",
+              "exception_covers_week": "false"
+            },
+            "response": {
+              "model": "jev-1.13.0",
+              "usage": {
+                "input_tokens": 1639,
+                "output_tokens": 134
+              },
+              "answers": {
+                "exception_conflict": {
+                  "type": "choice",
+                  "choice": "false",
+                  "confidence": 0.59,
+                  "probabilities": {
+                    "true": 0.0,
+                    "false": 0.73,
+                    "unknown": 0.27
+                  }
+                },
+                "exception_covers_week": {
+                  "type": "choice",
+                  "choice": "false",
+                  "confidence": 1.0,
+                  "probabilities": {
+                    "true": 0.0,
+                    "false": 1.0,
+                    "unknown": 0.0
+                  }
+                },
+                "overall_outcome": {
+                  "type": "choice",
+                  "choice": "insufficient_data",
+                  "confidence": 1.0,
+                  "probabilities": {
+                    "ignore": 0.0,
+                    "investigate": 0.0,
+                    "insufficient_data": 1.0,
+                    "notify": 0.0
+                  }
+                }
+              }
+            },
+            "seconds": 0.19745687500108033,
+            "numeric_checks": {
+              "on_time_below": "true",
+              "cancellation_rise": "unknown"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "company": "maple-mobility",
+      "arm": "baseline",
+      "episode": {
+        "status": "complete",
+        "error": null,
+        "tool_calls": 8,
+        "seconds": 23.668089082988445,
+        "response_timeout_seconds": 180,
+        "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+        "wall_time_overrun_seconds": 0.0,
+        "transport": "codex_cli",
+        "exit_code": 0,
+        "foreign_tools": []
+      },
+      "source_reads": 4,
+      "runs": [
+        {
+          "id": "maple-delivery-both-triggers",
+          "outcome": "notify",
+          "citations": [
+            "f1",
+            "f2",
+            "f3"
+          ],
+          "narrative": "Notify the primary owner: on-time delivery is 90%, below the 92% threshold, and cancellations rose 3 percentage points (3% to 6%), meeting the 2-point threshold. Evidence indicates no weather-closure exception covers the comparison week. Next step: review the fleet\u2019s delivery and cancellation drivers with the primary owner; no causal explanation is established.",
+          "recipients": [
+            "primary-owner"
+          ],
+          "workflow": null
+        },
+        {
+          "id": "maple-delivery-one-sided",
+          "outcome": "ignore",
+          "citations": [
+            "f1",
+            "f2",
+            "f3"
+          ],
+          "narrative": "Ignore: on-time delivery is 95%, above the 92% threshold, although cancellations rose 3 percentage points. No weather-closure exception covers the week. Because only one trigger holds, no notification is warranted; continue routine monitoring.",
+          "recipients": [],
+          "workflow": null
+        },
+        {
+          "id": "maple-delivery-exception-conflict",
+          "outcome": "investigate",
+          "citations": [
+            "f1",
+            "f2",
+            "f3",
+            "f4"
+          ],
+          "narrative": "Investigate the claimed weather-closure exception: current schedules conflict on scope, with one covering the whole fleet and another covering only two depots. The numeric triggers also hold: on-time delivery is 89% and cancellations rose 4 percentage points. Resolve the authoritative exception scope with the review owner before deciding whether notification is appropriate.",
+          "recipients": [
+            "review-owner"
+          ],
+          "workflow": null
+        },
+        {
+          "id": "maple-delivery-missing-rate",
+          "outcome": "insufficient_data",
+          "citations": [
+            "f1",
+            "f2",
+            "f3"
+          ],
+          "narrative": "Send insufficient_data to the data owner: on-time delivery is 89% and below threshold, but the cancellation-rate value is missing, so the cancellation trigger cannot be computed. No weather-closure exception covers the week. Next step: obtain the current cancellation-rate measurement and rerun the policy checks.",
+          "recipients": [
+            "data-owner"
+          ],
+          "workflow": null
+        }
+      ]
+    },
+    {
+      "company": "quartz-care",
+      "arm": "baseline",
+      "episode": {
+        "status": "complete",
+        "error": null,
+        "tool_calls": 8,
+        "seconds": 35.73416516598081,
+        "response_timeout_seconds": 180,
+        "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+        "wall_time_overrun_seconds": 0.0,
+        "transport": "codex_cli",
+        "exit_code": 0,
+        "foreign_tools": []
+      },
+      "source_reads": 4,
+      "runs": [
+        {
+          "id": "quartz-release-high-priority",
+          "outcome": "notify",
+          "citations": [
+            "f1",
+            "f2",
+            "f3"
+          ],
+          "narrative": "Significance: the contract release is high priority and lacks signed reconciliation, matching the policy trigger. Evidence: the record marks it high priority (f1), the checklist says signed reconciliation is missing (f2), and no signed release-manager reconciliation is present (f3). Caveat: no causal claim is made. Next step: notify the primary owner and obtain signed reconciliation.",
+          "recipients": [
+            "primary-owner"
+          ],
+          "workflow": null
+        },
+        {
+          "id": "quartz-release-routine",
+          "outcome": "ignore",
+          "citations": [
+            "f1",
+            "f2",
+            "f3"
+          ],
+          "narrative": "Significance: no policy action is triggered. Evidence: the release is classified as routine (f1), while signed reconciliation is missing (f2) and no signed release-manager reconciliation is present (f3). Caveat: this does not establish any cause or risk beyond the stated facts. Next step: ignore for this review period; retain the evidence for routine tracking.",
+          "recipients": [],
+          "workflow": null
+        },
+        {
+          "id": "quartz-release-missing-priority",
+          "outcome": "insufficient_data",
+          "citations": [
+            "f1",
+            "f2",
+            "f3"
+          ],
+          "narrative": "Significance: the priority classification is absent, so the policy does not support a release-priority determination. Evidence: the evidence has no priority classification (f2); it states signed reconciliation is missing (f1) and no signed release-manager reconciliation is present (f3). Caveat: do not infer priority or causation. Next step: send insufficient_data to the data owner and obtain the missing classification.",
+          "recipients": [
+            "data-owner"
+          ],
+          "workflow": null
+        },
+        {
+          "id": "quartz-release-conflicting-priority",
+          "outcome": "insufficient_data",
+          "citations": [
+            "f1",
+            "f2",
+            "f3",
+            "f4"
+          ],
+          "narrative": "Significance: the policy cannot determine the release classification because authoritative records conflict. Evidence: one record says high priority (f1), while an equally authoritative record says routine (f2); signed reconciliation is missing (f3) and no signed release-manager reconciliation is present (f4). Caveat: do not resolve the conflict by inference. Next step: send insufficient_data to the data owner for clarification.",
+          "recipients": [
+            "data-owner"
+          ],
+          "workflow": null
+        }
+      ]
+    },
+    {
+      "company": "quartz-care",
+      "arm": "composed",
+      "episode": {
+        "status": "complete",
+        "error": null,
+        "tool_calls": 8,
+        "seconds": 64.87651141703827,
+        "response_timeout_seconds": 180,
+        "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+        "wall_time_overrun_seconds": 0.0,
+        "transport": "codex_cli",
+        "exit_code": 0,
+        "foreign_tools": []
+      },
+      "source_reads": 4,
+      "runs": [
+        {
+          "id": "quartz-release-high-priority",
+          "outcome": "notify",
+          "citations": [
+            "f1",
+            "f2",
+            "f3"
+          ],
+          "narrative": "Significance: the high-priority contract release meets the policy trigger for notification. Evidence: the release is classified high priority, signed reconciliation is marked missing, and no signed release-manager reconciliation is present (f1, f2, f3). Caveat: no additional numeric checks were provided. Next step: notify the primary owner for review.",
+          "recipients": [
+            "primary-owner"
+          ],
+          "workflow": {
+            "outcome": "notify",
+            "broad_outcome": "notify",
+            "answers": {
+              "priority_missing_or_conflicting": "false",
+              "reconciliation_missing_or_conflicting": "false",
+              "signed_release_manager_reconciliation": "false",
+              "high_priority_release": "true",
+              "missing_signed_reconciliation": "true",
+              "routine_release": "false"
+            },
+            "response": {
+              "model": "jev-1.13.0",
+              "usage": {
+                "input_tokens": 2374,
+                "output_tokens": 292
+              },
+              "answers": {
+                "priority_missing_or_conflicting": {
+                  "type": "choice",
+                  "choice": "false",
+                  "confidence": 1.0,
+                  "probabilities": {
+                    "false": 1.0,
+                    "unknown": 0.0,
+                    "true": 0.0
+                  }
+                },
+                "reconciliation_missing_or_conflicting": {
+                  "type": "choice",
+                  "choice": "false",
+                  "confidence": 0.86,
+                  "probabilities": {
+                    "false": 0.9,
+                    "unknown": 0.04,
+                    "true": 0.06
+                  }
+                },
+                "signed_release_manager_reconciliation": {
+                  "type": "choice",
+                  "choice": "false",
+                  "confidence": 0.99,
+                  "probabilities": {
+                    "false": 1.0,
+                    "unknown": 0.0,
+                    "true": 0.0
+                  }
+                },
+                "high_priority_release": {
+                  "type": "choice",
+                  "choice": "true",
+                  "confidence": 1.0,
+                  "probabilities": {
+                    "false": 0.0,
+                    "unknown": 0.0,
+                    "true": 1.0
+                  }
+                },
+                "missing_signed_reconciliation": {
+                  "type": "choice",
+                  "choice": "true",
+                  "confidence": 0.99,
+                  "probabilities": {
+                    "false": 0.0,
+                    "unknown": 0.01,
+                    "true": 0.99
+                  }
+                },
+                "routine_release": {
+                  "type": "choice",
+                  "choice": "false",
+                  "confidence": 0.98,
+                  "probabilities": {
+                    "false": 0.98,
+                    "unknown": 0.02,
+                    "true": 0.0
+                  }
+                },
+                "overall_outcome": {
+                  "type": "choice",
+                  "choice": "notify",
+                  "confidence": 0.94,
+                  "probabilities": {
+                    "insufficient_data": 0.03,
+                    "notify": 0.96,
+                    "investigate": 0.01,
+                    "ignore": 0.0
+                  }
+                }
+              }
+            },
+            "seconds": 0.22790274996077642,
+            "numeric_checks": {}
+          }
+        },
+        {
+          "id": "quartz-release-routine",
+          "outcome": "ignore",
+          "citations": [
+            "f1",
+            "f2",
+            "f3"
+          ],
+          "narrative": "Quiet: the routine classification means this release does not trigger notification under the owner policy (f1). Evidence still records missing signed reconciliation and no signed release-manager reconciliation (f2, f3). Caveat: the policy explicitly excludes routine releases. Next step: ignore for this review period and retain the evidence for recordkeeping.",
+          "recipients": [],
+          "workflow": {
+            "outcome": "ignore",
+            "broad_outcome": "ignore",
+            "answers": {
+              "priority_missing_or_conflicting": "false",
+              "reconciliation_missing_or_conflicting": "false",
+              "signed_release_manager_reconciliation": "false",
+              "high_priority_release": "false",
+              "missing_signed_reconciliation": "true",
+              "routine_release": "true"
+            },
+            "response": {
+              "model": "jev-1.13.0",
+              "usage": {
+                "input_tokens": 2374,
+                "output_tokens": 292
+              },
+              "answers": {
+                "priority_missing_or_conflicting": {
+                  "type": "choice",
+                  "choice": "false",
+                  "confidence": 0.99,
+                  "probabilities": {
+                    "false": 1.0,
+                    "true": 0.0,
+                    "unknown": 0.0
+                  }
+                },
+                "reconciliation_missing_or_conflicting": {
+                  "type": "choice",
+                  "choice": "false",
+                  "confidence": 0.81,
+                  "probabilities": {
+                    "false": 0.88,
+                    "true": 0.08,
+                    "unknown": 0.04
+                  }
+                },
+                "signed_release_manager_reconciliation": {
+                  "type": "choice",
+                  "choice": "false",
+                  "confidence": 0.99,
+                  "probabilities": {
+                    "false": 1.0,
+                    "true": 0.0,
+                    "unknown": 0.0
+                  }
+                },
+                "high_priority_release": {
+                  "type": "choice",
+                  "choice": "false",
+                  "confidence": 1.0,
+                  "probabilities": {
+                    "false": 1.0,
+                    "true": 0.0,
+                    "unknown": 0.0
+                  }
+                },
+                "missing_signed_reconciliation": {
+                  "type": "choice",
+                  "choice": "true",
+                  "confidence": 0.98,
+                  "probabilities": {
+                    "false": 0.0,
+                    "true": 0.99,
+                    "unknown": 0.01
+                  }
+                },
+                "routine_release": {
+                  "type": "choice",
+                  "choice": "true",
+                  "confidence": 1.0,
+                  "probabilities": {
+                    "false": 0.0,
+                    "true": 1.0,
+                    "unknown": 0.0
+                  }
+                },
+                "overall_outcome": {
+                  "type": "choice",
+                  "choice": "ignore",
+                  "confidence": 0.96,
+                  "probabilities": {
+                    "insufficient_data": 0.02,
+                    "notify": 0.0,
+                    "ignore": 0.97,
+                    "investigate": 0.01
+                  }
+                }
+              }
+            },
+            "seconds": 0.20546295802341774,
+            "numeric_checks": {}
+          }
+        },
+        {
+          "id": "quartz-release-missing-priority",
+          "outcome": "insufficient_data",
+          "citations": [
+            "f1",
+            "f2",
+            "f3"
+          ],
+          "narrative": "Significance: the release cannot be classified for policy action because its priority is absent. Evidence: the checklist says signed reconciliation is missing, no signed release-manager reconciliation is present, and the evidence lacks a priority classification (f1, f2, f3). Caveat: priority remains unknown, so high-priority notification cannot be determined. Next step: send insufficient_data to the data owner.",
+          "recipients": [
+            "data-owner"
+          ],
+          "workflow": {
+            "outcome": "insufficient_data",
+            "broad_outcome": "insufficient_data",
+            "answers": {
+              "priority_missing_or_conflicting": "true",
+              "reconciliation_missing_or_conflicting": "unknown",
+              "signed_release_manager_reconciliation": "false",
+              "high_priority_release": "unknown",
+              "missing_signed_reconciliation": "true",
+              "routine_release": "unknown"
+            },
+            "response": {
+              "model": "jev-1.13.0",
+              "usage": {
+                "input_tokens": 2370,
+                "output_tokens": 296
+              },
+              "answers": {
+                "priority_missing_or_conflicting": {
+                  "type": "choice",
+                  "choice": "true",
+                  "confidence": 0.99,
+                  "probabilities": {
+                    "true": 0.99,
+                    "unknown": 0.01,
+                    "false": 0.0
+                  }
+                },
+                "reconciliation_missing_or_conflicting": {
+                  "type": "choice",
+                  "choice": "false",
+                  "confidence": 0.26,
+                  "probabilities": {
+                    "unknown": 0.1,
+                    "true": 0.4,
+                    "false": 0.5
+                  }
+                },
+                "signed_release_manager_reconciliation": {
+                  "type": "choice",
+                  "choice": "false",
+                  "confidence": 0.98,
+                  "probabilities": {
+                    "unknown": 0.01,
+                    "true": 0.0,
+                    "false": 0.99
+                  }
+                },
+                "high_priority_release": {
+                  "type": "choice",
+                  "choice": "unknown",
+                  "confidence": 0.46,
+                  "probabilities": {
+                    "unknown": 0.64,
+                    "true": 0.0,
+                    "false": 0.36
+                  }
+                },
+                "missing_signed_reconciliation": {
+                  "type": "choice",
+                  "choice": "true",
+                  "confidence": 0.93,
+                  "probabilities": {
+                    "unknown": 0.04,
+                    "true": 0.96,
+                    "false": 0.0
+                  }
+                },
+                "routine_release": {
+                  "type": "choice",
+                  "choice": "unknown",
+                  "confidence": 0.83,
+                  "probabilities": {
+                    "true": 0.0,
+                    "unknown": 0.89,
+                    "false": 0.11
+                  }
+                },
+                "overall_outcome": {
+                  "type": "choice",
+                  "choice": "insufficient_data",
+                  "confidence": 1.0,
+                  "probabilities": {
+                    "insufficient_data": 1.0,
+                    "notify": 0.0,
+                    "investigate": 0.0,
+                    "ignore": 0.0
+                  }
+                }
+              }
+            },
+            "seconds": 0.21105512499343604,
+            "numeric_checks": {}
+          }
+        },
+        {
+          "id": "quartz-release-conflicting-priority",
+          "outcome": "investigate",
+          "citations": [
+            "f1",
+            "f2",
+            "f3",
+            "f4"
+          ],
+          "narrative": "Significance: the conflicting priority classifications prevent a definitive policy decision. Evidence: one release record says high priority while an equally authoritative record says routine; signed reconciliation is missing and no signed release-manager reconciliation is present (f1, f2, f3, f4). Caveat: priority and reconciliation status are unresolved. Next step: investigate the conflicting records through the review owner.",
+          "recipients": [
+            "review-owner"
+          ],
+          "workflow": {
+            "outcome": "investigate",
+            "broad_outcome": "insufficient_data",
+            "answers": {
+              "priority_missing_or_conflicting": "unknown",
+              "reconciliation_missing_or_conflicting": "unknown",
+              "signed_release_manager_reconciliation": "false",
+              "high_priority_release": "unknown",
+              "missing_signed_reconciliation": "true",
+              "routine_release": "unknown"
+            },
+            "response": {
+              "model": "jev-1.13.0",
+              "usage": {
+                "input_tokens": 2404,
+                "output_tokens": 296
+              },
+              "answers": {
+                "priority_missing_or_conflicting": {
+                  "type": "choice",
+                  "choice": "unknown",
+                  "confidence": 0.36,
+                  "probabilities": {
+                    "unknown": 0.57,
+                    "false": 0.0,
+                    "true": 0.43
+                  }
+                },
+                "reconciliation_missing_or_conflicting": {
+                  "type": "choice",
+                  "choice": "false",
+                  "confidence": 0.41,
+                  "probabilities": {
+                    "unknown": 0.21,
+                    "false": 0.61,
+                    "true": 0.18
+                  }
+                },
+                "signed_release_manager_reconciliation": {
+                  "type": "choice",
+                  "choice": "false",
+                  "confidence": 0.97,
+                  "probabilities": {
+                    "unknown": 0.02,
+                    "false": 0.98,
+                    "true": 0.0
+                  }
+                },
+                "high_priority_release": {
+                  "type": "choice",
+                  "choice": "unknown",
+                  "confidence": 0.86,
+                  "probabilities": {
+                    "unknown": 0.91,
+                    "false": 0.0,
+                    "true": 0.09
+                  }
+                },
+                "missing_signed_reconciliation": {
+                  "type": "choice",
+                  "choice": "true",
+                  "confidence": 0.83,
+                  "probabilities": {
+                    "unknown": 0.11,
+                    "false": 0.0,
+                    "true": 0.89
+                  }
+                },
+                "routine_release": {
+                  "type": "choice",
+                  "choice": "unknown",
+                  "confidence": 0.68,
+                  "probabilities": {
+                    "unknown": 0.78,
+                    "false": 0.01,
+                    "true": 0.21
+                  }
+                },
+                "overall_outcome": {
+                  "type": "choice",
+                  "choice": "insufficient_data",
+                  "confidence": 0.99,
+                  "probabilities": {
+                    "investigate": 0.01,
+                    "ignore": 0.0,
+                    "insufficient_data": 0.99,
+                    "notify": 0.0
+                  }
+                }
+              }
+            },
+            "seconds": 0.22450570797082037,
+            "numeric_checks": {}
+          }
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "baseline": {
+      "correct": 11,
+      "intended": 12,
+      "submitted": 12,
+      "false_business_notifications": 0,
+      "missed_business_notifications": 0
+    },
+    "composed": {
+      "correct": 9,
+      "intended": 12,
+      "submitted": 12,
+      "false_business_notifications": 0,
+      "missed_business_notifications": 0
+    },
+    "broad": {
+      "correct": 11,
+      "intended": 12,
+      "submitted": 12,
+      "false_business_notifications": 0,
+      "missed_business_notifications": 0
+    }
+  },
+  "episodes": [
+    {
+      "company": "cobalt-market",
+      "phase": "author",
+      "status": "complete",
+      "error": null,
+      "tool_calls": 1,
+      "seconds": 28.13353712501703,
+      "response_timeout_seconds": 180,
+      "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+      "wall_time_overrun_seconds": 0.0,
+      "transport": "codex_cli",
+      "exit_code": 0,
+      "foreign_tools": []
+    },
+    {
+      "company": "maple-mobility",
+      "phase": "author",
+      "status": "complete",
+      "error": null,
+      "tool_calls": 1,
+      "seconds": 29.292948250018526,
+      "response_timeout_seconds": 180,
+      "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+      "wall_time_overrun_seconds": 0.0,
+      "transport": "codex_cli",
+      "exit_code": 0,
+      "foreign_tools": []
+    },
+    {
+      "company": "quartz-care",
+      "phase": "author",
+      "status": "complete",
+      "error": null,
+      "tool_calls": 2,
+      "seconds": 39.67278762499336,
+      "response_timeout_seconds": 180,
+      "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+      "wall_time_overrun_seconds": 0.0,
+      "transport": "codex_cli",
+      "exit_code": 0,
+      "foreign_tools": []
+    },
+    {
+      "company": "cobalt-market",
+      "phase": "baseline",
+      "status": "complete",
+      "error": null,
+      "tool_calls": 9,
+      "seconds": 65.06882133404724,
+      "response_timeout_seconds": 180,
+      "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+      "wall_time_overrun_seconds": 0.0,
+      "transport": "codex_cli",
+      "exit_code": 0,
+      "foreign_tools": []
+    },
+    {
+      "company": "cobalt-market",
+      "phase": "composed",
+      "status": "complete",
+      "error": null,
+      "tool_calls": 9,
+      "seconds": 40.43434466602048,
+      "response_timeout_seconds": 180,
+      "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+      "wall_time_overrun_seconds": 0.0,
+      "transport": "codex_cli",
+      "exit_code": 0,
+      "foreign_tools": []
+    },
+    {
+      "company": "maple-mobility",
+      "phase": "composed",
+      "status": "complete",
+      "error": null,
+      "tool_calls": 8,
+      "seconds": 32.64149449998513,
+      "response_timeout_seconds": 180,
+      "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+      "wall_time_overrun_seconds": 0.0,
+      "transport": "codex_cli",
+      "exit_code": 0,
+      "foreign_tools": []
+    },
+    {
+      "company": "maple-mobility",
+      "phase": "baseline",
+      "status": "complete",
+      "error": null,
+      "tool_calls": 8,
+      "seconds": 23.668089082988445,
+      "response_timeout_seconds": 180,
+      "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+      "wall_time_overrun_seconds": 0.0,
+      "transport": "codex_cli",
+      "exit_code": 0,
+      "foreign_tools": []
+    },
+    {
+      "company": "quartz-care",
+      "phase": "baseline",
+      "status": "complete",
+      "error": null,
+      "tool_calls": 8,
+      "seconds": 35.73416516598081,
+      "response_timeout_seconds": 180,
+      "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+      "wall_time_overrun_seconds": 0.0,
+      "transport": "codex_cli",
+      "exit_code": 0,
+      "foreign_tools": []
+    },
+    {
+      "company": "quartz-care",
+      "phase": "composed",
+      "status": "complete",
+      "error": null,
+      "tool_calls": 8,
+      "seconds": 64.87651141703827,
+      "response_timeout_seconds": 180,
+      "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+      "wall_time_overrun_seconds": 0.0,
+      "transport": "codex_cli",
+      "exit_code": 0,
+      "foreign_tools": []
+    }
+  ],
+  "plans": {
+    "cobalt-market": {
+      "checks": [
+        {
+          "id": "freeze_approved",
+          "kind": "semantic",
+          "condition": "The source text establishes that the migration-freeze exception is approved.",
+          "field": null,
+          "op": null,
+          "threshold": null
+        },
+        {
+          "id": "total_comparable",
+          "kind": "semantic",
+          "condition": "The source text establishes that the total-order population is comparable.",
+          "field": null,
+          "op": null,
+          "threshold": null
+        },
+        {
+          "id": "regional_comparable",
+          "kind": "semantic",
+          "condition": "The source text establishes that the regional population is comparable.",
+          "field": null,
+          "op": null,
+          "threshold": null
+        },
+        {
+          "id": "freeze_unresolved",
+          "kind": "semantic",
+          "condition": "The source text leaves the migration-freeze exception missing or conflicting.",
+          "field": null,
+          "op": null,
+          "threshold": null
+        },
+        {
+          "id": "total_comp_unresolved",
+          "kind": "semantic",
+          "condition": "The source text leaves total-order comparability missing or conflicting.",
+          "field": null,
+          "op": null,
+          "threshold": null
+        },
+        {
+          "id": "regional_comp_unresolved",
+          "kind": "semantic",
+          "condition": "The source text leaves regional comparability missing or conflicting.",
+          "field": null,
+          "op": null,
+          "threshold": null
+        },
+        {
+          "id": "total_decline_ge_10",
+          "kind": "numeric",
+          "condition": "Total comparable settled orders declined by at least the policy threshold.",
+          "field": "total_decline_pct",
+          "op": "ge",
+          "threshold": 10.0
+        },
+        {
+          "id": "regional_decline_ge_15",
+          "kind": "numeric",
+          "condition": "A comparable region declined by at least the policy threshold.",
+          "field": "max_region_decline_pct",
+          "op": "ge",
+          "threshold": 15.0
+        }
+      ],
+      "rules": [
+        {
+          "when": [
+            {
+              "freeze_approved": "true"
+            }
+          ],
+          "outcome": "ignore"
+        },
+        {
+          "when": [
+            {
+              "freeze_unresolved": "true"
+            }
+          ],
+          "outcome": "investigate"
+        },
+        {
+          "when": [
+            {
+              "freeze_approved": "false",
+              "total_comp_unresolved": "true"
+            }
+          ],
+          "outcome": "investigate"
+        },
+        {
+          "when": [
+            {
+              "freeze_approved": "false",
+              "regional_comp_unresolved": "true"
+            }
+          ],
+          "outcome": "investigate"
+        },
+        {
+          "when": [
+            {
+              "freeze_approved": "false",
+              "total_comparable": "false"
+            }
+          ],
+          "outcome": "insufficient_data"
+        },
+        {
+          "when": [
+            {
+              "freeze_approved": "false",
+              "regional_comparable": "false"
+            }
+          ],
+          "outcome": "insufficient_data"
+        },
+        {
+          "when": [
+            {
+              "freeze_approved": "false",
+              "total_comparable": "true",
+              "regional_comparable": "true",
+              "total_decline_ge_10": "true"
+            },
+            {
+              "freeze_approved": "false",
+              "total_comparable": "true",
+              "regional_comparable": "true",
+              "regional_decline_ge_15": "true"
+            }
+          ],
+          "outcome": "notify"
+        },
+        {
+          "when": [
+            {
+              "freeze_approved": "false",
+              "total_comparable": "true",
+              "regional_comparable": "true",
+              "total_decline_ge_10": "unknown"
+            },
+            {
+              "freeze_approved": "false",
+              "total_comparable": "true",
+              "regional_comparable": "true",
+              "regional_decline_ge_15": "unknown"
+            }
+          ],
+          "outcome": "investigate"
+        }
+      ],
+      "default": "investigate"
+    },
+    "maple-mobility": {
+      "checks": [
+        {
+          "id": "exception_conflict",
+          "kind": "semantic",
+          "condition": "The claimed weather-closure exception has conflicting approval or scope.",
+          "field": null,
+          "op": null,
+          "threshold": null
+        },
+        {
+          "id": "exception_covers_week",
+          "kind": "semantic",
+          "condition": "A signed weather-closure exception covers the week.",
+          "field": null,
+          "op": null,
+          "threshold": null
+        },
+        {
+          "id": "on_time_below",
+          "kind": "numeric",
+          "condition": "On-time delivery is below the policy threshold.",
+          "field": "on_time_pct",
+          "op": "lt",
+          "threshold": 92.0
+        },
+        {
+          "id": "cancellation_rise",
+          "kind": "numeric",
+          "condition": "The cancellation rate rise meets the policy threshold.",
+          "field": "cancellation_delta_pp",
+          "op": "ge",
+          "threshold": 2.0
+        }
+      ],
+      "rules": [
+        {
+          "when": [
+            {
+              "exception_conflict": "true"
+            }
+          ],
+          "outcome": "investigate"
+        },
+        {
+          "when": [
+            {
+              "exception_conflict": "unknown"
+            }
+          ],
+          "outcome": "investigate"
+        },
+        {
+          "when": [
+            {
+              "exception_covers_week": "true"
+            }
+          ],
+          "outcome": "ignore"
+        },
+        {
+          "when": [
+            {
+              "exception_covers_week": "unknown"
+            }
+          ],
+          "outcome": "investigate"
+        },
+        {
+          "when": [
+            {
+              "on_time_below": "unknown"
+            }
+          ],
+          "outcome": "insufficient_data"
+        },
+        {
+          "when": [
+            {
+              "cancellation_rise": "unknown"
+            }
+          ],
+          "outcome": "insufficient_data"
+        },
+        {
+          "when": [
+            {
+              "on_time_below": "true",
+              "cancellation_rise": "true"
+            }
+          ],
+          "outcome": "notify"
+        },
+        {
+          "when": [
+            {
+              "on_time_below": "true",
+              "cancellation_rise": "false"
+            }
+          ],
+          "outcome": "ignore"
+        },
+        {
+          "when": [
+            {
+              "on_time_below": "false",
+              "cancellation_rise": "true"
+            }
+          ],
+          "outcome": "ignore"
+        },
+        {
+          "when": [
+            {
+              "on_time_below": "false",
+              "cancellation_rise": "false"
+            }
+          ],
+          "outcome": "ignore"
+        }
+      ],
+      "default": "investigate"
+    },
+    "quartz-care": {
+      "checks": [
+        {
+          "id": "priority_missing_or_conflicting",
+          "kind": "semantic",
+          "condition": "The release priority classification is missing or conflicting in the source text.",
+          "field": null,
+          "op": null,
+          "threshold": null
+        },
+        {
+          "id": "reconciliation_missing_or_conflicting",
+          "kind": "semantic",
+          "condition": "The reconciliation status is missing or conflicting in the source text.",
+          "field": null,
+          "op": null,
+          "threshold": null
+        },
+        {
+          "id": "signed_release_manager_reconciliation",
+          "kind": "semantic",
+          "condition": "The source text states that a signed reconciliation from the release manager exists.",
+          "field": null,
+          "op": null,
+          "threshold": null
+        },
+        {
+          "id": "high_priority_release",
+          "kind": "semantic",
+          "condition": "The release is classified as high priority in the source text.",
+          "field": null,
+          "op": null,
+          "threshold": null
+        },
+        {
+          "id": "missing_signed_reconciliation",
+          "kind": "semantic",
+          "condition": "The source text states that the contract release is missing signed reconciliation.",
+          "field": null,
+          "op": null,
+          "threshold": null
+        },
+        {
+          "id": "routine_release",
+          "kind": "semantic",
+          "condition": "The release is classified as routine in the source text.",
+          "field": null,
+          "op": null,
+          "threshold": null
+        }
+      ],
+      "rules": [
+        {
+          "when": [
+            {
+              "priority_missing_or_conflicting": "true"
+            },
+            {
+              "reconciliation_missing_or_conflicting": "true"
+            }
+          ],
+          "outcome": "insufficient_data"
+        },
+        {
+          "when": [
+            {
+              "priority_missing_or_conflicting": "unknown"
+            },
+            {
+              "reconciliation_missing_or_conflicting": "unknown"
+            }
+          ],
+          "outcome": "investigate"
+        },
+        {
+          "when": [
+            {
+              "priority_missing_or_conflicting": "false",
+              "reconciliation_missing_or_conflicting": "false",
+              "signed_release_manager_reconciliation": "unknown"
+            }
+          ],
+          "outcome": "investigate"
+        },
+        {
+          "when": [
+            {
+              "priority_missing_or_conflicting": "false",
+              "reconciliation_missing_or_conflicting": "false",
+              "signed_release_manager_reconciliation": "false",
+              "high_priority_release": "true",
+              "missing_signed_reconciliation": "true"
+            }
+          ],
+          "outcome": "notify"
+        },
+        {
+          "when": [
+            {
+              "priority_missing_or_conflicting": "false",
+              "reconciliation_missing_or_conflicting": "false",
+              "signed_release_manager_reconciliation": "false",
+              "high_priority_release": "false",
+              "routine_release": "true"
+            }
+          ],
+          "outcome": "ignore"
+        },
+        {
+          "when": [
+            {
+              "priority_missing_or_conflicting": "false",
+              "reconciliation_missing_or_conflicting": "false",
+              "signed_release_manager_reconciliation": "false",
+              "high_priority_release": "unknown"
+            }
+          ],
+          "outcome": "investigate"
+        },
+        {
+          "when": [
+            {
+              "priority_missing_or_conflicting": "false",
+              "reconciliation_missing_or_conflicting": "false",
+              "signed_release_manager_reconciliation": "false",
+              "high_priority_release": "true",
+              "missing_signed_reconciliation": "unknown"
+            }
+          ],
+          "outcome": "investigate"
+        },
+        {
+          "when": [
+            {
+              "priority_missing_or_conflicting": "false",
+              "reconciliation_missing_or_conflicting": "false",
+              "signed_release_manager_reconciliation": "false",
+              "high_priority_release": "false",
+              "routine_release": "unknown"
+            }
+          ],
+          "outcome": "investigate"
+        }
+      ],
+      "default": "notify"
+    }
+  },
+  "jev_attempts": 12,
+  "luna_episodes": 9,
+  "review_status": "pending_internal_review",
+  "usage": [
+    {
+      "episode": "cobalt-market:author",
+      "kind": "api.response",
+      "provider": "openai",
+      "request_id": -1,
+      "seconds": 28.132853749964852,
+      "transport": "codex_cli",
+      "usage": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 22784,
+        "input_tokens": 27184,
+        "input_tokens_details": {
+          "cached_tokens": 22784
+        },
+        "output_tokens": 1189,
+        "reasoning_output_tokens": 473
+      }
+    },
+    {
+      "episode": "maple-mobility:author",
+      "kind": "api.response",
+      "provider": "openai",
+      "request_id": -2,
+      "seconds": 29.29278025001986,
+      "transport": "codex_cli",
+      "usage": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 20736,
+        "input_tokens": 24434,
+        "input_tokens_details": {
+          "cached_tokens": 20736
+        },
+        "output_tokens": 1305,
+        "reasoning_output_tokens": 807
+      }
+    },
+    {
+      "episode": "quartz-care:author",
+      "kind": "api.response",
+      "provider": "openai",
+      "request_id": -3,
+      "seconds": 39.67260441696271,
+      "transport": "codex_cli",
+      "usage": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 23552,
+        "input_tokens": 34023,
+        "input_tokens_details": {
+          "cached_tokens": 23552
+        },
+        "output_tokens": 1792,
+        "reasoning_output_tokens": 457
+      }
+    },
+    {
+      "episode": "cobalt-market:baseline",
+      "kind": "api.response",
+      "provider": "openai",
+      "request_id": -4,
+      "seconds": 65.06843899999512,
+      "transport": "codex_cli",
+      "usage": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 83200,
+        "input_tokens": 102052,
+        "input_tokens_details": {
+          "cached_tokens": 83200
+        },
+        "output_tokens": 1147,
+        "reasoning_output_tokens": 190
+      }
+    },
+    {
+      "episode": "cobalt-market:composed",
+      "kind": "api.response",
+      "provider": "jev",
+      "request_id": 1,
+      "response": {
+        "answers": {
+          "freeze_approved": {
+            "choice": "false",
+            "confidence": 0.99,
+            "probabilities": {
+              "false": 0.99,
+              "true": 0.0,
+              "unknown": 0.01
+            },
+            "type": "choice"
+          },
+          "freeze_unresolved": {
+            "choice": "false",
+            "confidence": 0.93,
+            "probabilities": {
+              "false": 0.95,
+              "true": 0.03,
+              "unknown": 0.02
+            },
+            "type": "choice"
+          },
+          "overall_outcome": {
+            "choice": "notify",
+            "confidence": 0.97,
+            "probabilities": {
+              "ignore": 0.0,
+              "insufficient_data": 0.01,
+              "investigate": 0.01,
+              "notify": 0.98
+            },
+            "type": "choice"
+          },
+          "regional_comp_unresolved": {
+            "choice": "false",
+            "confidence": 0.86,
+            "probabilities": {
+              "false": 0.91,
+              "true": 0.07,
+              "unknown": 0.02
+            },
+            "type": "choice"
+          },
+          "regional_comparable": {
+            "choice": "true",
+            "confidence": 0.81,
+            "probabilities": {
+              "false": 0.01,
+              "true": 0.87,
+              "unknown": 0.12
+            },
+            "type": "choice"
+          },
+          "total_comp_unresolved": {
+            "choice": "false",
+            "confidence": 0.96,
+            "probabilities": {
+              "false": 0.98,
+              "true": 0.01,
+              "unknown": 0.01
+            },
+            "type": "choice"
+          },
+          "total_comparable": {
+            "choice": "true",
+            "confidence": 0.9,
+            "probabilities": {
+              "false": 0.0,
+              "true": 0.9400000000000001,
+              "unknown": 0.06
+            },
+            "type": "choice"
+          }
+        },
+        "model": "jev-1.13.0",
+        "usage": {
+          "input_tokens": 2566,
+          "output_tokens": 289
+        }
+      },
+      "seconds": 0.26963395898928866,
+      "usage": {
+        "input_tokens": 2566,
+        "output_tokens": 289
+      }
+    },
+    {
+      "episode": "cobalt-market:composed",
+      "kind": "api.response",
+      "provider": "jev",
+      "request_id": 2,
+      "response": {
+        "answers": {
+          "freeze_approved": {
+            "choice": "false",
+            "confidence": 0.99,
+            "probabilities": {
+              "false": 0.99,
+              "true": 0.0,
+              "unknown": 0.01
+            },
+            "type": "choice"
+          },
+          "freeze_unresolved": {
+            "choice": "false",
+            "confidence": 0.93,
+            "probabilities": {
+              "false": 0.96,
+              "true": 0.02,
+              "unknown": 0.02
+            },
+            "type": "choice"
+          },
+          "overall_outcome": {
+            "choice": "ignore",
+            "confidence": 0.29,
+            "probabilities": {
+              "ignore": 0.45999999999999996,
+              "insufficient_data": 0.06,
+              "investigate": 0.45,
+              "notify": 0.03
+            },
+            "type": "choice"
+          },
+          "regional_comp_unresolved": {
+            "choice": "false",
+            "confidence": 0.88,
+            "probabilities": {
+              "false": 0.92,
+              "true": 0.06,
+              "unknown": 0.02
+            },
+            "type": "choice"
+          },
+          "regional_comparable": {
+            "choice": "true",
+            "confidence": 0.86,
+            "probabilities": {
+              "false": 0.01,
+              "true": 0.9,
+              "unknown": 0.09
+            },
+            "type": "choice"
+          },
+          "total_comp_unresolved": {
+            "choice": "false",
+            "confidence": 0.96,
+            "probabilities": {
+              "false": 0.98,
+              "true": 0.01,
+              "unknown": 0.01
+            },
+            "type": "choice"
+          },
+          "total_comparable": {
+            "choice": "true",
+            "confidence": 0.89,
+            "probabilities": {
+              "false": 0.0,
+              "true": 0.93,
+              "unknown": 0.07
+            },
+            "type": "choice"
+          }
+        },
+        "model": "jev-1.13.0",
+        "usage": {
+          "input_tokens": 2564,
+          "output_tokens": 289
+        }
+      },
+      "seconds": 0.20358404202852398,
+      "usage": {
+        "input_tokens": 2564,
+        "output_tokens": 289
+      }
+    },
+    {
+      "episode": "cobalt-market:composed",
+      "kind": "api.response",
+      "provider": "jev",
+      "request_id": 3,
+      "response": {
+        "answers": {
+          "freeze_approved": {
+            "choice": "true",
+            "confidence": 0.99,
+            "probabilities": {
+              "false": 0.0,
+              "true": 1.0,
+              "unknown": 0.0
+            },
+            "type": "choice"
+          },
+          "freeze_unresolved": {
+            "choice": "false",
+            "confidence": 0.99,
+            "probabilities": {
+              "false": 0.99,
+              "true": 0.0,
+              "unknown": 0.01
+            },
+            "type": "choice"
+          },
+          "overall_outcome": {
+            "choice": "ignore",
+            "confidence": 1.0,
+            "probabilities": {
+              "ignore": 1.0,
+              "insufficient_data": 0.0,
+              "investigate": 0.0,
+              "notify": 0.0
+            },
+            "type": "choice"
+          },
+          "regional_comp_unresolved": {
+            "choice": "false",
+            "confidence": 0.99,
+            "probabilities": {
+              "false": 1.0,
+              "true": 0.0,
+              "unknown": 0.0
+            },
+            "type": "choice"
+          },
+          "regional_comparable": {
+            "choice": "true",
+            "confidence": 0.99,
+            "probabilities": {
+              "false": 0.0,
+              "true": 1.0,
+              "unknown": 0.0
+            },
+            "type": "choice"
+          },
+          "total_comp_unresolved": {
+            "choice": "false",
+            "confidence": 0.99,
+            "probabilities": {
+              "false": 1.0,
+              "true": 0.0,
+              "unknown": 0.0
+            },
+            "type": "choice"
+          },
+          "total_comparable": {
+            "choice": "true",
+            "confidence": 0.99,
+            "probabilities": {
+              "false": 0.0,
+              "true": 0.99,
+              "unknown": 0.01
+            },
+            "type": "choice"
+          }
+        },
+        "model": "jev-1.13.0",
+        "usage": {
+          "input_tokens": 2522,
+          "output_tokens": 289
+        }
+      },
+      "seconds": 0.1877075420343317,
+      "usage": {
+        "input_tokens": 2522,
+        "output_tokens": 289
+      }
+    },
+    {
+      "episode": "cobalt-market:composed",
+      "kind": "api.response",
+      "provider": "jev",
+      "request_id": 4,
+      "response": {
+        "answers": {
+          "freeze_approved": {
+            "choice": "false",
+            "confidence": 0.98,
+            "probabilities": {
+              "false": 0.99,
+              "true": 0.0,
+              "unknown": 0.01
+            },
+            "type": "choice"
+          },
+          "freeze_unresolved": {
+            "choice": "false",
+            "confidence": 0.72,
+            "probabilities": {
+              "false": 0.81,
+              "true": 0.14,
+              "unknown": 0.04
+            },
+            "type": "choice"
+          },
+          "overall_outcome": {
+            "choice": "insufficient_data",
+            "confidence": 0.89,
+            "probabilities": {
+              "ignore": 0.0,
+              "insufficient_data": 0.92,
+              "investigate": 0.08,
+              "notify": 0.0
+            },
+            "type": "choice"
+          },
+          "regional_comp_unresolved": {
+            "choice": "true",
+            "confidence": 0.99,
+            "probabilities": {
+              "false": 0.0,
+              "true": 0.99,
+              "unknown": 0.01
+            },
+            "type": "choice"
+          },
+          "regional_comparable": {
+            "choice": "false",
+            "confidence": 0.55,
+            "probabilities": {
+              "false": 0.7,
+              "true": 0.0,
+              "unknown": 0.3
+            },
+            "type": "choice"
+          },
+          "total_comp_unresolved": {
+            "choice": "true",
+            "confidence": 0.9,
+            "probabilities": {
+              "false": 0.01,
+              "true": 0.93,
+              "unknown": 0.05
+            },
+            "type": "choice"
+          },
+          "total_comparable": {
+            "choice": "unknown",
+            "confidence": 0.55,
+            "probabilities": {
+              "false": 0.3,
+              "true": 0.0,
+              "unknown": 0.7
+            },
+            "type": "choice"
+          }
+        },
+        "model": "jev-1.13.0",
+        "usage": {
+          "input_tokens": 2514,
+          "output_tokens": 293
+        }
+      },
+      "seconds": 0.18551054201088846,
+      "usage": {
+        "input_tokens": 2514,
+        "output_tokens": 293
+      }
+    },
+    {
+      "episode": "cobalt-market:composed",
+      "kind": "api.response",
+      "provider": "openai",
+      "request_id": -5,
+      "seconds": 40.43395562499063,
+      "transport": "codex_cli",
+      "usage": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 62976,
+        "input_tokens": 103914,
+        "input_tokens_details": {
+          "cached_tokens": 62976
+        },
+        "output_tokens": 1073,
+        "reasoning_output_tokens": 168
+      }
+    },
+    {
+      "episode": "maple-mobility:composed",
+      "kind": "api.response",
+      "provider": "jev",
+      "request_id": 5,
+      "response": {
+        "answers": {
+          "exception_conflict": {
+            "choice": "false",
+            "confidence": 0.68,
+            "probabilities": {
+              "false": 0.79,
+              "true": 0.0,
+              "unknown": 0.21
+            },
+            "type": "choice"
+          },
+          "exception_covers_week": {
+            "choice": "false",
+            "confidence": 1.0,
+            "probabilities": {
+              "false": 1.0,
+              "true": 0.0,
+              "unknown": 0.0
+            },
+            "type": "choice"
+          },
+          "overall_outcome": {
+            "choice": "notify",
+            "confidence": 0.98,
+            "probabilities": {
+              "ignore": 0.0,
+              "insufficient_data": 0.0,
+              "investigate": 0.01,
+              "notify": 0.99
+            },
+            "type": "choice"
+          }
+        },
+        "model": "jev-1.13.0",
+        "usage": {
+          "input_tokens": 1647,
+          "output_tokens": 130
+        }
+      },
+      "seconds": 0.2950565419741906,
+      "usage": {
+        "input_tokens": 1647,
+        "output_tokens": 130
+      }
+    },
+    {
+      "episode": "maple-mobility:composed",
+      "kind": "api.response",
+      "provider": "jev",
+      "request_id": 6,
+      "response": {
+        "answers": {
+          "exception_conflict": {
+            "choice": "false",
+            "confidence": 0.67,
+            "probabilities": {
+              "false": 0.78,
+              "true": 0.0,
+              "unknown": 0.22
+            },
+            "type": "choice"
+          },
+          "exception_covers_week": {
+            "choice": "false",
+            "confidence": 1.0,
+            "probabilities": {
+              "false": 1.0,
+              "true": 0.0,
+              "unknown": 0.0
+            },
+            "type": "choice"
+          },
+          "overall_outcome": {
+            "choice": "ignore",
+            "confidence": 0.99,
+            "probabilities": {
+              "ignore": 1.0,
+              "insufficient_data": 0.0,
+              "investigate": 0.0,
+              "notify": 0.0
+            },
+            "type": "choice"
+          }
+        },
+        "model": "jev-1.13.0",
+        "usage": {
+          "input_tokens": 1647,
+          "output_tokens": 130
+        }
+      },
+      "seconds": 0.2118468330008909,
+      "usage": {
+        "input_tokens": 1647,
+        "output_tokens": 130
+      }
+    },
+    {
+      "episode": "maple-mobility:composed",
+      "kind": "api.response",
+      "provider": "jev",
+      "request_id": 7,
+      "response": {
+        "answers": {
+          "exception_conflict": {
+            "choice": "true",
+            "confidence": 0.58,
+            "probabilities": {
+              "false": 0.0,
+              "true": 0.72,
+              "unknown": 0.28
+            },
+            "type": "choice"
+          },
+          "exception_covers_week": {
+            "choice": "unknown",
+            "confidence": 0.99,
+            "probabilities": {
+              "false": 0.01,
+              "true": 0.0,
+              "unknown": 0.99
+            },
+            "type": "choice"
+          },
+          "overall_outcome": {
+            "choice": "investigate",
+            "confidence": 0.99,
+            "probabilities": {
+              "ignore": 0.0,
+              "insufficient_data": 0.0,
+              "investigate": 1.0,
+              "notify": 0.0
+            },
+            "type": "choice"
+          }
+        },
+        "model": "jev-1.13.0",
+        "usage": {
+          "input_tokens": 1682,
+          "output_tokens": 133
+        }
+      },
+      "seconds": 0.1939698330243118,
+      "usage": {
+        "input_tokens": 1682,
+        "output_tokens": 133
+      }
+    },
+    {
+      "episode": "maple-mobility:composed",
+      "kind": "api.response",
+      "provider": "jev",
+      "request_id": 8,
+      "response": {
+        "answers": {
+          "exception_conflict": {
+            "choice": "false",
+            "confidence": 0.59,
+            "probabilities": {
+              "false": 0.73,
+              "true": 0.0,
+              "unknown": 0.27
+            },
+            "type": "choice"
+          },
+          "exception_covers_week": {
+            "choice": "false",
+            "confidence": 1.0,
+            "probabilities": {
+              "false": 1.0,
+              "true": 0.0,
+              "unknown": 0.0
+            },
+            "type": "choice"
+          },
+          "overall_outcome": {
+            "choice": "insufficient_data",
+            "confidence": 1.0,
+            "probabilities": {
+              "ignore": 0.0,
+              "insufficient_data": 1.0,
+              "investigate": 0.0,
+              "notify": 0.0
+            },
+            "type": "choice"
+          }
+        },
+        "model": "jev-1.13.0",
+        "usage": {
+          "input_tokens": 1639,
+          "output_tokens": 134
+        }
+      },
+      "seconds": 0.19678729196311906,
+      "usage": {
+        "input_tokens": 1639,
+        "output_tokens": 134
+      }
+    },
+    {
+      "episode": "maple-mobility:composed",
+      "kind": "api.response",
+      "provider": "openai",
+      "request_id": -6,
+      "seconds": 32.64131749997614,
+      "transport": "codex_cli",
+      "usage": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 71168,
+        "input_tokens": 89565,
+        "input_tokens_details": {
+          "cached_tokens": 71168
+        },
+        "output_tokens": 855,
+        "reasoning_output_tokens": 72
+      }
+    },
+    {
+      "episode": "maple-mobility:baseline",
+      "kind": "api.response",
+      "provider": "openai",
+      "request_id": -7,
+      "seconds": 23.666897999995854,
+      "transport": "codex_cli",
+      "usage": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 68096,
+        "input_tokens": 88513,
+        "input_tokens_details": {
+          "cached_tokens": 68096
+        },
+        "output_tokens": 863,
+        "reasoning_output_tokens": 145
+      }
+    },
+    {
+      "episode": "quartz-care:baseline",
+      "kind": "api.response",
+      "provider": "openai",
+      "request_id": -8,
+      "seconds": 35.73370620800415,
+      "transport": "codex_cli",
+      "usage": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 74240,
+        "input_tokens": 89776,
+        "input_tokens_details": {
+          "cached_tokens": 74240
+        },
+        "output_tokens": 1212,
+        "reasoning_output_tokens": 235
+      }
+    },
+    {
+      "episode": "quartz-care:composed",
+      "kind": "api.response",
+      "provider": "jev",
+      "request_id": 9,
+      "response": {
+        "answers": {
+          "high_priority_release": {
+            "choice": "true",
+            "confidence": 1.0,
+            "probabilities": {
+              "false": 0.0,
+              "true": 1.0,
+              "unknown": 0.0
+            },
+            "type": "choice"
+          },
+          "missing_signed_reconciliation": {
+            "choice": "true",
+            "confidence": 0.99,
+            "probabilities": {
+              "false": 0.0,
+              "true": 0.99,
+              "unknown": 0.01
+            },
+            "type": "choice"
+          },
+          "overall_outcome": {
+            "choice": "notify",
+            "confidence": 0.94,
+            "probabilities": {
+              "ignore": 0.0,
+              "insufficient_data": 0.03,
+              "investigate": 0.01,
+              "notify": 0.96
+            },
+            "type": "choice"
+          },
+          "priority_missing_or_conflicting": {
+            "choice": "false",
+            "confidence": 1.0,
+            "probabilities": {
+              "false": 1.0,
+              "true": 0.0,
+              "unknown": 0.0
+            },
+            "type": "choice"
+          },
+          "reconciliation_missing_or_conflicting": {
+            "choice": "false",
+            "confidence": 0.86,
+            "probabilities": {
+              "false": 0.9,
+              "true": 0.06,
+              "unknown": 0.04
+            },
+            "type": "choice"
+          },
+          "routine_release": {
+            "choice": "false",
+            "confidence": 0.98,
+            "probabilities": {
+              "false": 0.98,
+              "true": 0.0,
+              "unknown": 0.02
+            },
+            "type": "choice"
+          },
+          "signed_release_manager_reconciliation": {
+            "choice": "false",
+            "confidence": 0.99,
+            "probabilities": {
+              "false": 1.0,
+              "true": 0.0,
+              "unknown": 0.0
+            },
+            "type": "choice"
+          }
+        },
+        "model": "jev-1.13.0",
+        "usage": {
+          "input_tokens": 2374,
+          "output_tokens": 292
+        }
+      },
+      "seconds": 0.22760829201433808,
+      "usage": {
+        "input_tokens": 2374,
+        "output_tokens": 292
+      }
+    },
+    {
+      "episode": "quartz-care:composed",
+      "kind": "api.response",
+      "provider": "jev",
+      "request_id": 10,
+      "response": {
+        "answers": {
+          "high_priority_release": {
+            "choice": "false",
+            "confidence": 1.0,
+            "probabilities": {
+              "false": 1.0,
+              "true": 0.0,
+              "unknown": 0.0
+            },
+            "type": "choice"
+          },
+          "missing_signed_reconciliation": {
+            "choice": "true",
+            "confidence": 0.98,
+            "probabilities": {
+              "false": 0.0,
+              "true": 0.99,
+              "unknown": 0.01
+            },
+            "type": "choice"
+          },
+          "overall_outcome": {
+            "choice": "ignore",
+            "confidence": 0.96,
+            "probabilities": {
+              "ignore": 0.97,
+              "insufficient_data": 0.02,
+              "investigate": 0.01,
+              "notify": 0.0
+            },
+            "type": "choice"
+          },
+          "priority_missing_or_conflicting": {
+            "choice": "false",
+            "confidence": 0.99,
+            "probabilities": {
+              "false": 1.0,
+              "true": 0.0,
+              "unknown": 0.0
+            },
+            "type": "choice"
+          },
+          "reconciliation_missing_or_conflicting": {
+            "choice": "false",
+            "confidence": 0.81,
+            "probabilities": {
+              "false": 0.88,
+              "true": 0.08,
+              "unknown": 0.04
+            },
+            "type": "choice"
+          },
+          "routine_release": {
+            "choice": "true",
+            "confidence": 1.0,
+            "probabilities": {
+              "false": 0.0,
+              "true": 1.0,
+              "unknown": 0.0
+            },
+            "type": "choice"
+          },
+          "signed_release_manager_reconciliation": {
+            "choice": "false",
+            "confidence": 0.99,
+            "probabilities": {
+              "false": 1.0,
+              "true": 0.0,
+              "unknown": 0.0
+            },
+            "type": "choice"
+          }
+        },
+        "model": "jev-1.13.0",
+        "usage": {
+          "input_tokens": 2374,
+          "output_tokens": 292
+        }
+      },
+      "seconds": 0.20521229197038338,
+      "usage": {
+        "input_tokens": 2374,
+        "output_tokens": 292
+      }
+    },
+    {
+      "episode": "quartz-care:composed",
+      "kind": "api.response",
+      "provider": "jev",
+      "request_id": 11,
+      "response": {
+        "answers": {
+          "high_priority_release": {
+            "choice": "unknown",
+            "confidence": 0.46,
+            "probabilities": {
+              "false": 0.36,
+              "true": 0.0,
+              "unknown": 0.64
+            },
+            "type": "choice"
+          },
+          "missing_signed_reconciliation": {
+            "choice": "true",
+            "confidence": 0.93,
+            "probabilities": {
+              "false": 0.0,
+              "true": 0.96,
+              "unknown": 0.04
+            },
+            "type": "choice"
+          },
+          "overall_outcome": {
+            "choice": "insufficient_data",
+            "confidence": 1.0,
+            "probabilities": {
+              "ignore": 0.0,
+              "insufficient_data": 1.0,
+              "investigate": 0.0,
+              "notify": 0.0
+            },
+            "type": "choice"
+          },
+          "priority_missing_or_conflicting": {
+            "choice": "true",
+            "confidence": 0.99,
+            "probabilities": {
+              "false": 0.0,
+              "true": 0.99,
+              "unknown": 0.01
+            },
+            "type": "choice"
+          },
+          "reconciliation_missing_or_conflicting": {
+            "choice": "false",
+            "confidence": 0.26,
+            "probabilities": {
+              "false": 0.5,
+              "true": 0.4,
+              "unknown": 0.1
+            },
+            "type": "choice"
+          },
+          "routine_release": {
+            "choice": "unknown",
+            "confidence": 0.83,
+            "probabilities": {
+              "false": 0.11,
+              "true": 0.0,
+              "unknown": 0.89
+            },
+            "type": "choice"
+          },
+          "signed_release_manager_reconciliation": {
+            "choice": "false",
+            "confidence": 0.98,
+            "probabilities": {
+              "false": 0.99,
+              "true": 0.0,
+              "unknown": 0.01
+            },
+            "type": "choice"
+          }
+        },
+        "model": "jev-1.13.0",
+        "usage": {
+          "input_tokens": 2370,
+          "output_tokens": 296
+        }
+      },
+      "seconds": 0.21081041696015745,
+      "usage": {
+        "input_tokens": 2370,
+        "output_tokens": 296
+      }
+    },
+    {
+      "episode": "quartz-care:composed",
+      "kind": "api.response",
+      "provider": "jev",
+      "request_id": 12,
+      "response": {
+        "answers": {
+          "high_priority_release": {
+            "choice": "unknown",
+            "confidence": 0.86,
+            "probabilities": {
+              "false": 0.0,
+              "true": 0.09,
+              "unknown": 0.91
+            },
+            "type": "choice"
+          },
+          "missing_signed_reconciliation": {
+            "choice": "true",
+            "confidence": 0.83,
+            "probabilities": {
+              "false": 0.0,
+              "true": 0.89,
+              "unknown": 0.11
+            },
+            "type": "choice"
+          },
+          "overall_outcome": {
+            "choice": "insufficient_data",
+            "confidence": 0.99,
+            "probabilities": {
+              "ignore": 0.0,
+              "insufficient_data": 0.99,
+              "investigate": 0.01,
+              "notify": 0.0
+            },
+            "type": "choice"
+          },
+          "priority_missing_or_conflicting": {
+            "choice": "unknown",
+            "confidence": 0.36,
+            "probabilities": {
+              "false": 0.0,
+              "true": 0.43,
+              "unknown": 0.57
+            },
+            "type": "choice"
+          },
+          "reconciliation_missing_or_conflicting": {
+            "choice": "false",
+            "confidence": 0.41,
+            "probabilities": {
+              "false": 0.61,
+              "true": 0.18,
+              "unknown": 0.21
+            },
+            "type": "choice"
+          },
+          "routine_release": {
+            "choice": "unknown",
+            "confidence": 0.68,
+            "probabilities": {
+              "false": 0.01,
+              "true": 0.21,
+              "unknown": 0.78
+            },
+            "type": "choice"
+          },
+          "signed_release_manager_reconciliation": {
+            "choice": "false",
+            "confidence": 0.97,
+            "probabilities": {
+              "false": 0.98,
+              "true": 0.0,
+              "unknown": 0.02
+            },
+            "type": "choice"
+          }
+        },
+        "model": "jev-1.13.0",
+        "usage": {
+          "input_tokens": 2404,
+          "output_tokens": 296
+        }
+      },
+      "seconds": 0.22380229097325355,
+      "usage": {
+        "input_tokens": 2404,
+        "output_tokens": 296
+      }
+    },
+    {
+      "episode": "quartz-care:composed",
+      "kind": "api.response",
+      "provider": "openai",
+      "request_id": -9,
+      "seconds": 64.87634616700234,
+      "transport": "codex_cli",
+      "usage": {
+        "cache_write_input_tokens": 0,
+        "cached_input_tokens": 72192,
+        "input_tokens": 90467,
+        "input_tokens_details": {
+          "cached_tokens": 72192
+        },
+        "output_tokens": 1020,
+        "reasoning_output_tokens": 112
+      }
+    }
+  ],
+  "production_changed": false
+}
