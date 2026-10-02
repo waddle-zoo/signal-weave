@@ -96,4 +96,11 @@ async def run_card(
         _write_once(folder / "brief.md", evidence_brief(result))
         payload["artifacts"] = {"result": str((folder / "result.json").resolve()),
                                 "brief": str((folder / "brief.md").resolve())}
+        if "report" in payload:
+            _write_once(folder / "report.json", json.dumps(payload["report"], indent=2) + "\n")
+            _write_once(folder / "report.md", payload["report_markdown"])
+            payload["artifacts"].update({
+                "report": str((folder / "report.json").resolve()),
+                "report_markdown": str((folder / "report.md").resolve()),
+            })
     return payload

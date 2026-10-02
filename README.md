@@ -187,6 +187,7 @@ discover_insight_sources(goal, adapter?, limit?)
 propose_insight_card(what_to_watch, why_watch, watch_for?, questions?, ...)
 resolve_insight_sources(card_id)
 simulate_insight_card(card_id)
+preview_investigation_report(card_id)
 evaluate_card_workflow(card_id, cases=owner_labeled_cases, acceptance_outcomes=owner_outcomes)
 approve_insight_card(card_id, workflow_report_id=certification_report_id)
 evaluate_insight_card(card_id)
@@ -208,6 +209,10 @@ draft_insight_card(title, what_to_watch, why_watch, sources, ...)
 
 The proposal path uses Jev to rank a bounded source catalog, stores a draft, and
 returns setup questions. Preview is delivery-disabled. Approval is explicit.
+For recurring analytical reviews, use `preview_investigation_report` to show the
+first report: validated calculations, provenance, coverage and unresolved work.
+Approved runs return and retain that same report format. See the
+[first-report flow](docs/local-investigations.md#start-with-the-first-report).
 Before calling a workflow tested, replay owner-labeled actionable, quiet and
 missing-evidence examples. The acceptance report checks actual outcomes and
 destinations, and exposes unresolved evidence for correction. Pass its report ID

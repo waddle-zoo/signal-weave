@@ -40,6 +40,44 @@ holds the cards and receipts across agent/process restarts. `result.json` is the
 machine-readable record; `brief.md` is a readable, numerical evidence brief, not
 an LLM-authored causal explanation. An existing agent or scheduler provides wakeups.
 
+## Start with the first report
+
+An agent should inspect existing definitions and source comparisons, draft the
+investigation, then call `preview_investigation_report(card_id)`. This invokes
+the same real adapters and Jev as `simulate_insight_card`; it does not approve
+the card or send a notification. Both tools now return `report` and
+`report_markdown` alongside the underlying evidence.
+
+The report includes reproducible numeric claims, source/query/period provenance,
+coverage, unresolved questions and intended routes. `complete` means the bounded
+analytical checks passed, not that the business policy is independently proven.
+`partial` and `blocked` are not synonyms for "nothing changed." Contributions
+account for a measured difference; they do not establish its causal mechanism.
+
+Show this first report to the owner. Ask only about unresolved definitions,
+materiality or delivery policy. Repair missing context and test other periods
+with independent expected results before requesting `approve_insight_card`.
+One successful preview is not workflow certification. The existing
+`evaluate_card_workflow` acceptance path remains available for policy replay.
+
+An approved `evaluate_insight_card` run returns the same report format and saves
+the generated report in its receipt. Reusing an idempotency key replays it without
+new source or Jev calls. `signalweave run ... --output ...` also writes
+`report.json` and `report.md`. An external agent may use this evidence to write
+a richer narrative, investigate gaps, or send a digest. SignalWeave does not
+verify that additional prose or deliver it automatically.
+
+The opt-in feasibility experiment is `python -m evaluations.first_report_trial`.
+Without `--live` it creates only a frozen manifest. Live mode uses four small
+synthetic companies, a maximum of 48 Jev attempts without retries, at most two
+author drafts per company, and saved-login Luna for authorship and comparison.
+Both recurring arms receive the same authored context and deterministic analysis
+tool. This tests runtime after shared onboarding, not independent onboarding
+superiority. Initial setup periods are development examples; later periods are
+unseen by the author. Narrative usefulness still requires separate review. No
+real source connections, human usability study, or enterprise-readiness claim
+follows from this fixture trial.
+
 ## Quantitative methods available now
 
 | Method | What it answers | What it does not establish |

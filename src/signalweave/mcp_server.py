@@ -36,6 +36,7 @@ from .models import (
     DeliveryMethod,
     InsightCard,
     InsightCardStatus,
+    InsightResult,
     InvestigationMode,
     InvestigationQuestions,
     MetricQueryCard,
@@ -52,6 +53,7 @@ from .models import (
 )
 from .onboarding import InsightAuthoringService, proposal_summary, resolve_comparison_windows
 from .query_planner import QueryWindow, compile_query, plan_query
+from .reporting import build_investigation_report, render_investigation_report
 from .retrieval_quality import (
     RetrievalQualityCase,
     RetrievalQualityEvaluator,
@@ -119,7 +121,20 @@ CARD_AUTHORING_GUIDANCE = (
     "free-form. Map every owner-requested delivery rule to its outcome and exact destination, "
     "not only the setup examples; outcomes meant to stay silent need no delivery entry. "
     "Never invent a recipient; ask for missing expected cases when an intended route is not covered. "
-    "Passing partial examples is not proof of the whole policy."
+    "Passing partial examples is not proof of the whole policy. "
+    "For recurring analytical reports, inspect existing source definitions and comparisons first; "
+    "draft the smallest investigation preserving the business intent, then use "
+    "preview_investigation_report to show the first actual report. Resolve missing definitions, "
+    "unsupported questions, partial populations and conflicting measurements before proposing "
+    "unattended reporting. Reuse existing trusted SQL and metric definitions, but verify them "
+    "against source results. Ask only material unresolved business questions. Do not equate "
+    "differently defined nearby metrics with a conflict in the selected metric. "
+    "Compare definitions within the same intended population and metric; clarify ambiguous owner "
+    "wording before making it a recurring condition. A complete report "
+    "means its bounded evidence checks passed, not that the full business policy is certified. "
+    "Test other periods and negative cases with independent expectations before requesting "
+    "owner approval. Never infer causation from a contribution breakdown. Scheduling, final "
+    "narrative generation and delivery remain with the caller-owned agent."
 )
 
 
@@ -433,6 +448,9 @@ def create_mcp(
             )
             evaluated_result = run.result.model_copy(update={"retrieval": bundle})
             result = evaluated_result.model_dump(mode="json")
+            report = build_investigation_report(run.card, evaluated_result, run.resources)
+            result["report"] = report.model_dump(mode="json")
+            result["report_markdown"] = render_investigation_report(report)
         except Exception as error:  # noqa: BLE001 - persist failed claims for replay safety
             failure: dict[str, Any] = {"error": f"{type(error).__name__}: {error}"}
             if isinstance(error, (EvaluationPayloadError, JevPayloadError)):
@@ -488,7 +506,7 @@ def create_mcp(
             raise ValueError("idempotency_key must not be empty")
         lock = idempotency_locks.setdefault(key, asyncio.Lock())
         async with lock:
-            return await evaluate_approved_card_once(
+            response = await evaluate_approved_card_once(
                 card_id,
                 idempotency_key=key,
                 actor=actor,
@@ -497,6 +515,20 @@ def create_mcp(
                 parent_receipt_id=parent_receipt_id,
                 workflow_step_key=workflow_step_key,
             )
+            if "error" not in response["result"]:
+                if "report" in response["result"]:
+                    response["report"] = response["result"]["report"]
+                    response["report_markdown"] = response["result"]["report_markdown"]
+                else:
+                    # Older receipts remain readable; their source health cannot
+                    # be reassessed without making a new run with a new key.
+                    report = build_investigation_report(
+                        get_scoped_card(card_id, principal),
+                        InsightResult.model_validate(response["result"]),
+                    )
+                    response["report"] = report.model_dump(mode="json")
+                    response["report_markdown"] = render_investigation_report(report)
+            return response
 
     async def selected_query_sources(
         selected_sources: list[dict[str, Any]],
@@ -1465,6 +1497,7 @@ def create_mcp(
             principal=principal,
         )
         result = run.result.model_copy(update={"retrieval": bundle})
+        report = build_investigation_report(run.card, result, run.resources)
         return {
             "status": "preview",
             "delivery_enabled": False,
@@ -1473,7 +1506,25 @@ def create_mcp(
             "plan": run.plan.model_dump(mode="json"),
             "retrieval": bundle.model_dump(mode="json"),
             "result": result.model_dump(mode="json"),
+            "report": report.model_dump(mode="json"),
+            "report_markdown": render_investigation_report(report),
         }
+
+    @mcp.tool()
+    async def preview_investigation_report(
+        card_id: str,
+        context: ContextSnapshot | None = None,
+        ctx: Context | None = None,
+    ) -> dict[str, Any]:
+        """Run a first analytical report before approving a recurring investigation.
+
+        Uses the normal delivery-disabled simulation, real source adapters and Jev.
+        The report exposes validated calculations, coverage, provenance and unresolved
+        work. It never approves a card or certifies policy from one example. A caller
+        should review this report, repair missing context, test other periods, and
+        obtain owner authorization before scheduling evaluate_insight_card.
+        """
+        return await simulate_insight_card(card_id=card_id, context=context, ctx=ctx)
 
     @mcp.tool()
     def record_insight_card_correction(
