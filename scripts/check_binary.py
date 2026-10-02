@@ -63,6 +63,10 @@ async def check(binary: Path, key_file: Path | None, live: bool):
         import tomllib
 
         settings = tomllib.loads((home / "config.toml").read_text())["environment"]
+        expected_version = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]["version"]
+        binary_version = command("--version").strip()
+        if binary_version != f"SignalWeave {expected_version}":
+            raise RuntimeError("Binary version does not match the source release candidate")
         assert settings["SIGNALWEAVE_TENANT_ID"] == settings["SUPERSET_TENANT_ID"] == "local"
         assert settings["SIGNALWEAVE_PRINCIPAL_ID"] == "packaging-agent"
         assert settings["SUPERSET_URL"] == "http://127.0.0.1:8080"
@@ -93,7 +97,8 @@ async def check(binary: Path, key_file: Path | None, live: bool):
                 _check_stderr(line)
         result = {"standalone_startup": True, "private_setup": True, "persisted_source_config": True,
                   "offline_doctor": True, "agent_config": True,
-                  "stdio_tools": len(names), "different_cwd": True, "live": live}
+                  "stdio_tools": len(names), "different_cwd": True, "live": live,
+                  "version": binary_version}
         if live:
             # Test-only imports; neither trial fixtures nor this checker are bundled.
             sys.path.insert(0, str(ROOT))

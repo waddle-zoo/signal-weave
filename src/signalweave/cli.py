@@ -10,6 +10,7 @@ import sys
 from contextlib import ExitStack, nullcontext
 from pathlib import Path
 
+from . import __version__
 from .local_setup import (
     SetupError,
     agent_config,
@@ -41,6 +42,7 @@ def _http_api_token() -> str | None:
 def main() -> None:
     distribution = "standalone executable" if getattr(sys, "frozen", False) else "Python CLI"
     parser = argparse.ArgumentParser(description=f"SignalWeave local setup and MCP server ({distribution})")
+    parser.add_argument("--version", action="version", version=f"SignalWeave {__version__}")
     commands = parser.add_subparsers(dest="command", required=True)
     init = commands.add_parser("init", help="Create private local configuration and state")
     init.add_argument("--home", help="Local home (default: SIGNALWEAVE_HOME or ~/.signalweave)")

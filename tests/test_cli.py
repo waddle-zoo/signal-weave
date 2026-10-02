@@ -15,6 +15,16 @@ import signalweave.cli as cli
 from signalweave import local_setup as setup
 
 
+def test_version_reports_installed_distribution_without_initializing(monkeypatch, capsys):
+    from importlib.metadata import version
+
+    monkeypatch.setattr(sys, "argv", ["signalweave", "--version"])
+    with pytest.raises(SystemExit) as stopped:
+        cli.main()
+    assert stopped.value.code == 0
+    assert capsys.readouterr().out.strip() == f"SignalWeave {version('signal-weave')}"
+
+
 @pytest.fixture(autouse=True)
 def isolated_local_setup(monkeypatch, tmp_path):
     for name in (*setup._ENV_NAMES, "SIGNALWEAVE_HOME"):
@@ -321,6 +331,7 @@ async def test_binary_checker_checks_stderr_after_shutdown_without_echo(
                 agent=option("--agent"), non_interactive=True,
             )
         return SimpleNamespace(returncode=0, stderr="", stdout=(
+            f"SignalWeave {cli.__version__}" if argv[1] == "--version" else
             json.dumps({"binary": str(binary)}) if argv[1] == "agent-config"
             else "Offline configuration check"
         ))
