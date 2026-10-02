@@ -48,7 +48,7 @@ from evaluations.onboarding_acceptance_trial import source_freeze
 from signalweave.diagnostics import AnalysisReport
 from signalweave.engine import InsightEngine
 from signalweave.mcp_server import CARD_AUTHORING_GUIDANCE, create_mcp
-from signalweave.models import InsightCard, SourceRef
+from signalweave.models import InsightCard, InsightCardStatus, SourceRef
 from signalweave.numeric_conditions import evaluate_numeric_conditions
 from signalweave.runtime import Runtime
 from signalweave.sources import SourceRegistry
@@ -462,6 +462,47 @@ def _brief_metadata_card(company: dict[str, Any]) -> InsightCard:
     )
 
 
+def _assert_approved_runtime_card(card: InsightCard) -> None:
+    """Fail closed unless a recurring treatment card carries its stored plan."""
+    if card.status != InsightCardStatus.APPROVED:
+        raise ValueError("recurring treatment card is not approved")
+    plan = card.compiled_plan
+    if plan is None:
+        raise ValueError("recurring treatment card has no stored compiled plan")
+    if plan.card_id != card.id:
+        raise ValueError("stored compiled plan card_id does not match treatment card")
+    if plan.card_version != card.version:
+        raise ValueError("stored compiled plan card_version does not match treatment card")
+    source_keys = [source.key for source in card.sources]
+    if not set(plan.selected_source_keys).issubset(set(source_keys)):
+        raise ValueError("stored compiled plan selects a source outside the treatment card")
+
+
+def _approved_card_from_store(runtime: Runtime, approval: dict[str, Any], card_id: str) -> InsightCard:
+    """Restore the full approved card while rejecting an unexpected MCP payload."""
+    response_card = approval.get("card")
+    if not isinstance(response_card, dict):
+        raise ValueError("approval response did not contain a card payload")
+    sanitized_fields = {
+        "compiled_plan", "onboarding_review", "onboarding_review_history", "onboarding_corrections",
+    }
+    if sanitized_fields & response_card.keys():
+        raise ValueError("approval response card was not sanitized")
+
+    stored = runtime.card_store.get_card(card_id)
+    _assert_approved_runtime_card(stored)
+    stored_source_keys = [source.key for source in stored.sources]
+    response_source_keys = [source.get("key") for source in response_card.get("sources", [])]
+    if (
+        response_card.get("id") != stored.id
+        or response_card.get("version") != stored.version
+        or response_card.get("status") != stored.status.value
+        or response_source_keys != stored_source_keys
+    ):
+        raise ValueError("approval response identity disagrees with the stored approved card")
+    return stored
+
+
 def _select_arm_card(setup_result: dict[str, Any], company: dict[str, Any], *, treatment: bool) -> tuple[InsightCard | None, str]:
     """Keep treatment approval-gated without zeroing an independent baseline."""
     approved = InsightCard.model_validate(setup_result["card"]) if setup_result.get("card") else None
@@ -677,7 +718,11 @@ async def _author_company(company, audit, judger, output):
                                  "source_selection_reason": "Synthetic owner reviewed the selected definitions and sources for this recurring card."}
                 approval = await first_report_dispatch(session.server, "approve_insight_card", approval_args)
                 if approval.get("status") in {"approved", "replayed"}:
-                    card = InsightCard.model_validate(approval.get("card"))
+                    # The MCP approval response is deliberately compact and omits
+                    # compiled_plan.  Rehydrate from the durable store so each arm
+                    # receives the approved execution plan rather than recompiling
+                    # on every fresh period snapshot.
+                    card = _approved_card_from_store(runtime, approval, session.card_id)
             except Exception as error:  # retain the authored attempt; approval is a separate gate
                 approval = {"status": "failed", "error": type(error).__name__}
     return {"company": company["id"], "episode": episode, "setup_complete": session.setup_complete,
@@ -749,6 +794,17 @@ async def run_trial(output: Path, *, live: bool = False, key_file: str | None = 
                              "intended_holdouts": [p["id"] for p in holdout]})
                 _write_json(output / "progress.json", {"setup": setup_results, "results": rows})
                 continue
+            if treatment:
+                try:
+                    _assert_approved_runtime_card(card)
+                except Exception as error:  # retain a fail-closed pre-arm failure
+                    rows.append({"company": company["id"], "arm": arm,
+                                 "episode": {"status": "failed", "error": f"treatment_card_invariant:{type(error).__name__}",
+                                              "seconds": 0, "tool_calls": 0, "foreign_tools": []},
+                                 "runs": [], "card_source": card_source,
+                                 "intended_holdouts": [p["id"] for p in holdout]})
+                    _write_json(output / "progress.json", {"setup": setup_results, "results": rows})
+                    continue
             luna_episodes += 1
             session = None
             try:

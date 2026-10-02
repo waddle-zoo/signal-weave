@@ -1,0 +1,1262 @@
+{
+  "canyon-freight": {
+    "p03": {
+      "numeric_policy": [
+        {
+          "source_key": "canyon-freight-reporting",
+          "comparison_key": "late-deliveries",
+          "unit": "deliveries",
+          "measurement": "delta",
+          "segment": null,
+          "absolute": false,
+          "comparator": ">=",
+          "threshold": 17
+        },
+        {
+          "source_key": "canyon-freight-reporting",
+          "comparison_key": "late-deliveries",
+          "unit": "deliveries",
+          "measurement": "contribution",
+          "segment": null,
+          "absolute": false,
+          "comparator": ">=",
+          "threshold": 11
+        }
+      ],
+      "status": "complete",
+      "outcome": "notify",
+      "recipients": [
+        "fleet-operations"
+      ],
+      "analyses": [
+        {
+          "source_key": "canyon-freight-reporting",
+          "comparison_key": "late-deliveries",
+          "metric": "late_delivery_count",
+          "unit": "deliveries",
+          "dimension": "service_lane",
+          "definition": "Shipments delivered late in the closed interval after duplicate removal.",
+          "population": "non-duplicate shipments with a delivery timestamp",
+          "baseline_start": "2027-03-01T00:00:00+00:00",
+          "baseline_end": "2027-03-08T00:00:00+00:00",
+          "current_start": "2027-03-08T00:00:00+00:00",
+          "current_end": "2027-03-15T00:00:00+00:00",
+          "baseline": 220,
+          "current": 233,
+          "delta": 13,
+          "within_effect": null,
+          "mix_effect": null,
+          "contributions": [
+            {
+              "segment": "air",
+              "baseline": 100,
+              "current": 112,
+              "contribution": 12
+            },
+            {
+              "segment": "ground",
+              "baseline": 80,
+              "current": 82,
+              "contribution": 2
+            },
+            {
+              "segment": "ocean",
+              "baseline": 40,
+              "current": 39,
+              "contribution": -1
+            }
+          ],
+          "query_refs": [
+            "query:canyon-freight:reporting:p03"
+          ]
+        }
+      ],
+      "semantic_status": "not_applicable",
+      "context_status": "not_applicable",
+      "measurements": {
+        "baseline": 220,
+        "current": 233,
+        "delta": 13,
+        "contributions": [
+          {
+            "segment": "air",
+            "baseline": 100,
+            "current": 112,
+            "contribution": 12
+          },
+          {
+            "segment": "ground",
+            "baseline": 80,
+            "current": 82,
+            "contribution": 2
+          },
+          {
+            "segment": "ocean",
+            "baseline": 40,
+            "current": 39,
+            "contribution": -1
+          }
+        ],
+        "within_effect": null,
+        "mix_effect": null
+      },
+      "materiality": {
+        "delta_threshold": 17,
+        "contribution_threshold": 11
+      }
+    },
+    "p04": {
+      "numeric_policy": [
+        {
+          "source_key": "canyon-freight-reporting",
+          "comparison_key": "late-deliveries",
+          "unit": "deliveries",
+          "measurement": "delta",
+          "segment": null,
+          "absolute": false,
+          "comparator": ">=",
+          "threshold": 17
+        },
+        {
+          "source_key": "canyon-freight-reporting",
+          "comparison_key": "late-deliveries",
+          "unit": "deliveries",
+          "measurement": "contribution",
+          "segment": null,
+          "absolute": false,
+          "comparator": ">=",
+          "threshold": 11
+        }
+      ],
+      "status": "complete",
+      "outcome": "ignore",
+      "recipients": [],
+      "analyses": [
+        {
+          "source_key": "canyon-freight-reporting",
+          "comparison_key": "late-deliveries",
+          "metric": "late_delivery_count",
+          "unit": "deliveries",
+          "dimension": "service_lane",
+          "definition": "Shipments delivered late in the closed interval after duplicate removal.",
+          "population": "non-duplicate shipments with a delivery timestamp",
+          "baseline_start": "2027-03-15T00:00:00+00:00",
+          "baseline_end": "2027-03-22T00:00:00+00:00",
+          "current_start": "2027-03-22T00:00:00+00:00",
+          "current_end": "2027-03-29T00:00:00+00:00",
+          "baseline": 300,
+          "current": 283,
+          "delta": -17,
+          "within_effect": null,
+          "mix_effect": null,
+          "contributions": [
+            {
+              "segment": "air",
+              "baseline": 150,
+              "current": 130,
+              "contribution": -20
+            },
+            {
+              "segment": "ground",
+              "baseline": 90,
+              "current": 88,
+              "contribution": -2
+            },
+            {
+              "segment": "ocean",
+              "baseline": 60,
+              "current": 65,
+              "contribution": 5
+            }
+          ],
+          "query_refs": [
+            "query:canyon-freight:reporting:p04"
+          ]
+        }
+      ],
+      "semantic_status": "not_applicable",
+      "context_status": "not_applicable",
+      "measurements": {
+        "baseline": 300,
+        "current": 283,
+        "delta": -17,
+        "contributions": [
+          {
+            "segment": "air",
+            "baseline": 150,
+            "current": 130,
+            "contribution": -20
+          },
+          {
+            "segment": "ground",
+            "baseline": 90,
+            "current": 88,
+            "contribution": -2
+          },
+          {
+            "segment": "ocean",
+            "baseline": 60,
+            "current": 65,
+            "contribution": 5
+          }
+        ],
+        "within_effect": null,
+        "mix_effect": null
+      },
+      "materiality": {
+        "delta_threshold": 17,
+        "contribution_threshold": 11
+      }
+    },
+    "p05": {
+      "numeric_policy": [
+        {
+          "source_key": "canyon-freight-reporting",
+          "comparison_key": "late-deliveries",
+          "unit": "deliveries",
+          "measurement": "delta",
+          "segment": null,
+          "absolute": false,
+          "comparator": ">=",
+          "threshold": 17
+        },
+        {
+          "source_key": "canyon-freight-reporting",
+          "comparison_key": "late-deliveries",
+          "unit": "deliveries",
+          "measurement": "contribution",
+          "segment": null,
+          "absolute": false,
+          "comparator": ">=",
+          "threshold": 11
+        }
+      ],
+      "status": "blocked",
+      "outcome": "insufficient_data",
+      "recipients": [
+        "logistics-data"
+      ],
+      "analyses": [],
+      "semantic_status": "not_applicable",
+      "context_status": "not_applicable",
+      "measurements": {
+        "baseline": 270,
+        "current": null,
+        "delta": null,
+        "contributions": [],
+        "within_effect": null,
+        "mix_effect": null
+      },
+      "materiality": {
+        "delta_threshold": 17,
+        "contribution_threshold": 11
+      }
+    },
+    "p06": {
+      "numeric_policy": [
+        {
+          "source_key": "canyon-freight-reporting",
+          "comparison_key": "late-deliveries",
+          "unit": "deliveries",
+          "measurement": "delta",
+          "segment": null,
+          "absolute": false,
+          "comparator": ">=",
+          "threshold": 17
+        },
+        {
+          "source_key": "canyon-freight-reporting",
+          "comparison_key": "late-deliveries",
+          "unit": "deliveries",
+          "measurement": "contribution",
+          "segment": null,
+          "absolute": false,
+          "comparator": ">=",
+          "threshold": 11
+        }
+      ],
+      "status": "complete",
+      "outcome": "notify",
+      "recipients": [
+        "fleet-operations"
+      ],
+      "analyses": [
+        {
+          "source_key": "canyon-freight-reporting",
+          "comparison_key": "late-deliveries",
+          "metric": "late_delivery_count",
+          "unit": "deliveries",
+          "dimension": "service_lane",
+          "definition": "Shipments delivered late in the closed interval after duplicate removal.",
+          "population": "non-duplicate shipments with a delivery timestamp",
+          "baseline_start": "2027-04-12T00:00:00+00:00",
+          "baseline_end": "2027-04-19T00:00:00+00:00",
+          "current_start": "2027-04-19T00:00:00+00:00",
+          "current_end": "2027-04-26T00:00:00+00:00",
+          "baseline": 340,
+          "current": 367,
+          "delta": 27,
+          "within_effect": null,
+          "mix_effect": null,
+          "contributions": [
+            {
+              "segment": "air",
+              "baseline": 120,
+              "current": 125,
+              "contribution": 5
+            },
+            {
+              "segment": "ground",
+              "baseline": 140,
+              "current": 150,
+              "contribution": 10
+            },
+            {
+              "segment": "ocean",
+              "baseline": 80,
+              "current": 92,
+              "contribution": 12
+            }
+          ],
+          "query_refs": [
+            "query:canyon-freight:reporting:p06"
+          ]
+        }
+      ],
+      "semantic_status": "not_applicable",
+      "context_status": "not_applicable",
+      "measurements": {
+        "baseline": 340,
+        "current": 367,
+        "delta": 27,
+        "contributions": [
+          {
+            "segment": "air",
+            "baseline": 120,
+            "current": 125,
+            "contribution": 5
+          },
+          {
+            "segment": "ground",
+            "baseline": 140,
+            "current": 150,
+            "contribution": 10
+          },
+          {
+            "segment": "ocean",
+            "baseline": 80,
+            "current": 92,
+            "contribution": 12
+          }
+        ],
+        "within_effect": null,
+        "mix_effect": null
+      },
+      "materiality": {
+        "delta_threshold": 17,
+        "contribution_threshold": 11
+      }
+    }
+  },
+  "helio-support": {
+    "p03": {
+      "numeric_policy": [
+        {
+          "source_key": "helio-support-reporting",
+          "comparison_key": "recontact-quality-rate",
+          "unit": "ratio",
+          "measurement": "current",
+          "segment": null,
+          "absolute": false,
+          "comparator": ">=",
+          "threshold": 0.09
+        },
+        {
+          "source_key": "helio-support-reporting",
+          "comparison_key": "recontact-quality-rate",
+          "unit": "ratio",
+          "measurement": "delta",
+          "segment": null,
+          "absolute": false,
+          "comparator": ">=",
+          "threshold": 0.025
+        }
+      ],
+      "status": "complete",
+      "outcome": "notify",
+      "recipients": [
+        "support-quality"
+      ],
+      "analyses": [
+        {
+          "source_key": "helio-support-reporting",
+          "comparison_key": "recontact-quality-rate",
+          "metric": "customer_recontact_rate",
+          "unit": "ratio",
+          "dimension": "support_channel",
+          "definition": "Eligible support conversations followed by a customer recontact within the quality window, divided by eligible conversations.",
+          "population": "eligible support conversations with a channel and quality outcome",
+          "baseline_start": "2027-03-01T00:00:00+00:00",
+          "baseline_end": "2027-03-08T00:00:00+00:00",
+          "current_start": "2027-03-08T00:00:00+00:00",
+          "current_end": "2027-03-15T00:00:00+00:00",
+          "baseline": 0.1,
+          "current": 0.11805555555555555,
+          "delta": 0.018055555555555554,
+          "within_effect": 0.01611111111111111,
+          "mix_effect": 0.0019444444444444444,
+          "contributions": [
+            {
+              "segment": "chat",
+              "baseline": 0.125,
+              "current": 0.11666666666666667,
+              "contribution": 0.008333333333333333,
+              "within_effect": -0.00375,
+              "mix_effect": 0.012083333333333333
+            },
+            {
+              "segment": "email",
+              "baseline": 0.08333333333333333,
+              "current": 0.11666666666666667,
+              "contribution": 0.005555555555555556,
+              "within_effect": 0.012222222222222223,
+              "mix_effect": -0.006666666666666667
+            },
+            {
+              "segment": "voice",
+              "baseline": 0.08333333333333333,
+              "current": 0.125,
+              "contribution": 0.004166666666666667,
+              "within_effect": 0.007638888888888889,
+              "mix_effect": -0.003472222222222222
+            }
+          ],
+          "query_refs": [
+            "query:helio-support:reporting:p03"
+          ]
+        }
+      ],
+      "semantic_status": "not_applicable",
+      "context_status": "not_applicable",
+      "measurements": {
+        "baseline": 0.1,
+        "current": 0.11805555555555555,
+        "delta": 0.018055555555555554,
+        "contributions": [
+          {
+            "segment": "chat",
+            "baseline": 0.125,
+            "current": 0.11666666666666667,
+            "contribution": 0.008333333333333333,
+            "within_effect": -0.00375,
+            "mix_effect": 0.012083333333333333
+          },
+          {
+            "segment": "email",
+            "baseline": 0.08333333333333333,
+            "current": 0.11666666666666667,
+            "contribution": 0.005555555555555556,
+            "within_effect": 0.012222222222222223,
+            "mix_effect": -0.006666666666666667
+          },
+          {
+            "segment": "voice",
+            "baseline": 0.08333333333333333,
+            "current": 0.125,
+            "contribution": 0.004166666666666667,
+            "within_effect": 0.007638888888888889,
+            "mix_effect": -0.003472222222222222
+          }
+        ],
+        "within_effect": 0.01611111111111111,
+        "mix_effect": 0.0019444444444444444
+      },
+      "materiality": {
+        "delta_threshold": 0.025,
+        "current_threshold": 0.09
+      }
+    },
+    "p04": {
+      "numeric_policy": [
+        {
+          "source_key": "helio-support-reporting",
+          "comparison_key": "recontact-quality-rate",
+          "unit": "ratio",
+          "measurement": "current",
+          "segment": null,
+          "absolute": false,
+          "comparator": ">=",
+          "threshold": 0.09
+        },
+        {
+          "source_key": "helio-support-reporting",
+          "comparison_key": "recontact-quality-rate",
+          "unit": "ratio",
+          "measurement": "delta",
+          "segment": null,
+          "absolute": false,
+          "comparator": ">=",
+          "threshold": 0.025
+        }
+      ],
+      "status": "complete",
+      "outcome": "notify",
+      "recipients": [
+        "support-quality"
+      ],
+      "analyses": [
+        {
+          "source_key": "helio-support-reporting",
+          "comparison_key": "recontact-quality-rate",
+          "metric": "customer_recontact_rate",
+          "unit": "ratio",
+          "dimension": "support_channel",
+          "definition": "Eligible support conversations followed by a customer recontact within the quality window, divided by eligible conversations.",
+          "population": "eligible support conversations with a channel and quality outcome",
+          "baseline_start": "2027-03-15T00:00:00+00:00",
+          "baseline_end": "2027-03-22T00:00:00+00:00",
+          "current_start": "2027-03-22T00:00:00+00:00",
+          "current_end": "2027-03-29T00:00:00+00:00",
+          "baseline": 0.05,
+          "current": 0.08,
+          "delta": 0.03,
+          "within_effect": 0.03,
+          "mix_effect": 0.0,
+          "contributions": [
+            {
+              "segment": "chat",
+              "baseline": 0.05,
+              "current": 0.08333333333333333,
+              "contribution": 0.015,
+              "within_effect": 0.015,
+              "mix_effect": 0.0
+            },
+            {
+              "segment": "email",
+              "baseline": 0.05,
+              "current": 0.075,
+              "contribution": 0.01,
+              "within_effect": 0.01,
+              "mix_effect": 0.0
+            },
+            {
+              "segment": "voice",
+              "baseline": 0.05,
+              "current": 0.08333333333333333,
+              "contribution": 0.005,
+              "within_effect": 0.005,
+              "mix_effect": 0.0
+            }
+          ],
+          "query_refs": [
+            "query:helio-support:reporting:p04"
+          ]
+        }
+      ],
+      "semantic_status": "not_applicable",
+      "context_status": "not_applicable",
+      "measurements": {
+        "baseline": 0.05,
+        "current": 0.08,
+        "delta": 0.03,
+        "contributions": [
+          {
+            "segment": "chat",
+            "baseline": 0.05,
+            "current": 0.08333333333333333,
+            "contribution": 0.015,
+            "within_effect": 0.015,
+            "mix_effect": 0.0
+          },
+          {
+            "segment": "email",
+            "baseline": 0.05,
+            "current": 0.075,
+            "contribution": 0.01,
+            "within_effect": 0.01,
+            "mix_effect": 0.0
+          },
+          {
+            "segment": "voice",
+            "baseline": 0.05,
+            "current": 0.08333333333333333,
+            "contribution": 0.005,
+            "within_effect": 0.005,
+            "mix_effect": 0.0
+          }
+        ],
+        "within_effect": 0.03,
+        "mix_effect": 0.0
+      },
+      "materiality": {
+        "delta_threshold": 0.025,
+        "current_threshold": 0.09
+      }
+    },
+    "p05": {
+      "numeric_policy": [
+        {
+          "source_key": "helio-support-reporting",
+          "comparison_key": "recontact-quality-rate",
+          "unit": "ratio",
+          "measurement": "current",
+          "segment": null,
+          "absolute": false,
+          "comparator": ">=",
+          "threshold": 0.09
+        },
+        {
+          "source_key": "helio-support-reporting",
+          "comparison_key": "recontact-quality-rate",
+          "unit": "ratio",
+          "measurement": "delta",
+          "segment": null,
+          "absolute": false,
+          "comparator": ">=",
+          "threshold": 0.025
+        }
+      ],
+      "status": "complete",
+      "outcome": "ignore",
+      "recipients": [],
+      "analyses": [
+        {
+          "source_key": "helio-support-reporting",
+          "comparison_key": "recontact-quality-rate",
+          "metric": "customer_recontact_rate",
+          "unit": "ratio",
+          "dimension": "support_channel",
+          "definition": "Eligible support conversations followed by a customer recontact within the quality window, divided by eligible conversations.",
+          "population": "eligible support conversations with a channel and quality outcome",
+          "baseline_start": "2027-03-29T00:00:00+00:00",
+          "baseline_end": "2027-04-05T00:00:00+00:00",
+          "current_start": "2027-04-05T00:00:00+00:00",
+          "current_end": "2027-04-12T00:00:00+00:00",
+          "baseline": 0.046,
+          "current": 0.06,
+          "delta": 0.014,
+          "within_effect": 0.014,
+          "mix_effect": 0.0,
+          "contributions": [
+            {
+              "segment": "chat",
+              "baseline": 0.06,
+              "current": 0.08,
+              "contribution": 0.006,
+              "within_effect": 0.006,
+              "mix_effect": 0.0
+            },
+            {
+              "segment": "email",
+              "baseline": 0.05,
+              "current": 0.065,
+              "contribution": 0.006,
+              "within_effect": 0.006,
+              "mix_effect": 0.0
+            },
+            {
+              "segment": "voice",
+              "baseline": 0.02666666666666667,
+              "current": 0.03333333333333333,
+              "contribution": 0.002,
+              "within_effect": 0.002,
+              "mix_effect": 0.0
+            }
+          ],
+          "query_refs": [
+            "query:helio-support:reporting:p05"
+          ]
+        }
+      ],
+      "semantic_status": "not_applicable",
+      "context_status": "not_applicable",
+      "measurements": {
+        "baseline": 0.046,
+        "current": 0.06,
+        "delta": 0.014,
+        "contributions": [
+          {
+            "segment": "chat",
+            "baseline": 0.06,
+            "current": 0.08,
+            "contribution": 0.006,
+            "within_effect": 0.006,
+            "mix_effect": 0.0
+          },
+          {
+            "segment": "email",
+            "baseline": 0.05,
+            "current": 0.065,
+            "contribution": 0.006,
+            "within_effect": 0.006,
+            "mix_effect": 0.0
+          },
+          {
+            "segment": "voice",
+            "baseline": 0.02666666666666667,
+            "current": 0.03333333333333333,
+            "contribution": 0.002,
+            "within_effect": 0.002,
+            "mix_effect": 0.0
+          }
+        ],
+        "within_effect": 0.014,
+        "mix_effect": 0.0
+      },
+      "materiality": {
+        "delta_threshold": 0.025,
+        "current_threshold": 0.09
+      }
+    },
+    "p06": {
+      "numeric_policy": [
+        {
+          "source_key": "helio-support-reporting",
+          "comparison_key": "recontact-quality-rate",
+          "unit": "ratio",
+          "measurement": "current",
+          "segment": null,
+          "absolute": false,
+          "comparator": ">=",
+          "threshold": 0.09
+        },
+        {
+          "source_key": "helio-support-reporting",
+          "comparison_key": "recontact-quality-rate",
+          "unit": "ratio",
+          "measurement": "delta",
+          "segment": null,
+          "absolute": false,
+          "comparator": ">=",
+          "threshold": 0.025
+        }
+      ],
+      "status": "blocked",
+      "outcome": "insufficient_data",
+      "recipients": [
+        "support-data"
+      ],
+      "analyses": [],
+      "semantic_status": "not_applicable",
+      "context_status": "not_applicable",
+      "measurements": {
+        "baseline": null,
+        "current": null,
+        "delta": null,
+        "contributions": [],
+        "within_effect": null,
+        "mix_effect": null
+      },
+      "materiality": {
+        "delta_threshold": 0.025,
+        "current_threshold": 0.09
+      }
+    }
+  },
+  "lattice-energy": {
+    "p03": {
+      "numeric_policy": [
+        {
+          "source_key": "lattice-energy-reporting",
+          "comparison_key": "signed-contract-movement",
+          "unit": "USD",
+          "measurement": "delta",
+          "segment": null,
+          "absolute": false,
+          "comparator": "<=",
+          "threshold": -75
+        },
+        {
+          "source_key": "lattice-energy-reporting",
+          "comparison_key": "signed-contract-movement",
+          "unit": "USD",
+          "measurement": "contribution",
+          "segment": "contraction",
+          "absolute": false,
+          "comparator": "<=",
+          "threshold": -45
+        },
+        {
+          "source_key": "lattice-energy-reporting",
+          "comparison_key": "signed-contract-movement",
+          "unit": "USD",
+          "measurement": "contribution",
+          "segment": "churn",
+          "absolute": false,
+          "comparator": "<=",
+          "threshold": -45
+        }
+      ],
+      "status": "complete",
+      "outcome": "notify",
+      "recipients": [
+        "commercial-operations"
+      ],
+      "analyses": [
+        {
+          "source_key": "lattice-energy-reporting",
+          "comparison_key": "signed-contract-movement",
+          "metric": "signed_contract_value_movement",
+          "unit": "USD",
+          "dimension": "change_type",
+          "definition": "Signed contract-value movement from effective account changes; contraction and churn are negative.",
+          "population": "billed accounts with an effective contract-change record",
+          "baseline_start": "2027-05-24T00:00:00+00:00",
+          "baseline_end": "2027-06-21T00:00:00+00:00",
+          "current_start": "2027-06-21T00:00:00+00:00",
+          "current_end": "2027-07-19T00:00:00+00:00",
+          "baseline": 90,
+          "current": 15,
+          "delta": -75,
+          "within_effect": null,
+          "mix_effect": null,
+          "contributions": [
+            {
+              "segment": "churn",
+              "baseline": -20,
+              "current": -70,
+              "contribution": -50
+            },
+            {
+              "segment": "contraction",
+              "baseline": -20,
+              "current": -25,
+              "contribution": -5
+            },
+            {
+              "segment": "expansion",
+              "baseline": 100,
+              "current": 90,
+              "contribution": -10
+            },
+            {
+              "segment": "new_contract",
+              "baseline": 30,
+              "current": 20,
+              "contribution": -10
+            }
+          ],
+          "query_refs": [
+            "query:lattice-energy:reporting:p03"
+          ]
+        }
+      ],
+      "semantic_status": "none",
+      "context_status": "none",
+      "measurements": {
+        "baseline": 90,
+        "current": 15,
+        "delta": -75,
+        "contributions": [
+          {
+            "segment": "churn",
+            "baseline": -20,
+            "current": -70,
+            "contribution": -50
+          },
+          {
+            "segment": "contraction",
+            "baseline": -20,
+            "current": -25,
+            "contribution": -5
+          },
+          {
+            "segment": "expansion",
+            "baseline": 100,
+            "current": 90,
+            "contribution": -10
+          },
+          {
+            "segment": "new_contract",
+            "baseline": 30,
+            "current": 20,
+            "contribution": -10
+          }
+        ],
+        "within_effect": null,
+        "mix_effect": null
+      },
+      "materiality": {
+        "delta_threshold": -75,
+        "contribution_threshold": -45
+      }
+    },
+    "p04": {
+      "numeric_policy": [
+        {
+          "source_key": "lattice-energy-reporting",
+          "comparison_key": "signed-contract-movement",
+          "unit": "USD",
+          "measurement": "delta",
+          "segment": null,
+          "absolute": false,
+          "comparator": "<=",
+          "threshold": -75
+        },
+        {
+          "source_key": "lattice-energy-reporting",
+          "comparison_key": "signed-contract-movement",
+          "unit": "USD",
+          "measurement": "contribution",
+          "segment": "contraction",
+          "absolute": false,
+          "comparator": "<=",
+          "threshold": -45
+        },
+        {
+          "source_key": "lattice-energy-reporting",
+          "comparison_key": "signed-contract-movement",
+          "unit": "USD",
+          "measurement": "contribution",
+          "segment": "churn",
+          "absolute": false,
+          "comparator": "<=",
+          "threshold": -45
+        }
+      ],
+      "status": "complete",
+      "outcome": "ignore",
+      "recipients": [],
+      "analyses": [
+        {
+          "source_key": "lattice-energy-reporting",
+          "comparison_key": "signed-contract-movement",
+          "metric": "signed_contract_value_movement",
+          "unit": "USD",
+          "dimension": "change_type",
+          "definition": "Signed contract-value movement from effective account changes; contraction and churn are negative.",
+          "population": "billed accounts with an effective contract-change record",
+          "baseline_start": "2027-07-19T00:00:00+00:00",
+          "baseline_end": "2027-08-16T00:00:00+00:00",
+          "current_start": "2027-08-16T00:00:00+00:00",
+          "current_end": "2027-09-13T00:00:00+00:00",
+          "baseline": 50,
+          "current": 55,
+          "delta": 5,
+          "within_effect": null,
+          "mix_effect": null,
+          "contributions": [
+            {
+              "segment": "churn",
+              "baseline": -30,
+              "current": -35,
+              "contribution": -5
+            },
+            {
+              "segment": "contraction",
+              "baseline": -40,
+              "current": -45,
+              "contribution": -5
+            },
+            {
+              "segment": "expansion",
+              "baseline": 100,
+              "current": 40,
+              "contribution": -60
+            },
+            {
+              "segment": "new_contract",
+              "baseline": 20,
+              "current": 95,
+              "contribution": 75
+            }
+          ],
+          "query_refs": [
+            "query:lattice-energy:reporting:p04"
+          ]
+        }
+      ],
+      "semantic_status": "none",
+      "context_status": "none",
+      "measurements": {
+        "baseline": 50,
+        "current": 55,
+        "delta": 5,
+        "contributions": [
+          {
+            "segment": "churn",
+            "baseline": -30,
+            "current": -35,
+            "contribution": -5
+          },
+          {
+            "segment": "contraction",
+            "baseline": -40,
+            "current": -45,
+            "contribution": -5
+          },
+          {
+            "segment": "expansion",
+            "baseline": 100,
+            "current": 40,
+            "contribution": -60
+          },
+          {
+            "segment": "new_contract",
+            "baseline": 20,
+            "current": 95,
+            "contribution": 75
+          }
+        ],
+        "within_effect": null,
+        "mix_effect": null
+      },
+      "materiality": {
+        "delta_threshold": -75,
+        "contribution_threshold": -45
+      }
+    },
+    "p05": {
+      "numeric_policy": [
+        {
+          "source_key": "lattice-energy-reporting",
+          "comparison_key": "signed-contract-movement",
+          "unit": "USD",
+          "measurement": "delta",
+          "segment": null,
+          "absolute": false,
+          "comparator": "<=",
+          "threshold": -75
+        },
+        {
+          "source_key": "lattice-energy-reporting",
+          "comparison_key": "signed-contract-movement",
+          "unit": "USD",
+          "measurement": "contribution",
+          "segment": "contraction",
+          "absolute": false,
+          "comparator": "<=",
+          "threshold": -45
+        },
+        {
+          "source_key": "lattice-energy-reporting",
+          "comparison_key": "signed-contract-movement",
+          "unit": "USD",
+          "measurement": "contribution",
+          "segment": "churn",
+          "absolute": false,
+          "comparator": "<=",
+          "threshold": -45
+        }
+      ],
+      "status": "complete",
+      "outcome": "ignore",
+      "recipients": [],
+      "analyses": [
+        {
+          "source_key": "lattice-energy-reporting",
+          "comparison_key": "signed-contract-movement",
+          "metric": "signed_contract_value_movement",
+          "unit": "USD",
+          "dimension": "change_type",
+          "definition": "Signed contract-value movement from effective account changes; contraction and churn are negative.",
+          "population": "billed accounts with an effective contract-change record",
+          "baseline_start": "2027-09-13T00:00:00+00:00",
+          "baseline_end": "2027-10-11T00:00:00+00:00",
+          "current_start": "2027-10-11T00:00:00+00:00",
+          "current_end": "2027-11-08T00:00:00+00:00",
+          "baseline": 115,
+          "current": -60,
+          "delta": -175,
+          "within_effect": null,
+          "mix_effect": null,
+          "contributions": [
+            {
+              "segment": "churn",
+              "baseline": -25,
+              "current": -70,
+              "contribution": -45
+            },
+            {
+              "segment": "contraction",
+              "baseline": -30,
+              "current": -90,
+              "contribution": -60
+            },
+            {
+              "segment": "expansion",
+              "baseline": 130,
+              "current": 80,
+              "contribution": -50
+            },
+            {
+              "segment": "new_contract",
+              "baseline": 40,
+              "current": 20,
+              "contribution": -20
+            }
+          ],
+          "query_refs": [
+            "query:lattice-energy:reporting:p05"
+          ]
+        }
+      ],
+      "semantic_status": "approved",
+      "context_status": "approved",
+      "measurements": {
+        "baseline": 115,
+        "current": -60,
+        "delta": -175,
+        "contributions": [
+          {
+            "segment": "churn",
+            "baseline": -25,
+            "current": -70,
+            "contribution": -45
+          },
+          {
+            "segment": "contraction",
+            "baseline": -30,
+            "current": -90,
+            "contribution": -60
+          },
+          {
+            "segment": "expansion",
+            "baseline": 130,
+            "current": 80,
+            "contribution": -50
+          },
+          {
+            "segment": "new_contract",
+            "baseline": 40,
+            "current": 20,
+            "contribution": -20
+          }
+        ],
+        "within_effect": null,
+        "mix_effect": null
+      },
+      "materiality": {
+        "delta_threshold": -75,
+        "contribution_threshold": -45
+      }
+    },
+    "p06": {
+      "numeric_policy": [
+        {
+          "source_key": "lattice-energy-reporting",
+          "comparison_key": "signed-contract-movement",
+          "unit": "USD",
+          "measurement": "delta",
+          "segment": null,
+          "absolute": false,
+          "comparator": "<=",
+          "threshold": -75
+        },
+        {
+          "source_key": "lattice-energy-reporting",
+          "comparison_key": "signed-contract-movement",
+          "unit": "USD",
+          "measurement": "contribution",
+          "segment": "contraction",
+          "absolute": false,
+          "comparator": "<=",
+          "threshold": -45
+        },
+        {
+          "source_key": "lattice-energy-reporting",
+          "comparison_key": "signed-contract-movement",
+          "unit": "USD",
+          "measurement": "contribution",
+          "segment": "churn",
+          "absolute": false,
+          "comparator": "<=",
+          "threshold": -45
+        }
+      ],
+      "status": "complete",
+      "outcome": "investigate",
+      "recipients": [
+        "commercial-data"
+      ],
+      "analyses": [
+        {
+          "source_key": "lattice-energy-reporting",
+          "comparison_key": "signed-contract-movement",
+          "metric": "signed_contract_value_movement",
+          "unit": "USD",
+          "dimension": "change_type",
+          "definition": "Signed contract-value movement from effective account changes; contraction and churn are negative.",
+          "population": "billed accounts with an effective contract-change record",
+          "baseline_start": "2027-11-08T00:00:00+00:00",
+          "baseline_end": "2027-12-06T00:00:00+00:00",
+          "current_start": "2027-12-06T00:00:00+00:00",
+          "current_end": "2028-01-03T00:00:00+00:00",
+          "baseline": 75,
+          "current": 5,
+          "delta": -70,
+          "within_effect": null,
+          "mix_effect": null,
+          "contributions": [
+            {
+              "segment": "churn",
+              "baseline": -20,
+              "current": -25,
+              "contribution": -5
+            },
+            {
+              "segment": "contraction",
+              "baseline": -35,
+              "current": -90,
+              "contribution": -55
+            },
+            {
+              "segment": "expansion",
+              "baseline": 100,
+              "current": 100,
+              "contribution": 0
+            },
+            {
+              "segment": "new_contract",
+              "baseline": 30,
+              "current": 20,
+              "contribution": -10
+            }
+          ],
+          "query_refs": [
+            "query:lattice-energy:reporting:p06"
+          ]
+        }
+      ],
+      "semantic_status": "unresolved",
+      "context_status": "unresolved",
+      "measurements": {
+        "baseline": 75,
+        "current": 5,
+        "delta": -70,
+        "contributions": [
+          {
+            "segment": "churn",
+            "baseline": -20,
+            "current": -25,
+            "contribution": -5
+          },
+          {
+            "segment": "contraction",
+            "baseline": -35,
+            "current": -90,
+            "contribution": -55
+          },
+          {
+            "segment": "expansion",
+            "baseline": 100,
+            "current": 100,
+            "contribution": 0
+          },
+          {
+            "segment": "new_contract",
+            "baseline": 30,
+            "current": 20,
+            "contribution": -10
+          }
+        ],
+        "within_effect": null,
+        "mix_effect": null
+      },
+      "materiality": {
+        "delta_threshold": -75,
+        "contribution_threshold": -45
+      }
+    }
+  }
+}

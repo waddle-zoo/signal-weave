@@ -99,6 +99,41 @@ tool events and instruction digest are retained, but it lacks a clean committed
 source freeze. The revised reviewer supplies cases in its prompt and only exposes
 the submission tool; the next invocation will freeze that source first.
 
+## Fresh transfer trial and execution-harness failure
+
+The revised authoring schema was frozen at `b240c64` before testing Canyon
+Freight, Helio Support and Lattice Energy. These are different numerical fixtures,
+policies and thresholds using the same three supported mathematical shapes—not
+proof of broad new analytical methods. Each company had a quiet and an actionable
+setup period. Canyon also exposed a large negative change during setup; Lattice's
+holdout contains an excluded segment with a large negative contribution.
+
+**All three agent-authored cards passed the numerical-policy audit and production
+approval.** The baseline submitted and strictly passed 12/12 reports. SignalWeave
+submitted and strictly passed 7/12; five were missing when the Jev budget ran out.
+Original [manifest](evidence/recurring-runtime-transfer-live-01/manifest.json),
+[report](evidence/recurring-runtime-transfer-live-01/report.json), and
+[journal](evidence/recurring-runtime-transfer-live-01/events.jsonl.gz) remain
+unchanged. The trial used all 36 permitted Jev calls and nine Luna sessions.
+
+This exposed a measurement bug in the evaluation harness. The public MCP approval
+response intentionally omits the compiled execution plan. The harness copied that
+response into separate arm stores, instead of copying the full approved card
+already persisted in setup SQLite. Consequently, fresh periods recompiled a plan
+unnecessarily. All three original setup databases still contain valid plans and
+their execution payloads exactly match the public frozen cards.
+
+The harness now restores the durable approved card and checks plan identity,
+version and source binding. Offline full-runtime regression tests cover both sets
+and require exactly three setup compiles, zero recurring compiles and exact receipt
+replay. No production gate, numerical threshold or company policy was changed.
+
+A separate completion-only protocol targets only the five absent reports, with
+the exact retained approved cards and source snapshots, at most five Jev calls
+and two Luna sessions. Completed reports cannot be replaced. Its coverage is
+post hoc execution repair; it cannot turn the original failed gate into a clean
+prospective win or support an end-to-end latency comparison.
+
 ## Acceptance and limits
 
 The [goal document](local-adoption-goal.md) fixes the success criteria: all

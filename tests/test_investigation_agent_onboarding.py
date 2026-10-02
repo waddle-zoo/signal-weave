@@ -65,7 +65,7 @@ def test_numeric_conditions_are_forwarded_without_becoming_action_policy():
         comparison_key="comparison-a",
         measurement="delta",
         unit="number",
-        threshold=10,
+        threshold=-10,
         comparator="<=",
     )
     result = draft_arguments(intent(numeric_conditions=[numeric], routes=[]), approved, [])

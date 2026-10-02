@@ -1,0 +1,30 @@
+{
+  "scope": "Local macOS arm64 packaging smoke; not a published release or cross-platform certification",
+  "runtime_source_commit": "b240c64",
+  "binary_sha256": "4296034cb97381758ca247963d39664fdf9f5bebc908834b38947d21efe37273",
+  "build": "scripts/build_binary.py",
+  "installed_binary_test": "tests/test_install.py::test_real_binary_installs_and_initializes",
+  "installed_binary_test_result": "1 passed in 37.26s",
+  "live_checker": "scripts/check_binary.py --live --key-file <private credential path>",
+  "live_checker_exit_code": 0,
+  "result": {
+    "standalone_startup": true,
+    "private_setup": true,
+    "persisted_source_config": true,
+    "offline_doctor": true,
+    "agent_config": true,
+    "stdio_tools": 29,
+    "different_cwd": true,
+    "live": true,
+    "version": "SignalWeave 0.2.0rc2",
+    "live_outcome": "notify",
+    "measured_delta": -20,
+    "process_restart_replay": true
+  },
+  "limitations": [
+    "One synthetic, preapproved card; not an onboarding trial",
+    "No external delivery",
+    "No signed/notarized macOS artifact or Linux/Intel execution established by this local test",
+    "Live checker does not retain API token usage; its cost is separate and unmeasured"
+  ]
+}

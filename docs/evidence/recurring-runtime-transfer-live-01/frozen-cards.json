@@ -1,0 +1,1682 @@
+{
+  "canyon-freight": {
+    "company": "canyon-freight",
+    "episode": {
+      "status": "complete",
+      "error": null,
+      "tool_calls": 8,
+      "seconds": 37.19351800001459,
+      "response_timeout_seconds": 240,
+      "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+      "wall_time_overrun_seconds": 0.0,
+      "transport": "codex_cli",
+      "exit_code": 0,
+      "foreign_tools": []
+    },
+    "setup_complete": true,
+    "drafts": 1,
+    "card": {
+      "id": "card-late-delivery-increases-by-service-lane-202a7959859b",
+      "title": "Late delivery increases by service lane",
+      "what_to_watch": "Late delivery counts in the immediately preceding closed week versus the current closed week for non-duplicate shipments with a delivery timestamp, including the total delta and each service-lane contribution.",
+      "why_watch": "Identify material increases in late deliveries and route comparisons that do not satisfy the source comparability requirements.",
+      "watch_for": [
+        "The source confirms the same shipment population after duplicate removal, the same late-delivery definition, adjacent closed periods, a complete disjoint service-lane partition, and reconciled totals."
+      ],
+      "questions": [],
+      "numeric_conditions": [
+        {
+          "text": "Total current minus baseline late deliveries is at least 17 deliveries.",
+          "source_key": "canyon-freight-reporting",
+          "comparison_key": "late-deliveries",
+          "measurement": "delta",
+          "segment": null,
+          "unit": "deliveries",
+          "threshold": 17.0,
+          "comparator": ">=",
+          "absolute": false
+        },
+        {
+          "text": "At least one service lane's current-minus-baseline contribution is at least 11 deliveries.",
+          "source_key": "canyon-freight-reporting",
+          "comparison_key": "late-deliveries",
+          "measurement": "contribution",
+          "segment": null,
+          "unit": "deliveries",
+          "threshold": 11.0,
+          "comparator": ">=",
+          "absolute": false
+        }
+      ],
+      "evidence_requirements": {},
+      "decision_guidance": "Use late deliveries in adjacent closed weeks for the same shipment population after duplicate removal. Notify Fleet Operations when the total is at least 17 higher than baseline or when any service lane is at least 11 higher than its baseline. Compare current minus baseline; a negative lane contribution is not an increase. Use the result only when the source confirms the same population, definition, adjacent periods, complete lane partition, and reconciled totals. Route incomplete comparisons as insufficient_data to Logistics Data. If neither threshold is met, ignore. Describe lane contributions as accounting decomposition, not causes.",
+      "follow_up_guidance": "Describe lane contributions as accounting decomposition, not causes. Do not infer causation from the comparison.",
+      "sources": [
+        {
+          "key": "canyon-freight-reporting",
+          "adapter": "company_mcp",
+          "resource": "report:late-deliveries",
+          "label": "Late deliveries by service lane",
+          "parameters": {
+            "business_role": "reporting",
+            "available_comparison_windows": [
+              "previous_period"
+            ]
+          },
+          "required": true,
+          "required_comparison_keys": [
+            "late-deliveries"
+          ]
+        }
+      ],
+      "comparison_windows": [
+        "previous_period"
+      ],
+      "action_confidence_threshold": 0.7,
+      "owner": null,
+      "version": 1,
+      "max_source_age_hours": 24.0,
+      "delivery_methods": [
+        {
+          "key": "fleet-operations:notify",
+          "outcome": "notify",
+          "label": "Fleet Operations",
+          "destination": "agent://fleet-operations",
+          "instructions": ""
+        },
+        {
+          "key": "logistics-data:insufficient_data",
+          "outcome": "insufficient_data",
+          "label": "Logistics Data",
+          "destination": "agent://logistics-data",
+          "instructions": ""
+        }
+      ],
+      "retrieval_mode": "fixed",
+      "investigation_mode": "none",
+      "max_investigation_sources": 3,
+      "investigation_threshold": 0.6,
+      "principal_id": "canyon-freight-owner",
+      "principal_tenant": "synthetic-recurring-runtime",
+      "compiled_plan": null,
+      "onboarding_review": null,
+      "onboarding_review_history": [],
+      "onboarding_corrections": [],
+      "status": "approved",
+      "approved_by": "canyon-freight-owner",
+      "approved_at": "2026-10-02T23:33:17.096345Z"
+    },
+    "draft_card": {
+      "id": "card-late-delivery-increases-by-service-lane-202a7959859b",
+      "title": "Late delivery increases by service lane",
+      "what_to_watch": "Late delivery counts in the immediately preceding closed week versus the current closed week for non-duplicate shipments with a delivery timestamp, including the total delta and each service-lane contribution.",
+      "why_watch": "Identify material increases in late deliveries and route comparisons that do not satisfy the source comparability requirements.",
+      "watch_for": [
+        "The source confirms the same shipment population after duplicate removal, the same late-delivery definition, adjacent closed periods, a complete disjoint service-lane partition, and reconciled totals."
+      ],
+      "questions": [],
+      "numeric_conditions": [
+        {
+          "text": "Total current minus baseline late deliveries is at least 17 deliveries.",
+          "source_key": "canyon-freight-reporting",
+          "comparison_key": "late-deliveries",
+          "measurement": "delta",
+          "segment": null,
+          "unit": "deliveries",
+          "threshold": 17.0,
+          "comparator": ">=",
+          "absolute": false
+        },
+        {
+          "text": "At least one service lane's current-minus-baseline contribution is at least 11 deliveries.",
+          "source_key": "canyon-freight-reporting",
+          "comparison_key": "late-deliveries",
+          "measurement": "contribution",
+          "segment": null,
+          "unit": "deliveries",
+          "threshold": 11.0,
+          "comparator": ">=",
+          "absolute": false
+        }
+      ],
+      "evidence_requirements": {},
+      "decision_guidance": "Use late deliveries in adjacent closed weeks for the same shipment population after duplicate removal. Notify Fleet Operations when the total is at least 17 higher than baseline or when any service lane is at least 11 higher than its baseline. Compare current minus baseline; a negative lane contribution is not an increase. Use the result only when the source confirms the same population, definition, adjacent periods, complete lane partition, and reconciled totals. Route incomplete comparisons as insufficient_data to Logistics Data. If neither threshold is met, ignore. Describe lane contributions as accounting decomposition, not causes.",
+      "follow_up_guidance": "Describe lane contributions as accounting decomposition, not causes. Do not infer causation from the comparison.",
+      "sources": [
+        {
+          "key": "canyon-freight-reporting",
+          "adapter": "company_mcp",
+          "resource": "report:late-deliveries",
+          "label": "Late deliveries by service lane",
+          "parameters": {
+            "business_role": "reporting",
+            "available_comparison_windows": [
+              "previous_period"
+            ]
+          },
+          "required": true,
+          "required_comparison_keys": [
+            "late-deliveries"
+          ]
+        }
+      ],
+      "comparison_windows": [
+        "previous_period"
+      ],
+      "action_confidence_threshold": 0.7,
+      "owner": null,
+      "version": 1,
+      "max_source_age_hours": 24.0,
+      "delivery_methods": [
+        {
+          "key": "fleet-operations:notify",
+          "outcome": "notify",
+          "label": "Fleet Operations",
+          "destination": "agent://fleet-operations",
+          "instructions": ""
+        },
+        {
+          "key": "logistics-data:insufficient_data",
+          "outcome": "insufficient_data",
+          "label": "Logistics Data",
+          "destination": "agent://logistics-data",
+          "instructions": ""
+        }
+      ],
+      "retrieval_mode": "fixed",
+      "investigation_mode": "none",
+      "max_investigation_sources": 3,
+      "investigation_threshold": 0.6,
+      "principal_id": "canyon-freight-owner",
+      "principal_tenant": "synthetic-recurring-runtime",
+      "compiled_plan": {
+        "card_id": "card-late-delivery-increases-by-service-lane-202a7959859b",
+        "card_version": 1,
+        "selected_source_keys": [
+          "canyon-freight-reporting"
+        ],
+        "comparison_windows": [
+          "previous_period"
+        ],
+        "capabilities": [
+          "baseline_comparison",
+          "freshness_check",
+          "dimension_contribution",
+          "watch_for_checks"
+        ],
+        "watch_for": [
+          "The source confirms the same shipment population after duplicate removal, the same late-delivery definition, adjacent closed periods, a complete disjoint service-lane partition, and reconciled totals."
+        ],
+        "questions": [],
+        "delivery_method_keys": [
+          "fleet-operations:notify",
+          "logistics-data:insufficient_data"
+        ],
+        "compiled_by": "jev-latest",
+        "card_scope": "Late delivery counts in the immediately preceding closed week versus the current closed week for non-duplicate shipments with a delivery timestamp, including the total delta and each service-lane contribution.\nWhy: Identify material increases in late deliveries and route comparisons that do not satisfy the source comparability requirements.",
+        "metric_query_plans": [],
+        "investigation_mode": "none",
+        "max_investigation_sources": 3,
+        "evidence_slots": [
+          {
+            "key": "source:canyon-freight-reporting",
+            "role": "primary",
+            "question": "What changed in Late deliveries by service lane that is relevant to the card's stated purpose and comparison window?",
+            "source_keys": [
+              "canyon-freight-reporting"
+            ],
+            "source_refs": [
+              {
+                "key": "canyon-freight-reporting",
+                "adapter": "company_mcp",
+                "resource": "report:late-deliveries",
+                "label": "Late deliveries by service lane",
+                "parameters": {
+                  "business_role": "reporting",
+                  "available_comparison_windows": [
+                    "previous_period"
+                  ]
+                },
+                "required": true,
+                "required_comparison_keys": [
+                  "late-deliveries"
+                ]
+              }
+            ],
+            "required": true,
+            "completion_criteria": "Return complete, reconciled analytical comparisons: late-deliveries",
+            "status": "pending",
+            "evidence_fact_ids": [],
+            "evidence_source_keys": []
+          },
+          {
+            "key": "watch:1",
+            "role": "watch",
+            "question": "The source confirms the same shipment population after duplicate removal, the same late-delivery definition, adjacent closed periods, a complete disjoint service-lane partition, and reconciled totals.",
+            "source_keys": [
+              "canyon-freight-reporting"
+            ],
+            "source_refs": [],
+            "required": true,
+            "completion_criteria": "Return evidence that shows whether this watch item is present or absent.",
+            "status": "pending",
+            "evidence_fact_ids": [],
+            "evidence_source_keys": []
+          }
+        ]
+      },
+      "onboarding_review": null,
+      "onboarding_review_history": [],
+      "onboarding_corrections": [],
+      "status": "draft",
+      "approved_by": null,
+      "approved_at": null
+    },
+    "approval": {
+      "status": "approved",
+      "card": {
+        "id": "card-late-delivery-increases-by-service-lane-202a7959859b",
+        "title": "Late delivery increases by service lane",
+        "what_to_watch": "Late delivery counts in the immediately preceding closed week versus the current closed week for non-duplicate shipments with a delivery timestamp, including the total delta and each service-lane contribution.",
+        "why_watch": "Identify material increases in late deliveries and route comparisons that do not satisfy the source comparability requirements.",
+        "watch_for": [
+          "The source confirms the same shipment population after duplicate removal, the same late-delivery definition, adjacent closed periods, a complete disjoint service-lane partition, and reconciled totals."
+        ],
+        "questions": [],
+        "numeric_conditions": [
+          {
+            "text": "Total current minus baseline late deliveries is at least 17 deliveries.",
+            "source_key": "canyon-freight-reporting",
+            "comparison_key": "late-deliveries",
+            "measurement": "delta",
+            "segment": null,
+            "unit": "deliveries",
+            "threshold": 17.0,
+            "comparator": ">=",
+            "absolute": false
+          },
+          {
+            "text": "At least one service lane's current-minus-baseline contribution is at least 11 deliveries.",
+            "source_key": "canyon-freight-reporting",
+            "comparison_key": "late-deliveries",
+            "measurement": "contribution",
+            "segment": null,
+            "unit": "deliveries",
+            "threshold": 11.0,
+            "comparator": ">=",
+            "absolute": false
+          }
+        ],
+        "evidence_requirements": {},
+        "decision_guidance": "Use late deliveries in adjacent closed weeks for the same shipment population after duplicate removal. Notify Fleet Operations when the total is at least 17 higher than baseline or when any service lane is at least 11 higher than its baseline. Compare current minus baseline; a negative lane contribution is not an increase. Use the result only when the source confirms the same population, definition, adjacent periods, complete lane partition, and reconciled totals. Route incomplete comparisons as insufficient_data to Logistics Data. If neither threshold is met, ignore. Describe lane contributions as accounting decomposition, not causes.",
+        "follow_up_guidance": "Describe lane contributions as accounting decomposition, not causes. Do not infer causation from the comparison.",
+        "sources": [
+          {
+            "key": "canyon-freight-reporting",
+            "adapter": "company_mcp",
+            "resource": "report:late-deliveries",
+            "label": "Late deliveries by service lane",
+            "parameters": {
+              "business_role": "reporting",
+              "available_comparison_windows": [
+                "previous_period"
+              ]
+            },
+            "required": true,
+            "required_comparison_keys": [
+              "late-deliveries"
+            ]
+          }
+        ],
+        "comparison_windows": [
+          "previous_period"
+        ],
+        "action_confidence_threshold": 0.7,
+        "owner": null,
+        "version": 1,
+        "max_source_age_hours": 24.0,
+        "delivery_methods": [
+          {
+            "key": "fleet-operations:notify",
+            "outcome": "notify",
+            "label": "Fleet Operations",
+            "destination": "agent://fleet-operations",
+            "instructions": ""
+          },
+          {
+            "key": "logistics-data:insufficient_data",
+            "outcome": "insufficient_data",
+            "label": "Logistics Data",
+            "destination": "agent://logistics-data",
+            "instructions": ""
+          }
+        ],
+        "retrieval_mode": "fixed",
+        "investigation_mode": "none",
+        "max_investigation_sources": 3,
+        "investigation_threshold": 0.6,
+        "principal_id": "canyon-freight-owner",
+        "principal_tenant": "synthetic-recurring-runtime",
+        "status": "approved",
+        "approved_by": "canyon-freight-owner",
+        "approved_at": "2026-10-02T23:33:17.096345Z"
+      },
+      "onboarding_review": {
+        "card_id": "card-late-delivery-increases-by-service-lane-202a7959859b",
+        "status": "ready_for_approval",
+        "readiness_status": "ready_for_approval",
+        "blockers": [],
+        "source_selection_fingerprint": "30b05d3ca02fb8390971cfbddcfbf86a019b00a345bfd908662a91969f954286",
+        "source_selection_confirmation": null,
+        "confirmed_blocker_codes": [],
+        "principal_id": "canyon-freight-owner",
+        "principal_tenant": "synthetic-recurring-runtime",
+        "authorization_evidence": "deployment",
+        "discovery_receipt": {
+          "principal_id": "canyon-freight-owner",
+          "principal_tenant": "synthetic-recurring-runtime",
+          "authorization_evidence": "deployment",
+          "catalog_provider": "company_mcp",
+          "catalog_strategy": "local-scan-fallback",
+          "catalog_cursor": null,
+          "candidate_refs": [
+            "company_mcp|report:late-deliveries"
+          ],
+          "candidate_count": 1,
+          "candidate_limit": 40,
+          "truncated": false,
+          "evaluator": "jev-latest"
+        },
+        "selected_source_refs": [
+          "company_mcp|report:late-deliveries"
+        ],
+        "recommended_source_refs": [
+          "company_mcp|report:late-deliveries"
+        ],
+        "missing_recommended_refs": [],
+        "selected_outside_bounded_candidates": [],
+        "ambiguous_candidate_groups": [],
+        "source_candidates": [
+          {
+            "ref": "company_mcp|report:late-deliveries",
+            "adapter": "company_mcp",
+            "resource": "report:late-deliveries",
+            "kind": "saved_query",
+            "title": "Late deliveries by service lane",
+            "description": "Shipments delivered late in the closed interval after duplicate removal.",
+            "source_url": null,
+            "domain": "canyon-freight-reporting",
+            "tenant_id": "synthetic-recurring-runtime",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "synthetic-recurring-runtime",
+              "domain": "canyon-freight-reporting",
+              "scope": "non-duplicate shipments with a delivery timestamp",
+              "metric_names": [
+                "late_delivery_count"
+              ],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [
+                "late-deliveries"
+              ],
+              "population": "non-duplicate shipments with a delivery timestamp",
+              "grain": "weekly delivery interval",
+              "freshness_sla_hours": 48.0,
+              "lineage": [],
+              "roles": [
+                "reporting"
+              ],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "source_key": "canyon-freight-reporting",
+                "business_role": "reporting",
+                "required": true,
+                "read_only": true,
+                "period_contract": "closed UTC intervals compared with the immediately preceding closed interval",
+                "comparability_contract": {
+                  "population_identity": "non-duplicate shipments with a delivery timestamp",
+                  "period_alignment": "adjacent closed intervals with the same calendar grain",
+                  "segment_partition": "declared disjoint segments; incomplete partitions are not comparable",
+                  "definition_version": "synthetic-contract-v1"
+                }
+              }
+            },
+            "selected": true,
+            "recommended": true,
+            "relevance": 0.95,
+            "suggested_role": "primary",
+            "role_probability": 1.0,
+            "reason": "Jev judged it materially relevant to the stated goal; its catalog domain is canyon-freight-reporting; Jev classified its evidence role as primary (1.00).",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          }
+        ],
+        "questions": [],
+        "warnings": [],
+        "evidence_requirements": [
+          {
+            "key": "watch:1",
+            "question": "The source confirms the same shipment population after duplicate removal, the same late-delivery definition, adjacent closed periods, a complete disjoint service-lane partition, and reconciled totals.",
+            "required": true
+          }
+        ]
+      },
+      "workflow_acceptance": {
+        "status": "unassessed",
+        "report_id": null,
+        "human_authorization_required": true
+      }
+    },
+    "numeric_policy_audit": {
+      "passed": true,
+      "errors": []
+    },
+    "previewed_periods": [
+      "p01",
+      "p02"
+    ]
+  },
+  "helio-support": {
+    "company": "helio-support",
+    "episode": {
+      "status": "complete",
+      "error": null,
+      "tool_calls": 8,
+      "seconds": 37.17582654196303,
+      "response_timeout_seconds": 240,
+      "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+      "wall_time_overrun_seconds": 0.0,
+      "transport": "codex_cli",
+      "exit_code": 0,
+      "foreign_tools": []
+    },
+    "setup_complete": true,
+    "drafts": 1,
+    "card": {
+      "id": "card-monitor-weighted-customer-recontact-quality-fae6584e1a5b",
+      "title": "Monitor weighted customer recontact quality",
+      "what_to_watch": "Weighted customer recontact rate across eligible support conversations by support channel, using conversation counts rather than an average of channel percentages.",
+      "why_watch": "Identify when the weighted current rate or its change from the adjacent closed week requires Support Quality attention, while routing incomplete comparisons to Support Data.",
+      "watch_for": [
+        "The source confirms the same population and definition across adjacent closed weeks, a complete disjoint channel partition, and reconciled totals."
+      ],
+      "questions": [],
+      "numeric_conditions": [
+        {
+          "text": "Weighted current customer recontact rate is at least 9%.",
+          "source_key": "helio-support-reporting",
+          "comparison_key": "recontact-quality-rate",
+          "measurement": "current",
+          "segment": null,
+          "unit": "ratio",
+          "threshold": 0.09,
+          "comparator": ">=",
+          "absolute": false
+        },
+        {
+          "text": "Weighted current minus baseline customer recontact rate is at least 2.5 percentage points.",
+          "source_key": "helio-support-reporting",
+          "comparison_key": "recontact-quality-rate",
+          "measurement": "delta",
+          "segment": null,
+          "unit": "ratio",
+          "threshold": 0.025,
+          "comparator": ">=",
+          "absolute": false
+        }
+      ],
+      "evidence_requirements": {},
+      "decision_guidance": "Notify Support Quality when either numeric threshold is met. Route incomplete or non-comparable adjacent-week comparisons as insufficient_data to Support Data. If the source is complete and comparable and neither threshold is met, ignore. Describe channel accounting effects without claiming causes; contribution decomposition is not causal evidence.",
+      "follow_up_guidance": "Use adjacent closed weeks and report the weighted totals, signed change, channel accounting contributions, and completeness/comparability status. Do not claim causes from the decomposition.",
+      "sources": [
+        {
+          "key": "helio-support-reporting",
+          "adapter": "company_mcp",
+          "resource": "report:recontact-quality-rate",
+          "label": "Weighted recontact quality rate by support channel",
+          "parameters": {
+            "business_role": "reporting",
+            "available_comparison_windows": [
+              "previous_period"
+            ]
+          },
+          "required": true,
+          "required_comparison_keys": [
+            "recontact-quality-rate"
+          ]
+        }
+      ],
+      "comparison_windows": [
+        "previous_period"
+      ],
+      "action_confidence_threshold": 0.7,
+      "owner": null,
+      "version": 1,
+      "max_source_age_hours": 24.0,
+      "delivery_methods": [
+        {
+          "key": "support-quality:notify",
+          "outcome": "notify",
+          "label": "Support Quality",
+          "destination": "agent://support-quality",
+          "instructions": ""
+        },
+        {
+          "key": "support-data:insufficient_data",
+          "outcome": "insufficient_data",
+          "label": "Support Data",
+          "destination": "agent://support-data",
+          "instructions": ""
+        }
+      ],
+      "retrieval_mode": "fixed",
+      "investigation_mode": "none",
+      "max_investigation_sources": 3,
+      "investigation_threshold": 0.6,
+      "principal_id": "helio-support-owner",
+      "principal_tenant": "synthetic-recurring-runtime",
+      "compiled_plan": null,
+      "onboarding_review": null,
+      "onboarding_review_history": [],
+      "onboarding_corrections": [],
+      "status": "approved",
+      "approved_by": "helio-support-owner",
+      "approved_at": "2026-10-02T23:33:55.098901Z"
+    },
+    "draft_card": {
+      "id": "card-monitor-weighted-customer-recontact-quality-fae6584e1a5b",
+      "title": "Monitor weighted customer recontact quality",
+      "what_to_watch": "Weighted customer recontact rate across eligible support conversations by support channel, using conversation counts rather than an average of channel percentages.",
+      "why_watch": "Identify when the weighted current rate or its change from the adjacent closed week requires Support Quality attention, while routing incomplete comparisons to Support Data.",
+      "watch_for": [
+        "The source confirms the same population and definition across adjacent closed weeks, a complete disjoint channel partition, and reconciled totals."
+      ],
+      "questions": [],
+      "numeric_conditions": [
+        {
+          "text": "Weighted current customer recontact rate is at least 9%.",
+          "source_key": "helio-support-reporting",
+          "comparison_key": "recontact-quality-rate",
+          "measurement": "current",
+          "segment": null,
+          "unit": "ratio",
+          "threshold": 0.09,
+          "comparator": ">=",
+          "absolute": false
+        },
+        {
+          "text": "Weighted current minus baseline customer recontact rate is at least 2.5 percentage points.",
+          "source_key": "helio-support-reporting",
+          "comparison_key": "recontact-quality-rate",
+          "measurement": "delta",
+          "segment": null,
+          "unit": "ratio",
+          "threshold": 0.025,
+          "comparator": ">=",
+          "absolute": false
+        }
+      ],
+      "evidence_requirements": {},
+      "decision_guidance": "Notify Support Quality when either numeric threshold is met. Route incomplete or non-comparable adjacent-week comparisons as insufficient_data to Support Data. If the source is complete and comparable and neither threshold is met, ignore. Describe channel accounting effects without claiming causes; contribution decomposition is not causal evidence.",
+      "follow_up_guidance": "Use adjacent closed weeks and report the weighted totals, signed change, channel accounting contributions, and completeness/comparability status. Do not claim causes from the decomposition.",
+      "sources": [
+        {
+          "key": "helio-support-reporting",
+          "adapter": "company_mcp",
+          "resource": "report:recontact-quality-rate",
+          "label": "Weighted recontact quality rate by support channel",
+          "parameters": {
+            "business_role": "reporting",
+            "available_comparison_windows": [
+              "previous_period"
+            ]
+          },
+          "required": true,
+          "required_comparison_keys": [
+            "recontact-quality-rate"
+          ]
+        }
+      ],
+      "comparison_windows": [
+        "previous_period"
+      ],
+      "action_confidence_threshold": 0.7,
+      "owner": null,
+      "version": 1,
+      "max_source_age_hours": 24.0,
+      "delivery_methods": [
+        {
+          "key": "support-quality:notify",
+          "outcome": "notify",
+          "label": "Support Quality",
+          "destination": "agent://support-quality",
+          "instructions": ""
+        },
+        {
+          "key": "support-data:insufficient_data",
+          "outcome": "insufficient_data",
+          "label": "Support Data",
+          "destination": "agent://support-data",
+          "instructions": ""
+        }
+      ],
+      "retrieval_mode": "fixed",
+      "investigation_mode": "none",
+      "max_investigation_sources": 3,
+      "investigation_threshold": 0.6,
+      "principal_id": "helio-support-owner",
+      "principal_tenant": "synthetic-recurring-runtime",
+      "compiled_plan": {
+        "card_id": "card-monitor-weighted-customer-recontact-quality-fae6584e1a5b",
+        "card_version": 1,
+        "selected_source_keys": [
+          "helio-support-reporting"
+        ],
+        "comparison_windows": [
+          "previous_period"
+        ],
+        "capabilities": [
+          "baseline_comparison",
+          "freshness_check",
+          "watch_for_checks"
+        ],
+        "watch_for": [
+          "The source confirms the same population and definition across adjacent closed weeks, a complete disjoint channel partition, and reconciled totals."
+        ],
+        "questions": [],
+        "delivery_method_keys": [
+          "support-quality:notify",
+          "support-data:insufficient_data"
+        ],
+        "compiled_by": "jev-latest",
+        "card_scope": "Weighted customer recontact rate across eligible support conversations by support channel, using conversation counts rather than an average of channel percentages.\nWhy: Identify when the weighted current rate or its change from the adjacent closed week requires Support Quality attention, while routing incomplete comparisons to Support Data.",
+        "metric_query_plans": [],
+        "investigation_mode": "none",
+        "max_investigation_sources": 3,
+        "evidence_slots": [
+          {
+            "key": "source:helio-support-reporting",
+            "role": "primary",
+            "question": "What changed in Weighted recontact quality rate by support channel that is relevant to the card's stated purpose and comparison window?",
+            "source_keys": [
+              "helio-support-reporting"
+            ],
+            "source_refs": [
+              {
+                "key": "helio-support-reporting",
+                "adapter": "company_mcp",
+                "resource": "report:recontact-quality-rate",
+                "label": "Weighted recontact quality rate by support channel",
+                "parameters": {
+                  "business_role": "reporting",
+                  "available_comparison_windows": [
+                    "previous_period"
+                  ]
+                },
+                "required": true,
+                "required_comparison_keys": [
+                  "recontact-quality-rate"
+                ]
+              }
+            ],
+            "required": true,
+            "completion_criteria": "Return complete, reconciled analytical comparisons: recontact-quality-rate",
+            "status": "pending",
+            "evidence_fact_ids": [],
+            "evidence_source_keys": []
+          },
+          {
+            "key": "watch:1",
+            "role": "watch",
+            "question": "The source confirms the same population and definition across adjacent closed weeks, a complete disjoint channel partition, and reconciled totals.",
+            "source_keys": [
+              "helio-support-reporting"
+            ],
+            "source_refs": [],
+            "required": true,
+            "completion_criteria": "Return evidence that shows whether this watch item is present or absent.",
+            "status": "pending",
+            "evidence_fact_ids": [],
+            "evidence_source_keys": []
+          }
+        ]
+      },
+      "onboarding_review": null,
+      "onboarding_review_history": [],
+      "onboarding_corrections": [],
+      "status": "draft",
+      "approved_by": null,
+      "approved_at": null
+    },
+    "approval": {
+      "status": "approved",
+      "card": {
+        "id": "card-monitor-weighted-customer-recontact-quality-fae6584e1a5b",
+        "title": "Monitor weighted customer recontact quality",
+        "what_to_watch": "Weighted customer recontact rate across eligible support conversations by support channel, using conversation counts rather than an average of channel percentages.",
+        "why_watch": "Identify when the weighted current rate or its change from the adjacent closed week requires Support Quality attention, while routing incomplete comparisons to Support Data.",
+        "watch_for": [
+          "The source confirms the same population and definition across adjacent closed weeks, a complete disjoint channel partition, and reconciled totals."
+        ],
+        "questions": [],
+        "numeric_conditions": [
+          {
+            "text": "Weighted current customer recontact rate is at least 9%.",
+            "source_key": "helio-support-reporting",
+            "comparison_key": "recontact-quality-rate",
+            "measurement": "current",
+            "segment": null,
+            "unit": "ratio",
+            "threshold": 0.09,
+            "comparator": ">=",
+            "absolute": false
+          },
+          {
+            "text": "Weighted current minus baseline customer recontact rate is at least 2.5 percentage points.",
+            "source_key": "helio-support-reporting",
+            "comparison_key": "recontact-quality-rate",
+            "measurement": "delta",
+            "segment": null,
+            "unit": "ratio",
+            "threshold": 0.025,
+            "comparator": ">=",
+            "absolute": false
+          }
+        ],
+        "evidence_requirements": {},
+        "decision_guidance": "Notify Support Quality when either numeric threshold is met. Route incomplete or non-comparable adjacent-week comparisons as insufficient_data to Support Data. If the source is complete and comparable and neither threshold is met, ignore. Describe channel accounting effects without claiming causes; contribution decomposition is not causal evidence.",
+        "follow_up_guidance": "Use adjacent closed weeks and report the weighted totals, signed change, channel accounting contributions, and completeness/comparability status. Do not claim causes from the decomposition.",
+        "sources": [
+          {
+            "key": "helio-support-reporting",
+            "adapter": "company_mcp",
+            "resource": "report:recontact-quality-rate",
+            "label": "Weighted recontact quality rate by support channel",
+            "parameters": {
+              "business_role": "reporting",
+              "available_comparison_windows": [
+                "previous_period"
+              ]
+            },
+            "required": true,
+            "required_comparison_keys": [
+              "recontact-quality-rate"
+            ]
+          }
+        ],
+        "comparison_windows": [
+          "previous_period"
+        ],
+        "action_confidence_threshold": 0.7,
+        "owner": null,
+        "version": 1,
+        "max_source_age_hours": 24.0,
+        "delivery_methods": [
+          {
+            "key": "support-quality:notify",
+            "outcome": "notify",
+            "label": "Support Quality",
+            "destination": "agent://support-quality",
+            "instructions": ""
+          },
+          {
+            "key": "support-data:insufficient_data",
+            "outcome": "insufficient_data",
+            "label": "Support Data",
+            "destination": "agent://support-data",
+            "instructions": ""
+          }
+        ],
+        "retrieval_mode": "fixed",
+        "investigation_mode": "none",
+        "max_investigation_sources": 3,
+        "investigation_threshold": 0.6,
+        "principal_id": "helio-support-owner",
+        "principal_tenant": "synthetic-recurring-runtime",
+        "status": "approved",
+        "approved_by": "helio-support-owner",
+        "approved_at": "2026-10-02T23:33:55.098901Z"
+      },
+      "onboarding_review": {
+        "card_id": "card-monitor-weighted-customer-recontact-quality-fae6584e1a5b",
+        "status": "ready_for_approval",
+        "readiness_status": "ready_for_approval",
+        "blockers": [],
+        "source_selection_fingerprint": "45478c537485aee572358eb14de996ec14be1e5132a4a7e02e37fc306aa3181a",
+        "source_selection_confirmation": null,
+        "confirmed_blocker_codes": [],
+        "principal_id": "helio-support-owner",
+        "principal_tenant": "synthetic-recurring-runtime",
+        "authorization_evidence": "deployment",
+        "discovery_receipt": {
+          "principal_id": "helio-support-owner",
+          "principal_tenant": "synthetic-recurring-runtime",
+          "authorization_evidence": "deployment",
+          "catalog_provider": "company_mcp",
+          "catalog_strategy": "local-scan-fallback",
+          "catalog_cursor": null,
+          "candidate_refs": [
+            "company_mcp|report:recontact-quality-rate"
+          ],
+          "candidate_count": 1,
+          "candidate_limit": 40,
+          "truncated": false,
+          "evaluator": "jev-latest"
+        },
+        "selected_source_refs": [
+          "company_mcp|report:recontact-quality-rate"
+        ],
+        "recommended_source_refs": [
+          "company_mcp|report:recontact-quality-rate"
+        ],
+        "missing_recommended_refs": [],
+        "selected_outside_bounded_candidates": [],
+        "ambiguous_candidate_groups": [],
+        "source_candidates": [
+          {
+            "ref": "company_mcp|report:recontact-quality-rate",
+            "adapter": "company_mcp",
+            "resource": "report:recontact-quality-rate",
+            "kind": "saved_query",
+            "title": "Weighted recontact quality rate by support channel",
+            "description": "Eligible support conversations followed by a customer recontact within the quality window, divided by eligible conversations.",
+            "source_url": null,
+            "domain": "helio-support-reporting",
+            "tenant_id": "synthetic-recurring-runtime",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "synthetic-recurring-runtime",
+              "domain": "helio-support-reporting",
+              "scope": "eligible support conversations with a channel and quality outcome",
+              "metric_names": [
+                "customer_recontact_rate"
+              ],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [
+                "recontact-quality-rate"
+              ],
+              "population": "eligible support conversations with a channel and quality outcome",
+              "grain": "weekly support interval",
+              "freshness_sla_hours": 48.0,
+              "lineage": [],
+              "roles": [
+                "reporting"
+              ],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "source_key": "helio-support-reporting",
+                "business_role": "reporting",
+                "required": true,
+                "read_only": true,
+                "period_contract": "closed UTC intervals compared with the immediately preceding closed interval",
+                "comparability_contract": {
+                  "population_identity": "eligible support conversations with a channel and quality outcome",
+                  "period_alignment": "adjacent closed intervals with the same calendar grain",
+                  "segment_partition": "declared disjoint segments; incomplete partitions are not comparable",
+                  "definition_version": "synthetic-contract-v1"
+                }
+              }
+            },
+            "selected": true,
+            "recommended": true,
+            "relevance": 0.95,
+            "suggested_role": "primary",
+            "role_probability": 0.99,
+            "reason": "Jev judged it materially relevant to the stated goal; its catalog domain is helio-support-reporting; Jev classified its evidence role as primary (0.99).",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          }
+        ],
+        "questions": [],
+        "warnings": [],
+        "evidence_requirements": [
+          {
+            "key": "watch:1",
+            "question": "The source confirms the same population and definition across adjacent closed weeks, a complete disjoint channel partition, and reconciled totals.",
+            "required": true
+          }
+        ]
+      },
+      "workflow_acceptance": {
+        "status": "unassessed",
+        "report_id": null,
+        "human_authorization_required": true
+      }
+    },
+    "numeric_policy_audit": {
+      "passed": true,
+      "errors": []
+    },
+    "previewed_periods": [
+      "p01",
+      "p02"
+    ]
+  },
+  "lattice-energy": {
+    "company": "lattice-energy",
+    "episode": {
+      "status": "complete",
+      "error": null,
+      "tool_calls": 9,
+      "seconds": 29.5174221250345,
+      "response_timeout_seconds": 240,
+      "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+      "wall_time_overrun_seconds": 0.0,
+      "transport": "codex_cli",
+      "exit_code": 0,
+      "foreign_tools": []
+    },
+    "setup_complete": true,
+    "drafts": 1,
+    "card": {
+      "id": "card-signed-contract-value-movement-by-customer-change-type-d7d9aef393bc",
+      "title": "Signed contract-value movement by customer change type",
+      "what_to_watch": "Monitor signed monthly contract-value movement from effective account-change records for the same billed-account population, comparing the current closed month with the immediately preceding closed month.",
+      "why_watch": "Detect material deterioration in net contract-value movement or in exact contraction or churn contributions while preserving signed values and the owner's exception policy.",
+      "watch_for": [
+        "The reporting source confirms the same billed-account population, signed-contract-movement definition, adjacent closed monthly periods, complete disjoint change-type partition, and reconciled totals.",
+        "The service-credit exception register resolves whether an approved exception covers the exact closed month."
+      ],
+      "questions": [],
+      "numeric_conditions": [
+        {
+          "text": "Net signed contract-value movement is at least $75 lower than baseline (current minus baseline <= -75 USD).",
+          "source_key": "lattice-energy-reporting",
+          "comparison_key": "signed-contract-movement",
+          "measurement": "delta",
+          "segment": null,
+          "unit": "USD",
+          "threshold": -75.0,
+          "comparator": "<=",
+          "absolute": false
+        },
+        {
+          "text": "The contraction contribution is at least $45 lower than baseline (signed contribution <= -45 USD).",
+          "source_key": "lattice-energy-reporting",
+          "comparison_key": "signed-contract-movement",
+          "measurement": "contribution",
+          "segment": "contraction",
+          "unit": "USD",
+          "threshold": -45.0,
+          "comparator": "<=",
+          "absolute": false
+        },
+        {
+          "text": "The churn contribution is at least $45 lower than baseline (signed contribution <= -45 USD).",
+          "source_key": "lattice-energy-reporting",
+          "comparison_key": "signed-contract-movement",
+          "measurement": "contribution",
+          "segment": "churn",
+          "unit": "USD",
+          "threshold": -45.0,
+          "comparator": "<=",
+          "absolute": false
+        }
+      ],
+      "evidence_requirements": {
+        "watch:1": true,
+        "watch:2": true
+      },
+      "decision_guidance": "Use the complete analytical report and resolved exception context. Preserve signs and compare current minus baseline. If a numeric trigger is present and an approved service-credit exception covers the exact closed month, ignore. If a numeric trigger is present and that exception context is unresolved, investigate with Commercial Data. If the report is partial or otherwise incomplete, return insufficient_data and route to Commercial Data. If the complete report has no numeric trigger, ignore. If a complete report has a trigger without an approved exception, notify Commercial Operations. Contributions describe measured movement, not causes.",
+      "follow_up_guidance": "Report the signed baseline, current value, delta, triggered threshold(s), exact segment contributions, population and comparability checks, and exception status. Do not infer causal mechanisms from contribution breakdowns.",
+      "sources": [
+        {
+          "key": "lattice-energy-reporting",
+          "adapter": "company_mcp",
+          "resource": "report:signed-contract-movement",
+          "label": "Signed monthly contract-value movement by change type",
+          "parameters": {
+            "business_role": "reporting",
+            "available_comparison_windows": [
+              "previous_period"
+            ]
+          },
+          "required": true,
+          "required_comparison_keys": [
+            "signed-contract-movement"
+          ]
+        },
+        {
+          "key": "lattice-energy-context",
+          "adapter": "company_mcp",
+          "resource": "record:service-credit-register",
+          "label": "Service-credit exception register",
+          "parameters": {
+            "business_role": "owner_context",
+            "available_comparison_windows": [
+              "previous_period"
+            ]
+          },
+          "required": true,
+          "required_comparison_keys": []
+        }
+      ],
+      "comparison_windows": [
+        "previous_period"
+      ],
+      "action_confidence_threshold": 0.7,
+      "owner": null,
+      "version": 1,
+      "max_source_age_hours": 24.0,
+      "delivery_methods": [
+        {
+          "key": "commercial-operations:notify",
+          "outcome": "notify",
+          "label": "Commercial Operations",
+          "destination": "agent://commercial-operations",
+          "instructions": ""
+        },
+        {
+          "key": "commercial-data:investigate",
+          "outcome": "investigate",
+          "label": "Commercial Data",
+          "destination": "agent://commercial-data",
+          "instructions": ""
+        },
+        {
+          "key": "commercial-data:insufficient_data",
+          "outcome": "insufficient_data",
+          "label": "Commercial Data",
+          "destination": "agent://commercial-data",
+          "instructions": ""
+        }
+      ],
+      "retrieval_mode": "fixed",
+      "investigation_mode": "none",
+      "max_investigation_sources": 3,
+      "investigation_threshold": 0.6,
+      "principal_id": "lattice-energy-owner",
+      "principal_tenant": "synthetic-recurring-runtime",
+      "compiled_plan": null,
+      "onboarding_review": null,
+      "onboarding_review_history": [],
+      "onboarding_corrections": [],
+      "status": "approved",
+      "approved_by": "lattice-energy-owner",
+      "approved_at": "2026-10-02T23:34:25.502729Z"
+    },
+    "draft_card": {
+      "id": "card-signed-contract-value-movement-by-customer-change-type-d7d9aef393bc",
+      "title": "Signed contract-value movement by customer change type",
+      "what_to_watch": "Monitor signed monthly contract-value movement from effective account-change records for the same billed-account population, comparing the current closed month with the immediately preceding closed month.",
+      "why_watch": "Detect material deterioration in net contract-value movement or in exact contraction or churn contributions while preserving signed values and the owner's exception policy.",
+      "watch_for": [
+        "The reporting source confirms the same billed-account population, signed-contract-movement definition, adjacent closed monthly periods, complete disjoint change-type partition, and reconciled totals.",
+        "The service-credit exception register resolves whether an approved exception covers the exact closed month."
+      ],
+      "questions": [],
+      "numeric_conditions": [
+        {
+          "text": "Net signed contract-value movement is at least $75 lower than baseline (current minus baseline <= -75 USD).",
+          "source_key": "lattice-energy-reporting",
+          "comparison_key": "signed-contract-movement",
+          "measurement": "delta",
+          "segment": null,
+          "unit": "USD",
+          "threshold": -75.0,
+          "comparator": "<=",
+          "absolute": false
+        },
+        {
+          "text": "The contraction contribution is at least $45 lower than baseline (signed contribution <= -45 USD).",
+          "source_key": "lattice-energy-reporting",
+          "comparison_key": "signed-contract-movement",
+          "measurement": "contribution",
+          "segment": "contraction",
+          "unit": "USD",
+          "threshold": -45.0,
+          "comparator": "<=",
+          "absolute": false
+        },
+        {
+          "text": "The churn contribution is at least $45 lower than baseline (signed contribution <= -45 USD).",
+          "source_key": "lattice-energy-reporting",
+          "comparison_key": "signed-contract-movement",
+          "measurement": "contribution",
+          "segment": "churn",
+          "unit": "USD",
+          "threshold": -45.0,
+          "comparator": "<=",
+          "absolute": false
+        }
+      ],
+      "evidence_requirements": {
+        "watch:1": true,
+        "watch:2": true
+      },
+      "decision_guidance": "Use the complete analytical report and resolved exception context. Preserve signs and compare current minus baseline. If a numeric trigger is present and an approved service-credit exception covers the exact closed month, ignore. If a numeric trigger is present and that exception context is unresolved, investigate with Commercial Data. If the report is partial or otherwise incomplete, return insufficient_data and route to Commercial Data. If the complete report has no numeric trigger, ignore. If a complete report has a trigger without an approved exception, notify Commercial Operations. Contributions describe measured movement, not causes.",
+      "follow_up_guidance": "Report the signed baseline, current value, delta, triggered threshold(s), exact segment contributions, population and comparability checks, and exception status. Do not infer causal mechanisms from contribution breakdowns.",
+      "sources": [
+        {
+          "key": "lattice-energy-reporting",
+          "adapter": "company_mcp",
+          "resource": "report:signed-contract-movement",
+          "label": "Signed monthly contract-value movement by change type",
+          "parameters": {
+            "business_role": "reporting",
+            "available_comparison_windows": [
+              "previous_period"
+            ]
+          },
+          "required": true,
+          "required_comparison_keys": [
+            "signed-contract-movement"
+          ]
+        },
+        {
+          "key": "lattice-energy-context",
+          "adapter": "company_mcp",
+          "resource": "record:service-credit-register",
+          "label": "Service-credit exception register",
+          "parameters": {
+            "business_role": "owner_context",
+            "available_comparison_windows": [
+              "previous_period"
+            ]
+          },
+          "required": true,
+          "required_comparison_keys": []
+        }
+      ],
+      "comparison_windows": [
+        "previous_period"
+      ],
+      "action_confidence_threshold": 0.7,
+      "owner": null,
+      "version": 1,
+      "max_source_age_hours": 24.0,
+      "delivery_methods": [
+        {
+          "key": "commercial-operations:notify",
+          "outcome": "notify",
+          "label": "Commercial Operations",
+          "destination": "agent://commercial-operations",
+          "instructions": ""
+        },
+        {
+          "key": "commercial-data:investigate",
+          "outcome": "investigate",
+          "label": "Commercial Data",
+          "destination": "agent://commercial-data",
+          "instructions": ""
+        },
+        {
+          "key": "commercial-data:insufficient_data",
+          "outcome": "insufficient_data",
+          "label": "Commercial Data",
+          "destination": "agent://commercial-data",
+          "instructions": ""
+        }
+      ],
+      "retrieval_mode": "fixed",
+      "investigation_mode": "none",
+      "max_investigation_sources": 3,
+      "investigation_threshold": 0.6,
+      "principal_id": "lattice-energy-owner",
+      "principal_tenant": "synthetic-recurring-runtime",
+      "compiled_plan": {
+        "card_id": "card-signed-contract-value-movement-by-customer-change-type-d7d9aef393bc",
+        "card_version": 1,
+        "selected_source_keys": [
+          "lattice-energy-reporting",
+          "lattice-energy-context"
+        ],
+        "comparison_windows": [
+          "previous_period"
+        ],
+        "capabilities": [
+          "baseline_comparison",
+          "freshness_check",
+          "dimension_contribution",
+          "cross_source_comparison",
+          "related_context_check",
+          "watch_for_checks"
+        ],
+        "watch_for": [
+          "The reporting source confirms the same billed-account population, signed-contract-movement definition, adjacent closed monthly periods, complete disjoint change-type partition, and reconciled totals.",
+          "The service-credit exception register resolves whether an approved exception covers the exact closed month."
+        ],
+        "questions": [],
+        "delivery_method_keys": [
+          "commercial-operations:notify",
+          "commercial-data:investigate",
+          "commercial-data:insufficient_data"
+        ],
+        "compiled_by": "jev-latest",
+        "card_scope": "Monitor signed monthly contract-value movement from effective account-change records for the same billed-account population, comparing the current closed month with the immediately preceding closed month.\nWhy: Detect material deterioration in net contract-value movement or in exact contraction or churn contributions while preserving signed values and the owner's exception policy.",
+        "metric_query_plans": [],
+        "investigation_mode": "none",
+        "max_investigation_sources": 3,
+        "evidence_slots": [
+          {
+            "key": "source:lattice-energy-reporting",
+            "role": "primary",
+            "question": "What changed in Signed monthly contract-value movement by change type that is relevant to the card's stated purpose and comparison window?",
+            "source_keys": [
+              "lattice-energy-reporting"
+            ],
+            "source_refs": [
+              {
+                "key": "lattice-energy-reporting",
+                "adapter": "company_mcp",
+                "resource": "report:signed-contract-movement",
+                "label": "Signed monthly contract-value movement by change type",
+                "parameters": {
+                  "business_role": "reporting",
+                  "available_comparison_windows": [
+                    "previous_period"
+                  ]
+                },
+                "required": true,
+                "required_comparison_keys": [
+                  "signed-contract-movement"
+                ]
+              }
+            ],
+            "required": true,
+            "completion_criteria": "Return complete, reconciled analytical comparisons: signed-contract-movement",
+            "status": "pending",
+            "evidence_fact_ids": [],
+            "evidence_source_keys": []
+          },
+          {
+            "key": "source:lattice-energy-context",
+            "role": "primary",
+            "question": "What changed in Service-credit exception register that is relevant to the card's stated purpose and comparison window?",
+            "source_keys": [
+              "lattice-energy-context"
+            ],
+            "source_refs": [
+              {
+                "key": "lattice-energy-context",
+                "adapter": "company_mcp",
+                "resource": "record:service-credit-register",
+                "label": "Service-credit exception register",
+                "parameters": {
+                  "business_role": "owner_context",
+                  "available_comparison_windows": [
+                    "previous_period"
+                  ]
+                },
+                "required": true,
+                "required_comparison_keys": []
+              }
+            ],
+            "required": true,
+            "completion_criteria": "Return a bounded observation or evidence statement with its source and comparison window.",
+            "status": "pending",
+            "evidence_fact_ids": [],
+            "evidence_source_keys": []
+          },
+          {
+            "key": "watch:1",
+            "role": "watch",
+            "question": "The reporting source confirms the same billed-account population, signed-contract-movement definition, adjacent closed monthly periods, complete disjoint change-type partition, and reconciled totals.",
+            "source_keys": [
+              "lattice-energy-reporting",
+              "lattice-energy-context"
+            ],
+            "source_refs": [],
+            "required": true,
+            "completion_criteria": "Return evidence that shows whether this watch item is present or absent.",
+            "status": "pending",
+            "evidence_fact_ids": [],
+            "evidence_source_keys": []
+          },
+          {
+            "key": "watch:2",
+            "role": "watch",
+            "question": "The service-credit exception register resolves whether an approved exception covers the exact closed month.",
+            "source_keys": [
+              "lattice-energy-reporting",
+              "lattice-energy-context"
+            ],
+            "source_refs": [],
+            "required": true,
+            "completion_criteria": "Return evidence that shows whether this watch item is present or absent.",
+            "status": "pending",
+            "evidence_fact_ids": [],
+            "evidence_source_keys": []
+          }
+        ]
+      },
+      "onboarding_review": null,
+      "onboarding_review_history": [],
+      "onboarding_corrections": [],
+      "status": "draft",
+      "approved_by": null,
+      "approved_at": null
+    },
+    "approval": {
+      "status": "approved",
+      "card": {
+        "id": "card-signed-contract-value-movement-by-customer-change-type-d7d9aef393bc",
+        "title": "Signed contract-value movement by customer change type",
+        "what_to_watch": "Monitor signed monthly contract-value movement from effective account-change records for the same billed-account population, comparing the current closed month with the immediately preceding closed month.",
+        "why_watch": "Detect material deterioration in net contract-value movement or in exact contraction or churn contributions while preserving signed values and the owner's exception policy.",
+        "watch_for": [
+          "The reporting source confirms the same billed-account population, signed-contract-movement definition, adjacent closed monthly periods, complete disjoint change-type partition, and reconciled totals.",
+          "The service-credit exception register resolves whether an approved exception covers the exact closed month."
+        ],
+        "questions": [],
+        "numeric_conditions": [
+          {
+            "text": "Net signed contract-value movement is at least $75 lower than baseline (current minus baseline <= -75 USD).",
+            "source_key": "lattice-energy-reporting",
+            "comparison_key": "signed-contract-movement",
+            "measurement": "delta",
+            "segment": null,
+            "unit": "USD",
+            "threshold": -75.0,
+            "comparator": "<=",
+            "absolute": false
+          },
+          {
+            "text": "The contraction contribution is at least $45 lower than baseline (signed contribution <= -45 USD).",
+            "source_key": "lattice-energy-reporting",
+            "comparison_key": "signed-contract-movement",
+            "measurement": "contribution",
+            "segment": "contraction",
+            "unit": "USD",
+            "threshold": -45.0,
+            "comparator": "<=",
+            "absolute": false
+          },
+          {
+            "text": "The churn contribution is at least $45 lower than baseline (signed contribution <= -45 USD).",
+            "source_key": "lattice-energy-reporting",
+            "comparison_key": "signed-contract-movement",
+            "measurement": "contribution",
+            "segment": "churn",
+            "unit": "USD",
+            "threshold": -45.0,
+            "comparator": "<=",
+            "absolute": false
+          }
+        ],
+        "evidence_requirements": {
+          "watch:1": true,
+          "watch:2": true
+        },
+        "decision_guidance": "Use the complete analytical report and resolved exception context. Preserve signs and compare current minus baseline. If a numeric trigger is present and an approved service-credit exception covers the exact closed month, ignore. If a numeric trigger is present and that exception context is unresolved, investigate with Commercial Data. If the report is partial or otherwise incomplete, return insufficient_data and route to Commercial Data. If the complete report has no numeric trigger, ignore. If a complete report has a trigger without an approved exception, notify Commercial Operations. Contributions describe measured movement, not causes.",
+        "follow_up_guidance": "Report the signed baseline, current value, delta, triggered threshold(s), exact segment contributions, population and comparability checks, and exception status. Do not infer causal mechanisms from contribution breakdowns.",
+        "sources": [
+          {
+            "key": "lattice-energy-reporting",
+            "adapter": "company_mcp",
+            "resource": "report:signed-contract-movement",
+            "label": "Signed monthly contract-value movement by change type",
+            "parameters": {
+              "business_role": "reporting",
+              "available_comparison_windows": [
+                "previous_period"
+              ]
+            },
+            "required": true,
+            "required_comparison_keys": [
+              "signed-contract-movement"
+            ]
+          },
+          {
+            "key": "lattice-energy-context",
+            "adapter": "company_mcp",
+            "resource": "record:service-credit-register",
+            "label": "Service-credit exception register",
+            "parameters": {
+              "business_role": "owner_context",
+              "available_comparison_windows": [
+                "previous_period"
+              ]
+            },
+            "required": true,
+            "required_comparison_keys": []
+          }
+        ],
+        "comparison_windows": [
+          "previous_period"
+        ],
+        "action_confidence_threshold": 0.7,
+        "owner": null,
+        "version": 1,
+        "max_source_age_hours": 24.0,
+        "delivery_methods": [
+          {
+            "key": "commercial-operations:notify",
+            "outcome": "notify",
+            "label": "Commercial Operations",
+            "destination": "agent://commercial-operations",
+            "instructions": ""
+          },
+          {
+            "key": "commercial-data:investigate",
+            "outcome": "investigate",
+            "label": "Commercial Data",
+            "destination": "agent://commercial-data",
+            "instructions": ""
+          },
+          {
+            "key": "commercial-data:insufficient_data",
+            "outcome": "insufficient_data",
+            "label": "Commercial Data",
+            "destination": "agent://commercial-data",
+            "instructions": ""
+          }
+        ],
+        "retrieval_mode": "fixed",
+        "investigation_mode": "none",
+        "max_investigation_sources": 3,
+        "investigation_threshold": 0.6,
+        "principal_id": "lattice-energy-owner",
+        "principal_tenant": "synthetic-recurring-runtime",
+        "status": "approved",
+        "approved_by": "lattice-energy-owner",
+        "approved_at": "2026-10-02T23:34:25.502729Z"
+      },
+      "onboarding_review": {
+        "card_id": "card-signed-contract-value-movement-by-customer-change-type-d7d9aef393bc",
+        "status": "ready_for_approval",
+        "readiness_status": "ready_for_approval",
+        "blockers": [],
+        "source_selection_fingerprint": "df46d6664b9cf93e9c737fa33d890af485ce8fb2a36914c538bb2b6416c34621",
+        "source_selection_confirmation": null,
+        "confirmed_blocker_codes": [],
+        "principal_id": "lattice-energy-owner",
+        "principal_tenant": "synthetic-recurring-runtime",
+        "authorization_evidence": "deployment",
+        "discovery_receipt": {
+          "principal_id": "lattice-energy-owner",
+          "principal_tenant": "synthetic-recurring-runtime",
+          "authorization_evidence": "deployment",
+          "catalog_provider": "company_mcp",
+          "catalog_strategy": "local-scan-fallback",
+          "catalog_cursor": null,
+          "candidate_refs": [
+            "company_mcp|record:service-credit-register",
+            "company_mcp|report:signed-contract-movement"
+          ],
+          "candidate_count": 2,
+          "candidate_limit": 40,
+          "truncated": false,
+          "evaluator": "jev-latest"
+        },
+        "selected_source_refs": [
+          "company_mcp|record:service-credit-register",
+          "company_mcp|report:signed-contract-movement"
+        ],
+        "recommended_source_refs": [
+          "company_mcp|record:service-credit-register",
+          "company_mcp|report:signed-contract-movement"
+        ],
+        "missing_recommended_refs": [],
+        "selected_outside_bounded_candidates": [],
+        "ambiguous_candidate_groups": [],
+        "source_candidates": [
+          {
+            "ref": "company_mcp|report:signed-contract-movement",
+            "adapter": "company_mcp",
+            "resource": "report:signed-contract-movement",
+            "kind": "saved_query",
+            "title": "Signed monthly contract-value movement by change type",
+            "description": "Signed contract-value movement from effective account changes; contraction and churn are negative.",
+            "source_url": null,
+            "domain": "lattice-energy-reporting",
+            "tenant_id": "synthetic-recurring-runtime",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "synthetic-recurring-runtime",
+              "domain": "lattice-energy-reporting",
+              "scope": "billed accounts with an effective contract-change record",
+              "metric_names": [
+                "signed_contract_value_movement"
+              ],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [
+                "signed-contract-movement"
+              ],
+              "population": "billed accounts with an effective contract-change record",
+              "grain": "monthly contract interval",
+              "freshness_sla_hours": 48.0,
+              "lineage": [],
+              "roles": [
+                "reporting"
+              ],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "source_key": "lattice-energy-reporting",
+                "business_role": "reporting",
+                "required": true,
+                "read_only": true,
+                "period_contract": "closed UTC intervals compared with the immediately preceding closed interval",
+                "comparability_contract": {
+                  "population_identity": "billed accounts with an effective contract-change record",
+                  "period_alignment": "adjacent closed intervals with the same calendar grain",
+                  "segment_partition": "declared disjoint segments; incomplete partitions are not comparable",
+                  "definition_version": "synthetic-contract-v1"
+                }
+              }
+            },
+            "selected": true,
+            "recommended": true,
+            "relevance": 0.98,
+            "suggested_role": "primary",
+            "role_probability": 0.99,
+            "reason": "Jev judged it materially relevant to the stated goal; its catalog domain is lattice-energy-reporting; Jev classified its evidence role as primary (0.99).",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          },
+          {
+            "ref": "company_mcp|record:service-credit-register",
+            "adapter": "company_mcp",
+            "resource": "record:service-credit-register",
+            "kind": "context_record",
+            "title": "Service-credit exception register",
+            "description": "Owner context stating whether an approved exception covers the exact closed period.",
+            "source_url": null,
+            "domain": "lattice-energy-context",
+            "tenant_id": "synthetic-recurring-runtime",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "synthetic-recurring-runtime",
+              "domain": "lattice-energy-context",
+              "scope": "owner-approved exceptions keyed to a closed period",
+              "metric_names": [
+                "owner_exception"
+              ],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [],
+              "population": "owner-approved exceptions keyed to a closed period",
+              "grain": "monthly contract interval",
+              "freshness_sla_hours": 48.0,
+              "lineage": [],
+              "roles": [
+                "owner_context"
+              ],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "source_key": "lattice-energy-context",
+                "business_role": "owner_context",
+                "required": true,
+                "read_only": true,
+                "period_contract": "closed UTC intervals compared with the immediately preceding closed interval",
+                "comparability_contract": {
+                  "population_identity": "owner-approved exceptions keyed to a closed period",
+                  "period_alignment": "adjacent closed intervals with the same calendar grain",
+                  "segment_partition": "declared disjoint segments; incomplete partitions are not comparable",
+                  "definition_version": "synthetic-contract-v1"
+                },
+                "semantic_contract": "Status is approved, none, or unresolved; this source has no analytical comparison."
+              }
+            },
+            "selected": true,
+            "recommended": true,
+            "relevance": 0.94,
+            "suggested_role": "unknown",
+            "role_probability": 0.52,
+            "reason": "Jev judged it materially relevant to the stated goal; its catalog domain is lattice-energy-context.",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          }
+        ],
+        "questions": [],
+        "warnings": [],
+        "evidence_requirements": [
+          {
+            "key": "watch:1",
+            "question": "The reporting source confirms the same billed-account population, signed-contract-movement definition, adjacent closed monthly periods, complete disjoint change-type partition, and reconciled totals.",
+            "required": true
+          },
+          {
+            "key": "watch:2",
+            "question": "The service-credit exception register resolves whether an approved exception covers the exact closed month.",
+            "required": true
+          }
+        ]
+      },
+      "workflow_acceptance": {
+        "status": "unassessed",
+        "report_id": null,
+        "human_authorization_required": true
+      }
+    },
+    "numeric_policy_audit": {
+      "passed": true,
+      "errors": []
+    },
+    "previewed_periods": [
+      "p01",
+      "p02"
+    ]
+  }
+}

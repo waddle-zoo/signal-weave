@@ -56,9 +56,13 @@ class _AlwaysNotifyJev:
         self.key = key
         self.budget = budget
         self.audit = audit
+        self.compile_calls = 0
+        self.compile_episodes: list[str] = []
 
     async def compile_plan(self, state, card):
         del state
+        self.compile_calls += 1
+        self.compile_episodes.append(self.audit.episode)
         return {
             "capabilities": ["percent_change", "baseline_comparison", "freshness_check"],
             "baseline": card.comparison_windows[0],
@@ -205,11 +209,17 @@ async def _fake_episode(session, *, receipt_ids: list[str], **kwargs):
 @pytest.mark.parametrize("case_set", ["initial", "transfer"])
 def test_full_offline_run_trial_smoke_exercises_real_runtime_artifacts(tmp_path, monkeypatch, case_set):
     receipt_ids: list[str] = []
+    jev_instances: list[_AlwaysNotifyJev] = []
 
     async def fake_episode(session, **kwargs):
         return await _fake_episode(session, receipt_ids=receipt_ids, **kwargs)
 
-    monkeypatch.setattr(trial, "TrialJev", _AlwaysNotifyJev)
+    def fake_trial_jev(*args, **kwargs):
+        instance = _AlwaysNotifyJev(*args, **kwargs)
+        jev_instances.append(instance)
+        return instance
+
+    monkeypatch.setattr(trial, "TrialJev", fake_trial_jev)
     monkeypatch.setattr(trial, "codex_episode", fake_episode)
     monkeypatch.setattr("signalweave.typesafe_adapter.load_api_key", lambda _: "offline-smoke-key")
 
@@ -232,6 +242,9 @@ def test_full_offline_run_trial_smoke_exercises_real_runtime_artifacts(tmp_path,
     assert report["all_attempts_retained"] is True
     assert report["luna_episodes"] == trial.MAX_LUNA_EPISODES == 9
     assert report["jev_attempts"] <= trial.MAX_JEV_ATTEMPTS == 36
+    assert len(jev_instances) == 1
+    assert sum(instance.compile_calls for instance in jev_instances) == 3
+    assert all(episode.endswith(":setup") for instance in jev_instances for episode in instance.compile_episodes)
     assert len(receipt_ids) == 12
     assert len(set(receipt_ids)) == 12
 
@@ -239,6 +252,18 @@ def test_full_offline_run_trial_smoke_exercises_real_runtime_artifacts(tmp_path,
     assert all(item["setup_complete"] for item in report["setup"])
     assert all(item["approval"]["status"] in {"approved", "replayed"} for item in report["setup"])
     assert all(item["card"]["status"] == "approved" for item in report["setup"])
+    for item in report["setup"]:
+        card = item["card"]
+        plan = card["compiled_plan"]
+        assert plan["card_id"] == card["id"]
+        assert plan["card_version"] == card["version"]
+        assert set(plan["selected_source_keys"]) <= {source["key"] for source in card["sources"]}
+        compact = item["approval"]["card"]
+        assert "compiled_plan" not in compact
+        assert "onboarding_review_history" not in compact
+        assert compact["id"] == card["id"]
+        assert compact["version"] == card["version"]
+        assert [source["key"] for source in compact["sources"]] == [source["key"] for source in card["sources"]]
     assert all(len(item["previewed_periods"]) == trial.SETUP_PERIODS for item in report["setup"])
 
     assert len(report["results"]) == 6
