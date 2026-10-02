@@ -148,11 +148,13 @@ class InvestigationReport(BaseModel):
 def _judgment_records(result: InsightResult) -> list[JudgmentRecord]:
     records = [JudgmentRecord(
         reference="outcome", status=result.outcome.value,
-        probabilities=result.probabilities, support=result.confidence,
+        probabilities=result.probabilities,
+        support=max(result.probabilities.values()) if result.probabilities else None,
         interpretation=(
             "Routed outcome after code safety gates; distribution is the model's original "
             "judgment, not source truth or probability of causation. The routed outcome "
             "may differ from the model's preferred outcome after confidence or evidence gates."
+            " Support is the largest recorded model outcome probability, not confidence in the routed outcome."
         ),
     )]
     for item in result.watch_results:
@@ -839,6 +841,25 @@ def build_investigation_report(
             else:
                 warnings.append(f"Optional source {source.key} is {status}: {detail}")
 
+    numeric_conditions = evaluate_numeric_conditions(
+        card,
+        [analysis for analysis in recomputed_by_key.values()
+         if any(item.kind == "source" and item.key == analysis.source_key
+                and item.status == "satisfied" for item in coverage)
+         and any(claim.source_key == analysis.source_key
+                 and claim.comparison_key == analysis.comparison_key for claim in numeric_claims)],
+    )
+    required_source_keys = {source.key for source in card.sources if source.required}
+    for condition in numeric_conditions:
+        if condition.status != "unknown":
+            continue
+        message = f"Numeric check {condition.condition_text!r} could not be computed: {condition.reason}"
+        if condition.source_key in required_source_keys:
+            blockers.append(_issue("required_numeric_condition_unavailable", message,
+                                   source_keys=[condition.source_key], reference=condition.comparison_key))
+        else:
+            warnings.append(message)
+
     if result.outcome.value == "insufficient_data":
         blockers.append(_issue(
             "result_insufficient_data",
@@ -901,14 +922,7 @@ def build_investigation_report(
         evaluated_at=result.evaluated_at,
         evaluator=result.evaluator,
         judgments=_judgment_records(result),
-        numeric_conditions=evaluate_numeric_conditions(
-            card,
-            [analysis for analysis in recomputed_by_key.values()
-             if any(item.kind == "source" and item.key == analysis.source_key
-                    and item.status == "satisfied" for item in coverage)
-             and any(claim.source_key == analysis.source_key
-                     and claim.comparison_key == analysis.comparison_key for claim in numeric_claims)],
-        ),
+        numeric_conditions=numeric_conditions,
     )
 
 

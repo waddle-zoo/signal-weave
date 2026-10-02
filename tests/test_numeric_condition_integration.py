@@ -14,7 +14,8 @@ from tests.test_reporting import comparison
 
 
 @pytest.mark.parametrize("broken", [False, True])
-async def test_checks_are_recomputed_and_healthy_before_jev_and_writer(monkeypatch, broken):
+@pytest.mark.parametrize("unit", ["count", "USD"])
+async def test_checks_are_recomputed_and_healthy_before_jev_and_writer(monkeypatch, broken, unit):
     calls = []
 
     async def transport(self, **kwargs):
@@ -32,7 +33,7 @@ async def test_checks_are_recomputed_and_healthy_before_jev_and_writer(monkeypat
                   "required_comparison_keys": ["volume-by-channel"]}],
         numeric_conditions=[{"text": "Total decline is at least 20", "source_key": "a",
                              "comparison_key": "volume-by-channel", "measurement": "delta",
-                             "unit": "count", "threshold": -20, "comparator": "<="}],
+                             "unit": unit, "threshold": -20, "comparator": "<="}],
         delivery_methods=[{"key": "owner", "outcome": "notify", "label": "Owner", "destination": "agent://owner"}],
     )
     card.compiled_plan = base_plan(card)
@@ -42,15 +43,21 @@ async def test_checks_are_recomputed_and_healthy_before_jev_and_writer(monkeypat
     run = await InsightEngine(JevJudger(api_key="offline-test")).evaluate(card, [snapshot])
     assert len(calls) == 1
     state = calls[0]["state"]
-    assert state["numeric_conditions"][0]["status"] == ("unknown" if broken else "true")
+    unavailable = broken or unit != "count"
+    assert state["numeric_conditions"][0]["status"] == ("unknown" if unavailable else "true")
     assert "not standalone action rules" in state["numeric_condition_semantics"]
     assert "numeric_conditions" in calls[0]["questions"]["outcome"].instructions
-    assert run.result.outcome.value == ("insufficient_data" if broken else "notify")
+    assert run.result.outcome.value == ("insufficient_data" if unavailable else "notify")
+    if unavailable:
+        assert not run.result.delivery_methods
     report = build_investigation_report(card, run.result, [snapshot])
-    assert report.numeric_conditions[0].status == ("unknown" if broken else "true")
+    assert report.numeric_conditions[0].status == ("unknown" if unavailable else "true")
+    if unavailable:
+        assert report.status == "blocked"
+        assert any(b.code == "required_numeric_condition_unavailable" for b in report.blockers)
     writer = build_briefing_writer_input(report, render_investigation_report(report), [])
     check = writer["report"]["numeric_conditions"][0]
-    if not broken:
+    if not unavailable:
         assert check["value"] == -20
         assert check["analysis_input_digest"]
         assert check["query_refs"] == ["query:volume-total", "query:volume-segments"]

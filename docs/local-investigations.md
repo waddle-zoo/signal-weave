@@ -322,6 +322,11 @@ exceptions and the outcome policy in `decision_guidance`. There is no new workfl
 language. Missing, ambiguous or unhealthy inputs produce `unknown`, never false.
 Optional context does not waive required-source gates. Editing the checks changes
 the reviewed card contract and requires a new approval.
+Checks bound to a required source must be computable: a missing exact segment,
+unit mismatch, or invalid comparison forces `insufficient_data` even if Jev
+suggests a confident notification or suppression. An optional source's unknown
+check remains advisory. This is a measurement-admission gate, not a demand that
+every speculative semantic question be answered.
 
 Do not add a required watch item for every possible explanation. Required watch
 and question slots are unconditional evidence prerequisites; speculative/advisory

@@ -1284,6 +1284,24 @@ class InsightEngine:
                 ),
             )
 
+        from .numeric_conditions import evaluate_numeric_conditions
+
+        required_keys = {source.key for source in card.sources if source.required}
+        failed_keys = {error["source_key"] for error in source_errors}
+        unresolved_numeric = [
+            item for item in evaluate_numeric_conditions(
+                card, [analysis for analysis in result.analyses if analysis.source_key not in failed_keys]
+            ) if item.status == "unknown" and item.source_key in required_keys
+        ]
+        if unresolved_numeric:
+            return cls._with_outcome(
+                result, card, Outcome.INSUFFICIENT_DATA,
+                rationale=(
+                    "A numeric check bound to required evidence could not be computed. "
+                    "Repair its measurement binding, unit, or source before automatic interpretation."
+                ),
+            )
+
         if (
             result.context is not None
             and result.context.trust == "unverified"
