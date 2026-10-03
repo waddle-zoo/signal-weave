@@ -469,6 +469,13 @@ def test_source_context_is_optional_and_policy_remains_separate(inputs):
     assert "Do not reject a faithful quiet/ignore rule" in reviewer.REVIEW_INSTRUCTIONS
 
 
+def test_review_instructions_preserve_ordered_policy_precedence_and_exceptions():
+    assert "ordered policy" in reviewer.REVIEW_INSTRUCTIONS
+    assert "precedence" in reviewer.REVIEW_INSTRUCTIONS
+    assert "exception" in reviewer.REVIEW_INSTRUCTIONS
+    assert "do not compress" in reviewer.REVIEW_INSTRUCTIONS
+
+
 def test_execution_contract_rejects_unbound_numeric_conditions_and_exposes_typed_semantics(inputs):
     inputs["artifact"]["card"]["numeric_conditions"][0].update({
         "text": "Within-segment effect reaches 20%.",

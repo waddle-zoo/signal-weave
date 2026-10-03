@@ -4,6 +4,80 @@ Status: implementation advanced; proof gate **not complete**. This updates the
 working acceptance criteria for the existing local-first adoption goal; it does
 not declare the earlier failed trials passed.
 
+## Native MCP onboarding investigation — October 3, 2026
+
+The new `evaluations/installed_workflow_trial.py` joins actual executable setup,
+stdio MCP, an external read-only source MCP, Luna card authoring, synthetic-owner
+review, historical acceptance and repeated live-Jev evaluations. No expert card
+is installed. Owner policy and labeled calibration history are supplied; future
+labels remain evaluator-only. This tests reuse after assisted authoring, not
+zero-context onboarding, fresh warehouse extraction or report-writing quality.
+
+Retained proof: [Northstar raw-payload adjudication](evidence/installed-workflow-2026-10-03/installed-workflow-northstar-live-02/adjudication.json),
+[interrupted follow-up](evidence/installed-workflow-2026-10-03/installed-workflow-northstar-live-03/adjudication.json),
+and [stopped transfer cohort](evidence/installed-workflow-2026-10-03/installed-workflow-transfer-live-02/adjudication.json).
+Their sibling files contain protocols and compressed raw traces, native outputs
+and frozen scenarios, including failed pilots. The offline adjudicator reads
+both plain and gzip artifacts. Secret-value absence was checked before export.
+
+Northstar live02 completed onboarding and all 42 later runs: **39/42** matched
+the retained outcome/recipient/evidence labels, and **42/42** receipt replays made
+no new source or Jev calls. The recurring median was **0.712 seconds**, with
+cached synthetic sources, two Jev requests and no frontier-model call per run.
+This is not an end-to-end latency comparison against Luna or Trino.
+Three modest-movement cases routed to investigation. Two had model-selected
+ignore below the unchanged 0.70 floor; one selected investigation. Review also
+flagged the latter case's original label: exactly −10% was labeled ignore although
+the owner rule says “below 10%.” The original score and label are retained, not
+silently repaired. Reports explicitly lacked validated quantitative analysis.
+An additional raw-request audit found descriptive scenario IDs in source
+metadata for all 42 judgment calls (for example, `modest-movement`). They did
+not contain the expected action, but disclosed a scenario-family hint. Therefore
+**39/42 is an observed execution score, not clean blinded generalization proof**.
+New fixtures use opaque period IDs and retain the register names evaluator-side;
+tests prohibit leaking the descriptive names through future source payloads.
+
+The next author preserved the full ordered owner policy. Its six initial later
+cases had correct business outcomes/routes, but a new scorer mistakenly looked
+for the compiled plan in `card` rather than the native response's separate `plan`
+field and stopped expansion. **36 intended cases were not run.** Independent
+offline adjudication does not turn that interrupted run into a 42-case success.
+The scorer now has a regression against the actual MCP response serializer.
+
+Transfer pilots exposed both genuine agent mistakes and harness defects:
+mistyped endpoints, a validator rejecting legal card-local route aliases, and
+historical examples incorrectly evaluated against today's freshness clock.
+The latter cohort was stopped to conserve credits. Historical time must be
+explicit; source ages, source-health failures and the production freshness
+limit must remain intact. These trials do not establish six-company success.
+
+Product changes so far reject omitted acceptance labels before paid inference
+and guide authors to retain policy order/exceptions and exact directory endpoints.
+Historical evaluation now accepts a timezone-aware per-case `as_of`, binds it
+into the report digest and isolates each clock. It uses only the supplied
+snapshots/context, never current sources or current external context. Future
+typed resource/context capture timestamps are rejected; stale evidence remains
+stale relative to its case time. This is not validation of arbitrary timestamps
+inside unstructured values, nor a test of live historical follow-up fetching.
+Acceptance remains separate from owner authorization and actual delivery.
+The TypeSafe-guided implementation retains Jev as the only semantic execution
+path; neither test labels nor a local heuristic supply production decisions.
+
+Reproduce the bounded native study (paid inference is explicit):
+
+```sh
+python -m evaluations.installed_workflow_trial --binary dist/signalweave \
+  --suite transfer --company-index 0 --key-file /private/path/jev-key \
+  --jev-budget 40 --live --output artifacts/new-exclusive-run
+```
+
+Omit `--live` for an offline protocol/fixture freeze. Select `--suite northstar`
+and `--seed-dir /path/to/northstar/warehouse/init` for the 42-case Northstar replay.
+Every run uses an exclusive directory and retains failed attempts. The separate
+`evaluations.installed_workflow_review` recomputes from raw payloads; it does not
+trust cached pass flags. Neither a passing synthetic replay nor internal model
+review establishes universal enterprise readiness or a comparative benefit.
+
 Latest [six-company v6 cohort](enterprise-onboarding-repair-v6-cohort.md): both
 arms completed 6/6 setups and 18/18 later reports. Treatment achieved 16/18 native
 outcomes/routes and 17/18 strict final reports, versus 18/18 strict reports for

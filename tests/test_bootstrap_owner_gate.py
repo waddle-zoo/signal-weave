@@ -25,16 +25,13 @@ def setup_session(tmp_path, public, treatment):
     return session
 
 
-@pytest.mark.parametrize("mutation", ["bare_key", "different_endpoint", "unknown_key", "empty_endpoint"])
+@pytest.mark.parametrize("mutation", ["bare_key", "different_endpoint", "invented_endpoint", "empty_endpoint"])
 async def test_owner_review_cannot_approve_route_outside_original_directory(tmp_path, public, mutation):
     session = setup_session(tmp_path, public, True)
     route = copy.deepcopy(public["destinations"][0])
     route["outcome"] = "investigate"
-    if mutation == "unknown_key":
-        route["key"] = "unlisted-team"
-    else:
-        route["destination"] = {"bare_key": route["key"], "different_endpoint": "slack://other",
-                                "empty_endpoint": ""}[mutation]
+    route["destination"] = {"bare_key": route["key"], "different_endpoint": "slack://other",
+                             "invented_endpoint": "slack://invented", "empty_endpoint": ""}[mutation]
     card = {"id": "draft", "delivery_methods": [route]}
     session.product = AsyncMock(return_value=copy.deepcopy(card))
     decision = await session.semantic_owner_review(card)
@@ -49,6 +46,17 @@ async def test_exact_endpoint_lookup_accepts_opaque_destinations_and_multiple_ou
     session = setup_session(tmp_path, public, True)
     routes = [{**public["destinations"][0], "outcome": outcome} for outcome in ("notify", "investigate")]
     card = {"id": "draft", "delivery_methods": routes}
+    session.product = AsyncMock(return_value=copy.deepcopy(card))
+    result = await session.semantic_owner_review(card)
+    assert result["approved"] is True
+    assert session.owner_reviewer.await_count == 1
+
+
+async def test_local_delivery_alias_accepts_authorized_endpoint(tmp_path, public):
+    session = setup_session(tmp_path, public, True)
+    route = {"key": "business_notify", "destination": public["destinations"][0]["destination"],
+             "outcome": "notify"}
+    card = {"id": "draft", "delivery_methods": [route]}
     session.product = AsyncMock(return_value=copy.deepcopy(card))
     result = await session.semantic_owner_review(card)
     assert result["approved"] is True

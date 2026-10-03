@@ -409,7 +409,9 @@ class ToolSession:
         if not self.notes:
             return {"approved": False, "reasons": ["Save reusable notes before owner review."]}
         # The public directory is an exact caller-supplied mapping, not a semantic
-        # judgment. Opaque endpoints are legal; substituting their key is not.
+        # judgment. Opaque endpoints are legal. A card may use a local route alias,
+        # but the endpoint must resolve to the supplied directory and an existing
+        # directory key may not be rebound to another endpoint.
         # This check changes future research admission, not frozen v4 scores.
         if card is not None:
             destinations: dict[str, str] = {}
@@ -419,10 +421,14 @@ class ToolSession:
                 if key in destinations and destinations[key] != destination:
                     errors.append(f"The supplied destination directory conflicts for key {key!r}.")
                 destinations[key] = destination
+            endpoints = set(destinations.values())
             for method in card.get("delivery_methods", []):
                 key = method.get("key")
-                if key not in destinations or method.get("destination") != destinations[key]:
-                    errors.append(f"Delivery method {key!r} must copy its exact supplied destination, not its key or an inferred endpoint.")
+                destination = method.get("destination")
+                if destination not in endpoints:
+                    errors.append(f"Delivery method {key!r} must use an exact supplied destination endpoint, not an invented or missing-prefix value.")
+                elif key in destinations and destination != destinations[key]:
+                    errors.append(f"Delivery method {key!r} conflicts with its supplied directory endpoint.")
             if errors:
                 decision = {"approved": False, "directory_validation": "rejected", "reasons": errors,
                             "synthetic": True, "real_human_approval": False}

@@ -1,0 +1,339 @@
+{
+  "adjudicator": "installed_workflow_review-v1",
+  "run_dir_name": "installed-workflow-northstar-live-03",
+  "original_report_preserved": true,
+  "offline_only": true,
+  "checks": {
+    "trace_integrity": {
+      "passed": true
+    },
+    "recorded_hashes": {
+      "passed": true
+    },
+    "raw_jev_budget": {
+      "passed": true,
+      "detail": {
+        "paid_attempts": 68,
+        "rejected_attempts": 0,
+        "limit": 144
+      }
+    }
+  },
+  "companies": [
+    {
+      "scenario_id": "northstar-outfitters-local",
+      "checks": {
+        "card_recorded": {
+          "passed": true
+        },
+        "owner_review_approved": {
+          "passed": true,
+          "detail": {
+            "prior_reviews": 0
+          }
+        },
+        "calibration_independent": {
+          "passed": true,
+          "detail": {
+            "passed": true,
+            "status": "approved",
+            "case_count": 6,
+            "failures": [],
+            "certification_report_id": "card_workflow:card-northstar-net-sales-movement-triage-e713eab3:1e5f46ecadd04a288d8bec85:9ed7e8e70db7"
+          }
+        },
+        "future_period_set": {
+          "passed": false,
+          "detail": {
+            "missing": [
+              "future-week-03-day-01-no-change",
+              "future-week-03-day-02-modest-movement",
+              "future-week-03-day-03-isolated-channel",
+              "future-week-03-day-04-corroborated-decline",
+              "future-week-03-day-05-conflicting-sources",
+              "future-week-03-day-06-source-unavailable",
+              "future-week-04-day-01-no-change",
+              "future-week-04-day-02-modest-movement",
+              "future-week-04-day-03-isolated-channel",
+              "future-week-04-day-04-corroborated-decline",
+              "future-week-04-day-05-conflicting-sources",
+              "future-week-04-day-06-source-unavailable",
+              "future-week-05-day-01-no-change",
+              "future-week-05-day-02-modest-movement",
+              "future-week-05-day-03-isolated-channel",
+              "future-week-05-day-04-corroborated-decline",
+              "future-week-05-day-05-conflicting-sources",
+              "future-week-05-day-06-source-unavailable",
+              "future-week-06-day-01-no-change",
+              "future-week-06-day-02-modest-movement",
+              "future-week-06-day-03-isolated-channel",
+              "future-week-06-day-04-corroborated-decline",
+              "future-week-06-day-05-conflicting-sources",
+              "future-week-06-day-06-source-unavailable",
+              "future-week-07-day-01-no-change",
+              "future-week-07-day-02-modest-movement",
+              "future-week-07-day-03-isolated-channel",
+              "future-week-07-day-04-corroborated-decline",
+              "future-week-07-day-05-conflicting-sources",
+              "future-week-07-day-06-source-unavailable",
+              "future-week-08-day-01-no-change",
+              "future-week-08-day-02-modest-movement",
+              "future-week-08-day-03-isolated-channel",
+              "future-week-08-day-04-corroborated-decline",
+              "future-week-08-day-05-conflicting-sources",
+              "future-week-08-day-06-source-unavailable"
+            ],
+            "extra": []
+          }
+        },
+        "future_intent_not_leaked_onboarding": {
+          "passed": true
+        },
+        "native_periods_independent": {
+          "passed": false,
+          "detail": {
+            "completed": 6,
+            "expected": 42,
+            "failed": []
+          }
+        },
+        "compiled_plan_stability": {
+          "passed": false,
+          "detail": {
+            "status": "unassessed",
+            "reason": "raw monitoring output is missing compiled_plan",
+            "missing_periods": [
+              "future-week-03-day-01-no-change",
+              "future-week-03-day-02-modest-movement",
+              "future-week-03-day-03-isolated-channel",
+              "future-week-03-day-04-corroborated-decline",
+              "future-week-03-day-05-conflicting-sources",
+              "future-week-03-day-06-source-unavailable",
+              "future-week-04-day-01-no-change",
+              "future-week-04-day-02-modest-movement",
+              "future-week-04-day-03-isolated-channel",
+              "future-week-04-day-04-corroborated-decline",
+              "future-week-04-day-05-conflicting-sources",
+              "future-week-04-day-06-source-unavailable",
+              "future-week-05-day-01-no-change",
+              "future-week-05-day-02-modest-movement",
+              "future-week-05-day-03-isolated-channel",
+              "future-week-05-day-04-corroborated-decline",
+              "future-week-05-day-05-conflicting-sources",
+              "future-week-05-day-06-source-unavailable",
+              "future-week-06-day-01-no-change",
+              "future-week-06-day-02-modest-movement",
+              "future-week-06-day-03-isolated-channel",
+              "future-week-06-day-04-corroborated-decline",
+              "future-week-06-day-05-conflicting-sources",
+              "future-week-06-day-06-source-unavailable",
+              "future-week-07-day-01-no-change",
+              "future-week-07-day-02-modest-movement",
+              "future-week-07-day-03-isolated-channel",
+              "future-week-07-day-04-corroborated-decline",
+              "future-week-07-day-05-conflicting-sources",
+              "future-week-07-day-06-source-unavailable",
+              "future-week-08-day-01-no-change",
+              "future-week-08-day-02-modest-movement",
+              "future-week-08-day-03-isolated-channel",
+              "future-week-08-day-04-corroborated-decline",
+              "future-week-08-day-05-conflicting-sources",
+              "future-week-08-day-06-source-unavailable"
+            ],
+            "observations": 6
+          }
+        }
+      },
+      "calibration": {
+        "passed": true,
+        "status": "approved",
+        "case_count": 6,
+        "failures": [],
+        "certification_report_id": "card_workflow:card-northstar-net-sales-movement-triage-e713eab3:1e5f46ecadd04a288d8bec85:9ed7e8e70db7"
+      },
+      "periods": [
+        {
+          "period_id": "future-week-02-day-01-no-change",
+          "passed": true,
+          "reasons": [],
+          "expected_outcome": "ignore",
+          "actual_outcome": "ignore",
+          "expected_recipients": [],
+          "actual_recipients": [],
+          "expected_recipient_destinations": [],
+          "actual_recipient_destinations": [],
+          "required_evidence_refs": [
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "actual_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-bcc430dd0048c951ef1a",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "report_status": "partial"
+        },
+        {
+          "period_id": "future-week-02-day-02-modest-movement",
+          "passed": true,
+          "reasons": [],
+          "expected_outcome": "ignore",
+          "actual_outcome": "ignore",
+          "expected_recipients": [],
+          "actual_recipients": [],
+          "expected_recipient_destinations": [],
+          "actual_recipient_destinations": [],
+          "required_evidence_refs": [
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "actual_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-bcc430dd0048c951ef1a",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "report_status": "partial"
+        },
+        {
+          "period_id": "future-week-02-day-03-isolated-channel",
+          "passed": true,
+          "reasons": [],
+          "expected_outcome": "investigate",
+          "actual_outcome": "investigate",
+          "expected_recipients": [
+            "analytics"
+          ],
+          "actual_recipients": [
+            "analytics"
+          ],
+          "expected_recipient_destinations": [
+            "slack://simulation-analytics"
+          ],
+          "actual_recipient_destinations": [
+            "slack://simulation-analytics"
+          ],
+          "required_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "actual_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-bcc430dd0048c951ef1a",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "report_status": "partial"
+        },
+        {
+          "period_id": "future-week-02-day-04-corroborated-decline",
+          "passed": true,
+          "reasons": [],
+          "expected_outcome": "notify",
+          "actual_outcome": "notify",
+          "expected_recipients": [
+            "leadership"
+          ],
+          "actual_recipients": [
+            "leadership"
+          ],
+          "expected_recipient_destinations": [
+            "slack://simulation-leadership"
+          ],
+          "actual_recipient_destinations": [
+            "slack://simulation-leadership"
+          ],
+          "required_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "actual_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-bcc430dd0048c951ef1a",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "report_status": "partial"
+        },
+        {
+          "period_id": "future-week-02-day-05-conflicting-sources",
+          "passed": true,
+          "reasons": [],
+          "expected_outcome": "investigate",
+          "actual_outcome": "investigate",
+          "expected_recipients": [
+            "analytics"
+          ],
+          "actual_recipients": [
+            "analytics"
+          ],
+          "expected_recipient_destinations": [
+            "slack://simulation-analytics"
+          ],
+          "actual_recipient_destinations": [
+            "slack://simulation-analytics"
+          ],
+          "required_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "actual_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-bcc430dd0048c951ef1a",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "report_status": "partial"
+        },
+        {
+          "period_id": "future-week-02-day-06-source-unavailable",
+          "passed": true,
+          "reasons": [],
+          "expected_outcome": "insufficient_data",
+          "actual_outcome": "insufficient_data",
+          "expected_recipients": [
+            "data-trust"
+          ],
+          "actual_recipients": [
+            "data-trust"
+          ],
+          "expected_recipient_destinations": [
+            "slack://simulation-data-trust"
+          ],
+          "actual_recipient_destinations": [
+            "slack://simulation-data-trust"
+          ],
+          "required_evidence_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "actual_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-bcc430dd0048c951ef1a",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "report_status": "blocked"
+        }
+      ],
+      "qualitative_scope": {
+        "report_statuses": {
+          "partial": 5,
+          "blocked": 1
+        },
+        "note": "Native adjudication does not certify report prose, causal claims, numeric-claim quality, usability, or customer outcomes."
+      },
+      "passed": false
+    }
+  ],
+  "summary": {
+    "passed": false,
+    "companies": 1,
+    "periods": 6,
+    "raw_jev_paid_attempts": 68,
+    "raw_jev_rejected_attempts": 0
+  }
+}
