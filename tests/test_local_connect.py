@@ -79,6 +79,42 @@ def test_bare_interactive_setup_and_single_registration_command(tmp_path, monkey
     assert env["SIGNALWEAVE_PRINCIPAL_ID"] == "local"
 
 
+@pytest.mark.parametrize("register", [False, True])
+def test_registration_requires_explicit_cli_opt_in(options, monkeypatch, capsys, register):
+    from signalweave import client_setup
+
+    calls = []
+    monkeypatch.setattr(client_setup, "register_agent", lambda home, agent: (
+        calls.append((home, agent)) or client_setup.AgentRegistrationStatus(
+            agent, "registered", "Test registration succeeded",
+        )
+    ))
+    argv = ["signalweave", "setup", "--home", str(options["home"]), "--non-interactive",
+            "--key-file", str(options["key_file"]), "--source", "skip", "--agent", "codex"]
+    if register:
+        argv.append("--register-agent")
+    monkeypatch.setattr(sys, "argv", argv)
+    cli.main()
+    assert len(calls) == int(register)
+    assert "get_signalweave_guide" in capsys.readouterr().out
+
+
+def test_connect_failure_keeps_successful_local_setup(options, monkeypatch, capsys):
+    from signalweave import client_setup
+
+    setup.setup_local(**options, source="skip")
+    original = (options["home"] / "config.toml").read_bytes()
+    monkeypatch.setattr(client_setup, "register_agent", lambda *args: client_setup.AgentRegistrationStatus(
+        "codex", "unavailable", "CLI not installed", "safe manual command",
+    ))
+    monkeypatch.setattr(sys, "argv", ["signalweave", "connect", "--agent", "codex", "--home", str(options["home"])])
+    with pytest.raises(SystemExit) as error:
+        cli.main()
+    assert error.value.code == 1
+    assert (options["home"] / "config.toml").read_bytes() == original
+    assert "Registration was not verified" in capsys.readouterr().out
+
+
 def test_superset_setup_to_actual_runtime(options, tmp_path):
     opts = superset_options(options, tmp_path)
     root, agent = setup.setup_local(**opts)

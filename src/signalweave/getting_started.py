@@ -1,0 +1,82 @@
+"""Small, model-free orientation shipped with the MCP, not a workflow engine."""
+
+from __future__ import annotations
+
+from typing import Literal
+
+GuideTask = Literal["start", "query", "report", "monitor"]
+
+
+def getting_started(task: GuideTask = "start") -> dict:
+    """Describe actual tool paths without probing sources or exposing configuration."""
+    common = {
+        "task": task,
+        "purpose": "Turn an existing BI question into checked evidence and a reusable investigation.",
+        "first_question": "What do you want to understand or keep an eye on, and which decision will it help you make?",
+        "agent_role": (
+            "Use the user's plain language. Find existing definitions before asking questions; "
+            "ask only for material missing context. You draft the cards, not the human. "
+            "Show one useful result before discussing recurring automation."
+        ),
+        "boundaries": [
+            "This guide makes no source or model requests and changes nothing.",
+            "Discovery, previews and evaluations use paid live Jev and send selected evidence to TypeSafe.",
+            "Connect a supported adapter or reviewed read-only company MCP mapping; arbitrary MCP responses are not automatically understood.",
+            "Reuse exact source IDs, metric definitions, periods and units. Missing evidence is not zero or no change.",
+            "Source inspection can execute warehouse queries. Respect the owner's read-access, time-window and query-cost limits; inspection is not always a free metadata lookup.",
+            "Jev judges bounded relevance and policy; code validates calculations and SQL. Your agent writes the explanation.",
+            "Accounting contributions and correlations are not proof of causation or statistical significance.",
+            "Never invent recipients or business thresholds. Approval, query execution, scheduling and delivery need the owner's authorization.",
+        ],
+    }
+    paths = {
+        "query": {
+            "result": "A reviewed metric definition and bounded SQL, with a query fingerprint—not an invented database answer.",
+            "needs": "A connected catalog with typed metric_definitions; approved population, dimensions and a time window.",
+            "steps": [
+                {"tool": "discover_insight_sources", "purpose": "Find a bounded set of catalog definitions. Check returned metric_definitions, grain and population; clarify ambiguity instead of guessing. Do not call inspect_resource for metadata-only checking: a Trino inspection executes a query."},
+                {"tool": "propose_metric_query_card", "purpose": "Have Jev select only among the inspected, approved definitions."},
+                {"tool": "compile_metric_query_card", "purpose": "Preview deterministic SELECT SQL with explicit window_start and window_end."},
+                {"tool": "approve_metric_query_card", "purpose": "Only after explicit owner approval; hand the bounded query to an authorized caller-owned executor."},
+            ],
+            "stop_if": "No matching catalog definition, unsupported join/dimension, missing partition/time bound, or no authorized executor. Explain the missing contract; do not invent SQL.",
+            "human_handoff": "Confirm definition, population, time window and permitted query cost before execution. Compilation is not execution.",
+        },
+        "report": {
+            "result": "A source-backed report with measurements, contributing segments, uncertainty and the next investigation step.",
+            "needs": "Connected source evidence; quantitative decomposition additionally needs complete, comparable, reconciled comparison tables.",
+            "steps": [
+                {"tool": "discover_insight_sources", "purpose": "Find relevant existing analytical assets for the user's question."},
+                {"tool": "inspect_resource", "purpose": "Verify definitions, source health, comparison periods, controlling totals and provenance."},
+                {"tool": "draft_insight_card", "purpose": "Save a minimal draft bound to inspected sources; no delivery route is needed for a one-off report. Use onboard_insight_card instead when discovery and drafting should be combined."},
+                {"tool": "preview_investigation_report", "purpose": "Produce the first delivery-disabled report with live Jev and validated calculations."},
+            ],
+            "stop_if": "Coverage, definitions or calculations are incomplete. Report the gap and needed evidence, not a fabricated cause or an all-clear.",
+            "human_handoff": "Lead with what changed, why it matters under the stated policy, supporting evidence, and what remains unknown. Keep audit detail available without overwhelming the owner.",
+        },
+        "monitor": {
+            "result": "A reviewed investigation your existing agent can repeat, with auditable evidence and outcome-specific routing.",
+            "needs": "Start with the report path; then confirm materiality, owner/destinations, cadence, quiet behavior and missing-evidence handling.",
+            "steps": [
+                {"tool": "list_insight_cards", "purpose": "Look for an existing reviewed investigation before creating another one."},
+                {"tool": "onboard_insight_card", "purpose": "If none fits, draft from the free-form business intent; inspect sources and resolve only material setup questions."},
+                {"tool": "preview_investigation_report", "purpose": "Show the actual evidence, numerical checks and proposed routes; do not enable delivery."},
+                {"tool": "evaluate_card_workflow", "purpose": "Test owner-labeled actionable, quiet and missing-evidence cases; expected outcomes must not come from Jev's answers."},
+                {"tool": "review_insight_card", "purpose": "Show current policy, source bindings and remaining blockers to the owner."},
+                {"tool": "approve_insight_card", "purpose": "Only after explicit owner approval; pass the passing workflow_report_id. Never lower safety gates just to pass."},
+                {"tool": "evaluate_insight_card", "purpose": "Reuse the approved card; one stable idempotency key per scheduled observation, the same key for retries."},
+                {"tool": "get_decision_receipt", "purpose": "Recover the saved report and workflow handoff; suppress quiet outcomes, investigate gaps, and deliver only to approved recipients through the caller's tools."},
+            ],
+            "stop_if": "Acceptance fails, the approved contract changes, required evidence fails, or scheduler/delivery is not configured. Do not claim monitoring is active merely because a card is approved.",
+            "human_handoff": "Confirm who will run the schedule and send messages. This binary does neither by itself. Record proposed cadence with the caller's scheduler, not as an unsupported SignalWeave promise.",
+        },
+    }
+    if task == "start":
+        return {
+            **common,
+            "choose": {name: path["result"] for name, path in paths.items()},
+            "next": "Call get_signalweave_guide with query, report or monitor. If this is a new investigation, start with report; do not force the user through a JSON form.",
+        }
+    if task not in paths:
+        raise ValueError("Choose start, query, report or monitor")
+    return {**common, **paths[task]}

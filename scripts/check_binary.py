@@ -88,6 +88,11 @@ async def check(binary: Path, key_file: Path | None, live: bool):
                         await session.initialize()
                         names = [tool.name for tool in (await session.list_tools()).tools]
                         assert "onboard_insight_card" in names and "evaluate_insight_card" in names
+                        assert "get_signalweave_guide" in names
+                        for task in ("start", "query", "report", "monitor"):
+                            guide = await session.call_tool("get_signalweave_guide", {"task": task})
+                            assert not guide.isError
+                            assert guide.structuredContent["task"] == task
             except Exception:
                 raise RuntimeError("Binary stdio check failed; diagnostic contents withheld") from None
             # Check after transport teardown: frozen shutdown tracebacks arrive after
@@ -99,6 +104,7 @@ async def check(binary: Path, key_file: Path | None, live: bool):
                   "offline_doctor": True, "agent_config": True,
                   "stdio_tools": len(names), "different_cwd": True, "live": live,
                   "version": binary_version}
+        result["orientation_paths"] = ["start", "query", "report", "monitor"]
         if live:
             # Test-only imports; neither trial fixtures nor this checker are bundled.
             sys.path.insert(0, str(ROOT))

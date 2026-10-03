@@ -363,8 +363,12 @@ async def test_binary_checker_checks_stderr_after_shutdown_without_echo(
 
         async def list_tools(self):
             return SimpleNamespace(tools=[SimpleNamespace(name=name) for name in (
-                "onboard_insight_card", "evaluate_insight_card",
+                "onboard_insight_card", "evaluate_insight_card", "get_signalweave_guide",
             )])
+
+        async def call_tool(self, name, arguments):
+            assert name == "get_signalweave_guide"
+            return SimpleNamespace(isError=False, structuredContent={"task": arguments["task"]})
 
     monkeypatch.setattr(check_binary, "stdio_client", transport)
     monkeypatch.setattr(check_binary, "ClientSession", Session)

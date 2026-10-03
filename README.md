@@ -13,11 +13,10 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-2ea44f.svg" alt="Apache 2.0 license"></a>
 </p>
 
-Most companies already know what they want to watch. The hard part is not making
-another dashboard. It is getting an agent to understand a set of dashboards,
-charts, notebooks, queries, and operational signals well enough to check them,
-spot what matters, and run the right bounded workflow without a person opening
-everything every morning.
+Use the BI stack you already have through the agent you already use. Ask a
+business question, review the first investigation, and save it for repeat runs.
+SignalWeave helps your agent find relevant assets, use approved metric queries,
+check calculations, and return evidence for reports and alerts.
 
 SignalWeave is a small open-source MCP and webhook service for that seam. A
 person writes a free-form insight card, source adapters return bounded evidence,
@@ -49,30 +48,6 @@ privately and configures your data connection without hand-editing TOML.
 > exposed unresolved card-approval gaps; comparative benefit is not established.
 > Stable v0.1.0 has no native assets.
 
-The newer [owner-reviewed onboarding trial](docs/bootstrap-owner-reviewed-v4-01.md)
-also failed its gate: final routing was correct on 5/6 runs versus Luna's 6/6,
-with higher setup effort and token cost. Existing curated-card results do not
-establish that novice onboarding delivers the same benefit.
-
-The [bounded onboarding repair](docs/bootstrap-empirical-repair-v2-results.md)
-accepted three agent-authored cards and passed 12/12 live Jev monitoring cases.
-Those were previously inspected synthetic cases—not fresh enterprise proof or
-an advantage over Luna. Failed attempts and raw evidence are retained.
-
-The newer [end-to-end report trial](docs/business-outcome-trial.md) includes the
-final LLM-written message and persistent agents in both arms: SignalWeave passed
-10/12 cases versus Luna's 12/12, with no measured speed or cost advantage. A
-separate six-case repair probe passed 5/6; the remaining failure is unresolved.
-The [follow-up investigation](docs/policy-composition-investigation.md) tests
-why: direct Jev decisions matched Luna on a new bounded set, while added
-rule-composition worsened results. The experimental layer is not shipped.
-
-The latest [recurring investigation trial](docs/recurring-runtime-trial.md) fixes
-concrete authoring and numerical-check defects. After a separately recorded
-execution repair, both systems passed 12/12 synthetic reports and their usability
-review. This is bounded correctness evidence—not a clean prospective win, a
-speed/cost advantage, or enterprise certification.
-
 Then ask your agent:
 
 > Use SignalWeave to monitor why online sales changed and how that affected net
@@ -83,6 +58,11 @@ You need a TypeSafe key **and** credentials for your sources. Evidence is sent t
 TypeSafe; local installation does not mean offline inference. Supported adapters
 and reviewed company MCP mappings are required—not every arbitrary MCP response
 can be analyzed automatically.
+
+The unpublished rc2 development binary adds opt-in Codex registration with
+`signalweave setup --agent codex --register-agent` and a bundled
+`get_signalweave_guide` MCP tool for **query**, **report**, and **monitor** paths.
+See the [first-use flow](docs/local-install.md#2-connect-your-agent).
 
 <details>
 <summary>Develop from source or run the local Docker demo</summary>
@@ -461,6 +441,26 @@ stdio or test integrations unless the embedding application supplies the same
 principal requirement and middleware.
 
 ## Evidence and limits
+
+For the local agent-assisted path, the latest
+[recurring investigation trial](docs/recurring-runtime-trial.md) reached 12/12
+correct and reviewer-usable synthetic reports in both arms after a separately
+recorded execution repair. This is not a clean prospective win or a measured
+speed/cost advantage over Luna. Real-user onboarding remains unproven.
+
+<details>
+<summary>Earlier local-onboarding results, including failures</summary>
+
+The [owner-reviewed trial](docs/bootstrap-owner-reviewed-v4-01.md) failed its gate
+(5/6 routes versus Luna's 6/6). A [bounded repair](docs/bootstrap-empirical-repair-v2-results.md)
+passed 12/12 previously inspected cases. The [end-to-end report trial](docs/business-outcome-trial.md)
+passed 10/12 versus Luna's 12/12, with no measured speed/cost advantage; its repair
+probe passed 5/6. The [follow-up](docs/policy-composition-investigation.md) found
+that added rule-composition worsened results. That experimental layer is not shipped.
+Failed attempts and raw evidence are retained; curated-card scores do not establish
+that novice onboarding achieves the same benefit.
+
+</details>
 
 The strongest current proof is a bounded live Jev shadow trial, not a promise of
 universal accuracy. Across six synthetic company shapes and 60 messy monitoring

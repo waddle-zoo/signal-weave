@@ -60,6 +60,10 @@ def main() -> None:
     setup.add_argument("--tenant", help="Local tenant identifier (default: existing setting or local)")
     setup.add_argument("--principal", help="Local principal identifier (default: existing setting or local)")
     setup.add_argument("--agent", choices=["codex", "claude"])
+    setup.add_argument("--register-agent", action="store_true", help="Opt in to agent CLI registration; existing entries are not replaced")
+    connect = commands.add_parser("connect", help="Register an existing local setup with your agent")
+    connect.add_argument("--home", help="Local home (default: SIGNALWEAVE_HOME or ~/.signalweave)")
+    connect.add_argument("--agent", choices=["codex", "claude"], required=True)
     check = commands.add_parser("doctor", help="Check configuration offline; makes no live requests")
     check.add_argument("--home", help="Local home (default: SIGNALWEAVE_HOME or ~/.signalweave)")
     snippet = commands.add_parser("agent-config", help="Print configuration; never edits agent files")
@@ -83,13 +87,24 @@ def main() -> None:
         if args.command == "setup":
             options = vars(args).copy()
             options.pop("command")
+            register = options.pop("register_agent")
             home, agent = setup_local(**options)
             print("Local configuration saved. No network requests or source processes were started.")
             print("Local identity scopes this single-user process; it is not provider authentication.")
             print("Credentials and live source access remain unverified. Review and simulate cards before approval.")
-            print("To register with your agent, review and run this command:")
-            print(agent_registration(home, agent))
+            if register:
+                _connect_agent(home, agent)
+            else:
+                print("To register with your agent, review and run this command:")
+                print(agent_registration(home, agent))
             print("Offline check: " + shlex.join(["signalweave", "doctor", "--home", str(home)]))
+            print("Then ask your agent: Use SignalWeave's get_signalweave_guide to help me get my first useful report from my BI sources.")
+            return
+        if args.command == "connect":
+            from .local_setup import read_config
+
+            home, _ = read_config(args.home)
+            _connect_agent(home, args.agent)
             return
         if args.command == "init":
             home = initialize(args.home, key_file=args.key_file)
@@ -145,6 +160,20 @@ def main() -> None:
         raise SystemExit(1) from None
     except KeyboardInterrupt:
         raise SystemExit(130) from None
+
+
+def _connect_agent(home: Path, agent: str) -> None:
+    from .client_setup import register_agent
+
+    status = register_agent(home, agent)
+    print(status.message)
+    if status.outcome in {"registered", "already_configured"}:
+        print("Restart or reconnect the agent, then call get_signalweave_guide.")
+        return
+    if status.command:
+        print("Registration was not verified. Review existing entries before running this manual command:")
+        print(status.command)
+    raise SystemExit(1)
 
 
 def _run_stdio(server) -> None:

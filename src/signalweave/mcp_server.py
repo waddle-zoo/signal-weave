@@ -25,6 +25,7 @@ from .evaluation import (
     card_acceptance_digest,
     has_current_evidence_admission_policy,
 )
+from .getting_started import GuideTask, getting_started
 from .models import (
     CardDeliveryMethods,
     CertificationRecord,
@@ -191,6 +192,7 @@ def create_mcp(
     mcp = FastMCP(
         "signal-weave",
         instructions=(
+            "New users: call get_signalweave_guide first for the query, report or monitor path. "
             "SignalWeave saves and repeats reviewed investigations using TypeSafe Jev. "
             "Start with the user's business question, not a JSON form: use "
             "onboard_insight_card to discover sources and propose a draft. Read its "
@@ -587,6 +589,18 @@ def create_mcp(
                 )
             )
         return refs
+
+    @mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False, "openWorldHint": False})
+    def get_signalweave_guide(
+        task: GuideTask = "start", ctx: Context | None = None,
+    ) -> dict[str, Any]:
+        """Start here: help a person query, report on, or monitor their existing BI.
+
+        Returns the supported tool sequence, what to ask the owner, and where to
+        stop. No source access, paid inference, approval, scheduling or delivery.
+        """
+        request_principal(ctx)
+        return getting_started(task)
 
     @mcp.tool()
     async def list_resources(
