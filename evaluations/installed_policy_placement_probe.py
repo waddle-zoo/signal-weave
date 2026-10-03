@@ -8,6 +8,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import copy
+import gzip
 import json
 from pathlib import Path
 
@@ -24,7 +25,8 @@ from signalweave.models import InsightCard
 
 
 def prepare(trace: Path) -> tuple[dict, dict, list[dict]]:
-    events = [json.loads(line) for line in trace.read_text().splitlines()]
+    raw = gzip.decompress(trace.read_bytes()).decode() if trace.suffix == ".gz" else trace.read_text()
+    events = [json.loads(line) for line in raw.splitlines()]
     evaluation = next(e for e in reversed(events)
                       if e.get("kind") == "tool.result" and e.get("name") == "evaluate_card_workflow"
                       and e.get("result", {}).get("cases"))

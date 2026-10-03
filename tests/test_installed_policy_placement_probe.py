@@ -1,4 +1,5 @@
 import copy
+import gzip
 import json
 
 import pytest
@@ -32,6 +33,9 @@ def test_only_existing_prose_placement_and_version_change(tmp_path):
     assert restored == original
     assert candidate["decision_guidance"] == "Owner rules\nOtherwise stay quiet"
     assert candidate["action_confidence_threshold"] == 0.7
+    compressed = tmp_path / "trace.jsonl.gz"
+    compressed.write_bytes(gzip.compress(path.read_bytes(), mtime=0))
+    assert prepare(compressed) == prepare(path)
 
 
 async def test_dry_run_never_instantiates_live_client(tmp_path, monkeypatch):
