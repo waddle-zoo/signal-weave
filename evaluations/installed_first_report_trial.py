@@ -193,7 +193,8 @@ def _frozen_protocol(binary: Path | None = None) -> dict[str, Any]:
 async def _call(session, name: str, args: dict[str, Any]) -> dict[str, Any]:
     response = await session.call_tool(name, args)
     if response.isError:
-        raise RuntimeError(f"native tool failed: {name}")
+        detail = " ".join(item.text for item in response.content if item.type == "text")
+        raise RuntimeError(f"native tool failed: {name}: {detail[:1500]}")
     if response.structuredContent:
         return response.structuredContent
     return json.loads(next(item.text for item in response.content if item.type == "text"))
@@ -207,7 +208,8 @@ def _scan_exact_secrets(payload: str, key_file: Path) -> dict[str, Any]:
 
 
 async def _live_company(binary: Path, key_file: Path, company: dict[str, Any], fixture_script: Path,
-                        captured: str, attempts: dict[str, Any], events: list[dict[str, Any]], event_file: Path) -> dict[str, Any]:
+                        captured: str, attempts: dict[str, Any], events: list[dict[str, Any]], event_file: Path,
+                        *, preflight_only: bool = False) -> dict[str, Any]:
     from mcp import ClientSession, StdioServerParameters
     from mcp.client.stdio import stdio_client
 
@@ -218,7 +220,7 @@ async def _live_company(binary: Path, key_file: Path, company: dict[str, Any], f
             stream.write(json.dumps(event) + "\n")
 
     with tempfile.TemporaryDirectory(prefix=f"{company['id']}-") as temporary:
-        work = Path(temporary)
+        work = Path(temporary).resolve()
         home, fixture = work / "private-home", work / "snapshot.json"
         home.mkdir(mode=0o700)
         fixture.write_text(json.dumps(_fixture_payload(company, company["periods"][2], captured)) + "\n")
@@ -234,7 +236,7 @@ async def _live_company(binary: Path, key_file: Path, company: dict[str, Any], f
                                 "--source", "mcp", "--manifest", str(manifest), "--tenant", "local", "--principal", company["id"], "--agent", "codex"],
                                cwd=work, env=env, capture_output=True, text=True, timeout=90)
         if setup.returncode:
-            raise RuntimeError("binary setup failed")
+            raise RuntimeError(f"binary setup failed: {setup.stderr[:1500]}")
         async with stdio_client(StdioServerParameters(command=str(binary), args=["serve", "--home", str(home)], cwd=str(work), env=env)) as (reader, writer):
             async with ClientSession(reader, writer) as session:
                 await session.initialize()
@@ -242,7 +244,11 @@ async def _live_company(binary: Path, key_file: Path, company: dict[str, Any], f
                 tools = [tool.name for tool in (await session.list_tools()).tools]
                 await _call(session, "list_resources", {"adapter": "company_metrics"})
                 for source in public["sources"]:
-                    await _call(session, "inspect_resource", {"adapter": source["adapter"], "resource": source["resource"]})
+                    snapshot = await _call(session, "inspect_resource", {"adapter": source["adapter"], "resource": source["resource"]})
+                    if snapshot.get("error"):
+                        raise RuntimeError(f"source inspection failed: {snapshot['error']}")
+                if preflight_only:
+                    return {"preflight_passed": True, "paid_attempts": 0}
                 for operation, call in (("draft_insight_card", {"title": company["brief"], "what_to_watch": company["brief"],
                     "why_watch": "Support the owner's reporting decision.", "decision_guidance": company["owner_policy"],
                     "sources": public["sources"], "delivery_methods": _routes(company["id"], company["destinations"]),
@@ -298,7 +304,10 @@ def run_trial(output: Path, *, live: bool = False, binary: Path | None = None, k
             results.append(asyncio.run(_live_company(binary.resolve(), key_file.resolve(), company, fixture_script,
                                                      frozen["captured_at"], attempts, events, event_file)))
         except Exception as error:
-            event = {"kind": "company_error", "company": company["id"], "error": type(error).__name__}
+            secret = key_file.read_text(encoding="utf-8").strip()
+            message = str(error).replace(secret, "[redacted]") if secret else str(error)
+            event = {"kind": "company_error", "company": company["id"], "error": type(error).__name__,
+                     "message": message[:2000]}
             events.append(event)
             with event_file.open("a", encoding="utf-8") as stream:
                 stream.write(json.dumps(event) + "\n")

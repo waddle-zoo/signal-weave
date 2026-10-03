@@ -1,6 +1,9 @@
 import asyncio
 import json
+import os
 import stat
+import subprocess
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -8,6 +11,7 @@ import pytest
 from evaluations.installed_first_report_trial import (
     ROUTE_INTENT,
     _fixture_payload,
+    _live_company,
     _manifest,
     _normal_public,
     _routes,
@@ -110,6 +114,14 @@ def test_offline_setup_and_source_registry_inspect_fixture_mcp(tmp_path):
     manifest.chmod(0o600)
     setup_local(home, key_file=key, source="mcp", manifest=manifest, tenant="local",
                 principal=company["id"], agent="codex", non_interactive=True)
+    if binary := os.environ.get("SIGNALWEAVE_TEST_BINARY"):
+        result = subprocess.run([
+            str(Path(binary).resolve()), "setup", "--home", str(home), "--non-interactive",
+            "--key-file", str(key), "--source", "mcp", "--manifest", str(manifest),
+            "--tenant", "local", "--principal", company["id"], "--agent", "codex",
+        ], capture_output=True, text=True, timeout=90,
+            env={k: os.environ[k] for k in ("PATH", "LANG", "LC_ALL", "LC_CTYPE", "TMPDIR") if k in os.environ})
+        assert result.returncode == 0, result.stderr
     assert (home / "typesafe.key").read_text() == "offline-test-key\n"
     assert stat.S_IMODE((home / "typesafe.key").stat().st_mode) == 0o600
     assert stat.S_IMODE(manifest.stat().st_mode) == 0o600
@@ -124,3 +136,19 @@ def test_offline_setup_and_source_registry_inspect_fixture_mcp(tmp_path):
             assert snapshot.source_captured_at is not None
 
     asyncio.run(inspect_all())
+
+
+@pytest.mark.skipif(not os.environ.get("SIGNALWEAVE_TEST_BINARY"), reason="requires native binary")
+def test_native_first_report_preflight_without_inference(tmp_path):
+    key = tmp_path / "key"
+    key.write_text("offline-fixture-key")
+    company = cases()[0]
+    attempts = {"paid": 0, "companies": {company["id"]: 0}}
+    result = asyncio.run(_live_company(
+        Path(os.environ["SIGNALWEAVE_TEST_BINARY"]).resolve(), key, company,
+        Path(__file__).parents[1] / "evaluations" / "fixture_snapshot_mcp.py",
+        datetime.now(timezone.utc).isoformat(), attempts, [], tmp_path / "events.jsonl",
+        preflight_only=True,
+    ))
+    assert result["preflight_passed"]
+    assert attempts["paid"] == 0
