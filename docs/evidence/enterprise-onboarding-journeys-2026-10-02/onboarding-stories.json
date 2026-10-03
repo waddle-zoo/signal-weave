@@ -1,0 +1,1456 @@
+[
+  {
+    "company": "Juniper Trail Retail",
+    "brief": "Keep an eye on what we actually keep from sales. If it takes a hit, tell our commerce lead what changed, not just that a chart moved.",
+    "arm": "luna_bi",
+    "status": "complete",
+    "error": null,
+    "onboarding_seconds": 78.48412654100684,
+    "guide_calls": 0,
+    "author_tool_calls": 15,
+    "tool_histogram": {
+      "list_catalog": 1,
+      "ask_owner": 7,
+      "inspect_source": 2,
+      "save_notes": 2,
+      "request_synthetic_owner_approval": 2,
+      "finish_setup": 1
+    },
+    "first_successful_preview_tool_ordinal": null,
+    "first_preview_wall_time": null,
+    "first_preview_time_limit": "Trace has per-tool duration, not timestamps covering intervening model time; do not infer time-to-first-value.",
+    "owner_interview": [
+      {
+        "topic": "metric_scope",
+        "answer": {
+          "answer": "Sales means gross completed-order revenue minus refunds posted during the same reporting week, excluding tax and shipping. Do not use booked order value or subtract refunds twice.",
+          "known": true,
+          "topic": "metric_scope"
+        }
+      },
+      {
+        "topic": "materiality",
+        "answer": {
+          "answer": "Notify the business destination for a net-sales decline of at least 10% against the prior complete week. Otherwise ignore. Missing definitions or incomplete postings require insufficient_data to the data destination, not a business alert.",
+          "known": true,
+          "topic": "materiality"
+        }
+      },
+      {
+        "topic": "routing",
+        "answer": {
+          "answer": "business destination: team-1ad71a8723aa9325e8c1; data destination: team-66fa81ad827deebeb98f. Only these routes are authorized; no destructive actions.",
+          "known": true,
+          "topic": "routing"
+        }
+      },
+      {
+        "topic": "data_gaps",
+        "answer": {
+          "answer": "Ask for a corrected export or a versioned definition when needed. I cannot reconstruct missing rows, infer causation, or tell you a period's correct answer.",
+          "known": true,
+          "topic": "data_gaps"
+        }
+      },
+      {
+        "topic": "metric_scope",
+        "answer": {
+          "answer": "Sales means gross completed-order revenue minus refunds posted during the same reporting week, excluding tax and shipping. Do not use booked order value or subtract refunds twice.",
+          "known": true,
+          "topic": "metric_scope"
+        }
+      },
+      {
+        "topic": "materiality",
+        "answer": {
+          "answer": "Notify the business destination for a net-sales decline of at least 10% against the prior complete week. Otherwise ignore. Missing definitions or incomplete postings require insufficient_data to the data destination, not a business alert.",
+          "known": true,
+          "topic": "materiality"
+        }
+      },
+      {
+        "topic": "data_gaps",
+        "answer": {
+          "answer": "Ask for a corrected export or a versioned definition when needed. I cannot reconstruct missing rows, infer causation, or tell you a period's correct answer.",
+          "known": true,
+          "topic": "data_gaps"
+        }
+      }
+    ],
+    "owner_reviews": [
+      {
+        "approved": false,
+        "reasons": [
+          "Reject: the artifact adds unsupported source/tool constraints and requires citing inspected adapter/resource refs; neither the public brief, glossary, nor owner_answers authorizes those prerequisites.",
+          "Reject: it excludes partner/pilot, sandbox/QA, archive, and planning sources, but the supplied policy does not define those population exclusions. Owner clarification is required before omitting them from the actual-sales population.",
+          "Reject: the rate-comparison instruction to report mix/within effects and the mandatory claim tags add reporting/actions outside the supplied rule. Clarify whether these are required; otherwise remove them."
+        ],
+        "review_episode": {
+          "error": null,
+          "exit_code": 0,
+          "foreign_tools": [],
+          "response_timeout_seconds": 90,
+          "seconds": 8.663284290989395,
+          "status": "complete",
+          "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+          "tool_calls": 1,
+          "transport": "codex_cli",
+          "wall_time_overrun_seconds": 0.0
+        }
+      },
+      {
+        "approved": true,
+        "reasons": [
+          "Approved: defines sales as gross completed-order revenue minus same-week refunds, excluding tax and shipping; it forbids booked order value and double-counting refunds.",
+          "Matches the materiality rule: notify the authorized business destination for a net-sales decline of at least 10% versus the prior complete week; otherwise ignore.",
+          "Correctly sends insufficient_data for missing definitions or incomplete postings to the authorized data destination, without treating that as a business alert.",
+          "Preserves the data-gap policy: request a corrected export or versioned definition, do not reconstruct rows, infer causation, or provide an asserted period answer.",
+          "Uses only the two authorized destination keys and adds no destructive actions or unsupported recipients."
+        ],
+        "review_episode": {
+          "error": null,
+          "exit_code": 0,
+          "foreign_tools": [],
+          "response_timeout_seconds": 90,
+          "seconds": 22.01035045797471,
+          "status": "complete",
+          "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+          "tool_calls": 1,
+          "transport": "codex_cli",
+          "wall_time_overrun_seconds": 0.0
+        }
+      }
+    ],
+    "tool_errors": [],
+    "alternate_scope_read_count": 0,
+    "saved_notes": "Juniper Trail Retail:\nMetric policy: Sales means gross completed-order revenue minus refunds posted during the same reporting week, excluding tax and shipping. Do not use booked order value or subtract refunds twice.\nMateriality: Notify the business destination for a net-sales decline of at least 10% against the prior complete week. Otherwise ignore. Missing definitions or incomplete postings require insufficient_data to the data destination, not a business alert.\nData gaps: Ask for a corrected export or a versioned definition when needed. Do not reconstruct missing rows, infer causation, or tell the owner a period's correct answer.\nAuthorized routes: business destination key team-1ad71a8723aa9325e8c1; data destination key team-66fa81ad827deebeb98f."
+  },
+  {
+    "company": "Juniper Trail Retail",
+    "brief": "Keep an eye on what we actually keep from sales. If it takes a hit, tell our commerce lead what changed, not just that a chart moved.",
+    "arm": "luna_signalweave_jev",
+    "status": "failed",
+    "error": "no_structured_submission",
+    "onboarding_seconds": 153.3043752919766,
+    "guide_calls": 1,
+    "author_tool_calls": 24,
+    "tool_histogram": {
+      "get_signalweave_guide": 1,
+      "ask_owner": 4,
+      "list_insight_cards": 1,
+      "onboard_insight_card": 4,
+      "discover_insight_sources": 2,
+      "inspect_source": 1,
+      "draft_insight_card": 2,
+      "get_insight_card": 1,
+      "simulate_insight_card": 2,
+      "analyze_source": 1,
+      "evaluate_card_workflow": 3,
+      "save_notes": 1,
+      "finish_setup": 1
+    },
+    "first_successful_preview_tool_ordinal": 16,
+    "first_preview_wall_time": null,
+    "first_preview_time_limit": "Trace has per-tool duration, not timestamps covering intervening model time; do not infer time-to-first-value.",
+    "owner_interview": [
+      {
+        "topic": "metric_scope",
+        "answer": {
+          "answer": "Sales means gross completed-order revenue minus refunds posted during the same reporting week, excluding tax and shipping. Do not use booked order value or subtract refunds twice.",
+          "known": true,
+          "topic": "metric_scope"
+        }
+      },
+      {
+        "topic": "routing",
+        "answer": {
+          "answer": "business destination: team-1ad71a8723aa9325e8c1; data destination: team-66fa81ad827deebeb98f. Only these routes are authorized; no destructive actions.",
+          "known": true,
+          "topic": "routing"
+        }
+      },
+      {
+        "topic": "materiality",
+        "answer": {
+          "answer": "Notify the business destination for a net-sales decline of at least 10% against the prior complete week. Otherwise ignore. Missing definitions or incomplete postings require insufficient_data to the data destination, not a business alert.",
+          "known": true,
+          "topic": "materiality"
+        }
+      },
+      {
+        "topic": "data_gaps",
+        "answer": {
+          "answer": "Ask for a corrected export or a versioned definition when needed. I cannot reconstruct missing rows, infer causation, or tell you a period's correct answer.",
+          "known": true,
+          "topic": "data_gaps"
+        }
+      }
+    ],
+    "owner_reviews": [],
+    "tool_errors": [
+      {
+        "tool": "onboard_insight_card",
+        "error": {
+          "error": "ToolError",
+          "message": "Error executing tool onboard_insight_card: POST https://api.typesafe.ai/v1/systemone: 520 The origin web server sent a response that Cloudflare could not parse. This may indicate the origin returned an empty response, malformed HTTP headers, or an otherwise invalid response."
+        }
+      },
+      {
+        "tool": "onboard_insight_card",
+        "error": {
+          "error": "ToolError",
+          "message": "Error executing tool onboard_insight_card: selected source refs must come from discover_insight_sources: company_mcp|resource-ecdbd08bf01b01f59a60"
+        }
+      },
+      {
+        "tool": "onboard_insight_card",
+        "error": {
+          "error": "ToolError",
+          "message": "Error executing tool onboard_insight_card: selected source refs must come from discover_insight_sources: None"
+        }
+      },
+      {
+        "tool": "finish_setup",
+        "error": {
+          "error": "ValueError",
+          "message": "Treatment requires a saved approved card"
+        }
+      }
+    ],
+    "alternate_scope_read_count": 0,
+    "saved_notes": "Juniper Trail Retail policy: net_sales is gross completed-order revenue minus same-week refunds posted during the same UTC reporting week, excluding tax and shipping; do not use booked order value or subtract refunds twice. Compare current complete reporting week with previous complete reporting week. Notify business destination key team-1ad71a8723aa9325e8c1 only when net sales declines by at least 10%; otherwise ignore. If definitions or postings are incomplete, route insufficient_data to data destination key team-66fa81ad827deebeb98f. Ask for corrected export or versioned definition when needed. Use current-period evidence; do not infer causality or fill missing populations with zeros. Validated source: company_mcp|resource-ecdbd08bf01b01f59a60 (Commerce weekly), company-wide completed transaction amounts by channel with positive refunds in USD; source period is UTC."
+  },
+  {
+    "company": "Harbor Workspace",
+    "brief": "Are customers sticking with us? Let customer success know when retention is really getting worse, rather than just because we signed up a different mix of customers.",
+    "arm": "luna_bi",
+    "status": "complete",
+    "error": null,
+    "onboarding_seconds": 65.54675166698871,
+    "guide_calls": 0,
+    "author_tool_calls": 11,
+    "tool_histogram": {
+      "ask_owner": 4,
+      "list_catalog": 1,
+      "inspect_source": 2,
+      "analyze_source": 1,
+      "save_notes": 1,
+      "request_synthetic_owner_approval": 1,
+      "finish_setup": 1
+    },
+    "first_successful_preview_tool_ordinal": null,
+    "first_preview_wall_time": null,
+    "first_preview_time_limit": "Trace has per-tool duration, not timestamps covering intervening model time; do not infer time-to-first-value.",
+    "owner_interview": [
+      {
+        "topic": "metric_scope",
+        "answer": {
+          "answer": "Retention is renewed accounts divided by accounts due for renewal in the week, grouped by the plan at renewal eligibility. Trial signups are excluded. Plan cohorts are mutually exclusive.",
+          "known": true,
+          "topic": "metric_scope"
+        }
+      },
+      {
+        "topic": "materiality",
+        "answer": {
+          "answer": "Notify the business destination if the symmetric within-plan retention change is at most -0.05 in ratio units. A pure mix shift is ignore, even if the aggregate falls. An unknown eligibility definition requires insufficient_data to the data destination.",
+          "known": true,
+          "topic": "materiality"
+        }
+      },
+      {
+        "topic": "routing",
+        "answer": {
+          "answer": "business destination: team-9b9aad22a09fe443f335; data destination: team-d40b5d95d78af4b2d96c. Only these routes are authorized; no destructive actions.",
+          "known": true,
+          "topic": "routing"
+        }
+      },
+      {
+        "topic": "data_gaps",
+        "answer": {
+          "answer": "Ask for a corrected export or a versioned definition when needed. I cannot reconstruct missing rows, infer causation, or tell you a period's correct answer.",
+          "known": true,
+          "topic": "data_gaps"
+        }
+      }
+    ],
+    "owner_reviews": [
+      {
+        "approved": true,
+        "reasons": [
+          "Matches the supplied retention definition: renewed accounts divided by accounts due in the week, grouped by mutually exclusive plan at renewal eligibility, with trial signups excluded.",
+          "Uses the authorized comparison basis: the previous complete reporting week, with UTC source periods, and preserves ratio units.",
+          "Correctly maps materiality: notify the authorized business destination when symmetric within-plan change is <= -0.05 ratio units; pure mix shift is ignore.",
+          "Correctly maps an unknown eligibility definition to insufficient_data at the authorized data destination and prohibits reconstructing missing rows or inferring causation.",
+          "No extra recipients or destructive actions are introduced; the added decomposition and claim labels support the stated mix-versus-within-plan distinction."
+        ],
+        "review_episode": {
+          "error": null,
+          "exit_code": 0,
+          "foreign_tools": [],
+          "response_timeout_seconds": 90,
+          "seconds": 38.353045083989855,
+          "status": "complete",
+          "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+          "tool_calls": 1,
+          "transport": "codex_cli",
+          "wall_time_overrun_seconds": 0.0
+        }
+      }
+    ],
+    "tool_errors": [],
+    "alternate_scope_read_count": 0,
+    "saved_notes": "Harbor Workspace retention monitoring policy:\n- Metric: renewed accounts divided by accounts due for renewal in the week, grouped by mutually exclusive paid plan at renewal eligibility; trial signups excluded.\n- Comparison: previous complete reporting week; source periods are UTC.\n- Materiality/routing: notify business destination key team-9b9aad22a09fe443f335 only when symmetric within-plan retention change is <= -0.05 ratio units. Pure mix shift is ignore even if aggregate falls. If eligibility definition is unknown, outcome insufficient_data routed to data destination key team-d40b5d95d78af4b2d96c.\n- Data gaps: request corrected export or versioned definition; do not reconstruct missing rows or infer causation.\n- Validated current source: company_mcp|resource-ab6a5d5969c67c01fa68, Account health, renewal counts and eligible accounts by paid plan with controlling totals. Billing definition source: company_mcp|resource-f2565899b79da2c7dcaf, version v3. Source periods are current monitoring evidence only; do not preserve measurements as future truth.\n- Use symmetric rate decomposition for aggregate retention, reporting baseline/current/delta plus mix and within effects when supported. Claims must be tagged observation, accounting_decomposition, association, hypothesis, or causal; use numeric vocabulary identifiers and ratio units."
+  },
+  {
+    "company": "Harbor Workspace",
+    "brief": "Are customers sticking with us? Let customer success know when retention is really getting worse, rather than just because we signed up a different mix of customers.",
+    "arm": "luna_signalweave_jev",
+    "status": "failed",
+    "error": "no_structured_submission",
+    "onboarding_seconds": 195.29793570801849,
+    "guide_calls": 1,
+    "author_tool_calls": 31,
+    "tool_histogram": {
+      "get_signalweave_guide": 1,
+      "list_catalog": 1,
+      "ask_owner": 4,
+      "inspect_source": 2,
+      "onboard_insight_card": 5,
+      "discover_insight_sources": 1,
+      "simulate_insight_card": 1,
+      "preview_investigation_report": 1,
+      "evaluate_card_workflow": 7,
+      "request_synthetic_owner_approval": 3,
+      "get_insight_card": 1,
+      "save_notes": 1,
+      "approve_insight_card": 2,
+      "review_insight_card": 1
+    },
+    "first_successful_preview_tool_ordinal": 15,
+    "first_preview_wall_time": null,
+    "first_preview_time_limit": "Trace has per-tool duration, not timestamps covering intervening model time; do not infer time-to-first-value.",
+    "owner_interview": [
+      {
+        "topic": "metric_scope",
+        "answer": {
+          "answer": "Retention is renewed accounts divided by accounts due for renewal in the week, grouped by the plan at renewal eligibility. Trial signups are excluded. Plan cohorts are mutually exclusive.",
+          "known": true,
+          "topic": "metric_scope"
+        }
+      },
+      {
+        "topic": "materiality",
+        "answer": {
+          "answer": "Notify the business destination if the symmetric within-plan retention change is at most -0.05 in ratio units. A pure mix shift is ignore, even if the aggregate falls. An unknown eligibility definition requires insufficient_data to the data destination.",
+          "known": true,
+          "topic": "materiality"
+        }
+      },
+      {
+        "topic": "routing",
+        "answer": {
+          "answer": "business destination: team-9b9aad22a09fe443f335; data destination: team-d40b5d95d78af4b2d96c. Only these routes are authorized; no destructive actions.",
+          "known": true,
+          "topic": "routing"
+        }
+      },
+      {
+        "topic": "data_gaps",
+        "answer": {
+          "answer": "Ask for a corrected export or a versioned definition when needed. I cannot reconstruct missing rows, infer causation, or tell you a period's correct answer.",
+          "known": true,
+          "topic": "data_gaps"
+        }
+      }
+    ],
+    "owner_reviews": [
+      {
+        "approved": true,
+        "reasons": [
+          "Matches the glossary metric: renewed accounts divided by accounts due, grouped by mutually exclusive plan at renewal eligibility, with trial signups excluded.",
+          "Uses the required comparison basis: the previous complete UTC reporting week, with a symmetric within-plan change threshold of <= -0.05 ratio units.",
+          "Correctly ignores pure plan-mix shifts and does not infer causation; the decomposition is explicitly accounting-only.",
+          "Outcome routing matches the owner answers and authorized destinations: notify the business destination, and send insufficient_data to the data destination when eligibility is unknown."
+        ],
+        "review_episode": {
+          "error": null,
+          "exit_code": 0,
+          "foreign_tools": [],
+          "response_timeout_seconds": 90,
+          "seconds": 18.68594920798205,
+          "status": "complete",
+          "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+          "tool_calls": 1,
+          "transport": "codex_cli",
+          "wall_time_overrun_seconds": 0.0
+        }
+      }
+    ],
+    "tool_errors": [
+      {
+        "tool": "onboard_insight_card",
+        "error": {
+          "error": "ToolError",
+          "message": "Error executing tool onboard_insight_card: selected source refs must come from discover_insight_sources: None, None"
+        }
+      },
+      {
+        "tool": "onboard_insight_card",
+        "error": {
+          "error": "ToolError",
+          "message": "Error executing tool onboard_insight_card: 1 validation error for InsightCard\n  Value error, numeric condition source_key must reference a card source: resource-ab6a5d5969c67c01fa68 [type=value_error, input_value={'id': 'card-weekly-reten...y-80529fa10aa0f418949b'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/value_error"
+        }
+      },
+      {
+        "tool": "onboard_insight_card",
+        "error": {
+          "error": "ToolError",
+          "message": "Error executing tool onboard_insight_card: 1 validation error for InsightCard\n  Value error, numeric condition source_key must reference a card source: company_mcp|resource-ab6a5d5969c67c01fa68 [type=value_error, input_value={'id': 'card-weekly-reten...y-80529fa10aa0f418949b'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/value_error"
+        }
+      },
+      {
+        "tool": "evaluate_card_workflow",
+        "error": {
+          "error": "ToolError",
+          "message": "Error executing tool evaluate_card_workflow: 3 validation errors for CardEvaluationCase\nresources.0\n  Input should be a valid dictionary or instance of ResourceSnapshot [type=model_type, input_value='company_mcp|resource-ab6a5d5969c67c01fa68', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/model_type\nresources.1\n  Input should be a valid dictionary or instance of ResourceSnapshot [type=model_type, input_value='company_mcp|resource-f2565899b79da2c7dcaf', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/model_type\nexpected_delivery_destinations\n  Input should be a valid dictionary [type=dict_type, input_value=[], input_type=list]\n    For further information visit https://errors.pydantic.dev/2.13/v/dict_type"
+        }
+      },
+      {
+        "tool": "evaluate_card_workflow",
+        "error": {
+          "error": "ToolError",
+          "message": "Error executing tool evaluate_card_workflow: 2 validation errors for CardEvaluationCase\nresources.0.title\n  Field required [type=missing, input_value={'source_key': 'resource-...e-ab6a5d5969c67c01fa68'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nresources.1.title\n  Field required [type=missing, input_value={'source_key': 'resource-...e-f2565899b79da2c7dcaf'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing"
+        }
+      },
+      {
+        "tool": "evaluate_card_workflow",
+        "error": {
+          "error": "ToolError",
+          "message": "Error executing tool evaluate_card_workflow: 1 validation error for CardEvaluationCase\nexpected_delivery_destinations.notify\n  Input should be a valid string [type=string_type, input_value=['team-9b9aad22a09fe443f335'], input_type=list]\n    For further information visit https://errors.pydantic.dev/2.13/v/string_type"
+        }
+      },
+      {
+        "tool": "evaluate_card_workflow",
+        "error": {
+          "error": "ToolError",
+          "message": "Error executing tool evaluate_card_workflow: evaluation case contains resources outside the authenticated principal tenant: company_mcp|resource-ab6a5d5969c67c01fa68, company_mcp|resource-f2565899b79da2c7dcaf"
+        }
+      },
+      {
+        "tool": "evaluate_card_workflow",
+        "error": {
+          "error": "ToolError",
+          "message": "Error executing tool evaluate_card_workflow: evaluation case contains resources outside the authenticated principal tenant: company_mcp|resource-ab6a5d5969c67c01fa68, company_mcp|resource-f2565899b79da2c7dcaf"
+        }
+      },
+      {
+        "tool": "evaluate_card_workflow",
+        "error": {
+          "error": "ToolError",
+          "message": "Error executing tool evaluate_card_workflow: evaluation case contains resources outside the authenticated principal tenant: company_mcp|resource-ab6a5d5969c67c01fa68, company_mcp|resource-f2565899b79da2c7dcaf"
+        }
+      },
+      {
+        "tool": "evaluate_card_workflow",
+        "error": {
+          "error": "ToolError",
+          "message": "Error executing tool evaluate_card_workflow: evaluation case contains resources outside the authenticated principal tenant: company_mcp|resource-ab6a5d5969c67c01fa68, company_mcp|resource-f2565899b79da2c7dcaf"
+        }
+      },
+      {
+        "tool": "approve_insight_card",
+        "error": {
+          "error": "ToolError",
+          "message": "Error executing tool approve_insight_card: Source selection review is stale or missing. Call review_insight_card and obtain owner confirmation of the current policy and catalog."
+        }
+      },
+      {
+        "tool": "approve_insight_card",
+        "error": {
+          "error": "ToolError",
+          "message": "Error executing tool approve_insight_card: Source selection review is stale or missing. Call review_insight_card and obtain owner confirmation of the current policy and catalog."
+        }
+      }
+    ],
+    "alternate_scope_read_count": 0,
+    "saved_notes": "Harbor Workspace retention monitoring policy: retention is renewed accounts divided by accounts due for renewal in the week, grouped by mutually exclusive plan at renewal eligibility; trial signups excluded. Compare the previous complete UTC reporting week. Use company_mcp|resource-ab6a5d5969c67c01fa68 (Account health) for current-period retention comparisons and company_mcp|resource-f2565899b79da2c7dcaf (Billing definitions) for versioned eligibility; v3 was observed during onboarding. Owner materiality: notify business destination team-9b9aad22a09fe443f335 when symmetric within-plan retention change is <= -0.05 ratio units; ignore pure mix shifts; route insufficient_data to team-d40b5d95d78af4b2d96c when eligibility is unknown. Report retention.baseline, retention.current, retention.delta, retention.mix_effect, retention.within_effect in ratio units. Accounting decomposition is not causal. Do not fill missing populations with zeros or invent recipients. Authorized destinations are only the two provided keys."
+  },
+  {
+    "company": "Kindred Helpdesk",
+    "brief": "We are getting busier. Tell the support manager if we are letting customers down, not every time the ticket count goes up.",
+    "arm": "luna_signalweave_jev",
+    "status": "failed",
+    "error": "no_structured_submission",
+    "onboarding_seconds": 124.7879154169932,
+    "guide_calls": 1,
+    "author_tool_calls": 22,
+    "tool_histogram": {
+      "get_signalweave_guide": 1,
+      "list_insight_cards": 1,
+      "ask_owner": 4,
+      "onboard_insight_card": 3,
+      "review_insight_card": 2,
+      "draft_insight_card": 1,
+      "inspect_source": 1,
+      "preview_investigation_report": 1,
+      "evaluate_card_workflow": 6,
+      "save_notes": 1,
+      "finish_setup": 1
+    },
+    "first_successful_preview_tool_ordinal": 14,
+    "first_preview_wall_time": null,
+    "first_preview_time_limit": "Trace has per-tool duration, not timestamps covering intervening model time; do not infer time-to-first-value.",
+    "owner_interview": [
+      {
+        "topic": "metric_scope",
+        "answer": {
+          "answer": "SLA attainment is first responses within one business day divided by all eligible inbound customer tickets, including still-open tickets whose deadline elapsed. Bot and spam tickets are excluded.",
+          "known": true,
+          "topic": "metric_scope"
+        }
+      },
+      {
+        "topic": "materiality",
+        "answer": {
+          "answer": "Notify the business destination when SLA attainment drops by at least 0.05 ratio units against the prior complete week. Volume alone is ignore. A missing eligible denominator requires insufficient_data to the data destination.",
+          "known": true,
+          "topic": "materiality"
+        }
+      },
+      {
+        "topic": "routing",
+        "answer": {
+          "answer": "business destination: team-41d27e7150b769ffdfe8; data destination: team-230b13de1fed0db1ee93. Only these routes are authorized; no destructive actions.",
+          "known": true,
+          "topic": "routing"
+        }
+      },
+      {
+        "topic": "data_gaps",
+        "answer": {
+          "answer": "Ask for a corrected export or a versioned definition when needed. I cannot reconstruct missing rows, infer causation, or tell you a period's correct answer.",
+          "known": true,
+          "topic": "data_gaps"
+        }
+      }
+    ],
+    "owner_reviews": [],
+    "tool_errors": [
+      {
+        "tool": "onboard_insight_card",
+        "error": {
+          "error": "ToolError",
+          "message": "Error executing tool onboard_insight_card: 1 validation error for InsightCard\n  Value error, numeric condition source_key must reference a card source: sla_attainment [type=value_error, input_value={'id': 'card-weekly-sla-a...y-954c2623285a0ce6506e'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/value_error"
+        }
+      },
+      {
+        "tool": "onboard_insight_card",
+        "error": {
+          "error": "ToolError",
+          "message": "Error executing tool onboard_insight_card: selected source refs must come from discover_insight_sources: None"
+        }
+      },
+      {
+        "tool": "review_insight_card",
+        "error": {
+          "error": "ToolError",
+          "message": "Error executing tool review_insight_card: limit must be between 1 and 25"
+        }
+      },
+      {
+        "tool": "evaluate_card_workflow",
+        "error": {
+          "error": "ToolError",
+          "message": "Error executing tool evaluate_card_workflow: 4 validation errors for CardEvaluationCase\nresources.0.adapter\n  Field required [type=missing, input_value={'source_key': 'source-co...-a3e595b7af5a31a5e466']}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nresources.0.resource\n  Field required [type=missing, input_value={'source_key': 'source-co...-a3e595b7af5a31a5e466']}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nresources.0.title\n  Field required [type=missing, input_value={'source_key': 'source-co...-a3e595b7af5a31a5e466']}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nexpected_delivery_destinations\n  Input should be a valid dictionary [type=dict_type, input_value=['team-41d27e7150b769ffdfe8'], input_type=list]\n    For further information visit https://errors.pydantic.dev/2.13/v/dict_type"
+        }
+      },
+      {
+        "tool": "evaluate_card_workflow",
+        "error": {
+          "error": "ToolError",
+          "message": "Error executing tool evaluate_card_workflow: 1 validation error for CardEvaluationCase\nexpected_delivery_destinations.notify\n  Input should be a valid string [type=string_type, input_value=['team-41d27e7150b769ffdfe8'], input_type=list]\n    For further information visit https://errors.pydantic.dev/2.13/v/string_type"
+        }
+      },
+      {
+        "tool": "evaluate_card_workflow",
+        "error": {
+          "error": "ToolError",
+          "message": "Error executing tool evaluate_card_workflow: evaluation case contains resources outside the authenticated principal tenant: company_mcp|resource-a3e595b7af5a31a5e466"
+        }
+      },
+      {
+        "tool": "evaluate_card_workflow",
+        "error": {
+          "error": "ToolError",
+          "message": "Error executing tool evaluate_card_workflow: evaluation case contains resources outside the authenticated principal tenant: company_mcp|resource-a3e595b7af5a31a5e466"
+        }
+      },
+      {
+        "tool": "finish_setup",
+        "error": {
+          "error": "ValueError",
+          "message": "Treatment requires a saved approved card"
+        }
+      }
+    ],
+    "alternate_scope_read_count": 0,
+    "saved_notes": "Policy: SLA attainment is first responses within one business day divided by all eligible inbound customer tickets, including still-open tickets whose deadline elapsed; bot and spam excluded. Compare current complete UTC reporting week with previous_period. Notify business destination team-41d27e7150b769ffdfe8 when signed delta is <= -0.05 ratio units; ignore volume alone. Missing eligible denominator routes insufficient_data to data destination team-230b13de1fed0db1ee93. Request corrected export or versioned definition; do not infer causation. Validated source: company_mcp|resource-a3e595b7af5a31a5e466, Queue service, complete current snapshot; observed SLA attainment 0.90 baseline and 0.90 current, delta 0.00 ratio, mix effect 0.00, within effect 0.00; segments priority and standard unchanged. Preview was blocked because required comparison key was not uniquely returned by typed evidence slot."
+  },
+  {
+    "company": "Kindred Helpdesk",
+    "brief": "We are getting busier. Tell the support manager if we are letting customers down, not every time the ticket count goes up.",
+    "arm": "luna_bi",
+    "status": "complete",
+    "error": null,
+    "onboarding_seconds": 117.5322483330383,
+    "guide_calls": 0,
+    "author_tool_calls": 15,
+    "tool_histogram": {
+      "ask_owner": 4,
+      "list_catalog": 1,
+      "inspect_source": 2,
+      "analyze_source": 1,
+      "save_notes": 3,
+      "request_synthetic_owner_approval": 3,
+      "finish_setup": 1
+    },
+    "first_successful_preview_tool_ordinal": null,
+    "first_preview_wall_time": null,
+    "first_preview_time_limit": "Trace has per-tool duration, not timestamps covering intervening model time; do not infer time-to-first-value.",
+    "owner_interview": [
+      {
+        "topic": "routing",
+        "answer": {
+          "answer": "business destination: team-41d27e7150b769ffdfe8; data destination: team-230b13de1fed0db1ee93. Only these routes are authorized; no destructive actions.",
+          "known": true,
+          "topic": "routing"
+        }
+      },
+      {
+        "topic": "data_gaps",
+        "answer": {
+          "answer": "Ask for a corrected export or a versioned definition when needed. I cannot reconstruct missing rows, infer causation, or tell you a period's correct answer.",
+          "known": true,
+          "topic": "data_gaps"
+        }
+      },
+      {
+        "topic": "metric_scope",
+        "answer": {
+          "answer": "SLA attainment is first responses within one business day divided by all eligible inbound customer tickets, including still-open tickets whose deadline elapsed. Bot and spam tickets are excluded.",
+          "known": true,
+          "topic": "metric_scope"
+        }
+      },
+      {
+        "topic": "materiality",
+        "answer": {
+          "answer": "Notify the business destination when SLA attainment drops by at least 0.05 ratio units against the prior complete week. Volume alone is ignore. A missing eligible denominator requires insufficient_data to the data destination.",
+          "known": true,
+          "topic": "materiality"
+        }
+      }
+    ],
+    "owner_reviews": [
+      {
+        "approved": false,
+        "reasons": [
+          "The artifact adds an unsupported reporting requirement: every rate comparison must include symmetric mix_effect and within_effect decomposition fields. The brief and owner_answers require the SLA rate, prior-week comparison, signed drop threshold, and supported routing, but do not authorize this extra analysis.",
+          "The artifact relies on asserted Queue service/Support handbook source validation, definition version v3, segment availability, and source exclusions that are not supplied in the public brief, glossary, authorized destinations, or owner_answers. Remove these unverified source-specific rules or obtain owner clarification."
+        ],
+        "review_episode": {
+          "error": null,
+          "exit_code": 0,
+          "foreign_tools": [],
+          "response_timeout_seconds": 90,
+          "seconds": 25.16246045799926,
+          "status": "complete",
+          "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+          "tool_calls": 1,
+          "transport": "codex_cli",
+          "wall_time_overrun_seconds": 0.0
+        }
+      },
+      {
+        "approved": false,
+        "reasons": [
+          "Reject: the mandatory step to inspect current-period catalog sources and validate definitions/population before using measurements is an unsupported prerequisite. The supplied policy authorizes the stated SLA definition and comparison, but does not require catalog-source validation as a gate.",
+          "Reject: the requirement to report driver/decomposition facts, including mix and within effects, adds an unsupported action beyond the supplied outcomes and owner answers. Remove it or obtain explicit owner authorization."
+        ],
+        "review_episode": {
+          "error": null,
+          "exit_code": 0,
+          "foreign_tools": [],
+          "response_timeout_seconds": 90,
+          "seconds": 30.946824125014246,
+          "status": "complete",
+          "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+          "tool_calls": 1,
+          "transport": "codex_cli",
+          "wall_time_overrun_seconds": 0.0
+        }
+      },
+      {
+        "approved": true,
+        "reasons": [
+          "Matches the supplied policy: SLA attainment is first responses within one business day divided by all eligible inbound tickets, including still-open tickets past deadline; bot and spam tickets are excluded; unit is ratio; source periods are UTC.",
+          "Matches the required outcomes and routing: notify the business destination only for a drop of at least 0.05 ratio units versus the previous complete reporting week; ticket volume alone is ignore; a missing eligible denominator is insufficient_data routed to the data destination."
+        ],
+        "review_episode": {
+          "error": null,
+          "exit_code": 0,
+          "foreign_tools": [],
+          "response_timeout_seconds": 90,
+          "seconds": 20.452349541010335,
+          "status": "complete",
+          "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+          "tool_calls": 1,
+          "transport": "codex_cli",
+          "wall_time_overrun_seconds": 0.0
+        }
+      }
+    ],
+    "tool_errors": [],
+    "alternate_scope_read_count": 0,
+    "saved_notes": "Kindred Helpdesk monitoring policy:\n- SLA attainment is first responses within one business day divided by all eligible inbound customer tickets, including still-open tickets whose deadline elapsed; bot and spam tickets are excluded. Unit is ratio. Compare with the previous complete reporting week; source periods are UTC.\n- Notify the business destination only when SLA attainment drops by at least 0.05 ratio units against the prior complete week. Ticket volume alone is ignore.\n- If an eligible denominator is missing, use outcome insufficient_data and route to the data destination. Ask for a corrected export or a versioned definition when needed. Do not reconstruct missing rows, infer causation, or decide a period’s correct answer without evidence.\n- Authorized destination keys: business team-41d27e7150b769ffdfe8; data team-230b13de1fed0db1ee93. No external notifications."
+  },
+  {
+    "company": "Cinder Database Cloud",
+    "brief": "Watch for customer-facing database slowdowns. Connect the related signals before paging someone. We do not want a page for one hot CPU.",
+    "arm": "luna_bi",
+    "status": "complete",
+    "error": null,
+    "onboarding_seconds": 93.87209508300293,
+    "guide_calls": 0,
+    "author_tool_calls": 12,
+    "tool_histogram": {
+      "ask_owner": 4,
+      "list_catalog": 1,
+      "inspect_source": 2,
+      "save_notes": 2,
+      "request_synthetic_owner_approval": 2,
+      "finish_setup": 1
+    },
+    "first_successful_preview_tool_ordinal": null,
+    "first_preview_wall_time": null,
+    "first_preview_time_limit": "Trace has per-tool duration, not timestamps covering intervening model time; do not infer time-to-first-value.",
+    "owner_interview": [
+      {
+        "topic": "metric_scope",
+        "answer": {
+          "answer": "Customer impact needs query p95 latency and replication lag in the same cluster population, with regional breadth. Rollout times and incident notes are corroboration, not proof of cause.",
+          "known": true,
+          "topic": "metric_scope"
+        }
+      },
+      {
+        "topic": "materiality",
+        "answer": {
+          "answer": "Investigate to the business destination when latency rises at least 20%, lag at least doubles, and at least two regions are affected. Isolated CPU spikes are ignore. Missing cluster coverage requires insufficient_data to the data destination. Never state a deployment caused an incident from timing alone.",
+          "known": true,
+          "topic": "materiality"
+        }
+      },
+      {
+        "topic": "routing",
+        "answer": {
+          "answer": "business destination: team-a9701ad653c41de9a095; data destination: team-f8f76f00c083192dd0ae. Only these routes are authorized; no destructive actions.",
+          "known": true,
+          "topic": "routing"
+        }
+      },
+      {
+        "topic": "data_gaps",
+        "answer": {
+          "answer": "Ask for a corrected export or a versioned definition when needed. I cannot reconstruct missing rows, infer causation, or tell you a period's correct answer.",
+          "known": true,
+          "topic": "data_gaps"
+        }
+      }
+    ],
+    "owner_reviews": [
+      {
+        "approved": false,
+        "reasons": [
+          "The materiality, comparison, population, units, outcomes, recipients, CPU exception, missing-data handling, and causality limits match the supplied policy.",
+          "Reject because the notes add unsupported source assertions and exclusions: specific company_mcp resource IDs, a “validated” status, and pilot/partner/sandbox/planning/archive restrictions are not in the public brief, glossary, or owner_answers. Remove them or obtain explicit owner authorization.",
+          "The required vocabulary identifiers also add an unprovided reporting requirement, especially latency.rollout_lead_minutes (minutes). Clarify or remove these identifiers; the supplied policy authorizes only the stated latency unit and corroboration role for rollout notes."
+        ],
+        "review_episode": {
+          "error": null,
+          "exit_code": 0,
+          "foreign_tools": [],
+          "response_timeout_seconds": 90,
+          "seconds": 45.87789491604781,
+          "status": "complete",
+          "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+          "tool_calls": 1,
+          "transport": "codex_cli",
+          "wall_time_overrun_seconds": 0.0
+        }
+      },
+      {
+        "approved": true,
+        "reasons": [
+          "Approved: the notes faithfully match the brief and owner answers. They connect query p95 latency and replication lag in the same current customer-cluster population, preserve regional breadth, and use the previous complete reporting week in UTC with latency in ms.",
+          "The materiality rule is preserved exactly: investigate only when latency rises at least 20%, lag at least doubles, and at least 2 regions are affected; isolated CPU spikes are ignore.",
+          "Missing cluster coverage correctly produces insufficient_data and routes the business investigation and data gap to the authorized destination keys. The notes also preserve the prohibition on inferring causation and on reconstructing missing data."
+        ],
+        "review_episode": {
+          "error": null,
+          "exit_code": 0,
+          "foreign_tools": [],
+          "response_timeout_seconds": 90,
+          "seconds": 15.802653040969744,
+          "status": "complete",
+          "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+          "tool_calls": 1,
+          "transport": "codex_cli",
+          "wall_time_overrun_seconds": 0.0
+        }
+      }
+    ],
+    "tool_errors": [],
+    "alternate_scope_read_count": 0,
+    "saved_notes": "Policy and reusable source knowledge for Cinder Database Cloud:\n- Scope: current-period customer-cluster population; measure query p95 latency and replication lag on the same population, with regional breadth. Comparison is the previous complete reporting week; source periods are UTC; latency unit is ms.\n- Materiality: investigate when latency rises at least 20%, replication lag at least doubles, and at least 2 affected regions. Isolated CPU spikes are ignore. Missing cluster coverage means insufficient_data.\n- Routing: business investigation destination key team-a9701ad653c41de9a095; data-gap destination key team-f8f76f00c083192dd0ae. No external notifications.\n- Evidence rules: use current-period evidence for measurements; rollout times and incident notes are corroboration, not proof of cause. Do not infer causality from correlation or timing. Ask for a corrected export or versioned definition when needed; do not reconstruct missing rows or fill populations with zeros.\n- Use numeric vocabulary identifiers and units when reporting supported quantities, including latency.delta (ms) and latency.affected_regions (regions)."
+  },
+  {
+    "company": "Cinder Database Cloud",
+    "brief": "Watch for customer-facing database slowdowns. Connect the related signals before paging someone. We do not want a page for one hot CPU.",
+    "arm": "luna_signalweave_jev",
+    "status": "complete",
+    "error": null,
+    "onboarding_seconds": 170.96744945796672,
+    "guide_calls": 1,
+    "author_tool_calls": 22,
+    "tool_histogram": {
+      "get_signalweave_guide": 1,
+      "list_insight_cards": 1,
+      "list_catalog": 1,
+      "ask_owner": 4,
+      "onboard_insight_card": 2,
+      "inspect_source": 1,
+      "get_insight_card": 1,
+      "preview_investigation_report": 1,
+      "evaluate_card_workflow": 4,
+      "save_notes": 2,
+      "request_synthetic_owner_approval": 2,
+      "approve_insight_card": 1,
+      "finish_setup": 1
+    },
+    "first_successful_preview_tool_ordinal": 12,
+    "first_preview_wall_time": null,
+    "first_preview_time_limit": "Trace has per-tool duration, not timestamps covering intervening model time; do not infer time-to-first-value.",
+    "owner_interview": [
+      {
+        "topic": "metric_scope",
+        "answer": {
+          "answer": "Customer impact needs query p95 latency and replication lag in the same cluster population, with regional breadth. Rollout times and incident notes are corroboration, not proof of cause.",
+          "known": true,
+          "topic": "metric_scope"
+        }
+      },
+      {
+        "topic": "materiality",
+        "answer": {
+          "answer": "Investigate to the business destination when latency rises at least 20%, lag at least doubles, and at least two regions are affected. Isolated CPU spikes are ignore. Missing cluster coverage requires insufficient_data to the data destination. Never state a deployment caused an incident from timing alone.",
+          "known": true,
+          "topic": "materiality"
+        }
+      },
+      {
+        "topic": "routing",
+        "answer": {
+          "answer": "business destination: team-a9701ad653c41de9a095; data destination: team-f8f76f00c083192dd0ae. Only these routes are authorized; no destructive actions.",
+          "known": true,
+          "topic": "routing"
+        }
+      },
+      {
+        "topic": "data_gaps",
+        "answer": {
+          "answer": "Ask for a corrected export or a versioned definition when needed. I cannot reconstruct missing rows, infer causation, or tell you a period's correct answer.",
+          "known": true,
+          "topic": "data_gaps"
+        }
+      }
+    ],
+    "owner_reviews": [
+      {
+        "approved": false,
+        "reasons": [
+          "Reject: notes introduce an \"authoritative company_mcp|resource-6dfa76e81a9d86bcbc86\" source that is not supplied or authorized by the brief, glossary, or owner answers. Remove it or obtain owner clarification of the authorized source.",
+          "Reject: notes assert unsupported current facts—source health and a snapshot of 100→100 ms p95, 10→10 ms lag, 0 regions, 3 clusters, and 95% CPU. The owner supplied no such measurements; labeling them non-reusable does not make them supported."
+        ],
+        "review_episode": {
+          "error": null,
+          "exit_code": 0,
+          "foreign_tools": [],
+          "response_timeout_seconds": 90,
+          "seconds": 25.662677749991417,
+          "status": "complete",
+          "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+          "tool_calls": 1,
+          "transport": "codex_cli",
+          "wall_time_overrun_seconds": 0.0
+        }
+      },
+      {
+        "approved": true,
+        "reasons": [
+          "Matches the owner policy: compares the current complete UTC reporting week with the previous complete week for query p95 latency and replication lag in the same cluster population, with regional breadth.",
+          "Correctly investigates only when latency rises at least 20%, lag at least doubles, and at least two regions are affected; the investigation route is the authorized business destination.",
+          "Correctly ignores isolated CPU spikes and sends insufficient_data to the authorized data destination when cluster coverage or a versioned definition is missing.",
+          "Preserves the rule that rollout timing and incident notes are corroboration only, not proof of deployment causation, and requests corrected or versioned data when evidence is incomplete."
+        ],
+        "review_episode": {
+          "error": null,
+          "exit_code": 0,
+          "foreign_tools": [],
+          "response_timeout_seconds": 90,
+          "seconds": 36.28179845795967,
+          "status": "complete",
+          "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+          "tool_calls": 1,
+          "transport": "codex_cli",
+          "wall_time_overrun_seconds": 0.0
+        }
+      }
+    ],
+    "tool_errors": [
+      {
+        "tool": "onboard_insight_card",
+        "error": {
+          "error": "ToolError",
+          "message": "Error executing tool onboard_insight_card: 1 validation error for InsightCard\n  Value error, numeric condition source_key must reference a card source: database-service [type=value_error, input_value={'id': 'card-customer-fac...y-b06fc32e549ebf0def71'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/value_error"
+        }
+      },
+      {
+        "tool": "evaluate_card_workflow",
+        "error": {
+          "error": "ToolError",
+          "message": "Error executing tool evaluate_card_workflow: 3 validation errors for CardEvaluationCase\nresources.0.source_key\n  Field required [type=missing, input_value={'adapter': 'company_mcp'...ode_cpu_percent': 95}}]}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nresources.0.title\n  Field required [type=missing, input_value={'adapter': 'company_mcp'...ode_cpu_percent': 95}}]}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nresources.0.evidence.0.statement\n  Field required [type=missing, input_value={'values': {'baseline_p95..._node_cpu_percent': 95}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing"
+        }
+      },
+      {
+        "tool": "evaluate_card_workflow",
+        "error": {
+          "error": "ToolError",
+          "message": "Error executing tool evaluate_card_workflow: 2 validation errors for CardEvaluationCase\nresources.0.adapter\n  Field required [type=missing, input_value={'source_key': 'source-co...dfa76e81a9d86bcbc86']}]}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nresources.0.resource\n  Field required [type=missing, input_value={'source_key': 'source-co...dfa76e81a9d86bcbc86']}]}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing"
+        }
+      },
+      {
+        "tool": "evaluate_card_workflow",
+        "error": {
+          "error": "ToolError",
+          "message": "Error executing tool evaluate_card_workflow: evaluation case contains resources outside the authenticated principal tenant: company_mcp|resource-6dfa76e81a9d86bcbc86"
+        }
+      },
+      {
+        "tool": "evaluate_card_workflow",
+        "error": {
+          "error": "ToolError",
+          "message": "Error executing tool evaluate_card_workflow: evaluation case contains resources outside the authenticated principal tenant: company_mcp|resource-6dfa76e81a9d86bcbc86"
+        }
+      }
+    ],
+    "alternate_scope_read_count": 0,
+    "saved_notes": "Owner policy: customer impact requires query p95 latency and replication lag in the same cluster population with regional breadth. Compare the current complete reporting week with the previous complete reporting week; source periods are UTC and latency is measured in ms. Investigate when latency rises at least 20%, lag at least doubles, and at least two regions are affected; route to destination key team-a9701ad653c41de9a095. Ignore isolated CPU spikes. Missing cluster coverage or a versioned definition requires insufficient_data routed to team-f8f76f00c083192dd0ae. Rollout times and incident notes are corroboration only, not proof of cause. Ask for a corrected export or versioned definition when needed. No current measurements are saved as policy."
+  },
+  {
+    "company": "Mosaic Exchange",
+    "brief": "I want to know if the number of people buying is falling. Our growth team has lots of audience charts, but I do not want the same customer counted twice.",
+    "arm": "luna_signalweave_jev",
+    "status": "failed",
+    "error": "no_structured_submission",
+    "onboarding_seconds": 138.77227366599254,
+    "guide_calls": 1,
+    "author_tool_calls": 21,
+    "tool_histogram": {
+      "get_signalweave_guide": 1,
+      "ask_owner": 4,
+      "onboard_insight_card": 2,
+      "discover_insight_sources": 1,
+      "propose_insight_card": 1,
+      "get_insight_card": 1,
+      "inspect_source": 1,
+      "review_insight_card": 1,
+      "simulate_insight_card": 1,
+      "evaluate_card_workflow": 8
+    },
+    "first_successful_preview_tool_ordinal": 13,
+    "first_preview_wall_time": null,
+    "first_preview_time_limit": "Trace has per-tool duration, not timestamps covering intervening model time; do not infer time-to-first-value.",
+    "owner_interview": [
+      {
+        "topic": "metric_scope",
+        "answer": {
+          "answer": "Weekly buyers are distinct customer IDs with a completed purchase, across the entire marketplace. Audience tags overlap; only the union query is a population count.",
+          "known": true,
+          "topic": "metric_scope"
+        }
+      },
+      {
+        "topic": "materiality",
+        "answer": {
+          "answer": "Notify the business destination for at least a 15% drop in distinct buyers. Otherwise ignore. If only overlapping audience counts are available, use insufficient_data to the data destination; do not add the tags.",
+          "known": true,
+          "topic": "materiality"
+        }
+      },
+      {
+        "topic": "routing",
+        "answer": {
+          "answer": "business destination: team-f720b4073aca870858ef; data destination: team-ea10384a6928bf7482a4. Only these routes are authorized; no destructive actions.",
+          "known": true,
+          "topic": "routing"
+        }
+      },
+      {
+        "topic": "data_gaps",
+        "answer": {
+          "answer": "Ask for a corrected export or a versioned definition when needed. I cannot reconstruct missing rows, infer causation, or tell you a period's correct answer.",
+          "known": true,
+          "topic": "data_gaps"
+        }
+      }
+    ],
+    "owner_reviews": [],
+    "tool_errors": [
+      {
+        "tool": "onboard_insight_card",
+        "error": {
+          "error": "ToolError",
+          "message": "Error executing tool onboard_insight_card: selected source refs must come from discover_insight_sources: None"
+        }
+      },
+      {
+        "tool": "evaluate_card_workflow",
+        "error": {
+          "error": "ToolError",
+          "message": "Error executing tool evaluate_card_workflow: 2 validation errors for CardEvaluationCase\nresources.0.title\n  Field required [type=missing, input_value={'source_key': 'resource-...completed_purchases'}}]}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nresources.0.evidence.0.statement\n  Field required [type=missing, input_value={'values': {'baseline_dis...l_completed_purchases'}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing"
+        }
+      },
+      {
+        "tool": "evaluate_card_workflow",
+        "error": {
+          "error": "ToolError",
+          "message": "Error executing tool evaluate_card_workflow: evaluation case contains resources outside the authenticated principal tenant: company_mcp|resource-d9eaca5a1ed7fc376bac"
+        }
+      },
+      {
+        "tool": "evaluate_card_workflow",
+        "error": {
+          "error": "ToolError",
+          "message": "Error executing tool evaluate_card_workflow: evaluation case contains resources outside the authenticated principal tenant: company_mcp|resource-d9eaca5a1ed7fc376bac"
+        }
+      },
+      {
+        "tool": "evaluate_card_workflow",
+        "error": {
+          "error": "ToolError",
+          "message": "Error executing tool evaluate_card_workflow: evaluation case contains resources outside the authenticated principal tenant: company_mcp|resource-d9eaca5a1ed7fc376bac"
+        }
+      },
+      {
+        "tool": "evaluate_card_workflow",
+        "error": {
+          "error": "ToolError",
+          "message": "Error executing tool evaluate_card_workflow: evaluation case contains resources outside the authenticated principal tenant: company_mcp|source-company-mcp-resource-d9eaca5a1ed7fc376bac"
+        }
+      },
+      {
+        "tool": "evaluate_card_workflow",
+        "error": {
+          "error": "ToolError",
+          "message": "Error executing tool evaluate_card_workflow: evaluation case contains resources outside the authenticated principal tenant: company_mcp|resource-d9eaca5a1ed7fc376bac"
+        }
+      }
+    ],
+    "alternate_scope_read_count": 0,
+    "saved_notes": ""
+  },
+  {
+    "company": "Mosaic Exchange",
+    "brief": "I want to know if the number of people buying is falling. Our growth team has lots of audience charts, but I do not want the same customer counted twice.",
+    "arm": "luna_bi",
+    "status": "complete",
+    "error": null,
+    "onboarding_seconds": 60.30943612498231,
+    "guide_calls": 0,
+    "author_tool_calls": 14,
+    "tool_histogram": {
+      "ask_owner": 6,
+      "list_catalog": 1,
+      "inspect_source": 1,
+      "analyze_source": 1,
+      "save_notes": 2,
+      "request_synthetic_owner_approval": 2,
+      "finish_setup": 1
+    },
+    "first_successful_preview_tool_ordinal": null,
+    "first_preview_wall_time": null,
+    "first_preview_time_limit": "Trace has per-tool duration, not timestamps covering intervening model time; do not infer time-to-first-value.",
+    "owner_interview": [
+      {
+        "topic": "metric_scope",
+        "answer": {
+          "answer": "Weekly buyers are distinct customer IDs with a completed purchase, across the entire marketplace. Audience tags overlap; only the union query is a population count.",
+          "known": true,
+          "topic": "metric_scope"
+        }
+      },
+      {
+        "topic": "materiality",
+        "answer": {
+          "answer": "Notify the business destination for at least a 15% drop in distinct buyers. Otherwise ignore. If only overlapping audience counts are available, use insufficient_data to the data destination; do not add the tags.",
+          "known": true,
+          "topic": "materiality"
+        }
+      },
+      {
+        "topic": "routing",
+        "answer": {
+          "answer": "business destination: team-f720b4073aca870858ef; data destination: team-ea10384a6928bf7482a4. Only these routes are authorized; no destructive actions.",
+          "known": true,
+          "topic": "routing"
+        }
+      },
+      {
+        "topic": "data_gaps",
+        "answer": {
+          "answer": "Ask for a corrected export or a versioned definition when needed. I cannot reconstruct missing rows, infer causation, or tell you a period's correct answer.",
+          "known": true,
+          "topic": "data_gaps"
+        }
+      },
+      {
+        "topic": "data_gaps",
+        "answer": {
+          "answer": "Ask for a corrected export or a versioned definition when needed. I cannot reconstruct missing rows, infer causation, or tell you a period's correct answer.",
+          "known": true,
+          "topic": "data_gaps"
+        }
+      },
+      {
+        "topic": "routing",
+        "answer": {
+          "answer": "business destination: team-f720b4073aca870858ef; data destination: team-ea10384a6928bf7482a4. Only these routes are authorized; no destructive actions.",
+          "known": true,
+          "topic": "routing"
+        }
+      }
+    ],
+    "owner_reviews": [
+      {
+        "approved": false,
+        "reasons": [
+          "The notes conflict: they require notifying the business destination on a qualifying drop, then prohibit external notifications. Clarify whether the notify outcome is actually delivered; retain the authorized business route if it is.",
+          "The data-gap outcome says to request a corrected export or versioned definition, but supplies no recipient or authorized route for that request. Clarify who receives it (or explicitly make it a no-recipient instruction).",
+          "“Use current-period evidence for measurements” and “cite inspected refs as adapter|resource” are not defined by the brief or owner answers; remove them or clarify their non-policy purpose, especially since the comparison also requires the previous complete reporting week."
+        ],
+        "review_episode": {
+          "error": null,
+          "exit_code": 0,
+          "foreign_tools": [],
+          "response_timeout_seconds": 90,
+          "seconds": 26.347378874954302,
+          "status": "complete",
+          "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+          "tool_calls": 1,
+          "transport": "codex_cli",
+          "wall_time_overrun_seconds": 0.0
+        }
+      },
+      {
+        "approved": true,
+        "reasons": [
+          "Matches the owner rule: measure weekly distinct customer IDs with completed purchases across the entire marketplace, using UTC and the previous complete reporting week.",
+          "Correctly requires a union population count because audience tags overlap and must not be added.",
+          "Correctly maps a drop of at least 15% to notify the authorized business destination team-f720b4073aca870858ef.",
+          "Correctly maps otherwise to ignore, with no unnecessary recipient.",
+          "Correctly maps overlapping-count-only data to insufficient_data at the authorized data destination team-ea10384a6928bf7482a4.",
+          "Faithfully handles missing or unclear data by requesting a corrected export or versioned definition, without reconstructing rows, inferring causation, or filling missing populations with zero.",
+          "Uses only the two authorized destination keys and adds no destructive action or unsupported causal rule."
+        ],
+        "review_episode": {
+          "error": null,
+          "exit_code": 0,
+          "foreign_tools": [],
+          "response_timeout_seconds": 90,
+          "seconds": 15.486132207966875,
+          "status": "complete",
+          "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+          "tool_calls": 1,
+          "transport": "codex_cli",
+          "wall_time_overrun_seconds": 0.0
+        }
+      }
+    ],
+    "tool_errors": [],
+    "alternate_scope_read_count": 0,
+    "saved_notes": "Metric policy for Mosaic Exchange:\n- Measure weekly buyers as distinct customer IDs with a completed purchase across the entire marketplace; source periods are UTC and comparison is the previous complete reporting week.\n- Audience tags overlap and must never be added; only a union query is a valid population count.\n- If distinct buyers drop by at least 15%, outcome is notify and route to authorized business destination key team-f720b4073aca870858ef.\n- Otherwise outcome is ignore.\n- If only overlapping audience counts are available, outcome is insufficient_data and route to authorized data destination key team-ea10384a6928bf7482a4.\n- For missing data or unclear definitions, ask for a corrected export or versioned definition and route the data-gap request to authorized data destination key team-ea10384a6928bf7482a4; do not reconstruct rows, infer causation, or fill missing populations with zero.\n- Only the two destination keys above are authorized. The agent does not send external notifications; it records the prescribed outcome and route."
+  },
+  {
+    "company": "Lumen Freight Finance",
+    "brief": "Keep me ahead of a cash shortfall. If collections dip, tell the controller, but do not panic everyone just because the bank feed is late.",
+    "arm": "luna_signalweave_jev",
+    "status": "failed",
+    "error": "no_structured_submission",
+    "onboarding_seconds": 192.26204966701334,
+    "guide_calls": 1,
+    "author_tool_calls": 36,
+    "tool_histogram": {
+      "get_signalweave_guide": 1,
+      "list_catalog": 1,
+      "ask_owner": 8,
+      "onboard_insight_card": 1,
+      "inspect_resource": 2,
+      "draft_insight_card": 2,
+      "get_insight_card": 2,
+      "review_insight_card": 3,
+      "preview_investigation_report": 2,
+      "simulate_insight_card": 2,
+      "evaluate_card_workflow": 5,
+      "save_notes": 1,
+      "request_synthetic_owner_approval": 3,
+      "approve_insight_card": 3
+    },
+    "first_successful_preview_tool_ordinal": 17,
+    "first_preview_wall_time": null,
+    "first_preview_time_limit": "Trace has per-tool duration, not timestamps covering intervening model time; do not infer time-to-first-value.",
+    "owner_interview": [
+      {
+        "topic": "metric_scope",
+        "answer": {
+          "answer": "Collections are settled receipts in USD by bank posting week, not invoices or payment authorizations. All bank partitions must close before a comparison is actionable.",
+          "known": true,
+          "topic": "metric_scope"
+        }
+      },
+      {
+        "topic": "materiality",
+        "answer": {
+          "answer": "Notify the business destination for at least a 10% decline in settled receipts versus the previous complete week. Otherwise ignore. A late partition requires insufficient_data to the data destination, never an assertion that cash disappeared.",
+          "known": true,
+          "topic": "materiality"
+        }
+      },
+      {
+        "topic": "routing",
+        "answer": {
+          "answer": "business destination: team-3d4b5a7cb044afba6e20; data destination: team-91e14389801a02206e68. Only these routes are authorized; no destructive actions.",
+          "known": true,
+          "topic": "routing"
+        }
+      },
+      {
+        "topic": "data_gaps",
+        "answer": {
+          "answer": "Ask for a corrected export or a versioned definition when needed. I cannot reconstruct missing rows, infer causation, or tell you a period's correct answer.",
+          "known": true,
+          "topic": "data_gaps"
+        }
+      },
+      {
+        "topic": "metric_scope",
+        "answer": {
+          "answer": "Collections are settled receipts in USD by bank posting week, not invoices or payment authorizations. All bank partitions must close before a comparison is actionable.",
+          "known": true,
+          "topic": "metric_scope"
+        }
+      },
+      {
+        "topic": "materiality",
+        "answer": {
+          "answer": "Notify the business destination for at least a 10% decline in settled receipts versus the previous complete week. Otherwise ignore. A late partition requires insufficient_data to the data destination, never an assertion that cash disappeared.",
+          "known": true,
+          "topic": "materiality"
+        }
+      },
+      {
+        "topic": "routing",
+        "answer": {
+          "answer": "business destination: team-3d4b5a7cb044afba6e20; data destination: team-91e14389801a02206e68. Only these routes are authorized; no destructive actions.",
+          "known": true,
+          "topic": "routing"
+        }
+      },
+      {
+        "topic": "data_gaps",
+        "answer": {
+          "answer": "Ask for a corrected export or a versioned definition when needed. I cannot reconstruct missing rows, infer causation, or tell you a period's correct answer.",
+          "known": true,
+          "topic": "data_gaps"
+        }
+      }
+    ],
+    "owner_reviews": [
+      {
+        "approved": true,
+        "reasons": [
+          "Matches the owner's rule: notify the business destination when settled USD receipts decline by at least 10% versus the previous complete reporting week.",
+          "Correctly defines collections, comparison basis, USD unit, and the all-bank-partitions-closed requirement.",
+          "Correctly routes late partitions or a non-cutoff watermark to insufficient_data at the authorized data destination, without claiming causation or missing cash.",
+          "Uses only the two authorized destinations and preserves ignore for the otherwise non-triggering case."
+        ],
+        "review_episode": {
+          "error": null,
+          "exit_code": 0,
+          "foreign_tools": [],
+          "response_timeout_seconds": 90,
+          "seconds": 27.265786791045684,
+          "status": "complete",
+          "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+          "tool_calls": 1,
+          "transport": "codex_cli",
+          "wall_time_overrun_seconds": 0.0
+        }
+      }
+    ],
+    "tool_errors": [
+      {
+        "tool": "evaluate_card_workflow",
+        "error": {
+          "error": "ToolError",
+          "message": "Error executing tool evaluate_card_workflow: 3 validation errors for CardEvaluationCase\nresources.0\n  Input should be a valid dictionary or instance of ResourceSnapshot [type=model_type, input_value='company_mcp|resource-20ac02da369111fc9815', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/model_type\nresources.1\n  Input should be a valid dictionary or instance of ResourceSnapshot [type=model_type, input_value='company_mcp|resource-54087565779cfa1adef1', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.13/v/model_type\nexpected_delivery_destinations\n  Input should be a valid dictionary [type=dict_type, input_value=[], input_type=list]\n    For further information visit https://errors.pydantic.dev/2.13/v/dict_type"
+        }
+      },
+      {
+        "tool": "evaluate_card_workflow",
+        "error": {
+          "error": "ToolError",
+          "message": "Error executing tool evaluate_card_workflow: 4 validation errors for CardEvaluationCase\nresources.0.source_key\n  Field required [type=missing, input_value={'adapter': 'company_mcp'...0ac02da369111fc9815']}]}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nresources.0.title\n  Field required [type=missing, input_value={'adapter': 'company_mcp'...0ac02da369111fc9815']}]}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nresources.1.source_key\n  Field required [type=missing, input_value={'adapter': 'company_mcp'...4087565779cfa1adef1']}]}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing\nresources.1.title\n  Field required [type=missing, input_value={'adapter': 'company_mcp'...4087565779cfa1adef1']}]}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/missing"
+        }
+      },
+      {
+        "tool": "evaluate_card_workflow",
+        "error": {
+          "error": "ToolError",
+          "message": "Error executing tool evaluate_card_workflow: evaluation case contains resources outside the authenticated principal tenant: company_mcp|resource-20ac02da369111fc9815, company_mcp|resource-54087565779cfa1adef1"
+        }
+      },
+      {
+        "tool": "evaluate_card_workflow",
+        "error": {
+          "error": "ToolError",
+          "message": "Error executing tool evaluate_card_workflow: evaluation case contains resources outside the authenticated principal tenant: company_mcp|resource-20ac02da369111fc9815, company_mcp|resource-54087565779cfa1adef1"
+        }
+      },
+      {
+        "tool": "evaluate_card_workflow",
+        "error": {
+          "error": "ToolError",
+          "message": "Error executing tool evaluate_card_workflow: evaluation case contains resources outside the authenticated principal tenant: company_mcp|resource-20ac02da369111fc9815, company_mcp|resource-54087565779cfa1adef1"
+        }
+      },
+      {
+        "tool": "approve_insight_card",
+        "error": {
+          "error": "ValueError",
+          "message": "Synthetic owner requires get_insight_card inspection and successful simulate_insight_card or preview_investigation_report then request_synthetic_owner_approval for the current card before approval"
+        }
+      },
+      {
+        "tool": "approve_insight_card",
+        "error": {
+          "error": "ToolError",
+          "message": "Error executing tool approve_insight_card: Source selection review is stale or missing. Call review_insight_card and obtain owner confirmation of the current policy and catalog."
+        }
+      },
+      {
+        "tool": "approve_insight_card",
+        "error": {
+          "error": "ToolError",
+          "message": "Error executing tool approve_insight_card: Source selection review is stale or missing. Call review_insight_card and obtain owner confirmation of the current policy and catalog."
+        }
+      }
+    ],
+    "alternate_scope_read_count": 0,
+    "saved_notes": "Lumen Freight Finance monitoring policy: collections means settled receipts in USD by bank posting week, not invoices or payment authorizations. Previous complete reporting week is represented by source comparison key previous_period; source periods are UTC. All expected bank partitions must close and the bank watermark must match the reporting cutoff before a comparison is actionable. At least a 10% decline versus the previous complete week routes notify to destination key team-3d4b5a7cb044afba6e20 (business owner). Otherwise ignore. Late partition or non-current watermark routes insufficient_data to team-91e14389801a02206e68 (data operations), never claim cash disappeared. Do not reconstruct missing rows or infer causation. Fixed sources selected after catalog inspection: company_mcp|resource-20ac02da369111fc9815 (Receipts weekly, settled bank receipts by account with independent control total) and company_mcp|resource-54087565779cfa1adef1 (Bank ingest, partition close/watermark). Excluded regional pilot, sandbox, planning, partner, and archive variants because their populations/definitions are not the complete live business population or are superseded. Current inspected evidence for period-96496177cacaf3909ee5: baseline 25000 USD, current 25000 USD, delta 0 USD; east and west current 12500 USD each; 2/2 partitions closed and watermark at cutoff. This is current-period evidence only, not future measurement truth. Preview limitation: adapter did not return a typed previous_period analytical comparison, so no complete recurring report is certified yet."
+  },
+  {
+    "company": "Lumen Freight Finance",
+    "brief": "Keep me ahead of a cash shortfall. If collections dip, tell the controller, but do not panic everyone just because the bank feed is late.",
+    "arm": "luna_bi",
+    "status": "complete",
+    "error": null,
+    "onboarding_seconds": 50.504147707950324,
+    "guide_calls": 0,
+    "author_tool_calls": 10,
+    "tool_histogram": {
+      "list_catalog": 1,
+      "ask_owner": 4,
+      "inspect_source": 2,
+      "save_notes": 1,
+      "request_synthetic_owner_approval": 1,
+      "finish_setup": 1
+    },
+    "first_successful_preview_tool_ordinal": null,
+    "first_preview_wall_time": null,
+    "first_preview_time_limit": "Trace has per-tool duration, not timestamps covering intervening model time; do not infer time-to-first-value.",
+    "owner_interview": [
+      {
+        "topic": "metric_scope",
+        "answer": {
+          "answer": "Collections are settled receipts in USD by bank posting week, not invoices or payment authorizations. All bank partitions must close before a comparison is actionable.",
+          "known": true,
+          "topic": "metric_scope"
+        }
+      },
+      {
+        "topic": "materiality",
+        "answer": {
+          "answer": "Notify the business destination for at least a 10% decline in settled receipts versus the previous complete week. Otherwise ignore. A late partition requires insufficient_data to the data destination, never an assertion that cash disappeared.",
+          "known": true,
+          "topic": "materiality"
+        }
+      },
+      {
+        "topic": "routing",
+        "answer": {
+          "answer": "business destination: team-3d4b5a7cb044afba6e20; data destination: team-91e14389801a02206e68. Only these routes are authorized; no destructive actions.",
+          "known": true,
+          "topic": "routing"
+        }
+      },
+      {
+        "topic": "data_gaps",
+        "answer": {
+          "answer": "Ask for a corrected export or a versioned definition when needed. I cannot reconstruct missing rows, infer causation, or tell you a period's correct answer.",
+          "known": true,
+          "topic": "data_gaps"
+        }
+      }
+    ],
+    "owner_reviews": [
+      {
+        "approved": true,
+        "reasons": [
+          "Faithfully matches the metric: settled receipts in USD by UTC bank-posting week, excluding invoices and authorizations.",
+          "Uses the required comparison: previous complete reporting week, with all expected bank partitions closed and the watermark at cutoff.",
+          "Preserves exact outcomes: insufficient_data for late or incomplete bank data, notify only for at least a 10% decline, and ignore otherwise.",
+          "Maps business notifications to team-3d4b5a7cb044afba6e20 and data-gap notifications to team-91e14389801a02206e68, with no extra recipients.",
+          "Preserves the supplied source exclusions, no-zero-fill/no-reconstruction rule, owner data-gap policy, evidence vocabulary, and causal-claim restriction."
+        ],
+        "review_episode": {
+          "error": null,
+          "exit_code": 0,
+          "foreign_tools": [],
+          "response_timeout_seconds": 90,
+          "seconds": 22.280633667018265,
+          "status": "complete",
+          "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+          "tool_calls": 1,
+          "transport": "codex_cli",
+          "wall_time_overrun_seconds": 0.0
+        }
+      }
+    ],
+    "tool_errors": [],
+    "alternate_scope_read_count": 0,
+    "saved_notes": "Lumen Freight Finance monitoring policy (reusable; no current-period measurements):\n- Metric: collections = settled receipts in USD by bank posting week, not invoices or payment authorizations. Compare the previous complete reporting week; source periods are UTC.\n- Actionability gate: all expected bank partitions must be closed and bank watermark must be at the reporting cutoff. If not, outcome is insufficient_data; do not interpret a late partition as missing cash or fill missing rows with zero. Ask for a corrected export or versioned definition when needed.\n- Materiality: notify only for at least a 10% decline in settled receipts versus the previous complete week; otherwise ignore.\n- Routing: business outcome to authorized destination key team-3d4b5a7cb044afba6e20. Data-gap/late-partition outcome to authorized destination key team-91e14389801a02206e68. No other recipients and no external notifications.\n- Source selection: use the live, non-pilot/non-QA/non-partner/non-archive/non-planning source titled Receipts weekly with settled bank receipts by account and independent control total, validated alongside live Bank ingest. Do not use forecast, authorization, sandbox, regional pilot, partner, archive, or planning sources.\n- Evidence/citations: cite inspected refs as company_mcp|resource-20ac02da369111fc9815 and company_mcp|resource-54087565779cfa1adef1 when applicable. Use numeric vocabulary identifiers collections.baseline, collections.current, collections.delta with unit USD. Claims must be tagged observation, accounting_decomposition, association, hypothesis, or causal; do not assert causality without evidence.\n- Owner data-gap policy: cannot reconstruct missing rows, infer causation, or determine a period's correct answer."
+  }
+]

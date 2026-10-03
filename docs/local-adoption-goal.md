@@ -4,7 +4,17 @@ Status: implementation advanced; proof gate **not complete**. This updates the
 working acceptance criteria for the existing local-first adoption goal; it does
 not declare the earlier failed trials passed.
 
-Latest [live evidence](recurring-runtime-trial.md): three transfer cards approved;
+Latest [agent-onboarding regression](enterprise-onboarding-journeys-2026-10-02.md):
+six synthetic businesses, messy 24-asset catalogs and 48 planned setup/monitoring
+episodes. Treatment completed **1/6 setups and 3/18 later reports**, versus Luna's
+6/6 and 18/18. All six treatment agents read the guide and obtained a preview;
+approval/tool-contract failures prevented five from becoming usable workflows.
+The run used 99 live Jev attempts with one provider error, without exhausting its
+budget. A native review/approval fingerprint defect reproduces offline. The
+simulated owner evaluator also conflates source checks with business-policy
+changes, limiting causal attribution. The goal remains **not complete**.
+
+Earlier [recurring evidence](recurring-runtime-trial.md): three transfer cards approved;
 12/12 structured results and reviewer-usable reports in both arms after completing
 five interrupted treatment runs. All 12 treatment receipts replay without new
 calls. The original prospective trial remains failed. Arm-masked reviewers
@@ -80,8 +90,13 @@ that focused suite then passed eight tests with one native-only skip. Ruff and
 `git diff --check` passed. `make verify` could not launch because `uv` was absent
 from this shell; the existing virtualenv's Ruff and pytest were run directly.
 
-Next proof step: let the user's agent read the guide, discover supported assets,
+That next proof step was run in the
+[six-company onboarding regression](enterprise-onboarding-journeys-2026-10-02.md)
+and failed. It let the user's agent read the guide, discover supported assets,
 and draft from public owner policy without private labels or expert card edits.
+Next: repair the demonstrated source-selection/approval handoffs and agent-facing
+evaluation input contract, and separate the research owner's policy review from
+source-evidence validation before another small frozen prospective run.
 Require first-report review and owner-labeled threshold-crossing, quiet and
 missing-evidence acceptance cases before approval. Preserve numeric units and
 source bindings, inspect actual numeric-condition results, and verify the final

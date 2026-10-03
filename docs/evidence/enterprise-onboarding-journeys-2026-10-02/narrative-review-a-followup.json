@@ -1,0 +1,182 @@
+{
+  "review_scope": {
+    "source": "blind-review.json only",
+    "cases_reviewed": 18,
+    "citation_rule": "Every top-level, numeric-claim, and narrative-claim evidence reference must be an exact key in business.period.snapshots and must also appear in inspected_refs.",
+    "private_material_used": false,
+    "limitations": [
+      "This remains an internal review, not external peer review, and is not fully blinded because the packet exposes public company names, glossaries, owner policy, snapshots, and arm-masking metadata.",
+      "No private scores, mapping, sibling report, audit trace, or results artifact was used.",
+      "This follow-up audits citation identity and rechecks arithmetic/population support; it does not rescore the trial or establish enterprise validity, real-user usability, causal truth, timing, or billed cost."
+    ]
+  },
+  "summary": {
+    "prior_verdicts_preserved": true,
+    "changes": [
+      {
+        "case_id": "review-013",
+        "from": "supported",
+        "to": "qualified",
+        "severity": "material citation defect; not an arithmetic defect",
+        "detail": "Top-level analysis.evidence_refs correctly cite company_mcp|resource-ecdbd08bf01b01f59a60 and company_mcp|resource-41613ec6c871dbcf61da, and both are inspected. However, all three numeric claims that depend on the commerce snapshot and all three narrative claims cite nonexistent company_mcp|resource-ecdbd08bf01b01f59da. The exact snapshot key is company_mcp|resource-ecdbd08bf01b01f59a60. The underlying math recomputes: baseline 23000, current 16100, delta -6900, web contribution -6900. The case is qualified because the claim-level citations are not independently resolvable as written."
+      }
+    ],
+    "unchanged_case_count": 17
+  },
+  "cases": [
+    {
+      "case_id": "review-001",
+      "verdict": "supported",
+      "citation_status": "valid",
+      "reasons": [
+        "Top-level refs, both numeric/claim refs, snapshot keys, and inspected_refs agree exactly.",
+        "6660/7400 = 0.90 and 13320/14800 = 0.90; the cited priority and standard segments also remain 0.90. Ignore/no recipient follows policy."
+      ]
+    },
+    {
+      "case_id": "review-002",
+      "verdict": "supported",
+      "citation_status": "valid",
+      "reasons": [
+        "All top-level, numeric, and narrative refs are exact snapshot keys and inspected refs.",
+        "The cited commerce rows recompute to USD 23000 in both periods, delta USD 0, and web contribution USD 0; the refund-policy citation is also exact."
+      ]
+    },
+    {
+      "case_id": "review-009",
+      "verdict": "qualified",
+      "citation_status": "valid",
+      "reasons": [
+        "All three narrative claim refs are exact snapshot keys and inspected refs.",
+        "The cited Account health snapshot is explicitly non-comparable and the cited Billing snapshot lacks historical membership mapping; insufficient_data is therefore supported. Qualification remains because no numeric retention result is safely available."
+      ]
+    },
+    {
+      "case_id": "review-010",
+      "verdict": "supported",
+      "citation_status": "valid",
+      "reasons": [
+        "All narrative refs are exact snapshot keys and inspected refs.",
+        "The cited Queue service snapshot has a null current denominator, and the cited Support handbook says the overdue-open population is missing; no delta is invented and data routing is appropriate."
+      ]
+    },
+    {
+      "case_id": "review-011",
+      "verdict": "missing",
+      "citation_status": "no citations present",
+      "reasons": [
+        "No analysis, numeric claims, narrative claims, top-level evidence refs, or inspected refs are present. Missing remains failure, not safe success."
+      ]
+    },
+    {
+      "case_id": "review-013",
+      "verdict": "qualified",
+      "citation_status": "invalid claim-level refs",
+      "reasons": [
+        "Top-level analysis.evidence_refs and inspected_refs correctly contain company_mcp|resource-ecdbd08bf01b01f59a60 and company_mcp|resource-41613ec6c871dbcf61da.",
+        "The numeric claims for current, delta, and web contribution and all three narrative claims instead cite nonexistent company_mcp|resource-ecdbd08bf01b01f59da; that key is neither in business.period.snapshots nor inspected_refs.",
+        "Using the real inspected commerce snapshot, (14950-5750)+(9200-2300) = USD 16100 versus baseline USD 23000, so the -USD 6900 / 30% notification math and web attribution are correct. The defect is citation traceability, not population or arithmetic."
+      ]
+    },
+    {
+      "case_id": "review-014",
+      "verdict": "supported",
+      "citation_status": "valid",
+      "reasons": [
+        "All narrative refs are exact snapshot keys and inspected refs.",
+        "The cited Returns operations snapshot says refund timing is undocumented, supporting insufficient_data rather than a sales alert; the next step is appropriately concrete."
+      ]
+    },
+    {
+      "case_id": "review-017",
+      "verdict": "missing",
+      "citation_status": "no citations present",
+      "reasons": [
+        "No analysis or citations are present. Missing remains failure, not safe success."
+      ]
+    },
+    {
+      "case_id": "review-018",
+      "verdict": "missing",
+      "citation_status": "no citations present",
+      "reasons": [
+        "No analysis or citations are present. Missing remains failure, not safe success."
+      ]
+    },
+    {
+      "case_id": "review-019",
+      "verdict": "missing",
+      "citation_status": "no citations present",
+      "reasons": [
+        "No analysis or citations are present. Missing remains failure, not safe success."
+      ]
+    },
+    {
+      "case_id": "review-023",
+      "verdict": "supported",
+      "citation_status": "valid",
+      "reasons": [
+        "All top-level and narrative refs are exact snapshot keys and inspected refs.",
+        "The cited Account health values give 1320/2400 = 0.55 and 900/2400 = 0.375; team remains 0.90, self-serve remains 0.20, and the full aggregate change is mix. Ignore is supported by policy."
+      ]
+    },
+    {
+      "case_id": "review-024",
+      "verdict": "missing",
+      "citation_status": "no citations present",
+      "reasons": [
+        "No analysis or citations are present. Missing remains failure, not safe success."
+      ]
+    },
+    {
+      "case_id": "review-026",
+      "verdict": "supported",
+      "citation_status": "valid",
+      "reasons": [
+        "All top-level and narrative refs are exact snapshot keys and inspected refs.",
+        "The cited Queue service values give 6660/7400 = 0.90 and 11100/14800 = 0.75, delta -0.15, with equal segment declines; notification routing and decomposition wording are supported."
+      ]
+    },
+    {
+      "case_id": "review-027",
+      "verdict": "missing",
+      "citation_status": "no citations present",
+      "reasons": [
+        "No analysis or citations are present. Missing remains failure, not safe success."
+      ]
+    },
+    {
+      "case_id": "review-028",
+      "verdict": "missing",
+      "citation_status": "no citations present",
+      "reasons": [
+        "No analysis or citations are present. Missing remains failure, not safe success."
+      ]
+    },
+    {
+      "case_id": "review-030",
+      "verdict": "supported",
+      "citation_status": "valid",
+      "reasons": [
+        "All top-level and narrative refs are exact snapshot keys and inspected refs.",
+        "The cited Account health values give 1320/2400 = 0.55 and 660/2400 = 0.275; team changes 0.90 to 0.80 and self-serve 0.20 to 0.10, supporting the reported -0.10 within-plan effect and notification."
+      ]
+    },
+    {
+      "case_id": "review-034",
+      "verdict": "missing",
+      "citation_status": "no citations present",
+      "reasons": [
+        "No analysis or citations are present. Missing remains failure, not safe success."
+      ]
+    },
+    {
+      "case_id": "review-036",
+      "verdict": "missing",
+      "citation_status": "no citations present",
+      "reasons": [
+        "No analysis or citations are present. Missing remains failure, not safe success."
+      ]
+    }
+  ]
+}

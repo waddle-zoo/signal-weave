@@ -1,0 +1,173 @@
+{
+  "review_scope": {
+    "source": "blind-review.json only",
+    "companies": [
+      "Juniper Trail Retail",
+      "Harbor Workspace",
+      "Kindred Helpdesk"
+    ],
+    "case_count": 18,
+    "review_type": "internal narrative evidence review; not external peer review",
+    "limitations": [
+      "This is not fully blinded: the packet exposes company names, public glossaries, owner policy, source snapshots, and arm-masking metadata. No review key, scored report, results, or audit trace was used.",
+      "The sources and owner interactions are synthetic normalized fixtures; this review does not establish enterprise validity, real-user usability, provider reliability, or causal truth.",
+      "This review checks narrative support, arithmetic, population definition, routing, and next-step clarity only. It does not rescore the trial, verify execution counts, estimate time-to-first-value, or treat hypothetical costs as billed costs.",
+      "Missing submissions are classified as missing and are not treated as safe successes."
+    ]
+  },
+  "cases": [
+    {
+      "case_id": "review-001",
+      "verdict": "supported",
+      "reasons": [
+        "Kindred SLA is 6660/7400 = 0.90 in the baseline and 13320/14800 = 0.90 currently; delta is 0.00, with both priority and standard segments unchanged at 0.90.",
+        "The ignore outcome and no-recipient routing follow the owner threshold of a 0.05 ratio-unit drop; ticket-volume growth is correctly treated as non-triggering.",
+        "The narrative uses the authorized comparison window and gives a clear no-notification next step; no causal claim is made."
+      ]
+    },
+    {
+      "case_id": "review-002",
+      "verdict": "supported",
+      "reasons": [
+        "Juniper net sales recompute to (18400-2300)+(9200-2300) = USD 23000 in both weeks; delta and web contribution are both USD 0.",
+        "The narrative applies the same-week refund definition once, uses the prior complete week, and correctly stays below the 10% decline threshold.",
+        "The refund-posting statement is supported by the Returns operations source and the next step is correctly to ignore/no notification."
+      ]
+    },
+    {
+      "case_id": "review-009",
+      "verdict": "qualified",
+      "reasons": [
+        "Harbor correctly refuses a retention alert because the comparison is marked non-comparable and Billing lacks historical plan-membership mapping.",
+        "The source is complete as an export but not analytically comparable; the narrative preserves that distinction and does not invent retention numbers.",
+        "Routing to the data destination and requesting a corrected export/versioned eligibility definition are clear and match policy."
+      ]
+    },
+    {
+      "case_id": "review-010",
+      "verdict": "supported",
+      "reasons": [
+        "Kindred correctly identifies the current eligible-ticket denominator as missing; the support handbook explicitly says the overdue-open population cannot be reconstructed.",
+        "It avoids calculating a delta or decomposition from an absent denominator and routes insufficient_data to the authorized data destination.",
+        "The next step—provide a corrected current-period export—is concrete; no unsupported outcome or causal statement appears."
+      ]
+    },
+    {
+      "case_id": "review-011",
+      "verdict": "missing",
+      "reasons": [
+        "No analysis, evidence references, numeric claims, outcome, recipients, or next step are present.",
+        "This is missing work, not an implicit ignore or safe success."
+      ]
+    },
+    {
+      "case_id": "review-013",
+      "verdict": "supported",
+      "reasons": [
+        "Juniper recomputes baseline net sales as USD 23000 and current net sales as (14950-5750)+(9200-2300) = USD 16100; delta is -USD 6900, a 30% decline.",
+        "Web moves from USD 16100 to USD 9200 while shop stays at USD 6900, so web accounts for the full measured decline and the business recipient is authorized under the 10% policy.",
+        "The gross/refund movements are presented as coincident association, explicitly not causation; the notification and follow-up direction are clear."
+      ]
+    },
+    {
+      "case_id": "review-014",
+      "verdict": "supported",
+      "reasons": [
+        "Juniper correctly withholds a net-sales decision because current refund timing is undocumented and the source says the new feed has no versioned timing mapping.",
+        "The narrative does not treat the visible commerce amounts as an actionable comparison and routes insufficient_data to the data destination.",
+        "The stated remedy—corrected export or versioned definition—is concrete; the hypothesis wording is appropriately qualified rather than causal."
+      ]
+    },
+    {
+      "case_id": "review-017",
+      "verdict": "missing",
+      "reasons": [
+        "No analysis, evidence references, numeric claims, outcome, recipients, or next step are present.",
+        "This is missing work, not an implicit ignore or safe success."
+      ]
+    },
+    {
+      "case_id": "review-018",
+      "verdict": "missing",
+      "reasons": [
+        "No analysis, evidence references, numeric claims, outcome, recipients, or next step are present.",
+        "This is missing work, not an implicit ignore or safe success."
+      ]
+    },
+    {
+      "case_id": "review-019",
+      "verdict": "missing",
+      "reasons": [
+        "No analysis, evidence references, numeric claims, outcome, recipients, or next step are present.",
+        "This is missing work, not an implicit ignore or safe success."
+      ]
+    },
+    {
+      "case_id": "review-023",
+      "verdict": "supported",
+      "reasons": [
+        "Harbor recomputes aggregate retention as 1320/2400 = 0.55 baseline and 900/2400 = 0.375 current, delta -0.175.",
+        "Team retention remains 0.90 and self-serve remains 0.20; the symmetric within-plan effect is 0.00 and the full aggregate movement is mix, so ignore is correct despite the aggregate decline.",
+        "Billing v3 supports the paid-plan/trial exclusion, and the narrative gives a clear no-notification result without causal overreach."
+      ]
+    },
+    {
+      "case_id": "review-024",
+      "verdict": "missing",
+      "reasons": [
+        "No analysis, evidence references, numeric claims, outcome, recipients, or next step are present.",
+        "This is missing work, not an implicit ignore or safe success."
+      ]
+    },
+    {
+      "case_id": "review-026",
+      "verdict": "supported",
+      "reasons": [
+        "Kindred recomputes baseline SLA as 6660/7400 = 0.90 and current SLA as 11100/14800 = 0.75; delta is -0.15.",
+        "Priority and standard both fall from 0.90 to 0.75, giving within-segment effect -0.15 and mix effect 0.00; this exceeds the 0.05 notification threshold.",
+        "The authorized business route is used, the narrative distinguishes measured decomposition from cause, and the notification is operationally clear."
+      ]
+    },
+    {
+      "case_id": "review-027",
+      "verdict": "missing",
+      "reasons": [
+        "No analysis, evidence references, numeric claims, outcome, recipients, or next step are present.",
+        "This is missing work, not an implicit ignore or safe success."
+      ]
+    },
+    {
+      "case_id": "review-028",
+      "verdict": "missing",
+      "reasons": [
+        "No analysis, evidence references, numeric claims, outcome, recipients, or next step are present.",
+        "This is missing work, not an implicit ignore or safe success."
+      ]
+    },
+    {
+      "case_id": "review-030",
+      "verdict": "supported",
+      "reasons": [
+        "Harbor recomputes aggregate retention as 1320/2400 = 0.55 baseline and 660/2400 = 0.275 current, delta -0.275.",
+        "Team retention falls 0.90 to 0.80 and self-serve 0.20 to 0.10; the reported -0.10 within-plan effect is below the -0.05 threshold, so notification is warranted even though -0.175 is also mix.",
+        "The recipient is authorized, Billing v3 supports eligibility, and the narrative describes accounting decomposition rather than claiming a cause."
+      ]
+    },
+    {
+      "case_id": "review-034",
+      "verdict": "missing",
+      "reasons": [
+        "No analysis, evidence references, numeric claims, outcome, recipients, or next step are present.",
+        "This is missing work, not an implicit ignore or safe success."
+      ]
+    },
+    {
+      "case_id": "review-036",
+      "verdict": "missing",
+      "reasons": [
+        "No analysis, evidence references, numeric claims, outcome, recipients, or next step are present.",
+        "This is missing work, not an implicit ignore or safe success."
+      ]
+    }
+  ]
+}

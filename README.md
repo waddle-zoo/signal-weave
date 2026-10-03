@@ -442,8 +442,13 @@ principal requirement and middleware.
 
 ## Evidence and limits
 
-For the local agent-assisted path, the latest
-[recurring investigation trial](docs/recurring-runtime-trial.md) reached 12/12
+The latest [six-company agent-onboarding trial](docs/enterprise-onboarding-journeys-2026-10-02.md)
+failed its gate: SignalWeave + live Jev completed **1/6 setups and 3/18 later reports**,
+versus the same Luna agent's 6/6 and 18/18 using company tools directly. All six
+treatment agents reached a preview; tool-contract and approval handoffs remain
+blockers. These are synthetic businesses, not customer deployments.
+
+An earlier [recurring investigation trial](docs/recurring-runtime-trial.md) reached 12/12
 correct and reviewer-usable synthetic reports in both arms after a separately
 recorded execution repair. This is not a clean prospective win or a measured
 speed/cost advantage over Luna. Real-user onboarding remains unproven.

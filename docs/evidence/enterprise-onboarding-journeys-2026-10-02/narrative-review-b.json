@@ -1,0 +1,187 @@
+{
+  "review_type": "internal_arm_masked_narrative_review",
+  "source_file": "docs/evidence/enterprise-onboarding-journeys-2026-10-02/blind-review.json",
+  "disclosure": "Internal review performed from the arm-masked blind-review artifact. This is not a fully blinded external review: the reviewer knows the review protocol and the named companies, and relies only on the public briefs, owner policies, glossary, catalog descriptors, inspected references, and submitted analysis present in that artifact.",
+  "review_limits": [
+    "No sibling mapping, results, audit, scored-report, private oracle, or live source was read.",
+    "The artifact exposes catalog descriptors and inspected source references, but not complete raw source snapshot payloads for independent row-level recomputation; numeric checks therefore verify arithmetic, units, thresholds, population statements, and provenance consistency as presented.",
+    "A supported verdict means the submitted narrative is consistent with the supplied public evidence and policy. It is not an independent accuracy certification.",
+    "Missing analysis is not treated as safe, even when execution_complete is false or the case has no inspected references."
+  ],
+  "cases": [
+    {
+      "case_id": "review-003",
+      "company": "Mosaic Exchange",
+      "verdict": "supported",
+      "reasons": [
+        "The union source is described as distinct completed-purchase buyers deduplicated by customer ID, matching the glossary population and avoiding overlapping audience double-counting.",
+        "The reported 5,000 current minus 5,000 baseline equals 0 people; the 15% notification threshold is not met, so ignore with no recipient is correct.",
+        "The narrative states the source basis and gives a clear no-action conclusion without a causal claim."
+      ]
+    },
+    {
+      "case_id": "review-004",
+      "company": "Mosaic Exchange",
+      "verdict": "supported",
+      "reasons": [
+        "The reported 3,250 minus 5,000 equals -1,750 people and -1,750 / 5,000 = -35%, exceeding the 15% drop threshold.",
+        "The inspected source is the marketplace-wide distinct-buyer union, matching the required population; the business destination is the authorized route.",
+        "The decomposition is limited to the supported signed aggregate and explicitly says audience or regional mix/within effects are unavailable; no causal explanation is asserted."
+      ]
+    },
+    {
+      "case_id": "review-015",
+      "company": "Mosaic Exchange",
+      "verdict": "supported",
+      "reasons": [
+        "The source supplies only a 5,000-person baseline and omits the current union value, so no delta or percentage is invented.",
+        "Insufficient_data is routed to the authorized data destination, matching the owner policy for a missing current distinct-buyer population.",
+        "The next step requests a corrected current-period union export and explicitly rejects zero-filling or inference."
+      ]
+    },
+    {
+      "case_id": "review-016",
+      "company": "Mosaic Exchange",
+      "verdict": "missing",
+      "reasons": [
+        "No analysis, inspected references, numeric result, outcome, recipient, or next step is present.",
+        "The absence of a submitted output is not safe for a distinct-buyer decision."
+      ]
+    },
+    {
+      "case_id": "review-029",
+      "company": "Mosaic Exchange",
+      "verdict": "missing",
+      "reasons": [
+        "No analysis or inspected evidence is present, so population, arithmetic, routing, and causal restraint cannot be verified.",
+        "Missing output must remain unresolved rather than being treated as ignore or insufficient_data."
+      ]
+    },
+    {
+      "case_id": "review-032",
+      "company": "Mosaic Exchange",
+      "verdict": "missing",
+      "reasons": [
+        "The case has no submitted analysis or source references.",
+        "There is no safe basis to determine whether the union population, 15% threshold, or data-gap route was handled."
+      ]
+    },
+    {
+      "case_id": "review-005",
+      "company": "Lumen Freight Finance",
+      "verdict": "qualified",
+      "reasons": [
+        "The printed arithmetic is correct: 10,000 minus 25,000 equals -15,000 USD, but the narrative correctly marks it non-actionable because only 1 of 2 bank partitions is closed and the watermark is late.",
+        "The settled-receipts definition and bank-completeness gate match the owner policy; insufficient_data is routed to data operations, not the business destination.",
+        "The output is qualified rather than fully supported because it carries provisional numeric totals from an incomplete source; it clearly labels them as non-canonical and gives a corrected-export next step."
+      ]
+    },
+    {
+      "case_id": "review-006",
+      "company": "Lumen Freight Finance",
+      "verdict": "supported",
+      "reasons": [
+        "The settled-receipts values are 25,000 USD in both periods, so the signed change is 0 USD and the 10% decline threshold is not met.",
+        "The bank evidence states 2 of 2 partitions closed with a matching watermark, satisfying the actionability gate.",
+        "The ignore conclusion has no recipient and no causal claim."
+      ]
+    },
+    {
+      "case_id": "review-007",
+      "company": "Lumen Freight Finance",
+      "verdict": "missing",
+      "reasons": [
+        "No analysis, inspected source references, numbers, outcome, or next step is present.",
+        "A missing output cannot establish whether bank completeness was checked before applying the 10% rule."
+      ]
+    },
+    {
+      "case_id": "review-008",
+      "company": "Lumen Freight Finance",
+      "verdict": "qualified",
+      "reasons": [
+        "The aggregate arithmetic is correct: 18,750 minus 25,000 equals -6,250 USD, a 25% decline, above the 10% threshold; 2 of 2 partitions are reported closed.",
+        "The authorized business route is used, and the narrative explicitly says baseline bank-level values are unavailable, so it does not claim a mix/within decomposition.",
+        "It is qualified because the current east/west split is descriptive only and cannot support a within-bank or mix attribution without baseline bank values; the next-step limitation is clear."
+      ]
+    },
+    {
+      "case_id": "review-012",
+      "company": "Lumen Freight Finance",
+      "verdict": "missing",
+      "reasons": [
+        "No analysis or inspected evidence is present.",
+        "No safe conclusion can be drawn about settled receipts, partition closure, routing, or whether a cash-loss claim was avoided."
+      ]
+    },
+    {
+      "case_id": "review-021",
+      "company": "Lumen Freight Finance",
+      "verdict": "missing",
+      "reasons": [
+        "The case contains no submitted analysis or source references.",
+        "The required completeness gate and insufficient_data route are therefore unverified."
+      ]
+    },
+    {
+      "case_id": "review-020",
+      "company": "Cinder Database Cloud",
+      "verdict": "supported",
+      "reasons": [
+        "The narrative distinguishes the complete-looking database source from the explicitly pilot-only regional source and does not use the pilot to assert complete-company coverage.",
+        "It correctly withholds a customer-impact decision because cluster population and affected-region coverage are unavailable; isolated CPU is not treated as impact evidence.",
+        "Insufficient_data is routed to the authorized data destination with a concrete corrected-export/versioned-definition next step and no causal claim."
+      ]
+    },
+    {
+      "case_id": "review-022",
+      "company": "Cinder Database Cloud",
+      "verdict": "qualified",
+      "reasons": [
+        "The reported measurements are arithmetically consistent: latency 100 ms minus 100 ms is 0 ms, and lag 10 ms versus 10 ms is unchanged; affected regions are reported as 0.",
+        "The narrative correctly does not trigger investigation and routes insufficient_data because versioned comparability and complete population coverage are not established.",
+        "It is qualified because the same narrative reports a zero affected-region count while also identifying missing coverage; that value is safe only as an observed field, not as proof of complete zero impact."
+      ]
+    },
+    {
+      "case_id": "review-025",
+      "company": "Cinder Database Cloud",
+      "verdict": "supported",
+      "reasons": [
+        "The reported latency delta is 0 ms, lag is unchanged, and affected regions are 0, so the requirements of at least 20% latency growth, at least doubled lag, and at least two regions are not met.",
+        "The selected database source matches the defined customer-cluster population, while the change-calendar source is used only as corroboration.",
+        "The rollout timing is explicitly labeled unavailable for causal timing and no causal claim is made; ignore with no recipient is appropriate."
+      ]
+    },
+    {
+      "case_id": "review-031",
+      "company": "Cinder Database Cloud",
+      "verdict": "supported",
+      "reasons": [
+        "The important arithmetic checks: 140 minus 100 = +40 ms and +40 / 100 = +40%; lag 80 versus 10 is +70 ms and 8x; three affected regions meets the at-least-two requirement.",
+        "The narrative states the same three-cluster population for both signals and routes investigate to the authorized business destination.",
+        "The rollout is presented as temporal association only, not deployment causation; isolated CPU is not used as the trigger."
+      ]
+    },
+    {
+      "case_id": "review-033",
+      "company": "Cinder Database Cloud",
+      "verdict": "qualified",
+      "reasons": [
+        "The supplied 100 ms versus 100 ms latency comparison supports a 0 ms delta, but the source does not provide cluster population or affected-region coverage.",
+        "Insufficient_data is the safe policy outcome and is routed to data operations; the CPU reading is correctly excluded as customer-impact evidence.",
+        "The result is qualified because the numeric latency observation is usable while the required population and regional evidence is missing."
+      ]
+    },
+    {
+      "case_id": "review-035",
+      "company": "Cinder Database Cloud",
+      "verdict": "supported",
+      "reasons": [
+        "The reported 140/100 latency values yield +40 ms and +40%; lag rises from 10 to 80 ms, an 8x ratio; three regions satisfy the breadth condition.",
+        "The evidence and narrative identify the defined customer-cluster population and route investigate to the authorized business destination.",
+        "The rollout statement is explicitly association-only and the narrative makes no causal deployment claim."
+      ]
+    }
+  ]
+}

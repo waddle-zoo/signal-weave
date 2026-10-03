@@ -1,0 +1,332 @@
+{
+  "review_type": "internal_arm_masked_narrative_review_followup",
+  "source_file": "docs/evidence/enterprise-onboarding-journeys-2026-10-02/blind-review.json",
+  "correction_of_initial_review": "The initial review was wrong to state that complete raw snapshots were absent. The public evidence is present under each case's business.period.snapshots and is used for this follow-up. This follow-up does not use the prior narrative review, sibling mappings/results/audits/scored reports, private oracle data, or live sources.",
+  "review_limits": [
+    "This remains an internal arm-masked review, not a fully blinded external review: the reviewer knows the protocol and named companies.",
+    "All numeric and prerequisite checks below are against the actual public snapshot values in business.period.snapshots, the public catalog descriptors, glossary, and owner_answers in blind-review.json—not the submitted analysis summary alone.",
+    "Citations are JSON Pointers into blind-review.json. Per-case citations identify the owner policy and the exact snapshot or missing-output field; each reason carries the citation(s) supporting that finding.",
+    "No oracle, mapping, private score, sibling result, or live call was used."
+  ],
+  "cases": [
+    {
+      "case_id": "review-003",
+      "company": "Mosaic Exchange",
+      "verdict": "supported",
+      "citations": [
+        "blind-review.json#/cases/2/business/owner_answers",
+        "blind-review.json#/cases/2/business/period/snapshots/company_mcp|resource-d9eaca5a1ed7fc376bac/evidence/0/values",
+        "blind-review.json#/cases/2/analysis"
+      ],
+      "reasons": [
+        {
+          "finding": "The actual union snapshot is customer_id count_distinct over all_completed_purchases, with baseline 5,000 and current 5,000; delta is 0 and the 15% notification threshold is not met. Ignore with no recipient is supported.",
+          "citations": ["blind-review.json#/cases/2/business/owner_answers", "blind-review.json#/cases/2/business/period/snapshots/company_mcp|resource-d9eaca5a1ed7fc376bac/evidence/0/values"]
+        },
+        {
+          "finding": "The narrative uses the correct population, cites the union source, and makes no causal claim or unsupported audience decomposition.",
+          "citations": ["blind-review.json#/cases/2/business/glossary", "blind-review.json#/cases/2/analysis/claims/0"]
+        }
+      ]
+    },
+    {
+      "case_id": "review-004",
+      "company": "Mosaic Exchange",
+      "verdict": "supported",
+      "citations": [
+        "blind-review.json#/cases/3/business/owner_answers",
+        "blind-review.json#/cases/3/business/period/snapshots/company_mcp|resource-d9eaca5a1ed7fc376bac/evidence/0/values",
+        "blind-review.json#/cases/3/analysis"
+      ],
+      "reasons": [
+        {
+          "finding": "The actual snapshot gives 3,250 current versus 5,000 baseline: -1,750 people and -35%, exceeding the 15% drop threshold; the business destination is the authorized route.",
+          "citations": ["blind-review.json#/cases/3/business/owner_answers", "blind-review.json#/cases/3/business/period/snapshots/company_mcp|resource-d9eaca5a1ed7fc376bac/evidence/0/values"]
+        },
+        {
+          "finding": "The narrative correctly limits the decomposition to the supported aggregate and explicitly says no audience or regional mix/within decomposition is available; it does not claim causation.",
+          "citations": ["blind-review.json#/cases/3/business/glossary", "blind-review.json#/cases/3/analysis/claims/1"]
+        }
+      ]
+    },
+    {
+      "case_id": "review-015",
+      "company": "Mosaic Exchange",
+      "verdict": "supported",
+      "citations": [
+        "blind-review.json#/cases/14/business/owner_answers",
+        "blind-review.json#/cases/14/business/period/snapshots/company_mcp|resource-d9eaca5a1ed7fc376bac/evidence/0/values",
+        "blind-review.json#/cases/14/analysis"
+      ],
+      "reasons": [
+        {
+          "finding": "The actual union snapshot has baseline 5,000 and current null with coverage missing_union_export. No delta or percentage is computed, and insufficient_data is routed to data operations as required.",
+          "citations": ["blind-review.json#/cases/14/business/owner_answers", "blind-review.json#/cases/14/business/period/snapshots/company_mcp|resource-d9eaca5a1ed7fc376bac/evidence/0/values"]
+        },
+        {
+          "finding": "The next step requests a corrected current-period union export and explicitly rejects zero-filling or inference.",
+          "citations": ["blind-review.json#/cases/14/business/owner_answers/data_gaps", "blind-review.json#/cases/14/analysis/summary"]
+        }
+      ]
+    },
+    {
+      "case_id": "review-016",
+      "company": "Mosaic Exchange",
+      "verdict": "missing",
+      "citations": ["blind-review.json#/cases/15/execution_complete", "blind-review.json#/cases/15/analysis", "blind-review.json#/cases/15/inspected_refs"],
+      "reasons": [
+        {
+          "finding": "The case has no submitted analysis, inspected references, outcome, recipient, or next step; the available snapshot cannot be treated as an implicit result.",
+          "citations": ["blind-review.json#/cases/15/execution_complete", "blind-review.json#/cases/15/analysis", "blind-review.json#/cases/15/inspected_refs"]
+        }
+      ]
+    },
+    {
+      "case_id": "review-029",
+      "company": "Mosaic Exchange",
+      "verdict": "missing",
+      "citations": ["blind-review.json#/cases/28/execution_complete", "blind-review.json#/cases/28/analysis", "blind-review.json#/cases/28/inspected_refs"],
+      "reasons": [
+        {
+          "finding": "No narrative output or inspected evidence is present, so population, arithmetic, threshold routing, and causal restraint are unverified.",
+          "citations": ["blind-review.json#/cases/28/execution_complete", "blind-review.json#/cases/28/analysis", "blind-review.json#/cases/28/inspected_refs"]
+        }
+      ]
+    },
+    {
+      "case_id": "review-032",
+      "company": "Mosaic Exchange",
+      "verdict": "missing",
+      "citations": ["blind-review.json#/cases/31/execution_complete", "blind-review.json#/cases/31/analysis", "blind-review.json#/cases/31/inspected_refs"],
+      "reasons": [
+        {
+          "finding": "No submitted analysis or inspected references are present; there is no safe basis to determine whether the union population or 15% threshold was handled.",
+          "citations": ["blind-review.json#/cases/31/execution_complete", "blind-review.json#/cases/31/analysis", "blind-review.json#/cases/31/inspected_refs"]
+        }
+      ]
+    },
+    {
+      "case_id": "review-005",
+      "company": "Lumen Freight Finance",
+      "verdict": "qualified",
+      "citations": [
+        "blind-review.json#/cases/4/business/owner_answers",
+        "blind-review.json#/cases/4/business/period/snapshots/company_mcp|resource-20ac02da369111fc9815/evidence/0/values",
+        "blind-review.json#/cases/4/business/period/snapshots/company_mcp|resource-54087565779cfa1adef1/evidence/0/values",
+        "blind-review.json#/cases/4/analysis"
+      ],
+      "reasons": [
+        {
+          "finding": "The actual snapshots show 25,000 baseline, 10,000 current, and -15,000 USD arithmetic, but only 1 of 2 expected bank partitions is closed. The owner policy therefore requires insufficient_data, not a cash-loss assertion.",
+          "citations": ["blind-review.json#/cases/4/business/owner_answers", "blind-review.json#/cases/4/business/period/snapshots/company_mcp|resource-20ac02da369111fc9815/evidence/0/values", "blind-review.json#/cases/4/business/period/snapshots/company_mcp|resource-54087565779cfa1adef1/evidence/0/values"]
+        },
+        {
+          "finding": "The output is qualified because it repeats provisional totals, but clearly marks them non-actionable, routes to data operations, and requests a corrected complete export without claiming cash disappeared.",
+          "citations": ["blind-review.json#/cases/4/business/owner_answers/data_gaps", "blind-review.json#/cases/4/analysis/claims/1", "blind-review.json#/cases/4/analysis/summary"]
+        }
+      ]
+    },
+    {
+      "case_id": "review-006",
+      "company": "Lumen Freight Finance",
+      "verdict": "supported",
+      "citations": [
+        "blind-review.json#/cases/5/business/owner_answers",
+        "blind-review.json#/cases/5/business/period/snapshots/company_mcp|resource-20ac02da369111fc9815/evidence/0/values",
+        "blind-review.json#/cases/5/business/period/snapshots/company_mcp|resource-54087565779cfa1adef1/evidence/0/values",
+        "blind-review.json#/cases/5/analysis"
+      ],
+      "reasons": [
+        {
+          "finding": "The actual complete snapshots show 25,000 USD in both periods, delta 0, and 2 of 2 partitions closed with a matching watermark; the 10% decline threshold is not met.",
+          "citations": ["blind-review.json#/cases/5/business/owner_answers", "blind-review.json#/cases/5/business/period/snapshots/company_mcp|resource-20ac02da369111fc9815/evidence/0/values", "blind-review.json#/cases/5/business/period/snapshots/company_mcp|resource-54087565779cfa1adef1/evidence/0/values"]
+        },
+        {
+          "finding": "Ignore with no recipient is consistent and no causal claim is made.",
+          "citations": ["blind-review.json#/cases/5/analysis/summary", "blind-review.json#/cases/5/analysis/claims/2"]
+        }
+      ]
+    },
+    {
+      "case_id": "review-007",
+      "company": "Lumen Freight Finance",
+      "verdict": "missing",
+      "citations": ["blind-review.json#/cases/6/execution_complete", "blind-review.json#/cases/6/analysis", "blind-review.json#/cases/6/inspected_refs"],
+      "reasons": [
+        {
+          "finding": "No analysis or inspected references are present, so the bank-completeness gate, settled-receipts arithmetic, routing, and causal restraint are unverified.",
+          "citations": ["blind-review.json#/cases/6/execution_complete", "blind-review.json#/cases/6/analysis", "blind-review.json#/cases/6/inspected_refs"]
+        }
+      ]
+    },
+    {
+      "case_id": "review-008",
+      "company": "Lumen Freight Finance",
+      "verdict": "supported",
+      "citations": [
+        "blind-review.json#/cases/7/business/owner_answers",
+        "blind-review.json#/cases/7/business/period/snapshots/company_mcp|resource-20ac02da369111fc9815/evidence/0/values",
+        "blind-review.json#/cases/7/business/period/snapshots/company_mcp|resource-54087565779cfa1adef1/evidence/0/values",
+        "blind-review.json#/cases/7/analysis"
+      ],
+      "reasons": [
+        {
+          "finding": "The actual complete snapshots show 18,750 versus 25,000 USD: -6,250 USD and -25%, exceeding the 10% threshold; both bank partitions are closed.",
+          "citations": ["blind-review.json#/cases/7/business/owner_answers", "blind-review.json#/cases/7/business/period/snapshots/company_mcp|resource-20ac02da369111fc9815/evidence/0/values", "blind-review.json#/cases/7/business/period/snapshots/company_mcp|resource-54087565779cfa1adef1/evidence/0/values"]
+        },
+        {
+          "finding": "The business route is authorized. The narrative correctly says current east/west values are descriptive only and that baseline bank-level values are unavailable, so it does not invent a mix/within decomposition or causal explanation.",
+          "citations": ["blind-review.json#/cases/7/business/owner_answers/routing", "blind-review.json#/cases/7/analysis/claims/2", "blind-review.json#/cases/7/analysis/claims/3"]
+        }
+      ]
+    },
+    {
+      "case_id": "review-012",
+      "company": "Lumen Freight Finance",
+      "verdict": "missing",
+      "citations": ["blind-review.json#/cases/11/execution_complete", "blind-review.json#/cases/11/analysis", "blind-review.json#/cases/11/inspected_refs"],
+      "reasons": [
+        {
+          "finding": "No submitted analysis or inspected references are present; no safe conclusion can be drawn about settled receipts, partition closure, or routing.",
+          "citations": ["blind-review.json#/cases/11/execution_complete", "blind-review.json#/cases/11/analysis", "blind-review.json#/cases/11/inspected_refs"]
+        }
+      ]
+    },
+    {
+      "case_id": "review-021",
+      "company": "Lumen Freight Finance",
+      "verdict": "missing",
+      "citations": ["blind-review.json#/cases/20/execution_complete", "blind-review.json#/cases/20/analysis", "blind-review.json#/cases/20/inspected_refs"],
+      "reasons": [
+        {
+          "finding": "No analysis or inspected references are present, so the required completeness gate and insufficient_data route are unverified.",
+          "citations": ["blind-review.json#/cases/20/execution_complete", "blind-review.json#/cases/20/analysis", "blind-review.json#/cases/20/inspected_refs"]
+        }
+      ]
+    },
+    {
+      "case_id": "review-020",
+      "company": "Cinder Database Cloud",
+      "verdict": "supported",
+      "citations": [
+        "blind-review.json#/cases/19/business/owner_answers",
+        "blind-review.json#/cases/19/business/period/snapshots/company_mcp|resource-2571c1152ac9709bb72a/evidence/0/values",
+        "blind-review.json#/cases/19/business/period/snapshots/company_mcp|resource-6dfa76e81a9d86bcbc86/evidence/0/values",
+        "blind-review.json#/cases/19/analysis"
+      ],
+      "reasons": [
+        {
+          "finding": "The actual full and pilot snapshots both lack affected-region and cluster-population values; the pilot is explicitly non-complete. The owner policy requires those coverage prerequisites, so insufficient_data is correct and isolated CPU is not a trigger.",
+          "citations": ["blind-review.json#/cases/19/business/owner_answers", "blind-review.json#/cases/19/business/period/snapshots/company_mcp|resource-2571c1152ac9709bb72a/evidence/0/values", "blind-review.json#/cases/19/business/period/snapshots/company_mcp|resource-6dfa76e81a9d86bcbc86/evidence/0/values"]
+        },
+        {
+          "finding": "The output routes the evidence gap to data operations, requests corrected population/region coverage, and makes no causal claim.",
+          "citations": ["blind-review.json#/cases/19/business/owner_answers/routing", "blind-review.json#/cases/19/analysis/summary"]
+        }
+      ]
+    },
+    {
+      "case_id": "review-022",
+      "company": "Cinder Database Cloud",
+      "verdict": "unsupported",
+      "citations": [
+        "blind-review.json#/cases/21/business/owner_answers",
+        "blind-review.json#/cases/21/business/period/snapshots/company_mcp|resource-6dfa76e81a9d86bcbc86/evidence/0/values",
+        "blind-review.json#/cases/21/analysis"
+      ],
+      "reasons": [
+        {
+          "finding": "The actual snapshot supplies the defined cluster population [eu-1, us-1, ap-1], affected_regions 0, latency 100 versus 100 ms, and lag 10 versus 10 ms. The owner policy's investigation prerequisites are therefore not met: 0% latency rise, no lag doubling, and fewer than two regions.",
+          "citations": ["blind-review.json#/cases/21/business/owner_answers/materiality", "blind-review.json#/cases/21/business/period/snapshots/company_mcp|resource-6dfa76e81a9d86bcbc86/evidence/0/values"]
+        },
+        {
+          "finding": "The narrative's insufficient_data result adds a versioned-definition/comparability gate that is not required by the supplied owner policy or the actual source values. The safe policy result from this snapshot is ignore, not insufficient_data; the 95% isolated CPU value is correctly non-actionable.",
+          "citations": ["blind-review.json#/cases/21/business/owner_answers", "blind-review.json#/cases/21/business/period/snapshots/company_mcp|resource-6dfa76e81a9d86bcbc86/evidence/0/values", "blind-review.json#/cases/21/analysis/claims/2"]
+        }
+      ]
+    },
+    {
+      "case_id": "review-025",
+      "company": "Cinder Database Cloud",
+      "verdict": "supported",
+      "citations": [
+        "blind-review.json#/cases/24/business/owner_answers",
+        "blind-review.json#/cases/24/business/period/snapshots/company_mcp|resource-6dfa76e81a9d86bcbc86/evidence/0/values",
+        "blind-review.json#/cases/24/business/period/snapshots/company_mcp|resource-a42da6d8d97166482a33/evidence/0/values",
+        "blind-review.json#/cases/24/analysis"
+      ],
+      "reasons": [
+        {
+          "finding": "The actual database snapshot has 100 versus 100 ms latency, 10 versus 10 ms lag, 0 affected regions, and the defined three-cluster population. None of the investigate thresholds is met, so ignore is correct.",
+          "citations": ["blind-review.json#/cases/24/business/owner_answers/materiality", "blind-review.json#/cases/24/business/period/snapshots/company_mcp|resource-6dfa76e81a9d86bcbc86/evidence/0/values"]
+        },
+        {
+          "finding": "The change-calendar snapshot has no latency_change_at and says the rollout merely coincided with prior lag without a controlled causal test; the narrative correctly labels timing as non-causal and does not use CPU as a trigger.",
+          "citations": ["blind-review.json#/cases/24/business/period/snapshots/company_mcp|resource-a42da6d8d97166482a33/evidence/0/values", "blind-review.json#/cases/24/analysis/claims/2"]
+        }
+      ]
+    },
+    {
+      "case_id": "review-031",
+      "company": "Cinder Database Cloud",
+      "verdict": "supported",
+      "citations": [
+        "blind-review.json#/cases/30/business/owner_answers",
+        "blind-review.json#/cases/30/business/period/snapshots/company_mcp|resource-6dfa76e81a9d86bcbc86/evidence/0/values",
+        "blind-review.json#/cases/30/business/period/snapshots/company_mcp|resource-a42da6d8d97166482a33/evidence/0/values",
+        "blind-review.json#/cases/30/analysis"
+      ],
+      "reasons": [
+        {
+          "finding": "The actual snapshot verifies 140 minus 100 = +40 ms and +40%, lag 80 versus 10 = 8x, and 3 affected regions across eu-1/us-1/ap-1; all owner investigation prerequisites are met.",
+          "citations": ["blind-review.json#/cases/30/business/owner_answers/materiality", "blind-review.json#/cases/30/business/period/snapshots/company_mcp|resource-6dfa76e81a9d86bcbc86/evidence/0/values"]
+        },
+        {
+          "finding": "The rollout snapshot shows a 12-minute timing association for the same target population and explicitly says no controlled causal test was performed; investigate routing is authorized and the narrative does not claim causation.",
+          "citations": ["blind-review.json#/cases/30/business/owner_answers/routing", "blind-review.json#/cases/30/business/period/snapshots/company_mcp|resource-a42da6d8d97166482a33/evidence/0/values", "blind-review.json#/cases/30/analysis/claims/3"]
+        }
+      ]
+    },
+    {
+      "case_id": "review-033",
+      "company": "Cinder Database Cloud",
+      "verdict": "supported",
+      "citations": [
+        "blind-review.json#/cases/32/business/owner_answers",
+        "blind-review.json#/cases/32/business/period/snapshots/company_mcp|resource-6dfa76e81a9d86bcbc86/evidence/0/values",
+        "blind-review.json#/cases/32/analysis"
+      ],
+      "reasons": [
+        {
+          "finding": "The actual snapshot has a 0 ms latency delta but null cluster_population and affected_regions, so the owner-required population and regional prerequisites are missing; insufficient_data to data operations is correct.",
+          "citations": ["blind-review.json#/cases/32/business/owner_answers/materiality", "blind-review.json#/cases/32/business/period/snapshots/company_mcp|resource-6dfa76e81a9d86bcbc86/evidence/0/values"]
+        },
+        {
+          "finding": "The output does not turn the isolated 95% CPU reading into customer impact and does not invent a delta or causal explanation.",
+          "citations": ["blind-review.json#/cases/32/business/period/snapshots/company_mcp|resource-6dfa76e81a9d86bcbc86/evidence/0/values", "blind-review.json#/cases/32/analysis/claims/0"]
+        }
+      ]
+    },
+    {
+      "case_id": "review-035",
+      "company": "Cinder Database Cloud",
+      "verdict": "supported",
+      "citations": [
+        "blind-review.json#/cases/34/business/owner_answers",
+        "blind-review.json#/cases/34/business/period/snapshots/company_mcp|resource-6dfa76e81a9d86bcbc86/evidence/0/values",
+        "blind-review.json#/cases/34/business/period/snapshots/company_mcp|resource-a42da6d8d97166482a33/evidence/0/values",
+        "blind-review.json#/cases/34/analysis"
+      ],
+      "reasons": [
+        {
+          "finding": "The actual snapshot verifies +40 ms and +40% latency, 10 to 80 ms lag (8x), and 3 affected regions; the investigate threshold is met for the defined population.",
+          "citations": ["blind-review.json#/cases/34/business/owner_answers/materiality", "blind-review.json#/cases/34/business/period/snapshots/company_mcp|resource-6dfa76e81a9d86bcbc86/evidence/0/values"]
+        },
+        {
+          "finding": "The change calendar supplies the same target population and 12-minute timing association, but explicitly lacks causal proof; the narrative routes investigate correctly and avoids a causal claim.",
+          "citations": ["blind-review.json#/cases/34/business/owner_answers/routing", "blind-review.json#/cases/34/business/period/snapshots/company_mcp|resource-a42da6d8d97166482a33/evidence/0/values", "blind-review.json#/cases/34/analysis/claims/2"]
+        }
+      ]
+    }
+  ]
+}

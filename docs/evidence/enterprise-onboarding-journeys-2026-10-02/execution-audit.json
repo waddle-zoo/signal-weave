@@ -1,0 +1,56 @@
+{
+  "full_report_sha256": "51998d94ef1514d7c27dcecd2720329258b956ab07aeb89e9f32e92e4304f84f",
+  "trace_sha256": "96dd9688e30ba53938c12039e8229de774aa6b482a995354f46f29679481d577",
+  "planned_episodes": 48,
+  "retained_episodes": 48,
+  "integrity": {
+    "expected_episodes": 48,
+    "expected_onboardings": 12,
+    "expected_monitoring_per_arm": 18,
+    "validated": true
+  },
+  "onboarding_stories": 12,
+  "jev_attempts": 99,
+  "jev_failed_attempts": 1,
+  "codex_invocations": 48,
+  "codex_api_error_events": 0,
+  "failed_author_monitor_episodes": 20,
+  "failed_owner_review_invocations": 0,
+  "event_kind_counts": {
+    "api.request": 147,
+    "codex.event": 985,
+    "tool.result": 341,
+    "source.read": 90,
+    "review.request": 15,
+    "api.response": 146,
+    "review.result": 15,
+    "review.binding": 15,
+    "api.error": 1,
+    "episode.error": 15,
+    "owner.approval": 8,
+    "system.evaluation": 3
+  },
+  "blindness_limit": "Arm metadata removed, but output style can reveal treatment. Give reviewers only blind-review.json, never review-key.json or this directory.",
+  "budget_censored": false,
+  "native_correctness": {
+    "luna_bi": {
+      "planned_monitoring_periods": 18,
+      "completed_agent_reports": 18,
+      "native_decisions_available": 0,
+      "native_decisions_missing": 18,
+      "native_metric_applicable": false,
+      "native_outcome_and_recipient_correct": 0,
+      "agent_changed_native_outcome": 0
+    },
+    "luna_signalweave_jev": {
+      "planned_monitoring_periods": 18,
+      "completed_agent_reports": 3,
+      "native_decisions_available": 3,
+      "native_decisions_missing": 15,
+      "native_metric_applicable": true,
+      "native_outcome_and_recipient_correct": 2,
+      "agent_changed_native_outcome": 0
+    }
+  },
+  "limit": "Scripted owner interviews with an actual model agent. Not real users, enterprise certification, or independent peer review."
+}
