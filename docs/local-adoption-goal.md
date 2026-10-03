@@ -6,6 +6,16 @@ not declare the earlier failed trials passed.
 
 ## Native MCP onboarding investigation — October 3, 2026
 
+Latest [36-call evidence-sufficiency experiment](evidence-sufficiency-experiment-2026-10-03.md):
+explicit synthetic provider definitions repaired quiet history, but both primary
+arms passed only **8/12** exact outcome/recipient/handoff checks. Partial and
+mismatched populations still generated business-investigation work instead of
+data repair. Six of eight primary failures came from low-confidence
+`insufficient_data` falling back to investigation; two were model-selected
+investigations. Normalization had no net gain. All calls used live Jev; no
+notifications were sent. These are known-family component diagnostics, not
+onboarding or comparative-value proof. No treatment was promoted to production.
+
 Latest [handoff and retrieval follow-up](native-onboarding-handoff-2026-10-03.md):
 three bounded operations pilots still failed setup. We fixed a contradictory
 required-versus-permitted retrieval contract, exposed exact missing historical

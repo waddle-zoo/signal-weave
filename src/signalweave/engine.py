@@ -602,17 +602,44 @@ class InsightEngine:
             )
         if result.outcome == Outcome.INSUFFICIENT_DATA:
             required_sources = sorted(source.key for source in card.sources if source.required)
+            repair_instructions = (
+                "Repair or validate the missing, conflicting, or incomparable required "
+                "evidence before continuing the analysis. Source availability alone does "
+                "not establish that its evidence is complete or comparable. Use the "
+                "evidence bundle and plan to identify the gap; do not reconstruct missing "
+                "values or invent definitions. Submit corrected evidence for re-evaluation "
+                "of the same card before resuming analytical follow-up."
+            )
+            follow_up = (
+                "\n\nCard follow-up guidance (after evidence repair and re-evaluation):\n"
+                + card.follow_up_guidance if card.follow_up_guidance.strip() else ""
+            )
+            instructions = repair_instructions + ("\n\n" + plan_instructions if plan_instructions else "") + follow_up
+            # Both fields can be valid individually but exceed the handoff's
+            # 8,000-character limit together. Reference full structured content
+            # rather than truncating an owner's policy mid-sentence.
+            if len(instructions) > 8000:
+                instructions = repair_instructions + "\n\nConsult the attached evidence_plan for all evidence slots." + follow_up
+            if len(instructions) > 8000:
+                instructions = (
+                    repair_instructions
+                    + "\n\nConsult the attached evidence_plan for all evidence slots. "
+                    "The full follow-up guidance exceeds this handoff's text limit; read "
+                    f"card {card.id} version {card.version}'s follow_up_guidance after "
+                    "evidence repair and re-evaluation."
+                )
             return WorkflowHandoff(
                 status="blocked",
                 step_key="repair-source",
                 action="repair_source",
                 objective=objective,
-                instructions=(
-                    card.follow_up_guidance
-                    or "Repair or validate the required source, then re-evaluate the same card."
-                ),
+                instructions=instructions,
                 required_source_keys=required_sources,
-                completion_criteria="Required sources are healthy and a new evaluation is submitted.",
+                completion_criteria=(
+                    "Required evidence is corrected or validated against its applicable "
+                    "definitions, population and comparison window, and a new evaluation "
+                    "of the same card is submitted. Source health alone is not sufficient."
+                ),
                 delivery_method_keys=delivery_keys,
                 evidence_plan=evidence_plan,
             )

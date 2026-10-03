@@ -1,4 +1,6 @@
 import copy
+import gzip
+import hashlib
 import json
 from collections import Counter
 from pathlib import Path
@@ -123,3 +125,49 @@ def test_suppression_needs_complete_status_and_no_recipients(mutation):
               "actual_delivery_destinations": {}, "workflow": {"action": "suppress", "status": "complete",
                                                                 "delivery_method_keys": [], **mutation}}]}
     assert trial.score(row, report)["exact"] is False
+
+
+def test_retained_live_evidence_matches_raw_responses_and_frozen_denominators():
+    """Audit a failed experiment, not a mock model or a new accuracy claim."""
+    root = Path(__file__).resolve().parents[1] / "docs/evidence/evidence-sufficiency-2026-10-03"
+    manifest = json.loads((root / "manifest.json").read_text())
+    decoded = {}
+    for name, record in manifest["artifacts"].items():
+        blob = (root / name).read_bytes()
+        assert hashlib.sha256(blob).hexdigest() == record["archive_sha256"]
+        raw = gzip.decompress(blob) if name.endswith(".gz") else blob
+        assert hashlib.sha256(raw).hexdigest() == record["source_sha256"]
+        decoded[name.removesuffix(".gz")] = raw
+    protocol = json.loads(decoded["protocol.json"])
+    inputs = json.loads(decoded["inputs.json"])
+    report = json.loads(decoded["report.json"])
+    assert trial.digest(inputs) == protocol["input_digest"]
+    events = [json.loads(line) for line in decoded["trace.jsonl"].splitlines()]
+    requests = [e for e in events if e["kind"] == "api.request"]
+    responses = [e for e in events if e["kind"] == "api.response"]
+    assert len(requests) == len(responses) == len(report["results"]) == protocol["attempt_cap"] == 36
+    assert len({e["request_id"] for e in requests}) == 36
+    assert {e["request_id"] for e in requests} == {e["request_id"] for e in responses}
+    successes = Counter()
+    for number, (entry, result) in enumerate(zip(protocol["schedule"], report["results"], strict=True)):
+        row = inputs["rows"][entry["index"]]
+        assert (result["index"], result["repeat"]) == (entry["index"], entry["repeat"])
+        episode = f"attempt-{number:03d}"
+        request = next(e for e in requests if e["episode"] == episode)
+        response = next(e for e in responses if e["episode"] == episode)
+        assert request["request_id"] == response["request_id"]
+        # Gold labels are evaluator-only, unlike the common owner policy.
+        serialized_request = json.dumps(request)
+        for label in ("expected_outcome", "expected_delivery_destinations", "expected_retrieval_refs"):
+            assert label not in serialized_request
+        case = result["report"]["cases"][0]
+        answer = response["response"]["answers"]["outcome"]
+        assert case["probabilities"] == answer["probabilities"]
+        support = answer["probabilities"][answer["choice"]]
+        assert case["confidence"] == support
+        expected_routing = "investigate" if support < inputs["card"]["action_confidence_threshold"] else answer["choice"]
+        assert case["outcome"] == expected_routing
+        assert result["score"] == trial.score(row, result["report"])
+        successes[row["arm"]] += result["score"]["exact"]
+    assert dict(successes) == {arm: value["exact"] for arm, value in report["summary"].items()}
+    assert report["primary_gates"] == {"documented": False, "documented_typed": False}

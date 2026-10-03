@@ -8,6 +8,8 @@ from signalweave.models import (
     ContextSnapshot,
     DeliveryMethod,
     Evidence,
+    EvidencePlan,
+    EvidenceSlot,
     InsightCard,
     InsightResult,
     Observation,
@@ -245,4 +247,57 @@ async def test_failed_required_source_cannot_become_a_delivery_handoff():
     assert run.result.workflow is not None
     assert run.result.workflow.action == "repair_source"
     assert run.result.workflow.status == "blocked"
+    assert "Evidence slots to complete:" in run.result.workflow.instructions
+    assert "growth-dashboard" in run.result.workflow.instructions
+    assert "after evidence repair and re-evaluation" in run.result.workflow.instructions
     assert run.result.delivery_methods == []
+
+
+@pytest.mark.parametrize("guidance", ["", "Report the driver decomposition to leadership."])
+def test_data_repair_precedes_analytical_follow_up_even_without_missing_plan_slots(guidance):
+    card = _card(follow_up_guidance=guidance)
+    result = InsightResult(
+        card_id=card.id,
+        outcome=Outcome.INSUFFICIENT_DATA,
+        summary="The source is reachable but its population coverage is unresolved.",
+        rationale="Coverage needs validation.",
+        confidence=0.9,
+        probabilities={"insufficient_data": 0.9},
+        evidence=[], observations=[], source_keys=["growth-dashboard"],
+        evaluator="handoff-contract-test",
+    )
+    handoff = InsightEngine._workflow_handoff(card, result)
+    assert handoff.action == "repair_source"
+    assert handoff.status == "blocked"
+    assert handoff.instructions.startswith("Repair or validate")
+    assert "do not reconstruct missing values" in handoff.instructions
+    assert "Source health alone is not sufficient" in handoff.completion_criteria
+    assert handoff.required_source_keys == ["growth-dashboard"]
+    assert handoff.delivery_method_keys == []
+    if guidance:
+        assert "after evidence repair and re-evaluation" in handoff.instructions
+        assert handoff.instructions.endswith(guidance)
+    else:
+        assert "Card follow-up guidance" not in handoff.instructions
+
+
+@pytest.mark.parametrize("guidance", ["Inspect the decomposition.", "x" * 8000])
+def test_repair_handoff_preserves_large_plan_and_references_untruncated_owner_guidance(guidance):
+    card = _card(follow_up_guidance=guidance)
+    slots = [EvidenceSlot(key=f"question:{n}", role="question", question="q" * 4000,
+                          required=True, source_keys=["growth-dashboard"]) for n in range(3)]
+    plan = EvidencePlan(objective="Validate evidence", slots=slots, missing_slot_keys=[s.key for s in slots])
+    result = InsightResult(card_id=card.id, outcome=Outcome.INSUFFICIENT_DATA,
+                           summary="Required evidence missing", rationale="Repair", evaluator="test",
+                           evidence_plan=plan)
+    handoff = InsightEngine._workflow_handoff(card, result)
+    assert len(handoff.instructions) <= 8000
+    assert handoff.instructions.startswith("Repair or validate")
+    assert handoff.evidence_plan == plan
+    assert "Consult the attached evidence_plan" in handoff.instructions
+    assert card.follow_up_guidance == guidance
+    if len(guidance) == 8000:
+        assert "exceeds this handoff's text limit" in handoff.instructions
+        assert f"card {card.id} version {card.version}" in handoff.instructions
+    else:
+        assert handoff.instructions.endswith(guidance)
