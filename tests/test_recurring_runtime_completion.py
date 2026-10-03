@@ -30,7 +30,7 @@ async def parent_run(tmp_path, monkeypatch):
             for run in removed:
                 key = f"business-outcomes:{run['period']}"
                 payload = json.loads(db.execute("SELECT payload FROM decision_receipts WHERE idempotency_key=?", (key,)).fetchone()[0])
-                payload.update(status="failed", outcome=None, delivery_enabled=False,
+                payload.update(status="failed", outcome="insufficient_data", delivery_enabled=False, delivery_method_keys=[],
                                result={"error": "BudgetExceeded: global_api_request_budget_exhausted"})
                 db.execute("UPDATE decision_receipts SET payload=? WHERE idempotency_key=?", (json.dumps(payload), key))
     trial._write_json(parent / "report.json", report)

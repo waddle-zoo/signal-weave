@@ -93,8 +93,9 @@ def prepare(parent):
         for period_id in absent:
             receipt = read_payload(parent / f"{cid}-signalweave.db", "decision_receipts", "idempotency_key", f"business-outcomes:{period_id}")
             if receipt is not None and not (
-                receipt["status"] == "failed" and receipt.get("outcome") is None
-                and receipt.get("delivery_enabled") is False and receipt.get("result") == {
+                receipt["status"] == "failed" and receipt.get("outcome") == "insufficient_data"
+                and receipt.get("delivery_enabled") is False and receipt.get("delivery_method_keys") == []
+                and receipt.get("result") == {
                     "error": "BudgetExceeded: global_api_request_budget_exhausted"
                 }
             ):
