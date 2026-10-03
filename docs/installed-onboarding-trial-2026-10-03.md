@@ -109,10 +109,14 @@ and [marketplace/finance adjudication](evidence/installed-workflow-2026-10-03/in
 
 Operations initially required an unavailable typed comparison. After repair, its
 quiet historical example still became `investigate` because ignore support was
-0.62, below the unchanged floor. Later author revisions did not finish accepted
-setup; one owner review rejected omitted data-gap instructions. No future
-operations case was executed. A policy-faithful owner review alone is not a
-passing workflow evaluation.
+0.62, below the unchanged floor. A deeper follow-up audit found that the last
+two revisions **did pass all three historical cases**, with quiet support of
+0.78 and 0.75. One owner review rejected omitted data-gap instructions; after
+repairing those instructions, the agent stopped at a missing current inspection/
+preview prerequisite before the final owner review. No future operations case
+was executed. The unresolved endpoint was the revision-to-approval handoff,
+not a persistent failure of every historical Jev evaluation. Both passing
+historical results and the incomplete setup remain in the original raw trace.
 
 Marketplace exposed a second fixture problem. Its original private evidence
 labels require the deduplicated union source, not the audience-tags source.

@@ -6,6 +6,17 @@ not declare the earlier failed trials passed.
 
 ## Native MCP onboarding investigation — October 3, 2026
 
+Latest [handoff and retrieval follow-up](native-onboarding-handoff-2026-10-03.md):
+three bounded operations pilots still failed setup. We fixed a contradictory
+required-versus-permitted retrieval contract, exposed exact missing historical
+source refs, and verified draft approval remains separate from evaluation.
+The final pilot passed retrieval and its event/missing-data history, but quiet
+history escalated below the unchanged confidence floor. A six-call paired
+prose-placement diagnostic did not fix it. **74 total Jev attempts**, retained
+failures, no full-cohort expansion, no enterprise-completion claim. The next gate
+is source-backed evidence sufficiency with missing-context negative controls,
+not more retries or lower thresholds.
+
 Current [native onboarding report](installed-onboarding-trial-2026-10-03.md): the
 clean Northstar run completed **41/42** future cases exactly and **42/42** no-call
 receipt replays. The broader six-business v5 probe completed only **3/6** setups
