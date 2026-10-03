@@ -22,6 +22,73 @@ faithful evidence bundle to a caller-owned report writer. People supply business
 policy and approve definitions and routes. We do not infer undocumented policy,
 own the agent/scheduler/delivery system, or promise universal enterprise accuracy.
 
+## Local binary first-use check — October 2, 2026
+
+The rc2 development binary now supplies a read-only `get_signalweave_guide` for
+query, report and monitor paths, plus opt-in Codex CLI registration. The existing
+GitHub Actions release workflow builds native archives; no new release was
+published for this iteration. The local Apple Silicon archive was built from
+`2a7939a`, with binary SHA-256
+`e6563b79bbc8948d81e93b777a4148a0df4dd97e2854b8f890497217e7b8f96e`.
+It passed real installer/private setup checks outside the checkout and all four
+MCP guide paths. Claude registration remains manual. Signing/notarization and
+managed-device acceptance are not established by these checks.
+
+A fresh private home per synthetic company exercised source inspection, native
+card drafting and delivery-disabled report preview with live Jev. Source
+contracts and English owner policies were supplied by the scripted driver;
+discovery, human usability, autonomous authoring and recurring delivery were not
+tested. Six paid tool attempts were used, with no retries or frontier-model calls.
+The frozen code was `082e8a1`; period p03 was selected in advance for each of the
+three existing fixtures. These are reused cases, not new held-out enterprises.
+
+| Company | Measurements and provenance | Decision and recipient |
+| --- | --- | --- |
+| Canyon Freight | Correct | Correct: Fleet Operations |
+| Helio Support | Correct | **Missed notification** to Support Quality |
+| Lattice Energy | Correct | Correct: Commercial Operations |
+
+**This is 2/3 fully correct, not an onboarding success gate.** Helio's weighted
+current recontact rate was 11.8056%, above the owner's 9% threshold, yet Jev
+selected `ignore`. No code or expected label was changed to excuse that result.
+The result shows a policy application failure despite available evidence; it
+does not justify blaming missing company context. These cards did not include
+source-bound numeric conditions. Whether agent-authored checks improve this flow
+must be tested, not assumed from earlier expertly configured runs.
+
+The initial run failed before inference because the harness used a symlinked
+macOS temporary path. Correcting the harness preserved the private-path security
+check. A second harness defect affected scoring: recurring fixtures express
+contributions as records, whereas the first-report scorer expects a mapping.
+Offline projection corrected the scorer without changing outputs or making any
+new model calls. Both original reports remain unmodified:
+
+- [Zero-call failed run](evidence/installed-first-report-2026-10-02/report.json)
+- [Frozen live protocol](evidence/installed-first-report-2026-10-02-corrected/frozen_protocol.json)
+- [Raw live outputs and original scoring](evidence/installed-first-report-2026-10-02-corrected/report.json)
+- [Corrected scores, hashes and separate Luna review](evidence/installed-first-report-2026-10-02-corrected/adjudication.json)
+
+Reproduce the native preflight without paid inference:
+
+```sh
+SIGNALWEAVE_TEST_BINARY=dist/signalweave uv run pytest tests/test_installed_first_report_trial.py
+```
+
+The focused native suite passed eight tests. The full offline suite passed 2,007
+tests with four opt-in skips before the final scorer-format regression was added;
+that focused suite then passed eight tests with one native-only skip. Ruff and
+`git diff --check` passed. `make verify` could not launch because `uv` was absent
+from this shell; the existing virtualenv's Ruff and pytest were run directly.
+
+Next proof step: let the user's agent read the guide, discover supported assets,
+and draft from public owner policy without private labels or expert card edits.
+Require first-report review and owner-labeled threshold-crossing, quiet and
+missing-evidence acceptance cases before approval. Preserve numeric units and
+source bindings, inspect actual numeric-condition results, and verify the final
+outcome as well as the math. A numeric check alone is not proof of correct routing.
+Compare the resulting recurring reports against the same agent without
+SignalWeave before claiming better quality, lower cost or less human work.
+
 ## Acceptance criteria
 
 1. Audit the existing release/install/setup path and close demonstrated defects.

@@ -1,0 +1,36 @@
+{
+  "kind": "offline_rescore_and_agent_review",
+  "original_report_sha256": "a8edd3dd4d3e0f78752f0f8a499bf8530e1c190187d4686b13af9ec2fc0f8bed",
+  "frozen_protocol_sha256": "631c1b6f22cc8dfd26f9320213162edb036ecec7481f15e366905eca25ba2199",
+  "events_sha256": "0d265f1662a184a0b4f47597d8b813a95dbd4a28e88eb7cbd808a2a46173f874",
+  "correction": "The original scorer expected a segment-to-contribution dictionary; these recurring fixtures use a list of segment records. Reused recurring_runtime_trial._first_report_oracle to project that representation. No expected values, policies, cases, or model outputs changed. Original report retained unchanged.",
+  "additional_inference_calls": 0,
+  "intended_denominator": 3,
+  "fully_correct": 2,
+  "arithmetic_and_provenance_correct": 3,
+  "outcome_and_recipient_correct": 2,
+  "results": [
+    {"company": "canyon-freight", "passed": true, "errors": []},
+    {"company": "helio-support", "passed": false, "errors": ["outcome", "recipients"]},
+    {"company": "lattice-energy", "passed": true, "errors": []}
+  ],
+  "agent_review": {
+    "reviewer": "Maxwell, separate Luna subagent",
+    "reviewer_id": "01a0ff31-e203-7553-8572-58c841e5f650",
+    "all_cases_included": true,
+    "findings": [
+      "Canyon: total increase 13 is below 17, but air contribution 12 exceeds the 11 lane threshold; notification to Fleet Operations is correct.",
+      "Helio: current weighted rate 11.8056% exceeds the 9% threshold; ignore with no recipient is a material false negative.",
+      "Lattice: net delta -75 and churn contribution -50 trigger notification to Commercial Operations.",
+      "Source, fixture and oracle hashes recomputed; six attempted draft/preview tools, no extras; exact-key scan has zero matches."
+    ],
+    "limitation": "AI-agent review of bounded scripted synthetic evidence, not external peer review or enterprise certification."
+  },
+  "limits": [
+    "Uses existing synthetic fixtures and supplied source contracts and English owner policy; not unseen businesses or self-directed discovery.",
+    "No human usability study or frontier-agent onboarding/writing comparison.",
+    "No query execution, recurring approval, schedule, or real notification was exercised in this trial.",
+    "Numeric conditions were not supplied to these draft cards; the trial does not prove whether authoring those checks would repair the missed notification.",
+    "The earlier zero-call native temporary-path failure remains archived separately."
+  ]
+}

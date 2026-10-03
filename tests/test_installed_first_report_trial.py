@@ -16,6 +16,7 @@ from evaluations.installed_first_report_trial import (
     _normal_public,
     _routes,
     _scan_exact_secrets,
+    _score_preview,
     run_trial,
 )
 from evaluations.recurring_runtime_transfer_cases import cases
@@ -91,6 +92,27 @@ def test_key_scan_rejects_key_without_trailing_newline(tmp_path):
     with pytest.raises(RuntimeError, match="key material"):
         _scan_exact_secrets('{"oops": "sensitive-fixture-value"}', key)
     assert _scan_exact_secrets('{"fine": true}', key)["matches"] == 0
+
+
+def test_recurring_oracle_contribution_format_is_projected(monkeypatch):
+    import copy
+
+    company = cases()[0]
+    period = company["periods"][2]
+    oracle = period["oracle"]
+    analyses = []
+    for truth in oracle["analyses"]:
+        analysis = copy.deepcopy(truth)
+        analysis["status"] = "complete"
+        analysis["comparison"] = {key: truth[key] for key in (
+            "definition", "population", "baseline_start", "baseline_end", "current_start", "current_end")}
+        analyses.append(analysis)
+    submission = {"status": oracle["status"], "outcome": oracle["outcome"],
+                  "recipients": oracle["recipients"], "analyses": analyses}
+    monkeypatch.setattr("evaluations.first_report_trial.native_submission", lambda *args: submission)
+    assert _score_preview({}, company, period)["numeric_and_provenance"]["passed"]
+    submission["analyses"][0]["delta"] += 1
+    assert "delta" in _score_preview({}, company, period)["numeric_and_provenance"]["errors"]
 
 
 def test_offline_setup_and_source_registry_inspect_fixture_mcp(tmp_path):

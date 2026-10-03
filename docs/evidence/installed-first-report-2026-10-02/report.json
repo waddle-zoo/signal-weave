@@ -1,0 +1,51 @@
+{
+  "status": "recorded",
+  "intended_denominator": 3,
+  "results": [
+    {
+      "company": "canyon-freight",
+      "error": "live_attempt_failed",
+      "failed_attempts_retained": true,
+      "paid_attempts": 0
+    },
+    {
+      "company": "helio-support",
+      "error": "live_attempt_failed",
+      "failed_attempts_retained": true,
+      "paid_attempts": 0
+    },
+    {
+      "company": "lattice-energy",
+      "error": "live_attempt_failed",
+      "failed_attempts_retained": true,
+      "paid_attempts": 0
+    }
+  ],
+  "binary_sha256": "e6563b79bbc8948d81e93b777a4148a0df4dd97e2854b8f890497217e7b8f96e",
+  "paid_attempts": 0,
+  "max_paid_attempts": 6,
+  "events": [
+    {
+      "kind": "company_error",
+      "company": "canyon-freight",
+      "error": "RuntimeError"
+    },
+    {
+      "kind": "company_error",
+      "company": "helio-support",
+      "error": "RuntimeError"
+    },
+    {
+      "kind": "company_error",
+      "company": "lattice-energy",
+      "error": "RuntimeError"
+    }
+  ],
+  "request_count": "unverified_without_returned_telemetry",
+  "all_attempts_retained": true,
+  "artifact_secret_scan": {
+    "checked": true,
+    "matches": 0,
+    "key_file": "apikey_typesafe"
+  }
+}

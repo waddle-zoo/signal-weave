@@ -136,10 +136,11 @@ def _routes(company_id: str, destinations: list[dict[str, Any]]) -> list[dict[st
 def _score_preview(preview: dict[str, Any], company: dict[str, Any], period: dict[str, Any]) -> dict[str, Any]:
     from evaluations.first_report_trial import native_submission
     from evaluations.first_report_trial import score as first_report_score
+    from evaluations.recurring_runtime_trial import _first_report_oracle
 
     try:
         submission = native_submission(preview, company["destinations"])
-        numeric = first_report_score(submission, period["oracle"])
+        numeric = first_report_score(submission, _first_report_oracle(period["oracle"]))
     except (KeyError, TypeError, ValueError, IndexError) as error:
         submission = None
         numeric = {"passed": False, "errors": ["malformed_native_report", type(error).__name__]}
