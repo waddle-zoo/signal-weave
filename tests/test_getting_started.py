@@ -91,6 +91,9 @@ def test_preview_review_distinguishes_execution_from_behavioral_acceptance(task)
     assert "comparison window is not a typed analytical comparison" in review["repair"]
     assert "inspected analytical_comparisons keys" in review["repair"]
     assert "capture_current_sources" in review["retest"]
+    assert "newly returned card ID" in review["retest"]
+    assert "does not replace the current preview or owner approval" in review["retest"]
+    assert "do not stop at a passing evaluation" in review["retest"]
     assert "not independent historical acceptance" in review["retest"]
 
 
@@ -106,6 +109,8 @@ def test_onboarding_preserves_policy_precedence_and_explicit_labels(task):
                for text in guide["boundaries"])
     review = guide["preview_review"]
     assert "owner's original rules" in review["policy_fidelity"]
+    assert "quiet branch" in review["policy_fidelity"]
+    assert "data-repair instructions" in review["policy_fidelity"]
     assert "authorized directory" in review["policy_fidelity"]
     for field in ("expected_delivery_method_keys", "expected_delivery_destinations",
                   "required_evidence_source_keys", "expected_retrieval_refs"):

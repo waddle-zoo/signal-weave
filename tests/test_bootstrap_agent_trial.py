@@ -121,8 +121,12 @@ async def test_missing_owner_review_returns_actionable_steps(tmp_path, public):
     })
     result = await session.call("request_synthetic_owner_approval", {"card_id": drafted["card"]["id"]})
     assert not result["approved"]
-    assert result["next_tools"] == ["get_insight_card", "simulate_insight_card",
-                                     "preview_investigation_report", "request_synthetic_owner_approval"]
+    assert result["next_tools"] == ["get_insight_card", "preview_investigation_report",
+                                     "request_synthetic_owner_approval"]
+    assert result["missing_prerequisites"] == ["get_insight_card", "preview_investigation_report"]
+    assert result["next_actions"] == [
+        {"tool": tool, "arguments": {"card_id": drafted["card"]["id"]}}
+        for tool in result["missing_prerequisites"]]
     assert "missing" in result["reason"]
     assert session.owner_approvals == {}
 

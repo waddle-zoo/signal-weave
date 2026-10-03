@@ -660,7 +660,14 @@ def create_mcp(
     async def discover_insight_sources(
         goal: str,
         adapter: str | None = None,
-        limit: int = 10,
+        limit: Annotated[
+            int,
+            Field(
+                ge=1,
+                le=25,
+                description="Maximum number of bounded authoring candidates (1-25).",
+            ),
+        ] = 10,
         ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Find bounded, Jev-ranked source candidates for an insight goal."""
@@ -1043,7 +1050,14 @@ def create_mcp(
         follow_up_guidance: str | None = None,
         selected_sources: list[SelectedSourceInput] | None = None,
         adapter: str | None = None,
-        limit: int = 10,
+        limit: Annotated[
+            int,
+            Field(
+                ge=1,
+                le=25,
+                description="Maximum number of bounded authoring candidates (1-25).",
+            ),
+        ] = 10,
         title: str | None = None,
         comparison_windows: ComparisonWindows | None = None,
         delivery_methods: CardDeliveryMethods | None = None,
@@ -1138,7 +1152,14 @@ def create_mcp(
         follow_up_guidance: str | None = None,
         selected_sources: list[SelectedSourceInput] | None = None,
         adapter: str | None = None,
-        limit: int = 10,
+        limit: Annotated[
+            int,
+            Field(
+                ge=1,
+                le=25,
+                description="Maximum number of bounded authoring candidates (1-25).",
+            ),
+        ] = 10,
         title: str | None = None,
         comparison_windows: ComparisonWindows | None = None,
         delivery_methods: CardDeliveryMethods | None = None,
@@ -1542,7 +1563,14 @@ def create_mcp(
     async def review_insight_card(
         card_id: str,
         adapter: str | None = None,
-        limit: int = 10,
+        limit: Annotated[
+            int,
+            Field(
+                ge=1,
+                le=25,
+                description="Maximum number of bounded authoring candidates (1-25).",
+            ),
+        ] = 10,
         ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Review a draft's source coverage before a human approves it.

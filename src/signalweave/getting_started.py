@@ -87,6 +87,8 @@ def getting_started(task: GuideTask = "start") -> dict:
             "policy_fidelity": (
                 "Compare the saved card with the owner's original rules, not just your summary. "
                 "Check precedence, exceptions, threshold boundaries, missing-data handling and "
+                "the quiet branch: state what happens when actionable conditions are not met. "
+                "Preserve the owner's data-repair instructions as well as the escalation route. Check "
                 "exact outcome-to-destination mappings. Copy destination identifiers from the "
                 "authorized directory, never retype them from memory. Explain any proposed "
                 "meaning change and obtain owner agreement before testing it."
@@ -120,7 +122,12 @@ def getting_started(task: GuideTask = "start") -> dict:
                 "English policy over available evidence and state the quantitative validation gap."
             ),
             "retest": (
-                "After revision, inspect and preview again. Use evaluate_card_workflow with one "
+                "After revision, inspect and preview again using the newly returned card ID. "
+                "A passing historical evaluation does not replace the current preview or owner approval. "
+                "Keep going through those remaining review steps; do not stop at a passing evaluation. "
+                "If a tool lists missing prerequisites, complete just those steps and retry the handoff. "
+                "Do not draft another card unless policy or source bindings actually need to change. "
+                "Use evaluate_card_workflow with one "
                 "capture_current_sources case for an owner-confirmed current expectation. A single "
                 "case or an agent-proposed expectation is not independent historical acceptance. "
                 "If agreement cannot be established, record the mismatch and keep delivery disabled."

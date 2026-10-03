@@ -25,6 +25,41 @@ def setup_session(tmp_path, public, treatment):
     return session
 
 
+@pytest.mark.parametrize("inspected,previewed,missing", [
+    (False, False, ["get_insight_card", "preview_investigation_report"]),
+    (True, False, ["preview_investigation_report"]),
+    (False, True, ["get_insight_card"]),
+])
+async def test_review_handoff_names_only_missing_current_card_prerequisites(
+    tmp_path, public, inspected, previewed, missing,
+):
+    session = setup_session(tmp_path, public, True)
+    card = {"id": "revised-card", "decision_guidance": "Preserve owner policy"}
+    session.product = AsyncMock(return_value=copy.deepcopy(card))
+    fingerprint = card_fingerprint(card)
+    session.reviewed[card["id"]] = fingerprint if inspected else "old-fingerprint"
+    session.simulated[card["id"]] = fingerprint if previewed else "old-fingerprint"
+    result = await session.call("request_synthetic_owner_approval", {"card_id": card["id"]})
+    assert not result["approved"]
+    assert result["missing_prerequisites"] == missing
+    assert result["next_actions"] == [
+        {"tool": tool, "arguments": {"card_id": "revised-card"}} for tool in missing]
+    assert session.owner_reviewer.await_count == 0
+    assert not session.owner_approvals
+
+
+async def test_successful_owner_handoff_does_not_ask_for_post_approval_notes_mutation(tmp_path, public):
+    session = setup_session(tmp_path, public, True)
+    card = {"id": "current", "decision_guidance": "Preserve owner policy"}
+    session.product = AsyncMock(return_value=copy.deepcopy(card))
+    session.reviewed["current"] = session.simulated["current"] = card_fingerprint(card)
+    result = await session.call("request_synthetic_owner_approval", {"card_id": "current"})
+    assert result["approved"]
+    assert result["missing_prerequisites"] == result["next_actions"] == []
+    assert result["next_tools"] == ["approve_insight_card", "finish_setup"]
+    assert session.owner_reviewer.await_count == 1
+
+
 @pytest.mark.parametrize("mutation", ["bare_key", "different_endpoint", "invented_endpoint", "empty_endpoint"])
 async def test_owner_review_cannot_approve_route_outside_original_directory(tmp_path, public, mutation):
     session = setup_session(tmp_path, public, True)

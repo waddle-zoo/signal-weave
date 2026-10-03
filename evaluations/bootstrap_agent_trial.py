@@ -600,8 +600,12 @@ class ToolSession:
             card_id = arguments["card_id"]
             card = await self.product("get_insight_card", {"card_id": card_id})
             fingerprint = card_fingerprint(card)
-            accepted = (self.reviewed.get(card_id) == fingerprint
-                        and self.simulated.get(card_id) == fingerprint)
+            missing = []
+            if self.reviewed.get(card_id) != fingerprint:
+                missing.append({"tool": "get_insight_card", "arguments": {"card_id": card_id}})
+            if self.simulated.get(card_id) != fingerprint:
+                missing.append({"tool": "preview_investigation_report", "arguments": {"card_id": card_id}})
+            accepted = not missing
             owner_review = None
             if accepted and self.owner_reviewer is not None:
                 owner_review = await self.semantic_owner_review(card)
@@ -609,12 +613,16 @@ class ToolSession:
             decision = {"card_id": card_id, "approved": accepted, "card_digest": fingerprint,
                         "synthetic": True, "policy_correctness_validated": False,
                         "reason": "Inspected stored card and preview; no hidden labels consulted."
-                        if accepted else "Current card inspection and/or preview is missing.",
-                        "next_tools": (["approve_insight_card", "save_notes", "finish_setup"] if accepted
-                                       else ["get_insight_card", "simulate_insight_card", "preview_investigation_report",
-                                             "request_synthetic_owner_approval"])}
+                        if accepted else "Current card prerequisites are missing; complete next_actions for this card and request review again.",
+                        "missing_prerequisites": [item["tool"] for item in missing],
+                        "next_actions": missing,
+                        "next_tools": (["approve_insight_card", "finish_setup"] if accepted
+                                       else [item["tool"] for item in missing] + ["request_synthetic_owner_approval"])}
             if owner_review is not None:
                 decision.update(owner_review=owner_review, reason="Independent simulated owner reviewed original instructions, draft and notes; not actual human approval.")
+                if not accepted:
+                    decision["next_tools"] = ["get_insight_card", "save_notes", "request_synthetic_owner_approval"]
+                    decision["next_actions"] = []
             self.adapter.audit.emit("owner.approval", **decision)
             if accepted:
                 self.owner_approvals[card_id] = self.approval_fingerprint(card)

@@ -33,7 +33,7 @@ from evaluations.bootstrap_scenarios import public_scenario
 from evaluations.codex_trial_transport import codex_episode
 from evaluations.installed_first_report_trial import _file_hash, _git_sha
 
-VERSION = "installed-workflow-v7"
+VERSION = "installed-workflow-v8"
 
 
 def bind_examples(examples: list[dict], card: dict) -> list[dict]:
@@ -185,14 +185,15 @@ def onboarding_instructions(server) -> str:
 
 
 async def run_trial(scenarios, *, binary, key_file, output, jev_budget=100, live=False,
-                    stage_gate=6):
+                    stage_gate=6, fixture_seed=None):
     output.mkdir(parents=True, exist_ok=False, mode=0o700)
     protocol = {"version": VERSION, "code": _git_sha(), "binary_sha256": _file_hash(binary),
                 "harness_sha256": {name: _file_hash(Path(__file__).with_name(name)) for name in
                                    ("installed_workflow_trial.py", "installed_trial_transport.py",
                                     "installed_northstar_cases.py", "installed_transfer_cases.py", "bootstrap_agent_trial.py",
                                     "bootstrap_owner_review.py", "codex_trial_transport.py")},
-                "dataset_sha256": digest(scenarios), "jev_attempt_limit": jev_budget,
+                "dataset_sha256": digest(scenarios), "fixture_seed": fixture_seed,
+                "jev_attempt_limit": jev_budget,
                 "stop_expansion_after_first_cases": stage_gate,
                 "author_model": "gpt-5.6-luna", "owner_review_model": "gpt-5.6-luna",
                 "companies": len(scenarios), "monitoring_cases": sum(len(s["public"]["periods"]) for s in scenarios),
@@ -320,6 +321,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--binary", type=Path, required=True)
     parser.add_argument("--seed-dir", type=Path)
+    parser.add_argument("--seed", type=int, help="Transfer fixture seed; defaults to the recorded regression seed.")
     parser.add_argument("--suite", choices=["northstar", "transfer"], default="northstar")
     parser.add_argument("--company-index", action="append", type=int)
     parser.add_argument("--output", type=Path, required=True)
@@ -333,21 +335,23 @@ def main():
     if not 1 <= args.jev_budget <= 250:
         parser.error("budget must be between 1 and 250")
     if args.suite == "northstar":
-        if args.seed_dir is None or args.company_index is not None:
-            parser.error("northstar requires --seed-dir and does not accept --company-index")
+        if args.seed_dir is None or args.company_index is not None or args.seed is not None:
+            parser.error("northstar requires --seed-dir and does not accept --company-index or --seed")
         from evaluations.installed_northstar_cases import build_northstar
         scenarios = [build_northstar(args.seed_dir, smoke=args.smoke)]
     else:
         if args.smoke or args.seed_dir is not None:
             parser.error("transfer uses --company-index for bounded probes, not --smoke/--seed-dir")
-        from evaluations.installed_transfer_cases import build_transfers
-        scenarios = build_transfers()
+        from evaluations.installed_transfer_cases import DEFAULT_SEED, build_transfers
+        args.seed = DEFAULT_SEED if args.seed is None else args.seed
+        scenarios = build_transfers(args.seed)
         if args.company_index is not None:
             if len(set(args.company_index)) != len(args.company_index) or any(i not in range(len(scenarios)) for i in args.company_index):
                 parser.error("Company indices must be unique and in range")
             scenarios = [s for i, s in enumerate(scenarios) if i in args.company_index]
     report = asyncio.run(run_trial(scenarios, binary=args.binary.resolve(), key_file=args.key_file,
-                                   output=args.output, jev_budget=args.jev_budget, live=args.live))
+                                   output=args.output, jev_budget=args.jev_budget, live=args.live,
+                                   fixture_seed=args.seed))
     print(json.dumps({k: v for k, v in report.items() if k not in {"companies", "protocol"}}, indent=2))
 
 

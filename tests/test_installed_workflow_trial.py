@@ -1,4 +1,6 @@
 import copy
+import json
+import sys
 
 import pytest
 
@@ -12,6 +14,24 @@ from evaluations.installed_workflow_trial import (
     score_native,
 )
 from tests.test_northstar_growth_history_trial import _write_seed_dir
+
+
+def test_offline_cli_freezes_selected_transfer_seed_without_inference(tmp_path, monkeypatch):
+    from evaluations.installed_transfer_cases import build_transfers
+    from evaluations.installed_workflow_trial import main
+
+    binary = tmp_path / "offline-binary"
+    binary.write_text("hash-only; not executed without --live")
+    output = tmp_path / "frozen"
+    monkeypatch.setattr(sys, "argv", ["trial", "--suite", "transfer", "--seed", "20261007",
+                                   "--company-index", "3", "--binary", str(binary),
+                                   "--output", str(output)])
+    main()
+    protocol = json.loads((output / "protocol.json").read_text())
+    assert protocol["fixture_seed"] == 20261007
+    assert protocol["companies"] == 1 and protocol["monitoring_cases"] == 3
+    assert protocol["live"] is False
+    assert json.loads((output / "frozen-scenarios.json").read_text()) == [build_transfers(20261007)[3]]
 
 
 @pytest.fixture
