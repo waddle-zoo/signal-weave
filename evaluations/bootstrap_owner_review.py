@@ -233,6 +233,17 @@ def project_source_context(source_context: dict | None) -> dict:
                 key: _bounded_text(comparison[key], f"comparison.{key}", required=True)
                 for key in COMPARISON_DESCRIPTION_FIELDS if key in comparison
             }
+            # Preserve explicit adapter declarations, not inferred/defaulted assurances.
+            if "coverage" in comparison:
+                coverage = comparison["coverage"]
+                if type(coverage) is not str or coverage not in ("complete", "partial", "unknown"):
+                    raise ValueError("comparison.coverage must be complete, partial or unknown")
+                descriptor["coverage"] = coverage
+            for field in ("comparable", "disjoint_segments"):
+                if field in comparison:
+                    if type(comparison[field]) is not bool:
+                        raise ValueError(f"comparison.{field} must be boolean")
+                    descriptor[field] = comparison[field]
             if descriptor["key"] in seen:
                 raise ValueError("Duplicate comparison descriptor key")
             seen.add(descriptor["key"])

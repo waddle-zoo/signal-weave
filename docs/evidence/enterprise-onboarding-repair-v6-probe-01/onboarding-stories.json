@@ -1,0 +1,170 @@
+[
+  {
+    "company": "Juniper Trail Retail",
+    "brief": "Keep an eye on what we actually keep from sales. If it takes a hit, tell our commerce lead what changed, not just that a chart moved.",
+    "arm": "luna_bi",
+    "status": "complete",
+    "error": null,
+    "onboarding_seconds": 59.79117154201958,
+    "guide_calls": 0,
+    "author_tool_calls": 10,
+    "tool_histogram": {
+      "list_catalog": 1,
+      "ask_owner": 4,
+      "inspect_source": 2,
+      "save_notes": 1,
+      "request_synthetic_owner_approval": 1,
+      "finish_setup": 1
+    },
+    "first_successful_preview_tool_ordinal": null,
+    "first_preview_wall_time": null,
+    "first_preview_time_limit": "Trace has per-tool duration, not timestamps covering intervening model time; do not infer time-to-first-value.",
+    "owner_interview": [
+      {
+        "topic": "metric_scope",
+        "answer": {
+          "answer": "Sales means gross completed-order revenue minus refunds posted during the same reporting week, excluding tax and shipping. Do not use booked order value or subtract refunds twice.",
+          "known": true,
+          "topic": "metric_scope"
+        }
+      },
+      {
+        "topic": "materiality",
+        "answer": {
+          "answer": "Notify the business destination for a net-sales decline of at least 10% against the prior complete week. Otherwise ignore. Missing definitions or incomplete postings require insufficient_data to the data destination, not a business alert.",
+          "known": true,
+          "topic": "materiality"
+        }
+      },
+      {
+        "topic": "routing",
+        "answer": {
+          "answer": "business destination: team-1ad71a8723aa9325e8c1; data destination: team-66fa81ad827deebeb98f. Only these routes are authorized; no destructive actions.",
+          "known": true,
+          "topic": "routing"
+        }
+      },
+      {
+        "topic": "data_gaps",
+        "answer": {
+          "answer": "Ask for a corrected export or a versioned definition when needed. I cannot reconstruct missing rows, infer causation, or tell you a period's correct answer.",
+          "known": true,
+          "topic": "data_gaps"
+        }
+      }
+    ],
+    "owner_reviews": [
+      {
+        "approved": true,
+        "reasons": [
+          "Matches the owner policy: net_sales is gross completed-order revenue minus same-week refunds, excluding tax and shipping, in USD; booked order value and double-counted refunds are excluded.",
+          "Preserves the exact comparison and threshold: current reporting week versus the previous complete UTC week; notify only for a decline of at least 10%, otherwise ignore.",
+          "Preserves missing-data behavior and routing: incomplete definitions, postings, or population produce insufficient_data to team-66fa81ad827deebeb98f, while qualifying declines notify only team-1ad71a8723aa9325e8c1.",
+          "Uses only the authorized destinations, prohibits reconstruction and causal inference, and keeps the requested reporting details and shadow-only status without adding business conditions."
+        ],
+        "review_episode": {
+          "error": null,
+          "exit_code": 0,
+          "foreign_tools": [],
+          "response_timeout_seconds": 90,
+          "seconds": 23.081833750009537,
+          "status": "complete",
+          "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+          "tool_calls": 1,
+          "transport": "codex_cli",
+          "wall_time_overrun_seconds": 0.0
+        }
+      }
+    ],
+    "tool_errors": [],
+    "alternate_scope_read_count": 0,
+    "saved_notes": "Juniper Trail Retail policy for future monitoring (no current-period measurements retained):\n- Metric: net_sales, defined as gross completed-order revenue minus refunds posted in the same UTC reporting week; exclude tax and shipping; never use booked order value; do not subtract refunds twice.\n- Comparison: previous complete reporting week versus current reporting week.\n- Materiality: notify only for a net-sales decline of at least 10% versus the prior complete week; otherwise ignore.\n- If metric definitions are missing or postings/population are incomplete, outcome is insufficient_data and route to data destination; do not reconstruct rows, infer causation, or fill missing populations with zero.\n- Authorized routes only: business destination key team-1ad71a8723aa9325e8c1; data destination key team-66fa81ad827deebeb98f.\n- Valid source knowledge: company_mcp|resource-ecdbd08bf01b01f59a60 (Commerce weekly completed transactions by channel, positive refunds, USD) and company_mcp|resource-41613ec6c871dbcf61da (refund posting week matches transaction feed; refunds already included). Reinspect current-period evidence before any measurement.\n- Acceptance status: unassessed; this synthetic review authorizes shadow setup only, never production delivery or unattended delivery readiness.\n- Required monitoring reporting: include net_sales.baseline/current/delta in USD when applicable, web contribution in USD when supported, and honest claim tags/citations; include mix and within effects for rate comparisons when relevant (not applicable unless a rate comparison is performed)."
+  },
+  {
+    "company": "Juniper Trail Retail",
+    "brief": "Keep an eye on what we actually keep from sales. If it takes a hit, tell our commerce lead what changed, not just that a chart moved.",
+    "arm": "luna_signalweave_jev",
+    "status": "complete",
+    "error": null,
+    "onboarding_seconds": 97.44504554197192,
+    "guide_calls": 1,
+    "author_tool_calls": 21,
+    "tool_histogram": {
+      "get_signalweave_guide": 1,
+      "list_insight_cards": 1,
+      "list_catalog": 1,
+      "ask_owner": 4,
+      "inspect_source": 2,
+      "onboard_insight_card": 2,
+      "review_insight_card": 2,
+      "preview_investigation_report": 2,
+      "save_notes": 1,
+      "request_synthetic_owner_approval": 2,
+      "get_insight_card": 1,
+      "approve_insight_card": 1,
+      "finish_setup": 1
+    },
+    "first_successful_preview_tool_ordinal": 14,
+    "first_preview_wall_time": null,
+    "first_preview_time_limit": "Trace has per-tool duration, not timestamps covering intervening model time; do not infer time-to-first-value.",
+    "owner_interview": [
+      {
+        "topic": "metric_scope",
+        "answer": {
+          "answer": "Sales means gross completed-order revenue minus refunds posted during the same reporting week, excluding tax and shipping. Do not use booked order value or subtract refunds twice.",
+          "known": true,
+          "topic": "metric_scope"
+        }
+      },
+      {
+        "topic": "materiality",
+        "answer": {
+          "answer": "Notify the business destination for a net-sales decline of at least 10% against the prior complete week. Otherwise ignore. Missing definitions or incomplete postings require insufficient_data to the data destination, not a business alert.",
+          "known": true,
+          "topic": "materiality"
+        }
+      },
+      {
+        "topic": "routing",
+        "answer": {
+          "answer": "business destination: team-1ad71a8723aa9325e8c1; data destination: team-66fa81ad827deebeb98f. Only these routes are authorized; no destructive actions.",
+          "known": true,
+          "topic": "routing"
+        }
+      },
+      {
+        "topic": "data_gaps",
+        "answer": {
+          "answer": "Ask for a corrected export or a versioned definition when needed. I cannot reconstruct missing rows, infer causation, or tell you a period's correct answer.",
+          "known": true,
+          "topic": "data_gaps"
+        }
+      }
+    ],
+    "owner_reviews": [
+      {
+        "approved": true,
+        "reasons": [
+          "Matches the owner policy: company-wide net sales are completed-order revenue minus same-week refunds, excluding tax and shipping; it compares complete UTC weeks.",
+          "Routes the >=10% decline only to the authorized business destination, ignores smaller declines, and routes incomplete definitions or postings only to the authorized data destination.",
+          "The card contains the required notify and insufficient_data delivery entries, adds no unsupported causal rule or extra recipient, and does not require a route for ignore."
+        ],
+        "review_episode": {
+          "error": null,
+          "exit_code": 0,
+          "foreign_tools": [],
+          "response_timeout_seconds": 90,
+          "seconds": 16.33859995799139,
+          "status": "complete",
+          "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+          "tool_calls": 1,
+          "transport": "codex_cli",
+          "wall_time_overrun_seconds": 0.0
+        }
+      }
+    ],
+    "tool_errors": [],
+    "alternate_scope_read_count": 0,
+    "saved_notes": "Juniper Trail Retail policy: Monitor company-wide weekly net_sales in UTC. Net sales = gross completed-order revenue minus refunds posted in the same reporting week, excluding tax and shipping; never use booked order value or subtract refunds twice. Compare current complete week to previous complete week. Notify only for decline of at least 10% relative to baseline via destination key team-1ad71a8723aa9325e8c1. Otherwise ignore. If definitions or postings are incomplete, outcome insufficient_data and route only to team-66fa81ad827deebeb98f. Owner says request corrected export or versioned definition; do not reconstruct rows or infer causation. Fixed sources: company_mcp|resource-ecdbd08bf01b01f59a60 (Commerce weekly current company-wide completed transaction amounts by channel) and company_mcp|resource-41613ec6c871dbcf61da (Returns operations posting policy; refunds already included in transaction rows). Exclude pilot, partner, sandbox, archive, planning, orders-bookings, and chart variants. Report net_sales.baseline/current/delta in USD and web contribution when the applicable population is complete; label claims honestly. Acceptance history is unavailable; acceptance remains unassessed. This card is for delivery-disabled caller-managed shadow evaluation only, not unattended delivery or production approval."
+  }
+]

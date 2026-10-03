@@ -4,15 +4,34 @@ Status: implementation advanced; proof gate **not complete**. This updates the
 working acceptance criteria for the existing local-first adoption goal; it does
 not declare the earlier failed trials passed.
 
-Latest [agent-onboarding regression](enterprise-onboarding-journeys-2026-10-02.md):
+Latest [six-company v6 cohort](enterprise-onboarding-repair-v6-cohort.md): both
+arms completed 6/6 setups and 18/18 later reports. Treatment achieved 16/18 native
+outcomes/routes and 17/18 strict final reports, versus 18/18 strict reports for
+Luna alone. Luna corrected two treatment outcomes. A blinded internal retail
+review found a material population-completeness overclaim. The gate remains
+**not complete**, with no demonstrated comparative advantage.
+Post-run review qualified the finance native comparison: its decisive reporting
+cutoff reached Luna/the oracle but not Jev. Retain the failed handoff and original
+counts; fix explicit source-context parity before another model comparison.
+
+The [63-call component investigation](jev-v6-state-diagnostics.md) retained both
+unchanged requests and explicit missing-evidence controls. A candidate semantics
+clarification improved quiet outcomes but weakened missing-evidence judgments and
+left required checks unresolved; it is not being promoted to production.
+Reporting now exposes literal source boundaries, and onboarding guidance calls
+for explicit preview-behavior and recurring-source-coverage review. Those changes
+pass offline contracts; their end-to-end benefit still requires a new frozen run.
+
+Earlier [agent-onboarding regression](enterprise-onboarding-journeys-2026-10-02.md):
 six synthetic businesses, messy 24-asset catalogs and 48 planned setup/monitoring
 episodes. Treatment completed **1/6 setups and 3/18 later reports**, versus Luna's
 6/6 and 18/18. All six treatment agents read the guide and obtained a preview;
 approval/tool-contract failures prevented five from becoming usable workflows.
-The run used 99 live Jev attempts with one provider error, without exhausting its
-budget. A native review/approval fingerprint defect reproduces offline. The
-simulated owner evaluator also conflates source checks with business-policy
-changes, limiting causal attribution. The goal remains **not complete**.
+That run used 99 live Jev attempts with one provider error, without exhausting its
+budget. A native review/approval fingerprint defect reproduced offline at that
+revision. Its simulated owner evaluator also conflated source checks with
+business-policy changes, limiting attribution of those historical failures.
+Subsequent repairs and current qualifications are recorded in the v6 cohort.
 
 Earlier [recurring evidence](recurring-runtime-trial.md): three transfer cards approved;
 12/12 structured results and reviewer-usable reports in both arms after completing
@@ -94,15 +113,26 @@ That next proof step was run in the
 [six-company onboarding regression](enterprise-onboarding-journeys-2026-10-02.md)
 and failed. It let the user's agent read the guide, discover supported assets,
 and draft from public owner policy without private labels or expert card edits.
-Next: repair the demonstrated source-selection/approval handoffs and agent-facing
-evaluation input contract, and separate the research owner's policy review from
-source-evidence validation before another small frozen prospective run.
+Those failures motivated the subsequent source-selection/approval handoff,
+evaluation-contract and research owner-review repairs; current proof gaps are
+described in the v6 qualification below.
 Require first-report review and owner-labeled threshold-crossing, quiet and
-missing-evidence acceptance cases before approval. Preserve numeric units and
+missing-evidence acceptance cases before unattended-use certification. Explicit
+shadow approval can remain unassessed. Preserve numeric units and
 source bindings, inspect actual numeric-condition results, and verify the final
 outcome as well as the math. A numeric check alone is not proof of correct routing.
 Compare the resulting recurring reports against the same agent without
 SignalWeave before claiming better quality, lower cost or less human work.
+
+The v6 work repaired those setup handoffs sufficiently for six fresh agent-authored
+cards to reach shadow monitoring, not to satisfy the behavioral gate. The next
+acceptance work must make the authoring agent consume actual preview/evaluation
+failures, preserve supporting sources needed for explanations, and verify source
+meaning is equally available to native Jev and the reporting agent. Independent
+current or historical examples must be explicitly supplied or reviewed, not
+invented from a model's output or taken from future test labels. Keep all previous
+failures and account for extra onboarding review costs. Do not merely rerun the
+same study hoping for higher confidence scores.
 
 ## Acceptance criteria
 

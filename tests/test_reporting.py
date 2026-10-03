@@ -6,7 +6,13 @@ import pytest
 from pydantic import ValidationError
 
 from signalweave.diagnostics import AnalyticalComparison, SegmentContribution, analyze_comparison
-from signalweave.models import InsightCard, InsightResult, InvestigationMode, ResourceSnapshot
+from signalweave.models import (
+    Evidence,
+    InsightCard,
+    InsightResult,
+    InvestigationMode,
+    ResourceSnapshot,
+)
 from signalweave.numeric_conditions import NumericCondition
 from signalweave.reporting import (
     build_investigation_report,
@@ -178,6 +184,157 @@ def test_complete_report_contains_only_recomputed_numeric_facts_and_provenance()
     assert report.provenance[0].definition.startswith("Completed activity")
     assert report.model_dump()["status"] == "complete"
     assert "caus" in " ".join(report.limitations).lower()
+
+
+@pytest.mark.parametrize("blank", ["", " \t\n"])
+def test_undeclared_source_bounds_do_not_downgrade_complete_comparisons(blank):
+    resources = healthy_resources()
+    for field in ("scope", "population", "grain"):
+        setattr(resources[0].contract, field, blank)
+    resources[0].description = "Complete company-wide population."
+    resources[0].metadata = {"population": "All customers", "scope": "Global"}
+    configured, evaluated = card(), result(complete_analysis())
+    before = deepcopy((configured, evaluated, resources))
+    report = build_investigation_report(configured, evaluated, resources)
+
+    assert report.status == "complete"
+    assert report.outcome == evaluated.outcome.value
+    assert report.blockers == report.warnings == []
+    assert next(c for c in report.coverage if c.kind == "source").status == "satisfied"
+    assert (report.numeric_claims[0].baseline, report.numeric_claims[0].current,
+            report.numeric_claims[0].delta) == (100, 80, -20)
+    assert report.provenance[0].population == "Eligible population"
+    assert report.provenance[0].coverage == "complete"
+    boundary = report.source_boundaries[0]
+    assert boundary.source_status == "healthy"
+    for field in ("scope", "population", "grain"):
+        assert getattr(boundary, field) is None
+        assert getattr(boundary, field + "_status") == "undeclared"
+    assert (configured, evaluated, resources) == before
+    assert type(report).model_validate_json(report.model_dump_json()) == report
+    markdown = render_investigation_report(report)
+    assert "population: undeclared" in markdown
+    assert "do not establish population completeness" in markdown
+    assert "Measurements are provisional" not in markdown
+
+
+def test_source_bounds_preserve_literal_text_and_remain_separate_from_comparisons():
+    resources = healthy_resources()
+    resources[0].contract.scope = " Pilot <west> | [only] "
+    resources[0].contract.population = " Pilot accounts "
+    resources[0].contract.grain = "daily"
+    report = build_investigation_report(card(), result(complete_analysis()), resources)
+
+    boundary = report.source_boundaries[0]
+    assert boundary.model_dump() == {
+        "source_key": "sales", "adapter": "test", "resource": "query:sales",
+        "scope": " Pilot <west> | [only] ", "population": " Pilot accounts ",
+        "grain": "daily", "scope_status": "declared", "population_status": "declared",
+        "grain_status": "declared", "source_status": "healthy",
+    }
+    assert report.status == "complete"
+    assert report.provenance[0].population == "Eligible population"
+    markdown = render_investigation_report(report)
+    assert "Pilot &lt;west&gt; \\| \\[only\\]" in markdown
+    assert "population: declared —  Pilot accounts " in markdown
+    assert "Comparison coverage applies only to its stated population" in markdown
+
+
+def test_source_boundaries_do_not_require_structured_annotations_for_raw_evidence():
+    configured = card()
+    configured.sources[0].required_comparison_keys = []
+    snapshot = healthy_resources()[0]
+    snapshot.analytical_comparisons = []
+    snapshot.evidence = [Evidence(
+        source_key="sales", statement="Scoped export", values={"count": 0},
+    )]
+    report = build_investigation_report(configured, result(), [snapshot])
+    assert report.status == "partial"  # Existing absence of validated quantitative analysis.
+    assert not report.blockers
+    assert not report.warnings
+    assert report.source_boundaries[0].population_status == "undeclared"
+
+
+@pytest.mark.parametrize("resources", [None, []])
+def test_source_bounds_without_snapshots_are_not_returned(resources):
+    report = build_investigation_report(card(), result(complete_analysis()), resources)
+    boundary = report.source_boundaries[0]
+    assert boundary.source_status is None
+    for field in ("scope", "population", "grain"):
+        assert getattr(boundary, field) is None
+        assert getattr(boundary, field + "_status") == "not_returned"
+    if resources is None:
+        assert report.status == "partial"
+        assert report.numeric_claims
+    else:
+        assert report.status == "blocked"
+        assert any(b.code == "required_source_missing" for b in report.blockers)
+        assert not report.numeric_claims
+
+
+@pytest.mark.parametrize("source_status", ["failed", "stale", "ambiguous", "unknown"])
+def test_declared_source_bounds_do_not_override_source_health_blocks(source_status):
+    resources = healthy_resources(source_status=source_status)
+    resources[0].contract.population = "Eligible population"
+    report = build_investigation_report(card(), result(complete_analysis()), resources)
+    assert report.status == "blocked"
+    assert any(b.code == "required_source_failed" for b in report.blockers)
+    assert report.source_boundaries[0].source_status == source_status
+    assert report.source_boundaries[0].population_status == "declared"
+    assert report.source_boundaries[0].scope_status == "undeclared"
+    assert report.numeric_claims[0].delta == -20
+    assert "Measurements are provisional" in render_investigation_report(report)
+
+
+@pytest.mark.parametrize("invalid", ["identity", "duplicate", "foreign"])
+def test_source_bounds_require_unique_authorized_snapshot_identity(invalid):
+    resource = healthy_resources()[0]
+    resource.contract.population = "Do not attribute this population to another source"
+    if invalid == "identity":
+        resource.resource = "query:other"
+    elif invalid == "foreign":
+        resource.source_key = "other"
+    resources = [resource, deepcopy(resource)] if invalid == "duplicate" else [resource]
+    report = build_investigation_report(card(), result(complete_analysis()), resources)
+    assert report.status == "blocked"
+    assert not report.numeric_claims
+    assert len(report.source_boundaries) == 1
+    boundary = report.source_boundaries[0]
+    assert boundary.source_key == "sales" and boundary.resource == "query:sales"
+    assert boundary.population is None
+    assert boundary.population_status == "not_returned"
+
+
+def test_legacy_report_without_source_boundaries_still_validates():
+    report = build_investigation_report(card(), result(complete_analysis()), healthy_resources())
+    payload = report.model_dump(mode="json")
+    del payload["source_boundaries"]
+    restored = type(report).model_validate(payload)
+    assert restored.source_boundaries == []
+    assert restored.numeric_claims == report.numeric_claims
+    assert restored.status == "complete"
+
+
+@pytest.mark.parametrize("source_status", ["healthy", "failed"])
+def test_revoked_source_annotations_do_not_reach_report_or_writer(source_status):
+    from examples.investigation_agent.briefing import build_briefing_writer_input
+
+    resources = healthy_resources(source_status=source_status)
+    resources[0].contract.authorized = False
+    for field in ("scope", "population", "grain"):
+        setattr(resources[0].contract, field, "REVOKED_ANNOTATION_CANARY")
+    report = build_investigation_report(card(), result(complete_analysis()), resources)
+    assert report.status == "blocked"
+    assert any(b.code == "required_source_failed" for b in report.blockers)
+    assert report.source_boundaries[0].population_status == "not_returned"
+    assert report.source_boundaries[0].source_status is None
+    assert report.numeric_claims == []
+    assert report.provenance == []
+    markdown = render_investigation_report(report)
+    writer = build_briefing_writer_input(report, markdown, [])
+    assert "REVOKED_ANNOTATION_CANARY" not in report.model_dump_json()
+    assert "REVOKED_ANNOTATION_CANARY" not in markdown
+    assert "REVOKED_ANNOTATION_CANARY" not in str(writer)
 
 
 @pytest.mark.parametrize(
@@ -417,6 +574,7 @@ def test_bounded_investigation_selected_source_is_authorized_and_bound():
 
     assert report.status == "complete"
     assert {claim.source_key for claim in report.numeric_claims} == {"sales", "diagnostic"}
+    assert {item.source_key for item in report.source_boundaries} == {"sales", "diagnostic"}
 
 
 def test_notify_route_without_configuration_and_duplicate_selection_block():

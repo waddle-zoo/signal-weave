@@ -1,0 +1,50 @@
+{
+  "scope": "Offline archive integrity and recorded cohort accounting; no rerun or new narrative scoring.",
+  "acceptance": "not_passed",
+  "raw_cohort_sha256": "1afa885b5849b809a8afbc04c97105f8088529622ad9f84f84f647f27ad902a4",
+  "source_revision": "7703b0d48f80b74c300d997563c708584a00dd50",
+  "wrapper_sha256": "acace49c57e3c2a4fbe7ef1c6fc28f3af534d4336bddd409fc2a4c2fdbd54658",
+  "validated": {
+    "component_report_and_trace_sha256_match_cohort_and_exports": true,
+    "component_configs_match_reports_and_cohort": true,
+    "frozen_source_fingerprints_and_wrapper_hashes_match": true,
+    "unique_company_arm_phase_period_records": 48,
+    "distinct_companies": 6,
+    "onboarding_records": 12,
+    "monitoring_records": 36,
+    "component_company_sets_disjoint": true,
+    "request_response_provider_and_id_and_episode_match": true,
+    "remaining_archive_source_files_byte_verified": 54,
+    "retail_archived_report_and_trace_byte_verified": true
+  },
+  "recorded_invocations": {
+    "retail": {"jev_attempts": 17, "luna_invocations": 10, "owner_reviews_included_in_luna": 2, "total": 27},
+    "remaining": {"jev_attempts": 75, "luna_invocations": 53, "owner_reviews_included_in_luna": 13, "total": 128},
+    "cohort": {"jev_attempts": 92, "luna_invocations": 63, "owner_reviews_included_in_luna": 15, "total": 155},
+    "matched_trace_responses": 155,
+    "rejected_owner_reviews_retained": 3,
+    "recorded_provider_failures": 0,
+    "unknown_usage_attempts": 0,
+    "jev_cap": 144,
+    "budget_censored": false,
+    "limit": "Luna counts are observed Codex CLI invocations. Internal API requests and retries are not observed. Report api_attempts is the Jev budget counter."
+  },
+  "arms": {
+    "luna_bi": {"setup_complete": 6, "setup_denominator": 6, "reports_complete": 18, "monitoring_denominator": 18, "final_strict": 18, "final_outcome_and_recipient_correct": 18, "native_routing": null},
+    "luna_signalweave_jev": {"setup_complete": 6, "setup_denominator": 6, "reports_complete": 18, "monitoring_denominator": 18, "final_strict": 17, "final_outcome_and_recipient_correct": 18, "native_outcome_and_recipient_correct": 16, "agent_changed_native_outcome": 2}
+  },
+  "retained_failure_refs": {
+    "strict": [{"scenario_id": "company-b06fc32e549ebf0def71", "period_id": "period-2c1a7a0c2bb49acae7b7", "missing_numeric_fact": "latency.rollout_lead_minutes", "missing_required_ref": "company_mcp|resource-a42da6d8d97166482a33", "error": "missing_explanation_claim_type"}],
+    "native_routing": [
+      {"scenario_id": "company-b06fc32e549ebf0def71", "period_id": "period-baf6f19a4f2be5acba8c"},
+      {"scenario_id": "company-e24793cbc57b1a3ea566", "period_id": "period-19f49b39f86506d4064a"}
+    ],
+    "retail_narrative": "../enterprise-onboarding-repair-v6-probe-01/narrative-review.md#review-002--qualified"
+  },
+  "limits": [
+    "Raw cohort.json retains narrative_gate=unassessed. The separately retained retail review already identifies a material population/completeness overclaim; no cohort narrative pass is inferred.",
+    "All records are retained, but the predeclared treatment acceptance gate did not pass. Native correctness covers routing and strict scoring covers structured fields.",
+    "Two staged processes with distinct rebased clocks and dataset subsets; known-family synthetic regression, not a fresh holdout despite the recorded split label.",
+    "No comparative advantage, measured subscription cost, real-user usability, real connector validation, or actual unattended delivery claim."
+  ]
+}

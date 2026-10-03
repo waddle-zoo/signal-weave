@@ -58,7 +58,7 @@ def _writer_report(report: InvestigationReport) -> dict[str, Any]:
         "card_id", "title", "outcome", "purpose", "intended_audience", "next_step",
         "status", "numeric_claims", "provenance", "limitations", "unresolved_questions",
         "intended_routes_not_delivered", "blockers", "warnings", "evaluator",
-        "judgments", "numeric_conditions",
+        "judgments", "numeric_conditions", "source_boundaries",
     )
     compact = {field: native[field] for field in fields if field != "intended_routes_not_delivered"}
     compact["intended_routes_not_delivered"] = [
@@ -103,6 +103,10 @@ def build_briefing_writer_input(
             "uncertain interpretation from known source failures: do not call a document "
             "missing or conflicting merely because a semantic assessment is unresolved. "
             "Do not claim the support probability measures a causal explanation's likelihood. "
+            "Source boundaries copy literal contract annotations: undeclared annotations do not "
+            "establish missing records, and healthy/satisfied sources do not establish population "
+            "completeness. Keep each comparison's coverage within its stated population; do not "
+            "extrapolate it to the whole source or company. "
             "Cite exact source_key/comparison_key references in the caller's output schema. "
             "Independent review remains necessary."
         ),

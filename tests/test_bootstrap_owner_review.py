@@ -11,6 +11,8 @@ from test_codex_trial_transport import fake_episode as fake_episode
 from evaluations import bootstrap_owner_review as reviewer
 from evaluations import codex_trial_transport as transport
 from evaluations.bootstrap_agent_trial import MODEL, Audit, RequestBudget, canonical, digest
+from signalweave.diagnostics import AnalyticalComparison
+from signalweave.models import ResourceSnapshot
 
 REAL_CODEX_EPISODE = transport.codex_episode
 COMPLETE = {"status": "complete", "error": None, "exit_code": 0,
@@ -390,6 +392,72 @@ def test_inspected_comparisons_not_authored_requirements_verify_binding(inputs):
 def test_uninspected_numeric_source_is_not_verified_by_card(inputs):
     with pytest.raises(ValueError, match="must be inspected"):
         reviewer.review_payload(**inputs, source_context={"inspected_sources": []})
+
+
+@pytest.fixture
+def comparison_source_context():
+    comparison = AnalyticalComparison.model_validate({
+        "key": "comparison-a", "metric": "latency", "definition": "Eligible request latency",
+        "population": "Customer requests", "unit": "ratio", "dimension": "channel",
+        "kind": "rate", "baseline_start": "2026-08-01T00:00:00Z",
+        "baseline_end": "2026-08-08T00:00:00Z", "current_start": "2026-08-08T00:00:00Z",
+        "current_end": "2026-08-15T00:00:00Z", "coverage": "complete",
+        "comparable": True, "disjoint_segments": True, "query_refs": ["QUERY_CANARY"],
+        "baseline_total": {"numerator": 82, "denominator": 100},
+        "current_total": {"numerator": 28, "denominator": 100},
+        "segments": [{"segment": "SEGMENT_CANARY", "baseline": {"numerator": 82, "denominator": 100},
+                      "current": {"numerator": 28, "denominator": 100}}],
+    })
+    snapshot = ResourceSnapshot(
+        source_key="source-a", adapter="company_mcp", resource="metric:latency", title="Latency",
+        analytical_comparisons=[comparison], metadata={"private_label": "PRIVATE_CANARY"},
+    ).model_dump(mode="json")
+    snapshot["ref"] = "company_mcp|metric:latency"
+    return {"inspected_sources": [snapshot]}
+
+
+@pytest.mark.parametrize("baseline", [False, True])
+@pytest.mark.parametrize("coverage", ["complete", "partial", "unknown"])
+@pytest.mark.parametrize("flag", [False, True])
+def test_comparison_flags_from_real_snapshot_are_preserved_without_measurements(
+    inputs, comparison_source_context, baseline, coverage, flag,
+):
+    if baseline:
+        inputs["artifact"].pop("card")
+    comparison = comparison_source_context["inspected_sources"][0]["analytical_comparisons"][0]
+    comparison.update(coverage=coverage, comparable=flag, disjoint_segments=not flag)
+    original = copy.deepcopy(comparison_source_context)
+    payload = reviewer.review_payload(**inputs, source_context=comparison_source_context)
+    projected = payload["source_context"]["inspected_sources"][0]["analytical_comparisons"][0]
+    assert projected == {
+        **{key: comparison[key] for key in reviewer.COMPARISON_DESCRIPTION_FIELDS},
+        "coverage": coverage, "comparable": flag, "disjoint_segments": not flag,
+    }
+    assert "CANARY" not in canonical(payload)
+    assert payload["owner_policy"]["owner_answers"] == inputs["owner_answers"]
+    assert comparison_source_context == original
+    comparison["comparable"] = not flag
+    assert digest(payload) != digest(reviewer.review_payload(**inputs, source_context=comparison_source_context))
+
+
+def test_comparison_projection_does_not_synthesize_omitted_flags(comparison_source_context):
+    comparison = comparison_source_context["inspected_sources"][0]["analytical_comparisons"][0]
+    for field in ("coverage", "comparable", "disjoint_segments"):
+        comparison.pop(field)
+    projected = reviewer.project_source_context(comparison_source_context)
+    assert projected["inspected_sources"][0]["analytical_comparisons"][0] == {
+        key: comparison[key] for key in reviewer.COMPARISON_DESCRIPTION_FIELDS
+    }
+
+
+@pytest.mark.parametrize("field, invalid", [
+    (field, value) for field in ("comparable", "disjoint_segments")
+    for value in (None, 0, 1, "true", "false", [], {})
+] + [("coverage", value) for value in (None, True, 0, "all", "Complete", " complete ", [], {})])
+def test_comparison_flags_reject_invalid_types_and_enums(comparison_source_context, field, invalid):
+    comparison_source_context["inspected_sources"][0]["analytical_comparisons"][0][field] = invalid
+    with pytest.raises(ValueError, match=rf"comparison\.{field}"):
+        reviewer.project_source_context(comparison_source_context)
 
 
 def test_source_context_is_optional_and_policy_remains_separate(inputs):

@@ -1,0 +1,57 @@
+{
+  "full_report_sha256": "c4f03f75375b467fd463302717f01d57bbe612df5affdb0dd4f02242eaab9bb5",
+  "trace_sha256": "1160c910a37ec1936b4aa09d09fb0f06f6b75dd4a8ee53a12d04390913424ebb",
+  "planned_episodes": 40,
+  "retained_episodes": 40,
+  "integrity": {
+    "expected_episodes": 40,
+    "expected_onboardings": 10,
+    "expected_monitoring_per_arm": 15,
+    "validated": true
+  },
+  "onboarding_stories": 10,
+  "jev_attempts": 75,
+  "jev_failed_attempts": 0,
+  "codex_invocations": 53,
+  "codex_api_error_events": 0,
+  "failed_author_monitor_episodes": 0,
+  "failed_owner_review_invocations": 0,
+  "event_kind_counts": {
+    "api.request": 128,
+    "codex.event": 956,
+    "tool.result": 302,
+    "source.read": 119,
+    "review.request": 13,
+    "api.response": 128,
+    "review.result": 13,
+    "review.binding": 13,
+    "owner.approval": 8,
+    "system.evaluation": 15
+  },
+  "blindness_limit": "Arm metadata removed, but output style can reveal treatment. Give reviewers only blind-review.json, never review-key.json or this directory.",
+  "budget_censored": false,
+  "native_correctness": {
+    "luna_bi": {
+      "planned_monitoring_periods": 15,
+      "completed_agent_reports": 15,
+      "native_decisions_available": 0,
+      "native_decisions_missing": 15,
+      "native_metric_applicable": false,
+      "native_outcome_and_recipient_correct": 0,
+      "agent_changed_native_outcome": 0
+    },
+    "luna_signalweave_jev": {
+      "planned_monitoring_periods": 15,
+      "completed_agent_reports": 15,
+      "native_decisions_available": 15,
+      "native_decisions_missing": 0,
+      "native_metric_applicable": true,
+      "native_outcome_and_recipient_correct": 13,
+      "agent_changed_native_outcome": 2
+    }
+  },
+  "acceptance_status": "not_passed",
+  "narrative_gate": "unassessed",
+  "ledger_limit": "Hashes record supplied artifacts; they do not authenticate historical execution or code.",
+  "limit": "Scripted owner interviews with an actual model agent. Not real users, enterprise certification, or independent peer review."
+}

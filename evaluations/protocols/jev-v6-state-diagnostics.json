@@ -1,0 +1,244 @@
+{
+  "seed": 20261003,
+  "repetitions": 3,
+  "cases": [
+    {
+      "request_id": 38,
+      "variants": [
+        {
+          "name": "original"
+        },
+        {
+          "name": "omit_blank_annotations",
+          "edits": [
+            {
+              "op": "remove",
+              "path": [
+                "sources",
+                0,
+                "contract",
+                "population"
+              ]
+            },
+            {
+              "op": "remove",
+              "path": [
+                "sources",
+                0,
+                "contract",
+                "scope"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "one_affected_region",
+          "edits": [
+            {
+              "op": "replace",
+              "path": [
+                "sources",
+                0,
+                "evidence",
+                0,
+                "values",
+                "affected_regions"
+              ],
+              "old": 0,
+              "value": 1
+            },
+            {
+              "op": "replace",
+              "path": [
+                "evidence",
+                0,
+                "values",
+                "affected_regions"
+              ],
+              "old": 0,
+              "value": 1
+            }
+          ]
+        },
+        {
+          "name": "missing_regions",
+          "edits": [
+            {
+              "op": "remove",
+              "path": [
+                "sources",
+                0,
+                "evidence",
+                0,
+                "values",
+                "affected_regions"
+              ]
+            },
+            {
+              "op": "remove",
+              "path": [
+                "evidence",
+                0,
+                "values",
+                "affected_regions"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "explicit_clock",
+          "edits": [
+            {
+              "op": "add",
+              "path": [
+                "evaluation_as_of"
+              ],
+              "value": "2026-10-24T05:47:10.135718+00:00"
+            },
+            {
+              "op": "add",
+              "path": [
+                "evaluation_clock_semantics"
+              ],
+              "value": "Authoritative reference time for this evaluation. Source capture timestamps are not measurement intervals. Do not invent reporting cutoffs or population completeness from this clock."
+            }
+          ]
+        },
+        {
+          "name": "isolated_outcome",
+          "question": "outcome"
+        },
+        {
+          "name": "isolated_watch_0",
+          "question": "watch_0"
+        },
+        {
+          "name": "isolated_watch_1",
+          "question": "watch_1"
+        },
+        {
+          "name": "isolated_watch_2",
+          "question": "watch_2"
+        },
+        {
+          "name": "missing_population",
+          "edits": [
+            {
+              "op": "remove",
+              "path": [
+                "sources",
+                0,
+                "evidence",
+                0,
+                "values",
+                "cluster_population"
+              ]
+            },
+            {
+              "op": "remove",
+              "path": [
+                "evidence",
+                0,
+                "values",
+                "cluster_population"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "request_id": 74,
+      "variants": [
+        {
+          "name": "original"
+        },
+        {
+          "name": "omit_blank_annotations",
+          "edits": [
+            {
+              "op": "remove",
+              "path": [
+                "sources",
+                0,
+                "contract",
+                "population"
+              ]
+            },
+            {
+              "op": "remove",
+              "path": [
+                "sources",
+                0,
+                "contract",
+                "scope"
+              ]
+            },
+            {
+              "op": "remove",
+              "path": [
+                "sources",
+                1,
+                "contract",
+                "population"
+              ]
+            },
+            {
+              "op": "remove",
+              "path": [
+                "sources",
+                1,
+                "contract",
+                "scope"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "explicit_clock",
+          "edits": [
+            {
+              "op": "add",
+              "path": [
+                "evaluation_as_of"
+              ],
+              "value": "2026-10-17T05:47:10.135718+00:00"
+            },
+            {
+              "op": "add",
+              "path": [
+                "evaluation_clock_semantics"
+              ],
+              "value": "Authoritative reference time for this evaluation. Source capture timestamps are not measurement intervals. Do not invent reporting cutoffs or population completeness from this clock."
+            }
+          ]
+        },
+        {
+          "name": "missing_watermark",
+          "edits": [
+            {
+              "op": "remove",
+              "path": [
+                "sources",
+                1,
+                "evidence",
+                0,
+                "values",
+                "watermark"
+              ]
+            },
+            {
+              "op": "remove",
+              "path": [
+                "evidence",
+                1,
+                "values",
+                "watermark"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

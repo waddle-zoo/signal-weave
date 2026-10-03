@@ -1,0 +1,437 @@
+{
+  "verification": "All archive bytes, after decompression where applicable, match the source artifacts. JSON and JSONL parse.",
+  "files": [
+    {
+      "archive_path": "company-80529fa10aa0f418949b/luna_signalweave_jev/cards.json.gz",
+      "source_path": "artifacts/enterprise-onboarding-repair-v6-remaining-01/company-80529fa10aa0f418949b/luna_signalweave_jev/cards.json",
+      "source_sha256": "8711cab00d0d78e64a4dff0c808e597bd61df0275eb64979ac872a51bb5019b5",
+      "archive_sha256": "d7eddf934bd0baa4ac8126400f5b49fcbece892f63003b80ed2e81ea36ed545e",
+      "source_bytes": 71170,
+      "archive_bytes": 4727
+    },
+    {
+      "archive_path": "company-8693b9d35dd65e7cede9/luna_signalweave_jev/cards.json.gz",
+      "source_path": "artifacts/enterprise-onboarding-repair-v6-remaining-01/company-8693b9d35dd65e7cede9/luna_signalweave_jev/cards.json",
+      "source_sha256": "50c2758192b6f777fbfd6d331516f2af826cb3784ca5d7a122d5d1351ba9fb75",
+      "archive_sha256": "e0f3166f67ead8caa6c440aed6a36622f0ded7ba4bb5095fed3c54595d84ff97",
+      "source_bytes": 169906,
+      "archive_bytes": 10205
+    },
+    {
+      "archive_path": "company-954c2623285a0ce6506e/luna_signalweave_jev/cards.json.gz",
+      "source_path": "artifacts/enterprise-onboarding-repair-v6-remaining-01/company-954c2623285a0ce6506e/luna_signalweave_jev/cards.json",
+      "source_sha256": "69a29f457638a29f0008aa867b87ccb49af36d9839780b615d0ab7df36adfde9",
+      "archive_sha256": "f03e2a76c20c867883764995f61ac042fb07a27c32c03712599c1cb87946b150",
+      "source_bytes": 95860,
+      "archive_bytes": 5447
+    },
+    {
+      "archive_path": "company-b06fc32e549ebf0def71/luna_signalweave_jev/cards.json.gz",
+      "source_path": "artifacts/enterprise-onboarding-repair-v6-remaining-01/company-b06fc32e549ebf0def71/luna_signalweave_jev/cards.json",
+      "source_sha256": "75688fb5faf9710e16c102974d2b69786d2bdd1269a04f5550001457407807ef",
+      "archive_sha256": "33699ada89b942f4d3a8f6ce643e3d90581e066eaeff083ef417439f007af70a",
+      "source_bytes": 205826,
+      "archive_bytes": 13397
+    },
+    {
+      "archive_path": "company-e24793cbc57b1a3ea566/luna_signalweave_jev/cards.json.gz",
+      "source_path": "artifacts/enterprise-onboarding-repair-v6-remaining-01/company-e24793cbc57b1a3ea566/luna_signalweave_jev/cards.json",
+      "source_sha256": "3f8f7d17ae0ebd4bfb92749f4c516555b0ecf1a1ef0bd1d8cb2613877e73d08b",
+      "archive_sha256": "71b5ac61b5f29c23ce279cd5ee133c2fdee0bbf54688d2199e5a9ceeff41a93e",
+      "source_bytes": 233877,
+      "archive_bytes": 13855
+    },
+    {
+      "archive_path": "config.json",
+      "source_path": "artifacts/enterprise-onboarding-repair-v6-remaining-01/config.json",
+      "source_sha256": "f56ef57370380d4d437314449b6a27e2a4aed6121d8e815d20a4f8004502f72b",
+      "archive_sha256": "f56ef57370380d4d437314449b6a27e2a4aed6121d8e815d20a4f8004502f72b",
+      "source_bytes": 6581,
+      "archive_bytes": 6581
+    },
+    {
+      "archive_path": "episodes/episode-001.json.gz",
+      "source_path": "artifacts/enterprise-onboarding-repair-v6-remaining-01/episode-001.json",
+      "source_sha256": "f38568b19ef98c4324e0c33dd64ca2aef8d6467cb6e4ec60ff3b640085957199",
+      "archive_sha256": "0be69881bb45baf3938723e8d11d49df9acb2f806d46e5f8c550a22a4789593a",
+      "source_bytes": 8302,
+      "archive_bytes": 2754
+    },
+    {
+      "archive_path": "episodes/episode-002.json.gz",
+      "source_path": "artifacts/enterprise-onboarding-repair-v6-remaining-01/episode-002.json",
+      "source_sha256": "bbaaeb2a62a57337b73c6c3f8601439c428e03bcc6dcd6b2f68a1bad0d42c599",
+      "archive_sha256": "3571b5827d9e16e647f5b5a491ad1357b769779b75a25de0c28668667b31593a",
+      "source_bytes": 5811,
+      "archive_bytes": 2035
+    },
+    {
+      "archive_path": "episodes/episode-003.json.gz",
+      "source_path": "artifacts/enterprise-onboarding-repair-v6-remaining-01/episode-003.json",
+      "source_sha256": "f82aff9e121f41ebf00f37b65309cdc21a27b2de9ae9942303051e08c25001b3",
+      "archive_sha256": "fb1bc84d3c203df2e3815f17fd52c4149fe0d8f00b56f7ae1c2b10ae27e27a16",
+      "source_bytes": 64123,
+      "archive_bytes": 8175
+    },
+    {
+      "archive_path": "episodes/episode-004.json.gz",
+      "source_path": "artifacts/enterprise-onboarding-repair-v6-remaining-01/episode-004.json",
+      "source_sha256": "56d33f6fc132c0c535d45259e9afdac15defc1323dcc8a2303661798255f34ab",
+      "archive_sha256": "b0b20dc9780e2d61ed1f29b65bd65b85e81f0fe0a314f34b8127bfca5d7ba10d",
+      "source_bytes": 6874,
+      "archive_bytes": 2294
+    },
+    {
+      "archive_path": "episodes/episode-005.json.gz",
+      "source_path": "artifacts/enterprise-onboarding-repair-v6-remaining-01/episode-005.json",
+      "source_sha256": "8b32038bafa90904d36e9d457ea7801da7522e637183c24a02747e5f066539e0",
+      "archive_sha256": "6c611328109a8d35154b70855f2b845f8245ccd2888a867363f8c938944df10e",
+      "source_bytes": 6493,
+      "archive_bytes": 2232
+    },
+    {
+      "archive_path": "episodes/episode-006.json.gz",
+      "source_path": "artifacts/enterprise-onboarding-repair-v6-remaining-01/episode-006.json",
+      "source_sha256": "f6c7ab166f402dcdb68a8defa1bf16e688f35252bc710741dfe803780057979a",
+      "archive_sha256": "945d76c3abc0c832524ad42354a5b8f1f7d9d3fad20b6d6a29c3b17b108a2ef7",
+      "source_bytes": 62467,
+      "archive_bytes": 8030
+    },
+    {
+      "archive_path": "episodes/episode-007.json.gz",
+      "source_path": "artifacts/enterprise-onboarding-repair-v6-remaining-01/episode-007.json",
+      "source_sha256": "49029b3a68e6dff7df7c17880e7c396e9140a0b9645001adc598b03a52535d48",
+      "archive_sha256": "9bbc3531a8cf31e8d6ca9d5d87a1d5a535185ad972f113b94a894b18d08fe209",
+      "source_bytes": 64175,
+      "archive_bytes": 8384
+    },
+    {
+      "archive_path": "episodes/episode-008.json.gz",
+      "source_path": "artifacts/enterprise-onboarding-repair-v6-remaining-01/episode-008.json",
+      "source_sha256": "801453896ae15ae1059f73a67b5196a61a83f3d10fd4855e663346f020408569",
+      "archive_sha256": "e8574ca4e6b8e570116589c0546b1a9579989e9c5029aea32ac46b8812242075",
+      "source_bytes": 5652,
+      "archive_bytes": 2175
+    },
+    {
+      "archive_path": "episodes/episode-009.json.gz",
+      "source_path": "artifacts/enterprise-onboarding-repair-v6-remaining-01/episode-009.json",
+      "source_sha256": "07cd1064c8d0c713c0d71ce9c395b9bc516a26099f2e7b66b56e12a71ef73c97",
+      "archive_sha256": "5bc9bc83924f7c1ccec28a88423352d2b31685a4c8e3c0503b1736f5225cb61e",
+      "source_bytes": 8455,
+      "archive_bytes": 2468
+    },
+    {
+      "archive_path": "episodes/episode-010.json.gz",
+      "source_path": "artifacts/enterprise-onboarding-repair-v6-remaining-01/episode-010.json",
+      "source_sha256": "70601c889f8995820a77acf02e811643dd0bf50288da3899e3077080a8fd3f1d",
+      "archive_sha256": "eeba647d1b9af6f085180b1f0e242130c18f8e114e7d944c59005f18328ad403",
+      "source_bytes": 5425,
+      "archive_bytes": 2091
+    },
+    {
+      "archive_path": "episodes/episode-011.json.gz",
+      "source_path": "artifacts/enterprise-onboarding-repair-v6-remaining-01/episode-011.json",
+      "source_sha256": "c73ca5637b330ef4a936989dac7122f04e53be69a0a3f7a45f46a4030ec2903b",
+      "archive_sha256": "a459b0b82923e456cc6ce25f17290a701bc3670f67ddd71b207e8b70cf957ccd",
+      "source_bytes": 61533,
+      "archive_bytes": 8100
+    },
+    {
+      "archive_path": "episodes/episode-012.json.gz",
+      "source_path": "artifacts/enterprise-onboarding-repair-v6-remaining-01/episode-012.json",
+      "source_sha256": "a0a0d66e1a5dc6df87b2dbccceb9e24bbaf42014abb4fdf672647c8805479cfd",
+      "archive_sha256": "4b449387aab7bd4e2e3985e02f779ff70d584c688dbd16ef78300ef33112c417",
+      "source_bytes": 5662,
+      "archive_bytes": 1872
+    },
+    {
+      "archive_path": "episodes/episode-013.json.gz",
+      "source_path": "artifacts/enterprise-onboarding-repair-v6-remaining-01/episode-013.json",
+      "source_sha256": "3522dd130548fe43c857ce7059a3e7017de780e7557cf56f259d7ff50b0d1c87",
+      "archive_sha256": "1c3f937bd0a886bfe062349d9b6e544d4cc8afb0427f0e0d3ec1ede72b56cd2d",
+      "source_bytes": 4794,
+      "archive_bytes": 1841
+    },
+    {
+      "archive_path": "episodes/episode-014.json.gz",
+      "source_path": "artifacts/enterprise-onboarding-repair-v6-remaining-01/episode-014.json",
+      "source_sha256": "cb1e4006217a001189e5009de8800a445656e62b25e4379707424cf73d692daa",
+      "archive_sha256": "34f4014be540ef5702b7a93c89efaf91f7639ac1b926d246c8710fd17be46689",
+      "source_bytes": 63560,
+      "archive_bytes": 8399
+    },
+    {
+      "archive_path": "episodes/episode-015.json.gz",
+      "source_path": "artifacts/enterprise-onboarding-repair-v6-remaining-01/episode-015.json",
+      "source_sha256": "37134284314551ea441a43910213838243fd4d4a7c00999796d0c64f34d6d448",
+      "archive_sha256": "82515f04ade50c77b9c3591f7de7cdd9b9aec9c2b7b1685ab79a66fb9a79e89f",
+      "source_bytes": 63362,
+      "archive_bytes": 8254
+    },
+    {
+      "archive_path": "episodes/episode-016.json.gz",
+      "source_path": "artifacts/enterprise-onboarding-repair-v6-remaining-01/episode-016.json",
+      "source_sha256": "8f552f87396eabe60dc4a45b07feb36991829eca5385864f38ff4111099fda1a",
+      "archive_sha256": "a009bc10884536197ab4bd1f8241e27ce7c0c0d7cdd373b164e4fb27ec1bd590",
+      "source_bytes": 5631,
+      "archive_bytes": 1914
+    },
+    {
+      "archive_path": "episodes/episode-017.json.gz",
+      "source_path": "artifacts/enterprise-onboarding-repair-v6-remaining-01/episode-017.json",
+      "source_sha256": "72521773aaa8cbd7a45e3ca21c300dcb3451c148ca54ca110b3c649f8314fbe4",
+      "archive_sha256": "64c2f346f868bd67c25971b2945fa775372651a2d7f796c64bb9ea86f018bd8d",
+      "source_bytes": 5083,
+      "archive_bytes": 1913
+    },
+    {
+      "archive_path": "episodes/episode-018.json.gz",
+      "source_path": "artifacts/enterprise-onboarding-repair-v6-remaining-01/episode-018.json",
+      "source_sha256": "33487018d60091d19974a03c84702324e2bde381f95ad9bc76e6a3101ffde984",
+      "archive_sha256": "d1fe97bc617d637d513e57e32fe69457edabfb76984b98cabd03635544c267c5",
+      "source_bytes": 7982,
+      "archive_bytes": 2452
+    },
+    {
+      "archive_path": "episodes/episode-019.json.gz",
+      "source_path": "artifacts/enterprise-onboarding-repair-v6-remaining-01/episode-019.json",
+      "source_sha256": "542f6fb071a92d0022baefdea048ccd40d18496efa6e0a00851907a1a30ea99e",
+      "archive_sha256": "15baa34a8db70128023ec2ded3e620bac4a1bfe85c53c4d135f0028bb6bdcf6c",
+      "source_bytes": 5775,
+      "archive_bytes": 2007
+    },
+    {
+      "archive_path": "episodes/episode-020.json.gz",
+      "source_path": "artifacts/enterprise-onboarding-repair-v6-remaining-01/episode-020.json",
+      "source_sha256": "5a41f34d3e7ce4b5f3cbee3c69abd7fb922eb27e99335f3afeb7e1f5b194d37c",
+      "archive_sha256": "50ee0987ca559559d2b3f444de0f4241b0efbd7856b2a73ebcb8417b4309ad9c",
+      "source_bytes": 59520,
+      "archive_bytes": 7596
+    },
+    {
+      "archive_path": "episodes/episode-021.json.gz",
+      "source_path": "artifacts/enterprise-onboarding-repair-v6-remaining-01/episode-021.json",
+      "source_sha256": "cff3fff881bbec54f457487e1e5ebe620b6b582f98158e6e426bb2220a1f77e7",
+      "archive_sha256": "726804e917db78ba8e78929b2076476a4774e58fb19365b2e1c8d8e45b82cc35",
+      "source_bytes": 60737,
+      "archive_bytes": 7526
+    },
+    {
+      "archive_path": "episodes/episode-022.json.gz",
+      "source_path": "artifacts/enterprise-onboarding-repair-v6-remaining-01/episode-022.json",
+      "source_sha256": "01bf32a5f536182696ee066e46a9fb1a33b448e98f5bc44a2aaa95211ca90047",
+      "archive_sha256": "4730bacc58a27d88c6e6f6cd88e0fb224a18507dfda8659d8e0a6bd7c6108842",
+      "source_bytes": 4845,
+      "archive_bytes": 1887
+    },
+    {
+      "archive_path": "episodes/episode-023.json.gz",
+      "source_path": "artifacts/enterprise-onboarding-repair-v6-remaining-01/episode-023.json",
+      "source_sha256": "fb94a0de8a35126ebf771667059c19c84b1f5dece7f9111337c9cad232fb875f",
+      "archive_sha256": "e4e67ad89a10ee7678fbcdfcbfa307acdfb4a706e1a900c96555a879c51c6600",
+      "source_bytes": 5455,
+      "archive_bytes": 1932
+    },
+    {
+      "archive_path": "episodes/episode-024.json.gz",
+      "source_path": "artifacts/enterprise-onboarding-repair-v6-remaining-01/episode-024.json",
+      "source_sha256": "eac35a1df5d759500b480e5340fd621b2d29882c6fb5fc8d5b45f4ba3cd745b7",
+      "archive_sha256": "50ac095916b89facf3267fa8e4143f5d8a20f82ce40e8e92667c85c4881432c7",
+      "source_bytes": 60674,
+      "archive_bytes": 7511
+    },
+    {
+      "archive_path": "episodes/episode-025.json.gz",
+      "source_path": "artifacts/enterprise-onboarding-repair-v6-remaining-01/episode-025.json",
+      "source_sha256": "75e1b2b8673605b65c48a94cf207a7818fe86c2ee366bca9bf78f1abbff87806",
+      "archive_sha256": "2bac279c80d5281a4772a82580c5b0f66264e4895402afe0789feda1e1c9de2b",
+      "source_bytes": 5686,
+      "archive_bytes": 2075
+    },
+    {
+      "archive_path": "episodes/episode-026.json.gz",
+      "source_path": "artifacts/enterprise-onboarding-repair-v6-remaining-01/episode-026.json",
+      "source_sha256": "84a7477416c767eb288584e34a68ef96900f303dd8ed59064ffe21fb9fc29ba8",
+      "archive_sha256": "b2168bcba8942f39cf0ee141d958f59f749825fde81b1fd6c95b77611c0f62c9",
+      "source_bytes": 4657,
+      "archive_bytes": 1722
+    },
+    {
+      "archive_path": "episodes/episode-027.json.gz",
+      "source_path": "artifacts/enterprise-onboarding-repair-v6-remaining-01/episode-027.json",
+      "source_sha256": "3f040c7d56ee3e373ea6dc0fc32667c37a8933c0e2aca532d5aa95d6a3b6ff21",
+      "archive_sha256": "da040c970546833548f4d5de503d203e234c013534fa571e59816da7443721d0",
+      "source_bytes": 30915,
+      "archive_bytes": 5519
+    },
+    {
+      "archive_path": "episodes/episode-028.json.gz",
+      "source_path": "artifacts/enterprise-onboarding-repair-v6-remaining-01/episode-028.json",
+      "source_sha256": "50a08160e41ca50dd9af3e43cb86f4576cabe6260492901d93c063b844df9848",
+      "archive_sha256": "de34dda53a02a2846da75ef2517f9633d5bd0c15a9eb5b1172adb95dd3823606",
+      "source_bytes": 4169,
+      "archive_bytes": 1752
+    },
+    {
+      "archive_path": "episodes/episode-029.json.gz",
+      "source_path": "artifacts/enterprise-onboarding-repair-v6-remaining-01/episode-029.json",
+      "source_sha256": "047c55f84f4c7660843559a17007fdcf063fa040b9e3889d74fa98b16599d2ea",
+      "archive_sha256": "c2d7d7ef0571a8fa602b6d3b0571398f61b8784090cc11f86d992268c5b110ae",
+      "source_bytes": 4460,
+      "archive_bytes": 1744
+    },
+    {
+      "archive_path": "episodes/episode-030.json.gz",
+      "source_path": "artifacts/enterprise-onboarding-repair-v6-remaining-01/episode-030.json",
+      "source_sha256": "c18e4eb8ca9011ef443dac84177c6804e043ad365d1123502757783f1a17fdcc",
+      "archive_sha256": "c57fda2fefd0dcd99032bbddf237ec7f7a9ad3390bd5bae327f8cbc431aa8685",
+      "source_bytes": 28310,
+      "archive_bytes": 5305
+    },
+    {
+      "archive_path": "episodes/episode-031.json.gz",
+      "source_path": "artifacts/enterprise-onboarding-repair-v6-remaining-01/episode-031.json",
+      "source_sha256": "e3f89145a1b8046e52cb136d0c6e9a5bcea82e8f0d4573c330d69939c47fba03",
+      "archive_sha256": "35fbc3239b1eae882d23edd9328ac8f08753008d52d255feb505aa241e20d837",
+      "source_bytes": 30134,
+      "archive_bytes": 5503
+    },
+    {
+      "archive_path": "episodes/episode-032.json.gz",
+      "source_path": "artifacts/enterprise-onboarding-repair-v6-remaining-01/episode-032.json",
+      "source_sha256": "cc5573261982c9eac374f1e86e4354224e3919887fdf77f432613f6e1d7e50ef",
+      "archive_sha256": "27d416ed18142eb35b67b4a6a1994c50b19e892f32c9fbfb7993eb7fd8822a27",
+      "source_bytes": 5115,
+      "archive_bytes": 1914
+    },
+    {
+      "archive_path": "episodes/episode-033.json.gz",
+      "source_path": "artifacts/enterprise-onboarding-repair-v6-remaining-01/episode-033.json",
+      "source_sha256": "346c57e514bff67d5def99baa821c5ae3706375b36e345f59fbb01933048789a",
+      "archive_sha256": "871f82eb4d376e5465c272d006b602aa50db984a3e46247df2f49cecf4aaea1a",
+      "source_bytes": 5819,
+      "archive_bytes": 2101
+    },
+    {
+      "archive_path": "episodes/episode-034.json.gz",
+      "source_path": "artifacts/enterprise-onboarding-repair-v6-remaining-01/episode-034.json",
+      "source_sha256": "193401c75dbd246e7778bbe5f4bef9b51c5cc405a4528014602ce6dc6763b90b",
+      "archive_sha256": "271407dd38f08d2ab67ca61581a2aba19135f62d68dad7d978c48399838a1b1e",
+      "source_bytes": 7104,
+      "archive_bytes": 2569
+    },
+    {
+      "archive_path": "episodes/episode-035.json.gz",
+      "source_path": "artifacts/enterprise-onboarding-repair-v6-remaining-01/episode-035.json",
+      "source_sha256": "200bf96336335704b7b072978b13e41d30aeb5653945d6cbb4f513fbb80aa61f",
+      "archive_sha256": "974c8598c2ca27757c118211b7e38dcce93d9ee10584ed006ad63e06433b8ab6",
+      "source_bytes": 5828,
+      "archive_bytes": 2268
+    },
+    {
+      "archive_path": "episodes/episode-036.json.gz",
+      "source_path": "artifacts/enterprise-onboarding-repair-v6-remaining-01/episode-036.json",
+      "source_sha256": "63e806a057f9dbbe75d41b7628467a23b8104e11a482eb080c22dbad3bdf3759",
+      "archive_sha256": "d2c26bd68c0423935687c873f5c61bb96e4e7c4e5f94ec1e00bf32d47b95987f",
+      "source_bytes": 59294,
+      "archive_bytes": 7592
+    },
+    {
+      "archive_path": "episodes/episode-037.json.gz",
+      "source_path": "artifacts/enterprise-onboarding-repair-v6-remaining-01/episode-037.json",
+      "source_sha256": "4eef250b99d3f96bc1a0561570b17a04c725316fce14ccc3d3d216477e7d6e1d",
+      "archive_sha256": "a8a96b4a6351ced7f05a149c7d086ad37edf542742541c6ad18bfe1935415e3b",
+      "source_bytes": 50334,
+      "archive_bytes": 6807
+    },
+    {
+      "archive_path": "episodes/episode-038.json.gz",
+      "source_path": "artifacts/enterprise-onboarding-repair-v6-remaining-01/episode-038.json",
+      "source_sha256": "94bfeed2522ad68976dc2b068c1dd57c41e1b501514e297c7bd0e8869b1d05b2",
+      "archive_sha256": "fc5a805a6fea6a554e315ffddccdf7c780d9d80ea6070e07c7a1e91fcffd6a03",
+      "source_bytes": 6790,
+      "archive_bytes": 2352
+    },
+    {
+      "archive_path": "episodes/episode-039.json.gz",
+      "source_path": "artifacts/enterprise-onboarding-repair-v6-remaining-01/episode-039.json",
+      "source_sha256": "4413dc6c0a2c2fc740044ee61f59aa88d955fde9ec634690e845bb18902b2f15",
+      "archive_sha256": "377e49a28566cc8986be490592893d0c880a2168bd792dc97feb6fb422e1dca0",
+      "source_bytes": 6950,
+      "archive_bytes": 2375
+    },
+    {
+      "archive_path": "episodes/episode-040.json.gz",
+      "source_path": "artifacts/enterprise-onboarding-repair-v6-remaining-01/episode-040.json",
+      "source_sha256": "a85de450707d107ef1e6c6e0ef3d26f391728fe22926b07df6e4119ecd24d7b7",
+      "archive_sha256": "ca73e5a0830cd686c67643231786352f91bdcb4ae28acdd43d835921705289d6",
+      "source_bytes": 49932,
+      "archive_bytes": 6871
+    },
+    {
+      "archive_path": "protocol.json",
+      "source_path": "artifacts/enterprise-onboarding-repair-v6-remaining-01.protocol.json",
+      "source_sha256": "10f444db777534ebd0e7604d70560fa1468562422683c874eae6042d1027f13c",
+      "archive_sha256": "10f444db777534ebd0e7604d70560fa1468562422683c874eae6042d1027f13c",
+      "source_bytes": 4980,
+      "archive_bytes": 4980
+    },
+    {
+      "archive_path": "report.json.gz",
+      "source_path": "artifacts/enterprise-onboarding-repair-v6-remaining-01/report.json",
+      "source_sha256": "c4f03f75375b467fd463302717f01d57bbe612df5affdb0dd4f02242eaab9bb5",
+      "archive_sha256": "324198e9720c9905ec9b36843dcdd548d7e7a94cb663b678e2f5af1fe35292fe",
+      "source_bytes": 1081044,
+      "archive_bytes": 126450
+    },
+    {
+      "archive_path": "review/blind-review.json.gz",
+      "source_path": "artifacts/enterprise-onboarding-repair-v6-remaining-01-review/blind-review.json",
+      "source_sha256": "6f49664fdef7439a64b7df12e3f3984469aa248806422034cc398c5cedf55dea",
+      "archive_sha256": "d613b97b19d4e3e6663c7db28889a5491c0d8da4fe117557486371965543e07e",
+      "source_bytes": 3080208,
+      "archive_bytes": 157977
+    },
+    {
+      "archive_path": "review/execution-audit.json.gz",
+      "source_path": "artifacts/enterprise-onboarding-repair-v6-remaining-01-review/execution-audit.json",
+      "source_sha256": "b84f30018ce983cb8e5f42366e59ae0942d8581dbbdee5b0917ca25ac2ae514d",
+      "archive_sha256": "baac231dc65f9ffc21c2fd12608d8cd3e912a47dcc3c48fbc56bd16b0f03bc94",
+      "source_bytes": 1864,
+      "archive_bytes": 793
+    },
+    {
+      "archive_path": "review/onboarding-stories.json.gz",
+      "source_path": "artifacts/enterprise-onboarding-repair-v6-remaining-01-review/onboarding-stories.json",
+      "source_sha256": "5510013dcaba782225454da50e2fecb33ab4d8959019c4a83a0953b90b1f8fd8",
+      "archive_sha256": "4984e338eb2b02518bcb12c05fc9b3c2ad170ee1f06e06d9b6d477fb1b79dda9",
+      "source_bytes": 58636,
+      "archive_bytes": 9931
+    },
+    {
+      "archive_path": "review/results.json.gz",
+      "source_path": "artifacts/enterprise-onboarding-repair-v6-remaining-01-review/results.json",
+      "source_sha256": "265f20d40c4774c492ade74056593ad3a6443fa5734fc9306dbaab22fce9cece",
+      "archive_sha256": "95a4ab31420961fdfe7e0aa622a187c4592e9e1bf28033981d795a6d41e6397f",
+      "source_bytes": 153901,
+      "archive_bytes": 16953
+    },
+    {
+      "archive_path": "review/review-key.json.gz",
+      "source_path": "artifacts/enterprise-onboarding-repair-v6-remaining-01-review/review-key.json",
+      "source_sha256": "4d3ba1829b943bac1cc9bfe5422a760f40431457875cf39462cd89a8a5af14d8",
+      "archive_sha256": "8bd18ddb7042c32f7a0b36c01523ed766b758eafbe081948b671e5398f0e39f6",
+      "source_bytes": 4488,
+      "archive_bytes": 570
+    },
+    {
+      "archive_path": "trace.jsonl.gz",
+      "source_path": "artifacts/enterprise-onboarding-repair-v6-remaining-01/trace.jsonl",
+      "source_sha256": "1160c910a37ec1936b4aa09d09fb0f06f6b75dd4a8ee53a12d04390913424ebb",
+      "archive_sha256": "1fb4303fa9892b6ef8e6506a2e3458322a0a15bf8c19b6733953660aac00f4ed",
+      "source_bytes": 11189273,
+      "archive_bytes": 1076852
+    }
+  ]
+}

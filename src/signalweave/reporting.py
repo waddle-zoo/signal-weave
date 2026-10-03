@@ -24,6 +24,7 @@ ReportStatus = Literal["complete", "partial", "blocked"]
 CoverageStatus = Literal[
     "satisfied", "missing", "unresolved", "insufficient_data", "failed", "not_requested"
 ]
+DeclarationStatus = Literal["declared", "undeclared", "not_returned"]
 
 
 class PeriodProvenance(BaseModel):
@@ -73,6 +74,30 @@ class NumericClaim(BaseModel):
     mix_effect: FiniteFloat | None = None
     contributions: list[SegmentContribution] = Field(default_factory=list)
     provenance_key: str
+
+
+class SourceBoundary(BaseModel):
+    """Literal snapshot contract annotations, independent of analytical coverage.
+
+    Declared means nonblank text was supplied, not that completeness was verified.
+    Undeclared means a blank annotation, not missing measurements. Not_returned
+    means no unique authorized snapshot matching the source identity was supplied;
+    consult source coverage for the retrieval or identity failure. Comparison
+    populations and coverage remain local to their AnalysisProvenance records.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    source_key: str
+    adapter: str
+    resource: str
+    scope: str | None
+    population: str | None
+    grain: str | None
+    scope_status: DeclarationStatus
+    population_status: DeclarationStatus
+    grain_status: DeclarationStatus
+    source_status: Literal["healthy", "stale", "failed", "ambiguous", "unknown"] | None
 
 
 class CoverageRecord(BaseModel):
@@ -133,6 +158,7 @@ class InvestigationReport(BaseModel):
     status: ReportStatus
     numeric_claims: list[NumericClaim] = Field(default_factory=list)
     provenance: list[AnalysisProvenance] = Field(default_factory=list)
+    source_boundaries: list[SourceBoundary] = Field(default_factory=list)
     coverage: list[CoverageRecord] = Field(default_factory=list)
     limitations: list[str] = Field(default_factory=list)
     unresolved_questions: list[str] = Field(default_factory=list)
@@ -494,6 +520,11 @@ def _analysis_snapshot_error(
             "analysis_source_identity_mismatch",
             f"Analysis source {analysis.source_key} does not match the approved adapter/resource.",
         )
+    if not resource.contract.authorized:
+        return (
+            "analysis_source_access_denied",
+            f"Source {analysis.source_key} is not authorized for use in this report.",
+        )
     matches = [
         comparison
         for comparison in resource.analytical_comparisons
@@ -558,6 +589,7 @@ def build_investigation_report(
     ]
     coverage: list[CoverageRecord] = []
     provenance: list[AnalysisProvenance] = []
+    source_boundaries: list[SourceBoundary] = []
     numeric_claims: list[NumericClaim] = []
     authorized_sources, source_authorization_blockers = _authorized_sources(card, result)
     blockers.extend(source_authorization_blockers)
@@ -791,6 +823,30 @@ def build_investigation_report(
                 structured_failed_sources.update(slot.source_keys)
     for source in authorized_sources.values():
         resource = resources_by_key.get(source.key)
+        contract = (
+            resource.contract
+            if resource is not None
+            and resource.contract.authorized
+            and source.key not in duplicate_resource_keys
+            and (resource.adapter, resource.resource) == (source.adapter, source.resource)
+            else None
+        )
+        annotations = {}
+        for field in ("scope", "population", "grain"):
+            value = getattr(contract, field) if contract is not None else ""
+            annotations[field] = value if value.strip() else None
+        source_boundaries.append(SourceBoundary(
+            source_key=source.key, adapter=source.adapter, resource=source.resource,
+            **annotations,
+            **{
+                f"{field}_status": (
+                    "not_returned" if contract is None else
+                    "declared" if value is not None else "undeclared"
+                )
+                for field, value in annotations.items()
+            },
+            source_status=contract.source_status if contract is not None else None,
+        ))
         if source.key in structured_failed_sources:
             status = "failed"
             detail = "A required typed evidence slot reports this source as unavailable."
@@ -809,6 +865,9 @@ def build_investigation_report(
                 f"(expected {source.adapter}:{source.resource}, "
                 f"got {resource.adapter}:{resource.resource})."
             )
+        elif resource is not None and not resource.contract.authorized:
+            status = "failed"
+            detail = "Source access is not authorized."
         elif resource is not None and (resource.error or resource.contract.source_status == "failed"):
             status = "failed"
             detail = resource.error or "Source contract status is failed."
@@ -913,6 +972,7 @@ def build_investigation_report(
         status=status,
         numeric_claims=numeric_claims,
         provenance=provenance,
+        source_boundaries=source_boundaries,
         coverage=coverage,
         limitations=list(dict.fromkeys(limitations)),
         unresolved_questions=list(dict.fromkeys(unresolved)),
@@ -1127,6 +1187,24 @@ def render_investigation_report(report: InvestigationReport) -> str:
             lines.append(f"- `{_md(item.key)}` — {_md(item.status)} ({requirement}): {_md(item.detail)}")
     else:
         lines.append("- No non-semantic coverage records.")
+
+    if report.source_boundaries:
+        lines.extend([
+            "", "### Source boundaries",
+            "Literal source contract annotations. Undeclared annotations do not establish "
+            "missing records. Healthy/satisfied sources do not establish population completeness. "
+            "Comparison coverage applies only to its stated population; do not extrapolate it "
+            "to the whole source or company. Not_returned means no unique authorized matching snapshot "
+            "was supplied; see source coverage.",
+        ])
+        for boundary in report.source_boundaries:
+            annotations = "; ".join(
+                f"{field}: {_md(getattr(boundary, field + '_status'))}"
+                + (f" — {_md(getattr(boundary, field))}"
+                   if getattr(boundary, field) is not None else "")
+                for field in ("scope", "population", "grain")
+            )
+            lines.append(f"- `{_md(boundary.source_key)}` — {annotations}.")
 
     if len(claims) > 3:
         lines.extend(["", "### Additional measured changes"])

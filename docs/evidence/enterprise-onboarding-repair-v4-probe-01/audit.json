@@ -38,9 +38,11 @@
       "warm_seconds": 103.610293
     }
   },
-  "api_attempts": {
-    "total": 16,
+  "recorded_invocations": {
+    "total": 26,
     "jev": 16,
+    "luna": 10,
+    "owner_review_invocations": 2,
     "failed": 0,
     "unknown_usage": 0
   },

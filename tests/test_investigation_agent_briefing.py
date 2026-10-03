@@ -11,6 +11,7 @@ from signalweave.reporting import (
     InvestigationReport,
     NumericClaim,
     PeriodProvenance,
+    SourceBoundary,
 )
 
 
@@ -56,6 +57,7 @@ async def test_writer_input_is_compact_and_uses_recipient_keys() -> None:
         "card_id", "title", "outcome", "purpose", "intended_audience", "next_step",
         "status", "numeric_claims", "provenance", "limitations", "unresolved_questions",
         "intended_routes_not_delivered", "blockers", "warnings", "evaluator", "coverage", "judgments", "numeric_conditions",
+        "source_boundaries",
     }
     assert calls[0]["known_analysis_refs"] == [
         {"source_key": "source-a", "comparison_key": "comparison-a"}
@@ -64,6 +66,22 @@ async def test_writer_input_is_compact_and_uses_recipient_keys() -> None:
     assert result["writer_status"] == "accepted"
     assert result["authoritative"]["report"] == report().model_dump(mode="json")
     assert result["authoritative"]["report_markdown"].startswith("# Native report")
+
+
+def test_writer_receives_undeclared_source_bounds_alongside_complete_comparison():
+    boundary = SourceBoundary(
+        source_key="source-a", adapter="test", resource="query:a",
+        scope=None, population=None, grain="daily", scope_status="undeclared",
+        population_status="undeclared", grain_status="declared", source_status="healthy",
+    )
+    native = report(source_boundaries=[boundary])
+    projected = build_briefing_writer_input(native, "native markdown", ["owner"])
+    assert projected["report"]["source_boundaries"] == [boundary.model_dump(mode="json")]
+    assert projected["report"]["status"] == "complete"
+    assert projected["report"]["provenance"][0]["coverage"] == "complete"
+    assert projected["report"]["provenance"][0]["population"] == "All orders"
+    assert "undeclared annotations do not establish missing records" in projected["instructions"]
+    assert "do not extrapolate it to the whole source or company" in projected["instructions"]
 
 
 @pytest.mark.asyncio

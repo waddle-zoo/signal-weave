@@ -80,4 +80,36 @@ def getting_started(task: GuideTask = "start") -> dict:
         }
     if task not in paths:
         raise ValueError("Choose start, query, report or monitor")
-    return {**common, **paths[task]}
+    result = {**common, **paths[task]}
+    if task in {"report", "monitor"}:
+        result["preview_review"] = {
+            "before_preview": (
+                "From inspected evidence and the owner's rules, independently propose the current "
+                "outcome, recipients and supporting evidence. Ask the owner to confirm a labeled "
+                "example when possible. Do not copy Jev's answer as the expected answer."
+            ),
+            "compare": (
+                "Compare that expectation with the actual preview outcome, routes, required evidence "
+                "slots and explanation coverage. A returned preview is execution, not correctness. "
+                "Unknown required checks need investigation even if the headline outcome looks right."
+            ),
+            "source_coverage": (
+                "For each requested explanation, preserve the inspected supporting source in the "
+                "recurring card or an explicitly approved bounded investigation path. An asset read "
+                "during setup is not automatically fetched on future runs. Corroborating context "
+                "must not become an unconditional action prerequisite unless the owner requires it."
+            ),
+            "repair": (
+                "Resolve missing definitions or ambiguous checks with the owner. A watch should "
+                "state one observable condition, not combine availability, timing and population "
+                "into a vague checklist. Preserve the business rule; never lower confidence, "
+                "remove a genuine requirement, or relabel the example to make it pass."
+            ),
+            "retest": (
+                "After revision, inspect and preview again. Use evaluate_card_workflow with one "
+                "capture_current_sources case for an owner-confirmed current expectation. A single "
+                "case or an agent-proposed expectation is not independent historical acceptance. "
+                "If agreement cannot be established, record the mismatch and keep delivery disabled."
+            ),
+        }
+    return result

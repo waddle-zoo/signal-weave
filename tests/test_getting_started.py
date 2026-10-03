@@ -74,3 +74,22 @@ def test_paths_keep_execution_and_approval_honest():
 async def test_unknown_path_is_rejected_by_mcp_schema(server):
     with pytest.raises(Exception, match="Input should be"):
         await server.call_tool("get_signalweave_guide", {"task": "run-all-company-tools"})
+
+
+@pytest.mark.parametrize("task", ["report", "monitor"])
+def test_preview_review_distinguishes_execution_from_behavioral_acceptance(task):
+    review = getting_started(task)["preview_review"]
+    assert "independently propose" in review["before_preview"]
+    assert "Do not copy Jev's answer" in review["before_preview"]
+    assert "execution, not correctness" in review["compare"]
+    assert "Unknown required checks" in review["compare"]
+    assert "not automatically fetched" in review["source_coverage"]
+    assert "unless the owner requires" in review["source_coverage"]
+    assert "never lower confidence" in review["repair"]
+    assert "capture_current_sources" in review["retest"]
+    assert "not independent historical acceptance" in review["retest"]
+
+
+def test_behavioral_review_does_not_expand_query_or_start_paths():
+    assert "preview_review" not in getting_started("query")
+    assert "preview_review" not in getting_started("start")
