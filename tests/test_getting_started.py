@@ -85,7 +85,11 @@ def test_preview_review_distinguishes_execution_from_behavioral_acceptance(task)
     assert "Unknown required checks" in review["compare"]
     assert "not automatically fetched" in review["source_coverage"]
     assert "unless the owner requires" in review["source_coverage"]
+    assert "including optional sources" in review["source_coverage"]
+    assert "delivery-disabled current preview" in review["source_coverage"]
     assert "never lower confidence" in review["repair"]
+    assert "comparison window is not a typed analytical comparison" in review["repair"]
+    assert "inspected analytical_comparisons keys" in review["repair"]
     assert "capture_current_sources" in review["retest"]
     assert "not independent historical acceptance" in review["retest"]
 

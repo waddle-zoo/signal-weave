@@ -1,8 +1,11 @@
+import copy
 import json
 from datetime import datetime
 
+import pytest
+
 from evaluations.enterprise_onboarding_journeys import journeys
-from evaluations.installed_transfer_cases import build_transfers
+from evaluations.installed_transfer_cases import _target_resource_map, build_transfers
 from signalweave.models import ResourceDescriptor, ResourceSnapshot
 
 
@@ -86,3 +89,98 @@ def test_transfer_adds_finance_reporting_cutoff_to_calibration_and_future_snapsh
         for period in periods:
             for snapshot in period["snapshots"].values():
                 assert snapshot["metadata"]["reporting_cutoff"] == period["as_of"]
+
+
+@pytest.mark.parametrize("seed", [20261004, 20261005, 20262013])
+def test_resource_mapping_preserves_complete_semantic_identity_across_families(seed):
+    target_scenarios = journeys(seed)
+    calibration_scenarios = journeys(seed + 1009)
+    assert len(target_scenarios) == len(calibration_scenarios) == 6
+    for target, calibration in zip(target_scenarios, calibration_scenarios, strict=True):
+        mapping = _target_resource_map(target, calibration)
+        target_by_resource = {
+            item["resource"]: item for item in target["public"]["catalog"]
+        }
+        calibration_by_resource = {
+            item["resource"]: item for item in calibration["public"]["catalog"]
+        }
+        target_snapshots = target["public"]["onboarding"]["snapshots"]
+        calibration_snapshots = calibration["public"]["onboarding"]["snapshots"]
+        assert set(mapping) == set(calibration_by_resource)
+        assert set(mapping.values()) == set(target_by_resource)
+        for calibration_resource, target_resource in mapping.items():
+            source = calibration_by_resource[calibration_resource]
+            expected = target_by_resource[target_resource]
+            assert _semantic_fields(source) == _semantic_fields(expected)
+            source_snapshot = calibration_snapshots[f"company_mcp|{calibration_resource}"]
+            expected_snapshot = target_snapshots[f"company_mcp|{target_resource}"]
+            assert source_snapshot["title"] == expected_snapshot["title"]
+            assert source_snapshot["description"] == expected_snapshot["description"]
+            assert _semantic_fields({**source_snapshot, "kind": source["kind"]}) == (
+                _semantic_fields({**expected_snapshot, "kind": expected["kind"]})
+            )
+            for source_comparison, expected_comparison in zip(
+                source_snapshot.get("analytical_comparisons", []),
+                expected_snapshot.get("analytical_comparisons", []),
+                strict=True,
+            ):
+                for field in (
+                    "key",
+                    "kind",
+                    "metric",
+                    "unit",
+                    "dimension",
+                    "definition",
+                    "population",
+                    "coverage",
+                    "comparable",
+                ):
+                    assert source_comparison.get(field) == expected_comparison.get(field)
+
+
+def _semantic_fields(item):
+    contract = item["contract"]
+    return (
+        item["title"],
+        item["kind"],
+        item["description"],
+        contract["scope"],
+        contract["population"],
+        tuple(contract["metric_names"]),
+        tuple(contract["metric_definitions"]),
+        tuple(contract["available_comparison_windows"]),
+    )
+
+
+def test_resource_mapping_is_invariant_to_catalog_order():
+    target, calibration = journeys(20261004)[5], journeys(20261004 + 1009)[5]
+    expected = _target_resource_map(target, calibration)
+    reordered_target = copy.deepcopy(target)
+    reordered_calibration = copy.deepcopy(calibration)
+    reordered_target["public"]["catalog"].reverse()
+    reordered_calibration["public"]["catalog"] = (
+        reordered_calibration["public"]["catalog"][7:]
+        + reordered_calibration["public"]["catalog"][:7]
+    )
+    assert _target_resource_map(reordered_target, reordered_calibration) == expected
+
+
+def test_resource_mapping_rejects_ambiguous_duplicate_semantic_identity():
+    target, calibration = journeys(20261004)[0], journeys(20261004 + 1009)[0]
+    duplicate = copy.deepcopy(target["public"]["catalog"][0])
+    duplicate["resource"] = "resource-ambiguous-duplicate"
+    target["public"]["catalog"].append(duplicate)
+    with pytest.raises(ValueError, match="ambiguous target semantic identity"):
+        _target_resource_map(target, calibration)
+
+
+@pytest.mark.parametrize("field,value", [
+    ("population", "different eligible population"),
+    ("metric_definitions", ["different metric meaning"]),
+    ("available_comparison_windows", ["year_over_year"]),
+])
+def test_resource_mapping_rejects_contract_drift_despite_identical_title(field, value):
+    target, calibration = journeys(20261004)[0], journeys(20261004 + 1009)[0]
+    target["public"]["catalog"][0]["contract"][field] = value
+    with pytest.raises(ValueError, match="catalog semantic identities differ"):
+        _target_resource_map(target, calibration)

@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import copy
 import hashlib
-from collections import defaultdict
+import json
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -46,22 +46,46 @@ def _with_cutoff(period: dict[str, Any]) -> dict[str, Any]:
     return period
 
 
-def _target_resource_map(target: dict[str, Any], calibration: dict[str, Any]) -> dict[str, str]:
-    target_by_identity: dict[tuple[str, str], list[str]] = defaultdict(list)
-    for item in target["public"]["catalog"]:
-        target_by_identity[(item["title"], item["kind"])].append(item["resource"])
-    calibration_by_identity: dict[tuple[str, str], list[str]] = defaultdict(list)
-    for item in calibration["public"]["catalog"]:
-        calibration_by_identity[(item["title"], item["kind"])].append(item["resource"])
-    result = {}
-    for identity, calibration_resources in calibration_by_identity.items():
-        target_resources = target_by_identity.get(identity, [])
-        if not target_resources or len(target_resources) != len(calibration_resources):
-            raise ValueError(f"calibration asset has no target identity: {identity!r}")
-        result.update(dict(zip(calibration_resources, target_resources, strict=True)))
-    if len(result) != len(calibration["public"]["catalog"]):
-        raise ValueError("calibration resource identities are not unique")
+def _semantic_identity(item: dict[str, Any]) -> tuple[str, str, str, str]:
+    contract = {key: value for key, value in item["contract"].items() if key != "tenant_id"}
+    return (item["title"], item["kind"], item["description"],
+            json.dumps(contract, sort_keys=True, separators=(",", ":")))
+
+
+def _catalog_identity_index(
+    catalog: list[dict[str, Any]], *, label: str
+) -> dict[tuple[str, str, str, str], str]:
+    result: dict[tuple[str, str, str, str], str] = {}
+    resources: set[str] = set()
+    for item in catalog:
+        identity = _semantic_identity(item)
+        resource = item["resource"]
+        if identity in result:
+            raise ValueError(f"ambiguous {label} semantic identity: {identity!r}")
+        if resource in resources:
+            raise ValueError(f"duplicate {label} resource: {resource!r}")
+        result[identity] = resource
+        resources.add(resource)
     return result
+
+
+def _target_resource_map(target: dict[str, Any], calibration: dict[str, Any]) -> dict[str, str]:
+    """Map calibration resources by complete catalog meaning, never position."""
+
+    target_index = _catalog_identity_index(target["public"]["catalog"], label="target")
+    calibration_index = _catalog_identity_index(
+        calibration["public"]["catalog"], label="calibration"
+    )
+    if set(target_index) != set(calibration_index):
+        missing = sorted(set(calibration_index) - set(target_index))
+        extra = sorted(set(target_index) - set(calibration_index))
+        raise ValueError(
+            f"catalog semantic identities differ: missing={missing!r}, extra={extra!r}"
+        )
+    return {
+        calibration_index[identity]: target_index[identity]
+        for identity in calibration_index
+    }
 
 
 def _normalize_target_public(public: dict[str, Any], tenant: str) -> dict[str, Any]:

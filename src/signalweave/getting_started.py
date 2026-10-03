@@ -105,13 +105,19 @@ def getting_started(task: GuideTask = "start") -> dict:
                 "For each requested explanation, preserve the inspected supporting source in the "
                 "recurring card or an explicitly approved bounded investigation path. An asset read "
                 "during setup is not automatically fetched on future runs. Corroborating context "
-                "must not become an unconditional action prerequisite unless the owner requires it."
+                "must not become an unconditional action prerequisite unless the owner requires it. "
+                "Compare every saved source, including optional sources, with the snapshots used "
+                "in calibration. An omitted optional source can still change a live judgment; "
+                "test the complete saved source set in a delivery-disabled current preview."
             ),
             "repair": (
                 "Resolve missing definitions or ambiguous checks with the owner. A watch should "
                 "state one observable condition, not combine availability, timing and population "
                 "into a vague checklist. Preserve the business rule; never lower confidence, "
-                "remove a genuine requirement, or relabel the example to make it pass."
+                "remove a genuine requirement, or relabel the example to make it pass. "
+                "A declared comparison window is not a typed analytical comparison. Bind numeric "
+                "conditions only to inspected analytical_comparisons keys; otherwise preserve the "
+                "English policy over available evidence and state the quantitative validation gap."
             ),
             "retest": (
                 "After revision, inspect and preview again. Use evaluate_card_workflow with one "
