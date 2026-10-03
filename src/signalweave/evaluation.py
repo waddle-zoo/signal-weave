@@ -40,7 +40,9 @@ from .sources import SourceRegistry
 # existing marker name so readiness invalidates those reports without migration.
 # Version 4 corrects question handoffs: low answerability is pending, not proof
 # of conflict. Re-evaluate serialized plan wording; do not relabel old reports.
-EVIDENCE_ADMISSION_POLICY_VERSION = 4
+# Version 5 distinguishes required retrieval from explicitly permitted context.
+# Old exact-set labels keep their semantics; new reports record both sets.
+EVIDENCE_ADMISSION_POLICY_VERSION = 5
 
 
 def has_current_evidence_admission_policy(report: Mapping[str, object]) -> bool:
@@ -158,6 +160,7 @@ def _case_labels(case: CardEvaluationCase) -> dict[str, object]:
         "expected_delivery_destinations": case.expected_delivery_destinations,
         "required_evidence_source_keys": case.required_evidence_source_keys,
         "expected_retrieval_refs": case.expected_retrieval_refs,
+        "allowed_retrieval_refs": case.allowed_retrieval_refs,
     }
 
 
@@ -182,6 +185,10 @@ class CardEvaluationCase(BaseModel):
     expected_delivery_destinations: dict[str, str] | None = None
     required_evidence_source_keys: list[str] = Field(default_factory=list, max_length=500)
     expected_retrieval_refs: list[str] = Field(default_factory=list, max_length=500)
+    allowed_retrieval_refs: list[str] | None = Field(
+        default=None, max_length=500,
+        description="Owner-labeled permissible retrieval, including every expected ref. None requires exactly expected_retrieval_refs. Optional context is permitted, never required. This is a scoring label, not source authorization.",
+    )
     tags: list[str] = Field(default_factory=list, max_length=50)
     dataset: EvaluationDataset = Field(default_factory=lambda: EvaluationDataset(dataset_id="unspecified"))
     as_of: AwareDatetime | None = Field(
@@ -196,11 +203,14 @@ class CardEvaluationCase(BaseModel):
         for field_name in (
             "required_evidence_source_keys",
             "expected_retrieval_refs",
+            "allowed_retrieval_refs",
             "expected_delivery_method_keys",
         ):
             values = getattr(self, field_name)
             if values is not None and len(values) != len(set(values)):
                 raise ValueError(f"{field_name} must be unique")
+        if self.allowed_retrieval_refs is not None and not set(self.expected_retrieval_refs) <= set(self.allowed_retrieval_refs):
+            raise ValueError("allowed_retrieval_refs must include every expected_retrieval_ref")
         if self.as_of is not None:
             for resource in self.resources:
                 field_name = _future_capture(resource, self.as_of)
@@ -242,6 +252,10 @@ class WorkflowCaseInput(BaseModel):
     allowed_outcomes: list[Outcome] | None = None
     required_evidence_source_keys: list[str] = Field(default_factory=list, max_length=500)
     expected_retrieval_refs: list[str] = Field(default_factory=list, max_length=500)
+    allowed_retrieval_refs: list[str] | None = Field(
+        default=None, max_length=500,
+        description="Owner-labeled permissible retrieval, including every expected ref. None requires exactly expected_retrieval_refs. Optional context is permitted, never required. This is a scoring label, not source authorization.",
+    )
     tags: list[str] = Field(default_factory=list, max_length=50)
     dataset: EvaluationDataset = Field(default_factory=lambda: EvaluationDataset(dataset_id="unspecified"))
     as_of: AwareDatetime | None = Field(
@@ -298,6 +312,8 @@ class CardEvaluationCaseResult(BaseModel):
     actual_delivery_destinations: dict[str, str] = Field(default_factory=dict)
     actual_evidence_source_keys: list[str] = Field(default_factory=list)
     actual_retrieval_refs: list[str] = Field(default_factory=list)
+    expected_retrieval_refs: list[str] | None = None
+    allowed_retrieval_refs: list[str] | None = None
     confidence: float | None = Field(default=None, ge=0.0, le=1.0)
     probabilities: dict[str, float] = Field(default_factory=dict)
     summary: str = ""
@@ -570,6 +586,8 @@ class CardWorkflowEvaluator:
                 card_id=case.card.id,
                 card_version=case.card.version,
                 expected_outcome=case.expected_outcome,
+                expected_retrieval_refs=case.expected_retrieval_refs,
+                allowed_retrieval_refs=case.allowed_retrieval_refs,
                 as_of=case.as_of,
                 latency_ms=(time.perf_counter() - started) * 1000,
                 error=f"{type(error).__name__}: {error}",
@@ -605,9 +623,13 @@ class CardWorkflowEvaluator:
             {f"{resource.adapter}|{resource.resource}" for resource in run.resources}
         )
         expected_retrieval = set(case.expected_retrieval_refs)
+        allowed_retrieval = (
+            expected_retrieval if case.allowed_retrieval_refs is None
+            else set(case.allowed_retrieval_refs)
+        )
         actual_retrieval_set = set(actual_retrieval)
         retrieval_precision = (
-            len(expected_retrieval & actual_retrieval_set) / len(actual_retrieval_set)
+            len(allowed_retrieval & actual_retrieval_set) / len(actual_retrieval_set)
             if actual_retrieval_set
             else 1.0
             if not expected_retrieval
@@ -617,8 +639,6 @@ class CardWorkflowEvaluator:
             len(expected_retrieval & actual_retrieval_set) / len(expected_retrieval)
             if expected_retrieval
             else 1.0
-            if not actual_retrieval_set
-            else 0.0
         )
         allowed_outcomes = set(case.allowed_outcomes or [case.expected_outcome])
         safe_action = result.outcome in allowed_outcomes
@@ -655,13 +675,15 @@ class CardWorkflowEvaluator:
             actual_delivery_destinations=actual_destinations,
             actual_evidence_source_keys=actual_evidence,
             actual_retrieval_refs=actual_retrieval,
+            expected_retrieval_refs=case.expected_retrieval_refs,
+            allowed_retrieval_refs=case.allowed_retrieval_refs,
             confidence=result.confidence,
             probabilities=result.probabilities,
             summary=result.summary,
             rationale=result.rationale,
             missing_evidence_source_keys=sorted(required_evidence - set(actual_evidence)),
             missing_retrieval_refs=sorted(expected_retrieval - actual_retrieval_set),
-            unexpected_retrieval_refs=sorted(actual_retrieval_set - expected_retrieval),
+            unexpected_retrieval_refs=sorted(actual_retrieval_set - allowed_retrieval),
             latency_ms=(time.perf_counter() - started) * 1000,
             evaluator=result.evaluator,
             tags=case.tags,

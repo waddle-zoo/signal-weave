@@ -191,6 +191,7 @@ def _calibration_example(
         "expected_delivery_destinations": endpoints,
         "required_evidence_refs": required_refs,
         "expected_retrieval_refs": sorted(required_refs),
+        "allowed_retrieval_refs": sorted(available_refs),
         "resources": resources,
     }
     if sorted(recipients) != sorted(endpoints):

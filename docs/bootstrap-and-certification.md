@@ -115,6 +115,27 @@ cover the full policy or authorize delivery.
 
 ### Test onboarding, not just the prose
 
+Retrieval labels distinguish what **must** be fetched from what **may** be fetched.
+By default, `expected_retrieval_refs` is an exact set. When extra corroborating
+context is legitimate, supply `allowed_retrieval_refs` as a bounded superset.
+Required refs must still be present; unlisted refs still fail acceptance. Retrieval
+recall measures required coverage, and precision measures permitted retrieval.
+For example, require `metrics|daily` and permit both `metrics|daily` and
+`changes|calendar`: fetching the calendar is neither mandatory nor a failure.
+Define these owner labels before observing the model's selection, not to excuse
+whatever it happened to fetch. They never grant access, change the card's source
+selection or enter Jev's state. Admission-policy version 5 records these semantics;
+older certifications must be rerun for current readiness.
+
+Like expected outcomes and recipients, retrieval labels are caller-supplied.
+The evaluator does not independently establish their correctness or prove a human
+authored them. An agent can make a weak test by supplying weak labels. Keep owner
+fixtures independently reviewed and immutable in your host workflow. Reports
+retain both retrieval sets and their label digest for inspection; certification
+does not approve a draft card or authorize delivery. Old reports retain their
+historical status: use `get_enterprise_readiness`, not an old status alone, to
+check current compatibility.
+
 A successful preview means the engine ran. It does not mean it followed the
 owner's rule. Likewise, approving a card authorizes it; that alone is not evidence
 of correct behavior. The recommended onboarding path is:

@@ -4,7 +4,7 @@ import gzip
 import json
 from pathlib import Path
 
-from evaluations.installed_workflow_review import adjudicate
+from evaluations.installed_workflow_review import _digest, adjudicate
 
 
 def test_compressed_evidence_recomputes_identically(tmp_path):
@@ -19,6 +19,13 @@ def test_compressed_evidence_recomputes_identically(tmp_path):
 
 def _write(path: Path, value) -> None:
     path.write_text(json.dumps(value), encoding="utf-8")
+
+
+def _refresh_dataset_digest(run: Path) -> None:
+    protocol = json.loads((run / "protocol.json").read_text(encoding="utf-8"))
+    scenarios = json.loads((run / "frozen-scenarios.json").read_text(encoding="utf-8"))
+    protocol["dataset_sha256"] = _digest(scenarios)
+    _write(run / "protocol.json", protocol)
 
 
 def _fixture(tmp_path: Path, *, bad_native: bool = False, no_plan_trace: bool = False,
@@ -92,6 +99,7 @@ def _fixture(tmp_path: Path, *, bad_native: bool = False, no_plan_trace: bool = 
         period["result"].pop("plan")
     _write(run / "protocol.json", protocol)
     _write(run / "frozen-scenarios.json", [scenario])
+    _refresh_dataset_digest(run)
     _write(run / f"{scenario_id}-onboarding.json", onboarding)
     _write(run / f"{scenario_id}-{period_id}.json", period)
     (run / "trace.jsonl").write_text("\n".join(json.dumps(item) for item in trace) + "\n", encoding="utf-8")
@@ -101,6 +109,7 @@ def _fixture(tmp_path: Path, *, bad_native: bool = False, no_plan_trace: bool = 
 def test_independent_adjudication_passes_and_ignores_cached_flags(tmp_path):
     result = adjudicate(_fixture(tmp_path))
     assert result["summary"]["passed"] is True
+    assert result["checks"]["dataset_integrity"]["passed"] is True
     assert result["companies"][0]["periods"][0]["passed"] is True
 
 
@@ -191,7 +200,7 @@ def test_calibration_requires_exact_retrieval_and_explicit_labels(tmp_path):
     trace_path.write_text("\n".join(json.dumps(event) for event in events) + "\n", encoding="utf-8")
     result = adjudicate(run)
     assert result["companies"][0]["calibration"]["passed"] is False
-    assert "week-01-case: retrieval refs" in result["companies"][0]["calibration"]["failures"]
+    assert "week-01-case: forbidden retrieval refs" in result["companies"][0]["calibration"]["failures"]
 
     run = _fixture(tmp_path / "missing", no_plan_trace=True)
     frozen_path = run / "frozen-scenarios.json"
@@ -200,6 +209,157 @@ def test_calibration_requires_exact_retrieval_and_explicit_labels(tmp_path):
     frozen_path.write_text(json.dumps(frozen), encoding="utf-8")
     result = adjudicate(run)
     assert result["companies"][0]["calibration"]["status"] == "invalid_labels"
+
+
+def test_allowed_retrieval_refs_permit_optional_source_present_or_absent(tmp_path):
+    run = _fixture(tmp_path)
+    frozen_path = run / "frozen-scenarios.json"
+    frozen = json.loads(frozen_path.read_text(encoding="utf-8"))
+    label = frozen[0]["owner_examples"][0]
+    required = label["expected_retrieval_refs"][0]
+    optional = "company_mcp|optional-context"
+    label["allowed_retrieval_refs"] = [required, optional]
+    _write(frozen_path, frozen)
+    _refresh_dataset_digest(run)
+
+    result = adjudicate(run)
+    calibration = result["companies"][0]["calibration"]
+    assert calibration["passed"] is True
+    assert calibration["cases"][0]["retrieval_precision"] == 1.0
+    assert calibration["cases"][0]["retrieval_recall"] == 1.0
+
+    trace_path = run / "trace.jsonl"
+    events = [json.loads(line) for line in trace_path.read_text(encoding="utf-8").splitlines()]
+    for event in events:
+        if event.get("name") == "evaluate_card_workflow":
+            event["result"]["cases"][0]["actual_retrieval_refs"].append(optional)
+    trace_path.write_text("\n".join(json.dumps(event) for event in events) + "\n", encoding="utf-8")
+    result = adjudicate(run)
+    calibration = result["companies"][0]["calibration"]
+    assert calibration["passed"] is True
+    assert calibration["cases"][0]["retrieval_precision"] == 1.0
+    assert calibration["cases"][0]["retrieval_recall"] == 1.0
+
+
+def test_allowed_retrieval_refs_reject_missing_required_and_duplicate_labels(tmp_path):
+    run = _fixture(tmp_path)
+    frozen_path = run / "frozen-scenarios.json"
+    frozen = json.loads(frozen_path.read_text(encoding="utf-8"))
+    label = frozen[0]["owner_examples"][0]
+    label["allowed_retrieval_refs"] = ["company_mcp|optional-context"]
+    _write(frozen_path, frozen)
+    _refresh_dataset_digest(run)
+    result = adjudicate(run)
+    assert result["companies"][0]["calibration"]["status"] == "invalid_labels"
+    assert "omits required expected refs" in result["companies"][0]["calibration"]["failures"][0]
+
+    label["allowed_retrieval_refs"] = [label["expected_retrieval_refs"][0]] * 2
+    _write(frozen_path, frozen)
+    _refresh_dataset_digest(run)
+    result = adjudicate(run)
+    assert result["companies"][0]["calibration"]["status"] == "invalid_labels"
+    assert "contains duplicates" in result["companies"][0]["calibration"]["failures"][0]
+
+
+def test_duplicate_expected_retrieval_labels_are_rejected(tmp_path):
+    run = _fixture(tmp_path)
+    frozen_path = run / "frozen-scenarios.json"
+    frozen = json.loads(frozen_path.read_text(encoding="utf-8"))
+    label = frozen[0]["owner_examples"][0]
+    required = label["expected_retrieval_refs"][0]
+    label["expected_retrieval_refs"] = [required, required]
+    _write(frozen_path, frozen)
+    _refresh_dataset_digest(run)
+
+    result = adjudicate(run)
+    calibration = result["companies"][0]["calibration"]
+    assert calibration["status"] == "invalid_labels"
+    assert "expected_retrieval_refs contains duplicates" in calibration["failures"][0]
+
+
+def test_optional_only_allowed_refs_with_empty_actual_retrieval_are_precise(tmp_path):
+    run = _fixture(tmp_path)
+    frozen_path = run / "frozen-scenarios.json"
+    frozen = json.loads(frozen_path.read_text(encoding="utf-8"))
+    label = frozen[0]["owner_examples"][0]
+    label["expected_retrieval_refs"] = []
+    label["allowed_retrieval_refs"] = ["company_mcp|optional-context"]
+    _write(frozen_path, frozen)
+    _refresh_dataset_digest(run)
+
+    trace_path = run / "trace.jsonl"
+    events = [json.loads(line) for line in trace_path.read_text(encoding="utf-8").splitlines()]
+    for event in events:
+        if event.get("name") == "evaluate_card_workflow":
+            event["result"]["cases"][0]["actual_retrieval_refs"] = []
+    trace_path.write_text("\n".join(json.dumps(event) for event in events) + "\n", encoding="utf-8")
+
+    result = adjudicate(run)
+    calibration = result["companies"][0]["calibration"]
+    assert calibration["passed"] is True
+    assert calibration["cases"][0]["retrieval_precision"] == 1.0
+    assert calibration["cases"][0]["retrieval_recall"] == 1.0
+
+
+def test_actual_missing_required_retrieval_ref_fails_valid_label(tmp_path):
+    run = _fixture(tmp_path)
+    frozen_path = run / "frozen-scenarios.json"
+    frozen = json.loads(frozen_path.read_text(encoding="utf-8"))
+    label = frozen[0]["owner_examples"][0]
+    required = label["expected_retrieval_refs"][0]
+    label["allowed_retrieval_refs"] = [required, "company_mcp|optional-context"]
+    _write(frozen_path, frozen)
+    _refresh_dataset_digest(run)
+
+    trace_path = run / "trace.jsonl"
+    events = [json.loads(line) for line in trace_path.read_text(encoding="utf-8").splitlines()]
+    for event in events:
+        if event.get("name") == "evaluate_card_workflow":
+            event["result"]["cases"][0]["actual_retrieval_refs"] = ["company_mcp|optional-context"]
+    trace_path.write_text("\n".join(json.dumps(event) for event in events) + "\n", encoding="utf-8")
+
+    result = adjudicate(run)
+    calibration = result["companies"][0]["calibration"]
+    assert calibration["passed"] is False
+    assert "week-01-case: missing required retrieval refs" in calibration["failures"]
+    assert calibration["cases"][0]["retrieval_precision"] == 1.0
+    assert calibration["cases"][0]["retrieval_recall"] == 0.0
+
+
+def test_forbidden_retrieval_ref_fails_even_when_optional_refs_are_allowed(tmp_path):
+    run = _fixture(tmp_path)
+    frozen_path = run / "frozen-scenarios.json"
+    frozen = json.loads(frozen_path.read_text(encoding="utf-8"))
+    required = frozen[0]["owner_examples"][0]["expected_retrieval_refs"][0]
+    frozen[0]["owner_examples"][0]["allowed_retrieval_refs"] = [required, "company_mcp|optional-context"]
+    _write(frozen_path, frozen)
+    _refresh_dataset_digest(run)
+    trace_path = run / "trace.jsonl"
+    events = [json.loads(line) for line in trace_path.read_text(encoding="utf-8").splitlines()]
+    for event in events:
+        if event.get("name") == "evaluate_card_workflow":
+            event["result"]["cases"][0]["actual_retrieval_refs"].append("company_mcp|forbidden")
+    trace_path.write_text("\n".join(json.dumps(event) for event in events) + "\n", encoding="utf-8")
+    result = adjudicate(run)
+    calibration = result["companies"][0]["calibration"]
+    assert calibration["passed"] is False
+    assert "week-01-case: forbidden retrieval refs" in calibration["failures"]
+    assert calibration["cases"][0]["retrieval_precision"] == 0.5
+    assert calibration["cases"][0]["retrieval_recall"] == 1.0
+
+
+def test_frozen_label_tampering_fails_dataset_integrity(tmp_path):
+    run = _fixture(tmp_path)
+    frozen_path = run / "frozen-scenarios.json"
+    frozen = json.loads(frozen_path.read_text(encoding="utf-8"))
+    frozen[0]["owner_examples"][0]["allowed_retrieval_refs"] = [
+        frozen[0]["owner_examples"][0]["expected_retrieval_refs"][0],
+        "company_mcp|tampered",
+    ]
+    _write(frozen_path, frozen)
+    result = adjudicate(run)
+    assert result["checks"]["dataset_integrity"]["passed"] is False
+    assert result["summary"]["passed"] is False
 
 
 def test_shadow_receipt_and_malformed_trace_fail_closed(tmp_path):

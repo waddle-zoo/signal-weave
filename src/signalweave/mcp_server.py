@@ -735,6 +735,11 @@ def create_mcp(
         Set acceptance_outcomes to the owner's intended dispositions to test
         onboarding with strict behavioral coverage and exact endpoint labels.
         This is empirical evidence, not human authorization or causal proof.
+
+        By default retrieval must exactly match expected_retrieval_refs. Supply
+        allowed_retrieval_refs to permit bounded optional corroborating context:
+        expected refs remain mandatory, unlisted retrieval still fails. These
+        owner labels do not grant source access or select sources for the card.
         """
         principal = request_principal(ctx)
         card = get_scoped_card(card_id, principal)

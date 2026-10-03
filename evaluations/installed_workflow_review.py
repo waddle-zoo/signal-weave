@@ -84,6 +84,34 @@ def _actual_evidence_refs(native: dict[str, Any], card: dict[str, Any]) -> set[s
     return {source_refs[key] for key in refs if key in source_refs}
 
 
+def _retrieval_contract(label: dict[str, Any]) -> tuple[set[str], set[str], list[str]]:
+    """Return required/permissible refs and label-format failures.
+
+    ``expected_retrieval_refs`` remains the required retrieval set.  An absent
+    or null ``allowed_retrieval_refs`` preserves the legacy exact-set contract.
+    """
+    expected = label.get("expected_retrieval_refs")
+    if not isinstance(expected, list) or not all(isinstance(ref, str) and ref for ref in expected):
+        return set(), set(), ["expected_retrieval_refs is not a string list"]
+    if len(set(expected)) != len(expected):
+        return set(), set(), ["expected_retrieval_refs contains duplicates"]
+    required = set(expected)
+    allowed_value = label.get("allowed_retrieval_refs")
+    if allowed_value is None:
+        return required, required, []
+    if not isinstance(allowed_value, list) or not all(
+        isinstance(ref, str) and ref for ref in allowed_value
+    ):
+        return required, set(), ["allowed_retrieval_refs is not a string list"]
+    allowed = set(allowed_value)
+    failures: list[str] = []
+    if len(allowed) != len(allowed_value):
+        failures.append("allowed_retrieval_refs contains duplicates")
+    if not required.issubset(allowed):
+        failures.append("allowed_retrieval_refs omits required expected refs")
+    return required, allowed, failures
+
+
 def _adjudicate_native(
     period: dict[str, Any], label: dict[str, Any], card: dict[str, Any],
     public_destinations: list[dict[str, Any]],
@@ -219,6 +247,17 @@ def _calibration(
         return {"passed": False, "status": "invalid_labels", "case_count": 0,
                 "failures": [f"explicit labels missing: {missing_labels}"]}
     owner_by_id = {item.get("id"): item for item in owner_examples}
+    label_failures: list[str] = []
+    retrieval_contracts: dict[str, tuple[set[str], set[str]]] = {}
+    for item in owner_examples:
+        required, allowed, failures = _retrieval_contract(item)
+        if failures:
+            label_failures.extend(f"{item.get('id')}: {failure}" for failure in failures)
+        else:
+            retrieval_contracts[item.get("id")] = (required, allowed)
+    if label_failures:
+        return {"passed": False, "status": "invalid_labels", "case_count": 0,
+                "failures": label_failures}
     workflow_results = [
         event.get("result")
         for event in events
@@ -230,6 +269,7 @@ def _calibration(
         return {"passed": False, "status": "missing", "case_count": 0, "failures": ["no traced calibration result"]}
     result = workflow_results[-1]
     failures: list[str] = []
+    case_scores: list[dict[str, Any]] = []
     if result.get("status") != "approved":
         failures.append("calibration status is not approved")
     if result.get("acceptance_passed") is not True:
@@ -248,12 +288,29 @@ def _calibration(
         expected_destinations = _expected_destinations(expected.get("expected_delivery_destinations"))
         actual_destinations = set((case.get("actual_delivery_destinations") or {}).values())
         actual_refs = set(case.get("actual_retrieval_refs") or [])
+        required_refs, allowed_refs = retrieval_contracts[case.get("case_id")]
         if case.get("outcome") != expected.get("expected_outcome"):
             failures.append(f"{case.get('case_id')}: outcome")
         if actual_destinations != expected_destinations:
             failures.append(f"{case.get('case_id')}: destinations")
-        if actual_refs != set(expected.get("expected_retrieval_refs") or []):
-            failures.append(f"{case.get('case_id')}: retrieval refs")
+        allowed_count = len(actual_refs & allowed_refs)
+        retrieval_precision = allowed_count / len(actual_refs) if actual_refs else (1.0 if not required_refs else 0.0)
+        retrieval_recall = (
+            len(actual_refs & required_refs) / len(required_refs)
+            if required_refs else 1.0
+        )
+        if not required_refs.issubset(actual_refs):
+            failures.append(f"{case.get('case_id')}: missing required retrieval refs")
+        if not actual_refs.issubset(allowed_refs):
+            failures.append(f"{case.get('case_id')}: forbidden retrieval refs")
+        case_scores.append({
+            "case_id": case.get("case_id"),
+            "required_retrieval_refs": sorted(required_refs),
+            "allowed_retrieval_refs": sorted(allowed_refs),
+            "actual_retrieval_refs": sorted(actual_refs),
+            "retrieval_precision": retrieval_precision,
+            "retrieval_recall": retrieval_recall,
+        })
         # Evidence keys are card-owned aliases; map them back to canonical refs.
         key_to_ref = {
             item.get("key"): f"{item.get('adapter')}|{item.get('resource')}"
@@ -267,6 +324,7 @@ def _calibration(
         "status": result.get("status"),
         "case_count": len(result.get("cases", [])),
         "failures": failures,
+        "cases": case_scores,
         "certification_report_id": result.get("certification_report_id"),
     }
 
@@ -284,6 +342,16 @@ def adjudicate(run_dir: Path) -> dict[str, Any]:
         _fail(checks, "recorded_hashes", "binary_sha256 and harness_sha256 are required")
     else:
         _pass(checks, "recorded_hashes")
+    recorded_dataset_digest = protocol.get("dataset_sha256")
+    if recorded_dataset_digest is not None:
+        actual_dataset_digest = _digest(scenarios)
+        if actual_dataset_digest != recorded_dataset_digest:
+            _fail(checks, "dataset_integrity", {
+                "recorded": recorded_dataset_digest,
+                "actual": actual_dataset_digest,
+            })
+        else:
+            _pass(checks, "dataset_integrity")
 
     jev_requests = [e for e in events if e.get("kind") == "api.request" and e.get("provider") == "jev"]
     jev_rejected = [e for e in events if e.get("kind") == "api.rejected" and e.get("provider") == "jev"]

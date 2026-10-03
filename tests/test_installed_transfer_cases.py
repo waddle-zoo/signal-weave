@@ -58,6 +58,9 @@ def test_transfer_examples_are_disjoint_from_future_labels_and_before_onboarding
             assert example["required_evidence_refs"]
             assert set(example["expected_retrieval_refs"]) == set(example["required_evidence_refs"])
             assert len(example["resources"]) == 2
+            assert set(example["allowed_retrieval_refs"]) == {
+                f"{resource['adapter']}|{resource['resource']}" for resource in example["resources"]
+            }
             assert set(example["expected_retrieval_refs"]) <= {
                 f"{resource['adapter']}|{resource['resource']}"
                 for resource in example["resources"]
@@ -199,6 +202,7 @@ def test_optional_available_context_does_not_become_required_retrieval():
     assert len(example["resources"]) == 2  # The optional context is still available.
     assert len(bound["resources"]) == 1
     assert bound["expected_retrieval_refs"] == [required_ref]
+    assert bound["allowed_retrieval_refs"] == example["allowed_retrieval_refs"]
     assert bound["required_evidence_source_keys"] == ["primary"]
     with pytest.raises(ValueError, match="omits an owner-required evidence"):
         bind_examples([example], {"sources": [], "delivery_methods": []})
