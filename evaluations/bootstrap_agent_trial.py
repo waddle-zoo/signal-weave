@@ -61,9 +61,10 @@ PRICES = {
              "Failed requests with missing usage have unknown cost, never assumed free.",
 }
 PRODUCT_TOOLS = frozenset({
-    "onboard_insight_card", "propose_insight_card", "draft_insight_card",
+    "get_signalweave_guide", "onboard_insight_card", "propose_insight_card", "draft_insight_card",
     "discover_insight_sources", "review_insight_card", "get_insight_card",
-    "list_insight_cards", "resolve_insight_sources", "simulate_insight_card",
+    "list_insight_cards", "list_resources", "inspect_resource", "resolve_insight_sources",
+    "simulate_insight_card", "preview_investigation_report", "evaluate_card_workflow",
     "approve_insight_card", "evaluate_insight_card", "get_decision_receipt",
     "record_insight_card_correction",
 })
@@ -462,8 +463,8 @@ class ToolSession:
             specs.append(function("request_synthetic_owner_approval",
                 "After saving notes, request independent simulated-owner review against original answers. "
                 "Rejections explain what needs correction. Three review attempts per arm/company. "
-                "This is model review, not actual human authorization. Treatment must inspect and simulate "
-                "the card first; baseline reviews notes and leaves card_id null.",
+                "This is model review, not actual human authorization. Treatment must inspect and run a current-card dry-run "
+                "the card first with simulate_insight_card or preview_investigation_report; baseline reviews notes and leaves card_id null.",
                 {"card_id": {"type": ["string", "null"]}}))
         if self.treatment:
             # Schemas stay coupled to real runtime code, never copied benchmark versions.
@@ -473,7 +474,7 @@ class ToolSession:
                                          "evaluate_insight_card", "get_decision_receipt"}
             elif self.owner_reviewer is None:
                 specs.append(function("request_synthetic_owner_approval",
-                                      "Present the inspected, simulated card to the simulated owner "
+                                      "Present the inspected card and current-card dry-run (simulate_insight_card or preview_investigation_report) to the simulated owner "
                                       "for procedural approval. This logs a mock human decision; "
                                       "it does not certify semantic correctness or consult expected answers.",
                                       {"card_id": {"type": "string"}}, ["card_id"]))
@@ -559,7 +560,7 @@ class ToolSession:
                         "reason": "Inspected stored card and preview; no hidden labels consulted."
                         if accepted else "Current card inspection and/or preview is missing.",
                         "next_tools": (["approve_insight_card", "save_notes", "finish_setup"] if accepted
-                                       else ["get_insight_card", "simulate_insight_card",
+                                       else ["get_insight_card", "simulate_insight_card", "preview_investigation_report",
                                              "request_synthetic_owner_approval"])}
             if owner_review is not None:
                 decision.update(owner_review=owner_review, reason="Independent simulated owner reviewed original instructions, draft and notes; not actual human approval.")
@@ -571,19 +572,19 @@ class ToolSession:
             raise ValueError("tool not available in this arm/phase")
         card_id = arguments.get("card_id")
         before = None
-        if name == "simulate_insight_card":
+        if name in {"simulate_insight_card", "preview_investigation_report"}:
             before = card_fingerprint(await self.product("get_insight_card", {"card_id": card_id}))
         if name == "approve_insight_card":
             card = await self.product("get_insight_card", {"card_id": card_id})
             fingerprint = self.approval_fingerprint(card)
             if self.owner_approvals.get(card_id) != fingerprint:
                 raise ValueError("Synthetic owner requires get_insight_card inspection and successful "
-                                 "simulate_insight_card then request_synthetic_owner_approval "
+                                 "simulate_insight_card or preview_investigation_report then request_synthetic_owner_approval "
                                  "for the current card before approval")
         result = await self.product(name, arguments)
         if name == "get_insight_card":
             self.reviewed[card_id] = card_fingerprint(result)
-        if name == "simulate_insight_card" and result.get("status") == "preview":
+        if name in {"simulate_insight_card", "preview_investigation_report"} and result.get("status") == "preview":
             # A safe abstention is a valid preview; the independent scorer assesses
             # correctness later. Never approve based on hidden expected outcomes.
             after = card_fingerprint(await self.product("get_insight_card", {"card_id": card_id}))
@@ -600,7 +601,7 @@ async def luna_episode(session: ToolSession, *, key: str, effort: str, budget: R
     if session.treatment:
         instructions += (" SignalWeave is available. For setup: onboard or draft a card from "
                          "the brief and owner answers; inspect it with get_insight_card, dry-run "
-                         "simulate_insight_card, resolve blockers, request_synthetic_owner_approval, "
+                         "simulate_insight_card or preview_investigation_report, resolve blockers, request_synthetic_owner_approval, "
                          "then approve_insight_card. "
                          "Approval models a synthetic owner's procedural review only. Save notes "
                          "and finish_setup with the card ID. No actual human has validated it.")
@@ -823,12 +824,13 @@ def select_scenarios(scenarios: list[dict], scenario_ids: list[str] | None, limi
     return [scenario for scenario in scenarios if scenario["scenario_id"] in scenario_ids]
 
 
-async def run_trial(args) -> dict:
+async def run_trial(args, *, scenarios_override: list[dict] | None = None) -> dict:
     owner_review_mode = getattr(args, "owner_review", "procedural")
     if owner_review_mode == "independent" and getattr(args, "agent_transport", "api") != "codex":
         raise ValueError("Independent owner review currently requires the Codex research transport")
     openai_key, jev_key = credentials(args)  # Fail before creating output or calling a provider.
-    scenarios = select_scenarios(build_scenarios(seed=args.seed, split=args.split),
+    fixture_source = scenarios_override if scenarios_override is not None else build_scenarios(seed=args.seed, split=args.split)
+    scenarios = select_scenarios(fixture_source,
                                  getattr(args, "scenario_id", None), args.limit)
     if not scenarios:
         raise ValueError("no selected scenarios")
@@ -838,6 +840,7 @@ async def run_trial(args) -> dict:
     budget = RequestBudget(args.max_api_requests)
     clock = datetime.now(timezone.utc)
     config = {"model": MODEL, "effort": args.effort, "seed": args.seed, "split": args.split,
+              "fixtures": "explicit_versioned_scenarios" if scenarios_override is not None else "builtin",
               "dataset_digest": dataset_digest(scenarios), "selected_companies": len(scenarios),
               "selected_scenario_ids": [scenario["scenario_id"] for scenario in scenarios],
               "public_context_digest": digest([public_scenario(scenario) for scenario in scenarios]),

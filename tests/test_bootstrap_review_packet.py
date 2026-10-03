@@ -83,6 +83,17 @@ def test_blind_packets_exclude_oracles_scores_and_arm_metadata(review_report):
     assert review.packets(report)[0] == cases
 
 
+def test_explicit_fixtures_are_digest_checked_without_builtin_reconstruction(review_report, monkeypatch):
+    report, scenario = review_report
+    report["config"]["dataset_digest"] = dataset_digest([scenario])
+    monkeypatch.setattr(review, "build_scenarios", lambda **kwargs: pytest.fail("must use supplied fixtures"))
+    assert len(review.packets(report, fixtures_override=[scenario])[0]) == 4
+    changed = copy.deepcopy(scenario)
+    changed["public"]["brief"] += " changed"
+    with pytest.raises(ValueError, match="Fixture digest"):
+        review.packets(report, fixtures_override=[changed])
+
+
 def test_completed_failed_and_missing_submissions_are_all_preserved(review_report):
     report, _ = review_report
     cases, mapping, compact = review.packets(report)

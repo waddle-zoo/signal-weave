@@ -43,7 +43,7 @@ REVIEW_INSTRUCTIONS = (
 # Only authored policy, never cached plans, source payloads, prior reviews or scores.
 CARD_POLICY_FIELDS = (
     "title", "what_to_watch", "why_watch", "watch_for", "questions",
-    "evidence_requirements", "decision_guidance", "follow_up_guidance",
+    "evidence_requirements", "numeric_conditions", "decision_guidance", "follow_up_guidance",
     "comparison_windows", "action_confidence_threshold", "max_source_age_hours",
     "delivery_methods", "retrieval_mode", "investigation_mode",
     "max_investigation_sources", "investigation_threshold",

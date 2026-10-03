@@ -162,8 +162,8 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
         instructions = COMMON_SYSTEM
         if session.treatment:
             instructions += (
-                " SignalWeave is available. For setup: onboard or draft a card from the brief "
-                "and owner answers; inspect with get_insight_card, dry-run simulate_insight_card, "
+                " SignalWeave is available. For setup, call get_signalweave_guide first. Then onboard or draft a card from the brief "
+                "and owner answers; inspect with get_insight_card, then use dry-run simulate_insight_card or preview_investigation_report, "
                 "resolve blockers, request_synthetic_owner_approval, then approve_insight_card. "
                 "Save notes and finish_setup with the card ID. Approval is simulated, not real "
                 "human validation.\nProduction MCP instructions:\n" + (session.server.instructions or ""))
@@ -173,7 +173,7 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
                 "An independent model compares your notes (and card when present) with the original owner answers. "
                 "Correct rejected artifacts explicitly and request review again, at most three attempts. "
                 "Both arms need that review; it is not actual human approval. Changed notes/cards invalidate it. "
-                "For SignalWeave, inspect and simulate before requesting review, then approve the card only after acceptance.")
+                "For SignalWeave, inspect and use simulate_insight_card or preview_investigation_report before requesting review, then approve the card only after acceptance.")
         instructions += ("\nUse only the trial MCP tools. No filesystem, shell, web or other "
                          "tools. After finish_setup or submit_analysis succeeds, stop immediately.")
         prompt = instructions + "\n" + canonical({

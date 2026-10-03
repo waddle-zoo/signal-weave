@@ -84,6 +84,14 @@ def make_session(tmp_path, public, treatment=True):
     return trial.ToolSession(public, adapter, create_mcp(runtime), treatment)
 
 
+async def test_product_tool_parity_includes_guide_sources_preview_and_workflow(tmp_path, public):
+    session = make_session(tmp_path, public)
+    specs = await session.specs()
+    names = {item["name"] for item in specs}
+    assert {"get_signalweave_guide", "list_resources", "inspect_resource",
+            "preview_investigation_report", "evaluate_card_workflow"} <= names
+
+
 async def test_public_numeric_enum_is_identical_for_both_arms(tmp_path, public):
     schemas = []
     for treatment in (False, True):
@@ -113,7 +121,8 @@ async def test_missing_owner_review_returns_actionable_steps(tmp_path, public):
     })
     result = await session.call("request_synthetic_owner_approval", {"card_id": drafted["card"]["id"]})
     assert not result["approved"]
-    assert result["next_tools"] == ["get_insight_card", "simulate_insight_card", "request_synthetic_owner_approval"]
+    assert result["next_tools"] == ["get_insight_card", "simulate_insight_card",
+                                     "preview_investigation_report", "request_synthetic_owner_approval"]
     assert "missing" in result["reason"]
     assert session.owner_approvals == {}
 
@@ -337,13 +346,13 @@ async def test_preview_expansion_uses_stored_fingerprint_and_edits_revoke_approv
     async def product(name, arguments):
         if name == "get_insight_card":
             return copy.deepcopy(card)
-        if name == "simulate_insight_card":
+        if name in {"simulate_insight_card", "preview_investigation_report"}:
             return {"status": "preview", "card": {**card, "sources": [{"key": "anchor"}, {"key": "expanded"}]}}
         raise AssertionError("unexpected tool")
 
     monkeypatch.setattr(session, "product", product)
     await session.call("get_insight_card", {"card_id": "one"})
-    await session.call("simulate_insight_card", {"card_id": "one"})
+    await session.call("preview_investigation_report", {"card_id": "one"})
     assert (await session.call("request_synthetic_owner_approval", {"card_id": "one"}))["approved"]
     card["what_to_watch"] = "edited"
     with pytest.raises(ValueError, match="requires"):
@@ -449,6 +458,24 @@ async def test_exhausted_budget_keeps_every_planned_period_in_denominator(monkey
     with pytest.raises(FileExistsError):
         await trial.run_trial(args)
     assert (args.output / "report.json").exists()
+
+
+async def test_run_trial_accepts_explicit_versioned_scenarios_and_records_digest(monkeypatch, tmp_path):
+    monkeypatch.setenv("OPENAI_API_KEY", "offline-key")
+    monkeypatch.setenv("TYPESAFE_API_KEY", "offline-jev")
+    scenario = build_scenarios(split="dev")[0]
+
+    async def fail(*args, **kwargs):
+        kwargs["budget"].claim()
+        return {"status": "failed", "error": "offline_test", "seconds": 0, "tool_calls": 0}
+
+    monkeypatch.setattr(trial, "luna_episode", fail)
+    args = trial.parser().parse_args(["--limit", "1", "--max-api-requests", "1",
+                                      "--output", str(tmp_path / "explicit")])
+    report = await trial.run_trial(args, scenarios_override=[scenario])
+    assert report["config"]["fixtures"] == "explicit_versioned_scenarios"
+    assert report["config"]["dataset_digest"] == trial.dataset_digest([scenario])
+    assert report["config"]["selected_scenario_ids"] == [scenario["scenario_id"]]
 
 
 def test_cost_counts_cold_warm_and_unknown_attempts_separately():

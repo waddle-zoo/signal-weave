@@ -41,6 +41,7 @@ def inputs():
             "notes": "Customer traffic only. Investigate to business at a 20% latency increase.",
             "card": {
                 "decision_guidance": "Investigate to business at a 20% latency increase.",
+                "numeric_conditions": [{"measurement": "delta", "threshold": 0.20, "unit": "ratio"}],
                 "delivery_methods": [{"key": "business", "outcome": "investigate",
                                       "label": "Business owner", "destination": "slack://business"}],
                 "sources": [{"snapshot": "SECRET_CARD_SOURCE"}],
@@ -81,6 +82,7 @@ async def test_label_safe_payload_same_episode_audit_hashes_and_counters(monkeyp
     assert set(payload["public"]) == {"brief", "glossary", "destinations"}
     assert payload["owner_answers"] == inputs["owner_answers"]
     assert payload["artifact"]["card"]["delivery_methods"] == inputs["artifact"]["card"]["delivery_methods"]
+    assert payload["artifact"]["card"]["numeric_conditions"] == inputs["artifact"]["card"]["numeric_conditions"]
     assert "SECRET_" not in canonical(payload) and "WRONG_OWNER_SOURCE" not in canonical(payload)
     assert observed["instructions_override"] == reviewer.REVIEW_INSTRUCTIONS
     assert observed["effort"] == "high" and observed["timeout_seconds"] == 90

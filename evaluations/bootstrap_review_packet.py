@@ -13,9 +13,9 @@ from evaluations.bootstrap_agent_trial import select_scenarios, shift_timestamps
 from evaluations.bootstrap_scenarios import build_scenarios, dataset_digest, public_episode
 
 
-def packets(report: dict) -> tuple[list[dict], dict, dict]:
+def packets(report: dict, *, fixtures_override: list[dict] | None = None) -> tuple[list[dict], dict, dict]:
     config = report["config"]
-    fixtures = build_scenarios(seed=config["seed"], split=config["split"])
+    fixtures = fixtures_override if fixtures_override is not None else build_scenarios(seed=config["seed"], split=config["split"])
     fixtures = select_scenarios(fixtures, config.get("selected_scenario_ids"),
                                config.get("selected_companies", len(fixtures)))
     if config.get("dataset_digest") and dataset_digest(fixtures) != config["dataset_digest"]:
