@@ -1,6 +1,7 @@
 import copy
 import json
 import sys
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -159,6 +160,39 @@ async def test_author_cannot_modify_calibration_cases_to_pass():
     with pytest.raises(ValueError, match="unmodified"):
         await session.call("evaluate_card_workflow", {"cases": [example()], "card_id": "x",
                            "acceptance_outcomes": ["notify"], "thresholds": {"min_outcome_accuracy": 0}})
+
+
+async def test_missing_source_feedback_names_owner_history_refs_without_mutating_card(card):
+    session = object.__new__(InstalledSession)
+    session.phase = "onboarding"
+    session.examples = [example()]
+    session.examples[0]["required_evidence_refs"].append("company_mcp|required-context")
+    session.examples[0]["allowed_retrieval_refs"] = ["company_mcp|r", "company_mcp|optional-context"]
+    session.offered_cases = [example()]  # A prior card's offer cannot survive failure.
+    session.product = AsyncMock(return_value=card)
+    before = copy.deepcopy(card)
+    result = await session.call("get_owner_examples", {"card_id": card["id"]})
+    assert result["status"] == "needs_source_review"
+    assert result["missing_required_source_refs"] == ["company_mcp|required-context"]
+    assert result["next_actions"] == [{"tool": "inspect_source", "arguments": {"ref": "company_mcp|required-context"}}]
+    assert "cases" not in result
+    assert card == before and session.offered_cases is None
+    session.product.assert_awaited_once_with("get_insight_card", {"card_id": card["id"]})
+    with pytest.raises(ValueError, match="unchanged"):
+        await session.call("evaluate_card_workflow", {"card_id": card["id"], "cases": [example()]})
+
+
+async def test_complete_source_bindings_return_original_labels_not_optional_requirements(card):
+    session = object.__new__(InstalledSession)
+    session.phase = "onboarding"
+    session.examples = [example()]
+    session.examples[0]["allowed_retrieval_refs"] = ["company_mcp|r", "company_mcp|optional-context"]
+    session.product = AsyncMock(return_value=card)
+    before = copy.deepcopy(session.examples)
+    result = await session.call("get_owner_examples", {"card_id": card["id"]})
+    assert result["cases"] == bind_examples(before, card)
+    assert result["acceptance_outcomes"] == ["notify"]
+    assert session.examples == before
 
 
 def test_session_public_projection_excludes_future_measurements_without_server_init(tmp_path):

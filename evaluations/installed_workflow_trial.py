@@ -33,7 +33,7 @@ from evaluations.bootstrap_scenarios import public_scenario
 from evaluations.codex_trial_transport import codex_episode
 from evaluations.installed_first_report_trial import _file_hash, _git_sha
 
-VERSION = "installed-workflow-v9"
+VERSION = "installed-workflow-v10"
 
 
 def bind_examples(examples: list[dict], card: dict) -> list[dict]:
@@ -92,6 +92,22 @@ class InstalledSession(ToolSession):
     async def call(self, name, arguments):
         if name == "get_owner_examples" and self.phase == "onboarding":
             card = await self.product("get_insight_card", {"card_id": arguments["card_id"]})
+            self.offered_cases = None
+            selected = {f"{source['adapter']}|{source['resource']}" for source in card["sources"]}
+            required = {ref for case in self.examples for ref in (
+                case.get("required_evidence_refs", []) + case.get("expected_retrieval_refs", [])
+            )}
+            missing = sorted(required - selected)
+            if missing:
+                # This is the supplied owner's calibration context, not inferred
+                # future truth. Do not make the author guess an opaque missing ID.
+                return {
+                    "status": "needs_source_review", "card_id": card["id"],
+                    "missing_required_source_refs": missing,
+                    "next_actions": [{"tool": "inspect_source", "arguments": {"ref": ref}} for ref in missing],
+                    "message": "Owner-labeled history requires these sources. Inspect them, then revise the card faithfully and request examples again. No source was added and no approval was granted.",
+                    "scope": "Supplied historical calibration requirements, not future labels or automatic source discovery.",
+                }
             self.offered_cases = bind_examples(self.examples, card)
             return {"cases": self.offered_cases,
                     "acceptance_outcomes": sorted({x["expected_outcome"] for x in self.examples}),
