@@ -6,6 +6,7 @@ import pytest
 
 from evaluations.enterprise_onboarding_journeys import journeys
 from evaluations.installed_transfer_cases import _target_resource_map, build_transfers
+from evaluations.installed_workflow_trial import bind_examples
 from signalweave.models import ResourceDescriptor, ResourceSnapshot
 
 
@@ -55,8 +56,9 @@ def test_transfer_examples_are_disjoint_from_future_labels_and_before_onboarding
             assert all(_dt(resource["metadata"]["reporting_cutoff"]) < onboarding
                        for resource in example["resources"])
             assert example["required_evidence_refs"]
-            assert len(example["expected_retrieval_refs"]) == 2
-            assert set(example["expected_retrieval_refs"]) == {
+            assert set(example["expected_retrieval_refs"]) == set(example["required_evidence_refs"])
+            assert len(example["resources"]) == 2
+            assert set(example["expected_retrieval_refs"]) <= {
                 f"{resource['adapter']}|{resource['resource']}"
                 for resource in example["resources"]
             }
@@ -75,7 +77,7 @@ def test_transfer_keeps_target_policy_and_maps_refs_and_destinations():
             assert set(example["required_evidence_refs"]) <= target_refs
             assert set(example["expected_retrieval_refs"]) <= target_refs
             assert set(example["required_evidence_refs"]) <= set(example["expected_retrieval_refs"])
-            assert {f"{item['adapter']}|{item['resource']}" for item in example["resources"]} == set(
+            assert {f"{item['adapter']}|{item['resource']}" for item in example["resources"]} >= set(
                 example["expected_retrieval_refs"]
             )
 
@@ -184,3 +186,19 @@ def test_resource_mapping_rejects_contract_drift_despite_identical_title(field, 
     target["public"]["catalog"][0]["contract"][field] = value
     with pytest.raises(ValueError, match="catalog semantic identities differ"):
         _target_resource_map(target, calibration)
+
+
+def test_optional_available_context_does_not_become_required_retrieval():
+    scenario = build_transfers()[4]
+    example = next(item for item in scenario["owner_examples"] if item["expected_outcome"] == "ignore")
+    required_ref, = example["required_evidence_refs"]
+    adapter, resource = required_ref.split("|", 1)
+    card = {"sources": [{"key": "primary", "adapter": adapter, "resource": resource}],
+            "delivery_methods": []}
+    bound, = bind_examples([example], card)
+    assert len(example["resources"]) == 2  # The optional context is still available.
+    assert len(bound["resources"]) == 1
+    assert bound["expected_retrieval_refs"] == [required_ref]
+    assert bound["required_evidence_source_keys"] == ["primary"]
+    with pytest.raises(ValueError, match="omits an owner-required evidence"):
+        bind_examples([example], {"sources": [], "delivery_methods": []})

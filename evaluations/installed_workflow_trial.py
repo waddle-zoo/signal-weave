@@ -33,7 +33,7 @@ from evaluations.bootstrap_scenarios import public_scenario
 from evaluations.codex_trial_transport import codex_episode
 from evaluations.installed_first_report_trial import _file_hash, _git_sha
 
-VERSION = "installed-workflow-v6"
+VERSION = "installed-workflow-v7"
 
 
 def bind_examples(examples: list[dict], card: dict) -> list[dict]:

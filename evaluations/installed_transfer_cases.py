@@ -3,8 +3,9 @@
 The target journeys remain the future monitoring set.  Calibration examples are
 generated independently, then identity-bound to the target catalog so the
 agent sees familiar business families without receiving target future data.
-The calibration cases carry explicit historical retrieval-scope labels for the
-first two legitimate assets defined by the existing family specs.  This is a
+The calibration cases carry the owner's historical required evidence scope as
+minimum retrieval labels. The first two legitimate assets remain available as
+snapshots; availability alone does not make both mandatory. This is a
 known-family regression with supplied context-asset labels, not proof of
 novice card authoring without context or a novel-company holdout.
 """
@@ -173,13 +174,15 @@ def _calibration_example(
         f"company_mcp|{resource_map[ref.split('|', 1)[1]]}"
         for ref in label["required_evidence_refs"]
     ]
-    expected_retrieval_refs = [
+    available_refs = [
         f"company_mcp|{resource_map[resource]}"
         for resource in sorted(approved_resources)
     ]
+    if not set(required_refs) <= set(available_refs):
+        raise ValueError("historical required evidence is absent from available calibration sources")
     resources = [
         snapshot for snapshot in period["snapshots"].values()
-        if f"company_mcp|{snapshot['resource']}" in expected_retrieval_refs
+        if f"company_mcp|{snapshot['resource']}" in available_refs
     ]
     example = {
         "id": f"calibration-{_digest(target['scenario_id'] + ':' + condition)}",
@@ -187,7 +190,7 @@ def _calibration_example(
         "expected_outcome": label["outcome"],
         "expected_delivery_destinations": endpoints,
         "required_evidence_refs": required_refs,
-        "expected_retrieval_refs": expected_retrieval_refs,
+        "expected_retrieval_refs": sorted(required_refs),
         "resources": resources,
     }
     if sorted(recipients) != sorted(endpoints):
