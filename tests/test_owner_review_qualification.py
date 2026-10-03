@@ -72,7 +72,6 @@ def test_run_retains_per_case_inputs_results_and_trace_without_expectation_in_in
     async def fake_review_owner_artifact(*, public, owner_answers, artifact, source_context, audit, budget):
         assert "expected_approved" not in json.dumps({"public": public, "owner_answers": owner_answers, "artifact": artifact, "source_context": source_context})
         budget.claim()
-        audit.emit("review.request", input_valid=True, model="gpt-5.6-luna")
         encoded = json.dumps(artifact)
         approved = (
             "fabricated" not in encoded
@@ -85,6 +84,8 @@ def test_run_retains_per_case_inputs_results_and_trace_without_expectation_in_in
                 "episode": {"status": "failed", "error": "invalid_review_input", "tool_calls": 0},
             }
         else:
+            audit.emit("api.request", provider="openai", request_id=budget.used,
+                       model="gpt-5.6-luna")
             result = {
                 "approved": approved, "reasons": ["offline transport double"],
                 "review": {"approved": approved, "reasons": ["offline transport double"]},
@@ -96,7 +97,8 @@ def test_run_retains_per_case_inputs_results_and_trace_without_expectation_in_in
     monkeypatch.setattr(runner, "review_owner_artifact", fake_review_owner_artifact)
     output = tmp_path / "qualification"
     summary = asyncio.run(runner.run_qualification(output))
-    assert output.exists() and summary["attempts_used"] == 5
+    assert output.exists() and summary["attempts_used"] == 4
+    assert summary["budget_claims_used"] == 5
     assert summary["all_passed"] is True
     manifest = json.loads((output / "manifest.json").read_text())
     assert manifest["instructions_digest"]

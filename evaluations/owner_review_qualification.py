@@ -35,6 +35,14 @@ def _file_digest(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _audited_openai_attempts(events: list[dict[str, Any]]) -> int:
+    """Count actual saved-Codex invocations, independent of legacy budgets."""
+    return sum(
+        event.get("kind") == "api.request" and event.get("provider") == "openai"
+        for event in events
+    )
+
+
 def _source_context() -> dict[str, Any]:
     return {
         "catalog": [{
@@ -309,6 +317,7 @@ async def run_qualification(output: Path) -> dict[str, Any]:
     })
     budget = RequestBudget(len(cases))
     rows = []
+    audited_attempts = 0
     for case in cases:
         case_dir = output / case["case_id"]
         case_dir.mkdir()
@@ -325,6 +334,8 @@ async def run_qualification(output: Path) -> dict[str, Any]:
             artifact=case["artifact"], source_context=case["source_context"],
             audit=audit, budget=budget,
         )
+        case_audited_attempts = _audited_openai_attempts(audit.events)
+        audited_attempts += case_audited_attempts
         row = {
             "case_id": case["case_id"],
             "expected_approved": case["expected_approved"],
@@ -334,6 +345,8 @@ async def run_qualification(output: Path) -> dict[str, Any]:
             "result": result,
             "input_digest": digest(reviewer_input),
             "trace_event_count": len(audit.events),
+            "audited_openai_attempts": case_audited_attempts,
+            "budget_claims": budget.used,
         }
         _write_exclusive(case_dir / "result.json", row)
         rows.append(row)
@@ -341,7 +354,8 @@ async def run_qualification(output: Path) -> dict[str, Any]:
         "runner": "owner_review_qualification",
         "model": "gpt-5.6-luna",
         "attempt_limit": len(cases),
-        "attempts_used": budget.used,
+        "attempts_used": audited_attempts,
+        "budget_claims_used": budget.used,
         "all_passed": all(row["passed"] for row in rows),
         "cases": rows,
     }

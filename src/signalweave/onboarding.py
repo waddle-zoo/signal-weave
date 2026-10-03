@@ -522,16 +522,17 @@ class InsightAuthoringService:
                 "The card has no human-approved anchor source.",
                 question,
             )
-        if not card.watch_for and not card.questions:
+        if not card.watch_for and not card.questions and not card.decision_guidance.strip():
             question = (
-                "Add at least one concrete thing to look for or one question the evidence should answer."
+                "Describe the decision rule in decision_guidance, or add a concrete watch-out "
+                "or question. Do not duplicate an existing decision rule as a required watch item."
             )
             questions.append(question)
             add_blocker(
                 OnboardingBlockerCode.INTENT_DETAIL_REQUIRED,
                 OnboardingBlockerSeverity.REVIEW,
                 "human-intent",
-                "The card does not describe a concrete watch-out or question to answer.",
+                "The card has no decision guidance, watch-out, or question to answer.",
                 question,
             )
         if card.delivery_methods and not card.decision_guidance.strip():

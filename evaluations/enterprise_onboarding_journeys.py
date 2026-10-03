@@ -21,7 +21,7 @@ from evaluations.bootstrap_agent_trial import run_trial
 from evaluations.bootstrap_scenarios import build_scenarios, dataset_digest
 
 VERSION = "enterprise-onboarding-journeys-v1"
-EXECUTION_VERSION = "enterprise-onboarding-repair-v4"
+EXECUTION_VERSION = "enterprise-onboarding-repair-v5"
 SEED = 20261003
 VARIANTS = (
     ("Archive", "Superseded weekly definition; retained for historical audit.", 60),
@@ -93,6 +93,7 @@ def protocol(scenarios: list[dict], *, jev_budget: int = 144) -> dict:
         "execution_version": EXECUTION_VERSION,
         "subset_probe": len(scenarios) != 6,
         "interventions": [
+            "Nonempty decision_guidance satisfies structural intent review without forcing duplicate required watch/question assessments.",
             "Owner review treats numeric conditions as optional and checks present bindings against inspected current comparison descriptors.",
             "Stable source-selection confirmation and explicit authorized anchors.",
             "Typed selected-source and workflow-case inputs; optional single current capture.",

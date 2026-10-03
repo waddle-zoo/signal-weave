@@ -512,12 +512,26 @@ async def test_new_health_failure_invalidates_token_and_cannot_be_acknowledged(t
 
 @pytest.mark.parametrize("options,code", [
     ({"decision_guidance": ""}, "decision-guidance-required"),
-    ({"watch_for": [], "questions": []}, "intent-detail-required"),
+    ({"watch_for": [], "questions": [], "decision_guidance": " "}, "intent-detail-required"),
 ])
 async def test_confirmation_cannot_resolve_missing_policy_or_intent(tmp_path, options, code):
     server, card_id, review, _, _ = await reviewed_case(tmp_path, **options)
     assert RESOLVABLE < {b["code"] for b in review["blockers"]}
     await assert_rejected(server, card_id, review["source_selection_fingerprint"], match=code)
+
+
+@pytest.mark.parametrize("sqlite", [False, True], ids=["json", "sqlite"])
+async def test_free_form_decision_policy_needs_no_duplicate_watch_or_question(tmp_path, sqlite):
+    server, card_id, review, _, _ = await reviewed_case(
+        tmp_path, sqlite=sqlite, watch_for=[], questions=[],
+        decision_guidance="Notify Growth on a material conversion drop; ignore ordinary variation.",
+    )
+    assert {b["code"] for b in review["blockers"]} == RESOLVABLE
+    await confirm(server, card_id, review["source_selection_fingerprint"])
+    card = stored(server, card_id)
+    assert card["status"] == "approved"
+    assert card["watch_for"] == card["questions"] == []
+    assert card["decision_guidance"] == "Notify Growth on a material conversion drop; ignore ordinary variation."
 
 
 @pytest.mark.parametrize("sqlite", [False, True], ids=["json", "sqlite"])
