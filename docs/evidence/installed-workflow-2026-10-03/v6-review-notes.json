@@ -1,0 +1,75 @@
+{
+  "date": "2026-10-03",
+  "review_kind": "Internal Luna implementation/methodology reviews independently checked against raw artifacts by the main agent; not external peer review",
+  "repair_commit": "3be22c5",
+  "retrieval_scope_repair_commit": "d324b8f",
+  "goal_complete": false,
+  "marketplace_v7_final_review": {
+    "setup_complete": true,
+    "future_exact": 3,
+    "future_intended": 3,
+    "jev_attempts": 17,
+    "jev_limit": 25,
+    "action_confidence_threshold": 0.7,
+    "future_public_payloads_and_private_labels_unchanged_from_live07": true,
+    "receipt_replays_without_new_calls": 3,
+    "delivery_enabled": false,
+    "qualification": "Internal Luna reviewer checked raw outputs independently. Reports remain partial or blocked, numeric claims empty; no prose/quantitative-quality or six-company readiness claim."
+  },
+  "findings": [
+    {
+      "issue": "Positional mapping within shuffled same-title/type catalog groups changed historical asset meaning",
+      "affected_v5_transfer_families": {
+        "retail": 0,
+        "saas": 4,
+        "support": 8,
+        "operations": 4,
+        "marketplace": 6,
+        "finance": 6
+      },
+      "count_unit": "Incorrect catalog mappings, including distractors; not necessarily executed or selected assets",
+      "resolution": "Match title, kind, description and canonical source contract excluding only tenant_id; reject ambiguous, duplicate or changed identities",
+      "regression": "tests/test_installed_transfer_cases.py",
+      "qualification": "Previous raw outputs are retained; cross-family results from the defective mapping cannot be treated as clean generalization proof"
+    },
+    {
+      "issue": "Reviewer incorrectly attributed finance's third source to dynamic expansion",
+      "resolution": "Raw native card and plan were fixed/none and explicitly included three sources. No retrieval-mode behavior was changed",
+      "actual_finance_result": "Jev selected insufficient_data with 0.43 support; code fell back to investigate without recipients",
+      "qualification": "Misbound calibration and a larger recurring evidence set confound attribution. No causal ablation of the extra source was performed"
+    },
+    {
+      "issue": "Authors used declared comparison windows as if they were typed numerical comparisons",
+      "resolution": "Guide explains that numeric conditions require inspected analytical_comparisons keys; English policy can use available evidence without claiming validated quantitative analysis",
+      "regression": "tests/test_getting_started.py"
+    },
+    {
+      "issue": "Calibration treated both available family assets as mandatory retrieval, independent of the historical required evidence labels",
+      "resolution": "In v7, preserve all available snapshots but derive minimum required retrieval from original owner-labeled required_evidence_refs; required-source omissions still fail",
+      "regression": "tests/test_installed_transfer_cases.py::test_optional_available_context_does_not_become_required_retrieval",
+      "qualification": "Failed v6 marketplace setup remains failed. The separate v7 prospective marketplace run completed setup and 3/3 future cases with 17 Jev attempts; no new six-company success claim"
+    },
+    {
+      "issue": "Historical supplied-snapshot acceptance does not test omitted optional sources",
+      "resolution": "Guide requires comparing the full saved source set to calibration and delivery-disabled current preview",
+      "qualification": "Guidance is not a new runtime certification guarantee; autonomous compliance remains an empirical question"
+    }
+  ],
+  "northstar_live04_audit": {
+    "jev_request_payloads_checked": 102,
+    "private_case_id_or_exact_condition_hint_matches": 0,
+    "completed": 42,
+    "exact": 41,
+    "receipt_replays_without_new_calls": 42,
+    "remaining_mismatch": "week-05-day-02-modest-movement: retained ignore label at exactly -10%, supplied policy says below 10%; native investigate after ignore support 0.63 fell below unchanged 0.70 floor",
+    "scope": "Native outcomes, destinations and evidence-source presence; no validated numerical report claims or real delivery"
+  },
+  "mapping_audit": {
+    "default_seed_families": 6,
+    "assets_checked": 144,
+    "source_contracts_preserved_except_tenant_id": true,
+    "typed_comparison_meanings_preserved": true,
+    "reordering_invariant": true,
+    "ambiguous_identity_rejected": true
+  }
+}

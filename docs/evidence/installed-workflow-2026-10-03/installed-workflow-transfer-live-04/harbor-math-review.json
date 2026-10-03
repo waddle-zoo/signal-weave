@@ -1,0 +1,54 @@
+{
+  "method": "Independent Fraction arithmetic over returned analytical_comparisons; no production calculation helper or model calls",
+  "source_file": "company-8d459664ee96ec88562a-result.json",
+  "source_sha256": "8543ba9f0699fe28d670d843c796c15a4f4c931cf42ab6065e80f7f89db05cc3",
+  "scope": "Harbor Workspace three-period arithmetic and incomparable-data guard only; descriptive decomposition, not causality",
+  "rows": [
+    {
+      "period_id": "period-a2f3abfc0f076b252b1b",
+      "recomputed_from_raw_comparison": {
+        "baseline": 0.55,
+        "current": 0.375,
+        "delta": -0.175,
+        "within_effect": 0.0,
+        "mix_effect": -0.175
+      },
+      "checks": {
+        "baseline": true,
+        "current": true,
+        "delta": true,
+        "within_effect": true,
+        "mix_effect": true
+      },
+      "outcome": "ignore",
+      "passed": true
+    },
+    {
+      "period_id": "period-e8f603f5fd5b3ccd0db3",
+      "recomputed_from_raw_comparison": {
+        "baseline": 0.55,
+        "current": 0.275,
+        "delta": -0.275,
+        "within_effect": -0.1,
+        "mix_effect": -0.175
+      },
+      "checks": {
+        "baseline": true,
+        "current": true,
+        "delta": true,
+        "within_effect": true,
+        "mix_effect": true
+      },
+      "outcome": "notify",
+      "passed": true
+    },
+    {
+      "period_id": "period-a3fe32654b203c33373c",
+      "comparison_comparable": false,
+      "numeric_claims_suppressed": true,
+      "outcome": "insufficient_data",
+      "passed": true
+    }
+  ],
+  "passed": true
+}

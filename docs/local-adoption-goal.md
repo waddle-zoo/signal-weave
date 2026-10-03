@@ -6,6 +6,17 @@ not declare the earlier failed trials passed.
 
 ## Native MCP onboarding investigation — October 3, 2026
 
+Current [native onboarding report](installed-onboarding-trial-2026-10-03.md): the
+clean Northstar run completed **41/42** future cases exactly and **42/42** no-call
+receipt replays. The broader six-business v5 probe completed only **3/6** setups
+and exposed a historical asset-identity mapping defect; its raw results must not
+be presented as clean generalization evidence. After repair, v6 completed **3/5**
+setups and **9/15** intended future cases. The separate v7 marketplace check
+completed setup and **3/3** future cases after removing an unjustified test-only
+retrieval requirement. Retail, SaaS, support, finance and marketplace have passing
+three-case follow-ups across separate versions; operations remains unresolved.
+This is not a pooled six-company pass. The goal remains incomplete.
+
 The new `evaluations/installed_workflow_trial.py` joins actual executable setup,
 stdio MCP, an external read-only source MCP, Luna card authoring, synthetic-owner
 review, historical acceptance and repeated live-Jev evaluations. No expert card

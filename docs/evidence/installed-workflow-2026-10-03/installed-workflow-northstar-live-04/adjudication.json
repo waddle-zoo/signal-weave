@@ -1,0 +1,1295 @@
+{
+  "adjudicator": "installed_workflow_review-v1",
+  "run_dir_name": "installed-workflow-northstar-live-04",
+  "original_report_preserved": true,
+  "offline_only": true,
+  "checks": {
+    "trace_integrity": {
+      "passed": true
+    },
+    "recorded_hashes": {
+      "passed": true
+    },
+    "raw_jev_budget": {
+      "passed": true,
+      "detail": {
+        "paid_attempts": 102,
+        "rejected_attempts": 0,
+        "limit": 144
+      }
+    }
+  },
+  "companies": [
+    {
+      "scenario_id": "northstar-outfitters-local",
+      "checks": {
+        "card_recorded": {
+          "passed": true
+        },
+        "owner_review_approved": {
+          "passed": true,
+          "detail": {
+            "prior_reviews": 1
+          }
+        },
+        "calibration_independent": {
+          "passed": true,
+          "detail": {
+            "passed": true,
+            "status": "approved",
+            "case_count": 6,
+            "failures": [],
+            "certification_report_id": "card_workflow:card-net-sales-change-triage-b85e32619e19:d80240de54afc0f6003b8a5e:c941dce99be1"
+          }
+        },
+        "future_period_set": {
+          "passed": true,
+          "detail": {
+            "count": 42
+          }
+        },
+        "future_intent_not_leaked_onboarding": {
+          "passed": true
+        },
+        "native_periods_independent": {
+          "passed": false,
+          "detail": {
+            "completed": 42,
+            "expected": 42,
+            "failed": [
+              {
+                "period_id": "period-cacfd2e988263338b326",
+                "passed": false,
+                "reasons": [
+                  "outcome differs from private label",
+                  "delivery endpoints differ from private label"
+                ],
+                "expected_outcome": "ignore",
+                "actual_outcome": "investigate",
+                "expected_recipients": [],
+                "actual_recipients": [
+                  "analytics"
+                ],
+                "expected_recipient_destinations": [],
+                "actual_recipient_destinations": [
+                  "slack://simulation-analytics"
+                ],
+                "required_evidence_refs": [
+                  "company_mcp|resource-bc5e054e60461fb10b8e",
+                  "company_mcp|resource-fd7ced0b3305cf92db4a"
+                ],
+                "actual_evidence_refs": [
+                  "company_mcp|resource-2ecd7a55803804422a3e",
+                  "company_mcp|resource-bc5e054e60461fb10b8e",
+                  "company_mcp|resource-bcc430dd0048c951ef1a",
+                  "company_mcp|resource-fd7ced0b3305cf92db4a"
+                ],
+                "report_status": "partial"
+              }
+            ]
+          }
+        },
+        "compiled_plan_stability": {
+          "passed": true,
+          "detail": {
+            "observations": 42,
+            "source": "native_period_outputs"
+          }
+        }
+      },
+      "calibration": {
+        "passed": true,
+        "status": "approved",
+        "case_count": 6,
+        "failures": [],
+        "certification_report_id": "card_workflow:card-net-sales-change-triage-b85e32619e19:d80240de54afc0f6003b8a5e:c941dce99be1"
+      },
+      "periods": [
+        {
+          "period_id": "period-8220f5a49f2c408aa128",
+          "passed": true,
+          "reasons": [],
+          "expected_outcome": "ignore",
+          "actual_outcome": "ignore",
+          "expected_recipients": [],
+          "actual_recipients": [],
+          "expected_recipient_destinations": [],
+          "actual_recipient_destinations": [],
+          "required_evidence_refs": [
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "actual_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-bcc430dd0048c951ef1a",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "report_status": "partial"
+        },
+        {
+          "period_id": "period-1b0b454965160f058bf1",
+          "passed": true,
+          "reasons": [],
+          "expected_outcome": "ignore",
+          "actual_outcome": "ignore",
+          "expected_recipients": [],
+          "actual_recipients": [],
+          "expected_recipient_destinations": [],
+          "actual_recipient_destinations": [],
+          "required_evidence_refs": [
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "actual_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-bcc430dd0048c951ef1a",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "report_status": "partial"
+        },
+        {
+          "period_id": "period-1e4550a643b6d460c470",
+          "passed": true,
+          "reasons": [],
+          "expected_outcome": "investigate",
+          "actual_outcome": "investigate",
+          "expected_recipients": [
+            "analytics"
+          ],
+          "actual_recipients": [
+            "analytics"
+          ],
+          "expected_recipient_destinations": [
+            "slack://simulation-analytics"
+          ],
+          "actual_recipient_destinations": [
+            "slack://simulation-analytics"
+          ],
+          "required_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "actual_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-bcc430dd0048c951ef1a",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "report_status": "partial"
+        },
+        {
+          "period_id": "period-42733dd4648afe7bb944",
+          "passed": true,
+          "reasons": [],
+          "expected_outcome": "notify",
+          "actual_outcome": "notify",
+          "expected_recipients": [
+            "leadership"
+          ],
+          "actual_recipients": [
+            "leadership"
+          ],
+          "expected_recipient_destinations": [
+            "slack://simulation-leadership"
+          ],
+          "actual_recipient_destinations": [
+            "slack://simulation-leadership"
+          ],
+          "required_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "actual_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-bcc430dd0048c951ef1a",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "report_status": "partial"
+        },
+        {
+          "period_id": "period-6813875d626052244933",
+          "passed": true,
+          "reasons": [],
+          "expected_outcome": "investigate",
+          "actual_outcome": "investigate",
+          "expected_recipients": [
+            "analytics"
+          ],
+          "actual_recipients": [
+            "analytics"
+          ],
+          "expected_recipient_destinations": [
+            "slack://simulation-analytics"
+          ],
+          "actual_recipient_destinations": [
+            "slack://simulation-analytics"
+          ],
+          "required_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "actual_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-bcc430dd0048c951ef1a",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "report_status": "partial"
+        },
+        {
+          "period_id": "period-e82d47975f8ec9b4de0c",
+          "passed": true,
+          "reasons": [],
+          "expected_outcome": "insufficient_data",
+          "actual_outcome": "insufficient_data",
+          "expected_recipients": [
+            "data-trust"
+          ],
+          "actual_recipients": [
+            "data-trust"
+          ],
+          "expected_recipient_destinations": [
+            "slack://simulation-data-trust"
+          ],
+          "actual_recipient_destinations": [
+            "slack://simulation-data-trust"
+          ],
+          "required_evidence_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "actual_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-bcc430dd0048c951ef1a",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "report_status": "blocked"
+        },
+        {
+          "period_id": "period-2978afa52afb19f80d0f",
+          "passed": true,
+          "reasons": [],
+          "expected_outcome": "ignore",
+          "actual_outcome": "ignore",
+          "expected_recipients": [],
+          "actual_recipients": [],
+          "expected_recipient_destinations": [],
+          "actual_recipient_destinations": [],
+          "required_evidence_refs": [
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "actual_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-bcc430dd0048c951ef1a",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "report_status": "partial"
+        },
+        {
+          "period_id": "period-41109ba382f9bde47760",
+          "passed": true,
+          "reasons": [],
+          "expected_outcome": "ignore",
+          "actual_outcome": "ignore",
+          "expected_recipients": [],
+          "actual_recipients": [],
+          "expected_recipient_destinations": [],
+          "actual_recipient_destinations": [],
+          "required_evidence_refs": [
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "actual_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-bcc430dd0048c951ef1a",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "report_status": "partial"
+        },
+        {
+          "period_id": "period-285114f40a192aa63630",
+          "passed": true,
+          "reasons": [],
+          "expected_outcome": "investigate",
+          "actual_outcome": "investigate",
+          "expected_recipients": [
+            "analytics"
+          ],
+          "actual_recipients": [
+            "analytics"
+          ],
+          "expected_recipient_destinations": [
+            "slack://simulation-analytics"
+          ],
+          "actual_recipient_destinations": [
+            "slack://simulation-analytics"
+          ],
+          "required_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "actual_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-bcc430dd0048c951ef1a",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "report_status": "partial"
+        },
+        {
+          "period_id": "period-a46684c5c938d88e3d0a",
+          "passed": true,
+          "reasons": [],
+          "expected_outcome": "notify",
+          "actual_outcome": "notify",
+          "expected_recipients": [
+            "leadership"
+          ],
+          "actual_recipients": [
+            "leadership"
+          ],
+          "expected_recipient_destinations": [
+            "slack://simulation-leadership"
+          ],
+          "actual_recipient_destinations": [
+            "slack://simulation-leadership"
+          ],
+          "required_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "actual_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-bcc430dd0048c951ef1a",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "report_status": "partial"
+        },
+        {
+          "period_id": "period-d40b0e6fc4cc04aac895",
+          "passed": true,
+          "reasons": [],
+          "expected_outcome": "investigate",
+          "actual_outcome": "investigate",
+          "expected_recipients": [
+            "analytics"
+          ],
+          "actual_recipients": [
+            "analytics"
+          ],
+          "expected_recipient_destinations": [
+            "slack://simulation-analytics"
+          ],
+          "actual_recipient_destinations": [
+            "slack://simulation-analytics"
+          ],
+          "required_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "actual_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-bcc430dd0048c951ef1a",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "report_status": "partial"
+        },
+        {
+          "period_id": "period-92aca4c03ff62e6ec9d4",
+          "passed": true,
+          "reasons": [],
+          "expected_outcome": "insufficient_data",
+          "actual_outcome": "insufficient_data",
+          "expected_recipients": [
+            "data-trust"
+          ],
+          "actual_recipients": [
+            "data-trust"
+          ],
+          "expected_recipient_destinations": [
+            "slack://simulation-data-trust"
+          ],
+          "actual_recipient_destinations": [
+            "slack://simulation-data-trust"
+          ],
+          "required_evidence_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "actual_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-bcc430dd0048c951ef1a",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "report_status": "blocked"
+        },
+        {
+          "period_id": "period-7ed22dd0421a5fdf2f15",
+          "passed": true,
+          "reasons": [],
+          "expected_outcome": "ignore",
+          "actual_outcome": "ignore",
+          "expected_recipients": [],
+          "actual_recipients": [],
+          "expected_recipient_destinations": [],
+          "actual_recipient_destinations": [],
+          "required_evidence_refs": [
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "actual_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-bcc430dd0048c951ef1a",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "report_status": "partial"
+        },
+        {
+          "period_id": "period-ec8e43a5dbf96f699c95",
+          "passed": true,
+          "reasons": [],
+          "expected_outcome": "ignore",
+          "actual_outcome": "ignore",
+          "expected_recipients": [],
+          "actual_recipients": [],
+          "expected_recipient_destinations": [],
+          "actual_recipient_destinations": [],
+          "required_evidence_refs": [
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "actual_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-bcc430dd0048c951ef1a",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "report_status": "partial"
+        },
+        {
+          "period_id": "period-c8cb712acffab956b59a",
+          "passed": true,
+          "reasons": [],
+          "expected_outcome": "investigate",
+          "actual_outcome": "investigate",
+          "expected_recipients": [
+            "analytics"
+          ],
+          "actual_recipients": [
+            "analytics"
+          ],
+          "expected_recipient_destinations": [
+            "slack://simulation-analytics"
+          ],
+          "actual_recipient_destinations": [
+            "slack://simulation-analytics"
+          ],
+          "required_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "actual_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-bcc430dd0048c951ef1a",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "report_status": "partial"
+        },
+        {
+          "period_id": "period-b928580f8bdb5b9e8d65",
+          "passed": true,
+          "reasons": [],
+          "expected_outcome": "notify",
+          "actual_outcome": "notify",
+          "expected_recipients": [
+            "leadership"
+          ],
+          "actual_recipients": [
+            "leadership"
+          ],
+          "expected_recipient_destinations": [
+            "slack://simulation-leadership"
+          ],
+          "actual_recipient_destinations": [
+            "slack://simulation-leadership"
+          ],
+          "required_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "actual_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-bcc430dd0048c951ef1a",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "report_status": "partial"
+        },
+        {
+          "period_id": "period-50f7e33fafedb9365e0b",
+          "passed": true,
+          "reasons": [],
+          "expected_outcome": "investigate",
+          "actual_outcome": "investigate",
+          "expected_recipients": [
+            "analytics"
+          ],
+          "actual_recipients": [
+            "analytics"
+          ],
+          "expected_recipient_destinations": [
+            "slack://simulation-analytics"
+          ],
+          "actual_recipient_destinations": [
+            "slack://simulation-analytics"
+          ],
+          "required_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "actual_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-bcc430dd0048c951ef1a",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "report_status": "partial"
+        },
+        {
+          "period_id": "period-1473d5183d28d89c57d0",
+          "passed": true,
+          "reasons": [],
+          "expected_outcome": "insufficient_data",
+          "actual_outcome": "insufficient_data",
+          "expected_recipients": [
+            "data-trust"
+          ],
+          "actual_recipients": [
+            "data-trust"
+          ],
+          "expected_recipient_destinations": [
+            "slack://simulation-data-trust"
+          ],
+          "actual_recipient_destinations": [
+            "slack://simulation-data-trust"
+          ],
+          "required_evidence_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "actual_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-bcc430dd0048c951ef1a",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "report_status": "blocked"
+        },
+        {
+          "period_id": "period-1fea3a82a7f1acdde235",
+          "passed": true,
+          "reasons": [],
+          "expected_outcome": "ignore",
+          "actual_outcome": "ignore",
+          "expected_recipients": [],
+          "actual_recipients": [],
+          "expected_recipient_destinations": [],
+          "actual_recipient_destinations": [],
+          "required_evidence_refs": [
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "actual_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-bcc430dd0048c951ef1a",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "report_status": "partial"
+        },
+        {
+          "period_id": "period-cacfd2e988263338b326",
+          "passed": false,
+          "reasons": [
+            "outcome differs from private label",
+            "delivery endpoints differ from private label"
+          ],
+          "expected_outcome": "ignore",
+          "actual_outcome": "investigate",
+          "expected_recipients": [],
+          "actual_recipients": [
+            "analytics"
+          ],
+          "expected_recipient_destinations": [],
+          "actual_recipient_destinations": [
+            "slack://simulation-analytics"
+          ],
+          "required_evidence_refs": [
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "actual_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-bcc430dd0048c951ef1a",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "report_status": "partial"
+        },
+        {
+          "period_id": "period-b3695fb07a6fcceeddbf",
+          "passed": true,
+          "reasons": [],
+          "expected_outcome": "investigate",
+          "actual_outcome": "investigate",
+          "expected_recipients": [
+            "analytics"
+          ],
+          "actual_recipients": [
+            "analytics"
+          ],
+          "expected_recipient_destinations": [
+            "slack://simulation-analytics"
+          ],
+          "actual_recipient_destinations": [
+            "slack://simulation-analytics"
+          ],
+          "required_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "actual_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-bcc430dd0048c951ef1a",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "report_status": "partial"
+        },
+        {
+          "period_id": "period-fb80caef1adf491888bb",
+          "passed": true,
+          "reasons": [],
+          "expected_outcome": "notify",
+          "actual_outcome": "notify",
+          "expected_recipients": [
+            "leadership"
+          ],
+          "actual_recipients": [
+            "leadership"
+          ],
+          "expected_recipient_destinations": [
+            "slack://simulation-leadership"
+          ],
+          "actual_recipient_destinations": [
+            "slack://simulation-leadership"
+          ],
+          "required_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "actual_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-bcc430dd0048c951ef1a",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "report_status": "partial"
+        },
+        {
+          "period_id": "period-362db1faf5537d524e5b",
+          "passed": true,
+          "reasons": [],
+          "expected_outcome": "investigate",
+          "actual_outcome": "investigate",
+          "expected_recipients": [
+            "analytics"
+          ],
+          "actual_recipients": [
+            "analytics"
+          ],
+          "expected_recipient_destinations": [
+            "slack://simulation-analytics"
+          ],
+          "actual_recipient_destinations": [
+            "slack://simulation-analytics"
+          ],
+          "required_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "actual_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-bcc430dd0048c951ef1a",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "report_status": "partial"
+        },
+        {
+          "period_id": "period-ff146006fd898378808e",
+          "passed": true,
+          "reasons": [],
+          "expected_outcome": "insufficient_data",
+          "actual_outcome": "insufficient_data",
+          "expected_recipients": [
+            "data-trust"
+          ],
+          "actual_recipients": [
+            "data-trust"
+          ],
+          "expected_recipient_destinations": [
+            "slack://simulation-data-trust"
+          ],
+          "actual_recipient_destinations": [
+            "slack://simulation-data-trust"
+          ],
+          "required_evidence_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "actual_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-bcc430dd0048c951ef1a",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "report_status": "blocked"
+        },
+        {
+          "period_id": "period-3942badd45544d27e051",
+          "passed": true,
+          "reasons": [],
+          "expected_outcome": "ignore",
+          "actual_outcome": "ignore",
+          "expected_recipients": [],
+          "actual_recipients": [],
+          "expected_recipient_destinations": [],
+          "actual_recipient_destinations": [],
+          "required_evidence_refs": [
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "actual_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-bcc430dd0048c951ef1a",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "report_status": "partial"
+        },
+        {
+          "period_id": "period-52668276315c126c3380",
+          "passed": true,
+          "reasons": [],
+          "expected_outcome": "ignore",
+          "actual_outcome": "ignore",
+          "expected_recipients": [],
+          "actual_recipients": [],
+          "expected_recipient_destinations": [],
+          "actual_recipient_destinations": [],
+          "required_evidence_refs": [
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "actual_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-bcc430dd0048c951ef1a",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "report_status": "partial"
+        },
+        {
+          "period_id": "period-ea55ec983158dbb2a561",
+          "passed": true,
+          "reasons": [],
+          "expected_outcome": "investigate",
+          "actual_outcome": "investigate",
+          "expected_recipients": [
+            "analytics"
+          ],
+          "actual_recipients": [
+            "analytics"
+          ],
+          "expected_recipient_destinations": [
+            "slack://simulation-analytics"
+          ],
+          "actual_recipient_destinations": [
+            "slack://simulation-analytics"
+          ],
+          "required_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "actual_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-bcc430dd0048c951ef1a",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "report_status": "partial"
+        },
+        {
+          "period_id": "period-4cd5f2a896c88c2a3881",
+          "passed": true,
+          "reasons": [],
+          "expected_outcome": "notify",
+          "actual_outcome": "notify",
+          "expected_recipients": [
+            "leadership"
+          ],
+          "actual_recipients": [
+            "leadership"
+          ],
+          "expected_recipient_destinations": [
+            "slack://simulation-leadership"
+          ],
+          "actual_recipient_destinations": [
+            "slack://simulation-leadership"
+          ],
+          "required_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "actual_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-bcc430dd0048c951ef1a",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "report_status": "partial"
+        },
+        {
+          "period_id": "period-61809440532a5c19edc4",
+          "passed": true,
+          "reasons": [],
+          "expected_outcome": "investigate",
+          "actual_outcome": "investigate",
+          "expected_recipients": [
+            "analytics"
+          ],
+          "actual_recipients": [
+            "analytics"
+          ],
+          "expected_recipient_destinations": [
+            "slack://simulation-analytics"
+          ],
+          "actual_recipient_destinations": [
+            "slack://simulation-analytics"
+          ],
+          "required_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "actual_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-bcc430dd0048c951ef1a",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "report_status": "partial"
+        },
+        {
+          "period_id": "period-536c2dfb1243781a72ea",
+          "passed": true,
+          "reasons": [],
+          "expected_outcome": "insufficient_data",
+          "actual_outcome": "insufficient_data",
+          "expected_recipients": [
+            "data-trust"
+          ],
+          "actual_recipients": [
+            "data-trust"
+          ],
+          "expected_recipient_destinations": [
+            "slack://simulation-data-trust"
+          ],
+          "actual_recipient_destinations": [
+            "slack://simulation-data-trust"
+          ],
+          "required_evidence_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "actual_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-bcc430dd0048c951ef1a",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "report_status": "blocked"
+        },
+        {
+          "period_id": "period-b183661e1220aaa7bf5b",
+          "passed": true,
+          "reasons": [],
+          "expected_outcome": "ignore",
+          "actual_outcome": "ignore",
+          "expected_recipients": [],
+          "actual_recipients": [],
+          "expected_recipient_destinations": [],
+          "actual_recipient_destinations": [],
+          "required_evidence_refs": [
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "actual_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-bcc430dd0048c951ef1a",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "report_status": "partial"
+        },
+        {
+          "period_id": "period-740316b8c564ac9127ca",
+          "passed": true,
+          "reasons": [],
+          "expected_outcome": "ignore",
+          "actual_outcome": "ignore",
+          "expected_recipients": [],
+          "actual_recipients": [],
+          "expected_recipient_destinations": [],
+          "actual_recipient_destinations": [],
+          "required_evidence_refs": [
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "actual_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-bcc430dd0048c951ef1a",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "report_status": "partial"
+        },
+        {
+          "period_id": "period-6f90ab4547e1e3acb534",
+          "passed": true,
+          "reasons": [],
+          "expected_outcome": "investigate",
+          "actual_outcome": "investigate",
+          "expected_recipients": [
+            "analytics"
+          ],
+          "actual_recipients": [
+            "analytics"
+          ],
+          "expected_recipient_destinations": [
+            "slack://simulation-analytics"
+          ],
+          "actual_recipient_destinations": [
+            "slack://simulation-analytics"
+          ],
+          "required_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "actual_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-bcc430dd0048c951ef1a",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "report_status": "partial"
+        },
+        {
+          "period_id": "period-a81942ac36fc56f150c8",
+          "passed": true,
+          "reasons": [],
+          "expected_outcome": "notify",
+          "actual_outcome": "notify",
+          "expected_recipients": [
+            "leadership"
+          ],
+          "actual_recipients": [
+            "leadership"
+          ],
+          "expected_recipient_destinations": [
+            "slack://simulation-leadership"
+          ],
+          "actual_recipient_destinations": [
+            "slack://simulation-leadership"
+          ],
+          "required_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "actual_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-bcc430dd0048c951ef1a",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "report_status": "partial"
+        },
+        {
+          "period_id": "period-8c54ee3358c32c22c9ea",
+          "passed": true,
+          "reasons": [],
+          "expected_outcome": "investigate",
+          "actual_outcome": "investigate",
+          "expected_recipients": [
+            "analytics"
+          ],
+          "actual_recipients": [
+            "analytics"
+          ],
+          "expected_recipient_destinations": [
+            "slack://simulation-analytics"
+          ],
+          "actual_recipient_destinations": [
+            "slack://simulation-analytics"
+          ],
+          "required_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "actual_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-bcc430dd0048c951ef1a",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "report_status": "partial"
+        },
+        {
+          "period_id": "period-f8dad01afb232277aedc",
+          "passed": true,
+          "reasons": [],
+          "expected_outcome": "insufficient_data",
+          "actual_outcome": "insufficient_data",
+          "expected_recipients": [
+            "data-trust"
+          ],
+          "actual_recipients": [
+            "data-trust"
+          ],
+          "expected_recipient_destinations": [
+            "slack://simulation-data-trust"
+          ],
+          "actual_recipient_destinations": [
+            "slack://simulation-data-trust"
+          ],
+          "required_evidence_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "actual_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-bcc430dd0048c951ef1a",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "report_status": "blocked"
+        },
+        {
+          "period_id": "period-ce15c8635cbea518bbf9",
+          "passed": true,
+          "reasons": [],
+          "expected_outcome": "ignore",
+          "actual_outcome": "ignore",
+          "expected_recipients": [],
+          "actual_recipients": [],
+          "expected_recipient_destinations": [],
+          "actual_recipient_destinations": [],
+          "required_evidence_refs": [
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "actual_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-bcc430dd0048c951ef1a",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "report_status": "partial"
+        },
+        {
+          "period_id": "period-e874fb1d73e1274488fe",
+          "passed": true,
+          "reasons": [],
+          "expected_outcome": "ignore",
+          "actual_outcome": "ignore",
+          "expected_recipients": [],
+          "actual_recipients": [],
+          "expected_recipient_destinations": [],
+          "actual_recipient_destinations": [],
+          "required_evidence_refs": [
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "actual_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-bcc430dd0048c951ef1a",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "report_status": "partial"
+        },
+        {
+          "period_id": "period-c45d2d7534a61f685738",
+          "passed": true,
+          "reasons": [],
+          "expected_outcome": "investigate",
+          "actual_outcome": "investigate",
+          "expected_recipients": [
+            "analytics"
+          ],
+          "actual_recipients": [
+            "analytics"
+          ],
+          "expected_recipient_destinations": [
+            "slack://simulation-analytics"
+          ],
+          "actual_recipient_destinations": [
+            "slack://simulation-analytics"
+          ],
+          "required_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "actual_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-bcc430dd0048c951ef1a",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "report_status": "partial"
+        },
+        {
+          "period_id": "period-db74c8aeff2c84f0aabd",
+          "passed": true,
+          "reasons": [],
+          "expected_outcome": "notify",
+          "actual_outcome": "notify",
+          "expected_recipients": [
+            "leadership"
+          ],
+          "actual_recipients": [
+            "leadership"
+          ],
+          "expected_recipient_destinations": [
+            "slack://simulation-leadership"
+          ],
+          "actual_recipient_destinations": [
+            "slack://simulation-leadership"
+          ],
+          "required_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "actual_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-bcc430dd0048c951ef1a",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "report_status": "partial"
+        },
+        {
+          "period_id": "period-9fb146a1013905087e93",
+          "passed": true,
+          "reasons": [],
+          "expected_outcome": "investigate",
+          "actual_outcome": "investigate",
+          "expected_recipients": [
+            "analytics"
+          ],
+          "actual_recipients": [
+            "analytics"
+          ],
+          "expected_recipient_destinations": [
+            "slack://simulation-analytics"
+          ],
+          "actual_recipient_destinations": [
+            "slack://simulation-analytics"
+          ],
+          "required_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "actual_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-bcc430dd0048c951ef1a",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "report_status": "partial"
+        },
+        {
+          "period_id": "period-1ac5faee838bff868863",
+          "passed": true,
+          "reasons": [],
+          "expected_outcome": "insufficient_data",
+          "actual_outcome": "insufficient_data",
+          "expected_recipients": [
+            "data-trust"
+          ],
+          "actual_recipients": [
+            "data-trust"
+          ],
+          "expected_recipient_destinations": [
+            "slack://simulation-data-trust"
+          ],
+          "actual_recipient_destinations": [
+            "slack://simulation-data-trust"
+          ],
+          "required_evidence_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "actual_evidence_refs": [
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-bcc430dd0048c951ef1a",
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ],
+          "report_status": "blocked"
+        }
+      ],
+      "qualitative_scope": {
+        "report_statuses": {
+          "partial": 35,
+          "blocked": 7
+        },
+        "note": "Native adjudication does not certify report prose, causal claims, numeric-claim quality, usability, or customer outcomes."
+      },
+      "passed": false
+    }
+  ],
+  "summary": {
+    "passed": false,
+    "companies": 1,
+    "periods": 42,
+    "raw_jev_paid_attempts": 102,
+    "raw_jev_rejected_attempts": 0
+  }
+}

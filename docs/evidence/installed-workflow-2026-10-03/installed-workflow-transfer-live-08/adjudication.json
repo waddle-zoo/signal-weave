@@ -1,0 +1,164 @@
+{
+  "adjudicator": "installed_workflow_review-v1",
+  "run_dir_name": "installed-workflow-transfer-live-08",
+  "original_report_preserved": true,
+  "offline_only": true,
+  "checks": {
+    "trace_integrity": {
+      "passed": true
+    },
+    "recorded_hashes": {
+      "passed": true
+    },
+    "raw_jev_budget": {
+      "passed": true,
+      "detail": {
+        "paid_attempts": 17,
+        "rejected_attempts": 0,
+        "limit": 25
+      }
+    }
+  },
+  "companies": [
+    {
+      "scenario_id": "company-59f63defc7194b5ec90f",
+      "checks": {
+        "card_recorded": {
+          "passed": true
+        },
+        "owner_review_approved": {
+          "passed": true,
+          "detail": {
+            "prior_reviews": 0
+          }
+        },
+        "calibration_independent": {
+          "passed": true,
+          "detail": {
+            "passed": true,
+            "status": "approved",
+            "case_count": 3,
+            "failures": [],
+            "certification_report_id": "card_workflow:card-weekly-distinct-buyers-decline-06703693:e9e79f6d1a0d253afa8b105d:eec076950449"
+          }
+        },
+        "future_period_set": {
+          "passed": true,
+          "detail": {
+            "count": 3
+          }
+        },
+        "future_intent_not_leaked_onboarding": {
+          "passed": true
+        },
+        "native_periods_independent": {
+          "passed": true,
+          "detail": {
+            "count": 3
+          }
+        },
+        "compiled_plan_stability": {
+          "passed": true,
+          "detail": {
+            "observations": 3,
+            "source": "native_period_outputs"
+          }
+        }
+      },
+      "calibration": {
+        "passed": true,
+        "status": "approved",
+        "case_count": 3,
+        "failures": [],
+        "certification_report_id": "card_workflow:card-weekly-distinct-buyers-decline-06703693:e9e79f6d1a0d253afa8b105d:eec076950449"
+      },
+      "periods": [
+        {
+          "period_id": "period-4e4e58f53a872b0441f0",
+          "passed": true,
+          "reasons": [],
+          "expected_outcome": "ignore",
+          "actual_outcome": "ignore",
+          "expected_recipients": [],
+          "actual_recipients": [],
+          "expected_recipient_destinations": [],
+          "actual_recipient_destinations": [],
+          "required_evidence_refs": [
+            "company_mcp|resource-b188a4a001676320ebdd"
+          ],
+          "actual_evidence_refs": [
+            "company_mcp|resource-b188a4a001676320ebdd"
+          ],
+          "report_status": "partial"
+        },
+        {
+          "period_id": "period-d74dea2e644c8f49a6fa",
+          "passed": true,
+          "reasons": [],
+          "expected_outcome": "notify",
+          "actual_outcome": "notify",
+          "expected_recipients": [
+            "team-50e4dc85af7143c3e809"
+          ],
+          "actual_recipients": [
+            "team-50e4dc85af7143c3e809"
+          ],
+          "expected_recipient_destinations": [
+            "slack://team-50e4dc85af7143c3e809"
+          ],
+          "actual_recipient_destinations": [
+            "slack://team-50e4dc85af7143c3e809"
+          ],
+          "required_evidence_refs": [
+            "company_mcp|resource-b188a4a001676320ebdd"
+          ],
+          "actual_evidence_refs": [
+            "company_mcp|resource-b188a4a001676320ebdd"
+          ],
+          "report_status": "partial"
+        },
+        {
+          "period_id": "period-099565ac43484ffa8235",
+          "passed": true,
+          "reasons": [],
+          "expected_outcome": "insufficient_data",
+          "actual_outcome": "insufficient_data",
+          "expected_recipients": [
+            "team-85445a81d8594b9e5c14"
+          ],
+          "actual_recipients": [
+            "team-85445a81d8594b9e5c14"
+          ],
+          "expected_recipient_destinations": [
+            "slack://team-85445a81d8594b9e5c14"
+          ],
+          "actual_recipient_destinations": [
+            "slack://team-85445a81d8594b9e5c14"
+          ],
+          "required_evidence_refs": [
+            "company_mcp|resource-b188a4a001676320ebdd"
+          ],
+          "actual_evidence_refs": [
+            "company_mcp|resource-b188a4a001676320ebdd"
+          ],
+          "report_status": "blocked"
+        }
+      ],
+      "qualitative_scope": {
+        "report_statuses": {
+          "partial": 2,
+          "blocked": 1
+        },
+        "note": "Native adjudication does not certify report prose, causal claims, numeric-claim quality, usability, or customer outcomes."
+      },
+      "passed": true
+    }
+  ],
+  "summary": {
+    "passed": true,
+    "companies": 1,
+    "periods": 3,
+    "raw_jev_paid_attempts": 17,
+    "raw_jev_rejected_attempts": 0
+  }
+}
