@@ -1,0 +1,93 @@
+{
+  "status": "aborted",
+  "complete_export": false,
+  "exporter_status": "not_generated",
+  "run": {
+    "artifact_set": "artifacts/enterprise-onboarding-repair-v3-full-01",
+    "protocol_sidecar": "artifacts/enterprise-onboarding-repair-v3-full-01.protocol.json",
+    "frozen_git_revision": "3860519877bb47b14b9d80312e7b807f57735c1d",
+    "abort": "SIGINT",
+    "reported_pid": 71159,
+    "pid_observed_at_audit": "absent",
+    "session_state": "gone",
+    "runtime_edits_during_run": false
+  },
+  "abort_reason": {
+    "category": "protocol_defect_observed",
+    "description": "A reviewer first demanded a numeric_conditions entry for an owner rule, then accepted a previous_period binding that was absent from the inspected source and its required comparison keys. The later preview reported that comparison as missing.",
+    "source_evidence": {
+      "inspected_sources": 2,
+      "analytical_comparisons_in_each": 0,
+      "required_comparison_keys_in_each_contract": 0,
+      "invented_comparison_key_accepted": "previous_period",
+      "later_preview_status": "blocked",
+      "later_preview_outcome": "insufficient_data"
+    }
+  },
+  "denominator": {
+    "intended_episode_records": 48,
+    "observed_episode_json_records": 9,
+    "trace_only_partial_attempts": 1,
+    "remaining_episode_records_without_observation": 39,
+    "not_run_status": "unassigned; no estimate"
+  },
+  "attempts": {
+    "gpt-5.6-luna": {
+      "provider": "openai",
+      "request_records": 12,
+      "response_records": 11,
+      "uncompleted_request_records": 1,
+      "request_ids": [-1, -2, -3, -4, -5, -6, -7, -8, -9, -10, -11, -12],
+      "uncompleted_request_id": -12
+    },
+    "jev-latest": {
+      "provider": "jev",
+      "request_records": 15,
+      "response_records": 15,
+      "failed_request_records": 0,
+      "request_ids": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+    }
+  },
+  "observed_outcomes": [
+    {"record": "episode-001.json", "company": "Juniper Trail Retail", "arm": "luna_bi", "phase": "onboarding", "status": "complete", "owner_review": "approved"},
+    {"record": "episode-002.json", "company": "Juniper Trail Retail", "arm": "luna_signalweave_jev", "phase": "onboarding", "status": "failed", "error": "no_structured_submission", "owner_reviews": 3, "jev_attempts": 12},
+    {"record": "episode-003.json", "company": "Juniper Trail Retail", "arm": "luna_signalweave_jev", "phase": "monitoring", "status": "failed", "error": "RuntimeError", "execution": "blocked_before_agent_or_Jev_calls"},
+    {"record": "episode-004.json", "company": "Juniper Trail Retail", "arm": "luna_bi", "phase": "monitoring", "status": "complete"},
+    {"record": "episode-005.json", "company": "Juniper Trail Retail", "arm": "luna_bi", "phase": "monitoring", "status": "complete"},
+    {"record": "episode-006.json", "company": "Juniper Trail Retail", "arm": "luna_signalweave_jev", "phase": "monitoring", "status": "failed", "error": "RuntimeError", "execution": "blocked_before_agent_or_Jev_calls"},
+    {"record": "episode-007.json", "company": "Juniper Trail Retail", "arm": "luna_signalweave_jev", "phase": "monitoring", "status": "failed", "error": "RuntimeError", "execution": "blocked_before_agent_or_Jev_calls"},
+    {"record": "episode-008.json", "company": "Juniper Trail Retail", "arm": "luna_bi", "phase": "monitoring", "status": "complete"},
+    {"record": "episode-009.json", "company": "Harbor Workspace", "arm": "luna_bi", "phase": "onboarding", "status": "complete", "owner_review": "approved"}
+  ],
+  "trace_only_partial": {
+    "company": "Harbor Workspace",
+    "arm": "luna_signalweave_jev",
+    "phase": "onboarding",
+    "episode": "company-80529fa10aa0f418949b/luna_signalweave_jev/period-f7f0796ead10c6417487",
+    "model_request_id": -12,
+    "model_response": "absent_before_SIGINT",
+    "jev_request_ids": [13, 14, 15],
+    "jev_responses": 3,
+    "tool_results_observed": 10,
+    "final_observed_tool": "onboard_insight_card",
+    "outcome": "aborted_before_episode_record_and_before_onboarding_completion",
+    "score": "not computed"
+  },
+  "unobserved_companies": [
+    "Kindred Helpdesk",
+    "Cinder Database Cloud",
+    "Mosaic Exchange",
+    "Lumen Freight Finance"
+  ],
+  "archive_files": {
+    "trace.jsonl.gz": "ada62158a822e36b8d495614903c0d05cd103b7bb096c44f0a65e6ce37cd4d3f",
+    "config.json": "71dcad2b4a8210fe76225cd4a49545a273b1314a3e9665d2a3eb89134e9be6e6",
+    "protocol.sidecar.json": "4204b8a760649fe20eee81fcbe9989985000bbedf171737bc6b63a9445f7e948"
+  },
+  "claims": {
+    "narrative_success": false,
+    "treatment_completion": "not established",
+    "correctness_score": "not computed",
+    "not_run_cases": "no outcome assigned"
+  }
+}

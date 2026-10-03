@@ -772,7 +772,9 @@ class InsightCard(BaseModel):
         default_factory=list,
         max_length=100,
         description=(
-            "Approved numeric projections bound to a card source and analytical comparison. "
+            "Optional approved numeric projections bound to an inspected card source and "
+            "an existing analytical comparison. Leave empty when no applicable comparison "
+            "exists; never invent a comparison key. Plain-English policy belongs in decision_guidance. "
             "They are evidence checks only; action selection remains owner/Jev state."
         ),
     )

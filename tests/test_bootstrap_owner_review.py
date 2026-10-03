@@ -313,6 +313,7 @@ async def test_preexhausted_budget_does_not_launch_reviewer(monkeypatch, inputs)
 
 
 def test_current_onboarding_source_context_is_bounded_and_cannot_leak_future_oracle(inputs):
+    inputs["artifact"]["card"]["numeric_conditions"] = []
     context = {
         "current_period": {"period_id": "onboarding-current", "as_of": "2026-10-03T00:00:00Z",
                            "future_snapshot": "FUTURE_SNAPSHOT_CANARY"},
@@ -352,6 +353,43 @@ def test_current_onboarding_source_context_is_bounded_and_cannot_leak_future_ora
     assert "PRIVATE_" not in dumped
     assert "MALICIOUS_" not in dumped
     assert "snapshot" not in dumped and "metadata" not in dumped
+
+
+def test_optional_numeric_policy_does_not_require_fabricated_comparison(inputs):
+    inputs["artifact"]["card"]["numeric_conditions"] = []
+    payload = reviewer.review_payload(**inputs, source_context={"inspected_sources": []})
+    assert payload["artifact"]["card"]["decision_guidance"]
+    assert payload["execution_contract"]["numeric_bindings"] == []
+    assert "numeric_conditions are OPTIONAL" in reviewer.REVIEW_INSTRUCTIONS
+
+
+def test_inspected_comparisons_not_authored_requirements_verify_binding(inputs):
+    source = {"ref": "company_mcp|metric:latency", "adapter": "company_mcp",
+              "resource": "metric:latency", "title": "Latency",
+              "analytical_comparisons": []}
+    context = {"inspected_sources": [source]}
+    with pytest.raises(ValueError, match="absent from inspected"):
+        reviewer.review_payload(**inputs, source_context=context)
+    source["analytical_comparisons"] = [{"key": "comparison-a", "kind": "rate", "unit": "ratio",
+                                          "baseline_total": "PRIVATE_MEASUREMENT",
+                                          "future": "FUTURE_LABEL"}]
+    payload = reviewer.review_payload(**inputs, source_context=context)
+    assert "PRIVATE_MEASUREMENT" not in canonical(payload)
+    assert "FUTURE_LABEL" not in canonical(payload)
+    assert payload["execution_contract"]["numeric_bindings_verified_against_inspection"]
+    inputs["artifact"]["card"]["numeric_conditions"][0]["measurement"] = "within_effect"
+    reviewer.review_payload(**inputs, source_context=context)
+    source["analytical_comparisons"][0]["kind"] = "additive"
+    with pytest.raises(ValueError, match="Rate effects"):
+        reviewer.review_payload(**inputs, source_context=context)
+    source["analytical_comparisons"][0]["unit"] = "milliseconds"
+    with pytest.raises(ValueError, match="unit differs"):
+        reviewer.review_payload(**inputs, source_context=context)
+
+
+def test_uninspected_numeric_source_is_not_verified_by_card(inputs):
+    with pytest.raises(ValueError, match="must be inspected"):
+        reviewer.review_payload(**inputs, source_context={"inspected_sources": []})
 
 
 def test_source_context_is_optional_and_policy_remains_separate(inputs):

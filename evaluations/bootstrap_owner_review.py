@@ -57,7 +57,12 @@ REVIEW_INSTRUCTIONS = (
     "is never a business metric. retrieval_mode, investigation_mode, source-age limits, and "
     "investigation limits are execution settings, not owner policy. The execution_contract is "
     "code-grounded context, not proof that runtime execution works. "
-    "For numeric conditions, validate the executable source_key, comparison_key, measurement, "
+    "numeric_conditions are OPTIONAL compiled checks. A complete numerical business rule in "
+    "decision_guidance is executed by Jev; it does not require a numeric_conditions entry. "
+    "Raw observations may have no analytical_comparisons at all. Do not demand, invent, or "
+    "approve invented comparison bindings to translate such a rule. Absence of a compiled "
+    "check is not omission of a rule faithfully expressed in decision_guidance. "
+    "When numeric conditions ARE present, validate the executable source_key, comparison_key, measurement, "
     "segment, unit, threshold and comparator fields against the supplied typed contract; do not "
     "use a free-text label to reinterpret them. A contribution with segment=null means any "
     "matching segment contribution; it is not a total within-effect measurement. If the owner's "
@@ -95,6 +100,10 @@ CONTRACT_FIELDS = (
     "source_status", "authorized",
 )
 DESCRIPTION_FIELDS = ("ref", "adapter", "resource", "kind", "title", "description")
+COMPARISON_DESCRIPTION_FIELDS = (
+    "key", "metric", "definition", "population", "unit", "dimension", "kind",
+    "comparison_window",
+)
 Reason = Annotated[str, StringConstraints(min_length=1, max_length=600, pattern=r"\S")]
 
 
@@ -183,6 +192,8 @@ def _project_description(entry: object, field: str, *, require_ref: bool = False
             raise ValueError(f"{field}.{required} is required")
     if require_ref and "ref" not in projected:
         raise ValueError(f"{field}.ref is required")
+    if require_ref and projected["ref"] != f"{projected['adapter']}|{projected['resource']}":
+        raise ValueError(f"{field}.ref does not match its source identity")
     if "contract" in entry:
         projected["contract"] = _project_contract(entry["contract"])
     return projected
@@ -207,6 +218,25 @@ def project_source_context(source_context: dict | None) -> dict:
             _project_description(item, "inspected_sources", require_ref=True) for item in inspected
         ],
     }
+    for original, selected in zip(inspected, projected["inspected_sources"], strict=True):
+        # A source's actual comparison descriptors, never authored card requirements.
+        # Exclude totals, segments, private labels and every arbitrary metadata field.
+        comparisons = original.get("analytical_comparisons", [])
+        if not isinstance(comparisons, list) or len(comparisons) > MAX_CONTEXT_LIST_ITEMS:
+            raise ValueError("analytical_comparisons must be a bounded list")
+        selected["analytical_comparisons"] = []
+        seen = set()
+        for comparison in comparisons:
+            if not isinstance(comparison, dict) or "key" not in comparison:
+                raise ValueError("Comparison descriptor requires a key")
+            descriptor = {
+                key: _bounded_text(comparison[key], f"comparison.{key}", required=True)
+                for key in COMPARISON_DESCRIPTION_FIELDS if key in comparison
+            }
+            if descriptor["key"] in seen:
+                raise ValueError("Duplicate comparison descriptor key")
+            seen.add(descriptor["key"])
+            selected["analytical_comparisons"].append(descriptor)
     current_period = source_context.get("current_period")
     if current_period is not None:
         if not isinstance(current_period, dict):
@@ -220,7 +250,7 @@ def project_source_context(source_context: dict | None) -> dict:
     return projected
 
 
-def _execution_contract(card: dict | None) -> dict:
+def _execution_contract(card: dict | None, source_context: dict | None = None) -> dict:
     """Project code-owned runtime guards and typed executable bindings."""
     settings = dict(RUNTIME_DEFAULTS)
     source_bindings: list[dict] = []
@@ -276,6 +306,24 @@ def _execution_contract(card: dict | None) -> dict:
                 raise ValueError(
                     f"card.numeric_conditions[{index}] references an unbound comparison"
                 )
+            if source_context is not None:
+                ref = f"{source['adapter']}|{source['resource']}"
+                inspected = [item for item in source_context["inspected_sources"]
+                             if item["ref"] == ref]
+                if len(inspected) != 1:
+                    raise ValueError(f"Numeric binding source must be inspected: {ref}")
+                comparisons = {item["key"]: item for item in
+                               inspected[0]["analytical_comparisons"]}
+                comparison = comparisons.get(condition.comparison_key)
+                if comparison is None:
+                    raise ValueError(
+                        f"Comparison {condition.comparison_key!r} is absent from inspected "
+                        f"source {ref}; numeric_conditions are optional, not invented bindings."
+                    )
+                if condition.unit is not None and condition.unit != comparison.get("unit"):
+                    raise ValueError("Numeric condition unit differs from inspected comparison")
+                if condition.measurement in {"within_effect", "mix_effect"} and comparison.get("kind") != "rate":
+                    raise ValueError("Rate effects require an inspected rate comparison")
             if condition.measurement == "contribution" and condition.segment is None:
                 semantics = "any matching segment contribution"
             else:
@@ -300,7 +348,10 @@ def _execution_contract(card: dict | None) -> dict:
         "numeric_condition_schema": NumericCondition.model_json_schema(),
         "source_bindings": source_bindings,
         "numeric_bindings": numeric_bindings,
+        "numeric_bindings_verified_against_inspection": source_context is not None,
         "rules": [
+            "numeric_conditions are optional; Jev executes plain-English decision_guidance.",
+            "Card required_comparison_keys declare requirements, not proof comparisons exist.",
             "Use structured fields, not condition text, to identify the measurement.",
             "A contribution with segment=null is any matching segment contribution.",
             "investigation_threshold applies only when investigation_mode is bounded.",
@@ -332,13 +383,16 @@ def review_payload(public: dict, owner_answers: dict, artifact: dict,
         selected["card"] = {
             key: card[key] for key in CARD_POLICY_FIELDS if key in card
         }
+    projected_context = project_source_context(source_context)
     return copy.deepcopy({
         "owner_policy": {
             "brief": public["brief"], "glossary": public["glossary"],
             "destinations": public["destinations"], "owner_answers": owner_answers,
         },
-        "source_context": project_source_context(source_context),
-        "execution_contract": _execution_contract(card),
+        "source_context": projected_context,
+        "execution_contract": _execution_contract(
+            card, projected_context if source_context is not None else None
+        ),
         "artifact": selected,
     })
 
@@ -355,12 +409,15 @@ async def review_owner_artifact(*, public: dict, owner_answers: dict, artifact: 
               "instructions_digest": digest(REVIEW_INSTRUCTIONS)}
     request = {"model": MODEL, "effort": "high", "timeout_seconds": 90, "max_tool_calls": 2,
                "synthetic": True, "human_approval": False, "policy_guarantee": False}
+    validation_feedback = None
     try:
         payload = review_payload(public, owner_answers, artifact, source_context)
         if len(canonical(payload)) > MAX_PROMPT_CHARACTERS:
             raise ValueError("Review payload is too large")
         hashes.update(input_digest=digest(payload), artifact_digest=digest(artifact))
-    except (KeyError, TypeError, ValueError, RecursionError):
+    except (KeyError, TypeError, ValueError, RecursionError) as error:
+        if isinstance(error, ValueError):
+            validation_feedback = str(error)[:600]
         audit.emit("review.request", **request, **hashes, input_valid=False)
         episode = {"status": "failed", "error": "invalid_review_input", "tool_calls": 0,
                    "seconds": time.perf_counter() - started, "transport": "codex_cli"}
@@ -391,7 +448,7 @@ async def review_owner_artifact(*, public: dict, owner_answers: dict, artifact: 
                 and not budget.exhausted and review is not None)
     result = {
         "approved": bool(complete and review["approved"]),
-        "reasons": review["reasons"] if complete else [
+        "reasons": review["reasons"] if complete else [validation_feedback or
             "No valid completed independent review; inspect the retained failure. Unchanged requests replay it without another invocation."
         ],
         "synthetic": True, "human_approval": False, "policy_guarantee": False,

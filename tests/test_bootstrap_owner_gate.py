@@ -158,7 +158,9 @@ async def test_current_contract_context_is_bounded_and_bound_to_approval(tmp_pat
     assert len(context["inspected_sources"]) == 1
     assert context["inspected_sources"][0]["ref"] == ref
     assert "HIDDEN_PAYLOAD" not in repr(context)
-    assert "analytical_comparisons" not in repr(context)
+    assert context["inspected_sources"][0]["analytical_comparisons"] == []
+    assert "baseline_total" not in repr(context)
+    assert "current_total" not in repr(context)
     session.adapter.snapshots[ref]["contract"]["scope"] = "Changed source population"
     assert session.approval_fingerprint(None) != before
     session.setup_source_context = session.owner_source_context()
