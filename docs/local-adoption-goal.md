@@ -1,7 +1,18 @@
 # Local adoption: implementation and proof gate
 
-Status: in progress. This updates the working acceptance criteria for the existing
-local-first adoption goal; it does not declare the earlier failed trials passed.
+Status: implementation advanced; proof gate **not complete**. This updates the
+working acceptance criteria for the existing local-first adoption goal; it does
+not declare the earlier failed trials passed.
+
+Latest [live evidence](recurring-runtime-trial.md): three transfer cards approved;
+12/12 structured results and reviewer-usable reports in both arms after completing
+five interrupted treatment runs. All 12 treatment receipts replay without new
+calls. The original prospective trial remains failed. Arm-masked reviewers
+preferred the baseline artifact six times and tied six times, with unequal final
+artifact detail confounding a prose comparison. No comparative benefit is proven.
+The local rc2 binary is verified on this Mac, not yet published or cross-platform
+certified. Remaining proof work is a frozen, equal-output prospective comparison
+and actual onboarding/release validation, not more retrospective success claims.
 
 ## Deliverable
 

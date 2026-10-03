@@ -16,6 +16,8 @@ from evaluations.recurring_runtime_trial import (
     SetupSession,
     _brief_metadata_card,
     _independent_numeric_score,
+    _paired,
+    _paired_context_matches,
     _period_groups,
     _public_company,
     _select_arm_card,
@@ -138,6 +140,84 @@ def test_numeric_score_never_calls_unlabeled_fixture_path_a_pass():
     result = score(submission, oracle, [])
     assert result["numeric_passed"] is False
     assert "numeric_condition_missing" in result["errors"]
+
+
+@pytest.mark.parametrize("segment", [None, "down"])
+def test_absolute_contribution_scores_normalized_value(segment):
+    oracle = {
+        "status": "complete",
+        "numeric_policy": [{
+            "source_key": "source",
+            "comparison_key": "movement",
+            "unit": "units",
+            "measurement": "contribution",
+            "segment": segment,
+            "absolute": True,
+            "comparator": ">=",
+            "threshold": 5,
+        }],
+        "measurements": {"contributions": [{"segment": "down", "contribution": -7}]},
+    }
+    results = [{
+        "condition_text": "Magnitude is at least five units",
+        "source_key": "source",
+        "comparison_key": "movement",
+        "unit": "units",
+        "expected_unit": "units",
+        "measurement": "contribution",
+        "segment": segment,
+        "matched_segment": "down",
+        "absolute": True,
+        "comparator": ">=",
+        "threshold": 5,
+        "status": "true",
+        "value": 7,
+    }]
+    assert _independent_numeric_score(results, oracle)["passed"]
+
+
+def test_paired_context_requires_same_card_digest():
+    from evaluations.recurring_runtime_transfer_cases import cases
+
+    company = cases()[0]
+    _, holdout = _period_groups(company)
+
+    def row(arm, card_digest, catalog_digest="catalog", analysis_digest="analysis"):
+        return {
+            "company": company["id"],
+            "arm": arm,
+            "runs": [{
+                "period": period["id"],
+                "card_digest": card_digest,
+                "catalog_digest": catalog_digest,
+                "analysis_input_digest": analysis_digest,
+            } for period in holdout],
+        }
+
+    paired = _paired([row("baseline", "same"), row("signalweave", "same")], [company])
+    assert all(item["same_card"] for item in paired)
+    assert _paired_context_matches(paired)
+
+    mismatched = _paired([row("baseline", "baseline-card"), row("signalweave", "treatment-card")], [company])
+    assert not any(item["same_card"] for item in mismatched)
+    assert not _paired_context_matches(mismatched)
+
+    for field, paired_field in (
+        ("card_digest", "same_card"),
+        ("catalog_digest", "same_catalog"),
+        ("analysis_digest", "same_analysis"),
+    ):
+        for missing in (None, "", "   "):
+            values = {"card_digest": "same", "catalog_digest": "catalog", "analysis_digest": "analysis"}
+            values[field] = missing
+            incomplete = _paired(
+                [row("baseline", **values), row("signalweave", **values)],
+                [company],
+            )
+            assert not any(item[paired_field] for item in incomplete)
+            assert not _paired_context_matches(incomplete)
+
+    assert not _paired_context_matches([])
 
 
 def test_summary_cannot_drop_numeric_failure_from_strict_gate():

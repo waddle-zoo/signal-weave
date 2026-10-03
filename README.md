@@ -67,6 +67,12 @@ The [follow-up investigation](docs/policy-composition-investigation.md) tests
 why: direct Jev decisions matched Luna on a new bounded set, while added
 rule-composition worsened results. The experimental layer is not shipped.
 
+The latest [recurring investigation trial](docs/recurring-runtime-trial.md) fixes
+concrete authoring and numerical-check defects. After a separately recorded
+execution repair, both systems passed 12/12 synthetic reports and their usability
+review. This is bounded correctness evidence—not a clean prospective win, a
+speed/cost advantage, or enterprise certification.
+
 Then ask your agent:
 
 > Use SignalWeave to monitor why online sales changed and how that affected net

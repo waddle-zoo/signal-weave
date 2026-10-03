@@ -46,6 +46,31 @@ async def test_dry_completion_selects_only_missing_and_makes_no_calls(parent_run
     assert result["paid_calls"] == 0
 
 
+@pytest.mark.parametrize("mutation", ["result", "receipt", "report", "markdown", "outcome", "recipients", "analyses"])
+async def test_preflight_rejects_retained_result_drift(parent_run, mutation):
+    report = json.loads((parent_run / "report.json").read_text())
+    row = next(row for row in report["results"] if row["arm"] == "signalweave" and row["runs"])
+    run = row["runs"][0]
+    if mutation == "result":
+        run["native"]["result"]["outcome"] = "tampered"
+    elif mutation == "receipt":
+        run["native"]["receipt"]["request_fingerprint"] = "tampered"
+    elif mutation == "report":
+        run["native"]["report"]["purpose"] = "tampered"
+    elif mutation == "markdown":
+        run["native"]["report_markdown"] = "tampered"
+    elif mutation == "outcome":
+        run["submission"]["outcome"] = "tampered"
+    elif mutation == "recipients":
+        run["submission"]["recipients"] = ["unauthorized-recipient"]
+    else:
+        assert run["submission"]["analyses"]
+        run["submission"]["analyses"][0]["delta"] = 999999
+    trial._write_json(parent_run / "report.json", report)
+    with pytest.raises(ValueError, match="differs from its durable"):
+        completion.prepare(parent_run)
+
+
 async def test_completion_rejects_policy_plan_source_and_completed_receipt_drift(parent_run, monkeypatch):
     _, _, frozen, cards, _, _, freeze = completion.prepare(parent_run)
     card = cards["helio-support"]
@@ -97,7 +122,8 @@ async def test_partial_completion_cannot_claim_complete(parent_run, tmp_path, mo
     assert result["combined_coverage"]["signalweave"]["submitted"] == 7
 
 
-async def test_real_completion_runtime_retains_original_reports_and_gates(parent_run, tmp_path, monkeypatch):
+@pytest.mark.parametrize("card_mismatch", [False, True])
+async def test_real_completion_runtime_retains_original_reports_and_gates(parent_run, tmp_path, monkeypatch, card_mismatch):
     calls = []
     async def episode(session, **kwargs):
         calls.append(session.company["id"])
@@ -111,6 +137,15 @@ async def test_real_completion_runtime_retains_original_reports_and_gates(parent
             })
         return {"status": "complete", "error": None, "tool_calls": 8, "seconds": 1, "foreign_tools": []}
     monkeypatch.setattr(trial, "codex_episode", episode)
+    if card_mismatch:
+        paired = trial._paired
+
+        def mismatched(*args):
+            result = paired(*args)
+            result[0]["same_card"] = False
+            return result
+
+        monkeypatch.setattr(trial, "_paired", mismatched)
     original = (parent_run / "report.json").read_bytes()
     output = tmp_path / "completion"
     result = await completion.run_completion(parent_run, output, live=True)
@@ -120,6 +155,9 @@ async def test_real_completion_runtime_retains_original_reports_and_gates(parent
     assert result["original_failed_gate_preserved"]
     assert result["combined_coverage"]["signalweave"]["submitted"] == 12
     assert result["combined_coverage"]["signalweave"]["failed_episodes"] == 2
+    assert result["paired_inputs_match"] is not card_mismatch
+    if card_mismatch:
+        assert result["completion_correct"] is False
     assert (parent_run / "report.json").read_bytes() == original
     assert all(run["replay_exact_no_calls"] for row in result["completion"] for run in row["runs"])
     packet = json.loads((output / "review-input.json").read_text())

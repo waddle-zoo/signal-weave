@@ -1,0 +1,20 @@
+{
+  "scope": "Post-run offline integrity check, not a rerun or prospective success",
+  "paid_calls": 0,
+  "checked_pairs": 12,
+  "same_card_catalog_analysis": true,
+  "durable_receipts_checked": 12,
+  "original_receipts_checked": 7,
+  "completion_receipts_checked": 5,
+  "native_result_report_and_metadata_match_local_sqlite": true,
+  "structured_submissions_match_durable_results": true,
+  "exact_replay_no_calls": 12,
+  "parent_report_sha256": "f99eab395325023173e1baf45d3604931a8f09a879ed530914172181798cc5a9",
+  "completion_report_sha256": "7ea5866872f58e673bd8e6f555aaa2aa55a397bf0ad4187c41c1a108bdea2f29",
+  "limitations": [
+    "Guards were added after the live run; original frozen artifacts were not rewritten.",
+    "Local SQLite files are not published. Native receipt and result projections remain in the archived reports.",
+    "Narrative truth is not established by a durable decision receipt; caller prose was reviewed separately.",
+    "These checks detect inconsistency, not coherent tampering of every local artifact."
+  ]
+}

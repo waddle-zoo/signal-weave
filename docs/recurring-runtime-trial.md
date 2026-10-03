@@ -1,9 +1,10 @@
 # Recurring investigations: prospective implementation trial
 
-Status: the first trial failed the end-to-end acceptance gate. A corrected
-onboarding implementation is being evaluated on a separately frozen transfer
-set. Neither the successful unit tests nor one successful company's workflow
-establish the local-adoption goal or a general advantage over Luna.
+Status: bounded implementation and live completion checks pass; the broader
+local-adoption goal is **not complete**. The transfer set has 12/12 correct
+structured results and 12/12 reviewer-usable reports in both arms, after a
+separately recorded completion of five missing SignalWeave runs. This is not a
+clean prospective pass or a demonstrated advantage over Luna.
 
 ## What this tests
 
@@ -128,11 +129,111 @@ version and source binding. Offline full-runtime regression tests cover both set
 and require exactly three setup compiles, zero recurring compiles and exact receipt
 replay. No production gate, numerical threshold or company policy was changed.
 
-A separate completion-only protocol targets only the five absent reports, with
+A separate completion-only protocol targeted only the five absent reports, with
 the exact retained approved cards and source snapshots, at most five Jev calls
 and two Luna sessions. Completed reports cannot be replaced. Its coverage is
 post hoc execution repair; it cannot turn the original failed gate into a clean
 prospective win or support an end-to-end latency comparison.
+
+## Completion result and independent report review
+
+The completion driver was frozen at `01d4914`. It recovered the original approved
+cards, including their compiled plans, verified unchanged production source,
+dependencies and source fixtures, and preserved the original failed trial. It
+used **five Jev judgment calls, zero compile calls and two Luna sessions**. All
+five missing reports passed; all intended treatment reports now have exact
+receipt replay without another source or model call. The first, zero-paid-call
+[preflight rejection](evidence/recurring-runtime-transfer-completion-preflight.json)
+is retained separately.
+
+| Combined transfer coverage | Luna baseline | SignalWeave + Jev + Luna |
+| --- | ---: | ---: |
+| Intended/submitted reports | 12/12 | 12/12 |
+| Correct status, outcome, routes, numerical checks and provenance | 12/12 | 12/12 |
+| Quiet periods correctly suppressed | 4/4 | 4/4 |
+| Wrong recipients / false or missed notifications | 0 / 0 | 0 / 0 |
+| Reports judged usable against supplied evidence | 12/12 | 12/12 |
+
+These are proposed routes, not actual notifications. The treatment column mixes
+seven original reports and five completion reports. Original failed episodes are
+retained. See the [completion manifest](evidence/recurring-runtime-transfer-completion-live-01/manifest.json),
+[report](evidence/recurring-runtime-transfer-completion-live-01/report.json),
+[journal](evidence/recurring-runtime-transfer-completion-live-01/events.jsonl.gz),
+and [checksums](evidence/recurring-runtime-transfer-completion-live-01/SHA256SUMS).
+Its inherited `combined_coverage.episode_seconds` and tool counters are **not**
+combined performance totals; completion episodes are recorded separately. Do not
+compare those inherited counters with the baseline. The explicit
+`latency_comparable: false` and `prospective_pass: false` remain authoritative.
+
+Two isolated Luna review sessions, with arm labels masked and no access to the
+private labels or decoding key, completed all 12 reviews. They reported no
+unusable candidate and preferred the baseline artifact in six cases, with six
+ties and no SignalWeave wins. Each case had one reviewer, not a consensus panel.
+The reviewer code was committed and clean before invocation. Complete
+[reviews](evidence/recurring-runtime-transfer-completion-prose-review/report.json),
+[manifest](evidence/recurring-runtime-transfer-completion-prose-review/manifest.json)
+and [journal](evidence/recurring-runtime-transfer-completion-prose-review/events.jsonl.gz)
+are retained. This is internal AI review, not external peer review or a human
+usability study.
+
+The preferences do not isolate prose quality. Baseline submissions included full
+analysis objects; treatment submissions included compact claims and omitted
+numeric claims for blocked cases. Review reasons preferred the richer objects'
+rate numerators/denominators, comparison/reconciliation fields, null totals and
+limitations. Both agents had the same underlying source/analysis inputs, but
+their final artifact representations differed. Thus this review supports
+bounded usability, **not a fair conclusion that either writer is better**. A new
+comparison must distinguish the human-facing narrative from equally projected
+supporting evidence. Do not retroactively replace the recorded scores.
+
+Completion usage was 508,419 Luna input tokens (447,744 reported cached), 3,686
+output tokens, and 50,400 Jev input / 616 output tokens. The two final review
+sessions used 139,087 Luna input tokens (90,880 reported cached) and 4,826 output
+tokens. These are additional to the original trial and failed review costs, not
+an efficiency claim or dollar invoice. The completion sessions took 86.96 and
+48.59 seconds; their restarted contexts prevent a fair paired speed comparison.
+
+Final adversarial code review found three additional evaluation defects: paired
+scoring recorded but did not enforce identical card digests; completion preflight
+required a durable receipt but did not compare its contents to the retained
+report; and the independent scorer mishandled the recorded value of an absolute
+negative segment contribution. These guards and regression tests were added
+after the run. A [zero-inference revalidation](evidence/recurring-runtime-transfer-offline-revalidation.json)
+confirmed identical cards/catalogs/analyses for all 12 pairs and exact structured
+result bindings to all 12 local durable receipts. Current transfer cards use
+signed checks, so the absolute-value scorer defect did not alter their scores.
+Original artifacts remain unchanged. Review keys are published for auditability
+after isolated review; public readers are not blinded.
+
+Verification: the full offline suite passed **1,970 tests**, with three opt-in
+checks skipped. The final digest-guard and scorer follow-up was additionally
+checked in the focused completion/trial suite. Ruff and `git diff --check` pass.
+Two internal Luna code/method reviewers inspected the work; concrete integrity
+findings above were repaired. Their acceptance is bounded to archiving this
+evidence and these contracts, not endorsement of enterprise readiness or a
+comparative product win.
+
+### What is implemented, and what remains
+
+- Approved numerical checks are computed from source-bound validated analyses;
+  Jev selects bounded semantic outcomes rather than doing threshold arithmetic.
+- Required uncomputable checks fail closed. Semantic uncertainty remains distinct
+  from a missing or broken source in the evidence handoff.
+- Agent authoring now exposes evidence-slot grammar, signed-versus-magnitude
+  semantics, and collision-free default route IDs for shared recipients.
+- Stored compiled plans survive the trial's arm-store transfer; recurring runs
+  no longer pay for avoidable recompilation.
+- The local rc2 native binary passes install/setup/MCP/live-evaluation and
+  separate-process replay checks ([evidence](evidence/local-rc2-binary-check.json)).
+  This is local macOS evidence. Public installation still points to rc1; rc2 has
+  not been published, and other release targets were not certified by this check.
+
+Still unproved: a clean fresh prospective run of the corrected end-to-end path,
+comparative reporting or operating-cost benefit, real-human onboarding, and a
+real team's deployment. The next evaluation should freeze equal evidence
+projections before inference, then measure the final messages separately from
+audit-bundle detail. Do not add new abstractions or keep rerunning known cases
+until a favorable score appears.
 
 ## Acceptance and limits
 

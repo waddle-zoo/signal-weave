@@ -148,7 +148,8 @@ def _independent_numeric_score(results: list[dict[str, Any]] | None, oracle: dic
                 )]
                 expected_status = "true" if matches else "false"
                 witness = [item for item in matches if item["segment"] == result.get("matched_segment")]
-                value = witness[0]["contribution"] if len(witness) == 1 else None
+                raw_value = witness[0]["contribution"] if len(witness) == 1 else None
+                value = abs(raw_value) if raw_value is not None and result.get("absolute") else raw_value
                 if matches and len(witness) != 1:
                     errors.append("numeric_witness")
                 if not matches and result.get("matched_segment") is not None:
@@ -158,7 +159,8 @@ def _independent_numeric_score(results: list[dict[str, Any]] | None, oracle: dic
                 if len(selected) != 1:
                     errors.append("numeric_segment_binding")
                     continue
-                value = selected[0].get("contribution")
+                raw_value = selected[0].get("contribution")
+                value = abs(raw_value) if raw_value is not None and result.get("absolute") else raw_value
                 if result.get("matched_segment") != segment:
                     errors.append("numeric_witness")
                 expected_status = "true" if _finite_number(value) and _compare_numeric(
@@ -580,9 +582,30 @@ def _paired(rows: list[dict[str, Any]], companies: list[dict[str, Any]]) -> list
                                                    "signalweave": (treatment or {}).get("numeric_conditions", [])},
                            "route_score": {"baseline": (baseline or {}).get("score", {}).get("errors", []),
                                            "signalweave": (treatment or {}).get("score", {}).get("errors", [])},
-                           "same_catalog": bool(baseline and treatment and baseline.get("catalog_digest") == treatment.get("catalog_digest")),
-                           "same_analysis": bool(baseline and treatment and baseline.get("analysis_input_digest") == treatment.get("analysis_input_digest"))})
+                           "same_catalog": bool(baseline and treatment and _same_nonempty_digest(
+                               baseline.get("catalog_digest"), treatment.get("catalog_digest"))),
+                           "same_analysis": bool(baseline and treatment and _same_nonempty_digest(
+                               baseline.get("analysis_input_digest"), treatment.get("analysis_input_digest"))),
+                           "same_card": bool(baseline and treatment and _same_nonempty_digest(
+                               baseline.get("card_digest"), treatment.get("card_digest")))})
     return result
+
+
+def _same_nonempty_digest(left: Any, right: Any) -> bool:
+    return (
+        isinstance(left, str)
+        and bool(left.strip())
+        and isinstance(right, str)
+        and bool(right.strip())
+        and left == right
+    )
+
+
+def _paired_context_matches(paired: list[dict[str, Any]]) -> bool:
+    return bool(paired) and all(
+        item["same_catalog"] and item["same_analysis"] and item["same_card"]
+        for item in paired
+    )
 
 
 def masked_review_packet(rows: list[dict[str, Any]], companies: list[dict[str, Any]]):
@@ -886,7 +909,7 @@ async def run_trial(output: Path, *, live: bool = False, key_file: str | None = 
         run.get("replay_exact_no_calls") is True
         for row in rows if row["arm"] == "signalweave" for run in row.get("runs", [])
     ) and all(row.get("runs") for row in rows if row["arm"] == "signalweave")
-    paired_context = all(item["same_catalog"] and item["same_analysis"] for item in paired)
+    paired_context = _paired_context_matches(paired)
     protocol_checks = {
         "all_intended_holdout_scores": all_scores,
         "all_three_cards_approved": all_approved,

@@ -14,6 +14,7 @@ import sqlite3
 from pathlib import Path
 
 from evaluations import recurring_runtime_trial as trial
+from evaluations.first_report_trial import native_submission
 from evaluations.recurring_runtime_transfer_cases import cases
 from signalweave.models import InsightCard
 
@@ -37,6 +38,36 @@ def validate_card(card, public_card):
     trial._assert_approved_runtime_card(card)
     if card.execution_payload() != InsightCard.model_validate(public_card).execution_payload():
         raise ValueError("Stored execution payload differs from frozen owner-approved policy")
+
+
+def validate_completed_run(run, receipt, card, destinations):
+    """Bind retained structured results to durable output, not just receipt existence.
+
+    The receipt predates the caller's narrative. This check establishes the
+    structured evidence binding, not prose truth or cryptographic authenticity
+    of the entire local research directory.
+    """
+    if receipt is None or receipt.get("status") != "delivery_disabled" or not receipt.get("result"):
+        raise ValueError("Original submitted report lacks a completed durable receipt")
+    native = run.get("native", {})
+    metadata = {key: value for key, value in receipt.items() if key != "result"}
+    if (native.get("receipt") != metadata
+            or receipt.get("card_id") != card.id or receipt.get("card_version") != card.version
+            or receipt.get("idempotency_key") != f"business-outcomes:{run['period']}"
+            or receipt.get("delivery_enabled") is not False
+            or native.get("result") != receipt["result"]
+            or native.get("report") != receipt["result"].get("report")
+            or native.get("report_markdown") != receipt["result"].get("report_markdown")):
+        raise ValueError("Original native result differs from its durable receipt")
+    expected = native_submission(native, destinations)
+    submitted = run["submission"]
+    if any(submitted[key] != expected[key] for key in ("status", "outcome")):
+        raise ValueError("Original submission differs from its durable decision")
+    if sorted(submitted["recipients"]) != sorted(expected["recipients"]):
+        raise ValueError("Original submission differs from its durable recipients")
+    # Reference order is caller-owned; contents and multiplicity must be exact.
+    if sorted(map(trial.canonical, submitted["analyses"])) != sorted(map(trial.canonical, expected["analyses"])):
+        raise ValueError("Original submission differs from its durable analyses")
 
 
 def prepare(parent):
@@ -83,8 +114,7 @@ def prepare(parent):
             if not isinstance(submission, dict) or not {"status", "outcome", "recipients", "analyses", "narrative"} <= submission.keys():
                 raise ValueError("Original row has an ambiguous submission")
             receipt = read_payload(parent / f"{cid}-signalweave.db", "decision_receipts", "idempotency_key", f"business-outcomes:{run['period']}")
-            if receipt is None or receipt.get("status") != "delivery_disabled" or not receipt.get("result"):
-                raise ValueError("Original submitted report lacks a completed durable receipt")
+            validate_completed_run(run, receipt, card, company["destinations"])
         absent = [period["id"] for period in holdout if period["id"] not in finished]
         if not absent:
             continue
@@ -206,17 +236,25 @@ async def run_completion(parent: Path, output: Path, *, live=False, key_file=Non
         and row["episode"].get("status") == "complete"
         for row in completion
     ) and len(completion) == len(pending)
+    paired = trial._paired(combined, companies)
+    paired_inputs_match = bool(paired) and all(
+        pair["same_card"] and pair["same_catalog"] and pair["same_analysis"]
+        for pair in paired
+    )
     report = {
         "status": "completion_only", "parent_hashes": hashes, "completion": completion,
         "completion_complete": completion_exact,
-        "completion_correct": completion_exact and all(run["score"]["passed"] for row in completion for run in row["runs"]),
+        "completion_correct": completion_exact and paired_inputs_match and all(
+            run["score"]["passed"] for row in completion for run in row["runs"]
+        ),
+        "paired_inputs_match": paired_inputs_match,
         "coverage_origin": {
             "original_treatment_reports": sum(len(row["runs"]) for row in original["results"] if row["arm"] == "signalweave"),
             "post_hoc_reports": sum(len(row["runs"]) for row in completion),
             "pending_allocation": pending,
         },
         "combined_results": combined, "combined_coverage": trial.summarize(combined, private),
-        "paired": trial._paired(combined, companies), "usage": trial._usage(audit),
+        "paired": paired, "usage": trial._usage(audit),
         "jev_attempts": budget.used, "luna_episodes": len(completion),
         "original_failed_gate_preserved": True, "prospective_pass": False, "latency_comparable": False,
     }
