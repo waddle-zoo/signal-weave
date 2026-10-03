@@ -17,7 +17,7 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, model_validator
 
 from .engine import InsightEngine
 from .models import (
@@ -25,6 +25,7 @@ from .models import (
     EvidencePlan,
     InsightCard,
     Outcome,
+    PrincipalContext,
     QuestionResult,
     ResourceSnapshot,
     WatchResult,
@@ -175,6 +176,41 @@ class CardEvaluationCase(BaseModel):
         return self
 
 
+class WorkflowCaseInput(BaseModel):
+    """Caller labels plus either exact historical snapshots or one live capture.
+
+    The stored card is server-owned. A live capture is a single current example,
+    never an invented historical period or evidence of full policy coverage.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str = Field(min_length=1, max_length=200)
+    expected_outcome: Outcome
+    expected_delivery_method_keys: list[str] | None = None
+    expected_delivery_destinations: dict[str, str] | None = None
+    capture_current_sources: StrictBool = Field(
+        default=False,
+        description="Explicit read/query permission to fetch this stored card's selected sources for ONE current example. Do not also supply resources.",
+    )
+    resources: list[ResourceSnapshot] | None = Field(
+        default=None, max_length=500,
+        description="Exact normalized snapshots from inspection/preview, including source_key and contract.tenant_id; not ref strings or invented metadata. Use [] only to explicitly test missing resources.",
+    )
+    context: ContextSnapshot | None = None
+    allowed_outcomes: list[Outcome] | None = None
+    required_evidence_source_keys: list[str] = Field(default_factory=list, max_length=500)
+    expected_retrieval_refs: list[str] = Field(default_factory=list, max_length=500)
+    tags: list[str] = Field(default_factory=list, max_length=50)
+    dataset: EvaluationDataset = Field(default_factory=lambda: EvaluationDataset(dataset_id="unspecified"))
+
+    @model_validator(mode="after")
+    def require_evidence_input(self):
+        if self.capture_current_sources == (self.resources is not None):
+            raise ValueError("Choose capture_current_sources=true OR explicit resources snapshots (including [] for a missing-resource test).")
+        return self
+
+
 class CardEvaluationThresholds(BaseModel):
     """Promotion gates evaluated on a labeled replay set."""
 
@@ -286,11 +322,18 @@ def load_card_evaluation_cases(path: str | Path) -> list[CardEvaluationCase]:
 class CardWorkflowEvaluator:
     """Replay labeled cases through the real InsightEngine and certify the result."""
 
-    def __init__(self, engine: InsightEngine, *, max_concurrency: int = 8) -> None:
+    def __init__(
+        self,
+        engine: InsightEngine,
+        *,
+        max_concurrency: int = 8,
+        principal: PrincipalContext | None = None,
+    ) -> None:
         if max_concurrency < 1:
             raise ValueError("max_concurrency must be positive")
         self.engine = engine
         self.max_concurrency = max_concurrency
+        self.principal = principal
 
     async def evaluate(
         self,
@@ -440,11 +483,15 @@ class CardWorkflowEvaluator:
     async def _evaluate_case(self, case: CardEvaluationCase) -> CardEvaluationCaseResult:
         started = time.perf_counter()
         try:
-            run = await self.engine.evaluate(
-                case.card,
-                resources=case.resources,
-                context_override=case.context,
-            )
+            evaluate_kwargs = {
+                "resources": case.resources,
+                "context_override": case.context,
+            }
+            # Keep legacy/offline engine doubles compatible while preserving the
+            # authenticated principal for dynamic follow-up source resolution.
+            if self.principal is not None:
+                evaluate_kwargs["principal"] = self.principal
+            run = await self.engine.evaluate(case.card, **evaluate_kwargs)
         except Exception as error:  # noqa: BLE001 - one bad case must remain visible
             return CardEvaluationCaseResult(
                 case_id=case.id,

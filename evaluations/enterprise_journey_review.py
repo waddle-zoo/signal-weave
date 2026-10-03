@@ -7,7 +7,7 @@ import json
 from collections import Counter
 from pathlib import Path
 
-from evaluations.bootstrap_agent_trial import usage_summary, write_exclusive
+from evaluations.bootstrap_agent_trial import select_scenarios, usage_summary, write_exclusive
 from evaluations.bootstrap_review_packet import packets
 from evaluations.enterprise_onboarding_journeys import journeys
 
@@ -84,6 +84,8 @@ def export(report_path: Path, output: Path) -> dict:
     raw = report_path.read_bytes()
     report = json.loads(raw)
     fixtures = journeys(report["config"]["seed"])
+    fixtures = select_scenarios(fixtures, report["config"].get("selected_scenario_ids"),
+                               report["config"].get("selected_companies", len(fixtures)))
     blind, mapping, compact = packets(report, fixtures_override=fixtures)
     trace_path = report_path.with_name("trace.jsonl")
     with trace_path.open() as stream:

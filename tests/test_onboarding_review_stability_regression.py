@@ -1,9 +1,4 @@
-"""Characterization of the frozen review-to-approval fingerprint defect.
-
-This is deliberately a failing-behavior regression, not an acceptance test:
-the card and its business evidence stay fixed while a bounded Jev ranking moves
-one nonmaterial candidate across the visible discovery boundary.
-"""
+"""Acceptance regressions for stable onboarding source confirmation."""
 
 import pytest
 from test_onboarding import SupersetCatalogDouble, make_server, tool
@@ -61,14 +56,15 @@ class BoundaryCatalog(SupersetCatalogDouble):
 
 
 @pytest.mark.asyncio
-async def test_review_approval_fingerprint_characterizes_boundary_instability(tmp_path):
-    """Current defect: identical policy/evidence gets a stale approval token."""
+async def test_review_approval_ignores_boundary_reranking(tmp_path):
+    """Reranking an omitted candidate must not stale selected-source approval."""
     judger = BoundaryRankingJev()
     server = make_server(tmp_path, judger=judger, catalog=BoundaryCatalog())
     draft = await tool(server, "draft_insight_card")(
         title="Checkout conversion watch",
         what_to_watch="Checkout conversion for completed sessions.",
         why_watch="Decide whether Growth needs to respond.",
+        watch_for=["Conversion drops materially."],
         decision_guidance="Ignore ordinary variation; notify Growth on a material drop.",
         sources=[{
             "key": "growth",
@@ -90,16 +86,93 @@ async def test_review_approval_fingerprint_characterizes_boundary_instability(tm
     # nonmaterial Jev score moves another candidate into the bounded top ten.
     judger.reordered = True
 
-    with pytest.raises(ValueError, match="stale or missing") as rejection:
-        await tool(server, "approve_insight_card")(
-            card_id,
-            source_selection_fingerprint=first_fingerprint,
-            source_selection_reason=(
-                "Keep the selected completed-session checkout source; the ranking change "
-                "does not alter the card's business evidence."
-            ),
-        )
+    approved = await tool(server, "approve_insight_card")(
+        card_id,
+        source_selection_fingerprint=first_fingerprint,
+        source_selection_reason=(
+            "Keep the selected completed-session checkout source; the ranking change "
+            "does not alter the card's business evidence."
+        ),
+    )
+    assert approved["status"] == "approved"
     assert judger.rank_calls == 2, (
         "approval did not perform its second native review; "
-        f"returned fingerprint={first_fingerprint!r}, rejection={rejection.value}"
+        f"returned fingerprint={first_fingerprint!r}"
     )
+
+
+@pytest.mark.asyncio
+async def test_proposal_retains_authorized_selected_ref_below_top_k(tmp_path):
+    judger = BoundaryRankingJev()
+    server = make_server(tmp_path, judger=judger, catalog=BoundaryCatalog())
+
+    proposal = await tool(server, "propose_insight_card")(
+        what_to_watch="Checkout conversion for completed sessions.",
+        why_watch="Decide whether Growth needs to respond.",
+        watch_for=["Conversion drops materially."],
+        decision_guidance="Ignore ordinary variation; notify Growth on a material drop.",
+        selected_sources=[{"ref": "superset|dashboard:17"}],
+        limit=1,
+    )
+
+    card = proposal["proposal"]["card"]
+    assert card["sources"][0]["resource"] == "dashboard:17"
+    assert proposal["proposal"]["onboarding_review"]["selected_source_refs"] == [
+        "superset|dashboard:17"
+    ]
+    assert judger.rank_calls == 1
+
+
+@pytest.mark.asyncio
+async def test_malformed_selected_ref_is_rejected_before_jev(tmp_path):
+    judger = BoundaryRankingJev()
+    server = make_server(tmp_path, judger=judger, catalog=BoundaryCatalog())
+
+    with pytest.raises(ValueError, match=r"selected_sources\[0\]\.ref"):
+        await tool(server, "propose_insight_card")(
+            what_to_watch="Checkout conversion.",
+            why_watch="Decide whether Growth should respond.",
+            selected_sources=[{"ref": "dashboard:17"}],
+        )
+
+    assert judger.rank_calls == 0
+    assert server._test_runtime.card_store.list_cards() == []
+
+@pytest.mark.asyncio
+async def test_off_top_k_selected_ref_cannot_bypass_catalog_acl(tmp_path):
+    catalog = BoundaryCatalog()
+    resource = next(item for item in catalog.resources if item.resource == "dashboard:17")
+    catalog.resources[catalog.resources.index(resource)] = resource.model_copy(update={
+        "contract": resource.contract.model_copy(update={"authorized": False}),
+    })
+    judger = BoundaryRankingJev()
+    server = make_server(tmp_path, judger=judger, catalog=catalog)
+
+    with pytest.raises(ValueError, match="authorized adapter catalog"):
+        await tool(server, "propose_insight_card")(
+            what_to_watch="Checkout conversion.",
+            why_watch="Decide whether Growth should respond.",
+            selected_sources=[{"ref": "superset|dashboard:17"}],
+            limit=1,
+        )
+
+    assert judger.rank_calls == 0
+    assert server._test_runtime.card_store.list_cards() == []
+
+
+@pytest.mark.asyncio
+async def test_selected_source_rejects_unknown_fields_before_jev(tmp_path):
+    judger = BoundaryRankingJev()
+    server = make_server(tmp_path, judger=judger, catalog=BoundaryCatalog())
+
+    with pytest.raises(ValueError, match=r"selected_sources\[0\]\.unexpected"):
+        await tool(server, "propose_insight_card")(
+            what_to_watch="Checkout conversion.",
+            why_watch="Decide whether Growth should respond.",
+            selected_sources=[
+                {"ref": "superset|dashboard:17", "unexpected": "ignored?"}
+            ],
+        )
+
+    assert judger.rank_calls == 0
+    assert server._test_runtime.card_store.list_cards() == []

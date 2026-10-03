@@ -21,6 +21,7 @@ from evaluations.bootstrap_agent_trial import run_trial
 from evaluations.bootstrap_scenarios import build_scenarios, dataset_digest
 
 VERSION = "enterprise-onboarding-journeys-v1"
+EXECUTION_VERSION = "enterprise-onboarding-repair-v2"
 SEED = 20261003
 VARIANTS = (
     ("Archive", "Superseded weekly definition; retained for historical audit.", 60),
@@ -85,17 +86,27 @@ def journeys(seed: int = SEED) -> list[dict]:
     return scenarios
 
 
-def protocol(scenarios: list[dict]) -> dict:
+def protocol(scenarios: list[dict], *, jev_budget: int = 144) -> dict:
+    periods = sum(len(s["public"]["periods"]) for s in scenarios)
     return {
         "version": VERSION, "seed": SEED, "dataset_sha256": dataset_digest(scenarios),
+        "execution_version": EXECUTION_VERSION,
+        "subset_probe": len(scenarios) != 6,
+        "interventions": [
+            "Stable source-selection confirmation and explicit authorized anchors.",
+            "Typed selected-source and workflow-case inputs; optional single current capture.",
+            "Separate owner action rules from unconditional evidence assessments in guide.",
+            "Both owner reviewers receive bounded current public source contracts, not measurements or labels.",
+            "Both report writers get identical inspected-citation validation and population caveats.",
+        ],
         "companies": [{"name": s["public"]["company"], "family": s["private"]["family"],
                        "brief": s["public"]["brief"], "assets": len(s["public"]["catalog"]),
                        "monitoring_periods": len(s["public"]["periods"])} for s in scenarios],
-        "primary_denominators": {"onboarding_per_arm": 6, "monitoring_per_arm": 18,
-                                 "author_and_monitor_episodes": 48},
-        "budget": {"jev_attempts": 144, "sdk_retries": 0, "tool_calls_per_episode": 45,
+        "primary_denominators": {"onboarding_per_arm": len(scenarios), "monitoring_per_arm": periods,
+                                 "author_and_monitor_episodes": 2 * (len(scenarios) + periods)},
+        "budget": {"jev_attempts": jev_budget, "sdk_retries": 0, "tool_calls_per_episode": 45,
                    "owner_review_attempts_per_arm_company": 3,
-                   "max_codex_invocations_including_owner_reviews": 84},
+                   "max_codex_invocations_including_owner_reviews": 2 * (4 * len(scenarios) + periods)},
         "endpoints": ["setup completion", "owner questions and corrections", "guide usage",
                       "time to first preview", "native outcome and exact recipient",
                       "final outcome and exact recipient", "numeric and provenance correctness",
@@ -119,11 +130,20 @@ def main() -> None:
     parser.add_argument("--live", action="store_true")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--jev-key-file", type=Path)
+    parser.add_argument("--company-index", type=int, action="append",
+                        help="Zero-based whole-company repair probe; never omit individual later periods.")
+    parser.add_argument("--jev-budget", type=int, default=144)
     args = parser.parse_args()
     if args.output.exists():
         parser.error("Output must be new; never overwrite or resume")
     scenarios = journeys()
-    frozen = protocol(scenarios)
+    if args.company_index is not None:
+        if len(set(args.company_index)) != len(args.company_index) or any(i not in range(6) for i in args.company_index):
+            parser.error("Company indices must be unique and in 0..5")
+        scenarios = [s for i, s in enumerate(scenarios) if i in args.company_index]
+    if not 1 <= args.jev_budget <= 144:
+        parser.error("Jev budget must be in 1..144")
+    frozen = protocol(scenarios, jev_budget=args.jev_budget)
     frozen["wrapper_sha256"] = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
     if not args.live:
         args.output.mkdir(parents=True)
@@ -140,7 +160,7 @@ def main() -> None:
         json.dump(frozen, stream, indent=2)
     options = agent_parser().parse_args([
         "--agent-transport", "codex", "--owner-review", "independent", "--split", "holdout",
-        "--limit", "6", "--seed", str(SEED), "--max-api-requests", "144",
+        "--limit", str(len(scenarios)), "--seed", str(SEED), "--max-api-requests", str(args.jev_budget),
         "--max-tool-calls", "45", "--jev-key-file", str(args.jev_key_file),
         "--output", str(args.output),
     ])

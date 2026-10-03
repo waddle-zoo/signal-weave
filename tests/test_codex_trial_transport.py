@@ -24,7 +24,7 @@ def session_stub(*, treatment=False, phase="monitoring"):
     return SimpleNamespace(
         treatment=treatment, phase=phase, submission=None, setup_complete=False,
         public={"brief": "Synthetic test", "numeric_vocabulary": ["delta"]}, notes="saved policy",
-        adapter=SimpleNamespace(period_context={
+        adapter=SimpleNamespace(inspected={"company_mcp|offline"}, period_context={
             "period_id": "offline-period", "as_of": "2026-10-01T00:00:00+00:00",
         }),
         server=SimpleNamespace(instructions="Offline product instructions"),

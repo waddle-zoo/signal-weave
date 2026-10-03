@@ -57,3 +57,13 @@ def test_generation_and_protocol_are_reproducible():
     assert dataset_digest(journeys()) == dataset_digest(journeys())
     assert dataset_digest(journeys()) != dataset_digest(journeys(SEED + 1))
     assert protocol(journeys())["budget"]["jev_attempts"] == 144
+
+
+def test_probe_preserves_complete_company_denominators_and_does_not_claim_full_gate():
+    frozen = protocol([journeys()[1], journeys()[3]], jev_budget=64)
+    assert frozen["subset_probe"] is True
+    assert frozen["primary_denominators"] == {
+        "onboarding_per_arm": 2, "monitoring_per_arm": 6, "author_and_monitor_episodes": 16}
+    assert frozen["budget"]["jev_attempts"] == 64
+    assert frozen["budget"]["max_codex_invocations_including_owner_reviews"] == 28
+    assert "all 18" in frozen["success_gate"]

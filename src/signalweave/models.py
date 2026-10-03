@@ -453,6 +453,10 @@ class EvidenceBundle(BaseModel):
 class ResourceDiscovery(BaseModel):
     """The inspectable result of goal-to-resource discovery."""
 
+    catalog_fingerprint: str = Field(
+        default="", description="Digest of the authorized bounded catalog definitions, independent of semantic ranking.",
+    )
+
     goal: str
     matches: list[ResourceMatch] = Field(default_factory=list)
     candidate_refs: list[str] = Field(

@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from typing import Any, Protocol
 from uuid import uuid4
 
-from pydantic import StrictBool
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, ValidationError
 
 from .compiler import SUPPORTED_CAPABILITIES, base_plan
 from .models import (
@@ -45,6 +45,22 @@ class ResourceRelevanceJudger(Protocol):
     async def rank_resources(
         self, goal: str, resources: list[ResourceDescriptor]
     ) -> dict[str, float]: ...
+
+
+class SelectedSourceInput(BaseModel):
+    """Typed public input for an explicitly selected catalog source."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    ref: str = Field(
+        min_length=3,
+        pattern=r"^[^|\s]+\|[^|\s]+$",
+        description="Exact authorized catalog identity in adapter|resource form.",
+    )
+    key: str | None = None
+    label: str | None = None
+    parameters: dict[str, Any] = Field(default_factory=dict)
+    required: StrictBool = True
 
 
 def _slug(value: str) -> str:
@@ -148,24 +164,72 @@ class InsightAuthoringService:
         return principal or self.principal
 
     @staticmethod
+    def _validate_selected_sources(
+        selected_sources: list[SelectedSourceInput | dict[str, Any]],
+    ) -> list[SelectedSourceInput]:
+        """Validate caller-provided refs before discovery invokes Jev.
+
+        Optional authoring metadata is retained for card construction, but
+        source identity and authorization are resolved from the adapter catalog.
+        """
+        if not isinstance(selected_sources, list):
+            raise ValueError("selected_sources must be a list of objects")
+        if not selected_sources:
+            raise ValueError("selected_sources must not be empty")
+        validated: list[SelectedSourceInput] = []
+        for index, item in enumerate(selected_sources):
+            if not isinstance(item, (SelectedSourceInput, dict)):
+                raise ValueError(f"selected_sources[{index}] must be an object")
+            try:
+                validated.append(
+                    item if isinstance(item, SelectedSourceInput)
+                    else SelectedSourceInput.model_validate(item)
+                )
+            except ValidationError as error:
+                field = error.errors()[0].get("loc", ("input",))[0]
+                raise ValueError(f"selected_sources[{index}].{field} is invalid") from error
+        return validated
+
+    @staticmethod
     def source_selection_fingerprint(
         card: InsightCard, discovery: ResourceDiscovery, principal: PrincipalContext | None
     ) -> str:
-        """Bind explicit scope confirmation to policy and visible catalog, not model scores.
+        """Bind confirmation to policy and authorized catalog identity, not ranking.
 
         This is a stale-review check, not an authentication credential. Caller
-        identity/tenant and source authorization are checked independently.
+        identity/tenant and source authorization are checked independently. The
+        selected source definitions are material; non-selected ranking scores,
+        roles, order, and top-k visibility are not.
         """
         policy = card.model_dump(mode="json", exclude={
             "compiled_plan", "onboarding_review", "onboarding_review_history",
             "onboarding_corrections", "status", "approved_at", "approved_by",
         })
-        candidates = [match.model_dump(mode="json", exclude={
-            "relevance", "recommended", "suggested_role", "role_probability", "retrieval_signals",
-        }) for match in sorted(discovery.matches, key=lambda item: item.ref)]
-        payload = {"card": policy, "catalog": candidates,
-                   "principal": principal.model_dump(mode="json") if principal else None,
-                   "tenant": discovery.authorized_tenant, "truncated": discovery.truncated}
+        selected_refs = {
+            f"{source.adapter}|{source.resource}" for source in card.sources
+        }
+        selected_catalog = []
+        matches = {match.ref: match for match in discovery.matches}
+        for ref in sorted(selected_refs):
+            match = matches.get(ref)
+            selected_catalog.append({
+                "ref": ref,
+                "definition": None if match is None else match.model_dump(
+                    mode="json",
+                    exclude={
+                        "relevance", "recommended", "suggested_role",
+                        "role_probability", "retrieval_signals",
+                    },
+                ),
+            })
+        payload = {
+            "card": policy,
+            "selected_catalog": selected_catalog,
+            "catalog_refs": sorted(set(discovery.candidate_refs)),
+            "catalog_identity": discovery.catalog_fingerprint,
+            "catalog_strategy": discovery.catalog_strategy,
+            "principal": principal.model_dump(mode="json") if principal else None,
+            "tenant": discovery.authorized_tenant, "truncated": discovery.truncated}
         return hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
     @staticmethod
@@ -702,11 +766,15 @@ class InsightAuthoringService:
             card.numeric_conditions,
         )
         effective_principal = self._effective_principal(principal)
+        authorized_descriptors = await self._authorize_explicit_anchors(
+            list(card.sources), principal=effective_principal
+        ) if card.sources else {}
         discovery = await self.discover(
             goal, adapter=adapter, limit=limit, principal=effective_principal
         )
         discovery = await self._retain_explicit_anchors(
-            card, discovery, principal=effective_principal
+            list(card.sources), discovery, principal=effective_principal,
+            authorized_descriptors=authorized_descriptors,
         )
         selected_refs = {
             f"{source.adapter}|{source.resource}" for source in card.sources
@@ -723,10 +791,11 @@ class InsightAuthoringService:
 
     async def _retain_explicit_anchors(
         self,
-        card: InsightCard,
+        anchors: list[SourceRef],
         discovery: ResourceDiscovery,
         *,
         principal: PrincipalContext | None,
+        authorized_descriptors: dict[str, ResourceDescriptor] | None = None,
     ) -> ResourceDiscovery:
         """Keep authorized human anchors visible even when discovery is bounded.
 
@@ -740,20 +809,25 @@ class InsightAuthoringService:
         visible_refs = {match.ref for match in discovery.matches}
         missing = [
             source
-            for source in card.sources
+            for source in anchors
             if f"{source.adapter}|{source.resource}" not in visible_refs
         ]
         if not missing:
             return discovery
         appended: list[ResourceMatch] = []
         for source in missing:
-            try:
-                descriptor = await self.registry.authorize(
-                    source,
-                    authorized_tenants=[principal.tenant_id] if principal else None,
+            if authorized_descriptors is not None:
+                descriptor = authorized_descriptors.get(
+                    f"{source.adapter}|{source.resource}"
                 )
-            except Exception:  # noqa: BLE001 - unavailable anchors remain blocked
-                descriptor = None
+            else:
+                try:
+                    descriptor = await self.registry.authorize(
+                        source,
+                        authorized_tenants=[principal.tenant_id] if principal else None,
+                    )
+                except Exception:  # noqa: BLE001 - unavailable anchors remain blocked
+                    descriptor = None
             if descriptor is None:
                 continue
             ref = f"{source.adapter}|{source.resource}"
@@ -787,6 +861,38 @@ class InsightAuthoringService:
                 "warnings": warnings,
             }
         )
+
+    async def _authorize_explicit_anchors(
+        self,
+        anchors: list[SourceRef],
+        *,
+        principal: PrincipalContext | None,
+    ) -> dict[str, ResourceDescriptor]:
+        """Authorize explicit anchors before bounded discovery invokes Jev."""
+        authorized: dict[str, ResourceDescriptor] = {}
+        for source in anchors:
+            ref = f"{source.adapter}|{source.resource}"
+            try:
+                descriptor = await self.registry.authorize(
+                    source,
+                    authorized_tenants=[principal.tenant_id] if principal else None,
+                )
+            except Exception:  # noqa: BLE001 - fail closed before paid ranking
+                descriptor = None
+            if descriptor is not None:
+                authorized[ref] = descriptor
+        unauthorized = [
+            f"{source.adapter}|{source.resource}"
+            for source in anchors
+            if f"{source.adapter}|{source.resource}" not in authorized
+        ]
+        if unauthorized:
+            raise ValueError(
+                "selected source refs must come from the authorized adapter catalog "
+                "and discover_insight_sources when available: "
+                + ", ".join(unauthorized)
+            )
+        return authorized
 
     async def discover(
         self,
@@ -882,6 +988,16 @@ class InsightAuthoringService:
             if effective_principal
             else self.registry.authorized_tenants
         )
+        catalog_identity = hashlib.sha256(
+            json.dumps(
+                [
+                    resource.model_dump(mode="json")
+                    for resource in sorted(resources, key=resource_ref)
+                ],
+                sort_keys=True,
+                separators=(",", ":"),
+            ).encode()
+        ).hexdigest()
         authorized_tenant = (
             next(iter(authorized_tenants)) if authorized_tenants and len(authorized_tenants) == 1 else None
         )
@@ -898,6 +1014,7 @@ class InsightAuthoringService:
             authorized_tenant=authorized_tenant,
             catalog_provider=catalog.provider,
             catalog_strategy=catalog.strategy,
+            catalog_fingerprint=catalog_identity,
             catalog_cursor=catalog.next_cursor,
             warnings=warnings,
         )
@@ -913,7 +1030,7 @@ class InsightAuthoringService:
         evidence_requirements: dict[str, StrictBool] | None = None,
         decision_guidance: str | None = None,
         follow_up_guidance: str | None = None,
-        selected_sources: list[dict[str, Any]] | None = None,
+        selected_sources: list[SelectedSourceInput | dict[str, Any]] | None = None,
         adapter: str | None = None,
         limit: int = 10,
         title: str | None = None,
@@ -928,6 +1045,9 @@ class InsightAuthoringService:
         investigation_threshold: float = 0.60,
         principal: PrincipalContext | None = None,
     ) -> InsightCardProposal:
+        validated_selected_sources: list[SelectedSourceInput] | None = None
+        if selected_sources is not None:
+            validated_selected_sources = self._validate_selected_sources(selected_sources)
         if not what_to_watch.strip():
             raise ValueError("what_to_watch must not be empty")
         if not why_watch.strip():
@@ -950,28 +1070,55 @@ class InsightAuthoringService:
             numeric_conditions,
         )
         effective_principal = self._effective_principal(principal)
+        requested_anchors: list[SourceRef] = []
+        if validated_selected_sources is not None:
+            requested_anchors = [
+                SourceRef(
+                    key=item.key or f"source-{_slug(item.ref)}",
+                    adapter=item.ref.split("|", 1)[0],
+                    resource=item.ref.split("|", 1)[1],
+                    label=item.label or item.ref,
+                    parameters=item.parameters,
+                    required=item.required,
+                )
+                for item in validated_selected_sources
+            ]
+        authorized_descriptors = await self._authorize_explicit_anchors(
+            requested_anchors, principal=effective_principal
+        ) if requested_anchors else {}
         discovery = await self.discover(
             goal, adapter=adapter, limit=limit, principal=effective_principal
         )
         matches = {match.ref: match for match in discovery.matches}
-        requested = selected_sources
+        requested = validated_selected_sources
         if requested is None:
-            requested = [{"ref": match.ref} for match in discovery.matches if match.recommended]
-        unknown = [item.get("ref") for item in requested if item.get("ref") not in matches]
+            requested = [
+                SelectedSourceInput(ref=match.ref)
+                for match in discovery.matches
+                if match.recommended
+            ]
+        else:
+            discovery = await self._retain_explicit_anchors(
+                requested_anchors, discovery, principal=effective_principal,
+                authorized_descriptors=authorized_descriptors,
+            )
+            matches = {match.ref: match for match in discovery.matches}
+        unknown = [item.ref for item in requested if item.ref not in matches]
         if unknown:
             raise ValueError(
-                "selected source refs must come from discover_insight_sources: "
+                "selected source refs must come from the authorized adapter catalog "
+                "and discover_insight_sources when available: "
                 + ", ".join(str(item) for item in unknown)
             )
         source_refs = [
             SourceRef(
-                key=str(item.get("key") or f"source-{_slug(str(item['ref']))}"),
-                adapter=matches[item["ref"]].adapter,
-                resource=matches[item["ref"]].resource,
-                label=str(item.get("label") or matches[item["ref"]].title),
-                parameters=item.get("parameters") or {},
-                required=bool(item.get("required", True)),
-                required_comparison_keys=list(matches[item["ref"]].contract.required_comparison_keys),
+                key=item.key or f"source-{_slug(item.ref)}",
+                adapter=matches[item.ref].adapter,
+                resource=matches[item.ref].resource,
+                label=item.label or matches[item.ref].title,
+                parameters=item.parameters,
+                required=item.required,
+                required_comparison_keys=list(matches[item.ref].contract.required_comparison_keys),
             )
             for item in requested
         ]

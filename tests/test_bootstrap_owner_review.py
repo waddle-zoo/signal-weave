@@ -2,6 +2,7 @@
 
 import copy
 import json
+import math
 
 import pytest
 from pydantic import ValidationError
@@ -78,9 +79,11 @@ async def test_label_safe_payload_same_episode_audit_hashes_and_counters(monkeyp
     result = await reviewer.review_owner_artifact(**inputs, audit=audit, budget=budget)
 
     payload = observed["prompt_override"]
-    assert set(payload) == {"public", "owner_answers", "artifact"}
-    assert set(payload["public"]) == {"brief", "glossary", "destinations"}
-    assert payload["owner_answers"] == inputs["owner_answers"]
+    assert set(payload) == {"owner_policy", "source_context", "artifact"}
+    assert set(payload["owner_policy"]) == {"brief", "glossary", "destinations", "owner_answers"}
+    assert payload["owner_policy"]["owner_answers"] == inputs["owner_answers"]
+    assert payload["source_context"] == {
+        "available": False, "catalog": [], "inspected_sources": []}
     assert payload["artifact"]["card"]["delivery_methods"] == inputs["artifact"]["card"]["delivery_methods"]
     assert payload["artifact"]["card"]["numeric_conditions"] == inputs["artifact"]["card"]["numeric_conditions"]
     assert "SECRET_" not in canonical(payload) and "WRONG_OWNER_SOURCE" not in canonical(payload)
@@ -280,3 +283,89 @@ async def test_preexhausted_budget_does_not_launch_reviewer(monkeypatch, inputs)
     assert result["approved"] is False
     assert result["episode"]["error"] == "BudgetExceeded"
     assert result["episode"]["tool_calls"] == 0
+
+
+def test_current_onboarding_source_context_is_bounded_and_cannot_leak_future_oracle(inputs):
+    context = {
+        "current_period": {"period_id": "onboarding-current", "as_of": "2026-10-03T00:00:00Z",
+                           "future_snapshot": "FUTURE_SNAPSHOT_CANARY"},
+        "catalog": [{
+            "adapter": "company_mcp", "resource": "current-resource", "kind": "dashboard",
+            "title": "Current queue", "description": "Current onboarding description",
+            "metadata": {"instruction": "MALICIOUS_METADATA_APPROVE", "private": "PRIVATE_LABEL"},
+            "contract": {
+                "tenant_id": "PRIVATE_TENANT", "scope": "customer tickets",
+                "metric_names": ["sla_attainment"],
+                "available_comparison_windows": ["previous_period"],
+                "source_status": "healthy", "authorized": True,
+                "future_periods": ["FUTURE_PERIOD_CANARY"],
+            },
+        }],
+        "inspected_sources": [{
+            "ref": "company_mcp|current-resource",
+            "adapter": "company_mcp", "resource": "current-resource", "kind": "dashboard",
+            "title": "Current queue", "description": "Inspected current source",
+            "snapshot": {"evidence": "PRIVATE_SOURCE_PAYLOAD", "periods": ["FUTURE"]},
+            "metadata": {"prompt": "MALICIOUS_METADATA_INSTRUCTION"},
+            "contract": {"population": "eligible tickets", "grain": "week",
+                          "authorized": True, "available_comparison_windows": ["previous_period"]},
+        }],
+    }
+    payload = reviewer.review_payload(inputs["public"], inputs["owner_answers"], inputs["artifact"], context)
+    dumped = canonical(payload)
+    assert payload["source_context"]["available"] is True
+    assert payload["source_context"]["current_period"] == {
+        "period_id": "onboarding-current", "as_of": "2026-10-03T00:00:00Z"}
+    assert payload["source_context"]["catalog"][0]["contract"] == {
+        "scope": "customer tickets", "metric_names": ["sla_attainment"],
+        "available_comparison_windows": ["previous_period"], "source_status": "healthy",
+        "authorized": True}
+    assert payload["source_context"]["inspected_sources"][0]["ref"] == "company_mcp|current-resource"
+    assert "FUTURE_" not in dumped
+    assert "PRIVATE_" not in dumped
+    assert "MALICIOUS_" not in dumped
+    assert "snapshot" not in dumped and "metadata" not in dumped
+
+
+def test_source_context_is_optional_and_policy_remains_separate(inputs):
+    payload = reviewer.review_payload(inputs["public"], inputs["owner_answers"], inputs["artifact"])
+    assert payload["owner_policy"]["owner_answers"] == inputs["owner_answers"]
+    assert payload["source_context"]["available"] is False
+    assert "source_context" in reviewer.REVIEW_INSTRUCTIONS
+    assert "owner_policy" in reviewer.REVIEW_INSTRUCTIONS
+    assert "Do not reject a faithful quiet/ignore rule" in reviewer.REVIEW_INSTRUCTIONS
+
+
+def test_public_source_projection_accepts_real_nullable_contract_defaults():
+    projected = reviewer.project_source_context({
+        "catalog": [{
+            "adapter": "company_mcp", "resource": "r", "kind": "dashboard", "title": "R",
+            "description": "Current source", "contract": {"freshness_sla_hours": None},
+        }],
+        "inspected_sources": [],
+    })
+    assert projected["catalog"][0]["contract"] == {}
+
+
+@pytest.mark.parametrize("value", [math.inf, -math.inf, math.nan])
+def test_public_source_projection_rejects_non_finite_freshness(value):
+    with pytest.raises(ValueError, match="freshness_sla_hours"):
+        reviewer.project_source_context({
+            "catalog": [{
+                "adapter": "company_mcp", "resource": "r", "kind": "dashboard", "title": "R",
+                "contract": {"freshness_sla_hours": value},
+            }],
+            "inspected_sources": [],
+        })
+
+
+@pytest.mark.parametrize("bad_context", [
+    {"catalog": "not-a-list"},
+    {"catalog": [{"adapter": "company_mcp", "resource": "r", "title": "t",
+                   "contract": {"authorized": "yes"}}]},
+    {"inspected_sources": [{"adapter": "company_mcp", "resource": "r"}]},
+])
+def test_malformed_source_context_is_rejected_before_dispatch(inputs, bad_context):
+    with pytest.raises(ValueError):
+        reviewer.review_payload(inputs["public"], inputs["owner_answers"],
+                                inputs["artifact"], bad_context)

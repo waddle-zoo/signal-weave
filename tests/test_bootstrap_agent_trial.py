@@ -127,6 +127,32 @@ async def test_missing_owner_review_returns_actionable_steps(tmp_path, public):
     assert session.owner_approvals == {}
 
 
+@pytest.mark.parametrize("treatment", [False, True])
+async def test_submission_citations_validated_without_expected_answer(tmp_path, public, treatment):
+    session = make_session(tmp_path, public, treatment)
+    session.phase = "monitoring"
+    descriptor = session.adapter.catalog[0]
+    ref = f"{descriptor.adapter}|{descriptor.resource}"
+    submission = {"outcome": "ignore", "recipients": [], "evidence_refs": [ref],
+                  "claims": [{"claim_type": "hypothesis", "evidence_refs": [ref],
+                              "statement": "Contract validation does not prove this claim."}],
+                  "numeric_claims": [], "summary": "Shared mechanical validation only."}
+    with pytest.raises(ValueError, match="actually inspected"):
+        await session.call("submit_analysis", submission)
+    await session.adapter.inspect(SourceRef(key="s", adapter=descriptor.adapter,
+                                            resource=descriptor.resource, label=descriptor.title))
+    with pytest.raises(ValueError, match="top-level"):
+        await session.call("submit_analysis", {**submission, "evidence_refs": []})
+    with pytest.raises(ValueError, match="actually inspected"):
+        await session.call("submit_analysis", {**submission, "evidence_refs": [ref + "typo"]})
+    assert session.submission is None
+    assert (await session.call("submit_analysis", submission))["recorded"]
+    # A new period cannot reuse evidence seen only during onboarding/another period.
+    session.adapter.set_period(public["periods"][0], datetime.now(timezone.utc))
+    with pytest.raises(ValueError, match="actually inspected"):
+        await session.call("submit_analysis", submission)
+
+
 def test_real_sdk_response_usage_serializes_and_is_counted():
     response = SystemOneResponse(model="jev-1.13.0", usage=Usage(input_tokens=120, output_tokens=0), answers={})
     audit = trial.Audit()

@@ -22,6 +22,7 @@ from .evaluation import (
     CardEvaluationCase,
     CardEvaluationThresholds,
     CardWorkflowEvaluator,
+    WorkflowCaseInput,
     card_acceptance_digest,
     has_current_evidence_admission_policy,
 )
@@ -55,6 +56,7 @@ from .models import (
 from .numeric_conditions import NumericCondition
 from .onboarding import (
     InsightAuthoringService,
+    SelectedSourceInput,
     bind_numeric_condition_requirements,
     proposal_summary,
     resolve_comparison_windows,
@@ -158,8 +160,11 @@ CARD_AUTHORING_GUIDANCE = (
     "Review counterexamples such as a large but unchanged level, offsetting segment changes, "
     "a threshold-boundary case, and missing population coverage. Derive expected actions from "
     "the owner's policy independently of the model's answers; surface disagreements for review. "
-    "Test other periods and negative cases with independent expectations before requesting "
-    "owner approval. Never infer causation from a contribution breakdown. Scheduling, final "
+    "Test other periods and negative cases with independent expectations before enabling "
+    "unattended delivery. If only current evidence is available, capture one owner-labeled "
+    "current case or preview it; do not invent historical snapshots. Owner approval without "
+    "full acceptance remains unassessed and is suitable only for caller-managed shadow review. "
+    "Never infer causation from a contribution breakdown. Scheduling, final "
     "narrative generation and delivery remain with the caller-owned agent."
 )
 
@@ -681,7 +686,7 @@ def create_mcp(
     @mcp.tool()
     async def evaluate_card_workflow(
         card_id: str,
-        cases: list[dict[str, Any]],
+        cases: Annotated[list[WorkflowCaseInput], Field(min_length=1, max_length=500)],
         thresholds: dict[str, Any] | None = None,
         max_concurrency: int = 8,
         acceptance_outcomes: list[Outcome] | None = None,
@@ -689,8 +694,13 @@ def create_mcp(
     ) -> dict[str, Any]:
         """Replay one stored card against owner-labeled snapshots before promotion.
 
-        Each case contains ``id``, ``resources``, ``expected_outcome`` and any
-        optional evidence/retrieval labels. Labels stay in the evaluator and
+        Each case contains ``id``, ``expected_outcome`` and either exact
+        ``resources`` snapshots or ``capture_current_sources=true`` to fetch
+        this card's selected sources. Current capture can execute source queries;
+        use it only within the owner's query budget. At most one case can capture
+        current evidence. It is NOT historical or full-policy acceptance.
+        Copy snapshot objects unchanged; resource strings are not snapshots.
+        Optional evidence/retrieval labels stay in the evaluator and
         are never included in the Jev state. Historical snapshots are supplied
         by the caller; production delivery is not performed by this tool.
         Set acceptance_outcomes to the owner's intended dispositions to test
@@ -701,22 +711,38 @@ def create_mcp(
         card = get_scoped_card(card_id, principal)
         if not cases:
             raise ValueError("at least one labeled evaluation case is required")
+        inputs = [WorkflowCaseInput.model_validate(case) for case in cases]
+        current_case_ids = [case.id for case in inputs if case.capture_current_sources]
+        if len(current_case_ids) > 1:
+            raise ValueError("At most one current-source case is allowed; supply distinct historical snapshots for other cases.")
+        if current_case_ids and acceptance_outcomes is not None:
+            raise ValueError("Current-source capture is a shadow check, not acceptance certification; supply independent historical snapshots for acceptance_outcomes.")
+        # Validate ALL inputs before a source query or inference is attempted.
         parsed_cases = [
-            CardEvaluationCase.model_validate({**case, "card": card}) for case in cases
+            CardEvaluationCase.model_validate({
+                **case.model_dump(exclude={"capture_current_sources", "resources"}),
+                "resources": case.resources or [], "card": card,
+            }) for case in inputs
         ]
         assert_evaluation_case_scope(parsed_cases, principal)
-        report = await CardWorkflowEvaluator(
-            runtime.engine, max_concurrency=max_concurrency
-        ).evaluate(
+        parsed_thresholds = CardEvaluationThresholds.model_validate(thresholds) if thresholds is not None else None
+        evaluator = CardWorkflowEvaluator(runtime.engine, max_concurrency=max_concurrency, principal=principal)
+        for input_case, parsed in zip(inputs, parsed_cases, strict=True):
+            if input_case.capture_current_sources:
+                parsed.resources = await runtime.sources.resolve(
+                    card.sources, authorized_tenants=[principal.tenant_id] if principal else None,
+                )
+        assert_evaluation_case_scope(parsed_cases, principal)
+        report = await evaluator.evaluate(
             parsed_cases,
-            thresholds=(
-                CardEvaluationThresholds.model_validate(thresholds)
-                if thresholds is not None
-                else None
-            ),
+            thresholds=parsed_thresholds,
             acceptance_outcomes=acceptance_outcomes,
         )
         payload = report.model_dump(mode="json")
+        if current_case_ids:
+            payload["current_source_case_ids"] = current_case_ids
+            if payload["status"] == "approved":
+                payload["status"] = "shadow"
         record = persist_certification(
             kind="card_workflow",
             subject_id=card.id,
@@ -991,7 +1017,7 @@ def create_mcp(
         evidence_requirements: dict[EvidenceRequirementKey, StrictBool] | None = None,
         decision_guidance: str | None = None,
         follow_up_guidance: str | None = None,
-        selected_sources: list[dict[str, Any]] | None = None,
+        selected_sources: list[SelectedSourceInput] | None = None,
         adapter: str | None = None,
         limit: int = 10,
         title: str | None = None,
@@ -1086,7 +1112,7 @@ def create_mcp(
         evidence_requirements: dict[EvidenceRequirementKey, StrictBool] | None = None,
         decision_guidance: str | None = None,
         follow_up_guidance: str | None = None,
-        selected_sources: list[dict[str, Any]] | None = None,
+        selected_sources: list[SelectedSourceInput] | None = None,
         adapter: str | None = None,
         limit: int = 10,
         title: str | None = None,

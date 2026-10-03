@@ -98,6 +98,21 @@ prevents an old green report from being mistaken for proof about a newer card.
 
 ## 2. Certify a card/workflow
 
+For a single current-data check, agents do not need to reconstruct source
+snapshots. Use one case with `capture_current_sources: true`, an `id`, and the
+owner's `expected_outcome` (plus explicit expected routes). The server fetches
+the stored card's selected sources through the normal authorization boundary,
+preserving source keys, parameters and tenant contracts. This can execute queries;
+obtain the owner's read/query permission first. At most one current capture is
+allowed per evaluation call. Never present it as several historical periods.
+
+Alternatively supply `resources` as the exact normalized snapshot objects from
+inspection or preview, including their contracts—not resource-name strings.
+Explicit `resources: []` tests missing sources. These two input modes are mutually
+exclusive, and every case is validated before current data is fetched or Jev called.
+Labels remain outside Jev's state in both paths. A current check alone does not
+cover the full policy or authorize delivery.
+
 ### Test onboarding, not just the prose
 
 A successful preview means the engine ran. It does not mean it followed the

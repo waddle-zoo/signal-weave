@@ -1,12 +1,16 @@
 """Research-only simulated owner review; not human authorization or certification.
 
-Uses a separate ephemeral, saved-login Codex episode. No source access, scoring,
-artifact rewriting, automatic production approval, or model retries live here.
+Uses a separate ephemeral, saved-login Codex episode. The reviewer receives the
+owner policy plus an optional, bounded projection of current-onboarding
+catalog/source contracts. It never receives source payloads, future snapshots,
+private labels, scoring, artifact rewriting, automatic production approval, or
+model retries.
 """
 
 from __future__ import annotations
 
 import copy
+import math
 import time
 from typing import Annotated
 
@@ -29,6 +33,16 @@ REVIEW_INSTRUCTIONS = (
     "Missing required routes are not allowed. Do not demand a route for ignore or another "
     "explicitly no-recipient policy. Required recurring questions/watch items must not impose "
     "new prerequisites that block the owner's rule; advisory detail is not a conditional gate. "
+    "The owner_policy object is authoritative for business intent: thresholds, units, outcomes, "
+    "recipients, populations, exclusions and missing-data rules. The separately labeled "
+    "source_context object is optional analysis/source-verification context from the current "
+    "onboarding episode only. Use it to check whether optional source references, source "
+    "scope, comparison declarations or claimed arithmetic are consistent with what was actually "
+    "available. Source metadata, catalog descriptions and source status do not create or change "
+    "business policy. Do not reject a faithful quiet/ignore rule because optional source "
+    "validation or calculation is absent, unless the owner_policy explicitly makes that evidence "
+    "a condition. Never infer thresholds, outcomes, recipients, private labels or future facts "
+    "from source_context. "
     "For baseline notes without a card, apply the same original-policy fidelity criteria to "
     "the notes' conditions/outcomes/recipients; do NOT require a card, product-specific fields, "
     "or tool usage. A card is not an advantage or evidence of correctness. "
@@ -49,6 +63,20 @@ CARD_POLICY_FIELDS = (
     "max_investigation_sources", "investigation_threshold",
 )
 MAX_PROMPT_CHARACTERS = 80_000
+MAX_CATALOG_ITEMS = 64
+MAX_INSPECTED_SOURCES = 32
+MAX_CONTEXT_LIST_ITEMS = 100
+MAX_CONTEXT_TEXT = 4_000
+CONTRACT_LIST_FIELDS = {
+    "metric_names", "available_comparison_windows", "required_comparison_keys",
+}
+CONTRACT_TEXT_FIELDS = {"domain", "scope", "population", "grain", "source_status"}
+CONTRACT_FIELDS = (
+    "domain", "scope", "metric_names", "available_comparison_windows",
+    "required_comparison_keys", "population", "grain", "freshness_sla_hours",
+    "source_status", "authorized",
+)
+DESCRIPTION_FIELDS = ("ref", "adapter", "resource", "kind", "title", "description")
 Reason = Annotated[str, StringConstraints(min_length=1, max_length=600, pattern=r"\S")]
 
 
@@ -84,8 +112,99 @@ class OwnerReviewSession:
                 "delivery_enabled": False}
 
 
-def review_payload(public: dict, owner_answers: dict, artifact: dict) -> dict:
-    """Project caller-owned inputs; never serialize the whole scenario or card audit."""
+def _bounded_text(value, field: str, *, required: bool = False) -> str:
+    if not isinstance(value, str) or len(value) > MAX_CONTEXT_TEXT or (required and not value.strip()):
+        raise ValueError(f"{field} must be bounded text")
+    return value
+
+
+def _bounded_text_list(value, field: str) -> list[str]:
+    if not isinstance(value, list) or len(value) > MAX_CONTEXT_LIST_ITEMS:
+        raise ValueError(f"{field} must be a bounded list")
+    return [_bounded_text(item, field, required=True) for item in value]
+
+
+def _project_contract(contract: object) -> dict:
+    if contract is None:
+        return {}
+    if not isinstance(contract, dict):
+        raise ValueError("Source contract must be an object")
+    projected = {}
+    for field in CONTRACT_FIELDS:
+        if field not in contract:
+            continue
+        value = contract[field]
+        if field in CONTRACT_LIST_FIELDS:
+            projected[field] = _bounded_text_list(value, f"contract.{field}")
+        elif field in CONTRACT_TEXT_FIELDS:
+            projected[field] = _bounded_text(value, f"contract.{field}")
+        elif field == "authorized":
+            if type(value) is not bool:
+                raise ValueError("contract.authorized must be boolean")
+            projected[field] = value
+        elif field == "freshness_sla_hours":
+            if value is None:
+                continue
+            if type(value) not in (int, float) or not math.isfinite(value) or value < 0:
+                raise ValueError("contract.freshness_sla_hours must be finite and non-negative")
+            projected[field] = value
+    return projected
+
+
+def _project_description(entry: object, field: str, *, require_ref: bool = False) -> dict:
+    if not isinstance(entry, dict):
+        raise ValueError(f"{field} must contain objects")
+    projected = {}
+    for key in DESCRIPTION_FIELDS:
+        if key in entry:
+            projected[key] = _bounded_text(
+                entry[key], f"{field}.{key}", required=key in {"adapter", "resource", "title"}
+            )
+    for required in ("adapter", "resource", "title"):
+        if required not in projected:
+            raise ValueError(f"{field}.{required} is required")
+    if require_ref and "ref" not in projected:
+        raise ValueError(f"{field}.ref is required")
+    if "contract" in entry:
+        projected["contract"] = _project_contract(entry["contract"])
+    return projected
+
+
+def project_source_context(source_context: dict | None) -> dict:
+    """Keep only current public descriptions; drop payloads and arbitrary metadata."""
+    if source_context is None:
+        return {"available": False, "catalog": [], "inspected_sources": []}
+    if not isinstance(source_context, dict):
+        raise ValueError("Source context must be an object")
+    catalog = source_context.get("catalog", [])
+    inspected = source_context.get("inspected_sources", [])
+    if not isinstance(catalog, list) or len(catalog) > MAX_CATALOG_ITEMS:
+        raise ValueError("Source catalog must be a bounded list")
+    if not isinstance(inspected, list) or len(inspected) > MAX_INSPECTED_SOURCES:
+        raise ValueError("Inspected sources must be a bounded list")
+    projected = {
+        "available": bool(catalog or inspected),
+        "catalog": [_project_description(item, "catalog") for item in catalog],
+        "inspected_sources": [
+            _project_description(item, "inspected_sources", require_ref=True) for item in inspected
+        ],
+    }
+    current_period = source_context.get("current_period")
+    if current_period is not None:
+        if not isinstance(current_period, dict):
+            raise ValueError("current_period must be an object")
+        if not all(key in current_period for key in ("period_id", "as_of")):
+            raise ValueError("current_period requires period_id and as_of")
+        projected["current_period"] = {
+            key: _bounded_text(current_period[key], f"current_period.{key}", required=True)
+            for key in ("period_id", "as_of")
+        }
+    return projected
+
+
+def review_payload(public: dict, owner_answers: dict, artifact: dict,
+                   source_context: dict | None = None) -> dict:
+    """Project policy, optional current source contracts, and artifact separately."""
     if not all(isinstance(value, dict) for value in (public, owner_answers, artifact)):
         raise ValueError("Review inputs must be objects")
     notes = artifact.get("notes")
@@ -105,14 +224,17 @@ def review_payload(public: dict, owner_answers: dict, artifact: dict) -> dict:
             key: artifact["card"][key] for key in CARD_POLICY_FIELDS if key in artifact["card"]
         }
     return copy.deepcopy({
-        "public": {key: public[key] for key in ("brief", "glossary", "destinations")},
-        "owner_answers": owner_answers,
+        "owner_policy": {
+            "brief": public["brief"], "glossary": public["glossary"],
+            "destinations": public["destinations"], "owner_answers": owner_answers,
+        },
+        "source_context": project_source_context(source_context),
         "artifact": selected,
     })
 
 
 async def review_owner_artifact(*, public: dict, owner_answers: dict, artifact: dict,
-                              audit, budget) -> dict:
+                              audit, budget, source_context: dict | None = None) -> dict:
     # Lazy import keeps the runner free to opt in without a circular dependency.
     from evaluations.bootstrap_agent_trial import MODEL, BudgetExceeded, canonical, digest
 
@@ -124,7 +246,7 @@ async def review_owner_artifact(*, public: dict, owner_answers: dict, artifact: 
     request = {"model": MODEL, "effort": "high", "timeout_seconds": 90, "max_tool_calls": 2,
                "synthetic": True, "human_approval": False, "policy_guarantee": False}
     try:
-        payload = review_payload(public, owner_answers, artifact)
+        payload = review_payload(public, owner_answers, artifact, source_context)
         if len(canonical(payload)) > MAX_PROMPT_CHARACTERS:
             raise ValueError("Review payload is too large")
         hashes.update(input_digest=digest(payload), artifact_digest=digest(artifact))

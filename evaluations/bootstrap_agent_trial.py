@@ -84,6 +84,9 @@ COMMON_SYSTEM = (
     "Do not infer causality from correlation or fill missing populations with zeros. "
     "Do not perform external notifications. Recipients are authorized destination keys, "
     "not invented people or URLs. Citations use adapter|resource refs actually inspected. "
+    "Include every per-claim citation in the top-level evidence_refs too. Canonical numeric "
+    "claims require a known applicable population; if source coverage is incomplete, keep "
+    "provisional displayed values qualified in prose rather than asserting them as business facts. "
     "If configuring a delivery method, copy the destination provided in business.destinations; "
     "final submitted recipients use those destinations' keys, not their URLs. "
     "In each monitoring result report the metric delta and useful decomposition/driver "
@@ -358,12 +361,30 @@ class ToolSession:
         self.owner_review_records: list[dict] = []
         self.owner_review_attempts = 0
         self.semantic_approval: str | None = None
+        self.setup_source_context: dict | None = None
+
+    def owner_source_context(self) -> dict:
+        from evaluations.bootstrap_owner_review import project_source_context
+
+        if self.setup_complete and self.setup_source_context is not None:
+            return copy.deepcopy(self.setup_source_context)
+        # Only the current episode is retained by this adapter. Never serialize
+        # the scenario, payload measurements, future periods or private labels.
+        return project_source_context({
+            "catalog": [item.model_dump(mode="json") for item in self.adapter.catalog],
+            "inspected_sources": [
+                {**self.adapter.snapshots[ref], "ref": ref}
+                for ref in sorted(self.adapter.inspected) if ref in self.adapter.snapshots
+            ],
+            "current_period": self.adapter.period_context,
+        })
 
     def approval_fingerprint(self, card: dict | None) -> str:
         if self.owner_reviewer is None:
             return card_fingerprint(card or {})
         return digest({"card": card_fingerprint(card) if card else None, "notes": self.notes,
                        "owner_answers": self.owner["owner_answers"],
+                       "source_context_digest": digest(self.owner_source_context()),
                        "public_owner_context": {key: self.public[key] for key in
                                                 ("brief", "glossary", "destinations")}})
 
@@ -417,6 +438,7 @@ class ToolSession:
         try:
             decision = await self.owner_reviewer(
                 public=copy.deepcopy(self.public),
+                source_context=self.owner_source_context(),
                 owner_answers=copy.deepcopy(self.owner["owner_answers"]), artifact=artifact)
         except Exception as error:
             decision = {"approved": False, "reasons": ["Owner review failed."],
@@ -530,6 +552,7 @@ class ToolSession:
                 if self.semantic_approval != self.approval_fingerprint(card):
                     return {"setup_complete": False, "reason": "Current card/notes need independent owner review.",
                             "next_tools": ["request_synthetic_owner_approval", "finish_setup"]}
+            self.setup_source_context = self.owner_source_context()
             self.setup_complete = True
             return {"setup_complete": True, "card_id": self.card_id,
                     "human_approval": ("independent simulated-owner model review; not actual human authorization"
@@ -540,6 +563,16 @@ class ToolSession:
             if any(c["fact"] not in self.public["numeric_vocabulary"] for c in parsed["numeric_claims"]):
                 raise ValueError("Use exact numeric_vocabulary fact identifiers, without values or prose: "
                                  + ", ".join(self.public["numeric_vocabulary"]))
+            cited = set(parsed["evidence_refs"])
+            claim_refs = {ref for claim in [*parsed["numeric_claims"], *parsed["claims"]]
+                          for ref in claim["evidence_refs"]}
+            uninspected = (cited | claim_refs) - self.adapter.inspected
+            if uninspected:
+                raise ValueError("Citations must be exact current-period refs actually inspected: "
+                                 + ", ".join(sorted(uninspected)))
+            if claim_refs - cited:
+                raise ValueError("Include each per-claim citation in top-level evidence_refs: "
+                                 + ", ".join(sorted(claim_refs - cited)))
             self.submission = parsed
             return {"recorded": True, "delivery_enabled": False}
         if (name == "request_synthetic_owner_approval" and not self.treatment
@@ -752,6 +785,7 @@ def source_fingerprint() -> dict:
              "docs/bootstrap-owner-reviewed-v4.md", "uv.lock",
              "src/signalweave/engine.py", "src/signalweave/models.py", "src/signalweave/onboarding.py",
              "src/signalweave/diagnostics.py", "src/signalweave/mcp_server.py",
+             "src/signalweave/getting_started.py", "src/signalweave/evaluation.py",
              "src/signalweave/typesafe_adapter.py")
     hashes = {name: hashlib.sha256((root / name).read_bytes()).hexdigest() for name in paths}
     revision = subprocess.run(["git", "rev-parse", "HEAD"], cwd=root, capture_output=True,

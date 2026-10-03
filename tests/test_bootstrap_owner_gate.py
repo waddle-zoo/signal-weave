@@ -147,6 +147,27 @@ async def test_notes_race_invalidates_owner_acceptance(tmp_path, public):
     assert session.owner_review_records[0]["approved"] is False
 
 
+async def test_current_contract_context_is_bounded_and_bound_to_approval(tmp_path, public):
+    session = setup_session(tmp_path, public, False)
+    ref = next(iter(session.adapter.snapshots))
+    session.adapter.inspected.add(ref)
+    session.adapter.snapshots[ref]["metadata"]["secret_future"] = "HIDDEN_PAYLOAD"
+    before = session.approval_fingerprint(None)
+    await session.semantic_owner_review(None)
+    context = session.owner_reviewer.call_args.kwargs["source_context"]
+    assert len(context["inspected_sources"]) == 1
+    assert context["inspected_sources"][0]["ref"] == ref
+    assert "HIDDEN_PAYLOAD" not in repr(context)
+    assert "analytical_comparisons" not in repr(context)
+    session.adapter.snapshots[ref]["contract"]["scope"] = "Changed source population"
+    assert session.approval_fingerprint(None) != before
+    session.setup_source_context = session.owner_source_context()
+    session.setup_complete = True
+    approved = session.approval_fingerprint(None)
+    session.adapter.set_period(public["periods"][0], session.adapter.clock)
+    assert session.approval_fingerprint(None) == approved
+
+
 async def test_treatment_approval_bound_to_current_card_and_notes(tmp_path, public, monkeypatch):
     session = setup_session(tmp_path, public, True)
     await session.specs()
