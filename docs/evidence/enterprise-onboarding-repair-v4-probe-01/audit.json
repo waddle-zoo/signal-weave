@@ -1,0 +1,59 @@
+{
+  "status": "complete_probe_structured_acceptance_failed",
+  "run": "enterprise-onboarding-repair-v4-probe-01",
+  "company": "Juniper Trail Retail",
+  "intended_records": 8,
+  "observed_records": 8,
+  "comparative_eligible": true,
+  "source_revision": "78dd7481c38883d8539c9ff484d2faa4521f296e",
+  "dataset_digest": "512d308d24bd5da0b85b8179ebee7c3560036edf08acc3d2d94d6e981ff27be4",
+  "clock_rebased_to": "2026-10-03T05:25:37.178848+00:00",
+  "arms": {
+    "luna_bi": {
+      "onboarding": "1/1",
+      "monitoring_complete": "3/3",
+      "final_outcome": "3/3",
+      "final_recipients": "3/3",
+      "final_provenance": "3/3",
+      "final_exact": "2/3",
+      "native_outcome": "not applicable",
+      "native_recipients": "not applicable",
+      "cold_seconds": 42.335414,
+      "warm_median_seconds": 23.611790,
+      "warm_seconds": 65.556263
+    },
+    "luna_signalweave_jev": {
+      "onboarding": "1/1",
+      "monitoring_complete": "3/3",
+      "final_outcome": "1/3",
+      "final_recipients": "1/3",
+      "final_provenance": "3/3",
+      "final_exact": "1/3",
+      "native_outcome": "1/3",
+      "native_recipients": "2/3",
+      "native_decisions": "3/3",
+      "native_agent_changed_outcome": "2/3",
+      "cold_seconds": 108.829291,
+      "warm_median_seconds": 34.614671,
+      "warm_seconds": 103.610293
+    }
+  },
+  "api_attempts": {
+    "total": 16,
+    "jev": 16,
+    "failed": 0,
+    "unknown_usage": 0
+  },
+  "archive_sha256": {
+    "report.json": "ca91f307b76ea0ad0a69c171197793f8c8a3bf27a643ef2a2796ad003438ee6a",
+    "config.json": "c15f54e5bc4989bf0288aa94cd33b29e976adc17b1480dfb44fadf18f264540d",
+    "protocol.json": "b6ac91823dda8dc4bf369ec445839e9bb6f9d64ecb65c92bf5ee0c2f6c3b77a7",
+    "trace.jsonl.gz": "52860c2e158222877f6a5c406e30fed0d039d6250138f2576f7fb0847e6448c0"
+  },
+  "limitations": [
+    "Synthetic single-company known-family probe; not a customer study or general reliability claim.",
+    "Baseline has no native SignalWeave decision, so native treatment-vs-baseline comparison is not applicable.",
+    "Known API-equivalent usage estimates are recorded in report.json; measured subscription-dollar comparison is unavailable.",
+    "Real external notifications were disabled; delivery results are shadow routing only."
+  ]
+}

@@ -70,6 +70,12 @@ PRODUCT_TOOLS = frozenset({
 })
 COMMON_SYSTEM = (
     "You are a business analytics agent in a synthetic, read-only company trial. "
+    "This trial is caller-managed, delivery-disabled shadow evaluation, not production "
+    "certification or permission to notify anyone. Onboarding prepares a reviewed policy "
+    "for later shadow observations. No independent historical acceptance snapshots are supplied: "
+    "record acceptance as unassessed, do not invent examples, and do not claim unattended "
+    "delivery is ready. A successful synthetic owner review authorizes this trial's shadow "
+    "setup only, not production approval or correctness. "
     "Start from the ordinary business brief, not a supplied monitoring card. "
     "During onboarding, ask the owner for unclear metric scope, materiality, routing, and policy. "
     "The owner is simulated: obtain answers by calling ask_owner, never by ending "

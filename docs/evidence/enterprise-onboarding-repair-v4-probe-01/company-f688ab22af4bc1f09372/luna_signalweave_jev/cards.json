@@ -1,0 +1,4407 @@
+{
+  "card-weekly-net-sales-decline-e4f53a37": {
+    "id": "card-weekly-net-sales-decline-e4f53a37",
+    "title": "Weekly net sales decline",
+    "what_to_watch": "Net sales (completed-order gross revenue minus same-week posted refunds, excluding tax and shipping) versus the previous complete reporting week.",
+    "why_watch": "Tell the commerce lead what changed when net sales materially decline.",
+    "watch_for": [],
+    "questions": [],
+    "numeric_conditions": [],
+    "evidence_requirements": {},
+    "decision_guidance": "Notify the business destination team-1ad71a8723aa9325e8c1 when net sales declines by at least 10% versus the prior complete reporting week. Otherwise ignore. If metric definitions are missing or postings/population coverage are incomplete, classify as insufficient_data and route to data destination team-66fa81ad827deebeb98f. Do not infer causation; include supported accounting decomposition and driver facts, including web contribution, when available.",
+    "follow_up_guidance": "Use only current-period evidence and the validated previous complete reporting week comparison. Distinguish observations, accounting decompositions, associations, hypotheses, and causal claims. Do not fill missing populations with zero or claim unavailable facts.",
+    "sources": [
+      {
+        "key": "source-company-mcp-resource-ecdbd08bf01b01f59a60",
+        "adapter": "company_mcp",
+        "resource": "resource-ecdbd08bf01b01f59a60",
+        "label": "Commerce weekly",
+        "parameters": {},
+        "required": true,
+        "required_comparison_keys": []
+      },
+      {
+        "key": "source-company-mcp-resource-41613ec6c871dbcf61da",
+        "adapter": "company_mcp",
+        "resource": "resource-41613ec6c871dbcf61da",
+        "label": "Returns operations",
+        "parameters": {},
+        "required": true,
+        "required_comparison_keys": []
+      }
+    ],
+    "comparison_windows": [
+      "previous_period"
+    ],
+    "action_confidence_threshold": 0.7,
+    "owner": "Business owner",
+    "version": 1,
+    "max_source_age_hours": 24.0,
+    "delivery_methods": [
+      {
+        "key": "team-1ad71a8723aa9325e8c1",
+        "outcome": "notify",
+        "label": "Business owner",
+        "destination": "slack://team-1ad71a8723aa9325e8c1",
+        "instructions": "Send the net-sales delta and supported decomposition/driver facts."
+      },
+      {
+        "key": "team-66fa81ad827deebeb98f",
+        "outcome": "insufficient_data",
+        "label": "Data operations",
+        "destination": "slack://team-66fa81ad827deebeb98f",
+        "instructions": "Report missing definitions, incomplete postings, or incomplete population coverage."
+      }
+    ],
+    "retrieval_mode": "fixed",
+    "investigation_mode": "none",
+    "max_investigation_sources": 3,
+    "investigation_threshold": 0.6,
+    "principal_id": "synthetic-owner",
+    "principal_tenant": "company-f688ab22af4bc1f09372",
+    "compiled_plan": {
+      "card_id": "card-weekly-net-sales-decline-e4f53a37",
+      "card_version": 1,
+      "selected_source_keys": [
+        "source-company-mcp-resource-ecdbd08bf01b01f59a60",
+        "source-company-mcp-resource-41613ec6c871dbcf61da"
+      ],
+      "comparison_windows": [
+        "previous_period"
+      ],
+      "capabilities": [
+        "percent_change",
+        "baseline_comparison",
+        "freshness_check"
+      ],
+      "watch_for": [],
+      "questions": [],
+      "delivery_method_keys": [
+        "team-1ad71a8723aa9325e8c1",
+        "team-66fa81ad827deebeb98f"
+      ],
+      "compiled_by": "jev-latest",
+      "card_scope": "Net sales (completed-order gross revenue minus same-week posted refunds, excluding tax and shipping) versus the previous complete reporting week.\nWhy: Tell the commerce lead what changed when net sales materially decline.",
+      "metric_query_plans": [],
+      "investigation_mode": "none",
+      "max_investigation_sources": 3,
+      "evidence_slots": [
+        {
+          "key": "source:source-company-mcp-resource-ecdbd08bf01b01f59a60",
+          "role": "primary",
+          "question": "What changed in Commerce weekly that is relevant to the card's stated purpose and comparison window?",
+          "source_keys": [
+            "source-company-mcp-resource-ecdbd08bf01b01f59a60"
+          ],
+          "source_refs": [
+            {
+              "key": "source-company-mcp-resource-ecdbd08bf01b01f59a60",
+              "adapter": "company_mcp",
+              "resource": "resource-ecdbd08bf01b01f59a60",
+              "label": "Commerce weekly",
+              "parameters": {},
+              "required": true,
+              "required_comparison_keys": []
+            }
+          ],
+          "required": true,
+          "completion_criteria": "Return a bounded observation or evidence statement with its source and comparison window.",
+          "status": "pending",
+          "evidence_fact_ids": [],
+          "evidence_source_keys": []
+        },
+        {
+          "key": "source:source-company-mcp-resource-41613ec6c871dbcf61da",
+          "role": "primary",
+          "question": "What changed in Returns operations that is relevant to the card's stated purpose and comparison window?",
+          "source_keys": [
+            "source-company-mcp-resource-41613ec6c871dbcf61da"
+          ],
+          "source_refs": [
+            {
+              "key": "source-company-mcp-resource-41613ec6c871dbcf61da",
+              "adapter": "company_mcp",
+              "resource": "resource-41613ec6c871dbcf61da",
+              "label": "Returns operations",
+              "parameters": {},
+              "required": true,
+              "required_comparison_keys": []
+            }
+          ],
+          "required": true,
+          "completion_criteria": "Return a bounded observation or evidence statement with its source and comparison window.",
+          "status": "pending",
+          "evidence_fact_ids": [],
+          "evidence_source_keys": []
+        }
+      ]
+    },
+    "onboarding_review": {
+      "card_id": "card-weekly-net-sales-decline-e4f53a37",
+      "status": "needs_human_input",
+      "readiness_status": "needs_human_review",
+      "blockers": [
+        {
+          "code": "intent-detail-required",
+          "severity": "review",
+          "layer": "human-intent",
+          "message": "The card does not describe a concrete watch-out or question to answer.",
+          "question": "Add at least one concrete thing to look for or one question the evidence should answer.",
+          "refs": []
+        },
+        {
+          "code": "candidate-selection-review",
+          "severity": "review",
+          "layer": "human-intent",
+          "message": "Jev found related candidates that the fixed card has not accepted.",
+          "question": "Review the suggested sources before approval; the draft omitted: Commerce weekly / Regional pilot, Returns operations / Partner export.",
+          "refs": [
+            "company_mcp|resource-06a9ad40c5c35ec05644",
+            "company_mcp|resource-966ddad4f91c95571a22"
+          ]
+        }
+      ],
+      "source_selection_fingerprint": "acc1046b9f9d60b39248918a5dbbcd44fc5b4fb638eb2ab5aeb46323f2dd575d",
+      "source_selection_confirmation": null,
+      "confirmed_blocker_codes": [],
+      "principal_id": "synthetic-owner",
+      "principal_tenant": "company-f688ab22af4bc1f09372",
+      "authorization_evidence": "deployment",
+      "discovery_receipt": {
+        "principal_id": "synthetic-owner",
+        "principal_tenant": "company-f688ab22af4bc1f09372",
+        "authorization_evidence": "deployment",
+        "catalog_provider": "company_mcp",
+        "catalog_strategy": "local-scan-fallback",
+        "catalog_cursor": null,
+        "candidate_refs": [
+          "company_mcp|resource-06a9ad40c5c35ec05644",
+          "company_mcp|resource-1e53940d2a45a6ac009d",
+          "company_mcp|resource-3f8e8238dc14900857dc",
+          "company_mcp|resource-41613ec6c871dbcf61da",
+          "company_mcp|resource-67ed6938e54f57d0db7d",
+          "company_mcp|resource-966ddad4f91c95571a22",
+          "company_mcp|resource-ea4e7f676ffbb91e771f",
+          "company_mcp|resource-ecdbd08bf01b01f59a60",
+          "company_mcp|resource-f7bd7d0eb77faeaeb40b",
+          "company_mcp|resource-fe0b5031f65c67b7014c"
+        ],
+        "candidate_count": 24,
+        "candidate_limit": 40,
+        "truncated": false,
+        "evaluator": "jev-latest"
+      },
+      "selected_source_refs": [
+        "company_mcp|resource-41613ec6c871dbcf61da",
+        "company_mcp|resource-ecdbd08bf01b01f59a60"
+      ],
+      "recommended_source_refs": [
+        "company_mcp|resource-06a9ad40c5c35ec05644",
+        "company_mcp|resource-41613ec6c871dbcf61da",
+        "company_mcp|resource-966ddad4f91c95571a22",
+        "company_mcp|resource-ecdbd08bf01b01f59a60"
+      ],
+      "missing_recommended_refs": [
+        "company_mcp|resource-06a9ad40c5c35ec05644",
+        "company_mcp|resource-966ddad4f91c95571a22"
+      ],
+      "selected_outside_bounded_candidates": [],
+      "ambiguous_candidate_groups": [],
+      "source_candidates": [
+        {
+          "ref": "company_mcp|resource-06a9ad40c5c35ec05644",
+          "adapter": "company_mcp",
+          "resource": "resource-06a9ad40c5c35ec05644",
+          "kind": "saved_query",
+          "title": "Commerce weekly / Regional pilot",
+          "description": "Completed transaction amounts by sales channel; refunds are positive deductions, amounts in USD. Scope: Pilot-only regional population, not the complete company population.",
+          "source_url": null,
+          "domain": "unknown",
+          "tenant_id": "company-f688ab22af4bc1f09372",
+          "source_status": "healthy",
+          "available_comparison_windows": [
+            "previous_period"
+          ],
+          "metadata": {
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "domain": "unknown",
+            "scope": "",
+            "metric_names": [],
+            "metric_definitions": [],
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "required_comparison_keys": [],
+            "population": "",
+            "grain": "",
+            "freshness_sla_hours": null,
+            "lineage": [],
+            "roles": [],
+            "source_status": "healthy",
+            "authorized": true,
+            "adapter_metadata": {
+              "tenant": "company-f688ab22af4bc1f09372",
+              "owner": "Business owner",
+              "inspection": "bounded current-period snapshot",
+              "read_only": true,
+              "scope_note": "Pilot-only regional population, not the complete company population."
+            }
+          },
+          "selected": false,
+          "recommended": true,
+          "relevance": 0.64,
+          "suggested_role": "unknown",
+          "role_probability": 0.32,
+          "reason": "Jev judged it materially relevant to the stated goal.",
+          "retrieval_signals": [
+            "catalog"
+          ]
+        },
+        {
+          "ref": "company_mcp|resource-41613ec6c871dbcf61da",
+          "adapter": "company_mcp",
+          "resource": "resource-41613ec6c871dbcf61da",
+          "kind": "document",
+          "title": "Returns operations",
+          "description": "Refund posting metadata and accounting mapping; not an additional refund ledger.",
+          "source_url": null,
+          "domain": "unknown",
+          "tenant_id": "company-f688ab22af4bc1f09372",
+          "source_status": "healthy",
+          "available_comparison_windows": [
+            "previous_period"
+          ],
+          "metadata": {
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "domain": "unknown",
+            "scope": "",
+            "metric_names": [],
+            "metric_definitions": [],
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "required_comparison_keys": [],
+            "population": "",
+            "grain": "",
+            "freshness_sla_hours": null,
+            "lineage": [],
+            "roles": [],
+            "source_status": "healthy",
+            "authorized": true,
+            "adapter_metadata": {
+              "tenant": "company-f688ab22af4bc1f09372",
+              "owner": "Data operations",
+              "inspection": "bounded current-period snapshot",
+              "read_only": true
+            }
+          },
+          "selected": true,
+          "recommended": true,
+          "relevance": 0.63,
+          "suggested_role": "unknown",
+          "role_probability": 0.44,
+          "reason": "Jev judged it materially relevant to the stated goal.",
+          "retrieval_signals": [
+            "catalog"
+          ]
+        },
+        {
+          "ref": "company_mcp|resource-966ddad4f91c95571a22",
+          "adapter": "company_mcp",
+          "resource": "resource-966ddad4f91c95571a22",
+          "kind": "document",
+          "title": "Returns operations / Partner export",
+          "description": "Refund posting metadata and accounting mapping; not an additional refund ledger. Scope: Partner subset using a separate reporting cutoff and population.",
+          "source_url": null,
+          "domain": "unknown",
+          "tenant_id": "company-f688ab22af4bc1f09372",
+          "source_status": "healthy",
+          "available_comparison_windows": [
+            "previous_period"
+          ],
+          "metadata": {
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "domain": "unknown",
+            "scope": "",
+            "metric_names": [],
+            "metric_definitions": [],
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "required_comparison_keys": [],
+            "population": "",
+            "grain": "",
+            "freshness_sla_hours": null,
+            "lineage": [],
+            "roles": [],
+            "source_status": "healthy",
+            "authorized": true,
+            "adapter_metadata": {
+              "tenant": "company-f688ab22af4bc1f09372",
+              "owner": "Data operations",
+              "inspection": "bounded current-period snapshot",
+              "read_only": true,
+              "scope_note": "Partner subset using a separate reporting cutoff and population."
+            }
+          },
+          "selected": false,
+          "recommended": true,
+          "relevance": 0.61,
+          "suggested_role": "unknown",
+          "role_probability": 0.33999999999999997,
+          "reason": "Jev judged it materially relevant to the stated goal.",
+          "retrieval_signals": [
+            "catalog"
+          ]
+        },
+        {
+          "ref": "company_mcp|resource-ecdbd08bf01b01f59a60",
+          "adapter": "company_mcp",
+          "resource": "resource-ecdbd08bf01b01f59a60",
+          "kind": "saved_query",
+          "title": "Commerce weekly",
+          "description": "Completed transaction amounts by sales channel; refunds are positive deductions, amounts in USD.",
+          "source_url": null,
+          "domain": "unknown",
+          "tenant_id": "company-f688ab22af4bc1f09372",
+          "source_status": "healthy",
+          "available_comparison_windows": [
+            "previous_period"
+          ],
+          "metadata": {
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "domain": "unknown",
+            "scope": "",
+            "metric_names": [],
+            "metric_definitions": [],
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "required_comparison_keys": [],
+            "population": "",
+            "grain": "",
+            "freshness_sla_hours": null,
+            "lineage": [],
+            "roles": [],
+            "source_status": "healthy",
+            "authorized": true,
+            "adapter_metadata": {
+              "tenant": "company-f688ab22af4bc1f09372",
+              "owner": "Business owner",
+              "inspection": "bounded current-period snapshot",
+              "read_only": true
+            }
+          },
+          "selected": true,
+          "recommended": true,
+          "relevance": 0.6,
+          "suggested_role": "unknown",
+          "role_probability": 0.49,
+          "reason": "Jev judged it materially relevant to the stated goal.",
+          "retrieval_signals": [
+            "catalog"
+          ]
+        },
+        {
+          "ref": "company_mcp|resource-3f8e8238dc14900857dc",
+          "adapter": "company_mcp",
+          "resource": "resource-3f8e8238dc14900857dc",
+          "kind": "document",
+          "title": "Returns operations / Planning",
+          "description": "Refund posting metadata and accounting mapping; not an additional refund ledger. Scope: Forecast assumptions, not observed actual results.",
+          "source_url": null,
+          "domain": "unknown",
+          "tenant_id": "company-f688ab22af4bc1f09372",
+          "source_status": "healthy",
+          "available_comparison_windows": [
+            "previous_period"
+          ],
+          "metadata": {
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "domain": "unknown",
+            "scope": "",
+            "metric_names": [],
+            "metric_definitions": [],
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "required_comparison_keys": [],
+            "population": "",
+            "grain": "",
+            "freshness_sla_hours": null,
+            "lineage": [],
+            "roles": [],
+            "source_status": "healthy",
+            "authorized": true,
+            "adapter_metadata": {
+              "tenant": "company-f688ab22af4bc1f09372",
+              "owner": "Data operations",
+              "inspection": "bounded current-period snapshot",
+              "read_only": true,
+              "scope_note": "Forecast assumptions, not observed actual results."
+            }
+          },
+          "selected": false,
+          "recommended": false,
+          "relevance": 0.55,
+          "suggested_role": "unknown",
+          "role_probability": 0.39,
+          "reason": "it remained in the bounded candidate set for review.",
+          "retrieval_signals": [
+            "catalog"
+          ]
+        },
+        {
+          "ref": "company_mcp|resource-1e53940d2a45a6ac009d",
+          "adapter": "company_mcp",
+          "resource": "resource-1e53940d2a45a6ac009d",
+          "kind": "document",
+          "title": "Returns operations / Archive",
+          "description": "Refund posting metadata and accounting mapping; not an additional refund ledger. Scope: Superseded weekly definition; retained for historical audit.",
+          "source_url": null,
+          "domain": "unknown",
+          "tenant_id": "company-f688ab22af4bc1f09372",
+          "source_status": "healthy",
+          "available_comparison_windows": [
+            "previous_period"
+          ],
+          "metadata": {
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "domain": "unknown",
+            "scope": "",
+            "metric_names": [],
+            "metric_definitions": [],
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "required_comparison_keys": [],
+            "population": "",
+            "grain": "",
+            "freshness_sla_hours": null,
+            "lineage": [],
+            "roles": [],
+            "source_status": "healthy",
+            "authorized": true,
+            "adapter_metadata": {
+              "tenant": "company-f688ab22af4bc1f09372",
+              "owner": "Data operations",
+              "inspection": "bounded current-period snapshot",
+              "read_only": true,
+              "scope_note": "Superseded weekly definition; retained for historical audit."
+            }
+          },
+          "selected": false,
+          "recommended": false,
+          "relevance": 0.48,
+          "suggested_role": "unknown",
+          "role_probability": 0.39,
+          "reason": "it remained in the bounded candidate set for review.",
+          "retrieval_signals": [
+            "catalog"
+          ]
+        },
+        {
+          "ref": "company_mcp|resource-f7bd7d0eb77faeaeb40b",
+          "adapter": "company_mcp",
+          "resource": "resource-f7bd7d0eb77faeaeb40b",
+          "kind": "saved_query",
+          "title": "Commerce weekly / Partner export",
+          "description": "Completed transaction amounts by sales channel; refunds are positive deductions, amounts in USD. Scope: Partner subset using a separate reporting cutoff and population.",
+          "source_url": null,
+          "domain": "unknown",
+          "tenant_id": "company-f688ab22af4bc1f09372",
+          "source_status": "healthy",
+          "available_comparison_windows": [
+            "previous_period"
+          ],
+          "metadata": {
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "domain": "unknown",
+            "scope": "",
+            "metric_names": [],
+            "metric_definitions": [],
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "required_comparison_keys": [],
+            "population": "",
+            "grain": "",
+            "freshness_sla_hours": null,
+            "lineage": [],
+            "roles": [],
+            "source_status": "healthy",
+            "authorized": true,
+            "adapter_metadata": {
+              "tenant": "company-f688ab22af4bc1f09372",
+              "owner": "Business owner",
+              "inspection": "bounded current-period snapshot",
+              "read_only": true,
+              "scope_note": "Partner subset using a separate reporting cutoff and population."
+            }
+          },
+          "selected": false,
+          "recommended": false,
+          "relevance": 0.44,
+          "suggested_role": "unknown",
+          "role_probability": 0.45,
+          "reason": "it remained in the bounded candidate set for review.",
+          "retrieval_signals": [
+            "catalog"
+          ]
+        },
+        {
+          "ref": "company_mcp|resource-67ed6938e54f57d0db7d",
+          "adapter": "company_mcp",
+          "resource": "resource-67ed6938e54f57d0db7d",
+          "kind": "chart",
+          "title": "Commerce weekly / Planning",
+          "description": "Archived checkout experiment, test-store population only. Scope: Forecast assumptions, not observed actual results.",
+          "source_url": null,
+          "domain": "unknown",
+          "tenant_id": "company-f688ab22af4bc1f09372",
+          "source_status": "healthy",
+          "available_comparison_windows": [
+            "previous_period"
+          ],
+          "metadata": {
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "domain": "unknown",
+            "scope": "",
+            "metric_names": [],
+            "metric_definitions": [],
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "required_comparison_keys": [],
+            "population": "",
+            "grain": "",
+            "freshness_sla_hours": null,
+            "lineage": [],
+            "roles": [],
+            "source_status": "healthy",
+            "authorized": true,
+            "adapter_metadata": {
+              "tenant": "company-f688ab22af4bc1f09372",
+              "owner": "Data operations",
+              "inspection": "bounded current-period snapshot",
+              "read_only": true,
+              "scope_note": "Forecast assumptions, not observed actual results."
+            }
+          },
+          "selected": false,
+          "recommended": false,
+          "relevance": 0.38,
+          "suggested_role": "unknown",
+          "role_probability": 0.36,
+          "reason": "it remained in the bounded candidate set for review.",
+          "retrieval_signals": [
+            "catalog"
+          ]
+        },
+        {
+          "ref": "company_mcp|resource-fe0b5031f65c67b7014c",
+          "adapter": "company_mcp",
+          "resource": "resource-fe0b5031f65c67b7014c",
+          "kind": "saved_query",
+          "title": "Commerce weekly / Archive",
+          "description": "Completed transaction amounts by sales channel; refunds are positive deductions, amounts in USD. Scope: Superseded weekly definition; retained for historical audit.",
+          "source_url": null,
+          "domain": "unknown",
+          "tenant_id": "company-f688ab22af4bc1f09372",
+          "source_status": "healthy",
+          "available_comparison_windows": [
+            "previous_period"
+          ],
+          "metadata": {
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "domain": "unknown",
+            "scope": "",
+            "metric_names": [],
+            "metric_definitions": [],
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "required_comparison_keys": [],
+            "population": "",
+            "grain": "",
+            "freshness_sla_hours": null,
+            "lineage": [],
+            "roles": [],
+            "source_status": "healthy",
+            "authorized": true,
+            "adapter_metadata": {
+              "tenant": "company-f688ab22af4bc1f09372",
+              "owner": "Business owner",
+              "inspection": "bounded current-period snapshot",
+              "read_only": true,
+              "scope_note": "Superseded weekly definition; retained for historical audit."
+            }
+          },
+          "selected": false,
+          "recommended": false,
+          "relevance": 0.36,
+          "suggested_role": "unknown",
+          "role_probability": 0.27999999999999997,
+          "reason": "it remained in the bounded candidate set for review.",
+          "retrieval_signals": [
+            "catalog"
+          ]
+        },
+        {
+          "ref": "company_mcp|resource-ea4e7f676ffbb91e771f",
+          "adapter": "company_mcp",
+          "resource": "resource-ea4e7f676ffbb91e771f",
+          "kind": "document",
+          "title": "Returns operations / Regional pilot",
+          "description": "Refund posting metadata and accounting mapping; not an additional refund ledger. Scope: Pilot-only regional population, not the complete company population.",
+          "source_url": null,
+          "domain": "unknown",
+          "tenant_id": "company-f688ab22af4bc1f09372",
+          "source_status": "healthy",
+          "available_comparison_windows": [
+            "previous_period"
+          ],
+          "metadata": {
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "domain": "unknown",
+            "scope": "",
+            "metric_names": [],
+            "metric_definitions": [],
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "required_comparison_keys": [],
+            "population": "",
+            "grain": "",
+            "freshness_sla_hours": null,
+            "lineage": [],
+            "roles": [],
+            "source_status": "healthy",
+            "authorized": true,
+            "adapter_metadata": {
+              "tenant": "company-f688ab22af4bc1f09372",
+              "owner": "Data operations",
+              "inspection": "bounded current-period snapshot",
+              "read_only": true,
+              "scope_note": "Pilot-only regional population, not the complete company population."
+            }
+          },
+          "selected": false,
+          "recommended": false,
+          "relevance": 0.36,
+          "suggested_role": "unknown",
+          "role_probability": 0.4,
+          "reason": "it remained in the bounded candidate set for review.",
+          "retrieval_signals": [
+            "catalog"
+          ]
+        }
+      ],
+      "questions": [
+        "Add at least one concrete thing to look for or one question the evidence should answer.",
+        "Review the suggested sources before approval; the draft omitted: Commerce weekly / Regional pilot, Returns operations / Partner export."
+      ],
+      "warnings": [],
+      "evidence_requirements": []
+    },
+    "onboarding_review_history": [
+      {
+        "card_id": "card-weekly-net-sales-decline-e4f53a37",
+        "status": "needs_human_input",
+        "readiness_status": "needs_human_review",
+        "blockers": [
+          {
+            "code": "intent-detail-required",
+            "severity": "review",
+            "layer": "human-intent",
+            "message": "The card does not describe a concrete watch-out or question to answer.",
+            "question": "Add at least one concrete thing to look for or one question the evidence should answer.",
+            "refs": []
+          },
+          {
+            "code": "candidate-selection-review",
+            "severity": "review",
+            "layer": "human-intent",
+            "message": "Jev found related candidates that the fixed card has not accepted.",
+            "question": "Review the suggested sources before approval; the draft omitted: Commerce weekly / Regional pilot, Returns operations / Partner export.",
+            "refs": [
+              "company_mcp|resource-06a9ad40c5c35ec05644",
+              "company_mcp|resource-966ddad4f91c95571a22"
+            ]
+          }
+        ],
+        "source_selection_fingerprint": "acc1046b9f9d60b39248918a5dbbcd44fc5b4fb638eb2ab5aeb46323f2dd575d",
+        "source_selection_confirmation": null,
+        "confirmed_blocker_codes": [],
+        "principal_id": "synthetic-owner",
+        "principal_tenant": "company-f688ab22af4bc1f09372",
+        "authorization_evidence": "deployment",
+        "discovery_receipt": {
+          "principal_id": "synthetic-owner",
+          "principal_tenant": "company-f688ab22af4bc1f09372",
+          "authorization_evidence": "deployment",
+          "catalog_provider": "company_mcp",
+          "catalog_strategy": "local-scan-fallback",
+          "catalog_cursor": null,
+          "candidate_refs": [
+            "company_mcp|resource-06a9ad40c5c35ec05644",
+            "company_mcp|resource-1e53940d2a45a6ac009d",
+            "company_mcp|resource-3f8e8238dc14900857dc",
+            "company_mcp|resource-41613ec6c871dbcf61da",
+            "company_mcp|resource-67ed6938e54f57d0db7d",
+            "company_mcp|resource-966ddad4f91c95571a22",
+            "company_mcp|resource-ea4e7f676ffbb91e771f",
+            "company_mcp|resource-ecdbd08bf01b01f59a60",
+            "company_mcp|resource-f7bd7d0eb77faeaeb40b",
+            "company_mcp|resource-fe0b5031f65c67b7014c"
+          ],
+          "candidate_count": 24,
+          "candidate_limit": 40,
+          "truncated": false,
+          "evaluator": "jev-latest"
+        },
+        "selected_source_refs": [
+          "company_mcp|resource-41613ec6c871dbcf61da",
+          "company_mcp|resource-ecdbd08bf01b01f59a60"
+        ],
+        "recommended_source_refs": [
+          "company_mcp|resource-06a9ad40c5c35ec05644",
+          "company_mcp|resource-41613ec6c871dbcf61da",
+          "company_mcp|resource-966ddad4f91c95571a22",
+          "company_mcp|resource-ecdbd08bf01b01f59a60"
+        ],
+        "missing_recommended_refs": [
+          "company_mcp|resource-06a9ad40c5c35ec05644",
+          "company_mcp|resource-966ddad4f91c95571a22"
+        ],
+        "selected_outside_bounded_candidates": [],
+        "ambiguous_candidate_groups": [],
+        "source_candidates": [
+          {
+            "ref": "company_mcp|resource-06a9ad40c5c35ec05644",
+            "adapter": "company_mcp",
+            "resource": "resource-06a9ad40c5c35ec05644",
+            "kind": "saved_query",
+            "title": "Commerce weekly / Regional pilot",
+            "description": "Completed transaction amounts by sales channel; refunds are positive deductions, amounts in USD. Scope: Pilot-only regional population, not the complete company population.",
+            "source_url": null,
+            "domain": "unknown",
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "company-f688ab22af4bc1f09372",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "tenant": "company-f688ab22af4bc1f09372",
+                "owner": "Business owner",
+                "inspection": "bounded current-period snapshot",
+                "read_only": true,
+                "scope_note": "Pilot-only regional population, not the complete company population."
+              }
+            },
+            "selected": false,
+            "recommended": true,
+            "relevance": 0.64,
+            "suggested_role": "unknown",
+            "role_probability": 0.32,
+            "reason": "Jev judged it materially relevant to the stated goal.",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          },
+          {
+            "ref": "company_mcp|resource-41613ec6c871dbcf61da",
+            "adapter": "company_mcp",
+            "resource": "resource-41613ec6c871dbcf61da",
+            "kind": "document",
+            "title": "Returns operations",
+            "description": "Refund posting metadata and accounting mapping; not an additional refund ledger.",
+            "source_url": null,
+            "domain": "unknown",
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "company-f688ab22af4bc1f09372",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "tenant": "company-f688ab22af4bc1f09372",
+                "owner": "Data operations",
+                "inspection": "bounded current-period snapshot",
+                "read_only": true
+              }
+            },
+            "selected": true,
+            "recommended": true,
+            "relevance": 0.63,
+            "suggested_role": "unknown",
+            "role_probability": 0.44,
+            "reason": "Jev judged it materially relevant to the stated goal.",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          },
+          {
+            "ref": "company_mcp|resource-966ddad4f91c95571a22",
+            "adapter": "company_mcp",
+            "resource": "resource-966ddad4f91c95571a22",
+            "kind": "document",
+            "title": "Returns operations / Partner export",
+            "description": "Refund posting metadata and accounting mapping; not an additional refund ledger. Scope: Partner subset using a separate reporting cutoff and population.",
+            "source_url": null,
+            "domain": "unknown",
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "company-f688ab22af4bc1f09372",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "tenant": "company-f688ab22af4bc1f09372",
+                "owner": "Data operations",
+                "inspection": "bounded current-period snapshot",
+                "read_only": true,
+                "scope_note": "Partner subset using a separate reporting cutoff and population."
+              }
+            },
+            "selected": false,
+            "recommended": true,
+            "relevance": 0.61,
+            "suggested_role": "unknown",
+            "role_probability": 0.33999999999999997,
+            "reason": "Jev judged it materially relevant to the stated goal.",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          },
+          {
+            "ref": "company_mcp|resource-ecdbd08bf01b01f59a60",
+            "adapter": "company_mcp",
+            "resource": "resource-ecdbd08bf01b01f59a60",
+            "kind": "saved_query",
+            "title": "Commerce weekly",
+            "description": "Completed transaction amounts by sales channel; refunds are positive deductions, amounts in USD.",
+            "source_url": null,
+            "domain": "unknown",
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "company-f688ab22af4bc1f09372",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "tenant": "company-f688ab22af4bc1f09372",
+                "owner": "Business owner",
+                "inspection": "bounded current-period snapshot",
+                "read_only": true
+              }
+            },
+            "selected": true,
+            "recommended": true,
+            "relevance": 0.6,
+            "suggested_role": "unknown",
+            "role_probability": 0.49,
+            "reason": "Jev judged it materially relevant to the stated goal.",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          },
+          {
+            "ref": "company_mcp|resource-3f8e8238dc14900857dc",
+            "adapter": "company_mcp",
+            "resource": "resource-3f8e8238dc14900857dc",
+            "kind": "document",
+            "title": "Returns operations / Planning",
+            "description": "Refund posting metadata and accounting mapping; not an additional refund ledger. Scope: Forecast assumptions, not observed actual results.",
+            "source_url": null,
+            "domain": "unknown",
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "company-f688ab22af4bc1f09372",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "tenant": "company-f688ab22af4bc1f09372",
+                "owner": "Data operations",
+                "inspection": "bounded current-period snapshot",
+                "read_only": true,
+                "scope_note": "Forecast assumptions, not observed actual results."
+              }
+            },
+            "selected": false,
+            "recommended": false,
+            "relevance": 0.55,
+            "suggested_role": "unknown",
+            "role_probability": 0.39,
+            "reason": "it remained in the bounded candidate set for review.",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          },
+          {
+            "ref": "company_mcp|resource-1e53940d2a45a6ac009d",
+            "adapter": "company_mcp",
+            "resource": "resource-1e53940d2a45a6ac009d",
+            "kind": "document",
+            "title": "Returns operations / Archive",
+            "description": "Refund posting metadata and accounting mapping; not an additional refund ledger. Scope: Superseded weekly definition; retained for historical audit.",
+            "source_url": null,
+            "domain": "unknown",
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "company-f688ab22af4bc1f09372",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "tenant": "company-f688ab22af4bc1f09372",
+                "owner": "Data operations",
+                "inspection": "bounded current-period snapshot",
+                "read_only": true,
+                "scope_note": "Superseded weekly definition; retained for historical audit."
+              }
+            },
+            "selected": false,
+            "recommended": false,
+            "relevance": 0.48,
+            "suggested_role": "unknown",
+            "role_probability": 0.39,
+            "reason": "it remained in the bounded candidate set for review.",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          },
+          {
+            "ref": "company_mcp|resource-f7bd7d0eb77faeaeb40b",
+            "adapter": "company_mcp",
+            "resource": "resource-f7bd7d0eb77faeaeb40b",
+            "kind": "saved_query",
+            "title": "Commerce weekly / Partner export",
+            "description": "Completed transaction amounts by sales channel; refunds are positive deductions, amounts in USD. Scope: Partner subset using a separate reporting cutoff and population.",
+            "source_url": null,
+            "domain": "unknown",
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "company-f688ab22af4bc1f09372",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "tenant": "company-f688ab22af4bc1f09372",
+                "owner": "Business owner",
+                "inspection": "bounded current-period snapshot",
+                "read_only": true,
+                "scope_note": "Partner subset using a separate reporting cutoff and population."
+              }
+            },
+            "selected": false,
+            "recommended": false,
+            "relevance": 0.44,
+            "suggested_role": "unknown",
+            "role_probability": 0.45,
+            "reason": "it remained in the bounded candidate set for review.",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          },
+          {
+            "ref": "company_mcp|resource-67ed6938e54f57d0db7d",
+            "adapter": "company_mcp",
+            "resource": "resource-67ed6938e54f57d0db7d",
+            "kind": "chart",
+            "title": "Commerce weekly / Planning",
+            "description": "Archived checkout experiment, test-store population only. Scope: Forecast assumptions, not observed actual results.",
+            "source_url": null,
+            "domain": "unknown",
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "company-f688ab22af4bc1f09372",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "tenant": "company-f688ab22af4bc1f09372",
+                "owner": "Data operations",
+                "inspection": "bounded current-period snapshot",
+                "read_only": true,
+                "scope_note": "Forecast assumptions, not observed actual results."
+              }
+            },
+            "selected": false,
+            "recommended": false,
+            "relevance": 0.38,
+            "suggested_role": "unknown",
+            "role_probability": 0.36,
+            "reason": "it remained in the bounded candidate set for review.",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          },
+          {
+            "ref": "company_mcp|resource-fe0b5031f65c67b7014c",
+            "adapter": "company_mcp",
+            "resource": "resource-fe0b5031f65c67b7014c",
+            "kind": "saved_query",
+            "title": "Commerce weekly / Archive",
+            "description": "Completed transaction amounts by sales channel; refunds are positive deductions, amounts in USD. Scope: Superseded weekly definition; retained for historical audit.",
+            "source_url": null,
+            "domain": "unknown",
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "company-f688ab22af4bc1f09372",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "tenant": "company-f688ab22af4bc1f09372",
+                "owner": "Business owner",
+                "inspection": "bounded current-period snapshot",
+                "read_only": true,
+                "scope_note": "Superseded weekly definition; retained for historical audit."
+              }
+            },
+            "selected": false,
+            "recommended": false,
+            "relevance": 0.36,
+            "suggested_role": "unknown",
+            "role_probability": 0.27999999999999997,
+            "reason": "it remained in the bounded candidate set for review.",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          },
+          {
+            "ref": "company_mcp|resource-ea4e7f676ffbb91e771f",
+            "adapter": "company_mcp",
+            "resource": "resource-ea4e7f676ffbb91e771f",
+            "kind": "document",
+            "title": "Returns operations / Regional pilot",
+            "description": "Refund posting metadata and accounting mapping; not an additional refund ledger. Scope: Pilot-only regional population, not the complete company population.",
+            "source_url": null,
+            "domain": "unknown",
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "company-f688ab22af4bc1f09372",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "tenant": "company-f688ab22af4bc1f09372",
+                "owner": "Data operations",
+                "inspection": "bounded current-period snapshot",
+                "read_only": true,
+                "scope_note": "Pilot-only regional population, not the complete company population."
+              }
+            },
+            "selected": false,
+            "recommended": false,
+            "relevance": 0.36,
+            "suggested_role": "unknown",
+            "role_probability": 0.4,
+            "reason": "it remained in the bounded candidate set for review.",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          }
+        ],
+        "questions": [
+          "Add at least one concrete thing to look for or one question the evidence should answer.",
+          "Review the suggested sources before approval; the draft omitted: Commerce weekly / Regional pilot, Returns operations / Partner export."
+        ],
+        "warnings": [],
+        "evidence_requirements": []
+      }
+    ],
+    "onboarding_corrections": [],
+    "status": "draft",
+    "approved_by": null,
+    "approved_at": null
+  },
+  "card-weekly-net-sales-decline-53a704b6": {
+    "id": "card-weekly-net-sales-decline-53a704b6",
+    "title": "Weekly net sales decline",
+    "what_to_watch": "Net sales (completed-order gross revenue minus same-week posted refunds, excluding tax and shipping) versus the previous complete reporting week.",
+    "why_watch": "Tell the commerce lead what changed when net sales materially decline.",
+    "watch_for": [
+      "Whether the current and prior complete reporting week both have complete gross and refund postings for the same business population; if not, classify insufficient_data."
+    ],
+    "questions": [],
+    "numeric_conditions": [],
+    "evidence_requirements": {
+      "watch:1": true
+    },
+    "decision_guidance": "Notify business destination team-1ad71a8723aa9325e8c1 for a net-sales decline of at least 10% versus the prior complete reporting week; otherwise ignore. If definitions are missing or postings/population coverage are incomplete, insufficient_data to data destination team-66fa81ad827deebeb98f. Include supported accounting decomposition and driver facts, including web contribution; do not infer causation.",
+    "follow_up_guidance": "Use current-period evidence only; do not fill missing populations with zero. Tag claims as observation or accounting_decomposition unless evidence supports association, hypothesis, or causal claims.",
+    "sources": [
+      {
+        "key": "source-company-mcp-resource-ecdbd08bf01b01f59a60",
+        "adapter": "company_mcp",
+        "resource": "resource-ecdbd08bf01b01f59a60",
+        "label": "Commerce weekly",
+        "parameters": {},
+        "required": true,
+        "required_comparison_keys": []
+      },
+      {
+        "key": "source-company-mcp-resource-41613ec6c871dbcf61da",
+        "adapter": "company_mcp",
+        "resource": "resource-41613ec6c871dbcf61da",
+        "label": "Returns operations",
+        "parameters": {},
+        "required": true,
+        "required_comparison_keys": []
+      }
+    ],
+    "comparison_windows": [
+      "previous_period"
+    ],
+    "action_confidence_threshold": 0.7,
+    "owner": "Business owner",
+    "version": 1,
+    "max_source_age_hours": 24.0,
+    "delivery_methods": [
+      {
+        "key": "team-1ad71a8723aa9325e8c1",
+        "outcome": "notify",
+        "label": "Business owner",
+        "destination": "slack://team-1ad71a8723aa9325e8c1",
+        "instructions": ""
+      },
+      {
+        "key": "team-66fa81ad827deebeb98f",
+        "outcome": "insufficient_data",
+        "label": "Data operations",
+        "destination": "slack://team-66fa81ad827deebeb98f",
+        "instructions": ""
+      }
+    ],
+    "retrieval_mode": "fixed",
+    "investigation_mode": "none",
+    "max_investigation_sources": 3,
+    "investigation_threshold": 0.6,
+    "principal_id": "synthetic-owner",
+    "principal_tenant": "company-f688ab22af4bc1f09372",
+    "compiled_plan": {
+      "card_id": "card-weekly-net-sales-decline-53a704b6",
+      "card_version": 1,
+      "selected_source_keys": [
+        "source-company-mcp-resource-ecdbd08bf01b01f59a60",
+        "source-company-mcp-resource-41613ec6c871dbcf61da"
+      ],
+      "comparison_windows": [
+        "previous_period"
+      ],
+      "capabilities": [
+        "percent_change",
+        "baseline_comparison",
+        "freshness_check",
+        "cross_source_comparison",
+        "watch_for_checks"
+      ],
+      "watch_for": [
+        "Whether the current and prior complete reporting week both have complete gross and refund postings for the same business population; if not, classify insufficient_data."
+      ],
+      "questions": [],
+      "delivery_method_keys": [
+        "team-1ad71a8723aa9325e8c1",
+        "team-66fa81ad827deebeb98f"
+      ],
+      "compiled_by": "jev-latest",
+      "card_scope": "Net sales (completed-order gross revenue minus same-week posted refunds, excluding tax and shipping) versus the previous complete reporting week.\nWhy: Tell the commerce lead what changed when net sales materially decline.",
+      "metric_query_plans": [],
+      "investigation_mode": "none",
+      "max_investigation_sources": 3,
+      "evidence_slots": [
+        {
+          "key": "source:source-company-mcp-resource-ecdbd08bf01b01f59a60",
+          "role": "primary",
+          "question": "What changed in Commerce weekly that is relevant to the card's stated purpose and comparison window?",
+          "source_keys": [
+            "source-company-mcp-resource-ecdbd08bf01b01f59a60"
+          ],
+          "source_refs": [
+            {
+              "key": "source-company-mcp-resource-ecdbd08bf01b01f59a60",
+              "adapter": "company_mcp",
+              "resource": "resource-ecdbd08bf01b01f59a60",
+              "label": "Commerce weekly",
+              "parameters": {},
+              "required": true,
+              "required_comparison_keys": []
+            }
+          ],
+          "required": true,
+          "completion_criteria": "Return a bounded observation or evidence statement with its source and comparison window.",
+          "status": "pending",
+          "evidence_fact_ids": [],
+          "evidence_source_keys": []
+        },
+        {
+          "key": "source:source-company-mcp-resource-41613ec6c871dbcf61da",
+          "role": "primary",
+          "question": "What changed in Returns operations that is relevant to the card's stated purpose and comparison window?",
+          "source_keys": [
+            "source-company-mcp-resource-41613ec6c871dbcf61da"
+          ],
+          "source_refs": [
+            {
+              "key": "source-company-mcp-resource-41613ec6c871dbcf61da",
+              "adapter": "company_mcp",
+              "resource": "resource-41613ec6c871dbcf61da",
+              "label": "Returns operations",
+              "parameters": {},
+              "required": true,
+              "required_comparison_keys": []
+            }
+          ],
+          "required": true,
+          "completion_criteria": "Return a bounded observation or evidence statement with its source and comparison window.",
+          "status": "pending",
+          "evidence_fact_ids": [],
+          "evidence_source_keys": []
+        },
+        {
+          "key": "watch:1",
+          "role": "watch",
+          "question": "Whether the current and prior complete reporting week both have complete gross and refund postings for the same business population; if not, classify insufficient_data.",
+          "source_keys": [
+            "source-company-mcp-resource-ecdbd08bf01b01f59a60",
+            "source-company-mcp-resource-41613ec6c871dbcf61da"
+          ],
+          "source_refs": [],
+          "required": true,
+          "completion_criteria": "Return evidence that shows whether this watch item is present or absent.",
+          "status": "pending",
+          "evidence_fact_ids": [],
+          "evidence_source_keys": []
+        }
+      ]
+    },
+    "onboarding_review": {
+      "card_id": "card-weekly-net-sales-decline-53a704b6",
+      "status": "ready_for_approval",
+      "readiness_status": "ready_for_approval",
+      "blockers": [],
+      "source_selection_fingerprint": "a0b3061e2fac5ce1e102a339865b227567a0c63d4eb4ca1b9db8e48d88929f97",
+      "source_selection_confirmation": "Owner-defined net sales requires the live completed-order Commerce weekly saved query and same-week refund posting metadata. The selected saved query is the live business population; the same-title chart is explicitly an archived test-store experiment and is excluded.",
+      "confirmed_blocker_codes": [
+        "candidate-selection-review",
+        "definition-conflict"
+      ],
+      "principal_id": "synthetic-owner",
+      "principal_tenant": "company-f688ab22af4bc1f09372",
+      "authorization_evidence": "deployment",
+      "discovery_receipt": {
+        "principal_id": "synthetic-owner",
+        "principal_tenant": "company-f688ab22af4bc1f09372",
+        "authorization_evidence": "deployment",
+        "catalog_provider": "company_mcp",
+        "catalog_strategy": "local-scan-fallback",
+        "catalog_cursor": null,
+        "candidate_refs": [
+          "company_mcp|resource-06a9ad40c5c35ec05644",
+          "company_mcp|resource-1e53940d2a45a6ac009d",
+          "company_mcp|resource-3f8e8238dc14900857dc",
+          "company_mcp|resource-41613ec6c871dbcf61da",
+          "company_mcp|resource-5c35a224a6ce7173108d",
+          "company_mcp|resource-67048cc4191f7172f53b",
+          "company_mcp|resource-95a3a79027adf5aa9576",
+          "company_mcp|resource-ea4e7f676ffbb91e771f",
+          "company_mcp|resource-ecdbd08bf01b01f59a60",
+          "company_mcp|resource-f7bd7d0eb77faeaeb40b"
+        ],
+        "candidate_count": 24,
+        "candidate_limit": 40,
+        "truncated": false,
+        "evaluator": "jev-latest"
+      },
+      "selected_source_refs": [
+        "company_mcp|resource-41613ec6c871dbcf61da",
+        "company_mcp|resource-ecdbd08bf01b01f59a60"
+      ],
+      "recommended_source_refs": [
+        "company_mcp|resource-41613ec6c871dbcf61da",
+        "company_mcp|resource-67048cc4191f7172f53b",
+        "company_mcp|resource-ecdbd08bf01b01f59a60"
+      ],
+      "missing_recommended_refs": [
+        "company_mcp|resource-67048cc4191f7172f53b"
+      ],
+      "selected_outside_bounded_candidates": [],
+      "ambiguous_candidate_groups": [
+        [
+          "company_mcp|resource-67048cc4191f7172f53b",
+          "company_mcp|resource-ecdbd08bf01b01f59a60"
+        ]
+      ],
+      "source_candidates": [
+        {
+          "ref": "company_mcp|resource-ecdbd08bf01b01f59a60",
+          "adapter": "company_mcp",
+          "resource": "resource-ecdbd08bf01b01f59a60",
+          "kind": "saved_query",
+          "title": "Commerce weekly",
+          "description": "Completed transaction amounts by sales channel; refunds are positive deductions, amounts in USD.",
+          "source_url": null,
+          "domain": "unknown",
+          "tenant_id": "company-f688ab22af4bc1f09372",
+          "source_status": "healthy",
+          "available_comparison_windows": [
+            "previous_period"
+          ],
+          "metadata": {
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "domain": "unknown",
+            "scope": "",
+            "metric_names": [],
+            "metric_definitions": [],
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "required_comparison_keys": [],
+            "population": "",
+            "grain": "",
+            "freshness_sla_hours": null,
+            "lineage": [],
+            "roles": [],
+            "source_status": "healthy",
+            "authorized": true,
+            "adapter_metadata": {
+              "tenant": "company-f688ab22af4bc1f09372",
+              "owner": "Business owner",
+              "inspection": "bounded current-period snapshot",
+              "read_only": true
+            }
+          },
+          "selected": true,
+          "recommended": true,
+          "relevance": 0.74,
+          "suggested_role": "unknown",
+          "role_probability": 0.67,
+          "reason": "Jev judged it materially relevant to the stated goal.",
+          "retrieval_signals": [
+            "catalog"
+          ]
+        },
+        {
+          "ref": "company_mcp|resource-67048cc4191f7172f53b",
+          "adapter": "company_mcp",
+          "resource": "resource-67048cc4191f7172f53b",
+          "kind": "chart",
+          "title": "Commerce weekly",
+          "description": "Archived checkout experiment, test-store population only.",
+          "source_url": null,
+          "domain": "unknown",
+          "tenant_id": "company-f688ab22af4bc1f09372",
+          "source_status": "healthy",
+          "available_comparison_windows": [
+            "previous_period"
+          ],
+          "metadata": {
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "domain": "unknown",
+            "scope": "",
+            "metric_names": [],
+            "metric_definitions": [],
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "required_comparison_keys": [],
+            "population": "",
+            "grain": "",
+            "freshness_sla_hours": null,
+            "lineage": [],
+            "roles": [],
+            "source_status": "healthy",
+            "authorized": true,
+            "adapter_metadata": {
+              "tenant": "company-f688ab22af4bc1f09372",
+              "owner": "Data operations",
+              "inspection": "bounded current-period snapshot",
+              "read_only": true
+            }
+          },
+          "selected": false,
+          "recommended": true,
+          "relevance": 0.61,
+          "suggested_role": "unknown",
+          "role_probability": 0.68,
+          "reason": "Jev judged it materially relevant to the stated goal.",
+          "retrieval_signals": [
+            "catalog"
+          ]
+        },
+        {
+          "ref": "company_mcp|resource-41613ec6c871dbcf61da",
+          "adapter": "company_mcp",
+          "resource": "resource-41613ec6c871dbcf61da",
+          "kind": "document",
+          "title": "Returns operations",
+          "description": "Refund posting metadata and accounting mapping; not an additional refund ledger.",
+          "source_url": null,
+          "domain": "unknown",
+          "tenant_id": "company-f688ab22af4bc1f09372",
+          "source_status": "healthy",
+          "available_comparison_windows": [
+            "previous_period"
+          ],
+          "metadata": {
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "domain": "unknown",
+            "scope": "",
+            "metric_names": [],
+            "metric_definitions": [],
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "required_comparison_keys": [],
+            "population": "",
+            "grain": "",
+            "freshness_sla_hours": null,
+            "lineage": [],
+            "roles": [],
+            "source_status": "healthy",
+            "authorized": true,
+            "adapter_metadata": {
+              "tenant": "company-f688ab22af4bc1f09372",
+              "owner": "Data operations",
+              "inspection": "bounded current-period snapshot",
+              "read_only": true
+            }
+          },
+          "selected": true,
+          "recommended": true,
+          "relevance": 0.61,
+          "suggested_role": "unknown",
+          "role_probability": 0.66,
+          "reason": "Jev judged it materially relevant to the stated goal.",
+          "retrieval_signals": [
+            "catalog"
+          ]
+        },
+        {
+          "ref": "company_mcp|resource-06a9ad40c5c35ec05644",
+          "adapter": "company_mcp",
+          "resource": "resource-06a9ad40c5c35ec05644",
+          "kind": "saved_query",
+          "title": "Commerce weekly / Regional pilot",
+          "description": "Completed transaction amounts by sales channel; refunds are positive deductions, amounts in USD. Scope: Pilot-only regional population, not the complete company population.",
+          "source_url": null,
+          "domain": "unknown",
+          "tenant_id": "company-f688ab22af4bc1f09372",
+          "source_status": "healthy",
+          "available_comparison_windows": [
+            "previous_period"
+          ],
+          "metadata": {
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "domain": "unknown",
+            "scope": "",
+            "metric_names": [],
+            "metric_definitions": [],
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "required_comparison_keys": [],
+            "population": "",
+            "grain": "",
+            "freshness_sla_hours": null,
+            "lineage": [],
+            "roles": [],
+            "source_status": "healthy",
+            "authorized": true,
+            "adapter_metadata": {
+              "tenant": "company-f688ab22af4bc1f09372",
+              "owner": "Business owner",
+              "inspection": "bounded current-period snapshot",
+              "read_only": true,
+              "scope_note": "Pilot-only regional population, not the complete company population."
+            }
+          },
+          "selected": false,
+          "recommended": false,
+          "relevance": 0.58,
+          "suggested_role": "unknown",
+          "role_probability": 0.38,
+          "reason": "it remained in the bounded candidate set for review.",
+          "retrieval_signals": [
+            "catalog"
+          ]
+        },
+        {
+          "ref": "company_mcp|resource-3f8e8238dc14900857dc",
+          "adapter": "company_mcp",
+          "resource": "resource-3f8e8238dc14900857dc",
+          "kind": "document",
+          "title": "Returns operations / Planning",
+          "description": "Refund posting metadata and accounting mapping; not an additional refund ledger. Scope: Forecast assumptions, not observed actual results.",
+          "source_url": null,
+          "domain": "unknown",
+          "tenant_id": "company-f688ab22af4bc1f09372",
+          "source_status": "healthy",
+          "available_comparison_windows": [
+            "previous_period"
+          ],
+          "metadata": {
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "domain": "unknown",
+            "scope": "",
+            "metric_names": [],
+            "metric_definitions": [],
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "required_comparison_keys": [],
+            "population": "",
+            "grain": "",
+            "freshness_sla_hours": null,
+            "lineage": [],
+            "roles": [],
+            "source_status": "healthy",
+            "authorized": true,
+            "adapter_metadata": {
+              "tenant": "company-f688ab22af4bc1f09372",
+              "owner": "Data operations",
+              "inspection": "bounded current-period snapshot",
+              "read_only": true,
+              "scope_note": "Forecast assumptions, not observed actual results."
+            }
+          },
+          "selected": false,
+          "recommended": false,
+          "relevance": 0.53,
+          "suggested_role": "unknown",
+          "role_probability": 0.37,
+          "reason": "it remained in the bounded candidate set for review.",
+          "retrieval_signals": [
+            "catalog"
+          ]
+        },
+        {
+          "ref": "company_mcp|resource-f7bd7d0eb77faeaeb40b",
+          "adapter": "company_mcp",
+          "resource": "resource-f7bd7d0eb77faeaeb40b",
+          "kind": "saved_query",
+          "title": "Commerce weekly / Partner export",
+          "description": "Completed transaction amounts by sales channel; refunds are positive deductions, amounts in USD. Scope: Partner subset using a separate reporting cutoff and population.",
+          "source_url": null,
+          "domain": "unknown",
+          "tenant_id": "company-f688ab22af4bc1f09372",
+          "source_status": "healthy",
+          "available_comparison_windows": [
+            "previous_period"
+          ],
+          "metadata": {
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "domain": "unknown",
+            "scope": "",
+            "metric_names": [],
+            "metric_definitions": [],
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "required_comparison_keys": [],
+            "population": "",
+            "grain": "",
+            "freshness_sla_hours": null,
+            "lineage": [],
+            "roles": [],
+            "source_status": "healthy",
+            "authorized": true,
+            "adapter_metadata": {
+              "tenant": "company-f688ab22af4bc1f09372",
+              "owner": "Business owner",
+              "inspection": "bounded current-period snapshot",
+              "read_only": true,
+              "scope_note": "Partner subset using a separate reporting cutoff and population."
+            }
+          },
+          "selected": false,
+          "recommended": false,
+          "relevance": 0.42,
+          "suggested_role": "unknown",
+          "role_probability": 0.36,
+          "reason": "it remained in the bounded candidate set for review.",
+          "retrieval_signals": [
+            "catalog"
+          ]
+        },
+        {
+          "ref": "company_mcp|resource-ea4e7f676ffbb91e771f",
+          "adapter": "company_mcp",
+          "resource": "resource-ea4e7f676ffbb91e771f",
+          "kind": "document",
+          "title": "Returns operations / Regional pilot",
+          "description": "Refund posting metadata and accounting mapping; not an additional refund ledger. Scope: Pilot-only regional population, not the complete company population.",
+          "source_url": null,
+          "domain": "unknown",
+          "tenant_id": "company-f688ab22af4bc1f09372",
+          "source_status": "healthy",
+          "available_comparison_windows": [
+            "previous_period"
+          ],
+          "metadata": {
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "domain": "unknown",
+            "scope": "",
+            "metric_names": [],
+            "metric_definitions": [],
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "required_comparison_keys": [],
+            "population": "",
+            "grain": "",
+            "freshness_sla_hours": null,
+            "lineage": [],
+            "roles": [],
+            "source_status": "healthy",
+            "authorized": true,
+            "adapter_metadata": {
+              "tenant": "company-f688ab22af4bc1f09372",
+              "owner": "Data operations",
+              "inspection": "bounded current-period snapshot",
+              "read_only": true,
+              "scope_note": "Pilot-only regional population, not the complete company population."
+            }
+          },
+          "selected": false,
+          "recommended": false,
+          "relevance": 0.4,
+          "suggested_role": "quality",
+          "role_probability": 0.83,
+          "reason": "it remained in the bounded candidate set for review; Jev classified its evidence role as quality (0.83).",
+          "retrieval_signals": [
+            "catalog"
+          ]
+        },
+        {
+          "ref": "company_mcp|resource-5c35a224a6ce7173108d",
+          "adapter": "company_mcp",
+          "resource": "resource-5c35a224a6ce7173108d",
+          "kind": "saved_query",
+          "title": "Commerce weekly / Planning",
+          "description": "Completed transaction amounts by sales channel; refunds are positive deductions, amounts in USD. Scope: Forecast assumptions, not observed actual results.",
+          "source_url": null,
+          "domain": "unknown",
+          "tenant_id": "company-f688ab22af4bc1f09372",
+          "source_status": "healthy",
+          "available_comparison_windows": [
+            "previous_period"
+          ],
+          "metadata": {
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "domain": "unknown",
+            "scope": "",
+            "metric_names": [],
+            "metric_definitions": [],
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "required_comparison_keys": [],
+            "population": "",
+            "grain": "",
+            "freshness_sla_hours": null,
+            "lineage": [],
+            "roles": [],
+            "source_status": "healthy",
+            "authorized": true,
+            "adapter_metadata": {
+              "tenant": "company-f688ab22af4bc1f09372",
+              "owner": "Business owner",
+              "inspection": "bounded current-period snapshot",
+              "read_only": true,
+              "scope_note": "Forecast assumptions, not observed actual results."
+            }
+          },
+          "selected": false,
+          "recommended": false,
+          "relevance": 0.32,
+          "suggested_role": "unknown",
+          "role_probability": 0.31,
+          "reason": "it remained in the bounded candidate set for review.",
+          "retrieval_signals": [
+            "catalog"
+          ]
+        },
+        {
+          "ref": "company_mcp|resource-1e53940d2a45a6ac009d",
+          "adapter": "company_mcp",
+          "resource": "resource-1e53940d2a45a6ac009d",
+          "kind": "document",
+          "title": "Returns operations / Archive",
+          "description": "Refund posting metadata and accounting mapping; not an additional refund ledger. Scope: Superseded weekly definition; retained for historical audit.",
+          "source_url": null,
+          "domain": "unknown",
+          "tenant_id": "company-f688ab22af4bc1f09372",
+          "source_status": "healthy",
+          "available_comparison_windows": [
+            "previous_period"
+          ],
+          "metadata": {
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "domain": "unknown",
+            "scope": "",
+            "metric_names": [],
+            "metric_definitions": [],
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "required_comparison_keys": [],
+            "population": "",
+            "grain": "",
+            "freshness_sla_hours": null,
+            "lineage": [],
+            "roles": [],
+            "source_status": "healthy",
+            "authorized": true,
+            "adapter_metadata": {
+              "tenant": "company-f688ab22af4bc1f09372",
+              "owner": "Data operations",
+              "inspection": "bounded current-period snapshot",
+              "read_only": true,
+              "scope_note": "Superseded weekly definition; retained for historical audit."
+            }
+          },
+          "selected": false,
+          "recommended": false,
+          "relevance": 0.32,
+          "suggested_role": "unknown",
+          "role_probability": 0.33,
+          "reason": "it remained in the bounded candidate set for review.",
+          "retrieval_signals": [
+            "catalog"
+          ]
+        },
+        {
+          "ref": "company_mcp|resource-95a3a79027adf5aa9576",
+          "adapter": "company_mcp",
+          "resource": "resource-95a3a79027adf5aa9576",
+          "kind": "document",
+          "title": "Returns operations / Sandbox",
+          "description": "Refund posting metadata and accounting mapping; not an additional refund ledger. Scope: QA population with synthetic entities, not the live business population.",
+          "source_url": null,
+          "domain": "unknown",
+          "tenant_id": "company-f688ab22af4bc1f09372",
+          "source_status": "healthy",
+          "available_comparison_windows": [
+            "previous_period"
+          ],
+          "metadata": {
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "domain": "unknown",
+            "scope": "",
+            "metric_names": [],
+            "metric_definitions": [],
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "required_comparison_keys": [],
+            "population": "",
+            "grain": "",
+            "freshness_sla_hours": null,
+            "lineage": [],
+            "roles": [],
+            "source_status": "healthy",
+            "authorized": true,
+            "adapter_metadata": {
+              "tenant": "company-f688ab22af4bc1f09372",
+              "owner": "Data operations",
+              "inspection": "bounded current-period snapshot",
+              "read_only": true,
+              "scope_note": "QA population with synthetic entities, not the live business population."
+            }
+          },
+          "selected": false,
+          "recommended": false,
+          "relevance": 0.29,
+          "suggested_role": "unknown",
+          "role_probability": 0.68,
+          "reason": "it remained in the bounded candidate set for review.",
+          "retrieval_signals": [
+            "catalog"
+          ]
+        }
+      ],
+      "questions": [],
+      "warnings": [],
+      "evidence_requirements": [
+        {
+          "key": "watch:1",
+          "question": "Whether the current and prior complete reporting week both have complete gross and refund postings for the same business population; if not, classify insufficient_data.",
+          "required": true
+        }
+      ]
+    },
+    "onboarding_review_history": [
+      {
+        "card_id": "card-weekly-net-sales-decline-53a704b6",
+        "status": "needs_human_input",
+        "readiness_status": "needs_human_review",
+        "blockers": [
+          {
+            "code": "definition-conflict",
+            "severity": "review",
+            "layer": "meaning",
+            "message": "Multiple candidates share a visible identity and may define different things.",
+            "question": "Disambiguate repeated catalog candidates before approval using owner, lineage, freshness, or relationship metadata.",
+            "refs": [
+              "company_mcp|resource-67048cc4191f7172f53b",
+              "company_mcp|resource-ecdbd08bf01b01f59a60"
+            ]
+          }
+        ],
+        "source_selection_fingerprint": "a0b3061e2fac5ce1e102a339865b227567a0c63d4eb4ca1b9db8e48d88929f97",
+        "source_selection_confirmation": null,
+        "confirmed_blocker_codes": [],
+        "principal_id": "synthetic-owner",
+        "principal_tenant": "company-f688ab22af4bc1f09372",
+        "authorization_evidence": "deployment",
+        "discovery_receipt": {
+          "principal_id": "synthetic-owner",
+          "principal_tenant": "company-f688ab22af4bc1f09372",
+          "authorization_evidence": "deployment",
+          "catalog_provider": "company_mcp",
+          "catalog_strategy": "local-scan-fallback",
+          "catalog_cursor": null,
+          "candidate_refs": [
+            "company_mcp|resource-06a9ad40c5c35ec05644",
+            "company_mcp|resource-1e53940d2a45a6ac009d",
+            "company_mcp|resource-3f8e8238dc14900857dc",
+            "company_mcp|resource-41613ec6c871dbcf61da",
+            "company_mcp|resource-5c35a224a6ce7173108d",
+            "company_mcp|resource-67048cc4191f7172f53b",
+            "company_mcp|resource-95a3a79027adf5aa9576",
+            "company_mcp|resource-ea4e7f676ffbb91e771f",
+            "company_mcp|resource-ecdbd08bf01b01f59a60",
+            "company_mcp|resource-f7bd7d0eb77faeaeb40b"
+          ],
+          "candidate_count": 24,
+          "candidate_limit": 40,
+          "truncated": false,
+          "evaluator": "jev-latest"
+        },
+        "selected_source_refs": [
+          "company_mcp|resource-41613ec6c871dbcf61da",
+          "company_mcp|resource-ecdbd08bf01b01f59a60"
+        ],
+        "recommended_source_refs": [
+          "company_mcp|resource-41613ec6c871dbcf61da",
+          "company_mcp|resource-ecdbd08bf01b01f59a60"
+        ],
+        "missing_recommended_refs": [],
+        "selected_outside_bounded_candidates": [],
+        "ambiguous_candidate_groups": [
+          [
+            "company_mcp|resource-67048cc4191f7172f53b",
+            "company_mcp|resource-ecdbd08bf01b01f59a60"
+          ]
+        ],
+        "source_candidates": [
+          {
+            "ref": "company_mcp|resource-ecdbd08bf01b01f59a60",
+            "adapter": "company_mcp",
+            "resource": "resource-ecdbd08bf01b01f59a60",
+            "kind": "saved_query",
+            "title": "Commerce weekly",
+            "description": "Completed transaction amounts by sales channel; refunds are positive deductions, amounts in USD.",
+            "source_url": null,
+            "domain": "unknown",
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "company-f688ab22af4bc1f09372",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "tenant": "company-f688ab22af4bc1f09372",
+                "owner": "Business owner",
+                "inspection": "bounded current-period snapshot",
+                "read_only": true
+              }
+            },
+            "selected": true,
+            "recommended": true,
+            "relevance": 0.68,
+            "suggested_role": "unknown",
+            "role_probability": 0.6,
+            "reason": "Jev judged it materially relevant to the stated goal.",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          },
+          {
+            "ref": "company_mcp|resource-41613ec6c871dbcf61da",
+            "adapter": "company_mcp",
+            "resource": "resource-41613ec6c871dbcf61da",
+            "kind": "document",
+            "title": "Returns operations",
+            "description": "Refund posting metadata and accounting mapping; not an additional refund ledger.",
+            "source_url": null,
+            "domain": "unknown",
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "company-f688ab22af4bc1f09372",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "tenant": "company-f688ab22af4bc1f09372",
+                "owner": "Data operations",
+                "inspection": "bounded current-period snapshot",
+                "read_only": true
+              }
+            },
+            "selected": true,
+            "recommended": true,
+            "relevance": 0.61,
+            "suggested_role": "unknown",
+            "role_probability": 0.58,
+            "reason": "Jev judged it materially relevant to the stated goal.",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          },
+          {
+            "ref": "company_mcp|resource-67048cc4191f7172f53b",
+            "adapter": "company_mcp",
+            "resource": "resource-67048cc4191f7172f53b",
+            "kind": "chart",
+            "title": "Commerce weekly",
+            "description": "Archived checkout experiment, test-store population only.",
+            "source_url": null,
+            "domain": "unknown",
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "company-f688ab22af4bc1f09372",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "tenant": "company-f688ab22af4bc1f09372",
+                "owner": "Data operations",
+                "inspection": "bounded current-period snapshot",
+                "read_only": true
+              }
+            },
+            "selected": false,
+            "recommended": false,
+            "relevance": 0.59,
+            "suggested_role": "unknown",
+            "role_probability": 0.63,
+            "reason": "it remained in the bounded candidate set for review.",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          },
+          {
+            "ref": "company_mcp|resource-06a9ad40c5c35ec05644",
+            "adapter": "company_mcp",
+            "resource": "resource-06a9ad40c5c35ec05644",
+            "kind": "saved_query",
+            "title": "Commerce weekly / Regional pilot",
+            "description": "Completed transaction amounts by sales channel; refunds are positive deductions, amounts in USD. Scope: Pilot-only regional population, not the complete company population.",
+            "source_url": null,
+            "domain": "unknown",
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "company-f688ab22af4bc1f09372",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "tenant": "company-f688ab22af4bc1f09372",
+                "owner": "Business owner",
+                "inspection": "bounded current-period snapshot",
+                "read_only": true,
+                "scope_note": "Pilot-only regional population, not the complete company population."
+              }
+            },
+            "selected": false,
+            "recommended": false,
+            "relevance": 0.57,
+            "suggested_role": "unknown",
+            "role_probability": 0.34,
+            "reason": "it remained in the bounded candidate set for review.",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          },
+          {
+            "ref": "company_mcp|resource-3f8e8238dc14900857dc",
+            "adapter": "company_mcp",
+            "resource": "resource-3f8e8238dc14900857dc",
+            "kind": "document",
+            "title": "Returns operations / Planning",
+            "description": "Refund posting metadata and accounting mapping; not an additional refund ledger. Scope: Forecast assumptions, not observed actual results.",
+            "source_url": null,
+            "domain": "unknown",
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "company-f688ab22af4bc1f09372",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "tenant": "company-f688ab22af4bc1f09372",
+                "owner": "Data operations",
+                "inspection": "bounded current-period snapshot",
+                "read_only": true,
+                "scope_note": "Forecast assumptions, not observed actual results."
+              }
+            },
+            "selected": false,
+            "recommended": false,
+            "relevance": 0.51,
+            "suggested_role": "unknown",
+            "role_probability": 0.33,
+            "reason": "it remained in the bounded candidate set for review.",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          },
+          {
+            "ref": "company_mcp|resource-f7bd7d0eb77faeaeb40b",
+            "adapter": "company_mcp",
+            "resource": "resource-f7bd7d0eb77faeaeb40b",
+            "kind": "saved_query",
+            "title": "Commerce weekly / Partner export",
+            "description": "Completed transaction amounts by sales channel; refunds are positive deductions, amounts in USD. Scope: Partner subset using a separate reporting cutoff and population.",
+            "source_url": null,
+            "domain": "unknown",
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "company-f688ab22af4bc1f09372",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "tenant": "company-f688ab22af4bc1f09372",
+                "owner": "Business owner",
+                "inspection": "bounded current-period snapshot",
+                "read_only": true,
+                "scope_note": "Partner subset using a separate reporting cutoff and population."
+              }
+            },
+            "selected": false,
+            "recommended": false,
+            "relevance": 0.39,
+            "suggested_role": "unknown",
+            "role_probability": 0.34,
+            "reason": "it remained in the bounded candidate set for review.",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          },
+          {
+            "ref": "company_mcp|resource-ea4e7f676ffbb91e771f",
+            "adapter": "company_mcp",
+            "resource": "resource-ea4e7f676ffbb91e771f",
+            "kind": "document",
+            "title": "Returns operations / Regional pilot",
+            "description": "Refund posting metadata and accounting mapping; not an additional refund ledger. Scope: Pilot-only regional population, not the complete company population.",
+            "source_url": null,
+            "domain": "unknown",
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "company-f688ab22af4bc1f09372",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "tenant": "company-f688ab22af4bc1f09372",
+                "owner": "Data operations",
+                "inspection": "bounded current-period snapshot",
+                "read_only": true,
+                "scope_note": "Pilot-only regional population, not the complete company population."
+              }
+            },
+            "selected": false,
+            "recommended": false,
+            "relevance": 0.39,
+            "suggested_role": "quality",
+            "role_probability": 0.8200000000000001,
+            "reason": "it remained in the bounded candidate set for review; Jev classified its evidence role as quality (0.82).",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          },
+          {
+            "ref": "company_mcp|resource-5c35a224a6ce7173108d",
+            "adapter": "company_mcp",
+            "resource": "resource-5c35a224a6ce7173108d",
+            "kind": "saved_query",
+            "title": "Commerce weekly / Planning",
+            "description": "Completed transaction amounts by sales channel; refunds are positive deductions, amounts in USD. Scope: Forecast assumptions, not observed actual results.",
+            "source_url": null,
+            "domain": "unknown",
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "company-f688ab22af4bc1f09372",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "tenant": "company-f688ab22af4bc1f09372",
+                "owner": "Business owner",
+                "inspection": "bounded current-period snapshot",
+                "read_only": true,
+                "scope_note": "Forecast assumptions, not observed actual results."
+              }
+            },
+            "selected": false,
+            "recommended": false,
+            "relevance": 0.37,
+            "suggested_role": "unknown",
+            "role_probability": 0.35,
+            "reason": "it remained in the bounded candidate set for review.",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          },
+          {
+            "ref": "company_mcp|resource-95a3a79027adf5aa9576",
+            "adapter": "company_mcp",
+            "resource": "resource-95a3a79027adf5aa9576",
+            "kind": "document",
+            "title": "Returns operations / Sandbox",
+            "description": "Refund posting metadata and accounting mapping; not an additional refund ledger. Scope: QA population with synthetic entities, not the live business population.",
+            "source_url": null,
+            "domain": "unknown",
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "company-f688ab22af4bc1f09372",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "tenant": "company-f688ab22af4bc1f09372",
+                "owner": "Data operations",
+                "inspection": "bounded current-period snapshot",
+                "read_only": true,
+                "scope_note": "QA population with synthetic entities, not the live business population."
+              }
+            },
+            "selected": false,
+            "recommended": false,
+            "relevance": 0.32,
+            "suggested_role": "unknown",
+            "role_probability": 0.6,
+            "reason": "it remained in the bounded candidate set for review.",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          },
+          {
+            "ref": "company_mcp|resource-1e53940d2a45a6ac009d",
+            "adapter": "company_mcp",
+            "resource": "resource-1e53940d2a45a6ac009d",
+            "kind": "document",
+            "title": "Returns operations / Archive",
+            "description": "Refund posting metadata and accounting mapping; not an additional refund ledger. Scope: Superseded weekly definition; retained for historical audit.",
+            "source_url": null,
+            "domain": "unknown",
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "company-f688ab22af4bc1f09372",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "tenant": "company-f688ab22af4bc1f09372",
+                "owner": "Data operations",
+                "inspection": "bounded current-period snapshot",
+                "read_only": true,
+                "scope_note": "Superseded weekly definition; retained for historical audit."
+              }
+            },
+            "selected": false,
+            "recommended": false,
+            "relevance": 0.31,
+            "suggested_role": "unknown",
+            "role_probability": 0.29000000000000004,
+            "reason": "it remained in the bounded candidate set for review.",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          }
+        ],
+        "questions": [
+          "Disambiguate repeated catalog candidates before approval using owner, lineage, freshness, or relationship metadata."
+        ],
+        "warnings": [],
+        "evidence_requirements": [
+          {
+            "key": "watch:1",
+            "question": "Whether the current and prior complete reporting week both have complete gross and refund postings for the same business population; if not, classify insufficient_data.",
+            "required": true
+          }
+        ]
+      },
+      {
+        "card_id": "card-weekly-net-sales-decline-53a704b6",
+        "status": "needs_human_input",
+        "readiness_status": "needs_human_review",
+        "blockers": [
+          {
+            "code": "definition-conflict",
+            "severity": "review",
+            "layer": "meaning",
+            "message": "Multiple candidates share a visible identity and may define different things.",
+            "question": "Disambiguate repeated catalog candidates before approval using owner, lineage, freshness, or relationship metadata.",
+            "refs": [
+              "company_mcp|resource-67048cc4191f7172f53b",
+              "company_mcp|resource-ecdbd08bf01b01f59a60"
+            ]
+          }
+        ],
+        "source_selection_fingerprint": "a0b3061e2fac5ce1e102a339865b227567a0c63d4eb4ca1b9db8e48d88929f97",
+        "source_selection_confirmation": null,
+        "confirmed_blocker_codes": [],
+        "principal_id": "synthetic-owner",
+        "principal_tenant": "company-f688ab22af4bc1f09372",
+        "authorization_evidence": "deployment",
+        "discovery_receipt": {
+          "principal_id": "synthetic-owner",
+          "principal_tenant": "company-f688ab22af4bc1f09372",
+          "authorization_evidence": "deployment",
+          "catalog_provider": "company_mcp",
+          "catalog_strategy": "local-scan-fallback",
+          "catalog_cursor": null,
+          "candidate_refs": [
+            "company_mcp|resource-06a9ad40c5c35ec05644",
+            "company_mcp|resource-1572f49ecd113dba834b",
+            "company_mcp|resource-18aaf08f17492b3c3d37",
+            "company_mcp|resource-1d64ea51b1051f7b7789",
+            "company_mcp|resource-1e53940d2a45a6ac009d",
+            "company_mcp|resource-3f8e8238dc14900857dc",
+            "company_mcp|resource-41613ec6c871dbcf61da",
+            "company_mcp|resource-41f1119f23af2ca41577",
+            "company_mcp|resource-4bb5aa10e7e0d844031d",
+            "company_mcp|resource-5141745d2b73077d7f51",
+            "company_mcp|resource-5c35a224a6ce7173108d",
+            "company_mcp|resource-6667a7574cef7138263f",
+            "company_mcp|resource-67048cc4191f7172f53b",
+            "company_mcp|resource-67ed6938e54f57d0db7d",
+            "company_mcp|resource-95a3a79027adf5aa9576",
+            "company_mcp|resource-966ddad4f91c95571a22",
+            "company_mcp|resource-c880755d533cd2a920d4",
+            "company_mcp|resource-e0df48508096fd1d5aa0",
+            "company_mcp|resource-e3ca6525a09cbe3be232",
+            "company_mcp|resource-ea4e7f676ffbb91e771f",
+            "company_mcp|resource-ecdbd08bf01b01f59a60",
+            "company_mcp|resource-f7bd7d0eb77faeaeb40b",
+            "company_mcp|resource-fc86c0decece2d8c1085",
+            "company_mcp|resource-fe0b5031f65c67b7014c"
+          ],
+          "candidate_count": 24,
+          "candidate_limit": 40,
+          "truncated": false,
+          "evaluator": "jev-latest"
+        },
+        "selected_source_refs": [
+          "company_mcp|resource-41613ec6c871dbcf61da",
+          "company_mcp|resource-ecdbd08bf01b01f59a60"
+        ],
+        "recommended_source_refs": [
+          "company_mcp|resource-ecdbd08bf01b01f59a60"
+        ],
+        "missing_recommended_refs": [],
+        "selected_outside_bounded_candidates": [],
+        "ambiguous_candidate_groups": [
+          [
+            "company_mcp|resource-67048cc4191f7172f53b",
+            "company_mcp|resource-ecdbd08bf01b01f59a60"
+          ],
+          [
+            "company_mcp|resource-06a9ad40c5c35ec05644",
+            "company_mcp|resource-1d64ea51b1051f7b7789"
+          ],
+          [
+            "company_mcp|resource-1572f49ecd113dba834b",
+            "company_mcp|resource-f7bd7d0eb77faeaeb40b"
+          ],
+          [
+            "company_mcp|resource-5c35a224a6ce7173108d",
+            "company_mcp|resource-67ed6938e54f57d0db7d"
+          ],
+          [
+            "company_mcp|resource-fc86c0decece2d8c1085",
+            "company_mcp|resource-fe0b5031f65c67b7014c"
+          ],
+          [
+            "company_mcp|resource-e0df48508096fd1d5aa0",
+            "company_mcp|resource-e3ca6525a09cbe3be232"
+          ]
+        ],
+        "source_candidates": [
+          {
+            "ref": "company_mcp|resource-ecdbd08bf01b01f59a60",
+            "adapter": "company_mcp",
+            "resource": "resource-ecdbd08bf01b01f59a60",
+            "kind": "saved_query",
+            "title": "Commerce weekly",
+            "description": "Completed transaction amounts by sales channel; refunds are positive deductions, amounts in USD.",
+            "source_url": null,
+            "domain": "unknown",
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "company-f688ab22af4bc1f09372",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "tenant": "company-f688ab22af4bc1f09372",
+                "owner": "Business owner",
+                "inspection": "bounded current-period snapshot",
+                "read_only": true
+              }
+            },
+            "selected": true,
+            "recommended": true,
+            "relevance": 0.71,
+            "suggested_role": "unknown",
+            "role_probability": 0.61,
+            "reason": "Jev judged it materially relevant to the stated goal.",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          },
+          {
+            "ref": "company_mcp|resource-41613ec6c871dbcf61da",
+            "adapter": "company_mcp",
+            "resource": "resource-41613ec6c871dbcf61da",
+            "kind": "document",
+            "title": "Returns operations",
+            "description": "Refund posting metadata and accounting mapping; not an additional refund ledger.",
+            "source_url": null,
+            "domain": "unknown",
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "company-f688ab22af4bc1f09372",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "tenant": "company-f688ab22af4bc1f09372",
+                "owner": "Data operations",
+                "inspection": "bounded current-period snapshot",
+                "read_only": true
+              }
+            },
+            "selected": true,
+            "recommended": false,
+            "relevance": 0.57,
+            "suggested_role": "unknown",
+            "role_probability": 0.59,
+            "reason": "it remained in the bounded candidate set for review.",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          },
+          {
+            "ref": "company_mcp|resource-06a9ad40c5c35ec05644",
+            "adapter": "company_mcp",
+            "resource": "resource-06a9ad40c5c35ec05644",
+            "kind": "saved_query",
+            "title": "Commerce weekly / Regional pilot",
+            "description": "Completed transaction amounts by sales channel; refunds are positive deductions, amounts in USD. Scope: Pilot-only regional population, not the complete company population.",
+            "source_url": null,
+            "domain": "unknown",
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "company-f688ab22af4bc1f09372",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "tenant": "company-f688ab22af4bc1f09372",
+                "owner": "Business owner",
+                "inspection": "bounded current-period snapshot",
+                "read_only": true,
+                "scope_note": "Pilot-only regional population, not the complete company population."
+              }
+            },
+            "selected": false,
+            "recommended": false,
+            "relevance": 0.56,
+            "suggested_role": "unknown",
+            "role_probability": 0.37,
+            "reason": "it remained in the bounded candidate set for review.",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          },
+          {
+            "ref": "company_mcp|resource-67048cc4191f7172f53b",
+            "adapter": "company_mcp",
+            "resource": "resource-67048cc4191f7172f53b",
+            "kind": "chart",
+            "title": "Commerce weekly",
+            "description": "Archived checkout experiment, test-store population only.",
+            "source_url": null,
+            "domain": "unknown",
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "company-f688ab22af4bc1f09372",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "tenant": "company-f688ab22af4bc1f09372",
+                "owner": "Data operations",
+                "inspection": "bounded current-period snapshot",
+                "read_only": true
+              }
+            },
+            "selected": false,
+            "recommended": false,
+            "relevance": 0.54,
+            "suggested_role": "unknown",
+            "role_probability": 0.63,
+            "reason": "it remained in the bounded candidate set for review.",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          },
+          {
+            "ref": "company_mcp|resource-3f8e8238dc14900857dc",
+            "adapter": "company_mcp",
+            "resource": "resource-3f8e8238dc14900857dc",
+            "kind": "document",
+            "title": "Returns operations / Planning",
+            "description": "Refund posting metadata and accounting mapping; not an additional refund ledger. Scope: Forecast assumptions, not observed actual results.",
+            "source_url": null,
+            "domain": "unknown",
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "company-f688ab22af4bc1f09372",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "tenant": "company-f688ab22af4bc1f09372",
+                "owner": "Data operations",
+                "inspection": "bounded current-period snapshot",
+                "read_only": true,
+                "scope_note": "Forecast assumptions, not observed actual results."
+              }
+            },
+            "selected": false,
+            "recommended": false,
+            "relevance": 0.5,
+            "suggested_role": "unknown",
+            "role_probability": 0.36,
+            "reason": "it remained in the bounded candidate set for review.",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          },
+          {
+            "ref": "company_mcp|resource-ea4e7f676ffbb91e771f",
+            "adapter": "company_mcp",
+            "resource": "resource-ea4e7f676ffbb91e771f",
+            "kind": "document",
+            "title": "Returns operations / Regional pilot",
+            "description": "Refund posting metadata and accounting mapping; not an additional refund ledger. Scope: Pilot-only regional population, not the complete company population.",
+            "source_url": null,
+            "domain": "unknown",
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "company-f688ab22af4bc1f09372",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "tenant": "company-f688ab22af4bc1f09372",
+                "owner": "Data operations",
+                "inspection": "bounded current-period snapshot",
+                "read_only": true,
+                "scope_note": "Pilot-only regional population, not the complete company population."
+              }
+            },
+            "selected": false,
+            "recommended": false,
+            "relevance": 0.39,
+            "suggested_role": "quality",
+            "role_probability": 0.85,
+            "reason": "it remained in the bounded candidate set for review; Jev classified its evidence role as quality (0.85).",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          },
+          {
+            "ref": "company_mcp|resource-f7bd7d0eb77faeaeb40b",
+            "adapter": "company_mcp",
+            "resource": "resource-f7bd7d0eb77faeaeb40b",
+            "kind": "saved_query",
+            "title": "Commerce weekly / Partner export",
+            "description": "Completed transaction amounts by sales channel; refunds are positive deductions, amounts in USD. Scope: Partner subset using a separate reporting cutoff and population.",
+            "source_url": null,
+            "domain": "unknown",
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "company-f688ab22af4bc1f09372",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "tenant": "company-f688ab22af4bc1f09372",
+                "owner": "Business owner",
+                "inspection": "bounded current-period snapshot",
+                "read_only": true,
+                "scope_note": "Partner subset using a separate reporting cutoff and population."
+              }
+            },
+            "selected": false,
+            "recommended": false,
+            "relevance": 0.36,
+            "suggested_role": "unknown",
+            "role_probability": 0.35000000000000003,
+            "reason": "it remained in the bounded candidate set for review.",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          },
+          {
+            "ref": "company_mcp|resource-95a3a79027adf5aa9576",
+            "adapter": "company_mcp",
+            "resource": "resource-95a3a79027adf5aa9576",
+            "kind": "document",
+            "title": "Returns operations / Sandbox",
+            "description": "Refund posting metadata and accounting mapping; not an additional refund ledger. Scope: QA population with synthetic entities, not the live business population.",
+            "source_url": null,
+            "domain": "unknown",
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "company-f688ab22af4bc1f09372",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "tenant": "company-f688ab22af4bc1f09372",
+                "owner": "Data operations",
+                "inspection": "bounded current-period snapshot",
+                "read_only": true,
+                "scope_note": "QA population with synthetic entities, not the live business population."
+              }
+            },
+            "selected": false,
+            "recommended": false,
+            "relevance": 0.33,
+            "suggested_role": "unknown",
+            "role_probability": 0.6900000000000001,
+            "reason": "it remained in the bounded candidate set for review.",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          },
+          {
+            "ref": "company_mcp|resource-5c35a224a6ce7173108d",
+            "adapter": "company_mcp",
+            "resource": "resource-5c35a224a6ce7173108d",
+            "kind": "saved_query",
+            "title": "Commerce weekly / Planning",
+            "description": "Completed transaction amounts by sales channel; refunds are positive deductions, amounts in USD. Scope: Forecast assumptions, not observed actual results.",
+            "source_url": null,
+            "domain": "unknown",
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "company-f688ab22af4bc1f09372",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "tenant": "company-f688ab22af4bc1f09372",
+                "owner": "Business owner",
+                "inspection": "bounded current-period snapshot",
+                "read_only": true,
+                "scope_note": "Forecast assumptions, not observed actual results."
+              }
+            },
+            "selected": false,
+            "recommended": false,
+            "relevance": 0.32,
+            "suggested_role": "unknown",
+            "role_probability": 0.37,
+            "reason": "it remained in the bounded candidate set for review.",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          },
+          {
+            "ref": "company_mcp|resource-1e53940d2a45a6ac009d",
+            "adapter": "company_mcp",
+            "resource": "resource-1e53940d2a45a6ac009d",
+            "kind": "document",
+            "title": "Returns operations / Archive",
+            "description": "Refund posting metadata and accounting mapping; not an additional refund ledger. Scope: Superseded weekly definition; retained for historical audit.",
+            "source_url": null,
+            "domain": "unknown",
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "company-f688ab22af4bc1f09372",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "tenant": "company-f688ab22af4bc1f09372",
+                "owner": "Data operations",
+                "inspection": "bounded current-period snapshot",
+                "read_only": true,
+                "scope_note": "Superseded weekly definition; retained for historical audit."
+              }
+            },
+            "selected": false,
+            "recommended": false,
+            "relevance": 0.3,
+            "suggested_role": "unknown",
+            "role_probability": 0.3,
+            "reason": "it remained in the bounded candidate set for review.",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          },
+          {
+            "ref": "company_mcp|resource-966ddad4f91c95571a22",
+            "adapter": "company_mcp",
+            "resource": "resource-966ddad4f91c95571a22",
+            "kind": "document",
+            "title": "Returns operations / Partner export",
+            "description": "Refund posting metadata and accounting mapping; not an additional refund ledger. Scope: Partner subset using a separate reporting cutoff and population.",
+            "source_url": null,
+            "domain": "unknown",
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "company-f688ab22af4bc1f09372",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "tenant": "company-f688ab22af4bc1f09372",
+                "owner": "Data operations",
+                "inspection": "bounded current-period snapshot",
+                "read_only": true,
+                "scope_note": "Partner subset using a separate reporting cutoff and population."
+              }
+            },
+            "selected": false,
+            "recommended": false,
+            "relevance": 0.23,
+            "suggested_role": "unknown",
+            "role_probability": 0.36,
+            "reason": "it remained in the bounded candidate set for review.",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          },
+          {
+            "ref": "company_mcp|resource-1d64ea51b1051f7b7789",
+            "adapter": "company_mcp",
+            "resource": "resource-1d64ea51b1051f7b7789",
+            "kind": "chart",
+            "title": "Commerce weekly / Regional pilot",
+            "description": "Archived checkout experiment, test-store population only. Scope: Pilot-only regional population, not the complete company population.",
+            "source_url": null,
+            "domain": "unknown",
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "company-f688ab22af4bc1f09372",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "tenant": "company-f688ab22af4bc1f09372",
+                "owner": "Data operations",
+                "inspection": "bounded current-period snapshot",
+                "read_only": true,
+                "scope_note": "Pilot-only regional population, not the complete company population."
+              }
+            },
+            "selected": false,
+            "recommended": false,
+            "relevance": 0.21,
+            "suggested_role": "unknown",
+            "role_probability": 0.46,
+            "reason": "it remained in the bounded candidate set for review.",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          },
+          {
+            "ref": "company_mcp|resource-18aaf08f17492b3c3d37",
+            "adapter": "company_mcp",
+            "resource": "resource-18aaf08f17492b3c3d37",
+            "kind": "saved_query",
+            "title": "Orders weekly",
+            "description": "Order bookings including cancelled orders, tax and shipping; not recognized sales.",
+            "source_url": null,
+            "domain": "unknown",
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "company-f688ab22af4bc1f09372",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "tenant": "company-f688ab22af4bc1f09372",
+                "owner": "Business owner",
+                "inspection": "bounded current-period snapshot",
+                "read_only": true
+              }
+            },
+            "selected": false,
+            "recommended": false,
+            "relevance": 0.19,
+            "suggested_role": "unknown",
+            "role_probability": 0.42,
+            "reason": "it remained in the bounded candidate set for review.",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          },
+          {
+            "ref": "company_mcp|resource-fe0b5031f65c67b7014c",
+            "adapter": "company_mcp",
+            "resource": "resource-fe0b5031f65c67b7014c",
+            "kind": "saved_query",
+            "title": "Commerce weekly / Archive",
+            "description": "Completed transaction amounts by sales channel; refunds are positive deductions, amounts in USD. Scope: Superseded weekly definition; retained for historical audit.",
+            "source_url": null,
+            "domain": "unknown",
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "company-f688ab22af4bc1f09372",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "tenant": "company-f688ab22af4bc1f09372",
+                "owner": "Business owner",
+                "inspection": "bounded current-period snapshot",
+                "read_only": true,
+                "scope_note": "Superseded weekly definition; retained for historical audit."
+              }
+            },
+            "selected": false,
+            "recommended": false,
+            "relevance": 0.18,
+            "suggested_role": "unknown",
+            "role_probability": 0.44,
+            "reason": "it remained in the bounded candidate set for review.",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          },
+          {
+            "ref": "company_mcp|resource-fc86c0decece2d8c1085",
+            "adapter": "company_mcp",
+            "resource": "resource-fc86c0decece2d8c1085",
+            "kind": "chart",
+            "title": "Commerce weekly / Archive",
+            "description": "Archived checkout experiment, test-store population only. Scope: Superseded weekly definition; retained for historical audit.",
+            "source_url": null,
+            "domain": "unknown",
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "company-f688ab22af4bc1f09372",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "tenant": "company-f688ab22af4bc1f09372",
+                "owner": "Data operations",
+                "inspection": "bounded current-period snapshot",
+                "read_only": true,
+                "scope_note": "Superseded weekly definition; retained for historical audit."
+              }
+            },
+            "selected": false,
+            "recommended": false,
+            "relevance": 0.17,
+            "suggested_role": "unknown",
+            "role_probability": 0.5,
+            "reason": "it remained in the bounded candidate set for review.",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          },
+          {
+            "ref": "company_mcp|resource-67ed6938e54f57d0db7d",
+            "adapter": "company_mcp",
+            "resource": "resource-67ed6938e54f57d0db7d",
+            "kind": "chart",
+            "title": "Commerce weekly / Planning",
+            "description": "Archived checkout experiment, test-store population only. Scope: Forecast assumptions, not observed actual results.",
+            "source_url": null,
+            "domain": "unknown",
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "company-f688ab22af4bc1f09372",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "tenant": "company-f688ab22af4bc1f09372",
+                "owner": "Data operations",
+                "inspection": "bounded current-period snapshot",
+                "read_only": true,
+                "scope_note": "Forecast assumptions, not observed actual results."
+              }
+            },
+            "selected": false,
+            "recommended": false,
+            "relevance": 0.17,
+            "suggested_role": "unknown",
+            "role_probability": 0.53,
+            "reason": "it remained in the bounded candidate set for review.",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          },
+          {
+            "ref": "company_mcp|resource-1572f49ecd113dba834b",
+            "adapter": "company_mcp",
+            "resource": "resource-1572f49ecd113dba834b",
+            "kind": "chart",
+            "title": "Commerce weekly / Partner export",
+            "description": "Archived checkout experiment, test-store population only. Scope: Partner subset using a separate reporting cutoff and population.",
+            "source_url": null,
+            "domain": "unknown",
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "company-f688ab22af4bc1f09372",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "tenant": "company-f688ab22af4bc1f09372",
+                "owner": "Data operations",
+                "inspection": "bounded current-period snapshot",
+                "read_only": true,
+                "scope_note": "Partner subset using a separate reporting cutoff and population."
+              }
+            },
+            "selected": false,
+            "recommended": false,
+            "relevance": 0.16,
+            "suggested_role": "unknown",
+            "role_probability": 0.49,
+            "reason": "it remained in the bounded candidate set for review.",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          },
+          {
+            "ref": "company_mcp|resource-6667a7574cef7138263f",
+            "adapter": "company_mcp",
+            "resource": "resource-6667a7574cef7138263f",
+            "kind": "saved_query",
+            "title": "Orders weekly / Archive",
+            "description": "Order bookings including cancelled orders, tax and shipping; not recognized sales. Scope: Superseded weekly definition; retained for historical audit.",
+            "source_url": null,
+            "domain": "unknown",
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "company-f688ab22af4bc1f09372",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "tenant": "company-f688ab22af4bc1f09372",
+                "owner": "Business owner",
+                "inspection": "bounded current-period snapshot",
+                "read_only": true,
+                "scope_note": "Superseded weekly definition; retained for historical audit."
+              }
+            },
+            "selected": false,
+            "recommended": false,
+            "relevance": 0.16,
+            "suggested_role": "unknown",
+            "role_probability": 0.62,
+            "reason": "it remained in the bounded candidate set for review.",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          },
+          {
+            "ref": "company_mcp|resource-c880755d533cd2a920d4",
+            "adapter": "company_mcp",
+            "resource": "resource-c880755d533cd2a920d4",
+            "kind": "saved_query",
+            "title": "Orders weekly / Partner export",
+            "description": "Order bookings including cancelled orders, tax and shipping; not recognized sales. Scope: Partner subset using a separate reporting cutoff and population.",
+            "source_url": null,
+            "domain": "unknown",
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "company-f688ab22af4bc1f09372",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "tenant": "company-f688ab22af4bc1f09372",
+                "owner": "Business owner",
+                "inspection": "bounded current-period snapshot",
+                "read_only": true,
+                "scope_note": "Partner subset using a separate reporting cutoff and population."
+              }
+            },
+            "selected": false,
+            "recommended": false,
+            "relevance": 0.13,
+            "suggested_role": "unknown",
+            "role_probability": 0.49,
+            "reason": "it remained in the bounded candidate set for review.",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          },
+          {
+            "ref": "company_mcp|resource-4bb5aa10e7e0d844031d",
+            "adapter": "company_mcp",
+            "resource": "resource-4bb5aa10e7e0d844031d",
+            "kind": "saved_query",
+            "title": "Orders weekly / Regional pilot",
+            "description": "Order bookings including cancelled orders, tax and shipping; not recognized sales. Scope: Pilot-only regional population, not the complete company population.",
+            "source_url": null,
+            "domain": "unknown",
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "company-f688ab22af4bc1f09372",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "tenant": "company-f688ab22af4bc1f09372",
+                "owner": "Business owner",
+                "inspection": "bounded current-period snapshot",
+                "read_only": true,
+                "scope_note": "Pilot-only regional population, not the complete company population."
+              }
+            },
+            "selected": false,
+            "recommended": false,
+            "relevance": 0.13,
+            "suggested_role": "unknown",
+            "role_probability": 0.44,
+            "reason": "it remained in the bounded candidate set for review.",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          },
+          {
+            "ref": "company_mcp|resource-e0df48508096fd1d5aa0",
+            "adapter": "company_mcp",
+            "resource": "resource-e0df48508096fd1d5aa0",
+            "kind": "saved_query",
+            "title": "Commerce weekly / Sandbox",
+            "description": "Completed transaction amounts by sales channel; refunds are positive deductions, amounts in USD. Scope: QA population with synthetic entities, not the live business population.",
+            "source_url": null,
+            "domain": "unknown",
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "company-f688ab22af4bc1f09372",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "tenant": "company-f688ab22af4bc1f09372",
+                "owner": "Business owner",
+                "inspection": "bounded current-period snapshot",
+                "read_only": true,
+                "scope_note": "QA population with synthetic entities, not the live business population."
+              }
+            },
+            "selected": false,
+            "recommended": false,
+            "relevance": 0.11,
+            "suggested_role": "unknown",
+            "role_probability": 0.47,
+            "reason": "it remained in the bounded candidate set for review.",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          },
+          {
+            "ref": "company_mcp|resource-e3ca6525a09cbe3be232",
+            "adapter": "company_mcp",
+            "resource": "resource-e3ca6525a09cbe3be232",
+            "kind": "chart",
+            "title": "Commerce weekly / Sandbox",
+            "description": "Archived checkout experiment, test-store population only. Scope: QA population with synthetic entities, not the live business population.",
+            "source_url": null,
+            "domain": "unknown",
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "company-f688ab22af4bc1f09372",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "tenant": "company-f688ab22af4bc1f09372",
+                "owner": "Data operations",
+                "inspection": "bounded current-period snapshot",
+                "read_only": true,
+                "scope_note": "QA population with synthetic entities, not the live business population."
+              }
+            },
+            "selected": false,
+            "recommended": false,
+            "relevance": 0.08,
+            "suggested_role": "unknown",
+            "role_probability": 0.81,
+            "reason": "it remained in the bounded candidate set for review.",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          },
+          {
+            "ref": "company_mcp|resource-5141745d2b73077d7f51",
+            "adapter": "company_mcp",
+            "resource": "resource-5141745d2b73077d7f51",
+            "kind": "saved_query",
+            "title": "Orders weekly / Planning",
+            "description": "Order bookings including cancelled orders, tax and shipping; not recognized sales. Scope: Forecast assumptions, not observed actual results.",
+            "source_url": null,
+            "domain": "unknown",
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "company-f688ab22af4bc1f09372",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "tenant": "company-f688ab22af4bc1f09372",
+                "owner": "Business owner",
+                "inspection": "bounded current-period snapshot",
+                "read_only": true,
+                "scope_note": "Forecast assumptions, not observed actual results."
+              }
+            },
+            "selected": false,
+            "recommended": false,
+            "relevance": 0.08,
+            "suggested_role": "unknown",
+            "role_probability": 0.75,
+            "reason": "it remained in the bounded candidate set for review.",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          },
+          {
+            "ref": "company_mcp|resource-41f1119f23af2ca41577",
+            "adapter": "company_mcp",
+            "resource": "resource-41f1119f23af2ca41577",
+            "kind": "saved_query",
+            "title": "Orders weekly / Sandbox",
+            "description": "Order bookings including cancelled orders, tax and shipping; not recognized sales. Scope: QA population with synthetic entities, not the live business population.",
+            "source_url": null,
+            "domain": "unknown",
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "company-f688ab22af4bc1f09372",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "tenant": "company-f688ab22af4bc1f09372",
+                "owner": "Business owner",
+                "inspection": "bounded current-period snapshot",
+                "read_only": true,
+                "scope_note": "QA population with synthetic entities, not the live business population."
+              }
+            },
+            "selected": false,
+            "recommended": false,
+            "relevance": 0.06,
+            "suggested_role": "unknown",
+            "role_probability": 0.53,
+            "reason": "it remained in the bounded candidate set for review.",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          }
+        ],
+        "questions": [
+          "Disambiguate repeated catalog candidates before approval using owner, lineage, freshness, or relationship metadata."
+        ],
+        "warnings": [],
+        "evidence_requirements": [
+          {
+            "key": "watch:1",
+            "question": "Whether the current and prior complete reporting week both have complete gross and refund postings for the same business population; if not, classify insufficient_data.",
+            "required": true
+          }
+        ]
+      },
+      {
+        "card_id": "card-weekly-net-sales-decline-53a704b6",
+        "status": "ready_for_approval",
+        "readiness_status": "ready_for_approval",
+        "blockers": [],
+        "source_selection_fingerprint": "a0b3061e2fac5ce1e102a339865b227567a0c63d4eb4ca1b9db8e48d88929f97",
+        "source_selection_confirmation": "Owner-defined net sales requires the live completed-order Commerce weekly saved query and same-week refund posting metadata. The selected saved query is the live business population; the same-title chart is explicitly an archived test-store experiment and is excluded.",
+        "confirmed_blocker_codes": [
+          "candidate-selection-review",
+          "definition-conflict"
+        ],
+        "principal_id": "synthetic-owner",
+        "principal_tenant": "company-f688ab22af4bc1f09372",
+        "authorization_evidence": "deployment",
+        "discovery_receipt": {
+          "principal_id": "synthetic-owner",
+          "principal_tenant": "company-f688ab22af4bc1f09372",
+          "authorization_evidence": "deployment",
+          "catalog_provider": "company_mcp",
+          "catalog_strategy": "local-scan-fallback",
+          "catalog_cursor": null,
+          "candidate_refs": [
+            "company_mcp|resource-06a9ad40c5c35ec05644",
+            "company_mcp|resource-1e53940d2a45a6ac009d",
+            "company_mcp|resource-3f8e8238dc14900857dc",
+            "company_mcp|resource-41613ec6c871dbcf61da",
+            "company_mcp|resource-5c35a224a6ce7173108d",
+            "company_mcp|resource-67048cc4191f7172f53b",
+            "company_mcp|resource-95a3a79027adf5aa9576",
+            "company_mcp|resource-ea4e7f676ffbb91e771f",
+            "company_mcp|resource-ecdbd08bf01b01f59a60",
+            "company_mcp|resource-f7bd7d0eb77faeaeb40b"
+          ],
+          "candidate_count": 24,
+          "candidate_limit": 40,
+          "truncated": false,
+          "evaluator": "jev-latest"
+        },
+        "selected_source_refs": [
+          "company_mcp|resource-41613ec6c871dbcf61da",
+          "company_mcp|resource-ecdbd08bf01b01f59a60"
+        ],
+        "recommended_source_refs": [
+          "company_mcp|resource-41613ec6c871dbcf61da",
+          "company_mcp|resource-67048cc4191f7172f53b",
+          "company_mcp|resource-ecdbd08bf01b01f59a60"
+        ],
+        "missing_recommended_refs": [
+          "company_mcp|resource-67048cc4191f7172f53b"
+        ],
+        "selected_outside_bounded_candidates": [],
+        "ambiguous_candidate_groups": [
+          [
+            "company_mcp|resource-67048cc4191f7172f53b",
+            "company_mcp|resource-ecdbd08bf01b01f59a60"
+          ]
+        ],
+        "source_candidates": [
+          {
+            "ref": "company_mcp|resource-ecdbd08bf01b01f59a60",
+            "adapter": "company_mcp",
+            "resource": "resource-ecdbd08bf01b01f59a60",
+            "kind": "saved_query",
+            "title": "Commerce weekly",
+            "description": "Completed transaction amounts by sales channel; refunds are positive deductions, amounts in USD.",
+            "source_url": null,
+            "domain": "unknown",
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "company-f688ab22af4bc1f09372",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "tenant": "company-f688ab22af4bc1f09372",
+                "owner": "Business owner",
+                "inspection": "bounded current-period snapshot",
+                "read_only": true
+              }
+            },
+            "selected": true,
+            "recommended": true,
+            "relevance": 0.74,
+            "suggested_role": "unknown",
+            "role_probability": 0.67,
+            "reason": "Jev judged it materially relevant to the stated goal.",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          },
+          {
+            "ref": "company_mcp|resource-67048cc4191f7172f53b",
+            "adapter": "company_mcp",
+            "resource": "resource-67048cc4191f7172f53b",
+            "kind": "chart",
+            "title": "Commerce weekly",
+            "description": "Archived checkout experiment, test-store population only.",
+            "source_url": null,
+            "domain": "unknown",
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "company-f688ab22af4bc1f09372",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "tenant": "company-f688ab22af4bc1f09372",
+                "owner": "Data operations",
+                "inspection": "bounded current-period snapshot",
+                "read_only": true
+              }
+            },
+            "selected": false,
+            "recommended": true,
+            "relevance": 0.61,
+            "suggested_role": "unknown",
+            "role_probability": 0.68,
+            "reason": "Jev judged it materially relevant to the stated goal.",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          },
+          {
+            "ref": "company_mcp|resource-41613ec6c871dbcf61da",
+            "adapter": "company_mcp",
+            "resource": "resource-41613ec6c871dbcf61da",
+            "kind": "document",
+            "title": "Returns operations",
+            "description": "Refund posting metadata and accounting mapping; not an additional refund ledger.",
+            "source_url": null,
+            "domain": "unknown",
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "company-f688ab22af4bc1f09372",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "tenant": "company-f688ab22af4bc1f09372",
+                "owner": "Data operations",
+                "inspection": "bounded current-period snapshot",
+                "read_only": true
+              }
+            },
+            "selected": true,
+            "recommended": true,
+            "relevance": 0.61,
+            "suggested_role": "unknown",
+            "role_probability": 0.66,
+            "reason": "Jev judged it materially relevant to the stated goal.",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          },
+          {
+            "ref": "company_mcp|resource-06a9ad40c5c35ec05644",
+            "adapter": "company_mcp",
+            "resource": "resource-06a9ad40c5c35ec05644",
+            "kind": "saved_query",
+            "title": "Commerce weekly / Regional pilot",
+            "description": "Completed transaction amounts by sales channel; refunds are positive deductions, amounts in USD. Scope: Pilot-only regional population, not the complete company population.",
+            "source_url": null,
+            "domain": "unknown",
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "company-f688ab22af4bc1f09372",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "tenant": "company-f688ab22af4bc1f09372",
+                "owner": "Business owner",
+                "inspection": "bounded current-period snapshot",
+                "read_only": true,
+                "scope_note": "Pilot-only regional population, not the complete company population."
+              }
+            },
+            "selected": false,
+            "recommended": false,
+            "relevance": 0.58,
+            "suggested_role": "unknown",
+            "role_probability": 0.38,
+            "reason": "it remained in the bounded candidate set for review.",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          },
+          {
+            "ref": "company_mcp|resource-3f8e8238dc14900857dc",
+            "adapter": "company_mcp",
+            "resource": "resource-3f8e8238dc14900857dc",
+            "kind": "document",
+            "title": "Returns operations / Planning",
+            "description": "Refund posting metadata and accounting mapping; not an additional refund ledger. Scope: Forecast assumptions, not observed actual results.",
+            "source_url": null,
+            "domain": "unknown",
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "company-f688ab22af4bc1f09372",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "tenant": "company-f688ab22af4bc1f09372",
+                "owner": "Data operations",
+                "inspection": "bounded current-period snapshot",
+                "read_only": true,
+                "scope_note": "Forecast assumptions, not observed actual results."
+              }
+            },
+            "selected": false,
+            "recommended": false,
+            "relevance": 0.53,
+            "suggested_role": "unknown",
+            "role_probability": 0.37,
+            "reason": "it remained in the bounded candidate set for review.",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          },
+          {
+            "ref": "company_mcp|resource-f7bd7d0eb77faeaeb40b",
+            "adapter": "company_mcp",
+            "resource": "resource-f7bd7d0eb77faeaeb40b",
+            "kind": "saved_query",
+            "title": "Commerce weekly / Partner export",
+            "description": "Completed transaction amounts by sales channel; refunds are positive deductions, amounts in USD. Scope: Partner subset using a separate reporting cutoff and population.",
+            "source_url": null,
+            "domain": "unknown",
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "company-f688ab22af4bc1f09372",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "tenant": "company-f688ab22af4bc1f09372",
+                "owner": "Business owner",
+                "inspection": "bounded current-period snapshot",
+                "read_only": true,
+                "scope_note": "Partner subset using a separate reporting cutoff and population."
+              }
+            },
+            "selected": false,
+            "recommended": false,
+            "relevance": 0.42,
+            "suggested_role": "unknown",
+            "role_probability": 0.36,
+            "reason": "it remained in the bounded candidate set for review.",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          },
+          {
+            "ref": "company_mcp|resource-ea4e7f676ffbb91e771f",
+            "adapter": "company_mcp",
+            "resource": "resource-ea4e7f676ffbb91e771f",
+            "kind": "document",
+            "title": "Returns operations / Regional pilot",
+            "description": "Refund posting metadata and accounting mapping; not an additional refund ledger. Scope: Pilot-only regional population, not the complete company population.",
+            "source_url": null,
+            "domain": "unknown",
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "company-f688ab22af4bc1f09372",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "tenant": "company-f688ab22af4bc1f09372",
+                "owner": "Data operations",
+                "inspection": "bounded current-period snapshot",
+                "read_only": true,
+                "scope_note": "Pilot-only regional population, not the complete company population."
+              }
+            },
+            "selected": false,
+            "recommended": false,
+            "relevance": 0.4,
+            "suggested_role": "quality",
+            "role_probability": 0.83,
+            "reason": "it remained in the bounded candidate set for review; Jev classified its evidence role as quality (0.83).",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          },
+          {
+            "ref": "company_mcp|resource-5c35a224a6ce7173108d",
+            "adapter": "company_mcp",
+            "resource": "resource-5c35a224a6ce7173108d",
+            "kind": "saved_query",
+            "title": "Commerce weekly / Planning",
+            "description": "Completed transaction amounts by sales channel; refunds are positive deductions, amounts in USD. Scope: Forecast assumptions, not observed actual results.",
+            "source_url": null,
+            "domain": "unknown",
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "company-f688ab22af4bc1f09372",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "tenant": "company-f688ab22af4bc1f09372",
+                "owner": "Business owner",
+                "inspection": "bounded current-period snapshot",
+                "read_only": true,
+                "scope_note": "Forecast assumptions, not observed actual results."
+              }
+            },
+            "selected": false,
+            "recommended": false,
+            "relevance": 0.32,
+            "suggested_role": "unknown",
+            "role_probability": 0.31,
+            "reason": "it remained in the bounded candidate set for review.",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          },
+          {
+            "ref": "company_mcp|resource-1e53940d2a45a6ac009d",
+            "adapter": "company_mcp",
+            "resource": "resource-1e53940d2a45a6ac009d",
+            "kind": "document",
+            "title": "Returns operations / Archive",
+            "description": "Refund posting metadata and accounting mapping; not an additional refund ledger. Scope: Superseded weekly definition; retained for historical audit.",
+            "source_url": null,
+            "domain": "unknown",
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "company-f688ab22af4bc1f09372",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "tenant": "company-f688ab22af4bc1f09372",
+                "owner": "Data operations",
+                "inspection": "bounded current-period snapshot",
+                "read_only": true,
+                "scope_note": "Superseded weekly definition; retained for historical audit."
+              }
+            },
+            "selected": false,
+            "recommended": false,
+            "relevance": 0.32,
+            "suggested_role": "unknown",
+            "role_probability": 0.33,
+            "reason": "it remained in the bounded candidate set for review.",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          },
+          {
+            "ref": "company_mcp|resource-95a3a79027adf5aa9576",
+            "adapter": "company_mcp",
+            "resource": "resource-95a3a79027adf5aa9576",
+            "kind": "document",
+            "title": "Returns operations / Sandbox",
+            "description": "Refund posting metadata and accounting mapping; not an additional refund ledger. Scope: QA population with synthetic entities, not the live business population.",
+            "source_url": null,
+            "domain": "unknown",
+            "tenant_id": "company-f688ab22af4bc1f09372",
+            "source_status": "healthy",
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "metadata": {
+              "tenant_id": "company-f688ab22af4bc1f09372",
+              "domain": "unknown",
+              "scope": "",
+              "metric_names": [],
+              "metric_definitions": [],
+              "available_comparison_windows": [
+                "previous_period"
+              ],
+              "required_comparison_keys": [],
+              "population": "",
+              "grain": "",
+              "freshness_sla_hours": null,
+              "lineage": [],
+              "roles": [],
+              "source_status": "healthy",
+              "authorized": true,
+              "adapter_metadata": {
+                "tenant": "company-f688ab22af4bc1f09372",
+                "owner": "Data operations",
+                "inspection": "bounded current-period snapshot",
+                "read_only": true,
+                "scope_note": "QA population with synthetic entities, not the live business population."
+              }
+            },
+            "selected": false,
+            "recommended": false,
+            "relevance": 0.29,
+            "suggested_role": "unknown",
+            "role_probability": 0.68,
+            "reason": "it remained in the bounded candidate set for review.",
+            "retrieval_signals": [
+              "catalog"
+            ]
+          }
+        ],
+        "questions": [],
+        "warnings": [],
+        "evidence_requirements": [
+          {
+            "key": "watch:1",
+            "question": "Whether the current and prior complete reporting week both have complete gross and refund postings for the same business population; if not, classify insufficient_data.",
+            "required": true
+          }
+        ]
+      }
+    ],
+    "onboarding_corrections": [],
+    "status": "approved",
+    "approved_by": "synthetic-owner",
+    "approved_at": "2026-10-03T05:28:02.316194Z"
+  }
+}

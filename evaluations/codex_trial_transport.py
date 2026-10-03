@@ -173,7 +173,10 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
                 "An independent model compares your notes (and card when present) with the original owner answers. "
                 "Correct rejected artifacts explicitly and request review again, at most three attempts. "
                 "Both arms need that review; it is not actual human approval. Changed notes/cards invalidate it. "
-                "For SignalWeave, inspect and use simulate_insight_card or preview_investigation_report before requesting review, then approve the card only after acceptance.")
+                "For SignalWeave, inspect and use simulate_insight_card or preview_investigation_report before requesting review. "
+                "After the synthetic owner accepts the policy, call approve_insight_card without workflow_report_id "
+                "for this delivery-disabled shadow trial, keep acceptance unassessed, then finish_setup. "
+                "This does not waive source, policy, authorization or simulation blockers and never enables actual delivery.")
         instructions += ("\nUse only the trial MCP tools. No filesystem, shell, web or other "
                          "tools. After finish_setup or submit_analysis succeeds, stop immediately.")
         prompt = instructions + "\n" + canonical({

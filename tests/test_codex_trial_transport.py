@@ -302,6 +302,9 @@ async def test_episode_completion_usage_and_isolated_process_cleanup(fake_episod
     assert request["request_id"] == response["request_id"] == -2
     assert request["accounting_unit"] == "agent_invocation"
     assert (fake.session.server.instructions in request["prompt"]) is treatment
+    assert "delivery-disabled shadow evaluation" in request["prompt"]
+    assert "record acceptance as unassessed" in request["prompt"]
+    assert "do not invent examples" in request["prompt"]
     context = json.loads(request["prompt"].rsplit("\n", 1)[1])
     assert context["period"] == fake.session.adapter.period_context
     assert response["kind"] == "api.response"
