@@ -713,10 +713,18 @@ def create_mcp(
         this card's selected sources. Current capture can execute source queries;
         use it only within the owner's query budget. At most one case can capture
         current evidence. It is NOT historical or full-policy acceptance.
+        For historical snapshots, set an aware ``as_of`` timestamp; this evaluates
+        source freshness against that clock without permitting current-source capture.
+        A supplied snapshot captured after ``as_of`` is rejected before evaluation.
         Copy snapshot objects unchanged; resource strings are not snapshots.
-        Optional evidence/retrieval labels stay in the evaluator and
-        are never included in the Jev state. Historical snapshots are supplied
-        by the caller; production delivery is not performed by this tool.
+        For acceptance, the owner must explicitly provide
+        ``expected_delivery_method_keys``, ``expected_delivery_destinations``,
+        ``required_evidence_source_keys``, and ``expected_retrieval_refs``;
+        explicit ``[]``/``{}`` means that none are expected. Omitted labels are
+        blocked before Jev. Optional evidence/retrieval labels stay in the
+        evaluator and are never included in the Jev state. Historical snapshots
+        are supplied by the caller; production delivery is not performed by
+        this tool.
         Set acceptance_outcomes to the owner's intended dispositions to test
         onboarding with strict behavioral coverage and exact endpoint labels.
         This is empirical evidence, not human authorization or causal proof.
@@ -734,7 +742,9 @@ def create_mcp(
         # Validate ALL inputs before a source query or inference is attempted.
         parsed_cases = [
             CardEvaluationCase.model_validate({
-                **case.model_dump(exclude={"capture_current_sources", "resources"}),
+                **case.model_dump(
+                    exclude={"capture_current_sources", "resources"}, exclude_unset=True
+                ),
                 "resources": case.resources or [], "card": card,
             }) for case in inputs
         ]

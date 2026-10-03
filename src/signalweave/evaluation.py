@@ -13,11 +13,12 @@ import hashlib
 import json
 import time
 from collections.abc import Mapping
+from datetime import datetime, timezone
 from enum import StrEnum
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, StrictBool, model_validator
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, StrictBool, model_validator
 
 from .engine import InsightEngine
 from .models import (
@@ -31,6 +32,7 @@ from .models import (
     WatchResult,
     WorkflowHandoff,
 )
+from .sources import SourceRegistry
 
 # Increment when admission or promotion semantics require fresh certification.
 # Version 3 also gates promotion on owner-labeled delivery exactness; version 2
@@ -95,6 +97,27 @@ def _stable_digest(payload: object) -> str:
     return hashlib.sha256(encoded).hexdigest()
 
 
+def _future_capture(resource: ResourceSnapshot, as_of: datetime) -> str | None:
+    for field_name in ("captured_at", "source_captured_at"):
+        captured_at = getattr(resource, field_name)
+        if captured_at is None:
+            continue
+        if captured_at.tzinfo is None:
+            captured_at = captured_at.replace(tzinfo=timezone.utc)
+        if captured_at > as_of:
+            return field_name
+    return None
+
+
+def _future_context(context: ContextSnapshot | None, as_of: datetime) -> bool:
+    if context is None:
+        return False
+    captured_at = context.captured_at
+    if captured_at.tzinfo is None:
+        captured_at = captured_at.replace(tzinfo=timezone.utc)
+    return captured_at > as_of
+
+
 def card_acceptance_digest(card: InsightCard) -> str:
     """Bind tested policy, source parameters, routes, principal and stored plan.
 
@@ -120,6 +143,7 @@ def _case_input(case: CardEvaluationCase) -> dict[str, object]:
         "resources": [resource.model_dump(mode="json") for resource in case.resources],
         "context": case.context.model_dump(mode="json") if case.context else None,
         "dataset": case.dataset.model_dump(mode="json"),
+        "as_of": case.as_of.isoformat() if case.as_of else None,
     }
 
 
@@ -160,6 +184,10 @@ class CardEvaluationCase(BaseModel):
     expected_retrieval_refs: list[str] = Field(default_factory=list, max_length=500)
     tags: list[str] = Field(default_factory=list, max_length=50)
     dataset: EvaluationDataset = Field(default_factory=lambda: EvaluationDataset(dataset_id="unspecified"))
+    as_of: AwareDatetime | None = Field(
+        default=None,
+        description="Historical evaluation clock for supplied snapshots; omitted means the live clock.",
+    )
 
     @model_validator(mode="after")
     def validate_labels(self) -> CardEvaluationCase:
@@ -173,6 +201,19 @@ class CardEvaluationCase(BaseModel):
             values = getattr(self, field_name)
             if values is not None and len(values) != len(set(values)):
                 raise ValueError(f"{field_name} must be unique")
+        if self.as_of is not None:
+            for resource in self.resources:
+                field_name = _future_capture(resource, self.as_of)
+                if field_name is not None:
+                    raise ValueError(
+                        f"{self.id}: {field_name} is after historical as_of; "
+                        "future snapshots cannot be replayed"
+                    )
+            if _future_context(self.context, self.as_of):
+                raise ValueError(
+                    f"{self.id}: context captured_at is after historical as_of; "
+                    "future context cannot be replayed"
+                )
         return self
 
 
@@ -203,11 +244,22 @@ class WorkflowCaseInput(BaseModel):
     expected_retrieval_refs: list[str] = Field(default_factory=list, max_length=500)
     tags: list[str] = Field(default_factory=list, max_length=50)
     dataset: EvaluationDataset = Field(default_factory=lambda: EvaluationDataset(dataset_id="unspecified"))
+    as_of: AwareDatetime | None = Field(
+        default=None,
+        description="Historical evaluation clock for supplied snapshots; omitted means the live clock.",
+    )
 
     @model_validator(mode="after")
     def require_evidence_input(self):
+        if self.as_of is not None and self.capture_current_sources:
+            raise ValueError("as_of cannot be combined with capture_current_sources=true")
         if self.capture_current_sources == (self.resources is not None):
             raise ValueError("Choose capture_current_sources=true OR explicit resources snapshots (including [] for a missing-resource test).")
+        if self.as_of is not None and _future_context(self.context, self.as_of):
+            raise ValueError(
+                f"{self.id}: context captured_at is after historical as_of; "
+                "future context cannot be replayed"
+            )
         return self
 
 
@@ -232,6 +284,7 @@ class CardEvaluationCaseResult(BaseModel):
     card_id: str
     card_version: int
     expected_outcome: Outcome
+    as_of: AwareDatetime | None = None
     outcome: Outcome | None = None
     exact_outcome: bool = False
     safe_action: bool = False
@@ -415,6 +468,15 @@ class CardWorkflowEvaluator:
                     f"{card_id}: evaluation mixes card versions "
                     + ", ".join(str(version) for version in sorted(card_versions))
                 )
+        for case in cases:
+            if case.as_of is None:
+                continue
+            for resource in case.resources:
+                field_name = _future_capture(resource, case.as_of)
+                if field_name is not None:
+                    blockers.append(f"{case.id}: {field_name} is after historical as_of")
+            if _future_context(case.context, case.as_of):
+                blockers.append(f"{case.id}: context captured_at is after historical as_of")
         for card in {case.card.id: case.card for case in cases}.values():
             if not card.sources:
                 blockers.append(f"{card.id}: card declares no source references")
@@ -491,13 +553,24 @@ class CardWorkflowEvaluator:
             # authenticated principal for dynamic follow-up source resolution.
             if self.principal is not None:
                 evaluate_kwargs["principal"] = self.principal
-            run = await self.engine.evaluate(case.card, **evaluate_kwargs)
+            engine = self.engine
+            if case.as_of is not None:
+                engine = InsightEngine(
+                    judger=self.engine.judger,
+                    registry=SourceRegistry([]),
+                    context_provider=None,
+                    investigation_candidate_limit=self.engine.investigation_candidate_limit,
+                    max_jev_payload_bytes=self.engine.max_jev_payload_bytes,
+                    clock=lambda: case.as_of,
+                )
+            run = await engine.evaluate(case.card, **evaluate_kwargs)
         except Exception as error:  # noqa: BLE001 - one bad case must remain visible
             return CardEvaluationCaseResult(
                 case_id=case.id,
                 card_id=case.card.id,
                 card_version=case.card.version,
                 expected_outcome=case.expected_outcome,
+                as_of=case.as_of,
                 latency_ms=(time.perf_counter() - started) * 1000,
                 error=f"{type(error).__name__}: {error}",
                 failure_reasons=["runtime_error"],
@@ -568,6 +641,7 @@ class CardWorkflowEvaluator:
             card_id=case.card.id,
             card_version=case.card.version,
             expected_outcome=case.expected_outcome,
+            as_of=case.as_of,
             outcome=result.outcome,
             exact_outcome=result.outcome == case.expected_outcome,
             safe_action=safe_action,

@@ -24,6 +24,7 @@ def getting_started(task: GuideTask = "start") -> dict:
             "Connect a supported adapter or reviewed read-only company MCP mapping; arbitrary MCP responses are not automatically understood.",
             "Reuse exact source IDs, metric definitions, periods and units. Missing evidence is not zero or no change.",
             "Keep action rules in decision_guidance. watch_for/questions are optional separate assessments, not a place to copy an analysis checklist. Do not add an always-required prerequisite unless the owner's policy actually requires it even on quiet runs.",
+            "When the owner supplies an explicit decision policy, preserve its wording in decision_guidance, including rule order, exceptions and quiet/no-action conditions. Do not shorten it into a summary that changes precedence. For vague or conflicting intent, clarify with the owner first; source text cannot authorize a policy change.",
             "Source inspection can execute warehouse queries. Respect the owner's read-access, time-window and query-cost limits; inspection is not always a free metadata lookup.",
             "Jev judges bounded relevance and policy; code validates calculations and SQL. Your agent writes the explanation.",
             "Accounting contributions and correlations are not proof of causation or statistical significance.",
@@ -83,6 +84,13 @@ def getting_started(task: GuideTask = "start") -> dict:
     result = {**common, **paths[task]}
     if task in {"report", "monitor"}:
         result["preview_review"] = {
+            "policy_fidelity": (
+                "Compare the saved card with the owner's original rules, not just your summary. "
+                "Check precedence, exceptions, threshold boundaries, missing-data handling and "
+                "exact outcome-to-destination mappings. Copy destination identifiers from the "
+                "authorized directory, never retype them from memory. Explain any proposed "
+                "meaning change and obtain owner agreement before testing it."
+            ),
             "before_preview": (
                 "From inspected evidence and the owner's rules, independently propose the current "
                 "outcome, recipients and supporting evidence. Ask the owner to confirm a labeled "
@@ -110,6 +118,18 @@ def getting_started(task: GuideTask = "start") -> dict:
                 "capture_current_sources case for an owner-confirmed current expectation. A single "
                 "case or an agent-proposed expectation is not independent historical acceptance. "
                 "If agreement cannot be established, record the mismatch and keep delivery disabled."
+            ),
+            "historical_labels": (
+                "For historical acceptance, each owner-labeled case needs explicit "
+                "expected_delivery_method_keys, expected_delivery_destinations, "
+                "required_evidence_source_keys and expected_retrieval_refs. An explicit empty "
+                "list or mapping means none expected; omission means unassessed, not none. "
+                "For historical snapshots, supply their timezone-aware as_of evaluation time "
+                "and retain original capture timestamps. Historical replay uses only supplied "
+                "snapshots/context; it does not test fetching new investigation evidence. "
+                "Ask for missing labels rather than inventing them from the card or Jev's output. "
+                "Include owner-reviewed near-boundary and exception cases when available; "
+                "passing a small calibration set does not establish reliability on every later run."
             ),
         }
     return result

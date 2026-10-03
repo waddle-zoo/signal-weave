@@ -93,3 +93,20 @@ def test_preview_review_distinguishes_execution_from_behavioral_acceptance(task)
 def test_behavioral_review_does_not_expand_query_or_start_paths():
     assert "preview_review" not in getting_started("query")
     assert "preview_review" not in getting_started("start")
+
+
+@pytest.mark.parametrize("task", ["report", "monitor"])
+def test_onboarding_preserves_policy_precedence_and_explicit_labels(task):
+    guide = getting_started(task)
+    assert any("preserve its wording" in text and "rule order" in text
+               for text in guide["boundaries"])
+    review = guide["preview_review"]
+    assert "owner's original rules" in review["policy_fidelity"]
+    assert "authorized directory" in review["policy_fidelity"]
+    for field in ("expected_delivery_method_keys", "expected_delivery_destinations",
+                  "required_evidence_source_keys", "expected_retrieval_refs"):
+        assert field in review["historical_labels"]
+    assert "omission means unassessed" in review["historical_labels"]
+    assert "near-boundary and exception cases" in review["historical_labels"]
+    assert "retain original capture timestamps" in review["historical_labels"]
+    assert "does not test fetching" in review["historical_labels"]
