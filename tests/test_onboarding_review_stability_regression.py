@@ -161,6 +161,24 @@ async def test_off_top_k_selected_ref_cannot_bypass_catalog_acl(tmp_path):
 
 
 @pytest.mark.asyncio
+async def test_numeric_source_binding_error_is_actionable_before_paid_discovery(tmp_path):
+    judger = BoundaryRankingJev()
+    server = make_server(tmp_path, judger=judger, catalog=BoundaryCatalog())
+    with pytest.raises(ValueError, match="available card-local keys: checkout"):
+        await tool(server, "propose_insight_card")(
+            what_to_watch="Checkout conversion", why_watch="Understand change",
+            selected_sources=[{"ref": "superset|dashboard:7", "key": "checkout"}],
+            numeric_conditions=[{
+                "text": "Owner rule", "source_key": "superset|dashboard:7",
+                "comparison_key": "conversion", "measurement": "delta",
+                "unit": "ratio", "threshold": -0.1, "comparator": "<=",
+            }],
+        )
+    assert judger.rank_calls == 0
+    assert server._test_runtime.card_store.list_cards() == []
+
+
+@pytest.mark.asyncio
 async def test_selected_source_rejects_unknown_fields_before_jev(tmp_path):
     judger = BoundaryRankingJev()
     server = make_server(tmp_path, judger=judger, catalog=BoundaryCatalog())

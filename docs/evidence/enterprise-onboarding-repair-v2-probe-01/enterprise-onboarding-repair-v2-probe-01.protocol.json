@@ -1,0 +1,67 @@
+{
+  "version": "enterprise-onboarding-journeys-v1",
+  "seed": 20261003,
+  "dataset_sha256": "55bccc65ae15bdeeee5ecb6169205d54ddbc104a0daf208ac7b2dad1ce26654e",
+  "execution_version": "enterprise-onboarding-repair-v2",
+  "subset_probe": true,
+  "interventions": [
+    "Stable source-selection confirmation and explicit authorized anchors.",
+    "Typed selected-source and workflow-case inputs; optional single current capture.",
+    "Separate owner action rules from unconditional evidence assessments in guide.",
+    "Both owner reviewers receive bounded current public source contracts, not measurements or labels.",
+    "Both report writers get identical inspected-citation validation and population caveats."
+  ],
+  "companies": [
+    {
+      "name": "Harbor Workspace",
+      "family": "saas",
+      "brief": "Are customers sticking with us? Let customer success know when retention is really getting worse, rather than just because we signed up a different mix of customers.",
+      "assets": 24,
+      "monitoring_periods": 3
+    },
+    {
+      "name": "Cinder Database Cloud",
+      "family": "ops",
+      "brief": "Watch for customer-facing database slowdowns. Connect the related signals before paging someone. We do not want a page for one hot CPU.",
+      "assets": 24,
+      "monitoring_periods": 3
+    }
+  ],
+  "primary_denominators": {
+    "onboarding_per_arm": 2,
+    "monitoring_per_arm": 6,
+    "author_and_monitor_episodes": 16
+  },
+  "budget": {
+    "jev_attempts": 64,
+    "sdk_retries": 0,
+    "tool_calls_per_episode": 45,
+    "owner_review_attempts_per_arm_company": 3,
+    "max_codex_invocations_including_owner_reviews": 28
+  },
+  "endpoints": [
+    "setup completion",
+    "owner questions and corrections",
+    "guide usage",
+    "time to first preview",
+    "native outcome and exact recipient",
+    "final outcome and exact recipient",
+    "numeric and provenance correctness",
+    "unnecessary and missed alerts",
+    "unsupported narrative claims",
+    "tool errors, reads, tokens and wall time"
+  ],
+  "success_gate": "Six completed treatment onboardings; all 18 later native and final outcomes/recipients correct; required numeric/provenance checks pass; no unsupported material narrative claims. Missing work remains failure, not a quiet success.",
+  "comparison_gate": "No correctness loss against the same Luna agent using the same source and owner tools; report setup and monitoring cost/time separately. No commercial savings or universal reliability claim from this regression.",
+  "limits": [
+    "Synthetic normalized MCP sources, not real provider accounts or installation.",
+    "Known business-family regression; new catalog distractors are not a new holdout.",
+    "Copied alternative data values test scope selection, not new statistical distributions.",
+    "Simulated owner answers and independent model review, not observed real-user usability.",
+    "One onboarding snapshot and three later periods per company, not months-long fleet scale.",
+    "No real scheduling, query billing, notifications, or causal ground truth.",
+    "The human still supplies business intent and policy; missing policy is not Jev's job.",
+    "No publication, runtime repair, label changes or retries during the frozen run."
+  ],
+  "wrapper_sha256": "ca632c082253ea5a63fd0571b6b6b252d386efd1089ade40093a3121a4fb7945"
+}

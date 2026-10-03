@@ -57,7 +57,10 @@ class SelectedSourceInput(BaseModel):
         pattern=r"^[^|\s]+\|[^|\s]+$",
         description="Exact authorized catalog identity in adapter|resource form.",
     )
-    key: str | None = None
+    key: str | None = Field(
+        default=None,
+        description="Stable card-local name. Set this explicitly when numeric_conditions refer to this source; their source_key must equal this key, not the catalog ref.",
+    )
     label: str | None = None
     parameters: dict[str, Any] = Field(default_factory=dict)
     required: StrictBool = True
@@ -1083,6 +1086,14 @@ class InsightAuthoringService:
                 )
                 for item in validated_selected_sources
             ]
+            available_keys = {source.key for source in requested_anchors}
+            unknown_keys = {condition.source_key for condition in numeric_conditions} - available_keys
+            if unknown_keys:
+                raise ValueError(
+                    "numeric_conditions.source_key must match selected_sources.key; unknown: "
+                    + ", ".join(sorted(unknown_keys)) + "; available card-local keys: "
+                    + ", ".join(sorted(available_keys))
+                )
         authorized_descriptors = await self._authorize_explicit_anchors(
             requested_anchors, principal=effective_principal
         ) if requested_anchors else {}
@@ -1420,6 +1431,8 @@ def proposal_summary(proposal: InsightCardProposal) -> dict[str, Any]:
         "why_watch": proposal.card.why_watch,
         "watch_for": proposal.card.watch_for,
         "questions": proposal.card.questions,
+        "numeric_conditions": [condition.model_dump(mode="json") for condition in proposal.card.numeric_conditions],
+        "decision_guidance": proposal.card.decision_guidance,
         "retrieval_mode": proposal.card.retrieval_mode.value,
         "investigation_mode": proposal.card.investigation_mode.value,
         "max_investigation_sources": proposal.card.max_investigation_sources,

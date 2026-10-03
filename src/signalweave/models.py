@@ -34,7 +34,9 @@ ComparisonWindows = Annotated[list[str], Field(
 WatchConditions = Annotated[list[str], Field(
     max_length=100,
     description=(
-        "Owner-defined conditions to check against fresh evidence on each run, in plain language. "
+        "Optional independent semantic assessments against fresh evidence on each run; leave empty "
+        "when decision_guidance and numeric_conditions already express the owner's rules. "
+        "Do not duplicate source availability, comparison validity or action rules as watch items. "
         "Use the card's scope and rules, not bare topic names or a generic analysis checklist. "
         "Unresolved items are required by default; use evidence_requirements only for "
         "explicitly owner-reviewed advisory details. Do not invent materiality rules."
@@ -44,7 +46,8 @@ WatchConditions = Annotated[list[str], Field(
 InvestigationQuestions = Annotated[list[str], Field(
     max_length=100,
     description=(
-        "Analytical questions the investigation should answer from evidence on each run. "
+        "Optional additional analytical questions the investigation must answer on each run. "
+        "Leave empty unless the owner requires a separate answer beyond the action policy. "
         "Do not copy unanswered one-time setup questions here. Ask the owner first; preserve "
         "resolved definitions and policy in decision_guidance and source contracts. "
         "Questions about changing ownership or other non-numeric evidence remain supported."

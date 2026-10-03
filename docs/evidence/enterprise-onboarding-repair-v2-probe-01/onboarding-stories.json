@@ -1,0 +1,439 @@
+[
+  {
+    "company": "Harbor Workspace",
+    "brief": "Are customers sticking with us? Let customer success know when retention is really getting worse, rather than just because we signed up a different mix of customers.",
+    "arm": "luna_bi",
+    "status": "complete",
+    "error": null,
+    "onboarding_seconds": 72.22087816597195,
+    "guide_calls": 0,
+    "author_tool_calls": 12,
+    "tool_histogram": {
+      "ask_owner": 4,
+      "list_catalog": 1,
+      "inspect_source": 2,
+      "save_notes": 2,
+      "request_synthetic_owner_approval": 2,
+      "finish_setup": 1
+    },
+    "first_successful_preview_tool_ordinal": null,
+    "first_preview_wall_time": null,
+    "first_preview_time_limit": "Trace has per-tool duration, not timestamps covering intervening model time; do not infer time-to-first-value.",
+    "owner_interview": [
+      {
+        "topic": "metric_scope",
+        "answer": {
+          "answer": "Retention is renewed accounts divided by accounts due for renewal in the week, grouped by the plan at renewal eligibility. Trial signups are excluded. Plan cohorts are mutually exclusive.",
+          "known": true,
+          "topic": "metric_scope"
+        }
+      },
+      {
+        "topic": "routing",
+        "answer": {
+          "answer": "business destination: team-9b9aad22a09fe443f335; data destination: team-d40b5d95d78af4b2d96c. Only these routes are authorized; no destructive actions.",
+          "known": true,
+          "topic": "routing"
+        }
+      },
+      {
+        "topic": "materiality",
+        "answer": {
+          "answer": "Notify the business destination if the symmetric within-plan retention change is at most -0.05 in ratio units. A pure mix shift is ignore, even if the aggregate falls. An unknown eligibility definition requires insufficient_data to the data destination.",
+          "known": true,
+          "topic": "materiality"
+        }
+      },
+      {
+        "topic": "data_gaps",
+        "answer": {
+          "answer": "Ask for a corrected export or a versioned definition when needed. I cannot reconstruct missing rows, infer causation, or tell you a period's correct answer.",
+          "known": true,
+          "topic": "data_gaps"
+        }
+      }
+    ],
+    "owner_reviews": [
+      {
+        "approved": false,
+        "reasons": [
+          "The notes claim “Billing definitions v3,” but the supplied source context only identifies the authorized source as “Billing definitions” and does not provide or verify a v3 designation. Clarify or remove that unsupported source-version claim."
+        ],
+        "review_episode": {
+          "error": null,
+          "exit_code": 0,
+          "foreign_tools": [],
+          "response_timeout_seconds": 90,
+          "seconds": 21.82711516704876,
+          "status": "complete",
+          "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+          "tool_calls": 1,
+          "transport": "codex_cli",
+          "wall_time_overrun_seconds": 0.0
+        }
+      },
+      {
+        "approved": true,
+        "reasons": [
+          "Matches the authorized metric, population, exclusions, mutually exclusive plan grouping, ratio unit, UTC comparison basis, and previous complete reporting week.",
+          "Preserves the exact threshold and outcomes: notify business at symmetric within-plan change <= -0.05, ignore pure mix shift, and insufficient_data to data for unknown eligibility; routes use only the two authorized destinations and data-gap handling matches owner_answers."
+        ],
+        "review_episode": {
+          "error": null,
+          "exit_code": 0,
+          "foreign_tools": [],
+          "response_timeout_seconds": 90,
+          "seconds": 17.338366291951388,
+          "status": "complete",
+          "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+          "tool_calls": 1,
+          "transport": "codex_cli",
+          "wall_time_overrun_seconds": 0.0
+        }
+      }
+    ],
+    "tool_errors": [],
+    "alternate_scope_read_count": 0,
+    "saved_notes": "Harbor Workspace retention monitoring policy:\n- Metric: renewed accounts / accounts due for renewal in the week, grouped by mutually exclusive plan at renewal eligibility; exclude trial signups. Unit ratio. Comparison is previous complete reporting week, UTC.\n- Materiality: notify business destination when symmetric within-plan retention change <= -0.05 ratio units. Pure mix shift is ignore even if aggregate falls. Unknown eligibility definition => insufficient_data to data destination.\n- Routing: business destination key team-9b9aad22a09fe443f335; data destination key team-d40b5d95d78af4b2d96c. No other recipients.\n- Data-gap policy: ask for corrected export or versioned definition; do not reconstruct missing rows or infer causation.\n- Validated sources: current complete Account health export company_mcp|resource-ab6a5d5969c67c01fa68; current Billing definitions source company_mcp|resource-f2565899b79da2c7dcaf. Use current-period sources for measurements; notes preserve policy/source knowledge only."
+  },
+  {
+    "company": "Harbor Workspace",
+    "brief": "Are customers sticking with us? Let customer success know when retention is really getting worse, rather than just because we signed up a different mix of customers.",
+    "arm": "luna_signalweave_jev",
+    "status": "complete",
+    "error": null,
+    "onboarding_seconds": 200.5678133330075,
+    "guide_calls": 1,
+    "author_tool_calls": 31,
+    "tool_histogram": {
+      "get_signalweave_guide": 1,
+      "list_catalog": 1,
+      "list_insight_cards": 1,
+      "ask_owner": 4,
+      "inspect_source": 2,
+      "analyze_source": 1,
+      "onboard_insight_card": 3,
+      "get_insight_card": 2,
+      "simulate_insight_card": 3,
+      "preview_investigation_report": 3,
+      "review_insight_card": 2,
+      "evaluate_card_workflow": 1,
+      "save_notes": 2,
+      "request_synthetic_owner_approval": 3,
+      "approve_insight_card": 1,
+      "finish_setup": 1
+    },
+    "first_successful_preview_tool_ordinal": 14,
+    "first_preview_wall_time": null,
+    "first_preview_time_limit": "Trace has per-tool duration, not timestamps covering intervening model time; do not infer time-to-first-value.",
+    "owner_interview": [
+      {
+        "topic": "metric_scope",
+        "answer": {
+          "answer": "Retention is renewed accounts divided by accounts due for renewal in the week, grouped by the plan at renewal eligibility. Trial signups are excluded. Plan cohorts are mutually exclusive.",
+          "known": true,
+          "topic": "metric_scope"
+        }
+      },
+      {
+        "topic": "materiality",
+        "answer": {
+          "answer": "Notify the business destination if the symmetric within-plan retention change is at most -0.05 in ratio units. A pure mix shift is ignore, even if the aggregate falls. An unknown eligibility definition requires insufficient_data to the data destination.",
+          "known": true,
+          "topic": "materiality"
+        }
+      },
+      {
+        "topic": "data_gaps",
+        "answer": {
+          "answer": "Ask for a corrected export or a versioned definition when needed. I cannot reconstruct missing rows, infer causation, or tell you a period's correct answer.",
+          "known": true,
+          "topic": "data_gaps"
+        }
+      },
+      {
+        "topic": "routing",
+        "answer": {
+          "answer": "business destination: team-9b9aad22a09fe443f335; data destination: team-d40b5d95d78af4b2d96c. Only these routes are authorized; no destructive actions.",
+          "known": true,
+          "topic": "routing"
+        }
+      }
+    ],
+    "owner_reviews": [
+      {
+        "approved": false,
+        "reasons": [
+          "Reject: why_watch says to notify Customer Success, but the only authorized notification recipient is the Business owner route team-9b9aad22a09fe443f335. Remove Customer Success or explicitly map that recipient to an authorized destination.",
+          "Reject: insufficient_data is triggered by undefined “incomplete required evidence”; evidence_requirements is empty and owner_answers explicitly identify unknown eligibility, not an arbitrary evidence-completeness condition. Define the exact missing fields/conditions that trigger the Data Operations route."
+        ],
+        "review_episode": {
+          "error": null,
+          "exit_code": 0,
+          "foreign_tools": [],
+          "response_timeout_seconds": 90,
+          "seconds": 33.17299737496069,
+          "status": "complete",
+          "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+          "tool_calls": 1,
+          "transport": "codex_cli",
+          "wall_time_overrun_seconds": 0.0
+        }
+      },
+      {
+        "approved": true,
+        "reasons": [
+          "Matches the glossary: retention is renewed accounts divided by accounts due for renewal, grouped by mutually exclusive plan at renewal eligibility, with trial signups excluded.",
+          "Uses the required comparison basis: the current week versus the previous complete UTC reporting week.",
+          "Preserves the exact materiality rule: notify only when the symmetric within-plan retention change is <= -0.05 ratio units.",
+          "Correctly treats a pure mix shift as ignore and does not present the accounting decomposition as causal evidence.",
+          "Maps notify to the authorized Business owner destination team-9b9aad22a09fe443f335.",
+          "Maps insufficient_data only to the authorized Data Operations destination for the stated missing, unknown, incomplete, or non-comparable data conditions."
+        ],
+        "review_episode": {
+          "error": null,
+          "exit_code": 0,
+          "foreign_tools": [],
+          "response_timeout_seconds": 90,
+          "seconds": 56.12070645799395,
+          "status": "complete",
+          "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+          "tool_calls": 1,
+          "transport": "codex_cli",
+          "wall_time_overrun_seconds": 0.0
+        }
+      }
+    ],
+    "tool_errors": [
+      {
+        "tool": "evaluate_card_workflow",
+        "error": {
+          "error": "ToolError",
+          "message": "Error executing tool evaluate_card_workflow: Current-source capture is a shadow check, not acceptance certification; supply independent historical snapshots for acceptance_outcomes."
+        }
+      }
+    ],
+    "alternate_scope_read_count": 0,
+    "saved_notes": "Harbor Workspace weekly retention policy: renewed accounts divided by accounts due for renewal, grouped by mutually exclusive plan at renewal eligibility; trial signups excluded. Compare previous complete UTC reporting week. Notify only authorized Business owner key team-9b9aad22a09fe443f335 when symmetric within-plan change <= -0.05 ratio. Ignore pure mix shift. Route insufficient_data only to Data Operations key team-d40b5d95d78af4b2d96c when versioned eligibility definition is unknown/missing, required retention comparison is missing, or coverage is incomplete/non-comparable. Fixed sources: company_mcp|resource-ab6a5d5969c67c01fa68 and company_mcp|resource-f2565899b79da2c7dcaf (v3). Exclude partner, pilot, sandbox, planning, archive, login and acquisition variants by catalog scope. Report baseline/current/delta/mix/within in ratio units; decomposition is accounting, not causal. Current period evidence must be refetched for future runs. Acceptance certification remains unassessed without independent historical owner-labeled snapshots."
+  },
+  {
+    "company": "Cinder Database Cloud",
+    "brief": "Watch for customer-facing database slowdowns. Connect the related signals before paging someone. We do not want a page for one hot CPU.",
+    "arm": "luna_bi",
+    "status": "complete",
+    "error": null,
+    "onboarding_seconds": 77.74851699999999,
+    "guide_calls": 0,
+    "author_tool_calls": 12,
+    "tool_histogram": {
+      "ask_owner": 4,
+      "list_catalog": 1,
+      "inspect_source": 2,
+      "save_notes": 2,
+      "request_synthetic_owner_approval": 2,
+      "finish_setup": 1
+    },
+    "first_successful_preview_tool_ordinal": null,
+    "first_preview_wall_time": null,
+    "first_preview_time_limit": "Trace has per-tool duration, not timestamps covering intervening model time; do not infer time-to-first-value.",
+    "owner_interview": [
+      {
+        "topic": "materiality",
+        "answer": {
+          "answer": "Investigate to the business destination when latency rises at least 20%, lag at least doubles, and at least two regions are affected. Isolated CPU spikes are ignore. Missing cluster coverage requires insufficient_data to the data destination. Never state a deployment caused an incident from timing alone.",
+          "known": true,
+          "topic": "materiality"
+        }
+      },
+      {
+        "topic": "metric_scope",
+        "answer": {
+          "answer": "Customer impact needs query p95 latency and replication lag in the same cluster population, with regional breadth. Rollout times and incident notes are corroboration, not proof of cause.",
+          "known": true,
+          "topic": "metric_scope"
+        }
+      },
+      {
+        "topic": "routing",
+        "answer": {
+          "answer": "business destination: team-a9701ad653c41de9a095; data destination: team-f8f76f00c083192dd0ae. Only these routes are authorized; no destructive actions.",
+          "known": true,
+          "topic": "routing"
+        }
+      },
+      {
+        "topic": "data_gaps",
+        "answer": {
+          "answer": "Ask for a corrected export or a versioned definition when needed. I cannot reconstruct missing rows, infer causation, or tell you a period's correct answer.",
+          "known": true,
+          "topic": "data_gaps"
+        }
+      }
+    ],
+    "owner_reviews": [
+      {
+        "approved": false,
+        "reasons": [
+          "Reject: the routing says “investigate/notify” to the business destination. The owner policy authorizes investigate → team-a9701ad653c41de9a095; notify is a distinct outcome and is not authorized. Remove the notify mapping and state only the authorized investigate and insufficient_data routes."
+        ],
+        "review_episode": {
+          "error": null,
+          "exit_code": 0,
+          "foreign_tools": [],
+          "response_timeout_seconds": 90,
+          "seconds": 22.11123774998123,
+          "status": "complete",
+          "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+          "tool_calls": 1,
+          "transport": "codex_cli",
+          "wall_time_overrun_seconds": 0.0
+        }
+      },
+      {
+        "approved": true,
+        "reasons": [
+          "Matches the owner rule: investigate only when customer-facing query p95 latency rises at least 20%, replication lag at least doubles, and at least two regions are affected; isolated CPU spikes are ignored.",
+          "Preserves the required comparison and population: previous complete reporting week, UTC source periods, and latency plus lag measured in the same customer-cluster population with regional breadth.",
+          "Preserves missing-data handling: incomplete cluster coverage produces insufficient_data to the data destination; missing rows are not reconstructed and causality is not inferred.",
+          "Uses only the authorized outcome routes: investigate to team-a9701ad653c41de9a095 and insufficient_data to team-f8f76f00c083192dd0ae, with no extra notify route or recipients.",
+          "Correctly limits rollout timing and incident notes to corroboration and does not claim deployment causality from timing alone."
+        ],
+        "review_episode": {
+          "error": null,
+          "exit_code": 0,
+          "foreign_tools": [],
+          "response_timeout_seconds": 90,
+          "seconds": 16.148931375006214,
+          "status": "complete",
+          "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+          "tool_calls": 1,
+          "transport": "codex_cli",
+          "wall_time_overrun_seconds": 0.0
+        }
+      }
+    ],
+    "tool_errors": [],
+    "alternate_scope_read_count": 0,
+    "saved_notes": "Cinder Database Cloud monitoring policy (owner-validated during onboarding):\n- Scope: customer-facing query p95 latency and replication lag measured in the same defined customer-cluster population, with regional breadth. Comparison is previous complete reporting week; source periods UTC. Rollout times and incident notes are corroboration only, never proof of causality.\n- Materiality: investigate when latency rises at least 20%, replication lag at least doubles, and at least 2 regions are affected. Isolated CPU spikes are ignore.\n- Routing: the investigate outcome routes only to business destination key team-a9701ad653c41de9a095. The insufficient_data outcome routes only to data destination key team-f8f76f00c083192dd0ae. No notify mapping and no other recipients.\n- Data gaps: do not reconstruct missing rows, infer causality, or fill missing populations with zeros. Ask for corrected export or versioned definition when needed. Use insufficient_data when cluster coverage is incomplete.\n- Claims: use observation, accounting_decomposition, association, hypothesis, causal honestly. Timing alone supports at most association/hypothesis, not causal.\n- Current source knowledge: company_mcp|resource-6dfa76e81a9d86bcbc86 is the inspected current company-wide customer-cluster latency/lag/region source; company_mcp|resource-a42da6d8d97166482a33 is the inspected current change calendar and corroboration only. Catalog excluded pilot/partner/sandbox/archive/forecast/load-test/CPU-only sources as out of scope.\n- Numeric vocabulary: latency.affected_regions (regions), latency.delta (ms), latency.rollout_lead_minutes (minutes)."
+  },
+  {
+    "company": "Cinder Database Cloud",
+    "brief": "Watch for customer-facing database slowdowns. Connect the related signals before paging someone. We do not want a page for one hot CPU.",
+    "arm": "luna_signalweave_jev",
+    "status": "failed",
+    "error": "no_structured_submission",
+    "onboarding_seconds": 156.05252679204568,
+    "guide_calls": 1,
+    "author_tool_calls": 18,
+    "tool_histogram": {
+      "get_signalweave_guide": 1,
+      "list_catalog": 1,
+      "list_insight_cards": 1,
+      "ask_owner": 5,
+      "onboard_insight_card": 4,
+      "get_insight_card": 1,
+      "preview_investigation_report": 1,
+      "evaluate_card_workflow": 2,
+      "save_notes": 1,
+      "request_synthetic_owner_approval": 1
+    },
+    "first_successful_preview_tool_ordinal": 12,
+    "first_preview_wall_time": null,
+    "first_preview_time_limit": "Trace has per-tool duration, not timestamps covering intervening model time; do not infer time-to-first-value.",
+    "owner_interview": [
+      {
+        "topic": "metric_scope",
+        "answer": {
+          "answer": "Customer impact needs query p95 latency and replication lag in the same cluster population, with regional breadth. Rollout times and incident notes are corroboration, not proof of cause.",
+          "known": true,
+          "topic": "metric_scope"
+        }
+      },
+      {
+        "topic": "materiality",
+        "answer": {
+          "answer": "Investigate to the business destination when latency rises at least 20%, lag at least doubles, and at least two regions are affected. Isolated CPU spikes are ignore. Missing cluster coverage requires insufficient_data to the data destination. Never state a deployment caused an incident from timing alone.",
+          "known": true,
+          "topic": "materiality"
+        }
+      },
+      {
+        "topic": "routing",
+        "answer": {
+          "answer": "business destination: team-a9701ad653c41de9a095; data destination: team-f8f76f00c083192dd0ae. Only these routes are authorized; no destructive actions.",
+          "known": true,
+          "topic": "routing"
+        }
+      },
+      {
+        "topic": "data_gaps",
+        "answer": {
+          "answer": "Ask for a corrected export or a versioned definition when needed. I cannot reconstruct missing rows, infer causation, or tell you a period's correct answer.",
+          "known": true,
+          "topic": "data_gaps"
+        }
+      },
+      {
+        "topic": "data_gaps",
+        "answer": {
+          "answer": "Ask for a corrected export or a versioned definition when needed. I cannot reconstruct missing rows, infer causation, or tell you a period's correct answer.",
+          "known": true,
+          "topic": "data_gaps"
+        }
+      }
+    ],
+    "owner_reviews": [
+      {
+        "approved": false,
+        "reasons": [
+          "The card adds action_confidence_threshold and investigation_threshold of 0.7. The owner policy authorizes investigation from the stated latency, lag, region, population, and coverage rules, but supplies no confidence prerequisite; these fields could block a valid investigation.",
+          "The artifact adds a rule that incomplete comparable-period evidence produces insufficient_data and routes to Data operations. The owner explicitly maps missing cluster coverage to insufficient_data, but only says to request a corrected export or versioned definition for other data gaps. Clarify the exact outcome and recipient for missing comparison evidence."
+        ],
+        "review_episode": {
+          "error": null,
+          "exit_code": 0,
+          "foreign_tools": [],
+          "response_timeout_seconds": 90,
+          "seconds": 48.47642800002359,
+          "status": "complete",
+          "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+          "tool_calls": 1,
+          "transport": "codex_cli",
+          "wall_time_overrun_seconds": 0.0
+        }
+      }
+    ],
+    "tool_errors": [
+      {
+        "tool": "onboard_insight_card",
+        "error": {
+          "error": "ValidationError",
+          "message": "'resource-6dfa76e81a9d86bcbc86' does not match '^[^|\\\\s]+\\\\|[^|\\\\s]+$'\n\nFailed validating 'pattern' in schema[0]['items']['properties']['ref']:\n    {'description': 'Exact authorized catalog identity in adapter|resource '\n                    'form.',\n     'minLength': 3,\n     'pattern': '^[^|\\\\s]+\\\\|[^|\\\\s]+$',\n     'title': 'Ref',\n     'type': 'string'}\n\nOn instance[0]['ref']:\n    'resource-6dfa76e81a9d86bcbc86'"
+        }
+      },
+      {
+        "tool": "onboard_insight_card",
+        "error": {
+          "error": "ToolError",
+          "message": "Error executing tool onboard_insight_card: 1 validation error for InsightCard\n  Value error, numeric condition source_key must reference a card source: company_mcp|resource-6dfa76e81a9d86bcbc86 [type=value_error, input_value={'id': 'card-customer-fac...y-b06fc32e549ebf0def71'}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/value_error"
+        }
+      },
+      {
+        "tool": "evaluate_card_workflow",
+        "error": {
+          "error": "ValidationError",
+          "message": "{} is not valid under any of the given schemas\n\nFailed validating 'anyOf' in schema['properties']['cases']['items']['properties']['resources']:\n    {'anyOf': [{'items': {'$ref': '#/$defs/ResourceSnapshot'},\n                'maxItems': 500,\n                'type': 'array'},\n               {'type': 'null'}],\n     'default': None,\n     'description': 'Exact normalized snapshots from inspection/preview, '\n                    'including source_key and contract.tenant_id; not ref '\n                    'strings or invented metadata. Use [] only to '\n                    'explicitly test missing resources.',\n     'title': 'Resources'}\n\nOn instance['cases'][2]['resources']:\n    {}"
+        }
+      },
+      {
+        "tool": "evaluate_card_workflow",
+        "error": {
+          "error": "ToolError",
+          "message": "Error executing tool evaluate_card_workflow: Current-source capture is a shadow check, not acceptance certification; supply independent historical snapshots for acceptance_outcomes."
+        }
+      }
+    ],
+    "alternate_scope_read_count": 0,
+    "saved_notes": "Policy for Cinder Database Cloud customer-facing database slowdown monitoring: use exact source company_mcp|resource-6dfa76e81a9d86bcbc86 (Database service: customer-cluster latency, replication lag, regional coverage); exclude pilot, partner, sandbox, archive, planning, and CPU-only sources. Compare current period with previous complete UTC reporting week for the same customer-cluster population. Customer impact requires query p95 latency and replication lag together with regional breadth; rollout times and incident notes are corroboration only, not proof of cause. Investigate when latency rises >=20%, replication lag at least doubles, and at least 2 regions are affected; route investigate to team-a9701ad653c41de9a095. Ignore isolated CPU spikes. If required cluster coverage or comparable-period evidence is incomplete, outcome insufficient_data; route to team-f8f76f00c083192dd0ae. Ask for corrected export or versioned definition when needed; never reconstruct missing rows or infer causation. Report current/baseline values, signed latency delta in ms, relative changes, affected regions, and supported mix/within effects when available. Current onboarding preview is not a reusable measurement: period-5d5e27bdc55171377121 at 2026-10-03T04:32:07.801171Z showed p95 100/100 ms, lag 10/10 ms, 0 regions, CPU 95%, but semantic coverage was unresolved and outcome insufficient_data. Full acceptance remains unassessed because independent historical snapshots were unavailable."
+  }
+]

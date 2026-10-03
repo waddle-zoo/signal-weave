@@ -161,8 +161,6 @@ async def test_empty_required_intersection_rejects_defaults_and_blocks_explicit_
 async def test_undeclared_sources_warn_without_blocking_or_inferring(tmp_path, name):
     server = make_server(tmp_path, catalog=catalog_with_windows([]))
     args = arguments(name)
-    if name != "draft_insight_card":
-        args["selected_sources"][0]["available_comparison_windows"] = ["caller-injected"]
     response = await dispatch(server, name, args)
     assert response["card"]["comparison_windows"] == ["previous_period", "trailing_4_period_average"]
     card_id = response["card"]["id"]
@@ -170,6 +168,15 @@ async def test_undeclared_sources_warn_without_blocking_or_inferring(tmp_path, n
     assert any("undeclared" in w and "unverified" in w for w in review["warnings"])
     assert windows_blocker(review) is None
     assert (await dispatch(server, "approve_insight_card", {"card_id": card_id}))["status"] == "approved"
+
+
+@pytest.mark.parametrize("name", ["propose_insight_card", "onboard_insight_card"])
+async def test_selected_source_cannot_inject_comparison_windows(tmp_path, name):
+    server = make_server(tmp_path, catalog=catalog_with_windows([]))
+    args = arguments(name)
+    args["selected_sources"][0]["available_comparison_windows"] = ["caller-injected"]
+    with pytest.raises(Exception, match="available_comparison_windows"):
+        await dispatch(server, name, args)
 
 
 @pytest.mark.parametrize("name", ["propose_insight_card", "onboard_insight_card"])

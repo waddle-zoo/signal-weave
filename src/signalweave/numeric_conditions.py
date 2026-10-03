@@ -23,7 +23,9 @@ from pydantic import (
 
 from .diagnostics import AnalysisReport, analyze_comparison
 
-NumericMeasurement = Literal["baseline", "current", "delta", "contribution"]
+NumericMeasurement = Literal[
+    "baseline", "current", "delta", "contribution", "within_effect", "mix_effect"
+]
 NumericComparator = Literal["<", "<=", "==", ">=", ">", "!="]
 NumericConditionStatus = Literal["true", "false", "unknown"]
 
@@ -34,18 +36,32 @@ class NumericCondition(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     text: str = Field(min_length=1, max_length=2000)
-    source_key: str = Field(min_length=1, max_length=120)
-    comparison_key: str = Field(min_length=1, max_length=160)
+    source_key: str = Field(
+        min_length=1,
+        max_length=120,
+        description="Exact selected_sources.key for the source supplying this comparison.",
+    )
+    comparison_key: str = Field(
+        min_length=1,
+        max_length=160,
+        description="Exact AnalyticalComparison.key, not a comparison-window name.",
+    )
     measurement: NumericMeasurement = Field(
         description=(
-            "Select total baseline, current, delta, or a segment contribution. "
-            "Segment contribution may use segment=null for any segment or an exact segment label."
+            "Select total baseline, current, delta, a symmetric rate within_effect or "
+            "mix_effect, or a segment contribution. Within/mix effects require the "
+            "symmetric_rate_decomposition_v1 report method and never accept a segment. "
+            "Segment contribution may use segment=null for any segment or an exact "
+            "segment label."
         )
     )
     segment: str | None = Field(
         default=None,
         max_length=500,
-        description="For contribution checks, null checks any segment; a string matches that exact label.",
+        description=(
+            "Only for contribution checks: null checks any segment; a string matches "
+            "that exact label. Aggregate effects never accept a segment."
+        ),
     )
     unit: str = Field(min_length=1, max_length=80)
     threshold: FiniteFloat
@@ -95,8 +111,8 @@ class NumericConditionResult(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     condition_text: str
-    source_key: str
-    comparison_key: str
+    source_key: str = Field(description="Selected SourceRef.key bound to this condition.")
+    comparison_key: str = Field(description="Exact AnalyticalComparison.key, not a comparison-window name.")
     measurement: NumericMeasurement
     segment: str | None = None
     matched_segment: str | None = None
@@ -223,6 +239,29 @@ def _evaluate_one(condition: NumericCondition, analyses: Iterable[AnalysisReport
     if not _finite(report.baseline) or not _finite(report.current) or not _finite(report.delta):
         return _result(condition, status="unknown", report=report, reason="Matching analysis has no finite total value.")
 
+    if condition.measurement in {"within_effect", "mix_effect"}:
+        if report.method != "symmetric_rate_decomposition_v1":
+            return _result(
+                condition,
+                status="unknown",
+                report=report,
+                reason="Within/mix effects require a symmetric rate decomposition report.",
+            )
+        effect = getattr(report, condition.measurement)
+        if not _finite(effect):
+            return _result(
+                condition,
+                status="unknown",
+                report=report,
+                reason=f"Matching analysis has no finite {condition.measurement}.",
+            )
+        value = abs(effect) if condition.absolute else effect
+        return _result(
+            condition,
+            status="true" if _compare(value, condition.comparator, condition.threshold) else "false",
+            report=report,
+            value=value,
+        )
     if condition.measurement == "contribution":
         contributions = [
             row for row in report.contributions if _finite(row.contribution)

@@ -155,6 +155,8 @@ async def test_computed_contribution_contract_and_action_criteria_are_policy_bou
     assert "computed_analysis_semantics" not in original
     meanings = call["state"]["computed_analysis_semantics"]
     assert "not a percentage share" in meanings["contribution"]
+    assert "not any single segment" in meanings["within_effect"]
+    assert "change in group weights" in meanings["mix_effect"]
     assert "not automatically an action trigger" in meanings["policy"]
     criterion = call["questions"]["outcome"].criteria["notify"]
     assert "decision_guidance" in criterion and "trigger conditions and exceptions" in criterion

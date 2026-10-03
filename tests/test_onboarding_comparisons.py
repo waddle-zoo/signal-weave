@@ -17,7 +17,7 @@ async def test_onboarding_persists_reviewed_catalog_comparison_keys(tmp_path, ex
         why_watch="Understand the measured movement.",
         # Caller fields cannot clear or replace the reviewed catalog obligations.
         selected_sources=[{
-            "ref": "superset|dashboard:7", "required_comparison_keys": ["caller-injected"],
+            "ref": "superset|dashboard:7",
         }] if explicit_selection else None,
         delivery_methods=[{
             "key": "owner", "outcome": "notify", "label": "Owner", "destination": "agent://owner",
@@ -53,7 +53,7 @@ async def test_legacy_catalog_does_not_infer_requirements_from_snapshot_or_calle
         what_to_watch="Checkout conversion changes.",
         why_watch="Review the measured movement.",
         selected_sources=[{
-            "ref": "superset|dashboard:7", "required_comparison_keys": ["caller-injected"],
+            "ref": "superset|dashboard:7",
         }],
         retrieval_mode="fixed",
     )
@@ -92,3 +92,17 @@ def test_catalog_comparison_keys_are_optional_bounded_and_serialize():
     assert ResourceContract.model_validate_json(contract.model_dump_json()) == contract
     with pytest.raises(ValidationError):
         ResourceContract(required_comparison_keys=[f"comparison-{index}" for index in range(21)])
+
+
+async def test_selected_source_cannot_inject_comparison_requirements(tmp_path):
+    server = make_server(tmp_path)
+    with pytest.raises(Exception, match="required_comparison_keys"):
+        await tool(server, "onboard_insight_card")(
+            what_to_watch="Checkout conversion changes.",
+            why_watch="Review the measured movement.",
+            selected_sources=[{
+                "ref": "superset|dashboard:7",
+                "required_comparison_keys": ["caller-injected"],
+            }],
+            retrieval_mode="fixed",
+        )

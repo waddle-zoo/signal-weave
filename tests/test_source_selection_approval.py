@@ -442,12 +442,12 @@ async def test_confirmation_cannot_bypass_lost_source_authorization(tmp_path, mu
         catalog.resources[0] = resource.model_copy(update={
             "contract": resource.contract.model_copy(update=updates),
         })
-    await assert_rejected(server, card_id, review["source_selection_fingerprint"], match="stale")
-    current = (await tool(server, "review_insight_card")(card_id))["review"]
-    assert "selection-outside-discovery" in {b["code"] for b in current["blockers"]}
     await assert_rejected(
-        server, card_id, current["source_selection_fingerprint"], match="selection-outside-discovery",
+        server, card_id, review["source_selection_fingerprint"],
+        match="authorized adapter catalog",
     )
+    with pytest.raises(Exception, match="authorized adapter catalog"):
+        await tool(server, "review_insight_card")(card_id)
 
 
 @pytest.mark.parametrize("retrieval,investigation", [

@@ -21,7 +21,7 @@ from evaluations.bootstrap_agent_trial import run_trial
 from evaluations.bootstrap_scenarios import build_scenarios, dataset_digest
 
 VERSION = "enterprise-onboarding-journeys-v1"
-EXECUTION_VERSION = "enterprise-onboarding-repair-v2"
+EXECUTION_VERSION = "enterprise-onboarding-repair-v3"
 SEED = 20261003
 VARIANTS = (
     ("Archive", "Superseded weekly definition; retained for historical audit.", 60),
@@ -98,6 +98,9 @@ def protocol(scenarios: list[dict], *, jev_budget: int = 144) -> dict:
             "Separate owner action rules from unconditional evidence assessments in guide.",
             "Both owner reviewers receive bounded current public source contracts, not measurements or labels.",
             "Both report writers get identical inspected-citation validation and population caveats.",
+            "Exact within_effect/mix_effect numeric bindings; rendered checks expose executable selectors.",
+            "Owner reviewers distinguish code-owned execution contracts from business intent, and inspect typed numeric bindings.",
+            "Source-key and optional-watch schema guidance; both agents instructed to continue bounded correction after a draft/rejection.",
         ],
         "companies": [{"name": s["public"]["company"], "family": s["private"]["family"],
                        "brief": s["public"]["brief"], "assets": len(s["public"]["catalog"]),

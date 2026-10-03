@@ -145,6 +145,101 @@ def test_rate_conditions_compare_fraction_in_the_report_unit():
     assert mismatched.status == "unknown"
 
 
+def rate_effect_comparison(*, baseline_total, current_total, segments):
+    return comparison(kind="rate").model_copy(update={
+        "baseline_total": PeriodValue(**baseline_total),
+        "current_total": PeriodValue(**current_total),
+        "segments": [
+            SegmentPair(
+                segment=segment,
+                baseline=PeriodValue(**baseline),
+                current=PeriodValue(**current),
+            )
+            for segment, baseline, current in segments
+        ],
+    })
+
+
+def test_pure_mix_can_trigger_segment_contribution_without_within_effect():
+    report = analyze_comparison(
+        "source-a",
+        rate_effect_comparison(
+            baseline_total={"numerator": 100, "denominator": 200},
+            current_total={"numerator": 180, "denominator": 300},
+            segments=[
+                ("a", {"numerator": 80, "denominator": 100}, {"numerator": 160, "denominator": 200}),
+                ("b", {"numerator": 20, "denominator": 100}, {"numerator": 20, "denominator": 100}),
+            ],
+        ),
+    )
+    contribution = evaluate(
+        condition(measurement="contribution", threshold=0.05, comparator=">"), report=report
+    )[0]
+    within = evaluate(
+        condition(measurement="within_effect", threshold=0.05, comparator=">"), report=report
+    )[0]
+
+    assert report.status == "complete"
+    assert report.within_effect == pytest.approx(0)
+    assert report.mix_effect == pytest.approx(0.1)
+    assert contribution.status == "true"
+    assert within.status == "false"
+
+
+def test_within_effect_can_be_true_while_no_segment_contribution_reaches_threshold():
+    report = analyze_comparison(
+        "source-a",
+        rate_effect_comparison(
+            baseline_total={"numerator": 150, "denominator": 300},
+            current_total={"numerator": 168, "denominator": 300},
+            segments=[
+                ("a", {"numerator": 50, "denominator": 100}, {"numerator": 65, "denominator": 100}),
+                ("b", {"numerator": 50, "denominator": 100}, {"numerator": 65, "denominator": 100}),
+                ("offset", {"numerator": 50, "denominator": 100}, {"numerator": 38, "denominator": 100}),
+            ],
+        ),
+    )
+    within = evaluate(
+        condition(measurement="within_effect", threshold=0.05, comparator=">"), report=report
+    )[0]
+    contribution = evaluate(
+        condition(measurement="contribution", threshold=0.06, comparator=">="), report=report
+    )[0]
+
+    assert report.within_effect == pytest.approx(0.06)
+    assert report.mix_effect == pytest.approx(0)
+    assert within.status == "true"
+    assert contribution.status == "false"
+
+
+@pytest.mark.parametrize("measurement", ["within_effect", "mix_effect"])
+def test_aggregate_rate_effects_are_unknown_for_additive_reports(measurement):
+    result = evaluate(condition(measurement=measurement), report=analyze_comparison("source-a", comparison()))[0]
+    assert result.status == "unknown"
+    assert "symmetric rate decomposition" in result.reason
+
+
+def test_effects_require_finite_recomputed_report_values():
+    rate_report = analyze_comparison("source-a", comparison(kind="rate", unit="fraction"))
+    tampered = rate_report.model_copy(update={"within_effect": 999.0})
+    assert evaluate(
+        condition(measurement="within_effect", unit="fraction"), report=tampered
+    )[0].status == "unknown"
+
+
+def test_numeric_schema_describes_exact_source_and_comparison_bindings():
+    properties = NumericCondition.model_json_schema()["properties"]
+    assert "selected_sources.key" in properties["source_key"]["description"]
+    assert "AnalyticalComparison.key" in properties["comparison_key"]["description"]
+    assert "window" in properties["comparison_key"]["description"]
+    assert "relative_delta" not in json.dumps(properties)
+
+
+def test_aggregate_effects_reject_segment_selectors():
+    with pytest.raises(ValidationError, match="segment selector"):
+        condition(measurement="within_effect", segment="a")
+
+
 @pytest.mark.parametrize(
     "reports",
     [

@@ -661,6 +661,15 @@ class JevJudger:
             # Net movement can cancel even when individual effects are material.
             state = {**state, "computed_analysis_semantics": {
                 "delta": "Current aggregate minus baseline aggregate, in the comparison unit.",
+                "within_effect": (
+                    "Aggregate within-group rate change from the symmetric rate decomposition, "
+                    "in the rate unit. This is not any single segment's contribution or total delta."
+                ),
+                "mix_effect": (
+                    "Aggregate rate change attributable to the change in group weights, "
+                    "in the rate unit. Within effect plus mix effect reconciles to total delta; "
+                    "neither is causal attribution."
+                ),
                 "contribution": (
                     "A segment's signed additive contribution to delta, in the same unit as delta; "
                     "not a percentage share of delta and not proof of a causal mechanism. "

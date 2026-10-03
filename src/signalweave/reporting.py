@@ -1072,8 +1072,15 @@ def render_investigation_report(report: InvestigationReport) -> str:
     if report.numeric_conditions:
         lines.extend(["### Numeric checks (computed, not action rules)"])
         for item in report.numeric_conditions:
+            selector = item.measurement
+            if item.measurement == "contribution":
+                selector += f" for segment {item.segment}" if item.segment is not None else " for any segment"
+            if item.absolute:
+                selector = f"absolute({selector})"
             lines.append(f"- {_md(item.condition_text)}: **{_md(item.status)}** "
-                         f"({_md(item.source_key)} / {_md(item.comparison_key)}).")
+                         f"({_md(item.source_key)} / {_md(item.comparison_key)}). "
+                         f"Binding: {_md(selector)} {_md(item.comparator)} "
+                         f"{_md(item.threshold)} {_md(item.expected_unit)}.")
     if report.judgments:
         lines.extend(["### Decision assessment", report.judgments[0].interpretation, ""])
         if any(item.status == "unknown" for item in report.judgments):

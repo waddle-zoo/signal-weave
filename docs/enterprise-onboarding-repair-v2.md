@@ -1,6 +1,6 @@
 # Agent onboarding repair: prospective regression
 
-Status: implementation under review; live acceptance not yet demonstrated.
+Status: **first repair probe failed**. Do not claim acceptance or readiness.
 
 The first messy-catalog trial completed only one of six treatment onboardings.
 Its failures and raw evidence remain in
@@ -75,3 +75,45 @@ have scope distractors, not 144 independent real enterprise datasets. Owner revi
 uses a model, not a real person. There is no real connector installation, live
 delivery, scheduler, query bill, months-long operation or causal ground truth.
 Passing this regression supports these simulated workflows, not universal adoption.
+
+## Probe 01 result
+
+The unchanged dataset ran at `4440c19`; all 16 planned episode records were
+retained. Every one of the 16 recorded runtime/harness source hashes matches
+that committed revision. There were 34 live Jev attempts, no provider errors,
+and 20 Codex invocations including seven independent synthetic owner reviews.
+The attempt budget was not exhausted. No model retries or manual card repairs
+were made.
+
+| Endpoint | Luna baseline | Luna + SignalWeave + live Jev |
+| --- | ---: | ---: |
+| Completed onboarding | 2/2 | 1/2 |
+| Completed later reports | 6/6 | 3/6 |
+| Exact structured reports | 6/6 | 3/6 |
+| Correct native outcome and recipient | Not applicable | 2/6 intended; 2/3 returned |
+
+The three completed treatment reports passed the structured scorer, but the
+reporting agent corrected one native outcome. This is **not** successful native
+automation. Narrative review remains separate; structured scores are not proof
+of every prose claim. Missing treatment runs cannot count as latency/cost savings.
+
+Harbor setup completed. Its card mislabeled an any-segment contribution condition
+as an aggregate within-plan change. Diagnostics computed both within and mix
+effects, but the card's typed measurement selector did not expose either. Jev
+selected ignore for the quiet period with 0.64 support, below the unchanged 0.70
+floor; the runtime consequently returned investigate. The final Luna report
+corrected the outcome. This calls for exact measurement bindings, not a lower floor.
+
+Cinder setup did not complete. After one policy-review rejection, the author
+created another draft then stopped without preview/review/approval. The reviewer
+also interpreted confidence/retrieval settings as business prerequisites without
+their execution semantics. The correction budget was not exhausted. Other
+rejections, including an extra team name and widened data-gap rule, were legitimate.
+
+Raw evidence and integrity export:
+[probe archive](evidence/enterprise-onboarding-repair-v2-probe-01/).
+The original failed six-company run remains intact. The full-suite run on this
+freeze reported 2,053 passes, four skips and seven old-contract assertion failures:
+four expected ignored extra source fields, and three expected a later stale-review
+error rather than the new earlier authorization rejection. Update those tests
+to assert strict rejection; do not restore silent coercion.

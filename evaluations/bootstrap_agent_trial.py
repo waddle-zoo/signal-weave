@@ -82,6 +82,8 @@ COMMON_SYSTEM = (
     "can be reused without fetching it again; inspect more sources if needed to validate "
     "the analysis. The supplied period as_of is the simulated current clock. "
     "Do not infer causality from correlation or fill missing populations with zeros. "
+    "Model uncertainty is not proof of missing records: distinguish unresolved semantic "
+    "judgments from source-reported gaps and cite evidence for either claim. "
     "Do not perform external notifications. Recipients are authorized destination keys, "
     "not invented people or URLs. Citations use adapter|resource refs actually inspected. "
     "Include every per-claim citation in the top-level evidence_refs too. Canonical numeric "
@@ -94,8 +96,12 @@ COMMON_SYSTEM = (
     "Use numeric_vocabulary identifiers and units for numeric_claims; do not claim unavailable "
     "facts. Tag claims honestly as observation, accounting_decomposition, association, "
     "hypothesis or causal. Evidence needs to support both the quantities and their meaning. "
-    "During onboarding, save reusable notes and call finish_setup when ready. During "
-    "monitoring, call submit_analysis to finish; prose alone is not a submission."
+    "During onboarding, save reusable notes and call finish_setup when ready. "
+    "A draft or an edited draft is not completion: repeat inspection, preview "
+    "and independent review after changes. A correctable tool error or first review rejection "
+    "is not terminal while the stated correction budget remains. Never bypass approval; "
+    "ask the simulated owner through ask_owner for missing business policy. "
+    "During monitoring, call submit_analysis to finish; prose alone is not a submission."
 )
 
 
@@ -786,6 +792,7 @@ def source_fingerprint() -> dict:
              "src/signalweave/engine.py", "src/signalweave/models.py", "src/signalweave/onboarding.py",
              "src/signalweave/diagnostics.py", "src/signalweave/mcp_server.py",
              "src/signalweave/getting_started.py", "src/signalweave/evaluation.py",
+             "src/signalweave/numeric_conditions.py", "src/signalweave/reporting.py",
              "src/signalweave/typesafe_adapter.py")
     hashes = {name: hashlib.sha256((root / name).read_bytes()).hexdigest() for name in paths}
     revision = subprocess.run(["git", "rev-parse", "HEAD"], cwd=root, capture_output=True,

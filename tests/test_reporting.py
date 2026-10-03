@@ -7,6 +7,7 @@ from pydantic import ValidationError
 
 from signalweave.diagnostics import AnalyticalComparison, SegmentContribution, analyze_comparison
 from signalweave.models import InsightCard, InsightResult, InvestigationMode, ResourceSnapshot
+from signalweave.numeric_conditions import NumericCondition
 from signalweave.reporting import (
     build_investigation_report,
     render_investigation_report,
@@ -69,6 +70,20 @@ def card(*, optional_source: bool = False, question: bool = False) -> InsightCar
             }
         ],
     )
+
+
+def test_rendered_numeric_checks_expose_executable_binding_not_only_authored_label():
+    policy = card()
+    policy.numeric_conditions = [NumericCondition(
+        text="Owner-written label that must not hide the chosen measurement",
+        source_key="sales", comparison_key="volume-by-channel", measurement="contribution",
+        unit="count", threshold=-10, comparator="<=",
+    )]
+    report = build_investigation_report(policy, result(complete_analysis()))
+    rendered = render_investigation_report(report)
+    assert "Binding: contribution for any segment" in rendered
+    assert "-10.0 count" in rendered
+    assert "sales / volume-by-channel" in rendered
 
 
 def result(*analyses, **updates) -> InsightResult:
