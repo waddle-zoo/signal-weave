@@ -34,6 +34,10 @@ def test_everything_tracking_fixture_is_messy_and_cross_enterprise():
         for case in cases
     )
     assert all(
+        any(resource.metadata.get("evidence_role") == "owner" for resource in case.resources)
+        for case in cases
+    )
+    assert all(
         any(resource.metadata.get("required") is False for resource in case.resources)
         for case in cases
     )

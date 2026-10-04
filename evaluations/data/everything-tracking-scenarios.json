@@ -92,7 +92,8 @@
         {"adapter": "warehouse", "kind": "capacity", "role": "diagnostic", "label": "Warehouse capacity", "risk_direction": "down"},
         {"adapter": "carrier", "kind": "service", "role": "corroborates", "label": "Carrier service levels", "risk_direction": "down"},
         {"adapter": "inventory", "kind": "availability", "role": "diagnostic", "label": "Inventory availability", "risk_direction": "down"},
-        {"adapter": "airflow", "kind": "freshness", "role": "quality", "label": "Fulfillment data pipeline"}
+        {"adapter": "airflow", "kind": "freshness", "role": "quality", "label": "Fulfillment data pipeline"},
+        {"adapter": "docs", "kind": "operating_plan", "role": "owner", "label": "Fulfillment operating plan"}
       ]
     },
     "payment-trust": {
@@ -162,7 +163,8 @@
         {"adapter": "experiments", "kind": "experiment", "role": "corroborates", "label": "Experiment results", "risk_direction": "down"},
         {"adapter": "release", "kind": "deployment", "role": "diagnostic", "label": "Release timeline", "risk_direction": "up"},
         {"adapter": "support", "kind": "tickets", "role": "diagnostic", "label": "User friction", "risk_direction": "up"},
-        {"adapter": "airflow", "kind": "freshness", "role": "quality", "label": "Product event pipeline"}
+        {"adapter": "airflow", "kind": "freshness", "role": "quality", "label": "Product event pipeline"},
+        {"adapter": "docs", "kind": "rollout_plan", "role": "owner", "label": "Product rollout plan"}
       ]
     },
     "cloud-reliability": {
@@ -185,7 +187,8 @@
         {"adapter": "incident", "kind": "incident", "role": "corroborates", "label": "Incident timeline", "risk_direction": "up"},
         {"adapter": "release", "kind": "deployment", "role": "diagnostic", "label": "Recent deploys", "risk_direction": "up"},
         {"adapter": "cloud", "kind": "capacity", "role": "diagnostic", "label": "Capacity pressure", "risk_direction": "up"},
-        {"adapter": "airflow", "kind": "freshness", "role": "quality", "label": "Platform telemetry"}
+        {"adapter": "airflow", "kind": "freshness", "role": "quality", "label": "Platform telemetry"},
+        {"adapter": "release", "kind": "change_calendar", "role": "owner", "label": "Platform change calendar"}
       ]
     },
     "delivery-promise": {
@@ -208,7 +211,8 @@
         {"adapter": "fleet", "kind": "capacity", "role": "corroborates", "label": "Fleet capacity", "risk_direction": "down"},
         {"adapter": "weather", "kind": "external", "role": "diagnostic", "label": "Weather context", "risk_direction": "up"},
         {"adapter": "carrier", "kind": "service", "role": "diagnostic", "label": "Carrier exceptions", "risk_direction": "up"},
-        {"adapter": "inventory", "kind": "availability", "role": "quality", "label": "Dispatch completeness"}
+        {"adapter": "inventory", "kind": "availability", "role": "quality", "label": "Dispatch completeness"},
+        {"adapter": "scheduling", "kind": "operating_plan", "role": "owner", "label": "Network operating plan"}
       ]
     },
     "fleet-cost": {
@@ -323,7 +327,8 @@
         {"adapter": "supplier", "kind": "performance", "role": "corroborates", "label": "Supplier reliability", "risk_direction": "down"},
         {"adapter": "erp", "kind": "purchase_orders", "role": "diagnostic", "label": "Purchase orders", "risk_direction": "up"},
         {"adapter": "planning", "kind": "demand", "role": "diagnostic", "label": "Demand plan", "risk_direction": "up"},
-        {"adapter": "inventory", "kind": "availability", "role": "quality", "label": "Inventory freshness"}
+        {"adapter": "inventory", "kind": "availability", "role": "quality", "label": "Inventory freshness"},
+        {"adapter": "planning", "kind": "operating_plan", "role": "owner", "label": "Supply plan"}
       ]
     }
   }
