@@ -79,6 +79,27 @@ def test_bare_interactive_setup_and_single_registration_command(tmp_path, monkey
     assert env["SIGNALWEAVE_PRINCIPAL_ID"] == "local"
 
 
+def test_interactive_setup_can_finish_a_codex_handoff(tmp_path, monkeypatch, capsys):
+    from signalweave import client_setup
+
+    monkeypatch.setattr(setup.getpass, "getpass", lambda _: "test-jev-credential")
+    visible = iter(["", "", "skip", "codex", "", ""])
+    monkeypatch.setattr("builtins.input", lambda _: next(visible))
+    monkeypatch.setattr(
+        client_setup,
+        "register_agent",
+        lambda home, agent: client_setup.AgentRegistrationStatus(
+            agent, "registered", "Test registration succeeded",
+        ),
+    )
+    monkeypatch.setenv("SIGNALWEAVE_HOME", str(tmp_path / "wizard"))
+    monkeypatch.setattr(sys, "argv", ["signalweave", "setup"])
+    cli.main()
+    output = capsys.readouterr().out
+    assert "Test registration succeeded" in output
+    assert "To register with your agent" not in output
+
+
 def test_human_setup_can_add_two_connector_types_in_one_walkthrough(tmp_path, monkeypatch, capsys):
     catalog = private(tmp_path / "catalog.json", json.dumps([{
         "adapter": "trino", "resource": "analytics.orders", "kind": "table", "title": "Orders",
@@ -103,6 +124,38 @@ def test_human_setup_can_add_two_connector_types_in_one_walkthrough(tmp_path, mo
     assert "Local configuration saved" in output
 
 
+def test_adding_a_source_preserves_the_selected_claude_agent(tmp_path, monkeypatch):
+    catalog = private(tmp_path / "catalog.json", json.dumps([{
+        "adapter": "trino", "resource": "analytics.orders", "kind": "table", "title": "Orders",
+    }]))
+    home = tmp_path / "claude-home"
+    setup.setup_local(
+        home=home, non_interactive=True, key_file=private(tmp_path / "jev", "test-jev"),
+        source="skip", agent="claude",
+    )
+    monkeypatch.setattr(sys, "argv", [
+        "signalweave", "connections", "add", "--home", str(home), "--non-interactive",
+        "--source", "trino", "--url", "https://trino.example", "--catalog-file", str(catalog),
+    ])
+    cli.main()
+    assert setup.read_config(home)[1]["SIGNALWEAVE_AGENT"] == "claude"
+
+
+def test_noninteractive_connection_changes_require_an_explicit_source(tmp_path, monkeypatch, capsys):
+    home = tmp_path / "home"
+    setup.setup_local(
+        home=home, non_interactive=True, key_file=private(tmp_path / "jev", "test-jev"),
+        source="skip", agent="codex",
+    )
+    monkeypatch.setattr(sys, "argv", [
+        "signalweave", "connections", "add", "--home", str(home), "--non-interactive",
+    ])
+    with pytest.raises(SystemExit) as error:
+        cli.main()
+    assert error.value.code == 1
+    assert "require --source" in capsys.readouterr().err
+
+
 @pytest.mark.parametrize("register", [False, True])
 def test_registration_requires_explicit_cli_opt_in(options, monkeypatch, capsys, register):
     from signalweave import client_setup
@@ -121,6 +174,18 @@ def test_registration_requires_explicit_cli_opt_in(options, monkeypatch, capsys,
     cli.main()
     assert len(calls) == int(register)
     assert "get_signalweave_guide" in capsys.readouterr().out
+
+
+def test_setup_registration_is_non_fatal_for_claude_manual_handoff(options, monkeypatch, capsys):
+    monkeypatch.setattr(sys, "argv", [
+        "signalweave", "setup", "--home", str(options["home"]), "--non-interactive",
+        "--key-file", str(options["key_file"]), "--source", "skip", "--agent", "claude",
+        "--register-agent",
+    ])
+    cli.main()
+    output = capsys.readouterr().out
+    assert "claude mcp add" in output
+    assert "Local configuration saved" in output
 
 
 def test_connect_failure_keeps_successful_local_setup(options, monkeypatch, capsys):

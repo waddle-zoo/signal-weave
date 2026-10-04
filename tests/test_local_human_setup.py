@@ -9,7 +9,7 @@ import pytest
 
 import signalweave.cli as cli
 from signalweave.local_health import live_source_report
-from signalweave.local_setup import initialize, set_credential, setup_local
+from signalweave.local_setup import SetupError, initialize, read_config, set_credential, setup_local
 from signalweave.local_status import local_status
 from signalweave.local_ui import create_local_ui
 
@@ -84,6 +84,40 @@ def test_human_can_add_a_trino_catalog_connection(local_home, tmp_path):
     trino = next(item for item in report["connections"] if item["type"] == "trino")
     assert trino["status"] == "configured"
     assert trino["detail"] == "catalog configured"
+
+
+def test_human_can_configure_preset_bearer_credentials(local_home, tmp_path):
+    access = _private(tmp_path / "preset-access", "test-preset-access")
+    root, _ = setup_local(
+        local_home,
+        source="preset",
+        url="https://workspace.app.preset.io",
+        access_token_file=access,
+        preset_auth="bearer",
+        non_interactive=True,
+        agent="codex",
+    )
+    _, configured = read_config(root)
+    assert configured["PRESET_ACCESS_TOKEN_FILE"] == "preset-access-token.key"
+    assert "PRESET_API_TOKEN_NAME_FILE" not in configured
+    assert "test-preset-access" not in (root / "config.toml").read_text()
+    assert local_status(root)["credentials"]["PRESET_ACCESS_TOKEN"] == "configured"
+
+
+def test_credential_rotation_does_not_create_mixed_preset_auth_modes(local_home, tmp_path):
+    name = _private(tmp_path / "preset-name", "test-preset-name")
+    secret = _private(tmp_path / "preset-secret", "test-preset-secret")
+    setup_local(
+        local_home,
+        source="preset",
+        url="https://workspace.app.preset.io",
+        token_name_file=name,
+        secret_file=secret,
+        non_interactive=True,
+        agent="codex",
+    )
+    with pytest.raises(SetupError, match="switch credential modes"):
+        set_credential(local_home, "preset-access-token", value="not-mixed")
 
 
 def test_status_and_ui_are_secret_free_and_show_next_steps(local_home):

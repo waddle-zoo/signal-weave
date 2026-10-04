@@ -65,10 +65,10 @@ TypeSafe; local installation does not mean offline inference. Supported adapters
 and reviewed company MCP mappings are required—not every arbitrary MCP response
 can be analyzed automatically.
 
-The unpublished rc2 development binary adds opt-in Codex registration with
-`signalweave setup --agent codex --register-agent` and a bundled
-`get_signalweave_guide` MCP tool for **query**, **report**, and **monitor** paths.
-See the [first-use flow](docs/local-install.md#2-connect-your-agent).
+The native preview can register Codex during the guided setup with an explicit
+confirmation (or with `signalweave setup --agent codex --register-agent` in an
+unattended flow), and bundles a `get_signalweave_guide` MCP tool for **query**,
+**report**, and **monitor** paths. See the [first-use flow](docs/local-install.md#2-connect-your-agent).
 
 <details>
 <summary>Develop from source or run the local Docker demo</summary>

@@ -405,6 +405,22 @@ def set_credential(
         raise SetupError("Use either a hidden prompt value or --file, not both")
     root, configured = read_config(home)
     key = _credential_name(name)
+    preset_pair = (
+        "PRESET_API_TOKEN_NAME", "PRESET_API_TOKEN_NAME_FILE",
+        "PRESET_API_TOKEN_SECRET", "PRESET_API_TOKEN_SECRET_FILE",
+    )
+    if key == "PRESET_ACCESS_TOKEN" and any(configured.get(item) for item in preset_pair):
+        raise SetupError(
+            "Preset API-token credentials are configured; use `connections update "
+            "--source preset --preset-auth bearer` to switch credential modes"
+        )
+    if key in preset_pair and any(
+        configured.get(item) for item in ("PRESET_ACCESS_TOKEN", "PRESET_ACCESS_TOKEN_FILE")
+    ):
+        raise SetupError(
+            "Preset bearer credentials are configured; use `connections update "
+            "--source preset --preset-auth api-token` to switch credential modes"
+        )
     preserve_spaces = key == "SUPERSET_PASSWORD"
     if secret_file is not None:
         candidate = _read_private(Path(secret_file).expanduser().absolute())
@@ -470,6 +486,8 @@ def setup_local(
     home: str | Path | None = None, *, key_file: str | Path | None = None,
     source: str | None = None, url: str | None = None, username: str | None = None,
     secret_file: str | Path | None = None, token_name_file: str | Path | None = None,
+    access_token_file: str | Path | None = None,
+    preset_auth: str | None = None,
     manifest: str | Path | None = None, tenant: str | None = None,
     principal: str | None = None, agent: str | None = None, non_interactive: bool = False,
     catalog_file: str | Path | None = None, trino_user: str | None = None,
@@ -563,9 +581,13 @@ def setup_local(
         source = source or ("skip" if non_interactive else _ask_source())
         if source not in {"superset", "preset", "trino", "mcp", "skip"}:
             raise SetupError("Choose superset, preset, trino, mcp, or skip")
-        if (source not in {"superset", "preset", "trino"} and (url or secret_file)) or (
+        if preset_auth not in {None, "api-token", "bearer"}:
+            raise SetupError("Preset auth must be api-token or bearer")
+        if preset_auth is not None and source != "preset":
+            raise SetupError("--preset-auth requires --source preset")
+        if (source not in {"superset", "preset", "trino"} and (url or secret_file or access_token_file)) or (
             source != "superset" and username is not None
-        ) or (source != "preset" and token_name_file) or (source != "mcp" and manifest):
+        ) or (source != "preset" and (token_name_file or access_token_file)) or (source != "mcp" and manifest):
             raise SetupError("Source options do not match the selected source")
         if source != "trino" and any(
             value is not None
@@ -590,10 +612,47 @@ def setup_local(
                 add("SUPERSET_USERNAME", user)
                 credential("SUPERSET_PASSWORD", "superset-password.key", secret_file, "Superset password")
             else:
-                if values.get("PRESET_ACCESS_TOKEN") or values.get("PRESET_ACCESS_TOKEN_FILE"):
+                requested_mode = preset_auth
+                if requested_mode is None and not non_interactive and not (
+                    values.get("PRESET_ACCESS_TOKEN") or values.get("PRESET_ACCESS_TOKEN_FILE")
+                    or values.get("PRESET_API_TOKEN_NAME") or values.get("PRESET_API_TOKEN_NAME_FILE")
+                    or values.get("PRESET_API_TOKEN_SECRET") or values.get("PRESET_API_TOKEN_SECRET_FILE")
+                ):
+                    requested_mode = _ask(
+                        "Preset authentication (api-token or bearer)", "api-token"
+                    ).strip().lower()
+                    if requested_mode in {"access-token", "access_token", "token"}:
+                        requested_mode = "bearer"
+                    if requested_mode not in {"api-token", "bearer"}:
+                        raise SetupError("Choose api-token or bearer for Preset authentication")
+                existing_access_mode = bool(
+                    values.get("PRESET_ACCESS_TOKEN") or values.get("PRESET_ACCESS_TOKEN_FILE")
+                )
+                if requested_mode == "api-token" and access_token_file:
+                    raise SetupError("--access-token-file requires --preset-auth bearer")
+                access_mode = (
+                    requested_mode == "bearer"
+                    or (requested_mode is None and (existing_access_mode or access_token_file is not None))
+                )
+                if access_mode:
                     if token_name_file or secret_file:
-                        raise SetupError("Existing Preset access-token mode will not be replaced")
+                        raise SetupError("Use either Preset access-token mode or API-token pair mode")
+                    if values.get("PRESET_API_TOKEN_NAME") or values.get("PRESET_API_TOKEN_NAME_FILE") \
+                            or values.get("PRESET_API_TOKEN_SECRET") or values.get("PRESET_API_TOKEN_SECRET_FILE"):
+                        if not update:
+                            raise SetupError("Existing Preset API-token mode will not be replaced; use --update")
+                        for name in (
+                            "PRESET_API_TOKEN_NAME", "PRESET_API_TOKEN_NAME_FILE",
+                            "PRESET_API_TOKEN_SECRET", "PRESET_API_TOKEN_SECRET_FILE",
+                        ):
+                            values.pop(name, None)
+                    credential("PRESET_ACCESS_TOKEN", "preset-access-token.key", access_token_file, "Preset access token")
                 else:
+                    if values.get("PRESET_ACCESS_TOKEN") or values.get("PRESET_ACCESS_TOKEN_FILE"):
+                        if not update:
+                            raise SetupError("Existing Preset access-token mode will not be replaced; use --update")
+                        values.pop("PRESET_ACCESS_TOKEN", None)
+                        values.pop("PRESET_ACCESS_TOKEN_FILE", None)
                     credential("PRESET_API_TOKEN_NAME", "preset-token-name.key", token_name_file, "Preset API token name")
                     credential("PRESET_API_TOKEN_SECRET", "preset-token-secret.key", secret_file, "Preset API token secret")
                 values.setdefault("PRESET_DATA_MODE", "cached_results")

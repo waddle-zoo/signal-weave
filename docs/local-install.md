@@ -12,19 +12,17 @@ x64 with glibc 2.35+ (not Alpine/musl). macOS builds are not Developer-ID signed
 or notarized; company device-management policies may block them. Do not disable
 those controls—use an administrator-approved installation path instead.
 
-> **Local preview:** `v0.2.0rc1` is a prerelease for trying the local runtime.
-> Installation and bounded live-Jev execution have been tested. The paired
-> [Codex/Jev trial](codex-bootstrap-trial-2026-10-01.md) exposed unresolved
-> card-approval gaps; easy onboarding and comparative benefit are not proven.
-> The stable v0.1.0 release has no native assets.
+> **Local preview:** `v0.2.0rc2` is a prerelease for trying the local runtime.
+> Installation, guided setup, local agent handoff, and bounded live-Jev execution
+> have been tested. This preview is not a claim of enterprise analytical quality.
 
 ## 1. Install once, then use the guided setup
 
 ```sh
 installer="$(mktemp)"
 curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' \
-  https://github.com/waddle-zoo/signal-weave/releases/download/v0.2.0rc1/install.sh -o "$installer" &&
-  sh "$installer" --version v0.2.0rc1
+  https://github.com/waddle-zoo/signal-weave/releases/download/v0.2.0rc2/install.sh -o "$installer" &&
+  sh "$installer" --version v0.2.0rc2
 ```
 
 ```sh
@@ -36,7 +34,7 @@ That one guided command walks through the setup in this order:
 1. TypeSafe Jev key (hidden input)
 2. Local tenant and principal identity (safe defaults are `local`)
 3. One or more source connectors and their credentials
-4. Codex or Claude Code handoff
+4. Codex or Claude Code handoff (with an explicit confirmation before changing agent config)
 
 It writes a private local home at `~/.signalweave`; it does not require TOML
 editing or an OpenAI key. After each connector, the wizard asks whether to add
@@ -52,13 +50,20 @@ evaluations send configured evidence to TypeSafe; this is local storage, not
 offline inference. The pinned version explicitly opts into this preview;
 previews are never selected by the installer's default `latest` lookup.
 
+For an interactive setup, SignalWeave offers to connect the selected agent at the
+end. Press Enter to accept. If the agent CLI is not installed, or if you choose
+Claude Code, it prints the exact command to review and run. To make the choice
+explicit in scripts, use `--register-agent` or `--no-register-agent`.
+
 After setup, the normal human path is:
 
 ```sh
 signalweave status
 signalweave connections add       # add another source without editing TOML
+signalweave connections update    # change a source endpoint or credential mode
+signalweave credentials set NAME  # rotate one secret without editing config
 signalweave health --live         # test catalog access; does not spend a Jev judgment
-signalweave connect codex          # or: signalweave connect claude
+signalweave connect codex          # or: signalweave connect claude, if skipped during setup
 signalweave ui                     # optional local health page at 127.0.0.1:8765
 ```
 
@@ -78,15 +83,25 @@ same probe and renders only secret-free results. Run an approved card or the
 agent's workflow when you want to test the provider judgment path.
 
 The local wizard supports Superset, hosted Preset, Trino with a normalized
-catalog JSON file, and reviewed read-only MCP source manifests. Other company
-systems can be brought in through that MCP bridge without teaching the local
-CLI to store arbitrary provider secrets. To add or repair one connector later,
-rerun `signalweave connections add` or use `connections update`; to rotate one
-secret, use `signalweave credentials set NAME`.
+catalog JSON file, and reviewed read-only MCP source manifests. For Preset,
+the wizard supports either an API-token name/secret pair or a bearer access
+token. For example:
+
+```sh
+signalweave setup --source preset --url https://workspace.app.preset.io \
+  --preset-auth bearer --access-token-file /private/path/preset-access-token \
+  --agent codex --register-agent
+```
+
+Other company systems can be brought in through the reviewed MCP bridge without
+teaching the local CLI to store arbitrary provider secrets. To add or repair one
+connector later, rerun `signalweave connections add` or use `connections update`;
+to rotate one secret, use `signalweave credentials set NAME`. Run
+`signalweave --help` at any time for the complete command list.
 
 ## 2. Connect your agent
 
-The **unpublished rc2 development binary** can register with Codex during setup:
+The native preview can register with Codex during setup:
 
 ```sh
 signalweave setup --agent codex --register-agent
@@ -99,9 +114,6 @@ entry is left untouched; registration errors preserve your local setup. Close
 concurrent agent-configuration edits while connecting. Registration is not a
 live source test. Claude Code receives the exact registration command to review
 and run because SignalWeave must not silently edit a user's Claude configuration.
-The published rc1 still uses the commands below; do not pass rc2-only flags to
-rc1.
-
 Run **one** command for the agent you use:
 
 ```sh
@@ -112,7 +124,7 @@ codex mcp add signalweave -- "$HOME/.local/bin/signalweave" serve --home "$HOME/
 claude mcp add --transport stdio --scope user signalweave -- "$HOME/.local/bin/signalweave" serve --home "$HOME/.signalweave"
 ```
 
-Restart or reconnect the agent. In rc2, ask:
+Restart or reconnect the agent. Then ask:
 
 > Use SignalWeave's getting-started guide. Help me understand what changed in
 > my business using the BI sources I already have. Start with one useful report,
@@ -130,9 +142,6 @@ paths to the agent without making source or model requests:
 You explain the business intent; the agent writes the card. Existing sources
 must supply the definitions and measurement contracts. It should not ask you to
 fill in a large JSON form or invent a definition that your BI stack cannot support.
-For rc1, describe the same investigation directly; its MCP does not contain the
-new getting-started tool.
-
 The agent helps author the card; you approve its meaning and evidence. Connecting
 an arbitrary MCP is not automatic normalization of its responses. Scheduling and
 delivery stay with your agent or existing scheduler.

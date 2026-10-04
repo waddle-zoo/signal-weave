@@ -59,6 +59,11 @@ def main() -> None:
     setup.add_argument("--username", help="Superset username")
     setup.add_argument("--secret-file", help="Private Superset password or Preset API-token-secret file")
     setup.add_argument("--token-name-file", help="Private Preset API-token-name file")
+    setup.add_argument("--access-token-file", help="Private Preset bearer/access-token file")
+    setup.add_argument(
+        "--preset-auth", choices=["api-token", "bearer"],
+        help="Preset credential mode (defaults to API-token pair; bearer accepts --access-token-file)",
+    )
     setup.add_argument("--manifest", help="Reviewed read-only MCP source manifest (no server is launched)")
     setup.add_argument("--catalog-file", help="Private normalized Trino catalog JSON file")
     setup.add_argument("--user", dest="trino_user", help="Trino user")
@@ -68,7 +73,14 @@ def main() -> None:
     setup.add_argument("--tenant", help="Local tenant identifier (default: existing setting or local)")
     setup.add_argument("--principal", help="Local principal identifier (default: existing setting or local)")
     setup.add_argument("--agent", choices=["codex", "claude"])
-    setup.add_argument("--register-agent", action="store_true", help="Opt in to agent CLI registration; existing entries are not replaced")
+    setup.add_argument(
+        "--register-agent", dest="register_agent", action="store_true", default=None,
+        help="Register the selected agent in this setup flow when its CLI is available",
+    )
+    setup.add_argument(
+        "--no-register-agent", dest="register_agent", action="store_false",
+        help="Save setup without changing agent configuration",
+    )
     setup.add_argument("--update", action="store_true", help="Allow replacing existing settings or credentials")
     connect = commands.add_parser("connect", help="Register an existing local setup with your agent")
     connect.add_argument("--home", help="Local home (default: SIGNALWEAVE_HOME or ~/.signalweave)")
@@ -109,6 +121,8 @@ def main() -> None:
         connection.add_argument("--username", help="Superset username")
         connection.add_argument("--secret-file", help="Private password or Preset API-token-secret file")
         connection.add_argument("--token-name-file", help="Private Preset API-token-name file")
+        connection.add_argument("--access-token-file", help="Private Preset bearer/access-token file")
+        connection.add_argument("--preset-auth", choices=["api-token", "bearer"])
         connection.add_argument("--manifest", help="Reviewed read-only MCP source manifest")
         connection.add_argument("--catalog-file", help="Private normalized Trino catalog JSON file")
         connection.add_argument("--user", dest="trino_user", help="Trino user")
@@ -168,8 +182,13 @@ def main() -> None:
             print("Local configuration saved. No network requests or source processes were started.")
             print("Local identity scopes this single-user process; it is not provider authentication.")
             print("Credentials and live source access remain unverified. Review and simulate cards before approval.")
-            if register:
-                _connect_agent(home, agent)
+            if register is True or (register is None and guided_sources and _ask_yes_no(
+                f"\nConnect SignalWeave to {agent.title()} now? [Y/n]: ", default=True,
+            )):
+                # A missing agent CLI or Claude's intentionally manual path must
+                # not discard a successful local setup. The command remains in
+                # the output so the user can finish the handoff explicitly.
+                _connect_agent(home, agent, required=False)
             else:
                 print("To register with your agent, review and run this command:")
                 print(agent_registration(home, agent))
@@ -231,6 +250,12 @@ def main() -> None:
                 return
             from .local_setup import read_config
 
+            if args.non_interactive and args.source is None:
+                raise SetupError(
+                    "Non-interactive connection changes require --source; "
+                    "use `--source skip` only with the top-level setup command"
+                )
+
             try:
                 _, existing = read_config(args.home)
             except SetupError:
@@ -242,6 +267,8 @@ def main() -> None:
                 "username": args.username,
                 "secret_file": args.secret_file,
                 "token_name_file": args.token_name_file,
+                "access_token_file": args.access_token_file,
+                "preset_auth": getattr(args, "preset_auth", None),
                 "manifest": args.manifest,
                 "catalog_file": getattr(args, "catalog_file", None),
                 "trino_user": getattr(args, "trino_user", None),
@@ -253,7 +280,7 @@ def main() -> None:
                 # Agent registration is a separate explicit command. The
                 # connection editor must not ask a human for an unrelated
                 # agent choice just to save a source.
-                "agent": args.agent or "codex",
+                "agent": args.agent or existing.get("SIGNALWEAVE_AGENT") or "codex",
                 "non_interactive": args.non_interactive,
                 "update": args.connection_update,
             }
@@ -365,10 +392,13 @@ def _print_status(report: dict[str, object]) -> None:
             print(f"  {step}")
 
 
-def _ask_yes_no(prompt: str) -> bool:
+def _ask_yes_no(prompt: str, *, default: bool = False) -> bool:
     """Treat a closed input stream as the safe, non-mutating answer."""
     try:
-        return input(prompt).strip().lower() in {"y", "yes"}
+        answer = input(prompt).strip().lower()
+        if not answer:
+            return default
+        return answer in {"y", "yes"}
     except (EOFError, StopIteration):
         return False
 
@@ -388,7 +418,7 @@ def _print_connections(report: dict[str, object]) -> None:
         print(f"  {item.get('label', item.get('type', 'source'))}: {item.get('status', 'unknown')} ({detail})")
 
 
-def _connect_agent(home: Path, agent: str) -> None:
+def _connect_agent(home: Path, agent: str, *, required: bool = True) -> None:
     from .client_setup import register_agent
 
     status = register_agent(home, agent)
@@ -401,6 +431,9 @@ def _connect_agent(home: Path, agent: str) -> None:
         print(status.command)
     if status.outcome == "manual_required":
         print("The local setup is unchanged; run the command above, then reconnect the agent.")
+        return
+    if not required:
+        print("The local setup is saved; finish the agent handoff with the command above.")
         return
     raise SystemExit(1)
 

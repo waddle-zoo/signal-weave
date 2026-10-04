@@ -38,7 +38,7 @@ bundle Python, not source-server runtimes or company credentials.
 
 Only a pushed `vMAJOR.MINOR.PATCH` or `vMAJOR.MINOR.PATCHrcN` tag matching
 `pyproject.toml` can publish. The `rcN` form follows Python's release-candidate
-version spelling (for example `v0.2.0rc1`). All three builds must pass.
+version spelling (for example `v0.2.0rc2`). All three builds must pass.
 Use an annotated tag: its annotation becomes the release notes.
 Publication creates a new draft, uploads
 archives, per-file checksums, `SHA256SUMS`, and the installer, and only then
@@ -72,7 +72,7 @@ sh install.sh --version vVERSION
 sh install.sh --version vVERSION --replace
 ```
 
-For this local preview, replace `vVERSION` with `v0.2.0rc1`. Default `latest`
+For this local preview, replace `vVERSION` with `v0.2.0rc2`. Default `latest`
 never accepts a prerelease; it does not silently opt users into preview builds.
 
 `--replace` opts into replacing an existing regular executable; without it the
