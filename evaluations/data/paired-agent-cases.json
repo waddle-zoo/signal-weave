@@ -25,6 +25,7 @@
         "title": "Weekly growth pulse",
         "what_to_watch": "Qualified signups and the related growth signals.",
         "why_watch": "Notify growth leadership only when a material movement needs attention.",
+        "decision_guidance": "Ignore when the cached evidence is within the approved operating range; do not notify anyone.",
         "watch_for": ["A material movement that cached context does not already explain."],
         "questions": ["Is the current evidence sufficient to act?", "Should anyone be notified?"]
       },
@@ -47,6 +48,7 @@
         "title": "Weekly growth pulse",
         "what_to_watch": "Qualified signups and the related growth signals.",
         "why_watch": "Do not interrupt growth leadership for expected seasonal movement.",
+        "decision_guidance": "Ignore an expected movement when the approved campaign context explains it; do not notify growth leadership.",
         "watch_for": ["A movement that is material and not explained by approved context."],
         "questions": ["Is this movement already explained?", "Should anyone be notified?"]
       },
@@ -69,6 +71,7 @@
         "title": "Weekly growth pulse",
         "what_to_watch": "Qualified signups and the related growth signals.",
         "why_watch": "Notify growth leadership when a material movement is corroborated and actionable.",
+        "decision_guidance": "Notify growth leadership when a material decline is corroborated by the related operating signal; do not claim a causal explanation that the evidence does not establish.",
         "watch_for": ["A material decline corroborated by a related operating signal."],
         "questions": ["Is the movement real?", "Who should be notified?"]
       },
@@ -92,6 +95,7 @@
         "title": "Weekly growth pulse",
         "what_to_watch": "Qualified signups and signals that can explain a material movement.",
         "why_watch": "Give growth leadership a useful diagnosis rather than a bare alarm.",
+        "decision_guidance": "Investigate when a material movement has only a plausible driver; do not notify leadership until the investigation establishes an actionable explanation.",
         "watch_for": ["A material movement whose driver is not visible in cached charts."],
         "questions": ["What changed?", "Which authorized source can explain why?"]
       },
@@ -115,6 +119,7 @@
         "title": "Weekly growth pulse",
         "what_to_watch": "Whether the growth dashboard is trustworthy enough for action.",
         "why_watch": "Do not notify on stale or failed source data.",
+        "decision_guidance": "Escalate the freshness or source-contract failure to data-platform; do not notify growth leadership about the business movement.",
         "watch_for": ["A freshness or source-contract failure."],
         "questions": ["Can the current evidence be interpreted?", "Who owns the data issue?"]
       },
@@ -137,6 +142,7 @@
         "title": "Weekly growth pulse",
         "what_to_watch": "Qualified signups across the executive dashboard and governed data definition.",
         "why_watch": "Resolve definition conflicts before making a business decision.",
+        "decision_guidance": "Investigate conflicting populations or grains before any business notification or automatic action.",
         "watch_for": ["Related charts disagree because they use different populations or grains."],
         "questions": ["Are these numbers measuring the same thing?", "Should the movement be acted on?"]
       },
@@ -159,6 +165,7 @@
         "title": "Weekly growth pulse",
         "what_to_watch": "Growth, activation, and paid acquisition signals together.",
         "why_watch": "Find one useful explanation across related analytical assets.",
+        "decision_guidance": "Investigate a cross-dashboard movement when a shared driver is plausible but not established; do not notify leadership until the investigation confirms an actionable explanation.",
         "watch_for": ["Several cards move together and may share a driver."],
         "questions": ["What changed across the cluster?", "Is there one shared source to inspect?"]
       },

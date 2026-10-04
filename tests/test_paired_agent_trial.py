@@ -38,6 +38,7 @@ def test_both_arms_use_the_same_shared_input_shape():
     }
     assert "human-authored-card" in shared["context_fields"]
     assert "tenant-and-permission-scope" in shared["context_fields"]
+    assert shared["card"]["decision_guidance"]
 
 
 def test_query_executor_records_expensive_work_without_sleeping():
