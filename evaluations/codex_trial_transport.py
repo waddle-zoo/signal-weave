@@ -222,7 +222,7 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
             instructions += (
                 " A SignalWeave evaluation bundle is present in the opening context. Treat it as the "
                 "authoritative current-period decision surface: copy its typed outcome and the "
-                "delivery-method destination keys into submit_analysis, and use its evidence, "
+                "canonical recipient keys into submit_analysis, and use its evidence, "
                 "analyses, source references and report in the submission. Do not re-judge or "
                 "replace the bundle's outcome from the raw narrative. In particular, do not turn "
                 "insufficient_data into ignore, and do not turn investigate into notify. Do not re-read a source "
@@ -234,7 +234,11 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
                 "refs in top-level evidence_refs too. A source-level number is not a complete "
                 "business claim when the bundle attaches additional required provenance. "
                 "The bundle's evidence is still subject to the card policy and does not license claims "
-                "that are absent from its cited facts.")
+                "that are absent from its cited facts. For routing, a delivery_methods[].key such as "
+                "business or data is only a card-local route alias; it is not the submit_analysis "
+                "recipient. Resolve the method by exact delivery_methods[].destination against "
+                "business.destinations[].destination, then submit the matching business.destinations[].key. "
+                "Never submit the alias, a label, or the URI when the canonical key is available.")
         if session.phase == "monitoring" and shared_card is not None:
             instructions += (
                 " Both arms were given the identical owner-reviewed card snapshot in the opening context. "

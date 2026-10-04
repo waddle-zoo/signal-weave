@@ -726,7 +726,14 @@ class ResourceSnapshot(BaseModel):
 
 
 class DeliveryMethod(BaseModel):
-    """A configured way to deliver one outcome to a caller-owned destination."""
+    """A configured way to deliver one outcome to a caller-owned destination.
+
+    ``key`` is the stable caller-owned route identifier used by the delivery
+    adapter. It is not a human label or an instruction for the downstream
+    agent. ``destination`` is the exact endpoint/URI bound to that identifier;
+    callers should resolve delivery through the pair rather than guessing from
+    ``label``.
+    """
 
     key: str = Field(min_length=1, max_length=120)
     outcome: Outcome

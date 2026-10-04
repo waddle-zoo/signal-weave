@@ -90,7 +90,9 @@ def getting_started(task: GuideTask = "start") -> dict:
                 "the quiet branch: state what happens when actionable conditions are not met. "
                 "Preserve the owner's data-repair instructions as well as the escalation route. Check "
                 "exact outcome-to-destination mappings. Copy destination identifiers from the "
-                "authorized directory, never retype them from memory. Explain any proposed "
+                "authorized directory, never retype them from memory. A card-local route key, "
+                "human label, and destination URI are different fields; when a caller has a "
+                "canonical recipient directory, resolve the recipient by exact URI equality. Explain any proposed "
                 "meaning change and obtain owner agreement before testing it."
             ),
             "before_preview": (
