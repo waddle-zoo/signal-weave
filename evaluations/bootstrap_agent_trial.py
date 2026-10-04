@@ -434,6 +434,23 @@ def card_fingerprint(card: dict) -> str:
     return digest({key: val for key, val in card.items() if key not in ignored})
 
 
+def same_card_monitoring_observed(rows: list[dict[str, Any]]) -> bool:
+    """Check card equality per paired company/period, not across companies."""
+    monitoring_card_digests: dict[tuple[str, str], set[str]] = {}
+    for row in rows:
+        if row.get("phase") != "monitoring":
+            continue
+        key = (str(row.get("scenario_id")), str(row.get("period_id")))
+        digest_value = row.get("shared_card_digest")
+        monitoring_card_digests.setdefault(key, set()).add(
+            str(digest_value) if digest_value else ""
+        )
+    return bool(monitoring_card_digests) and all(
+        len(digests) == 1 and "" not in digests
+        for digests in monitoring_card_digests.values()
+    )
+
+
 class ToolSession:
     def __init__(self, public: dict, adapter: PublicSourceAdapter, server, treatment: bool,
                  *, owner_reviewer=None, onboarding_surface: str = "full"):
@@ -1361,14 +1378,10 @@ async def run_trial(args, *, scenarios_override: list[dict] | None = None) -> di
         and isinstance(e.get("response"), dict) and e["response"].get("model")})
     report["live_jev_observed"] = bool(report["resolved_jev_models"])
     report["comparative_eligible"] &= len(report["resolved_jev_models"]) <= 1
-    monitoring_card_digests = {
-        row.get("shared_card_digest") for row in rows
-        if row.get("phase") == "monitoring"
-    }
-    report["same_card_monitoring_observed"] = (
-        bool(monitoring_card_digests) and None not in monitoring_card_digests
-        and len(monitoring_card_digests) == 1
-    )
+    # A different company legitimately has a different card.  The fairness
+    # assertion is pair-scoped: every company/period must have one identical
+    # non-empty digest across the two arms.
+    report["same_card_monitoring_observed"] = same_card_monitoring_observed(rows)
     if not config.get("same_card_monitoring", False):
         report["comparative_eligible"] = False
     if config.get("agent_transport") == "codex_cli":

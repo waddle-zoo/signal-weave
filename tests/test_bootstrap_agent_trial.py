@@ -84,6 +84,23 @@ def test_push_gated_ignore_preserves_reported_numeric_facts_without_waking_agent
     ) is None
 
 
+def test_same_card_monitoring_is_scoped_to_each_company_period_pair():
+    rows = [
+        {"phase": "monitoring", "scenario_id": "company-a", "period_id": "p1",
+         "shared_card_digest": "card-a"},
+        {"phase": "monitoring", "scenario_id": "company-a", "period_id": "p1",
+         "shared_card_digest": "card-a"},
+        {"phase": "monitoring", "scenario_id": "company-b", "period_id": "p1",
+         "shared_card_digest": "card-b"},
+        {"phase": "monitoring", "scenario_id": "company-b", "period_id": "p1",
+         "shared_card_digest": "card-b"},
+    ]
+    assert trial.same_card_monitoring_observed(rows)
+
+    rows[-1]["shared_card_digest"] = "different-card-b"
+    assert not trial.same_card_monitoring_observed(rows)
+
+
 def test_explicit_regression_subset_preserves_whole_companies_fixture_order_and_inputs():
     scenarios = build_scenarios(seed=20261002)
     before = copy.deepcopy(scenarios)
