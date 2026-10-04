@@ -453,14 +453,37 @@ class ToolSession:
         self.setup_source_context: dict | None = None
 
     def owner_source_context(self) -> dict:
-        from evaluations.bootstrap_owner_review import project_source_context
+        from evaluations.bootstrap_owner_review import MAX_CATALOG_ITEMS, project_source_context
 
         if self.setup_complete and self.setup_source_context is not None:
             return copy.deepcopy(self.setup_source_context)
         # Only the current episode is retained by this adapter. Never serialize
         # the scenario, payload measurements, future periods or private labels.
+        catalog = [item.model_dump(mode="json") for item in self.adapter.catalog]
+        # The independent reviewer has a deliberately bounded context contract.
+        # A real connector may expose thousands of assets, so a large catalog
+        # must be reduced before the reviewer sees it rather than failing
+        # onboarding. Preserve every inspected asset and every card anchor, then
+        # fill the remaining slots in stable adapter/resource order. This is
+        # context shaping only; the full authorized catalog remains available to
+        # the onboarding/runtime services and both trial arms see the same list.
+        keep_refs = set(self.adapter.inspected)
+        if self.latest_card:
+            keep_refs.update(
+                f"{source.get('adapter')}|{source.get('resource')}"
+                for source in self.latest_card.get("sources", [])
+                if source.get("adapter") and source.get("resource")
+            )
+        prioritized = [item for item in catalog if (
+            f"{item.get('adapter')}|{item.get('resource')}" in keep_refs
+        )]
+        remainder = sorted(
+            (item for item in catalog if item not in prioritized),
+            key=lambda item: (str(item.get("adapter", "")), str(item.get("resource", ""))),
+        )
+        bounded_catalog = [*prioritized, *remainder[:max(0, MAX_CATALOG_ITEMS - len(prioritized))]]
         return project_source_context({
-            "catalog": [item.model_dump(mode="json") for item in self.adapter.catalog],
+            "catalog": bounded_catalog,
             "inspected_sources": [
                 {**self.adapter.snapshots[ref], "ref": ref}
                 for ref in sorted(self.adapter.inspected) if ref in self.adapter.snapshots

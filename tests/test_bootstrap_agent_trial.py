@@ -17,6 +17,7 @@ from signalweave.models import (
     InsightResult,
     Observation,
     PrincipalContext,
+    ResourceDescriptor,
     ResourceSnapshot,
     SourceRef,
 )
@@ -124,6 +125,32 @@ async def test_product_tool_parity_includes_guide_sources_preview_and_workflow(t
     assert "evaluate_card_workflow" not in names
     common_names = {item["name"] for item in trial.common_tools(public, "onboarding")}
     assert names - common_names - {"request_synthetic_owner_approval"} <= trial.ONBOARDING_PRODUCT_TOOLS
+
+
+async def test_owner_review_context_bounds_large_catalog_and_keeps_card_anchor(tmp_path, public):
+    session = make_session(tmp_path, public, treatment=True)
+    session.adapter.catalog.extend(
+        ResourceDescriptor(
+            adapter="superset",
+            resource=f"noise:{index}",
+            kind="dashboard",
+            title=f"Unrelated asset {index}",
+            description="A separate asset outside the selected workflow.",
+        )
+        for index in range(80)
+    )
+    anchor = session.adapter.catalog[-1]
+    session.latest_card = {
+        "sources": [{"adapter": anchor.adapter, "resource": anchor.resource}]
+    }
+
+    context = session.owner_source_context()
+
+    catalog_refs = {
+        f"{item['adapter']}|{item['resource']}" for item in context["catalog"]
+    }
+    assert len(context["catalog"]) == 64
+    assert f"{anchor.adapter}|{anchor.resource}" in catalog_refs
 
 
 async def test_full_onboarding_surface_retains_advanced_product_tools(tmp_path, public):
