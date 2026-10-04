@@ -135,6 +135,34 @@ COMMON_SYSTEM = (
     "During monitoring, call submit_analysis to finish; prose alone is not a submission."
 )
 
+# The typed Jev result is the product's decision surface.  The downstream Luna
+# agent may format the evidence bundle or add a bounded narrative, but it must
+# not silently re-judge the decision from raw prose.  Keep this handoff explicit
+# in the API trial as well as the Codex transport; otherwise the benchmark would
+# measure an undocumented prompt difference rather than SignalWeave.
+SIGNALWEAVE_BUNDLE_INSTRUCTIONS = (
+    " A SignalWeave evaluation bundle is present in the opening context. Treat it as the "
+    "authoritative current-period decision surface: copy its typed outcome and the "
+    "canonical recipient keys into submit_analysis, and use its evidence, analyses, "
+    "source references and report in the submission. Do not re-judge or replace the "
+    "bundle's outcome from raw narrative. In particular, do not turn insufficient_data "
+    "into ignore, and do not turn investigate into notify. Do not re-read a source just "
+    "to verify a complete bundle; inspect an additional source only when the bundle "
+    "explicitly reports a missing or incomplete obligation needed by the owner's policy. "
+    "For every numeric_claim, copy every adapter|resource ref in the matching bundle "
+    "provenance entry's query_refs into that claim's evidence_refs, including quality "
+    "or completeness sources that did not contain the numeric value; keep those refs in "
+    "top-level evidence_refs too. A source-level number is not a complete business "
+    "claim when the bundle attaches additional required provenance. The bundle's "
+    "evidence is still subject to the card policy and does not license claims that are "
+    "absent from its cited facts. For routing, a delivery_methods[].key such as business "
+    "or data is only a card-local route alias; it is not the submit_analysis recipient. "
+    "Resolve the method by exact delivery_methods[].destination against "
+    "business.destinations[].destination, then submit the matching "
+    "business.destinations[].key. Never submit the alias, a label, or the URI when the "
+    "canonical key is available."
+)
+
 
 def canonical(value: Any) -> str:
     return json.dumps(value, sort_keys=True, ensure_ascii=False, separators=(",", ":"),
@@ -876,6 +904,8 @@ async def luna_episode(session: ToolSession, *, key: str, effort: str, budget: R
             "use the shared card plus ordinary connector tools; the SignalWeave arm must use its "
             "card-backed evaluation bundle. Do not infer a different policy from the card."
         )
+    if session.phase == "monitoring" and session.treatment and bundle is not None:
+        instructions += SIGNALWEAVE_BUNDLE_INSTRUCTIONS
     prompt = {"phase": session.phase, "period": session.adapter.period_context,
               "business": session.public, "saved_notes": session.notes,
               "shared_card": shared_card,

@@ -152,7 +152,12 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
                         max_tool_calls, max_output_tokens, bundle=None,
                         timeout_seconds=360, instructions_override=None,
                         prompt_override=None) -> dict:
-    from evaluations.bootstrap_agent_trial import COMMON_SYSTEM, MODEL, canonical
+    from evaluations.bootstrap_agent_trial import (
+        COMMON_SYSTEM,
+        MODEL,
+        SIGNALWEAVE_BUNDLE_INSTRUCTIONS,
+        canonical,
+    )
     shared_card = getattr(session, "shared_card", None)
 
     if instructions_override is not None or prompt_override is not None:
@@ -219,26 +224,7 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
                 "for this delivery-disabled shadow trial, keep acceptance unassessed, then finish_setup. "
                 "This does not waive source, policy, authorization or simulation blockers and never enables actual delivery.")
         if session.treatment and bundle is not None:
-            instructions += (
-                " A SignalWeave evaluation bundle is present in the opening context. Treat it as the "
-                "authoritative current-period decision surface: copy its typed outcome and the "
-                "canonical recipient keys into submit_analysis, and use its evidence, "
-                "analyses, source references and report in the submission. Do not re-judge or "
-                "replace the bundle's outcome from the raw narrative. In particular, do not turn "
-                "insufficient_data into ignore, and do not turn investigate into notify. Do not re-read a source "
-                "just to verify a complete bundle; inspect an additional source only when the bundle "
-                "explicitly reports a missing or incomplete obligation needed by the owner's policy. "
-                "For every numeric_claim, copy every adapter|resource ref in the matching "
-                "bundle provenance entry's query_refs into that claim's evidence_refs, including "
-                "quality or completeness sources that did not contain the numeric value; keep those "
-                "refs in top-level evidence_refs too. A source-level number is not a complete "
-                "business claim when the bundle attaches additional required provenance. "
-                "The bundle's evidence is still subject to the card policy and does not license claims "
-                "that are absent from its cited facts. For routing, a delivery_methods[].key such as "
-                "business or data is only a card-local route alias; it is not the submit_analysis "
-                "recipient. Resolve the method by exact delivery_methods[].destination against "
-                "business.destinations[].destination, then submit the matching business.destinations[].key. "
-                "Never submit the alias, a label, or the URI when the canonical key is available.")
+            instructions += SIGNALWEAVE_BUNDLE_INSTRUCTIONS
         if session.phase == "monitoring" and shared_card is not None:
             instructions += (
                 " Both arms were given the identical owner-reviewed card snapshot in the opening context. "
