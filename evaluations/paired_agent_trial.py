@@ -227,9 +227,9 @@ class JevRetriever:
             "query": None,
         }
         bundle["decision_guardrail"] = {
-            "reuse": "Cached evidence is sufficient for the workflow's next decision; do not create extra analytical work unless a card question remains unanswered.",
-            "query": "A material question remains unresolved; use the returned evidence to investigate before taking an automatic business action.",
-            "escalate": "Do not interpret the business movement as trustworthy; route the source-contract or freshness issue to its owner.",
+            "reuse": "Cached evidence is sufficient for retrieval; apply the human-authored card policy and do not create extra analytical work unless a card question remains unanswered.",
+            "query": "A bounded diagnostic was selected to answer an unresolved card question. Use its evidence with the cached observations, then apply the human-authored card policy; retrieval path is not an outcome.",
+            "escalate": "Source trust or freshness is insufficient for interpretation. Preserve the source-contract evidence and apply the card's configured trust and routing policy.",
         }.get(path, "Treat this retrieval result as evidence, not as a hidden label or causal conclusion.")
         if path == "query":
             bundle["query"] = await executor.execute(reason="typed Jev retrieval path")
@@ -335,7 +335,9 @@ Shared workflow input:
             "\n\nSignalWeave preflight bundle (produced before this agent woke up):\n"
             f"{json.dumps(retrieval_bundle, sort_keys=True)}\n"
             "Use its path, probabilities, evidence, and guardrail as typed context. "
-            "Verify any source you cite; the bundle is not a replacement for provenance."
+            "Verify any source you cite; the bundle is not a replacement for provenance. "
+            "The retrieval path is not the workflow outcome: the human-authored card "
+            "policy remains authoritative after the evidence is verified."
         )
         if retrieval_bundle.get("query") is not None:
             prompt += (

@@ -168,6 +168,7 @@ def test_treatment_prompt_does_not_duplicate_a_preflight_query():
 
     assert "Do not call run_diagnostic_query again for the same question" in prompt
     assert "set query_justified to true" in prompt
+    assert "human-authored card policy remains authoritative" in prompt
 
 
 def test_both_arms_share_raw_tool_contract_and_final_submission_schema():
