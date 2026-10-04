@@ -298,7 +298,8 @@ def test_full_offline_run_trial_smoke_exercises_real_runtime_artifacts(tmp_path,
     assert checks["exact_replay_all_treatment_periods"]
     assert checks["paired_catalog_and_analysis"]
     assert checks["usage_complete"]
-    assert not checks["all_intended_holdout_scores"]
+    assert not checks["treatment_holdout_scores"]
+    assert checks["baseline_reference_complete"]
 
     manifest = json.loads((output / "manifest.json").read_text(encoding="utf-8"))
     review_input = json.loads((output / "review-input.json").read_text(encoding="utf-8"))

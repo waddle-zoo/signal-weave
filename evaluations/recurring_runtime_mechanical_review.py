@@ -189,6 +189,7 @@ def audit_report(report: dict[str, Any], companies: list[dict[str, Any]]) -> dic
     company_by_id = {company["id"]: company for company in companies}
     indexed: dict[tuple[str, str, str], dict[str, Any]] = {}
     errors: list[str] = []
+    arm_errors: dict[str, list[str]] = {"baseline": [], "signalweave": []}
     rows = report.get("results", [])
     for row in rows:
         company_id, arm = row.get("company"), row.get("arm")
@@ -219,13 +220,15 @@ def audit_report(report: dict[str, Any], companies: list[dict[str, Any]]) -> dic
                     continue
                 expected_status = "blocked" if expected_outcome == "insufficient_data" else "complete"
                 if submission.get("status") != expected_status:
-                    errors.append(f"status:{key}:{submission.get('status')}!= {expected_status}")
+                    arm_errors[arm].append(f"status:{key}:{submission.get('status')}!= {expected_status}")
                 if submission.get("outcome") != expected_outcome:
-                    errors.append(f"outcome:{key}:{submission.get('outcome')}!= {expected_outcome}")
+                    arm_errors[arm].append(f"outcome:{key}:{submission.get('outcome')}!= {expected_outcome}")
                 expected_recipients = [] if expected_recipient is None else [expected_recipient]
                 if submission.get("recipients") != expected_recipients:
-                    errors.append(f"recipients:{key}:{submission.get('recipients')}!= {expected_recipients}")
-                errors.extend(
+                    arm_errors[arm].append(
+                        f"recipients:{key}:{submission.get('recipients')}!= {expected_recipients}"
+                    )
+                arm_errors[arm].extend(
                     f"analysis:{key}:{error}"
                     for error in _analysis_errors(submission, company, period)
                 )
@@ -251,12 +254,16 @@ def audit_report(report: dict[str, Any], companies: list[dict[str, Any]]) -> dic
     if report.get("jev_attempts", 0) <= 0:
         errors.append("no_live_jev_attempts")
 
-    unique_errors = sorted(set(errors))
+    treatment_errors = sorted(set(arm_errors["signalweave"]))
+    baseline_errors = sorted(set(arm_errors["baseline"]))
+    unique_errors = sorted(set([*errors, *treatment_errors]))
     return {
         "passed": not unique_errors,
         "checked_runs": len(indexed),
         "expected_runs": len(companies) * 4 * 2,
         "errors": unique_errors,
+        "treatment_errors": treatment_errors,
+        "baseline_reference_errors": baseline_errors,
         "independent_of_trial_score": True,
     }
 

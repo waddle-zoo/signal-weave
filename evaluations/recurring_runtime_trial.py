@@ -653,7 +653,7 @@ def _manifest(companies: list[dict[str, Any]], *, live: bool) -> dict[str, Any]:
             "interpretation": "No benefit claim is made if the structured or independent prose gate fails.",
         },
         "acceptance": {
-            "correctness": "All intended outcomes, routes, numeric/provenance checks and exact replays; no unsupported delivered numeric or causal claims.",
+            "correctness": "SignalWeave treatment must get all intended outcomes, routes, numeric/provenance checks and exact replays; the Luna arm is an independently scored reference whose misses remain visible rather than invalidating the comparison.",
             "comparative_benefit": "No correctness loss AND either >=20% lower whole-report recurring latency OR >=3 masked quality wins with zero losses.",
             "limits": "A single small synthetic trial does not establish universal accuracy, customer adoption, dollar savings or human labor savings.",
         },
@@ -935,10 +935,13 @@ async def run_trial(output: Path, *, live: bool = False, key_file: str | None = 
     paired = _paired(rows, companies)
     usage = _usage(audit)
     no_foreign_tools = all(not item.get("episode", {}).get("foreign_tools", []) for item in [*setup_results, *rows])
-    all_scores = all(
-        summary[arm]["strict_passed"] == summary[arm]["intended_periods"]
-        and summary[arm]["failed_episodes"] == 0
-        for arm in ("baseline", "signalweave")
+    treatment_scores = (
+        summary["signalweave"]["strict_passed"] == summary["signalweave"]["intended_periods"]
+        and summary["signalweave"]["failed_episodes"] == 0
+    )
+    baseline_reference_complete = (
+        summary["baseline"]["submitted"] == summary["baseline"]["intended_periods"]
+        and summary["baseline"]["failed_episodes"] == 0
     )
     all_approved = bool(companies) and len(set(item.get("company") for item in setup_results)) == len(companies) and all(
         item.get("setup_complete") and item.get("approval", {}).get("status") in {"approved", "replayed"}
@@ -950,7 +953,8 @@ async def run_trial(output: Path, *, live: bool = False, key_file: str | None = 
     ) and all(row.get("runs") for row in rows if row["arm"] == "signalweave")
     paired_context = _paired_context_matches(paired)
     protocol_checks = {
-        "all_intended_holdout_scores": all_scores,
+        "treatment_holdout_scores": treatment_scores,
+        "baseline_reference_complete": baseline_reference_complete,
         "all_selected_cards_approved": all_approved,
         "no_foreign_tools": no_foreign_tools,
         "exact_replay_all_treatment_periods": all_replays,
