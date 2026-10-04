@@ -23,24 +23,84 @@ downstream agent calls.
 
 ## Evidence freshness
 
-The raw reports referenced below were produced before the paired-review
-reporting repair now on this branch. The reviewer records a content fingerprint
-for the executable harness, scorer, prompts, and product files; it now fails
-closed when that fingerprint is absent or differs from the current checkout.
-Run the reviewer normally for current proof. Use `--allow-historical` only to
-inspect these retained runs, and do not describe that inspection as a current
-live rerun.
+The reviewer records a content fingerprint for the executable harness, scorer,
+prompts, and product files; it fails closed when that fingerprint is absent or
+differs from the current checkout. The current artifact is the post-commit
+three-company cohort below: its fingerprint matches commit `9e5d090`, live Jev
+usage is complete, and both independent reviewers pass. The earlier
+three-company, Lumen-only, six-company, and Cinder-noise reports are retained
+as historical diagnostics because later source-scope and reviewer changes make
+their fingerprints stale. Run the reviewer normally for current proof. Use
+`--allow-historical` only to inspect retained older runs.
 
-The retrospective onboarding audit found that all three SignalWeave arms had an
-approved, authorized, mechanically executable card (3/3), while the plain Luna
-arm retained persistent notes but no executable card (0/3). Both arms retained
-the owner topics and policy hints in this artifact. That is evidence of the
-product boundary—not semantic policy validation or human usability—and it is
-historical-only until a fresh current-fingerprint run is produced.
+The benchmark intentionally separates two signals. Onboarding measures whether
+the treatment produces an approved executable card, while monitoring gives both
+arms the exact same treatment card before scoring. This avoids hiding a card
+advantage in the monitoring comparison while still measuring the onboarding
+value. A card review is mechanical/synthetic in this trial; it is not actual
+human authorization or semantic policy proof.
 
-## Current live rerun — quality result, not promotion approval
+## Current live cohort — post-scope guard, commit `9e5d090`
 
-The current-branch rerun used live Jev, the Codex transport for the same
+This is the current-source, three-company live rerun. It covers a Superset / dbt
+/ Airflow / Looker retail case, a Superset / CloudWatch / PagerDuty operations
+case, and a Trino / Airflow / dbt / Looker finance case. Each arm used the same
+Luna model, the same noisy authorized catalog, the same owner answers, and the
+same three held-out monitoring periods. The treatment called live Jev for card
+retrieval/evaluation and handed its typed bundle to Luna; delivery remained
+disabled.
+
+| Measure | Luna over BI tools | SignalWeave + Jev | Interpretation |
+| --- | ---: | ---: | --- |
+| Exact structured monitoring | 8/9 (88.9%) | **9/9 (100%)** | Treatment retained the required typed evidence on the full cohort. |
+| Outcome correctness | 9/9 | 9/9 | Tied; the difference was evidence completeness, not routing. |
+| Recipient correctness | 9/9 | 9/9 | Tied. |
+| Evidence recall | 94.4% | **100%** | Required related facts were cited in the treatment bundle. |
+| Numeric precision / recall | 100% / 96.3% | **100% / 100%** | The treatment did not invent numbers and missed none of the required typed facts. |
+| Provenance-complete runs | 9/9 | 9/9 | Tied. |
+| Warm downstream Luna work | 269.8s | **117.2s** | 56.6% less recurring agent time. |
+| Active work per wake-up | 29.97s | **19.53s** | 34.9% less after excluding safely skipped quiet wake-ups. |
+| Downstream wake-ups | 9 | **6** | Three complete Jev ignores did not wake Luna. |
+| Monitoring source reads | 27 | **18** | Synthetic adapter reads, not warehouse bytes or billing. |
+| Onboarding wall time | 294.5s | 475.1s | One-time Jev-backed setup is slower in this cohort. |
+| Known illustrative usage estimate | $0.135 | $0.329 | Not a bill; the reviewer correctly makes no cost claim. |
+
+The sole baseline exactness miss was the Cinder customer-facing slowdown: Luna
+found the right outcome and owner but omitted the required Airflow rollout
+association and its typed lead-time fact. Jev's card-backed evidence plan
+preserved that obligation. This is a small, structured quality signal—not proof
+of universal accuracy or causal reasoning.
+
+The current artifacts are:
+
+- live report: `/private/tmp/signalweave-live-bootstrap-cohort-20261004-v2/report.json`
+- paired review: `/private/tmp/signalweave-review-cohort-20261004-v2.json`
+- onboarding review: `/private/tmp/signalweave-onboarding-review-cohort-20261004-v2.json`
+
+Both reviewers pass current-source, fixture-digest, paired-denominator,
+same-card, score-recomputation, live-Jev, usage-complete, approved-card,
+raw-routing, push-gate, and no-unsafe-suppression checks. The reviewer still
+withholds a strong superiority claim because the sample is small, the card
+review is synthetic, and provider token estimates are not measured business
+cost. The correct conclusion is: this cohort shows a reproducible value signal
+for evidence completeness and recurring Luna work, while setup overhead and
+total cost remain open.
+
+## Prior failed rerun — useful onboarding diagnosis
+
+The retained Lumen artifact
+`/private/tmp/signalweave-live-bootstrap-lumen-postscope-20261004-v2/report.json`
+is intentionally not counted as a success. Plain Luna failed onboarding after
+three independent reviews because it kept an unsupported “2/2 partitions
+closed” current-evidence claim; the Jev arm removed the unsupported gate and
+completed. The failure is evidence that ordinary prompt-and-notes onboarding
+can stall on evidence discipline, but it also makes the pair incomplete, so it
+cannot support an end-to-end quality comparison. The current cohort rerun is
+the paired evidence used above.
+
+## Historical pre-scope rerun — retained diagnostic
+
+That retained rerun used live Jev, the Codex transport for the same
 `gpt-5.6-luna` agent, three connector profiles, ten catalog alternatives per
 canonical resource, and the push gate. It completed all 12 paired episodes
 (3 onboarding pairs and 9 monitoring pairs):
@@ -90,7 +150,77 @@ The retained artifacts are:
 - paired review: `/private/tmp/signalweave-review-current-20261004-v3.json`
 - onboarding review: `/private/tmp/signalweave-onboarding-review-current-20261004-v3.json`
 
-This rerun is the strongest current evidence for a product value signal: on a
+## Historical post-scope-guard diagnostic — Lumen Freight Finance
+
+After the six-company run exposed a scoped-source onboarding failure, the
+generic onboarding path was tightened. A selected source with a declared
+population scope now produces an explicit `source-scope-review` blocker. Approval
+must persist an exact scope confirmation by source ref; an agent cannot silently
+use a limited, sandbox, regional, archive, partner, or otherwise scoped asset as
+the unqualified business population. The guard is connector-neutral and is
+covered by offline approval tests plus this live Trino/Airflow case.
+
+The post-fix trial used the same Lumen holdout, the same noisy 44-resource
+catalog, live Jev, the same Luna baseline, and an independent synthetic owner
+review. The first treatment card selected `airflow|resource-c76...`, whose
+contract declared a sandbox population. The treatment then repaired the card to
+the canonical `airflow|resource-f8...` source. The independent owner reviewer
+also rejected the first draft because it turned a source-reported watermark into
+an owner-blocking business prerequisite. The agent removed that unsupported gate
+and received a second independent approval.
+
+| Measure | Luna over BI tools | SignalWeave + Jev | Interpretation |
+| --- | ---: | ---: | --- |
+| Exact structured monitoring | 1/3 | **3/3** | Treatment preserved the required typed facts and evidence on all held-out periods. |
+| Outcome correctness | 3/3 | 3/3 | Tied. |
+| Recipient correctness | 3/3 | 3/3 | Tied. |
+| Mean numeric precision / recall | 44.4% / 66.7% | **100% / 100%** | The card carried the typed comparison and source obligations into the bundle. |
+| Provenance-complete runs | 3/3 | 3/3 | Tied. |
+| Warm downstream Luna work | 100.84s | **38.40s** | 61.9% less downstream agent time. |
+| Active work per wake-up | 33.61s | **19.20s** | 42.9% less when the downstream agent actually woke. |
+| Downstream wake-ups | 3 | **2** | One complete quiet outcome was safely suppressed. |
+| Monitoring source reads | 8 | **6** | Synthetic adapter reads, not warehouse bytes or billing. |
+| Onboarding wall time | 120.22s | 238.38s | One-time treatment setup remains slower. |
+| Independent owner reviews | — | 2 (reject → approve) | The first review caught an unsupported gate; the corrected card passed. |
+
+The strict comparison reviewer passed current-source, live-Jev, usage,
+same-card, paired-denominator, score-recomputation, raw-routing, push-gate,
+and no-unsafe-suppression checks. It intentionally did not authorize a strong
+superiority claim because provider dollars are not billed cost and the owner
+review is synthetic rather than a real human authorization. The treatment's
+illustrative API-equivalent usage was higher ($0.1036 vs $0.0457); that is a
+real warning against claiming cost savings from this trial.
+
+These historical artifacts are:
+
+- live report: `/private/tmp/signalweave-live-bootstrap-lumen-postscope-20261004-v1/report.json`
+- paired review: `/private/tmp/signalweave-review-lumen-postscope-20261004-v1.json`
+- onboarding review: `/private/tmp/signalweave-onboarding-review-lumen-postscope-20261004-v1.json`
+
+## Retained six-company noisy benchmark — pre-scope fix
+
+The six-company live run remains useful as cross-connector quality evidence,
+but it is now historical because the source-scope guard changed the product
+fingerprint. It covered Superset, Looker, Hex, Trino, Airflow, dbt, CloudWatch,
+PagerDuty, and 18 held-out monitoring periods per arm:
+
+| Measure | Luna over BI tools | SignalWeave + Jev |
+| --- | ---: | ---: |
+| Exact structured monitoring | 15/18 (83.3%) | **18/18 (100%)** |
+| Outcome / recipient correctness | 18/18 / 18/18 | 18/18 / 18/18 |
+| Mean evidence recall | 91.7% | **100%** |
+| Mean numeric precision / recall | 88.9% / 88.9% | **100% / 100%** |
+| Warm downstream Luna work | 422.4s | **201.8s** |
+| Downstream wake-ups | 18 | **12** |
+| Monitoring source reads | 41 | **28** |
+| Onboarding card mechanical pass | 0/6 executable artifacts | 5/6 approved cards |
+
+The sixth treatment onboarding card was not counted as a pass: it selected the
+scoped Airflow sandbox asset described above. This is the reason the current
+post-scope trial is important. The old six-company result was a strong retrieval
+signal, not evidence that onboarding was already complete.
+
+This historical rerun was a strong diagnostic for a product value signal: on a
 small, held-out, noisy multi-connector cohort, SignalWeave improved structured
 evidence completeness and reduced recurring Luna work. It is not proof of
 universal accuracy, lower total cost, real warehouse savings, semantic human
