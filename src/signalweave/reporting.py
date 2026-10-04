@@ -417,6 +417,11 @@ def _route_records(
     blockers: list[ReportIssue] = []
     seen_keys: set[str] = set()
     outcome = result.outcome.value
+    # Quiet results do not have a delivery contract.  A card may retain an
+    # informational ignore route for authoring or audit purposes, but its
+    # presence must not turn a correct quiet report into a partial report.
+    if outcome == "ignore":
+        return [], [], []
     for method in result.delivery_methods:
         if method.key in seen_keys:
             blockers.append(_issue(

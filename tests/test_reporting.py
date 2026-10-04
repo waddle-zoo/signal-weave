@@ -7,6 +7,7 @@ from pydantic import ValidationError
 
 from signalweave.diagnostics import AnalyticalComparison, SegmentContribution, analyze_comparison
 from signalweave.models import (
+    DeliveryMethod,
     Evidence,
     InsightCard,
     InsightResult,
@@ -937,6 +938,29 @@ def test_selected_routes_are_not_sent_but_do_not_downgrade_good_report():
     )
     assert report.status == "complete"
     assert report.intended_routes_not_delivered[0].reason == "Caller owns delivery; not sent."
+
+
+def test_quiet_report_ignores_informational_quiet_route():
+    quiet_card = card().model_copy(update={
+        "delivery_methods": [
+            *card().delivery_methods,
+            DeliveryMethod(
+                key="quiet-audit",
+                outcome="ignore",
+                label="Audit log",
+                destination="audit://quiet",
+            ),
+        ]
+    })
+    report = build_investigation_report(
+        quiet_card,
+        result(complete_analysis(), outcome="ignore", delivery_methods=[]),
+        resources=healthy_resources(),
+    )
+
+    assert report.status == "complete"
+    assert report.intended_routes_not_delivered == []
+    assert report.warnings == []
 
 
 def test_changed_endpoint_and_foreign_route_are_blockers_not_new_routes():
