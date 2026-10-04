@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 
 from evaluations.everything_tracking_llm_adversarial_review import audit_report
-from evaluations.everything_tracking_llm_benchmark import _input_digest, _jev_row
+from evaluations.everything_tracking_llm_benchmark import _input_digest, _jev_row, select_cases
 from evaluations.everything_tracking_trial import DEFAULT_CONFIG, build_cases, load_config
 
 
@@ -145,3 +145,19 @@ def test_cost_estimate_uses_provider_token_usage():
         input_price_per_mtok=0.20,
         output_price_per_mtok=1.20,
     ) == 0.8
+
+
+def test_stratified_case_selection_preserves_all_variants_for_selected_companies():
+    cases = build_cases(load_config(DEFAULT_CONFIG))
+
+    selected = select_cases(cases, companies=["harbor-bank", "orbit-saas"])
+
+    assert {case.company_id for case in selected} == {"harbor-bank", "orbit-saas"}
+    assert {case.variant for case in selected} == {
+        "material_action",
+        "expected_change",
+        "ambiguous_state",
+        "trust_failure",
+        "urgent_operational_risk",
+    }
+    assert len(selected) == 20

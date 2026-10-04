@@ -254,6 +254,31 @@ def _input_digest(case: TrackingCase) -> str:
     return hashlib.sha256(canonical.encode()).hexdigest()[:24]
 
 
+def select_cases(
+    cases: list[TrackingCase],
+    *,
+    companies: list[str] | None = None,
+    workflows: list[str] | None = None,
+) -> list[TrackingCase]:
+    """Select a declared, stratified subset without changing case contents."""
+    company_filter = set(companies or [])
+    workflow_filter = set(workflows or [])
+    known_companies = {case.company_id for case in cases}
+    known_workflows = {case.workflow_id for case in cases}
+    unknown_companies = company_filter - known_companies
+    unknown_workflows = workflow_filter - known_workflows
+    if unknown_companies:
+        raise ValueError("unknown company IDs: " + ", ".join(sorted(unknown_companies)))
+    if unknown_workflows:
+        raise ValueError("unknown workflow IDs: " + ", ".join(sorted(unknown_workflows)))
+    return [
+        case
+        for case in cases
+        if (not company_filter or case.company_id in company_filter)
+        and (not workflow_filter or case.workflow_id in workflow_filter)
+    ]
+
+
 def _score(
     case: TrackingCase,
     *,
@@ -411,6 +436,7 @@ def _summary(rows: list[DecisionRow]) -> dict[str, Any]:
 async def run_benchmark(args: argparse.Namespace) -> dict[str, Any]:
     config = load_config(args.config)
     cases = build_cases(config, repeats=args.repeats)
+    cases = select_cases(cases, companies=args.company, workflows=args.workflow)
     if args.limit is not None:
         cases = cases[: args.limit]
     if not cases:
@@ -700,6 +726,16 @@ def main() -> None:
         help="Estimated OpenAI output price in USD per million tokens.",
     )
     parser.add_argument("--repeats", type=int, default=1)
+    parser.add_argument(
+        "--company",
+        action="append",
+        help="Select one or more company IDs after fixture expansion; repeat for a stratified subset.",
+    )
+    parser.add_argument(
+        "--workflow",
+        action="append",
+        help="Select one or more workflow IDs after fixture expansion; repeat for a stratified subset.",
+    )
     parser.add_argument("--limit", type=int)
     parser.add_argument("--concurrency", type=int, default=4)
     parser.add_argument("--dry-run", action="store_true")
