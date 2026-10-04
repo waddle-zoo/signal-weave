@@ -21,6 +21,35 @@ recomputed every score, checked the shared-card digest, verified raw Jev
 routing, checked current-run provenance, and verified that skipped rows had no
 downstream agent calls.
 
+## High-noise Cinder follow-up
+
+After the three-company run, Cinder was rerun with 20 catalog alternatives per
+canonical resource. This was a targeted engineering regression, not a new
+company or a fresh holdout. The first high-noise attempt exposed a useful
+failure: the treatment included the correct 12-minute rollout association in
+its narrative, but omitted that corroborating number from the typed numeric
+claim list. The comparator correctly scored that period non-exact. The shared
+agent contract was tightened to require relevant numeric corroboration in both
+typed and narrative form, and the same case was rerun once.
+
+| Cinder high-noise rerun | Luna BI | SignalWeave + Jev |
+| --- | ---: | ---: |
+| Exact structured monitoring | 3/3 | 3/3 |
+| Outcome / recipient correctness | 3/3 | 3/3 |
+| Evidence recall / provenance | 100% / 100% | 100% / 100% |
+| Warm Luna agent work | 83.69s | 32.98s |
+| Downstream wake-ups | 3 | 2 |
+| Source reads during monitoring | 11 | 10 |
+| Onboarding time | 23.40s | 68.56s |
+
+The independent review passed fixture reconstruction, same-card parity, raw
+Jev routing, usage completeness, score recomputation, and push-gate checks.
+The report is retained at
+`/private/tmp/signalweave-live-bootstrap-cinder-noise20-fix4/report.json` with
+the reviewer output at `/private/tmp/signalweave-review-cinder-noise20-fix4`.
+The recorded token-price estimate was higher for treatment ($0.0667 versus
+$0.0289), but those are API-equivalent estimates rather than billed costs.
+
 ## Results
 
 | Company | Connector profile | Luna exact | SignalWeave exact | Warm Luna agent work | Warm SignalWeave agent work | Wake-ups |
@@ -72,6 +101,8 @@ the agent still writes the human-facing analysis.
 ## What this does not prove
 
 - General accuracy superiority: both arms tied 9/9 on these structured labels.
+- The high-noise Cinder extension also tied 3/3 after the typed-corroboration
+  repair; it is robustness evidence, not an accuracy win.
 - Lower total or subscription cost: Jev adds onboarding/runtime requests, and
   recorded dollar fields are illustrative API-equivalent estimates, not bills.
 - Faster first-run onboarding: treatment cold setup was 68.18s, 76.04s, and
