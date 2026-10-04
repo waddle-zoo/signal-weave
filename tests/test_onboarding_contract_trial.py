@@ -17,9 +17,11 @@ from evaluations.onboarding_contract_trial import (
 )
 from evaluations.onboarding_readiness import assess_readiness
 from signalweave.models import (
+    DeliveryMethod,
     InsightCard,
     InsightCardOnboardingReview,
     OnboardingDiscoveryReceipt,
+    Outcome,
     PrincipalContext,
     ResourceContract,
     ResourceDescriptor,
@@ -283,6 +285,68 @@ def test_production_onboarding_review_blocks_missing_principal_boundary():
     assert review.principal_id is None
     assert review.authorization_evidence == "not-provided"
     assert any(blocker.code.value == "principal-required" for blocker in review.blockers)
+
+
+def test_onboarding_blocks_investigate_to_notify_route_translation():
+    card = InsightCard(
+        id="card-route-fidelity",
+        title="Database slowdown",
+        what_to_watch="Customer-facing latency and replication lag",
+        why_watch="Investigate broad customer impact.",
+        decision_guidance=(
+            "Investigate the business destination when latency and lag rise together; "
+            "otherwise ignore."
+        ),
+        delivery_methods=[
+            DeliveryMethod(
+                key="business",
+                outcome=Outcome.NOTIFY,
+                label="Business owner",
+                destination="slack://business",
+            )
+        ],
+        sources=[
+            SourceRef(
+                key="latency",
+                adapter="superset",
+                resource="dashboard:latency",
+                label="Latency",
+            )
+        ],
+    )
+    discovery = ResourceDiscovery(
+        goal="Customer-facing latency and replication lag",
+        matches=[
+            ResourceMatch(
+                ref="superset|dashboard:latency",
+                adapter="superset",
+                resource="dashboard:latency",
+                kind="dashboard",
+                title="Latency",
+                recommended=True,
+                relevance=0.95,
+                contract=ResourceContract(tenant_id="northstar"),
+            )
+        ],
+        candidate_count=1,
+        candidate_limit=10,
+        evaluator="test-jev",
+        authorized_tenant="northstar",
+    )
+
+    review = InsightAuthoringService.build_onboarding_review(
+        card,
+        discovery,
+        principal=PrincipalContext(principal_id="owner", tenant_id="northstar"),
+    )
+
+    blocker = next(
+        blocker for blocker in review.blockers
+        if blocker.code.value == "decision-route-mismatch"
+    )
+    assert review.readiness_status == "blocked"
+    assert blocker.severity.value == "block"
+    assert "investigate" in blocker.question
 
 
 def test_readiness_defense_in_depth_blocks_a_post_discovery_permission_drift():

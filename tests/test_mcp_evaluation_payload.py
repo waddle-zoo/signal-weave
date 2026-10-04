@@ -68,7 +68,7 @@ async def test_authoring_responses_preserve_current_review_without_repeated_hist
     for name in ("propose_insight_card", "onboard_insight_card"):
         response = await tool(server, name)(
             what_to_watch="Checkout conversion", why_watch="Decide whether Growth needs to act",
-            questions=["What changed?"],
+            questions=["What changed?"], response_mode="full",
         )
         response = response.get("proposal", response)
         card_id = response["card"]["id"]

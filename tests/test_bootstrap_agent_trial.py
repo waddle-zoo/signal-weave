@@ -250,9 +250,9 @@ async def test_missing_owner_review_returns_actionable_steps(tmp_path, public):
     })
     result = await session.call("request_synthetic_owner_approval", {"card_id": drafted["card"]["id"]})
     assert not result["approved"]
-    assert result["next_tools"] == ["get_insight_card", "preview_investigation_report",
+    assert result["next_tools"] == ["preview_investigation_report",
                                      "request_synthetic_owner_approval"]
-    assert result["missing_prerequisites"] == ["get_insight_card", "preview_investigation_report"]
+    assert result["missing_prerequisites"] == ["preview_investigation_report"]
     assert result["next_actions"] == [
         {"tool": tool, "arguments": {"card_id": drafted["card"]["id"]}}
         for tool in result["missing_prerequisites"]]
@@ -384,8 +384,8 @@ async def test_authoring_schemas_expose_required_delivery_fields_and_mode_enums(
     outcome = definitions[delivery["properties"]["outcome"]["$ref"].rsplit("/", 1)[1]]
     assert set(outcome["enum"]) == {"ignore", "investigate", "notify", "escalate", "insufficient_data"}
     for field, choices, default in (
-        ("retrieval_mode", {"fixed", "expand"}, "fixed" if name == "draft_insight_card" else "expand"),
-        ("investigation_mode", {"none", "bounded"}, "none" if name == "draft_insight_card" else "bounded"),
+        ("retrieval_mode", {"fixed", "expand"}, "fixed"),
+        ("investigation_mode", {"none", "bounded"}, "none"),
     ):
         mode = definitions[properties[field]["$ref"].rsplit("/", 1)[1]]
         assert set(mode["enum"]) == choices
@@ -524,7 +524,7 @@ async def test_responses_api_exact_model_instructions_usage_and_failure_no_retry
 
     def handle(request):
         seen.append(json.loads(request.content))
-        return httpx.Response(429, json={"error": {"message": "secret-response-not-recorded"}})
+        return httpx.Response(400, json={"error": {"message": "secret-response-not-recorded"}})
 
     audit, budget = trial.Audit(), trial.RequestBudget(5)
     result = await trial.luna_episode(session, key="dummy", effort="low", budget=budget,
@@ -537,6 +537,44 @@ async def test_responses_api_exact_model_instructions_usage_and_failure_no_retry
     assert "secret-response" not in trial.canonical(audit.events)
     usage = trial.usage_summary(audit.events)["openai"]
     assert usage["failed_attempts"] == usage["unknown_usage_attempts"] == 1
+
+
+async def test_responses_api_retries_rate_limit_with_bounded_backoff(tmp_path, public, monkeypatch):
+    session = make_session(tmp_path, public, False)
+    session.phase = "monitoring"
+    submission = {"outcome": "ignore", "recipients": [], "evidence_refs": [], "summary": "Test only"}
+    seen = []
+
+    def handle(request):
+        seen.append(json.loads(request.content))
+        if len(seen) == 1:
+            return httpx.Response(
+                429,
+                headers={"retry-after": "0"},
+                json={"error": {"message": "rate limited"}},
+            )
+        return httpx.Response(200, json={
+            "output": [{"type": "function_call", "name": "submit_analysis", "call_id": "call-1",
+                        "arguments": json.dumps(submission)}],
+            "usage": {"input_tokens": 100, "output_tokens": 20},
+        })
+
+    monkeypatch.setattr(trial, "OPENAI_RETRY_BACKOFF_SECONDS", 0)
+    audit = trial.Audit()
+    result = await trial.luna_episode(
+        session, key="dummy", effort="low", budget=trial.RequestBudget(3), audit=audit,
+        max_turns=1, max_tool_calls=5, max_output_tokens=100,
+        transport=httpx.MockTransport(handle),
+    )
+
+    assert result["status"] == "complete"
+    assert len(seen) == 2
+    assert trial.usage_summary(audit.events)["openai"]["unknown_usage_attempts"] == 1
+    assert any(
+        event.get("status_code") == 429
+        for event in audit.events
+        if event["kind"] == "api.error"
+    )
 
 
 async def test_responses_api_retries_transient_transport_and_keeps_unknown_cost(tmp_path, public, monkeypatch):
@@ -563,11 +601,100 @@ async def test_responses_api_retries_transient_transport_and_keeps_unknown_cost(
         transport=httpx.MockTransport(handle),
     )
 
-    assert result["status"] == "complete"
+    assert result["status"] == "complete", result
     assert len(seen) == 2
     assert trial.usage_summary(audit.events)["openai"]["attempts"] == 2
     assert trial.usage_summary(audit.events)["openai"]["unknown_usage_attempts"] == 1
     assert audit.events[1]["retry_index"] == 0
+
+
+async def test_successful_transport_retry_does_not_poison_followup_tool_turn(tmp_path, public, monkeypatch):
+    session = make_session(tmp_path, public, False)
+    seen = []
+
+    def response_for(*calls):
+        return httpx.Response(200, json={
+            "output": [{"type": "function_call", "name": name, "call_id": call_id,
+                        "arguments": json.dumps(arguments)} for name, call_id, arguments in calls],
+            "usage": {"input_tokens": 100, "output_tokens": 20},
+        })
+
+    def handle(request):
+        seen.append(json.loads(request.content))
+        if len(seen) == 1:
+            raise ssl.SSLError("transient TLS failure")
+        if len(seen) == 2:
+            descriptor = public["catalog"][0]
+            return response_for(
+                ("inspect_source", "call-inspect", {"ref": f"{descriptor['adapter']}|{descriptor['resource']}"}),
+                ("ask_owner", "call-owner", {"topic": "metric_scope"}),
+            )
+        if len(seen) == 3:
+            return response_for(("save_notes", "call-notes", {"notes": "Reusable policy context."}))
+        return response_for(("finish_setup", "call-finish", {"card_id": None}))
+
+    monkeypatch.setattr(trial, "OPENAI_RETRY_BACKOFF_SECONDS", 0)
+    audit = trial.Audit()
+    result = await trial.luna_episode(
+        session, key="dummy", effort="low", budget=trial.RequestBudget(5), audit=audit,
+        max_turns=4, max_tool_calls=8, max_output_tokens=100,
+        transport=httpx.MockTransport(handle),
+    )
+
+    assert result["status"] == "complete", result
+    assert session.setup_complete
+    assert len(seen) == 4  # failed attempt, successful retry, then three follow-up turns
+    assert trial.usage_summary(audit.events)["openai"]["unknown_usage_attempts"] == 1
+
+
+async def test_onboarding_continues_after_model_returns_prose_before_setup(tmp_path, public):
+    session = make_session(tmp_path, public, False)
+    seen = []
+    descriptor = public["catalog"][0]
+    ref = f"{descriptor['adapter']}|{descriptor['resource']}"
+
+    def response_for(*calls, prose=False):
+        output = []
+        if prose:
+            output.append({
+                "type": "message",
+                "role": "assistant",
+                "content": [{"type": "output_text", "text": "I will continue onboarding."}],
+            })
+        output.extend(
+            {"type": "function_call", "name": name, "call_id": call_id,
+             "arguments": json.dumps(arguments)}
+            for name, call_id, arguments in calls
+        )
+        return httpx.Response(200, json={
+            "output": output,
+            "usage": {"input_tokens": 100, "output_tokens": 20},
+        })
+
+    def handle(request):
+        seen.append(json.loads(request.content))
+        if len(seen) == 1:
+            return response_for(prose=True)
+        if len(seen) == 2:
+            return response_for(
+                ("inspect_source", "call-inspect", {"ref": ref}),
+                ("ask_owner", "call-owner", {"topic": "metric_scope"}),
+            )
+        if len(seen) == 3:
+            return response_for(("save_notes", "call-notes", {"notes": "Reusable policy context."}))
+        return response_for(("finish_setup", "call-finish", {"card_id": None}))
+
+    audit = trial.Audit()
+    result = await trial.luna_episode(
+        session, key="dummy", effort="low", budget=trial.RequestBudget(8), audit=audit,
+        max_turns=2, max_tool_calls=8, max_output_tokens=100,
+        transport=httpx.MockTransport(handle),
+    )
+
+    assert result["status"] == "complete"
+    assert session.setup_complete
+    assert len(seen) == 4
+    assert [event["continuation_turn"] for event in audit.events if event["kind"] == "agent.continuation"] == [1]
 
 
 async def test_responses_tool_loop_keeps_reasoning_and_notes(tmp_path, public):

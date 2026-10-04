@@ -41,6 +41,8 @@ from .typesafe_adapter import (
     InsightJudger,
     JevJudger,
     JevPayloadError,
+    compact_json_value,
+    compact_resource_snapshot_payload,
 )
 
 
@@ -108,6 +110,13 @@ class InsightEngine:
             separators=(",", ":"),
         )
         observed_bytes = len(serialized.encode("utf-8"))
+        # JevJudger owns token-aware chunking for one wide judgment. The
+        # aggregate state is intentionally larger than any individual request;
+        # applying the legacy aggregate byte guard here would prevent the
+        # chunker from ever running. Custom judgers do not advertise that
+        # contract and retain the strict preflight behavior.
+        if stage == "judgment" and getattr(self.judger, "supports_judgment_chunking", False):
+            return observed_bytes
         if observed_bytes > self.max_jev_payload_bytes:
             raise EvaluationPayloadError(
                 stage=stage,
@@ -222,29 +231,50 @@ class InsightEngine:
         card: InsightCard,
         resources: list[ResourceSnapshot] | None = None,
     ) -> InsightPlan:
-        if card.compiled_plan is not None and card.compiled_plan.card_version == card.version:
-            if not card.compiled_plan.comparison_windows or not set(
-                card.compiled_plan.comparison_windows
-            ).issubset(card.comparison_windows):
-                raise ValueError("compiled_plan comparison windows must be a nonempty subset of card windows")
-            # A cached semantic selection is not authority to waive prerequisites
-            # or carry fulfilled evidence into another run.
-            current = base_plan(card)
-            return card.compiled_plan.model_copy(update={
-                "evidence_slots": current.evidence_slots,
-                "questions": current.questions,
-                "watch_for": current.watch_for,
-                "card_scope": current.card_scope,
-            })
-        state = {
-            "sources": (
-                [resource.model_dump(mode="json") for resource in resources]
-                if resources is not None
-                else [source.model_dump(mode="json") for source in card.sources]
-            )
-        }
-        self._assert_jev_payload_budget(state, stage="compile")
-        return await compile_with_typesafe(card, self.judger, state=state)
+        # ``model_copy(update=...)`` can construct an in-memory card without
+        # rerunning Pydantic's model validator. Revalidate a persisted/cached
+        # plan before projecting a fresh deterministic plan so stale or
+        # tampered windows cannot be treated as harmless transport metadata.
+        if card.compiled_plan is not None:
+            if (
+                not card.compiled_plan.comparison_windows
+                or not set(card.compiled_plan.comparison_windows).issubset(
+                    card.comparison_windows
+                )
+            ):
+                raise ValueError(
+                    "compiled_plan comparison windows must be a nonempty subset of card windows"
+                )
+            InsightCard.model_validate(card.model_dump(mode="json"))
+            # The cached plan has already passed the card-version validator.
+            # Rebuild it from the current typed card rather than invoking an
+            # optional semantic compiler; this keeps old persisted plans from
+            # regaining authority while preserving the no-recompile contract.
+            del resources
+            return base_plan(card)
+        # Plan construction is a typed projection of the owner-authored card,
+        # not an analytical decision. Calling the production Jev adapter here
+        # made onboarding pay for a second model opinion before the frontier
+        # agent had inspected the data, and gave the resulting plan authority
+        # it did not need. Jev opts out via ``skip_semantic_compile`` and is
+        # reserved for the final policy judgment over normalized evidence.
+        # Alternate judgers can still opt into the explicit compile API; this
+        # keeps the engine protocol useful for non-TypeSafe integrations and
+        # test doubles without changing the production boundary.
+        if not getattr(self.judger, "skip_semantic_compile", False):
+            compiler = getattr(self.judger, "compile_plan", None)
+            if compiler is not None:
+                state = {
+                    "sources": (
+                        [resource.model_dump(mode="json") for resource in resources]
+                        if resources is not None
+                        else [source.model_dump(mode="json") for source in card.sources]
+                    )
+                }
+                self._assert_jev_payload_budget(state, stage="compile")
+                return await compile_with_typesafe(card, self.judger, state=state)
+        del resources
+        return base_plan(card)
 
     async def evaluate(
         self,
@@ -269,14 +299,20 @@ class InsightEngine:
             resources = list(resources)
 
         context = context_override or await self._load_context(card, resources)
-        self._assert_jev_payload_budget(
-            {
-                "card": card.execution_payload(),
-                "sources": [resource.model_dump(mode="json") for resource in resources],
-                "context": context.model_dump(mode="json") if context else None,
-            },
-            stage="source",
-        )
+        source_state = {
+            "card": card.execution_payload(),
+            "sources": [
+                compact_resource_snapshot_payload(resource)
+                if getattr(self.judger, "supports_judgment_chunking", False)
+                else resource.model_dump(mode="json")
+                for resource in resources
+            ],
+            "context": (
+                compact_json_value(context.model_dump(mode="json"), max_string=600, max_items=40, max_depth=4)
+                if context else None
+            ),
+        }
+        self._assert_jev_payload_budget(source_state, stage="source")
         plan = await self.compile(card, resources)
         investigation = await self._select_investigation(
             card, plan, resources, context, authorized_tenants=authorized_tenants
@@ -1141,11 +1177,15 @@ class InsightEngine:
             return observations
         adjusted: list[Observation] = []
         for observation in observations:
-            # A card can request several windows while an adapter only exposes
-            # one of them. Preserve the adapter's ordinary baseline when the
-            # selected window is unavailable; otherwise a valid comparison is
-            # accidentally turned into insufficient data.
-            baseline = observation.comparison_baselines.get(window, observation.baseline)
+            # A requested non-default window is a semantic contract, not a
+            # formatting preference. Never silently substitute the adapter's
+            # ordinary baseline when that window was not returned; doing so
+            # makes a card appear comparable while measuring the wrong period.
+            baseline = (
+                observation.baseline
+                if window == "previous_period"
+                else observation.comparison_baselines.get(window)
+            )
             change_pct = None
             if baseline is not None and observation.current is not None and baseline != 0:
                 change_pct = round(

@@ -487,7 +487,13 @@ class EvidenceBundle(BaseModel):
 
 
 class ResourceDiscovery(BaseModel):
-    """The inspectable result of goal-to-resource discovery."""
+    """The inspectable result of source recall or caller-selected scope.
+
+    ``evaluator`` and ``catalog_strategy`` identify whether this came from the
+    optional Jev-ranked convenience path or from an agent-selected authorized
+    source set. Do not treat a caller-selected relevance marker as a semantic
+    ranking score.
+    """
 
     catalog_fingerprint: str = Field(
         default="", description="Digest of the authorized bounded catalog definitions, independent of semantic ranking.",
@@ -499,8 +505,8 @@ class ResourceDiscovery(BaseModel):
         default_factory=list,
         max_length=200,
         description=(
-            "The bounded adapter-owned candidate pool that Jev ranked. This is "
-            "diagnostic retrieval evidence, not a relevance judgment."
+            "The bounded adapter-owned candidate pool used for recall or explicit "
+            "selection. Ranking and selection provenance are identified separately."
         ),
     )
     candidate_count: int = Field(ge=0)
@@ -569,8 +575,10 @@ class OnboardingBlockerCode(StrEnum):
     DEFINITION_CONFLICT = "definition-conflict"
     INTENT_DETAIL_REQUIRED = "intent-detail-required"
     DECISION_GUIDANCE_REQUIRED = "decision-guidance-required"
+    DECISION_ROUTE_MISMATCH = "decision-route-mismatch"
     DELIVERY_POLICY_MISSING = "delivery-policy-missing"
     COMPARISON_WINDOW_MISMATCH = "comparison-window-mismatch"
+    SOURCE_CONTRACT_REQUIRED = "source-contract-required"
     SOURCE_SCOPE_REVIEW = "source-scope-review"
 
 
@@ -781,7 +789,7 @@ class InsightPlan(BaseModel):
     watch_for: list[str] = Field(default_factory=list)
     questions: list[str] = Field(default_factory=list)
     delivery_method_keys: list[str] = Field(default_factory=list)
-    compiled_by: str = "jev-latest"
+    compiled_by: str = "deterministic-card-plan"
     card_scope: str
     metric_query_plans: list[MetricQueryPlan] = Field(default_factory=list, max_length=50)
     investigation_mode: InvestigationMode = InvestigationMode.NONE

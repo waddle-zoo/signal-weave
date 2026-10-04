@@ -247,6 +247,8 @@ async def test_evaluation_emits_shadow_telemetry_for_jev_and_source_work():
     assert telemetry.source_count == 1
     assert telemetry.observation_count == 1
     assert telemetry.evidence_count >= 1
+    # This is an alternate test judger, not the production Jev adapter; its
+    # explicit compile hook remains part of the generic InsightJudger protocol.
     assert telemetry.jev_requests == 2
     assert telemetry.jev_input_tokens == 360
     assert telemetry.jev_output_tokens == 24
@@ -573,9 +575,11 @@ async def test_unavailable_comparison_window_preserves_adapter_baseline():
         ],
     )
     run = await InsightEngine(TrailingWindowJudger()).evaluate(card, [resource])
-    assert run.result.outcome == Outcome.INVESTIGATE
-    assert run.result.observations[0].baseline == 100
-    assert run.result.observations[0].change_pct == 10
+    # Without an adapter comparison contract, a raw previous-period baseline
+    # is not enough to claim that the requested trailing window was evaluated.
+    assert run.result.outcome == Outcome.INSUFFICIENT_DATA
+    assert run.result.observations[0].baseline is None
+    assert run.result.observations[0].change_pct is None
 
 
 async def test_source_failure_is_not_treated_as_ignore():
@@ -1290,11 +1294,7 @@ async def test_stored_compiled_plan_is_used_without_recompiling():
     )
     run = await InsightEngine(CompileMustNotRun()).evaluate(card, [resource])
     current = base_plan(card)
-    assert run.plan == plan.model_copy(update={
-        "evidence_slots": current.evidence_slots,
-        "questions": current.questions, "watch_for": current.watch_for,
-        "card_scope": current.card_scope,
-    })
+    assert run.plan == current
     assert plan.evidence_slots == []  # Stored cache is not mutated or trusted for admission.
 
 
@@ -1391,7 +1391,11 @@ async def test_unfamiliar_metric_flows_through_without_metric_specific_logic():
         ],
     )
     run = await InsightEngine(SafetyTestDouble()).evaluate(card, [resource])
-    assert run.plan.capabilities == ["percent_change", "baseline_comparison", "freshness_check"]
+    assert run.plan.capabilities == [
+        "percent_change",
+        "baseline_comparison",
+        "freshness_check",
+    ]
     assert run.result.observations[0].metric == "p95_api_latency"
     assert run.result.evidence[0].values["change_pct"] == 80
 

@@ -151,12 +151,22 @@ async def _run_workspace(workspace: dict[str, Any]) -> dict[str, Any]:
     )
     snapshot = await adapter.inspect(source)
     snapshot_provider_requests = list(transport.requests)
-    judger = JevJudger(api_key="synthetic-contract-key", max_retries=0)
+    # This contract trial validates connector-to-Jev serialization and the
+    # historical one-card request shape. The dedicated wide-dashboard test
+    # covers token-aware chunking with a deliberately tight budget; keeping
+    # this fixture's budget high avoids conflating those two contracts.
+    judger = JevJudger(
+        api_key="synthetic-contract-key",
+        max_retries=0,
+        max_input_tokens=50_000,
+    )
     engine = InsightEngine(judger=judger)
     full_call_start = len(ContractClient.calls)
     full_provider_start = len(transport.requests)
     run = await engine.evaluate(_card(workspace, source), [snapshot])
-    full_judge_call = ContractClient.calls[full_call_start + 1]
+    # JevJudger intentionally opts out of a redundant semantic compile pass;
+    # the production evaluator receives one bounded typed judgment call here.
+    full_judge_call = ContractClient.calls[full_call_start]
     full_call_trace = ContractClient.calls[full_call_start:]
     full_provider_requests = transport.requests[full_provider_start:]
 
@@ -285,7 +295,10 @@ async def run_trial(output: Path | None = None) -> dict[str, Any]:
         typesafe_sdk.Noul = original_noul
         typesafe_sdk.Choice = original_choice
 
-    expected_calls = len(workspaces) * 4
+    # Each workspace has one full-dashboard and one focused-chart evaluation.
+    # Both are single bounded typed judgments; replay/compile work is not a
+    # second hidden Jev call.
+    expected_calls = len(workspaces) * 2
     checks = {
         "all_fixture_workspaces_evaluated": len(results) == len(workspaces) > 0,
         "tenant_contracts_remain_isolated": len(

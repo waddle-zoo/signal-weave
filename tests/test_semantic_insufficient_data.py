@@ -287,9 +287,9 @@ async def test_required_scalar_comparison_contract_fails_closed_before_business_
         item.values.get("quality_status") == expected_status
         for item in run.result.evidence
     )
-    # Jev still receives the bounded evidence for an explanation, but cannot
-    # turn a provider-declared coverage gap into a business route.
-    assert len(sdk.calls) == 2  # compile plan + semantic explanation
+    # The provider-declared contract gate is enforced before routing. Jev gets
+    # one bounded explanatory judgment, not a redundant compile pass.
+    assert len(sdk.calls) == 1
 
 
 async def test_required_scalar_comparison_contract_allows_semantic_decision_when_complete(sdk):

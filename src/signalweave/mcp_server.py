@@ -448,12 +448,36 @@ def _compact_bundle(bundle: Any) -> dict[str, Any]:
     if not isinstance(bundle, dict):
         return {}
     result = dict(bundle)
-    for field in ("related_matches", "omitted_matches"):
-        result[field] = [
-            _compact_match(match)
-            for match in bundle.get(field, [])
-            if isinstance(match, dict)
-        ]
+    result["related_matches"] = [
+        _compact_match(match)
+        for match in bundle.get("related_matches", [])
+        if isinstance(match, dict)
+    ]
+    # Omitted candidates are useful for an audit trail, but their repeated
+    # contracts and descriptions can dominate the next model context in a
+    # noisy enterprise catalog. Keep stable identity and ranking signals;
+    # selected/related sources retain the typed contract and evidence needed
+    # for the decision.
+    result["omitted_matches"] = [
+        {
+            key: match[key]
+            for key in (
+                "ref",
+                "adapter",
+                "resource",
+                "kind",
+                "title",
+                "relevance",
+                "recommended",
+                "suggested_role",
+                "role_probability",
+                "retrieval_signals",
+            )
+            if key in match
+        }
+        for match in bundle.get("omitted_matches", [])
+        if isinstance(match, dict)
+    ]
     return result
 
 
@@ -499,6 +523,32 @@ def _compact_simulation_response(response: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
+def _compact_evaluation_response(response: dict[str, Any]) -> dict[str, Any]:
+    """Return one evidence bundle without repeating the same payload three times.
+
+    ``evaluate_insight_card`` persists the complete result in the decision
+    receipt.  The normal agent handoff only needs the active card, receipt
+    metadata, and the structured result; returning the top-level resources,
+    plan, retrieval bundle, and rendered markdown again needlessly expands the
+    next model context.  No evidence fields are dropped from ``result``.
+    """
+    result = dict(response.get("result") or {})
+    had_markdown = isinstance(result.pop("report_markdown", None), str)
+    if isinstance(result.get("retrieval"), dict):
+        result["retrieval"] = _compact_bundle(result["retrieval"])
+    compact: dict[str, Any] = {
+        "receipt": response.get("receipt"),
+        "replayed": bool(response.get("replayed", False)),
+        "result": result,
+        "response_mode": "compact",
+        "details_available": True,
+    }
+    if "card" in response:
+        compact["card"] = _compact_card(response.get("card"))
+    compact["report_markdown_available"] = had_markdown
+    return compact
+
+
 CARD_AUTHORING_GUIDANCE = (
     "\n\nAuthoring guidance: use the minimal business fields accepted by draft_insight_card, "
     "propose_insight_card, or onboard_insight_card; do not copy a stored InsightCard, "
@@ -516,6 +566,9 @@ CARD_AUTHORING_GUIDANCE = (
     "resolve the canonical recipient by exact endpoint equality; never use a human label or a "
     "card-local alias as a substitute. Never invent a recipient; ask for missing expected cases when an intended route is not covered. "
     "Passing partial examples is not proof of the whole policy. "
+    "The frontier agent owns catalog search, source inspection, SQL/chart interpretation and the narrative investigation. "
+    "Use list_resources/search_catalog and inspect_resource before passing exact selected_sources; "
+    "the normal selected-source path is fixed/none and does not ask Jev to discover or rank assets. "
     "For recurring analytical reports, inspect existing source definitions and comparisons first; "
     "draft the smallest investigation preserving the business intent, then use "
     "preview_investigation_report to show the first actual report. "
@@ -596,10 +649,12 @@ def create_mcp(
             "New users: call get_signalweave_guide first for the query, report or monitor path. "
             "SignalWeave saves and repeats reviewed investigations using TypeSafe Jev. "
             "Start with the user's business question, not a JSON form: use "
-            "bootstrap_insight_card for the compact plain-language path, or "
-            "onboard_insight_card when you need the full authoring controls, to discover sources and propose a draft. Read its "
-            "setup_questions and review blockers. The compact path defaults to bounded related-source retrieval and bounded "
-            "follow-up investigation; choose fixed/none explicitly when the owner wants only the reviewed anchors. "
+            "list_resources/search_catalog and inspect_resource first so the frontier agent can choose and understand the "
+            "assets. Then use bootstrap_insight_card or onboard_insight_card with exact selected_sources to save the "
+            "agent's reviewed scope. The normal selected-source path is fixed/none: Jev does not discover assets or "
+            "perform the investigation. Choose retrieval_mode=expand or investigation_mode=bounded only when the "
+            "owner explicitly wants SignalWeave to make that bounded runtime selection. Read its setup_questions "
+            "and review blockers. "
             "A model selecting one metric source does not confirm anchor-only scope; when the goal asks why a movement "
             "happened or names related context, inspect adapter-published relationship candidates and preserve required "
             "partition, deployment, lineage, quality, or ownership sources before choosing fixed. "
@@ -647,7 +702,9 @@ def create_mcp(
             "retrieval and does not authorize unbounded discovery. "
             "For repeat runs, reuse the approved card instead of "
             "recreating it. Use a stable idempotency key for retries and a new key for "
-            "new observations. Return the evidence, numerical analysis, limitations, "
+            "new observations. Use response_mode=compact on evaluate_insight_card for the "
+            "normal agent handoff; the durable decision receipt retains the full result and "
+            "response_mode=full remains available for an exhaustive audit. Return the evidence, numerical analysis, limitations, "
             "and workflow handoff. Correlation and accounting contributions are not "
             "proof of causation. SignalWeave does not schedule runs or send messages; "
             "your agent or scheduler owns those actions. Selected evidence is sent "
@@ -1051,6 +1108,30 @@ def create_mcp(
         )
         return [resource.model_dump(mode="json") for resource in resources]
 
+    @mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False, "openWorldHint": False})
+    async def search_catalog(
+        query: str,
+        adapter: str | None = None,
+        limit: Annotated[int, Field(ge=1, le=100)] = 25,
+        cursor: str | None = None,
+        ctx: Context | None = None,
+    ) -> dict[str, Any]:
+        """Recall authorized catalog candidates without using Jev.
+
+        This is lexical/connector-owned recall for a frontier agent. It does
+        not decide which asset answers a business question; inspect the
+        returned candidates and pass the exact approved refs to onboarding.
+        """
+        principal = request_principal(ctx)
+        page = await runtime.sources.search_resources(
+            query,
+            adapter_name=adapter,
+            limit=limit,
+            cursor=cursor,
+            authorized_tenants=[principal.tenant_id] if principal else None,
+        )
+        return page.model_dump(mode="json")
+
     @mcp.tool()
     async def inspect_resource(
         adapter: str,
@@ -1088,7 +1169,12 @@ def create_mcp(
         ] = 10,
         ctx: Context | None = None,
     ) -> dict[str, Any]:
-        """Find bounded, Jev-ranked source candidates for an insight goal."""
+        """Find optional Jev-ranked source candidates for an insight goal.
+
+        Prefer ``list_resources``/``search_catalog`` plus ``inspect_resource``
+        when a frontier agent is available. This tool is a convenience for
+        callers that explicitly want Jev to rank a bounded catalog.
+        """
         discovery = await authoring.discover(
             goal,
             adapter=adapter,
@@ -1506,7 +1592,7 @@ def create_mcp(
                     "supports bounded related-source retrieval."
                 )
             ),
-        ] = RetrievalMode.EXPAND,
+        ] = RetrievalMode.FIXED,
         investigation_mode: Annotated[
             InvestigationMode,
             Field(
@@ -1518,7 +1604,7 @@ def create_mcp(
                     "a multi-source card does not require a second follow-up stage."
                 )
             ),
-        ] = InvestigationMode.BOUNDED,
+        ] = InvestigationMode.NONE,
         max_investigation_sources: int = 3,
         investigation_threshold: float = 0.60,
         response_mode: Annotated[
@@ -1535,10 +1621,11 @@ def create_mcp(
     ) -> dict[str, Any]:
         """Propose and save a draft free-form insight card.
 
-        ``selected_sources`` contains refs returned by
-        ``discover_insight_sources``; each item may also provide adapter
+        ``selected_sources`` contains exact refs chosen by the caller after
+        catalog search/inspection; each item may also provide adapter
         parameters such as Superset chart IDs. The result is a draft until a
-        human or policy service approves it.
+        human or policy service approves it. If omitted, the legacy convenience
+        discovery path may ask Jev to rank a bounded catalog.
         """
         proposal = await authoring.propose(
             what_to_watch,
@@ -1632,7 +1719,7 @@ def create_mcp(
                     "supports bounded related-source retrieval."
                 )
             ),
-        ] = RetrievalMode.EXPAND,
+        ] = RetrievalMode.FIXED,
         investigation_mode: Annotated[
             InvestigationMode,
             Field(
@@ -1644,7 +1731,7 @@ def create_mcp(
                     "a multi-source card does not require a second follow-up stage."
                 )
             ),
-        ] = InvestigationMode.BOUNDED,
+        ] = InvestigationMode.NONE,
         max_investigation_sources: int = 3,
         investigation_threshold: float = 0.60,
         response_mode: Annotated[
@@ -1660,11 +1747,13 @@ def create_mcp(
     ) -> dict[str, Any]:
         """Onboard one free-form card in a single human-reviewable call.
 
-        This is an ergonomic wrapper around the same Jev-backed proposal path;
+        This is an ergonomic wrapper around the same typed proposal path;
         it never approves a card, sends a push, or accepts identity from tool
         arguments. The response is shaped for a caller-owned UI or agent:
-        draft card, bounded discovery, typed plan, blockers, questions, and the
-        exact next action needed to reach approval.
+        draft card, exact authorized source scope, typed plan, blockers, questions,
+        and the exact next action needed to reach approval. When selected_sources
+        is supplied, the caller/agent owns discovery and Jev is not used for
+        catalog ranking or analytical investigation.
         """
         result = await propose_insight_card(
             what_to_watch=what_to_watch,
@@ -1746,22 +1835,21 @@ def create_mcp(
             RetrievalMode,
             Field(
                 description=(
-                    "Retrieval scope. The compact default is expand within the bounded authorized catalog. "
-                    "Choose fixed when the owner wants only the reviewed anchors."
+                    "Retrieval scope. The compact default is fixed to the exact selected sources. "
+                    "Choose expand only when the owner explicitly wants bounded runtime source selection."
                 )
             ),
-        ] = RetrievalMode.EXPAND,
+        ] = RetrievalMode.FIXED,
         investigation_mode: Annotated[
             InvestigationMode,
             Field(
                 description=(
-                    "Follow-up scope. The compact default is bounded: investigate only within the configured "
-                    "source limit. Choose none for a policy/threshold monitor whose approved anchors "
-                    "already contain the required evidence; use bounded only when the owner wants an "
-                    "additional source-based why/driver investigation."
+                    "Follow-up scope. The compact default is none: the caller's frontier agent owns "
+                    "additional investigation. Choose bounded only when the owner explicitly wants "
+                    "SignalWeave/Jev to select additional authorized sources."
                 )
             ),
-        ] = InvestigationMode.BOUNDED,
+        ] = InvestigationMode.NONE,
         response_mode: Annotated[
             ResponseMode,
             Field(
@@ -1775,12 +1863,13 @@ def create_mcp(
     ) -> dict[str, Any]:
         """Start onboarding from a few plain-language fields.
 
-        This is the compact agent-facing entry point. Plain-language fields are
-        enough to start discovery, while an agent may pass owner-approved typed
-        bindings after inspecting the catalog: exact selected source refs,
-        numeric conditions and outcome-to-destination mappings. SignalWeave
-        validates those bindings; it never invents a source, threshold or
-        recipient and never approves the card on the caller's behalf.
+        This is the compact agent-facing entry point. The frontier agent should
+        search/list and inspect the catalog first, then pass exact selected
+        source refs, numeric conditions and outcome-to-destination mappings.
+        SignalWeave validates those bindings; it never invents a source,
+        threshold or recipient and never approves the card on the caller's behalf.
+        Omitting selected_sources invokes the legacy Jev-ranked convenience path;
+        use that only when the caller explicitly wants Jev to help with retrieval.
         """
         context = purpose
         if source_hint:
@@ -2026,13 +2115,25 @@ def create_mcp(
         context: ContextSnapshot | None = None,
         parent_receipt_id: str | None = None,
         workflow_step_key: str | None = None,
+        response_mode: Annotated[
+            ResponseMode,
+            Field(
+                description=(
+                    "Use compact for the normal agent handoff: it preserves the complete "
+                    "structured evidence result while removing repeated resources, plans and "
+                    "rendered markdown. Use full for an exhaustive audit response."
+                )
+            ),
+        ] = "full",
         ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Run an approved card in delivery-disabled shadow mode.
 
         The result is Jev-backed and durable. SignalWeave never sends the
         configured delivery methods; a caller-owned scheduler or agent may
-        inspect the receipt and decide what to do next.
+        inspect the receipt and decide what to do next. The durable receipt
+        always retains the full result; ``response_mode='compact'`` only shapes
+        this MCP response for the next agent turn.
         """
         principal = request_principal(ctx)
         trusted_actor = principal.principal_id if principal else actor
@@ -2041,7 +2142,7 @@ def create_mcp(
             if context
             else None
         )
-        return await evaluate_approved_card(
+        response = await evaluate_approved_card(
             card_id,
             idempotency_key=idempotency_key,
             actor=trusted_actor,
@@ -2049,6 +2150,11 @@ def create_mcp(
             principal=principal,
             parent_receipt_id=parent_receipt_id,
             workflow_step_key=workflow_step_key,
+        )
+        return (
+            _compact_evaluation_response(response)
+            if response_mode == "compact"
+            else response
         )
 
     @mcp.tool()
@@ -2162,7 +2268,14 @@ def create_mcp(
         runtime.card_store.save_card(card)
         review_payload = review.model_dump(mode="json")
         return {
-            "card": _evaluation_card(card),
+            # The stored card carries the complete latest review for auditability.
+            # Do not put that uncompact candidate packet back into the caller's
+            # context when it explicitly requested the normal agent response.
+            "card": (
+                _compact_card(_evaluation_card(card))
+                if response_mode == "compact"
+                else _evaluation_card(card)
+            ),
             "review": _compact_review(review_payload)
             if response_mode == "compact"
             else review_payload,
@@ -2203,7 +2316,11 @@ def create_mcp(
         response = {
             "status": "preview",
             "delivery_enabled": False,
-            "card": _evaluation_card(run.card),
+            "card": (
+                _compact_card(_evaluation_card(run.card))
+                if response_mode == "compact"
+                else _evaluation_card(run.card)
+            ),
             "resources": [resource.model_dump(mode="json") for resource in run.resources],
             "plan": run.plan.model_dump(mode="json"),
             "retrieval": bundle.model_dump(mode="json"),
@@ -2407,6 +2524,7 @@ def create_mcp(
         adapter: str | None = None,
         source_selection_fingerprint: str | None = None,
         source_selection_reason: str | None = None,
+        use_current_source_selection_review: bool = False,
         source_scope_confirmations: dict[str, str] | None = None,
         dynamic_scope_acknowledged: bool = False,
         workflow_report_id: str | None = None,
@@ -2415,9 +2533,10 @@ def create_mcp(
         """Approve only after explicit owner review and a delivery-disabled simulation.
 
         For a fixed card with no dynamic investigation, an owner may confirm its
-        exact selected sources despite duplicate titles or omitted recommendations,
-        and may explicitly acknowledge an undeclared comparison window after
-        reviewing the source. For a card that explicitly requests bounded related-source
+        exact selected sources despite duplicate titles or omitted recommendations. A
+        source-owned comparison contract is still required for automatic notify or
+        escalate routes; owner prose cannot create a missing window, comparison key,
+        population, or grain. For a card that explicitly requests bounded related-source
         retrieval or investigation, pass dynamic_scope_acknowledged=true alongside the
         current review fingerprint and owner reason. This acknowledges the bounded runtime
         expansion; it does not authorize unbounded discovery. These confirmations do not
@@ -2428,6 +2547,12 @@ def create_mcp(
         source_selection_reason explaining which definitions/populations were chosen
         and why. Changed policy/catalog invalidates that confirmation. This cannot
         override source health, permissions, missing policy or other blockers.
+        Clients that have just reviewed the current card may set
+        use_current_source_selection_review=true and provide the owner reason
+        instead of copying the opaque fingerprint. The server binds approval to
+        the current stored review and still revalidates its fingerprint against
+        the current catalog; this is a convenience for agents and does not waive
+        any blocker or owner confirmation.
         If the review lists selected source scopes, also pass
         source_scope_confirmations with the exact declared scope text by source ref.
         This makes the scope decision auditable; it does not make an incompatible
@@ -2440,6 +2565,19 @@ def create_mcp(
         principal = request_principal(ctx)
         card = get_scoped_card(card_id, principal)
         assert_dynamic_review_scope(card, adapter)
+        if use_current_source_selection_review:
+            if source_selection_fingerprint is not None:
+                raise ValueError(
+                    "Do not pass source_selection_fingerprint when "
+                    "use_current_source_selection_review=true."
+                )
+            current_review = card.onboarding_review
+            if current_review is None or not current_review.source_selection_fingerprint:
+                raise ValueError(
+                    "No current source-selection review is stored. Call "
+                    "review_insight_card before using use_current_source_selection_review."
+                )
+            source_selection_fingerprint = current_review.source_selection_fingerprint
         original = card.model_dump(mode="json")
         if not card.sources:
             raise ValueError("an insight card needs at least one selected source before approval")
@@ -2510,15 +2648,9 @@ def create_mcp(
             )
             if dynamic_scope and card.sources:
                 confirmable.add(OnboardingBlockerCode.CATALOG_INCOMPLETE)
-            owner_confirmable_windows = [
-                blocker
-                for blocker in onboarding_review.blockers
-                if blocker.code == OnboardingBlockerCode.COMPARISON_WINDOW_MISMATCH
-                and "do not declare compatible comparison windows" in blocker.message
-            ]
             resolved = [
                 blocker for blocker in onboarding_review.blockers
-                if blocker.code in confirmable or blocker in owner_confirmable_windows
+                if blocker.code in confirmable
             ]
             remaining = [b for b in onboarding_review.blockers if b not in resolved]
             if resolved:

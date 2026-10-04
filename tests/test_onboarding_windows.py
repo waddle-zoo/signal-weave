@@ -201,6 +201,14 @@ async def test_undeclared_optional_quality_source_does_not_block_required_metric
     catalog = catalog_with_windows(["previous_period"])
     # This source is a point-in-time freshness/partition check, not a metric
     # comparison. It is intentionally not required for the numeric route.
+    catalog.resources[0].contract = ResourceContract(
+        metric_names=["checkout_conversion"],
+        available_comparison_windows=["previous_period"],
+        required_comparison_keys=["checkout_conversion"],
+        population="completed customer sessions",
+        grain="week",
+        roles=["primary"],
+    )
     catalog.resources[1].contract = ResourceContract()
     server = make_server(tmp_path, catalog=catalog)
     response = await dispatch(server, "onboard_insight_card", arguments(
@@ -236,7 +244,45 @@ async def test_undeclared_optional_quality_source_does_not_block_required_metric
     }))['status'] == "approved"
 
 
-async def test_owner_can_confirm_undeclared_window_for_fixed_automatic_route(tmp_path):
+async def test_typed_required_quality_source_does_not_block_metric_window(tmp_path):
+    catalog = catalog_with_windows(["previous_period"])
+    # A required quality source can gate actionability without being a metric
+    # comparison. The connector's typed role, not a title heuristic, carries
+    # that distinction into onboarding review.
+    catalog.resources[1].contract = ResourceContract(roles=["quality"])
+    server = make_server(tmp_path, catalog=catalog)
+    response = await dispatch(server, "onboard_insight_card", arguments(
+        "onboard_insight_card",
+        selected_sources=[
+            {"ref": "superset|dashboard:7", "key": "metric", "required": True},
+            {"ref": "superset|dashboard:8", "key": "quality", "required": True},
+        ],
+        numeric_conditions=[{
+            "text": "Notify on a material decline.",
+            "source_key": "metric",
+            "comparison_key": "checkout_conversion",
+            "measurement": "delta",
+            "threshold": -0.1,
+            "comparator": "<=",
+            "unit": "ratio",
+        }],
+        decision_guidance="Notify the owner on a material decline; ignore ordinary variation.",
+        delivery_methods=[{
+            "key": "owner",
+            "outcome": "notify",
+            "label": "Owner",
+            "destination": "agent://owner",
+        }],
+    ))
+    review = (await dispatch(server, "review_insight_card", {
+        "card_id": response["card"]["id"],
+    }))['review']
+
+    assert windows_blocker(review) is None
+    assert any("undeclared" in warning for warning in review["warnings"])
+
+
+async def test_owner_cannot_confirm_undeclared_window_for_fixed_automatic_route(tmp_path):
     server = make_server(tmp_path, catalog=catalog_with_windows([]))
     response = await dispatch(server, "onboard_insight_card", arguments(
         "onboard_insight_card",
@@ -251,18 +297,48 @@ async def test_owner_can_confirm_undeclared_window_for_fixed_automatic_route(tmp
     card_id = response["card"]["id"]
     review = (await dispatch(server, "review_insight_card", {"card_id": card_id}))["review"]
     assert windows_blocker(review)["severity"] == "block"
-    approval = await dispatch(server, "approve_insight_card", {
-        "card_id": card_id,
-        "source_selection_fingerprint": review["source_selection_fingerprint"],
-        "source_selection_reason": (
-            "The owner reviewed the fixed source and explicitly accepts previous_period "
-            "as the source's comparison contract; runtime evidence must still support it."
-        ),
-    })
-    assert approval["status"] == "approved"
-    assert approval["onboarding_review"]["confirmed_blocker_codes"] == [
-        "comparison-window-mismatch"
-    ]
+    with pytest.raises(Exception, match="comparison-window-mismatch"):
+        await dispatch(server, "approve_insight_card", {
+            "card_id": card_id,
+            "source_selection_fingerprint": review["source_selection_fingerprint"],
+            "source_selection_reason": (
+                "The owner reviewed the fixed source and explicitly accepts previous_period "
+                "as the source's comparison contract; runtime evidence must still support it."
+            ),
+        })
+
+
+async def test_metric_source_without_typed_contract_cannot_be_owner_confirmed(tmp_path):
+    catalog = catalog_with_windows(["previous_period"])
+    catalog.resources[0].contract = ResourceContract(
+        metric_names=["checkout_conversion"],
+        available_comparison_windows=["previous_period"],
+        roles=["reference"],
+    )
+    server = make_server(tmp_path, catalog=catalog)
+    response = await dispatch(server, "onboard_insight_card", arguments(
+        "onboard_insight_card",
+        decision_guidance="Notify the owner only when the selected comparison is materially abnormal.",
+        delivery_methods=[{
+            "key": "owner",
+            "outcome": "notify",
+            "label": "Owner",
+            "destination": "agent://owner",
+        }],
+    ))
+    card_id = response["card"]["id"]
+    review = (await dispatch(server, "review_insight_card", {"card_id": card_id}))["review"]
+    blocker = next(
+        item for item in review["blockers"] if item["code"] == "source-contract-required"
+    )
+    assert blocker["severity"] == "block"
+    assert blocker["refs"] == ["superset|dashboard:7"]
+    with pytest.raises(Exception, match="source-contract-required"):
+        await dispatch(server, "approve_insight_card", {
+            "card_id": card_id,
+            "source_selection_fingerprint": review["source_selection_fingerprint"],
+            "source_selection_reason": "The owner accepts this source despite its missing typed contract.",
+        })
 
 
 @pytest.mark.parametrize("name", ["propose_insight_card", "onboard_insight_card"])

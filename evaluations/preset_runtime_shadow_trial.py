@@ -27,7 +27,10 @@ import typesafe_sdk
 from evaluations.preset_generalization_trial import _workspaces
 from evaluations.preset_hosted_trial import WorkspaceTransport, _load_fixture
 from evaluations.preset_jev_contract_trial import ContractChoice, ContractClient, ContractNoul
+from signalweave.hosted import HostedDataPolicy
 from signalweave.mcp_server import create_mcp
+from signalweave.models import ResourceContract, SourceComparisonContract
+from signalweave.preset_adapter import PresetAdapter, PresetCloudClient
 from signalweave.runtime import build_runtime
 
 
@@ -102,28 +105,81 @@ def _focused_chart_id(workspace: dict[str, Any]) -> str:
     raise RuntimeError(f"workspace {workspace.get('id')} has no usable focused chart")
 
 
+class ContractBackedPresetAdapter(PresetAdapter):
+    """Evaluation-only Preset adapter with an explicit source contract.
+
+    Preset's dashboard API does not guarantee metric population, grain, or
+    comparison-key metadata. The production onboarding gate correctly blocks
+    unattended routes when those facts are absent. This shadow trial is meant
+    to exercise the post-onboarding runtime path, so it supplies the
+    customer-reviewed contract that a real deployment would obtain from a
+    dbt/DataHub/metric-catalog sidecar. It does not pretend Preset invented
+    these semantics.
+    """
+
+    def _contract(self, *, available_comparison_windows: list[str] | None = None):
+        return ResourceContract(
+            tenant_id=self.tenant_id,
+            domain="bi",
+            metric_names=["saved_dashboard_measures"],
+            comparison_contracts=[SourceComparisonContract(
+                key="saved-dashboard-measures",
+                metric="saved_dashboard_measures",
+                definition="Owner-reviewed saved dashboard measures for this monitoring card.",
+                population="the dashboard's configured reporting population",
+                unit="value",
+                comparison_window="previous_period",
+                coverage="complete",
+                comparable=True,
+            )],
+            available_comparison_windows=list(available_comparison_windows or ["previous_period"]),
+            population="the dashboard's configured reporting population",
+            grain="dashboard reporting interval",
+            roles=["primary"],
+        )
+
+    def _descriptors(self, dashboards: list[dict[str, object]]):
+        descriptors = super()._descriptors(dashboards)
+        return [
+            descriptor.model_copy(update={
+                "contract": self._contract(
+                    available_comparison_windows=descriptor.contract.available_comparison_windows
+                )
+            })
+            for descriptor in descriptors
+        ]
+
+
 async def _run_workspace(workspace: dict[str, Any], root: Path) -> dict[str, Any]:
     transport = WorkspaceTransport(workspace)
     adapter_name = "preset__preset-env"
     values = {
         "TYPESAFE_MODE": "jev",
         "TYPESAFE_API_KEY": "synthetic-runtime-key",
-        "PRESET_URL": f"https://{workspace['id']}.preset.test",
-        "PRESET_WORKSPACE": f"{workspace['id']}-workspace",
-        "PRESET_TENANT_ID": workspace["tenant_id"],
-        "PRESET_API_BASE_URL": "https://api.app.preset.test",
-        "PRESET_API_TOKEN_NAME": "synthetic-name",
-        "PRESET_API_TOKEN_SECRET": "synthetic-secret",
-        "PRESET_DATA_MODE": "cached_results",
-        "PRESET_ALLOW_LIVE_QUERIES": "false",
-        "PRESET_ALLOW_REFRESH": "false",
+        "SIGNALWEAVE_MAX_JEV_INPUT_TOKENS": "50000",
         "SIGNALWEAVE_TENANT_ID": workspace["tenant_id"],
         "SIGNALWEAVE_PRINCIPAL_ID": f"{workspace['id']}-monitoring-agent",
         "SIGNALWEAVE_STORE_BACKEND": "sqlite",
         "SIGNALWEAVE_STORE_PATH": str(root / f"{workspace['id']}.db"),
     }
     with _runtime_environment(values):
-        runtime = build_runtime(http_transport=httpx.MockTransport(transport))
+        # Keep the provider transport synthetic, but install the same adapter
+        # explicitly so this trial can model the separately reviewed metric
+        # contract that Preset itself does not guarantee to publish.
+        preset_client = PresetCloudClient(
+            f"https://{workspace['id']}.preset.test",
+            api_token_name="synthetic-name",
+            api_token_secret="synthetic-secret",
+            api_base_url="https://api.app.preset.test",
+            transport=httpx.MockTransport(transport),
+        )
+        preset_adapter = ContractBackedPresetAdapter(
+            preset_client,
+            tenant_id=workspace["tenant_id"],
+            policy=HostedDataPolicy(max_result_rows=100),
+            adapter_name=adapter_name,
+        )
+        runtime = build_runtime(adapters=[preset_adapter])
         server = create_mcp(runtime)
         discover = _tool(server, "discover_insight_sources")
         onboard = _tool(server, "onboard_insight_card")

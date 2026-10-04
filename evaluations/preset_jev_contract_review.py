@@ -285,7 +285,7 @@ def review_report(report: dict[str, Any]) -> dict[str, Any]:
     )
     if report.get("total_jev_requests") != raw_jev_requests:
         findings.append("serialized Jev request total is not backed by raw traces")
-    if report.get("total_jev_requests") != len(workspaces) * 4:
+    if report.get("total_jev_requests") != len(workspaces) * 2:
         findings.append("the contract request count is not bounded to two cards per workspace")
 
     missing_non_claims = REQUIRED_NOT_PROVEN - set(report.get("not_proven", []))

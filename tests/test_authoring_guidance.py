@@ -66,8 +66,8 @@ async def test_native_mcp_authoring_schema_preserves_defaults_and_allows_advance
     assert properties["action_confidence_threshold"]["default"] == 0.70
     assert properties["action_confidence_threshold"]["maximum"] == 1.0
     assert "model-support floor" in properties["action_confidence_threshold"]["description"].lower()
-    assert properties["retrieval_mode"]["default"] == ("fixed" if name == "draft_insight_card" else "expand")
-    assert properties["investigation_mode"]["default"] == ("none" if name == "draft_insight_card" else "bounded")
+    assert properties["retrieval_mode"]["default"] == "fixed"
+    assert properties["investigation_mode"]["default"] == "none"
     assert "selected source references" in properties["retrieval_mode"]["description"]
     assert "additional authorized sources" in properties["retrieval_mode"]["description"]
     assert "none disables follow-up" in properties["investigation_mode"]["description"]

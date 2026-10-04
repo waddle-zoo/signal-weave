@@ -21,6 +21,7 @@ from signalweave.models import (
     ResourceDescriptor,
     ResourceSnapshot,
 )
+from signalweave.onboarding import InsightAuthoringService
 from signalweave.runtime import Runtime
 from signalweave.sources import SourceRegistry
 from signalweave.store import (
@@ -128,6 +129,9 @@ class StaleSupersetCatalogDouble(SupersetCatalogDouble):
 
 class OnboardingJevDouble:
     name = "jev-onboarding-test-double"
+    # Mirror the production Jev contract: the engine derives the typed plan
+    # from the card and calls this judger only for the final policy result.
+    skip_semantic_compile = True
 
     async def rank_resources(self, goal, resources):
         del goal
@@ -403,6 +407,111 @@ async def test_mcp_can_use_trusted_request_principal_for_shared_catalog(tmp_path
 
 
 @pytest.mark.asyncio
+async def test_discovery_surfaces_typed_primary_anchor_when_noisy_jev_ranking_hides_it():
+    """A weak Jev signal exposes the typed anchor without auto-selecting it."""
+
+    class NoisyCatalog:
+        name = "warehouse"
+
+        async def list_resources(self):
+            return [
+                *[
+                    ResourceDescriptor(
+                        adapter=self.name,
+                        resource=f"asset:{index}",
+                        kind="dashboard",
+                        title=f"Revenue decoy {index}",
+                        description="A related but non-canonical asset.",
+                    )
+                    for index in range(20)
+                ],
+                ResourceDescriptor(
+                    adapter=self.name,
+                    resource="asset:canonical",
+                    kind="dashboard",
+                    title="Z canonical revenue asset",
+                    description="The reviewed source for the revenue metric.",
+                    contract=ResourceContract(
+                        roles=["primary"],
+                        metric_names=["net_revenue"],
+                        available_comparison_windows=["previous_period"],
+                    ),
+                ),
+            ]
+
+    class LowRecallJev:
+        name = "jev-recall-test"
+
+        async def rank_resources(self, goal, resources):
+            del goal
+            return {f"{item.adapter}|{item.resource}": 0.1 for item in resources}
+
+    registry = SourceRegistry([NoisyCatalog()])
+    service = InsightAuthoringService(
+        registry=registry,
+        engine=SimpleNamespace(judger=LowRecallJev()),
+    )
+
+    discovery = await service.discover("Monitor net revenue", limit=3)
+
+    canonical = next(
+        match for match in discovery.matches if match.resource == "asset:canonical"
+    )
+    assert "typed-anchor-contract" in canonical.retrieval_signals
+    assert canonical.recommended is False
+    assert len(discovery.matches) == 3
+
+
+@pytest.mark.asyncio
+async def test_discovery_recommends_typed_primary_anchor_at_derived_recall_floor():
+    """A moderate Jev signal can recommend a typed contract without a connector rule."""
+
+    class Catalog:
+        name = "warehouse"
+
+        async def list_resources(self):
+            return [
+                ResourceDescriptor(
+                    adapter=self.name,
+                    resource="asset:decoy",
+                    kind="dashboard",
+                    title="Revenue archive",
+                    description="Historical context only.",
+                ),
+                ResourceDescriptor(
+                    adapter=self.name,
+                    resource="asset:canonical",
+                    kind="dashboard",
+                    title="Revenue source",
+                    description="The current reviewed metric source.",
+                    contract=ResourceContract(
+                        roles=["primary"],
+                        metric_names=["net_revenue"],
+                        available_comparison_windows=["previous_period"],
+                    ),
+                ),
+            ]
+
+    class ModerateJev:
+        name = "jev-moderate-recall-test"
+
+        async def rank_resources(self, goal, resources):
+            del goal
+            return {f"{item.adapter}|{item.resource}": 0.5 for item in resources}
+
+    service = InsightAuthoringService(
+        registry=SourceRegistry([Catalog()]),
+        engine=SimpleNamespace(judger=ModerateJev()),
+    )
+
+    discovery = await service.discover("Monitor net revenue", limit=1)
+
+    assert discovery.no_match is False
+    assert discovery.matches[0].resource == "asset:canonical"
+    assert discovery.matches[0].recommended is True
+
+
+@pytest.mark.asyncio
 async def test_generic_card_flow_discovers_proposes_previews_and_requires_approval(
     tmp_path, monkeypatch
 ):
@@ -432,6 +541,7 @@ async def test_generic_card_flow_discovers_proposes_previews_and_requires_approv
                 "parameters": {"chart_ids": ["62", "64"]},
             }
         ],
+        retrieval_mode="expand",
         delivery_methods=[
             {
                 "key": "growth-ops",
@@ -455,7 +565,7 @@ async def test_generic_card_flow_discovers_proposes_previews_and_requires_approv
     assert proposal["proposal"]["onboarding_review"]["status"] == "ready_for_approval"
     assert proposal["proposal"]["onboarding_review"]["principal_id"] == "test-principal"
     assert proposal["proposal"]["onboarding_review"]["principal_tenant"] == "default"
-    assert proposal["proposal"]["onboarding_review"]["discovery_receipt"]["evaluator"] == "jev-onboarding-test-double"
+    assert proposal["proposal"]["onboarding_review"]["discovery_receipt"]["evaluator"] == "frontier-agent-selection"
     assert proposal["proposal"]["onboarding_review"]["discovery_receipt"]["candidate_refs"]
     assert proposal["proposal"]["onboarding_review"]["source_candidates"][0]["selected"] is True
     assert proposal["proposal"]["setup_questions"]
@@ -586,7 +696,7 @@ async def test_one_call_onboarding_returns_usable_human_review_packet_without_ap
     assert onboarding["review"]["discovery_receipt"]["evaluator"] == (
         "jev-onboarding-test-double"
     )
-    assert onboarding["plan"]["compiled_by"] == "jev-onboarding-test-double"
+    assert onboarding["plan"]["compiled_by"] == "deterministic-card-plan"
 
     stored = tool(server, "get_insight_card")(onboarding["card"]["id"])
     assert stored["status"] == "draft"
@@ -612,8 +722,8 @@ async def test_compact_bootstrap_onboarding_keeps_plain_language_and_returns_the
     assert onboarding["approval_required"] is True
     assert onboarding["delivery_enabled"] is False
     assert onboarding["card"]["status"] == "draft"
-    assert onboarding["card"]["retrieval_mode"] == "expand"
-    assert onboarding["card"]["investigation_mode"] == "bounded"
+    assert onboarding["card"]["retrieval_mode"] == "fixed"
+    assert onboarding["card"]["investigation_mode"] == "none"
     assert "growth dashboard" in onboarding["card"]["why_watch"]
     assert onboarding["review"]["discovery_receipt"]["evaluator"] == "jev-onboarding-test-double"
 
@@ -845,11 +955,15 @@ async def test_review_insight_card_explains_omitted_recommended_sources(tmp_path
                 "label": "Growth overview",
             }
         ],
+        retrieval_mode="expand",
     )
 
     review = await tool(server, "review_insight_card")(drafted["card"]["id"])
 
-    assert review["review"]["status"] == "needs_human_input"
+    # Expand mode is an explicit request for caller-owned dynamic retrieval;
+    # it surfaces the omitted recommendation without turning it into a fixed
+    # approval blocker.
+    assert review["review"]["status"] == "ready_for_approval"
     assert review["review"]["selected_source_refs"] == ["superset|dashboard:7"]
     assert review["review"]["missing_recommended_refs"] == ["superset|dashboard:8"]
     candidate = next(
@@ -910,6 +1024,7 @@ async def test_review_insight_card_surfaces_ambiguous_candidates(tmp_path):
                 "label": "Growth overview",
             }
         ],
+        retrieval_mode="expand",
     )
 
     review = await tool(server, "review_insight_card")(drafted["card"]["id"])
@@ -984,7 +1099,10 @@ async def test_direct_draft_accepts_free_form_card_and_outcome_routes(tmp_path):
     assert drafted["card"]["what_to_watch"].startswith("A Superset")
     assert drafted["plan"]["capabilities"] == [
         "percent_change",
+        "baseline_comparison",
+        "freshness_check",
         "cross_source_comparison",
+        "question_checks",
     ]
 
 

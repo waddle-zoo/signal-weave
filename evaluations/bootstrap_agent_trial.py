@@ -63,6 +63,8 @@ ARMS = ("luna_bi", "luna_signalweave_jev")
 # claim for that artifact.
 OPENAI_TRANSPORT_RETRIES = 2
 OPENAI_RETRY_BACKOFF_SECONDS = 0.5
+OPENAI_RETRYABLE_STATUS_CODES = frozenset({429, 500, 502, 503, 504})
+ONBOARDING_CONTINUATION_TURNS = 2
 PRICES = {
     "assumption_date": "2026-09-30",
     "currency": "USD",
@@ -86,7 +88,7 @@ PRODUCT_TOOLS = frozenset({
 # tool.  These are still the production MCP schemas; this is a guided entry
 # path, not a benchmark-only replacement for the full server.
 ONBOARDING_PRODUCT_TOOLS = frozenset({
-    "get_signalweave_guide", "bootstrap_insight_card", "get_insight_card",
+    "get_signalweave_guide", "bootstrap_insight_card", "onboard_insight_card", "get_insight_card",
     "review_insight_card", "simulate_insight_card", "preview_investigation_report",
     "record_insight_card_correction", "approve_insight_card",
 })
@@ -493,10 +495,13 @@ def same_card_monitoring_observed(rows: list[dict[str, Any]]) -> bool:
 
 class ToolSession:
     def __init__(self, public: dict, adapter: PublicSourceAdapter, server, treatment: bool,
-                 *, owner_reviewer=None, onboarding_surface: str = "full"):
+                 *, registry: SourceRegistry | None = None, owner_reviewer=None,
+                 onboarding_surface: str = "full"):
+        self.tenant_id = public["scenario_id"]
         self.public = agent_context(public)
         self.owner = {"owner_answers": copy.deepcopy(public["owner_answers"])}
         self.adapter, self.server, self.treatment = adapter, server, treatment
+        self.registry = registry or SourceRegistry([adapter])
         self.notes = ""
         self.owner_topics: set[str] = set()
         self.reviewed: dict[str, str] = {}
@@ -701,6 +706,13 @@ class ToolSession:
         result = json_value(structured)
         if name == "get_insight_card" and isinstance(result, dict):
             self.latest_card = copy.deepcopy(result.get("card", result))
+            # Internal product calls are still current-card inspections. The
+            # synthetic approval gate used to record this only when the model
+            # called get_insight_card through ToolSession.call, so the gate's
+            # own binding fetch could never satisfy its inspection prerequisite.
+            card = result.get("card", result)
+            if isinstance(card, dict) and card.get("id"):
+                self.reviewed[card["id"]] = card_fingerprint(result)
         return result
 
     async def call(self, name: str, arguments: dict) -> Any:
@@ -733,7 +745,13 @@ class ToolSession:
         if name in {"inspect_source", "analyze_source"}:
             adapter, resource = arguments["ref"].split("|", 1)
             source = SourceRef(key=resource, adapter=adapter, resource=resource, label=resource)
-            snapshot = await self.adapter.inspect(source)
+            # Use the same authorized SourceRegistry path as the treatment
+            # runtime. Calling the synthetic hub directly hid catalog-owned
+            # metric/window/population contracts from both arms, making a noisy
+            # reference asset look equivalent to the canonical one.
+            snapshot = await self.registry.inspect(
+                source, authorized_tenants=[self.tenant_id]
+            )
             result = {"ref": arguments["ref"], "snapshot": snapshot.model_dump(mode="json")}
             if name == "analyze_source":
                 result["analyses"] = [analyze_comparison(source.key, item).model_dump(mode="json")
@@ -855,14 +873,31 @@ async def luna_episode(session: ToolSession, *, key: str, effort: str, budget: R
                        transport=None) -> dict:
     instructions = COMMON_SYSTEM
     if session.treatment:
-        instructions += (" SignalWeave is available. For setup: use get_signalweave_guide, then "
-                         "Use response_mode='compact' on bootstrap_insight_card, onboard_insight_card, "
+        instructions += (" SignalWeave is available. For setup, call get_signalweave_guide with "
+                         "task='monitor' at most once, then use onboard_insight_card as the "
+                         "exactly once as the default single authoring call. Pass the owner's plain-language goal, "
+                         "purpose, decision policy, follow-up guidance and exact authorized "
+                         "delivery destinations, with response_mode='compact'. The one call "
+                         "does not perform catalog discovery or deep analysis: you own the draft, "
+                         "source interpretation and narrative. Search the catalog first with "
+                         "search_catalog/list_catalog, then inspect_source and analyze_source. "
+                         "create a second bootstrap/proposal for the same intent unless the "
+                         "onboarding result identifies a material correction. If it returns a "
+                         "setup question or blocker, ask only that missing owner question. "
+                         "If the review surfaces a candidate with retrieval signal "
+                         "'typed-anchor-contract', use that exact authorized ref as "
+                         "selected_sources on the correction call; it is a recall safeguard, "
+                         "not an automatic recommendation. "
+                         "inspect the named source or contract, and rerun the same onboarding "
+                         "call with the correction; do not restart the whole workflow. "
+                         "Do not call bootstrap_insight_card in this guided monitor path; it is a fallback "
+                         "for callers that truly have no policy or routing context. Use response_mode='compact' on onboard_insight_card, "
                          "propose_insight_card, get_insight_card, review_insight_card, resolve_insight_sources, "
                          "simulate_insight_card, and preview_investigation_report during normal agent work; "
                          "use response_mode='full' only when an operator explicitly asks for the exhaustive audit packet. "
                          "Compact mode preserves typed policy, source identity, rankings, evidence and approval facts "
                          "while removing duplicated catalog payloads. "
-                         "bootstrap_insight_card with the plain-language goal, purpose, policy and "
+                         "onboard_insight_card with the plain-language goal, purpose, policy and "
                          "routing guidance from the brief and owner answers. Inspect the selected source and its "
                          "analytical comparisons before finalizing the card. For every explicit threshold in the "
                          "owner policy, pass an exact numeric_conditions binding when the inspected source exposes "
@@ -874,6 +909,8 @@ async def luna_episode(session: ToolSession, *, key: str, effort: str, budget: R
                          "label. Use the exact source-declared comparison window identifier such as previous_period. "
                          "For every owner-approved route, "
                          "pass a delivery_methods entry with the exact destination key/URL from the owner directory; "
+                         "preserve each explicit outcome as its own route: investigate is not notify, and notify is not investigate. "
+                         "If onboarding review reports decision-route-mismatch, correct the card's typed delivery_methods before approval. "
                          "prose alone does not configure a route. Then inspect it with get_insight_card, dry-run "
                          "simulate_insight_card or preview_investigation_report, resolve blockers, request_synthetic_owner_approval, "
                          "then approve_insight_card. For retrieval_mode=expand or investigation_mode=bounded, review "
@@ -888,19 +925,24 @@ async def luna_episode(session: ToolSession, *, key: str, effort: str, budget: R
                          "or investigation_mode=bounded, pass the current review fingerprint, the "
                          "owner's source-selection reason, and dynamic_scope_acknowledged=true to "
                          "acknowledge bounded runtime related-source retrieval. "
+                         "When approving after a review, avoid copying the opaque 64-character fingerprint: pass "
+                         "use_current_source_selection_review=true and a concise source_selection_reason. The server "
+                         "binds that request to the current stored review and rechecks it. If the tool reports a stale "
+                         "review, call review_insight_card once, then use that current-review flag; do not invent or "
+                         "transcribe a replacement fingerprint. "
                          "When the owner asks to connect related signals or investigate why a movement happened, "
                          "preserve that intent with retrieval_mode=expand. Use investigation_mode=bounded only "
                          "when the owner asks for an additional source-based why/driver investigation beyond the "
                          "approved anchors and relationship-linked context; a multi-source card does not require "
                          "a second follow-up stage. Otherwise use investigation_mode=none; do not silently narrow "
                          "retrieval scope. "
-                         "Selecting one metric source is not the same as owner-confirming anchor-only scope: inspect "
+                         "The normal selected-source path is fixed/none; selecting one metric source is not the same as owner-confirming anchor-only scope: inspect "
                          "adapter-published relationship candidates and retain required partition, deployment, lineage, "
                          "quality, or ownership context before choosing fixed. "
                          "Inspect the full review's recommended corroborating or diagnostic candidates and explicitly "
                          "anchor any source the policy names as required context; bounded expansion must not silently "
                          "substitute an archive, sandbox, forecast, or other population. "
-                         "Approval models a synthetic owner's procedural review only. Save notes "
+                         "SignalWeave's Jev call is a bounded typed policy judgment over the evidence you selected; it is not a substitute for your investigation. Approval models a synthetic owner's procedural review only. Save notes "
                          "and finish_setup with the card ID. No actual human has validated it.")
         instructions += "\nProduction MCP initialization instructions:\n" + (session.server.instructions or "")
     shared_card = getattr(session, "shared_card", None)
@@ -923,8 +965,12 @@ async def luna_episode(session: ToolSession, *, key: str, effort: str, budget: R
     calls = 0
     started = time.perf_counter()
     error = None
+    continuation_turns = 0
     async with httpx.AsyncClient(timeout=120, transport=transport) as client:
-        for _ in range(max_turns):
+        turn_limit = max_turns + (
+            ONBOARDING_CONTINUATION_TURNS if session.phase == "onboarding" else 0
+        )
+        for _ in range(turn_limit):
             request = {"model": MODEL, "instructions": instructions, "input": messages,
                        "reasoning": {"effort": effort}, "tools": specs,
                        "max_output_tokens": max_output_tokens, "store": False}
@@ -948,6 +994,31 @@ async def luna_episode(session: ToolSession, *, key: str, effort: str, budget: R
                     audit.emit("api.response", provider="openai", request_id=request_id,
                                response=payload, usage=payload.get("usage"),
                                seconds=time.perf_counter() - begin)
+                    # A retryable transport error is recoverable when a later
+                    # attempt returns a valid response. Clear the transient
+                    # error before the outer turn loop checks it; otherwise a
+                    # successful retry is incorrectly recorded as a failed
+                    # episode and prevents the agent from continuing.
+                    error = None
+                    break
+                except httpx.HTTPStatusError as exc:
+                    status_code = exc.response.status_code
+                    error = type(exc).__name__
+                    retryable = status_code in OPENAI_RETRYABLE_STATUS_CODES
+                    audit.emit("api.error", provider="openai", request_id=request_id,
+                               error_type=error, status_code=status_code,
+                               retryable=retryable and retry_index < OPENAI_TRANSPORT_RETRIES,
+                               retry_index=retry_index,
+                               seconds=time.perf_counter() - begin, usage_known=False)
+                    if retryable and retry_index < OPENAI_TRANSPORT_RETRIES:
+                        retry_after = exc.response.headers.get("retry-after")
+                        try:
+                            delay = min(max(float(retry_after), 0.0), 10.0)
+                        except (TypeError, ValueError):
+                            delay = OPENAI_RETRY_BACKOFF_SECONDS * (2 ** retry_index)
+                        if delay:
+                            await asyncio.sleep(delay)
+                        continue
                     break
                 except (httpx.TransportError, ssl.SSLError, ConnectionError, TimeoutError) as exc:
                     error = type(exc).__name__
@@ -971,6 +1042,28 @@ async def luna_episode(session: ToolSession, *, key: str, effort: str, budget: R
             messages.extend(output)  # Retain reasoning items as required by Responses API.
             tool_calls = [item for item in output if item.get("type") == "function_call"]
             if not tool_calls:
+                if (
+                    session.phase == "onboarding"
+                    and not session.setup_complete
+                    and continuation_turns < ONBOARDING_CONTINUATION_TURNS
+                ):
+                    continuation_turns += 1
+                    audit.emit(
+                        "agent.continuation",
+                        reason="no_structured_submission",
+                        continuation_turn=continuation_turns,
+                    )
+                    messages.append({
+                        "role": "user",
+                        "content": (
+                            "Continue the onboarding workflow. Do not end with prose while setup is "
+                            "incomplete; call the next available onboarding tool. If the last tool "
+                            "returned a rejection or review requirement, inspect or correct it and "
+                            "then continue until finish_setup succeeds."
+                        ),
+                    })
+                    error = None
+                    continue
                 error = "no_structured_submission"
                 break
             for call in tool_calls:
@@ -1252,6 +1345,8 @@ async def run_trial(args, *, scenarios_override: list[dict] | None = None) -> di
               "max_api_requests": args.max_api_requests, "max_turns": args.max_turns,
               "max_tool_calls": args.max_tool_calls, "max_output_tokens": args.max_output_tokens,
               "openai_transport_retries": OPENAI_TRANSPORT_RETRIES,
+              "openai_retryable_status_codes": sorted(OPENAI_RETRYABLE_STATUS_CODES),
+              "onboarding_continuation_turns": ONBOARDING_CONTINUATION_TURNS,
               "prices": PRICES, "clock_rebased_to": clock.isoformat(),
               "source_fingerprint": source_fingerprint(),
               "live": True, "real_external_notifications": False,
@@ -1317,6 +1412,7 @@ async def run_trial(args, *, scenarios_override: list[dict] | None = None) -> di
                                                          tenant_id=public["scenario_id"]))
             sessions[arm] = ToolSession(
                 public, adapter, create_mcp(runtime), arm == ARMS[1],
+                registry=registry,
                 owner_reviewer=owner_reviewer,
                 onboarding_surface="guided",
             )
@@ -1361,7 +1457,8 @@ async def run_trial(args, *, scenarios_override: list[dict] | None = None) -> di
                     if phase == "monitoring" and session.treatment:
                         system_started = time.perf_counter()
                         system_output = await session.product("evaluate_insight_card", {
-                            "card_id": session.card_id, "idempotency_key": audit.episode})
+                            "card_id": session.card_id, "idempotency_key": audit.episode,
+                            "response_mode": "compact"})
                         row["system_seconds"] = time.perf_counter() - system_started
                         audit.emit("system.evaluation", response=system_output)
                     skipped = False

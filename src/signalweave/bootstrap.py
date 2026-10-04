@@ -14,7 +14,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 
-from .models import PrincipalContext, ResourceSnapshot, SourceRef
+from .models import PrincipalContext, ResourceDescriptor, ResourceSnapshot, SourceRef
 from .sources import SourceRegistry
 
 

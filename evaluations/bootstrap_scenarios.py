@@ -580,6 +580,29 @@ def build_scenarios(
                     grain="week",
                     roles=["primary"],
                 )
+            elif connector_profile and i == 1:
+                # Quality/operational context is a first-class source role. It
+                # gates whether a metric is actionable but is not itself a
+                # recurring metric comparison. Real connectors should publish
+                # the same typed role instead of relying on title heuristics.
+                secondary_role = {
+                    "retail": "corroborates",
+                    "subscription_boxes": "corroborates",
+                    "saas": "quality",
+                    "support": "quality",
+                    "ops": "diagnostic",
+                    "logistics": "quality",
+                    "marketplace": "diagnostic",
+                    "finance": "quality",
+                }[spec["family"]]
+                descriptor.contract = ResourceContract(
+                    tenant_id=scenario_id,
+                    domain=spec["family"],
+                    scope=spec["scope"],
+                    population="Owner-declared operational context",
+                    grain="point-in-time",
+                    roles=[secondary_role],
+                )
             catalog.append(descriptor.model_dump(
                 mode="json",
                 exclude={} if connector_profile else {"contract": {"available_comparison_windows"}},

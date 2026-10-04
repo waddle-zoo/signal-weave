@@ -98,6 +98,36 @@ async def test_compact_review_and_simulation_keep_decision_boundary_and_structur
     assert len(json.dumps(compact_preview)) < len(json.dumps(full_preview))
 
 
+async def test_compact_evaluation_preserves_evidence_but_avoids_duplicate_handoff_payload(tmp_path):
+    server = make_server(tmp_path)
+    card_id = await _draft(server)
+    for _ in range(3):
+        await tool(server, "review_insight_card")(card_id)
+    await tool(server, "simulate_insight_card")(card_id)
+    await tool(server, "approve_insight_card")(card_id)
+
+    full = await tool(server, "evaluate_insight_card")(
+        card_id, idempotency_key="full-handoff", response_mode="full"
+    )
+    compact = await tool(server, "evaluate_insight_card")(
+        card_id, idempotency_key="compact-handoff", response_mode="compact"
+    )
+    durable = tool(server, "get_decision_receipt")(
+        idempotency_key="compact-handoff"
+    )
+
+    expected = dict(durable["result"])
+    expected.pop("report_markdown", None)
+    assert compact["response_mode"] == "compact"
+    assert compact["result"] == expected
+    assert compact["result"]["evidence"]
+    assert compact["result"]["report"]
+    assert "report_markdown" not in compact["result"]
+    assert "resources" not in compact
+    assert "plan" not in compact
+    assert len(json.dumps(compact)) < len(json.dumps(full)) * 0.75
+
+
 async def test_compact_card_read_keeps_latest_review_and_full_read_keeps_legacy_shape(tmp_path):
     server = make_server(tmp_path)
     card_id = await _draft(server)

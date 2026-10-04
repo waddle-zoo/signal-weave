@@ -72,7 +72,7 @@ async def test_review_approval_ignores_boundary_reranking(tmp_path):
             "resource": "dashboard:7",
             "label": "Growth overview",
         }],
-        retrieval_mode="fixed",
+        retrieval_mode="expand",
         investigation_mode="none",
     )
     card_id = draft["card"]["id"]
@@ -93,6 +93,7 @@ async def test_review_approval_ignores_boundary_reranking(tmp_path):
             "Keep the selected completed-session checkout source; the ranking change "
             "does not alter the card's business evidence."
         ),
+        dynamic_scope_acknowledged=True,
     )
     assert approved["status"] == "approved"
     assert judger.rank_calls == 2, (
@@ -113,6 +114,7 @@ async def test_proposal_retains_authorized_selected_ref_below_top_k(tmp_path):
         decision_guidance="Ignore ordinary variation; notify Growth on a material drop.",
         selected_sources=[{"ref": "superset|dashboard:17"}],
         limit=1,
+        retrieval_mode="expand",
     )
 
     card = proposal["proposal"]["card"]
@@ -120,7 +122,9 @@ async def test_proposal_retains_authorized_selected_ref_below_top_k(tmp_path):
     assert proposal["proposal"]["onboarding_review"]["selected_source_refs"] == [
         "superset|dashboard:17"
     ]
-    assert judger.rank_calls == 1
+    # An explicit selected source is already authorized. Proposal generation
+    # must not spend a discovery-ranking call merely to retain that source.
+    assert judger.rank_calls == 0
 
 
 @pytest.mark.asyncio
