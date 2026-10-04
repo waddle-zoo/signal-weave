@@ -201,22 +201,34 @@ class BootstrapService:
         if not resources:
             blockers.append("probe returned no authorized resources to inspect")
 
-        sample = resources[0] if resources else None
+        # A catalog page is not ordered by inspectability. One broken chart
+        # must not invalidate an otherwise healthy adapter, so try the bounded
+        # probe results until one produces a usable snapshot.
+        sample: ResourceDescriptor | None = None
         sample_snapshot: ResourceSnapshot | None = None
-        if sample is not None:
+        for candidate in resources:
             try:
-                sample_snapshot = await self.registry.inspect(
+                inspected = await self.registry.inspect(
                     SourceRef(
                         key=f"bootstrap-{spec.adapter}",
-                        adapter=sample.adapter,
-                        resource=sample.resource,
-                        label=sample.title,
+                        adapter=candidate.adapter,
+                        resource=candidate.resource,
+                        label=candidate.title,
                     ),
                     authorized_tenants=[tenant_id],
                 )
+                if inspected.error:
+                    warnings.append(
+                        f"sample inspection failed for {candidate.resource}: {inspected.error}"
+                    )
+                    continue
+                sample = candidate
+                sample_snapshot = inspected
+                break
             except Exception as error:  # noqa: BLE001 - report the adapter boundary
                 warnings.append(
-                    f"sample inspection failed: {type(error).__name__}: {error}"
+                    f"sample inspection failed for {candidate.resource}: "
+                    f"{type(error).__name__}: {error}"
                 )
 
         capabilities = {

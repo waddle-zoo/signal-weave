@@ -1099,7 +1099,17 @@ class InsightEngine:
             "card": card.execution_payload(),
             "insight_card": card.execution_payload(),
             "insight_plan": plan.model_dump(mode="json"),
-            "sources": [resource.model_dump(mode="json") for resource in resources],
+            # Observations and normalized evidence are already present below.
+            # Do not send every raw source snapshot a second time: large BI
+            # dashboards can otherwise exceed the provider context window even
+            # though the local byte budget is still within bounds.
+            "sources": [
+                resource.model_dump(
+                    mode="json",
+                    exclude={"observations", "evidence", "analytical_comparisons"},
+                )
+                for resource in resources
+            ],
             "observations": [observation.model_dump(mode="json") for observation in observations],
             "priority_observations": [
                 observation.model_dump(mode="json") for observation in priority_observations

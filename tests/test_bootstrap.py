@@ -84,6 +84,36 @@ class LocalScanAdapter(NativeAdapter):
         return page.model_copy(update={"strategy": "local-scan-fallback"})
 
 
+class FirstSampleBrokenAdapter(NativeAdapter):
+    async def list_resources(self):
+        first = self.descriptor.model_copy(update={"resource": "dashboard:broken"})
+        second = self.descriptor.model_copy(update={"resource": "dashboard:healthy"})
+        return [first, second]
+
+    async def search_resources(self, query, *, limit, cursor=None, authorized_tenants=None):
+        del query, cursor
+        assert authorized_tenants == ["northstar"]
+        first = self.descriptor.model_copy(update={"resource": "dashboard:broken"})
+        second = self.descriptor.model_copy(update={"resource": "dashboard:healthy"})
+        return CatalogSearchPage(
+            resources=[first, second][:limit],
+            total_count=2,
+            provider="superset-catalog",
+            strategy="server-search",
+        )
+
+    async def inspect(self, source: SourceRef):
+        if source.resource == "dashboard:broken":
+            return ResourceSnapshot(
+                source_key=source.key,
+                adapter=self.name,
+                resource=source.resource,
+                title=source.label,
+                error="chart data unavailable",
+            )
+        return await super().inspect(source)
+
+
 @pytest.mark.asyncio
 async def test_bootstrap_reports_ready_native_adapter_capabilities():
     report = await BootstrapService(SourceRegistry([NativeAdapter()])).assess(
@@ -133,6 +163,29 @@ async def test_bootstrap_blocks_when_required_native_search_is_missing():
     assert report.status == "blocked"
     assert any("search" in blocker for blocker in report.blockers)
     assert any("local-scan-fallback" in warning for warning in report.warnings)
+
+
+@pytest.mark.asyncio
+async def test_bootstrap_skips_broken_first_sample_when_later_sample_is_healthy():
+    report = await BootstrapService(SourceRegistry([FirstSampleBrokenAdapter()])).assess(
+        BootstrapManifest(
+            tenant_id="northstar",
+            adapters=[
+                AdapterBootstrapSpec(
+                    adapter="superset",
+                    probe_goal="orders dashboard",
+                    required_capabilities=[BootstrapCapability.INSPECT],
+                )
+            ],
+        )
+    )
+
+    assert report.status == "needs_review"
+    result = report.adapters[0]
+    assert result.sample_ref == "superset|dashboard:healthy"
+    assert result.inspected_sample is True
+    assert result.capabilities[BootstrapCapability.INSPECT.value] is True
+    assert any("dashboard:broken" in warning for warning in result.warnings)
 
 
 @pytest.mark.asyncio
