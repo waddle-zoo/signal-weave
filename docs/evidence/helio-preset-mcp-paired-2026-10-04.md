@@ -53,6 +53,31 @@ work in this fixture. The Jev preflight classified the same evidence as
 reusable, so the treatment did not issue that query. This is a useful
 orchestration result, not proof that Jev is more correct than Luna.
 
+## Independent rerun
+
+The same three cases were rerun on 2026-10-04 with serialized execution and the
+same model, cards, source catalog, and seed. The raw report was written to
+`/private/tmp/helio-preset-mcp-paired-rerun-20261004.json`; the independent
+reviewer was run against that report and returned no findings.
+
+| Metric | Luna + connected Preset-MCP tools | Luna + SignalWeave/TypeSafe preflight |
+| --- | ---: | ---: |
+| Exact decisions | 3/3 (100%) | 3/3 (100%) |
+| Unsafe automatic actions | 0/3 | 0/3 |
+| Required-evidence recall | 100% | 100% |
+| Complete provenance | 3/3 | 3/3 |
+| Median end-to-end time | 5.930 s | 4.861 s |
+| Median agent-only time | 5.930 s | 4.575 s |
+| Diagnostic-query calls | 1 | 0 |
+| Jev requests | 0 | 3 |
+| Jev input/output tokens | 0 / 0 | 7,871 / 285 |
+| Oracle-field exposure | 0 | 0 |
+
+The rerun reproduces the earlier conclusion: Jev-assisted retrieval matched
+Luna's decisions and avoided one redundant diagnostic query in the partial-data
+case, but it did not improve correctness on this compact, already-curated
+fixture.
+
 ## Interpretation
 
 This trial does not support a claim that SignalWeave improves decision quality
