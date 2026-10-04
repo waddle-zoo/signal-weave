@@ -79,6 +79,22 @@ def test_healthy_sources_publish_machine_readable_freshness_and_comparability():
     )
 
 
+def test_trial_cards_separate_advisory_detail_from_gating_evidence():
+    cases = build_cases(load_config(DEFAULT_CONFIG))
+
+    case = next(case for case in cases if case.variant == "material_action")
+    assert case.card.evidence_requirements == {
+        "question:1": False,
+        "question:2": False,
+        "watch:2": False,
+    }
+    assert all(
+        resource.observations[0].attributes.get("risk_direction") in {"up", "down"}
+        for resource in case.resources
+        if resource.metadata.get("evidence_role") in {"primary", "corroborates", "diagnostic"}
+    )
+
+
 def test_movement_only_baseline_is_noisy_on_everything_tracking():
     results = run_baseline(build_cases(load_config(DEFAULT_CONFIG)))
 

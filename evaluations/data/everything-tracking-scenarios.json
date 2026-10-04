@@ -62,11 +62,11 @@
         "Is this a meaningful change in the growth outcome or an expected operating pattern?",
         "Which connected signal best explains what the growth team should do next?"
       ],
-      "primary": {"adapter": "superset", "kind": "dashboard", "label": "Growth command center", "metric": "qualified_growth"},
+      "primary": {"adapter": "superset", "kind": "dashboard", "label": "Growth command center", "metric": "qualified_growth", "risk_direction": "down"},
       "related": [
-        {"adapter": "crm", "kind": "pipeline", "role": "corroborates", "label": "Qualified pipeline"},
-        {"adapter": "product", "kind": "funnel", "role": "diagnostic", "label": "Activation funnel"},
-        {"adapter": "incident", "kind": "incident", "role": "diagnostic", "label": "Growth platform incidents"},
+        {"adapter": "crm", "kind": "pipeline", "role": "corroborates", "label": "Qualified pipeline", "risk_direction": "down"},
+        {"adapter": "product", "kind": "funnel", "role": "diagnostic", "label": "Activation funnel", "risk_direction": "down"},
+        {"adapter": "incident", "kind": "incident", "role": "diagnostic", "label": "Growth platform incidents", "risk_direction": "up"},
         {"adapter": "docs", "kind": "operating_note", "role": "owner", "label": "Campaign and launch calendar"}
       ]
     },
@@ -85,11 +85,11 @@
         "Is the customer-facing delivery risk broad enough to act on now?",
         "Is the strongest explanation in warehouse capacity, carrier performance, or inventory availability?"
       ],
-      "primary": {"adapter": "superset", "kind": "dashboard", "label": "Delivery promise board", "metric": "on_time_delivery"},
+      "primary": {"adapter": "superset", "kind": "dashboard", "label": "Delivery promise board", "metric": "on_time_delivery", "risk_direction": "down"},
       "related": [
-        {"adapter": "warehouse", "kind": "capacity", "role": "diagnostic", "label": "Warehouse capacity"},
-        {"adapter": "carrier", "kind": "service", "role": "corroborates", "label": "Carrier service levels"},
-        {"adapter": "inventory", "kind": "availability", "role": "diagnostic", "label": "Inventory availability"},
+        {"adapter": "warehouse", "kind": "capacity", "role": "diagnostic", "label": "Warehouse capacity", "risk_direction": "down"},
+        {"adapter": "carrier", "kind": "service", "role": "corroborates", "label": "Carrier service levels", "risk_direction": "down"},
+        {"adapter": "inventory", "kind": "availability", "role": "diagnostic", "label": "Inventory availability", "risk_direction": "down"},
         {"adapter": "airflow", "kind": "freshness", "role": "quality", "label": "Fulfillment data pipeline"}
       ]
     },
@@ -108,10 +108,10 @@
         "Should the payments team intervene, investigate, or leave the movement alone?",
         "What connected evidence best explains the change without overstating causation?"
       ],
-      "primary": {"adapter": "looker", "kind": "explore", "label": "Payment trust overview", "metric": "payment_completion"},
+      "primary": {"adapter": "looker", "kind": "explore", "label": "Payment trust overview", "metric": "payment_completion", "risk_direction": "down"},
       "related": [
-        {"adapter": "risk", "kind": "fraud", "role": "diagnostic", "label": "Fraud pressure"},
-        {"adapter": "issuer", "kind": "authorization", "role": "corroborates", "label": "Issuer declines"},
+        {"adapter": "risk", "kind": "fraud", "role": "diagnostic", "label": "Fraud pressure", "risk_direction": "up"},
+        {"adapter": "issuer", "kind": "authorization", "role": "corroborates", "label": "Issuer declines", "risk_direction": "up"},
         {"adapter": "compliance", "kind": "control", "role": "quality", "label": "Payment controls"},
         {"adapter": "incident", "kind": "incident", "role": "owner", "label": "Payment incidents"}
       ]
@@ -131,12 +131,12 @@
         "Is the retention signal broad and important enough for leadership attention?",
         "Which customer-facing signal should the account team investigate first?"
       ],
-      "primary": {"adapter": "looker", "kind": "dashboard", "label": "Customer health board", "metric": "retention_risk"},
+      "primary": {"adapter": "looker", "kind": "dashboard", "label": "Customer health board", "metric": "retention_risk", "risk_direction": "up"},
       "related": [
-        {"adapter": "product", "kind": "usage", "role": "corroborates", "label": "Product engagement"},
-        {"adapter": "support", "kind": "tickets", "role": "diagnostic", "label": "Support friction"},
+        {"adapter": "product", "kind": "usage", "role": "corroborates", "label": "Product engagement", "risk_direction": "down"},
+        {"adapter": "support", "kind": "tickets", "role": "diagnostic", "label": "Support friction", "risk_direction": "up"},
         {"adapter": "crm", "kind": "account", "role": "owner", "label": "Account context"},
-        {"adapter": "billing", "kind": "revenue", "role": "corroborates", "label": "Renewal revenue"}
+        {"adapter": "billing", "kind": "revenue", "role": "corroborates", "label": "Renewal revenue", "risk_direction": "down"}
       ]
     },
     "product-adoption": {
@@ -154,11 +154,11 @@
         "Is this an adoption problem, a rollout effect, or an instrumentation problem?",
         "What should the product team inspect before changing the plan?"
       ],
-      "primary": {"adapter": "hex", "kind": "notebook", "label": "Adoption review", "metric": "feature_adoption"},
+      "primary": {"adapter": "hex", "kind": "notebook", "label": "Adoption review", "metric": "feature_adoption", "risk_direction": "down"},
       "related": [
-        {"adapter": "experiments", "kind": "experiment", "role": "corroborates", "label": "Experiment results"},
-        {"adapter": "release", "kind": "deployment", "role": "diagnostic", "label": "Release timeline"},
-        {"adapter": "support", "kind": "tickets", "role": "diagnostic", "label": "User friction"},
+        {"adapter": "experiments", "kind": "experiment", "role": "corroborates", "label": "Experiment results", "risk_direction": "down"},
+        {"adapter": "release", "kind": "deployment", "role": "diagnostic", "label": "Release timeline", "risk_direction": "up"},
+        {"adapter": "support", "kind": "tickets", "role": "diagnostic", "label": "User friction", "risk_direction": "up"},
         {"adapter": "airflow", "kind": "freshness", "role": "quality", "label": "Product event pipeline"}
       ]
     },
@@ -177,11 +177,11 @@
         "Is there a customer-impacting platform issue that needs escalation?",
         "What operational evidence should the on-call team inspect first?"
       ],
-      "primary": {"adapter": "superset", "kind": "dashboard", "label": "Platform health", "metric": "customer_error_rate"},
+      "primary": {"adapter": "superset", "kind": "dashboard", "label": "Platform health", "metric": "customer_error_rate", "risk_direction": "up"},
       "related": [
-        {"adapter": "incident", "kind": "incident", "role": "corroborates", "label": "Incident timeline"},
-        {"adapter": "release", "kind": "deployment", "role": "diagnostic", "label": "Recent deploys"},
-        {"adapter": "cloud", "kind": "capacity", "role": "diagnostic", "label": "Capacity pressure"},
+        {"adapter": "incident", "kind": "incident", "role": "corroborates", "label": "Incident timeline", "risk_direction": "up"},
+        {"adapter": "release", "kind": "deployment", "role": "diagnostic", "label": "Recent deploys", "risk_direction": "up"},
+        {"adapter": "cloud", "kind": "capacity", "role": "diagnostic", "label": "Capacity pressure", "risk_direction": "up"},
         {"adapter": "airflow", "kind": "freshness", "role": "quality", "label": "Platform telemetry"}
       ]
     },
@@ -200,11 +200,11 @@
         "Is the delivery promise at risk across the network or only in one pocket?",
         "Which operational owner should investigate first?"
       ],
-      "primary": {"adapter": "tableau", "kind": "workbook", "label": "Network service view", "metric": "delivery_promise"},
+      "primary": {"adapter": "tableau", "kind": "workbook", "label": "Network service view", "metric": "delivery_promise", "risk_direction": "down"},
       "related": [
-        {"adapter": "fleet", "kind": "capacity", "role": "corroborates", "label": "Fleet capacity"},
-        {"adapter": "weather", "kind": "external", "role": "diagnostic", "label": "Weather context"},
-        {"adapter": "carrier", "kind": "service", "role": "diagnostic", "label": "Carrier exceptions"},
+        {"adapter": "fleet", "kind": "capacity", "role": "corroborates", "label": "Fleet capacity", "risk_direction": "down"},
+        {"adapter": "weather", "kind": "external", "role": "diagnostic", "label": "Weather context", "risk_direction": "up"},
+        {"adapter": "carrier", "kind": "service", "role": "diagnostic", "label": "Carrier exceptions", "risk_direction": "up"},
         {"adapter": "inventory", "kind": "availability", "role": "quality", "label": "Dispatch completeness"}
       ]
     },
@@ -223,10 +223,10 @@
         "Is the cost movement actionable without creating a service problem?",
         "What connected operating signal should the team use to choose a response?"
       ],
-      "primary": {"adapter": "trino", "kind": "query", "label": "Fleet cost analysis", "metric": "cost_per_delivery"},
+      "primary": {"adapter": "trino", "kind": "query", "label": "Fleet cost analysis", "metric": "cost_per_delivery", "risk_direction": "up"},
       "related": [
-        {"adapter": "fleet", "kind": "utilization", "role": "corroborates", "label": "Fleet utilization"},
-        {"adapter": "fuel", "kind": "price", "role": "diagnostic", "label": "Fuel surcharge"},
+        {"adapter": "fleet", "kind": "utilization", "role": "corroborates", "label": "Fleet utilization", "risk_direction": "down"},
+        {"adapter": "fuel", "kind": "price", "role": "diagnostic", "label": "Fuel surcharge", "risk_direction": "up"},
         {"adapter": "superset", "kind": "dashboard", "role": "quality", "label": "Service quality board"},
         {"adapter": "finance", "kind": "plan", "role": "owner", "label": "Operating plan"}
       ]
@@ -246,10 +246,10 @@
         "Is this a real access problem or a data and scheduling artifact?",
         "Which care-operations owner should respond first?"
       ],
-      "primary": {"adapter": "superset", "kind": "dashboard", "label": "Care access board", "metric": "care_wait_time"},
+      "primary": {"adapter": "superset", "kind": "dashboard", "label": "Care access board", "metric": "care_wait_time", "risk_direction": "up"},
       "related": [
-        {"adapter": "scheduling", "kind": "capacity", "role": "corroborates", "label": "Scheduling demand"},
-        {"adapter": "staffing", "kind": "workforce", "role": "diagnostic", "label": "Staffing coverage"},
+        {"adapter": "scheduling", "kind": "capacity", "role": "corroborates", "label": "Scheduling demand", "risk_direction": "up"},
+        {"adapter": "staffing", "kind": "workforce", "role": "diagnostic", "label": "Staffing coverage", "risk_direction": "down"},
         {"adapter": "quality", "kind": "quality", "role": "quality", "label": "Care quality checks"},
         {"adapter": "incident", "kind": "incident", "role": "owner", "label": "Care incidents"}
       ]
@@ -269,10 +269,10 @@
         "Is the financial movement actionable now or does it require investigation first?",
         "Which operational evidence best explains the collection gap?"
       ],
-      "primary": {"adapter": "looker", "kind": "explore", "label": "Revenue cycle view", "metric": "net_collections"},
+      "primary": {"adapter": "looker", "kind": "explore", "label": "Revenue cycle view", "metric": "net_collections", "risk_direction": "down"},
       "related": [
-        {"adapter": "claims", "kind": "operations", "role": "corroborates", "label": "Claims throughput"},
-        {"adapter": "billing", "kind": "denials", "role": "diagnostic", "label": "Denial reasons"},
+        {"adapter": "claims", "kind": "operations", "role": "corroborates", "label": "Claims throughput", "risk_direction": "down"},
+        {"adapter": "billing", "kind": "denials", "role": "diagnostic", "label": "Denial reasons", "risk_direction": "up"},
         {"adapter": "finance", "kind": "plan", "role": "owner", "label": "Cash plan"},
         {"adapter": "airflow", "kind": "freshness", "role": "quality", "label": "Finance data freshness"}
       ]
@@ -292,10 +292,10 @@
         "Is this a plant-level quality issue or an isolated measurement problem?",
         "What evidence should the quality owner investigate before changing production?"
       ],
-      "primary": {"adapter": "superset", "kind": "dashboard", "label": "Plant quality board", "metric": "first_pass_yield"},
+      "primary": {"adapter": "superset", "kind": "dashboard", "label": "Plant quality board", "metric": "first_pass_yield", "risk_direction": "down"},
       "related": [
-        {"adapter": "mes", "kind": "production", "role": "corroborates", "label": "Production lots"},
-        {"adapter": "maintenance", "kind": "maintenance", "role": "diagnostic", "label": "Maintenance events"},
+        {"adapter": "mes", "kind": "production", "role": "corroborates", "label": "Production lots", "risk_direction": "down"},
+        {"adapter": "maintenance", "kind": "maintenance", "role": "diagnostic", "label": "Maintenance events", "risk_direction": "up"},
         {"adapter": "quality", "kind": "inspection", "role": "quality", "label": "Inspection coverage"},
         {"adapter": "incident", "kind": "incident", "role": "owner", "label": "Quality holds"}
       ]
@@ -315,11 +315,11 @@
         "Is there a supply risk that needs intervention before the next planning cycle?",
         "Which supplier or demand signal should the operating team investigate first?"
       ],
-      "primary": {"adapter": "tableau", "kind": "workbook", "label": "Supply continuity view", "metric": "critical_supply_coverage"},
+      "primary": {"adapter": "tableau", "kind": "workbook", "label": "Supply continuity view", "metric": "critical_supply_coverage", "risk_direction": "down"},
       "related": [
-        {"adapter": "supplier", "kind": "performance", "role": "corroborates", "label": "Supplier reliability"},
-        {"adapter": "erp", "kind": "purchase_orders", "role": "diagnostic", "label": "Purchase orders"},
-        {"adapter": "planning", "kind": "demand", "role": "diagnostic", "label": "Demand plan"},
+        {"adapter": "supplier", "kind": "performance", "role": "corroborates", "label": "Supplier reliability", "risk_direction": "down"},
+        {"adapter": "erp", "kind": "purchase_orders", "role": "diagnostic", "label": "Purchase orders", "risk_direction": "up"},
+        {"adapter": "planning", "kind": "demand", "role": "diagnostic", "label": "Demand plan", "risk_direction": "up"},
         {"adapter": "inventory", "kind": "availability", "role": "quality", "label": "Inventory freshness"}
       ]
     }

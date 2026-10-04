@@ -45,37 +45,37 @@ DEFAULT_OUTPUT = ROOT / "artifacts" / "everything-tracking-trial.json"
 VARIANTS: dict[str, dict[str, Any]] = {
     "material_action": {
         "expected": Outcome.NOTIFY,
-        "primary_change": -22.0,
-        "corroborating_change": 34.0,
-        "diagnostic_change": 18.0,
+        "primary_risk_change": 22.0,
+        "corroborating_risk_change": 34.0,
+        "diagnostic_risk_change": 18.0,
         "description": "The primary business outcome moved materially and related evidence supports an owner action.",
     },
     "expected_change": {
         "expected": Outcome.IGNORE,
-        "primary_change": -18.0,
-        "corroborating_change": -17.0,
-        "diagnostic_change": 0.0,
+        "primary_risk_change": 18.0,
+        "corroborating_risk_change": 17.0,
+        "diagnostic_risk_change": 0.0,
         "description": "Several signals moved together during an expected operating pattern.",
     },
     "ambiguous_state": {
         "expected": Outcome.INVESTIGATE,
-        "primary_change": -22.0,
-        "corroborating_change": 2.0,
-        "diagnostic_change": -1.0,
+        "primary_risk_change": 22.0,
+        "corroborating_risk_change": -2.0,
+        "diagnostic_risk_change": -1.0,
         "description": "The primary movement is material but connected evidence is weak or contradictory.",
     },
     "trust_failure": {
         "expected": Outcome.INSUFFICIENT_DATA,
-        "primary_change": -22.0,
-        "corroborating_change": 18.0,
-        "diagnostic_change": 12.0,
+        "primary_risk_change": 22.0,
+        "corroborating_risk_change": 18.0,
+        "diagnostic_risk_change": 12.0,
         "description": "The business signals moved, but a required trust or freshness source cannot be used.",
     },
     "urgent_operational_risk": {
         "expected": Outcome.ESCALATE,
-        "primary_change": -38.0,
-        "corroborating_change": 44.0,
-        "diagnostic_change": 58.0,
+        "primary_risk_change": 38.0,
+        "corroborating_risk_change": 44.0,
+        "diagnostic_risk_change": 58.0,
         "description": "The movement is broad, severe, and supported by an operational risk signal.",
     },
 }
@@ -156,8 +156,22 @@ def _observation(
     *,
     subject_type: str,
     role: str,
+    risk_direction: str | None = None,
+    risk_change_pct: float | None = None,
     base: float = 100.0,
 ) -> Observation:
+    attributes: dict[str, Any] = {"evidence_role": role}
+    if risk_direction in {"up", "down"}:
+        attributes.update(
+            {
+                "risk_direction": risk_direction,
+                "risk_change_pct": risk_change_pct,
+                "metric_semantics": (
+                    f"A {risk_direction} movement in this metric indicates a more adverse "
+                    "business condition."
+                ),
+            }
+        )
     return Observation(
         source_key=source_key,
         subject_id=f"{source_key}-subject",
@@ -170,7 +184,7 @@ def _observation(
         previous=base,
         change_pct=change_pct,
         source_url=f"trial://{source_key}",
-        attributes={"evidence_role": role},
+        attributes=attributes,
     )
 
 
@@ -191,6 +205,8 @@ def _resource(
     error: str | None = None,
     source_status: str = "healthy",
     freshness: str | None = None,
+    risk_direction: str | None = None,
+    risk_change_pct: float | None = None,
 ) -> ResourceSnapshot:
     observation = _observation(
         source_key,
@@ -199,6 +215,8 @@ def _resource(
         change_pct,
         subject_type=kind,
         role=role,
+        risk_direction=risk_direction,
+        risk_change_pct=risk_change_pct,
     )
     observed_freshness = freshness
     if observed_freshness is None and error is None and source_status == "healthy":
@@ -210,7 +228,12 @@ def _resource(
         subject_id=f"{source_key}-evidence",
         subject_label=label,
         statement=statement,
-        values={"evidence_role": role, "source_kind": kind},
+        values={
+            "evidence_role": role,
+            "source_kind": kind,
+            "risk_direction": risk_direction,
+            "risk_change_pct": risk_change_pct,
+        },
         source_url=f"trial://{source_key}",
     )
     contract = ResourceContract(
@@ -225,7 +248,15 @@ def _resource(
         adapter=adapter,
         resource=resource,
         title=label,
-        description=f"{label} from the {adapter} system.",
+        description=(
+            f"{label} from the {adapter} system. "
+            + (
+                f"Metric semantics: a {risk_direction} movement indicates a more adverse "
+                "business condition."
+                if risk_direction in {"up", "down"}
+                else ""
+            )
+        ),
         observations=[] if error else [observation],
         evidence=[evidence],
         error=error,
@@ -237,6 +268,17 @@ def _resource(
 
 
 def _variant_statement(variant: str, role: str, label: str, workflow_title: str) -> str:
+    if role == "primary":
+        if variant == "material_action":
+            return f"{label} moved materially in its source-defined adverse direction for the {workflow_title} review."
+        if variant == "expected_change":
+            return f"{label} moved during a planned or expected operating pattern for the {workflow_title} review."
+        if variant == "ambiguous_state":
+            return f"{label} moved materially, but the connected {workflow_title} evidence is not yet decisive."
+        if variant == "trust_failure":
+            return f"{label} moved, but the required trust evidence for the {workflow_title} review is unavailable."
+        if variant == "urgent_operational_risk":
+            return f"{label} moved severely in its source-defined adverse direction for the {workflow_title} review."
     if variant == "material_action":
         if role == "corroborates":
             return f"{label} independently moved in a direction consistent with the {workflow_title} concern."
@@ -302,6 +344,7 @@ def build_cases(config: dict[str, Any], *, repeats: int = 1) -> list[TrackingCas
                             "label": workflow["primary"]["label"],
                             "role": "primary",
                             "metric": workflow["primary"]["metric"],
+                            "risk_direction": workflow["primary"].get("risk_direction"),
                         },
                         *related_specs,
                         {"adapter": "wiki", "kind": "document", "role": "unknown", "label": "Unrelated policy note"},
@@ -318,15 +361,17 @@ def build_cases(config: dict[str, Any], *, repeats: int = 1) -> list[TrackingCas
                         label = str(spec["label"])
                         required = role not in {"unknown"}
                         change = 0.0
+                        risk_change = None
+                        risk_direction = str(spec.get("risk_direction", "")) or None
                         metric = str(spec.get("metric", f"{role}_signal"))
                         if role == "primary":
-                            change = float(profile["primary_change"])
+                            risk_change = float(profile["primary_risk_change"])
                             expected_evidence.append(source_key)
                         elif role == "corroborates":
-                            change = float(profile["corroborating_change"])
+                            risk_change = float(profile["corroborating_risk_change"])
                             expected_evidence.append(source_key)
                         elif role == "diagnostic":
-                            change = float(profile["diagnostic_change"])
+                            risk_change = float(profile["diagnostic_risk_change"])
                             if variant in {"material_action", "ambiguous_state", "urgent_operational_risk"}:
                                 expected_evidence.append(source_key)
                         elif role == "quality":
@@ -337,6 +382,8 @@ def build_cases(config: dict[str, Any], *, repeats: int = 1) -> list[TrackingCas
                             expected_evidence.append(source_key)
                         if role == "unknown":
                             change = 61.0 if index % 2 else -47.0
+                        elif risk_change is not None and risk_direction in {"up", "down"}:
+                            change = risk_change if risk_direction == "up" else -risk_change
                         source_resource = f"{kind}:{company_id}:{workflow_id}:{variant}:{repeat}:{index}"
                         source_error = None
                         status = "healthy"
@@ -362,6 +409,8 @@ def build_cases(config: dict[str, Any], *, repeats: int = 1) -> list[TrackingCas
                             error=source_error,
                             source_status=status,
                             freshness=freshness,
+                            risk_direction=risk_direction,
+                            risk_change_pct=risk_change,
                         )
                         resources.append(resource)
                         sources.append(
@@ -384,6 +433,17 @@ def build_cases(config: dict[str, Any], *, repeats: int = 1) -> list[TrackingCas
                         watch_for=list(workflow["watch_for"]),
                         questions=list(workflow["questions"]),
                         decision_guidance=str(decision_guidance),
+                        # The action policy consumes the observations and
+                        # decision_guidance. These free-form questions and the
+                        # explanatory relationship check are useful report
+                        # detail, but are not unconditional delivery gates.
+                        # The trust watch remains required so a healthy-looking
+                        # semantic result cannot bypass source-quality checks.
+                        evidence_requirements={
+                            "question:1": False,
+                            "question:2": False,
+                            "watch:2": False,
+                        },
                         sources=sources,
                         comparison_windows=["previous_period", "trailing_4_period_average"],
                         action_confidence_threshold=0.70,

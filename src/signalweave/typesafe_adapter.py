@@ -698,7 +698,10 @@ class JevJudger:
                     "related source context. Do not require a numeric change when the "
                     "item describes existence, freshness, a relationship, or another "
                     "non-numeric condition. Distinguish evidence that a condition is absent "
-                    "from missing evidence about the condition."
+                    "from missing evidence about the condition. If an adapter supplies "
+                    "metric_semantics, risk_direction, or risk_change_pct in observation "
+                    "attributes, treat that as the source's metric contract; do not infer "
+                    "business risk from the raw sign of change_pct alone."
                 ),
                 criteria={
                     "present": "The available evidence establishes the watch item as stated.",
@@ -738,6 +741,9 @@ class JevJudger:
                         "decision_guidance, watch_for, and questions to identify the focal "
                         "condition and the owner's explicit interpretation rules. Then use "
                         "the observation's values, dimensions, freshness, source metadata, "
+                        "and any adapter-published metric_semantics, risk_direction, or "
+                        "risk_change_pct contract; do not infer business risk from a raw "
+                        "numeric sign alone. Use "
                         "context, and all related evidence. Apply this precedence when the "
                         "card does not say otherwise: quality for freshness, completeness, "
                         "or comparability; contradicts for expected, benign, or countervailing "
