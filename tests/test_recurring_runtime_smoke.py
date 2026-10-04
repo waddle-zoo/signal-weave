@@ -31,16 +31,23 @@ def _author_intent(company: dict, catalog: dict) -> dict:
         for condition in private_company["periods"][0]["oracle"]["numeric_policy"]
     ]
     destinations = catalog["destinations"]
+    routes = [
+        {"destination_key": destinations[0]["key"], "outcome": "notify"},
+        {"destination_key": destinations[1]["key"], "outcome": "insufficient_data"},
+    ]
+    # Lattice's second approved destination is deliberately shared by the
+    # unresolved-context and incomplete-data paths. Keep both typed outcomes
+    # in the deterministic fixture instead of silently treating every route as
+    # notify.
+    if "investigate" in private_company["owner_policy"].lower():
+        routes.append({"destination_key": destinations[1]["key"], "outcome": "investigate"})
     return {
         "title": f"{company['id']} recurring policy",
         "what_to_watch": company["brief"],
         "why_watch": company["owner_policy"],
         "decision_guidance": company["owner_policy"],
         "source_keys": [source["key"] for source in catalog["sources"]],
-        "routes": [
-            {"destination_key": destination["key"], "outcome": "notify"}
-            for destination in destinations
-        ],
+        "routes": routes,
         "numeric_conditions": conditions,
         "watch_for": ["The configured owner policy trigger is present or absent."],
         "questions": [],

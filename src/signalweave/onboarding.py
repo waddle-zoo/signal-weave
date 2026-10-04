@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from collections import defaultdict
 from dataclasses import dataclass
 from typing import Any, Protocol
@@ -73,6 +74,37 @@ def _slug(value: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")[:80] or "insight"
 
 
+def _explicit_policy_outcomes(guidance: str) -> set[str]:
+    """Extract positive action words that a card must route explicitly.
+
+    This is a conservative authoring lint, not a semantic decision engine. It
+    only catches the high-risk case where an owner names a *routed* non-quiet
+    outcome in the policy but the generated typed routes omit it. An internal
+    investigation step does not require a route; words such as ``destination``,
+    ``route``, ``delivery``, ``page`` or ``outcome`` make the routing intent
+    explicit. Negative mentions such as ``do not notify`` are ignored so prose
+    can still describe exceptions.
+    """
+    normalized = guidance.lower().replace("-", "_")
+    outcomes = {outcome.value for outcome in Outcome if outcome != Outcome.IGNORE}
+    found: set[str] = set()
+    for outcome in outcomes:
+        pattern = re.compile(rf"(?<![a-z0-9_]){re.escape(outcome)}(?![a-z0-9_])")
+        for match in pattern.finditer(normalized):
+            prefix = normalized[max(0, match.start() - 32):match.start()]
+            if re.search(r"(?:\bdo\s+not|\bdon't|\bnever|\bnot|\bwithout|\bno)\s*$", prefix):
+                continue
+            if outcome != Outcome.NOTIFY.value:
+                context = normalized[max(0, match.start() - 48):match.end() + 48]
+                if not re.search(
+                    r"\b(?:destination|route|routed|deliver(?:y|ed)?|send|page|outcome)\b",
+                    context,
+                ):
+                    continue
+            found.add(outcome)
+    return found
+
+
 def declared_comparison_windows(
     sources: list[SourceRef], contracts: dict[str, ResourceContract],
 ) -> dict[str, list[str]]:
@@ -82,6 +114,26 @@ def declared_comparison_windows(
         for source in sources
         if (contract := contracts.get(f"{source.adapter}|{source.resource}")) is not None
         and contract.available_comparison_windows
+    }
+
+
+def _comparison_window_required(
+    source: SourceRef,
+    matches: dict[str, ResourceMatch],
+) -> bool:
+    """Whether a selected source must declare the card's metric window.
+
+    A card can deliberately require a quality, ownership, corroborating, or
+    diagnostic source alongside its metric source. Those sources are evidence
+    gates, not recurring metric comparisons, so an empty window declaration is
+    expected and must not make an otherwise valid metric card impossible to
+    approve. An explicit comparison binding always wins over the role hint.
+    """
+    if source.required_comparison_keys:
+        return True
+    match = matches.get(f"{source.adapter}|{source.resource}")
+    return not match or match.suggested_role not in {
+        "quality", "owner", "corroborates", "diagnostic",
     }
 
 
@@ -222,9 +274,12 @@ def bind_numeric_condition_requirements(
 class InsightAuthoringService:
     """Conversation-facing card authoring over installed source adapters.
 
-    Candidate retrieval is deliberately bounded before Jev sees the catalog. The
-    pool unions lexical, relationship, domain, and context signals; Jev remains
-    the required semantic ranker and there is no local relevance fallback.
+    The normal agent-led path is deliberately explicit: a frontier model lists
+    and inspects assets, then passes the exact authorized refs it wants to use.
+    That path never asks Jev to discover a catalog, classify source roles, or
+    invent analytical scope. The legacy ``discover`` helper remains available
+    as an opt-in convenience for callers that explicitly want Jev-ranked
+    catalog candidates.
     """
 
     registry: SourceRegistry
@@ -401,7 +456,11 @@ class InsightAuthoringService:
     def _source_reason(match: ResourceMatch) -> str:
         """Explain a candidate without pretending ranking proves ownership."""
         reasons: list[str] = []
-        if match.recommended:
+        if "frontier-selected" in match.retrieval_signals:
+            reasons.append(
+                "the calling agent selected and inspected this exact authorized source"
+            )
+        elif match.recommended:
             reasons.append("Jev judged it materially relevant to the stated goal")
         else:
             reasons.append("it remained in the bounded candidate set for review")
@@ -411,14 +470,163 @@ class InsightAuthoringService:
             reasons.append("the adapter published a relationship to a selected source")
         if "context-reference" in match.retrieval_signals:
             reasons.append("the supplied context references it")
+        if "typed-anchor-contract" in match.retrieval_signals:
+            reasons.append(
+                "its adapter contract declares it as a primary source with a metric or comparison contract"
+            )
         if match.contract.domain and match.contract.domain != "unknown":
             reasons.append(f"its catalog domain is {match.contract.domain}")
         if match.suggested_role != "unknown":
-            reasons.append(
-                f"Jev classified its evidence role as {match.suggested_role} "
-                f"({match.role_probability:.2f})"
-            )
+            if "frontier-selected" in match.retrieval_signals:
+                reasons.append(
+                    f"its adapter contract identifies it as {match.suggested_role}"
+                )
+            else:
+                reasons.append(
+                    f"Jev classified its evidence role as {match.suggested_role} "
+                    f"({match.role_probability:.2f})"
+                )
         return "; ".join(reasons) + "."
+
+    @staticmethod
+    def _has_typed_primary_anchor(match: ResourceMatch) -> bool:
+        """Identify a governed primary source without using a connector name.
+
+        The contract is deliberately narrow: a plain ``primary`` role is not
+        enough to displace Jev-ranked candidates, because it may describe a
+        broad resource rather than a usable metric anchor. A primary resource
+        must also publish at least one machine-readable metric/comparison
+        declaration that an owner can inspect and approve.
+        """
+        roles = {role.strip().lower() for role in match.contract.roles}
+        has_measurement_contract = bool(
+            match.contract.metric_names
+            or match.contract.metric_definitions
+            or match.contract.comparison_contracts
+            or match.contract.available_comparison_windows
+            or match.contract.required_comparison_keys
+        )
+        return "primary" in roles and has_measurement_contract
+
+    def _typed_anchor_recommendation_floor(self) -> float:
+        """Return the Jev score floor for a contract-backed primary anchor.
+
+        A typed primary source is stronger than a title match, but its adapter
+        contract must not override Jev entirely. The derived floor preserves
+        Jev's semantic signal while preventing a noisy catalog from hiding a
+        source that explicitly declares the metric/comparison contract the
+        owner needs to review.
+        """
+        return self.recommendation_threshold * 0.8
+
+    def _default_requested_matches(
+        self, matches: list[ResourceMatch]
+    ) -> list[ResourceMatch]:
+        """Choose a reviewable default scope without selecting catalog decoys.
+
+        The old behavior selected every Jev-recommended candidate. In a noisy
+        catalog that could bind a forecast, archive, regional slice, and the
+        canonical source into one card simply because they all discussed the
+        same metric. Prefer typed primary anchors, then include only Jev-
+        recommended resources explicitly related to those anchors. Owners can
+        still add any omitted candidate during review.
+        """
+        eligible = [match for match in matches if match.recommended]
+        typed_primary = [
+            match
+            for match in eligible
+            if self._has_typed_primary_anchor(match)
+        ]
+        primary = typed_primary or [
+            match
+            for match in eligible
+            if match.suggested_role == "primary"
+        ]
+        if not primary:
+            return eligible
+        primary_refs = {match.ref for match in primary}
+        related = [
+            match
+            for match in eligible
+            if match.ref not in primary_refs
+            and "anchor-relationship" in match.retrieval_signals
+        ]
+        return [*primary, *related]
+
+    @staticmethod
+    def _explicit_source_discovery(
+        goal: str,
+        anchors: list[SourceRef],
+        authorized_descriptors: dict[str, ResourceDescriptor],
+        *,
+        principal: PrincipalContext | None,
+    ) -> ResourceDiscovery:
+        """Build an inspectable discovery receipt from caller-selected sources.
+
+        This is intentionally not a semantic ranking operation. The caller's
+        agent owns asset discovery and analytical interpretation; SignalWeave
+        only re-authorizes the exact refs and records the contracts that were
+        used to build the card. A selected source gets a relevance of ``1`` as
+        an identity marker, not as a Jev score.
+        """
+        matches: list[ResourceMatch] = []
+        descriptors: list[ResourceDescriptor] = []
+        for source in anchors:
+            ref = f"{source.adapter}|{source.resource}"
+            descriptor = authorized_descriptors[ref]
+            descriptors.append(descriptor)
+            role = InsightAuthoringService._role_judgment(descriptor, {})
+            matches.append(
+                ResourceMatch(
+                    ref=ref,
+                    adapter=descriptor.adapter,
+                    resource=descriptor.resource,
+                    kind=descriptor.kind,
+                    title=descriptor.title or source.label,
+                    description=descriptor.description,
+                    source_url=descriptor.source_url,
+                    relevance=1.0,
+                    recommended=False,
+                    suggested_role=role["role"],
+                    role_probability=role["probability"],
+                    retrieval_signals=[
+                        "frontier-selected",
+                        "explicit-card-anchor",
+                        "authorized-revalidation",
+                    ],
+                    contract=descriptor.contract,
+                    metadata=descriptor.metadata,
+                )
+            )
+        catalog_fingerprint = hashlib.sha256(
+            json.dumps(
+                [descriptor.model_dump(mode="json") for descriptor in sorted(
+                    descriptors, key=resource_ref
+                )],
+                sort_keys=True,
+                separators=(",", ":"),
+            ).encode()
+        ).hexdigest()
+        authorized_tenant = principal.tenant_id if principal else None
+        return ResourceDiscovery(
+            goal=goal,
+            matches=matches,
+            candidate_refs=[match.ref for match in matches],
+            candidate_count=len(matches),
+            candidate_limit=max(1, len(matches)),
+            truncated=False,
+            no_match=False,
+            candidate_strategy="frontier-agent-selected",
+            evaluator="frontier-agent-selection",
+            authorized_tenant=authorized_tenant,
+            catalog_provider="authorized-adapter-catalog",
+            catalog_strategy="explicit-authorized",
+            catalog_fingerprint=catalog_fingerprint,
+            warnings=[
+                "Source selection was supplied by the caller/agent after its own catalog search and inspection.",
+                "SignalWeave did not use Jev to discover, rank, or classify these sources.",
+            ],
+        )
 
     @classmethod
     def build_onboarding_review(
@@ -441,6 +649,7 @@ class InsightAuthoringService:
             for source in card.sources
         }
         candidate_refs = {match.ref for match in discovery.matches}
+        matches = {match.ref: match for match in discovery.matches}
         recommended_refs = {
             match.ref for match in discovery.matches if match.recommended
         }
@@ -527,11 +736,12 @@ class InsightAuthoringService:
         for source in card.sources:
             ref = f"{source.adapter}|{source.resource}"
             available = declared_windows.get(ref)
+            comparison_required = _comparison_window_required(source, matches)
             if not available:
                 undeclared_refs.append(ref)
-                if source.required:
+                if source.required and comparison_required:
                     required_undeclared_refs.append(ref)
-            elif not set(card.comparison_windows).issubset(available):
+            elif comparison_required and not set(card.comparison_windows).issubset(available):
                 message = f"{ref}: requested {card.comparison_windows!r}; available {available!r}."
                 if source.required:
                     window_issues.append(message)
@@ -569,6 +779,110 @@ class InsightAuthoringService:
                 OnboardingBlockerCode.COMPARISON_WINDOW_MISMATCH,
                 OnboardingBlockerSeverity.BLOCK, "comparison-window",
                 " ".join(window_issues)[:2000], question, window_refs,
+            )
+
+        # A source that advertises a metric but only carries a title/scope is
+        # not enough evidence for an unattended action. The frontier agent may
+        # discover and interpret arbitrary assets, but the recurring card still
+        # needs an adapter-owned contract tying the measurement to a comparison
+        # key, population, grain, and window. Do not let a caller-owned scope
+        # acknowledgement turn a noisy regional/archive/reference asset into a
+        # safe automatic route. Generic non-metric context sources are exempt;
+        # their typed role does not define the recurring measurement.
+        automatic_routes = [
+            method for method in card.delivery_methods
+            if method.outcome in {Outcome.NOTIFY, Outcome.ESCALATE}
+        ]
+        incomplete_contract_refs: list[str] = []
+        if automatic_routes:
+            for source in card.sources:
+                if not source.required:
+                    continue
+                ref = f"{source.adapter}|{source.resource}"
+                match = matches.get(ref)
+                contract = match.contract if match is not None else None
+                if contract is None:
+                    continue
+                roles = {role.strip().lower() for role in contract.roles}
+                # Connectors often publish the business role in adapter
+                # metadata rather than the normalized contract roles. A
+                # required owner/quality/lineage/diagnostic source can be
+                # essential evidence without being the recurring metric
+                # anchor; do not demand a metric comparison contract from it.
+                if match is not None:
+                    metadata_role = str(match.metadata.get("business_role", "")).strip().lower()
+                    if metadata_role:
+                        roles.add(metadata_role)
+                context_only_roles = {
+                    "quality", "owner", "owner_context", "corroborates", "diagnostic",
+                    "lineage", "deployment", "context",
+                }
+                if (
+                    roles & context_only_roles
+                    and not roles & {"primary", "reference", "reporting"}
+                ):
+                    continue
+                claims_measurement = bool(
+                    contract.metric_names
+                    or source.required_comparison_keys
+                    or contract.required_comparison_keys
+                    or "primary" in roles
+                    or "reference" in roles
+                )
+                if not claims_measurement:
+                    continue
+                comparison_keys = set(source.required_comparison_keys) | set(
+                    contract.required_comparison_keys
+                ) | {item.key for item in contract.comparison_contracts}
+                has_population = bool(
+                    contract.population
+                    or any(item.population for item in contract.metric_definitions)
+                    or any(item.population for item in contract.comparison_contracts)
+                )
+                has_grain = bool(
+                    contract.grain
+                    or any(item.grain for item in contract.metric_definitions)
+                )
+                has_window = bool(
+                    contract.available_comparison_windows
+                    or any(item.comparison_window for item in contract.comparison_contracts)
+                )
+                has_definition = bool(
+                    contract.metric_definitions
+                    or contract.comparison_contracts
+                    or (
+                        contract.metric_names
+                        and comparison_keys
+                        and has_population
+                        and has_grain
+                    )
+                )
+                if not (
+                    has_definition
+                    and comparison_keys
+                    and has_population
+                    and has_grain
+                    and has_window
+                ):
+                    incomplete_contract_refs.append(ref)
+        if incomplete_contract_refs:
+            route_names = ", ".join(method.outcome.value for method in automatic_routes)
+            question = (
+                "Select or inspect a source with a versioned metric/comparison contract before "
+                "enabling automatic " + route_names + " routing. The contract must declare the "
+                "metric meaning, comparison key/window, population, and grain; owner scope "
+                "confirmation cannot supply those missing facts."
+            )
+            questions.append(question)
+            add_blocker(
+                OnboardingBlockerCode.SOURCE_CONTRACT_REQUIRED,
+                OnboardingBlockerSeverity.BLOCK,
+                "source-contract",
+                "Required metric sources advertise a measurement but do not provide a complete "
+                "adapter-owned definition, comparison binding, population, grain, and window: "
+                + ", ".join(sorted(incomplete_contract_refs)),
+                question,
+                incomplete_contract_refs,
             )
 
         principal_tenant = principal.tenant_id if principal else discovery.authorized_tenant
@@ -637,6 +951,26 @@ class InsightAuthoringService:
                 ),
                 question,
             )
+        if card.delivery_methods and card.decision_guidance.strip():
+            routed_outcomes = {method.outcome.value for method in card.delivery_methods}
+            missing_routes = sorted(
+                _explicit_policy_outcomes(card.decision_guidance) - routed_outcomes
+            )
+            if missing_routes:
+                route_text = ", ".join(missing_routes)
+                question = (
+                    "Add an explicit delivery method for the policy outcome(s) "
+                    f"{route_text}, or revise the policy if that outcome is not intended. "
+                    "Preserve investigate, notify, escalate, and insufficient_data as distinct outcomes."
+                )
+                questions.append(question)
+                add_blocker(
+                    OnboardingBlockerCode.DECISION_ROUTE_MISMATCH,
+                    OnboardingBlockerSeverity.BLOCK,
+                    "decision-policy",
+                    "The decision guidance names an actionable outcome that has no matching typed route.",
+                    question,
+                )
         if missing_recommended:
             labels = [
                 match.title
@@ -916,22 +1250,42 @@ class InsightAuthoringService:
         authorized_descriptors = await self._authorize_explicit_anchors(
             list(card.sources), principal=effective_principal
         ) if card.sources else {}
-        discovery = await self.discover(
-            goal, adapter=adapter, limit=limit, principal=effective_principal
+        dynamic_scope = (
+            card.retrieval_mode != RetrievalMode.FIXED
+            or card.investigation_mode != InvestigationMode.NONE
         )
-        discovery = await self._retain_explicit_anchors(
-            list(card.sources), discovery, principal=effective_principal,
-            authorized_descriptors=authorized_descriptors,
-        )
-        discovery = await self._append_anchor_relationship_candidates(
-            list(card.sources), discovery, principal=effective_principal
-        )
-        selected_refs = {
-            f"{source.adapter}|{source.resource}" for source in card.sources
-        }
-        explicit_anchors_revalidated = bool(selected_refs) and selected_refs.issubset(
-            {match.ref for match in discovery.matches}
-        )
+        if card.sources and not dynamic_scope:
+            discovery = self._explicit_source_discovery(
+                goal,
+                list(card.sources),
+                authorized_descriptors,
+                principal=effective_principal,
+            )
+            # Fixed scope still needs to show adapter-published neighbors so a
+            # human cannot approve an anchor while unknowingly hiding the
+            # connector's own diagnostic/lineage relationship. This is native
+            # relationship evidence, not Jev source ranking; the owner decides
+            # whether to add it or keep the card fixed.
+            discovery = await self._append_anchor_relationship_candidates(
+                list(card.sources),
+                discovery,
+                principal=effective_principal,
+                rank_relationships=False,
+            )
+            explicit_anchors_revalidated = True
+        else:
+            discovery = await self.discover(
+                goal, adapter=adapter, limit=limit, principal=effective_principal
+            )
+            if card.sources:
+                discovery = await self._retain_explicit_anchors(
+                    list(card.sources), discovery, principal=effective_principal,
+                    authorized_descriptors=authorized_descriptors,
+                )
+                discovery = await self._append_anchor_relationship_candidates(
+                    list(card.sources), discovery, principal=effective_principal
+                )
+            explicit_anchors_revalidated = bool(card.sources)
         return self.build_onboarding_review(
             card,
             discovery,
@@ -1018,6 +1372,7 @@ class InsightAuthoringService:
         discovery: ResourceDiscovery,
         *,
         principal: PrincipalContext | None,
+        rank_relationships: bool = True,
     ) -> ResourceDiscovery:
         """Expose adapter-published neighbors while a card is still being authored.
 
@@ -1063,8 +1418,12 @@ class InsightAuthoringService:
         ]
         if not relationship_resources:
             return discovery
-        scores = await self._relevance_judger().rank_resources(
-            discovery.goal, relationship_resources
+        scores = (
+            await self._relevance_judger().rank_resources(
+                discovery.goal, relationship_resources
+            )
+            if rank_relationships
+            else {resource_ref(resource): 1.0 for resource in relationship_resources}
         )
         existing = {match.ref: match for match in discovery.matches}
         appended: list[ResourceMatch] = []
@@ -1094,7 +1453,11 @@ class InsightAuthoringService:
                     description=resource.description,
                     source_url=resource.source_url,
                     relevance=relevance,
-                    recommended=relevance >= self.recommendation_threshold,
+                    recommended=(
+                        True
+                        if not rank_relationships
+                        else relevance >= self.recommendation_threshold
+                    ),
                     suggested_role=role_judgment["role"],
                     role_probability=role_judgment["probability"],
                     retrieval_signals=["anchor-relationship"],
@@ -1232,15 +1595,55 @@ class InsightAuthoringService:
                 )
             )
         matches.sort(key=lambda match: (-match.relevance, match.title.lower(), match.ref))
+        anchor_candidates = [match for match in matches if self._has_typed_primary_anchor(match)]
+        anchor_candidates.sort(key=lambda match: (-match.relevance, match.title.lower(), match.ref))
+        if anchor_candidates:
+            anchor_refs = {match.ref for match in anchor_candidates}
+            matches = [
+                match.model_copy(update={
+                    "retrieval_signals": sorted(
+                        set(match.retrieval_signals) | {"typed-anchor-contract"}
+                    )
+                })
+                if match.ref in anchor_refs else match
+                for match in matches
+            ]
         visible = matches[:limit]
+        # A typed primary anchor is a recall obligation for onboarding, not a
+        # semantic recommendation. Surface one even when a noisy catalog made
+        # Jev rank it below the visible top-k; the owner/agent still has to
+        # select the exact ref and the normal review gates still apply.
+        if anchor_candidates and not any(
+            match.ref in {candidate.ref for candidate in visible}
+            for match in anchor_candidates
+        ):
+            promoted_ref = anchor_candidates[0].ref
+            promoted = next(match for match in matches if match.ref == promoted_ref)
+            if limit == 1:
+                visible = [promoted]
+            else:
+                visible = [*visible[: limit - 1], promoted]
         no_match = not any(
-            match.relevance >= self.recommendation_threshold for match in visible
+            match.relevance >= self.recommendation_threshold
+            or (
+                self._has_typed_primary_anchor(match)
+                and match.relevance >= self._typed_anchor_recommendation_floor()
+            )
+            for match in visible
         )
         visible = [
             match.model_copy(
                 update={
                     "recommended": (
-                        not no_match and match.relevance >= self.recommendation_threshold
+                        not no_match
+                        and (
+                            match.relevance >= self.recommendation_threshold
+                            or (
+                                self._has_typed_primary_anchor(match)
+                                and match.relevance
+                                >= self._typed_anchor_recommendation_floor()
+                            )
+                        )
                     )
                 }
             )
@@ -1319,8 +1722,8 @@ class InsightAuthoringService:
         action_confidence_threshold: float = 0.70,
         owner: str | None = None,
         max_source_age_hours: float | None = 24.0,
-        retrieval_mode: RetrievalMode = RetrievalMode.EXPAND,
-        investigation_mode: InvestigationMode = InvestigationMode.BOUNDED,
+        retrieval_mode: RetrievalMode = RetrievalMode.FIXED,
+        investigation_mode: InvestigationMode = InvestigationMode.NONE,
         max_investigation_sources: int = 3,
         investigation_threshold: float = 0.60,
         principal: PrincipalContext | None = None,
@@ -1374,15 +1777,21 @@ class InsightAuthoringService:
         authorized_descriptors = await self._authorize_explicit_anchors(
             requested_anchors, principal=effective_principal
         ) if requested_anchors else {}
-        discovery = await self.discover(
-            goal, adapter=adapter, limit=limit, principal=effective_principal
-        )
-        requested = validated_selected_sources
-        if requested is not None:
-            discovery = await self._retain_explicit_anchors(
-                requested_anchors, discovery, principal=effective_principal,
-                authorized_descriptors=authorized_descriptors,
+        if requested_anchors:
+            # The caller's frontier agent already performed discovery and
+            # inspection. Re-authorize and record exactly what it selected;
+            # do not make Jev repeat catalog search or role classification.
+            discovery = self._explicit_source_discovery(
+                goal,
+                requested_anchors,
+                authorized_descriptors,
+                principal=effective_principal,
             )
+        else:
+            discovery = await self.discover(
+                goal, adapter=adapter, limit=limit, principal=effective_principal
+            )
+        requested = validated_selected_sources
         relationship_anchors = requested_anchors
         if not relationship_anchors:
             relationship_anchors = [
@@ -1395,15 +1804,14 @@ class InsightAuthoringService:
                 for match in discovery.matches
                 if match.recommended
             ]
-        discovery = await self._append_anchor_relationship_candidates(
-            relationship_anchors, discovery, principal=effective_principal
-        )
+            discovery = await self._append_anchor_relationship_candidates(
+                relationship_anchors, discovery, principal=effective_principal
+            )
         matches = {match.ref: match for match in discovery.matches}
         if requested is None:
             requested = [
                 SelectedSourceInput(ref=match.ref)
-                for match in discovery.matches
-                if match.recommended
+                for match in self._default_requested_matches(discovery.matches)
             ]
         unknown = [item.ref for item in requested if item.ref not in matches]
         if unknown:
@@ -1480,7 +1888,10 @@ class InsightAuthoringService:
         )
         plan = await self.engine.compile(card)
         onboarding_review = self.build_onboarding_review(
-            card, discovery, principal=effective_principal
+            card,
+            discovery,
+            principal=effective_principal,
+            explicit_anchors_revalidated=bool(requested_anchors),
         )
         card = card.model_copy(
             update={
