@@ -161,6 +161,13 @@ def _observation(
     base: float = 100.0,
 ) -> Observation:
     attributes: dict[str, Any] = {"evidence_role": role}
+    if role == "quality":
+        attributes.update(
+            {
+                "quality_status": "healthy",
+                "comparability": "same reporting period and population",
+            }
+        )
     if risk_direction in {"up", "down"}:
         attributes.update(
             {
@@ -233,6 +240,10 @@ def _resource(
             "source_kind": kind,
             "risk_direction": risk_direction,
             "risk_change_pct": risk_change_pct,
+            "quality_status": "healthy" if role == "quality" else None,
+            "comparability": (
+                "same reporting period and population" if role == "quality" else None
+            ),
         },
         source_url=f"trial://{source_key}",
     )
@@ -465,6 +476,7 @@ def build_cases(config: dict[str, Any], *, repeats: int = 1) -> list[TrackingCas
                         evidence_requirements={
                             "question:1": False,
                             "question:2": False,
+                            "watch:1": False,
                             "watch:2": False,
                         },
                         sources=sources,

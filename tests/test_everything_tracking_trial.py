@@ -90,6 +90,7 @@ def test_trial_cards_separate_advisory_detail_from_gating_evidence():
     assert case.card.evidence_requirements == {
         "question:1": False,
         "question:2": False,
+        "watch:1": False,
         "watch:2": False,
     }
     assert "risk_change_pct of 20 or more" in case.card.decision_guidance
@@ -99,6 +100,12 @@ def test_trial_cards_separate_advisory_detail_from_gating_evidence():
         for resource in case.resources
         if resource.metadata.get("evidence_role") in {"primary", "corroborates", "diagnostic"}
     )
+    quality = next(
+        resource for resource in case.resources
+        if resource.metadata.get("evidence_role") == "quality"
+    )
+    assert quality.observations[0].attributes["quality_status"] == "healthy"
+    assert quality.observations[0].attributes["comparability"] == "same reporting period and population"
 
 
 def test_trial_owner_context_distinguishes_expected_and_unplanned_movement():
