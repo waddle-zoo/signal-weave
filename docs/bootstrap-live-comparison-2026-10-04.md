@@ -1,89 +1,91 @@
-# Live paired bootstrap comparison — 2026-10-04
+# Live paired bootstrap comparison — 2026-10-04 rerun
 
-This is the first fair live comparison of the local SignalWeave path against a
-plain Luna agent using the same cards and connector access. It is a bounded
-research result, not a production certification or a claim that SignalWeave is
-already cheaper or universally more accurate.
+This is a reproducible live comparison of the local SignalWeave path against a
+plain Luna agent using the same business inputs, connector catalog, owner
+policy, and monitoring card. It is evidence of an operational value signal,
+not a claim that SignalWeave is already cheaper or universally more accurate.
 
 ## Protocol
 
 Each company was run for three held-out monitoring periods. Both arms received
-the same business brief, owner answers, noisy source catalog, authorized
-destinations, and the exact same owner-reviewed card snapshot. The baseline
-used only ordinary connector tools. The treatment used live Jev to evaluate the
-card, then handed the typed bundle to the same `gpt-5.6-luna` agent. Delivery
-was disabled.
+the same business brief, owner answers, noisy authorized catalog, destinations,
+and the exact same owner-reviewed card snapshot before monitoring. The
+baseline used ordinary connector tools. The treatment used live Jev to
+evaluate the card and resolve bounded related sources, then handed the typed
+evidence bundle to the same `gpt-5.6-luna` agent. Delivery was disabled.
 
 The treatment was push-gated only for a complete Jev `ignore` with provenance.
-Actionable outcomes still woke Luna to produce the evidence-backed report. An
-independent reviewer rebuilt the fixture, recomputed every score, checked the
-shared-card digest, verified the raw Jev route, checked installed-resource
-provenance, and verified that skipped rows had no downstream agent calls.
+Actionable and insufficient-data outcomes still woke Luna to produce the
+evidence-backed report. The independent reviewer reconstructed the fixture,
+recomputed every score, checked the shared-card digest, verified raw Jev
+routing, checked current-run provenance, and verified that skipped rows had no
+downstream agent calls.
 
 ## Results
 
-| Company | Connector profile | Luna exact | SignalWeave exact | Warm Luna work | Warm SignalWeave work | Wake-ups |
+| Company | Connector profile | Luna exact | SignalWeave exact | Warm Luna agent work | Warm SignalWeave agent work | Wake-ups |
 | --- | --- | ---: | ---: | ---: | ---: | ---: |
-| Juniper Trail Retail | Superset + dbt + Airflow + Looker | 3/3 | 3/3 | 79.74s | 30.77s | 3 → 2 |
-| Lumen Freight Finance | Trino + Airflow + Looker + dbt | 3/3 | 3/3 | 86.03s | 31.23s | 3 → 2 |
+| Juniper Trail Retail | Superset + dbt + Airflow + Looker | 3/3 | 3/3 | 64.22s | 38.03s | 3 → 2 |
+| Cinder Database Cloud | Superset + Airflow + PagerDuty + CloudWatch | 3/3 | 3/3 | 77.95s | 34.45s | 3 → 2 |
+| Lumen Freight Finance | Trino + Airflow + Looker + dbt | 3/3 | 3/3 | 57.85s | 36.43s | 3 → 2 |
+| **Pooled** | **3 profiles, 9 periods/arm** | **9/9** | **9/9** | **200.02s** | **108.90s** | **9 → 6** |
 
-The treatment’s raw Jev routes were correct in all six periods. Its structured
-outcomes, recipients, and provenance were also correct in all six periods. The
-two push-gated quiet periods were complete ignores with no Luna wake-up and no
-unsafe suppression.
+Across all nine treatment periods:
 
-That is a meaningful value signal: SignalWeave reduced warm downstream Luna
-work by 61.4% and 63.7% in these two profiles while preserving the measured
-decision contract. It does not yet establish general accuracy superiority; in
-both profiles the baseline tied it at 3/3.
+- structured outcome, recipient, evidence provenance, and safety checks were
+  correct: 9/9;
+- raw Jev routing matched the independent labels: 9/9;
+- complete quiet outcomes skipped three downstream Luna wake-ups;
+- warm downstream Luna agent time fell 45.6% in aggregate;
+- SignalWeave did not reduce connector reads in aggregate (25 treatment reads
+  versus 24 baseline reads), so this is not evidence of lower warehouse query
+  cost;
+- every fresh artifact passed the independent mechanical review, including
+  fixture-digest, same-card, score-recomputation, push-gate, and approved-card
+  checks.
 
-The held-out fixture family used for the broader local regression contains six
-companies, 18 monitoring periods, 144 catalog resources, and ten connector
-identities: Airflow, CloudWatch, dbt, Hex, Looker, Notion, PagerDuty, Segment,
-Superset, and Trino. Adding five noisy catalog alternatives leaves scenario and
-period IDs stable, so catalog pressure cannot silently change the labels. That
-is breadth of the simulator and contract suite—not six live Jev comparisons.
+The Cinder event is the clearest retrieval example. The treatment returned the
+canonical Superset latency comparison plus the related Airflow change
+calendar, recovered the required 12-minute rollout lead, and labeled it as an
+association rather than causation. The initial version selected a same-domain
+archive instead. That failure exposed a real gap: a flat noisy catalog did not
+make the company relationship graph available to bounded retrieval. The fix
+adds the adapter-owned relationship index, retains direct graph neighbors as
+bounded context even when Jev ranks them below the optional relevance
+threshold, and preserves raw source facts in the evidence bundle. The fresh
+Cinder rerun passed 3/3 with the canonical Airflow ref.
 
-## What the failures taught us
+## What this proves
 
-The evidence is stronger because failed runs were retained and fixed:
+Under this protocol, the strongest defensible result is:
 
-- A Lumen treatment report initially omitted the Airflow completeness ref from
-  Luna’s numeric claims. The bundle already knew the ref; the handoff did not
-  state strongly enough that quality refs belong on numeric claims. The
-  handoff contract now requires all matching provenance refs, and the fresh
-  Lumen run passed 3/3.
-- An optional follow-up failure once converted an initial Jev ignore into an
-  alert. The engine now refuses to manufacture an alert from a no-action
-  primary decision when optional context fails.
-- A treatment comparison once accepted a canonical installed-resource ref that
-  was not inspected in the current period. The engine now blocks that required
-  comparison as `insufficient_data`, forcing onboarding to repair the card or
-  source selection.
-- An older Juniper artifact no longer matched the fixture digest after the
-  catalog-noise RNG was corrected. The independent reviewer rejected it. It is
-  not included in the results above.
+> SignalWeave + live Jev can preserve Luna's structured monitoring correctness
+> while reducing downstream agent work and suppressing complete quiet runs,
+> across Superset-led, Trino-led, and operational connector profiles with
+> noisy catalogs.
 
-These are not cosmetic benchmark adjustments. They are the exact failure modes
-that would make a real pushed analytics workflow untrustworthy.
+That is a meaningful product value signal for pushed analytics. It is not a
+claim that Jev replaces Luna's explanation or that SignalWeave independently
+proves causality. Jev makes bounded typed judgments and retrieves evidence;
+the agent still writes the human-facing analysis.
 
-## What is still not proven
+## What this does not prove
 
-SignalWeave adds onboarding and Jev evaluation work. In these runs treatment
-cold onboarding took roughly 65 seconds for Juniper and 101 seconds for Lumen,
-versus roughly 23 and 27 seconds for the baseline. Jev requests and token
-estimates were also additional. The recorded dollar fields are illustrative
-API-equivalent estimates, not subscription charges or a provider invoice. The
-first-run and total-cost claims therefore remain open.
+- General accuracy superiority: both arms tied 9/9 on these structured labels.
+- Lower total or subscription cost: Jev adds onboarding/runtime requests, and
+  recorded dollar fields are illustrative API-equivalent estimates, not bills.
+- Faster first-run onboarding: treatment cold setup was 68.18s, 76.04s, and
+  100.18s for Cinder, Juniper, and Lumen versus 26.71s, 31.63s, and 28.41s
+  for the baseline.
+- Lower warehouse/query cost: the fixture uses bounded synthetic snapshots,
+  not real Trino bytes scanned, queue time, or connector invoices.
+- Narrative usefulness to real operators, production notification safety, or
+  universal correctness for every hosted BI connector.
 
-This trial also does not prove narrative usefulness to real operators, broad
-connector compatibility, expensive warehouse-query savings, or production
-delivery safety. The strong-superiority gate is intentionally still false. The
-next bar is at least three more independent company/profile families with the
-same protocol, measured provider/query cost, blinded narrative review, and
-held-out multi-period replay.
-
-The machine-readable metrics, failure ledger, and artifact hashes are in
+The strong-superiority gate remains intentionally false. The next proof bar is
+blinded narrative review of evidence bundles, a larger held-out multi-period
+cohort, and measured provider/query economics using real connector telemetry.
+The current machine-readable compact evidence is in
 [`evidence/bootstrap-live-comparison-2026-10-04.json`](evidence/bootstrap-live-comparison-2026-10-04.json).
-The independent review implementation is
+The independent reviewer is
 [`evaluations/bootstrap_live_comparison_review.py`](../evaluations/bootstrap_live_comparison_review.py).

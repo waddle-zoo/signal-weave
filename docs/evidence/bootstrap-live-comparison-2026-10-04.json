@@ -1,14 +1,138 @@
 {
   "protocol": {
     "date": "2026-10-04",
+    "code_revision": "59fccb4",
     "agent_model": "gpt-5.6-luna",
     "treatment": "live Jev-backed SignalWeave card evaluation followed by the same Luna agent handoff; complete ignore outcomes are push-gated and do not wake Luna",
     "baseline": "the same Luna agent, same owner-reviewed card, same public catalog and connector tools, without SignalWeave tools",
     "delivery": "disabled shadow evaluation",
     "catalog_noise": 5,
     "periods_per_company": 3,
-    "review": "independent fixture reconstruction, score recomputation, same-card check, raw-route check, provenance and push-gate checks"
+    "review": "independent fixture reconstruction, score recomputation, same-card check, raw-route check, provenance and push-gate checks",
+    "cost_comparison_measured": false
   },
+  "runs": [
+    {
+      "company": "Juniper Trail Retail",
+      "scenario_id": "company-3e9c1df69fac812309d9",
+      "connectors": ["superset", "dbt", "airflow", "looker"],
+      "live_report_sha256": "358c131603f5c965c1497271f1566e4f35d75dd80e6467ef99f2e06011653aa7",
+      "independent_review_sha256": "f8a0dc630a89c8933ba21858d5f946b5b2f609477b8c803845274ee2bda2d1c3",
+      "review": {"integrity_pass": true, "strong_superiority_claim_allowed": false},
+      "baseline": {
+        "exact": "3/3",
+        "warm_agent_seconds": 64.22064954089001,
+        "source_reads": 7,
+        "agent_wakeups": 3
+      },
+      "signalweave": {
+        "exact": "3/3",
+        "raw_jev_routes": "3/3",
+        "provenance": "3/3",
+        "warm_agent_seconds": 38.025270958896726,
+        "source_reads": 6,
+        "agent_wakeups": 2,
+        "agent_wakeup_skips": 1,
+        "jev_requests": 23
+      },
+      "warm_agent_seconds_reduction_pct": 40.789650633032586,
+      "card_digest_shared": true,
+      "approved_card": true
+    },
+    {
+      "company": "Cinder Database Cloud",
+      "scenario_id": "company-af6cf98ce9ec61166fa8",
+      "connectors": ["superset", "airflow", "pagerduty", "cloudwatch"],
+      "live_report_sha256": "356d47a54a5af12de4b81dc14c9dc8cdd4067e66d3d65557ff6497ef3285982a",
+      "independent_review_sha256": "d4c2856dece22ad755b6e64394c0c8cac7b58f9b140ce92578d885a5d2544e34",
+      "review": {"integrity_pass": true, "strong_superiority_claim_allowed": false},
+      "baseline": {
+        "exact": "3/3",
+        "warm_agent_seconds": 77.95028570794966,
+        "source_reads": 9,
+        "agent_wakeups": 3
+      },
+      "signalweave": {
+        "exact": "3/3",
+        "raw_jev_routes": "3/3",
+        "provenance": "3/3",
+        "warm_agent_seconds": 34.451627749949694,
+        "source_reads": 9,
+        "agent_wakeups": 2,
+        "agent_wakeup_skips": 1,
+        "jev_requests": 31,
+        "required_rollout_fact_recovered": true
+      },
+      "warm_agent_seconds_reduction_pct": 55.80307700342888,
+      "card_digest_shared": true,
+      "approved_card": true
+    },
+    {
+      "company": "Lumen Freight Finance",
+      "scenario_id": "company-fe33e22b38ba4118beb4",
+      "connectors": ["trino", "airflow", "looker", "dbt"],
+      "live_report_sha256": "b6a093b7a1cc2023602493a3330e802185bf61866d095164b568f4181b762127",
+      "independent_review_sha256": "4e9a602a883bfb07cadd46b45d2b6545d4b534a11019ffe63de4de75ea9c2e37",
+      "review": {"integrity_pass": true, "strong_superiority_claim_allowed": false},
+      "baseline": {
+        "exact": "3/3",
+        "warm_agent_seconds": 57.84770070912782,
+        "source_reads": 8,
+        "agent_wakeups": 3
+      },
+      "signalweave": {
+        "exact": "3/3",
+        "raw_jev_routes": "3/3",
+        "provenance": "3/3",
+        "warm_agent_seconds": 36.4265959180193,
+        "source_reads": 10,
+        "agent_wakeups": 2,
+        "agent_wakeup_skips": 1,
+        "jev_requests": 29
+      },
+      "warm_agent_seconds_reduction_pct": 37.030174974142874,
+      "card_digest_shared": true,
+      "approved_card": true,
+      "usage_note": "One onboarding Jev attempt lacked complete usage metadata; no measured cost comparison is claimed."
+    }
+  ],
+  "pooled": {
+    "companies": 3,
+    "monitoring_periods_per_arm": 9,
+    "baseline_exact": "9/9",
+    "signalweave_exact": "9/9",
+    "signalweave_raw_jev_routes": "9/9",
+    "baseline_warm_agent_seconds": 200.0186359579675,
+    "signalweave_warm_agent_seconds": 108.90349462686572,
+    "warm_agent_seconds_reduction_pct": 45.5533260162063,
+    "baseline_agent_wakeups": 9,
+    "signalweave_agent_wakeups": 6,
+    "signalweave_source_reads": 25,
+    "baseline_source_reads": 24,
+    "all_independent_reviews_integrity_pass": true
+  },
+  "failed_and_fixed": [
+    {
+      "failure": "A treatment selected a same-domain archive instead of the canonical Airflow change calendar in a noisy Cinder catalog, omitting the required rollout lead fact.",
+      "fix": "Expose the connector-owned relationship index and treat a direct adapter-published neighbor as bounded context after Jev ranks it, rather than allowing an optional relevance threshold to erase it. Preserve raw source facts in the evidence bundle.",
+      "verification": "Fresh Cinder rerun recovered airflow|resource-46deb68364f1ea6ad3d2, reported the 12-minute association, and passed 3/3 exact structured cases."
+    },
+    {
+      "failure": "A required completeness ref could be omitted from Luna numeric claims even though the comparison provenance included it.",
+      "fix": "The handoff requires matching provenance refs on numeric claims and top-level evidence refs.",
+      "verification": "Fresh Lumen run passed 3/3 exact structured cases."
+    },
+    {
+      "failure": "An optional Jev follow-up could turn an initial complete ignore into an alert when the follow-up failed.",
+      "fix": "Optional follow-up failure no longer manufactures an alert from a primary no-action decision.",
+      "verification": "Push-gated quiet periods stayed complete ignores with no unsafe suppression."
+    },
+    {
+      "failure": "A comparison could cite an installed resource that was not inspected in the current period.",
+      "fix": "Required comparison provenance now blocks as insufficient_data until every installed resource ref is resolved and inspected.",
+      "verification": "The engine regression test and all three fresh profiles passed the independent provenance checks."
+    }
+  ],
   "offline_scale_fixture": {
     "companies": 6,
     "monitoring_periods": 18,
@@ -19,104 +143,22 @@
     "period_ids_stable_under_noise": true,
     "connectors": ["airflow", "cloudwatch", "dbt", "hex", "looker", "notion", "pagerduty", "segment", "superset", "trino"]
   },
-  "runs": [
-    {
-      "company": "Juniper Trail Retail",
-      "scenario_id": "company-3e9c1df69fac812309d9",
-      "connectors": ["superset", "dbt", "airflow", "looker"],
-      "live_report_sha256": "a378c20fc97b99ac79ce3a3d80b568ef7c5d76564e9238d0e217510b7bdd0888",
-      "independent_review_sha256": "792d2d00c59bfdd886df2f851c2b0cb9c7fd37bfa6afba4ffef4f854f91a67d1",
-      "review": {"integrity_pass": true},
-      "baseline": {
-        "exact": "3/3",
-        "outcomes": "3/3",
-        "recipients": "3/3",
-        "provenance": "3/3",
-        "warm_agent_seconds": 79.73819545796141,
-        "agent_wakeups": 3
-      },
-      "signalweave": {
-        "exact": "3/3",
-        "raw_jev_routes": "3/3",
-        "outcomes": "3/3",
-        "recipients": "3/3",
-        "provenance": "3/3",
-        "warm_agent_seconds": 30.765964499907568,
-        "agent_wakeups": 2,
-        "agent_wakeup_skips": 1,
-        "jev_requests": 23
-      },
-      "warm_agent_seconds_reduction_pct": 61.41627695082763,
-      "card_digest_shared": true,
-      "approved_card": true
-    },
-    {
-      "company": "Lumen Freight Finance",
-      "scenario_id": "company-fe33e22b38ba4118beb4",
-      "connectors": ["trino", "airflow", "looker", "dbt"],
-      "live_report_sha256": "a72f948f30dd5652c5689937ff4b2ac1d228cf3d930a451bec4dd6b8d238c5cc",
-      "independent_review_sha256": "311824e0f2e58e504cd3d96a44089db15ce9ed78c2b87be1c06613a17d6459e3",
-      "review": {"integrity_pass": true},
-      "baseline": {
-        "exact": "3/3",
-        "outcomes": "3/3",
-        "recipients": "3/3",
-        "provenance": "3/3",
-        "warm_agent_seconds": 86.02726654103026,
-        "agent_wakeups": 3
-      },
-      "signalweave": {
-        "exact": "3/3",
-        "raw_jev_routes": "3/3",
-        "outcomes": "3/3",
-        "recipients": "3/3",
-        "provenance": "3/3",
-        "warm_agent_seconds": 31.229085916886106,
-        "agent_wakeups": 2,
-        "agent_wakeup_skips": 1,
-        "jev_requests": 23
-      },
-      "warm_agent_seconds_reduction_pct": 63.69861885360317,
-      "card_digest_shared": true,
-      "approved_card": true
-    }
-  ],
-  "failed_and_fixed": [
-    {
-      "failure": "A required Airflow completeness ref was omitted from Luna numeric claims even though the SignalWeave comparison provenance included it.",
-      "fix": "The treatment handoff now requires every matching provenance query ref, including quality/completeness sources, on each numeric claim and in the top-level evidence refs.",
-      "verification": "Lumen rerun changed treatment from 2/3 to 3/3 exact structured cases."
-    },
-    {
-      "failure": "An optional Jev follow-up could turn an initial complete ignore into an investigation when the follow-up failed.",
-      "fix": "Optional follow-up failure no longer manufactures an alert from a primary no-action decision.",
-      "verification": "Regression coverage plus fresh push-gated Juniper and Lumen runs."
-    },
-    {
-      "failure": "A comparison could cite an installed resource that was not inspected in the current run.",
-      "fix": "Required comparison provenance now blocks as insufficient_data until every installed resource ref is resolved and inspected.",
-      "verification": "Engine regression test and fresh Lumen onboarding rerun."
-    },
-    {
-      "failure": "An older Juniper artifact was reconstructed with a changed fixture digest after the catalog RNG fix.",
-      "fix": "The independent reviewer rejects digest-mismatched artifacts instead of treating them as evidence.",
-      "verification": "The old artifact fails the review gate; the fresh Juniper artifact passes."
-    }
-  ],
   "interpretation": {
     "supported": [
-      "On two fresh, live-Jev, noisy multi-connector simulations, SignalWeave preserved structured correctness parity with Luna while reducing warm downstream agent work.",
+      "On three fresh live-Jev, noisy multi-connector simulations, SignalWeave preserved Luna's structured monitoring correctness while reducing downstream Luna work.",
       "Push-gated complete ignores removed one of three downstream Luna wake-ups in each company without unsafe suppression.",
-      "The typed SignalWeave route, recipient, numeric and provenance checks passed all six treatment periods.",
-      "The result is not Superset-specific: one profile was Superset-led and the other was Trino-led, and both included other connector identities."
+      "The typed Jev route, recipient, numeric, evidence, and provenance checks passed all nine treatment periods.",
+      "The result is not Superset-specific: the profiles were Superset-led, operational, and Trino-led, with dbt, Airflow, Looker, PagerDuty, CloudWatch, and other connector identities.",
+      "The Cinder failure-and-fix cycle shows why relationship-aware retrieval and durable evidence handoff matter in a messy catalog."
     ],
     "not_supported": [
-      "General accuracy superiority: both arms tied 3/3 in each live profile.",
-      "Lower total or subscription cost: Jev usage and onboarding work were additional, and the recorded dollar values are illustrative API-equivalent estimates.",
-      "Faster first-run onboarding: treatment cold onboarding took about 65 seconds for Juniper and 101 seconds for Lumen versus about 23 and 27 seconds for the baseline.",
-      "Universal connector correctness, narrative quality, real-customer usefulness, or production notification safety."
+      "General accuracy superiority: both arms tied 9/9 on the structured labels.",
+      "Lower total or subscription cost: Jev adds onboarding/runtime work and one run had incomplete onboarding usage metadata.",
+      "Faster first-run onboarding: treatment cold setup was slower in all three profiles.",
+      "Lower warehouse/query cost: synthetic snapshots do not measure real Trino bytes, queue time, or invoices.",
+      "Narrative usefulness to real operators, production delivery safety, or universal correctness for every hosted BI connector."
     ],
     "strong_superiority_claim_allowed": false,
-    "next_bar": "Run at least three additional independent companies/profiles with the same-card protocol, measured provider/query cost, blinded narrative review, and a held-out multi-period replay before claiming general superiority."
+    "next_bar": "Run blinded narrative review of evidence bundles, a larger held-out multi-period cohort, and metered real connector/provider economics before claiming general superiority."
   }
 }
