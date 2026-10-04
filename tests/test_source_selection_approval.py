@@ -26,10 +26,17 @@ REASON = (
     "Use dashboard:7 for checkout conversion among completed sessions; "
     "dashboard:8 is the finance population and is intentionally excluded."
 )
-RESOLVABLE = {"definition-conflict", "candidate-selection-review"}
+# Dynamic retrieval keeps Jev's related-source suggestions in the review
+# surface, but those suggestions are not a fixed-scope approval blocker. The
+# owner must acknowledge dynamic scope explicitly; only the visible definition
+# conflict remains confirmable in this fixture.
+RESOLVABLE = {"definition-conflict"}
 
 
 class MutableRankingDouble(OnboardingJevDouble):
+    # This fixture intentionally exercises the generic semantic-compiler hook
+    # during approval concurrency tests.
+    skip_semantic_compile = False
     def __init__(self):
         self.scores = {"dashboard:7": 0.94, "dashboard:8": 0.91, "dashboard:9": 0.12}
         self.role = "primary"
@@ -90,7 +97,10 @@ async def draft(server, **overrides):
             "key": "growth-ops", "outcome": "notify", "label": "Growth Ops",
             "destination": "slack://growth-ops",
         }],
-        "retrieval_mode": "fixed",
+        # This fixture exercises the opt-in Jev-ranked dynamic path. The normal
+        # human-selected fixed-scope path is covered by explicit fixed-mode
+        # cases below.
+        "retrieval_mode": "expand",
         "investigation_mode": "none",
     }
     arguments.update(overrides)
@@ -120,16 +130,17 @@ def save_changed_card(server, card_id, **updates):
 
 
 async def confirm(server, card_id, fingerprint, reason=REASON, **kwargs):
+    kwargs.setdefault("dynamic_scope_acknowledged", True)
     return await tool(server, "approve_insight_card")(
         card_id, source_selection_fingerprint=fingerprint,
         source_selection_reason=reason, **kwargs,
     )
 
 
-async def assert_rejected(server, card_id, fingerprint, *, reason=REASON, match):
+async def assert_rejected(server, card_id, fingerprint, *, reason=REASON, match, **kwargs):
     before = stored(server, card_id)
     with pytest.raises(ValueError, match=match):
-        await confirm(server, card_id, fingerprint, reason)
+        await confirm(server, card_id, fingerprint, reason, **kwargs)
     assert stored(server, card_id) == before
     assert before["status"] == "draft"
     assert before["approved_by"] is None
@@ -181,7 +192,10 @@ async def test_adapter_scoped_review_can_be_approved_with_the_same_scope(tmp_pat
         MutableRankingDouble(),
         catalogs=[AmbiguousSupersetCatalogDouble(), LookerCatalogDouble()],
     )
-    card_id = await draft(server)
+    # Adapter-scoped review is only valid for a fixed card. Dynamic
+    # multi-connector cards must be reviewed against the complete catalog so
+    # related evidence from the other connector cannot be hidden.
+    card_id = await draft(server, retrieval_mode="fixed")
 
     review = (await tool(server, "review_insight_card")(card_id, adapter="superset"))["review"]
     result = await confirm(
@@ -244,6 +258,21 @@ async def test_legacy_approval_without_confirmation_still_works(tmp_path, sqlite
 async def test_legacy_call_cannot_silently_resolve_conflicts(tmp_path):
     server, card_id, _, _, _ = await reviewed_case(tmp_path)
     await assert_rejected(server, card_id, None, reason=None, match="definition-conflict")
+
+
+async def test_agent_can_bind_current_review_without_transcribing_fingerprint(tmp_path):
+    server, card_id, _, _, _ = await reviewed_case(tmp_path)
+    await tool(server, "simulate_insight_card")(card_id)
+
+    approved = await tool(server, "approve_insight_card")(
+        card_id,
+        source_selection_reason=REASON,
+        use_current_source_selection_review=True,
+        dynamic_scope_acknowledged=True,
+    )
+
+    assert approved["status"] == "approved"
+    assert approved["onboarding_review"]["source_selection_confirmation"] == REASON
 
 
 @pytest.mark.parametrize("blocker", sorted(RESOLVABLE))
@@ -528,7 +557,7 @@ async def test_dynamic_modes_cannot_resolve_source_selection(tmp_path, retrieval
     )
     await assert_rejected(
         server, card_id, review["source_selection_fingerprint"],
-        match="dynamic_scope_acknowledged=true",
+        match="dynamic_scope_acknowledged=true", dynamic_scope_acknowledged=False,
     )
 
 
