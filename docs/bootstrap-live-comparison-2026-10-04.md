@@ -38,6 +38,66 @@ the owner topics and policy hints in this artifact. That is evidence of the
 product boundary—not semantic policy validation or human usability—and it is
 historical-only until a fresh current-fingerprint run is produced.
 
+## Current live rerun — quality result, not promotion approval
+
+The current-branch rerun used live Jev, the Codex transport for the same
+`gpt-5.6-luna` agent, three connector profiles, ten catalog alternatives per
+canonical resource, and the push gate. It completed all 12 paired episodes
+(3 onboarding pairs and 9 monitoring pairs):
+
+| Measure | Luna over BI tools | SignalWeave + Jev | Interpretation |
+| --- | ---: | ---: | --- |
+| Exact structured monitoring | 6/9 | **9/9** | Treatment recovered required typed evidence and numeric facts on the three baseline misses. |
+| Outcome correctness | 9/9 | 9/9 | Tied. |
+| Recipient correctness | 9/9 | 9/9 | Tied. |
+| Mean evidence recall | 94.4% | **100%** | Required source facts were present in the treatment bundles. |
+| Mean numeric precision / recall | 74.1% / 74.1% | **100% / 100%** | Treatment preserved typed numerical corroboration. |
+| Provenance-complete runs | 9/9 | 9/9 | Tied. |
+| Warm downstream Luna work | 227.4s | **148.6s** | 34.6% less downstream agent time. |
+| Active work per wake-up | 25.26s | **21.23s** | 16.0% less when both arms actually woke Luna. |
+| Downstream wake-ups | 9 | **7** | Two complete quiet outcomes were suppressed safely. |
+| Monitoring source reads | 22 | **18** | Synthetic adapter reads, not warehouse bytes or provider billing. |
+| Onboarding wall time | 85.6s | 284.9s | Jev adds one-time setup work; this is not a first-run speed win. |
+| Known illustrative usage estimate | $0.0949 | $0.2507 | Not a bill; no cost advantage is claimed. |
+
+The treatment's three exactness wins are diagnostic rather than cosmetic. Luna
+missed the required canonical Airflow corroborating reference for Cinder's
+12-minute rollout association, and omitted bank-control citations from Lumen's
+typed numeric claims in two periods. The card-backed path carried those source
+obligations into the evidence bundle while preserving the same owner-approved
+card for both monitoring arms.
+
+The independent mechanical review recomputed every stored score, verified the
+fixture digest, paired denominators, identical monitoring-card digests, raw
+Jev routing, approved cards, and push-gate contract. It passed all of those
+checks. The strict promotion review is still intentionally **blocked** because
+one Jev request encountered a transient TLS error before its retry succeeded;
+the failed attempt has unknown usage accounting. The trace shows request 68
+failing and request 69 returning the retry response. Quality rows remain
+inspectable, but usage-complete cost evidence must not be inferred from them.
+
+The corrected onboarding audit also passes all three treatment cards (3/3).
+It now checks the configured destination value rather than the card-local
+`DeliveryMethod.key`; the latter is allowed to be a human-friendly local label.
+This fixed a reviewer false negative on the Lumen card without weakening the
+unknown-destination rejection test. The onboarding artifact remains blocked
+for promotion for the same unknown-usage reason, and semantic owner fidelity
+and human usefulness remain unassessed.
+
+The retained artifacts are:
+
+- live report: `/private/tmp/signalweave-live-bootstrap-current-20261004-v2/report.json`
+- paired review: `/private/tmp/signalweave-review-current-20261004-v3.json`
+- onboarding review: `/private/tmp/signalweave-onboarding-review-current-20261004-v3.json`
+
+This rerun is the strongest current evidence for a product value signal: on a
+small, held-out, noisy multi-connector cohort, SignalWeave improved structured
+evidence completeness and reduced recurring Luna work. It is not proof of
+universal accuracy, lower total cost, real warehouse savings, semantic human
+approval, or production notification safety. Those claims still require a
+current run with complete provider accounting, blinded narrative review, and
+real connector/query telemetry.
+
 ## High-noise Cinder follow-up
 
 After the three-company run, Cinder was rerun with 20 catalog alternatives per

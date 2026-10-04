@@ -18,9 +18,11 @@ def _card(scenario, *, source_variant=False, unknown_route=False):
     for index, outcome in enumerate(sorted(outcomes)):
         destination = public["destinations"][index % len(public["destinations"])]
         methods.append({
-            "key": "unknown" if unknown_route and index == 0 else destination["key"],
+            # Keys are card-local and may be human-friendly. The destination
+            # is what must match the authorized route.
+            "key": "business-route" if index == 0 else destination["key"],
             "outcome": outcome,
-            "destination": destination["key"],
+            "destination": "unknown-destination" if unknown_route and index == 0 else destination["key"],
         })
     return {
         "id": "card-test",
@@ -39,6 +41,19 @@ def test_onboarding_card_audit_requires_authorized_non_noise_sources_and_routes(
     assert _card_quality(_card(scenario), scenario)["mechanical_pass"]
     assert _card_quality(_card(scenario, source_variant=True), scenario)["checks"]["sources_avoid_catalog_noise"] is False
     assert _card_quality(_card(scenario, unknown_route=True), scenario)["checks"]["routes_authorized"] is False
+
+
+def test_onboarding_card_audit_accepts_configured_destination_uri_with_local_key():
+    scenario = build_scenarios(seed=20261001, split="holdout", connector_profile=True)[0]
+    card = _card(scenario)
+    for method, destination in zip(
+        card["delivery_methods"], scenario["public"]["destinations"], strict=False
+    ):
+        method["key"] = f"owner-route-{method['outcome']}"
+        method["destination"] = destination["destination"]
+    result = _card_quality(card, scenario)
+    assert result["checks"]["routes_authorized"]
+    assert result["mechanical_pass"]
 
 
 def test_notes_audit_is_not_mistaken_for_an_executable_card():

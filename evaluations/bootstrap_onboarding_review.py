@@ -133,8 +133,22 @@ def _card_quality(
     sources = card.get("sources") if isinstance(card.get("sources"), list) else []
     source_refs = {_ref(source) for source in sources if isinstance(source, dict)}
     methods = card.get("delivery_methods") if isinstance(card.get("delivery_methods"), list) else []
-    destination_keys = {str(item["key"]) for item in public["destinations"]}
+    # DeliveryMethod.key is intentionally card-local. It is a stable label
+    # used by the compiled plan, not an authorization principal. The
+    # caller-owned destination is the security boundary: accept either the
+    # exact configured destination URI or its configured opaque key because
+    # adapters may persist one or the other while preserving the same route.
+    authorized_destinations = {
+        value
+        for item in public["destinations"]
+        for value in (str(item["key"]), str(item["destination"]))
+    }
     route_keys = {str(method.get("key")) for method in methods if isinstance(method, dict)}
+    route_destinations = {
+        str(method.get("destination"))
+        for method in methods
+        if isinstance(method, dict) and method.get("destination")
+    }
     route_outcomes = {
         str(method.get("outcome"))
         for method in methods
@@ -152,7 +166,8 @@ def _card_quality(
         and bool(str(card.get("why_watch") or "").strip()),
         "sources_authorized": bool(source_refs) and source_refs <= all_refs,
         "sources_avoid_catalog_noise": bool(source_refs) and source_refs <= canonical_refs,
-        "routes_authorized": bool(route_keys) and route_keys <= destination_keys,
+        "routes_authorized": bool(route_destinations)
+        and route_destinations <= authorized_destinations,
         "routes_cover_labeled_nonquiet_outcomes": expected_outcomes <= route_outcomes,
         "decision_guidance_present": bool(str(card.get("decision_guidance") or "").strip()),
         "materiality_anchor_hints_present": coverage["recall"] >= 0.80,
@@ -166,6 +181,8 @@ def _card_quality(
         "status": card.get("status"),
         "source_refs": sorted(source_refs),
         "route_keys": sorted(route_keys),
+        "route_destinations": sorted(route_destinations),
+        "authorized_destinations": sorted(authorized_destinations),
         "route_outcomes": sorted(route_outcomes),
         "expected_nonquiet_outcomes": sorted(expected_outcomes),
         "retrieval_mode": card.get("retrieval_mode"),
