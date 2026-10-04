@@ -49,6 +49,9 @@ def _score(case: dict[str, Any], run: dict[str, Any]) -> dict[str, Any]:
         for event in run.get("events", [])
         for ref in (event.get("result_summary") or {}).get("evidence_refs", [])
     }
+    preflight_evidence.update(
+        str(ref) for ref in (run.get("preflight") or {}).get("evidence_refs", [])
+    )
     provenance = bool(evidence) and all(
         ref in chart_ids
         or ref in inspected

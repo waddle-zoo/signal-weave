@@ -408,6 +408,33 @@ Shared workflow input:
     return prompt
 
 
+def _preflight_summary(bundle: dict[str, Any] | None) -> dict[str, Any] | None:
+    if bundle is None:
+        return None
+    return {
+        "path": bundle.get("path"),
+        "probabilities": bundle.get("probabilities", {}),
+        "source_selection": bundle.get("source_selection", []),
+        "evidence_refs": sorted(
+            {
+                str(item.get("source_ref"))
+                for item in bundle.get("evidence", [])
+                if item.get("source_ref")
+            }
+        ),
+        "query_evidence_refs": sorted(
+            {
+                str(item.get("source_ref"))
+                for item in (bundle.get("query") or {}).get("evidence", [])
+                if item.get("source_ref")
+            }
+        ),
+        "query_cache_hit": (bundle.get("query") or {}).get("cache_hit")
+        if isinstance(bundle.get("query"), dict)
+        else None,
+    }
+
+
 class ResponsesAgent:
     def __init__(self, *, api_key: str, model: str, timeout: float = 90.0) -> None:
         self.api_key = api_key
@@ -611,6 +638,7 @@ def score_run(case: dict[str, Any], run: dict[str, Any]) -> dict[str, Any]:
         for event in run.get("events", [])
         for ref in (event.get("result_summary") or {}).get("evidence_refs", [])
     }
+    preflight_evidence.update(str(ref) for ref in (run.get("preflight") or {}).get("evidence_refs", []))
     provenance = bool(evidence) and all(
         ref in inspected
         or ref in preflight_evidence
@@ -766,6 +794,7 @@ async def run_trial(args: argparse.Namespace) -> dict[str, Any]:
                     retrieval_bundle=retrieval_bundle,
                 )
                 result["preflight_elapsed_ms"] = preflight_elapsed_ms
+                result["preflight"] = _preflight_summary(retrieval_bundle)
                 result["end_to_end_elapsed_ms"] = round(
                     preflight_elapsed_ms + result["elapsed_ms"], 2
                 )
@@ -790,6 +819,7 @@ async def run_trial(args: argparse.Namespace) -> dict[str, Any]:
                     "preflight_elapsed_ms": preflight_elapsed_ms,
                     "end_to_end_elapsed_ms": preflight_elapsed_ms,
                     "query_calls": executor.calls,
+                    "preflight": _preflight_summary(retrieval_bundle),
                     "jev": {
                         "requests": retriever.requests if retriever else 0,
                         "input_tokens": retriever.input_tokens if retriever else 0,
