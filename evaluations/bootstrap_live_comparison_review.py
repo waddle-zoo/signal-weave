@@ -250,8 +250,20 @@ def review_report(report_path: Path) -> dict[str, Any]:
 
     treatment_warm = total(treatment, "agent_seconds")
     baseline_warm = total(baseline, "agent_seconds")
+    treatment_active = total(
+        [row for row in treatment if not row.get("agent_wakeup_skipped")],
+        "agent_seconds",
+    )
+    baseline_active = total(
+        [row for row in baseline if not row.get("agent_wakeup_skipped")],
+        "agent_seconds",
+    )
     treatment_exact = sum(bool(row.get("score", {}).get("exact")) for row in treatment)
     baseline_exact = sum(bool(row.get("score", {}).get("exact")) for row in baseline)
+    treatment_wakeups = sum(not row.get("agent_wakeup_skipped") for row in treatment)
+    baseline_wakeups = sum(not row.get("agent_wakeup_skipped") for row in baseline)
+    treatment_active_mean = treatment_active / treatment_wakeups if treatment_wakeups else None
+    baseline_active_mean = baseline_active / baseline_wakeups if baseline_wakeups else None
     value_signal = {
         "treatment_exact": treatment_exact,
         "baseline_exact": baseline_exact,
@@ -260,8 +272,17 @@ def review_report(report_path: Path) -> dict[str, Any]:
         "warm_agent_seconds_reduction_pct": (
             (baseline_warm - treatment_warm) / baseline_warm * 100 if baseline_warm else None
         ),
-        "treatment_agent_wakeups": sum(not row.get("agent_wakeup_skipped") for row in treatment),
-        "baseline_agent_wakeups": sum(not row.get("agent_wakeup_skipped") for row in baseline),
+        "treatment_active_warm_agent_seconds": treatment_active,
+        "baseline_active_warm_agent_seconds": baseline_active,
+        "treatment_active_warm_agent_seconds_per_wakeup": treatment_active_mean,
+        "baseline_active_warm_agent_seconds_per_wakeup": baseline_active_mean,
+        "active_warm_agent_seconds_per_wakeup_reduction_pct": (
+            (baseline_active_mean - treatment_active_mean) / baseline_active_mean * 100
+            if baseline_active_mean is not None and treatment_active_mean is not None
+            and baseline_active_mean else None
+        ),
+        "treatment_agent_wakeups": treatment_wakeups,
+        "baseline_agent_wakeups": baseline_wakeups,
         "treatment_source_reads": sum(int(row.get("source_reads") or 0) for row in treatment),
         "baseline_source_reads": sum(int(row.get("source_reads") or 0) for row in baseline),
         "treatment_quality": quality_signal(treatment),

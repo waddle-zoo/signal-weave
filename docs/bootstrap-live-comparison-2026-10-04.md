@@ -38,6 +38,7 @@ typed and narrative form, and the same case was rerun once.
 | Outcome / recipient correctness | 3/3 | 3/3 |
 | Evidence recall / provenance | 100% / 100% | 100% / 100% |
 | Warm Luna agent work | 83.69s | 32.98s |
+| Active-wakeup Luna work / wake-up | 27.90s | 16.49s |
 | Downstream wake-ups | 3 | 2 |
 | Source reads during monitoring | 11 | 10 |
 | Onboarding time | 23.40s | 68.56s |
@@ -66,6 +67,9 @@ Across all nine treatment periods:
 - raw Jev routing matched the independent labels: 9/9;
 - complete quiet outcomes skipped two downstream Luna wake-ups;
 - warm downstream Luna agent time fell 47.0% in aggregate;
+- among periods where Luna actually woke, mean agent work fell from 25.70s to
+  17.51s (31.9%), so the scheduled-work result is not explained only by
+  suppressing quiet wake-ups;
 - SignalWeave reduced observed monitoring source reads in this run (15 treatment
   reads versus 23 baseline reads), but the synthetic adapter does not measure
   bytes scanned or warehouse billing, so this is not evidence of lower warehouse
