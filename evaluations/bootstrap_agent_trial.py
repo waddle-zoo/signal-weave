@@ -42,7 +42,13 @@ from evaluations.bootstrap_scenarios import (
 from signalweave.diagnostics import analyze_comparison
 from signalweave.engine import InsightEngine
 from signalweave.mcp_server import create_mcp
-from signalweave.models import PrincipalContext, ResourceDescriptor, ResourceSnapshot, SourceRef
+from signalweave.models import (
+    CatalogSearchPage,
+    PrincipalContext,
+    ResourceDescriptor,
+    ResourceSnapshot,
+    SourceRef,
+)
 from signalweave.runtime import Runtime
 from signalweave.sources import SourceRegistry
 from signalweave.store import JsonInsightCardStore, JsonMetricQueryCardStore
@@ -286,6 +292,30 @@ class PublicSourceAdapter:
     async def list_resources(self):
         return [item.model_copy(deep=True) for item in self.catalog]
 
+    async def expand_related_resources(self, related_refs: list[str], *, limit: int,
+                                       authorized_tenants=None):
+        """Expose the connector-owned relationship index used by dynamic cards."""
+        seeds = {str(ref) for ref in related_refs if str(ref).strip()}
+        tenant_scope = set(authorized_tenants or [])
+        matches = []
+        for descriptor in self.catalog:
+            tenant = descriptor.contract.tenant_id
+            if tenant_scope and tenant not in tenant_scope:
+                continue
+            related = descriptor.metadata.get("related_refs", [])
+            if not isinstance(related, list):
+                continue
+            ref = f"{descriptor.adapter}|{descriptor.resource}"
+            if ref in seeds or seeds.intersection(str(item) for item in related):
+                matches.append(descriptor.model_copy(deep=True))
+        return CatalogSearchPage(
+            resources=matches[:limit],
+            total_count=len(matches),
+            has_more=len(matches) > limit,
+            provider=f"{self.name}-relationship-index",
+            strategy="adapter-related-index",
+        )
+
     async def inspect(self, source: SourceRef):
         ref = f"{source.adapter}|{source.resource}"
         allowed = {f"{item.adapter}|{item.resource}": item for item in self.catalog}
@@ -321,6 +351,19 @@ class PublicConnectorAdapter:
         if source.adapter != self.name:
             raise ValueError("source adapter does not match registered connector")
         return await self.hub.inspect(source)
+
+    async def expand_related_resources(self, related_refs: list[str], *, limit: int,
+                                       authorized_tenants=None):
+        page = await self.hub.expand_related_resources(
+            related_refs,
+            limit=limit,
+            authorized_tenants=authorized_tenants,
+        )
+        return page.model_copy(
+            update={"resources": [
+                resource for resource in page.resources if resource.adapter == self.name
+            ]}
+        )
 
 
 def function(name: str, description: str, properties: dict, required=()) -> dict:
@@ -712,8 +755,9 @@ async def luna_episode(session: ToolSession, *, key: str, effort: str, budget: R
                          "pass a delivery_methods entry with the exact destination key/URL from the owner directory; "
                          "prose alone does not configure a route. Then inspect it with get_insight_card, dry-run "
                          "simulate_insight_card or preview_investigation_report, resolve blockers, request_synthetic_owner_approval, "
-                         "then approve_insight_card. If review_insight_card was called with an adapter scope, pass "
-                         "that same adapter to approve_insight_card so the source-selection fingerprint uses the same catalog view. "
+                         "then approve_insight_card. For retrieval_mode=expand or investigation_mode=bounded, review "
+                         "and approve against the full authorized catalog by omitting adapter; use an adapter scope only "
+                         "for a fixed single-connector card. "
                          "If the card explicitly uses retrieval_mode=expand "
                          "or investigation_mode=bounded, pass the current review fingerprint, the "
                          "owner's source-selection reason, and dynamic_scope_acknowledged=true to "
@@ -721,6 +765,9 @@ async def luna_episode(session: ToolSession, *, key: str, effort: str, budget: R
                          "When the owner asks to connect related signals or investigate why a movement happened, "
                          "preserve that intent with retrieval_mode=expand and investigation_mode=bounded unless "
                          "the owner explicitly requests anchor-only fixed/none behavior; do not silently narrow scope. "
+                         "Inspect the full review's recommended corroborating or diagnostic candidates and explicitly "
+                         "anchor any source the policy names as required context; bounded expansion must not silently "
+                         "substitute an archive, sandbox, forecast, or other population. "
                          "Approval models a synthetic owner's procedural review only. Save notes "
                          "and finish_setup with the card ID. No actual human has validated it.")
         instructions += "\nProduction MCP initialization instructions:\n" + (session.server.instructions or "")

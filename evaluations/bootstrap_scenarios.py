@@ -544,12 +544,26 @@ def build_scenarios(
             f"bootstrap-noise-v{SCHEMA_VERSION}:{seed}:{split}:{scenario_id}"
         )
         for i, key in enumerate(keys):
+            metadata = {
+                "tenant": scenario_id,
+                "owner": destinations[i % 2]["label"],
+                "inspection": "bounded current-period snapshot",
+                "read_only": True,
+            }
+            if connector_profile and i == 0:
+                # The profile catalog models a native lineage/knowledge-graph
+                # edge: the primary analytical asset is related to the first
+                # corroborating context asset. The edge is adapter metadata,
+                # not a hidden expected outcome, and is intentionally absent
+                # from the neutral legacy fixture.
+                metadata["related_refs"] = [refs[1]]
+            elif connector_profile and i == 1:
+                metadata["related_refs"] = [refs[0]]
             descriptor = ResourceDescriptor(
                 adapter=adapters[i], resource=key,
                 kind=("saved_query", "document", "saved_query", "chart")[i],
                 title=spec["titles"][i], description=spec["descriptions"][i],
-                metadata={"tenant": scenario_id, "owner": destinations[i % 2]["label"],
-                          "inspection": "bounded current-period snapshot", "read_only": True},
+                metadata=metadata,
             )
             if connector_profile and i == 0:
                 # The profile trial models a connector that exposes a reviewed

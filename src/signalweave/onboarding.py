@@ -1290,6 +1290,10 @@ class InsightAuthoringService:
             for resource in [*catalog.resources, *relationship_catalog.resources]
         }
         resources = list(resources_by_ref.values())
+        relationship_refs = {
+            resource_ref(resource)
+            for resource in relationship_catalog.resources
+        }
         anchor_refs = {f"{source.adapter}|{source.resource}" for source in anchors}
         anchor_descriptors = {
             resource_ref(resource): resource
@@ -1313,23 +1317,33 @@ class InsightAuthoringService:
             scores = await rank_with_context(ranked_goal, candidates, retrieval_context)
         else:
             scores = await judger.rank_resources(ranked_goal, candidates)
-        matches = [
-            ResourceMatch(
-                ref=resource_ref(resource),
-                adapter=resource.adapter,
-                resource=resource.resource,
-                kind=resource.kind,
-                title=resource.title,
-                description=resource.description,
-                source_url=resource.source_url,
-                relevance=max(0.0, min(1.0, float(scores.get(resource_ref(resource), 0.0)))),
-                recommended=False,
-                contract=resource.contract,
-                retrieval_signals=pool.signals.get(resource_ref(resource), []),
+        matches: list[ResourceMatch] = []
+        for resource in candidates:
+            ref = resource_ref(resource)
+            if ref in anchor_refs:
+                continue
+            retrieval_signals = list(pool.signals.get(ref, []))
+            # The adapter's relationship-expansion result is itself a
+            # relationship signal. Adapters need not duplicate their graph
+            # edge in every descriptor's metadata for the bounded contract to
+            # remain useful.
+            if ref in relationship_refs and "anchor-relationship" not in retrieval_signals:
+                retrieval_signals.append("anchor-relationship")
+            matches.append(
+                ResourceMatch(
+                    ref=ref,
+                    adapter=resource.adapter,
+                    resource=resource.resource,
+                    kind=resource.kind,
+                    title=resource.title,
+                    description=resource.description,
+                    source_url=resource.source_url,
+                    relevance=max(0.0, min(1.0, float(scores.get(ref, 0.0)))),
+                    recommended=False,
+                    contract=resource.contract,
+                    retrieval_signals=retrieval_signals,
+                )
             )
-            for resource in candidates
-            if resource_ref(resource) not in anchor_refs
-        ]
         matches.sort(key=lambda match: (-match.relevance, match.title.lower(), match.ref))
         eligible = [
             match for match in matches if match.relevance >= self.recommendation_threshold
@@ -1365,6 +1379,28 @@ class InsightAuthoringService:
                 if len(selected_matches) < self.related_source_limit:
                     selected_matches.append(selected)
                     covered_targets.add(target)
+        # A native adapter relationship is a bounded retrieval contract, not
+        # merely another lexical hint. Jev still ranks the neighborhood and
+        # controls its order, but an explicitly published edge from an
+        # approved anchor must not disappear just because a same-domain
+        # archive scored higher in a noisy catalog. This keeps graph context
+        # available for the agent while preserving the configured source and
+        # concurrency bounds.
+        direct_relationship_matches = [
+            match for match in matches
+            if "anchor-relationship" in match.retrieval_signals
+        ]
+        for match in direct_relationship_matches:
+            if len(selected_matches) >= self.related_source_limit:
+                break
+            if match.ref in {item.ref for item in selected_matches}:
+                continue
+            selected_matches.append(match)
+            if match.relevance < self.recommendation_threshold:
+                coverage_warnings.append(
+                    "A native adapter relationship was retained as bounded context even "
+                    f"though Jev ranked {match.ref} below the optional relevance threshold."
+                )
         selected_refs = {match.ref for match in selected_matches}
         # When the trusted graph declares explicit context obligations, the
         # bundle should contain one Jev-ranked projection per obligation and

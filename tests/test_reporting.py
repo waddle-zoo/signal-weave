@@ -186,6 +186,38 @@ def test_complete_report_contains_only_recomputed_numeric_facts_and_provenance()
     assert "caus" in " ".join(report.limitations).lower()
 
 
+def test_report_keeps_source_facts_needed_for_a_bounded_investigation():
+    evidence = Evidence(
+        source_key="sales",
+        subject_id="deployment-42",
+        subject_label="Release calendar",
+        statement="Release completed 12 minutes before the measured change.",
+        values={"lead_minutes": 12},
+        provenance=["query:release-calendar"],
+    )
+    report = build_investigation_report(
+        card(), result(complete_analysis(), evidence=[evidence]), healthy_resources()
+    )
+
+    assert report.status == "complete"
+    assert report.evidence == [evidence]
+    assert "Release completed 12 minutes" in render_investigation_report(report)
+
+
+def test_report_rejects_foreign_evidence_instead_of_forwarding_it():
+    foreign = Evidence(
+        source_key="unapproved-source",
+        statement="A foreign fact.",
+        provenance=["query:foreign"],
+    )
+    report = build_investigation_report(
+        card(), result(complete_analysis(), evidence=[foreign]), healthy_resources()
+    )
+
+    assert report.status == "blocked"
+    assert any(item.code == "foreign_evidence" for item in report.blockers)
+
+
 @pytest.mark.parametrize("blank", ["", " \t\n"])
 def test_undeclared_source_bounds_do_not_downgrade_complete_comparisons(blank):
     resources = healthy_resources()

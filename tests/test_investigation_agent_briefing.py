@@ -55,7 +55,7 @@ async def test_writer_input_is_compact_and_uses_recipient_keys() -> None:
     assert "report_markdown" not in calls[0]
     assert set(calls[0]["report"]) == {
         "card_id", "title", "outcome", "purpose", "intended_audience", "next_step",
-        "status", "numeric_claims", "provenance", "limitations", "unresolved_questions",
+        "status", "evidence", "numeric_claims", "provenance", "limitations", "unresolved_questions",
         "intended_routes_not_delivered", "blockers", "warnings", "evaluator", "coverage", "judgments", "numeric_conditions",
         "source_boundaries",
     }

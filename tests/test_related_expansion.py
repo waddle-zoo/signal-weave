@@ -121,6 +121,15 @@ class RelationshipJev:
         }
 
 
+class LowRelationshipJev(RelationshipJev):
+    async def rank_resources(self, goal, resources):
+        del goal
+        return {
+            f"{resource.adapter}|{resource.resource}": 0.20
+            for resource in resources
+        }
+
+
 @pytest.mark.asyncio
 async def test_relationship_expansion_finds_nonlexical_neighbor_without_full_scan():
     adapter = RelationshipCatalog()
@@ -167,6 +176,40 @@ async def test_relationship_expansion_finds_nonlexical_neighbor_without_full_sca
     assert bundle.candidate_count == 2
     assert any("catalog count was redacted" in warning for warning in bundle.warnings)
     assert all("other-tenant" not in source.resource for source in bundle.selected_sources)
+
+
+@pytest.mark.asyncio
+async def test_adapter_relationship_is_retained_below_jev_threshold():
+    adapter = RelationshipCatalog()
+    registry = SourceRegistry([adapter], authorized_tenants=["tenant-a"])
+    service = InsightAuthoringService(
+        registry=registry,
+        engine=SimpleNamespace(judger=LowRelationshipJev()),
+        max_candidates=10,
+        related_source_limit=3,
+        principal=SimpleNamespace(tenant_id="tenant-a"),
+    )
+    card = InsightCard(
+        id="low-score-relationship-card",
+        title="Growth with bounded context",
+        what_to_watch="Growth conversion movement",
+        why_watch="Decide whether the movement needs action",
+        questions=["What related evidence explains the movement?"],
+        sources=[SourceRef(
+            key="anchor",
+            adapter="catalog",
+            resource="dashboard:anchor",
+            label="Growth overview",
+        )],
+        retrieval_mode=RetrievalMode.EXPAND,
+    )
+
+    bundle = await service.resolve_bundle(card)
+
+    assert [match.resource for match in bundle.related_matches] == [
+        "query:fulfillment-latency"
+    ]
+    assert any("native adapter relationship" in warning for warning in bundle.warnings)
 
 
 @pytest.mark.asyncio

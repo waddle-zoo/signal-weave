@@ -393,6 +393,25 @@ def create_mcp(
             }
         )
 
+    def assert_dynamic_review_scope(card: InsightCard, adapter: str | None) -> None:
+        """Prevent a connector-scoped review from hiding dynamic evidence.
+
+        ``adapter`` is useful for a fixed, single-connector card. Once a card
+        asks SignalWeave to expand or investigate, an adapter-scoped review can
+        certify a source selection without ever showing the other connectors
+        that the runtime may use. That is an onboarding correctness bug, not a
+        harmless pagination choice.
+        """
+        dynamic_scope = (
+            card.retrieval_mode != RetrievalMode.FIXED
+            or card.investigation_mode != InvestigationMode.NONE
+        )
+        if adapter and dynamic_scope and len(runtime.sources.adapter_names()) > 1:
+            raise ValueError(
+                "Dynamic multi-connector cards must be reviewed against the full authorized "
+                "catalog; omit adapter so related evidence from every connector is visible."
+            )
+
     async def prepare_insight_card(
         card: InsightCard,
         context: ContextSnapshot | None = None,
@@ -1675,6 +1694,7 @@ def create_mcp(
         """
         principal = request_principal(ctx)
         card = get_scoped_card(card_id, principal)
+        assert_dynamic_review_scope(card, adapter)
         original = card.model_dump(mode="json")
         review = await authoring.review(
             card,
@@ -1937,6 +1957,7 @@ def create_mcp(
         """
         principal = request_principal(ctx)
         card = get_scoped_card(card_id, principal)
+        assert_dynamic_review_scope(card, adapter)
         original = card.model_dump(mode="json")
         if not card.sources:
             raise ValueError("an insight card needs at least one selected source before approval")

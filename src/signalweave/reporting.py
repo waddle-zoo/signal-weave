@@ -17,7 +17,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, FiniteFloat, ValidationError
 
 from .diagnostics import AnalysisReport, SegmentContribution, analyze_comparison
-from .models import EvidencePlan, InsightCard, InsightResult, ResourceSnapshot, SourceRef
+from .models import Evidence, EvidencePlan, InsightCard, InsightResult, ResourceSnapshot, SourceRef
 from .numeric_conditions import NumericConditionResult, evaluate_numeric_conditions
 
 ReportStatus = Literal["complete", "partial", "blocked"]
@@ -156,6 +156,12 @@ class InvestigationReport(BaseModel):
     intended_audience: str
     next_step: str | None = None
     status: ReportStatus
+    # Raw, source-scoped facts are part of the durable handoff. Numeric claims
+    # remain the validated analytical surface; this field preserves the other
+    # evidence an agent may need for a bounded investigation (for example a
+    # deployment timestamp or an ownership record) without asking the agent to
+    # reread every connector.
+    evidence: list[Evidence] = Field(default_factory=list, max_length=2000)
     numeric_claims: list[NumericClaim] = Field(default_factory=list)
     provenance: list[AnalysisProvenance] = Field(default_factory=list)
     source_boundaries: list[SourceBoundary] = Field(default_factory=list)
@@ -617,6 +623,41 @@ def build_investigation_report(
             reference=result.card_id,
         ))
 
+    # Preserve the full current-run evidence bundle, but do not turn an
+    # unbound or foreign fact into a report just because a model returned it.
+    # Source identity and adapter|resource provenance are checked against the
+    # same authorized snapshots used for analytical validation. Context facts
+    # are intentionally allowed through their provider/version provenance.
+    report_evidence = list(result.evidence)
+    inspected_refs = {
+        f"{resource.adapter}|{resource.resource}" for resource in resources_by_key.values()
+    }
+    registered_adapters = {resource.adapter for resource in resources_by_key.values()}
+    for item in report_evidence:
+        if item.origin == "context":
+            continue
+        if item.source_key not in authorized_sources:
+            blockers.append(_issue(
+                "foreign_evidence",
+                f"Evidence fact {item.source_key} is not authorized by the card or bounded investigation selection.",
+                reference=item.source_key,
+                source_keys=[item.source_key],
+            ))
+        unresolved_refs = sorted(
+            ref for ref in item.provenance
+            if "|" in ref
+            and ref.split("|", 1)[0] in registered_adapters
+            and ref not in inspected_refs
+        )
+        if unresolved_refs:
+            blockers.append(_issue(
+                "evidence_provenance_unresolved",
+                f"Evidence fact {item.source_key} cites source snapshot(s) not inspected in this run: "
+                + ", ".join(unresolved_refs),
+                reference=item.source_key,
+                source_keys=[item.source_key],
+            ))
+
     identities = [(_analysis_key(item), item) for item in analyses]
     duplicate_keys = {
         key for key in {item_key for item_key, _ in identities}
@@ -970,6 +1011,7 @@ def build_investigation_report(
         ),
         next_step=(result.workflow.instructions if result.workflow is not None else None),
         status=status,
+        evidence=report_evidence,
         numeric_claims=numeric_claims,
         provenance=provenance,
         source_boundaries=source_boundaries,
@@ -1147,6 +1189,19 @@ def render_investigation_report(report: InvestigationReport) -> str:
             lines.append(
                 "An unresolved semantic judgment is not itself evidence of missing records "
                 "or conflicting facts. Source coverage and model uncertainty are separate."
+            )
+
+    if report.evidence:
+        lines.extend([
+            "### Evidence bundle",
+            "Source-scoped facts returned by this run. They are inspectable context, not automatically validated causal conclusions.",
+        ])
+        for item in report.evidence:
+            values = json.dumps(item.values, sort_keys=True, ensure_ascii=False, default=str)
+            provenance = ", ".join(item.provenance) if item.provenance else "none recorded"
+            lines.append(
+                f"- `{_md(item.source_key)}` — {_md(item.statement)}; "
+                f"values: `{_md(values)}`; provenance: `{_md(provenance)}`."
             )
     if policy_checks:
         lines.extend([

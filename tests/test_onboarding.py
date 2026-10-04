@@ -248,6 +248,42 @@ class AmbiguousCatalogJevDouble(OnboardingJevDouble):
         }
 
 
+class MultiConnectorJevDouble(ExplicitAnchorJevDouble):
+    async def rank_resources(self, goal, resources):
+        del goal
+        return {f"{resource.adapter}|{resource.resource}": 0.20 for resource in resources}
+
+
+class AirflowCatalogDouble:
+    name = "airflow"
+
+    def __init__(self):
+        self.resources = [ResourceDescriptor(
+            adapter=self.name,
+            resource="dag:deployment-calendar",
+            kind="document",
+            title="Deployment calendar",
+            description="Deployment timestamps and target population.",
+        )]
+
+    async def list_resources(self):
+        return self.resources
+
+    async def inspect(self, source):
+        return ResourceSnapshot(
+            source_key=source.key,
+            adapter=source.adapter,
+            resource=source.resource,
+            title=source.label,
+            evidence=[Evidence(
+                source_key=source.key,
+                statement="Deployment timestamp and target population.",
+                values={"target_population": ["all"]},
+                provenance=[f"{source.adapter}|{source.resource}"],
+            )],
+        )
+
+
 def make_server(
     tmp_path,
     judger=None,
@@ -823,6 +859,35 @@ async def test_review_insight_card_explains_omitted_recommended_sources(tmp_path
     )
     assert candidate["recommended"] is True
     assert "Jev judged it materially relevant" in candidate["reason"]
+
+
+@pytest.mark.asyncio
+async def test_dynamic_review_cannot_hide_other_connectors(tmp_path):
+    server = make_server(
+        tmp_path,
+        judger=MultiConnectorJevDouble(),
+        catalogs=[SupersetCatalogDouble(), AirflowCatalogDouble()],
+    )
+    drafted = await tool(server, "draft_insight_card")(
+        title="Cross-connector investigation",
+        what_to_watch="Checkout conversion and deployment context.",
+        why_watch="Investigate meaningful movement using related sources.",
+        sources=[{
+            "key": "growth",
+            "adapter": "superset",
+            "resource": "dashboard:7",
+            "label": "Growth overview",
+        }],
+        retrieval_mode="expand",
+        investigation_mode="bounded",
+    )
+    card_id = drafted["card"]["id"]
+
+    with pytest.raises(ValueError, match="full authorized catalog"):
+        await tool(server, "review_insight_card")(card_id, adapter="superset")
+
+    reviewed = await tool(server, "review_insight_card")(card_id)
+    assert any(item["adapter"] == "airflow" for item in reviewed["review"]["source_candidates"])
 
 
 @pytest.mark.asyncio

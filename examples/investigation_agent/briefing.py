@@ -56,7 +56,7 @@ def _writer_report(report: InvestigationReport) -> dict[str, Any]:
     native = report.model_dump(mode="json")
     fields = (
         "card_id", "title", "outcome", "purpose", "intended_audience", "next_step",
-        "status", "numeric_claims", "provenance", "limitations", "unresolved_questions",
+        "status", "evidence", "numeric_claims", "provenance", "limitations", "unresolved_questions",
         "intended_routes_not_delivered", "blockers", "warnings", "evaluator",
         "judgments", "numeric_conditions", "source_boundaries",
     )
