@@ -18,7 +18,7 @@ those controls—use an administrator-approved installation path instead.
 > card-approval gaps; easy onboarding and comparative benefit are not proven.
 > The stable v0.1.0 release has no native assets.
 
-## 1. Install and set up
+## 1. Install once, then use the guided setup
 
 ```sh
 installer="$(mktemp)"
@@ -31,13 +31,47 @@ curl --fail --silent --show-error --location --proto '=https' --proto-redir '=ht
 "$HOME/.local/bin/signalweave" setup
 ```
 
+That one guided command asks for your TypeSafe key, identity, source type, source
+credentials, and preferred agent. It writes a private local home at
+`~/.signalweave`; it does not require TOML editing or an OpenAI key. Jev is the
+SignalWeave decision runtime, while your agent supplies frontier-model reasoning
+when a workflow needs investigation or narrative analysis.
+
 The installer selects macOS Apple Silicon/Intel or Linux x64, verifies the
-archive's SHA-256 checksum, and installs without `sudo`. Setup keeps your key
-and state private under `~/.signalweave`. Your Jev key is not your BI credential:
-source access must be configured too. Jev evaluations send configured evidence
-to TypeSafe; this is local storage, not offline inference.
-The pinned version explicitly opts into this preview; previews are never selected
-by the installer's default `latest` lookup.
+archive's SHA-256 checksum, and installs without `sudo`. Your Jev key is not a
+BI credential: the setup wizard separately configures source access. Jev
+evaluations send configured evidence to TypeSafe; this is local storage, not
+offline inference. The pinned version explicitly opts into this preview;
+previews are never selected by the installer's default `latest` lookup.
+
+After setup, the normal human path is:
+
+```sh
+signalweave status
+signalweave connections add       # add or update a source without editing TOML
+signalweave doctor --live         # test catalog access; does not spend a Jev judgment
+signalweave connect codex          # or: signalweave connect claude
+signalweave ui                     # optional local health page at 127.0.0.1:8765
+```
+
+If you want to change one secret later, use a hidden prompt or a private file:
+
+```sh
+signalweave credentials list
+signalweave credentials set typesafe
+signalweave credentials set superset-password --file /private/path/password
+```
+
+`signalweave status` and the local UI never print credential values. `doctor`
+without `--live` is an offline configuration check. `doctor --live` performs a
+bounded catalog probe for each configured source and explicitly does not call
+Jev; run an approved card or the agent's workflow when you want to test the
+provider judgment path.
+
+The local wizard supports Superset, hosted Preset, Trino with a normalized
+catalog JSON file, and reviewed read-only MCP source manifests. Other company
+systems can be brought in through that MCP bridge without teaching the local
+CLI to store arbitrary provider secrets.
 
 ## 2. Connect your agent
 
@@ -47,13 +81,15 @@ The **unpublished rc2 development binary** can register with Codex during setup:
 signalweave setup --agent codex --register-agent
 ```
 
-For an already configured local home, use `signalweave connect --agent codex`.
+For an already configured local home, use `signalweave connect codex` (the
+older `--agent codex` spelling remains accepted).
 Registration is opt-in and uses the installed Codex CLI. A conflicting existing
 entry is left untouched; registration errors preserve your local setup. Close
 concurrent agent-configuration edits while connecting. Registration is not a
-live source test. Claude Code currently receives a manual registration command,
-not an automatic configuration edit. The published rc1 still uses the commands
-below; do not pass rc2-only flags to rc1.
+live source test. Claude Code receives the exact registration command to review
+and run because SignalWeave must not silently edit a user's Claude configuration.
+The published rc1 still uses the commands below; do not pass rc2-only flags to
+rc1.
 
 Run **one** command for the agent you use:
 

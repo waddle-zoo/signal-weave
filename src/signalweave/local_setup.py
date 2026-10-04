@@ -67,6 +67,25 @@ _ENV_NAMES = {
     "SIGNALWEAVE_OIDC_SCOPE_CLAIM",
     "SIGNALWEAVE_RESOURCE_SERVER_URL", "MCP_HOST", "MCP_PORT",
 }
+_CREDENTIAL_FILES = {
+    "TYPESAFE_API_KEY": "typesafe.key",
+    "PRESET_API_TOKEN_NAME": "preset-token-name.key",
+    "PRESET_API_TOKEN_SECRET": "preset-token-secret.key",
+    "PRESET_ACCESS_TOKEN": "preset-access-token.key",
+    "SUPERSET_PASSWORD": "superset-password.key",
+    "SIGNALWEAVE_API_TOKEN": "signalweave-api-token.key",
+    "PUSH_WEBHOOK_TOKEN": "push-webhook-token.key",
+}
+_CREDENTIAL_ALIASES = {
+    "typesafe": "TYPESAFE_API_KEY",
+    "jev": "TYPESAFE_API_KEY",
+    "superset-password": "SUPERSET_PASSWORD",
+    "preset-token-name": "PRESET_API_TOKEN_NAME",
+    "preset-token-secret": "PRESET_API_TOKEN_SECRET",
+    "preset-access-token": "PRESET_ACCESS_TOKEN",
+    "signalweave-api-token": "SIGNALWEAVE_API_TOKEN",
+    "push-webhook-token": "PUSH_WEBHOOK_TOKEN",
+}
 
 
 def resolve_home(home: str | Path | None = None) -> Path:
@@ -277,6 +296,21 @@ def _manifest_tenant(path: Path, tenant: str) -> None:
         raise SetupError("Reviewed MCP manifest must be valid, non-empty, and match the local tenant") from None
 
 
+def _validate_trino_catalog(path: Path) -> None:
+    """Validate a private, normalized Trino catalog before saving its path."""
+    _private_path(path)
+    try:
+        from .models import ResourceDescriptor
+
+        payload = json.loads(_read_private(path))
+        if not isinstance(payload, list) or not payload:
+            raise ValueError
+        for item in payload:
+            ResourceDescriptor.model_validate(item)
+    except (ValueError, OSError, TypeError, json.JSONDecodeError):
+        raise SetupError("Trino catalog must be a private, non-empty JSON list of resource descriptors") from None
+
+
 def _publish_config(path: Path, content: str) -> None:
     """Atomically replace validated private config; caller holds the setup lock."""
     _private_path(path)
@@ -293,12 +327,125 @@ def _publish_config(path: Path, content: str) -> None:
             os.unlink(temporary)
 
 
+def _publish_secret(path: Path, content: str) -> None:
+    """Atomically replace one private credential file."""
+    _private_directory(path.parent)
+    fd, temporary = tempfile.mkstemp(prefix=".secret-", dir=path.parent)
+    try:
+        if os.name == "posix":
+            os.fchmod(fd, 0o600)
+        with os.fdopen(fd, "w", encoding="utf-8") as output:
+            output.write(content)
+            output.flush()
+            os.fsync(output.fileno())
+        os.replace(temporary, path)
+        _private_path(path)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
+
+
+def _config_text(values: dict[str, str]) -> str:
+    content = "# Local single-user setup; process environment overrides these settings.\n"
+    content += "version = 1\n\n[environment]\n"
+    return content + "".join(
+        f"{name} = {json.dumps(value, ensure_ascii=False)}\n"
+        for name, value in values.items()
+    )
+
+
+def _credential_name(name: str) -> str:
+    normalized = name.strip().lower().replace("_", "-")
+    resolved = _CREDENTIAL_ALIASES.get(normalized, name.strip().upper())
+    if resolved not in _CREDENTIAL_FILES:
+        choices = ", ".join(sorted(_CREDENTIAL_ALIASES))
+        raise SetupError(f"Unknown credential; choose one of: {choices}")
+    return resolved
+
+
+def set_credential(
+    home: str | Path | None,
+    name: str,
+    *,
+    value: str | None = None,
+    secret_file: str | Path | None = None,
+) -> Path:
+    """Set or rotate one local credential without exposing it in config or argv."""
+    if value is not None and secret_file is not None:
+        raise SetupError("Use either a hidden prompt value or --file, not both")
+    root, configured = read_config(home)
+    key = _credential_name(name)
+    preserve_spaces = key == "SUPERSET_PASSWORD"
+    if secret_file is not None:
+        candidate = _read_private(Path(secret_file).expanduser().absolute())
+    elif value is not None:
+        candidate = value
+    else:
+        candidate = _hidden(
+            {
+                "TYPESAFE_API_KEY": "TypeSafe API key",
+                "SUPERSET_PASSWORD": "Superset password",
+            }.get(key, key.replace("_", " ").title()),
+            preserve_spaces=preserve_spaces,
+    )
+    candidate = (
+        _validate_key(candidate)
+        if key == "TYPESAFE_API_KEY"
+        else _secret(candidate, preserve_spaces=preserve_spaces)
+    )
+    filename = _CREDENTIAL_FILES[key]
+    destination = root / filename
+    config_path = root / "config.toml"
+    original_secret = _read_private(destination) if destination.exists() else None
+    original_config = _read_private(config_path)
+    updated = dict(configured)
+    updated.pop(key, None)
+    updated[f"{key}_FILE"] = filename
+    try:
+        _publish_secret(destination, candidate + "\n")
+        _publish_config(config_path, _config_text(updated))
+    except Exception:
+        if original_secret is None:
+            destination.unlink(missing_ok=True)
+        else:
+            _publish_secret(destination, original_secret)
+        if _read_private(config_path) != original_config:
+            _publish_config(config_path, original_config)
+        raise
+    return destination
+
+
+def credential_status(home: str | Path | None = None) -> dict[str, str]:
+    """Return secret-free local credential state for CLI/UI status views."""
+    root, configured = read_config(home)
+    result: dict[str, str] = {}
+    for key in _CREDENTIAL_FILES:
+        file_setting = configured.get(f"{key}_FILE")
+        if file_setting:
+            path = Path(file_setting).expanduser()
+            path = path if path.is_absolute() else root / path
+            try:
+                _private_path(path)
+                result[key] = "configured" if _read_private(path).strip() else "empty"
+            except SetupError:
+                result[key] = "invalid"
+        elif configured.get(key):
+            result[key] = "inline"
+        else:
+            result[key] = "missing"
+    return result
+
+
 def setup_local(
     home: str | Path | None = None, *, key_file: str | Path | None = None,
     source: str | None = None, url: str | None = None, username: str | None = None,
     secret_file: str | Path | None = None, token_name_file: str | Path | None = None,
     manifest: str | Path | None = None, tenant: str | None = None,
     principal: str | None = None, agent: str | None = None, non_interactive: bool = False,
+    catalog_file: str | Path | None = None, trino_user: str | None = None,
+    trino_catalog: str | None = None, trino_schema: str | None = None,
+    trino_max_rows: str | int | None = None,
+    update: bool = False,
 ) -> tuple[Path, str]:
     """Configure a local, single-tenant stdio installation without contacting sources.
 
@@ -325,7 +472,10 @@ def setup_local(
 
         def add(name: str, value: str) -> None:
             if name in values and values[name] != value:
-                raise SetupError("Setup will not replace existing settings; use a separate home or review config manually")
+                if not update:
+                    raise SetupError(
+                        "Setup will not replace existing settings; use --update to change them"
+                    )
             values[name] = value
 
         def credential(name: str, filename: str, supplied: str | Path | None, label: str) -> None:
@@ -347,15 +497,24 @@ def setup_local(
                     raise SetupError("Missing credential file; supply --key-file / --secret-file / --token-name-file")
                 candidate = _hidden(label, preserve_spaces=preserve_spaces)
             candidate = _validate_key(candidate) if name == "TYPESAFE_API_KEY" else _secret(candidate, preserve_spaces=preserve_spaces)
-            if current is not None:
-                if candidate != current:
-                    raise SetupError("Setup will not replace an existing credential")
+            if current is not None and candidate != current and not update:
+                raise SetupError(
+                    "Setup will not replace an existing credential; use --update to change it"
+                )
+            if current is not None and candidate == current:
                 return
             if destination.exists() or destination.is_symlink():
-                if _secret(_read_private(destination), preserve_spaces=preserve_spaces) != candidate:
-                    raise SetupError("Setup will not replace an existing credential file")
+                existing = _secret(_read_private(destination), preserve_spaces=preserve_spaces)
+                if existing == candidate:
+                    return
+                if not update:
+                    raise SetupError(
+                        "Setup will not replace an existing credential file; use --update to change it"
+                    )
+                pending[destination] = candidate + "\n"
             else:
                 pending[destination] = candidate + "\n"
+            values.pop(name, None)
             add(f"{name}_FILE", filename)
 
         credential("TYPESAFE_API_KEY", "typesafe.key", key_file, "TypeSafe API key")
@@ -371,13 +530,18 @@ def setup_local(
                 raise SetupError("Tenant and principal must be short non-empty identifiers without whitespace")
             add(name, value)
         tenant_id = values["SIGNALWEAVE_TENANT_ID"]
-        source = source or ("skip" if non_interactive else _ask("Source: superset / preset / mcp / skip", "skip"))
-        if source not in {"superset", "preset", "mcp", "skip"}:
-            raise SetupError("Choose superset, preset, mcp, or skip")
-        if (source not in {"superset", "preset"} and (url or secret_file)) or (
+        source = source or ("skip" if non_interactive else _ask("Source: superset / preset / trino / mcp / skip", "skip"))
+        if source not in {"superset", "preset", "trino", "mcp", "skip"}:
+            raise SetupError("Choose superset, preset, trino, mcp, or skip")
+        if (source not in {"superset", "preset", "trino"} and (url or secret_file)) or (
             source != "superset" and username is not None
         ) or (source != "preset" and token_name_file) or (source != "mcp" and manifest):
             raise SetupError("Source options do not match the selected source")
+        if source != "trino" and any(
+            value is not None
+            for value in (catalog_file, trino_user, trino_catalog, trino_schema, trino_max_rows)
+        ):
+            raise SetupError("Trino options require --source trino")
         if source in {"superset", "preset"}:
             prefix = source.upper()
             address = url or values.get(f"{prefix}_URL")
@@ -403,6 +567,34 @@ def setup_local(
                     credential("PRESET_API_TOKEN_NAME", "preset-token-name.key", token_name_file, "Preset API token name")
                     credential("PRESET_API_TOKEN_SECRET", "preset-token-secret.key", secret_file, "Preset API token secret")
                 values.setdefault("PRESET_DATA_MODE", "cached_results")
+        if source == "trino":
+            address = url or values.get("TRINO_URL")
+            if not address and not non_interactive:
+                address = _ask("Trino URL")
+            if not address:
+                raise SetupError("A Trino URL is required")
+            add("TRINO_URL", _source_url(address, "trino"))
+            selected = catalog_file or values.get("TRINO_CATALOG_FILE")
+            if not selected and not non_interactive:
+                selected = _ask("Private Trino catalog JSON path")
+            if not selected:
+                raise SetupError("A private Trino catalog file is required")
+            path = Path(selected).expanduser().absolute()
+            _validate_trino_catalog(path)
+            add("TRINO_CATALOG_FILE", str(path))
+            add("TRINO_USER", trino_user or values.get("TRINO_USER", "signalweave"))
+            if trino_catalog is not None:
+                add("TRINO_CATALOG", trino_catalog)
+            if trino_schema is not None:
+                add("TRINO_SCHEMA", trino_schema)
+            if trino_max_rows is not None:
+                try:
+                    max_rows = int(trino_max_rows)
+                except (TypeError, ValueError):
+                    raise SetupError("Trino max rows must be a positive integer") from None
+                if max_rows < 1:
+                    raise SetupError("Trino max rows must be a positive integer")
+                add("TRINO_MAX_ROWS", str(max_rows))
         if source == "mcp":
             selected = manifest or values.get("SIGNALWEAVE_MCP_SOURCES_FILE")
             if not selected and not non_interactive:
@@ -434,7 +626,7 @@ def setup_local(
         values.setdefault("SIGNALWEAVE_STORE_BACKEND", "sqlite")
         values.setdefault("SIGNALWEAVE_STORE_PATH", "state/signalweave.db")
         values.setdefault("SIGNALWEAVE_ALLOW_EMPTY_SOURCES", "1")
-        if values == configured:
+        if values == configured and not pending:
             return root, agent
         content = "# Local single-user setup; process environment overrides these settings.\nversion = 1\n\n[environment]\n"
         content += "".join(f"{name} = {json.dumps(value, ensure_ascii=False)}\n" for name, value in values.items())
@@ -451,21 +643,38 @@ def setup_local(
                     content = extended
             except tomllib.TOMLDecodeError:
                 pass
-        for path, text in pending.items():
-            _write_new(path, text)
-            created.append(path)
-        if original is None:
-            _write_new(config, content)
-        else:
-            if _read_private(config) != original:
-                raise SetupError("Configuration changed during setup; no existing settings were replaced")
-            _publish_config(config, content)
-        created.clear()
-        return root, agent
+        previous_secrets: dict[Path, str | None] = {}
+        try:
+            for path, text in pending.items():
+                if path.exists():
+                    previous_secrets[path] = _read_private(path)
+                    _publish_secret(path, text)
+                else:
+                    previous_secrets[path] = None
+                    _write_new(path, text)
+                    created.append(path)
+            if original is None:
+                _write_new(config, content)
+            else:
+                if _read_private(config) != original:
+                    raise SetupError("Configuration changed during setup; no existing settings were replaced")
+                _publish_config(config, content)
+            created.clear()
+            return root, agent
+        except Exception:
+            for path, previous in reversed(list(previous_secrets.items())):
+                try:
+                    if previous is None:
+                        path.unlink(missing_ok=True)
+                    else:
+                        _publish_secret(path, previous)
+                except OSError:
+                    pass
+            raise
     finally:
         for path in created:
-            path.unlink()
-        lock.unlink()
+            path.unlink(missing_ok=True)
+        lock.unlink(missing_ok=True)
 
 
 @contextmanager

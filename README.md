@@ -38,9 +38,10 @@ See [supported analyses and current limits](docs/local-investigations.md).
 
 ### With your local agent
 
-Follow the [two-step installation guide](docs/local-install.md): install and run
-`signalweave setup`, then connect it to Codex or Claude. Setup stores your Jev key
-privately and configures your data connection without hand-editing TOML.
+Follow the [human-first installation guide](docs/local-install.md): install the
+`signalweave` binary, run the guided setup, add or update connections from the
+CLI, and connect Codex or Claude. Setup stores Jev and source credentials
+privately; users do not need to hand-edit TOML.
 
 > The native installer is available as the **v0.2.0rc2 local preview**. Use the
 > pinned command in the guide. This is not a stable enterprise release; the new
@@ -49,7 +50,9 @@ privately and configures your data connection without hand-editing TOML.
 > but does not establish general superiority or lower total cost.
 > Stable v0.1.0 has no native assets.
 
-Then ask your agent:
+After setup, review the local state with `signalweave status`, run
+`signalweave doctor --live` to probe catalog access, and optionally open
+`signalweave ui` for a local health page. Then ask your agent:
 
 > Use SignalWeave to monitor why online sales changed and how that affected net
 > sales. Find the relevant sources, ask me what's missing, and show me a test
