@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from signalweave.models import ResourceContract
+from signalweave.models import ResourceContract, SourceComparisonContract
 from signalweave.store import SQLiteInsightCardStore
 from tests.test_onboarding import BundleJevDouble, SupersetCatalogDouble, make_server, tool
 
@@ -94,6 +94,27 @@ def test_catalog_comparison_keys_are_optional_bounded_and_serialize():
         ResourceContract(required_comparison_keys=[f"comparison-{index}" for index in range(21)])
 
 
+def test_scalar_comparison_contract_is_typed_and_serializes_without_action_policy():
+    comparison = SourceComparisonContract(
+        key="latency-p95-previous-period",
+        metric="query_latency_p95",
+        definition="95th percentile query latency over customer clusters",
+        population="customer clusters",
+        unit="ms",
+        comparison_window="previous_period",
+        coverage="partial",
+        comparable=False,
+        detail="Only one of three regions was exported.",
+    )
+    contract = ResourceContract(
+        comparison_contracts=[comparison],
+        required_comparison_keys=[comparison.key],
+    )
+    assert ResourceContract.model_validate_json(contract.model_dump_json()) == contract
+    serialized = contract.model_dump_json()
+    assert "notify" not in serialized and "investigate" not in serialized
+
+
 async def test_selected_source_cannot_inject_comparison_requirements(tmp_path):
     server = make_server(tmp_path)
     with pytest.raises(Exception, match="required_comparison_keys"):
@@ -106,3 +127,59 @@ async def test_selected_source_cannot_inject_comparison_requirements(tmp_path):
             }],
             retrieval_mode="fixed",
         )
+
+
+@pytest.mark.parametrize("coverage,comparable,expected", [
+    ("complete", True, "notify"),
+    ("partial", False, "insufficient_data"),
+])
+async def test_local_onboarding_preserves_typed_contract_into_simulation(
+    tmp_path, coverage, comparable, expected
+):
+    catalog = SupersetCatalogDouble()
+    key = "checkout-conversion-previous-period"
+    catalog.resources[0].contract = ResourceContract(
+        required_comparison_keys=[key],
+        available_comparison_windows=["previous_period"],
+        comparison_contracts=[SourceComparisonContract(
+            key=key,
+            metric="checkout_conversion",
+            definition="Checkout conversion over the approved growth population",
+            population="approved growth population",
+            unit="fraction",
+            comparison_window="previous_period",
+            coverage=coverage,
+            comparable=comparable,
+            detail="Provider export omitted part of the population." if coverage != "complete" else "",
+            query_refs=["superset:dashboard:7"],
+        )],
+    )
+    server = make_server(tmp_path, BundleJevDouble(), catalog=catalog)
+    onboarding = await tool(server, "onboard_insight_card")(
+        what_to_watch="Checkout conversion movement.",
+        why_watch="Route only a trustworthy growth signal.",
+        selected_sources=[{"ref": "superset|dashboard:7"}],
+        comparison_windows=["previous_period"],
+        decision_guidance="Investigate material movement; do not interpret incomplete population coverage.",
+        delivery_methods=[{
+            "key": "growth",
+            "outcome": "notify",
+            "label": "Growth",
+            "destination": "agent://growth",
+        }, {
+            "key": "data",
+            "outcome": "insufficient_data",
+            "label": "Data",
+            "destination": "agent://data",
+        }],
+        retrieval_mode="fixed",
+    )
+    assert onboarding["card"]["sources"][0]["required_comparison_keys"] == [key]
+    candidate = next(
+        item for item in onboarding["review"]["source_candidates"]
+        if item["resource"] == "dashboard:7"
+    )
+    assert candidate["metadata"]["comparison_contracts"][0]["key"] == key
+
+    preview = await tool(server, "simulate_insight_card")(onboarding["card"]["id"])
+    assert preview["result"]["outcome"] == expected

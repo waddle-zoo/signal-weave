@@ -459,7 +459,19 @@ class InsightEngine:
                 analytical_reports = [
                     report for report in result.analyses if report.source_key in slot.source_keys
                 ]
-                admitted = {(report.source_key, report.comparison_key) for report in analytical_reports if report.status == "complete"}
+                admitted = {
+                    (report.source_key, report.comparison_key)
+                    for report in analytical_reports
+                    if report.status == "complete"
+                }
+                admitted.update(
+                    (resource.source_key, comparison.key)
+                    for resource in relevant
+                    for comparison in resource.contract.comparison_contracts
+                    if comparison.coverage == "complete"
+                    and comparison.comparable
+                    and comparison.comparison_window in card.comparison_windows
+                )
                 required_analyses = {
                     (source.key, key) for source in card.sources if source.key in slot.source_keys
                     for key in source.required_comparison_keys
@@ -473,6 +485,10 @@ class InsightEngine:
                     status = "unavailable"
                 elif any(resource.observations or resource.evidence for resource in relevant) or any(
                     report.status == "complete" for report in analytical_reports
+                ) or any(
+                    comparison.coverage == "complete" and comparison.comparable
+                    for resource in relevant
+                    for comparison in resource.contract.comparison_contracts
                 ):
                     status = "fulfilled"
                     evidence_source_keys = sorted(resource.source_key for resource in relevant)
@@ -1149,7 +1165,10 @@ class InsightEngine:
                 )
             if resource is not None:
                 returned_keys = [comparison.key for comparison in resource.analytical_comparisons]
-                missing_keys = set(source.required_comparison_keys) - set(returned_keys)
+                scalar_keys = {
+                    comparison.key for comparison in resource.contract.comparison_contracts
+                }
+                missing_keys = set(source.required_comparison_keys) - (set(returned_keys) | scalar_keys)
                 if missing_keys or len(returned_keys) != len(set(returned_keys)):
                     errors.append({
                         "source_key": key, "resource": source.resource, "label": source.label,
@@ -1157,6 +1176,69 @@ class InsightEngine:
                         "source_url": resource.source_url, "blocking": source.required,
                         "quality_status": "analysis_incomplete",
                     })
+                scalar_contracts = {
+                    comparison.key: comparison
+                    for comparison in resource.contract.comparison_contracts
+                }
+                duplicate_scalar_keys = len(scalar_contracts) != len(resource.contract.comparison_contracts)
+                if duplicate_scalar_keys:
+                    errors.append({
+                        "source_key": key,
+                        "resource": source.resource,
+                        "label": source.label,
+                        "message": "Source comparison contracts contain duplicate keys.",
+                        "source_url": resource.source_url,
+                        "blocking": source.required,
+                        "quality_status": "comparison_incomplete",
+                    })
+                analytical_keys = set(returned_keys)
+                for comparison_key in source.required_comparison_keys:
+                    if comparison_key in analytical_keys:
+                        continue
+                    comparison = scalar_contracts.get(comparison_key)
+                    if comparison is None:
+                        errors.append({
+                            "source_key": key,
+                            "resource": source.resource,
+                            "label": source.label,
+                            "message": (
+                                f"Required source comparison {comparison_key} was not returned "
+                                "by the adapter."
+                            ),
+                            "source_url": resource.source_url,
+                            "blocking": source.required,
+                            "quality_status": "comparison_missing",
+                        })
+                        continue
+                    if comparison.comparison_window not in card.comparison_windows:
+                        errors.append({
+                            "source_key": key,
+                            "resource": source.resource,
+                            "label": source.label,
+                            "message": (
+                                f"Source comparison {comparison_key} uses window "
+                                f"{comparison.comparison_window!r}, outside the card's "
+                                f"selected windows {card.comparison_windows!r}."
+                            ),
+                            "source_url": resource.source_url,
+                            "blocking": source.required,
+                            "quality_status": "comparison_window_mismatch",
+                        })
+                    if comparison.coverage != "complete" or not comparison.comparable:
+                        detail = f" {comparison.detail}" if comparison.detail else ""
+                        errors.append({
+                            "source_key": key,
+                            "resource": source.resource,
+                            "label": source.label,
+                            "message": (
+                                f"Source comparison {comparison_key} is not safe for "
+                                f"interpretation: coverage={comparison.coverage}, "
+                                f"comparable={comparison.comparable}.{detail}"
+                            ),
+                            "source_url": resource.source_url,
+                            "blocking": source.required,
+                            "quality_status": "comparison_incomplete",
+                        })
             if resource is not None and not resource.error and not resource.observations and not resource.evidence and not resource.analytical_comparisons:
                 errors.append(
                     {

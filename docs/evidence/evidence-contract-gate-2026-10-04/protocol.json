@@ -1,0 +1,105 @@
+{
+  "version": "evidence-contract-gate-v1",
+  "input_digest": "2ab010d26957098f4550124483523101e33993c48dcab424076a851642b31201",
+  "trace_sha256": "e924ff0d8e1a649c0a0f5f88b99db9777ab1e06e732e06b985258bdbfe5c084c",
+  "runner_sha256": "c1bdd81858812cd138a0bfe933378599dc6edb6c2acd99d1e5f43b947aa45e72",
+  "implementation_sha256": {
+    "src/signalweave/__init__.py": "6677acf6ef17751cf785eb9f6e7a4da326ab7899b60873cf23dc9b6a6e16ac22",
+    "src/signalweave/analysis.py": "88f5af5a664ddfa6ef09aa201954e9a4b003a4202e8dc23c1547af024f60bb11",
+    "src/signalweave/auth.py": "1d304affc1da115eddbc9571fa7e755255c342deaad5fbb9b8db74f7dfb8fb52",
+    "src/signalweave/bootstrap.py": "d9dbeea75a49c7b34d68fba620de8a9db7b765dfe0c4663ec34f8bde713971de",
+    "src/signalweave/cli.py": "b5008b0171a780bb5190f545a7cad314062b304ef628fa016a7fffd1cc7c0dbd",
+    "src/signalweave/client_setup.py": "e3ed850882f63630b8f40b7b12ca3f08498a85e06b845202a9f8581de85c3ea6",
+    "src/signalweave/compiler.py": "7cee3d781781706af296a51afe825b0658b3a0ebc1d5196a2f18bba8b7be1b31",
+    "src/signalweave/config.py": "caec4f335c1d9cf3c447fe592118e4d9baf5fa4a8fd369a284e1a49b5d4ba3ea",
+    "src/signalweave/context.py": "8aec605b2d4deb952668480b9fc2390c4be7addbc899220fd004cf278ed7cacf",
+    "src/signalweave/diagnostics.py": "fb0f713fab70dd68a3beb13fc404338a7bd2d52a9d943ba4b04fae3a2835c5d7",
+    "src/signalweave/engine.py": "b34f48bf1d229f98b7d743b75d2cecaae0b75eaca7a289e97716447101a4f29e",
+    "src/signalweave/evaluation.py": "1923de7bbf9f3fb18ab7f73f09108cb0e15db97eb716d7022d71b21270ae6e07",
+    "src/signalweave/getting_started.py": "6b83957ad8d19292963851b887551720a78435048c32a50c0a89a6c19b52a710",
+    "src/signalweave/hex_adapter.py": "81d745e84a40ef830e93ec54158ceceab2a077e98b61072e1108fd0ff0ca3e39",
+    "src/signalweave/hosted.py": "9f59908272fe8f148b364d4a317f9de1d8f1ab78407cd3e0c7524d7d8b45be60",
+    "src/signalweave/local_run.py": "63f2809f22661e5e50ccf0e6ec62756000f11fbd69ecc4eb546ace31049e11fa",
+    "src/signalweave/local_setup.py": "b8853677718b720695676486292ad283683eb68987c73bd616437fd9b92807ee",
+    "src/signalweave/looker_adapter.py": "f5ef5c3c997ee3659eb2b3d61176821a1bba8084bf4efb38ea8525615c8f3cfa",
+    "src/signalweave/mcp_server.py": "6b61832a532f04f55c11daad99e9bac3a0fa40ced1a93db2751805cba195e524",
+    "src/signalweave/mcp_source.py": "f1d62349097317f3188cbe8d7574196daf7c56298bddf6a0cc22e597dd11321d",
+    "src/signalweave/models.py": "4393f30460e232f17575293bc4331fe5a0bafae31b8fc26bbd3c93a385355c9d",
+    "src/signalweave/numeric_conditions.py": "f5a1c6a62ea73851b97eb136e7d179b5eb63ac78d4bc5bced94794827991b22f",
+    "src/signalweave/onboarding.py": "a13c790ea1978b2f16f52915b67cc101bfd473dd81073fed2648d8c3db63a7c2",
+    "src/signalweave/preset_adapter.py": "c6c2730c8eedd2d3fbe539bd0c6272a87e1019dab8a824e3f58d20db6523b417",
+    "src/signalweave/preset_env.py": "590b7c2394daea05a1bdef8e676a6110878f8032cd322d2992bdaf516195d6e6",
+    "src/signalweave/query_planner.py": "63364552b14704ea6615297804b988d845cb1ca519fbdc53a93661101011f300",
+    "src/signalweave/reporting.py": "e011ff57fab587d3209c88e962874bf892fba8a92128222318dd57307602b22e",
+    "src/signalweave/retrieval.py": "fda8c2f71eb4d6ed17d056a26a4ae87e5e958af5247e74ded0b2cf93af939317",
+    "src/signalweave/retrieval_quality.py": "5c0e918888cd68fbe91e21756565a802dd1edeedec80cd7db07f16148cbe6658",
+    "src/signalweave/runtime.py": "412679df1c973c3d579edac2c71de0a7d24a024f699f83f0b97f86c4fdcbc1c9",
+    "src/signalweave/sources.py": "3ef07727cd47ca60ff85bc6e5f064654e0bf10167e460a1c25ba8795979d48fc",
+    "src/signalweave/store.py": "dc65753ffb1fe3e80f0b08fbcf5ee305fc34f8167ab4c5043ec01101c68da4b8",
+    "src/signalweave/superset_adapter.py": "a220195cda02ea0f7d084b5838949fa44d0588c29c563b859d11bf8d0388dfa8",
+    "src/signalweave/superset_client.py": "bf6587709752c38a096f0a92e597b5b0caf32780febdc38b0ff1915d78c30421",
+    "src/signalweave/superset_models.py": "b79b4e2e603950e96a466b791058b590b44b16e4c89149af78c760cd92aaf85c",
+    "src/signalweave/trino_adapter.py": "0f4d671a41d5070b3f693f787815b547470169d60ca0228cef12c9c61377ddef",
+    "src/signalweave/typesafe_adapter.py": "d6cf46d2ad0476008d740c428b21279cf4260b7ddc2c3363319bf730a1b999c2",
+    "evaluations/evidence_contract_gate_trial.py": "c1bdd81858812cd138a0bfe933378599dc6edb6c2acd99d1e5f43b947aa45e72",
+    "evaluations/bootstrap_agent_trial.py": "ee6d03ed2eb3a79d4e9c3446efed6f2ddb28b46600c1c2ed366c35d56d911fde",
+    "evaluations/evidence_sufficiency_trial.py": "950e15b1462072b51b106d1055fbbea4bd13748e1995ec96e440f61fbb9f2a99"
+  },
+  "code": "662b93b51d54170dfa046e416d41898e028c053d",
+  "attempt_cap": 12,
+  "schedule": [
+    {
+      "case_index": 5,
+      "repeat": 1
+    },
+    {
+      "case_index": 2,
+      "repeat": 1
+    },
+    {
+      "case_index": 4,
+      "repeat": 1
+    },
+    {
+      "case_index": 3,
+      "repeat": 0
+    },
+    {
+      "case_index": 5,
+      "repeat": 0
+    },
+    {
+      "case_index": 1,
+      "repeat": 0
+    },
+    {
+      "case_index": 1,
+      "repeat": 1
+    },
+    {
+      "case_index": 3,
+      "repeat": 1
+    },
+    {
+      "case_index": 0,
+      "repeat": 1
+    },
+    {
+      "case_index": 4,
+      "repeat": 0
+    },
+    {
+      "case_index": 0,
+      "repeat": 0
+    },
+    {
+      "case_index": 2,
+      "repeat": 0
+    }
+  ],
+  "scope": "Known-family regression of typed adapter comparability admission; no delivery",
+  "gate": "All six cases in both repetitions must match outcome, configured route and workflow handoff",
+  "retries": 0,
+  "zero_real_deliveries": true,
+  "comparative_claims": false
+}

@@ -156,6 +156,28 @@ class MetricDefinition(BaseModel):
         return self
 
 
+class SourceComparisonContract(BaseModel):
+    """Adapter-owned comparability contract for one recurring measurement.
+
+    This is intentionally smaller than :class:`AnalyticalComparison`. It is
+    useful for scalar dashboard/chart metrics that have a current and baseline
+    value but are not decomposable segment tables (for example p95 latency).
+    Adapters calculate coverage and comparability from their provider data;
+    Jev must not infer either property from prose or from a populated value.
+    """
+
+    key: str = Field(min_length=1, max_length=160)
+    metric: str = Field(min_length=1, max_length=240)
+    definition: str = Field(min_length=1, max_length=4000)
+    population: str = Field(min_length=1, max_length=1000)
+    unit: str = Field(min_length=1, max_length=80)
+    comparison_window: str = Field(min_length=1, max_length=160)
+    coverage: Literal["complete", "partial", "unknown"] = "unknown"
+    comparable: bool = False
+    detail: str = Field(default="", max_length=2000)
+    query_refs: list[str] = Field(default_factory=list, max_length=20)
+
+
 class ResourceContract(BaseModel):
     """Typed identity and trust metadata used during discovery and evaluation."""
 
@@ -164,6 +186,17 @@ class ResourceContract(BaseModel):
     scope: str = Field(default="", max_length=1000)
     metric_names: list[str] = Field(default_factory=list, max_length=100)
     metric_definitions: list[MetricDefinition] = Field(default_factory=list, max_length=100)
+    comparison_contracts: list[SourceComparisonContract] = Field(
+        default_factory=list,
+        max_length=200,
+        exclude_if=lambda values: not values,
+        description=(
+            "Adapter-owned recurring measurement contracts. A card must bind a "
+            "required_comparison_keys entry before a comparison can gate a workflow. "
+            "Coverage and comparability are provider assertions validated by code; "
+            "they are never inferred from prose or a non-null observation."
+        ),
+    )
     available_comparison_windows: list[str] = Field(
         default_factory=list, max_length=20,
         description=(

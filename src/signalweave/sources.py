@@ -21,7 +21,19 @@ def _inspection_contract(catalog: ResourceContract, snapshot: ResourceContract) 
     """Catalog owns authorization/meaning; either source can downgrade health."""
     severity = {"healthy": 0, "ambiguous": 1, "stale": 2, "unknown": 3, "failed": 4}
     status = max((catalog.source_status, snapshot.source_status), key=severity.__getitem__)
-    return catalog.model_copy(update={"source_status": status})
+    catalog_comparisons = {item.key: item for item in catalog.comparison_contracts}
+    snapshot_comparisons = {item.key: item for item in snapshot.comparison_contracts}
+    # Catalog metadata supplies the stable definition; the inspection snapshot
+    # may replace it with current coverage/comparability for this run. Keep
+    # catalog-only contracts too so a later required-key check remains explicit.
+    comparisons = [
+        snapshot_comparisons.get(key, item)
+        for key, item in catalog_comparisons.items()
+    ]
+    comparisons.extend(
+        item for key, item in snapshot_comparisons.items() if key not in catalog_comparisons
+    )
+    return catalog.model_copy(update={"source_status": status, "comparison_contracts": comparisons})
 
 
 def _catalog_terms(resource: ResourceDescriptor) -> set[str]:

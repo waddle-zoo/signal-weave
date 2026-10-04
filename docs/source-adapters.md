@@ -116,6 +116,37 @@ For production catalogs, populate the typed `ResourceContract` as well:
 - `roles` describes whether the resource is a primary metric, context, quality, or
   other approved evidence role; and
 - `metric_definitions` describes approved queryable metrics without exposing raw SQL.
+- `comparison_contracts` describes recurring scalar measurements when a source can
+  state their definition, population, unit, comparison window, coverage and
+  comparability. Bind a card's `SourceRef.required_comparison_keys` to the exact
+  contract keys when those properties are required for routing. A non-null metric
+  value is not evidence of complete coverage.
+
+For a scalar metric such as p95 latency, an adapter may return:
+
+```python
+from signalweave.models import ResourceContract, SourceComparisonContract
+
+contract = ResourceContract(comparison_contracts=[SourceComparisonContract(
+    key="latency-p95-previous-period",
+    metric="query_latency_p95",
+    definition="95th percentile query latency over customer clusters",
+    population="customer clusters",
+    unit="ms",
+    comparison_window="previous_period",
+    coverage="complete",       # adapter-owned assertion for this snapshot
+    comparable=True,
+    query_refs=["saved-query:latency-p95"],
+)])
+```
+
+If the export contains only one region, changes population between periods, or
+omits a required baseline, return `coverage="partial"` or `"unknown"` and
+`comparable=False`, with a short `detail`. SignalWeave converts a required
+contract failure into `insufficient_data` before any business route is admitted;
+Jev may still explain the supplied evidence, but it cannot turn that gap into a
+business investigation handoff. This applies to dashboard, notebook, SQL, lake,
+and operational adapters alike.
 
 The engine does not parse the resource locator or execute source languages. This
 keeps a SQL adapter from turning the MCP surface into an arbitrary SQL console,

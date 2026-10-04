@@ -28,6 +28,17 @@ partitions; a reviewed source export must supply the needed tables first. The lo
 MCP example demonstrates that export boundary rather than claiming every connector
 already performs these deeper analyses.
 
+For recurring scalar observations that are not decomposable tables—p95 latency,
+queue depth, a cached chart value—adapters can instead return a typed
+`ResourceContract.comparison_contracts` entry. It carries the metric definition,
+population, unit, exact comparison window, and provider-owned coverage and
+comparability assertions. A card binds the entry through
+`SourceRef.required_comparison_keys`. Required incomplete or non-comparable
+contracts are a deterministic `insufficient_data` gate; Jev is retained for the
+semantic explanation, not asked to infer source completeness from prose. This is
+the generic bridge between arbitrary BI/operational assets and the stricter
+analysis path.
+
 Once a card is approved:
 
 ```sh

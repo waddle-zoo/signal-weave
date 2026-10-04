@@ -6,10 +6,11 @@ from signalweave.models import (
     ResourceContract,
     ResourceDescriptor,
     ResourceSnapshot,
+    SourceComparisonContract,
     SourceRef,
 )
 from signalweave.preset_adapter import PresetAdapter
-from signalweave.sources import SourceRegistry
+from signalweave.sources import SourceRegistry, _inspection_contract
 from signalweave.superset_adapter import SupersetAdapter
 from signalweave.superset_models import SupersetChartSnapshot, SupersetDashboardSnapshot
 
@@ -27,6 +28,33 @@ class FakeAdapter:
             resource=source.resource,
             title=source.label,
         )
+
+
+def test_inspection_contract_preserves_catalog_definitions_and_snapshot_quality():
+    catalog = ResourceContract(
+        required_comparison_keys=["latency"],
+        comparison_contracts=[SourceComparisonContract(
+            key="latency", metric="p95", definition="catalog definition",
+            population="customers", unit="ms", comparison_window="previous_period",
+            coverage="unknown", comparable=False,
+        )],
+    )
+    snapshot = ResourceContract(
+        comparison_contracts=[SourceComparisonContract(
+            key="latency", metric="p95", definition="snapshot definition",
+            population="customers", unit="ms", comparison_window="previous_period",
+            coverage="partial", comparable=False, detail="region omitted",
+        ), SourceComparisonContract(
+            key="lag", metric="replication_lag", definition="lag",
+            population="customers", unit="ms", comparison_window="previous_period",
+            coverage="complete", comparable=True,
+        )],
+    )
+    merged = _inspection_contract(catalog, snapshot)
+    assert merged.required_comparison_keys == ["latency"]
+    assert [item.key for item in merged.comparison_contracts] == ["latency", "lag"]
+    assert merged.comparison_contracts[0].definition == "snapshot definition"
+    assert merged.comparison_contracts[0].detail == "region omitted"
 
 
 class BrokenCatalogAdapter:

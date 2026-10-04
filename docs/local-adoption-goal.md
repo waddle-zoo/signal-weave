@@ -4,6 +4,23 @@ Status: implementation advanced; proof gate **not complete**. This updates the
 working acceptance criteria for the existing local-first adoption goal; it does
 not declare the earlier failed trials passed.
 
+## Typed evidence-contract repair — October 4, 2026
+
+The [live typed-contract regression](evidence-contract-gate-2026-10-04.md)
+closed the specific failure identified below: 12/12 Jev evaluations matched the
+expected outcome, configured route, and workflow handoff across quiet,
+actionable, partial-population, mismatched-population, and missing-baseline
+cases. The adapter-owned `ResourceContract.comparison_contracts` gate now
+prevents Jev from turning incomplete scalar evidence into business work. This
+was a known-family regression, with delivery disabled; it is not yet proof of
+generalized onboarding or enterprise readiness.
+
+The next proof gate is a fresh adapter-backed onboarding trial: the same typed
+contract must survive discovery, card creation, source inspection, simulation,
+and recurring evaluation for a new resource family. It must also preserve the
+contract boundary when an agent authors the card, rather than relying on a
+hand-edited fixture.
+
 ## Native MCP onboarding investigation — October 3, 2026
 
 Latest [36-call evidence-sufficiency experiment](evidence-sufficiency-experiment-2026-10-03.md):

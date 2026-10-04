@@ -19,6 +19,7 @@ from signalweave.models import (
     ResourceContract,
     ResourceDescriptor,
     ResourceSnapshot,
+    SourceComparisonContract,
     SourceRef,
 )
 from signalweave.sources import SourceRegistry
@@ -242,6 +243,88 @@ async def test_confident_notify_still_obeys_required_source_health(sdk, defect, 
     ]
     if defect != "healthy":
         assert all(method.outcome != Outcome.NOTIFY for method in run.result.delivery_methods)
+
+
+@pytest.mark.parametrize("coverage,comparable,expected_status", [
+    ("partial", False, "comparison_incomplete"),
+    ("unknown", False, "comparison_incomplete"),
+])
+async def test_required_scalar_comparison_contract_fails_closed_before_business_routing(
+    sdk, coverage, comparable, expected_status
+):
+    sdk.choice = "notify"
+    source = SourceRef(
+        key="metric", adapter="test", resource="query:metric", label="Metric",
+        required_comparison_keys=["latency-weekly"],
+    )
+    card = InsightCard(
+        id="scalar-contract-gate", title="Latency", what_to_watch="Latency movement",
+        why_watch="Only route a trustworthy regression", sources=[source],
+        comparison_windows=["previous_period"],
+        delivery_methods=[route(Outcome.NOTIFY), route(Outcome.INSUFFICIENT_DATA)],
+    )
+    snapshot = ResourceSnapshot(
+        source_key=source.key, adapter=source.adapter, resource=source.resource,
+        title=source.label,
+        observations=[Observation(
+            source_key=source.key, subject_id="latency", subject_label="Latency",
+            metric="p95", unit="ms", current=140, baseline=100, change_pct=40,
+        )],
+        contract=ResourceContract(comparison_contracts=[SourceComparisonContract(
+            key="latency-weekly", metric="p95", definition="p95 query latency",
+            population="customer clusters", unit="ms", comparison_window="previous_period",
+            coverage=coverage, comparable=comparable, detail="Export did not prove the full population.",
+        )]),
+    )
+
+    run = await engine().evaluate(card, [snapshot])
+
+    assert run.result.outcome == Outcome.INSUFFICIENT_DATA
+    assert run.result.delivery_methods == [
+        method for method in card.delivery_methods if method.outcome == Outcome.INSUFFICIENT_DATA
+    ]
+    assert any(
+        item.values.get("quality_status") == expected_status
+        for item in run.result.evidence
+    )
+    # Jev still receives the bounded evidence for an explanation, but cannot
+    # turn a provider-declared coverage gap into a business route.
+    assert len(sdk.calls) == 2  # compile plan + semantic explanation
+
+
+async def test_required_scalar_comparison_contract_allows_semantic_decision_when_complete(sdk):
+    sdk.choice = "notify"
+    source = SourceRef(
+        key="metric", adapter="test", resource="query:metric", label="Metric",
+        required_comparison_keys=["latency-weekly"],
+    )
+    card = InsightCard(
+        id="scalar-contract-complete", title="Latency", what_to_watch="Latency movement",
+        why_watch="Route a trustworthy regression", sources=[source],
+        comparison_windows=["previous_period"], delivery_methods=[route(Outcome.NOTIFY)],
+    )
+    snapshot = ResourceSnapshot(
+        source_key=source.key, adapter=source.adapter, resource=source.resource,
+        title=source.label,
+        observations=[Observation(
+            source_key=source.key, subject_id="latency", subject_label="Latency",
+            metric="p95", unit="ms", current=140, baseline=100, change_pct=40,
+        )],
+        contract=ResourceContract(comparison_contracts=[SourceComparisonContract(
+            key="latency-weekly", metric="p95", definition="p95 query latency",
+            population="customer clusters", unit="ms", comparison_window="previous_period",
+            coverage="complete", comparable=True,
+        )]),
+    )
+
+    run = await engine().evaluate(card, [snapshot])
+
+    assert run.result.outcome == Outcome.NOTIFY
+    assert run.result.delivery_methods == [card.delivery_methods[0]]
+    assert not any(
+        item.values.get("quality_status") == "comparison_incomplete"
+        for item in run.result.evidence
+    )
 
 
 @pytest.mark.parametrize("tenant,authorized,expected", [
