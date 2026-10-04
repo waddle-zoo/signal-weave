@@ -2,6 +2,7 @@
 
 import copy
 import json
+import ssl
 from datetime import datetime, timedelta, timezone
 
 import httpx
@@ -547,7 +548,7 @@ async def test_responses_api_retries_transient_transport_and_keeps_unknown_cost(
     def handle(request):
         seen.append(json.loads(request.content))
         if len(seen) == 1:
-            raise httpx.ReadError("transient transport failure", request=request)
+            raise ssl.SSLError("transient TLS failure")
         return httpx.Response(200, json={
             "output": [{"type": "function_call", "name": "submit_analysis", "call_id": "call-1",
                         "arguments": json.dumps(submission)}],

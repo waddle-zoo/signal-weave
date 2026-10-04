@@ -18,6 +18,7 @@ import math
 import operator
 import os
 import random
+import ssl
 import statistics
 import subprocess
 import time
@@ -948,7 +949,7 @@ async def luna_episode(session: ToolSession, *, key: str, effort: str, budget: R
                                response=payload, usage=payload.get("usage"),
                                seconds=time.perf_counter() - begin)
                     break
-                except httpx.TransportError as exc:
+                except (httpx.TransportError, ssl.SSLError, ConnectionError, TimeoutError) as exc:
                     error = type(exc).__name__
                     audit.emit("api.error", provider="openai", request_id=request_id,
                                error_type=error, retryable=retry_index < OPENAI_TRANSPORT_RETRIES,
