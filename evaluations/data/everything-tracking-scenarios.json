@@ -67,7 +67,8 @@
         {"adapter": "crm", "kind": "pipeline", "role": "corroborates", "label": "Qualified pipeline", "risk_direction": "down"},
         {"adapter": "product", "kind": "funnel", "role": "diagnostic", "label": "Activation funnel", "risk_direction": "down"},
         {"adapter": "incident", "kind": "incident", "role": "diagnostic", "label": "Growth platform incidents", "risk_direction": "up"},
-        {"adapter": "docs", "kind": "operating_note", "role": "owner", "label": "Campaign and launch calendar"}
+        {"adapter": "docs", "kind": "operating_note", "role": "owner", "label": "Campaign and launch calendar"},
+        {"adapter": "quality", "kind": "freshness", "role": "quality", "label": "Growth data trust"}
       ]
     },
     "fulfillment-reliability": {
@@ -136,7 +137,8 @@
         {"adapter": "product", "kind": "usage", "role": "corroborates", "label": "Product engagement", "risk_direction": "down"},
         {"adapter": "support", "kind": "tickets", "role": "diagnostic", "label": "Support friction", "risk_direction": "up"},
         {"adapter": "crm", "kind": "account", "role": "owner", "label": "Account context"},
-        {"adapter": "billing", "kind": "revenue", "role": "corroborates", "label": "Renewal revenue", "risk_direction": "down"}
+        {"adapter": "billing", "kind": "revenue", "role": "corroborates", "label": "Renewal revenue", "risk_direction": "down"},
+        {"adapter": "quality", "kind": "freshness", "role": "quality", "label": "Customer data trust"}
       ]
     },
     "product-adoption": {

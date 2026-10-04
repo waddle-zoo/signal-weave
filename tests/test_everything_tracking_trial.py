@@ -30,6 +30,10 @@ def test_everything_tracking_fixture_is_messy_and_cross_enterprise():
     }
     assert min(len(case.resources) for case in cases) >= 7
     assert all(
+        any(resource.metadata.get("evidence_role") == "quality" for resource in case.resources)
+        for case in cases
+    )
+    assert all(
         any(resource.metadata.get("required") is False for resource in case.resources)
         for case in cases
     )

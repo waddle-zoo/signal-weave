@@ -285,7 +285,11 @@ def _variant_statement(variant: str, role: str, label: str, workflow_title: str)
         if role == "diagnostic":
             return f"{label} contains a connected operating change that could explain the {workflow_title} movement."
         if role == "quality":
-            return f"{label} reports current, comparable evidence for the {workflow_title} review."
+            return (
+                f"{label} establishes that the required sources use the same reporting "
+                f"period and population and reports current, comparable evidence for the "
+                f"{workflow_title} review."
+            )
     if variant == "expected_change":
         if role == "corroborates":
             return f"{label} moved with the primary signal during a planned or expected operating pattern."
