@@ -279,6 +279,22 @@ def _variant_statement(variant: str, role: str, label: str, workflow_title: str)
             return f"{label} moved, but the required trust evidence for the {workflow_title} review is unavailable."
         if variant == "urgent_operational_risk":
             return f"{label} moved severely in its source-defined adverse direction for the {workflow_title} review."
+    if role == "owner":
+        if variant == "expected_change":
+            return (
+                f"{label} records a planned or expected operating change for the "
+                f"{workflow_title} review period."
+            )
+        if variant in {"material_action", "urgent_operational_risk"}:
+            return (
+                f"{label} records no planned change or expected exception that would "
+                f"explain the {workflow_title} movement in this review period."
+            )
+        if variant == "ambiguous_state":
+            return (
+                f"{label} does not establish whether the {workflow_title} movement was "
+                "planned or expected."
+            )
     if variant == "material_action":
         if role == "corroborates":
             return f"{label} independently moved in a direction consistent with the {workflow_title} concern."

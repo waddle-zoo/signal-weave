@@ -99,6 +99,24 @@ def test_trial_cards_separate_advisory_detail_from_gating_evidence():
     )
 
 
+def test_trial_owner_context_distinguishes_expected_and_unplanned_movement():
+    cases = build_cases(load_config(DEFAULT_CONFIG))
+
+    expected = next(case for case in cases if case.variant == "expected_change")
+    material = next(case for case in cases if case.variant == "material_action")
+    expected_owner = next(
+        resource for resource in expected.resources
+        if resource.metadata.get("evidence_role") == "owner"
+    )
+    material_owner = next(
+        resource for resource in material.resources
+        if resource.metadata.get("evidence_role") == "owner"
+    )
+
+    assert "planned or expected" in expected_owner.evidence[0].statement
+    assert "no planned change" in material_owner.evidence[0].statement
+
+
 def test_movement_only_baseline_is_noisy_on_everything_tracking():
     results = run_baseline(build_cases(load_config(DEFAULT_CONFIG)))
 
