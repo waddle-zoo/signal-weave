@@ -80,6 +80,10 @@ def test_review_recomputes_scores_and_requires_same_card(tmp_path):
     assert result["gates"]["same_card_monitoring"]
     assert result["gates"]["push_gate_contract"]
     assert result["value_signal"]["treatment_agent_wakeups"] < result["value_signal"]["baseline_agent_wakeups"]
+    assert result["value_signal"]["treatment_quality"]["evidence_recall_mean"] == 1.0
+    assert result["value_signal"]["treatment_onboarding"]["runs"] == 0
+    assert result["value_signal"]["baseline_onboarding"]["runs"] == 0
+    assert result["value_signal"]["lifecycle_amortization"]["break_even_monitoring_runs"] == 0
 
 
 def test_review_rejects_changed_score(tmp_path):

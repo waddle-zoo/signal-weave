@@ -93,7 +93,7 @@ def review_report(report_path: Path) -> dict[str, Any]:
         row.get("usage", {}).get("jev", {}).get("unknown_usage_attempts", 0) == 0
         and row.get("usage", {}).get("openai", {}).get("unknown_usage_attempts", 0) == 0
         for row in report.get("rows", [])
-        if row.get("phase") == "monitoring"
+        if row.get("phase") in {"onboarding", "monitoring"}
     )
     gates["foreign_tools_absent"] = all(not row.get("foreign_tools") for row in report.get("rows", []))
 
@@ -187,6 +187,67 @@ def review_report(report_path: Path) -> dict[str, Any]:
     def total(arm_rows: list[dict[str, Any]], field: str) -> float:
         return sum(float(row.get(field) or 0.0) for row in arm_rows)
 
+    def mean_score(arm_rows: list[dict[str, Any]], field: str) -> float | None:
+        values = [
+            float(row["score"][field])
+            for row in arm_rows
+            if isinstance(row.get("score"), dict) and row["score"].get(field) is not None
+        ]
+        return sum(values) / len(values) if values else None
+
+    def count_score(arm_rows: list[dict[str, Any]], field: str) -> int:
+        return sum(
+            bool(row.get("score", {}).get(field))
+            for row in arm_rows
+            if isinstance(row.get("score"), dict)
+        )
+
+    def quality_signal(arm_rows: list[dict[str, Any]]) -> dict[str, Any]:
+        return {
+            "periods": len(arm_rows),
+            "exact": count_score(arm_rows, "exact"),
+            "exact_rate": count_score(arm_rows, "exact") / len(arm_rows) if arm_rows else None,
+            "outcome_correct": count_score(arm_rows, "outcome_correct"),
+            "outcome_accuracy_rate": (
+                count_score(arm_rows, "outcome_correct") / len(arm_rows) if arm_rows else None
+            ),
+            "recipients_correct": count_score(arm_rows, "recipients_correct"),
+            "recipient_accuracy_rate": (
+                count_score(arm_rows, "recipients_correct") / len(arm_rows) if arm_rows else None
+            ),
+            "evidence_recall_mean": mean_score(arm_rows, "evidence_recall"),
+            "numeric_precision_mean": mean_score(arm_rows, "numeric_precision"),
+            "numeric_recall_mean": mean_score(arm_rows, "numeric_recall"),
+            "provenance_complete_rate": mean_score(arm_rows, "provenance_complete"),
+            "false_alerts": count_score(arm_rows, "false_alert"),
+            "missed_events": count_score(arm_rows, "missed_event"),
+            "unsafe_routes": count_score(arm_rows, "unsafe_route"),
+            "unsafe_suppressions": count_score(arm_rows, "unsafe_suppression"),
+        }
+
+    def onboarding_signal(arm: str) -> dict[str, Any]:
+        onboarding = [
+            row for row in report.get("rows", [])
+            if row.get("phase") == "onboarding" and row.get("arm") == arm
+        ]
+        completed = sum(row.get("status") == "complete" for row in onboarding)
+        return {
+            "runs": len(onboarding),
+            "completed": completed,
+            "completion_rate": completed / len(onboarding) if onboarding else None,
+            "seconds": total(onboarding, "seconds"),
+            "source_reads": sum(int(row.get("source_reads") or 0) for row in onboarding),
+            "tool_calls": sum(int(row.get("tool_calls") or 0) for row in onboarding),
+            "jev_attempts": sum(
+                int(row.get("usage", {}).get("jev", {}).get("attempts") or 0)
+                for row in onboarding
+            ),
+            "jev_unknown_usage_attempts": sum(
+                int(row.get("usage", {}).get("jev", {}).get("unknown_usage_attempts") or 0)
+                for row in onboarding
+            ),
+        }
+
     treatment_warm = total(treatment, "agent_seconds")
     baseline_warm = total(baseline, "agent_seconds")
     treatment_exact = sum(bool(row.get("score", {}).get("exact")) for row in treatment)
@@ -203,6 +264,32 @@ def review_report(report_path: Path) -> dict[str, Any]:
         "baseline_agent_wakeups": sum(not row.get("agent_wakeup_skipped") for row in baseline),
         "treatment_source_reads": sum(int(row.get("source_reads") or 0) for row in treatment),
         "baseline_source_reads": sum(int(row.get("source_reads") or 0) for row in baseline),
+        "treatment_quality": quality_signal(treatment),
+        "baseline_quality": quality_signal(baseline),
+        "treatment_onboarding": onboarding_signal("luna_signalweave_jev"),
+        "baseline_onboarding": onboarding_signal("luna_bi"),
+    }
+    onboarding_overhead = (
+        value_signal["treatment_onboarding"]["seconds"]
+        - value_signal["baseline_onboarding"]["seconds"]
+    )
+    recurring_savings = (
+        (baseline_warm - treatment_warm) / len(treatment)
+        if treatment
+        else 0.0
+    )
+    value_signal["lifecycle_amortization"] = {
+        "onboarding_overhead_seconds": onboarding_overhead,
+        "recurring_warm_agent_savings_per_run_seconds": recurring_savings,
+        "break_even_monitoring_runs": (
+            int(onboarding_overhead / recurring_savings) + 1
+            if onboarding_overhead > 0 and recurring_savings > 0
+            else 0
+        ),
+        "interpretation": (
+            "Projected wall-time break-even only; it excludes provider pricing, "
+            "human review value, and any downstream business value."
+        ),
     }
     integrity_pass = all(gates.values())
     gates["cost_comparison_measured"] = False
