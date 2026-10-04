@@ -1426,6 +1426,11 @@ class InsightEngine:
 
     @staticmethod
     def _delivery_methods_for(card: InsightCard, outcome: Outcome) -> list[DeliveryMethod]:
+        # ``ignore`` is a quiet outcome.  Cards may retain an informational
+        # quiet route for authoring/audit purposes, but it must never appear
+        # as an active delivery destination in an evaluation result.
+        if outcome == Outcome.IGNORE:
+            return []
         return [method for method in card.delivery_methods if method.outcome == outcome]
 
     @classmethod

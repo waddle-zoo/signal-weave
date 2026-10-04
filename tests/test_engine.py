@@ -185,6 +185,55 @@ async def test_seasonal_movement_is_ignored():
     assert run.result.delivery_methods == []
 
 
+async def test_quiet_outcome_suppresses_stored_quiet_route():
+    class IgnoreJudger(SafetyTestDouble):
+        async def judge(self, state, card, plan, observations):
+            result = await super().judge(state, card, plan, observations)
+            return result.model_copy(update={"outcome": Outcome.IGNORE, "confidence": 0.99})
+
+    source = SourceRef(
+        key="quiet-source",
+        adapter="sql",
+        resource="query:metric",
+        label="Quiet metric",
+    )
+    card = card_for(
+        card_id="card-quiet-route",
+        title="Quiet route",
+        source=source,
+        delivery_methods=[
+            DeliveryMethod(
+                key="audit",
+                outcome=Outcome.IGNORE,
+                label="Audit log",
+                destination="audit://quiet",
+            )
+        ],
+    )
+    resource = ResourceSnapshot(
+        source_key=source.key,
+        adapter=source.adapter,
+        resource=source.resource,
+        title=source.label,
+        observations=[
+            Observation(
+                source_key=source.key,
+                subject_id="metric",
+                subject_label="Metric",
+                metric="metric",
+                current=100,
+                baseline=100,
+                change_pct=0,
+            )
+        ],
+    )
+
+    run = await InsightEngine(IgnoreJudger()).evaluate(card, [resource])
+
+    assert run.result.outcome == Outcome.IGNORE
+    assert run.result.delivery_methods == []
+
+
 async def test_evaluation_emits_shadow_telemetry_for_jev_and_source_work():
     class MeteredJev(SafetyTestDouble):
         def __init__(self):
