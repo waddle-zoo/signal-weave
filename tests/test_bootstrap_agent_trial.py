@@ -96,9 +96,16 @@ def test_same_card_monitoring_is_scoped_to_each_company_period_pair():
          "shared_card_digest": "card-b"},
     ]
     assert trial.same_card_monitoring_observed(rows)
-
     rows[-1]["shared_card_digest"] = "different-card-b"
     assert not trial.same_card_monitoring_observed(rows)
+
+
+def test_card_fingerprint_ignores_response_transport_metadata():
+    card = {"id": "card-1", "title": "Growth", "what_to_watch": "conversion"}
+    compact = {**card, "response_mode": "compact", "details_available": True}
+    full = {**card, "response_mode": "full", "details_available": True}
+    assert trial.card_fingerprint(card) == trial.card_fingerprint(compact)
+    assert trial.card_fingerprint(card) == trial.card_fingerprint(full)
 
 
 def test_explicit_regression_subset_preserves_whole_companies_fixture_order_and_inputs():

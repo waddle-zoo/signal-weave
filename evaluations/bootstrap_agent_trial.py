@@ -430,7 +430,9 @@ def agent_context(public: dict) -> dict:
 def card_fingerprint(card: dict) -> str:
     ignored = {"compiled_plan", "onboarding_reviews", "onboarding_review", "status",
                "onboarding_review_history", "onboarding_corrections",
-               "approved_at", "approved_by", "updated_at", "created_at"}
+               "approved_at", "approved_by", "updated_at", "created_at",
+               # MCP response metadata is transport detail, not card policy.
+               "response_mode", "details_available"}
     return digest({key: val for key, val in card.items() if key not in ignored})
 
 
