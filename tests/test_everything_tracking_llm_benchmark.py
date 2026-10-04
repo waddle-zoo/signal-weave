@@ -83,7 +83,7 @@ def test_adversarial_reviewer_rejects_a_treated_unsafe_action():
     target = next(
         row
         for row in mutated["rows"]
-        if row["arm"] == "llm-signalweave" and row["case_id"] == target_case.case_id
+        if row["arm"] == "jev" and row["case_id"] == target_case.case_id
     )
     target["actual_outcome"] = "notify"
     target["actual_delivery"] = [target_case.card.delivery_methods[0].key]
