@@ -96,6 +96,7 @@ def test_trial_cards_separate_advisory_detail_from_gating_evidence():
         "question:2": False,
         "watch:1": False,
         "watch:2": False,
+        "watch:3": False,
     }
     assert "risk_change_pct of 20 or more" in case.card.decision_guidance
     assert "35 or more as severe" in case.card.decision_guidance
@@ -128,6 +129,10 @@ def test_trial_owner_context_distinguishes_expected_and_unplanned_movement():
 
     assert "planned or expected" in expected_owner.evidence[0].statement
     assert "no planned change" in material_owner.evidence[0].statement
+    assert material_owner.observations[0].attributes["owner_change_status"] == "unplanned"
+    assert material_owner.observations[0].attributes["planned_change"] is False
+    assert expected_owner.observations[0].attributes["owner_change_status"] == "planned"
+    assert expected_owner.observations[0].attributes["planned_change"] is True
 
 
 def test_movement_only_baseline_is_noisy_on_everything_tracking():

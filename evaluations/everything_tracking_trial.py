@@ -158,6 +158,7 @@ def _observation(
     role: str,
     risk_direction: str | None = None,
     risk_change_pct: float | None = None,
+    owner_change_status: str | None = None,
     base: float = 100.0,
 ) -> Observation:
     attributes: dict[str, Any] = {"evidence_role": role}
@@ -177,6 +178,13 @@ def _observation(
                     f"A {risk_direction} movement in this metric indicates a more adverse "
                     "business condition."
                 ),
+            }
+        )
+    if owner_change_status in {"planned", "unplanned", "unknown"}:
+        attributes.update(
+            {
+                "owner_change_status": owner_change_status,
+                "planned_change": owner_change_status == "planned",
             }
         )
     return Observation(
@@ -214,6 +222,7 @@ def _resource(
     freshness: str | None = None,
     risk_direction: str | None = None,
     risk_change_pct: float | None = None,
+    owner_change_status: str | None = None,
 ) -> ResourceSnapshot:
     observation = _observation(
         source_key,
@@ -224,6 +233,7 @@ def _resource(
         role=role,
         risk_direction=risk_direction,
         risk_change_pct=risk_change_pct,
+        owner_change_status=owner_change_status,
     )
     observed_freshness = freshness
     if observed_freshness is None and error is None and source_status == "healthy":
@@ -243,6 +253,12 @@ def _resource(
             "quality_status": "healthy" if role == "quality" else None,
             "comparability": (
                 "same reporting period and population" if role == "quality" else None
+            ),
+            "owner_change_status": owner_change_status,
+            "planned_change": (
+                owner_change_status == "planned"
+                if owner_change_status in {"planned", "unplanned", "unknown"}
+                else None
             ),
         },
         source_url=f"trial://{source_key}",
@@ -442,6 +458,15 @@ def build_cases(config: dict[str, Any], *, repeats: int = 1) -> list[TrackingCas
                             freshness=freshness,
                             risk_direction=risk_direction,
                             risk_change_pct=risk_change,
+                            owner_change_status=(
+                                "planned"
+                                if role == "owner" and variant == "expected_change"
+                                else "unplanned"
+                                if role == "owner" and variant in {"material_action", "urgent_operational_risk"}
+                                else "unknown"
+                                if role == "owner"
+                                else None
+                            ),
                         )
                         resources.append(resource)
                         sources.append(
@@ -471,13 +496,16 @@ def build_cases(config: dict[str, Any], *, repeats: int = 1) -> list[TrackingCas
                         # decision_guidance. These free-form questions and the
                         # explanatory relationship check are useful report
                         # detail, but are not unconditional delivery gates.
-                        # The trust watch remains required so a healthy-looking
-                        # semantic result cannot bypass source-quality checks.
+                        # Source freshness, comparability, and failure are enforced by
+                        # adapter contracts and engine safety gates. The narrative trust
+                        # watch is useful report detail, but must not turn a verified
+                        # source-quality contract into a stochastic delivery prerequisite.
                         evidence_requirements={
                             "question:1": False,
                             "question:2": False,
                             "watch:1": False,
                             "watch:2": False,
+                            "watch:3": False,
                         },
                         sources=sources,
                         comparison_windows=["previous_period", "trailing_4_period_average"],

@@ -703,7 +703,10 @@ class JevJudger:
                     "attributes, treat that as the source's metric contract; do not infer "
                     "business risk from the raw sign of change_pct alone. Likewise, use "
                     "adapter-published quality_status and comparability attributes when "
-                    "the card asks whether sources can be compared."
+                    "the card asks whether sources can be compared. If an owner or plan "
+                    "source publishes owner_change_status or planned_change, treat that "
+                    "as source-owned context for the card's planned/expected exception; "
+                    "do not downgrade it to generic narrative uncertainty."
                 ),
                 criteria={
                     "present": "The available evidence establishes the watch item as stated.",
@@ -746,7 +749,9 @@ class JevJudger:
                         "and any adapter-published metric_semantics, risk_direction, or "
                         "risk_change_pct contract; do not infer business risk from a raw "
                         "numeric sign alone. Use adapter-published quality_status and "
-                        "comparability when assessing source trust. Use "
+                        "comparability when assessing source trust. If a source publishes "
+                        "owner_change_status or planned_change, use that typed plan context "
+                        "to apply planned/expected exceptions. Use "
                         "context, and all related evidence. Apply this precedence when the "
                         "card does not say otherwise: quality for freshness, completeness, "
                         "or comparability; contradicts for expected, benign, or countervailing "
@@ -851,7 +856,9 @@ class JevJudger:
                 "facts, sources, or destinations."
                 " Use code-computed numeric_conditions when supplied; apply the full policy "
                 "once to those facts and relevant context. Other questions in this request "
-                "are independent diagnostics, not additional policy prerequisites."
+                "are independent diagnostics, not additional policy prerequisites. Use "
+                "adapter-published owner_change_status or planned_change as authoritative "
+                "source context when the card distinguishes planned from unplanned movement."
             ),
             criteria=outcome_criteria,
         )
