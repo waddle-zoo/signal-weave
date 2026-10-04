@@ -200,8 +200,11 @@ def _resource(
         subject_type=kind,
         role=role,
     )
-    if freshness:
-        observation = observation.model_copy(update={"freshness": freshness})
+    observed_freshness = freshness
+    if observed_freshness is None and error is None and source_status == "healthy":
+        observed_freshness = "fresh; complete; comparable"
+    if observed_freshness:
+        observation = observation.model_copy(update={"freshness": observed_freshness})
     evidence = Evidence(
         source_key=source_key,
         subject_id=f"{source_key}-evidence",

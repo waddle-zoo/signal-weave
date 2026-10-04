@@ -61,6 +61,24 @@ def test_every_trust_failure_has_a_required_failed_trust_source():
         )
 
 
+def test_healthy_sources_publish_machine_readable_freshness_and_comparability():
+    cases = build_cases(load_config(DEFAULT_CONFIG))
+
+    case = next(case for case in cases if case.variant == "material_action")
+    healthy_required = [
+        resource
+        for resource in case.resources
+        if resource.metadata.get("required") is not False and resource.error is None
+    ]
+
+    assert healthy_required
+    assert all("fresh" in resource.observations[0].freshness for resource in healthy_required)
+    assert all(
+        "comparable" in resource.observations[0].freshness
+        for resource in healthy_required
+    )
+
+
 def test_movement_only_baseline_is_noisy_on_everything_tracking():
     results = run_baseline(build_cases(load_config(DEFAULT_CONFIG)))
 
