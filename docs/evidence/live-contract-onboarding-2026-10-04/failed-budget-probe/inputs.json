@@ -1,0 +1,38 @@
+{
+  "version": "live-contract-onboarding-v1",
+  "cases": [
+    {
+      "adapter": "looker",
+      "resource": "explore:checkout",
+      "title": "Checkout conversion explore",
+      "metric": "checkout_conversion",
+      "key": "checkout-conversion-previous-period",
+      "unit": "fraction",
+      "population": "approved checkout population"
+    },
+    {
+      "adapter": "trino",
+      "resource": "query:revenue-per-user",
+      "title": "Revenue per user query",
+      "metric": "net_revenue_per_user",
+      "key": "revenue-per-user-previous-period",
+      "unit": "USD",
+      "population": "active customers"
+    },
+    {
+      "adapter": "cloudwatch",
+      "resource": "widget:documentdb-performance",
+      "title": "DocumentDB performance widget",
+      "metric": "query_latency_p95",
+      "key": "query-latency-p95-previous-period",
+      "unit": "ms",
+      "population": "customer database clusters"
+    }
+  ],
+  "quality_arms": [
+    "complete",
+    "partial"
+  ],
+  "repeats": 1,
+  "delivery_enabled": false
+}

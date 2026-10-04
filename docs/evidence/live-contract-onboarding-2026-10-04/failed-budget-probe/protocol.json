@@ -1,0 +1,9 @@
+{
+  "version": "live-contract-onboarding-v1",
+  "input_digest": "1c729319cdcbf39633dd8dd3e31a9ead79a5f629d8df1127db68a21d0f78db97",
+  "implementation_sha256": "59b81cb95d8d2255f995d22bb3aed458178c7568bf05c1bb3906dce2a417d7f2",
+  "code": "0136726ca1bacb8325de09b07a89f0d12e4f06ae",
+  "attempt_cap": 6,
+  "scope": "Live MCP onboarding and delivery-disabled simulation across three adapter identities",
+  "zero_real_deliveries": true
+}

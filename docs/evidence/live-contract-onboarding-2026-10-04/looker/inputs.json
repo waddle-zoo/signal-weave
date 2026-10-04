@@ -1,0 +1,20 @@
+{
+  "version": "live-contract-onboarding-v1",
+  "cases": [
+    {
+      "adapter": "looker",
+      "resource": "explore:checkout",
+      "title": "Checkout conversion explore",
+      "metric": "checkout_conversion",
+      "key": "checkout-conversion-previous-period",
+      "unit": "fraction",
+      "population": "approved checkout population"
+    }
+  ],
+  "quality_arms": [
+    "complete",
+    "partial"
+  ],
+  "repeats": 1,
+  "delivery_enabled": false
+}

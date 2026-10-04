@@ -21,6 +21,14 @@ and recurring evaluation for a new resource family. It must also preserve the
 contract boundary when an agent authors the card, rather than relying on a
 hand-edited fixture.
 
+The first live local onboarding probe now covers that path for Looker-style and
+Trino-style identities: **3/3** delivery-disabled cases matched the exact card
+contract, outcome, route, and workflow handoff, using **12 live Jev requests**.
+The Looker arm includes both complete and partial contracts; the partial case
+correctly became `repair_source / blocked`. A failed six-call budget probe is
+retained separately and was not counted. This is still a small local adapter
+probe, not generalized enterprise onboarding proof.
+
 ## Native MCP onboarding investigation — October 3, 2026
 
 Latest [36-call evidence-sufficiency experiment](evidence-sufficiency-experiment-2026-10-03.md):
