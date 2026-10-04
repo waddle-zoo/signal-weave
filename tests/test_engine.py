@@ -10,6 +10,7 @@ from signalweave.models import (
     ContextFact,
     ContextSnapshot,
     DeliveryMethod,
+    Evidence,
     InsightCard,
     InsightPlan,
     InsightResult,
@@ -440,6 +441,119 @@ async def test_context_cannot_substitute_for_a_missing_required_source():
     assert run.result.outcome == Outcome.INSUFFICIENT_DATA
     assert run.result.delivery_methods == []
     assert any("could not be retrieved" in item.statement for item in run.result.evidence)
+
+
+@pytest.mark.parametrize(
+    ("status_key", "status_value"),
+    [
+        ("exception_status", "unresolved"),
+        ("resolution_status", "unknown"),
+        ("status", "ambiguous"),
+    ],
+)
+async def test_unresolved_required_context_cannot_authorize_automatic_action(
+    status_key, status_value
+):
+    class NotifyJudger(SafetyTestDouble):
+        async def judge(self, state, card, plan, observations):
+            result = await super().judge(state, card, plan, observations)
+            return result.model_copy(update={"outcome": Outcome.NOTIFY, "confidence": 0.99})
+
+    source = SourceRef(
+        key="owner-context",
+        adapter="company-mcp",
+        resource="record:exceptions",
+        label="Owner context",
+        required=True,
+    )
+    card = card_for(
+        card_id=f"card-unresolved-{status_key}",
+        title="Context-sensitive route",
+        source=source,
+        delivery_methods=[
+            DeliveryMethod(
+                key="ops",
+                outcome=Outcome.NOTIFY,
+                label="Operations",
+                destination="slack://ops",
+            ),
+            DeliveryMethod(
+                key="data",
+                outcome=Outcome.INVESTIGATE,
+                label="Data review",
+                destination="slack://data",
+            ),
+        ],
+    )
+    resource = ResourceSnapshot(
+        source_key=source.key,
+        adapter=source.adapter,
+        resource=source.resource,
+        title=source.label,
+        evidence=[
+            Evidence(
+                source_key=source.key,
+                subject_id="closed-period",
+                subject_label="Closed period context",
+                statement="The source is reachable but the required context is unresolved.",
+                values={status_key: status_value},
+            )
+        ],
+    )
+
+    run = await InsightEngine(NotifyJudger()).evaluate(card, [resource])
+
+    assert run.result.outcome == Outcome.INVESTIGATE
+    assert [method.key for method in run.result.delivery_methods] == ["data"]
+    assert "unresolved semantic context" in run.result.rationale
+
+
+async def test_resolved_required_context_does_not_block_automatic_action():
+    class NotifyJudger(SafetyTestDouble):
+        async def judge(self, state, card, plan, observations):
+            result = await super().judge(state, card, plan, observations)
+            return result.model_copy(update={"outcome": Outcome.NOTIFY, "confidence": 0.99})
+
+    source = SourceRef(
+        key="owner-context-resolved",
+        adapter="company-mcp",
+        resource="record:exceptions",
+        label="Owner context",
+        required=True,
+    )
+    card = card_for(
+        card_id="card-resolved-context",
+        title="Resolved context route",
+        source=source,
+        delivery_methods=[
+            DeliveryMethod(
+                key="ops",
+                outcome=Outcome.NOTIFY,
+                label="Operations",
+                destination="slack://ops",
+            )
+        ],
+    )
+    resource = ResourceSnapshot(
+        source_key=source.key,
+        adapter=source.adapter,
+        resource=source.resource,
+        title=source.label,
+        evidence=[
+            Evidence(
+                source_key=source.key,
+                subject_id="closed-period",
+                subject_label="Closed period context",
+                statement="No approved exception covers the exact closed period.",
+                values={"exception_status": "none"},
+            )
+        ],
+    )
+
+    run = await InsightEngine(NotifyJudger()).evaluate(card, [resource])
+
+    assert run.result.outcome == Outcome.NOTIFY
+    assert [method.key for method in run.result.delivery_methods] == ["ops"]
 
 
 async def test_ambiguous_source_cannot_take_an_automatic_route():

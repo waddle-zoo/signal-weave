@@ -45,6 +45,37 @@ from .typesafe_adapter import (
     compact_resource_snapshot_payload,
 )
 
+# A source can be reachable and well-formed while still failing to answer a
+# semantic prerequisite for the card (for example, whether an exception was
+# approved for the exact period being evaluated).  These values are not
+# adapter-specific failures; they are unresolved business context and must
+# not be allowed to authorize an automatic route.
+_UNCERTAIN_CONTEXT_KEYS = frozenset({
+    "approval_status",
+    "authorization_status",
+    "context_status",
+    "decision_status",
+    "exception_status",
+    "owner_status",
+    "resolution_status",
+    "semantic_status",
+    "status",
+})
+_UNCERTAIN_CONTEXT_VALUES = frozenset({
+    "ambiguous",
+    "conflict",
+    "conflicted",
+    "incomplete",
+    "missing",
+    "not found",
+    "not_found",
+    "pending",
+    "undetermined",
+    "unknown",
+    "unresolved",
+    "unverified",
+})
+
 
 @dataclass
 class InsightRun:
@@ -1412,6 +1443,49 @@ class InsightEngine:
         }
         return result.model_copy(update=updates)
 
+    @staticmethod
+    def _unresolved_required_context(
+        result: InsightResult,
+        required_source_keys: set[str],
+    ) -> list[tuple[str, str, str]]:
+        """Find unresolved semantic status values in required source evidence.
+
+        Adapters are intentionally free to shape qualitative evidence, so the
+        engine cannot require a single context schema.  It can still enforce
+        the important safety invariant: a required source that explicitly says
+        a status is unknown or unresolved cannot authorize a notify/escalate
+        result.  Only status-like keys are inspected and the source key must
+        be required, which avoids treating ordinary prose or numeric values as
+        missing context.
+        """
+
+        findings: list[tuple[str, str, str]] = []
+
+        def visit(value: Any, path: str = "") -> None:
+            if isinstance(value, dict):
+                for key, nested in value.items():
+                    normalized_key = str(key).strip().lower()
+                    if normalized_key in _UNCERTAIN_CONTEXT_KEYS:
+                        normalized_value = str(nested).strip().lower()
+                        if normalized_value in _UNCERTAIN_CONTEXT_VALUES:
+                            findings.append((path or "evidence", normalized_key, normalized_value))
+                    if isinstance(nested, (dict, list)):
+                        visit(nested, f"{path}.{normalized_key}" if path else normalized_key)
+            elif isinstance(value, list):
+                for index, nested in enumerate(value):
+                    if isinstance(nested, (dict, list)):
+                        visit(nested, f"{path}[{index}]")
+
+        for item in result.evidence:
+            if item.source_key not in required_source_keys:
+                continue
+            before = len(findings)
+            visit(item.values)
+            for index in range(before, len(findings)):
+                path, key, value = findings[index]
+                findings[index] = (item.source_key, key, value)
+        return findings
+
     @classmethod
     def _apply_safety_gates(
         cls,
@@ -1494,6 +1568,23 @@ class InsightEngine:
                 rationale=(
                     "A numeric check bound to required evidence could not be computed. "
                     "Repair its measurement binding, unit, or source before automatic interpretation."
+                ),
+            )
+
+        unresolved_context = cls._unresolved_required_context(result, required_keys)
+        if unresolved_context and result.outcome in {Outcome.NOTIFY, Outcome.ESCALATE}:
+            details = ", ".join(
+                f"{source_key}.{key}={value}"
+                for source_key, key, value in unresolved_context[:5]
+            )
+            suffix = "" if len(unresolved_context) <= 5 else " (and more)"
+            return cls._with_outcome(
+                result,
+                card,
+                Outcome.INVESTIGATE,
+                rationale=(
+                    "A required source contains unresolved semantic context, so an automatic "
+                    f"route is unsafe until the context is resolved: {details}{suffix}."
                 ),
             )
 
