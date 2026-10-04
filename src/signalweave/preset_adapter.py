@@ -172,6 +172,7 @@ class PresetCloudClient(SupersetClient):
             base_url=self.api_base_url,
             timeout=20,
             follow_redirects=False,
+            headers={"Accept-Encoding": "identity"},
             transport=self._transport,
         ) as client:
             response = await self._request_with_retries(
@@ -224,6 +225,7 @@ class PresetCloudClient(SupersetClient):
             base_url=self.base_url,
             timeout=timeout,
             follow_redirects=False,
+            headers={"Accept-Encoding": "identity"},
             transport=self._transport,
         ) as client:
             response = await self._request_with_retries(
@@ -413,63 +415,59 @@ class PresetCloudClient(SupersetClient):
 
         Preset's Superset-compatible endpoint may return several result envelopes.
         Dashboard reads use Preset's chart-specific endpoint so its dashboard
-        filter scope and access checks are applied. Standalone reads use the
-        saved query endpoint. We reject a provider response that ignores the
-        configured response cap; silently truncating a time series would create
-        a false current value.
+        filter scope and access checks are applied. Some Preset charts imported
+        from virtual datasets have no saved query context; when the dashboard
+        metadata proves that no native filters can alter the result, the generic
+        client's bounded unscoped fallback is safe and preserves that scope in
+        telemetry. Standalone reads use the saved query endpoint. We reject a
+        provider response that ignores the configured response cap; silently
+        truncating a time series would create a false current value.
         """
 
-        # Preset's dashboard endpoint is the only accepted dashboard-scoped
-        # path. It must never fall back to an unfiltered POST query.
-        del allow_unscoped_fallback
+        used_unscoped_fallback = False
         if dashboard_id is not None:
-            response = await self._request(
-                "GET",
-                f"/api/v1/chart/{chart['id']}/data",
-                timeout=60,
-                params={
-                    "format": "json",
-                    "type": "full",
-                    "force": "true" if self._force_refresh else "false",
-                    # Preset Cloud documents the singular spelling. The
-                    # generic Superset client uses the upstream plural form.
-                    "filter_dashboard_id": str(dashboard_id),
-                },
-            )
+            try:
+                response = await self._request(
+                    "GET",
+                    f"/api/v1/chart/{chart['id']}/data/",
+                    timeout=60,
+                    params={
+                        "format": "json",
+                        "type": "full",
+                        "force": "true" if self._force_refresh else "false",
+                        # Preset Cloud documents the singular spelling. The
+                        # generic Superset client uses the upstream plural form.
+                        "filter_dashboard_id": str(dashboard_id),
+                    },
+                )
+            except httpx.HTTPStatusError as error:
+                if (
+                    not allow_unscoped_fallback
+                    or error.response.status_code != 400
+                    or "query context saved" not in error.response.text.lower()
+                ):
+                    raise
+                response = await self._request(
+                    "POST",
+                    "/api/v1/chart/data",
+                    timeout=60,
+                    json=self._bounded_saved_query_payload(chart),
+                )
+                used_unscoped_fallback = True
             if scope_telemetry is not None:
                 scope_telemetry["dashboard_scoped_requests"] = (
                     scope_telemetry.get("dashboard_scoped_requests", 0) + 1
                 )
+                if used_unscoped_fallback:
+                    scope_telemetry["chart_query_fallbacks"] = (
+                        scope_telemetry.get("chart_query_fallbacks", 0) + 1
+                    )
         else:
-            self._validate_raw_saved_query_context(chart)
-            payload = self._saved_query_context(chart) or self._query_context(chart)
-            queries = payload.get("queries")
-            if not isinstance(queries, list) or not queries or any(
-                not isinstance(query, dict) for query in queries
-            ):
-                raise PresetPolicyError(
-                    "Preset saved query context did not contain a usable queries list"
-                )
-            if self.max_result_rows is not None:
-                for query in queries:
-                    requested = query.get("row_limit")
-                    if isinstance(requested, bool):
-                        raise PresetPolicyError(
-                            "Preset saved query context contained an invalid row_limit"
-                        )
-                    if requested is None:
-                        bounded = self.max_result_rows
-                    else:
-                        try:
-                            bounded = int(requested)
-                        except (TypeError, ValueError):
-                            raise PresetPolicyError(
-                                "Preset saved query context contained an invalid row_limit"
-                            ) from None
-                    query["row_limit"] = max(1, min(self.max_result_rows, bounded))
-            payload["force"] = self._force_refresh
             response = await self._request(
-                "POST", "/api/v1/chart/data", timeout=60, json=payload
+                "POST",
+                "/api/v1/chart/data",
+                timeout=60,
+                json=self._bounded_saved_query_payload(chart),
             )
         if response.status_code == 202:
             raise PresetPolicyError(
@@ -482,7 +480,7 @@ class PresetCloudClient(SupersetClient):
             raise PresetPolicyError("Preset chart response was not valid JSON") from error
         if not isinstance(body, dict):
             raise PresetPolicyError("Preset chart response was not a JSON object")
-        if dashboard_id is not None:
+        if dashboard_id is not None and not used_unscoped_fallback:
             raw_dashboard_filters = body.get("dashboard_filters")
             if not isinstance(raw_dashboard_filters, dict):
                 raise PresetPolicyError(
@@ -535,6 +533,38 @@ class PresetCloudClient(SupersetClient):
                     "Preset chart response exceeded the configured max_result_rows limit"
                 )
         return [item for item in envelopes if isinstance(item, dict)]
+
+    def _bounded_saved_query_payload(self, chart: dict[str, Any]) -> dict[str, Any]:
+        """Build one bounded saved-query payload for standalone or safe fallback reads."""
+
+        self._validate_raw_saved_query_context(chart)
+        payload = self._saved_query_context(chart) or self._query_context(chart)
+        queries = payload.get("queries")
+        if not isinstance(queries, list) or not queries or any(
+            not isinstance(query, dict) for query in queries
+        ):
+            raise PresetPolicyError(
+                "Preset saved query context did not contain a usable queries list"
+            )
+        if self.max_result_rows is not None:
+            for query in queries:
+                requested = query.get("row_limit")
+                if isinstance(requested, bool):
+                    raise PresetPolicyError(
+                        "Preset saved query context contained an invalid row_limit"
+                    )
+                if requested is None:
+                    bounded = self.max_result_rows
+                else:
+                    try:
+                        bounded = int(requested)
+                    except (TypeError, ValueError):
+                        raise PresetPolicyError(
+                            "Preset saved query context contained an invalid row_limit"
+                        ) from None
+                query["row_limit"] = max(1, min(self.max_result_rows, bounded))
+        payload["force"] = self._force_refresh
+        return payload
 
     @classmethod
     def _normalize_dashboard_filters(cls, payload: dict[str, Any]) -> dict[str, Any]:

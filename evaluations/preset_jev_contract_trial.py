@@ -251,16 +251,16 @@ async def _run_workspace(workspace: dict[str, Any]) -> dict[str, Any]:
         },
         "provider_requests": {
             "dashboard_chart_data": sum(
-                request["path"].endswith("/data") for request in transport.requests
+                request["path"].rstrip("/").endswith("/data") for request in transport.requests
             ),
             "dashboard_filter_context": all(
                 request["params"].get("filter_dashboard_id") == str(workspace["dashboard_id"])
                 for request in transport.requests
-                if request["path"].endswith("/data")
+                if request["path"].rstrip("/").endswith("/data")
             ),
             "focused_chart_scope_sent": any(
                 request["params"].get("filter_dashboard_id") == str(workspace["dashboard_id"])
-                and request["path"].endswith("/data")
+                and request["path"].rstrip("/").endswith("/data")
                 for request in transport.requests
             ),
         },

@@ -663,7 +663,7 @@ async def _run_trial_loaded(
             provider_data_requests_for_first_evaluation = sum(
                 count
                 for path, count in provider_paths_for_first_evaluation.items()
-                if path.endswith("/data")
+                if path.rstrip("/").endswith("/data")
             )
             provider_paths_before_replay = dict(provider_paths_after_first)
             replay = await _tool(server, "evaluate_insight_card")(

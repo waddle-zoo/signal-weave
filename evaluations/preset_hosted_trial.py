@@ -100,8 +100,8 @@ class WorkspaceTransport:
             )
 
         prefix = "/api/v1/chart/"
-        if request.url.path.startswith(prefix) and request.url.path.endswith("/data"):
-            chart_id = request.url.path.removeprefix(prefix).removesuffix("/data")
+        if request.url.path.startswith(prefix) and request.url.path.rstrip("/").endswith("/data"):
+            chart_id = request.url.path.removeprefix(prefix).rstrip("/").removesuffix("/data")
             chart = next(chart for chart in self.workspace["charts"] if chart["id"] == chart_id)
             if request.method != "GET" or request.url.params.get("filter_dashboard_id") != str(
                 self.workspace["dashboard_id"]
@@ -246,7 +246,7 @@ async def _inspect_workspace(workspace: dict[str, Any]) -> dict[str, Any]:
             ),
             "chart_data": sum(request["path"] == "/api/v1/chart/data" for request in transport.requests),
             "dashboard_chart_data": sum(
-                request["path"].endswith("/data") for request in transport.requests
+                request["path"].rstrip("/").endswith("/data") for request in transport.requests
             ),
         },
         "cached_query_guards": all(
@@ -255,14 +255,14 @@ async def _inspect_workspace(workspace: dict[str, Any]) -> dict[str, Any]:
             and request["params"].get("filter_dashboard_id")
             == str(workspace["dashboard_id"])
             for request in transport.requests
-            if request["path"].endswith("/data")
+            if request["path"].rstrip("/").endswith("/data")
         ),
         "dashboard_filters_sent": all(
             request["method"] == "GET"
             and request["params"].get("filter_dashboard_id")
             == str(workspace["dashboard_id"])
             for request in transport.requests
-            if request["path"].endswith("/data")
+            if request["path"].rstrip("/").endswith("/data")
         ),
     }
 
@@ -346,7 +346,7 @@ async def _live_query_case(workspace: dict[str, Any]) -> dict[str, Any]:
         )
     )
     query_requests = [
-        request for request in transport.requests if request["path"].endswith("/data")
+        request for request in transport.requests if request["path"].rstrip("/").endswith("/data")
     ]
     return {
         "chart_data_requests": len(query_requests),
@@ -395,7 +395,7 @@ async def _policy_cases(workspace: dict[str, Any]) -> dict[str, Any]:
         "row_limit_policy_enforced": row_snapshot.error is not None
         and row_snapshot.observations == []
         and any(
-            request["path"].endswith("/data")
+            request["path"].rstrip("/").endswith("/data")
             and request["params"].get("filter_dashboard_id")
             == str(workspace["dashboard_id"])
             for request in row_transport.requests

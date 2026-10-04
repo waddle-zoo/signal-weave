@@ -238,7 +238,7 @@ async def _run_workspace(workspace: dict[str, Any], root: Path) -> dict[str, Any
                     request["params"].get("filter_dashboard_id")
                     == str(workspace["dashboard_id"])
                     for request in transport.requests
-                    if request["path"].endswith("/data")
+                    if request["path"].rstrip("/").endswith("/data")
                 ),
                 "secrets_absent_from_mcp_artifacts": "synthetic-secret" not in serialized,
                 "secrets_absent_from_jev_state": all(
@@ -258,7 +258,7 @@ async def _run_workspace(workspace: dict[str, Any], root: Path) -> dict[str, Any
         "full_dashboard": full,
         "focused_chart": focused,
         "provider_data_requests": sum(
-            request["path"].endswith("/data") for request in transport.requests
+            request["path"].rstrip("/").endswith("/data") for request in transport.requests
         ),
         "provider_catalog_search_requests": sum(
             request["path"] == "/api/v1/dashboard/" for request in transport.requests

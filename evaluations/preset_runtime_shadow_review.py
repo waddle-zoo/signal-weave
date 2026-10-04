@@ -32,7 +32,8 @@ def _data_requests(requests: Any) -> list[dict[str, Any]]:
     return [
         request
         for request in requests
-        if isinstance(request, dict) and str(request.get("path", "")).endswith("/data")
+        if isinstance(request, dict)
+        and str(request.get("path", "")).rstrip("/").endswith("/data")
     ]
 
 

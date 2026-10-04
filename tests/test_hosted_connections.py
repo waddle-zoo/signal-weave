@@ -342,7 +342,7 @@ async def test_preset_cloud_token_exchange_and_dashboard_snapshot():
                     }
                 },
             )
-        if request.url.path == "/api/v1/chart/101/data":
+        if request.url.path == "/api/v1/chart/101/data/":
             assert request.method == "GET"
             assert request.url.params["filter_dashboard_id"] == "7"
             assert request.url.params["force"] == "false"
@@ -455,7 +455,91 @@ async def test_preset_cloud_token_exchange_and_dashboard_snapshot():
     assert client.request_path_counts["/v1/auth/"] == 1
     assert client.request_path_counts["/api/v1/dashboard/7"] == 1
     assert client.request_path_counts["/api/v1/chart/101"] == 1
-    assert client.request_path_counts["/api/v1/chart/101/data"] == 1
+    assert client.request_path_counts["/api/v1/chart/101/data/"] == 1
+
+
+@pytest.mark.asyncio
+async def test_preset_dashboard_chart_without_saved_context_uses_bounded_fallback():
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/api/v1/dashboard/7":
+            return httpx.Response(
+                200,
+                json={
+                    "result": {
+                        "id": 7,
+                        "dashboard_title": "Growth",
+                        "json_metadata": json.dumps(
+                            {
+                                "filter_scopes": {},
+                                "native_filter_configuration": [],
+                            }
+                        ),
+                        "position_json": {
+                            "chart-101": {"type": "CHART", "meta": {"chartId": 101}}
+                        },
+                    }
+                },
+            )
+        if request.url.path == "/api/v1/chart/101":
+            return httpx.Response(
+                200,
+                json={
+                    "result": {
+                        "id": 101,
+                        "slice_name": "Revenue",
+                        "params": json.dumps(
+                            {
+                                "datasource": "17__table",
+                                "metrics": ["revenue"],
+                                "granularity_sqla": "day",
+                            }
+                        ),
+                    }
+                },
+            )
+        if request.url.path == "/api/v1/chart/101/data/":
+            return httpx.Response(
+                400,
+                json={
+                    "message": "Chart has no query context saved. Please save the chart again."
+                },
+            )
+        if request.url.path == "/api/v1/chart/data":
+            assert request.method == "POST"
+            payload = json.loads(request.content)
+            assert payload["force"] is False
+            assert payload["queries"][0]["row_limit"] == 500
+            return httpx.Response(
+                200,
+                json={
+                    "result": [
+                        {
+                            "data": [
+                                {"day": "2026-09-01", "revenue": 120},
+                            ]
+                        }
+                    ]
+                },
+            )
+        raise AssertionError(f"unexpected Preset request: {request.method} {request.url}")
+
+    client = PresetCloudClient(
+        "https://northstar-workspace.app.preset.test",
+        access_token="preset-token",
+        transport=httpx.MockTransport(handler),
+    )
+    snapshot = await PresetAdapter(client, tenant_id="northstar").inspect(
+        SourceRef(key="growth", adapter="preset", resource="dashboard:7", label="Growth")
+    )
+
+    assert snapshot.error is None
+    assert snapshot.observations[0].current == 120
+    assert snapshot.metadata["dashboard_scope"] == {
+        "dashboard_scoped_requests": 1,
+        "chart_query_fallbacks": 1,
+    }
+    assert snapshot.metadata["charts"][0]["data_scope"] == "chart_query_fallback"
+    assert snapshot.metadata["charts"][0]["dashboard_filters"] is None
 
 
 @pytest.mark.asyncio
@@ -1119,7 +1203,7 @@ async def test_preset_rejects_provider_result_that_ignores_row_policy():
                     }
                 },
             )
-        if request.url.path == "/api/v1/chart/101/data":
+        if request.url.path == "/api/v1/chart/101/data/":
             assert request.method == "GET"
             assert request.url.params["filter_dashboard_id"] == "7"
             return httpx.Response(
@@ -1185,7 +1269,7 @@ async def test_preset_dashboard_budget_fails_closed_after_chart_fanout():
                     }
                 },
             )
-        if request.url.path == "/api/v1/chart/101/data":
+        if request.url.path == "/api/v1/chart/101/data/":
             return httpx.Response(
                 200,
                 json={
@@ -1342,7 +1426,7 @@ async def test_preset_async_chart_response_fails_closed_instead_of_becoming_no_d
     def handler(request: httpx.Request) -> httpx.Response:
         nonlocal calls
         calls += 1
-        assert request.url.path == "/api/v1/chart/101/data"
+        assert request.url.path == "/api/v1/chart/101/data/"
         return httpx.Response(
             202,
             json={

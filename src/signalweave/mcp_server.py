@@ -1655,7 +1655,7 @@ def create_mcp(
                     "the duplicated catalog and review audit packet."
                 )
             ),
-        ] = "full",
+        ] = "compact",
         ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Onboard one free-form card in a single human-reviewable call.
@@ -1770,7 +1770,7 @@ def create_mcp(
                     "the duplicated catalog and review audit packet."
                 )
             ),
-        ] = "full",
+        ] = "compact",
         ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Start onboarding from a few plain-language fields.

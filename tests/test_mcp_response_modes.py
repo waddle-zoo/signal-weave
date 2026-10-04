@@ -49,6 +49,17 @@ async def test_compact_onboarding_retains_typed_review_facts_and_reduces_duplica
     assert "onboarding_review" not in compact["summary"]
 
 
+async def test_bootstrap_defaults_to_compact_response_mode(tmp_path):
+    server = make_server(tmp_path)
+    response = await tool(server, "bootstrap_insight_card")(
+        goal="Monitor checkout conversion and explain material movement.",
+        purpose="Help Growth decide whether to investigate a customer-impacting regression.",
+        policy="Investigate when evidence is incomplete; notify Growth Ops when corroborated.",
+    )
+
+    assert response["response_mode"] == "compact"
+
+
 async def test_compact_review_and_simulation_keep_decision_boundary_and_structured_evidence(tmp_path):
     server = make_server(tmp_path)
     card_id = await _draft(server)

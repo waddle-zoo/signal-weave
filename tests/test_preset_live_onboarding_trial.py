@@ -257,7 +257,7 @@ async def test_live_trial_accepts_only_jev_delivery_disabled_shadow(monkeypatch,
     async def evaluate(*args, **kwargs):
         metrics.requests += 1
         provider_client.requests_made += 1
-        provider_client.request_path_counts["/api/v1/chart/1/data"] = 1
+        provider_client.request_path_counts["/api/v1/chart/1/data/"] = 1
         return {
             "result": {
                 "outcome": "notify",

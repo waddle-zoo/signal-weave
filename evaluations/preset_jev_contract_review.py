@@ -67,7 +67,8 @@ def _data_requests(trace: dict[str, Any]) -> list[dict[str, Any]]:
         requests.extend(
             request
             for request in phase_requests
-            if isinstance(request, dict) and str(request.get("path", "")).endswith("/data")
+            if isinstance(request, dict)
+            and str(request.get("path", "")).rstrip("/").endswith("/data")
         )
     return requests
 

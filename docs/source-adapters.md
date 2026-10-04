@@ -247,8 +247,9 @@ saved-chart-query fallback. Static defaults and `defaultToFirstItem` continue
 to fail closed because reconstructing the query could change the result. The
 fallback increments `chart_query_fallbacks` and must remain visible to the
 caller; it is not evidence that dashboard-native filters were applied. Hosted
-Preset uses its provider-specific dashboard endpoint and fails closed instead
-of taking this fallback.
+Preset uses its provider-specific dashboard endpoint first, then uses this
+bounded fallback only when its response says the query context is missing and
+the dashboard metadata proves no native filter can alter the initial result.
 Hosted connections should be created through the
 credential-reference-only factory:
 
