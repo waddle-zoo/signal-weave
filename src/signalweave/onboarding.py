@@ -85,6 +85,76 @@ def declared_comparison_windows(
     }
 
 
+def _declared_scope(
+    *,
+    contract_scope: Any = "",
+    population: Any = "",
+    metadata_scope: Any = "",
+    adapter_scope: Any = "",
+) -> str:
+    """Choose a source population label that needs owner confirmation.
+
+    Connector metadata is allowed to provide a concise scope label, but a
+    connector repeating its normal typed population in ``scope`` must not turn
+    every ordinary source into a needless review blocker. An adapter-specific
+    label wins because it is the usual place for variants such as sandbox,
+    regional, archive, or partner-only populations.
+    """
+    values = {
+        name: value.strip()
+        for name, value in {
+            "contract_scope": contract_scope,
+            "population": population,
+            "metadata_scope": metadata_scope,
+            "adapter_scope": adapter_scope,
+        }.items()
+        if isinstance(value, str)
+    }
+    population_value = values.get("population", "")
+    adapter_value = values.get("adapter_scope", "")
+    metadata_value = values.get("metadata_scope", "")
+    contract_value = values.get("contract_scope", "")
+    for candidate in (adapter_value, metadata_value, contract_value):
+        if not candidate:
+            continue
+        if population_value and candidate == population_value:
+            continue
+        return candidate
+    return ""
+
+
+def declared_source_scope(match: ResourceMatch) -> str:
+    """Return the typed scope a caller must review before selecting a source."""
+    adapter_metadata = match.metadata.get("adapter_metadata") if isinstance(match.metadata, dict) else {}
+    adapter_scope = adapter_metadata.get("scope", "") if isinstance(adapter_metadata, dict) else ""
+    return _declared_scope(
+        contract_scope=match.contract.scope,
+        population=match.contract.population,
+        metadata_scope=match.metadata.get("scope", "") if isinstance(match.metadata, dict) else "",
+        adapter_scope=adapter_scope,
+    )
+
+
+def source_scope_confirmations(review: InsightCardOnboardingReview) -> dict[str, str]:
+    """Return selected source scopes from the current review, by exact ref."""
+    result: dict[str, str] = {}
+    for candidate in review.source_candidates:
+        if not candidate.selected:
+            continue
+        adapter_metadata = candidate.metadata.get("adapter_metadata")
+        declared = _declared_scope(
+            contract_scope=candidate.metadata.get("scope", ""),
+            population=candidate.metadata.get("population", ""),
+            adapter_scope=(
+                adapter_metadata.get("scope", "")
+                if isinstance(adapter_metadata, dict) else ""
+            ),
+        )
+        if declared:
+            result[candidate.ref] = declared
+    return result
+
+
 def resolve_comparison_windows(
     requested: list[str] | None, sources: list[SourceRef], contracts: dict[str, ResourceContract],
 ) -> list[str]:
@@ -740,6 +810,29 @@ class InsightAuthoringService:
                 "A selected or recommended source is stale, failed, ambiguous, or otherwise not healthy.",
                 question,
                 unhealthy,
+            )
+        scoped_selected = {
+            match.ref: declared_source_scope(match)
+            for match in discovery.matches
+            if match.ref in selected_refs and declared_source_scope(match)
+        }
+        if scoped_selected:
+            details = "; ".join(
+                f"{ref}: {scope}" for ref, scope in sorted(scoped_selected.items())
+            )
+            question = (
+                "Confirm the declared population/scope for every selected source before approval. "
+                "A scoped source must not silently stand in for an unscoped business population: "
+                + details
+            )
+            questions.append(question)
+            add_blocker(
+                OnboardingBlockerCode.SOURCE_SCOPE_REVIEW,
+                OnboardingBlockerSeverity.REVIEW,
+                "meaning",
+                "One or more selected sources declare a population scope that requires explicit owner confirmation.",
+                question,
+                sorted(scoped_selected),
             )
         if not card.delivery_methods:
             add_blocker(

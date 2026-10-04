@@ -389,6 +389,31 @@ def test_inspected_comparisons_not_authored_requirements_verify_binding(inputs):
         reviewer.review_payload(**inputs, source_context=context)
 
 
+def test_relative_numeric_binding_uses_percent_not_the_metric_unit(inputs):
+    inputs["artifact"]["card"]["numeric_conditions"] = [{
+        "text": "Revenue declines by at least 10 percent.",
+        "source_key": "source-a",
+        "comparison_key": "comparison-a",
+        "measurement": "change_pct",
+        "threshold": -10.0,
+        "unit": "percent",
+        "comparator": "<=",
+    }]
+    inputs["artifact"]["card"]["decision_guidance"] = (
+        "Notify when revenue declines by at least 10 percent."
+    )
+    context = {"inspected_sources": [{
+        "ref": "company_mcp|metric:latency", "adapter": "company_mcp",
+        "resource": "metric:latency", "title": "Revenue",
+        "analytical_comparisons": [{
+            "key": "comparison-a", "metric": "revenue", "unit": "USD",
+            "kind": "additive", "definition": "Settled revenue.",
+        }],
+    }]}
+    payload = reviewer.review_payload(**inputs, source_context=context)
+    assert payload["execution_contract"]["numeric_bindings"][0]["unit"] == "percent"
+
+
 def test_uninspected_numeric_source_is_not_verified_by_card(inputs):
     with pytest.raises(ValueError, match="must be inspected"):
         reviewer.review_payload(**inputs, source_context={"inspected_sources": []})

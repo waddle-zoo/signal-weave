@@ -61,6 +61,7 @@ from .onboarding import (
     proposal_summary,
     resolve_comparison_windows,
 )
+from .onboarding import source_scope_confirmations as expected_source_scope_confirmations
 from .query_planner import QueryWindow, compile_query, plan_query
 from .readiness import deployment_readiness
 from .reporting import build_investigation_report, render_investigation_report
@@ -1941,6 +1942,7 @@ def create_mcp(
         adapter: str | None = None,
         source_selection_fingerprint: str | None = None,
         source_selection_reason: str | None = None,
+        source_scope_confirmations: dict[str, str] | None = None,
         dynamic_scope_acknowledged: bool = False,
         workflow_report_id: str | None = None,
         ctx: Context | None = None,
@@ -1961,6 +1963,10 @@ def create_mcp(
         source_selection_reason explaining which definitions/populations were chosen
         and why. Changed policy/catalog invalidates that confirmation. This cannot
         override source health, permissions, missing policy or other blockers.
+        If the review lists selected source scopes, also pass
+        source_scope_confirmations with the exact declared scope text by source ref.
+        This makes the scope decision auditable; it does not make an incompatible
+        population safe.
         Feedback corrections alone never approve or resolve a card.
         Pass a successful acceptance-mode evaluate_card_workflow report as
         workflow_report_id to bind approval to tested policy, sources, plan and
@@ -2016,6 +2022,16 @@ def create_mcp(
                                  "and obtain owner confirmation of the current policy and catalog.")
             confirmable = {OnboardingBlockerCode.DEFINITION_CONFLICT,
                            OnboardingBlockerCode.CANDIDATE_SELECTION_REVIEW}
+            scoped_sources = expected_source_scope_confirmations(onboarding_review)
+            if scoped_sources:
+                supplied_scopes = source_scope_confirmations or {}
+                if supplied_scopes != scoped_sources:
+                    raise ValueError(
+                        "Selected sources declare population scopes. Provide exact "
+                        "source_scope_confirmations for every selected scoped source "
+                        "from review_insight_card; this is an explicit owner-review record."
+                    )
+                confirmable.add(OnboardingBlockerCode.SOURCE_SCOPE_REVIEW)
             # An expand/investigate card intentionally delegates a bounded
             # related-source search to SignalWeave at run time.  When the
             # owner has supplied and revalidated an explicit anchor, the
@@ -2051,6 +2067,9 @@ def create_mcp(
                     "readiness_status": "blocked" if blocking else "needs_human_review"
                     if needs_review else "ready_for_approval",
                     "source_selection_confirmation": reason,
+                    "source_scope_confirmations": (
+                        dict(source_scope_confirmations or {}) if scoped_sources else {}
+                    ),
                     "confirmed_blocker_codes": [b.code for b in resolved],
                 })
         if onboarding_review.readiness_status != "ready_for_approval":

@@ -571,6 +571,7 @@ class OnboardingBlockerCode(StrEnum):
     DECISION_GUIDANCE_REQUIRED = "decision-guidance-required"
     DELIVERY_POLICY_MISSING = "delivery-policy-missing"
     COMPARISON_WINDOW_MISMATCH = "comparison-window-mismatch"
+    SOURCE_SCOPE_REVIEW = "source-scope-review"
 
 
 class OnboardingBlocker(BaseModel):
@@ -643,6 +644,7 @@ class InsightCardOnboardingReview(BaseModel):
     blockers: list[OnboardingBlocker] = Field(default_factory=list, max_length=50)
     source_selection_fingerprint: str = Field(default="", max_length=64)
     source_selection_confirmation: str | None = Field(default=None, max_length=4000)
+    source_scope_confirmations: dict[str, str] = Field(default_factory=dict, max_length=200)
     confirmed_blocker_codes: list[OnboardingBlockerCode] = Field(default_factory=list)
     principal_id: str | None = Field(default=None, max_length=240)
     principal_tenant: str | None = Field(default=None, max_length=160)

@@ -64,6 +64,16 @@ class LookerCatalogDouble(SupersetCatalogDouble):
     name = "looker"
 
 
+class ScopedSupersetCatalogDouble(SupersetCatalogDouble):
+    def __init__(self):
+        super().__init__()
+        self.resources[0] = self.resources[0].model_copy(update={
+            "contract": self.resources[0].contract.model_copy(update={
+                "scope": "completed customer sessions",
+            }),
+        })
+
+
 async def draft(server, **overrides):
     arguments = {
         "title": "Owner-confirmed checkout scope",
@@ -183,6 +193,41 @@ async def test_adapter_scoped_review_can_be_approved_with_the_same_scope(tmp_pat
 
     assert result["status"] == "approved"
     assert result["onboarding_review"]["selected_source_refs"] == ["superset|dashboard:7"]
+
+
+async def test_declared_source_scope_requires_explicit_auditable_confirmation(tmp_path):
+    catalog = ScopedSupersetCatalogDouble()
+    server, card_id, review, _, _ = await reviewed_case(tmp_path, catalog=catalog)
+    assert "source-scope-review" in {blocker["code"] for blocker in review["blockers"]}
+    await assert_rejected(
+        server, card_id, review["source_selection_fingerprint"],
+        reason=REASON, match="source_scope_confirmations",
+    )
+    scope = "completed customer sessions"
+    result = await confirm(
+        server, card_id, review["source_selection_fingerprint"],
+        source_scope_confirmations={"superset|dashboard:7": scope},
+    )
+    assert result["status"] == "approved"
+    assert result["onboarding_review"]["source_scope_confirmations"] == {
+        "superset|dashboard:7": scope,
+    }
+
+
+async def test_normal_population_repeated_as_scope_does_not_create_false_blocker(tmp_path):
+    catalog = SupersetCatalogDouble()
+    resource = catalog.resources[0]
+    catalog.resources[0] = resource.model_copy(update={
+        "contract": resource.contract.model_copy(update={
+            "population": "completed customer sessions",
+            "scope": "completed customer sessions",
+        }),
+        "metadata": {"scope": "completed customer sessions"},
+    })
+    _, _, review, _, _ = await reviewed_case(tmp_path, catalog=catalog)
+
+    assert "source-scope-review" not in {blocker["code"] for blocker in review["blockers"]}
+    assert review["source_scope_confirmations"] == {}
 
 
 @pytest.mark.parametrize("sqlite", [False, True], ids=["json", "sqlite"])

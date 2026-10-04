@@ -334,7 +334,18 @@ def _execution_contract(card: dict | None, source_context: dict | None = None) -
                         f"Comparison {condition.comparison_key!r} is absent from inspected "
                         f"source {ref}; numeric_conditions are optional, not invented bindings."
                     )
-                if condition.unit is not None and condition.unit != comparison.get("unit"):
+                # A relative condition is expressed in percentage points even
+                # when the underlying comparison is denominated in USD,
+                # records, milliseconds, etc.  Only absolute/level checks
+                # must match the source-declared measurement unit; requiring
+                # ``percent == USD`` made the independent owner reviewer
+                # reject otherwise valid cards before it could inspect policy
+                # or source scope.
+                if (
+                    condition.measurement != "change_pct"
+                    and condition.unit is not None
+                    and condition.unit != comparison.get("unit")
+                ):
                     raise ValueError("Numeric condition unit differs from inspected comparison")
                 if condition.measurement in {"within_effect", "mix_effect"} and comparison.get("kind") != "rate":
                     raise ValueError("Rate effects require an inspected rate comparison")
