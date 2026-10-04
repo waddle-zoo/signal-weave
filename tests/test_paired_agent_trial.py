@@ -125,6 +125,38 @@ def test_scoring_rejects_unsafe_notification_and_missing_evidence():
     assert scored["evidence_recall"] < 1.0
 
 
+def test_explicit_cached_chart_provenance_can_satisfy_dashboard_evidence():
+    case = next(case for case in _load_cases(DEFAULT_CASES) if case["scenario"] == "stable_cache")
+    run = {
+        "case_id": case["case_id"],
+        "arm": "treatment",
+        "submission": {
+            "outcome": "ignore",
+            "delivery": "none",
+            "reason": "The cached charts are within the approved range.",
+            "evidence_refs": ["growth-summary", "growth-rate"],
+            "query_justified": False,
+            "confidence": 0.9,
+        },
+        "events": [],
+        "query_calls": [],
+        "tool_calls": 1,
+        "api_requests": 1,
+        "elapsed_ms": 100,
+    }
+
+    scored = score_run(case, run)
+
+    assert scored["exact"] is True
+    assert scored["unsafe_automatic_action"] is False
+    assert scored["evidence_recall"] == 1.0
+    assert scored["covered_required_evidence"] == ["superset|dashboard:growth"]
+    assert scored["equivalent_evidence_matches"]["superset|dashboard:growth"] == [
+        "growth-rate",
+        "growth-summary",
+    ]
+
+
 def test_both_arms_share_raw_tool_contract_and_final_submission_schema():
     baseline = {tool["name"] for tool in _tool_specs(False)}
     treatment = {tool["name"] for tool in _tool_specs(True)}

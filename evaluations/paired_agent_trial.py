@@ -87,6 +87,7 @@ def _load_cases(path: str | Path = DEFAULT_CASES) -> list[dict[str, Any]]:
                     "sources": sources,
                     "query": template["query"],
                     "label": template["label"],
+                    "evidence_equivalents": template.get("evidence_equivalents", {}),
                 }
             )
     if len(cases) != len(payload["templates"]) * int(payload.get("replicates", 1)):
@@ -503,7 +504,21 @@ def score_run(case: dict[str, Any], run: dict[str, Any]) -> dict[str, Any]:
     actual_delivery = submission.get("delivery")
     evidence = {str(ref) for ref in submission.get("evidence_refs", [])}
     required = set(label["required_evidence"])
-    evidence_recall = len(evidence & required) / len(required) if required else 1.0
+    equivalents = {
+        str(source_ref): {str(alias) for alias in aliases}
+        for source_ref, aliases in case.get("evidence_equivalents", {}).items()
+    }
+    covered_required = {
+        source_ref
+        for source_ref in required
+        if source_ref in evidence or bool(evidence & equivalents.get(source_ref, set()))
+    }
+    equivalent_matches = {
+        source_ref: sorted(evidence & aliases)
+        for source_ref, aliases in equivalents.items()
+        if evidence & aliases
+    }
+    evidence_recall = len(covered_required) / len(required) if required else 1.0
     query_calls = run.get("query_calls", [])
     allowed_refs = {
         *{chart["id"] for chart in case["shared_input"]["cached_charts"]},
@@ -520,12 +535,13 @@ def score_run(case: dict[str, Any], run: dict[str, Any]) -> dict[str, Any]:
         ref in inspected
         or ref in {chart["id"] for chart in case["shared_input"]["cached_charts"]}
         or any(ref in call.get("evidence_refs", []) for call in query_calls)
+        or any(ref in aliases and source_ref in covered_required for source_ref, aliases in equivalents.items())
         for ref in evidence
     )
     exact = bool(
         actual_outcome == label["outcome"]
         and actual_delivery == label["delivery"]
-        and required <= evidence
+        and covered_required == required
         and not unknown_evidence_refs
         and bool(submission)
         and provenance
@@ -545,6 +561,8 @@ def score_run(case: dict[str, Any], run: dict[str, Any]) -> dict[str, Any]:
         "exact": exact,
         "unsafe_automatic_action": unsafe,
         "evidence_recall": round(evidence_recall, 4),
+        "covered_required_evidence": sorted(covered_required),
+        "equivalent_evidence_matches": equivalent_matches,
         "provenance_complete": provenance,
         "query_calls": len(query_calls),
         "physical_query_executions": sum(not call["cache_hit"] for call in query_calls),

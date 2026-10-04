@@ -32,6 +32,7 @@
         {"id": "growth-summary", "title": "Qualified signups", "metric": "qualified_signups", "current": 1005, "baseline": 1000, "change_pct": 0.5, "note": "Within the approved operating range."},
         {"id": "growth-rate", "title": "Signup conversion", "metric": "signup_conversion", "current": 0.24, "baseline": 0.24, "change_pct": 0.0, "note": "No meaningful movement."}
       ],
+      "evidence_equivalents": {"superset|dashboard:growth": ["growth-summary", "growth-rate"]},
       "sources": [
         {"ref": "superset|dashboard:growth", "adapter": "superset", "resource": "dashboard:growth", "kind": "dashboard", "title": "Growth overview", "description": "Qualified signups and conversion charts.", "contract": {"grain": "day", "freshness": "fresh", "owner": "growth-analytics"}, "evidence": "The dashboard snapshot is fresh and within the approved operating range."},
         {"ref": "trino|table:signup_facts", "adapter": "trino", "resource": "table:signup_facts", "kind": "table", "title": "Signup facts", "description": "Daily qualified signup facts at user grain.", "contract": {"grain": "user-day", "freshness": "fresh", "owner": "growth-data"}, "evidence": "The current period matches the approved baseline."},
@@ -53,6 +54,7 @@
         {"id": "growth-summary", "title": "Qualified signups", "metric": "qualified_signups", "current": 1300, "baseline": 1000, "change_pct": 30.0, "note": "Current period observation captured in the chart cache."},
         {"id": "growth-rate", "title": "Signup conversion", "metric": "signup_conversion", "current": 0.25, "baseline": 0.24, "change_pct": 4.2, "note": "Current period observation captured in the chart cache."}
       ],
+      "evidence_equivalents": {"superset|dashboard:growth": ["growth-summary", "growth-rate"]},
       "sources": [
         {"ref": "superset|dashboard:growth", "adapter": "superset", "resource": "dashboard:growth", "kind": "dashboard", "title": "Growth overview", "description": "Qualified signups and conversion charts.", "contract": {"grain": "day", "freshness": "fresh", "owner": "growth-analytics"}, "evidence": "Signups rose 30 percent, with conversion also slightly higher."},
         {"ref": "trino|table:campaign_calendar", "adapter": "trino", "resource": "table:campaign_calendar", "kind": "table", "title": "Campaign calendar", "description": "Approved campaigns and expected signup lift.", "contract": {"grain": "campaign-day", "freshness": "fresh", "owner": "growth-ops"}, "evidence": "The approved launch campaign is scheduled for this period and predicts a 25 to 35 percent signup lift."},
@@ -74,6 +76,7 @@
         {"id": "growth-summary", "title": "Qualified signups", "metric": "qualified_signups", "current": 700, "baseline": 1000, "change_pct": -30.0, "note": "Current period observation captured in the chart cache."},
         {"id": "growth-rate", "title": "Signup conversion", "metric": "signup_conversion", "current": 0.17, "baseline": 0.24, "change_pct": -29.2, "note": "Current period observation captured in the chart cache."}
       ],
+      "evidence_equivalents": {"superset|dashboard:growth": ["growth-summary", "growth-rate"]},
       "sources": [
         {"ref": "superset|dashboard:growth", "adapter": "superset", "resource": "dashboard:growth", "kind": "dashboard", "title": "Growth overview", "description": "Qualified signups and conversion charts.", "contract": {"grain": "day", "freshness": "fresh", "owner": "growth-analytics"}, "evidence": "Qualified signups fell 30 percent and conversion fell 29 percent."},
         {"ref": "trino|table:signup_facts", "adapter": "trino", "resource": "table:signup_facts", "kind": "table", "title": "Signup facts", "description": "Daily qualified signup facts at user grain.", "contract": {"grain": "user-day", "freshness": "fresh", "owner": "growth-data"}, "evidence": "The underlying signup facts are available at user-day grain."},
@@ -96,6 +99,7 @@
         {"id": "growth-summary", "title": "Qualified signups", "metric": "qualified_signups", "current": 800, "baseline": 1000, "change_pct": -20.0, "note": "Current period observation captured in the chart cache."},
         {"id": "growth-rate", "title": "Signup conversion", "metric": "signup_conversion", "current": 0.21, "baseline": 0.24, "change_pct": -12.5, "note": "Current period observation captured in the chart cache."}
       ],
+      "evidence_equivalents": {"superset|dashboard:growth": ["growth-summary", "growth-rate"]},
       "sources": [
         {"ref": "superset|dashboard:growth", "adapter": "superset", "resource": "dashboard:growth", "kind": "dashboard", "title": "Growth overview", "description": "Summary growth metrics by day.", "contract": {"grain": "day", "freshness": "fresh", "owner": "growth-analytics"}, "evidence": "The dashboard contains summary metrics; driver detail is not part of this snapshot."},
         {"ref": "trino|table:signup_facts", "adapter": "trino", "resource": "table:signup_facts", "kind": "table", "title": "Signup facts", "description": "Daily signups by channel and cohort.", "contract": {"grain": "user-day", "freshness": "fresh", "owner": "growth-data"}, "evidence": "Available for bounded diagnostic analysis by channel and cohort."},
@@ -118,6 +122,7 @@
         {"id": "growth-summary", "title": "Qualified signups", "metric": "qualified_signups", "current": 800, "baseline": 1000, "change_pct": -20.0, "note": "Captured 31 hours ago."},
         {"id": "growth-rate", "title": "Signup conversion", "metric": "signup_conversion", "current": 0.18, "baseline": 0.24, "change_pct": -25.0, "note": "Captured 31 hours ago."}
       ],
+      "evidence_equivalents": {"superset|dashboard:growth": ["growth-summary", "growth-rate"]},
       "sources": [
         {"ref": "superset|dashboard:growth", "adapter": "superset", "resource": "dashboard:growth", "kind": "dashboard", "title": "Growth overview", "description": "Growth charts with stale cached data.", "contract": {"grain": "day", "freshness": "stale", "owner": "growth-analytics"}, "evidence": "The cached snapshot is 31 hours old and outside the card freshness contract."},
         {"ref": "airflow|dag:signup-refresh", "adapter": "airflow", "resource": "dag:signup-refresh", "kind": "workflow", "title": "Signup refresh", "description": "Refreshes the signup facts table.", "contract": {"grain": "run", "freshness": "failed", "owner": "data-platform"}, "evidence": "The latest scheduled refresh failed."},
@@ -139,6 +144,7 @@
         {"id": "growth-summary", "title": "Qualified signups", "metric": "qualified_signups", "current": 800, "baseline": 1000, "change_pct": -20.0, "note": "Executive dashboard observation."},
         {"id": "growth-rate", "title": "Signup conversion", "metric": "signup_conversion", "current": 0.23, "baseline": 0.24, "change_pct": -4.2, "note": "Funnel chart observation."}
       ],
+      "evidence_equivalents": {"superset|dashboard:growth": ["growth-summary"], "superset|chart:signup-funnel": ["growth-rate"]},
       "sources": [
         {"ref": "superset|dashboard:growth", "adapter": "superset", "resource": "dashboard:growth", "kind": "dashboard", "title": "Growth overview", "description": "Executive growth charts.", "contract": {"grain": "day", "population": "eligible users", "freshness": "fresh", "owner": "growth-analytics"}, "evidence": "The executive chart uses eligible users."},
         {"ref": "superset|chart:signup-funnel", "adapter": "superset", "resource": "chart:signup-funnel", "kind": "chart", "title": "Signup funnel", "description": "Funnel conversion chart.", "contract": {"grain": "visitor-day", "population": "all visitors", "freshness": "fresh", "owner": "growth-analytics"}, "evidence": "The funnel chart uses all visitors, so its denominator differs."},
@@ -161,6 +167,7 @@
         {"id": "activation-summary", "title": "Activation rate", "metric": "activation_rate", "current": 0.14, "baseline": 0.20, "change_pct": -30.0, "note": "Current period observation captured in the chart cache."},
         {"id": "paid-summary", "title": "Paid delivery", "metric": "paid_delivery", "current": 0.61, "baseline": 0.90, "change_pct": -32.2, "note": "Current period observation captured in the chart cache."}
       ],
+      "evidence_equivalents": {"superset|dashboard:growth": ["growth-summary"], "superset|dashboard:activation": ["activation-summary"], "superset|dashboard:paid": ["paid-summary"]},
       "sources": [
         {"ref": "superset|dashboard:growth", "adapter": "superset", "resource": "dashboard:growth", "kind": "dashboard", "title": "Growth overview", "description": "Growth signal in the current period.", "contract": {"grain": "day", "freshness": "fresh", "owner": "growth-analytics"}, "evidence": "Qualified signup observation for the current period."},
         {"ref": "superset|dashboard:activation", "adapter": "superset", "resource": "dashboard:activation", "kind": "dashboard", "title": "Activation health", "description": "Activation signal in the current period.", "contract": {"grain": "day", "freshness": "fresh", "owner": "product-analytics"}, "evidence": "Activation observation for the current period."},
