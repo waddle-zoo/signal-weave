@@ -618,6 +618,20 @@ def summarize(rows: list[dict[str, Any]], arm: str) -> dict[str, Any]:
 
 async def run_trial(args: argparse.Namespace) -> dict[str, Any]:
     cases = _load_cases(args.cases)
+    if args.case_id:
+        requested = set(args.case_id)
+        available = {str(case["case_id"]) for case in cases}
+        unknown = requested - available
+        if unknown:
+            raise ValueError("unknown paired-trial case IDs: " + ", ".join(sorted(unknown)))
+        cases = [case for case in cases if case["case_id"] in requested]
+    if args.scenario:
+        requested = set(args.scenario)
+        available = {str(case["scenario"]) for case in cases}
+        unknown = requested - available
+        if unknown:
+            raise ValueError("unknown paired-trial scenarios: " + ", ".join(sorted(unknown)))
+        cases = [case for case in cases if case["scenario"] in requested]
     if args.limit is not None:
         cases = cases[: args.limit]
     if not cases:
@@ -826,6 +840,19 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--model", default="gpt-5.6-luna")
     parser.add_argument("--prefer-dotenv", action="store_true")
     parser.add_argument("--seed", type=int, default=20260921)
+    parser.add_argument(
+        "--scenario",
+        action="append",
+        help=(
+            "Select one or more workload-family IDs from the case fixture. "
+            "Repeat for a stratified subset; selection happens before --limit."
+        ),
+    )
+    parser.add_argument(
+        "--case-id",
+        action="append",
+        help="Select one or more exact opaque case IDs from the fixture before --limit.",
+    )
     parser.add_argument("--limit", type=int)
     parser.add_argument("--concurrency", type=int, default=2)
     parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)
