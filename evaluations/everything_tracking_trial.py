@@ -445,6 +445,9 @@ def build_cases(config: dict[str, Any], *, repeats: int = 1) -> list[TrackingCas
                     decision_guidance = workflow.get("decision_guidance") or config.get(
                         "default_decision_guidance", ""
                     )
+                    approved_materiality = str(config.get("approved_materiality_guidance", "")).strip()
+                    if approved_materiality:
+                        decision_guidance = f"{decision_guidance} {approved_materiality}"
                     card = InsightCard(
                         id=f"card-{case_id}",
                         title=f"{company_id} {workflow['title']}",

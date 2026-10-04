@@ -92,6 +92,8 @@ def test_trial_cards_separate_advisory_detail_from_gating_evidence():
         "question:2": False,
         "watch:2": False,
     }
+    assert "risk_change_pct of 20 or more" in case.card.decision_guidance
+    assert "35 or more as severe" in case.card.decision_guidance
     assert all(
         resource.observations[0].attributes.get("risk_direction") in {"up", "down"}
         for resource in case.resources

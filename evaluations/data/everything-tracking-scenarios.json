@@ -8,6 +8,7 @@
     "urgent_operational_risk"
   ],
   "default_decision_guidance": "Ignore expected, normal, or explained movement. Investigate when a material movement is contradictory, weakly corroborated, or requires a human explanation before action. Notify when the primary outcome is materially off course and connected evidence supports a non-urgent response. Escalate severe operational risk or an untrusted, stale, or unsafe source. Return insufficient_data when required evidence is missing, failed, stale, or not comparable.",
+  "approved_materiality_guidance": "For this card set, the owner-defined source contract treats a risk_change_pct of 20 or more as material and 35 or more as severe. A positive risk_change_pct means the source-defined adverse direction is present; do not infer risk from the raw sign of change_pct. A material notification requires a material primary signal plus a materially adverse corroborating signal and no planned-change explanation. A severe escalation requires a severe primary signal plus a connected severe operational signal. These are card policy inputs, not model-invented thresholds.",
   "companies": [
     {
       "id": "northstar-commerce",
