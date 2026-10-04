@@ -549,12 +549,18 @@ async def run_benchmark(args: argparse.Namespace) -> dict[str, Any]:
             "variants": sorted({case.variant for case in cases}),
             "adapters": sorted({resource.adapter for case in cases for resource in case.resources}),
             "sources_per_case": sorted({len(case.resources) for case in cases}),
+            "full_fixture": not args.company and not args.workflow and args.limit is None,
+            "selection": {
+                "companies": sorted(args.company or []),
+                "workflows": sorted(args.workflow or []),
+            },
             "same_card_and_sources_all_arms": True,
             "expected_labels_sent_to_providers": False,
             "direct_llm_and_mediated_llm_same_model": True,
             "mediated_difference": "typed Jev preflight bundle",
         },
         "arms": {arm: _summary(items) for arm, items in by_arm.items()},
+        "selected_case_ids": [case.case_id for case in cases],
         "provider_metrics": {
             "typesafe_jev": {
                 "requests": jev_judger.metrics.requests,
