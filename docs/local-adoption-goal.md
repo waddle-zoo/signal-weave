@@ -4,6 +4,21 @@ Status: implementation advanced; proof gate **not complete**. This updates the
 working acceptance criteria for the existing local-first adoption goal; it does
 not declare the earlier failed trials passed.
 
+## Current branch evidence — October 4, 2026
+
+The current branch now has a fresh, independently reviewed proof of the local
+and deployed runtime contract: [local and deployed proof record](local-deployed-proof-2026-10-04.md).
+The live Northstar multi-step rerun passed 6/6 initial outcomes, 6/6 final
+outcomes, 6/6 typed handoffs, and 6/6 context-return checks. The deployed HTTP
+smoke passed readiness, authentication, onboarding, approval, live Jev
+evaluation, and exact replay with delivery disabled.
+
+The broader enterprise gate remains open. The deployed Superset smoke exposed
+why: a dashboard can return observations without declaring a trustworthy
+comparison contract, and Jev correctly holds the result for investigation.
+That is a source-onboarding requirement to close, not evidence that a local
+heuristic or a lower confidence threshold should be introduced.
+
 ## Typed evidence-contract repair — October 4, 2026
 
 The [live typed-contract regression](evidence-contract-gate-2026-10-04.md)

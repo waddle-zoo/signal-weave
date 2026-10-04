@@ -21,6 +21,36 @@ def test_metadata_mapping_is_read_only_and_safe():
     assert snapshot.charts == []
 
 
+@pytest.mark.parametrize(
+    ("metadata", "expected"),
+    [
+        ({"available_comparison_windows": ["previous_period"]}, ["previous_period"]),
+        (
+            {"json_metadata": '{"signalweave_comparison_windows": ["previous_period"]}'},
+            ["previous_period"],
+        ),
+        (
+            {"json_metadata": '{"signalweave": {"comparison_windows": ["custom"]}}'},
+            ["custom"],
+        ),
+        ({"json_metadata": "not-json"}, []),
+    ],
+)
+def test_source_owned_comparison_windows_are_explicit_and_never_inferred(metadata, expected):
+    assert SupersetClient.comparison_windows_from_metadata(metadata) == expected
+
+
+def test_dashboard_mapping_preserves_source_owned_comparison_windows():
+    snapshot = SupersetClient.metadata_to_snapshot(
+        {
+            "id": 42,
+            "dashboard_title": "Revenue",
+            "json_metadata": '{"signalweave_comparison_windows": ["previous_period"]}',
+        }
+    )
+    assert snapshot.available_comparison_windows == ["previous_period"]
+
+
 @pytest.mark.asyncio
 async def test_dashboard_chart_data_uses_superset_canonical_trailing_slash():
     requests: list[httpx.Request] = []

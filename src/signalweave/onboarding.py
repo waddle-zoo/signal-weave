@@ -24,6 +24,7 @@ from .models import (
     OnboardingBlockerSeverity,
     OnboardingDiscoveryReceipt,
     OnboardingSourceReview,
+    Outcome,
     PrincipalContext,
     ResourceContract,
     ResourceDescriptor,
@@ -467,6 +468,18 @@ class InsightAuthoringService:
         if undeclared_refs:
             warnings.append("Comparison windows are undeclared; compatibility is unverified for: "
                             + ", ".join(undeclared_refs))
+            automatic_routes = [
+                method for method in card.delivery_methods
+                if method.outcome in {Outcome.NOTIFY, Outcome.ESCALATE}
+            ]
+            if automatic_routes:
+                route_names = ", ".join(method.outcome.value for method in automatic_routes)
+                window_issues.append(
+                    "Required sources do not declare compatible comparison windows for "
+                    f"automatic {route_names} routes. Verify a source-owned comparison "
+                    "contract before approval."
+                )
+                window_refs.extend(undeclared_refs)
         if optional_window_issues:
             warnings.append("Optional source comparison-window mismatch: " + " ".join(optional_window_issues))
         if not card.comparison_windows:

@@ -539,6 +539,7 @@ accuracy claim.
 - [`docs/evidence-brief.md`](docs/evidence-brief.md) — measured product case
 - [`docs/enterprise-experiment.md`](docs/enterprise-experiment.md) — MCP-only enterprise readiness experiment
 - [`docs/enterprise-closure.md`](docs/enterprise-closure.md) — current proof boundary and next gate
+- [`docs/local-deployed-proof-2026-10-04.md`](docs/local-deployed-proof-2026-10-04.md) — current local binary, Docker, Superset, and live Jev proof record
 - [`docs/enterprise-readiness-report-2026-09-25.md`](docs/enterprise-readiness-report-2026-09-25.md) — high-level product-value, landscape, evidence, and enterprise-readiness assessment
 - [`docs/adversarial-v1-review-2026-09-25.md`](docs/adversarial-v1-review-2026-09-25.md) — security, retrieval, packaging, and release verdict for the reviewed branch
 - [`docs/adversarial-review.md`](docs/adversarial-review.md) — public-readiness review and explicit gaps

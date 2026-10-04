@@ -44,6 +44,7 @@ class SupersetCatalogDouble:
                 kind="dashboard",
                 title="Growth overview",
                 description="Revenue, conversion, and checkout health.",
+                contract=ResourceContract(available_comparison_windows=["previous_period"]),
             ),
             ResourceDescriptor(
                 adapter=self.name,
@@ -51,6 +52,7 @@ class SupersetCatalogDouble:
                 kind="dashboard",
                 title="Finance close",
                 description="Month-end reporting and forecast variance.",
+                contract=ResourceContract(available_comparison_windows=["previous_period"]),
             ),
             ResourceDescriptor(
                 adapter=self.name,
@@ -58,6 +60,7 @@ class SupersetCatalogDouble:
                 kind="dashboard",
                 title="People operations",
                 description="Hiring and retention metrics.",
+                contract=ResourceContract(available_comparison_windows=["previous_period"]),
             ),
         ]
 
@@ -110,6 +113,7 @@ class BoundedAnchorCatalogDouble(SupersetCatalogDouble):
                 kind="dashboard",
                 title="Z canonical growth asset",
                 description="The human-selected growth asset.",
+                contract=ResourceContract(available_comparison_windows=["previous_period"]),
             )
         )
 

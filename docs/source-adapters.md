@@ -122,6 +122,14 @@ For production catalogs, populate the typed `ResourceContract` as well:
   contract keys when those properties are required for routing. A non-null metric
   value is not evidence of complete coverage.
 
+For Superset-compatible providers, `available_comparison_windows` may be a
+first-class catalog field. A dashboard can also publish the same source-owned
+declaration in its JSON metadata as `signalweave_comparison_windows` (or
+`signalweave.comparison_windows`). SignalWeave only reads these declarations;
+it never infers approval from populated rows. An absent declaration remains a
+warning for investigation-only cards and a blocker for unattended notify or
+escalate routes.
+
 For a scalar metric such as p95 latency, an adapter may return:
 
 ```python
@@ -147,6 +155,11 @@ contract failure into `insufficient_data` before any business route is admitted;
 Jev may still explain the supplied evidence, but it cannot turn that gap into a
 business investigation handoff. This applies to dashboard, notebook, SQL, lake,
 and operational adapters alike.
+
+An adapter that cannot declare compatible comparison windows is also prevented
+from approving a card with an automatic `notify` or `escalate` route. The card
+may still be used for caller-owned investigation, but the onboarding review
+must surface the missing contract before an unattended push path is enabled.
 
 The engine does not parse the resource locator or execute source languages. This
 keeps a SQL adapter from turning the MCP surface into an arbitrary SQL console,

@@ -233,6 +233,7 @@ async def run_trial(
                 server = create_mcp(runtime)
                 discover = _tool(server, "discover_insight_sources")
                 onboard = _tool(server, "onboard_insight_card")
+                review_card = _tool(server, "review_insight_card")
                 approve = _tool(server, "approve_insight_card")
                 evaluate = _tool(server, "evaluate_insight_card")
                 get_receipt = _tool(server, "get_decision_receipt")
@@ -272,7 +273,26 @@ async def run_trial(
                     investigation_mode="none",
                 )
                 card_id = onboarding["card"]["id"]
-                approved = await approve(card_id, actor=principal_id)
+                onboarding_review = (await review_card(card_id))["review"]
+                approval_args = {"card_id": card_id, "actor": principal_id}
+                if any(
+                    blocker["code"] == "comparison-window-mismatch"
+                    for blocker in onboarding_review.get("blockers", [])
+                ):
+                    approval_args.update(
+                        {
+                            "source_selection_fingerprint": onboarding_review[
+                                "source_selection_fingerprint"
+                            ],
+                            "source_selection_reason": (
+                                "The dashboard owner reviewed this fixed Sales Dashboard scope "
+                                "and explicitly accepts previous_period for this monitor; "
+                                "runtime evidence must still support the selected window."
+                            ),
+                        }
+                    )
+                approved = await approve(**approval_args)
+                approved_review = approved.get("onboarding_review") or onboarding_review
                 provider_after_approval = provider_client.requests_made
                 jev_before_evaluation = len(ContractClient.calls)
                 resource_identity = re.sub(
@@ -324,8 +344,16 @@ async def run_trial(
                     "discovery_found_requested_dashboard": match["ref"].startswith(
                         "superset|dashboard:"
                     ),
-                    "human_reviewable_onboarding": onboarding["status"] == "ready_for_approval"
-                    and onboarding["approval_required"] is True,
+                    "human_reviewable_onboarding": onboarding["approval_required"] is True
+                    and onboarding["status"] in {"ready_for_approval", "blocked"},
+                    "owner_confirmation_resolved_onboarding": approved_review["status"]
+                    == "ready_for_approval"
+                    and not approved_review["blockers"]
+                    and (
+                        not onboarding_review["blockers"]
+                        or "comparison-window-mismatch"
+                        in approved_review["confirmed_blocker_codes"]
+                    ),
                     "approval_gate_passed": approved["status"] == "approved",
                     "real_provider_data_crossed_runtime": provider_after_evaluation
                     > provider_after_approval
@@ -381,6 +409,11 @@ async def run_trial(
                         "status": onboarding["status"],
                         "card_id": card_id,
                         "selected_sources": onboarding["card"]["sources"],
+                        "initial_review_status": onboarding_review["status"],
+                        "review_status": approved_review["status"],
+                        "confirmed_blocker_codes": approved_review[
+                            "confirmed_blocker_codes"
+                        ],
                     },
                     "approval": {"status": approved["status"]},
                     "evaluation": {

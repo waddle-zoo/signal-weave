@@ -126,7 +126,15 @@ def _handoff_expectation(outcome: str) -> tuple[str, str]:
 
 
 def _facts(scenario: dict[str, Any]) -> ContextSnapshot | None:
-    raw_facts = scenario["diagnostic_facts"]
+    # The first list is what the bounded investigation discovers immediately;
+    # the optional second list is the same caller-owned investigation returning
+    # the validation/cause facts it was asked to retrieve before re-evaluation.
+    # Omitting those facts would test an incomplete agent handoff, not the
+    # SignalWeave multi-step contract.
+    raw_facts = [
+        *scenario["diagnostic_facts"],
+        *(scenario.get("additional_diagnostic_facts") or []),
+    ]
     if not raw_facts:
         return None
     return ContextSnapshot(

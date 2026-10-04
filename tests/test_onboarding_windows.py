@@ -29,6 +29,10 @@ def catalog_with_windows(windows=None):
     catalog.resources[0].contract.available_comparison_windows = (
         ["previous_period"] if windows is None else windows
     )
+    # Keep the secondary fixture undeclared so tests can exercise mixed
+    # required-source compatibility without manufacturing a shared window.
+    catalog.resources[1].contract = ResourceContract()
+    catalog.resources[2].contract = ResourceContract()
     return catalog
 
 
@@ -168,6 +172,58 @@ async def test_undeclared_sources_warn_without_blocking_or_inferring(tmp_path, n
     assert any("undeclared" in w and "unverified" in w for w in review["warnings"])
     assert windows_blocker(review) is None
     assert (await dispatch(server, "approve_insight_card", {"card_id": card_id}))["status"] == "approved"
+
+
+@pytest.mark.parametrize("automatic_outcome", ["notify", "escalate"])
+async def test_undeclared_sources_block_automatic_routes(tmp_path, automatic_outcome):
+    server = make_server(tmp_path, catalog=catalog_with_windows([]))
+    response = await dispatch(server, "onboard_insight_card", arguments(
+        "onboard_insight_card",
+        decision_guidance="Notify the owner only when the selected comparison is materially abnormal.",
+        delivery_methods=[{
+            "key": "owner",
+            "outcome": automatic_outcome,
+            "label": "Owner",
+            "destination": "agent://owner",
+        }],
+    ))
+    review = (await dispatch(server, "review_insight_card", {
+        "card_id": response["card"]["id"],
+    }))["review"]
+    blocker = windows_blocker(review)
+    assert blocker["severity"] == "block"
+    assert "automatic" in blocker["message"]
+    with pytest.raises(Exception, match="comparison-window-mismatch"):
+        await dispatch(server, "approve_insight_card", {"card_id": response["card"]["id"]})
+
+
+async def test_owner_can_confirm_undeclared_window_for_fixed_automatic_route(tmp_path):
+    server = make_server(tmp_path, catalog=catalog_with_windows([]))
+    response = await dispatch(server, "onboard_insight_card", arguments(
+        "onboard_insight_card",
+        decision_guidance="Notify the owner only when the selected comparison is materially abnormal.",
+        delivery_methods=[{
+            "key": "owner",
+            "outcome": "notify",
+            "label": "Owner",
+            "destination": "agent://owner",
+        }],
+    ))
+    card_id = response["card"]["id"]
+    review = (await dispatch(server, "review_insight_card", {"card_id": card_id}))["review"]
+    assert windows_blocker(review)["severity"] == "block"
+    approval = await dispatch(server, "approve_insight_card", {
+        "card_id": card_id,
+        "source_selection_fingerprint": review["source_selection_fingerprint"],
+        "source_selection_reason": (
+            "The owner reviewed the fixed source and explicitly accepts previous_period "
+            "as the source's comparison contract; runtime evidence must still support it."
+        ),
+    })
+    assert approval["status"] == "approved"
+    assert approval["onboarding_review"]["confirmed_blocker_codes"] == [
+        "comparison-window-mismatch"
+    ]
 
 
 @pytest.mark.parametrize("name", ["propose_insight_card", "onboard_insight_card"])

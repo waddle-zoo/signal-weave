@@ -41,6 +41,7 @@ class SupersetDashboardSnapshot(BaseModel):
     description: str = ""
     owners: list[str] = Field(default_factory=list)
     charts: list[SupersetChartSnapshot] = Field(default_factory=list)
+    available_comparison_windows: list[str] = Field(default_factory=list, max_length=20)
     scope_telemetry: dict[str, int] = Field(default_factory=dict)
     source_url: str | None = None
     captured_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

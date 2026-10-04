@@ -1828,7 +1828,11 @@ def create_mcp(
         """Approve only after explicit owner review and a delivery-disabled simulation.
 
         For a fixed card with no dynamic investigation, an owner may confirm its
-        exact selected sources despite duplicate titles or omitted recommendations.
+        exact selected sources despite duplicate titles or omitted recommendations,
+        and may explicitly acknowledge an undeclared comparison window after
+        reviewing the source. This owner confirmation does not override a source
+        that declares an incompatible window, source health, permissions, or
+        runtime evidence-quality gates.
         Pass source_selection_fingerprint from review_insight_card and the owner's
         source_selection_reason explaining which definitions/populations were chosen
         and why. Changed policy/catalog invalidates that confirmation. This cannot
@@ -1878,8 +1882,17 @@ def create_mcp(
                                  "and obtain owner confirmation of the current policy and catalog.")
             confirmable = {OnboardingBlockerCode.DEFINITION_CONFLICT,
                            OnboardingBlockerCode.CANDIDATE_SELECTION_REVIEW}
-            resolved = [b for b in onboarding_review.blockers if b.code in confirmable]
-            remaining = [b for b in onboarding_review.blockers if b.code not in confirmable]
+            owner_confirmable_windows = [
+                blocker
+                for blocker in onboarding_review.blockers
+                if blocker.code == OnboardingBlockerCode.COMPARISON_WINDOW_MISMATCH
+                and "do not declare compatible comparison windows" in blocker.message
+            ]
+            resolved = [
+                blocker for blocker in onboarding_review.blockers
+                if blocker.code in confirmable or blocker in owner_confirmable_windows
+            ]
+            remaining = [b for b in onboarding_review.blockers if b not in resolved]
             if resolved:
                 remaining_questions = [q for q in onboarding_review.questions
                                        if q not in {b.question for b in resolved}]

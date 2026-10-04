@@ -147,6 +147,42 @@ class SupersetClient:
             )
         return result
 
+    @staticmethod
+    def comparison_windows_from_metadata(metadata: dict[str, Any]) -> list[str]:
+        """Read an adapter-owned comparison declaration without inferring one.
+
+        Providers that expose a first-class field should use
+        ``available_comparison_windows``. Superset deployments that need a
+        dashboard-local declaration can use the supported JSON metadata key
+        ``signalweave_comparison_windows`` (or
+        ``signalweave.comparison_windows``). Neither path derives support from
+        returned rows; an absent declaration remains absent.
+        """
+
+        raw: Any = metadata.get("available_comparison_windows")
+        if not isinstance(raw, list):
+            raw = metadata.get("signalweave_comparison_windows")
+        if not isinstance(raw, list):
+            json_metadata = metadata.get("json_metadata")
+            if isinstance(json_metadata, str):
+                try:
+                    json_metadata = json.loads(json_metadata)
+                except json.JSONDecodeError:
+                    json_metadata = None
+            if isinstance(json_metadata, dict):
+                raw = json_metadata.get("signalweave_comparison_windows")
+                if not isinstance(raw, list):
+                    nested = json_metadata.get("signalweave")
+                    raw = nested.get("comparison_windows") if isinstance(nested, dict) else None
+        result: list[str] = []
+        for value in raw if isinstance(raw, list) else []:
+            if not isinstance(value, str) or not value.strip() or value in result:
+                continue
+            result.append(value)
+            if len(result) == 20:
+                break
+        return result
+
     async def list_dashboards(
         self,
         page: int = 0,
@@ -1016,6 +1052,9 @@ class SupersetClient:
                 for owner in metadata.get("owners", [])
             ],
             charts=charts,
+            available_comparison_windows=SupersetClient.comparison_windows_from_metadata(
+                metadata
+            ),
             source_url=metadata.get("url"),
         )
 

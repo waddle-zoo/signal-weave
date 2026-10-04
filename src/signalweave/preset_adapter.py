@@ -613,7 +613,9 @@ class PresetAdapter(SupersetAdapter):
         scoped_snapshot = snapshot.model_copy(
             update={
                 "adapter": self.name,
-                "contract": self._contract(),
+                "contract": self._contract(
+                    available_comparison_windows=snapshot.contract.available_comparison_windows
+                ),
                 "metadata": {**snapshot.metadata, "provider": self.provider_name},
             }
         )
@@ -702,13 +704,20 @@ class PresetAdapter(SupersetAdapter):
             },
             source_url=dashboard.source_url,
             captured_at=dashboard.captured_at,
-            contract=self._contract(),
+            contract=self._contract(
+                available_comparison_windows=dashboard.available_comparison_windows
+            ),
         )
 
-    def _contract(self):
+    def _contract(self, *, available_comparison_windows: list[str] | None = None):
         from .models import ResourceContract
 
-        return ResourceContract(tenant_id=self.tenant_id, domain="bi", roles=["primary"])
+        return ResourceContract(
+            tenant_id=self.tenant_id,
+            domain="bi",
+            available_comparison_windows=list(available_comparison_windows or []),
+            roles=["primary"],
+        )
 
     async def _inspect_chart(self, source, chart_id):
         if self.policy.mode.value == "metadata_only":
@@ -734,13 +743,19 @@ class PresetAdapter(SupersetAdapter):
                 ],
                 metadata={"provider": self.provider_name, "data_policy_mode": self.policy.mode.value},
                 source_url=chart.get("url"),
-                contract=self._contract(),
+                contract=self._contract(
+                    available_comparison_windows=SupersetClient.comparison_windows_from_metadata(
+                        chart
+                    )
+                ),
             )
         snapshot = await super()._inspect_chart(source, chart_id)
         return snapshot.model_copy(
             update={
                 "adapter": self.name,
-                "contract": self._contract(),
+                "contract": self._contract(
+                    available_comparison_windows=snapshot.contract.available_comparison_windows
+                ),
                 "metadata": {**snapshot.metadata, "provider": self.provider_name},
             }
         )

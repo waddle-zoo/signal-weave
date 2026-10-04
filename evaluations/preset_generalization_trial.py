@@ -230,6 +230,7 @@ def _workspaces(*, seed: int, workspace_count: int, charts_per_workspace: int) -
                 "tenant_id": f"tenant-{workspace_index}-{suffix}",
                 "dashboard_id": dashboard_id,
                 "dashboard_title": f"Generated dashboard {workspace_index} {suffix}",
+                "available_comparison_windows": ["previous_period"],
                 "charts": charts,
             }
         )
@@ -259,6 +260,9 @@ class GeneratedWorkspaceTransport:
                         {
                             "id": self.workspace["dashboard_id"],
                             "dashboard_title": self.workspace["dashboard_title"],
+                            "available_comparison_windows": self.workspace.get(
+                                "available_comparison_windows", []
+                            ),
                         }
                     ],
                     "count": 1,
@@ -271,6 +275,9 @@ class GeneratedWorkspaceTransport:
                     "result": {
                         "id": self.workspace["dashboard_id"],
                         "dashboard_title": self.workspace["dashboard_title"],
+                        "available_comparison_windows": self.workspace.get(
+                            "available_comparison_windows", []
+                        ),
                         "position_json": {
                             chart["id"]: {
                                 "type": "CHART",

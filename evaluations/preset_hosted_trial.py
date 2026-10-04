@@ -68,6 +68,9 @@ class WorkspaceTransport:
                         {
                             "id": self.workspace["dashboard_id"],
                             "dashboard_title": self.workspace["dashboard_title"],
+                            "available_comparison_windows": self.workspace.get(
+                                "available_comparison_windows", []
+                            ),
                         }
                     ],
                     "count": 1,
@@ -88,6 +91,9 @@ class WorkspaceTransport:
                     "result": {
                         "id": self.workspace["dashboard_id"],
                         "dashboard_title": self.workspace["dashboard_title"],
+                        "available_comparison_windows": self.workspace.get(
+                            "available_comparison_windows", []
+                        ),
                         "position_json": position,
                     }
                 },

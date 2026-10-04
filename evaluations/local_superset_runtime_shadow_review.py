@@ -32,7 +32,14 @@ def review(report: dict[str, Any]) -> dict[str, Any]:
     provider = report.get("provider") or {}
     chart_summary = evaluation.get("chart_summary") or {}
 
-    require(onboarding.get("status") == "ready_for_approval", "onboarding was not reviewable")
+    require(
+        onboarding.get("status") in {"ready_for_approval", "blocked"},
+        "onboarding was not reviewable",
+    )
+    require(
+        onboarding.get("review_status") == "ready_for_approval",
+        "owner review did not resolve onboarding",
+    )
     require(approval.get("status") == "approved", "approval did not pass")
     require(evaluation.get("evaluator") == "jev-latest", "result was not Jev-evaluated")
     require(int(evaluation.get("charts", chart_summary.get("charts", 0))) > 0, "no chart shape reached the result")

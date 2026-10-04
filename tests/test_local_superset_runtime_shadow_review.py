@@ -12,7 +12,10 @@ def _report() -> dict:
             "match_count": 1,
             "selected_ref": "superset|dashboard:1",
         },
-        "onboarding": {"status": "ready_for_approval"},
+        "onboarding": {
+            "status": "ready_for_approval",
+            "review_status": "ready_for_approval",
+        },
         "approval": {"status": "approved"},
         "evaluation": {
             "evaluator": "jev-latest",
