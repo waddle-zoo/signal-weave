@@ -1002,6 +1002,7 @@ def write_exclusive(path: Path, payload: Any) -> None:
 def source_fingerprint() -> dict:
     root = Path(__file__).resolve().parents[1]
     paths = ("evaluations/bootstrap_agent_trial.py", "evaluations/bootstrap_scenarios.py",
+             "evaluations/bootstrap_live_comparison_review.py",
              "evaluations/codex_trial_transport.py", "evaluations/bootstrap_owner_review.py",
              "docs/bootstrap-benchmark-protocol.md", "docs/bootstrap-benchmark-v3.md",
              "docs/bootstrap-owner-reviewed-v4.md", "uv.lock",
