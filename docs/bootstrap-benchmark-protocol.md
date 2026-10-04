@@ -232,7 +232,12 @@ result justifies a real-team shadow pilot; a tie or regression is a valid result
 Record `dataset_digest(build_scenarios(...))`, seed, split, repository revision,
 scorer revision, clock policy, both arms' tool schemas/prompts, exact model IDs,
 live-Jev confirmation, cache scope, clarification logs, call budget and stop
-conditions. Keep all attempts and errors. Run only the two development companies
+conditions. The runner's `source_fingerprint` must include content hashes for
+the harness, scorer, prompts, production runtime files, and dependency lock;
+the independent comparative reviewer fails closed when that fingerprint is
+missing or differs from the current checkout. Historical inspection is an
+explicit `--allow-historical` mode and is never current proof. Keep all attempts
+and errors. Run only the two development companies
 while tuning. The parent runner owns execution and telemetry; this module does
 not execute a model, query engine, MCP server, notification or benchmark.
 

@@ -15,7 +15,12 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from evaluations.bootstrap_agent_trial import canonical, select_scenarios, write_exclusive
+from evaluations.bootstrap_agent_trial import (
+    canonical,
+    select_scenarios,
+    source_fingerprint,
+    write_exclusive,
+)
 from evaluations.bootstrap_scenarios import build_scenarios, dataset_digest, score_submission
 
 
@@ -66,9 +71,12 @@ def _card_statuses(report_path: Path, rows: list[dict[str, Any]]) -> dict[str, A
     }
 
 
-def review_report(report_path: Path) -> dict[str, Any]:
+def review_report(report_path: Path, *, require_current_source: bool = True) -> dict[str, Any]:
     report = json.loads(report_path.read_text())
     config = report["config"]
+    recorded_source = config.get("source_fingerprint")
+    current_source = source_fingerprint()
+    source_match = isinstance(recorded_source, dict) and _same(recorded_source, current_source)
     fixtures = build_scenarios(**_fixture_options(config))
     fixtures = select_scenarios(
         fixtures,
@@ -80,6 +88,19 @@ def review_report(report_path: Path) -> dict[str, Any]:
     scenarios = {scenario["scenario_id"]: scenario for scenario in fixtures}
     gates: dict[str, bool] = {}
     findings: list[str] = []
+
+    # A comparative result is only current evidence when the executable
+    # harness, scorer, and product files that produced it are byte-identical
+    # to the files being reviewed.  Historical reports remain inspectable via
+    # --allow-historical, but cannot silently become current proof after a
+    # prompt, scorer, or product change.
+    gates["source_fingerprint_present"] = isinstance(recorded_source, dict)
+    gates["source_fingerprint_matches_current"] = source_match
+    if require_current_source and not source_match:
+        findings.append(
+            "recorded source fingerprint does not match the current checkout; "
+            "review this artifact as historical evidence only"
+        )
 
     gates["fixture_digest_matches"] = fixture_digest == config.get("dataset_digest")
     if not gates["fixture_digest_matches"]:
@@ -312,7 +333,10 @@ def review_report(report_path: Path) -> dict[str, Any]:
             "human review value, and any downstream business value."
         ),
     }
-    integrity_pass = all(gates.values())
+    integrity_gates = dict(gates)
+    if not require_current_source:
+        integrity_gates.pop("source_fingerprint_matches_current", None)
+    integrity_pass = all(integrity_gates.values())
     gates["cost_comparison_measured"] = False
     strong_claim = bool(
         integrity_pass
@@ -325,6 +349,13 @@ def review_report(report_path: Path) -> dict[str, Any]:
     return {
         "review_version": 1,
         "report": str(report_path),
+        "source_review": {
+            "require_current_source": require_current_source,
+            "recorded": recorded_source,
+            "current": current_source,
+            "matches_current": source_match,
+            "historical_only": not source_match,
+        },
         "integrity_pass": integrity_pass,
         "strong_superiority_claim_allowed": strong_claim,
         "gates": gates,
@@ -355,8 +386,16 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("report", type=Path)
     parser.add_argument("output", type=Path)
+    parser.add_argument(
+        "--allow-historical",
+        action="store_true",
+        help=(
+            "Inspect an older artifact without requiring its source fingerprint "
+            "to match the current checkout; the result is marked historical-only."
+        ),
+    )
     args = parser.parse_args()
-    result = review_report(args.report)
+    result = review_report(args.report, require_current_source=not args.allow_historical)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     write_exclusive(args.output, result)
     print(canonical(result))

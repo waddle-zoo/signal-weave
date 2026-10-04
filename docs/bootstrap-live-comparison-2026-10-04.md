@@ -21,6 +21,23 @@ recomputed every score, checked the shared-card digest, verified raw Jev
 routing, checked current-run provenance, and verified that skipped rows had no
 downstream agent calls.
 
+## Evidence freshness
+
+The raw reports referenced below were produced before the paired-review
+reporting repair now on this branch. The reviewer records a content fingerprint
+for the executable harness, scorer, prompts, and product files; it now fails
+closed when that fingerprint is absent or differs from the current checkout.
+Run the reviewer normally for current proof. Use `--allow-historical` only to
+inspect these retained runs, and do not describe that inspection as a current
+live rerun.
+
+The retrospective onboarding audit found that all three SignalWeave arms had an
+approved, authorized, mechanically executable card (3/3), while the plain Luna
+arm retained persistent notes but no executable card (0/3). Both arms retained
+the owner topics and policy hints in this artifact. That is evidence of the
+product boundary—not semantic policy validation or human usability—and it is
+historical-only until a fresh current-fingerprint run is produced.
+
 ## High-noise Cinder follow-up
 
 After the three-company run, Cinder was rerun with 20 catalog alternatives per
@@ -120,7 +137,10 @@ the agent still writes the human-facing analysis.
 
 The strong-superiority gate remains intentionally false. The next proof bar is
 blinded narrative review of evidence bundles, a larger held-out multi-period
-cohort, and measured provider/query economics using real connector telemetry.
+cohort with a current source fingerprint, and measured provider/query economics
+using real connector telemetry. The onboarding reviewer is
+[`evaluations/bootstrap_onboarding_review.py`](../evaluations/bootstrap_onboarding_review.py);
+its phrase checks are diagnostics only and do not replace semantic owner review.
 The current machine-readable compact evidence is in
 [`evidence/bootstrap-live-comparison-2026-10-04.json`](evidence/bootstrap-live-comparison-2026-10-04.json).
 The independent reviewer is
