@@ -8,6 +8,8 @@ from typing import Any
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 
+from .local_health import live_health_report
+from .local_setup import SetupError, local_environment
 from .local_status import local_status
 
 _PAGE = """<!doctype html>
@@ -51,6 +53,8 @@ _PAGE = """<!doctype html>
       padding: 11px 17px; font: inherit; cursor: pointer; white-space: nowrap;
     }
     button:hover { background: var(--teal); border-color: var(--teal); }
+    button.secondary { background: transparent; color: var(--ink); }
+    button.secondary:hover { color: white; }
     button:focus-visible { outline: 3px solid #9bd7cf; outline-offset: 3px; }
     .summary { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 12px; margin: 36px 0 14px; }
     .card { background: color-mix(in srgb, var(--panel) 94%, transparent); border: 1px solid var(--line); border-radius: 18px; padding: 20px; box-shadow: 0 14px 38px rgba(23,35,41,.05); }
@@ -92,7 +96,10 @@ _PAGE = """<!doctype html>
         <h1>Is SignalWeave ready?</h1>
         <p class="lede">A private view of your local setup. Secrets are never rendered here. Use the CLI to change configuration; this page only helps you see what is ready for your agent.</p>
       </div>
-      <button id="refresh" type="button">Refresh status</button>
+      <div class="actions">
+        <button id="refresh" type="button">Refresh</button>
+        <button id="check" class="secondary" type="button">Check sources</button>
+      </div>
     </header>
     <div id="app" aria-live="polite">
       <div class="card" style="margin-top:36px">Loading local status…</div>
@@ -117,6 +124,11 @@ _PAGE = """<!doctype html>
       const next = (data.next_steps || []).map((step) =>
         '<div class="card">' + esc(step) + "</div>").join("");
       const error = data.error ? '<div class="card" style="margin-top:12px;color:var(--red)">' + esc(data.error) + "</div>" : "";
+      const live = data.live_health ?
+        '<section><h2>Source health</h2><div class="card"><div class="value">' +
+        (data.live_health.healthy ? 'Reachable' : 'Needs attention') +
+        '</div><div class="small">' + (data.live_health.messages || []).map(esc).join('<br>') +
+        '</div></div></section>' : '';
       app.innerHTML =
         '<div class="summary">' +
           '<div class="card"><div class="label">Overall</div><div class="value">' + esc(data.status).replaceAll("_", " ") +
@@ -127,19 +139,20 @@ _PAGE = """<!doctype html>
         '</div>' + error +
         '<section><h2>Connections</h2><div class="rows">' + (connections || row("Sources", "Add a source with the CLI", "not_configured")) + "</div></section>" +
         '<section><h2>Credentials</h2><div class="rows">' + (credentials || row("Credentials", "No local config yet", "missing")) + "</div></section>" +
-        '<section><h2>Next steps</h2><div class="next">' + (next || '<div class="card">No next steps.</div>') + "</div></section>";
+        '<section><h2>Next steps</h2><div class="next">' + (next || '<div class="card">No next steps.</div>') + "</div></section>" + live;
       foot.textContent = "Home: " + (data.home || "unknown") + " · refreshed " + new Date().toLocaleTimeString();
     };
-    const load = async () => {
+    const load = async (live = false) => {
       try {
-        const response = await fetch("/api/status", { cache: "no-store" });
+        const response = await fetch("/api/status" + (live ? "?live=true" : ""), { cache: "no-store" });
         if (!response.ok) throw new Error("Status request failed");
         render(await response.json());
       } catch (error) {
         app.innerHTML = '<div class="card" style="margin-top:36px;color:var(--red)">Could not read local status. ' + esc(error.message) + "</div>";
       }
     };
-    document.getElementById("refresh").addEventListener("click", load);
+    document.getElementById("refresh").addEventListener("click", () => load(false));
+    document.getElementById("check").addEventListener("click", () => load(true));
     load();
   </script>
 </body>
@@ -155,8 +168,18 @@ def create_local_ui(home: str | Path | None = None) -> Any:
         return _PAGE
 
     @app.get("/api/status")
-    async def status() -> dict[str, Any]:
-        return local_status(home)
+    async def status(live: bool = False) -> dict[str, Any]:
+        report = local_status(home)
+        if live and report.get("status") != "setup_required":
+            try:
+                with local_environment(home):
+                    report["live_health"] = await live_health_report()
+            except (SetupError, OSError):
+                report["live_health"] = {
+                    "healthy": False,
+                    "messages": ["Live source check could not start; run `signalweave doctor` for details."],
+                }
+        return report
 
     @app.get("/healthz")
     async def healthz() -> dict[str, str]:

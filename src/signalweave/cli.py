@@ -78,6 +78,10 @@ def main() -> None:
     check.add_argument("--home", help="Local home (default: SIGNALWEAVE_HOME or ~/.signalweave)")
     check.add_argument("--live", action="store_true", help="Run bounded catalog probes; never sends a Jev judgment")
     check.add_argument("--json", action="store_true", help="Print a machine-readable report")
+    health = commands.add_parser("health", help="Alias for doctor; check local and optional live source health")
+    health.add_argument("--home", help="Local home (default: SIGNALWEAVE_HOME or ~/.signalweave)")
+    health.add_argument("--live", action="store_true", help="Run bounded catalog probes; never sends a Jev judgment")
+    health.add_argument("--json", action="store_true", help="Print a machine-readable report")
     status = commands.add_parser("status", help="Show secret-free local setup status")
     status.add_argument("--home", help="Local home (default: SIGNALWEAVE_HOME or ~/.signalweave)")
     status.add_argument("--json", action="store_true", help="Print a machine-readable report")
@@ -142,7 +146,25 @@ def main() -> None:
             options = vars(args).copy()
             options.pop("command")
             register = options.pop("register_agent")
+            guided_sources = not options.get("non_interactive") and options.get("source") is None
             home, agent = setup_local(**options)
+            if guided_sources:
+                # A first-time human often has more than one useful system. Keep
+                # the wizard in one flow, but reuse the identity and key without
+                # asking the same questions again. Each connector still has its
+                # own explicit validation and secret boundary.
+                from .local_setup import read_config
+
+                while True:
+                    if not _ask_yes_no("\nAdd another source? [y/N]: "):
+                        break
+                    _, configured = read_config(home)
+                    home, agent = setup_local(
+                        home=home,
+                        tenant=configured.get("SIGNALWEAVE_TENANT_ID", "local"),
+                        principal=configured.get("SIGNALWEAVE_PRINCIPAL_ID", "local"),
+                        agent=agent,
+                    )
             print("Local configuration saved. No network requests or source processes were started.")
             print("Local identity scopes this single-user process; it is not provider authentication.")
             print("Credentials and live source access remain unverified. Review and simulate cards before approval.")
@@ -266,7 +288,7 @@ def main() -> None:
             else nullcontext()
         )
         with context as local_home:
-            if args.command == "doctor":
+            if args.command in {"doctor", "health"}:
                 healthy, messages = doctor()
                 report = {"healthy": healthy, "mode": "offline", "messages": messages}
                 if args.live:
@@ -327,6 +349,9 @@ def _print_status(report: dict[str, object]) -> None:
     jev = report.get("jev")
     if isinstance(jev, dict):
         print(f"Jev: {jev.get('status', 'unknown')} (live judgment check: {jev.get('live_check', 'not run')})")
+    agents = report.get("agents")
+    if isinstance(agents, dict):
+        print(f"Agent: {agents.get('selected', 'not selected')}")
     _print_connections(report)
     credentials = report.get("credentials")
     if isinstance(credentials, dict):
@@ -338,6 +363,14 @@ def _print_status(report: dict[str, object]) -> None:
         print("Next:")
         for step in next_steps:
             print(f"  {step}")
+
+
+def _ask_yes_no(prompt: str) -> bool:
+    """Treat a closed input stream as the safe, non-mutating answer."""
+    try:
+        return input(prompt).strip().lower() in {"y", "yes"}
+    except (EOFError, StopIteration):
+        return False
 
 
 def _print_connections(report: dict[str, object]) -> None:

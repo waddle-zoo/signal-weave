@@ -117,6 +117,7 @@ def local_status(home: str | Path | None = None) -> dict[str, Any]:
             "path": configured.get("SIGNALWEAVE_STORE_PATH", "state/signalweave.db"),
         },
         "agents": {
+            "selected": configured.get("SIGNALWEAVE_AGENT", "not selected"),
             "codex": "run `signalweave connect codex`",
             "claude": "run `signalweave connect claude`",
         },

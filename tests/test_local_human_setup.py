@@ -109,6 +109,24 @@ def test_status_and_ui_are_secret_free_and_show_next_steps(local_home):
     assert health.json() == {"status": "ok"}
 
 
+def test_ui_can_run_a_live_source_check_without_calling_jev(local_home, monkeypatch):
+    async def fake_live_health_report():
+        return {"healthy": True, "messages": ["superset: reachable and searchable; catalog items visible: 4."]}
+
+    monkeypatch.setattr("signalweave.local_ui.live_health_report", fake_live_health_report)
+
+    async def exercise():
+        transport = httpx.ASGITransport(app=create_local_ui(local_home))
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.get("/api/status?live=true")
+        return response
+
+    response = asyncio.run(exercise())
+    assert response.status_code == 200
+    assert response.json()["live_health"]["healthy"] is True
+    assert "catalog items visible: 4" in response.text
+
+
 @pytest.mark.asyncio
 async def test_live_source_check_is_bounded_and_does_not_call_jev(monkeypatch):
     class Sources:

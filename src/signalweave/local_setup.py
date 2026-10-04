@@ -51,6 +51,7 @@ _ENV_NAMES = {
     "TYPESAFE_MODE", "SIGNALWEAVE_STORE_BACKEND", "SIGNALWEAVE_TENANT_ID",
     "TYPESAFE_TIMEOUT_SECONDS", "TYPESAFE_MAX_RETRIES", "TYPESAFE_RETRY_BACKOFF_SECONDS",
     "SIGNALWEAVE_ALLOW_EMPTY_SOURCES",
+    "SIGNALWEAVE_AGENT",
     "SIGNALWEAVE_PRINCIPAL_ID", "SIGNALWEAVE_MAX_JEV_PAYLOAD_BYTES",
     "SIGNALWEAVE_MAX_SNAPSHOT_BYTES", "SUPERSET_URL", "SUPERSET_USERNAME",
     "SUPERSET_PASSWORD", "SUPERSET_TENANT_ID", "TRINO_URL", "TRINO_USER",
@@ -85,6 +86,14 @@ _CREDENTIAL_ALIASES = {
     "preset-access-token": "PRESET_ACCESS_TOKEN",
     "signalweave-api-token": "SIGNALWEAVE_API_TOKEN",
     "push-webhook-token": "PUSH_WEBHOOK_TOKEN",
+}
+
+_SOURCE_CHOICES = {
+    "1": "superset",
+    "2": "preset",
+    "3": "trino",
+    "4": "mcp",
+    "5": "skip",
 }
 
 
@@ -236,6 +245,27 @@ def _ask(label: str, default: str = "") -> str:
         return input(f"{label}" + (f" [{default}]" if default else "") + ": ").strip() or default
     except EOFError:
         raise SetupError("Setup input ended; use --non-interactive with file options") from None
+
+
+def _ask_source() -> str:
+    """Ask for a connector using a human-readable menu, while accepting names."""
+    print("\nChoose a source to connect:")
+    print("  1) Superset       dashboards and charts")
+    print("  2) Preset         hosted Superset")
+    print("  3) Trino          warehouse catalog")
+    print("  4) Company MCP    reviewed read-only source bridge")
+    print("  5) Skip for now")
+    selected = _ask("Source", "skip").lower()
+    return _SOURCE_CHOICES.get(selected, selected)
+
+
+def _ask_agent() -> str:
+    """Ask which local agent should receive the MCP connection."""
+    print("\nChoose the agent that will use SignalWeave:")
+    print("  1) Codex")
+    print("  2) Claude Code")
+    selected = _ask("Agent", "codex").lower()
+    return {"1": "codex", "2": "claude"}.get(selected, selected)
 
 
 def _secret(value: str, *, preserve_spaces: bool = False) -> str:
@@ -524,13 +554,13 @@ def setup_local(
         ):
             default = values.get(name, "local")
             value = explicit if explicit is not None else (
-                default if non_interactive else _ask(label, default)
+                default if non_interactive or name in values else _ask(label, default)
             )
             if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.:@-]{0,159}", value):
                 raise SetupError("Tenant and principal must be short non-empty identifiers without whitespace")
             add(name, value)
         tenant_id = values["SIGNALWEAVE_TENANT_ID"]
-        source = source or ("skip" if non_interactive else _ask("Source: superset / preset / trino / mcp / skip", "skip"))
+        source = source or ("skip" if non_interactive else _ask_source())
         if source not in {"superset", "preset", "trino", "mcp", "skip"}:
             raise SetupError("Choose superset, preset, trino, mcp, or skip")
         if (source not in {"superset", "preset", "trino"} and (url or secret_file)) or (
@@ -619,9 +649,14 @@ def setup_local(
         if values.get("SIGNALWEAVE_MCP_SOURCES_FILE"):
             path = Path(values["SIGNALWEAVE_MCP_SOURCES_FILE"]).expanduser()
             _manifest_tenant(path if path.is_absolute() else root / path, tenant_id)
-        agent = agent or ("codex" if non_interactive else _ask("Agent: codex / claude", "codex"))
+        agent = agent or (
+            values.get("SIGNALWEAVE_AGENT")
+            if values.get("SIGNALWEAVE_AGENT")
+            else ("codex" if non_interactive else _ask_agent())
+        )
         if agent not in {"codex", "claude"}:
             raise SetupError("Choose codex or claude")
+        add("SIGNALWEAVE_AGENT", agent)
         add("TYPESAFE_MODE", "jev")
         values.setdefault("SIGNALWEAVE_STORE_BACKEND", "sqlite")
         values.setdefault("SIGNALWEAVE_STORE_PATH", "state/signalweave.db")

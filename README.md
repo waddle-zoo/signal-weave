@@ -51,8 +51,10 @@ privately; users do not need to hand-edit TOML.
 > Stable v0.1.0 has no native assets.
 
 After setup, review the local state with `signalweave status`, run
-`signalweave doctor --live` to probe catalog access, and optionally open
-`signalweave ui` for a local health page. Then ask your agent:
+`signalweave health --live` to probe catalog access, and optionally open
+`signalweave ui` for a local health page. The setup wizard can add multiple
+connector types in one pass; later changes use `connections add/update` and
+`credentials set`. Then ask your agent:
 
 > Use SignalWeave to monitor why online sales changed and how that affected net
 > sales. Find the relevant sources, ask me what's missing, and show me a test

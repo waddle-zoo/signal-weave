@@ -75,6 +75,7 @@ async def check(binary: Path, key_file: Path | None, live: bool):
         # The original credential inputs can disappear; setup must have copied them.
         private_key.unlink()
         source_secret.unlink()
+        assert "Offline configuration check" in command("health", "--home", str(home))
         assert "Offline configuration check" in command("doctor", "--home", str(home))
         snippet = json.loads(command("agent-config", "--agent", "claude", "--home", str(home)))
         assert str(binary) in json.dumps(snippet)
@@ -101,7 +102,7 @@ async def check(binary: Path, key_file: Path | None, live: bool):
             for line in stderr:
                 _check_stderr(line)
         result = {"standalone_startup": True, "private_setup": True, "persisted_source_config": True,
-                  "offline_doctor": True, "agent_config": True,
+                  "offline_doctor": True, "health_alias": True, "agent_config": True,
                   "stdio_tools": len(names), "different_cwd": True, "live": live,
                   "version": binary_version}
         result["orientation_paths"] = ["start", "query", "report", "monitor"]

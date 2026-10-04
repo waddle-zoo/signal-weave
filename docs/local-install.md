@@ -31,11 +31,19 @@ curl --fail --silent --show-error --location --proto '=https' --proto-redir '=ht
 "$HOME/.local/bin/signalweave" setup
 ```
 
-That one guided command asks for your TypeSafe key, identity, source type, source
-credentials, and preferred agent. It writes a private local home at
-`~/.signalweave`; it does not require TOML editing or an OpenAI key. Jev is the
-SignalWeave decision runtime, while your agent supplies frontier-model reasoning
-when a workflow needs investigation or narrative analysis.
+That one guided command walks through the setup in this order:
+
+1. TypeSafe Jev key (hidden input)
+2. Local tenant and principal identity (safe defaults are `local`)
+3. One or more source connectors and their credentials
+4. Codex or Claude Code handoff
+
+It writes a private local home at `~/.signalweave`; it does not require TOML
+editing or an OpenAI key. After each connector, the wizard asks whether to add
+another one, so a team can connect Superset plus Trino or a reviewed company MCP
+manifest in one pass. Jev is the SignalWeave decision runtime, while your agent
+supplies frontier-model reasoning when a workflow needs investigation or
+narrative analysis.
 
 The installer selects macOS Apple Silicon/Intel or Linux x64, verifies the
 archive's SHA-256 checksum, and installs without `sudo`. Your Jev key is not a
@@ -48,8 +56,8 @@ After setup, the normal human path is:
 
 ```sh
 signalweave status
-signalweave connections add       # add or update a source without editing TOML
-signalweave doctor --live         # test catalog access; does not spend a Jev judgment
+signalweave connections add       # add another source without editing TOML
+signalweave health --live         # test catalog access; does not spend a Jev judgment
 signalweave connect codex          # or: signalweave connect claude
 signalweave ui                     # optional local health page at 127.0.0.1:8765
 ```
@@ -62,16 +70,19 @@ signalweave credentials set typesafe
 signalweave credentials set superset-password --file /private/path/password
 ```
 
-`signalweave status` and the local UI never print credential values. `doctor`
-without `--live` is an offline configuration check. `doctor --live` performs a
-bounded catalog probe for each configured source and explicitly does not call
-Jev; run an approved card or the agent's workflow when you want to test the
-provider judgment path.
+`signalweave status` and the local UI never print credential values. `health`
+without `--live` is an offline configuration check; `doctor` remains an alias.
+`health --live` performs a bounded catalog probe for each configured source and
+explicitly does not call Jev. The local UI's **Check sources** button runs the
+same probe and renders only secret-free results. Run an approved card or the
+agent's workflow when you want to test the provider judgment path.
 
 The local wizard supports Superset, hosted Preset, Trino with a normalized
 catalog JSON file, and reviewed read-only MCP source manifests. Other company
 systems can be brought in through that MCP bridge without teaching the local
-CLI to store arbitrary provider secrets.
+CLI to store arbitrary provider secrets. To add or repair one connector later,
+rerun `signalweave connections add` or use `connections update`; to rotate one
+secret, use `signalweave credentials set NAME`.
 
 ## 2. Connect your agent
 

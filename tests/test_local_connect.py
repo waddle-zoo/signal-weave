@@ -79,6 +79,30 @@ def test_bare_interactive_setup_and_single_registration_command(tmp_path, monkey
     assert env["SIGNALWEAVE_PRINCIPAL_ID"] == "local"
 
 
+def test_human_setup_can_add_two_connector_types_in_one_walkthrough(tmp_path, monkeypatch, capsys):
+    catalog = private(tmp_path / "catalog.json", json.dumps([{
+        "adapter": "trino", "resource": "analytics.orders", "kind": "table", "title": "Orders",
+    }]))
+    hidden = iter(["test-jev-credential", "test-password-credential"])
+    visible = iter([
+        "", "", "superset", "http://127.0.0.1:8088", "admin", "codex",
+        "y", "trino", "https://trino.example", str(catalog), "n",
+    ])
+    monkeypatch.setenv("SIGNALWEAVE_HOME", str(tmp_path / "wizard"))
+    monkeypatch.setattr(setup.getpass, "getpass", lambda _: next(hidden))
+    monkeypatch.setattr("builtins.input", lambda _: next(visible))
+    monkeypatch.setattr(sys, "argv", ["signalweave", "setup"])
+
+    cli.main()
+    output = capsys.readouterr().out
+    _, env = setup.read_config(tmp_path / "wizard")
+    assert env["SUPERSET_URL"] == "http://127.0.0.1:8088"
+    assert env["TRINO_URL"] == "https://trino.example"
+    assert env["SIGNALWEAVE_AGENT"] == "codex"
+    assert "Choose a source to connect" in output
+    assert "Local configuration saved" in output
+
+
 @pytest.mark.parametrize("register", [False, True])
 def test_registration_requires_explicit_cli_opt_in(options, monkeypatch, capsys, register):
     from signalweave import client_setup

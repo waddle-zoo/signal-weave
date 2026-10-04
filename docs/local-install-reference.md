@@ -227,10 +227,11 @@ arbitrary MCP server does not automatically turn its tools or raw responses into
 SignalWeave sources; provide that normalization and read-only contract first.
 
 ```sh
-signalweave doctor --home "$HOME/.signalweave"
+signalweave health --home "$HOME/.signalweave"
 ```
 
-This is an **offline configuration check**. It reads key/configuration files,
+This is an **offline configuration check**. (`signalweave doctor` is retained as
+an alias.) It reads key/configuration files,
 checks relevant credential/source settings, parses source manifests/catalogs,
 and reports onboarding-only mode when no adapter is configured. Exit status is
 zero for successful offline checks and one for invalid or missing configuration.
