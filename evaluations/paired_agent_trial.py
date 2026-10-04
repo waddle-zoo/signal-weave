@@ -176,13 +176,27 @@ class JevRetriever:
         self.output_tokens = 0
 
     async def retrieve(self, case: dict[str, Any], executor: QueryExecutor) -> dict[str, Any]:
-        from typesafe_sdk import Choice
+        from typesafe_sdk import Choice, Noul
 
         shared = case["shared_input"]
+        source_context = [
+            {
+                "ref": source["ref"],
+                "adapter": source["adapter"],
+                "resource": source["resource"],
+                "kind": source["kind"],
+                "title": source["title"],
+                "description": source["description"],
+                "contract": source["contract"],
+                "evidence": source["evidence"],
+            }
+            for source in case["sources"]
+        ]
         state = {
             "card": shared["card"],
             "cached_charts": shared["cached_charts"],
             "authorized_source_catalog": shared["authorized_source_catalog"],
+            "source_context": source_context,
             "tenant": shared["tenant"],
             "snapshot_version": shared["snapshot_version"],
             "available_action": "return cached evidence, run one bounded diagnostic query, or escalate source trust",
@@ -201,8 +215,23 @@ class JevRetriever:
                 "escalate": "Freshness, failure, or definition trust is insufficient for safe interpretation.",
             },
         )
+        questions: dict[str, Any] = {"path": question}
+        for index, _source in enumerate(source_context):
+            questions[f"source_{index}"] = Noul(
+                instructions=(
+                    f"Should source_context[{index}] be surfaced as related evidence for "
+                    "this card's stated questions and decision guidance? Use its contract, "
+                    "description, and curated evidence. Select it only when it can answer, "
+                    "qualify, corroborate, or explain the workflow; authorization alone is "
+                    "not relevance, and selection does not establish causality."
+                ),
+                criteria={
+                    "true": "The curated source context is materially useful for this workflow.",
+                    "false": "The source is unrelated, merely a delivery target, or not useful for this workflow.",
+                },
+            )
         async with self.client_type(api_key=self.api_key, timeout=self.timeout) as client:
-            response = await client.system_one(state=state, questions={"path": question})
+            response = await client.system_one(state=state, questions=questions)
         self.requests += 1
         usage = getattr(response, "usage", None)
         self.input_tokens += int(getattr(usage, "input_tokens", 0) or 0)
@@ -212,10 +241,21 @@ class JevRetriever:
         probabilities = {
             str(key): float(value) for key, value in getattr(answer, "probabilities", {}).items()
         }
+        source_selection: list[dict[str, Any]] = []
+        selected_source_refs: set[str] = set()
+        for index, source in enumerate(source_context):
+            source_answer = getattr(response, "nouls", {}).get(f"source_{index}")
+            if source_answer is None:
+                continue
+            probability = max(0.0, min(1.0, float(getattr(source_answer, "noul", 0.0))))
+            source_selection.append({"ref": source["ref"], "probability": probability})
+            if probability >= 0.60:
+                selected_source_refs.add(source["ref"])
         bundle: dict[str, Any] = {
             "path": path,
             "probabilities": probabilities,
             "confidence": max(probabilities.values()) if probabilities else None,
+            "source_selection": source_selection,
             "evidence": [
                 {
                     "source_ref": chart["id"],
@@ -226,6 +266,15 @@ class JevRetriever:
             ],
             "query": None,
         }
+        bundle["evidence"].extend(
+            {
+                "source_ref": source["ref"],
+                "statement": source["evidence"],
+                "origin": "curated-source-context",
+            }
+            for source in source_context
+            if source["ref"] in selected_source_refs
+        )
         bundle["decision_guardrail"] = {
             "reuse": "Cached evidence is sufficient for retrieval; apply the human-authored card policy and do not create extra analytical work unless a card question remains unanswered.",
             "query": "A bounded diagnostic was selected to answer an unresolved card question. Use its evidence with the cached observations, then apply the human-authored card policy; retrieval path is not an outcome.",
@@ -233,8 +282,12 @@ class JevRetriever:
         }.get(path, "Treat this retrieval result as evidence, not as a hidden label or causal conclusion.")
         if path == "query":
             bundle["query"] = await executor.execute(reason="typed Jev retrieval path")
-            bundle["evidence"].extend(bundle["query"]["evidence"])
+            existing_refs = {item["source_ref"] for item in bundle["evidence"]}
+            bundle["evidence"].extend(
+                item for item in bundle["query"]["evidence"] if item["source_ref"] not in existing_refs
+            )
         elif path == "escalate":
+            existing_refs = {item["source_ref"] for item in bundle["evidence"]}
             bundle["evidence"].extend(
                 {
                     "source_ref": source["ref"],
@@ -243,6 +296,7 @@ class JevRetriever:
                 }
                 for source in case["sources"]
                 if source["contract"].get("freshness") in {"stale", "failed"}
+                and source["ref"] not in existing_refs
             )
         return bundle
 
@@ -458,6 +512,13 @@ class ResponsesAgent:
                         result_summary = {
                             "path": result.get("path"),
                             "probabilities": result.get("probabilities"),
+                            "evidence_refs": sorted(
+                                {
+                                    str(item.get("source_ref"))
+                                    for item in result.get("evidence", [])
+                                    if item.get("source_ref")
+                                }
+                            ),
                             "query_cache_hit": (result.get("query") or {}).get("cache_hit")
                             if isinstance(result.get("query"), dict)
                             else None,
@@ -545,8 +606,14 @@ def score_run(case: dict[str, Any], run: dict[str, Any]) -> dict[str, Any]:
         for event in run.get("events", [])
         if event.get("successful_source_ref")
     }
+    preflight_evidence = {
+        str(ref)
+        for event in run.get("events", [])
+        for ref in (event.get("result_summary") or {}).get("evidence_refs", [])
+    }
     provenance = bool(evidence) and all(
         ref in inspected
+        or ref in preflight_evidence
         or ref in {chart["id"] for chart in case["shared_input"]["cached_charts"]}
         or any(ref in call.get("evidence_refs", []) for call in query_calls)
         or any(ref in aliases and source_ref in covered_required for source_ref, aliases in equivalents.items())

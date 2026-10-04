@@ -44,9 +44,15 @@ def _score(case: dict[str, Any], run: dict[str, Any]) -> dict[str, Any]:
         for event in run.get("events", [])
         if event.get("successful_source_ref")
     }
+    preflight_evidence = {
+        str(ref)
+        for event in run.get("events", [])
+        for ref in (event.get("result_summary") or {}).get("evidence_refs", [])
+    }
     provenance = bool(evidence) and all(
         ref in chart_ids
         or ref in inspected
+        or ref in preflight_evidence
         or any(ref in call.get("evidence_refs", []) for call in calls)
         for ref in evidence
     )
