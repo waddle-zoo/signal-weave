@@ -53,6 +53,36 @@ def test_codex_credentials_require_only_jev(monkeypatch):
     assert "OPENAI_API_KEY" not in str(error.value)
 
 
+def test_push_gated_ignore_preserves_reported_numeric_facts_without_waking_agent():
+    system_output = {
+        "result": {
+            "outcome": "ignore",
+            "report": {
+                "status": "complete",
+                "next_step": "Suppress delivery.",
+                "provenance": [{"source_key": "primary", "comparison_key": "net_sales",
+                                 "query_refs": ["superset|dashboard:weekly"]}],
+                "numeric_claims": [{"metric": "net_sales", "unit": "USD",
+                                    "source_key": "primary", "comparison_key": "net_sales",
+                                    "baseline": 100.0, "current": 100.0, "delta": 0.0,
+                                    "contributions": []}],
+            },
+        }
+    }
+    submission = trial.push_gated_ignore_submission(
+        system_output, {"net_sales.delta", "net_sales.current"}
+    )
+    assert submission is not None
+    assert submission["outcome"] == "ignore"
+    assert submission["evidence_refs"] == ["superset|dashboard:weekly"]
+    assert {claim["fact"] for claim in submission["numeric_claims"]} == {
+        "net_sales.current", "net_sales.delta"
+    }
+    assert trial.push_gated_ignore_submission(
+        {"result": {"outcome": "notify", "report": {}}}, {"net_sales.delta"}
+    ) is None
+
+
 def test_explicit_regression_subset_preserves_whole_companies_fixture_order_and_inputs():
     scenarios = build_scenarios(seed=20261002)
     before = copy.deepcopy(scenarios)
@@ -72,7 +102,7 @@ def public():
     return public_scenario(build_scenarios(split="dev")[0])
 
 
-def make_session(tmp_path, public, treatment=True):
+def make_session(tmp_path, public, treatment=True, onboarding_surface="full"):
     audit = trial.Audit()
     adapter = trial.PublicSourceAdapter(public["catalog"], public["scenario_id"], audit)
     adapter.set_period(public["onboarding"], datetime.now(timezone.utc))
@@ -81,15 +111,44 @@ def make_session(tmp_path, public, treatment=True):
                       engine=InsightEngine(OfflineJudger(), registry),
                       metric_query_store=JsonMetricQueryCardStore(tmp_path / "metric-cards.json"),
                       principal=PrincipalContext(principal_id="offline", tenant_id=public["scenario_id"]))
-    return trial.ToolSession(public, adapter, create_mcp(runtime), treatment)
+    return trial.ToolSession(public, adapter, create_mcp(runtime), treatment,
+                             onboarding_surface=onboarding_surface)
 
 
 async def test_product_tool_parity_includes_guide_sources_preview_and_workflow(tmp_path, public):
-    session = make_session(tmp_path, public)
+    session = make_session(tmp_path, public, onboarding_surface="guided")
     specs = await session.specs()
     names = {item["name"] for item in specs}
-    assert {"get_signalweave_guide", "list_resources", "inspect_resource",
-            "preview_investigation_report", "evaluate_card_workflow"} <= names
+    assert {"get_signalweave_guide", "bootstrap_insight_card", "get_insight_card",
+            "preview_investigation_report", "approve_insight_card"} <= names
+    assert "evaluate_card_workflow" not in names
+    common_names = {item["name"] for item in trial.common_tools(public, "onboarding")}
+    assert names - common_names - {"request_synthetic_owner_approval"} <= trial.ONBOARDING_PRODUCT_TOOLS
+
+
+async def test_full_onboarding_surface_retains_advanced_product_tools(tmp_path, public):
+    session = make_session(tmp_path, public)
+    names = {item["name"] for item in await session.specs()}
+    assert {"onboard_insight_card", "draft_insight_card", "evaluate_card_workflow"} <= names
+    assert "bootstrap_insight_card" in names
+
+
+async def test_multi_connector_public_transport_dispatches_through_registered_adapters(tmp_path):
+    connector_public = public_scenario(build_scenarios(split="dev", connector_profile=True)[0])
+    audit = trial.Audit()
+    hub = trial.PublicSourceAdapter(connector_public["catalog"], connector_public["scenario_id"], audit)
+    hub.set_period(connector_public["onboarding"], datetime.now(timezone.utc))
+    names = sorted({item["adapter"] for item in connector_public["catalog"]})
+    registry = SourceRegistry([trial.PublicConnectorAdapter(hub, name) for name in names])
+    assert registry.adapter_names() == names
+    resources = await registry.list_resources()
+    assert {item.adapter for item in resources} == set(names)
+    descriptor = resources[0]
+    snapshot = await registry.inspect(SourceRef(
+        key="anchor", adapter=descriptor.adapter, resource=descriptor.resource, label=descriptor.title,
+    ))
+    assert snapshot.adapter == descriptor.adapter
+    assert snapshot.source_key == "anchor"
 
 
 async def test_public_numeric_enum_is_identical_for_both_arms(tmp_path, public):

@@ -452,12 +452,15 @@ class InsightAuthoringService:
         window_issues: list[str] = []
         window_refs: list[str] = []
         undeclared_refs: list[str] = []
+        required_undeclared_refs: list[str] = []
         optional_window_issues: list[str] = []
         for source in card.sources:
             ref = f"{source.adapter}|{source.resource}"
             available = declared_windows.get(ref)
             if not available:
                 undeclared_refs.append(ref)
+                if source.required:
+                    required_undeclared_refs.append(ref)
             elif not set(card.comparison_windows).issubset(available):
                 message = f"{ref}: requested {card.comparison_windows!r}; available {available!r}."
                 if source.required:
@@ -472,14 +475,14 @@ class InsightAuthoringService:
                 method for method in card.delivery_methods
                 if method.outcome in {Outcome.NOTIFY, Outcome.ESCALATE}
             ]
-            if automatic_routes:
+            if required_undeclared_refs and automatic_routes:
                 route_names = ", ".join(method.outcome.value for method in automatic_routes)
                 window_issues.append(
                     "Required sources do not declare compatible comparison windows for "
                     f"automatic {route_names} routes. Verify a source-owned comparison "
                     "contract before approval."
                 )
-                window_refs.extend(undeclared_refs)
+                window_refs.extend(required_undeclared_refs)
         if optional_window_issues:
             warnings.append("Optional source comparison-window mismatch: " + " ".join(optional_window_issues))
         if not card.comparison_windows:
@@ -1148,6 +1151,32 @@ class InsightAuthoringService:
             for item in requested
         ]
         source_refs = bind_numeric_condition_requirements(source_refs, numeric_conditions)
+        available_source_keys = {source.key for source in source_refs}
+        unknown_condition_sources = {
+            condition.source_key for condition in numeric_conditions
+        } - available_source_keys
+        if unknown_condition_sources:
+            raise ValueError(
+                "numeric_conditions.source_key must reference a card source: "
+                + ", ".join(sorted(unknown_condition_sources))
+                + "; available card-local keys: "
+                + ", ".join(sorted(available_source_keys))
+                + ". Pass selected_sources with the desired card-local key, then bind the condition to that key."
+            )
+        comparisons_by_source = {
+            source.key: set(source.required_comparison_keys) for source in source_refs
+        }
+        for condition in numeric_conditions:
+            available_comparisons = comparisons_by_source.get(condition.source_key, set())
+            if condition.comparison_key not in available_comparisons:
+                raise ValueError(
+                    "numeric_conditions.comparison_key must be an exact inspected "
+                    "analytical comparison key for its card source: "
+                    f"{condition.comparison_key!r} is not available for {condition.source_key!r}; "
+                    "available keys: "
+                    + (", ".join(sorted(available_comparisons)) or "none")
+                    + ". Do not use a time-window label as comparison_key."
+                )
         card_title = (title or what_to_watch.strip().rstrip("."))[:200] or "Untitled insight"
         card = InsightCard(
             id=f"card-{_slug(card_title)}-{uuid4().hex[:8]}",

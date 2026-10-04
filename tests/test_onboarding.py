@@ -254,10 +254,14 @@ def make_server(
     *,
     sqlite=False,
     catalog=None,
+    catalogs=None,
     context_provider=None,
     max_jev_payload_bytes=None,
 ):
-    registry = SourceRegistry([catalog or SupersetCatalogDouble()], authorized_tenants=["default"])
+    registry = SourceRegistry(
+        catalogs or [catalog or SupersetCatalogDouble()],
+        authorized_tenants=["default"],
+    )
     engine_kwargs = {
         "registry": registry,
         "context_provider": context_provider,
@@ -550,6 +554,32 @@ async def test_one_call_onboarding_returns_usable_human_review_packet_without_ap
 
     stored = tool(server, "get_insight_card")(onboarding["card"]["id"])
     assert stored["status"] == "draft"
+
+
+@pytest.mark.asyncio
+async def test_compact_bootstrap_onboarding_keeps_plain_language_and_returns_the_same_review_packet(tmp_path):
+    server = make_server(tmp_path)
+    spec = next(item for item in await server.list_tools() if item.name == "bootstrap_insight_card")
+    assert set(spec.inputSchema["required"]) == {"goal", "purpose"}
+    assert {"selected_sources", "numeric_conditions", "delivery_methods"} <= set(
+        spec.inputSchema["properties"]
+    )
+
+    onboarding = await tool(server, "bootstrap_insight_card")(
+        goal="Watch checkout conversion and find the evidence that explains a material movement.",
+        purpose="Help Growth decide whether to investigate a customer-impacting regression.",
+        policy="Ignore normal variation; investigate when evidence is incomplete; notify Growth Ops when corroborated.",
+        delivery_guidance="Give the owner a concise evidence bundle and the next question to answer.",
+        source_hint="The owner currently uses the growth dashboard.",
+    )
+
+    assert onboarding["approval_required"] is True
+    assert onboarding["delivery_enabled"] is False
+    assert onboarding["card"]["status"] == "draft"
+    assert onboarding["card"]["retrieval_mode"] == "expand"
+    assert onboarding["card"]["investigation_mode"] == "bounded"
+    assert "growth dashboard" in onboarding["card"]["why_watch"]
+    assert onboarding["review"]["discovery_receipt"]["evaluator"] == "jev-onboarding-test-double"
 
 
 @pytest.mark.asyncio

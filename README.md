@@ -42,10 +42,11 @@ Follow the [two-step installation guide](docs/local-install.md): install and run
 `signalweave setup`, then connect it to Codex or Claude. Setup stores your Jev key
 privately and configures your data connection without hand-editing TOML.
 
-> The native installer is available as the **v0.2.0rc1 local preview**. Use the
+> The native installer is available as the **v0.2.0rc2 local preview**. Use the
 > pinned command in the guide. This is not a stable enterprise release; the new
-> [Live Codex/Jev onboarding trials](docs/codex-bootstrap-trial-2026-10-01.md)
-> exposed unresolved card-approval gaps; comparative benefit is not established.
+> [live paired Codex/Jev comparison](docs/bootstrap-live-comparison-2026-10-04.md)
+> shows correctness parity and lower warm agent work in two bounded profiles,
+> but does not establish general superiority or lower total cost.
 > Stable v0.1.0 has no native assets.
 
 Then ask your agent:

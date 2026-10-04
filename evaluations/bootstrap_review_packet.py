@@ -15,7 +15,15 @@ from evaluations.bootstrap_scenarios import build_scenarios, dataset_digest, pub
 
 def packets(report: dict, *, fixtures_override: list[dict] | None = None) -> tuple[list[dict], dict, dict]:
     config = report["config"]
-    fixtures = fixtures_override if fixtures_override is not None else build_scenarios(seed=config["seed"], split=config["split"])
+    if fixtures_override is not None:
+        fixtures = fixtures_override
+    else:
+        scenario_options = {"seed": config["seed"], "split": config["split"]}
+        if config.get("connector_profile", False):
+            scenario_options["connector_profile"] = True
+        if config.get("catalog_noise", 0):
+            scenario_options["catalog_noise"] = config["catalog_noise"]
+        fixtures = build_scenarios(**scenario_options)
     fixtures = select_scenarios(fixtures, config.get("selected_scenario_ids"),
                                config.get("selected_companies", len(fixtures)))
     if config.get("dataset_digest") and dataset_digest(fixtures) != config["dataset_digest"]:
@@ -44,7 +52,8 @@ def packets(report: dict, *, fixtures_override: list[dict] | None = None) -> tup
     compact["cases"] = [{key: row.get(key) for key in (
         "scenario_id", "period_id", "arm", "phase", "status", "error", "seconds",
         "agent_seconds", "system_seconds", "tool_calls", "source_reads", "usage",
-        "score", "raw_system_decision", "submission", "foreign_tools")} for row in report["rows"]]
+        "score", "raw_system_decision", "submission", "foreign_tools",
+        "shared_card_digest", "agent_wakeup_skipped")} for row in report["rows"]]
     compact["dollar_cost_scope"] = "Illustrative API-equivalent token estimates, not subscription charges."
     compact["resolved_jev_models"] = report.get("resolved_jev_models", [])
     compact["narrative_review_status"] = "Pending separate internal blind review; not external peer review."

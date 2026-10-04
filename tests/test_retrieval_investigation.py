@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 
 import pytest
 
+from signalweave.diagnostics import AnalyticalComparison, PeriodValue, SegmentPair
 from signalweave.engine import InsightEngine
 from signalweave.models import (
     CatalogSearchPage,
@@ -323,6 +324,101 @@ async def test_investigation_provider_failure_cannot_auto_notify():
     assert run.result.investigation is not None
     assert run.result.investigation.failed is True
     assert "timeout" in run.result.investigation.warnings[0]
+
+
+@pytest.mark.asyncio
+async def test_failed_optional_follow_up_does_not_turn_primary_ignore_into_alert():
+    anchor = SourceRef(
+        key="anchor", adapter="superset", resource="dashboard:exec", label="Executive pulse"
+    )
+    diagnostic = SourceRef(
+        key="diagnostic", adapter="superset", resource="dashboard:billing", label="Billing operations"
+    )
+    registry = SourceRegistry([InvestigationAdapter(anchor, diagnostic)], enforce_catalog=True)
+    card = InsightCard(
+        id="card-ignore-follow-up-timeout",
+        title="Quiet executive pulse",
+        what_to_watch="Revenue movement",
+        why_watch="Stay silent when the primary comparison is immaterial.",
+        sources=[anchor],
+        investigation_mode=InvestigationMode.BOUNDED,
+        delivery_methods=[
+            DeliveryMethod(
+                key="ops",
+                outcome=Outcome.NOTIFY,
+                label="Operations",
+                destination="test://ops",
+            )
+        ],
+    )
+
+    class IgnoreBrokenInvestigationJudger(BrokenInvestigationJudger):
+        async def judge(self, state, card, plan, observations):
+            result = await super().judge(state, card, plan, observations)
+            return result.model_copy(update={"outcome": Outcome.IGNORE, "delivery_methods": []})
+
+    run = await InsightEngine(
+        IgnoreBrokenInvestigationJudger(), registry=registry, context_provider=ContextDouble()
+    ).evaluate(card)
+
+    assert run.result.outcome == Outcome.IGNORE
+    assert run.result.delivery_methods == []
+    assert run.result.investigation is not None
+    assert run.result.investigation.failed is True
+    assert "timeout" in run.result.investigation.warnings[0]
+
+
+@pytest.mark.asyncio
+async def test_unresolved_resource_provenance_blocks_a_required_comparison():
+    anchor = SourceRef(
+        key="anchor", adapter="superset", resource="dashboard:exec", label="Executive pulse"
+    )
+    comparison = AnalyticalComparison(
+        key="revenue", metric="revenue", definition="Eligible revenue", population="Customers",
+        unit="USD", dimension="total", kind="additive", coverage="complete",
+        disjoint_segments=True, comparable=True,
+        baseline_start=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        baseline_end=datetime(2026, 1, 8, tzinfo=timezone.utc),
+        current_start=datetime(2026, 1, 8, tzinfo=timezone.utc),
+        current_end=datetime(2026, 1, 15, tzinfo=timezone.utc),
+        query_refs=["superset|dashboard:missing"],
+        baseline_total=PeriodValue(value=100), current_total=PeriodValue(value=100),
+        segments=[SegmentPair(segment="all", baseline=PeriodValue(value=100),
+                              current=PeriodValue(value=100))],
+    )
+    resource = ResourceSnapshot(
+        source_key=anchor.key, adapter=anchor.adapter, resource=anchor.resource,
+        title=anchor.label, analytical_comparisons=[comparison],
+    )
+    registry = SourceRegistry([InvestigationAdapter(anchor, anchor)])
+    card = InsightCard(
+        id="card-provenance-guard", title="Provenance guard",
+        what_to_watch="Revenue movement", why_watch="Keep the comparison trustworthy.",
+        sources=[anchor], comparison_windows=["previous_period"],
+    )
+
+    class IgnoreJudger:
+        name = "jev-provenance-test"
+
+        async def compile_plan(self, state, card):
+            del state, card
+            return {"capabilities": ["baseline_comparison"], "baseline": "previous_period"}
+
+        async def judge(self, state, card, plan, observations):
+            del plan
+            return InsightResult(
+                card_id=card.id, outcome=Outcome.IGNORE, summary="No movement.",
+                rationale="The primary comparison is flat.", confidence=0.99,
+                probabilities={"ignore": 0.99, "notify": 0.01},
+                evidence=state["evidence"], observations=observations,
+                source_keys=[anchor.key], evaluator=self.name,
+            )
+
+    run = await InsightEngine(IgnoreJudger(), registry=registry).evaluate(card, [resource])
+
+    assert run.result.outcome == Outcome.INSUFFICIENT_DATA
+    assert run.result.analyses[0].status == "insufficient_data"
+    assert any("unresolved resource" in issue for issue in run.result.analyses[0].issues)
 
 
 @pytest.mark.asyncio

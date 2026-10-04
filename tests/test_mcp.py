@@ -49,6 +49,7 @@ def test_server_exposes_mcp_object():
     # These instructions travel in MCP initialization, including the standalone
     # executable. A newly connected agent should not need a separate setup skill.
     assert "onboard_insight_card" in server.instructions
+    assert "bootstrap_insight_card" in server.instructions
     assert "Only call approve_insight_card after explicit owner approval" in server.instructions
     assert "without workflow_report_id authorizes only" in server.instructions
     assert "unassessed card" in server.instructions

@@ -153,18 +153,45 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
                         timeout_seconds=360, instructions_override=None,
                         prompt_override=None) -> dict:
     from evaluations.bootstrap_agent_trial import COMMON_SYSTEM, MODEL, canonical
+    shared_card = getattr(session, "shared_card", None)
 
     if instructions_override is not None or prompt_override is not None:
         if instructions_override is None or prompt_override is None:
             raise ValueError("Custom research episodes require both instructions and prompt")
-        prompt = instructions_override + "\n" + canonical(prompt_override)
+        # Custom research episodes are still allowed to receive the same
+        # precomputed SignalWeave handoff as the canonical episode path.  The
+        # old branch silently discarded ``bundle`` whenever a caller supplied
+        # a custom prompt, which made a treatment agent re-read connectors and
+        # invalidated comparisons that claimed to measure a preflight bundle.
+        payload = dict(prompt_override) if isinstance(prompt_override, dict) else {"input": prompt_override}
+        if shared_card is not None:
+            payload["shared_card"] = shared_card
+        if bundle is not None:
+            payload["signalweave_evaluation"] = bundle
+        prompt = instructions_override + "\n" + canonical(payload)
     else:
         instructions = COMMON_SYSTEM
         if session.treatment:
             instructions += (
-                " SignalWeave is available. For setup, call get_signalweave_guide first. Then onboard or draft a card from the brief "
-                "and owner answers; inspect with get_insight_card, then use dry-run simulate_insight_card or preview_investigation_report, "
-                "resolve blockers, request_synthetic_owner_approval, then approve_insight_card. "
+                " SignalWeave is available. For setup, call get_signalweave_guide first. Then use bootstrap_insight_card with the plain-language goal, purpose, policy and routing guidance from the brief "
+                "and owner answers. Inspect the selected source and its analytical comparisons before finalizing the card. "
+                "For every explicit threshold, pass an exact numeric_conditions binding when the inspected source exposes "
+                "the comparison: use measurement=change_pct with unit=percent for relative thresholds, or the source's "
+                "exact unit for signed delta/level checks. First pass selected_sources with an exact adapter|resource ref "
+                "and a short card-local key such as primary or quality; numeric_conditions.source_key must equal that key, "
+                "while comparison_key must be copied exactly from the inspected analytical_comparisons key, never from a "
+                "time-window label. Use the exact source-declared comparison window identifier such as previous_period. "
+                "For every owner-approved route, pass a delivery_methods entry with the exact destination key/URL from the "
+                "owner directory; prose alone does not configure a route. Then inspect with get_insight_card, use dry-run simulate_insight_card or preview_investigation_report, "
+                "resolve blockers, request_synthetic_owner_approval, then approve_insight_card. If review_insight_card "
+                "was called with an adapter scope, pass that same adapter to approve_insight_card so the source-selection "
+                "fingerprint is revalidated against the same catalog view. "
+                "If the card explicitly uses retrieval_mode=expand or investigation_mode=bounded, "
+                "the owner must acknowledge that bounded dynamic scope: pass the current review "
+                "fingerprint, source-selection reason, and dynamic_scope_acknowledged=true. "
+                "When the owner asks to connect related signals or investigate why a movement happened, "
+                "preserve that intent with retrieval_mode=expand and investigation_mode=bounded unless "
+                "the owner explicitly requests anchor-only fixed/none behavior; do not silently narrow scope. "
                 "Save notes and finish_setup with the card ID. Approval is simulated, not real "
                 "human validation.\nProduction MCP instructions:\n" + (session.server.instructions or ""))
         if getattr(session, "owner_reviewer", None) is not None:
@@ -177,11 +204,36 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
                 "After the synthetic owner accepts the policy, call approve_insight_card without workflow_report_id "
                 "for this delivery-disabled shadow trial, keep acceptance unassessed, then finish_setup. "
                 "This does not waive source, policy, authorization or simulation blockers and never enables actual delivery.")
+        if session.treatment and bundle is not None:
+            instructions += (
+                " A SignalWeave evaluation bundle is present in the opening context. Treat it as the "
+                "authoritative current-period decision surface: copy its typed outcome and the "
+                "delivery-method destination keys into submit_analysis, and use its evidence, "
+                "analyses, source references and report in the submission. Do not re-judge or "
+                "replace the bundle's outcome from the raw narrative. In particular, do not turn "
+                "insufficient_data into ignore, and do not turn investigate into notify. Do not re-read a source "
+                "just to verify a complete bundle; inspect an additional source only when the bundle "
+                "explicitly reports a missing or incomplete obligation needed by the owner's policy. "
+                "For every numeric_claim, copy every adapter|resource ref in the matching "
+                "bundle provenance entry's query_refs into that claim's evidence_refs, including "
+                "quality or completeness sources that did not contain the numeric value; keep those "
+                "refs in top-level evidence_refs too. A source-level number is not a complete "
+                "business claim when the bundle attaches additional required provenance. "
+                "The bundle's evidence is still subject to the card policy and does not license claims "
+                "that are absent from its cited facts.")
+        if session.phase == "monitoring" and shared_card is not None:
+            instructions += (
+                " Both arms were given the identical owner-reviewed card snapshot in the opening context. "
+                "The baseline has no SignalWeave tools and must execute that policy with ordinary "
+                "connector tools; the SignalWeave arm must use its card-backed evaluation bundle. "
+                "Do not silently replace the card policy."
+            )
         instructions += ("\nUse only the trial MCP tools. No filesystem, shell, web or other "
                          "tools. After finish_setup or submit_analysis succeeds, stop immediately.")
         prompt = instructions + "\n" + canonical({
             "phase": session.phase, "period": session.adapter.period_context,
             "business": session.public, "saved_notes": session.notes,
+            "shared_card": shared_card,
             "signalweave_evaluation": bundle})
     bridge = TrialMCP(session, audit, await session.specs(), max_tool_calls)
     # Distinct IDs from positive Jev request IDs. A Codex invocation is NOT an API request.

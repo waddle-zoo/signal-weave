@@ -61,12 +61,21 @@ PRICES = {
              "Failed requests with missing usage have unknown cost, never assumed free.",
 }
 PRODUCT_TOOLS = frozenset({
-    "get_signalweave_guide", "onboard_insight_card", "propose_insight_card", "draft_insight_card",
+    "get_signalweave_guide", "bootstrap_insight_card", "onboard_insight_card", "propose_insight_card", "draft_insight_card",
     "discover_insight_sources", "review_insight_card", "get_insight_card",
     "list_insight_cards", "list_resources", "inspect_resource", "resolve_insight_sources",
     "simulate_insight_card", "preview_investigation_report", "evaluate_card_workflow",
     "approve_insight_card", "evaluate_insight_card", "get_decision_receipt",
     "record_insight_card_correction",
+})
+# Keep the onboarding surface small enough for a local agent to use without
+# paying the schema/context cost of every recurring-runtime and certification
+# tool.  These are still the production MCP schemas; this is a guided entry
+# path, not a benchmark-only replacement for the full server.
+ONBOARDING_PRODUCT_TOOLS = frozenset({
+    "get_signalweave_guide", "bootstrap_insight_card", "get_insight_card",
+    "review_insight_card", "simulate_insight_card", "preview_investigation_report",
+    "record_insight_card_correction", "approve_insight_card",
 })
 COMMON_SYSTEM = (
     "You are a business analytics agent in a synthetic, read-only company trial. "
@@ -297,6 +306,23 @@ class PublicSourceAdapter:
         return result
 
 
+class PublicConnectorAdapter:
+    """One registered connector view over the shared public trial transport."""
+
+    def __init__(self, hub: PublicSourceAdapter, name: str):
+        self.hub = hub
+        self.name = name
+
+    async def list_resources(self):
+        return [item.model_copy(deep=True) for item in self.hub.catalog
+                if item.adapter == self.name]
+
+    async def inspect(self, source: SourceRef):
+        if source.adapter != self.name:
+            raise ValueError("source adapter does not match registered connector")
+        return await self.hub.inspect(source)
+
+
 def function(name: str, description: str, properties: dict, required=()) -> dict:
     return {"type": "function", "name": name, "description": description, "strict": False,
             "parameters": {"type": "object", "properties": properties,
@@ -355,7 +381,7 @@ def card_fingerprint(card: dict) -> str:
 
 class ToolSession:
     def __init__(self, public: dict, adapter: PublicSourceAdapter, server, treatment: bool,
-                 *, owner_reviewer=None):
+                 *, owner_reviewer=None, onboarding_surface: str = "full"):
         self.public = agent_context(public)
         self.owner = {"owner_answers": copy.deepcopy(public["owner_answers"])}
         self.adapter, self.server, self.treatment = adapter, server, treatment
@@ -365,11 +391,19 @@ class ToolSession:
         self.simulated: dict[str, str] = {}
         self.owner_approvals: dict[str, str] = {}
         self.card_id: str | None = None
+        # In the monitoring comparison both arms receive the identical
+        # owner-reviewed card snapshot. This isolates SignalWeave's retrieval
+        # and deterministic evaluation value from a hidden onboarding advantage.
+        self.shared_card: dict | None = None
+        self.latest_card: dict | None = None
         self.setup_complete = False
         self.submission: dict | None = None
         self.phase = "onboarding"
         self.allowed_product: set[str] = set()
         self.owner_reviewer = owner_reviewer
+        if onboarding_surface not in {"full", "guided"}:
+            raise ValueError("onboarding_surface must be full or guided")
+        self.onboarding_surface = onboarding_surface
         self.owner_review_records: list[dict] = []
         self.owner_review_attempts = 0
         self.semantic_approval: str | None = None
@@ -512,7 +546,9 @@ class ToolSession:
             if self.phase != "onboarding":
                 self.allowed_product &= {"get_insight_card", "resolve_insight_sources",
                                          "evaluate_insight_card", "get_decision_receipt"}
-            elif self.owner_reviewer is None:
+            elif self.onboarding_surface == "guided":
+                self.allowed_product &= ONBOARDING_PRODUCT_TOOLS
+            if self.phase == "onboarding" and self.owner_reviewer is None:
                 specs.append(function("request_synthetic_owner_approval",
                                       "Present the inspected card and current-card dry-run (simulate_insight_card or preview_investigation_report) to the simulated owner "
                                       "for procedural approval. This logs a mock human decision; "
@@ -527,7 +563,10 @@ class ToolSession:
 
     async def product(self, name: str, arguments: dict) -> Any:
         _content, structured = await self.server.call_tool(name, arguments)
-        return json_value(structured)
+        result = json_value(structured)
+        if name == "get_insight_card" and isinstance(result, dict):
+            self.latest_card = copy.deepcopy(result.get("card", result))
+        return result
 
     async def call(self, name: str, arguments: dict) -> Any:
         if name == "list_catalog":
@@ -658,15 +697,44 @@ async def luna_episode(session: ToolSession, *, key: str, effort: str, budget: R
                        transport=None) -> dict:
     instructions = COMMON_SYSTEM
     if session.treatment:
-        instructions += (" SignalWeave is available. For setup: onboard or draft a card from "
-                         "the brief and owner answers; inspect it with get_insight_card, dry-run "
+        instructions += (" SignalWeave is available. For setup: use get_signalweave_guide, then "
+                         "bootstrap_insight_card with the plain-language goal, purpose, policy and "
+                         "routing guidance from the brief and owner answers. Inspect the selected source and its "
+                         "analytical comparisons before finalizing the card. For every explicit threshold in the "
+                         "owner policy, pass an exact numeric_conditions binding when the inspected source exposes "
+                         "the comparison: use measurement=change_pct with unit=percent for relative thresholds, "
+                         "or the source's exact unit for signed delta/level checks. First pass selected_sources "
+                         "with an exact adapter|resource ref and a short card-local key such as primary or quality; "
+                         "numeric_conditions.source_key must equal that card-local key, while comparison_key must "
+                         "be copied exactly from the inspected analytical_comparisons key, never from a time-window "
+                         "label. Use the exact source-declared comparison window identifier such as previous_period. "
+                         "For every owner-approved route, "
+                         "pass a delivery_methods entry with the exact destination key/URL from the owner directory; "
+                         "prose alone does not configure a route. Then inspect it with get_insight_card, dry-run "
                          "simulate_insight_card or preview_investigation_report, resolve blockers, request_synthetic_owner_approval, "
-                         "then approve_insight_card. "
+                         "then approve_insight_card. If review_insight_card was called with an adapter scope, pass "
+                         "that same adapter to approve_insight_card so the source-selection fingerprint uses the same catalog view. "
+                         "If the card explicitly uses retrieval_mode=expand "
+                         "or investigation_mode=bounded, pass the current review fingerprint, the "
+                         "owner's source-selection reason, and dynamic_scope_acknowledged=true to "
+                         "acknowledge bounded runtime related-source retrieval. "
+                         "When the owner asks to connect related signals or investigate why a movement happened, "
+                         "preserve that intent with retrieval_mode=expand and investigation_mode=bounded unless "
+                         "the owner explicitly requests anchor-only fixed/none behavior; do not silently narrow scope. "
                          "Approval models a synthetic owner's procedural review only. Save notes "
                          "and finish_setup with the card ID. No actual human has validated it.")
         instructions += "\nProduction MCP initialization instructions:\n" + (session.server.instructions or "")
+    shared_card = getattr(session, "shared_card", None)
+    if session.phase == "monitoring" and shared_card is not None:
+        instructions += (
+            " The following owner-reviewed card snapshot is supplied identically to both trial arms. "
+            "Treat it as the policy to execute. The baseline has no SignalWeave product tools and must "
+            "use the shared card plus ordinary connector tools; the SignalWeave arm must use its "
+            "card-backed evaluation bundle. Do not infer a different policy from the card."
+        )
     prompt = {"phase": session.phase, "period": session.adapter.period_context,
               "business": session.public, "saved_notes": session.notes,
+              "shared_card": shared_card,
               "signalweave_evaluation": bundle}
     messages = [{"role": "user", "content": canonical(prompt)}]
     specs = await session.specs()
@@ -866,7 +934,73 @@ def aggregate(rows: list[dict]) -> dict:
             output[arm]["owner_review_tool_calls"] = sum(row.get("owner_review_tool_calls", 0) for row in arm_rows)
         for metric in ("outcome_correct", "recipients_correct", "agent_changed_outcome"):
             output[arm]["raw_system_" + metric + "_count"] = sum(r[metric] for r in system_rows)
+        output[arm]["agent_wakeups"] = sum(
+            1 for row in warm if not row.get("agent_wakeup_skipped", False)
+        )
+        output[arm]["agent_wakeup_skips"] = sum(
+            1 for row in warm if row.get("agent_wakeup_skipped", False)
+        )
     return output
+
+
+def push_gated_ignore_submission(system_output: dict, allowed_facts: set[str]) -> dict | None:
+    """Turn a complete no-action bundle into a typed silent-run record.
+
+    A push workflow must not wake a downstream Luna/Codex agent just to repeat
+    an already evaluated ``ignore``. This helper only handles an explicit
+    no-action result with provenance returned by SignalWeave; action outcomes
+    still wake the agent for the report/handoff step.
+    """
+    result = system_output.get("result") if isinstance(system_output, dict) else None
+    if not isinstance(result, dict) or result.get("outcome") != "ignore":
+        return None
+    report = result.get("report") if isinstance(result.get("report"), dict) else {}
+    evidence_refs = sorted({
+        ref
+        for provenance in report.get("provenance", [])
+        if isinstance(provenance, dict)
+        for ref in provenance.get("query_refs", [])
+        if isinstance(ref, str) and ref
+    })
+    if not evidence_refs or report.get("status") not in {None, "complete"}:
+        return None
+    numeric_claims = []
+    for claim in report.get("numeric_claims", []):
+        if not isinstance(claim, dict) or not claim.get("metric"):
+            continue
+        claim_refs = {
+            ref
+            for provenance in report.get("provenance", [])
+            if isinstance(provenance, dict)
+            and provenance.get("source_key") == claim.get("source_key")
+            and provenance.get("comparison_key") == claim.get("comparison_key")
+            for ref in provenance.get("query_refs", [])
+            if isinstance(ref, str) and ref
+        } or set(evidence_refs)
+        for field_name in ("baseline", "current", "delta", "within_effect", "mix_effect"):
+            fact = f"{claim['metric']}.{field_name}"
+            value = claim.get(field_name)
+            if fact in allowed_facts and type(value) in {int, float}:
+                numeric_claims.append({"fact": fact, "value": value,
+                                       "unit": claim.get("unit", ""),
+                                       "evidence_refs": sorted(claim_refs)})
+        for contribution in claim.get("contributions", []):
+            if not isinstance(contribution, dict) or not contribution.get("segment"):
+                continue
+            fact = f"{claim['metric']}.{contribution['segment']}_contribution"
+            value = contribution.get("contribution")
+            if fact in allowed_facts and type(value) in {int, float}:
+                numeric_claims.append({"fact": fact, "value": value,
+                                       "unit": claim.get("unit", ""),
+                                       "evidence_refs": sorted(claim_refs)})
+    return {
+        "outcome": "ignore",
+        "recipients": [],
+        "evidence_refs": evidence_refs,
+        "numeric_claims": numeric_claims,
+        "claims": [],
+        "summary": str(report.get("next_step") or result.get("summary") or "No action required."),
+    }
 
 
 def select_scenarios(scenarios: list[dict], scenario_ids: list[str] | None, limit: int) -> list[dict]:
@@ -890,7 +1024,12 @@ async def run_trial(args, *, scenarios_override: list[dict] | None = None) -> di
     if owner_review_mode == "independent" and getattr(args, "agent_transport", "api") != "codex":
         raise ValueError("Independent owner review currently requires the Codex research transport")
     openai_key, jev_key = credentials(args)  # Fail before creating output or calling a provider.
-    fixture_source = scenarios_override if scenarios_override is not None else build_scenarios(seed=args.seed, split=args.split)
+    fixture_source = scenarios_override if scenarios_override is not None else build_scenarios(
+        seed=args.seed,
+        split=args.split,
+        connector_profile=bool(getattr(args, "connector_profile", False)),
+        catalog_noise=int(getattr(args, "catalog_noise", 0)),
+    )
     scenarios = select_scenarios(fixture_source,
                                  getattr(args, "scenario_id", None), args.limit)
     if not scenarios:
@@ -902,21 +1041,28 @@ async def run_trial(args, *, scenarios_override: list[dict] | None = None) -> di
     clock = datetime.now(timezone.utc)
     config = {"model": MODEL, "effort": args.effort, "seed": args.seed, "split": args.split,
               "fixtures": "explicit_versioned_scenarios" if scenarios_override is not None else "builtin",
+              "connector_profile": bool(getattr(args, "connector_profile", False)),
+              "catalog_noise": int(getattr(args, "catalog_noise", 0)),
+              "push_gated": bool(getattr(args, "push_gated", False)),
               "dataset_digest": dataset_digest(scenarios), "selected_companies": len(scenarios),
               "selected_scenario_ids": [scenario["scenario_id"] for scenario in scenarios],
               "public_context_digest": digest([public_scenario(scenario) for scenario in scenarios]),
+              "onboarding_surface": "guided",
+              "same_card_monitoring": True,
               "max_api_requests": args.max_api_requests, "max_turns": args.max_turns,
               "max_tool_calls": args.max_tool_calls, "max_output_tokens": args.max_output_tokens,
               "prices": PRICES, "clock_rebased_to": clock.isoformat(),
               "source_fingerprint": source_fingerprint(),
               "live": True, "real_external_notifications": False,
               "limits": ["Synthetic sources with normalized adapter contracts, not real BI connectors.",
+                         "Noisy trials add scoped catalog alternatives; they are not evaluator-labeled distractors and are identical for both arms.",
                          "Human approval is procedural and simulated, not actual human validation.",
                          "No autonomous causal inference or enterprise reliability claim.",
                          "Baseline has notes and calculators but not persistent code generation.",
                          "Comparator: notes-persistent, LLM-per-run baseline, not all agent strategies.",
                          "Scorer checks structured fields, not narrative entailment; prose needs independent review.",
-                         "Every warm run wakes Luna in both arms; no claimed wakeup savings."]}
+                         "Push-gated treatment skips the downstream agent only for a complete Jev ignore with provenance; action outcomes still wake it.",
+                         "Without --push-gated every warm run wakes Luna in both arms; no wakeup savings are claimed."]}
     episode_runner = luna_episode
     owner_reviewer = None
     if owner_review_mode == "independent":
@@ -956,17 +1102,37 @@ async def run_trial(args, *, scenarios_override: list[dict] | None = None) -> di
             folder = args.output / public["scenario_id"] / arm
             folder.mkdir(parents=True)
             adapter = PublicSourceAdapter(public["catalog"], public["scenario_id"], audit)
-            registry = SourceRegistry([adapter])
+            connector_names = sorted({item.adapter for item in adapter.catalog})
+            registry = SourceRegistry(
+                [PublicConnectorAdapter(adapter, name) for name in connector_names]
+                if len(connector_names) > 1 or connector_names != [adapter.name]
+                else [adapter]
+            )
             judger = MeasuredJev(jev_key, budget, audit)
             runtime = Runtime(card_store=JsonInsightCardStore(folder / "cards.json"), sources=registry,
                               engine=InsightEngine(judger, registry, clock=lambda a=adapter: a.clock),
                               metric_query_store=JsonMetricQueryCardStore(folder / "metric-cards.json"),
                               principal=PrincipalContext(principal_id="synthetic-owner",
                                                          tenant_id=public["scenario_id"]))
-            sessions[arm] = ToolSession(public, adapter, create_mcp(runtime), arm == ARMS[1],
-                                        owner_reviewer=owner_reviewer)
+            sessions[arm] = ToolSession(
+                public, adapter, create_mcp(runtime), arm == ARMS[1],
+                owner_reviewer=owner_reviewer,
+                onboarding_surface="guided",
+            )
         periods = [("onboarding", public["onboarding"])] + [("monitoring", p) for p in public["periods"]]
+        shared_card_seeded = False
         for phase, period in periods:
+            if phase == "monitoring" and not shared_card_seeded:
+                # The treatment's approved card is the owner-authored policy
+                # artifact for the monitoring comparison. Supplying that exact
+                # snapshot to the baseline prevents a hidden card advantage.
+                shared_card = sessions[ARMS[1]].latest_card
+                if shared_card is not None:
+                    for candidate in sessions.values():
+                        candidate.shared_card = copy.deepcopy(shared_card)
+                else:
+                    config["same_card_monitoring"] = False
+                shared_card_seeded = True
             # Alternate pair order by period to reduce provider/cache ordering bias.
             order.reverse()
             for arm in order:
@@ -997,11 +1163,28 @@ async def run_trial(args, *, scenarios_override: list[dict] | None = None) -> di
                             "card_id": session.card_id, "idempotency_key": audit.episode})
                         row["system_seconds"] = time.perf_counter() - system_started
                         audit.emit("system.evaluation", response=system_output)
-                    episode = await episode_runner(session, key=openai_key, effort=args.effort,
-                                                 budget=budget, audit=audit, max_turns=args.max_turns,
-                                                 max_tool_calls=args.max_tool_calls,
-                                                 max_output_tokens=args.max_output_tokens,
-                                                 bundle=system_output)
+                    skipped = False
+                    skipped_submission = None
+                    if phase == "monitoring" and session.treatment and getattr(args, "push_gated", False):
+                        skipped_submission = push_gated_ignore_submission(
+                            system_output or {}, set(session.public["numeric_vocabulary"])
+                        )
+                        skipped = skipped_submission is not None
+                    if skipped:
+                        session.submission = skipped_submission
+                        episode = {
+                            "status": "complete", "seconds": 0.0, "agent_seconds": 0.0,
+                            "tool_calls": 0, "source_reads": session.adapter.inspections,
+                            "usage": usage_summary(audit.events[offset:]), "foreign_tools": [],
+                            "agent_wakeup_skipped": True,
+                        }
+                    else:
+                        episode = await episode_runner(session, key=openai_key, effort=args.effort,
+                                                     budget=budget, audit=audit, max_turns=args.max_turns,
+                                                     max_tool_calls=args.max_tool_calls,
+                                                     max_output_tokens=args.max_output_tokens,
+                                                     bundle=system_output)
+                        episode.setdefault("agent_wakeup_skipped", False)
                     row.update(episode)
                     row["agent_seconds"] = episode["seconds"]
                 except Exception as error:
@@ -1012,7 +1195,10 @@ async def run_trial(args, *, scenarios_override: list[dict] | None = None) -> di
                 row.update(seconds=time.perf_counter() - started, usage=usage_summary(audit.events[offset:]),
                            submission=session.submission, notes=session.notes, card_id=session.card_id,
                            system_output=system_output, inspected_refs=sorted(session.adapter.inspected),
-                           source_reads=session.adapter.inspections, asked_owner_topics=sorted(session.owner_topics))
+                           source_reads=session.adapter.inspections, asked_owner_topics=sorted(session.owner_topics),
+                           shared_card_digest=(digest(session.shared_card)
+                                               if phase == "monitoring" and session.shared_card is not None
+                                               else None))
                 if owner_reviewer is not None:
                     row["owner_reviews"] = session.owner_review_records[review_offset:]
                     row["owner_review_tool_calls"] = sum(
@@ -1064,6 +1250,16 @@ async def run_trial(args, *, scenarios_override: list[dict] | None = None) -> di
         and isinstance(e.get("response"), dict) and e["response"].get("model")})
     report["live_jev_observed"] = bool(report["resolved_jev_models"])
     report["comparative_eligible"] &= len(report["resolved_jev_models"]) <= 1
+    monitoring_card_digests = {
+        row.get("shared_card_digest") for row in rows
+        if row.get("phase") == "monitoring"
+    }
+    report["same_card_monitoring_observed"] = (
+        bool(monitoring_card_digests) and None not in monitoring_card_digests
+        and len(monitoring_card_digests) == 1
+    )
+    if not config.get("same_card_monitoring", False):
+        report["comparative_eligible"] = False
     if config.get("agent_transport") == "codex_cli":
         report["measured_dollar_cost_comparison_available"] = False
         report["jev_api_attempts"] = budget.used
@@ -1085,6 +1281,12 @@ def parser() -> argparse.ArgumentParser:
                         help="codex reuses saved CLI login; no OpenAI API key required")
     result.add_argument("--jev-key-file", type=Path)
     result.add_argument("--split", choices=["dev", "holdout"], default="dev")
+    result.add_argument("--connector-profile", action="store_true",
+                        help="Use the same fixtures with heterogeneous Superset/Looker/Hex/Trino/ops adapters")
+    result.add_argument("--catalog-noise", type=int, default=0,
+                        help="Add this many scoped archive/sandbox/regional/forecast/partner alternatives per canonical resource (0-20)")
+    result.add_argument("--push-gated", action="store_true",
+                        help="In treatment, do not wake the downstream agent for a complete Jev ignore with provenance")
     result.add_argument("--limit", type=int, default=6, help="Maximum companies, not periods")
     result.add_argument("--scenario-id", action="append", help="Explicit development subset; repeat per company. No periods are omitted.")
     result.add_argument("--seed", type=int, default=DEFAULT_SEED)
@@ -1107,7 +1309,13 @@ def main() -> None:
                args.max_output_tokens) < 1:
             raise ValueError("limits must be positive")
         credentials(args)
-        select_scenarios(build_scenarios(seed=args.seed, split=args.split), args.scenario_id, args.limit)
+        select_scenarios(
+            build_scenarios(seed=args.seed, split=args.split,
+                            connector_profile=args.connector_profile,
+                            catalog_noise=args.catalog_noise),
+            args.scenario_id,
+            args.limit,
+        )
         if args.output.exists():
             raise ValueError("Output already exists; choose a new directory. No overwrite or silent resume.")
         if args.preflight:

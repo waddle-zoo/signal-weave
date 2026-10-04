@@ -286,7 +286,7 @@ def test_full_offline_run_trial_smoke_exercises_real_runtime_artifacts(tmp_path,
     )
 
     checks = report["protocol_checks"]
-    assert checks["all_three_cards_approved"]
+    assert checks["all_selected_cards_approved"]
     assert checks["no_foreign_tools"]
     assert checks["exact_replay_all_treatment_periods"]
     assert checks["paired_catalog_and_analysis"]

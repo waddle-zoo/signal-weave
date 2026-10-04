@@ -145,6 +145,35 @@ def test_rate_conditions_compare_fraction_in_the_report_unit():
     assert mismatched.status == "unknown"
 
 
+@pytest.mark.parametrize("comparator,expected", [("<=", "true"), ("<", "false")])
+def test_change_pct_conditions_use_signed_relative_change(comparator, expected):
+    result = evaluate(
+        condition(
+            measurement="change_pct",
+            unit="percent",
+            threshold=-10,
+            comparator=comparator,
+        )
+    )[0]
+    assert result.status == expected
+    assert result.value == pytest.approx(-10.0)
+    assert result.unit == result.expected_unit == "percent"
+
+
+def test_change_pct_requires_a_nonzero_baseline_and_percent_unit():
+    zero_baseline = analyze_comparison(
+        "source-a", comparison().model_copy(update={
+            "baseline_total": PeriodValue(value=0),
+            "segments": [
+                SegmentPair(segment="a", baseline=PeriodValue(value=0), current=PeriodValue(value=50)),
+                SegmentPair(segment="any", baseline=PeriodValue(value=0), current=PeriodValue(value=40)),
+            ],
+        })
+    )
+    assert evaluate(condition(measurement="change_pct", unit="percent"), report=zero_baseline)[0].status == "unknown"
+    assert evaluate(condition(measurement="change_pct", unit="number"))[0].status == "unknown"
+
+
 def rate_effect_comparison(*, baseline_total, current_total, segments):
     return comparison(kind="rate").model_copy(update={
         "baseline_total": PeriodValue(**baseline_total),

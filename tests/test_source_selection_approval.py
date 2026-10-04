@@ -49,7 +49,7 @@ class MutableRankingDouble(OnboardingJevDouble):
             self.rank_started.set()
             await self.resume_rank.wait()
         return {
-            f"{resource.adapter}|{resource.resource}": self.scores[resource.resource]
+            f"{resource.adapter}|{resource.resource}": self.scores.get(resource.resource, 0.10)
             for resource in resources
         }
 
@@ -58,6 +58,10 @@ class MutableRankingDouble(OnboardingJevDouble):
             f"{resource.adapter}|{resource.resource}": {"role": self.role, "probability": 0.9}
             for resource in resources
         }
+
+
+class LookerCatalogDouble(SupersetCatalogDouble):
+    name = "looker"
 
 
 async def draft(server, **overrides):
@@ -159,6 +163,26 @@ async def test_confirmation_persists_exact_scope_and_audit_after_restart(tmp_pat
 
     restarted = make_server(tmp_path, judger, sqlite=sqlite, catalog=catalog)
     assert tool(restarted, "get_insight_card")(card_id, include_history=True) == approved
+
+
+async def test_adapter_scoped_review_can_be_approved_with_the_same_scope(tmp_path):
+    server = make_server(
+        tmp_path,
+        MutableRankingDouble(),
+        catalogs=[AmbiguousSupersetCatalogDouble(), LookerCatalogDouble()],
+    )
+    card_id = await draft(server)
+
+    review = (await tool(server, "review_insight_card")(card_id, adapter="superset"))["review"]
+    result = await confirm(
+        server,
+        card_id,
+        review["source_selection_fingerprint"],
+        adapter="superset",
+    )
+
+    assert result["status"] == "approved"
+    assert result["onboarding_review"]["selected_source_refs"] == ["superset|dashboard:7"]
 
 
 @pytest.mark.parametrize("sqlite", [False, True], ids=["json", "sqlite"])
@@ -459,8 +483,23 @@ async def test_dynamic_modes_cannot_resolve_source_selection(tmp_path, retrieval
     )
     await assert_rejected(
         server, card_id, review["source_selection_fingerprint"],
-        match="requires retrieval_mode=fixed and investigation_mode=none",
+        match="dynamic_scope_acknowledged=true",
     )
+
+
+@pytest.mark.parametrize("retrieval,investigation", [
+    ("expand", "none"), ("fixed", "bounded"), ("expand", "bounded"),
+])
+async def test_owner_can_explicitly_acknowledge_bounded_dynamic_scope(tmp_path, retrieval, investigation):
+    server, card_id, review, _, _ = await reviewed_case(
+        tmp_path, retrieval_mode=retrieval, investigation_mode=investigation,
+    )
+    result = await confirm(
+        server, card_id, review["source_selection_fingerprint"],
+        dynamic_scope_acknowledged=True,
+    )
+    assert result["status"] == "approved"
+    assert result["onboarding_review"]["source_selection_confirmation"] == REASON
 
 
 @pytest.mark.parametrize("status", ["stale", "failed", "ambiguous", "unknown"])

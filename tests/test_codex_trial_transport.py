@@ -323,6 +323,49 @@ async def test_episode_completion_usage_and_isolated_process_cleanup(fake_episod
     assert "fake-secret" not in trial.canonical(fake.audit.events)
 
 
+async def test_custom_episode_preserves_precomputed_signalweave_bundle(fake_episode):
+    fake = fake_episode
+    fake.session.submission = {}
+    bundle = {"status": "complete", "evidence": [{"source_key": "company_mcp|offline"}],
+              "outcome": "investigate"}
+    result = await fake.run(
+        [{"type": "turn.completed", "usage": {"input_tokens": 10, "output_tokens": 2}}],
+        instructions_override="Custom episode instructions",
+        prompt_override={"brief": "same brief"},
+        bundle=bundle,
+    )
+    assert result["status"] == "complete"
+    request = next(e for e in fake.audit.events if e.get("transport") == "codex_cli")
+    context = json.loads(request["prompt"].rsplit("\n", 1)[1])
+    assert context == {"brief": "same brief", "signalweave_evaluation": bundle}
+
+
+async def test_treatment_bundle_prompt_requires_full_numeric_provenance(fake_episode):
+    fake = fake_episode
+    fake.session.treatment = True
+    fake.session.phase = "monitoring"
+    fake.session.setup_complete = True
+    fake.session.submission = {}
+    bundle = {
+        "result": {
+            "outcome": "notify",
+            "report": {
+                "provenance": [{
+                    "source_key": "primary", "comparison_key": "collections",
+                    "query_refs": ["trino|receipts", "airflow|watermark"],
+                }],
+            },
+        },
+    }
+    await fake.run(
+        [{"type": "turn.completed", "usage": {"input_tokens": 10, "output_tokens": 2}}],
+        bundle=bundle,
+    )
+    request = next(e for e in fake.audit.events if e.get("transport") == "codex_cli")
+    assert "copy every adapter|resource ref" in request["prompt"]
+    assert "quality or completeness sources" in request["prompt"]
+
+
 @pytest.mark.parametrize("event,expected", [
     ({"type": "turn.failed"}, "codex_error"),
     ({"type": "error"}, "codex_error"),

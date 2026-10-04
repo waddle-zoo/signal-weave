@@ -15,6 +15,7 @@ import copy
 import hashlib
 import json
 import math
+import time
 from pathlib import Path
 from typing import Any
 
@@ -843,9 +844,46 @@ async def run_trial(output: Path, *, live: bool = False, key_file: str | None = 
                                   principal=operator_principal(public))
                 session = RecurringSession(company=public, adapter=adapter, server=create_mcp(runtime),
                                            audit=audit, treatment=treatment, card_id=card.id, card=card)
-                extra = ("Use evaluate_workflow once per period before composing the final written report. "
-                         "Retain its authoritative outcome, recipients and analyses. inspect_source returns "
-                         "the deterministic numeric-condition results when needed. " if treatment else
+                preflight = None
+                if treatment:
+                    # Model the pushed-analytics path: the scheduler/runtime
+                    # evaluates the approved card before waking the agent. The
+                    # agent receives this exact typed result in its opening
+                    # context and is not required to rediscover the evidence.
+                    preflight_started = time.perf_counter()
+                    preflight = await first_report_dispatch(session.server, "evaluate_insight_card", {
+                        "card_id": card.id,
+                        "idempotency_key": f"business-outcomes:{holdout[0]['id']}",
+                    })
+                    reads = adapter.inspections
+                    before = sum(e["kind"] == "api.request" and e.get("provider") == "jev"
+                                 for e in audit.events)
+                    replay = await first_report_dispatch(session.server, "evaluate_insight_card", {
+                        "card_id": card.id,
+                        "idempotency_key": f"business-outcomes:{holdout[0]['id']}",
+                    })
+                    after = sum(e["kind"] == "api.request" and e.get("provider") == "jev"
+                                for e in audit.events)
+                    session.native = preflight
+                    # Hydrate the same per-period projections that would be
+                    # produced if the agent had called evaluate_workflow.
+                    # This keeps the scheduled preflight path authoritative
+                    # even when the agent correctly uses the opening bundle
+                    # and makes no redundant tool call.
+                    await session.call("evaluate_workflow", {})
+                    session.native_meta["preflight_seconds"] = time.perf_counter() - preflight_started
+                    session.native_meta["preflight_delivered"] = True
+                    session.native_meta["replay_exact_no_calls"] = (
+                        all(replay.get(key) == preflight.get(key)
+                            for key in ("report", "report_markdown", "result"))
+                        and reads == adapter.inspections and before == after)
+                    audit.emit("system.evaluation", response=preflight)
+                extra = ("SignalWeave has already evaluated the approved card for this period. The complete "
+                         "typed evidence bundle is included in your opening context under "
+                         "signalweave_evaluation. Treat its outcome, recipients, analyses and evidence as "
+                         "authoritative. Do not call evaluate_workflow or re-read the source unless the "
+                         "bundle is missing or explicitly incomplete; use the saved policy and submit the "
+                         "owner-facing report from that bundle. " if treatment else
                          "Use inspect_source with the saved policy; its result includes the deterministic "
                          "numeric-condition checks. The optional helper is not required. ")
                 episode = await codex_episode(
@@ -853,6 +891,7 @@ async def run_trial(output: Path, *, live: bool = False, key_file: str | None = 
                     max_turns=35, max_tool_calls=34, max_output_tokens=7000,
                     timeout_seconds=EPISODE_TIMEOUT_SECONDS,
                     instructions_override=BUSINESS_INSTRUCTIONS + " " + extra,
+                    bundle=preflight,
                     prompt_override={"brief": public.get("brief", ""), "owner_policy": public.get("owner_policy", ""),
                                      "saved_card": card.execution_payload(),
                                      "period_count": HOLDOUT_PERIODS,
@@ -901,7 +940,7 @@ async def run_trial(output: Path, *, live: bool = False, key_file: str | None = 
         and summary[arm]["failed_episodes"] == 0
         for arm in ("baseline", "signalweave")
     )
-    all_approved = len(companies) == 3 and all(
+    all_approved = bool(companies) and len(set(item.get("company") for item in setup_results)) == len(companies) and all(
         item.get("setup_complete") and item.get("approval", {}).get("status") in {"approved", "replayed"}
         for item in setup_results
     )
@@ -912,7 +951,7 @@ async def run_trial(output: Path, *, live: bool = False, key_file: str | None = 
     paired_context = _paired_context_matches(paired)
     protocol_checks = {
         "all_intended_holdout_scores": all_scores,
-        "all_three_cards_approved": all_approved,
+        "all_selected_cards_approved": all_approved,
         "no_foreign_tools": no_foreign_tools,
         "exact_replay_all_treatment_periods": all_replays,
         "paired_catalog_and_analysis": paired_context,
@@ -951,7 +990,9 @@ def main():
     args = parser.parse_args()
     result = asyncio.run(run_trial(args.output, live=args.live, key_file=args.jev_key_file,
                                    company_limit=args.company_limit, case_set=args.case_set))
-    print(json.dumps({"output": str(args.output), "status": result.get("status"), "jev_attempts": result.get("jev_attempts", 0)}))
+    print(json.dumps({"output": str(args.output),
+                      "status": result.get("overall_status", result.get("status")),
+                      "jev_attempts": result.get("jev_attempts", 0)}))
 
 
 if __name__ == "__main__":

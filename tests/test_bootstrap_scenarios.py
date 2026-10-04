@@ -6,6 +6,7 @@ from fractions import Fraction
 import pytest
 
 from evaluations.bootstrap_scenarios import (
+    CONNECTOR_PROFILES,
     OWNER_TOPICS,
     SCHEMA_VERSION,
     SCORER_VERSION,
@@ -96,6 +97,57 @@ def test_counts_split_and_real_contracts():
                 assert ref == f"{snapshot.adapter}|{snapshot.resource}"
                 assert snapshot.metadata["period_id"] == period["period_id"]
                 assert snapshot.metadata["tenant"] == scenario["scenario_id"]
+
+
+def test_connector_profile_preserves_fixture_semantics_while_exercising_multiple_adapters():
+    scenarios = build_scenarios(connector_profile=True)
+    adapters = {descriptor["adapter"] for scenario in scenarios
+                for descriptor in scenario["public"]["catalog"]}
+    assert len(adapters) >= 6
+    assert {"superset", "looker", "hex", "trino", "airflow"} <= adapters
+    for scenario in scenarios:
+        family = scenario["private"]["family"]
+        expected = set(CONNECTOR_PROFILES[family])
+        catalog = scenario["public"]["catalog"]
+        assert {item["adapter"] for item in catalog} == expected
+        refs = {f'{item["adapter"]}|{item["resource"]}' for item in catalog}
+        assert set(scenario["public"]["onboarding"]["snapshots"]) == refs
+        for period in scenario["public"]["periods"]:
+            assert set(period["snapshots"]) == refs
+
+
+def test_catalog_noise_adds_shared_scoped_alternatives_without_changing_labels():
+    canonical = build_scenarios(seed=20261002, split="holdout", connector_profile=True)
+    scenarios = build_scenarios(seed=20261002, split="holdout",
+                                connector_profile=True, catalog_noise=2)
+    assert [item["scenario_id"] for item in scenarios] == [item["scenario_id"] for item in canonical]
+    assert [item["public"]["onboarding"]["period_id"] for item in scenarios] == [
+        item["public"]["onboarding"]["period_id"] for item in canonical
+    ]
+    for scenario in scenarios:
+        public = scenario["public"]
+        descriptors = [ResourceDescriptor.model_validate(item) for item in public["catalog"]]
+        refs = {f"{item.adapter}|{item.resource}" for item in descriptors}
+        assert len(descriptors) == 4 * 3
+        assert set(public["onboarding"]["snapshots"]) == refs
+        assert all(len(period["snapshots"]) == len(refs) for period in public["periods"])
+        assert sum(item.metadata.get("scope") in {"archive", "sandbox"}
+                   for item in descriptors) == 8
+        assert {label["condition"] for label in scenario["private"]["periods"].values()} == {
+            "quiet", "event", "quality"
+        }
+        for period in [public["onboarding"], *public["periods"]]:
+            for ref, raw_snapshot in period["snapshots"].items():
+                snapshot = ResourceSnapshot.model_validate(raw_snapshot)
+                assert ref == f"{snapshot.adapter}|{snapshot.resource}"
+                assert snapshot.metadata["period_id"] == period["period_id"]
+
+
+def test_catalog_noise_rejects_unbounded_fixture_expansion():
+    with pytest.raises(ValueError, match="between 0 and 20"):
+        build_scenarios(catalog_noise=21)
+    with pytest.raises(ValueError, match="between 0 and 20"):
+        build_scenarios(catalog_noise=-1)
 
 
 def test_public_allowlist_cannot_leak_private_fields_or_alias_private_state():

@@ -24,7 +24,7 @@ from pydantic import (
 from .diagnostics import AnalysisReport, analyze_comparison
 
 NumericMeasurement = Literal[
-    "baseline", "current", "delta", "contribution", "within_effect", "mix_effect"
+    "baseline", "current", "delta", "change_pct", "contribution", "within_effect", "mix_effect"
 ]
 NumericComparator = Literal["<", "<=", "==", ">=", ">", "!="]
 NumericConditionStatus = Literal["true", "false", "unknown"]
@@ -48,7 +48,8 @@ class NumericCondition(BaseModel):
     )
     measurement: NumericMeasurement = Field(
         description=(
-            "Select total baseline, current, delta, a symmetric rate within_effect or "
+            "Select total baseline, current, signed delta, relative change_pct in percent, "
+            "a symmetric rate within_effect or "
             "mix_effect, or a segment contribution. Within/mix effects require the "
             "symmetric_rate_decomposition_v1 report method and never accept a segment. "
             "Segment contribution may use segment=null for any segment or an exact "
@@ -195,6 +196,7 @@ def _result(
     value: float | None = None,
     reason: str = "",
     matched_segment: str | None = None,
+    unit: str | None = None,
 ) -> NumericConditionResult:
     return NumericConditionResult(
         condition_text=condition.text,
@@ -208,7 +210,7 @@ def _result(
         absolute=condition.absolute,
         status=status,
         value=value,
-        unit=report.unit if report else None,
+        unit=unit if unit is not None else report.unit if report else None,
         expected_unit=condition.unit,
         query_refs=list(report.query_refs) if report else [],
         provenance=list(report.query_refs) if report else [],
@@ -234,11 +236,39 @@ def _evaluate_one(condition: NumericCondition, analyses: Iterable[AnalysisReport
         return _result(condition, status="unknown", reason="Matching analysis failed reproducibility checks.")
     if report.status != "complete":
         return _result(condition, status="unknown", report=report, reason="Matching analysis is incomplete.")
-    if report.unit != condition.unit:
+    expected_unit_matches = (
+        condition.unit in {"percent", "%"}
+        if condition.measurement == "change_pct"
+        else report.unit == condition.unit
+    )
+    if not expected_unit_matches:
         return _result(condition, status="unknown", report=report, reason="Condition unit does not match analysis unit.")
     if not _finite(report.baseline) or not _finite(report.current) or not _finite(report.delta):
         return _result(condition, status="unknown", report=report, reason="Matching analysis has no finite total value.")
 
+    if condition.measurement == "change_pct":
+        if condition.unit not in {"percent", "%"}:
+            return _result(
+                condition,
+                status="unknown",
+                report=report,
+                reason="A relative-change condition must use the percent unit.",
+            )
+        if not _finite(report.baseline) or report.baseline == 0 or not _finite(report.current):
+            return _result(
+                condition,
+                status="unknown",
+                report=report,
+                reason="A relative change requires finite current and nonzero baseline values.",
+            )
+        value = (report.current - report.baseline) / abs(report.baseline) * 100
+        return _result(
+            condition,
+            status="true" if _compare(value, condition.comparator, condition.threshold) else "false",
+            report=report,
+            value=value,
+            unit=condition.unit,
+        )
     if condition.measurement in {"within_effect", "mix_effect"}:
         if report.method != "symmetric_rate_decomposition_v1":
             return _result(

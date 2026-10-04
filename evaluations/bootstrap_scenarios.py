@@ -17,13 +17,41 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, StrictFloat, StrictInt, ValidationError
 
-from signalweave.models import ResourceDescriptor, ResourceSnapshot
+from signalweave.models import ResourceContract, ResourceDescriptor, ResourceSnapshot
 
 SCHEMA_VERSION = 1
 SCORER_VERSION = 3
 DEFAULT_SEED = 20261001
 CLAIM_TYPES = ("observation", "accounting_decomposition", "association", "hypothesis", "causal")
 OWNER_TOPICS = ("metric_scope", "materiality", "routing", "data_gaps")
+
+# The original v3 fixture intentionally uses one neutral adapter name so its
+# historical digest remains immutable.  New connector-profile trials preserve
+# the same business data and labels while exercising the multi-adapter runtime
+# with realistic BI/warehouse/operations names.
+CONNECTOR_PROFILES = {
+    "retail": ("superset", "dbt", "airflow", "looker"),
+    "subscription_boxes": ("superset", "dbt", "airflow", "looker"),
+    "saas": ("looker", "airflow", "hex", "superset"),
+    "support": ("superset", "notion", "looker", "airflow"),
+    "ops": ("superset", "airflow", "pagerduty", "cloudwatch"),
+    "logistics": ("tableau", "airflow", "carrier", "trino"),
+    "marketplace": ("trino", "segment", "hex", "superset"),
+    "finance": ("trino", "airflow", "looker", "dbt"),
+}
+
+# Optional catalog pressure for live onboarding trials. These are ordinary
+# source scopes that appear in real BI/data catalogs, not evaluator labels.
+# The default fixture does not include them so the measured v3 digest remains
+# immutable; noisy trials opt in explicitly and expose the same alternatives
+# to both the baseline and SignalWeave arms.
+CATALOG_VARIANTS = (
+    ("archive", "Historical archive retained for reconciliation."),
+    ("sandbox", "Sandbox scope used for development and validation."),
+    ("regional", "Regional pilot scope with a limited operating population."),
+    ("forecast", "Planning projection used for forward-looking scenarios."),
+    ("partner", "Partner scope with a separately governed population."),
+)
 
 
 def _numeric_vocabulary(spec: dict) -> list[str]:
@@ -98,6 +126,23 @@ def _number(value: int | float | Fraction) -> float:
     return float(value)
 
 
+def _perturb_numeric_values(value: Any, factor: float) -> Any:
+    """Make a plausible alternative-scope export without metric-specific code."""
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, int):
+        return int(round(value * factor))
+    if isinstance(value, float):
+        return value * factor
+    if isinstance(value, dict):
+        return {key: _perturb_numeric_values(item, factor) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_perturb_numeric_values(item, factor) for item in value]
+    if isinstance(value, tuple):
+        return tuple(_perturb_numeric_values(item, factor) for item in value)
+    return value
+
+
 def _rate_facts(rows: list[tuple[str, int, int, int, int]]) -> dict[str, float]:
     """Independent oracle: four standardized totals, not runtime contributions."""
     d0, d1 = sum(r[2] for r in rows), sum(r[4] for r in rows)
@@ -131,6 +176,52 @@ def _comparison(metric: str, rows: list[tuple[str, int, int, int, int]],
         "segments": [{"segment": name, "baseline": {"numerator": n0, "denominator": d0},
                       "current": {"numerator": n1, "denominator": d1}}
                      for name, n0, d0, n1, d1 in rows],
+    }
+
+
+def _additive_comparison(
+    metric: str,
+    baseline: float | None,
+    current: float | None,
+    segments: list[tuple[str, float | None, float | None]],
+    as_of: datetime,
+    query_refs: list[str],
+    definition: str,
+    unit: str,
+    *,
+    comparable: bool = True,
+    coverage: str = "complete",
+) -> dict:
+    """Build the normalized comparison a real connector would return.
+
+    The raw export remains in the fixture as well.  This separate projection is
+    important: SignalWeave consumes adapter-declared analytical comparisons,
+    while a general-purpose agent may still inspect the underlying rows.
+    """
+    return {
+        "key": metric,
+        "metric": metric,
+        "definition": definition,
+        "population": "Eligible entities in the source glossary",
+        "dimension": "total",
+        "unit": unit,
+        "kind": "additive",
+        "baseline_start": (as_of - timedelta(days=14)).isoformat(),
+        "baseline_end": (as_of - timedelta(days=7)).isoformat(),
+        "current_start": (as_of - timedelta(days=7)).isoformat(),
+        "current_end": as_of.isoformat(),
+        "comparison_window": "previous_period",
+        "coverage": coverage,
+        "disjoint_segments": True,
+        "comparable": comparable,
+        "query_refs": query_refs,
+        "baseline_total": {"value": baseline},
+        "current_total": {"value": current},
+        "segments": [
+            {"segment": segment, "baseline": {"value": baseline_value},
+             "current": {"value": current_value}}
+            for segment, baseline_value, current_value in segments
+        ],
     }
 
 
@@ -240,7 +331,7 @@ def _specs(split: str) -> list[dict]:
 
 
 def _payload(spec: dict, condition: str, scale: int, as_of: datetime,
-             refs: list[str]) -> tuple[list[dict], dict, list[str]]:
+             refs: list[str], *, normalized_comparisons: bool = False) -> tuple[list[dict], dict, list[str]]:
     """Build source payloads; derive labels from generating quantities, not engine output."""
     family, metric = spec["family"], spec["metric"]
     broken, event = condition == "quality", condition == "event"
@@ -271,6 +362,24 @@ def _payload(spec: dict, condition: str, scale: int, as_of: datetime,
         if not broken:
             b = sum(r["baseline_gross"] - r["baseline_refunds"] for r in rows)
             c = sum(r["current_gross"] - r["current_refunds"] for r in rows)
+            if normalized_comparisons:
+                payloads[0]["comparison"] = _additive_comparison(
+                metric,
+                b,
+                c,
+                [
+                    (
+                        row["channel"],
+                        row["baseline_gross"] - row["baseline_refunds"],
+                        row["current_gross"] - row["current_refunds"],
+                    )
+                    for row in rows
+                ],
+                as_of,
+                [refs[0]],
+                spec["scope"],
+                spec["unit"],
+                )
             for name, value in (("baseline", b), ("current", c), ("delta", c - b)):
                 fact(name, value, needed=name == "delta")
             fact("web_contribution", rows[0]["current_gross"] - rows[0]["current_refunds"]
@@ -316,6 +425,17 @@ def _payload(spec: dict, condition: str, scale: int, as_of: datetime,
                        "incident_note": "A prior rollout coincided with lag; no controlled causal test was performed.",
                        "runbook": "Check target clusters and customer reports before proposing rollback."}
         if not broken:
+            if normalized_comparisons:
+                payloads[0]["comparison"] = _additive_comparison(
+                metric,
+                payloads[0]["baseline_p95_ms"],
+                payloads[0]["current_p95_ms"],
+                [("all_customer_clusters", payloads[0]["baseline_p95_ms"], payloads[0]["current_p95_ms"])],
+                as_of,
+                [refs[0]],
+                spec["scope"],
+                spec["unit"],
+                )
             fact("delta", 40 if event else 0, needed=True)
             fact("affected_regions", 3 if event else 0, "regions", needed=event)
             if event:
@@ -330,6 +450,19 @@ def _payload(spec: dict, condition: str, scale: int, as_of: datetime,
                        "overlap": "known, intersection count not exported", "disjoint": False}
         for name, value in _buyer_values(payloads[0]).items():
             fact(name, value, needed=name == "delta")
+        if not broken:
+            values = _buyer_values(payloads[0])
+            if normalized_comparisons:
+                payloads[0]["comparison"] = _additive_comparison(
+                metric,
+                values.get("baseline"),
+                values.get("current"),
+                [("all_buyers", values.get("baseline"), values.get("current"))],
+                as_of,
+                [refs[0]],
+                spec["scope"],
+                spec["unit"],
+                )
     else:
         b, c = 1000 * scale, (750 if event else 1000) * scale
         payloads[0] = {"baseline_settled_usd": b, "current_settled_usd": 400 * scale if broken else c,
@@ -339,6 +472,28 @@ def _payload(spec: dict, condition: str, scale: int, as_of: datetime,
                        "watermark": (as_of - timedelta(days=3) if broken else as_of).isoformat()}
         for name, value in _finance_values(payloads[0], payloads[1], as_of).items():
             fact(name, value, needed=name == "delta", evidence_refs=refs[:2])
+        values = _finance_values(payloads[0], payloads[1], as_of)
+        if values:
+            if normalized_comparisons:
+                payloads[0]["comparison"] = _additive_comparison(
+                metric,
+                values.get("baseline"),
+                values.get("current"),
+                [
+                    (
+                        row["bank"],
+                        row.get("baseline_usd"),
+                        row.get("current_usd"),
+                    )
+                    for row in payloads[0]["rows"]
+                ] if all("baseline_usd" in row for row in payloads[0]["rows"]) else [
+                    ("all_settled_receipts", values.get("baseline"), values.get("current"))
+                ],
+                as_of,
+                refs[:2],
+                spec["scope"],
+                spec["unit"],
+                )
     # Plausible, large movements in irrelevant populations on *every* period.
     payloads[2] = {"baseline": 900 * scale, "current": 450 * scale,
                    "population": spec["descriptions"][2], "coverage": "complete_for_this_population"}
@@ -347,48 +502,150 @@ def _payload(spec: dict, condition: str, scale: int, as_of: datetime,
     return payloads, facts, required
 
 
-def build_scenarios(seed: int = DEFAULT_SEED, split: Literal["dev", "holdout"] = "holdout") -> list[dict]:
+def build_scenarios(
+    seed: int = DEFAULT_SEED,
+    split: Literal["dev", "holdout"] = "holdout",
+    *,
+    connector_profile: bool = False,
+    catalog_noise: int = 0,
+) -> list[dict]:
     """Six held-out companies × three monitoring periods, or two dev companies.
 
     The separately supplied onboarding snapshot is not a held-out period. Each
     monitoring period is exposed to tools only when it becomes current; never
-    put the full ``public`` object into a model prompt.
+    put the full ``public`` object into a model prompt. ``catalog_noise`` adds
+    the same number of scoped alternative resources per canonical resource;
+    it is intentionally opt-in so the historical fixture stays byte-identical.
     """
     if split not in {"dev", "holdout"}:
         raise ValueError("split must be dev or holdout")
+    if type(catalog_noise) is not int or not 0 <= catalog_noise <= 20:
+        raise ValueError("catalog_noise must be an integer between 0 and 20")
     rng = random.Random(f"bootstrap-v{SCHEMA_VERSION}:{seed}:{split}")
     scenarios = []
     for spec in _specs(split):
         scenario_id = _opaque(rng, "company")
         keys = [_opaque(rng, "resource") for _ in range(4)]
-        refs = [f"company_mcp|{key}" for key in keys]
+        adapters = (
+            CONNECTOR_PROFILES[spec["family"]]
+            if connector_profile
+            else ("company_mcp",) * len(keys)
+        )
+        refs = [f"{adapters[i]}|{key}" for i, key in enumerate(keys)]
         route, data_route = _opaque(rng, "team"), _opaque(rng, "team")
         destinations = [{"key": route, "label": "Business owner", "destination": f"slack://{route}"},
                         {"key": data_route, "label": "Data operations", "destination": f"slack://{data_route}"}]
         # Keep this measured v3 fixture immutable as production models evolve.
         # It did not declare window capabilities; a later trial must version
         # any enriched source contract instead of silently changing old inputs.
-        catalog = [ResourceDescriptor(
-            adapter="company_mcp", resource=key, kind=("saved_query", "document", "saved_query", "chart")[i],
-            title=spec["titles"][i], description=spec["descriptions"][i],
-            metadata={"tenant": scenario_id, "owner": destinations[i % 2]["label"],
-                      "inspection": "bounded current-period snapshot", "read_only": True},
-        ).model_dump(mode="json", exclude={"contract": {"available_comparison_windows"}})
-                   for i, key in enumerate(keys)]
-        rng.shuffle(catalog)
+        catalog = []
+        noise_specs = []
+        noise_rng = random.Random(
+            f"bootstrap-noise-v{SCHEMA_VERSION}:{seed}:{split}:{scenario_id}"
+        )
+        for i, key in enumerate(keys):
+            descriptor = ResourceDescriptor(
+                adapter=adapters[i], resource=key,
+                kind=("saved_query", "document", "saved_query", "chart")[i],
+                title=spec["titles"][i], description=spec["descriptions"][i],
+                metadata={"tenant": scenario_id, "owner": destinations[i % 2]["label"],
+                          "inspection": "bounded current-period snapshot", "read_only": True},
+            )
+            if connector_profile and i == 0:
+                # The profile trial models a connector that exposes a reviewed
+                # recurring comparison contract. The historical neutral fixture
+                # intentionally remains unchanged.
+                descriptor.contract = ResourceContract(
+                    tenant_id=scenario_id,
+                    domain=spec["family"],
+                    scope=spec["scope"],
+                    metric_names=[spec["metric"]],
+                    available_comparison_windows=["previous_period"],
+                    required_comparison_keys=[spec["metric"]],
+                    population="Eligible entities in the source glossary",
+                    grain="week",
+                    roles=["primary"],
+                )
+            catalog.append(descriptor.model_dump(
+                mode="json",
+                exclude={} if connector_profile else {"contract": {"available_comparison_windows"}},
+            ))
+            if catalog_noise:
+                for variant_index in range(catalog_noise):
+                    variant_name, variant_note = CATALOG_VARIANTS[
+                        variant_index % len(CATALOG_VARIANTS)
+                    ]
+                    variant_suffix = (
+                        variant_name if variant_index < len(CATALOG_VARIANTS)
+                        else f"{variant_name}-{variant_index // len(CATALOG_VARIANTS) + 1}"
+                    )
+                    noise_key = _opaque(noise_rng, "resource")
+                    noise_ref = f"{adapters[i]}|{noise_key}"
+                    noise_descriptor = ResourceDescriptor(
+                        adapter=adapters[i], resource=noise_key,
+                        kind=descriptor.kind,
+                        title=f"{spec['titles'][i]} — {variant_suffix}",
+                        description=f"{spec['descriptions'][i]} {variant_note}",
+                        metadata={
+                            "tenant": scenario_id,
+                            "owner": destinations[i % 2]["label"],
+                            "inspection": "bounded current-period snapshot",
+                            "read_only": True,
+                            "scope": variant_suffix,
+                        },
+                        contract=ResourceContract(
+                            tenant_id=scenario_id,
+                            domain=spec["family"],
+                            scope=f"{spec['scope']} ({variant_note})",
+                            metric_names=[spec["metric"]],
+                            roles=["reference"],
+                        ),
+                    )
+                    catalog.append(noise_descriptor.model_dump(mode="json"))
+                    noise_specs.append({
+                        "canonical_index": i,
+                        "adapter": adapters[i],
+                        "resource": noise_key,
+                        "ref": noise_ref,
+                        "title": noise_descriptor.title,
+                        "description": noise_descriptor.description,
+                        "variant": variant_suffix,
+                        "variant_index": variant_index,
+                    })
+        if catalog_noise:
+            # Keep the canonical scenario RNG independent from optional catalog
+            # pressure so explicit company IDs and private labels remain stable.
+            catalog_rng = random.Random(
+                f"bootstrap-catalog-order-v{SCHEMA_VERSION}:{seed}:{split}:{scenario_id}"
+            )
+            catalog_rng.shuffle(catalog)
+            # Consume the same number of base-RNG draws as the canonical
+            # four-resource shuffle; subsequent company IDs and periods must
+            # not depend on whether this stress mode was enabled.
+            rng.shuffle([None] * len(keys))
+        else:
+            rng.shuffle(catalog)
         scale = rng.randint(3, 37)
         base = datetime(2026, 10, 5, tzinfo=timezone.utc)
 
         def period(condition: str, as_of: datetime, *, spec=spec, scale=scale, refs=refs,
-                   keys=keys, scenario_id=scenario_id, route=route, data_route=data_route) -> tuple[dict, dict]:
+                   keys=keys, adapters=adapters, noise_specs=noise_specs,
+                   scenario_id=scenario_id, route=route, data_route=data_route) -> tuple[dict, dict]:
             period_id = _opaque(rng, "period")
-            payloads, facts, required = _payload(spec, condition, scale, as_of, refs)
+            payloads, facts, required = _payload(
+                spec,
+                condition,
+                scale,
+                as_of,
+                refs,
+                normalized_comparisons=connector_profile,
+            )
             snapshots = {}
             for i, payload in enumerate(payloads):
                 payload = copy.deepcopy(payload)
                 comparison = payload.pop("comparison", None)
                 snapshots[refs[i]] = ResourceSnapshot(
-                    source_key=keys[i], adapter="company_mcp", resource=keys[i],
+                    source_key=keys[i], adapter=adapters[i], resource=keys[i],
                     title=spec["titles"][i], description=spec["descriptions"][i],
                     captured_at=as_of, source_captured_at=(as_of - timedelta(days=3)
                         if condition == "quality" and spec["family"] == "finance" and i == 0 else as_of),
@@ -397,6 +654,34 @@ def build_scenarios(seed: int = DEFAULT_SEED, split: Literal["dev", "holdout"] =
                                "statement": "Source export; interpret using catalog and owner definitions.",
                                "values": payload, "provenance": [refs[i]]}],
                     metadata={"tenant": scenario_id, "period_id": period_id},
+                ).model_dump(mode="json", exclude={"contract": {"available_comparison_windows"}})
+            for noise in noise_specs:
+                source_ref = noise["ref"]
+                values = copy.deepcopy(payloads[noise["canonical_index"]])
+                # Alternative scopes expose data, but not the reviewed
+                # comparison contract that makes the canonical source usable
+                # for recurring decisions. This is intentionally generic.
+                values.pop("comparison", None)
+                factor = 0.45 + 0.17 * (noise["variant_index"] % len(CATALOG_VARIANTS))
+                values = _perturb_numeric_values(values, factor)
+                values["scope"] = noise["variant"]
+                snapshots[source_ref] = ResourceSnapshot(
+                    source_key=noise["resource"],
+                    adapter=noise["adapter"],
+                    resource=noise["resource"],
+                    title=noise["title"],
+                    description=noise["description"],
+                    captured_at=as_of,
+                    source_captured_at=as_of,
+                    evidence=[{
+                        "source_key": noise["resource"],
+                        "subject_id": noise["resource"],
+                        "statement": "Scoped source export; interpret using its catalog contract.",
+                        "values": values,
+                        "provenance": [source_ref],
+                    }],
+                    metadata={"tenant": scenario_id, "period_id": period_id,
+                              "scope": noise["variant"]},
                 ).model_dump(mode="json", exclude={"contract": {"available_comparison_windows"}})
             outcome = ("insufficient_data" if condition == "quality" else
                        "investigate" if condition == "event" and spec["family"] == "ops" else

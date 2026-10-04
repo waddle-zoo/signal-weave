@@ -197,6 +197,45 @@ async def test_undeclared_sources_block_automatic_routes(tmp_path, automatic_out
         await dispatch(server, "approve_insight_card", {"card_id": response["card"]["id"]})
 
 
+async def test_undeclared_optional_quality_source_does_not_block_required_metric_route(tmp_path):
+    catalog = catalog_with_windows(["previous_period"])
+    # This source is a point-in-time freshness/partition check, not a metric
+    # comparison. It is intentionally not required for the numeric route.
+    catalog.resources[1].contract = ResourceContract()
+    server = make_server(tmp_path, catalog=catalog)
+    response = await dispatch(server, "onboard_insight_card", arguments(
+        "onboard_insight_card",
+        selected_sources=[
+            {"ref": "superset|dashboard:7", "key": "metric", "required": True},
+            {"ref": "superset|dashboard:8", "key": "quality", "required": False},
+        ],
+        numeric_conditions=[{
+            "text": "Notify on a material decline.",
+            "source_key": "metric",
+            "comparison_key": "checkout_conversion",
+            "measurement": "delta",
+            "threshold": -0.1,
+            "comparator": "<=",
+            "unit": "ratio",
+        }],
+        decision_guidance="Notify the owner on a material decline; ignore ordinary variation.",
+        delivery_methods=[{
+            "key": "owner",
+            "outcome": "notify",
+            "label": "Owner",
+            "destination": "agent://owner",
+        }],
+    ))
+    review = (await dispatch(server, "review_insight_card", {
+        "card_id": response["card"]["id"],
+    }))['review']
+    assert windows_blocker(review) is None
+    assert any("undeclared" in warning for warning in review["warnings"])
+    assert (await dispatch(server, "approve_insight_card", {
+        "card_id": response["card"]["id"],
+    }))['status'] == "approved"
+
+
 async def test_owner_can_confirm_undeclared_window_for_fixed_automatic_route(tmp_path):
     server = make_server(tmp_path, catalog=catalog_with_windows([]))
     response = await dispatch(server, "onboard_insight_card", arguments(

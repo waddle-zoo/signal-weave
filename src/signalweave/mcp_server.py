@@ -150,10 +150,11 @@ CARD_AUTHORING_GUIDANCE = (
     "wording before making it a recurring condition. A complete report "
     "means its bounded evidence checks passed, not that the full business policy is certified. "
     "For threshold rules, distinguish a current level, signed between-period change in units, relative "
-    "change, and a segment's contribution to that change. Do not silently choose among them. "
+    "change, relative change in percent, and a segment's contribution to that change. Do not silently choose among them. "
     "For exact numerical boundaries over available analytical comparisons, add numeric_conditions "
     "bound to the inspected source, comparison key, measurement and exact unit; let code perform "
-    "those comparisons. Rates use fractions (12% is 0.12); do not infer a unit conversion. "
+    "those comparisons. Use measurement=change_pct with unit=percent for relative thresholds. "
+    "Rates use fractions (12% is 0.12); do not infer a unit conversion. "
     "numeric_conditions are optional: when no applicable analytical comparison exists, "
     "leave them empty and keep the owner's complete rule in decision_guidance. Never invent "
     "a comparison key or confuse a declared requirement with available source evidence. "
@@ -211,7 +212,10 @@ def create_mcp(
             "New users: call get_signalweave_guide first for the query, report or monitor path. "
             "SignalWeave saves and repeats reviewed investigations using TypeSafe Jev. "
             "Start with the user's business question, not a JSON form: use "
-            "onboard_insight_card to discover sources and propose a draft. Read its "
+            "bootstrap_insight_card for the compact plain-language path, or "
+            "onboard_insight_card when you need the full authoring controls, to discover sources and propose a draft. Read its "
+            "setup_questions and review blockers. The compact path defaults to bounded related-source retrieval and bounded "
+            "follow-up investigation; choose fixed/none explicitly when the owner wants only the reviewed anchors. "
             "setup_questions and review blockers. Inspect the proposed sources; ask "
             "the owner only for unresolved metric definitions, comparison periods, "
             "materiality rules, or notification destinations. Never invent those answers. "
@@ -244,9 +248,13 @@ def create_mcp(
             "is not approval. Similar catalog titles are not automatically the same metric. "
             "If the owner confirms a bounded source selection despite duplicate titles or "
             "omitted suggestions, use a fixed card with investigation_mode=none, call "
-            "review_insight_card, and pass that review's source_selection_fingerprint "
+            "review_insight_card (and remember its adapter scope), then pass that review's source_selection_fingerprint "
             "and the owner's source_selection_reason to approve_insight_card. This does "
             "not override missing definitions, unhealthy sources or permissions. "
+            "For an owner-approved dynamic card (retrieval_mode=expand or investigation_mode=bounded), "
+            "pass the current review fingerprint and source-selection reason plus "
+            "dynamic_scope_acknowledged=true; this explicitly acknowledges bounded runtime related-source "
+            "retrieval and does not authorize unbounded discovery. "
             "For repeat runs, reuse the approved card instead of "
             "recreating it. Use a stable idempotency key for retries and a new key for "
             "new observations. Return the evidence, numerical analysis, limitations, "
@@ -1259,6 +1267,85 @@ def create_mcp(
         }
 
     @mcp.tool()
+    async def bootstrap_insight_card(
+        goal: Annotated[str, Field(description="In plain English, what should be monitored or answered?")],
+        purpose: Annotated[str, Field(description="Why does this matter, and who needs the result?")],
+        watch_for: WatchConditions | None = None,
+        questions: InvestigationQuestions | None = None,
+        numeric_conditions: list[NumericCondition] | None = None,
+        evidence_requirements: dict[EvidenceRequirementKey, StrictBool] | None = None,
+        selected_sources: list[SelectedSourceInput] | None = None,
+        policy: Annotated[
+            str | None,
+            Field(description="Optional plain-English rule for what matters, what to ignore, or when to investigate."),
+        ] = None,
+        delivery_guidance: Annotated[
+            str | None,
+            Field(description="Optional plain-English guidance for the agent's follow-up report or handoff."),
+        ] = None,
+        source_hint: Annotated[
+            str | None,
+            Field(description="Optional free-form hint such as a dashboard, warehouse, or connector; not a source key."),
+        ] = None,
+        adapter: Annotated[
+            str | None,
+            Field(description="Optional registered adapter name, such as superset, trino, looker, or hex."),
+        ] = None,
+        title: Annotated[str | None, Field(description="Optional human-readable card title.")] = None,
+        comparison_windows: ComparisonWindows | None = None,
+        delivery_methods: CardDeliveryMethods | None = None,
+        retrieval_mode: Annotated[
+            RetrievalMode,
+            Field(
+                description=(
+                    "Retrieval scope. The compact default is expand within the bounded authorized catalog. "
+                    "Choose fixed when the owner wants only the reviewed anchors."
+                )
+            ),
+        ] = RetrievalMode.EXPAND,
+        investigation_mode: Annotated[
+            InvestigationMode,
+            Field(
+                description=(
+                    "Follow-up scope. The compact default is bounded: investigate only within the configured "
+                    "source limit. Choose none when the owner wants no follow-up source retrieval."
+                )
+            ),
+        ] = InvestigationMode.BOUNDED,
+        ctx: Context | None = None,
+    ) -> dict[str, Any]:
+        """Start onboarding from a few plain-language fields.
+
+        This is the compact agent-facing entry point. Plain-language fields are
+        enough to start discovery, while an agent may pass owner-approved typed
+        bindings after inspecting the catalog: exact selected source refs,
+        numeric conditions and outcome-to-destination mappings. SignalWeave
+        validates those bindings; it never invents a source, threshold or
+        recipient and never approves the card on the caller's behalf.
+        """
+        context = purpose
+        if source_hint:
+            context += f"\nSource/context hint from the owner: {source_hint}"
+        return await onboard_insight_card(
+            what_to_watch=goal,
+            why_watch=context,
+            watch_for=watch_for,
+            questions=questions,
+            numeric_conditions=numeric_conditions,
+            evidence_requirements=evidence_requirements,
+            selected_sources=selected_sources,
+            decision_guidance=policy,
+            follow_up_guidance=delivery_guidance,
+            adapter=adapter,
+            title=title,
+            comparison_windows=comparison_windows,
+            delivery_methods=delivery_methods,
+            retrieval_mode=retrieval_mode,
+            investigation_mode=investigation_mode,
+            ctx=ctx,
+        )
+
+    @mcp.tool()
     async def draft_insight_card(
         title: str,
         what_to_watch: str,
@@ -1820,8 +1907,10 @@ def create_mcp(
     async def approve_insight_card(
         card_id: str,
         actor: str = "mcp-client",
+        adapter: str | None = None,
         source_selection_fingerprint: str | None = None,
         source_selection_reason: str | None = None,
+        dynamic_scope_acknowledged: bool = False,
         workflow_report_id: str | None = None,
         ctx: Context | None = None,
     ) -> dict[str, Any]:
@@ -1830,10 +1919,14 @@ def create_mcp(
         For a fixed card with no dynamic investigation, an owner may confirm its
         exact selected sources despite duplicate titles or omitted recommendations,
         and may explicitly acknowledge an undeclared comparison window after
-        reviewing the source. This owner confirmation does not override a source
-        that declares an incompatible window, source health, permissions, or
-        runtime evidence-quality gates.
-        Pass source_selection_fingerprint from review_insight_card and the owner's
+        reviewing the source. For a card that explicitly requests bounded related-source
+        retrieval or investigation, pass dynamic_scope_acknowledged=true alongside the
+        current review fingerprint and owner reason. This acknowledges the bounded runtime
+        expansion; it does not authorize unbounded discovery. These confirmations do not
+        override a source that declares an incompatible window, source health, permissions,
+        or runtime evidence-quality gates.
+        Pass the same optional adapter scope used by review_insight_card, plus its
+        source_selection_fingerprint and the owner's
         source_selection_reason explaining which definitions/populations were chosen
         and why. Changed policy/catalog invalidates that confirmation. This cannot
         override source health, permissions, missing policy or other blockers.
@@ -1862,17 +1955,26 @@ def create_mcp(
                 raise ValueError("Workflow acceptance report is failed, stale, outside this card/tenant, "
                                  "or not an acceptance test. Replay owner-labeled setup cases for the "
                                  "current card with evaluate_card_workflow(acceptance_outcomes=...).")
-        onboarding_review = await authoring.review(card, principal=principal)
+        # Approval must revalidate the same bounded catalog view used by the
+        # caller's review. Without this, a review scoped to one connector and
+        # approval scoped to the whole registry produce different fingerprints
+        # even when the selected source and card are unchanged.
+        onboarding_review = await authoring.review(
+            card, adapter=adapter, principal=principal
+        )
         if source_selection_fingerprint is not None or source_selection_reason is not None:
             reason = (source_selection_reason or "").strip()
             if not source_selection_fingerprint or not reason or len(reason) > 4000:
                 raise ValueError("Provide both source_selection_fingerprint and a nonempty "
                                  "source_selection_reason (at most 4000 characters).")
-            if (card.retrieval_mode != RetrievalMode.FIXED
-                    or card.investigation_mode != InvestigationMode.NONE):
-                raise ValueError("Source-selection confirmation requires retrieval_mode=fixed and "
-                                 "investigation_mode=none. Draft that bounded scope, review, simulate, "
-                                 "and ask its owner before approving; dynamic sources are not excluded.")
+            dynamic_scope = (card.retrieval_mode != RetrievalMode.FIXED
+                             or card.investigation_mode != InvestigationMode.NONE)
+            if dynamic_scope and not dynamic_scope_acknowledged:
+                raise ValueError(
+                    "Dynamic source-selection confirmation requires dynamic_scope_acknowledged=true. "
+                    "The owner must explicitly acknowledge bounded runtime related-source retrieval; "
+                    "unbounded discovery is never authorized."
+                )
             previous = card.onboarding_review
             if (previous is None or not hmac.compare_digest(
                     source_selection_fingerprint, previous.source_selection_fingerprint)

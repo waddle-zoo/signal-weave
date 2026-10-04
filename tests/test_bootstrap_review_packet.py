@@ -170,6 +170,39 @@ def test_export_reconstructs_explicit_nonprefix_regression_subset():
     assert len(cases) == 2 and all(not c["execution_complete"] for c in cases)
 
 
+def test_export_reconstructs_the_measured_connector_profile():
+    fixtures = build_scenarios(seed=20261002, split="holdout", connector_profile=True)[:1]
+    report = {
+        "config": {
+            "seed": 20261002,
+            "split": "holdout",
+            "connector_profile": True,
+            "selected_companies": 1,
+            "selected_scenario_ids": [fixtures[0]["scenario_id"]],
+            "dataset_digest": dataset_digest(fixtures),
+        },
+        "rows": [{
+            "scenario_id": fixtures[0]["scenario_id"],
+            "period_id": fixtures[0]["public"]["periods"][0]["period_id"],
+            "phase": "monitoring",
+            "arm": "luna_signalweave_jev",
+            "submission": None,
+            "inspected_refs": [],
+            "status": "failed",
+        }],
+        "status": "partial_or_failed",
+        "summary": {},
+        "usage": {},
+        "budget_censored": False,
+        "comparative_eligible": False,
+    }
+    cases, mapping, _ = review.packets(report)
+    assert len(cases) == len(mapping) == 1
+    assert {item["adapter"] for item in cases[0]["business"]["catalog"]} == {
+        "superset", "dbt", "airflow", "looker"
+    }
+
+
 def test_export_rebases_period_clock_without_changing_fixture(review_report):
     report, scenario = review_report
     original = copy.deepcopy(scenario)

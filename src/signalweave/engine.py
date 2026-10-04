@@ -938,6 +938,10 @@ class InsightEngine:
         required_comparisons = {
             (source.key, key) for source in card.sources for key in source.required_comparison_keys
         }
+        registered_adapters = set(self.registry.adapter_names()) if self.registry is not None else set()
+        inspected_resource_refs = {
+            f"{resource.adapter}|{resource.resource}" for resource in resources
+        }
         for resource in resources:
             if resource.source_key not in plan.selected_source_keys and resource.source_key not in required_sources:
                 continue
@@ -951,6 +955,27 @@ class InsightEngine:
                         comparison.required or (resource.source_key, comparison.key) in required_comparisons
                     ),
                 })
+                # Adapter comparisons may carry source-level provenance. A
+                # query ref that names one of our installed adapters is a
+                # resource identity, not a free-form SQL label; do not let the
+                # report cite that resource unless it was actually resolved in
+                # this run. Non-resource refs such as query IDs remain valid
+                # adapter-owned provenance strings.
+                missing_provenance = sorted(
+                    ref for ref in comparison.query_refs
+                    if "|" in ref
+                    and ref.split("|", 1)[0] in registered_adapters
+                    and ref not in inspected_resource_refs
+                )
+                if missing_provenance:
+                    report = report.model_copy(update={
+                        "status": "insufficient_data",
+                        "issues": [
+                            *report.issues,
+                            "Comparison provenance names unresolved resource(s): "
+                            + ", ".join(missing_provenance),
+                        ],
+                    })
                 analyses.append(report)
                 if report.status == "complete":
                     for observation in observations:
@@ -992,7 +1017,9 @@ class InsightEngine:
                         "source_key": resource.source_key, "resource": resource.resource,
                         "label": resource.title, "message": statement,
                         "blocking": report.required and resource.source_key in required_sources,
-                        "quality_status": "analysis_incomplete", "source_url": resource.source_url,
+                        "quality_status": (
+                            "provenance_incomplete" if missing_provenance else "analysis_incomplete"
+                        ), "source_url": resource.source_url,
                     })
         blocking_source_errors = [error for error in source_errors if error["blocking"]]
         priority_observations = candidate_observations(observations)
@@ -1382,7 +1409,16 @@ class InsightEngine:
                 evidence=new_evidence,
             )
 
-        if result.investigation is not None and result.investigation.failed:
+        # A bounded follow-up is optional context for a primary decision. If
+        # Jev already judged the primary evidence as no-action, a failed
+        # follow-up must not manufacture an alert and wake a downstream agent.
+        # Actionable primary outcomes still fail closed to investigation so an
+        # incomplete driver bundle cannot be delivered as a confident alert.
+        if (
+            result.investigation is not None
+            and result.investigation.failed
+            and result.outcome in {Outcome.NOTIFY, Outcome.ESCALATE, Outcome.INVESTIGATE}
+        ):
             return cls._with_outcome(
                 result,
                 card,
