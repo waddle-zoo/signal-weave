@@ -56,6 +56,12 @@ from signalweave.typesafe_adapter import JevJudger
 
 MODEL = "gpt-5.6-luna"
 ARMS = ("luna_bi", "luna_signalweave_jev")
+# A dropped TLS/HTTP stream should not turn an otherwise valid paired trial
+# into an onboarding failure. Every retry claims the global budget and keeps
+# its own audit event; an unknown-usage failed attempt still prevents a cost
+# claim for that artifact.
+OPENAI_TRANSPORT_RETRIES = 2
+OPENAI_RETRY_BACKOFF_SECONDS = 0.5
 PRICES = {
     "assumption_date": "2026-09-30",
     "currency": "USD",
@@ -918,29 +924,47 @@ async def luna_episode(session: ToolSession, *, key: str, effort: str, budget: R
     error = None
     async with httpx.AsyncClient(timeout=120, transport=transport) as client:
         for _ in range(max_turns):
-            try:
-                budget.claim()
-            except BudgetExceeded:
-                error = "global_api_request_budget_exhausted"
-                break
-            request_id = budget.used
             request = {"model": MODEL, "instructions": instructions, "input": messages,
                        "reasoning": {"effort": effort}, "tools": specs,
                        "max_output_tokens": max_output_tokens, "store": False}
-            audit.emit("api.request", provider="openai", request_id=request_id, request=request)
-            begin = time.perf_counter()
-            try:
-                response = await client.post("https://api.openai.com/v1/responses", json=request,
-                                             headers={"Authorization": f"Bearer {key}"})
-                response.raise_for_status()
-                payload = response.json()
-                audit.emit("api.response", provider="openai", request_id=request_id,
-                           response=payload, usage=payload.get("usage"),
-                           seconds=time.perf_counter() - begin)
-            except Exception as exc:
-                error = type(exc).__name__
-                audit.emit("api.error", provider="openai", request_id=request_id,
-                           error_type=error, seconds=time.perf_counter() - begin, usage_known=False)
+            payload = None
+            for retry_index in range(OPENAI_TRANSPORT_RETRIES + 1):
+                try:
+                    budget.claim()
+                except BudgetExceeded:
+                    error = "global_api_request_budget_exhausted"
+                    break
+                request_id = budget.used
+                audit.emit("api.request", provider="openai", request_id=request_id,
+                           request=request, retry_index=retry_index)
+                begin = time.perf_counter()
+                try:
+                    response = await client.post(
+                        "https://api.openai.com/v1/responses", json=request,
+                        headers={"Authorization": f"Bearer {key}"})
+                    response.raise_for_status()
+                    payload = response.json()
+                    audit.emit("api.response", provider="openai", request_id=request_id,
+                               response=payload, usage=payload.get("usage"),
+                               seconds=time.perf_counter() - begin)
+                    break
+                except httpx.TransportError as exc:
+                    error = type(exc).__name__
+                    audit.emit("api.error", provider="openai", request_id=request_id,
+                               error_type=error, retryable=retry_index < OPENAI_TRANSPORT_RETRIES,
+                               retry_index=retry_index,
+                               seconds=time.perf_counter() - begin, usage_known=False)
+                    if retry_index < OPENAI_TRANSPORT_RETRIES:
+                        await asyncio.sleep(OPENAI_RETRY_BACKOFF_SECONDS * (2 ** retry_index))
+                        continue
+                    break
+                except Exception as exc:
+                    error = type(exc).__name__
+                    audit.emit("api.error", provider="openai", request_id=request_id,
+                               error_type=error, retryable=False, retry_index=retry_index,
+                               seconds=time.perf_counter() - begin, usage_known=False)
+                    break
+            if payload is None:
                 break
             output = payload.get("output", [])
             messages.extend(output)  # Retain reasoning items as required by Responses API.
@@ -1226,6 +1250,7 @@ async def run_trial(args, *, scenarios_override: list[dict] | None = None) -> di
               "same_card_monitoring": True,
               "max_api_requests": args.max_api_requests, "max_turns": args.max_turns,
               "max_tool_calls": args.max_tool_calls, "max_output_tokens": args.max_output_tokens,
+              "openai_transport_retries": OPENAI_TRANSPORT_RETRIES,
               "prices": PRICES, "clock_rebased_to": clock.isoformat(),
               "source_fingerprint": source_fingerprint(),
               "live": True, "real_external_notifications": False,

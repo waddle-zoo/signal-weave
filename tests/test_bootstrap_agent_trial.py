@@ -538,6 +538,37 @@ async def test_responses_api_exact_model_instructions_usage_and_failure_no_retry
     assert usage["failed_attempts"] == usage["unknown_usage_attempts"] == 1
 
 
+async def test_responses_api_retries_transient_transport_and_keeps_unknown_cost(tmp_path, public, monkeypatch):
+    session = make_session(tmp_path, public, False)
+    session.phase = "monitoring"
+    submission = {"outcome": "ignore", "recipients": [], "evidence_refs": [], "summary": "Test only"}
+    seen = []
+
+    def handle(request):
+        seen.append(json.loads(request.content))
+        if len(seen) == 1:
+            raise httpx.ReadError("transient transport failure", request=request)
+        return httpx.Response(200, json={
+            "output": [{"type": "function_call", "name": "submit_analysis", "call_id": "call-1",
+                        "arguments": json.dumps(submission)}],
+            "usage": {"input_tokens": 100, "output_tokens": 20},
+        })
+
+    monkeypatch.setattr(trial, "OPENAI_RETRY_BACKOFF_SECONDS", 0)
+    audit = trial.Audit()
+    result = await trial.luna_episode(
+        session, key="dummy", effort="low", budget=trial.RequestBudget(3), audit=audit,
+        max_turns=1, max_tool_calls=5, max_output_tokens=100,
+        transport=httpx.MockTransport(handle),
+    )
+
+    assert result["status"] == "complete"
+    assert len(seen) == 2
+    assert trial.usage_summary(audit.events)["openai"]["attempts"] == 2
+    assert trial.usage_summary(audit.events)["openai"]["unknown_usage_attempts"] == 1
+    assert audit.events[1]["retry_index"] == 0
+
+
 async def test_responses_tool_loop_keeps_reasoning_and_notes(tmp_path, public):
     session = make_session(tmp_path, public, False)
     session.phase = "monitoring"
