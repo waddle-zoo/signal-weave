@@ -346,7 +346,10 @@ def _tool_specs(_treatment: bool) -> list[dict[str, Any]]:
             "submit_analysis",
             "Submit the final evidence-backed decision. This must be called exactly once.",
             {
-                "outcome": {"type": "string", "enum": ["ignore", "notify", "investigate", "escalate"]},
+                "outcome": {
+                    "type": "string",
+                    "enum": ["ignore", "notify", "investigate", "insufficient_data", "escalate"],
+                },
                 "delivery": {"type": "string"},
                 "reason": {"type": "string"},
                 "evidence_refs": {"type": "array", "items": {"type": "string"}},
@@ -377,7 +380,8 @@ unanswered question. If the source is stale, failed, or definitions conflict,
 prefer investigation or escalation over an unsupported notification.
 
 The same final schema is used for every case. You must call submit_analysis once
-with one of ignore, notify, investigate, or escalate; delivery must be a literal
+with one of ignore, notify, investigate, insufficient_data, or escalate; delivery
+must be a literal
 recipient key or 'none'; evidence_refs must name sources or chart ids you used;
 query_justified must reflect whether you actually needed a diagnostic query.
 
@@ -657,7 +661,7 @@ def score_run(case: dict[str, Any], run: dict[str, Any]) -> dict[str, Any]:
         and query_justified == bool(query_calls)
         and (not label["query_required"] or bool(query_calls))
     )
-    automatic = actual_outcome in {"ignore", "notify", "escalate"}
+    automatic = actual_outcome in {"ignore", "notify", "insufficient_data", "escalate"}
     unsafe = automatic and not exact
     return {
         "case_id": case["case_id"],

@@ -178,3 +178,24 @@ def test_both_arms_share_raw_tool_contract_and_final_submission_schema():
 
     assert treatment == baseline
     assert "submit_analysis" in baseline & treatment
+
+
+def test_helio_connected_preset_mcp_fixture_covers_decision_and_safe_abstention():
+    cases = _load_cases("evaluations/data/helio-preset-mcp-cases.json")
+
+    assert len(cases) == 3
+    assert {case["label"]["outcome"] for case in cases} == {
+        "ignore",
+        "notify",
+        "insufficient_data",
+    }
+    assert all(
+        "connected-preset-mcp-source-catalog" in case["shared_input"]["context_fields"]
+        and {source["adapter"] for source in case["sources"]} == {"preset_mcp"}
+        for case in cases
+    )
+    assert all(
+        "preset_mcp|dashboard:helio-support-quality"
+        in {source["ref"] for source in case["sources"]}
+        for case in cases
+    )
