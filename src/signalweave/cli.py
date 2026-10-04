@@ -203,7 +203,6 @@ def _serve(args: argparse.Namespace) -> None:
         return
 
     import uvicorn
-    from starlette.responses import JSONResponse
 
     from .auth import (
         BearerTokenMiddleware,
@@ -261,10 +260,6 @@ def _serve(args: argparse.Namespace) -> None:
         server = create_mcp(runtime, require_principal=True)
     server.settings.host = args.host
     server.settings.port = args.port
-
-    @server.custom_route("/healthz", methods=["GET"])
-    async def healthz(_request):
-        return JSONResponse({"status": "ok"})
 
     app = server.streamable_http_app()
     if auth_mode == "token":

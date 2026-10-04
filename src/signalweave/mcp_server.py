@@ -62,6 +62,7 @@ from .onboarding import (
     resolve_comparison_windows,
 )
 from .query_planner import QueryWindow, compile_query, plan_query
+from .readiness import deployment_readiness
 from .reporting import build_investigation_report, render_investigation_report
 from .retrieval_quality import (
     RetrievalQualityCase,
@@ -1986,6 +1987,16 @@ def create_mcp(
                 "source_adapters": runtime.sources.adapter_names(),
             }
         )
+
+    @mcp.custom_route("/readyz", methods=["GET"])
+    async def readyz(request: Request) -> JSONResponse:
+        """Report startup readiness without requiring a secret-bearing token."""
+        del request
+        report = deployment_readiness(
+            runtime,
+            request_scoped_principal=bool(http_principal_resolver or principal_resolver),
+        )
+        return JSONResponse(report, status_code=200 if report["startup_ready"] else 503)
 
     @mcp.custom_route("/webhooks/evaluate", methods=["POST"])
     async def evaluate_webhook(request: Request) -> JSONResponse:

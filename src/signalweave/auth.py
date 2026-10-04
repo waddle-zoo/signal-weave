@@ -31,7 +31,7 @@ class BearerTokenMiddleware:
         self,
         app: ASGIApp,
         token: str,
-        exempt_paths: Iterable[str] = ("/healthz",),
+        exempt_paths: Iterable[str] = ("/healthz", "/readyz"),
     ) -> None:
         self.app = app
         self.token = token

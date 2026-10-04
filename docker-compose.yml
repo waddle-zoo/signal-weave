@@ -78,7 +78,7 @@ services:
       - "127.0.0.1:${SIGNALWEAVE_PORT_HOST:-18000}:8000"
     command: ["python", "-m", "signalweave.cli", "serve", "--transport", "streamable-http"]
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz', timeout=3)"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/readyz', timeout=3)"]
       interval: 10s
       timeout: 5s
       retries: 10
