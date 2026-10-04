@@ -723,6 +723,21 @@ def summarize(rows: list[dict[str, Any]], arm: str) -> dict[str, Any]:
         "p95_elapsed_ms": round(sorted(latencies)[max(0, int(len(latencies) * 0.95) - 1)], 2)
         if latencies
         else None,
+        "median_agent_elapsed_ms": round(
+            statistics.median(row["agent_elapsed_ms"] for row in selected), 2
+        )
+        if selected
+        else None,
+        "p95_agent_elapsed_ms": round(
+            sorted(row["agent_elapsed_ms"] for row in selected)[max(0, int(len(selected) * 0.95) - 1)], 2
+        )
+        if selected
+        else None,
+        "mean_preflight_elapsed_ms": round(
+            statistics.mean(row["preflight_elapsed_ms"] for row in selected), 2
+        )
+        if selected
+        else 0.0,
         "mean_tool_calls": round(statistics.mean(row["tool_calls"] for row in selected), 2)
         if selected
         else 0.0,
@@ -932,6 +947,9 @@ def render_report(report: dict[str, Any]) -> str:
         ("Mean evidence recall", "mean_required_evidence_recall", ""),
         ("Median end-to-end latency", "median_elapsed_ms", " ms"),
         ("P95 end-to-end latency", "p95_elapsed_ms", " ms"),
+        ("Median agent-only latency", "median_agent_elapsed_ms", " ms"),
+        ("P95 agent-only latency", "p95_agent_elapsed_ms", " ms"),
+        ("Mean Jev preflight latency", "mean_preflight_elapsed_ms", " ms"),
         ("Mean model/API tool calls", "mean_tool_calls", ""),
         ("Diagnostic query calls", "diagnostic_query_calls", ""),
         ("Physical query executions", "physical_query_executions", ""),

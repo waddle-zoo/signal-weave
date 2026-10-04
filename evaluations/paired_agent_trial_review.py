@@ -85,9 +85,26 @@ def _score(case: dict[str, Any], run: dict[str, Any]) -> dict[str, Any]:
         "tool_calls": int(run.get("tool_calls", 0)),
         "api_requests": int(run.get("api_requests", 0)),
         "elapsed_ms": float(run.get("end_to_end_elapsed_ms", run.get("elapsed_ms", 0.0))),
+        "agent_elapsed_ms": float(run.get("elapsed_ms", 0.0)),
+        "preflight_elapsed_ms": float(run.get("preflight_elapsed_ms", 0.0)),
         "oracle_leaks": int(run.get("oracle_leaks", 0)),
         "error": run.get("error"),
     }
+
+
+def _median(values: list[float]) -> float | None:
+    if not values:
+        return None
+    values = sorted(values)
+    middle = len(values) // 2
+    value = values[middle] if len(values) % 2 else sum(values[middle - 1:middle + 1]) / 2
+    return round(value, 2)
+
+
+def _p95(values: list[float]) -> float | None:
+    if not values:
+        return None
+    return round(sorted(values)[max(0, int(len(values) * 0.95) - 1)], 2)
 
 
 def _summarize(rows: list[dict[str, Any]], arm: str) -> dict[str, Any]:
@@ -115,6 +132,15 @@ def _summarize(rows: list[dict[str, Any]], arm: str) -> dict[str, Any]:
             round(latencies[max(0, int(len(latencies) * 0.95) - 1)], 2)
             if latencies else None
         ),
+        "median_agent_elapsed_ms": _median(
+            [float(row.get("agent_elapsed_ms", row["elapsed_ms"])) for row in selected]
+        ),
+        "p95_agent_elapsed_ms": _p95(
+            [float(row.get("agent_elapsed_ms", row["elapsed_ms"])) for row in selected]
+        ),
+        "mean_preflight_elapsed_ms": round(
+            sum(float(row.get("preflight_elapsed_ms", 0.0)) for row in selected) / len(selected), 2
+        ) if selected else 0.0,
         "mean_tool_calls": round(sum(row["tool_calls"] for row in selected) / len(selected), 2)
         if selected else 0.0,
         "mean_api_requests": round(sum(row["api_requests"] for row in selected) / len(selected), 2)
@@ -131,7 +157,8 @@ def _compare_summary(stored: dict[str, Any], recomputed: dict[str, Any]) -> list
     keys = (
         "n", "exact_decisions", "exact_decision_rate", "unsafe_automatic_actions",
         "unsafe_automatic_action_rate", "provenance_complete", "mean_required_evidence_recall",
-        "median_elapsed_ms", "p95_elapsed_ms", "mean_tool_calls", "mean_api_requests",
+        "median_elapsed_ms", "p95_elapsed_ms", "median_agent_elapsed_ms", "p95_agent_elapsed_ms",
+        "mean_preflight_elapsed_ms", "mean_tool_calls", "mean_api_requests",
         "diagnostic_query_calls", "physical_query_executions", "bytes_scanned", "cpu_seconds",
         "oracle_leaks",
     )
