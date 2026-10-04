@@ -8,7 +8,7 @@ import os
 import re
 from collections.abc import Callable
 from datetime import datetime, timezone
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 from uuid import uuid4
 
 from mcp.server.fastmcp import Context, FastMCP
@@ -117,6 +117,386 @@ def _evaluation_card(card: InsightCard) -> dict[str, Any]:
         mode="json",
         exclude={"onboarding_review", "onboarding_review_history", "onboarding_corrections", "compiled_plan"},
     )
+
+
+ResponseMode = Literal["compact", "full"]
+
+
+def _compact_text(value: Any, limit: int = 420) -> Any:
+    """Bound free-form connector text in the normal agent response path."""
+    if not isinstance(value, str) or len(value) <= limit:
+        return value
+    return value[: limit - 1].rstrip() + "…"
+
+
+def _compact_contract(contract: Any) -> dict[str, Any]:
+    """Keep typed source-selection facts while dropping connector duplication."""
+    if not isinstance(contract, dict):
+        return {}
+    keep = {
+        "tenant_id",
+        "domain",
+        "scope",
+        "metric_names",
+        "metric_definitions",
+        "comparison_contracts",
+        "available_comparison_windows",
+        "required_comparison_keys",
+        "population",
+        "grain",
+        "freshness_sla_hours",
+        "lineage",
+        "roles",
+        "source_status",
+        "authorized",
+    }
+    compact: dict[str, Any] = {}
+    for key in keep:
+        if key not in contract:
+            continue
+        value = contract[key]
+        if key == "metric_definitions" and isinstance(value, list):
+            compact[key] = [
+                {
+                    field: _compact_text(item[field], 700)
+                    if field in {"description", "population", "grain"}
+                    else item[field]
+                    for field in (
+                        "key",
+                        "label",
+                        "description",
+                        "relation",
+                        "dialect",
+                        "aggregation",
+                        "measure_column",
+                        "time_column",
+                        "supported_grains",
+                        "dimensions",
+                        "partition_column",
+                        "aliases",
+                        "population",
+                        "grain",
+                        "lineage",
+                    )
+                    if field in item
+                }
+                for item in value
+                if isinstance(item, dict)
+            ]
+        elif key == "comparison_contracts" and isinstance(value, list):
+            compact[key] = [
+                {
+                    field: _compact_text(item[field], 700)
+                    if field in {"definition", "population", "detail"}
+                    else item[field]
+                    for field in (
+                        "key",
+                        "metric",
+                        "definition",
+                        "population",
+                        "unit",
+                        "comparison_window",
+                        "coverage",
+                        "comparable",
+                        "detail",
+                        "query_refs",
+                    )
+                    if field in item
+                }
+                for item in value
+                if isinstance(item, dict)
+            ]
+        elif key in {"scope", "population", "grain"}:
+            compact[key] = _compact_text(value, 900)
+        else:
+            compact[key] = value
+    return compact
+
+
+def _compact_metadata(metadata: Any) -> dict[str, Any]:
+    """Retain common adapter identity and ownership fields, not arbitrary blobs."""
+    if not isinstance(metadata, dict):
+        return {}
+    allowed = {
+        "owner",
+        "scope",
+        "tenant",
+        "read_only",
+        "related_refs",
+        "chart_id",
+        "dashboard_id",
+        "query_id",
+        "dataset",
+        "metric",
+        "tags",
+        "inspection",
+        "source_status",
+    }
+    return {
+        key: _compact_text(value, 600)
+        if key in {"owner", "scope", "tenant", "dataset", "metric", "inspection"}
+        else value
+        for key, value in metadata.items()
+        if key in allowed
+    }
+
+
+def _compact_match(match: Any, *, include_description: bool = True) -> dict[str, Any]:
+    """Compact a discovery candidate without changing its identity or ranking."""
+    if not isinstance(match, dict):
+        return {}
+    result = {
+        key: match[key]
+        for key in (
+            "ref",
+            "adapter",
+            "resource",
+            "kind",
+            "title",
+            "source_url",
+            "relevance",
+            "recommended",
+            "suggested_role",
+            "role_probability",
+            "retrieval_signals",
+        )
+        if key in match
+    }
+    if include_description and "description" in match:
+        result["description"] = _compact_text(match["description"], 700)
+    if "contract" in match:
+        result["contract"] = _compact_contract(match["contract"])
+    if "metadata" in match:
+        result["metadata"] = _compact_metadata(match["metadata"])
+    return result
+
+
+def _compact_discovery(discovery: Any) -> dict[str, Any]:
+    """Make the discovery packet useful to an agent without repeating raw catalog data."""
+    if not isinstance(discovery, dict):
+        return {}
+    result = {
+        key: discovery[key]
+        for key in (
+            "catalog_fingerprint",
+            "goal",
+            "candidate_refs",
+            "candidate_count",
+            "candidate_limit",
+            "truncated",
+            "no_match",
+            "candidate_strategy",
+            "evaluator",
+            "authorized_tenant",
+            "catalog_provider",
+            "catalog_strategy",
+            "catalog_cursor",
+            "warnings",
+        )
+        if key in discovery
+    }
+    result["matches"] = [
+        _compact_match(match, include_description=False)
+        for match in discovery.get("matches", [])
+        if isinstance(match, dict)
+    ]
+    return result
+
+
+def _compact_review_candidate(candidate: Any) -> dict[str, Any]:
+    """Compact the human review row while preserving every approval-relevant field."""
+    if not isinstance(candidate, dict):
+        return {}
+    result = {
+        key: candidate[key]
+        for key in (
+            "ref",
+            "adapter",
+            "resource",
+            "kind",
+            "title",
+            "source_url",
+            "domain",
+            "tenant_id",
+            "source_status",
+            "available_comparison_windows",
+            "selected",
+            "recommended",
+            "relevance",
+            "suggested_role",
+            "role_probability",
+            "reason",
+            "retrieval_signals",
+        )
+        if key in candidate
+    }
+    metadata = candidate.get("metadata", {})
+    if isinstance(metadata, dict):
+        contract_fields = {
+            key: value
+            for key, value in metadata.items()
+            if key
+            in {
+                "tenant_id",
+                "domain",
+                "scope",
+                "metric_names",
+                "metric_definitions",
+                "comparison_contracts",
+                "available_comparison_windows",
+                "required_comparison_keys",
+                "population",
+                "grain",
+                "freshness_sla_hours",
+                "lineage",
+                "roles",
+                "source_status",
+                "authorized",
+            }
+        }
+        adapter_metadata = metadata.get("adapter_metadata")
+        result["metadata"] = _compact_contract(contract_fields)
+        if adapter_metadata:
+            result["metadata"]["adapter_metadata"] = _compact_metadata(adapter_metadata)
+    if "description" in candidate:
+        result["description"] = _compact_text(candidate["description"], 700)
+    return result
+
+
+def _compact_review(review: Any) -> dict[str, Any]:
+    """Keep the review decision boundary, replacing repeated source payloads."""
+    if not isinstance(review, dict):
+        return {}
+    result = {
+        key: review[key]
+        for key in (
+            "card_id",
+            "status",
+            "readiness_status",
+            "blockers",
+            "source_selection_fingerprint",
+            "source_selection_confirmation",
+            "source_scope_confirmations",
+            "confirmed_blocker_codes",
+            "principal_id",
+            "principal_tenant",
+            "authorization_evidence",
+            "discovery_receipt",
+            "selected_source_refs",
+            "recommended_source_refs",
+            "missing_recommended_refs",
+            "selected_outside_bounded_candidates",
+            "ambiguous_candidate_groups",
+            "questions",
+            "warnings",
+            "evidence_requirements",
+        )
+        if key in review
+    }
+    result["source_candidates"] = [
+        _compact_review_candidate(candidate)
+        for candidate in review.get("source_candidates", [])
+        if isinstance(candidate, dict)
+    ]
+    return result
+
+
+def _compact_plan(plan: Any) -> Any:
+    """Plans are already typed; only bound free-form query text when present."""
+    if not isinstance(plan, dict):
+        return plan
+    result = dict(plan)
+    result["metric_query_plans"] = [
+        {
+            key: value
+            for key, value in item.items()
+            if key not in {"sql", "query", "description"}
+        }
+        for item in plan.get("metric_query_plans", [])
+        if isinstance(item, dict)
+    ]
+    return result
+
+
+def _compact_card(card: Any) -> dict[str, Any]:
+    """Return the stored card with a compact latest review for normal agent reads."""
+    if not isinstance(card, dict):
+        return {}
+    result = dict(card)
+    result.pop("onboarding_review_history", None)
+    result.pop("onboarding_corrections", None)
+    if result.get("onboarding_review"):
+        result["onboarding_review"] = _compact_review(result["onboarding_review"])
+    if result.get("compiled_plan"):
+        result["compiled_plan"] = _compact_plan(result["compiled_plan"])
+    return result
+
+
+def _compact_summary(summary: Any) -> dict[str, Any]:
+    """Remove discovery/review duplicates from the high-level proposal summary."""
+    if not isinstance(summary, dict):
+        return {}
+    result = dict(summary)
+    result.pop("discovery", None)
+    result.pop("onboarding_review", None)
+    result["details_available"] = True
+    return result
+
+
+def _compact_bundle(bundle: Any) -> dict[str, Any]:
+    """Compact a resolved evidence bundle while keeping candidate identity."""
+    if not isinstance(bundle, dict):
+        return {}
+    result = dict(bundle)
+    for field in ("related_matches", "omitted_matches"):
+        result[field] = [
+            _compact_match(match)
+            for match in bundle.get(field, [])
+            if isinstance(match, dict)
+        ]
+    return result
+
+
+def _compact_simulation_response(response: dict[str, Any]) -> dict[str, Any]:
+    """Keep structured evidence and omit only the rendered markdown duplicate."""
+    result = dict(response)
+    result.pop("report_markdown", None)
+    result["report_markdown_available"] = True
+    result["card"] = _compact_card(result.get("card"))
+    result["plan"] = _compact_plan(result.get("plan"))
+    retrieval = result.get("retrieval")
+    if isinstance(retrieval, dict):
+        result["retrieval"] = _compact_bundle(retrieval)
+    resources = result.get("resources")
+    if isinstance(resources, list):
+        result["resources"] = [
+            {
+                key: resource[key]
+                for key in (
+                    "source_key",
+                    "adapter",
+                    "resource",
+                    "title",
+                    "description",
+                    "source_url",
+                    "error",
+                    "captured_at",
+                    "source_captured_at",
+                )
+                if key in resource
+            }
+            | ({"metadata": _compact_metadata(resource.get("metadata"))}
+               if resource.get("metadata") else {})
+            | ({"contract": _compact_contract(resource.get("contract"))}
+               if resource.get("contract") else {})
+            for resource in resources
+            if isinstance(resource, dict)
+        ]
+    if isinstance(result.get("result"), dict):
+        result["result"] = dict(result["result"])
+        if isinstance(result["result"].get("retrieval"), dict):
+            result["result"]["retrieval"] = result["retrieval"]
+    return result
 
 
 CARD_AUTHORING_GUIDANCE = (
@@ -1135,6 +1515,16 @@ def create_mcp(
         ] = InvestigationMode.BOUNDED,
         max_investigation_sources: int = 3,
         investigation_threshold: float = 0.60,
+        response_mode: Annotated[
+            ResponseMode,
+            Field(
+                description=(
+                    "Response detail for the client. compact preserves typed policy, source identity, "
+                    "rankings and approval facts while removing duplicated catalog payloads; full "
+                    "returns the exhaustive audit packet."
+                )
+            ),
+        ] = "full",
         ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Propose and save a draft free-form insight card.
@@ -1173,11 +1563,22 @@ def create_mcp(
         stored_card = proposal.card.model_copy(update={"compiled_plan": proposal.plan})
         runtime.card_store.save_card(stored_card)
         proposal = proposal.model_copy(update={"card": stored_card})
+        proposal_payload = proposal.model_dump(mode="json", exclude={"card": {
+            "onboarding_review", "onboarding_review_history", "onboarding_corrections", "compiled_plan"
+        }})
+        summary = proposal_summary(proposal)
+        if response_mode == "compact":
+            proposal_payload["discovery"] = _compact_discovery(proposal_payload.get("discovery"))
+            proposal_payload["plan"] = _compact_plan(proposal_payload.get("plan"))
+            proposal_payload["onboarding_review"] = _compact_review(
+                proposal_payload.get("onboarding_review")
+            )
+            summary = _compact_summary(summary)
         return {
-            "proposal": proposal.model_dump(mode="json", exclude={"card": {
-                "onboarding_review", "onboarding_review_history", "onboarding_corrections", "compiled_plan"
-            }}),
-            "summary": proposal_summary(proposal),
+            "proposal": proposal_payload,
+            "summary": summary,
+            "response_mode": response_mode,
+            "details_available": True,
         }
 
     @mcp.tool()
@@ -1240,6 +1641,15 @@ def create_mcp(
         ] = InvestigationMode.BOUNDED,
         max_investigation_sources: int = 3,
         investigation_threshold: float = 0.60,
+        response_mode: Annotated[
+            ResponseMode,
+            Field(
+                description=(
+                    "Response detail for the client. compact is the normal agent path; full retains "
+                    "the duplicated catalog and review audit packet."
+                )
+            ),
+        ] = "full",
         ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Onboard one free-form card in a single human-reviewable call.
@@ -1272,6 +1682,7 @@ def create_mcp(
             investigation_mode=investigation_mode,
             max_investigation_sources=max_investigation_sources,
             investigation_threshold=investigation_threshold,
+            response_mode=response_mode,
             ctx=ctx,
         )
         proposal = result["proposal"]
@@ -1293,6 +1704,8 @@ def create_mcp(
             "review": review,
             "setup_questions": proposal["setup_questions"],
             "summary": result["summary"],
+            "response_mode": response_mode,
+            "details_available": True,
         }
 
     @mcp.tool()
@@ -1343,6 +1756,15 @@ def create_mcp(
                 )
             ),
         ] = InvestigationMode.BOUNDED,
+        response_mode: Annotated[
+            ResponseMode,
+            Field(
+                description=(
+                    "Response detail for the client. compact is the normal agent path; full retains "
+                    "the duplicated catalog and review audit packet."
+                )
+            ),
+        ] = "full",
         ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Start onboarding from a few plain-language fields.
@@ -1373,6 +1795,7 @@ def create_mcp(
             delivery_methods=delivery_methods,
             retrieval_mode=retrieval_mode,
             investigation_mode=investigation_mode,
+            response_mode=response_mode,
             ctx=ctx,
         )
 
@@ -1663,6 +2086,10 @@ def create_mcp(
     async def resolve_insight_sources(
         card_id: str,
         context: ContextSnapshot | None = None,
+        response_mode: Annotated[
+            ResponseMode,
+            Field(description="Use compact for normal agent retrieval or full for exhaustive audit detail."),
+        ] = "full",
         ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Preview the bounded Jev-ranked evidence bundle for a stored card."""
@@ -1678,9 +2105,14 @@ def create_mcp(
         bundle = await authoring.resolve_bundle(
             card, context_snapshot, principal=principal
         )
+        bundle_payload = bundle.model_dump(mode="json")
         return {
             "card": _evaluation_card(card),
-            "bundle": bundle.model_dump(mode="json"),
+            "bundle": _compact_bundle(bundle_payload)
+            if response_mode == "compact"
+            else bundle_payload,
+            "response_mode": response_mode,
+            "details_available": True,
         }
 
     @mcp.tool()
@@ -1695,6 +2127,10 @@ def create_mcp(
                 description="Maximum number of bounded authoring candidates (1-25).",
             ),
         ] = 10,
+        response_mode: Annotated[
+            ResponseMode,
+            Field(description="Use compact for normal agent review or full for exhaustive audit detail."),
+        ] = "full",
         ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Review a draft's source coverage before a human approves it.
@@ -1718,15 +2154,24 @@ def create_mcp(
             raise ValueError("Card changed during review; review the current card before approval.")
         card = append_onboarding_review(card, review)
         runtime.card_store.save_card(card)
+        review_payload = review.model_dump(mode="json")
         return {
             "card": _evaluation_card(card),
-            "review": review.model_dump(mode="json"),
+            "review": _compact_review(review_payload)
+            if response_mode == "compact"
+            else review_payload,
+            "response_mode": response_mode,
+            "details_available": True,
         }
 
     @mcp.tool()
     async def simulate_insight_card(
         card_id: str,
         context: ContextSnapshot | None = None,
+        response_mode: Annotated[
+            ResponseMode,
+            Field(description="Use compact for structured agent evidence or full to include rendered markdown and raw snapshots."),
+        ] = "full",
         ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Evaluate a draft without treating the result as an approved push action."""
@@ -1749,7 +2194,7 @@ def create_mcp(
         )
         result = run.result.model_copy(update={"retrieval": bundle})
         report = build_investigation_report(run.card, result, run.resources)
-        return {
+        response = {
             "status": "preview",
             "delivery_enabled": False,
             "card": _evaluation_card(run.card),
@@ -1760,11 +2205,20 @@ def create_mcp(
             "report": report.model_dump(mode="json"),
             "report_markdown": render_investigation_report(report),
         }
+        if response_mode == "compact":
+            response = _compact_simulation_response(response)
+        response["response_mode"] = response_mode
+        response["details_available"] = True
+        return response
 
     @mcp.tool()
     async def preview_investigation_report(
         card_id: str,
         context: ContextSnapshot | None = None,
+        response_mode: Annotated[
+            ResponseMode,
+            Field(description="Use compact for normal agent reports or full to include rendered markdown."),
+        ] = "full",
         ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Run a first analytical report before approving a recurring investigation.
@@ -1775,7 +2229,12 @@ def create_mcp(
         should review this report, repair missing context, test other periods, and
         obtain owner authorization before scheduling evaluate_insight_card.
         """
-        return await simulate_insight_card(card_id=card_id, context=context, ctx=ctx)
+        return await simulate_insight_card(
+            card_id=card_id,
+            context=context,
+            response_mode=response_mode,
+            ctx=ctx,
+        )
 
     @mcp.tool()
     def record_insight_card_correction(
@@ -2128,7 +2587,13 @@ def create_mcp(
 
     @mcp.tool()
     def get_insight_card(
-        card_id: str, include_history: bool = False, ctx: Context | None = None
+        card_id: str,
+        include_history: bool = False,
+        response_mode: Annotated[
+            ResponseMode,
+            Field(description="Use compact for normal agent reads or full for the complete stored review packet."),
+        ] = "full",
+        ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Return active policy, compiled plan and latest review by stable ID.
 
@@ -2136,10 +2601,19 @@ def create_mcp(
         History stays persisted but is not repeated in ordinary agent reads.
         """
         principal = request_principal(ctx)
-        return get_scoped_card(card_id, principal).model_dump(
+        if include_history and response_mode == "compact":
+            raise ValueError("include_history=true requires response_mode='full'")
+        payload = get_scoped_card(card_id, principal).model_dump(
             mode="json",
             exclude=set() if include_history else {"onboarding_review_history", "onboarding_corrections"},
         )
+        if response_mode == "compact":
+            return {
+                **_compact_card(payload),
+                "response_mode": response_mode,
+                "details_available": True,
+            }
+        return payload
 
     @mcp.resource("insight://catalog")
     def insight_catalog(ctx: Context | None = None) -> str:

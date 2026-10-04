@@ -816,6 +816,12 @@ async def luna_episode(session: ToolSession, *, key: str, effort: str, budget: R
     instructions = COMMON_SYSTEM
     if session.treatment:
         instructions += (" SignalWeave is available. For setup: use get_signalweave_guide, then "
+                         "Use response_mode='compact' on bootstrap_insight_card, onboard_insight_card, "
+                         "propose_insight_card, get_insight_card, review_insight_card, resolve_insight_sources, "
+                         "simulate_insight_card, and preview_investigation_report during normal agent work; "
+                         "use response_mode='full' only when an operator explicitly asks for the exhaustive audit packet. "
+                         "Compact mode preserves typed policy, source identity, rankings, evidence and approval facts "
+                         "while removing duplicated catalog payloads. "
                          "bootstrap_insight_card with the plain-language goal, purpose, policy and "
                          "routing guidance from the brief and owner answers. Inspect the selected source and its "
                          "analytical comparisons before finalizing the card. For every explicit threshold in the "
