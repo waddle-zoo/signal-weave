@@ -87,6 +87,13 @@ def audit_report(report: dict[str, Any], fixture: dict[str, Any]) -> dict[str, A
             findings.append(_finding("error", "terminal single-step result changed between initial and final views", scenario_id=scenario_id))
         if not row.get("initial_safe") or not row.get("context_returned"):
             findings.append(_finding("error", "report safety/integrity flag is false", scenario_id=scenario_id))
+        for check in row.get("observation_coverage", []):
+            if not check.get("passed"):
+                findings.append(_finding(
+                    "error",
+                    "report used a source snapshot that failed its declared shape prerequisite",
+                    scenario_id=scenario_id,
+                ))
 
     overall = report.get("overall", {})
     for metric in (

@@ -36,11 +36,12 @@ from evaluations.northstar_growth_history_trial import (
 from evaluations.northstar_growth_history_trial import (
     load_spec as load_history_spec,
 )
-from evaluations.northstar_shadow_trial import _card
+from evaluations.northstar_shadow_trial import SALES_SOURCE, _card
 from signalweave.engine import InsightEngine
 from signalweave.models import (
     ContextFact,
     ContextSnapshot,
+    DeliveryMethod,
     InsightCard,
     InsightResult,
     InvestigationMode,
@@ -74,6 +75,20 @@ def load_trial_spec(path: str | Path = DEFAULT_SPEC) -> dict[str, Any]:
         Outcome(str(scenario["expected_final"]))
         if not isinstance(scenario["diagnostic_facts"], list):
             raise ValueError(f"scenario {scenario['id']} diagnostic_facts must be a list")
+        requirements = scenario.get("coverage_requirements", [])
+        if not isinstance(requirements, list):
+            raise ValueError(f"scenario {scenario['id']} coverage_requirements must be a list")
+        for requirement in requirements:
+            if not isinstance(requirement, dict):
+                raise ValueError(f"scenario {scenario['id']} coverage requirement must be an object")
+            if not str(requirement.get("source_key", "")).strip():
+                raise ValueError(f"scenario {scenario['id']} coverage requirement needs source_key")
+            if not isinstance(requirement.get("minimum_count"), int) or requirement["minimum_count"] < 1:
+                raise ValueError(
+                    f"scenario {scenario['id']} coverage requirement minimum_count must be a positive integer"
+                )
+            if not str(requirement.get("subject_type", "")).strip():
+                raise ValueError(f"scenario {scenario['id']} coverage requirement needs subject_type")
     if not str(card.get("decision_guidance", "")).strip():
         raise ValueError("the trial card must define decision_guidance")
     if not str(card.get("follow_up_guidance", "")).strip():
@@ -81,9 +96,45 @@ def load_trial_spec(path: str | Path = DEFAULT_SPEC) -> dict[str, Any]:
     return payload
 
 
+def _observation_coverage(
+    scenario: dict[str, Any], resources: list[Any]
+) -> list[dict[str, Any]]:
+    """Check fixture-declared shape prerequisites before spending live credits."""
+
+    by_source = {resource.source_key: resource for resource in resources}
+    checks: list[dict[str, Any]] = []
+    for requirement in scenario.get("coverage_requirements", []):
+        source_key = str(requirement["source_key"])
+        subject_type = str(requirement["subject_type"])
+        resource = by_source.get(source_key)
+        available_count = sum(
+            observation.subject_type == subject_type
+            for observation in (resource.observations if resource is not None else [])
+        )
+        minimum_count = int(requirement["minimum_count"])
+        checks.append(
+            {
+                "source_key": source_key,
+                "subject_type": subject_type,
+                "available_count": available_count,
+                "minimum_count": minimum_count,
+                "passed": available_count >= minimum_count,
+            }
+        )
+    return checks
+
+
 def card_for_trial(spec: dict[str, Any]) -> InsightCard:
     base = _card()
     policy = spec["card"]
+    sources = [
+        source.model_copy(
+            update={"required_comparison_keys": ["net-sales-change"]}
+        )
+        if source.key == SALES_SOURCE
+        else source
+        for source in base.sources
+    ]
     return base.model_copy(
         update={
             "id": str(policy["id"]),
@@ -92,6 +143,17 @@ def card_for_trial(spec: dict[str, Any]) -> InsightCard:
             "investigation_mode": InvestigationMode(
                 str(policy.get("investigation_mode", "none"))
             ),
+            "sources": sources,
+            "delivery_methods": [
+                *base.delivery_methods,
+                DeliveryMethod(
+                    key="data-trust",
+                    outcome=Outcome.INSUFFICIENT_DATA,
+                    label="Route to Data Trust",
+                    destination="northstar://data-trust",
+                    instructions="Repair or validate the source before interpreting business movement.",
+                ),
+            ],
         }
     )
 
@@ -213,6 +275,13 @@ async def run_trial(
         if case is None:
             raise ValueError(f"scenario {scenario['id']} does not match a history case: {key}")
         resources = _build_resources(period_data, case.replay_case)
+        observation_coverage = _observation_coverage(scenario, resources)
+        failed_coverage = [item for item in observation_coverage if not item["passed"]]
+        if failed_coverage:
+            raise ValueError(
+                f"scenario {scenario['id']} cannot be evaluated because its source-shape "
+                f"requirements are unmet: {failed_coverage}"
+            )
         initial_before = _metrics(judger)
         initial_started = time.perf_counter()
         initial_result: InsightResult | None = None
@@ -278,6 +347,7 @@ async def run_trial(
                 "final_handoff_exact": final_handoff_exact,
                 "context_returned": context_returned,
                 "context_fact_count": len(context.facts) if context else 0,
+                "observation_coverage": observation_coverage,
                 "initial_elapsed_ms": initial_elapsed_ms,
                 "final_elapsed_ms": final_elapsed_ms,
                 "initial_jev_metrics": initial_metrics,

@@ -42,6 +42,7 @@ from signalweave.models import (
     Outcome,
     ResourceContract,
     ResourceSnapshot,
+    SourceComparisonContract,
     SourceRef,
 )
 from signalweave.superset_client import SupersetClient
@@ -334,9 +335,74 @@ def _build_resources(period: PeriodData, case: ReplayCase) -> list[ResourceSnaps
         SUPPORT_SOURCE: "Northstar Support Operations",
         FINANCE_SOURCE: "Northstar Finance Daily",
     }
+    source_contracts = {
+        SALES_SOURCE: ResourceContract(
+            tenant_id="northstar-outfitters",
+            domain="commerce",
+            metric_names=["net_sales"],
+            population="completed order lines with a settled net-sales amount",
+            grain="month and sales channel",
+            available_comparison_windows=["previous_period"],
+            freshness_sla_hours=36,
+            lineage=["fct_sales_order_line", "superset:dashboard:1"],
+            roles=["primary", "dashboard"],
+            comparison_contracts=[SourceComparisonContract(
+                key="net-sales-change",
+                metric="net_sales",
+                definition="Settled net sales across all order channels.",
+                population="completed order lines with a settled net-sales amount",
+                unit="currency",
+                comparison_window="previous_period",
+                coverage="complete",
+                comparable=True,
+                detail="The dashboard snapshot contains the total and channel breakdown for the same monthly population.",
+                query_refs=["fct_sales_order_line", "superset:dashboard:1"],
+            )],
+            source_status="healthy",
+        ),
+        FUNNEL_SOURCE: ResourceContract(
+            tenant_id="northstar-outfitters",
+            domain="commerce",
+            metric_names=["conversion_rate", "sessions", "orders"],
+            population="web sessions and attributed orders in the Northstar storefront",
+            grain="month",
+            available_comparison_windows=["previous_period"],
+            freshness_sla_hours=36,
+            lineage=["fct_web_session"],
+            roles=["corroborates", "diagnostic"],
+            source_status="healthy",
+        ),
+        SUPPORT_SOURCE: ResourceContract(
+            tenant_id="northstar-outfitters",
+            domain="support-operations",
+            metric_names=["backlog"],
+            population="open customer-support tickets at the period snapshot",
+            grain="month",
+            available_comparison_windows=["previous_period"],
+            freshness_sla_hours=36,
+            lineage=["fct_support_ticket"],
+            roles=["diagnostic"],
+            source_status="healthy",
+        ),
+        FINANCE_SOURCE: ResourceContract(
+            tenant_id="northstar-outfitters",
+            domain="finance",
+            metric_names=["revenue"],
+            population="booked revenue recorded in the finance daily ledger",
+            grain="month",
+            available_comparison_windows=["previous_period"],
+            freshness_sla_hours=72,
+            lineage=["fct_finance_daily"],
+            roles=["corroborates", "quality"],
+            source_status="healthy",
+        ),
+    }
     resources: list[ResourceSnapshot] = []
     for source_key, source_observations in by_source.items():
         failed = source_key in case.failed_sources
+        contract = source_contracts[source_key].model_copy(
+            update={"source_status": "failed" if failed else "healthy"}
+        )
         resources.append(
             ResourceSnapshot(
                 source_key=source_key,
@@ -363,11 +429,7 @@ def _build_resources(period: PeriodData, case: ReplayCase) -> list[ResourceSnaps
                     else None
                 ),
                 metadata={"data_quality": {"status": "failed" if failed else "healthy"}},
-                contract=ResourceContract(
-                    tenant_id="northstar-outfitters",
-                    domain="commerce",
-                    source_status="failed" if failed else "healthy",
-                ),
+                contract=contract,
             )
         )
     return resources
