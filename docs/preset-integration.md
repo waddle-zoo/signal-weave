@@ -120,7 +120,11 @@ are returned as redacted readiness reports with bounded remediation instead of
 forwarding provider response bodies or secret-bearing stack traces.
 
 The service listens on `http://127.0.0.1:18000` and exposes the MCP endpoint at
-`/mcp`. Connect the customer's agent through the existing identity-aware proxy,
+`/mcp`. `/healthz` is liveness-only; `/readyz` returns 200 only when the Jev
+runtime, a source adapter, persistence, and the static or request-scoped
+identity boundary are wired. It performs no provider or Jev request, so a
+passing readiness check still needs the bounded provider bootstrap probe below.
+Connect the customer's agent through the existing identity-aware proxy,
 or use the local bearer token for an isolated test. The container automatically
 registers one `preset` adapter from `PRESET_URL` and the supplied credentials.
 `PRESET_TENANT_ID` or `SIGNALWEAVE_TENANT_ID` is required; the bootstrap path

@@ -86,10 +86,13 @@ TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
 ```
 
 Superset is available at <http://localhost:8088>. SignalWeave serves MCP at
-<http://localhost:18000/mcp>, health at <http://localhost:18000/healthz>, and
-push evaluation at `POST /webhooks/evaluate`. The demo credentials are
-`admin` / `admin`; the loopback demo token is `local-dev-token`. Ports are
-loopback-only and must not be exposed. Set `SIGNALWEAVE_API_TOKEN` and
+<http://localhost:18000/mcp>, liveness at <http://localhost:18000/healthz>,
+readiness at <http://localhost:18000/readyz>, and push evaluation at
+`POST /webhooks/evaluate`. The demo credentials are `admin` / `admin`; the
+loopback demo token is `local-dev-token`. Ports are loopback-only and must not
+be exposed. `/healthz` is liveness-only; `/readyz` checks Jev, configured
+sources, persistence, and identity without making a provider or Jev request.
+Neither endpoint proves provider permissions. Set `SIGNALWEAVE_API_TOKEN` and
 `PUSH_WEBHOOK_TOKEN` to real deployment secrets outside local development.
 
 For an already approved card export, the standalone checker can run one

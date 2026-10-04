@@ -5,6 +5,7 @@ from __future__ import annotations
 import httpx
 import pytest
 
+from signalweave.auth import BearerTokenMiddleware
 from signalweave.engine import InsightEngine
 from signalweave.mcp_server import create_mcp
 from signalweave.models import PrincipalContext, ResourceDescriptor, ResourceSnapshot, SourceRef
@@ -98,11 +99,12 @@ async def test_readyz_is_public_but_mcp_remains_bearer_protected(tmp_path):
         sources=[SourceDouble()],
     )
     server = create_mcp(runtime, require_principal=True)
-    app = server.streamable_http_app()
+    server_app = server.streamable_http_app()
+    app = BearerTokenMiddleware(server_app, token="deployment-token")
 
     # create_mcp's route is tested directly; the token middleware is exercised
     # by the deployed CLI smoke and has a separate unit contract.
-    async with app.router.lifespan_context(app):
+    async with server_app.router.lifespan_context(server_app):
         async with httpx.AsyncClient(
             transport=httpx.ASGITransport(app=app), base_url="http://localhost"
         ) as client:
@@ -113,3 +115,6 @@ async def test_readyz_is_public_but_mcp_remains_bearer_protected(tmp_path):
             health = await client.get("/healthz")
             assert health.status_code == 200
             assert health.json()["source_adapters"] == ["looker"]
+
+            unauthorized = await client.post("/mcp")
+            assert unauthorized.status_code == 401
