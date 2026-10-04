@@ -153,6 +153,24 @@ async def test_owner_review_context_bounds_large_catalog_and_keeps_card_anchor(t
     assert f"{anchor.adapter}|{anchor.resource}" in catalog_refs
 
 
+async def test_catalog_search_is_shared_and_bounded_for_large_catalogs(tmp_path, public):
+    baseline = make_session(tmp_path / "baseline", public, treatment=False)
+    treatment = make_session(tmp_path / "treatment", public, treatment=True)
+    baseline_specs = {item["name"] for item in await baseline.specs()}
+    treatment_specs = {item["name"] for item in await treatment.specs()}
+    assert "search_catalog" in baseline_specs
+    assert "search_catalog" in treatment_specs
+    common_names = {item["name"] for item in trial.common_tools(public, "onboarding")}
+    assert common_names <= baseline_specs
+    assert common_names <= treatment_specs
+
+    result = await baseline.call("search_catalog", {"query": "customer", "limit": 2})
+
+    assert len(result["resources"]) <= 2
+    assert result["strategy"] == "local-scan-fallback"
+    assert result["total_count"] == len(public["catalog"])
+
+
 async def test_full_onboarding_surface_retains_advanced_product_tools(tmp_path, public):
     session = make_session(tmp_path, public)
     names = {item["name"] for item in await session.specs()}

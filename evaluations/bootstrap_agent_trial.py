@@ -96,6 +96,9 @@ COMMON_SYSTEM = (
     "The owner is simulated: obtain answers by calling ask_owner, never by ending "
     "with questions in chat. Those tool responses are the owner's answers. "
     "Inspect the catalog and relevant sources; do not trust a chart title alone. "
+    "When the catalog is large, use the bounded search_catalog tool with focused "
+    "queries rather than copying the full catalog into context; search results are "
+    "candidate recall, not a semantic decision. "
     "Use only current-period evidence for measurements; saved notes may preserve policy "
     "and source knowledge, not stale measurements. Calculators are available to both arms. "
     "During monitoring, reuse the validated policies in saved notes; ask_owner only for "
@@ -375,7 +378,12 @@ def function(name: str, description: str, properties: dict, required=()) -> dict
 def common_tools(public: dict, phase: str) -> list[dict]:
     text = {"type": "string"}
     tools = [
-        function("list_catalog", "List the same read-only BI source catalog available to both arms.", {}),
+        function("list_catalog", "List the same read-only BI source catalog available to both arms. "
+                 "Use only for a small catalog; use search_catalog for high-cardinality catalogs.", {}),
+        function("search_catalog", "Search the same read-only BI source catalog available to both arms. "
+                 "The result is a bounded candidate page, not a relevance decision.",
+                 {"query": text, "limit": {"type": "integer", "minimum": 1, "maximum": 25}},
+                 ["query"]),
         function("inspect_source", "Read one current-period source; cite adapter|resource exactly.",
                  {"ref": text}, ["ref"]),
         function("analyze_source", "Read source and compute verified accounting/rate decompositions "
@@ -638,6 +646,29 @@ class ToolSession:
         if name == "list_catalog":
             return {"resources": [item.model_dump(mode="json")
                                   for item in await self.adapter.list_resources()]}
+        if name == "search_catalog":
+            query = str(arguments.get("query", "")).strip()
+            limit = int(arguments.get("limit", 10))
+            if not query:
+                raise ValueError("query must not be empty")
+            if not 1 <= limit <= 25:
+                raise ValueError("limit must be between 1 and 25")
+            # Reuse the production registry's bounded local-search fallback so
+            # the comparator gets the same connector-facing discovery primitive
+            # as a real local deployment. Jev is not used by this common tool;
+            # both arms receive the same lexical candidate-recall page.
+            page = await SourceRegistry([self.adapter]).search_resources(
+                query, limit=limit
+            )
+            return {
+                "resources": [item.model_dump(mode="json") for item in page.resources],
+                "total_count": page.total_count,
+                "has_more": page.has_more,
+                "next_cursor": page.next_cursor,
+                "provider": page.provider,
+                "strategy": page.strategy,
+                "warnings": page.warnings,
+            }
         if name in {"inspect_source", "analyze_source"}:
             adapter, resource = arguments["ref"].split("|", 1)
             source = SourceRef(key=resource, adapter=adapter, resource=resource, label=resource)
