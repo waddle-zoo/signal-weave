@@ -665,6 +665,7 @@ def test_missing_or_invalid_token_usage_is_unknown_not_free(usage):
 def test_common_instructions_require_both_arms_finish_and_submit():
     assert "finish_setup" in trial.COMMON_SYSTEM
     assert "submit_analysis" in trial.COMMON_SYSTEM
+    assert "relevant corroborating fact is numeric" in trial.COMMON_SYSTEM
 
 
 async def test_final_mcp_wrapped_budget_exhaustion_disables_comparative_claims(monkeypatch, tmp_path):
