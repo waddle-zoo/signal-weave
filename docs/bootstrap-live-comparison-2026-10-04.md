@@ -54,20 +54,21 @@ $0.0289), but those are API-equivalent estimates rather than billed costs.
 
 | Company | Connector profile | Luna exact | SignalWeave exact | Warm Luna agent work | Warm SignalWeave agent work | Wake-ups |
 | --- | --- | ---: | ---: | ---: | ---: | ---: |
-| Juniper Trail Retail | Superset + dbt + Airflow + Looker | 3/3 | 3/3 | 64.22s | 38.03s | 3 → 2 |
-| Cinder Database Cloud | Superset + Airflow + PagerDuty + CloudWatch | 3/3 | 3/3 | 77.95s | 34.45s | 3 → 2 |
-| Lumen Freight Finance | Trino + Airflow + Looker + dbt | 3/3 | 3/3 | 57.85s | 36.43s | 3 → 2 |
-| **Pooled** | **3 profiles, 9 periods/arm** | **9/9** | **9/9** | **200.02s** | **108.90s** | **9 → 6** |
+| Juniper Trail Retail | Superset + dbt + Airflow + Looker | 3/3 | 3/3 | 73.58s | 30.67s | 3 → 2 |
+| Cinder Database Cloud | Superset + Airflow + PagerDuty + CloudWatch | 3/3 | 3/3 | 79.78s | 51.89s | 3 → 3 |
+| Lumen Freight Finance | Trino + Airflow + Looker + dbt | 3/3 | 3/3 | 77.97s | 40.03s | 3 → 2 |
+| **Pooled** | **3 profiles, 9 periods/arm** | **9/9** | **9/9** | **231.34s** | **122.59s** | **9 → 7** |
 
 Across all nine treatment periods:
 
 - structured outcome, recipient, evidence provenance, and safety checks were
   correct: 9/9;
 - raw Jev routing matched the independent labels: 9/9;
-- complete quiet outcomes skipped three downstream Luna wake-ups;
-- warm downstream Luna agent time fell 45.6% in aggregate;
-- SignalWeave did not reduce connector reads in aggregate (25 treatment reads
-  versus 24 baseline reads), so this is not evidence of lower warehouse query
+- complete quiet outcomes skipped two downstream Luna wake-ups;
+- warm downstream Luna agent time fell 47.0% in aggregate;
+- SignalWeave reduced observed monitoring source reads in this run (15 treatment
+  reads versus 23 baseline reads), but the synthetic adapter does not measure
+  bytes scanned or warehouse billing, so this is not evidence of lower warehouse
   cost;
 - every fresh artifact passed the independent mechanical review, including
   fixture-digest, same-card, score-recomputation, push-gate, and approved-card
@@ -105,8 +106,8 @@ the agent still writes the human-facing analysis.
   repair; it is robustness evidence, not an accuracy win.
 - Lower total or subscription cost: Jev adds onboarding/runtime requests, and
   recorded dollar fields are illustrative API-equivalent estimates, not bills.
-- Faster first-run onboarding: treatment cold setup was 68.18s, 76.04s, and
-  100.18s for Cinder, Juniper, and Lumen versus 26.71s, 31.63s, and 28.41s
+- Faster first-run onboarding: treatment cold setup was 86.93s, 116.65s, and
+  125.47s for Juniper, Cinder, and Lumen versus 26.79s, 17.99s, and 40.58s
   for the baseline.
 - Lower warehouse/query cost: the fixture uses bounded synthetic snapshots,
   not real Trino bytes scanned, queue time, or connector invoices.
