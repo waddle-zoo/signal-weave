@@ -214,7 +214,9 @@ def main() -> None:
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
     report = json.loads(args.report.read_text())
-    expected_cases = build_cases(_load_config(args.config), repeats=1)
+    expected_cases = build_cases(
+        _load_config(args.config), repeats=int(report.get("repeats", 1))
+    )
     review = audit_report(report, expected_cases=expected_cases)
     rendered = json.dumps(review, indent=2, sort_keys=True) + "\n"
     if args.output:
