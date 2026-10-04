@@ -216,6 +216,9 @@ def create_mcp(
             "onboard_insight_card when you need the full authoring controls, to discover sources and propose a draft. Read its "
             "setup_questions and review blockers. The compact path defaults to bounded related-source retrieval and bounded "
             "follow-up investigation; choose fixed/none explicitly when the owner wants only the reviewed anchors. "
+            "A model selecting one metric source does not confirm anchor-only scope; when the goal asks why a movement "
+            "happened or names related context, inspect adapter-published relationship candidates and preserve required "
+            "partition, deployment, lineage, quality, or ownership sources before choosing fixed. "
             "setup_questions and review blockers. Inspect the proposed sources; ask "
             "the owner only for unresolved metric definitions, comparison periods, "
             "materiality rules, or notification destinations. Never invent those answers. "
@@ -1122,7 +1125,10 @@ def create_mcp(
             Field(
                 description=(
                     "Investigation scope: none disables follow-up; bounded enables bounded "
-                    "follow-up investigation and requires a live SourceRegistry."
+                    "follow-up investigation and requires a live SourceRegistry. Use bounded "
+                    "only when the owner wants additional source-based why/driver analysis "
+                    "beyond the card's approved anchors and relationship-linked context; "
+                    "a multi-source card does not require a second follow-up stage."
                 )
             ),
         ] = InvestigationMode.BOUNDED,
@@ -1224,7 +1230,10 @@ def create_mcp(
             Field(
                 description=(
                     "Investigation scope: none disables follow-up; bounded enables bounded "
-                    "follow-up investigation and requires a live SourceRegistry."
+                    "follow-up investigation and requires a live SourceRegistry. Use bounded "
+                    "only when the owner wants additional source-based why/driver analysis "
+                    "beyond the card's approved anchors and relationship-linked context; "
+                    "a multi-source card does not require a second follow-up stage."
                 )
             ),
         ] = InvestigationMode.BOUNDED,
@@ -1327,7 +1336,9 @@ def create_mcp(
             Field(
                 description=(
                     "Follow-up scope. The compact default is bounded: investigate only within the configured "
-                    "source limit. Choose none when the owner wants no follow-up source retrieval."
+                    "source limit. Choose none for a policy/threshold monitor whose approved anchors "
+                    "already contain the required evidence; use bounded only when the owner wants an "
+                    "additional source-based why/driver investigation."
                 )
             ),
         ] = InvestigationMode.BOUNDED,

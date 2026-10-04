@@ -595,6 +595,40 @@ class InsightAuthoringService:
                     "Expand mode will inspect related Jev-recommended sources at run time; "
                     "the caller owns the dynamic-source policy."
                 )
+        omitted_relationships = sorted(
+            {
+                match.ref
+                for match in discovery.matches
+                if "anchor-relationship" in match.retrieval_signals
+                and match.ref not in selected_refs
+            }
+            - set(missing_recommended)
+        )
+        if omitted_relationships:
+            labels = [
+                match.title
+                for match in discovery.matches
+                if match.ref in omitted_relationships
+            ]
+            question = (
+                "Review connector-linked context before approving this card; the selected "
+                "source has related assets: " + ", ".join(labels) + "."
+            )
+            if card.retrieval_mode == RetrievalMode.FIXED:
+                questions.append(question)
+                add_blocker(
+                    OnboardingBlockerCode.CANDIDATE_SELECTION_REVIEW,
+                    OnboardingBlockerSeverity.REVIEW,
+                    "human-intent",
+                    "The adapter published related context that a fixed card has not accepted.",
+                    question,
+                    omitted_relationships,
+                )
+            else:
+                warnings.append(
+                    "Expand mode will inspect adapter-published related context at run time; "
+                    "the caller owns the dynamic-source policy."
+                )
         if selected_outside:
             question = (
                 "Confirm the explicitly selected source(s) outside this bounded candidate set: "
@@ -796,6 +830,9 @@ class InsightAuthoringService:
             list(card.sources), discovery, principal=effective_principal,
             authorized_descriptors=authorized_descriptors,
         )
+        discovery = await self._append_anchor_relationship_candidates(
+            list(card.sources), discovery, principal=effective_principal
+        )
         selected_refs = {
             f"{source.adapter}|{source.resource}" for source in card.sources
         }
@@ -878,6 +915,136 @@ class InsightAuthoringService:
             update={
                 "matches": [*discovery.matches, *appended],
                 "candidate_refs": sorted(set(refs)),
+                "warnings": warnings,
+            }
+        )
+
+    async def _append_anchor_relationship_candidates(
+        self,
+        anchors: list[SourceRef],
+        discovery: ResourceDiscovery,
+        *,
+        principal: PrincipalContext | None,
+    ) -> ResourceDiscovery:
+        """Expose adapter-published neighbors while a card is still being authored.
+
+        A source selection is not complete merely because one metric source
+        ranked highly. Connectors often own the only reliable relationship
+        between that source and a partition monitor, deployment, lineage node,
+        or ownership record. Runtime expansion already honors this contract;
+        authoring must show the same bounded neighborhood so a fixed card
+        cannot accidentally hide required context.
+
+        The adapter owns relationship discovery and authorization. Jev ranks
+        the bounded neighborhood, but a low score never erases a published
+        relationship from the human review surface.
+        """
+        if not anchors:
+            return discovery
+        relationship_catalog = await self.registry.expand_related_resources(
+            [f"{source.adapter}|{source.resource}" for source in anchors],
+            limit=min(
+                self.max_candidates,
+                max(self.related_source_limit, len(anchors) * 2),
+            ),
+            authorized_tenants=(
+                [principal.tenant_id] if principal else None
+            ),
+        )
+        if not relationship_catalog.resources:
+            if not relationship_catalog.warnings:
+                return discovery
+            return discovery.model_copy(
+                update={
+                    "warnings": [*discovery.warnings, *relationship_catalog.warnings],
+                }
+            )
+
+        anchor_refs = {
+            f"{source.adapter}|{source.resource}" for source in anchors
+        }
+        relationship_resources = [
+            resource
+            for resource in relationship_catalog.resources
+            if resource_ref(resource) not in anchor_refs
+        ]
+        if not relationship_resources:
+            return discovery
+        scores = await self._relevance_judger().rank_resources(
+            discovery.goal, relationship_resources
+        )
+        existing = {match.ref: match for match in discovery.matches}
+        appended: list[ResourceMatch] = []
+        for resource in relationship_resources:
+            ref = resource_ref(resource)
+            if ref in existing:
+                match = existing[ref]
+                if "anchor-relationship" not in match.retrieval_signals:
+                    existing[ref] = match.model_copy(
+                        update={
+                            "retrieval_signals": [
+                                *match.retrieval_signals,
+                                "anchor-relationship",
+                            ],
+                        }
+                    )
+                continue
+            relevance = max(0.0, min(1.0, float(scores.get(ref, 0.0))))
+            role_judgment = self._role_judgment(resource, {})
+            appended.append(
+                ResourceMatch(
+                    ref=ref,
+                    adapter=resource.adapter,
+                    resource=resource.resource,
+                    kind=resource.kind,
+                    title=resource.title,
+                    description=resource.description,
+                    source_url=resource.source_url,
+                    relevance=relevance,
+                    recommended=relevance >= self.recommendation_threshold,
+                    suggested_role=role_judgment["role"],
+                    role_probability=role_judgment["probability"],
+                    retrieval_signals=["anchor-relationship"],
+                    contract=resource.contract,
+                    metadata=resource.metadata,
+                )
+            )
+
+        matches = [*existing.values(), *appended]
+        relationship_refs = [resource_ref(resource) for resource in relationship_resources]
+        candidate_refs = sorted(set([*discovery.candidate_refs, *relationship_refs]))
+        relationship_fingerprint = hashlib.sha256(
+            json.dumps(
+                [
+                    resource.model_dump(mode="json")
+                    for resource in sorted(relationship_resources, key=resource_ref)
+                ],
+                sort_keys=True,
+                separators=(",", ":"),
+            ).encode()
+        ).hexdigest()
+        warnings = [
+            *discovery.warnings,
+            "The adapter supplied a bounded relationship neighborhood for card review; "
+            "inspect related candidates before choosing fixed scope.",
+            *relationship_catalog.warnings,
+        ]
+        return discovery.model_copy(
+            update={
+                "matches": matches,
+                "candidate_refs": candidate_refs,
+                "candidate_count": max(
+                    discovery.candidate_count,
+                    len(candidate_refs),
+                    relationship_catalog.total_count,
+                ),
+                "truncated": discovery.truncated or relationship_catalog.has_more,
+                "catalog_strategy": (
+                    f"{discovery.catalog_strategy}+{relationship_catalog.strategy}"
+                ),
+                "catalog_fingerprint": hashlib.sha256(
+                    f"{discovery.catalog_fingerprint}:{relationship_fingerprint}".encode()
+                ).hexdigest(),
                 "warnings": warnings,
             }
         )
@@ -1117,20 +1284,34 @@ class InsightAuthoringService:
         discovery = await self.discover(
             goal, adapter=adapter, limit=limit, principal=effective_principal
         )
-        matches = {match.ref: match for match in discovery.matches}
         requested = validated_selected_sources
+        if requested is not None:
+            discovery = await self._retain_explicit_anchors(
+                requested_anchors, discovery, principal=effective_principal,
+                authorized_descriptors=authorized_descriptors,
+            )
+        relationship_anchors = requested_anchors
+        if not relationship_anchors:
+            relationship_anchors = [
+                SourceRef(
+                    key=f"source-{_slug(match.ref)}",
+                    adapter=match.adapter,
+                    resource=match.resource,
+                    label=match.title,
+                )
+                for match in discovery.matches
+                if match.recommended
+            ]
+        discovery = await self._append_anchor_relationship_candidates(
+            relationship_anchors, discovery, principal=effective_principal
+        )
+        matches = {match.ref: match for match in discovery.matches}
         if requested is None:
             requested = [
                 SelectedSourceInput(ref=match.ref)
                 for match in discovery.matches
                 if match.recommended
             ]
-        else:
-            discovery = await self._retain_explicit_anchors(
-                requested_anchors, discovery, principal=effective_principal,
-                authorized_descriptors=authorized_descriptors,
-            )
-            matches = {match.ref: match for match in discovery.matches}
         unknown = [item.ref for item in requested if item.ref not in matches]
         if unknown:
             raise ValueError(
