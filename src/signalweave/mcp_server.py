@@ -2005,6 +2005,19 @@ def create_mcp(
                                  "and obtain owner confirmation of the current policy and catalog.")
             confirmable = {OnboardingBlockerCode.DEFINITION_CONFLICT,
                            OnboardingBlockerCode.CANDIDATE_SELECTION_REVIEW}
+            # An expand/investigate card intentionally delegates a bounded
+            # related-source search to SignalWeave at run time.  When the
+            # owner has supplied and revalidated an explicit anchor, the
+            # catalog-pagination warning is exactly what
+            # ``dynamic_scope_acknowledged`` is meant to acknowledge.  Do not
+            # extend this exception to cards without an anchor: those still
+            # need a source selected from an authorized discovery result.
+            dynamic_scope = (
+                card.retrieval_mode != RetrievalMode.FIXED
+                or card.investigation_mode != InvestigationMode.NONE
+            )
+            if dynamic_scope and card.sources:
+                confirmable.add(OnboardingBlockerCode.CATALOG_INCOMPLETE)
             owner_confirmable_windows = [
                 blocker
                 for blocker in onboarding_review.blockers

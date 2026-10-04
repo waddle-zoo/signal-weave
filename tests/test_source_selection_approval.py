@@ -19,7 +19,7 @@ from test_onboarding import (
     tool,
 )
 
-from signalweave.models import InsightCard
+from signalweave.models import InsightCard, ResourceDescriptor
 from signalweave.onboarding import InsightAuthoringService
 
 REASON = (
@@ -500,6 +500,40 @@ async def test_owner_can_explicitly_acknowledge_bounded_dynamic_scope(tmp_path, 
     )
     assert result["status"] == "approved"
     assert result["onboarding_review"]["source_selection_confirmation"] == REASON
+
+
+async def test_dynamic_scope_acknowledges_catalog_pagination_for_revalidated_anchor(tmp_path):
+    catalog = BoundedAnchorCatalogDouble()
+    catalog.resources.extend(
+        ResourceDescriptor(
+            adapter="superset",
+            resource=f"dashboard:noise-{index}",
+            kind="dashboard",
+            title=f"Unrelated operating asset {index}",
+            description="A separate operating asset outside the selected workflow.",
+        )
+        for index in range(30)
+    )
+    server, card_id, _, _, _ = await reviewed_case(
+        tmp_path,
+        catalog=catalog,
+        retrieval_mode="expand",
+        investigation_mode="bounded",
+    )
+    review = (await tool(server, "review_insight_card")(card_id))["review"]
+    assert "catalog-incomplete" in {item["code"] for item in review["blockers"]}
+    assert review["selected_source_refs"] == ["superset|dashboard:7"]
+
+    result = await confirm(
+        server,
+        card_id,
+        review["source_selection_fingerprint"],
+        dynamic_scope_acknowledged=True,
+    )
+
+    assert result["status"] == "approved"
+    assert result["onboarding_review"]["confirmed_blocker_codes"] == ["catalog-incomplete"]
+    assert result["onboarding_review"]["blockers"] == []
 
 
 @pytest.mark.parametrize("status", ["stale", "failed", "ambiguous", "unknown"])
