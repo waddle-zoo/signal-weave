@@ -2,6 +2,7 @@ from evaluations.paired_agent_trial import (
     DEFAULT_CASES,
     QueryExecutor,
     QueryLedger,
+    _agent_prompt,
     _load_cases,
     _tool_specs,
     score_run,
@@ -155,6 +156,18 @@ def test_explicit_cached_chart_provenance_can_satisfy_dashboard_evidence():
         "growth-rate",
         "growth-summary",
     ]
+
+
+def test_treatment_prompt_does_not_duplicate_a_preflight_query():
+    case = next(case for case in _load_cases(DEFAULT_CASES) if case["scenario"] == "actionable_change")
+    prompt = _agent_prompt(
+        case,
+        True,
+        {"path": "query", "query": {"finding": "bounded result"}},
+    )
+
+    assert "Do not call run_diagnostic_query again for the same question" in prompt
+    assert "set query_justified to true" in prompt
 
 
 def test_both_arms_share_raw_tool_contract_and_final_submission_schema():

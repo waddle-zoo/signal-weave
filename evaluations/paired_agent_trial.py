@@ -337,6 +337,18 @@ Shared workflow input:
             "Use its path, probabilities, evidence, and guardrail as typed context. "
             "Verify any source you cite; the bundle is not a replacement for provenance."
         )
+        if retrieval_bundle.get("query") is not None:
+            prompt += (
+                " A bounded diagnostic query has already run during preflight and its "
+                "result is included above. Do not call run_diagnostic_query again for "
+                "the same question; use that result and set query_justified to true. "
+                "Only request another query if a distinct unresolved question remains."
+            )
+        else:
+            prompt += (
+                " No diagnostic query ran during preflight. Set query_justified to true "
+                "only if you actually run one yourself."
+            )
     return prompt
 
 
