@@ -653,6 +653,11 @@ async def run_trial(args: argparse.Namespace) -> dict[str, Any]:
                     "preflight_elapsed_ms": preflight_elapsed_ms,
                     "end_to_end_elapsed_ms": preflight_elapsed_ms,
                     "query_calls": executor.calls,
+                    "shared_input_digest": _digest(case["shared_input"]),
+                    # Keep the parity digest stable even when the provider
+                    # fails before the agent can return its normal result.
+                    "prompt_digest": _digest(_agent_prompt(case, False)),
+                    "tool_schema_digest": _digest(_tool_specs()),
                     "preflight": None,
                     "jev": {
                         "requests": retriever.requests if retriever else 0,
