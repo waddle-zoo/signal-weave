@@ -81,6 +81,32 @@ class ScopedSupersetCatalogDouble(SupersetCatalogDouble):
         })
 
 
+class ScopedAndCanonicalSupersetCatalogDouble(SupersetCatalogDouble):
+    def __init__(self):
+        super().__init__()
+        self.resources[0] = self.resources[0].model_copy(update={
+            "contract": self.resources[0].contract.model_copy(update={
+                "metric_names": ["checkout_conversion"],
+                "scope": "sandbox development population",
+            }),
+            "metadata": {"scope": "sandbox"},
+        })
+        self.resources.append(
+            self.resources[0].model_copy(update={
+                "resource": "dashboard:10",
+                "title": "Growth overview canonical",
+                "description": "Production checkout conversion for the business population.",
+                "contract": self.resources[0].contract.model_copy(update={
+                    "scope": "",
+                    "population": "completed customer sessions",
+                    "grain": "week",
+                    "available_comparison_windows": ["previous_period"],
+                }),
+                "metadata": {},
+            })
+        )
+
+
 async def draft(server, **overrides):
     arguments = {
         "title": "Owner-confirmed checkout scope",
@@ -226,6 +252,17 @@ async def test_declared_source_scope_requires_explicit_auditable_confirmation(tm
     assert result["onboarding_review"]["source_scope_confirmations"] == {
         "superset|dashboard:7": scope,
     }
+
+
+async def test_scoped_anchor_review_surfaces_same_metric_replacement(tmp_path):
+    catalog = ScopedAndCanonicalSupersetCatalogDouble()
+    _server, _card_id, review, _, _ = await reviewed_case(tmp_path, catalog=catalog)
+
+    candidates = {item["ref"]: item for item in review["source_candidates"]}
+    assert "superset|dashboard:10" in candidates
+    assert candidates["superset|dashboard:10"]["selected"] is False
+    assert "scope-alternative" in candidates["superset|dashboard:10"]["retrieval_signals"]
+    assert "source-scope-review" in {blocker["code"] for blocker in review["blockers"]}
 
 
 async def test_normal_population_repeated_as_scope_does_not_create_false_blocker(tmp_path):

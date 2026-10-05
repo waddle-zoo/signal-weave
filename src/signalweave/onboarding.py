@@ -1272,6 +1272,9 @@ class InsightAuthoringService:
                 principal=effective_principal,
                 rank_relationships=False,
             )
+            discovery = await self._append_scope_alternatives(
+                list(card.sources), discovery, principal=effective_principal,
+            )
             explicit_anchors_revalidated = True
         else:
             discovery = await self.discover(
@@ -1284,6 +1287,9 @@ class InsightAuthoringService:
                 )
                 discovery = await self._append_anchor_relationship_candidates(
                     list(card.sources), discovery, principal=effective_principal
+                )
+                discovery = await self._append_scope_alternatives(
+                    list(card.sources), discovery, principal=effective_principal,
                 )
             explicit_anchors_revalidated = bool(card.sources)
         return self.build_onboarding_review(
@@ -1502,6 +1508,132 @@ class InsightAuthoringService:
                     f"{discovery.catalog_fingerprint}:{relationship_fingerprint}".encode()
                 ).hexdigest(),
                 "warnings": warnings,
+            }
+        )
+
+    async def _append_scope_alternatives(
+        self,
+        anchors: list[SourceRef],
+        discovery: ResourceDiscovery,
+        *,
+        principal: PrincipalContext | None,
+    ) -> ResourceDiscovery:
+        """Expose bounded same-metric replacements for scoped anchors.
+
+        A human or frontier agent may select an authorized sandbox, regional,
+        archive, or partner asset while searching a noisy catalog. The review
+        must keep that selection blocked until its population is confirmed, but
+        it should also show nearby authorized alternatives so the caller has a
+        repair path instead of a dead-end error. This is connector-neutral
+        candidate recall; it does not rank, approve, or replace the anchor.
+        """
+        selected = {
+            match.ref: match
+            for match in discovery.matches
+            if match.ref in {
+                f"{source.adapter}|{source.resource}" for source in anchors
+            }
+        }
+        scoped = [
+            match for match in selected.values() if declared_source_scope(match)
+        ]
+        if not scoped:
+            return discovery
+
+        existing = {match.ref: match for match in discovery.matches}
+        appended: list[ResourceMatch] = []
+        updated_existing = False
+        for anchor in scoped:
+            query_terms = [anchor.title, *anchor.contract.metric_names]
+            query = " ".join(term.strip() for term in query_terms if isinstance(term, str) and term.strip())
+            if not query:
+                query = f"{anchor.contract.domain} {anchor.kind}"
+            page = await self.registry.search_resources(
+                query,
+                adapter_name=anchor.adapter,
+                limit=min(self.max_candidates, 40),
+                authorized_tenants=(
+                    [principal.tenant_id] if principal else None
+                ),
+            )
+            anchor_terms = {
+                term for value in query_terms
+                for term in re.findall(r"[a-z0-9]+", str(value).lower())
+                if len(term) > 2
+            }
+            for resource in page.resources:
+                ref = resource_ref(resource)
+                if ref == f"{anchor.adapter}|{anchor.resource}":
+                    continue
+                candidate_terms = {
+                    term for value in (
+                        resource.title,
+                        resource.description,
+                        *resource.contract.metric_names,
+                    )
+                    for term in re.findall(r"[a-z0-9]+", str(value).lower())
+                    if len(term) > 2
+                }
+                same_metric = bool(
+                    set(anchor.contract.metric_names)
+                    & set(resource.contract.metric_names)
+                )
+                same_identity = len(anchor_terms & candidate_terms) >= 2
+                if not same_metric and not same_identity:
+                    continue
+                if ref in existing:
+                    existing[ref] = existing[ref].model_copy(
+                        update={
+                            "retrieval_signals": sorted(
+                                set(existing[ref].retrieval_signals)
+                                | {"scope-alternative"}
+                            ),
+                        }
+                    )
+                    updated_existing = True
+                    continue
+                role_judgment = self._role_judgment(resource, {})
+                appended.append(
+                    ResourceMatch(
+                        ref=ref,
+                        adapter=resource.adapter,
+                        resource=resource.resource,
+                        kind=resource.kind,
+                        title=resource.title,
+                        description=resource.description,
+                        source_url=resource.source_url,
+                        relevance=0.0,
+                        recommended=False,
+                        suggested_role=role_judgment["role"],
+                        role_probability=role_judgment["probability"],
+                        retrieval_signals=["scope-alternative"],
+                        contract=resource.contract,
+                        metadata=resource.metadata,
+                    )
+                )
+                existing[ref] = appended[-1]
+
+        if not appended and not updated_existing:
+            return discovery
+        refs = sorted({*discovery.candidate_refs, *(match.ref for match in appended)})
+        updated_matches = [
+            existing.get(match.ref, match) for match in discovery.matches
+        ]
+        return discovery.model_copy(
+            update={
+                "matches": [
+                    *updated_matches,
+                    *[match for match in appended if match.ref not in {
+                        item.ref for item in updated_matches
+                    }],
+                ],
+                "candidate_refs": refs,
+                "candidate_count": max(discovery.candidate_count, len(refs)),
+                "truncated": discovery.truncated,
+                "warnings": [
+                    *discovery.warnings,
+                    "Scoped anchors have bounded same-metric alternatives; inspect and select an authorized population before approval.",
+                ],
             }
         )
 
@@ -1806,6 +1938,10 @@ class InsightAuthoringService:
             ]
             discovery = await self._append_anchor_relationship_candidates(
                 relationship_anchors, discovery, principal=effective_principal
+            )
+        if relationship_anchors:
+            discovery = await self._append_scope_alternatives(
+                relationship_anchors, discovery, principal=effective_principal,
             )
         matches = {match.ref: match for match in discovery.matches}
         if requested is None:

@@ -169,7 +169,17 @@ SIGNALWEAVE_BUNDLE_INSTRUCTIONS = (
     "Resolve the method by exact delivery_methods[].destination against "
     "business.destinations[].destination, then submit the matching "
     "business.destinations[].key. Never submit the alias, a label, or the URI when the "
-    "canonical key is available."
+    "canonical key is available. For notify, investigate, or insufficient_data, the "
+    "submission is the downstream human/agent handoff: include a compact evidence digest "
+    "in claims and summary with the current and comparison values (or explicitly state "
+    "which comparison is missing), the applicable population/coverage, supported "
+    "decomposition or timing context, the reason the policy selected this outcome, and "
+    "the concrete next step. Preserve every material source reference from the bundle in "
+    "top-level evidence_refs. A typed outcome without those material facts is an "
+    "incomplete handoff even when the route is correct. For insufficient_data, never "
+    "invent a freshness SLA, watermark requirement, or business prerequisite: state only "
+    "the source-reported gap or a requirement explicitly present in the card or source "
+    "contract. A complete push-gated ignore may remain a short silent-run receipt."
 )
 
 

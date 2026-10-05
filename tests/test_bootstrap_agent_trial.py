@@ -851,6 +851,17 @@ def test_common_instructions_require_both_arms_finish_and_submit():
     assert "relevant corroborating fact is numeric" in trial.COMMON_SYSTEM
 
 
+def test_signalweave_handoff_requires_human_facing_evidence_digest_without_invented_slas():
+    instructions = trial.SIGNALWEAVE_BUNDLE_INSTRUCTIONS
+
+    assert "compact evidence digest" in instructions
+    assert "current and comparison values" in instructions
+    assert "applicable population/coverage" in instructions
+    assert "concrete next step" in instructions
+    assert "never invent a freshness SLA" in instructions
+    assert "A complete push-gated ignore may remain a short silent-run receipt" in instructions
+
+
 async def test_final_mcp_wrapped_budget_exhaustion_disables_comparative_claims(monkeypatch, tmp_path):
     from mcp.server.fastmcp import FastMCP
 
