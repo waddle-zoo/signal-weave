@@ -17,8 +17,9 @@ The installer then repeats that smoke against the installed executable, outside
 the checkout. These checks use dummy credentials,
 make no Jev call, and do not prove source credentials or analytical quality.
 
-Pushes to `feat/local-investigation-runtime` and manual `workflow_dispatch`
-runs upload three `native-*` Actions artifacts without publishing a release.
+Pushes to `main` or `feat/local-investigation-runtime` and manual
+`workflow_dispatch` runs upload three `native-*` Actions artifacts without
+publishing a release.
 Use the Actions UI to download the artifact for your system, unzip the Actions
 download, and check its archive before extracting in a new directory:
 
@@ -65,7 +66,15 @@ signed/notarized. Do not disable security controls to make them run.
 ## Installer versions and upgrades
 
 Download `install.sh` from a published release (or inspect it in the repository),
-then select a stable or preview version explicitly:
+then select a stable or preview version explicitly. For a stable release, the
+short path is:
+
+```sh
+curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' \
+  https://github.com/waddle-zoo/signal-weave/releases/latest/download/install.sh | sh
+```
+
+For a pinned or preview version:
 
 ```sh
 sh install.sh --version vVERSION
@@ -273,7 +282,17 @@ source services.
 
 ## Connect Codex or Claude Code
 
-Print the matching snippet from the installed CLI:
+The normal path is to let the official agent CLI register SignalWeave:
+
+```sh
+signalweave connect codex
+signalweave connect claude
+```
+
+These commands never pass credentials to the agent. They use the official MCP
+CLI, leave conflicting entries untouched, and print a manual command if the
+agent CLI is unavailable. To inspect the exact entry without changing anything,
+print the matching snippet from the installed CLI:
 
 ```sh
 signalweave agent-config --agent codex --home "$HOME/.signalweave"
@@ -281,11 +300,9 @@ signalweave agent-config --agent claude --home "$HOME/.signalweave"
 ```
 
 The Codex output is a `[mcp_servers.signalweave]` TOML block with `command` and
-`args`. Merge it into your user `~/.codex/config.toml`, preserving existing
-settings. The Claude output is a JSON `mcpServers` object; merge the
-`signalweave` entry into a project `.mcp.json`, or use Claude Code's user-scope
-CLI registration. Do not overwrite existing agent configuration with the whole
-output. SignalWeave only prints snippets and never edits those files.
+`args`. The Claude output is a JSON `mcpServers` object. If you manage agent
+configuration yourself, merge only the `signalweave` entry and preserve all
+existing settings; do not overwrite a whole config with the output.
 
 For manual registration using the installation above:
 

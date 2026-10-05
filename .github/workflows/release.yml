@@ -3,7 +3,7 @@ name: Native release
 on:
   workflow_dispatch:
   push:
-    branches: [feat/local-investigation-runtime]
+    branches: [main, feat/local-investigation-runtime]
     tags: ['v[0-9]*.[0-9]*.[0-9]*']
 
 permissions:

@@ -46,8 +46,12 @@ def local_status(home: str | Path | None = None) -> dict[str, Any]:
             "service": "signal-weave",
             "home": str(root),
             "error": str(error),
+            "identity": {"tenant": "local", "principal": "local"},
+            "jev": {"status": "missing", "mode": "jev", "live_check": "not_run"},
             "connections": [],
             "credentials": {},
+            "state": {"backend": "sqlite", "path": "state/signalweave.db"},
+            "agents": {"selected": "not selected"},
             "next_steps": ["Run `signalweave setup` to create your private local home."],
         }
 

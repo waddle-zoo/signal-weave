@@ -197,3 +197,24 @@ def test_cli_status_and_credential_list_are_human_readable(local_home, monkeypat
     )
     cli.main()
     assert json.loads(capsys.readouterr().out)["TYPESAFE_API_KEY"] == "configured"
+
+
+def test_cli_can_open_the_local_ui_without_changing_bind_address(local_home, monkeypatch, capsys):
+    import uvicorn
+
+    opened = []
+    started = []
+    monkeypatch.setattr("webbrowser.open", lambda address: opened.append(address))
+    monkeypatch.setattr(uvicorn, "run", lambda app, **kwargs: started.append(kwargs))
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["signalweave", "ui", "--open", "--home", str(local_home), "--port", "9876"],
+    )
+
+    cli.main()
+
+    assert opened == ["http://127.0.0.1:9876/"]
+    assert started[0]["host"] == "127.0.0.1"
+    assert started[0]["port"] == 9876
+    assert "http://127.0.0.1:9876/" in capsys.readouterr().out

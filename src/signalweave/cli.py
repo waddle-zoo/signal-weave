@@ -44,13 +44,30 @@ def _http_api_token() -> str | None:
 
 def main() -> None:
     distribution = "standalone executable" if getattr(sys, "frozen", False) else "Python CLI"
-    parser = argparse.ArgumentParser(description=f"SignalWeave local setup and MCP server ({distribution})")
+    parser = argparse.ArgumentParser(
+        description=f"SignalWeave human-first setup, health, and MCP server ({distribution})",
+        epilog=(
+            "First run: signalweave setup  ->  signalweave health --live  ->  "
+            "signalweave ui --open\n"
+            "Connect an agent later with: signalweave connect codex | signalweave connect claude"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     parser.add_argument("--version", action="version", version=f"SignalWeave {__version__}")
     commands = parser.add_subparsers(dest="command", required=True)
-    init = commands.add_parser("init", help="Create private local configuration and state")
+    init = commands.add_parser(
+        "init", help="Create private local configuration and state (advanced; setup is the normal path)"
+    )
     init.add_argument("--home", help="Local home (default: SIGNALWEAVE_HOME or ~/.signalweave)")
     init.add_argument("--key-file", help="Copy a private TypeSafe key file instead of prompting")
-    setup = commands.add_parser("setup", help="Offline wizard: Jev key, source, local identity, and agent config")
+    setup = commands.add_parser(
+        "setup",
+        help="Guided human setup: Jev key, connectors, credentials, and agent handoff",
+        description=(
+            "Walk through a private local setup. Secrets are hidden and stored under "
+            "~/.signalweave; no TOML editing is required."
+        ),
+    )
     setup.add_argument("--home", help="Local home (default: SIGNALWEAVE_HOME or ~/.signalweave)")
     setup.add_argument("--non-interactive", action="store_true", help="Never prompt; credentials must exist or use private files")
     setup.add_argument("--key-file", help="Private file containing the TypeSafe key")
@@ -82,31 +99,47 @@ def main() -> None:
         help="Save setup without changing agent configuration",
     )
     setup.add_argument("--update", action="store_true", help="Allow replacing existing settings or credentials")
-    connect = commands.add_parser("connect", help="Register an existing local setup with your agent")
+    connect = commands.add_parser(
+        "connect", help="Connect an existing local setup to Codex or Claude Code"
+    )
     connect.add_argument("--home", help="Local home (default: SIGNALWEAVE_HOME or ~/.signalweave)")
     connect.add_argument("agent_name", nargs="?", choices=["codex", "claude"])
     connect.add_argument("--agent", dest="agent_flag", choices=["codex", "claude"])
-    check = commands.add_parser("doctor", help="Check configuration offline; optionally probe source access")
+    check = commands.add_parser(
+        "doctor", help="Check local configuration; --live probes configured source access"
+    )
     check.add_argument("--home", help="Local home (default: SIGNALWEAVE_HOME or ~/.signalweave)")
     check.add_argument("--live", action="store_true", help="Run bounded catalog probes; never sends a Jev judgment")
     check.add_argument("--json", action="store_true", help="Print a machine-readable report")
-    health = commands.add_parser("health", help="Alias for doctor; check local and optional live source health")
+    health = commands.add_parser(
+        "health", help="Human-readable setup and source health check (doctor alias)"
+    )
     health.add_argument("--home", help="Local home (default: SIGNALWEAVE_HOME or ~/.signalweave)")
     health.add_argument("--live", action="store_true", help="Run bounded catalog probes; never sends a Jev judgment")
     health.add_argument("--json", action="store_true", help="Print a machine-readable report")
     status = commands.add_parser("status", help="Show secret-free local setup status")
     status.add_argument("--home", help="Local home (default: SIGNALWEAVE_HOME or ~/.signalweave)")
     status.add_argument("--json", action="store_true", help="Print a machine-readable report")
-    credentials = commands.add_parser("credentials", help="List or rotate private local credentials")
+    credentials = commands.add_parser(
+        "credentials", help="List or rotate private credentials without editing config"
+    )
     credentials_sub = credentials.add_subparsers(dest="credentials_command", required=True)
     credentials_list = credentials_sub.add_parser("list", help="Show credential status without secret values")
     credentials_list.add_argument("--home", help="Local home (default: SIGNALWEAVE_HOME or ~/.signalweave)")
     credentials_list.add_argument("--json", action="store_true", help="Print a machine-readable report")
     credentials_set = credentials_sub.add_parser("set", help="Set or rotate one credential; prompts without echo")
-    credentials_set.add_argument("name", help="typesafe, superset-password, preset-token-name, or another supported credential")
+    credentials_set.add_argument(
+        "name",
+        help=(
+            "typesafe, superset-password, preset-api-token-name, "
+            "preset-api-token-secret, preset-access-token, or jev"
+        ),
+    )
     credentials_set.add_argument("--home", help="Local home (default: SIGNALWEAVE_HOME or ~/.signalweave)")
     credentials_set.add_argument("--file", dest="secret_file", help="Read the secret from a private file")
-    connections = commands.add_parser("connections", help="Add, update, or list source connections")
+    connections = commands.add_parser(
+        "connections", help="Add, update, or list Superset, Preset, Trino, or MCP sources"
+    )
     connections_sub = connections.add_subparsers(dest="connections_command", required=True)
     connections_list = connections_sub.add_parser("list", help="Show configured source endpoints without secrets")
     connections_list.add_argument("--home", help="Local home (default: SIGNALWEAVE_HOME or ~/.signalweave)")
@@ -138,6 +171,7 @@ def main() -> None:
     ui.add_argument("--home", help="Local home (default: SIGNALWEAVE_HOME or ~/.signalweave)")
     ui.add_argument("--host", default="127.0.0.1", help="Loopback host only")
     ui.add_argument("--port", type=int, default=8765)
+    ui.add_argument("--open", action="store_true", help="Open the UI in the default browser")
     snippet = commands.add_parser("agent-config", help="Print configuration; never edits agent files")
     snippet.add_argument("--home", help="Local home (default: SIGNALWEAVE_HOME or ~/.signalweave)")
     snippet.add_argument("--agent", choices=["codex", "claude"], required=True)
@@ -161,6 +195,10 @@ def main() -> None:
             options.pop("command")
             register = options.pop("register_agent")
             guided_sources = not options.get("non_interactive") and options.get("source") is None
+            if guided_sources:
+                print("SignalWeave setup")
+                print("Private home: " + str(options.get("home") or Path.home() / ".signalweave"))
+                print("Enter your Jev key and the sources your agent may read. Secrets stay hidden and local.")
             home, agent = setup_local(**options)
             if guided_sources:
                 # A first-time human often has more than one useful system. Keep
@@ -179,23 +217,22 @@ def main() -> None:
                         principal=configured.get("SIGNALWEAVE_PRINCIPAL_ID", "local"),
                         agent=agent,
                     )
-            print("Local configuration saved. No network requests or source processes were started.")
-            print("Local identity scopes this single-user process; it is not provider authentication.")
-            print("Credentials and live source access remain unverified. Review and simulate cards before approval.")
+            print("\nLocal configuration saved. No source process was started during setup.")
+            print(f"Private home: {home}")
+            print("Run `signalweave health --live` when you are ready to test source access.")
             if register is True or (register is None and guided_sources and _ask_yes_no(
                 f"\nConnect SignalWeave to {agent.title()} now? [Y/n]: ", default=True,
             )):
-                # A missing agent CLI or Claude's intentionally manual path must
-                # not discard a successful local setup. The command remains in
-                # the output so the user can finish the handoff explicitly.
+                # A missing agent CLI or a conflicting existing entry must not
+                # discard a successful local setup. The command remains in the
+                # output so the user can finish the handoff explicitly.
                 _connect_agent(home, agent, required=False)
             else:
                 print("To register with your agent, review and run this command:")
                 print(agent_registration(home, agent))
             print("Status: " + shlex.join(["signalweave", "status", "--home", str(home)]))
-            print("Offline check: " + shlex.join(["signalweave", "doctor", "--home", str(home)]))
-            print("After adding a source: " + shlex.join(["signalweave", "doctor", "--live", "--home", str(home)]))
-            print("Then ask your agent: Use SignalWeave's get_signalweave_guide to help me get my first useful report from my BI sources.")
+            print("Local UI: " + shlex.join(["signalweave", "ui", "--open", "--home", str(home)]))
+            print("Then ask your agent: Use SignalWeave's getting-started guide to help me get my first useful report.")
             return
         if args.command == "connect":
             from .local_setup import read_config
@@ -297,7 +334,12 @@ def main() -> None:
 
             from .local_ui import create_local_ui
 
-            print(f"SignalWeave local UI: http://{args.host}:{args.port}/")
+            address = f"http://{args.host}:{args.port}/"
+            print(f"SignalWeave local UI: {address}")
+            if args.open:
+                import webbrowser
+
+                webbrowser.open(address)
             uvicorn.run(
                 create_local_ui(args.home),
                 host=args.host,

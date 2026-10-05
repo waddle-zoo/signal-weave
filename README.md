@@ -38,10 +38,19 @@ See [supported analyses and current limits](docs/local-investigations.md).
 
 ### With your local agent
 
-Follow the [human-first installation guide](docs/local-install.md): install the
-`signalweave` binary, run the guided setup, add or update connections from the
-CLI, and connect Codex or Claude. Setup stores Jev and source credentials
-privately; users do not need to hand-edit TOML.
+Install the native command in one step, then let the guided setup walk you
+through Jev, source connectors, credentials, and your agent:
+
+```sh
+curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' \
+  https://github.com/waddle-zoo/signal-weave/releases/download/v0.2.0rc2/install.sh | \
+  sh -s -- --version v0.2.0rc2
+signalweave setup
+```
+
+Setup stores Jev and source credentials privately under `~/.signalweave`; users
+do not need Python, Docker, TOML editing, or a separate OpenAI key. Use
+`signalweave --help` for the complete human maintenance path.
 
 > The native installer is available as the **v0.2.0rc2 local preview**. Use the
 > pinned command in the guide. This is not a stable enterprise release; the new
@@ -52,7 +61,7 @@ privately; users do not need to hand-edit TOML.
 
 After setup, review the local state with `signalweave status`, run
 `signalweave health --live` to probe catalog access, and optionally open
-`signalweave ui` for a local health page. The setup wizard can add multiple
+`signalweave ui --open` for a local health page. The setup wizard can add multiple
 connector types in one pass; later changes use `connections add/update` and
 `credentials set`. Then ask your agent:
 
@@ -65,10 +74,10 @@ TypeSafe; local installation does not mean offline inference. Supported adapters
 and reviewed company MCP mappings are required—not every arbitrary MCP response
 can be analyzed automatically.
 
-The native preview can register Codex during the guided setup with an explicit
-confirmation (or with `signalweave setup --agent codex --register-agent` in an
-unattended flow), and bundles a `get_signalweave_guide` MCP tool for **query**,
-**report**, and **monitor** paths. See the [first-use flow](docs/local-install.md#2-connect-your-agent).
+The native preview can register Codex or Claude Code during guided setup with an
+explicit confirmation (or with `signalweave setup --agent AGENT --register-agent`
+in an unattended flow), and bundles a `get_signalweave_guide` MCP tool for
+**query**, **report**, and **monitor** paths. See the [first-use flow](docs/local-install.md#2-connect-your-agent).
 
 <details>
 <summary>Develop from source or run the local Docker demo</summary>

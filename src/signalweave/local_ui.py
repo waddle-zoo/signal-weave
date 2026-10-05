@@ -124,6 +124,7 @@ _PAGE = """<!doctype html>
       const next = (data.next_steps || []).map((step) =>
         '<div class="card">' + esc(step) + "</div>").join("");
       const error = data.error ? '<div class="card" style="margin-top:12px;color:var(--red)">' + esc(data.error) + "</div>" : "";
+      const agent = ((data.agents || {}).selected || "not connected").replaceAll("_", " ");
       const live = data.live_health ?
         '<section><h2>Source health</h2><div class="card"><div class="value">' +
         (data.live_health.healthy ? 'Reachable' : 'Needs attention') +
@@ -135,7 +136,7 @@ _PAGE = """<!doctype html>
             '</div><div class="small">' + esc(data.home) + "</div></div>" +
           '<div class="card"><div class="label">Jev</div><div class="value">' + esc((data.jev || {}).status || "unknown") +
             '</div><div class="small">Configured locally; a live provider check is explicit.</div></div>' +
-          '<div class="card"><div class="label">Agent handoff</div><div class="value">MCP</div><div class="small">Use the CLI to register Codex or Claude.</div></div>' +
+          '<div class="card"><div class="label">Agent handoff</div><div class="value">' + esc(agent) + '</div><div class="small">Use the CLI to register Codex or Claude.</div></div>' +
         '</div>' + error +
         '<section><h2>Connections</h2><div class="rows">' + (connections || row("Sources", "Add a source with the CLI", "not_configured")) + "</div></section>" +
         '<section><h2>Credentials</h2><div class="rows">' + (credentials || row("Credentials", "No local config yet", "missing")) + "</div></section>" +

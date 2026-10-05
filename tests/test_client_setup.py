@@ -174,12 +174,30 @@ def test_cli_run_is_bounded_scrubbed_and_noninteractive(monkeypatch, tmp_path):
     assert seen["kwargs"]["env"]["ANTHROPIC_API_KEY"] == "preserved-agent-setting"
 
 
-def test_claude_is_actionable_but_never_auto_mutated(monkeypatch, tmp_path):
-    monkeypatch.setattr(client_setup, "_run", lambda argv: pytest.fail("must not invoke Claude CLI"))
+def test_claude_registration_uses_official_cli_without_exposing_output(monkeypatch, tmp_path):
+    calls = []
+    monkeypatch.setattr(
+        client_setup,
+        "_run",
+        lambda argv: calls.append(argv) or completed(stdout="SignalWeave added"),
+    )
 
     result = client_setup.register_agent(tmp_path / "home", "claude")
 
-    assert result.outcome == "manual_required"
+    assert result.outcome == "registered"
+    entry = json.loads(client_setup.agent_config(tmp_path / "home", "claude"))["mcpServers"]["signalweave"]
+    assert calls == [[
+        "claude", "mcp", "add", "--transport", "stdio", "--scope", "user",
+        "signalweave", "--", entry["command"], *entry["args"],
+    ]]
+
+
+def test_claude_registration_failure_keeps_manual_command(monkeypatch, tmp_path):
+    monkeypatch.setattr(client_setup, "_run", lambda argv: completed(1, stderr="existing entry"))
+
+    result = client_setup.register_agent(tmp_path / "home", "claude")
+
+    assert result.outcome == "conflict"
     assert result.command.startswith("claude mcp add")
     assert result.changed is False
 

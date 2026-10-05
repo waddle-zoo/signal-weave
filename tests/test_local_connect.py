@@ -63,17 +63,27 @@ def manifest_file(tmp_path, tenant="local"):
 
 
 def test_bare_interactive_setup_and_single_registration_command(tmp_path, monkeypatch, capsys):
+    from signalweave import client_setup
+
     hidden = iter(["test-jev-credential", "test-password-credential"])
-    visible = iter(["", "", "superset", "https://bi.internal", "analyst", "claude"])
+    visible = iter(["superset", "https://bi.internal", "analyst", "claude", "", ""])
     monkeypatch.setenv("SIGNALWEAVE_HOME", str(tmp_path / "wizard"))
     monkeypatch.setattr(setup.getpass, "getpass", lambda _: next(hidden))
     monkeypatch.setattr("builtins.input", lambda _: next(visible))
+    monkeypatch.setattr(
+        client_setup,
+        "register_agent",
+        lambda home, agent: client_setup.AgentRegistrationStatus(
+            agent, "manual_required", "Claude CLI unavailable", "claude mcp add --transport stdio --scope user signalweave -- ...",
+        ),
+    )
     monkeypatch.setattr(sys, "argv", ["signalweave", "setup"])
     cli.main()
     output = capsys.readouterr().out
     assert "claude mcp add --transport stdio --scope user signalweave --" in output
     assert "test-password" not in output and "test-jev" not in output
-    assert "unverified" in output and "not provider authentication" in output
+    assert "health --live" in output
+    assert "Private home" in output
     _, env = setup.read_config(tmp_path / "wizard")
     assert env["SIGNALWEAVE_TENANT_ID"] == env["SUPERSET_TENANT_ID"] == "local"
     assert env["SIGNALWEAVE_PRINCIPAL_ID"] == "local"
@@ -83,7 +93,7 @@ def test_interactive_setup_can_finish_a_codex_handoff(tmp_path, monkeypatch, cap
     from signalweave import client_setup
 
     monkeypatch.setattr(setup.getpass, "getpass", lambda _: "test-jev-credential")
-    visible = iter(["", "", "skip", "codex", "", ""])
+    visible = iter(["skip", "codex", "", ""])
     monkeypatch.setattr("builtins.input", lambda _: next(visible))
     monkeypatch.setattr(
         client_setup,
@@ -106,7 +116,7 @@ def test_human_setup_can_add_two_connector_types_in_one_walkthrough(tmp_path, mo
     }]))
     hidden = iter(["test-jev-credential", "test-password-credential"])
     visible = iter([
-        "", "", "superset", "http://127.0.0.1:8088", "admin", "codex",
+        "superset", "http://127.0.0.1:8088", "admin", "codex",
         "y", "trino", "https://trino.example", str(catalog), "n",
     ])
     monkeypatch.setenv("SIGNALWEAVE_HOME", str(tmp_path / "wizard"))
@@ -173,10 +183,17 @@ def test_registration_requires_explicit_cli_opt_in(options, monkeypatch, capsys,
     monkeypatch.setattr(sys, "argv", argv)
     cli.main()
     assert len(calls) == int(register)
-    assert "get_signalweave_guide" in capsys.readouterr().out
+    assert "getting-started guide" in capsys.readouterr().out
 
 
 def test_setup_registration_is_non_fatal_for_claude_manual_handoff(options, monkeypatch, capsys):
+    from signalweave import client_setup
+
+    monkeypatch.setattr(
+        client_setup,
+        "_run",
+        lambda argv: (_ for _ in ()).throw(FileNotFoundError()),
+    )
     monkeypatch.setattr(sys, "argv", [
         "signalweave", "setup", "--home", str(options["home"]), "--non-interactive",
         "--key-file", str(options["key_file"]), "--source", "skip", "--agent", "claude",

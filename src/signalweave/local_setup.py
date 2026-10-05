@@ -82,7 +82,9 @@ _CREDENTIAL_ALIASES = {
     "jev": "TYPESAFE_API_KEY",
     "superset-password": "SUPERSET_PASSWORD",
     "preset-token-name": "PRESET_API_TOKEN_NAME",
+    "preset-api-token-name": "PRESET_API_TOKEN_NAME",
     "preset-token-secret": "PRESET_API_TOKEN_SECRET",
+    "preset-api-token-secret": "PRESET_API_TOKEN_SECRET",
     "preset-access-token": "PRESET_ACCESS_TOKEN",
     "signalweave-api-token": "SIGNALWEAVE_API_TOKEN",
     "push-webhook-token": "PUSH_WEBHOOK_TOKEN",
@@ -266,6 +268,18 @@ def _ask_agent() -> str:
     print("  2) Claude Code")
     selected = _ask("Agent", "codex").lower()
     return {"1": "codex", "2": "claude"}.get(selected, selected)
+
+
+def _ask_preset_auth() -> str:
+    """Ask for the two supported Preset credential shapes without jargon-only input."""
+    print("\nHow will you authenticate to Preset?")
+    print("  1) API token name + secret")
+    print("  2) Bearer/access token")
+    selected = _ask("Authentication", "1").lower()
+    selected = {"1": "api-token", "2": "bearer", "access-token": "bearer"}.get(selected, selected)
+    if selected not in {"api-token", "bearer"}:
+        raise SetupError("Choose 1 for an API token pair or 2 for a bearer/access token")
+    return selected
 
 
 def _secret(value: str, *, preserve_spaces: bool = False) -> str:
@@ -566,14 +580,17 @@ def setup_local(
             add(f"{name}_FILE", filename)
 
         credential("TYPESAFE_API_KEY", "typesafe.key", key_file, "TypeSafe API key")
-        for name, explicit, label in (
-            ("SIGNALWEAVE_TENANT_ID", tenant, "Local tenant"),
-            ("SIGNALWEAVE_PRINCIPAL_ID", principal, "Local principal"),
+        for name, explicit in (
+            ("SIGNALWEAVE_TENANT_ID", tenant),
+            ("SIGNALWEAVE_PRINCIPAL_ID", principal),
         ):
             default = values.get(name, "local")
-            value = explicit if explicit is not None else (
-                default if non_interactive or name in values else _ask(label, default)
-            )
+            # Tenant and principal are deployment-scope details, not first-run
+            # questions for a person installing the local binary. Keep the
+            # stable local defaults unless an operator explicitly supplies the
+            # flags; advanced deployments can still set them without making
+            # every human understand SignalWeave's authorization vocabulary.
+            value = explicit if explicit is not None else default
             if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.:@-]{0,159}", value):
                 raise SetupError("Tenant and principal must be short non-empty identifiers without whitespace")
             add(name, value)
@@ -618,13 +635,7 @@ def setup_local(
                     or values.get("PRESET_API_TOKEN_NAME") or values.get("PRESET_API_TOKEN_NAME_FILE")
                     or values.get("PRESET_API_TOKEN_SECRET") or values.get("PRESET_API_TOKEN_SECRET_FILE")
                 ):
-                    requested_mode = _ask(
-                        "Preset authentication (api-token or bearer)", "api-token"
-                    ).strip().lower()
-                    if requested_mode in {"access-token", "access_token", "token"}:
-                        requested_mode = "bearer"
-                    if requested_mode not in {"api-token", "bearer"}:
-                        raise SetupError("Choose api-token or bearer for Preset authentication")
+                    requested_mode = _ask_preset_auth()
                 existing_access_mode = bool(
                     values.get("PRESET_ACCESS_TOKEN") or values.get("PRESET_ACCESS_TOKEN_FILE")
                 )

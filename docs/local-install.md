@@ -18,6 +18,21 @@ those controls—use an administrator-approved installation path instead.
 
 ## 1. Install once, then use the guided setup
 
+For a published stable release, install the native `signalweave` command in one
+step. It detects macOS Apple Silicon/Intel or Linux x64, verifies the release
+checksum, and installs to `~/.local/bin` without Python, Docker, or `sudo`:
+
+```sh
+curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' \
+  https://github.com/waddle-zoo/signal-weave/releases/latest/download/install.sh | sh
+```
+
+If your organization does not permit curl-to-shell installation, download and
+inspect `install.sh` from the release first, then run it locally. The installer
+never changes shell profiles, agent configuration, or credentials.
+
+The current repository preview is prerelease, so use its pinned installer:
+
 ```sh
 installer="$(mktemp)"
 curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' \
@@ -25,23 +40,32 @@ curl --fail --silent --show-error --location --proto '=https' --proto-redir '=ht
   sh "$installer" --version v0.2.0rc2
 ```
 
+The same preview can be installed in one command when your environment allows
+curl-to-shell execution:
+
 ```sh
-"$HOME/.local/bin/signalweave" setup
+curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' \
+  https://github.com/waddle-zoo/signal-weave/releases/download/v0.2.0rc2/install.sh | \
+  sh -s -- --version v0.2.0rc2
+```
+
+```sh
+signalweave setup
 ```
 
 That one guided command walks through the setup in this order:
 
 1. TypeSafe Jev key (hidden input)
-2. Local tenant and principal identity (safe defaults are `local`)
-3. One or more source connectors and their credentials
-4. Codex or Claude Code handoff (with an explicit confirmation before changing agent config)
+2. One or more source connectors and their credentials
+3. Codex or Claude Code handoff (with an explicit confirmation before changing agent config)
 
 It writes a private local home at `~/.signalweave`; it does not require TOML
-editing or an OpenAI key. After each connector, the wizard asks whether to add
-another one, so a team can connect Superset plus Trino or a reviewed company MCP
-manifest in one pass. Jev is the SignalWeave decision runtime, while your agent
-supplies frontier-model reasoning when a workflow needs investigation or
-narrative analysis.
+editing or an OpenAI key. Tenant and principal default to the private local
+identity `local`; operators can override them with `--tenant` and `--principal`.
+After each connector, the wizard asks whether to add another one, so a person
+can connect Superset plus Trino or a reviewed company MCP manifest in one pass.
+Jev is the SignalWeave decision runtime, while your agent supplies frontier-model
+reasoning when a workflow needs investigation or narrative analysis.
 
 The installer selects macOS Apple Silicon/Intel or Linux x64, verifies the
 archive's SHA-256 checksum, and installs without `sudo`. Your Jev key is not a
@@ -51,9 +75,10 @@ offline inference. The pinned version explicitly opts into this preview;
 previews are never selected by the installer's default `latest` lookup.
 
 For an interactive setup, SignalWeave offers to connect the selected agent at the
-end. Press Enter to accept. If the agent CLI is not installed, or if you choose
-Claude Code, it prints the exact command to review and run. To make the choice
-explicit in scripts, use `--register-agent` or `--no-register-agent`.
+end. Press Enter to accept. It invokes only the selected agent's official MCP
+CLI; if that CLI is not installed or refuses an existing entry, SignalWeave
+prints the exact command to review and run. To make the choice explicit in
+scripts, use `--register-agent` or `--no-register-agent`.
 
 After setup, the normal human path is:
 
@@ -64,7 +89,7 @@ signalweave connections update    # change a source endpoint or credential mode
 signalweave credentials set NAME  # rotate one secret without editing config
 signalweave health --live         # test catalog access; does not spend a Jev judgment
 signalweave connect codex          # or: signalweave connect claude, if skipped during setup
-signalweave ui                     # optional local health page at 127.0.0.1:8765
+signalweave ui --open              # optional local health page in your browser
 ```
 
 If you want to change one secret later, use a hidden prompt or a private file:
@@ -74,6 +99,22 @@ signalweave credentials list
 signalweave credentials set typesafe
 signalweave credentials set superset-password --file /private/path/password
 ```
+
+`connections add` and `connections update` are interactive when you omit
+`--source`; they keep the other configured sources and only ask for the fields
+that belong to the selected connector:
+
+| Connector | Human enters | Stored privately |
+| --- | --- | --- |
+| Superset | URL, username, password | Superset password file |
+| Preset | workspace URL, API-token pair or bearer token | Preset credential file(s) |
+| Trino | URL, catalog JSON, optional catalog/schema/user | Catalog path and bounds |
+| Company MCP | reviewed read-only manifest path | Manifest path; provider secrets stay with the MCP |
+
+For example, `signalweave connections update` is the normal way to change a
+workspace URL or switch a Preset credential mode; `signalweave credentials set
+preset-access-token` (or `preset-api-token-secret`) rotates one secret without
+editing configuration.
 
 `signalweave status` and the local UI never print credential values. `health`
 without `--live` is an offline configuration check; `doctor` remains an alias.
@@ -109,12 +150,11 @@ signalweave setup --agent codex --register-agent
 
 For an already configured local home, use `signalweave connect codex` (the
 older `--agent codex` spelling remains accepted).
-Registration is opt-in and uses the installed Codex CLI. A conflicting existing
-entry is left untouched; registration errors preserve your local setup. Close
-concurrent agent-configuration edits while connecting. Registration is not a
-live source test. Claude Code receives the exact registration command to review
-and run because SignalWeave must not silently edit a user's Claude configuration.
-Run **one** command for the agent you use:
+Registration is opt-in and uses the installed Codex or Claude CLI. A conflicting
+existing entry is left untouched; registration errors preserve your local setup.
+Close concurrent agent-configuration edits while connecting. Registration is
+not a live source test. If the official CLI is unavailable, run **one** command
+for the agent you use:
 
 ```sh
 codex mcp add signalweave -- "$HOME/.local/bin/signalweave" serve --home "$HOME/.signalweave"
