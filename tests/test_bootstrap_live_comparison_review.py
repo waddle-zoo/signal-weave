@@ -66,6 +66,22 @@ def test_review_recomputes_scores_and_requires_same_card(tmp_path):
         "dataset_digest": dataset_digest([scenario]), "push_gated": True,
         "source_fingerprint": source_fingerprint(),
     }
+    # Baseline safety errors are measured outcomes, not fixture-integrity
+    # failures. The treatment arm must still remain safe for the comparison to
+    # be eligible.
+    baseline_bad = next(
+        row for row in rows
+        if row["arm"] == "luna_bi"
+        and scenario["private"]["periods"][row["period_id"]]["outcome"] == "insufficient_data"
+    )
+    bad_submission = dict(baseline_bad["submission"])
+    bad_submission.update({"outcome": "ignore", "recipients": []})
+    baseline_bad["submission"] = bad_submission
+    baseline_bad["score"] = score_submission(
+        scenario, baseline_bad["period_id"], bad_submission,
+        inspected_refs=baseline_bad["inspected_refs"],
+        asked_owner_topics=baseline_bad["asked_owner_topics"],
+    )
     report_path = tmp_path / "report.json"
     cards_path = tmp_path / scenario["scenario_id"] / "luna_signalweave_jev" / "cards.json"
     cards_path.parent.mkdir(parents=True)
@@ -81,6 +97,9 @@ def test_review_recomputes_scores_and_requires_same_card(tmp_path):
     assert result["gates"]["scores_recompute"]
     assert result["gates"]["same_card_monitoring"]
     assert result["gates"]["push_gate_contract"]
+    assert result["gates"]["baseline_safety_violations_observed"]
+    assert result["gates"]["treatment_no_unsafe_suppression"]
+    assert result["value_signal"]["baseline_quality"]["unsafe_suppressions"] == 1
     assert result["value_signal"]["treatment_agent_wakeups"] < result["value_signal"]["baseline_agent_wakeups"]
     assert result["value_signal"]["treatment_active_warm_agent_seconds"] == 2.0
     assert result["value_signal"]["baseline_active_warm_agent_seconds"] == 6.0

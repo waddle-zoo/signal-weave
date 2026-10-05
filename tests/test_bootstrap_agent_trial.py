@@ -862,6 +862,12 @@ def test_signalweave_handoff_requires_human_facing_evidence_digest_without_inven
     assert "A complete push-gated ignore may remain a short silent-run receipt" in instructions
 
 
+def test_common_instructions_keep_saved_source_facts_grounded():
+    assert "separate owner policy from inspected-source knowledge" in trial.COMMON_SYSTEM
+    assert "never infer a source property from a title" in trial.COMMON_SYSTEM
+    assert "remove that sentence" in trial.COMMON_SYSTEM
+
+
 async def test_final_mcp_wrapped_budget_exhaustion_disables_comparative_claims(monkeypatch, tmp_path):
     from mcp.server.fastmcp import FastMCP
 

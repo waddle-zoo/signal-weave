@@ -159,10 +159,25 @@ def review_report(report_path: Path, *, require_current_source: bool = True) -> 
     if not gates["scores_recompute"]:
         findings.append("at least one stored score differs from an independent recomputation")
 
-    gates["no_unsafe_suppression"] = all(
+    # A baseline safety mistake is an outcome of the comparison, not an
+    # integrity failure.  Rejecting the whole artifact here would erase the
+    # exact product question the trial is meant to measure.  Treatment safety
+    # remains a hard gate: a Jev-assisted unsafe suppression or route makes the
+    # comparative artifact unusable until the product or fixture is repaired.
+    treatment_safety_rows = treatment
+    gates["treatment_no_unsafe_suppression"] = all(
         not row.get("score", {}).get("unsafe_suppression")
         and not row.get("score", {}).get("unsafe_route")
-        for row in rows
+        for row in treatment_safety_rows
+    )
+    # Preserve the old key as an explicit compatibility alias in artifacts,
+    # but define it in terms of treatment safety rather than suppressing a
+    # baseline result from the report.
+    gates["no_unsafe_suppression"] = gates["treatment_no_unsafe_suppression"]
+    gates["baseline_safety_violations_observed"] = any(
+        row.get("score", {}).get("unsafe_suppression")
+        or row.get("score", {}).get("unsafe_route")
+        for row in baseline
     )
     gates["approved_treatment_card"] = _card_statuses(report_path, rows)["pass"]
     if not gates["approved_treatment_card"]:
@@ -334,6 +349,8 @@ def review_report(report_path: Path, *, require_current_source: bool = True) -> 
         ),
     }
     integrity_gates = dict(gates)
+    # This is intentionally an observed baseline result, not a pass/fail gate.
+    integrity_gates.pop("baseline_safety_violations_observed", None)
     if not require_current_source:
         integrity_gates.pop("source_fingerprint_matches_current", None)
     integrity_pass = all(integrity_gates.values())
