@@ -66,6 +66,6 @@ break-even estimate is wall-time only. The next necessary test is a larger
 stratified set of held-out companies and multi-step investigations with the
 same independent review.
 
-Independent review: `/private/tmp/signalweave-cinder-contract-prompt-20261006/review.json`
+Independent review: `/private/tmp/signalweave-cinder-contract-prompt-20261006/review-current.json`
 
 Raw report: `/private/tmp/signalweave-cinder-contract-prompt-20261006/report.json`

@@ -23,6 +23,8 @@ from evaluations.bootstrap_agent_trial import (
 )
 from evaluations.bootstrap_scenarios import build_scenarios, dataset_digest, score_submission
 
+_REVIEWER_ONLY_FILES = frozenset({"evaluations/bootstrap_live_comparison_review.py"})
+
 
 def _fixture_options(config: dict[str, Any]) -> dict[str, Any]:
     options: dict[str, Any] = {
@@ -38,6 +40,30 @@ def _fixture_options(config: dict[str, Any]) -> dict[str, Any]:
 
 def _same(value: Any, expected: Any) -> bool:
     return canonical(value) == canonical(expected)
+
+
+def _source_content_matches(recorded: Any, current: Any) -> bool:
+    """Match the measured executable/protocol files, not unrelated Git commits."""
+
+    if not isinstance(recorded, dict) or not isinstance(current, dict):
+        return False
+    recorded_hashes = recorded.get("sha256")
+    current_hashes = current.get("sha256")
+    if isinstance(recorded_hashes, dict) and isinstance(current_hashes, dict):
+        # The reviewer is executed now and independently recomputes the report;
+        # its own source hash is not part of the measured trial producer. A
+        # reviewer-only change therefore must not force paid reruns when the
+        # runner, scorer, fixtures, and product files are unchanged.
+        recorded_measured = {
+            key: value for key, value in recorded_hashes.items()
+            if key not in _REVIEWER_ONLY_FILES
+        }
+        current_measured = {
+            key: value for key, value in current_hashes.items()
+            if key not in _REVIEWER_ONLY_FILES
+        }
+        return recorded_measured == current_measured
+    return _same(recorded, current)
 
 
 def _card_statuses(report_path: Path, rows: list[dict[str, Any]]) -> dict[str, Any]:
@@ -76,7 +102,7 @@ def review_report(report_path: Path, *, require_current_source: bool = True) -> 
     config = report["config"]
     recorded_source = config.get("source_fingerprint")
     current_source = source_fingerprint()
-    source_match = isinstance(recorded_source, dict) and _same(recorded_source, current_source)
+    source_match = _source_content_matches(recorded_source, current_source)
     fixtures = build_scenarios(**_fixture_options(config))
     fixtures = select_scenarios(
         fixtures,
@@ -91,9 +117,10 @@ def review_report(report_path: Path, *, require_current_source: bool = True) -> 
 
     # A comparative result is only current evidence when the executable
     # harness, scorer, and product files that produced it are byte-identical
-    # to the files being reviewed.  Historical reports remain inspectable via
-    # --allow-historical, but cannot silently become current proof after a
-    # prompt, scorer, or product change.
+    # to the files being reviewed. The measured file set is authoritative;
+    # an unrelated documentation-only commit must not invalidate the result.
+    # Historical reports remain inspectable via --allow-historical, but cannot
+    # silently become current proof after a prompt, scorer, or product change.
     gates["source_fingerprint_present"] = isinstance(recorded_source, dict)
     gates["source_fingerprint_matches_current"] = source_match
     if require_current_source and not source_match:
