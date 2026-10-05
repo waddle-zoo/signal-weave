@@ -849,6 +849,7 @@ def test_common_instructions_require_both_arms_finish_and_submit():
     assert "finish_setup" in trial.COMMON_SYSTEM
     assert "submit_analysis" in trial.COMMON_SYSTEM
     assert "relevant corroborating fact is numeric" in trial.COMMON_SYSTEM
+    assert "Do not put source completeness" in trial.COMMON_SYSTEM
 
 
 def test_signalweave_handoff_requires_human_facing_evidence_digest_without_invented_slas():
