@@ -174,7 +174,7 @@ async def test_undeclared_sources_warn_without_blocking_or_inferring(tmp_path, n
     assert (await dispatch(server, "approve_insight_card", {"card_id": card_id}))["status"] == "approved"
 
 
-@pytest.mark.parametrize("automatic_outcome", ["notify", "escalate"])
+@pytest.mark.parametrize("automatic_outcome", ["investigate", "notify", "escalate"])
 async def test_undeclared_sources_block_automatic_routes(tmp_path, automatic_outcome):
     server = make_server(tmp_path, catalog=catalog_with_windows([]))
     response = await dispatch(server, "onboard_insight_card", arguments(

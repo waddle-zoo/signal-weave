@@ -753,7 +753,7 @@ class InsightAuthoringService:
                             + ", ".join(undeclared_refs))
             automatic_routes = [
                 method for method in card.delivery_methods
-                if method.outcome in {Outcome.NOTIFY, Outcome.ESCALATE}
+                if method.outcome in {Outcome.INVESTIGATE, Outcome.NOTIFY, Outcome.ESCALATE}
             ]
             if required_undeclared_refs and automatic_routes:
                 route_names = ", ".join(method.outcome.value for method in automatic_routes)
@@ -787,11 +787,14 @@ class InsightAuthoringService:
         # needs an adapter-owned contract tying the measurement to a comparison
         # key, population, grain, and window. Do not let a caller-owned scope
         # acknowledgement turn a noisy regional/archive/reference asset into a
-        # safe automatic route. Generic non-metric context sources are exempt;
-        # their typed role does not define the recurring measurement.
+        # safe automatic route. This applies to externally delivered
+        # investigation routes as well as notify/escalate: an investigation
+        # destination is still an automated action and must not be triggered by
+        # an untyped source. Generic non-metric context sources are exempt; their
+        # typed role does not define the recurring measurement.
         automatic_routes = [
             method for method in card.delivery_methods
-            if method.outcome in {Outcome.NOTIFY, Outcome.ESCALATE}
+            if method.outcome in {Outcome.INVESTIGATE, Outcome.NOTIFY, Outcome.ESCALATE}
         ]
         incomplete_contract_refs: list[str] = []
         if automatic_routes:
