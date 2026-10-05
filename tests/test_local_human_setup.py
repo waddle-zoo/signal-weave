@@ -33,6 +33,39 @@ def test_human_can_rotate_credentials_without_exposing_them(local_home):
     assert local_status(local_home)["credentials"]["TYPESAFE_API_KEY"] == "configured"
 
 
+def test_one_command_interactive_setup_walkthrough_is_human_first(tmp_path, monkeypatch, capsys):
+    """The documented first-run path works without TOML editing or agent config writes."""
+    home = tmp_path / "human home"
+    secrets = iter(["test-typesafe-key", "test-superset-password"])
+    answers = iter([
+        "1",                         # Superset
+        "http://localhost:8088",     # source URL
+        "admin",                     # username
+        "1",                         # Codex
+        "n",                         # do not add another source
+        "n",                         # do not register the agent in this test
+    ])
+    monkeypatch.setattr("signalweave.local_setup.getpass.getpass", lambda _: next(secrets))
+    monkeypatch.setattr("builtins.input", lambda _: next(answers))
+    monkeypatch.setattr(sys, "argv", ["signalweave", "setup", "--home", str(home)])
+
+    cli.main()
+
+    output = capsys.readouterr().out
+    assert "Local configuration saved" in output
+    assert "test-typesafe-key" not in output
+    assert "test-superset-password" not in output
+    report = local_status(home)
+    assert report["status"] == "ready_for_agent"
+    assert report["agents"]["selected"] == "codex"
+    assert next(item for item in report["connections"] if item["type"] == "superset")["status"] == "configured"
+    config = (home / "config.toml").read_text()
+    assert "TYPESAFE_API_KEY_FILE = \"typesafe.key\"" in config
+    assert "SUPERSET_PASSWORD_FILE = \"superset-password.key\"" in config
+    assert "test-typesafe-key" not in config
+    assert "test-superset-password" not in config
+
+
 def test_setup_update_replaces_a_source_secret_transactionally(local_home, tmp_path):
     first = _private(tmp_path / "first-password", "first-password")
     second = _private(tmp_path / "second-password", "second-password")

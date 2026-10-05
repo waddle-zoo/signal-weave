@@ -144,9 +144,31 @@ directory. Keep that virtual environment in place.
 
 ## Initialize a private local home
 
-`setup` is the normal onboarding entry point: it also establishes local identity
-and source settings. The lower-level `init` command below only creates key/config
-storage; by itself it does not establish the tenant/principal needed for card approval.
+For a person installing SignalWeave, `setup` is the only command needed. It
+creates the private home, asks for the Jev key, walks through source connectors,
+and records the selected agent without requiring TOML editing:
+
+```sh
+signalweave setup
+signalweave status
+signalweave health --live
+```
+
+Use the maintenance commands later; they preserve the other configured sources:
+
+```sh
+signalweave connections add
+signalweave connections update
+signalweave credentials set typesafe
+signalweave credentials set superset-password --file /private/path/password
+signalweave credentials list
+signalweave connect codex                 # or: signalweave connect claude
+signalweave ui --open
+```
+
+The lower-level `init` command below is for scripts and advanced operators. It
+only creates key/config storage; it does not ask for a connector or register an
+agent.
 
 ```sh
 signalweave init
@@ -193,13 +215,23 @@ completed init with a valid private key can be rerun without entering it again.
 
 ## Configure sources and check offline
 
-Edit `[environment]` in the printed `config.toml`. Values must be TOML strings.
-The generated `SIGNALWEAVE_ALLOW_EMPTY_SOURCES = "1"` permits local startup for
-onboarding without a configured adapter. It does not provide evidence or permit
-evaluation without approved sources. Remove this setting to require at least
-one source at startup.
+Use `connections add` or `connections update`; these commands validate the
+connector-specific fields and store secrets in private files. Do not edit
+`config.toml` for normal local setup. For an existing Superset instance:
 
-For an existing Superset instance, add its URL and credentials to that section:
+```sh
+signalweave connections add --source superset \
+  --url https://superset.example.com \
+  --username your-username
+```
+
+The command prompts for the password without echoing it. For a private-file or
+scripted setup, add `--secret-file /private/path/password --non-interactive`.
+The generated `SIGNALWEAVE_ALLOW_EMPTY_SOURCES = "1"` permits local startup for
+onboarding without a configured adapter; it does not provide evidence or permit
+evaluation without approved sources.
+
+For an advanced environment-only deployment, the equivalent settings are:
 
 ```toml
 SUPERSET_URL = "https://superset.example.com"
@@ -214,15 +246,19 @@ the local-home loader reads that private file into the process environment for
 the Superset client. Bare environment-only deployments still expect an inline
 `SUPERSET_PASSWORD` (or a deployment-owned secret loader).
 
-For Preset, use the existing deployment settings, including HTTPS URL, matching
+For Preset, use `signalweave connections add --source preset`; the wizard asks
+whether the workspace uses an API-token pair or a bearer token. For advanced
+environment-only deployments, use the existing settings, including HTTPS URL, matching
 tenant/principal, data policy, and either the access-token file or the API-token
 name/secret files. See [hosted connectors](hosted-connectors.md) and
 [Preset integration](preset-integration.md). Files referenced by local settings
 are resolved relative to the local home. Keep source secrets private too.
 
-For an approved Trino catalog, set `TRINO_URL` and `TRINO_CATALOG_FILE` together;
-see [metric query cards](metric-query-cards.md). For the MCP source bridge, set
-`SIGNALWEAVE_MCP_SOURCES_FILE` to a deployment-owned JSON manifest; see
+For Trino, use `signalweave connections add --source trino` with a private
+normalized catalog JSON file; see [metric query cards](metric-query-cards.md).
+For the MCP source bridge, use `signalweave connections add --source mcp
+--manifest /private/path/sources.json`. In advanced environment-only deployments,
+set `SIGNALWEAVE_MCP_SOURCES_FILE` to a deployment-owned JSON manifest; see
 [MCP source bridge](mcp-source-bridge.md). `doctor`
 reuses the bridge's manifest schema validation without launching a source MCP
 process or making a request. Referenced source credentials and remote tool
@@ -236,7 +272,7 @@ arbitrary MCP server does not automatically turn its tools or raw responses into
 SignalWeave sources; provide that normalization and read-only contract first.
 
 ```sh
-signalweave health --home "$HOME/.signalweave"
+signalweave health --live
 ```
 
 This is an **offline configuration check**. (`signalweave doctor` is retained as
