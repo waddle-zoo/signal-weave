@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pytest
 
+from evaluations.northstar_multistep_paired_review import _score as independent_score
 from evaluations.northstar_multistep_paired_trial import build_cases, score_run
 from evaluations.northstar_multistep_trial import _observation_coverage, load_trial_spec
 from evaluations.northstar_growth_history_trial import _build_resources, _load_period_data
@@ -86,3 +87,33 @@ def test_paired_harness_accepts_chart_level_provenance_for_required_sources():
     assert scored["evidence_recall"] == 1.0
     assert scored["provenance_complete"] is True
     assert scored["final_exact"] is True
+
+
+def test_paired_scorers_agree_on_authorized_source_level_abstention():
+    case = next(case for case in build_cases(seed_dir=SEED) if case["scenario"] == "primary-source-unavailable")
+    submission = {
+        "stage": "initial",
+        "outcome": case["label"]["expected_final"],
+        "delivery": case["label"]["final_delivery"],
+        "evidence_refs": [case["sources"][0]["ref"]],
+        "query_justified": False,
+        "confidence": 0.9,
+    }
+    run = {
+        "arm": "baseline",
+        "initial_submission": submission,
+        "final_submission": submission,
+        "events": [],
+        "protocol_errors": [],
+        "oracle_leaks": 0,
+    }
+
+    runner = score_run(case, run)
+    independent = independent_score(case, run)
+
+    assert runner["provenance_complete"] is True
+    assert runner["final_exact"] is True
+    assert runner["unsafe_automatic_action"] is False
+    assert independent["provenance_complete"] is True
+    assert independent["exact"] is True
+    assert independent["unsafe_automatic_action"] is False

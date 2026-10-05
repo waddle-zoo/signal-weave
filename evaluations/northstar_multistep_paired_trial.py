@@ -496,7 +496,16 @@ def score_run(case: dict[str, Any], run: dict[str, Any]) -> dict[str, Any]:
         | {str(source["ref"]) for source in case["sources"]}
         | {str(fact["fact_id"]) for fact in case["diagnostic_facts"]}
     )
-    known = _refs_from_events(run) | {str(chart["id"]) for chart in case["shared_input"]["cached_charts"]}
+    # Source-level citations are already present in the authorized source
+    # contract supplied to the agent. They do not need to be repeated by an
+    # inspect_source event to be provenance-valid. Chart- and diagnostic-fact
+    # citations still need to be present in the public chart catalog or in a
+    # retrieved tool result, respectively.
+    known = (
+        _refs_from_events(run)
+        | {str(chart["id"]) for chart in case["shared_input"]["cached_charts"]}
+        | {str(source["ref"]) for source in case["sources"]}
+    )
     provenance = bool(evidence) and all(ref in allowed and ref in known for ref in evidence)
     expected_initial = label["expected_initial"]
     expected_final = label["expected_final"]
@@ -521,6 +530,9 @@ def score_run(case: dict[str, Any], run: dict[str, Any]) -> dict[str, Any]:
         protocol_ok = bool(run.get("context_retrieved"))
     else:
         protocol_ok = not run.get("context_retrieved")
+    # insufficient_data is a terminal, automated abstention. It belongs in
+    # the safety denominator: a wrong abstention is still an unsafe automated
+    # outcome even though it does not notify a business owner.
     automatic = final.get("outcome") in {"ignore", "notify", "insufficient_data", "escalate"}
     return {
         "case_id": case["case_id"],

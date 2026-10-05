@@ -60,7 +60,10 @@ def _score(case: dict[str, Any], run: dict[str, Any]) -> dict[str, Any]:
     )
     covered = _covered_required(required, evidence)
     provenance = bool(evidence) and evidence <= _known_refs(case, run) and evidence <= allowed
-    automatic = final.get("outcome") in {"ignore", "notify", "escalate"}
+    # Keep the safety denominator aligned with the trial scorer. A terminal
+    # insufficient_data result is an automated abstention; if it is wrong it
+    # is still an unsafe automated outcome.
+    automatic = final.get("outcome") in {"ignore", "notify", "insufficient_data", "escalate"}
     exact = bool(
         initial
         and initial.get("stage") == "initial"
