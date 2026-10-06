@@ -55,7 +55,7 @@ def test_missing_policy_version_loads_as_legacy_without_upgrading_old_approval()
     serialized = json.dumps(payload)
     report = CardEvaluationReport.model_validate_json(serialized)
 
-    assert EVIDENCE_ADMISSION_POLICY_VERSION == 5
+    assert EVIDENCE_ADMISSION_POLICY_VERSION == 6
     assert report.evidence_admission_policy_version == 0
     assert report.status == "approved"
     assert report.evaluation_id == payload["evaluation_id"]

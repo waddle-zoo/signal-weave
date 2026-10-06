@@ -306,6 +306,14 @@ def _case_definitions() -> list[tuple[InsightCard, list[ResourceSnapshot], Conte
         watch_for=["A material movement requiring investigation."],
         follow_up="Gather the missing diagnostic evidence, then re-evaluate this same card.",
     )
+    # This scenario represents a human-authored multi-step workflow whose
+    # diagnostic answers must exist before delivery; ordinary questions and
+    # watch prompts remain advisory by default.
+    multistep_card.evidence_requirements = {
+        "question:1": True,
+        "question:2": True,
+        "watch:1": True,
+    }
     cases.append(
         (
             multistep_card,

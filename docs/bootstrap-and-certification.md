@@ -124,7 +124,8 @@ For example, require `metrics|daily` and permit both `metrics|daily` and
 `changes|calendar`: fetching the calendar is neither mandatory nor a failure.
 Define these owner labels before observing the model's selection, not to excuse
 whatever it happened to fetch. They never grant access, change the card's source
-selection or enter Jev's state. Admission-policy version 5 records these semantics;
+selection or enter Jev's state. Admission-policy version 6 records these semantics,
+including advisory-by-default semantic prompts;
 older certifications must be rerun for current readiness.
 
 Like expected outcomes and recipients, retrieval labels are caller-supplied.

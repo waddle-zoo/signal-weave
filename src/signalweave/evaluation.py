@@ -42,7 +42,7 @@ from .sources import SourceRegistry
 # of conflict. Re-evaluate serialized plan wording; do not relabel old reports.
 # Version 5 distinguishes required retrieval from explicitly permitted context.
 # Old exact-set labels keep their semantics; new reports record both sets.
-EVIDENCE_ADMISSION_POLICY_VERSION = 5
+EVIDENCE_ADMISSION_POLICY_VERSION = 6
 
 
 def has_current_evidence_admission_policy(report: Mapping[str, object]) -> bool:

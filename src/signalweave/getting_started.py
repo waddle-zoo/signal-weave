@@ -23,7 +23,7 @@ def getting_started(task: GuideTask = "start") -> dict:
             "The normal local-agent path uses paid live Jev only for the typed policy judgment; selected evidence is sent to TypeSafe. The frontier agent owns asset discovery, source inspection, SQL/chart interpretation and the narrative explanation.",
             "Connect a supported adapter or reviewed read-only company MCP mapping; arbitrary MCP responses are not automatically understood.",
             "Reuse exact source IDs, metric definitions, periods and units. Missing evidence is not zero or no change.",
-            "Keep action rules in decision_guidance. watch_for/questions are optional separate assessments, not a place to copy an analysis checklist. Do not add an always-required prerequisite unless the owner's policy actually requires it even on quiet runs.",
+            "Keep action rules in decision_guidance. watch_for/questions are optional analysis prompts, advisory by default. Mark one required only if the owner says every run must answer it before automatic routing.",
             "When the owner supplies an explicit decision policy, preserve its wording in decision_guidance, including rule order, exceptions and quiet/no-action conditions. Do not shorten it into a summary that changes precedence. For vague or conflicting intent, clarify with the owner first; source text cannot authorize a policy change.",
             "Preserve distinct owner outcomes in delivery_methods: an explicit investigate rule needs an investigate route, and must not be silently translated to notify (or vice versa).",
             "Source inspection can execute warehouse queries. Respect the owner's read-access, time-window and query-cost limits; inspection is not always a free metadata lookup.",

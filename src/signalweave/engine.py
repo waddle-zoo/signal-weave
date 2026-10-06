@@ -1684,39 +1684,13 @@ class InsightEngine:
                 ),
             )
 
-        numeric_observations = [
-            observation for observation in observations if observation.current is not None
-        ]
-        analyzed_observations = {
-            (report.source_key, report.comparison_key, report.metric)
-            for report in result.analyses if report.status == "complete"
-        }
-        incomplete_baselines = [
-            observation
-            for observation in numeric_observations
-            if observation.source_key in required_source_keys
-            and (observation.source_key, observation.subject_id, observation.metric) not in analyzed_observations
-            and (observation.baseline is None or observation.change_pct is None)
-        ]
-        comparable_baselines = [
-            observation
-            for observation in numeric_observations
-            if observation.source_key in required_source_keys
-            and observation.baseline is not None
-            and observation.change_pct is not None
-        ]
-        if incomplete_baselines and not comparable_baselines:
-            return cls._with_outcome(
-                result,
-                card,
-                Outcome.INSUFFICIENT_DATA,
-                rationale=(
-                    f"{len(incomplete_baselines)} numeric observation(s) were returned without "
-                    "a comparable baseline and no required observation had one, so no "
-                    "automatic interpretation is safe."
-                ),
-                confidence=max(result.confidence or 0.0, 0.95),
-            )
+        # Do not turn every current-only metric into a global missing-data gate.
+        # Some owner policies ask about current levels, and agents may still
+        # investigate from partial evidence. Comparability is mandatory only
+        # when the card explicitly binds a required comparison or numeric check;
+        # those contracts are validated above. Otherwise Jev sees the missing
+        # baseline and the caller receives it as a limitation, not a fabricated
+        # all-or-nothing decision.
 
         if (
             result.outcome in (Outcome.IGNORE, Outcome.NOTIFY, Outcome.ESCALATE)

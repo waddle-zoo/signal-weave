@@ -38,8 +38,9 @@ WatchConditions = Annotated[list[str], Field(
         "when decision_guidance and numeric_conditions already express the owner's rules. "
         "Do not duplicate source availability, comparison validity or action rules as watch items. "
         "Use the card's scope and rules, not bare topic names or a generic analysis checklist. "
-        "Unresolved items are required by default; use evidence_requirements only for "
-        "explicitly owner-reviewed advisory details. Do not invent materiality rules."
+        "Items are advisory by default; mark a question or watch item required only when "
+        "the owner says every run must answer it before an automatic route. Do not invent "
+        "materiality rules."
     ),
 )]
 
@@ -832,9 +833,10 @@ class InsightCard(BaseModel):
         default_factory=dict,
         max_length=200,
         description=(
-            "Reviewed overrides for existing one-based question:N or watch:N slots. "
-            "Unspecified slots are required for automatic notification/escalation. "
-            "False marks advisory detail, not a conditional prerequisite or a source waiver."
+            "Optional strict requirements for existing one-based question:N or watch:N slots. "
+            "Unspecified slots are advisory. Set true only when the owner explicitly requires "
+            "this answer before automatic notification/escalation; false is equivalent to "
+            "omitting the slot and never waives a required source or comparison."
         ),
     )
     decision_guidance: str = Field(

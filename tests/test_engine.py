@@ -668,7 +668,7 @@ async def test_low_confidence_notify_is_safely_downgraded():
     assert run.result.delivery_methods == []
 
 
-async def test_missing_baseline_is_not_treated_as_ignore():
+async def test_missing_baseline_preserves_investigation_instead_of_forcing_insufficient_data():
     source = SourceRef(
         key="current-source",
         adapter="sql",
@@ -697,7 +697,91 @@ async def test_missing_baseline_is_not_treated_as_ignore():
         ],
     )
     run = await InsightEngine(SafetyTestDouble()).evaluate(card, [resource])
-    assert run.result.outcome == Outcome.INSUFFICIENT_DATA
+    assert run.result.outcome == Outcome.INVESTIGATE
+    assert run.result.observations[0].baseline is None
+
+
+async def test_current_level_policy_can_notify_without_an_implicit_trend_requirement():
+    source = SourceRef(
+        key="current-source",
+        adapter="sql",
+        resource="query:current",
+        label="Current value query",
+    )
+    card = card_for(
+        card_id="card-current-level",
+        title="Current level threshold",
+        source=source,
+        decision_guidance="Notify Operations when the current backlog exceeds 90.",
+        delivery_methods=[DeliveryMethod(
+            key="operations",
+            outcome=Outcome.NOTIFY,
+            label="Operations",
+            destination="slack://operations",
+        )],
+    )
+    resource = ResourceSnapshot(
+        source_key=source.key,
+        adapter=source.adapter,
+        resource=source.resource,
+        title=source.label,
+        observations=[Observation(
+            source_key=source.key,
+            subject_id="backlog",
+            subject_label="Current backlog",
+            metric="backlog",
+            current=100,
+        )],
+    )
+
+    class NotifyCurrentLevel(SafetyTestDouble):
+        async def judge(self, state, card, plan, observations):
+            result = await super().judge(state, card, plan, observations)
+            return result.model_copy(update={"outcome": Outcome.NOTIFY, "confidence": 0.99})
+
+    result = (await InsightEngine(NotifyCurrentLevel()).evaluate(card, [resource])).result
+    assert result.outcome == Outcome.NOTIFY
+    assert [method.key for method in result.delivery_methods] == ["operations"]
+    assert result.observations[0].baseline is None
+
+
+async def test_explicit_required_comparison_still_blocks_without_that_comparison():
+    source = SourceRef(
+        key="current-source",
+        adapter="sql",
+        resource="query:current",
+        label="Current value query",
+        required_comparison_keys=["month-over-month"],
+    )
+    card = card_for(
+        card_id="card-required-comparison",
+        title="Required monthly comparison",
+        source=source,
+        delivery_methods=[DeliveryMethod(
+            key="operations",
+            outcome=Outcome.NOTIFY,
+            label="Operations",
+            destination="slack://operations",
+        )],
+    )
+    resource = ResourceSnapshot(
+        source_key=source.key,
+        adapter=source.adapter,
+        resource=source.resource,
+        title=source.label,
+        observations=[Observation(
+            source_key=source.key,
+            subject_id="backlog",
+            subject_label="Current backlog",
+            metric="backlog",
+            current=100,
+        )],
+    )
+
+    result = (await InsightEngine(SafetyTestDouble()).evaluate(card, [resource])).result
+    assert result.outcome == Outcome.INSUFFICIENT_DATA
+    assert result.delivery_methods == []
+    assert "unavailable" in result.rationale
 
 
 async def test_unavailable_comparison_window_preserves_adapter_baseline():
@@ -740,7 +824,7 @@ async def test_unavailable_comparison_window_preserves_adapter_baseline():
     run = await InsightEngine(TrailingWindowJudger()).evaluate(card, [resource])
     # Without an adapter comparison contract, a raw previous-period baseline
     # is not enough to claim that the requested trailing window was evaluated.
-    assert run.result.outcome == Outcome.INSUFFICIENT_DATA
+    assert run.result.outcome == Outcome.INVESTIGATE
     assert run.result.observations[0].baseline is None
     assert run.result.observations[0].change_pct is None
 

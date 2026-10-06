@@ -339,11 +339,12 @@ suggests a confident notification or suppression. An optional source's unknown
 check remains advisory. This is a measurement-admission gate, not a demand that
 every speculative semantic question be answered.
 
-Do not add a required watch item for every possible explanation. Required watch
-and question slots are unconditional evidence prerequisites; speculative/advisory
-detail should be omitted or explicitly marked advisory by the owner. Jev still
-decides the outcome from the whole policy; numerical checks do not certify the
-policy's completeness or the source's truth.
+Do not add a required watch item for every possible explanation. Watch and
+question slots are advisory by default and remain visible when unresolved. Set
+the exact one-based `evidence_requirements` key to `true` only when the owner
+explicitly requires that answer before automatic routing. Jev still decides the
+outcome from the whole policy; numerical checks do not certify the policy's
+completeness or the source's truth.
 
 Reports and the optional writer projection retain both the computed checks and
 separately labeled model judgments. An unresolved semantic assessment can reflect

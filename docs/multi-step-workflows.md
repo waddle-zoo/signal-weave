@@ -144,25 +144,25 @@ outside SignalWeave.
 
 Cards declare `evidence_requirements: dict[str, StrictBool]`, defaulting to `{}`.
 Only exact keys for existing, one-based `question:N` and `watch:N` slots are
-accepted. Unspecified slots remain required. For example,
-`{"question:2": false}` makes only the second question advisory. Values must be
-JSON booleans, not strings or numbers. An advisory unknown remains visible in the
-evidence plan and missing-slot list but does not block admission. `false` is an
-unconditional advisory designation, not "required when applicable" or a
-conditional policy. Neither prose such as "when supported" nor a model judgment
-silently waives a requirement. Required-source and comparison checks cannot be
-waived through this map; other safety and confidence gates still apply.
+accepted. Unspecified slots are advisory. Set an entry to `true` only when the
+owner explicitly requires that answer before automatic notification or
+escalation. Values must be JSON booleans, not strings or numbers. An unresolved
+advisory remains visible in the evidence plan and missing-slot list but does not
+block admission. `false` is equivalent to omitting the slot; it is not
+"required when applicable" or a conditional policy. Neither prose such as
+"when supported" nor a model judgment silently waives an explicit requirement.
+Required-source and comparison checks cannot be waived through this map; other
+safety and confidence gates still apply.
 
-Review which slots are core decision evidence and which are advisory before
-migrating existing cards. Policy-map changes and question/watch edits or reordering
-require a new card version, fresh owner review/approval, and recertification over
-owner-labeled snapshots. The positional keys belong to that reviewed card version;
-do not carry a waiver onto a different question merely because its index matches.
-Even unchanged cards without follow-up prose may now conservatively withhold an
-automatic route when required evidence is unresolved.
+Review which slots are core decision evidence and which are advisory when
+authoring a recurring card. Policy-map changes and question/watch edits or
+reordering require a new card version, fresh owner review/approval, and
+recertification over owner-labeled snapshots. The positional keys belong to that
+reviewed card version; do not carry a requirement onto a different question
+merely because its index matches.
 
 New `CardEvaluationReport` objects emitted by `CardWorkflowEvaluator` record
-`evidence_admission_policy_version=4`. Reports lacking the field load as legacy
+`evidence_admission_policy_version=6`. Reports lacking the field load as legacy
 version `0`; they remain readable audit evidence, not current certification.
 Readiness must require the current policy version in addition to the existing
 card-version, approval, and certification gates. Re-run certification rather than

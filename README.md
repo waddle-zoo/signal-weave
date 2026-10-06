@@ -38,19 +38,41 @@ See [supported analyses and current limits](docs/local-investigations.md).
 
 ### With your local agent
 
-Install the native command in one step, then let the guided setup walk you
-through Jev, source connectors, credentials, and your agent:
+Install the native CLI with one command. No Python, Docker, or `sudo` is needed:
 
 ```sh
 curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' \
   https://github.com/waddle-zoo/signal-weave/releases/download/v0.2.0rc2/install.sh | \
   sh -s -- --version v0.2.0rc2
+```
+
+The installer puts the executable at `~/.local/bin/signalweave`. Check that
+your terminal can find it:
+
+```sh
+signalweave --version
+signalweave --help
+```
+
+If your shell says `command not found`, add the install directory to this
+terminal's `PATH`, then retry:
+
+```sh
+export PATH="$HOME/.local/bin:$PATH"
+signalweave --help
+```
+
+Now start the guided setup:
+
+```sh
 signalweave setup
 ```
 
-Setup stores Jev and source credentials privately under `~/.signalweave`; users
-do not need Python, Docker, TOML editing, or a separate OpenAI key. Use
-`signalweave --help` for the complete human maintenance path.
+The setup walks you through a Jev key, BI source connections and credentials,
+then optionally connects Codex or Claude Code. Credentials are stored privately
+under `~/.signalweave`. Use `signalweave --help` any time to add connections,
+rotate credentials, check health, or open the optional local status UI. No
+separate OpenAI key is required; your agent uses its own model access.
 
 > The native installer is available as the **v0.2.0rc2 local preview**. Use the
 > pinned command in the guide. This is not a stable enterprise release; the new
@@ -58,6 +80,12 @@ do not need Python, Docker, TOML editing, or a separate OpenAI key. Use
 > shows correctness parity and lower warm agent work in two bounded profiles,
 > but does not establish general superiority or lower total cost.
 > Stable v0.1.0 has no native assets.
+
+> **Testing this branch:** the one-command install above downloads the published
+> `v0.2.0rc2` preview, not unreleased commits on this branch. To test the latest
+> branch build, download the `native-darwin-arm64` (or matching platform)
+> artifact from the [Native release workflow](https://github.com/waddle-zoo/signal-weave/actions/workflows/release.yml?query=branch%3Afeat%2Flocal-investigation-runtime).
+> Branch builds are CI artifacts and are not published as releases.
 
 After setup, review the local state with `signalweave status`, run
 `signalweave health --live` to probe catalog access, and optionally open
@@ -173,7 +201,9 @@ In plain language:
 - `what_to_watch` says what the card is about;
 - `why_watch` says which decision it should support;
 - `watch_for` optionally names conditions to surface one by one;
-- `questions` optionally names questions the evidence should answer; and
+- `questions` optionally names questions the evidence should answer; both are
+  advisory by default. Set an exact `evidence_requirements` entry to `true` only
+  when the owner explicitly requires that answer before automatic routing; and
 - `delivery_methods` maps outcomes to caller-owned destinations.
 
 The result gives you the chosen `outcome`, configured delivery methods,

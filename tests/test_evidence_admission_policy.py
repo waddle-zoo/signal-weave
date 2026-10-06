@@ -49,7 +49,7 @@ async def test_trusted_context_tag_does_not_bypass_question_evidence(semantic, s
         "relation": "related_to", "statement": "The requested dimensional evidence is unresolved.",
     }])
     run = await InsightEngine(FixedJudger(question=semantic)).evaluate(
-        make_card(), [snapshot()], context_override=context,
+        make_card(requirements={"question:1": True}), [snapshot()], context_override=context,
     )
     slot = next(s for s in run.result.evidence_plan.slots if s.key == "question:1")
     assert slot.status == status
@@ -61,7 +61,7 @@ async def test_trusted_context_tag_does_not_bypass_question_evidence(semantic, s
 @pytest.mark.parametrize("guidance", ["", GUIDANCE])
 async def test_unanswered_question_is_missing_not_a_claim_of_conflicting_evidence(semantic, guidance):
     run = await InsightEngine(FixedJudger(question=semantic)).evaluate(
-        make_card(guidance=guidance), [snapshot()],
+        make_card(requirements={"question:1": True}, guidance=guidance), [snapshot()],
     )
     evidence = run.result.evidence_plan
     assert "question:1" in evidence.missing_slot_keys
@@ -103,8 +103,9 @@ def make_card(*, requirements=None, guidance=""):
              "destination": "slack://data-owner"},
         ],
     }
-    if requirements is not None:
-        payload["evidence_requirements"] = requirements
+    payload["evidence_requirements"] = (
+        requirements if requirements is not None else {"question:1": True, "watch:1": True}
+    )
     return InsightCard.model_validate(payload)
 
 
@@ -155,11 +156,11 @@ class FixedJudger:
         )
 
 
-def test_default_policy_is_explicit_and_keeps_unspecified_slots_required():
-    card = make_card()
+def test_default_policy_keeps_free_form_questions_and_watch_items_advisory():
+    card = make_card(requirements={})
     assert card.model_dump().get("evidence_requirements") == {}
     assert {slot.key: slot.required for slot in base_plan(card).evidence_slots} == {
-        "source:metric": True, "question:1": True, "watch:1": True,
+        "source:metric": True, "question:1": False, "watch:1": False,
     }
 
 
@@ -169,7 +170,7 @@ def test_default_policy_is_explicit_and_keeps_unspecified_slots_required():
 ])
 def test_only_reviewed_overrides_change_compiled_requirements(requirements):
     card = make_card(requirements=requirements)
-    expected = {"source:metric": True, "question:1": True, "watch:1": True}
+    expected = {"source:metric": True, "question:1": False, "watch:1": False}
     expected.update(requirements)
     assert {slot.key: slot.required for slot in base_plan(card).evidence_slots} == expected
     assert card.execution_payload()["evidence_requirements"] == requirements
@@ -205,11 +206,23 @@ async def test_explicit_optional_unknown_stays_visible_without_blocking(slot_key
     assert result.workflow.evidence_plan == result.evidence_plan
 
 
+async def test_unspecified_semantic_prompts_are_visible_but_do_not_gate_routes():
+    card = make_card(requirements={})
+    result = (await InsightEngine(FixedJudger(question="unknown", watch="unknown"))
+              .evaluate(card, [snapshot()])).result
+
+    assert result.outcome == Outcome.NOTIFY
+    assert [method.key for method in result.delivery_methods] == ["business-owner"]
+    assert result.evidence_plan.status == "complete"
+    assert set(result.evidence_plan.missing_slot_keys) == {"question:1", "watch:1"}
+    assert all(not slot.required for slot in result.evidence_plan.slots if slot.role in {"question", "watch"})
+
+
 @pytest.mark.parametrize("outcome", [Outcome.NOTIFY, Outcome.ESCALATE])
 @pytest.mark.parametrize("slot_key", ["question:1", "watch:1"])
 @pytest.mark.parametrize("guidance", ["", GUIDANCE], ids=["no-guidance", "remedial-guidance"])
-async def test_unspecified_required_unknown_blocks_automatic_routes(outcome, slot_key, guidance):
-    card = make_card(guidance=guidance)
+async def test_explicitly_required_unknown_blocks_automatic_routes(outcome, slot_key, guidance):
+    card = make_card(requirements={slot_key: True}, guidance=guidance)
     if outcome == Outcome.ESCALATE:
         card.delivery_methods[0].outcome = outcome
     judger = FixedJudger(
@@ -226,7 +239,7 @@ async def test_unspecified_required_unknown_blocks_automatic_routes(outcome, slo
 
 
 async def test_one_optional_item_does_not_waive_another_required_item():
-    card = make_card(requirements={"question:1": False})
+    card = make_card(requirements={"question:1": False, "watch:1": True})
     result = (await InsightEngine(FixedJudger(question="unknown", watch="unknown"))
               .evaluate(card, [snapshot()])).result
     assert result.outcome == Outcome.INVESTIGATE
@@ -287,7 +300,7 @@ def test_requirement_values_are_strict_booleans(value):
                                       "empty-plan", "waive-question", "waive-source",
                                       "forge-fulfilled-question"])
 async def test_cached_slot_tampering_is_rebuilt_from_current_card(mutation):
-    card = make_card(guidance=GUIDANCE)
+    card = make_card(requirements={"question:1": True, "watch:1": True}, guidance=GUIDANCE)
     plan = base_plan(card)
     if mutation.startswith("remove-"):
         key = {"remove-question": "question:1", "remove-watch": "watch:1",

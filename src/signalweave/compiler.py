@@ -66,7 +66,7 @@ def _evidence_slots(card: InsightCard) -> list[EvidenceSlot]:
             role="question",
             question=question,
             source_keys=[source.key for source in card.sources],
-            required=card.evidence_requirements.get(f"question:{index + 1}", True),
+            required=card.evidence_requirements.get(f"question:{index + 1}", False),
             completion_criteria="Return applicable evidence for a concrete answer, including a known no or zero; missing or unresolved evidence does not complete this question.",
         )
         for index, question in enumerate(card.questions)
@@ -77,7 +77,7 @@ def _evidence_slots(card: InsightCard) -> list[EvidenceSlot]:
             role="watch",
             question=watch_item,
             source_keys=[source.key for source in card.sources],
-            required=card.evidence_requirements.get(f"watch:{index + 1}", True),
+            required=card.evidence_requirements.get(f"watch:{index + 1}", False),
             completion_criteria="Return evidence that shows whether this watch item is present or absent.",
         )
         for index, watch_item in enumerate(card.watch_for)

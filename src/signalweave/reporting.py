@@ -373,7 +373,7 @@ def _append_semantic_coverage(
         coverage.append(CoverageRecord(
             key=f"question:{index}",
             kind="question",
-            required=card.evidence_requirements.get(f"question:{index}", True),
+            required=card.evidence_requirements.get(f"question:{index}", False),
             status="satisfied" if supported else "unresolved",
             detail=question,
             judgment=matched_status,
@@ -381,7 +381,7 @@ def _append_semantic_coverage(
         ))
         if not supported:
             unresolved.append(question)
-            if not card.evidence_requirements.get(f"question:{index}", True):
+            if not card.evidence_requirements.get(f"question:{index}", False):
                 warnings.append(f"Optional question {index} remains unresolved.")
 
     for index, watch in enumerate(card.watch_for, start=1):
@@ -394,7 +394,7 @@ def _append_semantic_coverage(
         coverage.append(CoverageRecord(
             key=f"watch:{index}",
             kind="watch",
-            required=card.evidence_requirements.get(f"watch:{index}", True),
+            required=card.evidence_requirements.get(f"watch:{index}", False),
             status="satisfied" if fulfilled else "unresolved",
             detail=watch,
             judgment=(
@@ -405,7 +405,7 @@ def _append_semantic_coverage(
         ))
         if not fulfilled:
             unresolved.append(watch)
-            if not card.evidence_requirements.get(f"watch:{index}", True):
+            if not card.evidence_requirements.get(f"watch:{index}", False):
                 warnings.append(f"Optional watch item {index} remains unresolved.")
 
 

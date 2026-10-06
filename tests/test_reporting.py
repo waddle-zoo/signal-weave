@@ -995,7 +995,7 @@ def test_changed_endpoint_and_foreign_route_are_blockers_not_new_routes():
 
 
 def test_required_not_supported_question_is_unresolved_even_with_a_result():
-    required = card(question=True).model_copy(update={"evidence_requirements": {}})
+    required = card(question=True).model_copy(update={"evidence_requirements": {"question:1": True}})
     report = build_investigation_report(
         required,
         result(

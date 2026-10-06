@@ -1221,8 +1221,9 @@ async def test_follow_up_evaluation_links_to_parent_receipt(tmp_path):
         why_watch="Investigate material movement before notifying leadership.",
         watch_for=["material online revenue movement and corroborating drivers"],
         questions=["What changed and what evidence explains it?"],
-        decision_guidance="Notify leadership only after diagnostic evidence corroborates a material cause.",
-        delivery_methods=[
+            decision_guidance="Notify leadership only after diagnostic evidence corroborates a material cause.",
+            evidence_requirements={"question:1": True},
+            delivery_methods=[
             {
                 "key": "analytics",
                 "outcome": "investigate",

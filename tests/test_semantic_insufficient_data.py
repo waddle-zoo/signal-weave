@@ -229,6 +229,10 @@ async def test_confident_notify_still_obeys_required_source_health(sdk, defect, 
     elif defect == "snapshot_expired":
         snapshot.source_captured_at = datetime.now(timezone.utc) - timedelta(days=3)
     elif defect == "missing_baseline":
+        # A missing baseline is only a hard failure when the card explicitly
+        # binds a comparison. Current-only cards remain eligible for a
+        # semantic decision with the missing baseline surfaced as a caveat.
+        card.sources[0].required_comparison_keys = ["metric-period"]
         snapshot.observations[0].baseline = None
         snapshot.observations[0].change_pct = None
     elif defect == "source_error":
@@ -377,6 +381,7 @@ async def test_required_watch_evidence_gate_survives_new_outcome(sdk, watch_supp
     sdk.choice, sdk.watch_probability = "notify", watch_support
     card, snapshot = card_and_snapshot([route(Outcome.NOTIFY)])
     card.watch_for = ["A required business condition holds."]
+    card.evidence_requirements = {"watch:1": True}
     card.follow_up_guidance = "Resolve the required evidence before notification."
     card.compiled_plan = base_plan(card)
 
