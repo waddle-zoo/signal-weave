@@ -29,6 +29,8 @@ import httpx
 from evaluations.northstar_growth_history_trial import (
     _build_resources,
     _load_period_data,
+)
+from evaluations.northstar_growth_history_trial import (
     load_spec as load_history_spec,
 )
 from evaluations.northstar_multistep_trial import (
@@ -44,7 +46,6 @@ from evaluations.paired_agent_trial import (
     _load_dotenv_key,
     _preflight_summary,
 )
-from signalweave.models import InsightCard, Outcome
 from signalweave.typesafe_adapter import load_api_key
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -387,7 +388,7 @@ class MultiStepAgent:
             return {"error": f"unknown tool {name}"}
 
         async with httpx.AsyncClient(timeout=self.timeout) as client:
-            for turn in range(max_turns):
+            for _turn in range(max_turns):
                 body = {
                     "model": self.model,
                     "input": request_input,

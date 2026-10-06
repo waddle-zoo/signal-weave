@@ -2,13 +2,15 @@ from pathlib import Path
 
 import pytest
 
-from evaluations.northstar_multistep_paired_review import _score as independent_score
-from evaluations.northstar_multistep_paired_trial import build_cases, score_run
-from evaluations.northstar_multistep_trial import _observation_coverage, load_trial_spec
 from evaluations.northstar_growth_history_trial import _build_resources, _load_period_data
 from evaluations.northstar_growth_history_trial import load_spec as load_history_spec
-from evaluations.northstar_multistep_trial import _case_lookup
-
+from evaluations.northstar_multistep_paired_review import _score as independent_score
+from evaluations.northstar_multistep_paired_trial import build_cases, score_run
+from evaluations.northstar_multistep_trial import (
+    _case_lookup,
+    _observation_coverage,
+    load_trial_spec,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 SEED = ROOT / "evaluations" / "data" / "northstar-multistep-seed"
