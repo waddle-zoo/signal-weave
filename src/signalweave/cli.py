@@ -183,7 +183,10 @@ def main() -> None:
     serve = commands.add_parser(
         "serve", help="Run the MCP server against configured source adapters"
     )
-    serve.add_argument("--home", help="Load a local home; otherwise use SIGNALWEAVE_HOME or deployment environment")
+    serve.add_argument(
+        "--home",
+        help="Local home (default: configured ~/.signalweave; otherwise deployment environment)",
+    )
     serve.add_argument("--transport", choices=["stdio", "streamable-http"], default="stdio")
     serve.add_argument("--host", default=None)
     serve.add_argument("--port", type=int, default=None)
@@ -350,10 +353,19 @@ def main() -> None:
         if args.command == "agent-config":
             print(agent_config(args.home, args.agent), end="")
             return
-        # Legacy serve remains environment-only unless the caller selects a home.
+        # Prefer the human's local profile for a bare `signalweave serve`, while
+        # preserving environment-only behavior for deployments that have no local
+        # profile. Explicit --home and SIGNALWEAVE_HOME always select local mode.
+        default_config = Path.home() / ".signalweave" / "config.toml"
+        local_profile_exists = default_config.exists() or default_config.is_symlink()
         context = (
             local_environment(args.home)
-            if args.command != "serve" or args.home is not None or "SIGNALWEAVE_HOME" in os.environ
+            if (
+                args.command != "serve"
+                or args.home is not None
+                or "SIGNALWEAVE_HOME" in os.environ
+                or local_profile_exists
+            )
             else nullcontext()
         )
         with context as local_home:
@@ -379,7 +391,7 @@ def main() -> None:
                 if not report["healthy"]:
                     raise SystemExit(1)
                 return
-            if local_home is not None:
+            if local_home is not None or args.command == "serve":
                 validate_key_configuration()
             if args.command == "run":
                 from .local_run import run_card

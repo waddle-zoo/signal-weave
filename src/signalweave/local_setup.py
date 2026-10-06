@@ -886,7 +886,10 @@ def validate_key_configuration() -> str:
     if key:
         _validate_key(key)
         return "environment"
-    raise SetupError("TypeSafe key is missing; configure TYPESAFE_API_KEY or TYPESAFE_API_KEY_FILE")
+    raise SetupError(
+        "TypeSafe key is missing; run `signalweave setup` for local setup, "
+        "or configure TYPESAFE_API_KEY / TYPESAFE_API_KEY_FILE for a deployment"
+    )
 
 
 def doctor() -> tuple[bool, list[str]]:

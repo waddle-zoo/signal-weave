@@ -30,10 +30,13 @@ async def check(binary: Path, key_file: Path | None, live: bool):
         # macOS aliases /var to /private/var; the setup contract rejects symlink
         # ancestors. Canonicalize only this newly created temporary test directory.
         folder = Path(temporary).resolve()
-        home = folder / "home"
+        user_home = folder / "isolated-user"
+        user_home.mkdir(mode=0o700)
+        home = user_home / ".signalweave"
         environment = {key: value for key, value in os.environ.items()
                        if not key.startswith(("SIGNALWEAVE_", "TYPESAFE_", "SUPERSET_", "PRESET_", "TRINO_", "PYTHON"))}
         environment.pop("VIRTUAL_ENV", None)
+        environment["HOME"] = str(user_home)
 
         def command(*args):
             completed = subprocess.run([str(binary), *args], cwd=folder, env=environment,
@@ -82,7 +85,9 @@ async def check(binary: Path, key_file: Path | None, live: bool):
         with tempfile.TemporaryFile(mode="w+", encoding="utf-8", errors="replace") as stderr:
             try:
                 async with stdio_client(StdioServerParameters(
-                    command=str(binary), args=["serve", "--home", str(home)],
+                    # Exercise the real local-install command: setup saves the
+                    # default profile and a bare `serve` must discover it.
+                    command=str(binary), args=["serve"],
                     cwd=str(folder), env=environment,
                 ), errlog=stderr) as (reader, writer):
                     async with ClientSession(reader, writer) as session:
@@ -101,7 +106,8 @@ async def check(binary: Path, key_file: Path | None, live: bool):
             stderr.seek(0)
             for line in stderr:
                 _check_stderr(line)
-        result = {"standalone_startup": True, "private_setup": True, "persisted_source_config": True,
+        result = {"standalone_startup": True, "private_setup": True, "default_home_serve": True,
+                  "persisted_source_config": True,
                   "offline_doctor": True, "health_alias": True, "agent_config": True,
                   "stdio_tools": len(names), "different_cwd": True, "live": live,
                   "version": binary_version}

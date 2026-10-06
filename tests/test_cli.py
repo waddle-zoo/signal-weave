@@ -39,6 +39,7 @@ def local_home(monkeypatch, tmp_path):
 
 
 def test_token_preset_server_fails_closed_without_static_principal(monkeypatch):
+    monkeypatch.setenv("TYPESAFE_API_KEY", "test-cli-key")
     monkeypatch.setenv("PRESET_URL", "https://workspace.app.preset.io")
     monkeypatch.setenv("SIGNALWEAVE_AUTH_MODE", "token")
     monkeypatch.delenv("SIGNALWEAVE_TENANT_ID", raising=False)
@@ -51,6 +52,7 @@ def test_token_preset_server_fails_closed_without_static_principal(monkeypatch):
 
 
 def test_token_http_fails_closed_without_any_static_principal(monkeypatch):
+    monkeypatch.setenv("TYPESAFE_API_KEY", "test-cli-key")
     monkeypatch.delenv("PRESET_URL", raising=False)
     monkeypatch.setenv("SIGNALWEAVE_AUTH_MODE", "token")
     monkeypatch.setattr(cli, "build_runtime", lambda: SimpleNamespace(principal=None))
@@ -79,17 +81,23 @@ def test_init_cli_and_repeated_init_do_not_print_key(monkeypatch, tmp_path, caps
     assert str(home / "config.toml") in captured.out
 
 
-@pytest.mark.parametrize("through_env", [False, True])
-def test_stdio_loads_local_config_before_runtime_without_stdout(local_home, monkeypatch, tmp_path, capsys, through_env):
+@pytest.mark.parametrize("home_mode", ["explicit", "environment", "default"])
+def test_stdio_loads_local_config_before_runtime_without_stdout(
+    local_home, monkeypatch, tmp_path, capsys, home_mode,
+):
     import signalweave.mcp_server as mcp_server
 
     monkeypatch.chdir(tmp_path)
+    expected_home = local_home
+    if home_mode == "default":
+        expected_home = setup.resolve_home()
+        local_home.rename(expected_home)
     calls = []
     runtime = object()
 
     def build():
-        assert os.environ["TYPESAFE_API_KEY_FILE"] == str(local_home / "typesafe.key")
-        assert os.environ["SIGNALWEAVE_STORE_PATH"] == str(local_home / "state" / "signalweave.db")
+        assert os.environ["TYPESAFE_API_KEY_FILE"] == str(expected_home / "typesafe.key")
+        assert os.environ["SIGNALWEAVE_STORE_PATH"] == str(expected_home / "state" / "signalweave.db")
         assert os.environ["SIGNALWEAVE_ALLOW_EMPTY_SOURCES"] == "1"
         calls.append("build")
         return runtime
@@ -102,9 +110,9 @@ def test_stdio_loads_local_config_before_runtime_without_stdout(local_home, monk
     monkeypatch.setattr(mcp_server, "create_mcp", create)
     monkeypatch.setattr(cli, "_run_stdio", lambda server: server.run(transport="stdio"))
     argv = ["signalweave", "serve"]
-    if through_env:
+    if home_mode == "environment":
         monkeypatch.setenv("SIGNALWEAVE_HOME", str(local_home))
-    else:
+    elif home_mode == "explicit":
         argv.extend(["--home", str(local_home)])
     monkeypatch.setattr(sys, "argv", argv)
     cli.main()
@@ -113,9 +121,7 @@ def test_stdio_loads_local_config_before_runtime_without_stdout(local_home, monk
     assert "SIGNALWEAVE_STORE_PATH" not in os.environ
 
 
-def test_legacy_serve_does_not_implicitly_load_default_home(local_home, monkeypatch):
-    default = setup.resolve_home()
-    local_home.rename(default)
+def test_serve_remains_environment_driven_without_a_local_profile(monkeypatch):
     monkeypatch.setenv("TYPESAFE_API_KEY", "test-deployment-key")
     monkeypatch.setenv("SIGNALWEAVE_STORE_PATH", "existing/deployment.db")
 
@@ -128,6 +134,19 @@ def test_legacy_serve_does_not_implicitly_load_default_home(local_home, monkeypa
     monkeypatch.setattr(cli, "_serve", serve)
     monkeypatch.setattr(sys, "argv", ["signalweave", "serve"])
     cli.main()
+
+
+def test_serve_without_jev_key_prints_setup_guidance_not_traceback(monkeypatch, capsys):
+    monkeypatch.setattr(cli, "_serve", lambda _args: pytest.fail("must validate before starting"))
+    monkeypatch.setattr(sys, "argv", ["signalweave", "serve"])
+    with pytest.raises(SystemExit) as error:
+        cli.main()
+    assert error.value.code == 1
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "TypeSafe key is missing" in captured.err
+    assert "signalweave setup" in captured.err
+    assert "Traceback" not in captured.err
 
 
 def test_local_serve_error_is_only_on_stderr(local_home, monkeypatch, capsys):
