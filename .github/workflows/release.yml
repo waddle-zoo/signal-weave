@@ -81,7 +81,7 @@ jobs:
           env -i PATH="$PATH" HOME="$diag_home" TMPDIR="$diag_home" LANG="${LANG:-C}" \
             dist/signalweave auth status --home "$diag_home/profile" \
             >/dev/null 2>"$diag_home/auth.err" || true
-          awk '/^[[:space:]]*(ImportError|ModuleNotFoundError|OSError):|Library not loaded:|Reason:|Referenced from:|image not found/ { print }' \
+          awk '/^[[:space:]]*(ImportError|ModuleNotFoundError|OSError):|Library not loaded:|Reason:|Referenced from:|Expected in:|image not found/ { print }' \
             "$diag_home/setup.err" "$diag_home/auth.err"
       - name: Package executable
         env:
