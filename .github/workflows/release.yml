@@ -52,7 +52,37 @@ jobs:
               output.write(f'version={version}\n')
           PY
       - name: Install locked build and test dependencies
-        run: uv sync --locked --extra dev --extra binary
+        run: |
+          if [[ "${{ matrix.target }}" == "darwin-x86_64" ]]; then
+            export OPENSSL_STATIC=1
+            export OPENSSL_DIR="$(brew --prefix openssl@3)"
+            uv sync --locked --extra dev --extra binary --no-cache
+          else
+            uv sync --locked --extra dev --extra binary
+          fi
+      - name: Verify Intel cryptography links OpenSSL statically
+        if: matrix.target == 'darwin-x86_64'
+        run: |
+          uv run python - <<'PY'
+          from pathlib import Path
+          import subprocess
+          from cryptography.hazmat.bindings import _rust
+
+          linkage = subprocess.run(
+              ["otool", "-L", _rust.__file__],
+              capture_output=True,
+              check=True,
+              text=True,
+          ).stdout
+          linked_names = {
+              Path(line.strip().split()[0]).name
+              for line in linkage.splitlines()[1:]
+              if line.strip()
+          }
+          if any(name.startswith(("libssl.", "libcrypto.")) for name in linked_names):
+              raise SystemExit("Intel cryptography extension has dynamic OpenSSL linkage")
+          print("Intel cryptography extension has no dynamic OpenSSL linkage")
+          PY
       - name: Check installer and packaging contracts
         run: uv run pytest tests/test_install.py -q
       - name: Verify source tree

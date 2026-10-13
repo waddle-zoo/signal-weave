@@ -350,6 +350,31 @@ def test_release_workflow_pins_actions_and_has_no_model_secrets():
     assert "github.event_name == 'push'" in workflow
 
 
+def test_intel_release_builds_cryptography_static_and_checks_linkage():
+    workflow = (ROOT / ".github/workflows/release.yml").read_text()
+    install = workflow.split(
+        "      - name: Install locked build and test dependencies\n", 1
+    )[1].split("      - name:", 1)[0]
+    assert 'if [[ "${{ matrix.target }}" == "darwin-x86_64" ]]' in install
+    assert install.index("export OPENSSL_STATIC=1") < install.index(
+        "uv sync --locked --extra dev --extra binary --no-cache"
+    )
+    assert 'export OPENSSL_DIR="$(brew --prefix openssl@3)"' in install
+    assert "else\n            uv sync --locked --extra dev --extra binary\n" in install
+
+    linkage_check = workflow.split(
+        "      - name: Verify Intel cryptography links OpenSSL statically\n", 1
+    )[1].split("      - name:", 1)[0]
+    assert "if: matrix.target == 'darwin-x86_64'" in linkage_check
+    assert "uv run python - <<'PY'" in linkage_check
+    assert '["otool", "-L", _rust.__file__]' in linkage_check
+    assert 'name.startswith(("libssl.", "libcrypto."))' in linkage_check
+    assert (
+        "      - name: Smoke-test binary (no live API key or requests)\n"
+        "        run: uv run python scripts/check_binary.py"
+    ) in workflow
+
+
 @pytest.mark.parametrize(("tag", "preview"), [("v1.2.3", False), ("v1.2.3rc1", True)])
 def test_actual_publish_script_preserves_preview_channel(install_env, tag, preview):
     import textwrap

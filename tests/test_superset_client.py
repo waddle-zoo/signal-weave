@@ -628,6 +628,46 @@ def test_time_series_rows_include_exact_returned_bucket_provenance():
     assert observations[0].attributes["time_bucket_count"] == 3
 
 
+def test_additive_grouped_sum_keeps_pooled_series_and_channel_children():
+    chart = {
+        "id": 42,
+        "params": {
+            "metrics": [
+                {
+                    "expressionType": "SIMPLE",
+                    "aggregate": "SUM",
+                    "column": {"column_name": "sales"},
+                    "label": "SUM(sales)",
+                }
+            ],
+            "granularity_sqla": "period",
+            "groupby": ["channel"],
+        },
+    }
+    observations = SupersetClient.observations_from_chart_data(
+        chart,
+        [
+            {
+                "data": [
+                    {"period": 1, "channel": "Online", "SUM(sales)": 100},
+                    {"period": 1, "channel": "Store", "SUM(sales)": 100},
+                    {"period": 2, "channel": "Online", "SUM(sales)": 50},
+                    {"period": 2, "channel": "Store", "SUM(sales)": 150},
+                ]
+            }
+        ],
+    )
+
+    by_channel = {
+        item.dimensions["channel"]: (item.current, item.baseline, item.change_pct)
+        for item in observations
+        if item.dimensions
+    }
+    pooled = next(item for item in observations if not item.dimensions)
+    assert by_channel == {"Online": (50.0, 100.0, -50.0), "Store": (150.0, 100.0, 50.0)}
+    assert (pooled.current, pooled.baseline, pooled.change_pct) == (200.0, 200.0, 0.0)
+
+
 def test_time_series_rows_become_a_comparable_observation():
     chart = {
         "id": 42,

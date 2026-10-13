@@ -880,15 +880,18 @@ class SupersetClient:
             if time_key:
                 group_keys = cls._group_keys(chart, rows, time_key, metric_keys)
                 non_additive = not cls._metric_is_additive(chart, metric_key)
-                per_dimension = bool(group_keys) and non_additive
                 series: dict[str, tuple[dict[str, Any], dict[Any, list[float]]]] = {}
                 for row in numeric_rows:
-                    dimensions = {key: row.get(key) for key in group_keys} if per_dimension else {}
-                    signature = json.dumps(dimensions, sort_keys=True, separators=(",", ":"), default=str)
-                    buckets = series.setdefault(signature, (dimensions, {}))[1]
-                    period = row.get(time_key)
-                    if period is not None:
-                        buckets.setdefault(period, []).append(float(row[metric_key]))
+                    grouped = {key: row.get(key) for key in group_keys}
+                    dimensions_list = ([{}] if group_keys and not non_additive else []) + (
+                        [grouped] if group_keys else [{}]
+                    )
+                    for dimensions in dimensions_list:
+                        signature = json.dumps(dimensions, sort_keys=True, separators=(",", ":"), default=str)
+                        buckets = series.setdefault(signature, (dimensions, {}))[1]
+                        period = row.get(time_key)
+                        if period is not None:
+                            buckets.setdefault(period, []).append(float(row[metric_key]))
                 for signature, (dimensions, buckets) in series.items():
                     ordered_keys = sorted(buckets, key=cls._sort_value)
                     values_by_time: dict[Any, float | None] = {
@@ -903,7 +906,7 @@ class SupersetClient:
                     current = values_by_time.get(current_period)
                     baseline_period = ordered_keys[-2] if len(ordered_keys) > 1 else None
                     baseline = values_by_time.get(baseline_period)
-                    if per_dimension and baseline_period is None:
+                    if dimensions and baseline_period is None:
                         notes.append("A grouped time series had no returned baseline bucket.")
                     ordered_values = [values_by_time[key] for key in ordered_keys]
                     comparison_baselines: dict[str, float] = {}
@@ -929,7 +932,7 @@ class SupersetClient:
                         "time_bucket_count": len(ordered_keys),
                     }
                     subject_id, subject_label = f"{chart_id}:{metric_key}", chart_title
-                    if per_dimension:
+                    if dimensions:
                         attributes["dimensions"] = dimensions
                         series_hash = hashlib.sha256(signature.encode()).hexdigest()[:16]
                         subject_id += f":{series_hash}"
