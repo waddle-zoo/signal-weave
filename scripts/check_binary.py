@@ -41,30 +41,135 @@ def _smoke_environment(user_home: Path) -> dict[str, str]:
     return environment
 
 
+def _traceback_exception_class(stderr: str) -> str | None:
+    if "Traceback" not in stderr:
+        return None
+    for line in reversed(stderr.splitlines()):
+        stripped = line.strip()
+        # PyInstaller writes a bootloader footer after the Python traceback;
+        # it is not an exception line and must not mask the traceback cause.
+        if stripped.startswith(("[PYI-", "PYI-")):
+            continue
+        candidate, separator, _ = stripped.partition(":")
+        if not separator or not candidate.isidentifier():
+            continue
+        exception_type = builtins.__dict__.get(candidate)
+        if isinstance(exception_type, type) and issubclass(exception_type, BaseException):
+            return candidate
+        if candidate.endswith(("Error", "Exception", "Exit", "Interrupt")):
+            # A non-built-in final exception can follow a built-in cause; do
+            # not misreport the cause as the exception that ended the traceback.
+            break
+    return None
+
+
 def _check_stderr(stderr: str) -> None:
     if "Traceback" in stderr:
-        exception_name = ""
-        for line in reversed(stderr.splitlines()):
-            stripped = line.strip()
-            # PyInstaller writes a bootloader footer after the Python traceback;
-            # it is not an exception line and must not mask the traceback cause.
-            if stripped.startswith(("[PYI-", "PYI-")):
-                continue
-            candidate, separator, _ = stripped.partition(":")
-            if not separator or not candidate.isidentifier():
-                continue
-            exception_type = builtins.__dict__.get(candidate)
-            if isinstance(exception_type, type) and issubclass(exception_type, BaseException):
-                exception_name = candidate
-                break
-            if candidate.endswith(("Error", "Exception", "Exit", "Interrupt")):
-                # A non-built-in final exception can follow a built-in cause; do
-                # not misreport the cause as the exception that ended the traceback.
-                break
+        exception_name = _traceback_exception_class(stderr)
         class_hint = f" (standard exception: {exception_name})" if exception_name else ""
         raise RuntimeError(
             f"Binary emitted a traceback on stderr{class_hint}; diagnostic contents withheld"
         )
+
+
+def _diagnostic_environment_names(environment: dict[str, str]) -> tuple[str, ...]:
+    return tuple(
+        sorted(
+            name
+            for name in environment
+            if name == "__PYVENV_LAUNCHER__"
+            or name.startswith(("_PYTHON_", "OPENSSL_"))
+            or name in {"SSL_CERT_FILE", "SSL_CERT_DIR"}
+        )
+    )
+
+
+def _environment_probe(binary: Path, folder: Path, environment: dict[str, str]):
+    profile = Path(environment["HOME"]) / "chatgpt-profile"
+
+    def run(args: tuple[str, ...]) -> dict[str, int | str | None]:
+        try:
+            completed = subprocess.run(
+                [str(binary), *args],
+                cwd=folder,
+                env=environment,
+                text=True,
+                capture_output=True,
+                timeout=90,
+            )
+        except Exception as error:
+            return {"exit_code": None, "exception_class": type(error).__name__}
+        return {
+            "exit_code": completed.returncode,
+            "exception_class": _traceback_exception_class(completed.stderr),
+        }
+
+    setup = run(
+        (
+            "setup",
+            "--non-interactive",
+            "--home",
+            str(profile),
+            "--decision-provider",
+            "chatgpt-plan",
+            "--source",
+            "skip",
+            "--no-register-agent",
+        )
+    )
+    auth_status = run(("auth", "status", "--home", str(profile)))
+    return {"setup": setup, "auth_status": auth_status}
+
+
+def diagnose_environment(binary: Path) -> None:
+    """Compare the exact smoke environment with a clean env and safe candidates."""
+    with tempfile.TemporaryDirectory(prefix="signalweave-import-diagnostic-") as temporary:
+        folder = Path(temporary).resolve()
+
+        def private_home(label: str) -> Path:
+            home = folder / f"{label}-home"
+            home.mkdir(mode=0o700)
+            return home
+
+        wrapper_home = private_home("wrapper")
+        wrapper_environment = _smoke_environment(wrapper_home)
+        candidate_names = _diagnostic_environment_names(wrapper_environment)
+        clean_base = {
+            "PATH": wrapper_environment.get("PATH", os.defpath),
+            "TMPDIR": wrapper_environment.get("TMPDIR", str(folder)),
+            "LANG": wrapper_environment.get("LANG", "C"),
+        }
+
+        def clean_environment(label: str) -> dict[str, str]:
+            return {**clean_base, "HOME": str(private_home(label))}
+
+        report = {
+            "wrapper": _environment_probe(binary, folder, wrapper_environment),
+            "strict_clean": _environment_probe(
+                binary,
+                folder,
+                clean_environment("strict-clean"),
+            ),
+            "known_candidates": _environment_probe(
+                binary,
+                folder,
+                {
+                    **clean_environment("known-candidates"),
+                    **{name: wrapper_environment[name] for name in candidate_names},
+                },
+            ),
+            "candidate_variables": {},
+        }
+        for name in candidate_names:
+            report["candidate_variables"][name] = _environment_probe(
+                binary,
+                folder,
+                {
+                    **clean_environment(f"candidate-home-{len(report['candidate_variables'])}"),
+                    name: wrapper_environment[name],
+                },
+            )
+        print(json.dumps(report, sort_keys=True))
 
 
 async def check(binary: Path, key_file: Path | None, live: bool):
@@ -230,7 +335,14 @@ def main():
     parser.add_argument("--binary", type=Path, default=ROOT / "dist/signalweave")
     parser.add_argument("--key-file", type=Path, help="Required only for --live; offline smoke uses a dummy key")
     parser.add_argument("--live", action="store_true")
+    parser.add_argument("--diagnose-environment", action="store_true")
     args = parser.parse_args()
+    if args.diagnose_environment:
+        if args.live or args.key_file:
+            parser.error("--diagnose-environment cannot be combined with --live or --key-file")
+        os.umask(0o077)
+        diagnose_environment(args.binary.resolve())
+        return
     if args.live and not args.key_file:
         parser.error("--live requires --key-file")
     os.umask(0o077)

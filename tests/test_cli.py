@@ -552,6 +552,91 @@ def test_binary_smoke_drops_host_python_loader_and_provider_environment(tmp_path
     assert environment["PATH"] == os.environ["PATH"]
 
 
+def test_binary_environment_diagnostic_compares_clean_and_candidate_variables(
+    tmp_path,
+    monkeypatch,
+    capsys,
+):
+    from scripts import check_binary
+
+    for name in list(os.environ):
+        if (
+            name == "__PYVENV_LAUNCHER__"
+            or name.startswith(("_PYTHON_", "OPENSSL_"))
+            or name in {"SSL_CERT_FILE", "SSL_CERT_DIR"}
+        ):
+            monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv("_PYTHON_HOST_PLATFORM", "private-python-value-sentinel")
+    monkeypatch.setenv("OPENSSL_CONF", "private-openssl-value-sentinel")
+    monkeypatch.setenv("OPENAI_API_KEY", "private-api-key-sentinel")
+
+    def run(argv, **kwargs):
+        affected = kwargs["env"].get("OPENSSL_CONF") == "private-openssl-value-sentinel"
+        stderr = (
+            "Traceback (most recent call last):\n"
+            '  File "/private/runner-path-sentinel", line 1\n'
+            "ImportError: private-import-message-sentinel\n"
+            if affected
+            else ""
+        )
+        return SimpleNamespace(
+            returncode=1 if affected else 0,
+            stderr=stderr,
+            stdout="private-stdout-sentinel",
+        )
+
+    monkeypatch.setattr(check_binary.subprocess, "run", run)
+    check_binary.diagnose_environment(tmp_path / "binary")
+
+    output = capsys.readouterr().out
+    report = json.loads(output)
+    assert report["candidate_variables"] == {
+        "_PYTHON_HOST_PLATFORM": {
+            "setup": {"exit_code": 0, "exception_class": None},
+            "auth_status": {"exit_code": 0, "exception_class": None},
+        },
+        "OPENSSL_CONF": {
+            "setup": {"exit_code": 1, "exception_class": "ImportError"},
+            "auth_status": {"exit_code": 1, "exception_class": "ImportError"},
+        },
+    }
+    assert report["wrapper"]["setup"]["exception_class"] == "ImportError"
+    assert report["strict_clean"]["setup"]["exit_code"] == 0
+    assert report["known_candidates"]["setup"]["exception_class"] == "ImportError"
+    assert "private-python-value-sentinel" not in output
+    assert "private-openssl-value-sentinel" not in output
+    assert "private-api-key-sentinel" not in output
+    assert "private-import-message-sentinel" not in output
+    assert "private-runner-path-sentinel" not in output
+    assert "private-stdout-sentinel" not in output
+
+
+def test_binary_environment_diagnostic_cli_dispatches_without_smoke_or_live_mode(
+    tmp_path,
+    monkeypatch,
+):
+    from scripts import check_binary
+
+    binary = tmp_path / "binary"
+    diagnosed = []
+    monkeypatch.setattr(check_binary, "diagnose_environment", diagnosed.append)
+    monkeypatch.setattr(check_binary.os, "umask", lambda _: None)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "check_binary.py",
+            "--binary",
+            str(binary),
+            "--diagnose-environment",
+        ],
+    )
+
+    check_binary.main()
+
+    assert diagnosed == [binary.resolve()]
+
+
 @pytest.mark.asyncio
 @pytest.mark.parametrize("returncode,stderr", [
     (0, 'Traceback (most recent call last):\n'

@@ -67,22 +67,7 @@ jobs:
       - name: Offline Intel ChatGPT auth import diagnostic
         if: failure() && matrix.target == 'darwin-x86_64'
         continue-on-error: true
-        shell: bash
-        run: |
-          set -u
-          umask 077
-          test -x dist/signalweave || exit 0
-          diag_home="$(mktemp -d)"
-          chmod 700 "$diag_home"
-          env -i PATH="$PATH" HOME="$diag_home" TMPDIR="$diag_home" LANG="${LANG:-C}" \
-            dist/signalweave setup --non-interactive --home "$diag_home/profile" \
-            --decision-provider chatgpt-plan --source skip --no-register-agent \
-            >/dev/null 2>"$diag_home/setup.err" || true
-          env -i PATH="$PATH" HOME="$diag_home" TMPDIR="$diag_home" LANG="${LANG:-C}" \
-            dist/signalweave auth status --home "$diag_home/profile" \
-            >/dev/null 2>"$diag_home/auth.err" || true
-          awk '/^[[:space:]]*(ImportError|ModuleNotFoundError|OSError):|Library not loaded:|Reason:|Referenced from:|Expected in:|image not found/ { print }' \
-            "$diag_home/setup.err" "$diag_home/auth.err"
+        run: uv run python scripts/check_binary.py --binary dist/signalweave --diagnose-environment
       - name: Package executable
         env:
           RELEASE_VERSION: ${{ steps.version.outputs.version }}
