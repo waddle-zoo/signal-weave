@@ -37,9 +37,12 @@ from evaluations.bootstrap_scenarios import (
 )
 from evaluations.codex_trial_transport import codex_episode
 from evaluations.installed_northstar_cases import (
+    NORTHSTAR_POLICY_INTERVENTION,
+    OWNER_FOLLOWUP_KNOWLEDGE,
     _northstar_numeric_facts,
     _private_label,
     build_northstar,
+    sales_partition_reconciliation,
 )
 from evaluations.northstar_growth_history_trial import (
     DEFAULT_SPEC as NORTHSTAR_HISTORY_SPEC,
@@ -52,7 +55,7 @@ from evaluations.northstar_growth_history_trial import (
 )
 from evaluations.northstar_multistep_paired_trial import build_cases as build_multistep_cases
 from evaluations.northstar_shadow_trial import ReplayCase, _build_resources, _load_period_data
-from scripts.binary_provenance import verify_binary
+from scripts.binary_provenance import source_fingerprint, verify_binary
 from signalweave.mcp_server import AGENT_PROFILE_TOOLS
 from signalweave.models import (
     Evidence,
@@ -63,16 +66,27 @@ from signalweave.models import (
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SEED = ROOT / "evaluations" / "data" / "northstar-multistep-seed"
-DEFAULT_OUTPUT = ROOT / "artifacts" / "northstar-release-2026-10-12"
+DEFAULT_OUTPUT = ROOT / "artifacts" / "northstar-release-2026-10-13"
+DEFAULT_INTERVENTION_OUTPUT = ROOT / "artifacts" / "northstar-owner-policy-reconciled-2026-10-13"
 DEFAULT_KEY_FILE = Path("/Users/brandonsovran/Downloads/apikey_typesafe")
 MODEL = "gpt-6-luna"
 EFFORT = "xhigh"
 PROFILE = "agent"
 PROTOCOL_VERSION = "northstar-release-onboarding-v1"
+POLICY_INTERVENTION_PROTOCOL = "northstar-owner-policy-ledger-v6"
+POLICY_INTERVENTION_CASES = {
+    "under_10_ignore": "period-41109ba382f9bde47760",
+    "10_to_below_15_investigate": "period-c8cb712acffab956b59a",
+    "corroborated_15_plus_decline_notify": "period-42733dd4648afe7bb944",
+    "primary_sales_source_unavailable": "period-e82d47975f8ec9b4de0c",
+}
+POLICY_INTERVENTION_SOURCE_SHA256 = "722070fc3ca5997b1cd7beb9023e609827b270a8b5a00988ce6764978d58f74b"
+POLICY_INTERVENTION_BINARY_SHA256 = "b5bb7388c7f143eb33e20285dcfd47e78e31f0570865eeb2b5f02011cb8b720c"
+POLICY_INTERVENTION_JEV_BUDGET = 20
 PILOT_SIZE = 4
 FULL_BASE_SIZE = 24
-CERTIFIED_BINARY_SHA256 = "4dbc21d4bbf07a6979bc82f200aab2cc541c60c3f9f31e7b594a9eb87c2b1521"
-CERTIFIED_SOURCE_SHA256 = "22498e8a38a937a29a4d06987ef297bd7a5e2fbe7f8a170d952c7f67a9c0f11c"
+CERTIFIED_BINARY_SHA256 = "764323c36da96332bacc662807ad4c36ce03065619bcafd03289eed670ca4f83"
+CERTIFIED_SOURCE_SHA256 = "9460d2e8e08a3e06de7309cf6c8d554b17043074d8fa9fe7fbdcee972c1298e2"
 CERTIFIED_VERSION = "0.2.0rc2"
 SOURCE_CONTRACT_FIXTURE_VERSION = "northstar-seed-contract-v1"
 SOURCE_ADAPTER = "company_mcp"
@@ -226,7 +240,10 @@ def _ground_source_contracts(scenario: dict, seed_dir: Path) -> dict[str, Any]:
             snapshot = period["snapshots"].get(ref)
             if snapshot is None:
                 continue
+            period_source_status = snapshot.get("contract", {}).get("source_status")
             snapshot["contract"] = copy.deepcopy(contract)
+            if period_source_status and period_source_status != "healthy":
+                snapshot["contract"]["source_status"] = period_source_status
             snapshot.setdefault("metadata", {})["scope"] = spec["scope"]
         audit_sources.append({
             "ref": ref,
@@ -492,120 +509,349 @@ def build_trial_scenario(seed_dir: Path = DEFAULT_SEED) -> dict:
     return scenario
 
 
-def apply_simulated_hil_followup(scenario: dict) -> dict:
-    """Add an explicitly simulated, conservative owner clarification for this replay.
+def _intervention_source_ref(scenario: dict, original_ref: str) -> str:
+    resource = _source_resource_by_original_ref(scenario, original_ref)
+    return f"{SOURCE_ADAPTER}|{resource}"
 
-    The response clarifies source-defined scope and how to honor the existing
-    ordered-policy fallback. It does not add thresholds, change labels, or claim
-    an incident definition that the available sources do not contain.
-    """
-    answers = scenario["public"]["owner_answers"]
-    if not {"metric_scope", "materiality"} <= set(answers):
-        raise ValueError("Northstar base owner answers are required before HIL follow-up")
-    contract_audit = scenario["private"].get("source_contract_fixture_audit")
-    if not isinstance(contract_audit, dict):
-        raise ValueError("Seed-grounded source contract audit is required before HIL follow-up")
-    sales_source = next(
-        item for item in contract_audit["sources"]
-        if item["seed_file"] == "fct_sales_order_line.csv"
+
+def _intervention_percent_facts(period: dict, source_ref: str) -> dict[str, dict[str, Any]]:
+    snapshot = period["snapshots"].get(source_ref)
+    return _northstar_numeric_facts({source_ref: snapshot}) if snapshot else {}
+
+
+def classify_policy_intervention_period(scenario: dict, period: dict) -> dict[str, Any]:
+    """Apply only the frozen owner policy to source-reported comparisons."""
+    sales_ref = _intervention_source_ref(scenario, "superset|dashboard:1")
+    sales_snapshot = period["snapshots"].get(sales_ref)
+    if (not sales_snapshot or sales_snapshot.get("error")
+            or sales_snapshot.get("contract", {}).get("source_status") != "healthy"):
+        return {"stratum": "primary_sales_source_unavailable", "outcome": "insufficient_data",
+                "source_reported_change_pct": None}
+    reconciliation = sales_partition_reconciliation(sales_snapshot)
+    if not reconciliation["reconciled"]:
+        return {"stratum": "primary_sales_comparison_unreconciled", "outcome": "insufficient_data",
+                "source_reported_change_pct": None, "reconciliation": reconciliation}
+    sales_facts = _intervention_percent_facts(period, sales_ref)
+    total_change = sales_facts.get("net_sales_total_change_pct", {}).get("value")
+    if type(total_change) not in {int, float}:
+        return {"stratum": "primary_sales_comparison_unavailable", "outcome": "insufficient_data",
+                "source_reported_change_pct": None}
+    if abs(total_change) < 10:
+        return {"stratum": "under_10_ignore", "outcome": "ignore",
+                "source_reported_change_pct": total_change}
+    channels = (
+        "online_net_sales_change_pct", "store_net_sales_change_pct",
+        "mobile_net_sales_change_pct", "marketplace_net_sales_change_pct",
     )
-    original = {topic: answers[topic] for topic in ("metric_scope", "materiality")}
-    followup = {
-        "metric_scope": (
-            "HIL clarification for this evaluation only: Northstar monthly sales means "
-            "the sum of the sales amounts recorded in the source, grouped by calendar "
-            "month and sales channel; the monthly total adds those channel values. The "
-            "available fields are order_date, channel, and net_sales. They do not establish "
-            "unique customers or orders, completion or settlement status, or a currency "
-            "denomination. Web, finance, and support are separate source populations: "
-            "web-session counts/orders, finance revenue rows, and support backlog rows. "
-            "The seed has no shared population key for joining these sources, but their "
-            "separately scoped evidence may corroborate or contextualize the same time "
-            "window. Do not claim exact reconciliation or causation. Use each source "
-            "only for its inspected fields and grain."
-        ),
-        "materiality": (
-            original["materiality"]
-            + " HIL owner addendum for this evaluation only; preserve the ordered policy "
-            "above. Its final investigate fallback is conditional: it covers isolated, "
-            "conflicting, or otherwise ambiguous material movement not resolved by the "
-            "earlier rules. It does not itself assign an outcome to every other material "
-            "movement. From the operating question—deciding what needs investigation "
-            "before anyone acts—the owner explicitly adds these outcomes: a net-sales "
-            "increase of at least 10% goes to Analytics to investigate, not to leadership; "
-            "a net-sales decline from 10% up to but not including 15% that does not meet "
-            "the existing notify rule also goes to Analytics to investigate, not to "
-            "leadership. This is an explicit HIL addendum, not an interpretation that the "
-            "original fallback covers all such cases. Keep the existing notify condition "
-            "unchanged; these are report/investigation routes, not automated notifications. "
-            "The selected source snapshots contain no "
-            "incident record or severity field; support provides average open-ticket "
-            "backlog, which by itself does not establish a severe operational incident. "
-            "No approved incident definition or numeric severity threshold is available. "
-            "For these replay episodes, do not invoke the severe-incident exception from "
-            "backlog alone. For real operations, keep that exception unresolved and ask "
-            "the owner for an approved incident source and definition before relying on "
-            "it or enabling automation."
+    declining_channels = sum(
+        type(value) in {int, float} and value < 0
+        for value in (sales_facts.get(name, {}).get("value") for name in channels)
+    )
+    web_ref = _intervention_source_ref(scenario, "northstar|fct_web_session")
+    finance_ref = _intervention_source_ref(scenario, "northstar|fct_finance_daily")
+    web_pct = _intervention_percent_facts(period, web_ref).get("web_conversion_rate_change_pct", {}).get("value")
+    finance_pct = _intervention_percent_facts(period, finance_ref).get("finance_booked_revenue_change_pct", {}).get("value")
+    corroboration = any(type(value) in {int, float} and value < 0 for value in (web_pct, finance_pct))
+    if total_change <= -15 and declining_channels >= 2 and corroboration:
+        stratum, outcome = "corroborated_15_plus_decline_notify", "notify"
+    elif total_change < 0 and 10 <= abs(total_change) < 15:
+        stratum, outcome = "10_to_below_15_investigate", "investigate"
+    else:
+        stratum, outcome = "other_material_investigate", "investigate"
+    return {"stratum": stratum, "outcome": outcome, "source_reported_change_pct": total_change}
+
+
+def _policy_intervention_label(scenario: dict, period: dict,
+                               classification: dict[str, Any]) -> dict[str, Any]:
+    """Build private scoring facts and actions from the frozen policy and repaired inputs."""
+    outcome = classification["outcome"]
+    facts = _northstar_numeric_facts(period["snapshots"])
+    sales_ref = _intervention_source_ref(scenario, "superset|dashboard:1")
+    required_refs = [sales_ref]
+    if outcome == "notify":
+        web_ref = _intervention_source_ref(scenario, "northstar|fct_web_session")
+        finance_ref = _intervention_source_ref(scenario, "northstar|fct_finance_daily")
+        web_change = facts.get("web_conversion_rate_change_pct", {}).get("value")
+        corroborator = web_ref if type(web_change) in {int, float} and web_change < 0 else finance_ref
+        required_refs.append(corroborator)
+    required_numeric = (
+        ["net_sales_total_baseline", "net_sales_total_current", "net_sales_total_change_pct"]
+        if classification["source_reported_change_pct"] is not None
+        and all(name in facts for name in (
+            "net_sales_total_baseline", "net_sales_total_current", "net_sales_total_change_pct",
+        )) else []
+    )
+    recipients = {
+        "ignore": [], "investigate": ["analytics"],
+        "notify": ["leadership"], "insufficient_data": ["data-trust"],
+    }[outcome]
+    return {
+        "historical_case_id": f"policy-intervention-{period['period_id']}",
+        "outcome": outcome,
+        "recipients": recipients,
+        "required_evidence_refs": required_refs,
+        "condition": ("event" if outcome in {"notify", "investigate"}
+                      else "data_gap" if outcome == "insufficient_data" else "quiet"),
+        "variant_id": f"policy-intervention:{classification['stratum']}",
+        "required_owner_topics": ["metric_scope", "materiality", "routing", "data_gaps"],
+        "numeric_facts": facts,
+        "required_numeric_facts": required_numeric,
+        "required_claim_types": [],
+        "allowed_claim_types": ["observation", "accounting_decomposition", "association", "hypothesis"],
+        "policy_intervention_stratum": classification["stratum"],
+    }
+
+
+def _install_simulation_sales_ledger(scenario: dict) -> None:
+    """Materialize fictional ledger records, then derive all sales facts from them.
+
+    Records have month/channel grain, not order or customer grain. The source
+    is authoritative only inside this simulation; no real Superset extraction
+    or actual business transaction is claimed.
+    """
+    ref = _intervention_source_ref(scenario, "superset|dashboard:1")
+    scope = "The fictional company's generated monthly channel ledger; not a real company or Superset extract."
+    descriptor = next(item for item in scenario["public"]["catalog"]
+                      if f"{item['adapter']}|{item['resource']}" == ref)
+    descriptor["contract"].update(scope=scope, population="Generated monthly channel ledger records.",
+                                  grain="One recorded balance per reporting month and sales channel.")
+    ledger_ref = "simulation-ledger://northstar/monthly-sales"
+    descriptor["contract"]["lineage"] = [ledger_ref]
+    for comparison in descriptor["contract"].get("comparison_contracts", []):
+        comparison.update(
+            definition="Sum recorded net_sales balances by reporting_month across the declared channels.",
+            population="Generated monthly channel ledger records; not orders or customers.",
+            detail="Totals and channels derive from the same complete fictional monthly ledger partition; no transaction, settlement or real-company coverage is asserted.",
+            query_refs=[ledger_ref],
+        )
+    descriptor["description"] = "Authoritative monthly sales ledger for the fictional company in this trial."
+    descriptor["metadata"]["scope"] = scope
+    descriptor["source_url"] = "simulation-ledger://northstar/monthly-sales"
+    for period in [scenario["public"]["onboarding"], *scenario["public"]["periods"]]:
+        snapshot = period["snapshots"].get(ref)
+        if not snapshot:
+            continue
+        status = snapshot["contract"]["source_status"]
+        snapshot["contract"].update(descriptor["contract"], source_status=status)
+        snapshot["title"] = descriptor["title"]
+        snapshot["description"] = descriptor["description"]
+        snapshot["source_url"] = f"simulation-ledger://northstar/{period['period_id']}"
+        snapshot["metadata"]["scope"] = scope
+        snapshot["metadata"].update(
+            source_capture="Generated ledger records are authoritative in this fictional company; not a real business extract.",
+            source_transport="simulated_row_ledger",
+        )
+        if snapshot.get("error"):
+            continue
+        total = next(item for item in snapshot["observations"] if item["subject_id"] == "revenue-total")
+        current_period = total["dimensions"]["current_period"]
+        baseline_period = total["attributes"]["baseline_period"]
+        channels = [item for item in snapshot["observations"] if item["subject_id"].startswith("channel-")]
+        rows = [{"row_id": f"{period['period_id']}/{month}/{item['subject_id']}",
+                 "reporting_month": month, "channel": item["dimensions"]["channel"],
+                 "net_sales": item[field]}
+                for item in channels for month, field in ((baseline_period, "baseline"), (current_period, "current"))]
+        if len({row["row_id"] for row in rows}) != len(rows):
+            raise ValueError("Simulation ledger contains duplicate record identities")
+        source_url = f"simulation-ledger://northstar/{period['period_id']}"
+        snapshot["contract"].update(descriptor["contract"])
+        snapshot["source_url"] = source_url
+        snapshot["metadata"].pop("sales_partition_generation", None)
+        snapshot["metadata"].update(
+            ledger_rows=rows, ledger_sha256=digest(rows),
+            source_capture="Generated ledger records are authoritative in this fictional company; not a real business extract.",
+            source_transport="simulated_row_ledger",
+        )
+        by_subject = {}
+        for item in [total, *channels]:
+            selected = rows if item is total else [row for row in rows if row["channel"] == item["dimensions"]["channel"]]
+            item["baseline"] = sum(row["net_sales"] for row in selected if row["reporting_month"] == baseline_period)
+            item["current"] = sum(row["net_sales"] for row in selected if row["reporting_month"] == current_period)
+            item["previous"] = item["baseline"]
+            item["change_pct"] = round((item["current"] - item["baseline"]) / abs(item["baseline"]) * 100, 3) if item["baseline"] else None
+            item["source_url"] = source_url
+            item["attributes"].pop("fixture_allocation", None)
+            item["attributes"].update(data_origin="Authoritative fictional-company monthly ledger records.",
+                                      ledger_row_ids=[row["row_id"] for row in selected])
+            by_subject[item["subject_id"]] = item
+        snapshot["evidence"] = [Evidence(
+            source_key=snapshot["source_key"], subject_id=item["subject_id"],
+            subject_label=item["subject_label"], source_url=source_url,
+            statement=f"{item['subject_label']}: {baseline_period} {item['baseline']} to {current_period} {item['current']}; generated ledger-derived change {item['change_pct']}%.",
+            values={"current": item["current"], "baseline": item["baseline"],
+                    "previous": item["previous"], "change_pct": item["change_pct"],
+                    "data_origin": item["attributes"]["data_origin"],
+                    "ledger_row_ids": item["attributes"]["ledger_row_ids"]},
+            origin="source", provenance=[row["row_id"] for row in rows],
+        ).model_dump(mode="json") for item in by_subject.values()]
+    scenario["public"]["owner_answers"]["metric_scope"] = scope
+
+
+def build_policy_intervention_scenario(seed_dir: Path = DEFAULT_SEED) -> tuple[dict, dict[str, Any]]:
+    """Freeze a separate, owner-policy-conditioned cohort before model exposure."""
+    scenario = build_trial_scenario(seed_dir)
+    _install_simulation_sales_ledger(scenario)
+    public = scenario["public"]
+    excluded = {f"{item['adapter']}|{item['resource']}" for item in public["catalog"]
+                if item.get("title") == "Northstar Checkout Incident Review"}
+    public["catalog"] = [
+        item for item in public["catalog"]
+        if item.get("title") != "Northstar Checkout Incident Review"
+    ]
+    for period in [public["onboarding"], *public["periods"]]:
+        for ref in excluded:
+            period["snapshots"].pop(ref, None)
+    public["owner_answers"].update(copy.deepcopy(NORTHSTAR_POLICY_INTERVENTION["owner_answers"]))
+    public["owner_answers"]["metric_scope"] = (
+        "Executive Pulse's generated monthly channel ledger is the authoritative sales source "
+        "in this fictional company. Total and per-channel balances are derived from the same "
+        "recorded rows. It is not a real-company extract, and does not establish individual "
+        "orders, customers, settlement, or company-wide coverage. Web, Finance and Support "
+        "are separate simulated populations; no row joins or shared-cohort assertion."
+    )
+    public["owner_topics"] = list(dict.fromkeys([
+        *public["owner_topics"], *NORTHSTAR_POLICY_INTERVENTION["owner_answers"],
+    ]))
+    public["source_transport"] = {
+        "kind": "simulated_bi_fixture",
+        "actual_superset": False,
+        "description": (
+            "Private local MCP replay of generated monthly sales ledger balances and "
+            "synthetic Web, Finance and Support snapshots; no live Superset extraction."
         ),
     }
-    answers.update(followup)
-    scenario["private"]["simulated_hil_followup"] = copy.deepcopy(followup)
+    public["brief"] += (
+        " The owner has pre-answered one-time business-policy questions. Keep Sales, Web, "
+        "Finance, and Support populations separate; no row joins. Owner policy and acting "
+        "data-expert source sign-off are distinct: during approval pass source_scope_confirmations "
+        "for exactly the selected refs, copying declared scope text from the current review. "
+        f"{NORTHSTAR_POLICY_INTERVENTION['recurring_questions_guidance']} Preserve thresholds "
+        "in English decision_guidance; do not invent comparison keys or numeric conditions. "
+        f"{NORTHSTAR_POLICY_INTERVENTION['source_selection_reason']}"
+    )
+    scenario["policy_intervention"] = copy.deepcopy(NORTHSTAR_POLICY_INTERVENTION)
+    scenario["policy_intervention"]["owner_answers"]["metric_scope"] = public["owner_answers"]["metric_scope"]
+    periods = {period["period_id"]: period for period in scenario["public"]["periods"]}
+    selected, strata = [], {}
+    new_labels = {}
+    for stratum, period_id in POLICY_INTERVENTION_CASES.items():
+        period = periods.get(period_id)
+        if period is None:
+            raise ValueError(f"Preregistered policy-intervention episode is missing: {period_id}")
+        expected = classify_policy_intervention_period(scenario, period)
+        if expected["stratum"] != stratum:
+            raise ValueError(f"Reconciled replay does not meet preregistered stratum {stratum}: {period_id}")
+        label = _policy_intervention_label(scenario, period, expected)
+        if label["outcome"] != expected["outcome"]:
+            raise ValueError(f"Policy label derivation disagrees with frozen policy for {period_id}")
+        selected.append(period)
+        new_labels[period_id] = label
+        sales_snapshot = period["snapshots"][_intervention_source_ref(
+            scenario, "superset|dashboard:1",
+        )]
+        sales_reconciliation = (
+            {"status": "not_applicable", "reason": "Primary sales source unavailable."}
+            if sales_snapshot.get("error")
+            or sales_snapshot.get("contract", {}).get("source_status") != "healthy"
+            else {"status": "checked", **sales_partition_reconciliation(sales_snapshot)}
+        )
+        strata[stratum] = {
+            "period_id": period_id,
+            "policy_outcome": expected["outcome"],
+            "source_reported_change_pct": expected["source_reported_change_pct"],
+            "sales_reconciliation": sales_reconciliation,
+        }
+    if len(selected) != PILOT_SIZE or len({p["period_id"] for p in selected}) != PILOT_SIZE:
+        raise ValueError("Policy intervention requires exactly four episodes")
+    selected_ids = {item["period_id"] for item in selected}
+    scenario["public"]["periods"] = copy.deepcopy(selected)
+    scenario["private"]["periods"] = new_labels
+    scenario["private"]["multistep"] = {key: value for key, value
+        in scenario["private"].get("multistep", {}).items() if key in selected_ids}
+    registration = {
+        "protocol": POLICY_INTERVENTION_PROTOCOL,
+        "cohort_label": (
+            f"{POLICY_INTERVENTION_PROTOCOL}: four-case row-backed fictional-company pilot; "
+            "prior cohort invalid and excluded."
+        ),
+        "intervention": copy.deepcopy(scenario["policy_intervention"]),
+        "sales_partition_rule": (
+            "For a healthy primary source, require exactly one total, a nonempty unique channel "
+            "partition, numeric values, identical comparison periods, and baseline/current sums "
+            "matching the total within 1e-6 arithmetic precision. Any mismatch is insufficient_data "
+            "to data-trust. A failed primary source is not reconciled and must expose no observations. "
+            "The generated monthly ledger rows are authoritative within the fictional company. "
+            "Both totals and channels are computed from those records; no real-business extract is claimed."
+        ),
+        "case_selection": (
+            "Fixed preregistered period IDs; repaired source facts were validated and the "
+            "owner-policy outcome labels were recomputed before any model exposure."
+        ),
+        "selected_strata": strata,
+        "expected_outcomes_by_stratum": {
+            stratum: item["policy_outcome"] for stratum, item in strata.items()
+        },
+        "synthetic_fixture_rows_generated": True,
+        "manufactured_business_truth_scope": (
+            "No legacy outcome label was consulted. Owner policy and ledger source contracts "
+            "are explicitly authored simulation inputs, not inferred real business knowledge. "
+            "No cross-source population equivalence is claimed. Fixture numbers are synthetic, "
+            "not asserted business facts."
+        ),
+        "selection_completed_before_future_values_exposed": True,
+        "legacy_oracle_used_for_selection_or_scoring": False,
+        "legacy_artifacts_preserved_as_invalid": True,
+        "source_transport": copy.deepcopy(public["source_transport"]),
+        "generalization_limit": (
+            "Four synthetic, policy-derived cases test workflow behavior; they are not an "
+            "independent business-accuracy estimate."
+        ),
+    }
+    scenario["policy_intervention_registration"] = registration
+    return scenario, registration
+
+
+def apply_simulated_hil_followup(scenario: dict) -> dict:
+    """Expose predeclared owner knowledge through the existing ask_owner tool.
+
+    The response answers the actual incident-definition follow-up by saying it
+    is unknown in the predeclared business materials. It does not alter policy,
+    source contracts, outcome labels, or add a numeric threshold. The answer is
+    available only through the shared trial MCP owner-lookup tool.
+    """
+    answers = scenario["public"]["owner_answers"]
+    topic = "severe_incident_definition"
+    knowledge = scenario.get("owner_followup_knowledge", {}).get(topic)
+    if (not isinstance(knowledge, dict)
+            or knowledge != OWNER_FOLLOWUP_KNOWLEDGE.get(topic)
+            or knowledge.get("status") != "unknown"):
+        raise ValueError("Northstar's independently predeclared incident answer is required")
+    answer = knowledge.get("answer")
+    if not isinstance(answer, str) or not answer.startswith("Unknown."):
+        raise ValueError("The incident-definition follow-up must preserve unknown status")
+    if not {"metric_scope", "materiality"} <= set(answers):
+        raise ValueError("Northstar base owner answers are required before HIL follow-up")
+
+    if topic in answers and answers[topic] != answer:
+        raise ValueError("Conflicting Northstar owner follow-up answer is already present")
+    answers[topic] = answer
+    if topic not in scenario["public"]["owner_topics"]:
+        scenario["public"]["owner_topics"].append(topic)
     return {
-        "mode": "simulated_human_followup",
+        "mode": "simulated_owner_followup_on_demand",
         "evaluation_only": True,
         "shared_with_both_arms": True,
-        "topics": sorted(followup),
-        "responses": followup,
-        "original_answers": original,
-        "policy_order_preserved": True,
-        "policy_semantics_expanded_by_explicit_hil_addendum": True,
+        "transport": "existing trial MCP facade",
+        "tool": "ask_owner",
+        "topic": topic,
+        "response_status": "unknown",
+        "response": answer,
+        "predeclared_knowledge_basis": copy.deepcopy(knowledge["basis"]),
+        "delivered_only_when_requested": True,
+        "policy_changed": False,
+        "source_contracts_changed": False,
+        "outcome_labels_changed": False,
         "new_numeric_thresholds": [],
-        "addendum_outcome_rules": [
-            "net-sales increase >=10% -> investigate with Analytics; no leadership notification",
-            "net-sales decline >=10% and <15% without existing notify conditions -> investigate with Analytics",
-        ],
-        "evidence_basis": {
-            "primary_sales_contract": (
-                "rows with order_date, channel, and net_sales; calendar month by channel, "
-                "with the total summed across channels; completion, settlement, and "
-                "unique-customer/order semantics are not present in the seed"
-            ),
-            "checked_in_sales_columns": sales_source["seed_columns"],
-            "selected_source_scope": {
-                item["seed_file"]: {
-                    "scope": item["scope"],
-                    "population": item["population"],
-                    "grain": item["grain"],
-                }
-                for item in contract_audit["sources"]
-            },
-            "advertised_comparisons": {
-                item["ref"]: {
-                    "source_contract_keys": item["source_comparison_contract_keys"],
-                    "required_keys": item["required_comparison_keys"],
-                    "inspected_analytical_keys": item["inspected_analytical_comparison_keys"],
-                }
-                for item in contract_audit["sources"]
-            },
-            "incident_evidence": (
-                "No incident record or severity field in the selected replay snapshots; "
-                "support backlog alone does not establish incident severity."
-            ),
-        },
-        "why": {
-            "materiality": (
-                "The original fallback is narrower than all remaining material movements. "
-                "This explicit simulated owner addendum separately assigns the positive and "
-                "10-to-under-15% cases from the business question, without changing notify "
-                "conditions. The genuine severe-incident definition remains unresolved "
-                "because the selected sources cannot resolve it."
-            ),
-            "metric_scope": (
-                "The original scope was implementation jargon. This supplies the primary "
-                "source contract and actual seed columns while preserving source-specific "
-                "populations and refusing unsupported joins/counts."
-            ),
-        },
     }
 
 
@@ -751,9 +997,8 @@ def _replace_tenant(value: Any, previous: str, current: str) -> None:
 def build_report_first_scenario(scenario: dict) -> tuple[dict, dict]:
     """Create a one-period vague-owner probe with unresolved alert ownership.
 
-    This keeps the checked-in Northstar observations, supplies the same
-    source-grounded expert scope clarification used by the HIL onboarding case,
-    and removes only materiality/routing. It is not a fresh warehouse read.
+    This keeps the checked-in Northstar observations and removes only
+    materiality/routing. It is not a fresh warehouse read.
     """
     result = copy.deepcopy(scenario)
     if "simulated_hil_followup" not in result["private"]:
@@ -863,6 +1108,172 @@ def score_report_first(submission: dict, *, period: dict, inspected_refs: set[st
         "source_evidence_period_digest": digest(period_text),
     }
     return result
+
+
+def score_final_report_utility(submission: dict | None, *, period: dict,
+                               inspected_refs: set[str]) -> dict[str, Any]:
+    """Score source-grounded usefulness of the final recipient-facing report.
+
+    This is a report-quality proxy, not a Jev or outcome-label score. Missing or
+    invalid reports score zero and are distinguished in the returned status.
+    """
+    if submission is None:
+        return {"status": "missing", "valid": False, "score": 0,
+                "dimensions": {}, "narrative_review_required": True}
+    try:
+        parsed = _Submission.model_validate(submission).model_dump(mode="json")
+    except Exception:
+        return {"status": "invalid", "valid": False, "score": 0,
+                "dimensions": {}, "narrative_review_required": True}
+
+    period_refs = set(period["snapshots"])
+    inspected = set(inspected_refs) & period_refs
+    cited = set(parsed["evidence_refs"])
+    cited |= {ref for item in parsed["numeric_claims"] for ref in item["evidence_refs"]}
+    cited |= {ref for item in parsed["claims"] for ref in item["evidence_refs"]}
+    evidence_fidelity = bool(cited) and cited <= inspected and cited <= period_refs
+
+    source_facts = _northstar_numeric_facts(period["snapshots"])
+    required_numeric = {
+        f"net_sales_total_{field}"
+        for field in ("baseline", "current", "change_pct")
+        if f"net_sales_total_{field}" in source_facts
+    }
+    correct_numeric: set[str] = set()
+    for claim in parsed["numeric_claims"]:
+        fact = source_facts.get(claim["fact"])
+        if (fact and claim["unit"] == fact["unit"]
+                and type(claim["value"]) in {int, float}
+                and abs(claim["value"] - fact["value"]) <= fact["absolute_tolerance"]
+                and set(claim["evidence_refs"]) >= set(fact["evidence_refs"])):
+            correct_numeric.add(claim["fact"])
+    numeric_precision = (
+        len(correct_numeric) / len(parsed["numeric_claims"])
+        if parsed["numeric_claims"] else (1.0 if not required_numeric else 0.0)
+    )
+    numeric_recall = (
+        len(correct_numeric & required_numeric) / len(required_numeric)
+        if required_numeric else 1.0
+    )
+
+    narrative = " ".join([
+        parsed["summary"], *(item["statement"] for item in parsed["claims"]),
+    ]).casefold()
+    source_text = canonical(period["snapshots"]).casefold()
+    words = re.findall(r"\b[\w%$.-]+\b", parsed["summary"])
+    scope_qualified = "northstar" in narrative and any(
+        term in narrative for term in ("monthly", "calendar month")
+    )
+    replay_caveat = any(
+        term in narrative for term in ("historical", "replay", "not live", "not a fresh")
+    )
+    driver_terms = (
+        "online", "store", "mobile", "marketplace", "web", "conversion",
+        "support", "finance", "channel", "checkout",
+    )
+    source_grounded_driver = any(
+        term in narrative and term in source_text for term in driver_terms
+    )
+    action_terms = ("ask", "confirm", "investigate", "review", "route", "owner", "next step")
+    concrete_next_step = any(term in narrative for term in action_terms)
+    concise = 10 <= len(words) <= 80
+    dimensions = {
+        "evidence_fidelity": 25 if evidence_fidelity else 0,
+        "numeric_fidelity": round(25 * (numeric_precision + numeric_recall) / 2, 2),
+        "scope_qualification": 7.5 if scope_qualified else 0,
+        "historical_replay_caveat": 7.5 if replay_caveat else 0,
+        "source_grounded_driver": 10 if source_grounded_driver else 0,
+        "concrete_next_step": 10 if concrete_next_step else 0,
+        "conciseness": 5 if concise else 0,
+    }
+    rubric_max_points = 90
+    return {
+        "status": "valid",
+        "valid": True,
+        "score": round(100 * sum(dimensions.values()) / rubric_max_points, 2),
+        "rubric_points": round(sum(dimensions.values()), 2),
+        "rubric_max_points": rubric_max_points,
+        "dimensions": dimensions,
+        "evidence_fidelity": evidence_fidelity,
+        "numeric_precision": numeric_precision,
+        "numeric_recall": numeric_recall,
+        "required_source_numeric_facts": sorted(required_numeric),
+        "correct_source_numeric_facts": sorted(correct_numeric),
+        "narrative_review_required": True,
+        "rubric_limit": (
+            "Rule-based final-report utility proxy; narrative entailment and real-user value "
+            "were not independently human-reviewed. Outcome and routing correctness are "
+            "reported separately as secondary diagnostics."
+        ),
+    }
+
+
+def add_final_report_utility(report: dict[str, Any], scenario: dict) -> dict[str, Any]:
+    """Attach paired final-report utility and separate invalid/missing counts."""
+    periods = {item["period_id"]: item for item in scenario["public"]["periods"]}
+    rows = report.get("companies", [{}])[0].get("periods", [])
+    pair_scores: list[float] = []
+    eligible_pair_scores: list[float] = []
+    by_arm: dict[str, list[float]] = {"baseline": [], "treatment": []}
+    counts = {
+        arm: {"valid": 0, "invalid": 0, "missing": 0}
+        for arm in ("baseline", "treatment")
+    }
+    for row in rows:
+        period = periods.get(row.get("period_id"))
+        if period is None:
+            continue
+        scored_arms = {}
+        for arm in ("baseline", "treatment"):
+            arm_result = row.get(arm) or {}
+            utility = score_final_report_utility(
+                arm_result.get("submission"), period=period,
+                inspected_refs=set(arm_result.get("visible_refs", [])),
+            )
+            scored_arms[arm] = utility
+            counts[arm][utility["status"]] += 1
+            by_arm[arm].append(float(utility["score"]))
+        row["final_report_utility"] = scored_arms
+        pair_scores.append(
+            float(scored_arms["treatment"]["score"])
+            - float(scored_arms["baseline"]["score"])
+        )
+        # A treatment without a successful native decision is an agent fallback,
+        # not evidence for Jev. Harness-censored baseline runs are not valid pairs.
+        eligible = bool(
+            row.get("result") and not row.get("native_evaluation_error")
+            and all((row.get(arm) or {}).get("completed")
+                    and scored_arms[arm]["valid"] for arm in ("baseline", "treatment"))
+        )
+        row["final_report_utility"]["comparison_eligible"] = eligible
+        if eligible:
+            eligible_pair_scores.append(pair_scores[-1])
+
+    intended_per_arm = len(scenario["public"]["periods"])
+    utility_summary = {
+        "primary_endpoint": "final_human_report_utility_proxy",
+        "scale": "0-100; invalid and missing reports score 0 and remain in the denominator",
+        "intended_reports_per_arm": intended_per_arm,
+        "baseline_mean": round(sum(by_arm["baseline"]) / max(1, intended_per_arm), 2),
+        "treatment_mean": round(sum(by_arm["treatment"]) / max(1, intended_per_arm), 2),
+        "paired_treatment_minus_baseline_mean": round(
+            sum(pair_scores) / max(1, intended_per_arm), 2
+        ),
+        "report_counts": counts,
+        "paired_rows_scored": len(pair_scores),
+        "eligible_live_decision_pairs": len(eligible_pair_scores),
+        "eligible_pair_utility_difference_mean": (
+            round(sum(eligible_pair_scores) / len(eligible_pair_scores), 2)
+            if eligible_pair_scores else None
+        ),
+        "comparison_limit": "Failure-inclusive means describe completion; only complete pairs with a successful native decision enter the live-decision comparison. This proxy is not a human preference score.",
+        "narrative_review_required": True,
+        "outcome_correctness_role": "secondary diagnostic; policy-label exactness is not the primary endpoint",
+    }
+    report.setdefault("summary", {})["final_report_utility"] = utility_summary
+    report.setdefault("protocol", {})["primary_endpoint"] = utility_summary["primary_endpoint"]
+    report["protocol"]["comparison"] = "paired_final_report_utility_with_secondary_outcome_diagnostics"
+    return utility_summary
 
 
 class ReleaseSession(ToolSession):
@@ -1194,8 +1605,8 @@ async def run_pilot(*, binary: Path, key_file: Path, output: Path,
             "variant_id_private": scenario["private"]["periods"][period["period_id"]]["variant_id"],
         } for period in selected],
         "source_classification": (
-            "Checked-in Northstar historical replay served by a local synthetic MCP; "
-            "not a live Superset extraction."
+            "Checked-in Northstar historical data served over simulated BI transport "
+            "through a local synthetic MCP; not an actual Superset connection or extraction."
         ),
         "source_contract_fixture": scenario["private"]["source_contract_fixture_audit"],
         "card_policy_representation": {
@@ -1204,10 +1615,13 @@ async def run_pilot(*, binary: Path, key_file: Path, output: Path,
             "source_comparison_contracts": "Recorded separately from inspected analytical_comparisons and required_comparison_keys.",
         },
         "simulated_hil_followup": hil_record,
-        "owner_context_studytool": {
-            "required_tool": "request_owner_context",
-            "available_in_shared_runner": False,
-            "live_gate": "Do not launch until the shared runner exposes and records the actual studytool schema; do not substitute Codex request_user_input.",
+        "owner_followup_transport": {
+            "facade": "existing trial MCP",
+            "tool": "ask_owner",
+            "response_source": "independently predeclared Northstar owner knowledge, separate from private outcome labels",
+            "answer_is_returned_only_after_topic_is_requested": True,
+            "unknown_definition_remains_unknown": True,
+            "uses_codex_ui_input": False,
         },
         "paired_runtime_scope": (
             "Shared installed_workflow_trial loop: treatment onboarding authors the "
@@ -1244,6 +1658,37 @@ async def run_pilot(*, binary: Path, key_file: Path, output: Path,
             "postflight_error_type": postflight_error,
         })
         raise
+    utility_summary = add_final_report_utility(report, scenario)
+    trace_path = output / "shared-trial" / "trace.jsonl"
+    owner_followup_calls = []
+    if trace_path.is_file():
+        for line in trace_path.read_text(encoding="utf-8").splitlines():
+            try:
+                event = json.loads(line)
+            except ValueError:
+                continue
+            if (event.get("kind") == "tool.result"
+                    and event.get("name") == "ask_owner"
+                    and (event.get("arguments") or {}).get("topic")
+                    == "severe_incident_definition"):
+                owner_followup_calls.append({
+                    "topic": "severe_incident_definition",
+                    "result": event.get("result"),
+                    "actor_role": event.get("actor_role"),
+                })
+    owner_followup_summary = {
+        "expected_topic": "severe_incident_definition",
+        "requests_observed": len(owner_followup_calls),
+        "responses": owner_followup_calls,
+        "definition_status": "unknown",
+    }
+    report["summary"]["owner_followup"] = owner_followup_summary
+    _write_private(output / "northstar-final-report-utility.json", {
+        "primary_endpoint": utility_summary,
+        "owner_followup": owner_followup_summary,
+        "simulated_bi_transport": True,
+        "actual_superset_extraction": False,
+    })
     final_identity = _verify_certified_binary(
         binary, certified_source_sha256=CERTIFIED_SOURCE_SHA256,
         certified_binary_sha256=CERTIFIED_BINARY_SHA256,
@@ -1263,6 +1708,87 @@ async def run_pilot(*, binary: Path, key_file: Path, output: Path,
     return report
 
 
+def _verify_policy_intervention_binary(binary: Path) -> dict:
+    current_source = source_fingerprint(ROOT)
+    if current_source != POLICY_INTERVENTION_SOURCE_SHA256:
+        raise ValueError("Frozen policy-intervention source fingerprint changed")
+    identity = verify_binary(binary)
+    if (identity["source_sha256"] != POLICY_INTERVENTION_SOURCE_SHA256
+            or identity["binary_sha256"] != POLICY_INTERVENTION_BINARY_SHA256):
+        raise ValueError("Native binary does not match the frozen policy-intervention build")
+    return identity
+
+
+async def run_policy_intervention(*, binary: Path = ROOT / "dist" / "signalweave",
+                                  key_file: Path = DEFAULT_KEY_FILE,
+                                  output: Path = DEFAULT_INTERVENTION_OUTPUT,
+                                  seed_dir: Path = DEFAULT_SEED) -> dict:
+    """Run the separate, preregistered policy cohort on the frozen native build."""
+    binary, key_file, output = Path(binary).resolve(), Path(key_file).resolve(), Path(output).resolve()
+    if not key_file.is_file():
+        raise FileNotFoundError("Private Jev key file is unavailable")
+    identity = _verify_policy_intervention_binary(binary)
+    scenario, registration = build_policy_intervention_scenario(seed_dir)
+    output.mkdir(mode=0o700, parents=True, exist_ok=False)
+    sales_ref = _intervention_source_ref(scenario, "superset|dashboard:1")
+    ledgers = {period["period_id"]: period["snapshots"][sales_ref].get("metadata", {}).get("ledger_rows", [])
+               for period in [scenario["public"]["onboarding"], *scenario["public"]["periods"]]}
+    _write_private(output / "source-ledgers.json", ledgers)
+    _write_private(output / "release-preflight.json", {
+        "protocol": POLICY_INTERVENTION_PROTOCOL,
+        "registration": registration, "binary_identity": identity,
+        "models": [MODEL, EFFORT], "jev_budget": POLICY_INTERVENTION_JEV_BUDGET,
+        "source_classification": "simulated BI transport over checked-in fixtures; not an actual Superset extraction",
+        "primary_endpoint": "final_human_report_utility_proxy",
+    })
+
+    from evaluations.installed_workflow_trial import run_trial
+
+    try:
+        report = await run_trial(
+            [scenario], binary=binary, key_file=key_file, output=output / "paired",
+            jev_budget=POLICY_INTERVENTION_JEV_BUDGET, live=True, stage_gate=PILOT_SIZE,
+            fixture_seed=None, author_model=MODEL, author_effort=EFFORT,
+            recurring_agent_model=MODEL, recurring_agent_effort=EFFORT,
+            reviewer_model=MODEL, reviewer_effort=EFFORT,
+        )
+    except Exception as error:
+        try:
+            postflight = _verify_policy_intervention_binary(binary)
+        except Exception as provenance_error:
+            postflight = {"error_type": type(provenance_error).__name__}
+        _write_private(output / "release-failure.json", {"failure_type": type(error).__name__,
+            "postflight": postflight, "details": "Inspect the redacted paired trace."})
+        raise
+
+    add_final_report_utility(report, scenario)
+    postflight = _verify_policy_intervention_binary(binary)
+    trace_path = output / "paired" / "trace.jsonl"
+    events = [json.loads(line) for line in trace_path.read_text(encoding="utf-8").splitlines()] if trace_path.is_file() else []
+    report["policy_intervention"] = {
+        "protocol": POLICY_INTERVENTION_PROTOCOL,
+        "cohort_label": registration["cohort_label"],
+        "registration": registration, "binary_before": identity, "binary_after": postflight,
+        "binary_identity_unchanged": identity == postflight,
+        "source_fingerprint_after": source_fingerprint(ROOT),
+        "source_scope_confirmations_at_approval": [
+            event.get("arguments", {}).get("source_scope_confirmations") for event in events
+            if event.get("kind") == "tool.result" and event.get("name") == "approve_insight_card"
+        ],
+        "owner_replies": [{"topic": event.get("arguments", {}).get("topic"),
+                            "result": event.get("result")} for event in events
+                           if event.get("kind") == "tool.result" and event.get("name") == "ask_owner"],
+        "data_expert_signoffs": [event.get("result") for event in events
+                                 if event.get("kind") == "tool.result"
+                                 and event.get("name") == "sign_off_data_foundation"],
+        "source_classification": "simulated BI transport; not an actual Superset extraction",
+    }
+    _write_private(output / "northstar-policy-intervention-report.json", report)
+    if identity != postflight or report["policy_intervention"]["source_fingerprint_after"] != POLICY_INTERVENTION_SOURCE_SHA256:
+        raise RuntimeError("Source or binary identity changed during policy-intervention trial")
+    return report
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--binary", type=Path, required=True)
@@ -1272,7 +1798,7 @@ def main() -> None:
     parser.add_argument("--episodes", type=int, choices=(2, 3, 4), default=4)
     parser.add_argument("--jev-budget", type=int, choices=range(1, 41), default=40)
     parser.add_argument("--simulate-hil-followup", action="store_true",
-                        help="Use the explicitly labeled conservative evaluation-only owner clarification")
+                        help="Expose predeclared owner knowledge through the shared ask_owner MCP tool")
     args = parser.parse_args()
     report = asyncio.run(run_pilot(
         binary=args.binary, key_file=args.key_file, output=args.output,

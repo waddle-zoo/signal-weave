@@ -354,8 +354,9 @@ class InstalledSession(ToolSession):
         return await super().call(name, arguments)
 
 
-def score_native(output: dict, card: dict, label: dict, destinations: list[dict]) -> dict:
-    """Recompute from native result, not saved pass flags or the final LLM prose."""
+def score_native(output: dict, card: dict, label: dict, destinations: list[dict], *,
+                 expected_idempotency_key: str | None = None) -> dict:
+    """Score the native agent-profile response shape, not legacy wrapper fields."""
     result = output.get("result") or {}
     methods = result.get("delivery_methods", [])
     directory = {d["destination"]: d["key"] for d in destinations}
@@ -368,27 +369,51 @@ def score_native(output: dict, card: dict, label: dict, destinations: list[dict]
     outcome_correct = result.get("outcome") == label["outcome"]
     routes_correct = actual == set(label["recipients"])
     evidence_complete = required <= present and bool(result.get("evidence"))
-    receipt, report, returned_card = (output.get(name) or {} for name in ("receipt", "report", "card"))
+    receipt = output.get("receipt") or {}
+    report = output.get("report") or result.get("report") or {}
+    returned_card = output.get("card") or {}
     identity_valid = bool(card.get("id")) and all(
         value == card["id"] for value in
-        (result.get("card_id"), report.get("card_id"), receipt.get("card_id"), returned_card.get("id"))
+        (result.get("card_id"), receipt.get("card_id"), returned_card.get("id"))
     ) and receipt.get("card_version") == card.get("version")
+    idempotency_valid = (
+        receipt.get("idempotency_key") == expected_idempotency_key
+        if expected_idempotency_key is not None else True
+    )
+    approved_card_digest_valid = (
+        bool(returned_card)
+        and card_fingerprint(returned_card) == card_fingerprint(card)
+        and (expected_idempotency_key is None or card.get("status") == "approved")
+    )
     delivery_disabled = (receipt.get("delivery_enabled") is False
                          and receipt.get("delivery_mode") == "shadow"
                          and receipt.get("status") == "delivery_disabled")
-    consistency = (report.get("outcome") == receipt.get("outcome") == result.get("outcome")
-                   and result.get("report") == report
+    consistency = (bool(report)
+                   and report.get("outcome") == receipt.get("outcome") == result.get("outcome")
+                   and (not result.get("report") or result.get("report") == report)
                    and sorted(receipt.get("delivery_method_keys", [])) == sorted(d.get("key", "") for d in methods))
-    plan_unchanged = bool(card.get("compiled_plan")) and output.get("plan") == card["compiled_plan"]
+    # The shared runner still accepts a legacy test/consumer envelope. Its
+    # optional plan check is not part of the native agent-profile score.
+    legacy_plan_check = expected_idempotency_key is None and "plan" in output
+    plan_unchanged = (
+        not legacy_plan_check
+        or (bool(card.get("compiled_plan")) and output.get("plan") == card["compiled_plan"])
+    )
     return {"exact": bool(outcome_correct and routes_correct and evidence_complete
-                          and identity_valid and delivery_disabled and consistency and plan_unchanged),
+                          and identity_valid and idempotency_valid and approved_card_digest_valid
+                          and delivery_disabled and consistency and plan_unchanged),
             "identity_valid": identity_valid, "delivery_disabled": delivery_disabled,
-            "consistency": consistency, "plan_unchanged": plan_unchanged,
+            "idempotency_valid": idempotency_valid,
+            "approved_card_digest_valid": approved_card_digest_valid,
+            "consistency": consistency,
             "outcome_correct": outcome_correct, "routes_correct": routes_correct,
             "evidence_complete": evidence_complete, "missing_evidence": sorted(required - present),
             "expected_outcome": label["outcome"], "actual_outcome": result.get("outcome"),
             "expected_recipients": label["recipients"], "actual_recipients": sorted(actual),
-            "scope": "Native route and source-presence contract; not narrative or causal correctness."}
+            "scope": (
+                "Native card identity/version/digest, idempotency, shadow-delivery, policy outcome, "
+                "route, and source-presence checks; not paired agent-report or narrative correctness."
+            )}
 
 
 async def assert_default_agent_profile(server) -> list[str]:
@@ -545,6 +570,7 @@ async def run_trial(scenarios, *, binary, key_file, output, jev_budget=100, live
             "list_catalog", "search_catalog", "inspect_source", "analyze_source", "calculate", "ask_owner"
         }),
         "pairing_design": "Both monitoring arms use the same recurring model/effort, reviewed card, notes, and source tools; treatment gets the runner's single native evaluation bundle.",
+        "monitoring_limits_per_arm": {"max_turns": 60, "max_tool_calls": 100, "timeout_seconds": 360},
         "companies": len(scenarios),
         "monitoring_cases": sum(len(s["public"]["periods"]) for s in scenarios),
         "expert_cards_seeded": False, "historical_examples_supplied": False,
@@ -684,7 +710,7 @@ async def run_trial(scenarios, *, binary, key_file, output, jev_budget=100, live
                                 audit.emit("system.evaluation", response=result)
                                 row["native_score"] = score_native(
                                     result, card, scenario["private"]["periods"][period["period_id"]],
-                                    public["destinations"],
+                                    public["destinations"], expected_idempotency_key=episode_id,
                                 )
                                 row["result"] = result
                             except Exception as error:
@@ -712,8 +738,8 @@ async def run_trial(scenarios, *, binary, key_file, output, jev_budget=100, live
                                     episode = await codex_episode(
                                         arm_session, key="", model=recurring_model,
                                         effort=recurring_effort, budget=budget, audit=audit,
-                                        max_turns=20, max_tool_calls=30, max_output_tokens=5000,
-                                        timeout_seconds=180,
+                                        max_turns=60, max_tool_calls=100, max_output_tokens=5000,
+                                        timeout_seconds=360,
                                         bundle=result if arm == "treatment" else None,
                                         instructions_override=monitoring_instructions(
                                             server, treatment=arm == "treatment",

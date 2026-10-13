@@ -1,8 +1,14 @@
 import json
 from datetime import datetime
+from pathlib import Path
 
 from evaluations.bootstrap_scenarios import score_submission
-from evaluations.installed_northstar_cases import build_northstar
+from evaluations.installed_northstar_cases import (
+    NORTHSTAR_POLICY_INTERVENTION,
+    OWNER_FOLLOWUP_KNOWLEDGE,
+    build_northstar,
+    sales_partition_reconciliation,
+)
 from evaluations.northstar_growth_history_trial import (
     DEFAULT_SPEC,
     build_historical_cases,
@@ -19,6 +25,39 @@ def test_installed_fixture_separates_setup_labels_from_future_cases(tmp_path):
     assert len(scenario["private"]["periods"]) == 42
     assert {item["id"] for item in scenario["owner_examples"]}.isdisjoint(scenario["private"]["periods"])
     assert not {"card", "expert_card"} & scenario["public"].keys()
+
+
+def test_incident_followup_knowledge_is_independent_and_explicitly_unknown(tmp_path):
+    scenario = build_northstar(_write_seed_dir(tmp_path / "seed"))
+    knowledge = scenario["owner_followup_knowledge"]["severe_incident_definition"]
+    assert knowledge == OWNER_FOLLOWUP_KNOWLEDGE["severe_incident_definition"]
+    assert knowledge["status"] == "unknown"
+    assert knowledge["answer"].startswith("Unknown.")
+    assert "severity threshold" in knowledge["answer"]
+    assert "incident status or severity" in knowledge["answer"]
+    assert "severe_incident_definition" not in scenario["public"]["owner_answers"]
+    assert "severe_incident_definition" not in scenario["public"]["owner_topics"]
+    assert "owner_followup_knowledge" not in scenario["private"]
+    serialized_labels = json.dumps(scenario["private"])
+    assert knowledge["answer"] not in serialized_labels
+
+
+def test_policy_intervention_is_explicit_and_keeps_comparisons_english_only():
+    answers = NORTHSTAR_POLICY_INTERVENTION["owner_answers"]
+    assert "10%" in answers["materiality"] and "15%" in answers["materiality"]
+    assert "at least two sales channels" in answers["materiality"]
+    assert "Web Funnel conversion or Finance Daily revenue" in answers["materiality"]
+    assert "All other material movements" in answers["materiality"]
+    assert "no incident feed" in answers["severe_incident_definition"]
+    assert "no row joins" in answers["source_scope"].lower()
+    assert "Do not copy setup or approval questions" in NORTHSTAR_POLICY_INTERVENTION[
+        "recurring_questions_guidance"]
+    assert NORTHSTAR_POLICY_INTERVENTION["basis"].startswith(
+        "Explicit simulation-coordinator-authored fictional owner policy,"
+    )
+    assert "user-supplied owner policy" not in NORTHSTAR_POLICY_INTERVENTION["basis"]
+    assert "not derived from private outcome labels" in NORTHSTAR_POLICY_INTERVENTION["basis"]
+    assert OWNER_FOLLOWUP_KNOWLEDGE["severe_incident_definition"]["status"] == "unknown"
 
 
 def test_installed_fixture_has_constant_policy_and_authorized_simulation_routes(tmp_path):
@@ -58,6 +97,9 @@ def test_installed_fixture_refs_validate_and_preserve_replayed_measurements(tmp_
             assert snapshot.metadata["tenant"] == scenario["scenario_id"]
             assert snapshot.metadata["period_id"] == period["period_id"]
             assert snapshot.metadata["fresh_warehouse_read"] is False
+            if snapshot.title == "Northstar Executive Pulse (Superset dashboard 1)":
+                assert snapshot.metadata["source_transport"] == "simulated_bi_fixture"
+                assert "not an actual Superset capture" in snapshot.metadata["source_capture"]
             assert all(item.source_key == snapshot.resource for item in snapshot.observations)
             assert all(item.source_key == snapshot.resource for item in snapshot.evidence)
     failed = next(item for item in scenario["owner_examples"] if item["id"] == "week-01-day-06-source-unavailable")
@@ -67,6 +109,27 @@ def test_installed_fixture_refs_validate_and_preserve_replayed_measurements(tmp_
     ))
     assert failed_sales["contract"]["source_status"] == "failed"
     assert failed_sales["error"] == "source unavailable during replay"
+    assert failed_sales["observations"] == []
+    assert failed_sales["evidence"] == []
+
+
+def test_simulated_sales_totals_reconcile_to_the_declared_channel_partition():
+    partition_seed = Path(__file__).resolve().parents[1] / "evaluations" / "data" / "northstar-multistep-seed"
+    scenario = build_northstar(partition_seed)
+    sales_resource = next(item["resource"] for item in scenario["public"]["catalog"]
+                          if item["title"] == "Northstar Executive Pulse")
+    ref = f"company_mcp|{sales_resource}"
+    for period in [scenario["public"]["onboarding"], *scenario["public"]["periods"]]:
+        snapshot = period["snapshots"][ref]
+        if snapshot["contract"]["source_status"] == "healthy":
+            check = sales_partition_reconciliation(snapshot)
+            assert check["reconciled"] is True
+            assert check["baseline_gap"] == 0
+            assert check["current_gap"] == 0
+        else:
+            assert snapshot["error"] == "source unavailable during replay"
+            assert snapshot["observations"] == []
+            assert snapshot["evidence"] == []
 
 
 def test_smoke_is_the_next_week_known_family_not_a_novel_holdout(tmp_path):
@@ -121,7 +184,10 @@ def test_installed_private_label_matches_generic_final_agent_scorer(tmp_path):
         assert label["required_owner_topics"] == [
             "metric_scope", "materiality", "routing", "data_gaps"
         ]
-        assert "net_sales_total_delta" in label["numeric_facts"]
+        if label["outcome"] == "insufficient_data":
+            assert "net_sales_total_delta" not in label["numeric_facts"]
+        else:
+            assert "net_sales_total_delta" in label["numeric_facts"]
         assert label["required_numeric_facts"] == (
             ["net_sales_total_baseline", "net_sales_total_current",
              "net_sales_total_change_pct"]

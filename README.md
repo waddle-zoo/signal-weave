@@ -90,7 +90,7 @@ SignalWeave supports Superset, Preset, Trino, and reviewed read-only MCP source
 manifests. An MCP connection does not make an unsupported source automatically
 understandable; see the [source adapter contract](docs/source-adapters.md).
 
-This is a preview. See [evaluations and evidence](docs/enterprise-onboarding-journeys-2026-10-02.md)
+This is a preview. See the [latest local trial notes](docs/evidence/local-onboarding-and-recurring-pilot-2026-10-13.md)
 and [current limits](docs/local-investigations.md) before relying on unattended
 workflows. Synthetic trials are not proof of success in your company.
 

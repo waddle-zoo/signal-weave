@@ -9,7 +9,13 @@ import pytest
 
 from evaluations import northstar_release_onboarding_trial as trial
 from evaluations.bootstrap_agent_trial import canonical
-from evaluations.bootstrap_scenarios import public_scenario
+from evaluations.bootstrap_scenarios import (
+    agent_context,
+    ask_owner,
+    public_episode,
+    public_scenario,
+)
+from evaluations.installed_workflow_trial import score_native
 from signalweave.mcp_server import AGENT_PROFILE_TOOLS
 
 
@@ -73,17 +79,24 @@ def test_source_contracts_are_seed_grounded_without_fabricated_comparison_keys(s
     ]
     for period in [scenario["public"]["onboarding"], *scenario["public"]["periods"]]:
         snapshot = period["snapshots"][sales["ref"]]
-        assert snapshot["contract"] == contract
+        snapshot_contract = copy.deepcopy(snapshot["contract"])
+        source_status = snapshot_contract.pop("source_status")
+        catalog_contract = copy.deepcopy(contract)
+        catalog_contract.pop("source_status")
+        assert snapshot_contract == catalog_contract
+        assert source_status == ("failed" if snapshot.get("error") else contract["source_status"])
         assert snapshot["analytical_comparisons"] == []
+        if snapshot.get("error"):
+            assert snapshot["observations"] == []
+            assert snapshot["evidence"] == []
 
 
 def test_report_first_probe_keeps_useful_facts_but_removes_only_missing_policies(scenario):
+    original_scope = scenario["public"]["owner_answers"]["metric_scope"]
     changed, private = trial.build_report_first_scenario(scenario)
     assert "materiality" not in changed["public"]["owner_answers"]
     assert "routing" not in changed["public"]["owner_answers"]
-    assert changed["public"]["owner_answers"]["metric_scope"]
-    assert "Northstar local seed rows normalized through the existing shadow-trial helpers" not in changed["public"]["owner_answers"]["metric_scope"]
-    assert "calendar month and sales channel" in changed["public"]["owner_answers"]["metric_scope"]
+    assert changed["public"]["owner_answers"]["metric_scope"] == original_scope
     assert len(changed["public"]["periods"]) == 1
     assert private["variant_id"] == "day-03-isolated-channel"
     assert changed["private"]["report_first_expected_unknown_topics"] == [
@@ -91,51 +104,265 @@ def test_report_first_probe_keeps_useful_facts_but_removes_only_missing_policies
     ]
 
 
-def test_simulated_owner_followup_resolves_only_documented_gaps_without_touching_labels(scenario):
+def test_simulated_owner_followup_answers_only_the_predeclared_unknown(scenario):
     changed = copy.deepcopy(scenario)
-    old_labels = copy.deepcopy(changed["private"]["periods"])
+    old_private = copy.deepcopy(changed["private"])
     original_answers = copy.deepcopy(changed["public"]["owner_answers"])
-    old_materiality = changed["public"]["owner_answers"]["materiality"]
-    record = trial.apply_simulated_hil_followup(changed)
-    assert record["mode"] == "simulated_human_followup"
-    assert record["shared_with_both_arms"] is True
-    actual_materiality = changed["public"]["owner_answers"]["materiality"]
-    assert actual_materiality.startswith(old_materiality)
-    assert "final investigate fallback is conditional" in actual_materiality
-    assert "does not itself assign an outcome to every other material movement" in actual_materiality
-    assert "owner explicitly adds these outcomes" in actual_materiality
-    assert "increase of at least 10% goes to Analytics to investigate" in actual_materiality
-    assert "decline from 10% up to but not including 15%" in actual_materiality
-    assert "not an interpretation that the original fallback covers all such cases" in actual_materiality
-    assert "no incident record or severity field" in actual_materiality
-    assert "No approved incident definition or numeric severity threshold is available" in actual_materiality
-    assert record["policy_order_preserved"] is True
-    assert record["policy_semantics_expanded_by_explicit_hil_addendum"] is True
-    assert record["new_numeric_thresholds"] == []
-    assert len(record["addendum_outcome_rules"]) == 2
-    assert changed["public"]["owner_answers"]["metric_scope"].startswith(
-        "HIL clarification for this evaluation only: Northstar monthly sales"
-    )
-    assert "order_date, channel, and net_sales" in changed["public"]["owner_answers"]["metric_scope"]
-    assert "do not establish unique customers or orders" in changed["public"]["owner_answers"]["metric_scope"]
-    assert "completion or settlement status" in changed["public"]["owner_answers"]["metric_scope"]
-    assert "settled net-sales amounts for completed order lines" not in changed["public"]["owner_answers"]["metric_scope"]
-    assert "may corroborate or contextualize" in changed["public"]["owner_answers"]["metric_scope"]
-    assert record["evidence_basis"]["checked_in_sales_columns"] == ["order_date", "channel", "net_sales"]
-    assert record["evidence_basis"]["advertised_comparisons"][
-        "company_mcp|" + next(
-            item["resource"] for item in changed["public"]["catalog"]
-            if item["title"] == "Northstar Executive Pulse"
-        )
-    ] == {
-        "source_contract_keys": ["net-sales-change"],
-        "required_keys": [],
-        "inspected_analytical_keys": [],
+    original_contracts = {
+        ref: snapshot["contract"]
+        for period in [changed["public"]["onboarding"], *changed["public"]["periods"]]
+        for ref, snapshot in period["snapshots"].items()
     }
-    assert changed["private"]["periods"] == old_labels
+    record = trial.apply_simulated_hil_followup(changed)
+    assert record["mode"] == "simulated_owner_followup_on_demand"
+    assert record["shared_with_both_arms"] is True
+    assert record["transport"] == "existing trial MCP facade"
+    assert record["tool"] == "ask_owner"
+    assert record["topic"] == "severe_incident_definition"
+    assert record["response_status"] == "unknown"
+    assert record["delivered_only_when_requested"] is True
+    assert record["policy_changed"] is False
+    assert record["source_contracts_changed"] is False
+    assert record["outcome_labels_changed"] is False
+    assert record["new_numeric_thresholds"] == []
+    assert record["response"].startswith("Unknown.")
+    assert "no approved definition or severity threshold" in record["response"]
+    assert "support source reports backlog, not incident status or severity" in record["response"]
+    assert "at least 10%" not in record["response"]
+    assert changed["public"]["owner_answers"]["metric_scope"] == original_answers["metric_scope"]
+    assert changed["public"]["owner_answers"]["materiality"] == original_answers["materiality"]
     assert changed["public"]["owner_answers"]["routing"] == original_answers["routing"]
     assert changed["public"]["owner_answers"]["data_gaps"] == original_answers["data_gaps"]
-    assert old_materiality != actual_materiality
+    assert "severe_incident_definition" in changed["public"]["owner_topics"]
+    owner_reply = ask_owner(public_scenario(changed), "severe_incident_definition")
+    assert owner_reply["known"] is True  # The owner response is known; the policy definition is not.
+    assert owner_reply["answer"] == record["response"]
+    assert changed["private"] == old_private
+    assert {
+        ref: snapshot["contract"]
+        for period in [changed["public"]["onboarding"], *changed["public"]["periods"]]
+        for ref, snapshot in period["snapshots"].items()
+    } == original_contracts
+
+
+def test_owner_policy_intervention_is_separate_and_preregistered(scenario):
+    changed, registration = trial.build_policy_intervention_scenario()
+    assert registration["protocol"] == trial.POLICY_INTERVENTION_PROTOCOL
+    assert registration["cohort_label"] == (
+        f"{trial.POLICY_INTERVENTION_PROTOCOL}: four-case row-backed fictional-company pilot; "
+        "prior cohort invalid and excluded."
+    )
+    assert registration["legacy_oracle_used_for_selection_or_scoring"] is False
+    assert registration["legacy_artifacts_preserved_as_invalid"] is True
+    assert registration["selection_completed_before_future_values_exposed"] is True
+    assert registration["synthetic_fixture_rows_generated"] is True
+    assert "no real-business extract is claimed" in registration["sales_partition_rule"]
+    assert len(changed["public"]["periods"]) == 4
+    assert set(changed["private"]["periods"]) == set(trial.POLICY_INTERVENTION_CASES.values())
+    assert registration["expected_outcomes_by_stratum"] == {
+        "under_10_ignore": "ignore",
+        "10_to_below_15_investigate": "investigate",
+        "corroborated_15_plus_decline_notify": "notify",
+        "primary_sales_source_unavailable": "insufficient_data",
+    }
+    assert all(item["sales_reconciliation"].get("status") != "checked"
+               or item["sales_reconciliation"]["reconciled"]
+               for item in registration["selected_strata"].values())
+    unavailable = registration["selected_strata"]["primary_sales_source_unavailable"]
+    assert unavailable["sales_reconciliation"] == {
+        "status": "not_applicable", "reason": "Primary sales source unavailable."
+    }
+
+
+def test_sales_measurements_are_derived_from_reproducible_fictional_ledger_rows():
+    changed, registration = trial.build_policy_intervention_scenario()
+    scenario = changed
+    ref = trial._intervention_source_ref(scenario, "superset|dashboard:1")
+    for period in [scenario["public"]["onboarding"], *scenario["public"]["periods"]]:
+        snapshot = period["snapshots"][ref]
+        assert "seed" not in json.dumps(snapshot).lower()
+        assert "Superset dashboard" not in json.dumps(snapshot)
+        if snapshot.get("error"):
+            continue
+        rows = snapshot["metadata"]["ledger_rows"]
+        assert len({row["row_id"] for row in rows}) == len(rows)
+        assert snapshot["metadata"]["ledger_sha256"] == trial.digest(rows)
+        assert snapshot["source_url"].startswith("simulation-ledger://")
+        assert "seed" not in json.dumps(snapshot).lower()
+        assert "superset|dashboard" not in json.dumps(snapshot).lower()
+        assert snapshot["contract"]["lineage"] == ["simulation-ledger://northstar/monthly-sales"]
+        for comparison in snapshot["contract"]["comparison_contracts"]:
+            assert "reporting_month" in comparison["definition"]
+            assert "order_date" not in json.dumps(comparison)
+            assert "local seed" not in json.dumps(comparison)
+            assert comparison["query_refs"] == snapshot["contract"]["lineage"]
+        for observation in snapshot["observations"]:
+            selected = [row for row in rows if row["row_id"] in observation["attributes"]["ledger_row_ids"]]
+            baseline = sum(row["net_sales"] for row in selected
+                           if row["reporting_month"] == observation["attributes"]["baseline_period"])
+            current = sum(row["net_sales"] for row in selected
+                          if row["reporting_month"] == observation["dimensions"]["current_period"])
+            assert baseline == observation["baseline"]
+            assert current == observation["current"]
+            assert "fixture_allocation" not in observation["attributes"]
+    assert all(changed["private"]["periods"][item["period_id"]]["outcome"]
+               == item["policy_outcome"]
+               for item in registration["selected_strata"].values())
+    assert registration["intervention"]["owner_answers"]["metric_scope"] == changed["public"]["owner_answers"]["metric_scope"]
+    assert all(label["variant_id"].startswith("policy-intervention:")
+               for label in changed["private"]["periods"].values())
+    assert not any(item["title"] == "Northstar Checkout Incident Review"
+                   for item in changed["public"]["catalog"])
+    assert "No severe-incident exception applies" in changed["public"]["owner_answers"][
+        "severe_incident_definition"]
+    assert "Do not copy setup or approval questions" in changed["policy_intervention"][
+        "recurring_questions_guidance"]
+    assert changed["public"]["source_transport"]["kind"] == "simulated_bi_fixture"
+    assert changed["public"]["source_transport"]["actual_superset"] is False
+    for period in [changed["public"]["onboarding"], *changed["public"]["periods"]]:
+        sales_ref = trial._intervention_source_ref(changed, "superset|dashboard:1")
+        assert any(f"{item['adapter']}|{item['resource']}" == sales_ref
+                   for item in changed["public"]["catalog"])
+        snapshot = period["snapshots"][sales_ref]
+        assert snapshot["analytical_comparisons"] == []
+        assert snapshot["contract"]["required_comparison_keys"] == []
+        if snapshot["contract"]["source_status"] == "healthy":
+            assert trial.sales_partition_reconciliation(snapshot)["reconciled"] is True
+
+
+def test_policy_intervention_mismatch_fails_closed_to_data_trust(scenario):
+    changed, _registration = trial.build_policy_intervention_scenario()
+    period = changed["public"]["periods"][0]
+    sales_ref = trial._intervention_source_ref(changed, "superset|dashboard:1")
+    sales = period["snapshots"][sales_ref]
+    total = next(item for item in sales["observations"]
+                 if item["subject_id"] == "revenue-total")
+    total["current"] += 1
+
+    classification = trial.classify_policy_intervention_period(changed, period)
+    label = trial._policy_intervention_label(changed, period, classification)
+    assert classification["stratum"] == "primary_sales_comparison_unreconciled"
+    assert classification["outcome"] == label["outcome"] == "insufficient_data"
+    assert label["recipients"] == ["data-trust"]
+    assert label["required_numeric_facts"] == []
+
+
+def test_native_agent_profile_score_uses_actual_evaluation_shape():
+    card = {
+        "id": "card-northstar-test", "version": 3, "status": "approved",
+        "sources": [{"key": "sales", "adapter": "company_mcp", "resource": "sales-1"}],
+    }
+    destinations = [{"key": "leadership", "destination": "slack://simulation-leadership"}]
+    label = {"outcome": "ignore", "recipients": [],
+             "required_evidence_refs": ["company_mcp|sales-1"]}
+    output = {
+        "card": copy.deepcopy(card),
+        "result": {
+            "card_id": card["id"], "outcome": "ignore", "delivery_methods": [],
+            "evidence": [{"source_key": "sales"}],
+            "report": {"outcome": "ignore"},
+        },
+        "receipt": {
+            "card_id": card["id"], "card_version": card["version"],
+            "idempotency_key": "cohort/period-1", "outcome": "ignore",
+            "delivery_method_keys": [], "delivery_enabled": False,
+            "delivery_mode": "shadow", "status": "delivery_disabled",
+        },
+    }
+    scored = score_native(
+        output, card, label, destinations, expected_idempotency_key="cohort/period-1",
+    )
+    assert scored["exact"] is True
+    assert scored["identity_valid"] is True
+    assert scored["idempotency_valid"] is True
+    assert scored["approved_card_digest_valid"] is True
+    assert scored["outcome_correct"] is True
+    assert scored["routes_correct"] is True
+    assert "plan_unchanged" not in scored
+    assert "legacy wrapper" not in scored["scope"]
+
+
+def test_policy_owner_replies_only_from_predeclared_context(scenario):
+    changed, _registration = trial.build_policy_intervention_scenario()
+    episode = public_episode(changed)
+    context = agent_context(episode)
+    assert "owner_answers" not in context
+    assert ask_owner(episode, "severe_incident_definition")["answer"] == changed[
+        "public"]["owner_answers"]["severe_incident_definition"]
+    unknown = ask_owner(episode, "unregistered_business_question")
+    assert unknown["known"] is False
+    assert unknown["answer"].startswith("Unknown.")
+
+
+def test_policy_intervention_binary_gate_pins_current_source_and_build(monkeypatch, tmp_path):
+    identity = {
+        "source_sha256": trial.POLICY_INTERVENTION_SOURCE_SHA256,
+        "binary_sha256": trial.POLICY_INTERVENTION_BINARY_SHA256,
+        "version": "0.2.0rc2", "frozen": True, "dirty": True,
+    }
+    monkeypatch.setattr(trial, "source_fingerprint",
+                        lambda _root: trial.POLICY_INTERVENTION_SOURCE_SHA256)
+    monkeypatch.setattr(trial, "verify_binary", lambda _path: copy.deepcopy(identity))
+    assert trial._verify_policy_intervention_binary(tmp_path / "dist") == identity
+    monkeypatch.setattr(trial, "verify_binary", lambda _path: {**identity, "binary_sha256": "f" * 64})
+    with pytest.raises(ValueError, match="[Nn]ative binary"):
+        trial._verify_policy_intervention_binary(tmp_path / "dist")
+
+
+def test_policy_intervention_runner_uses_live_paired_jev_budget_and_luna(
+        monkeypatch, tmp_path):
+    from evaluations import installed_workflow_trial
+
+    frozen, registration = trial.build_policy_intervention_scenario()
+    current_source = trial.source_fingerprint(trial.ROOT)
+    identity = {"source_sha256": current_source,
+                "binary_sha256": "a" * 64,
+                "version": "0.2.0rc2", "frozen": True, "dirty": True}
+    monkeypatch.setattr(trial, "POLICY_INTERVENTION_SOURCE_SHA256", current_source)
+    monkeypatch.setattr(trial, "POLICY_INTERVENTION_BINARY_SHA256", identity["binary_sha256"])
+    monkeypatch.setattr(trial, "verify_binary", lambda _path: copy.deepcopy(identity))
+    monkeypatch.setattr(trial, "build_policy_intervention_scenario",
+                        lambda _seed: (copy.deepcopy(frozen), copy.deepcopy(registration)))
+    captured = {}
+
+    async def fake_run_trial(scenarios, **kwargs):
+        captured["scenario"] = scenarios[0]
+        captured["kwargs"] = kwargs
+        return {"status": "completed", "summary": {"onboarding_complete": 1,
+                "completed": 4, "intended": 4}, "companies": [{}]}
+
+    monkeypatch.setattr(installed_workflow_trial, "run_trial", fake_run_trial)
+    key_file = tmp_path / "private-key"
+    key_file.write_text("test-only-not-a-credential", encoding="utf-8")
+    asyncio.run(trial.run_policy_intervention(
+        binary=tmp_path / "dist", key_file=key_file, output=tmp_path / "intervention",
+    ))
+    kwargs = captured["kwargs"]
+    assert kwargs["live"] is True and kwargs["stage_gate"] == 4
+    assert kwargs["jev_budget"] == 20
+    assert kwargs["author_model"] == kwargs["recurring_agent_model"] == "gpt-6-luna"
+    assert kwargs["author_effort"] == kwargs["recurring_agent_effort"] == "xhigh"
+    assert len(captured["scenario"]["public"]["periods"]) == 4
+    preflight = json.loads((tmp_path / "intervention/release-preflight.json").read_text())
+    assert preflight["protocol"] == trial.POLICY_INTERVENTION_PROTOCOL
+    assert preflight["jev_budget"] == 20
+
+
+def test_report_utility_excludes_censored_and_no_decision_pairs(monkeypatch):
+    monkeypatch.setattr(trial, "score_final_report_utility", lambda *_args, **_kwargs: {
+        "status": "valid", "valid": True, "score": 80,
+    })
+    rows = [{"period_id": str(index), "result": {"outcome": "ignore"},
+             "baseline": {"completed": True}, "treatment": {"completed": True}}
+            for index in range(3)]
+    rows[0]["native_evaluation_error"] = "RuntimeError"
+    rows[1]["baseline"]["completed"] = False
+    report = {"companies": [{"periods": rows}]}
+    scenario = {"public": {"periods": [{"period_id": str(index)} for index in range(3)]}}
+    summary = trial.add_final_report_utility(report, scenario)
+    assert summary["eligible_live_decision_pairs"] == 1
+    assert summary["eligible_pair_utility_difference_mean"] == 0
+    assert [row["final_report_utility"]["comparison_eligible"] for row in rows] == [False, False, True]
 
 
 def test_report_first_score_rewards_useful_monthly_report_without_scoring_unknown_policy(scenario):
@@ -209,6 +436,42 @@ def test_report_first_score_rejects_uninspected_claims_and_new_alert_cutoffs(sce
     assert scored["outcome_not_scored_without_alert_policy"] is True
 
 
+def test_final_report_utility_is_source_based_and_separates_invalid_reports(scenario):
+    period = trial.select_recurring_periods(scenario, cohort="pilot")[1]
+    facts = trial._northstar_numeric_facts(period["snapshots"])
+    sales_ref = facts["net_sales_total_current"]["evidence_refs"][0]
+    submission = {
+        "outcome": "investigate", "recipients": ["analytics"],
+        "evidence_refs": [sales_ref],
+        "numeric_claims": [
+            {"fact": fact, "value": facts[fact]["value"],
+             "unit": facts[fact]["unit"], "evidence_refs": facts[fact]["evidence_refs"]}
+            for fact in ("net_sales_total_baseline", "net_sales_total_current",
+                         "net_sales_total_change_pct")
+        ],
+        "claims": [{"claim_type": "association", "evidence_refs": [sales_ref],
+                    "statement": "Online sales and web conversion moved together; this is association, not cause."}],
+        "summary": (
+            "Northstar monthly net sales fell in this historical replay, with the online "
+            "channel contributing to the movement. Ask Growth Analytics to investigate "
+            "checkout; timing does not establish cause."
+        ),
+    }
+    utility = trial.score_final_report_utility(
+        submission, period=period, inspected_refs={sales_ref},
+    )
+    assert utility["status"] == "valid"
+    assert utility["score"] == 100
+    assert utility["evidence_fidelity"] is True
+    assert utility["numeric_recall"] == 1
+    assert trial.score_final_report_utility(
+        {"outcome": "invented"}, period=period, inspected_refs={sales_ref},
+    )["status"] == "invalid"
+    assert trial.score_final_report_utility(
+        None, period=period, inspected_refs={sales_ref},
+    )["status"] == "missing"
+
+
 def test_private_episode_labels_are_not_in_source_server_payload(scenario):
     public = public_scenario(scenario)
     serialized = canonical(public)
@@ -260,10 +523,10 @@ def test_binary_gate_requires_both_parent_certified_fingerprints(monkeypatch, tm
 def test_parent_certificate_constants_match_current_candidate():
     assert trial.CERTIFIED_VERSION == "0.2.0rc2"
     assert trial.CERTIFIED_SOURCE_SHA256 == (
-        "22498e8a38a937a29a4d06987ef297bd7a5e2fbe7f8a170d952c7f67a9c0f11c"
+        "9460d2e8e08a3e06de7309cf6c8d554b17043074d8fa9fe7fbdcee972c1298e2"
     )
     assert trial.CERTIFIED_BINARY_SHA256 == (
-        "4dbc21d4bbf07a6979bc82f200aab2cc541c60c3f9f31e7b594a9eb87c2b1521"
+        "764323c36da96332bacc662807ad4c36ce03065619bcafd03289eed670ca4f83"
     )
 
 
@@ -275,9 +538,9 @@ def test_run_pilot_delegates_all_model_roles_and_bounded_cases(
         "source_sha256": trial.CERTIFIED_SOURCE_SHA256,
         "binary_sha256": trial.CERTIFIED_BINARY_SHA256,
         "version": "0.2.0rc2",
-        "git_commit": "114614a",
-        "dirty": True,
-        "frozen": False,
+        "git_commit": "b8a0fc5b187ce0b49bff7842118f634a50daf5a6",
+        "dirty": False,
+        "frozen": True,
     }
     monkeypatch.setattr(trial, "verify_binary", lambda _path: copy.deepcopy(identity))
     monkeypatch.setattr(trial, "build_trial_scenario", lambda _seed: copy.deepcopy(scenario))
@@ -314,5 +577,7 @@ def test_run_pilot_delegates_all_model_roles_and_bounded_cases(
     assert kwargs["reviewer_model"] == "gpt-6-luna"
     assert kwargs["reviewer_effort"] == "xhigh"
     assert len(captured["scenarios"][0]["public"]["periods"]) == 4
-    assert "HIL owner addendum for this evaluation only" in captured["scenarios"][0]["public"]["owner_answers"]["materiality"]
+    assert captured["scenarios"][0]["public"]["owner_answers"]["severe_incident_definition"].startswith("Unknown.")
+    assert kwargs["author_model"] == kwargs["recurring_agent_model"] == "gpt-6-luna"
+    assert kwargs["author_effort"] == kwargs["recurring_agent_effort"] == "xhigh"
     assert report["summary"]["completed"] == 4

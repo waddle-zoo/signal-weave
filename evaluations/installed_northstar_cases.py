@@ -62,6 +62,93 @@ _DESTINATIONS = [
     {"key": "data-trust", "label": "Data trust", "destination": "slack://simulation-data-trust", "authorized": True},
 ]
 
+# Kept outside the private outcome register. This is the only predeclared
+# response for the incident-policy clarification: the example policy names a
+# severe incident but does not define one, and the support fixture is not an
+# incident feed. The response records that absence instead of supplying a
+# threshold or turning evaluator labels into owner knowledge.
+OWNER_FOLLOWUP_KNOWLEDGE = {
+    "severe_incident_definition": {
+        "status": "unknown",
+        "answer": (
+            "Unknown. The Northstar materials provided for this evaluation mention "
+            "a severe operational incident but contain no approved definition or "
+            "severity threshold. The support source reports backlog, not incident "
+            "status or severity, so it cannot establish whether the exception is "
+            "present. Keep this exception unresolved and obtain an owner-approved "
+            "definition and incident source before relying on it."
+        ),
+        "basis": [
+            "The checked-in Northstar decision guidance mentions the exception but does not define it.",
+            "The support source contains event_date and backlog fields, not incident or severity fields.",
+        ],
+    },
+}
+
+# A separate, explicitly authored simulation-policy intervention. It is not
+# inferred from the historical oracle; its selected episodes are registered
+# separately by northstar_release_onboarding_trial.py.
+NORTHSTAR_POLICY_INTERVENTION = {
+    "id": "northstar-sales-scope-policy-intervention-v1",
+    "owner_answers": {
+        "metric_scope": (
+            "Northstar Executive Pulse source-reported monthly net sales from its sales-order-line "
+            "population, grouped by the declared sales channels, is the metric of record. It does "
+            "not establish company-wide sales, unique orders or customers, or completed/settled "
+            "orders. Web Funnel, Finance Daily, and Support Operations are distinct populations "
+            "that may be used only as source-level context; never row-join them or claim a shared cohort."
+        ),
+        "materiality": (
+            "If the primary Executive Pulse source is unavailable or does not provide the needed "
+            "sales comparison, or its total does not reconcile to the complete declared channel "
+            "partition, return insufficient_data and route to data trust. Ignore absolute "
+            "source-reported net-sales changes below 10%. No severe-incident exception is in force: "
+            "the approved source scope has no incident feed. For a net-sales decline of at least "
+            "15%, notify leadership only when at least two sales channels decline and either "
+            "source-reported Web Funnel conversion or Finance Daily revenue also declines. All "
+            "other material movements—including declines from 10% to below 15%, declines without "
+            "that corroboration, and increases outside the under-10% ignore band—default to "
+            "investigate, not silence."
+        ),
+        "routing": (
+            "notify -> leadership; investigate -> analytics; insufficient_data -> data-trust; "
+            "ignore -> none. Use only the authorized simulation destinations."
+        ),
+        "data_gaps": (
+            "Support backlog is not incident status or severity. No incident feed is approved. "
+            "Keep Web, Finance, Support, and Sales populations separate; do not join rows or claim "
+            "a shared cohort. Do not invent missing source comparisons or numeric-condition keys; "
+            "keep owner thresholds in plain-English decision guidance."
+        ),
+        "severe_incident_definition": (
+            "No severe-incident exception applies in this intervention. The approved sources "
+            "contain no incident feed; Support Operations reports backlog, not incident status "
+            "or severity. Do not infer an incident from backlog."
+        ),
+        "source_scope": (
+            "I explicitly approve the exact declared scope text for the sources selected in the "
+            "current card review. As data expert, inspect those sources and pass their exact "
+            "selected ref-to-scope map in source_scope_confirmations when approving. Keep Sales "
+            "as the metric-of-record population and Web, Finance, and Support separate; no row joins."
+        ),
+    },
+    "source_selection_reason": (
+        "Owner-approved scope: Northstar Executive Pulse is the sales metric of record. Web "
+        "Funnel, Finance Daily, and Support Operations remain distinct source populations used "
+        "only as source-level context under the written policy; no row joins or shared-cohort claim "
+        "are authorized. Confirm the exact declared scope for each selected ref."
+    ),
+    "recurring_questions_guidance": (
+        "The owner has resolved the one-time setup clarifications above. Do not copy setup or "
+        "approval questions into recurring card questions; leave recurring questions empty unless "
+        "they express a distinct ongoing business question."
+    ),
+    "basis": (
+        "Explicit simulation-coordinator-authored fictional owner policy, frozen before any selected future-period values are "
+        "shown to either arm; not derived from private outcome labels."
+    ),
+}
+
 _NUMERIC_PREFIX_BY_SUBJECT = {
     "revenue-total": "net_sales_total",
     "channel-online": "online_net_sales",
@@ -188,7 +275,11 @@ def _rewrite_snapshot(snapshot: ResourceSnapshot, resource: str, scenario_id: st
             **payload.get("metadata", {}),
             "tenant": scenario_id, "period_id": period_id, "as_of": as_of,
             "replayed_historical_data": True, "fresh_warehouse_read": False,
-            "source_capture": "Historical source capture replayed by the local binary fixture; not a fresh warehouse read.",
+            "source_transport": "simulated_bi_fixture",
+            "source_capture": (
+                "Simulated BI transport over checked-in Northstar seed rows and synthetic replay "
+                "adjustments; not an actual Superset capture or a fresh warehouse read."
+            ),
             **({"excluded_scope": True} if excluded else {}),
         },
     })
@@ -198,6 +289,100 @@ def _rewrite_snapshot(snapshot: ResourceSnapshot, resource: str, scenario_id: st
         evidence["source_key"] = resource
         evidence["provenance"] = [resource]
     return ResourceSnapshot.model_validate(payload).model_dump(mode="json")
+
+
+def _reconcile_sales_channel_partition(snapshot: dict[str, Any]) -> None:
+    """Generate channel values as an allocation of the fixed total replay value."""
+    observations = snapshot.get("observations", [])
+    total = next((item for item in observations if item.get("subject_id") == "revenue-total"), None)
+    channels = [item for item in observations
+                if str(item.get("subject_id", "")).startswith("channel-")]
+    if total is None:
+        raise ValueError("Northstar sales replay needs exactly one total observation")
+    if not channels:
+        # Some small legacy test seeds change channel membership between
+        # months. Keep those observations untouched; reconciliation will fail
+        # closed rather than inventing a partition for missing source rows.
+        return
+
+    baseline_sum = sum(float(item["baseline"]) for item in channels)
+    total_baseline = float(total["baseline"])
+    if abs(baseline_sum - total_baseline) > 1e-6:
+        raise ValueError("Northstar local seed baseline does not reconcile to its channel rows")
+
+    total_current = float(total["current"])
+    raw_current_sum = sum(float(item["current"]) for item in channels)
+    if raw_current_sum <= 0 or total_current < 0:
+        raise ValueError("Northstar synthetic replay cannot allocate non-positive sales totals")
+
+    # Keep the checked-in case's channel mix, but allocate it to the scenario's
+    # fixed total so the declared partition is arithmetically coherent.
+    scale = total_current / raw_current_sum
+    allocated: list[float] = []
+    for item in channels[:-1]:
+        allocated.append(round(float(item["current"]) * scale, 6))
+    allocated.append(round(total_current - sum(allocated), 6))
+    for item, current in zip(channels, allocated, strict=True):
+        baseline = float(item["baseline"])
+        item["current"] = current
+        item["change_pct"] = round((current - baseline) / abs(baseline) * 100, 3) if baseline else 0.0
+        item.setdefault("attributes", {})["fixture_allocation"] = (
+            "Synthetic channel allocation normalized to the fixed scenario total; not a source extract."
+        )
+    snapshot.setdefault("metadata", {})["source_transport"] = "simulated_bi_fixture"
+    snapshot["metadata"]["sales_partition_generation"] = (
+        "Channel current values allocated from their replay shares to exactly reconcile to the fixed total."
+    )
+
+
+def sales_partition_reconciliation(snapshot: dict[str, Any]) -> dict[str, Any]:
+    """Check the source-declared total/channel partition without policy thresholds."""
+    observations = snapshot.get("observations", [])
+    totals = [item for item in observations if item.get("subject_id") == "revenue-total"]
+    channels = [item for item in observations
+                if str(item.get("subject_id", "")).startswith("channel-")]
+    errors: list[str] = []
+    if len(totals) != 1:
+        errors.append("expected exactly one total observation")
+    if not channels:
+        errors.append("missing declared channel observations")
+    if len({item.get("subject_id") for item in channels}) != len(channels):
+        errors.append("duplicate channel observation")
+    if errors:
+        return {"reconciled": False, "errors": errors}
+
+    total = totals[0]
+    numeric = [total.get("baseline"), total.get("current"),
+               *(item.get("baseline") for item in channels),
+               *(item.get("current") for item in channels)]
+    if any(type(value) not in {int, float} for value in numeric):
+        return {"reconciled": False, "errors": ["missing numeric total or channel value"]}
+
+    baseline_sum = sum(float(item["baseline"]) for item in channels)
+    current_sum = sum(float(item["current"]) for item in channels)
+    baseline_gap = round(baseline_sum - float(total["baseline"]), 6)
+    current_gap = round(current_sum - float(total["current"]), 6)
+    if abs(baseline_gap) > 1e-6:
+        errors.append("baseline total differs from channel sum")
+    if abs(current_gap) > 1e-6:
+        errors.append("current total differs from channel sum")
+    periods = {
+        (item.get("attributes", {}).get("baseline_period"),
+         item.get("dimensions", {}).get("current_period"))
+        for item in [total, *channels]
+    }
+    if len(periods) != 1:
+        errors.append("total and channel rows use different comparison periods")
+    return {
+        "reconciled": not errors,
+        "errors": errors,
+        "total_baseline": float(total["baseline"]),
+        "total_current": float(total["current"]),
+        "channel_baseline_sum": baseline_sum,
+        "channel_current_sum": current_sum,
+        "baseline_gap": baseline_gap,
+        "current_gap": current_gap,
+    }
 
 
 def _empty_distractor(resource: str, scenario_id: str, title: str, description: str,
@@ -222,6 +407,15 @@ def _period_snapshots(period_data: Any, case: Any, scenario_id: str,
         )
         for item in original
     }
+    for snapshot in snapshots.values():
+        if snapshot.get("error"):
+            snapshot["contract"]["source_status"] = "failed"
+            snapshot["observations"] = []
+            snapshot["evidence"] = []
+            snapshot["analytical_comparisons"] = []
+    sales_ref = f"company_mcp|{refs['superset|dashboard:1']}"
+    if not snapshots[sales_ref].get("error"):
+        _reconcile_sales_channel_partition(snapshots[sales_ref])
     for suffix, title, description in _DISTRACTORS:
         snapshots[f"company_mcp|{refs[suffix]}"] = _empty_distractor(
             refs[suffix], scenario_id, title, description, period_id, as_of,
@@ -345,5 +539,7 @@ def build_northstar(seed_dir: Path, *, smoke: bool = False) -> dict[str, Any]:
                                  "numeric_definitions": numeric_definitions,
                                  "notes": "The caller-owned agent produces the final analysis. Identifiers are source-backed; for notify or investigate, report the primary net-sales baseline, current value, and source-reported percent change when available. Report a derived delta only when it reconciles with the source breakdown; otherwise explain the discrepancy."},
     }
-    return {"scenario_id": scenario_id, "public": public, "private": {"family": "northstar-growth-history", "periods": private_periods},
-            "owner_examples": owner_examples}
+    return {"scenario_id": scenario_id, "public": public,
+            "private": {"family": "northstar-growth-history", "periods": private_periods},
+            "owner_examples": owner_examples,
+            "owner_followup_knowledge": copy.deepcopy(OWNER_FOLLOWUP_KNOWLEDGE)}

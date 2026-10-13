@@ -1,0 +1,59 @@
+{
+  "status": "completed_functional_pilot_not_enterprise_validation",
+  "date": "2026-10-13",
+  "protocol": "northstar-owner-policy-ledger-v6",
+  "production_source_sha256": "722070fc3ca5997b1cd7beb9023e609827b270a8b5a00988ce6764978d58f74b",
+  "native_binary_sha256": "b5bb7388c7f143eb33e20285dcfd47e78e31f0570865eeb2b5f02011cb8b720c",
+  "binary_identity_unchanged_before_after": true,
+  "onboarding": {
+    "completed": true,
+    "owner_context": "Explicitly authored fictional-company policy, supplied only through owner questions; not real human approval.",
+    "agent_data_expert_signoff": true,
+    "independent_simulated_owner_review": true,
+    "approved_card_reused": true
+  },
+  "sources": {
+    "transport": "Read-only local company-MCP simulation; not a live Superset extraction.",
+    "primary": "Generated monthly channel-balance records with deterministic record IDs and hashes. Sales totals and channel observations derive from the same records.",
+    "other": "Separate synthetic Web, Finance and Support populations; no row joins or inferred common customer population.",
+    "independent_business_ground_truth": false
+  },
+  "comparison": {
+    "model": "gpt-6-luna",
+    "effort": "xhigh",
+    "shared_context": "Same reviewed card, saved notes, company context, catalog, source tools and approved destinations.",
+    "treatment_addition": "Runner supplies one actual native SignalWeave/live-Jev evaluation bundle per case.",
+    "limits_per_arm": {"max_tool_calls": 100, "max_turns": 60, "timeout_seconds": 360},
+    "both_arms_forced_to_write_reports_even_for_quiet_cases": true,
+    "complete_eligible_pairs": 4,
+    "baseline_policy_and_route_correct": 4,
+    "signalweave_agent_policy_and_route_correct": 4,
+    "native_jev_policy_and_route_correct": 4,
+    "native_jev_requests": 4,
+    "native_jev_transport_errors": 0,
+    "native_jev_observed_seconds": [0.270213, 0.296648, 0.269906, 0.35488],
+    "utility_proxy_means": {"baseline": 93.05, "signalweave": 93.75},
+    "utility_proxy_is_not_a_human_preference_score": true,
+    "quality_improvement_demonstrated": false,
+    "cost_advantage_demonstrated": false
+  },
+  "cases": [
+    {"scenario": "below materiality boundary", "expected": "ignore", "recipient": null, "baseline_seconds": 105.163, "signalweave_agent_seconds": 129.337},
+    {"scenario": "material but below leadership escalation", "expected": "investigate", "recipient": "Analytics", "baseline_seconds": 329.522, "signalweave_agent_seconds": 50.111},
+    {"scenario": "corroborated material decline", "expected": "notify", "recipient": "Leadership", "baseline_seconds": 269.022, "signalweave_agent_seconds": 84.362},
+    {"scenario": "primary sales source unavailable", "expected": "insufficient_data", "recipient": "Data Trust", "baseline_seconds": 179.670, "signalweave_agent_seconds": 70.409}
+  ],
+  "delivery": "Shadow only. Reports and intended recipients were saved locally; no actual human notification was sent.",
+  "review": {
+    "independent_agent_review": true,
+    "real_human_panel": false,
+    "known_report_issue": "The treatment's Leadership recommendation does not clearly disclose historical replay rather than current warehouse data. Structured policy correctness does not establish a complete human-facing report-quality pass."
+  },
+  "limits": [
+    "Formative four-case fictional-company pilot after fixture repairs, not unseen holdout accuracy or evidence about a real enterprise.",
+    "Baseline receives the treatment-authored reviewed card and notes; this is a warm recurring-runtime comparison, not a paired onboarding comparison.",
+    "Arithmetic-tool verification is required in both arms. Timing is not a natural-workflow or total-cost benchmark and does not isolate the native evaluation overhead.",
+    "No scheduler, external delivery, long-term drift, many-company generalization, or real-human usefulness was proven.",
+    "Earlier invalid cohorts were retained separately and never substituted into these paired results."
+  ]
+}

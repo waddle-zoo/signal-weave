@@ -63,6 +63,9 @@ def test_offline_cli_freezes_selected_transfer_seed_without_inference(tmp_path, 
         "reviewer": {"model": "gpt-6-luna", "effort": "xhigh"},
     }
     assert protocol["comparison"] == "paired_final_business_outcome_runtime"
+    assert protocol["monitoring_limits_per_arm"] == {
+        "max_turns": 60, "max_tool_calls": 100, "timeout_seconds": 360,
+    }
     assert protocol["mcp_profile"] == "agent"
     assert json.loads((output / "frozen-scenarios.json").read_text()) == [build_transfers(20261007)[3]]
 
