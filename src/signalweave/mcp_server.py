@@ -868,7 +868,10 @@ def create_mcp(
             "reporting supported facts. Honor an owner's explicit fallback rather than demanding an "
             "exhaustive rule for every possible movement. "
             "On each recurring run, call evaluate_insight_card once with a stable idempotency key. It returns "
-            "a durable, delivery-disabled decision and evidence bundle. Jev applies the card's policy; the "
+            "a durable, delivery-disabled decision and evidence bundle. Jev applies the card's policy. The "
+            "normal call needs no context argument: approved sources are fetched automatically. Do not "
+            "repackage their observations as context or repeat source reads before evaluation. Use your "
+            "source tools for additional investigation when needed. The "
             "frontier agent owns deeper discovery, causal investigation, narrative, scheduling, and delivery. "
             "Use get_decision_receipt to recover a result after a retry. Do not call prepare_insight_run as a "
             "second fetch for the same run. Dynamic source expansion is outside this profile. The full profile "
@@ -2323,6 +2326,11 @@ def create_mcp(
         inspect the receipt and decide what to do next. The durable receipt
         always retains the full result; ``response_mode='compact'`` only shapes
         this MCP response for the next agent turn.
+
+        Omit ``context`` for a normal run: approved source evidence is fetched
+        automatically. Additional external facts may use a versioned context
+        object; its provider/version fields belong inside that object. Do not
+        copy already-fetched source observations into context.
         """
         principal = request_principal(ctx)
         trusted_actor = principal.principal_id if principal else actor

@@ -61,7 +61,30 @@ def agent_getting_started(task: str = "start", *, decision_provider: str = "jev-
     }
     if task == "monitor":
         response.pop("next", None)
-        response["repeat"] = "Reuse the same approved card ID and a stable per-run idempotency key; Jev applies the card policy, while the agent owns deeper investigation, cadence, narrative, and outcome-specific delivery."
+        response["steps"] = [
+            {"tool": "get_insight_card", "purpose": "Read the approved policy if it is not already available. Reuse its card ID and scope; do not repeat onboarding."},
+            {"tool": "evaluate_insight_card", "purpose": "Fetch the approved sources and obtain the policy decision and evidence in one call. Start here when the approved card is already available."},
+            {"tool": "get_decision_receipt", "purpose": "Read only needed omitted evidence pages or recover a completed run; this does not refetch sources or run inference."},
+        ]
+        response["evaluation_example"] = {
+            "card_id": "<approved-card-id>",
+            "idempotency_key": "<card-id>:<run-id>",
+            "response_mode": "compact",
+        }
+        response["repeat"] = (
+            "Reuse the approved card and a stable per-run idempotency key. Evaluate before "
+            "repeating source reads or analysis; the evidence bundle already contains the "
+            "fresh approved source facts. Use your company tools for deeper investigation "
+            "when needed, not to restate the same facts before every evaluation. Jev applies "
+            "the card policy; you own investigation, narrative, cadence and delivery."
+        )
+        response["optional_context"] = (
+            "Omit context for a normal card run. Supply it only for additional provenance-bearing "
+            "external facts, not copied card-source observations. If supplied, provider and version "
+            "belong inside the context object alongside facts; they are not top-level evaluation "
+            "arguments. Follow the tool schema. Caller-supplied context is unverified and does not "
+            "authorize policy changes or delivery."
+        )
     return _with_provider(response, decision_provider)
 
 

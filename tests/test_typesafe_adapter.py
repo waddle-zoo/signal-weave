@@ -164,8 +164,11 @@ async def test_computed_contribution_contract_and_action_criteria_are_policy_bou
     assert "change in group weights" in meanings["mix_effect"]
     assert "not automatically an action trigger" in meanings["policy"]
     criterion = call["questions"]["outcome"].criteria["notify"]
-    assert "decision_guidance" in criterion and "trigger conditions and exceptions" in criterion
-    assert "Capacity team" in criterion
+    assert "card.decision_guidance" in call["questions"]["outcome"].instructions
+    assert "thresholds, exceptions, and fallback exactly" in criterion
+    assert "a configured route is not a trigger" in criterion
+    assert call["state"]["card"]["decision_guidance"] == card.decision_guidance
+    assert call["state"]["card"]["delivery_methods"][0]["label"] == "Capacity team"
     assert card.action_confidence_threshold == .7
 
 

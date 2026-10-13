@@ -1,0 +1,236 @@
+{
+  "scope": "Native archive extraction, real PTY wizard, real isolated Codex registration, real Superset, two cold first-report agents",
+  "archive_origin": "local-build",
+  "archive_sha256": "bab683c22e07cb89a0fb0a0a04f94a622f411fab4ce4b98e44195ef04f850581",
+  "binary": {
+    "dirty": true,
+    "format_version": 1,
+    "frozen": true,
+    "git_commit": "ad3c1ceaae360821ffbb0b2de84688daeb4c8d10",
+    "python": "3.12.10",
+    "source_sha256": "b643a49594dcee6d216001ad1d151e4d1619e4b477a1ff3a78c628789f4bd048",
+    "version": "0.2.0rc2",
+    "binary_sha256": "cc071487521f2b4e8aea4f6b74c446d9ca063ea4f400f434d42139a1639f3406"
+  },
+  "binary_after": {
+    "dirty": true,
+    "format_version": 1,
+    "frozen": true,
+    "git_commit": "ad3c1ceaae360821ffbb0b2de84688daeb4c8d10",
+    "python": "3.12.10",
+    "source_sha256": "b643a49594dcee6d216001ad1d151e4d1619e4b477a1ff3a78c628789f4bd048",
+    "version": "0.2.0rc2",
+    "binary_sha256": "cc071487521f2b4e8aea4f6b74c446d9ca063ea4f400f434d42139a1639f3406"
+  },
+  "limitations": [
+    "Candidate is not a published release or curl-install test",
+    "Scripted human answers, not a human usability panel",
+    "Synthetic company on actual local Superset",
+    "First report is not proof of recurring card efficacy or external delivery"
+  ],
+  "wizard": {
+    "returncode": 0,
+    "seconds": 5.721937207999872,
+    "pending_prompts": []
+  },
+  "agent_inventory": {
+    "returncode": 0,
+    "entries": [
+      {
+        "name": "signalweave",
+        "enabled": true,
+        "disabled_reason": null,
+        "transport": {
+          "type": "stdio",
+          "command": "/Users/brandonsovran/Documents/Codex/2026-09-16/bas/signal-weave/artifacts/human-onboarding-2026-10-13/current-policy-native-journey/human-home/.local/bin/signalweave",
+          "args": [
+            "serve",
+            "--transport",
+            "stdio",
+            "--home",
+            "/Users/brandonsovran/Documents/Codex/2026-09-16/bas/signal-weave/artifacts/human-onboarding-2026-10-13/current-policy-native-journey/human-home/.signalweave"
+          ],
+          "env": null,
+          "env_vars": [],
+          "cwd": null
+        },
+        "startup_timeout_sec": null,
+        "tool_timeout_sec": null,
+        "auth_status": "unsupported"
+      }
+    ]
+  },
+  "status": {
+    "returncode": 0,
+    "output": {
+      "status": "ready_for_agent",
+      "service": "signal-weave",
+      "home": "/Users/brandonsovran/Documents/Codex/2026-09-16/bas/signal-weave/artifacts/human-onboarding-2026-10-13/current-policy-native-journey/human-home/.signalweave",
+      "identity": {
+        "tenant": "local",
+        "principal": "local"
+      },
+      "decision_provider": {
+        "selected": "jev",
+        "status": "configured",
+        "chatgpt_plan": null
+      },
+      "jev": {
+        "status": "configured",
+        "mode": "jev",
+        "live_check": "not_run"
+      },
+      "credentials": {
+        "TYPESAFE_API_KEY": "configured",
+        "OPENAI_API_KEY": "missing",
+        "PRESET_API_TOKEN_NAME": "missing",
+        "PRESET_API_TOKEN_SECRET": "missing",
+        "PRESET_ACCESS_TOKEN": "missing",
+        "SUPERSET_PASSWORD": "configured",
+        "SIGNALWEAVE_API_TOKEN": "missing",
+        "PUSH_WEBHOOK_TOKEN": "missing"
+      },
+      "connections": [
+        {
+          "type": "superset",
+          "label": "Superset",
+          "status": "configured",
+          "endpoint": "http://127.0.0.1:18089",
+          "detail": null
+        },
+        {
+          "type": "preset",
+          "label": "Preset",
+          "status": "not_configured",
+          "endpoint": null,
+          "detail": null
+        },
+        {
+          "type": "trino",
+          "label": "Trino",
+          "status": "not_configured",
+          "endpoint": null,
+          "detail": "catalog file missing"
+        },
+        {
+          "type": "mcp",
+          "label": "Company MCP source bridge",
+          "status": "not_configured",
+          "endpoint": null,
+          "detail": null
+        }
+      ],
+      "state": {
+        "backend": "sqlite",
+        "path": "state/signalweave.db"
+      },
+      "agents": {
+        "selected": "codex",
+        "codex": "run `signalweave connect codex`",
+        "claude": "run `signalweave connect claude`"
+      },
+      "next_steps": [
+        "Run `signalweave doctor --live` to test source access.",
+        "Run `signalweave connect codex` or `signalweave connect claude`."
+      ]
+    }
+  },
+  "health": {
+    "returncode": 0,
+    "output": {
+      "healthy": true,
+      "mode": "offline_and_live_source",
+      "messages": [
+        "Offline configuration check only; no provider requests were made.",
+        "Decision provider: jev (readable private file; live acceptance not tested).",
+        "Superset: configuration present (connectivity and access not tested).",
+        "Offline configuration checks passed; this offline check made no source or decision-provider requests.",
+        "superset: live catalog search succeeded; catalog entries reported: 48.",
+        "Catalog access only: resource-level permissions and data freshness are not checked. No decision-provider judgment was requested."
+      ]
+    }
+  },
+  "baseline": {
+    "episode": {
+      "status": "complete",
+      "error": null,
+      "final_message": "## Digital commerce and net sales\n\n**Data window:** Jan 2024–Sep 2026; dashboards were captured 13 Oct 2026. Amounts are in source numeric units—the chart definitions don’t specify currency. September and August monthly buckets are marked coverage-unverified.\n\n- **Net sales:** 2.292m in Aug 2026 to 1.372m in Sep (**−40.2%**). The Online channel fell from 843.7k to 484.6k (**−42.6%**); its share of monthly net sales slipped from **36.8% to 35.3%**. Store had the largest absolute channel decline: 363.5k.\n- **Historical mix:** Online contributed 26.291m of 72.877m in the unfiltered channel mix (**36.1%**). Mobile and Marketplace are separate channels; including them would change the share.\n- **Separate funnel measure:** Revenue across platforms fell from 45.7k in August to 30.6k in September (**−33.0%**). App and Mobile Web had the largest platform declines; Web was down 4.4%. This event-data revenue is not the net-sales measure above.\n\n**Investigate next:** Confirm whether September covers a complete month, then trace Online net sales by day, orders, units, and average order value. For the separate funnel series, examine App and Mobile Web traffic and orders. These are investigation paths, not established causes.\n\nThe funnel’s conversion and abandonment charts use summed rate fields; the abandonment rows total roughly 878–923, so they aren’t usable percentages as defined. Validate those calculations before using them for alerts.\n\n**To repeat this daily or set unattended alerts:** clarify what counts as “online,” the net-sales definition and currency, daily cutoff/timezone, handling of incomplete days and seasonal comparisons, plus each alert’s threshold, duration or sample size, refresh expectation, and escalation owner.\n\nThe full report was saved through the trial reporting tool.",
+      "tool_calls": 13,
+      "seconds": 173.48096525000437,
+      "response_timeout_seconds": 480,
+      "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+      "wall_time_overrun_seconds": 0,
+      "transport": "codex_cli",
+      "model": "gpt-6-luna",
+      "effort": "xhigh",
+      "exit_code": 0,
+      "foreign_tools": []
+    },
+    "submission": {
+      "evidence_refs": [
+        "Executive Command Center, chart 1: monthly SUM(net_sales) by channel; chart 5: historical channel sales mix",
+        "Digital Commerce Funnel, chart 72: monthly SUM(revenue) by platform",
+        "Digital Commerce Funnel, chart 75: SUM(cart_abandonment_rate) by traffic source",
+        "Digital Commerce Funnel, chart 79: detailed table; partial due to duplicate non-additive time bucket"
+      ],
+      "missing_context": [
+        "Whether online includes only the Online channel or also Mobile and Marketplace",
+        "Net-sales definition, denominator, and currency",
+        "Daily cutoff/timezone and handling of incomplete days",
+        "Preferred comparison window and seasonal/promotion treatment",
+        "Per-metric alert thresholds, duration/sample size, refresh expectation, and escalation owner",
+        "Validated aggregation rules for conversion and cart-abandonment rates"
+      ],
+      "report": "## Digital commerce and net sales\n\nDashboards were captured on **13 Oct 2026**. Their monthly rows span **Jan 2024–Sep 2026**; the latest bucket is Sep 2026. The saved chart queries have no date filter, and the September/August buckets are marked coverage-unverified. Amounts below are in the source’s numeric units; the chart definitions do not specify currency.\n\n### Measured\n\n- In Executive Command Center, total net sales moved from **2.292m in Aug 2026 to 1.372m in Sep 2026** (**−920.6k; −40.2%**). The **Online** channel moved from **843.7k to 484.6k** (**−359.1k; −42.6%**). Its share of those monthly totals fell from **36.8% to 35.3%** (**−1.5 percentage points**). Store had the largest absolute channel decline, **−363.5k (−38.1%)**.\n- Across the unfiltered historical net-sales mix, Online contributed **26.291m of 72.877m, or 36.1%**. The chart treats Mobile and Marketplace as separate channels; including those in a broader “digital” definition would change the share.\n- In Digital Commerce Funnel, the separate revenue measure summed across platforms was **45.7k in Aug to 30.6k in Sep (−33.0%)**. App fell **46.5%**, Mobile Web **40.5%**, and Web **4.4%**. This is event-data revenue, not the net-sales measure above, so the two totals should not be reconciled as though they were the same metric.\n\n### What to investigate next\n\nFirst confirm whether both September buckets cover a complete month and compare like-for-like days if they do not. Then trace the Online net-sales decline by day, orders, units, and average order value; for the separate funnel series, check App and Mobile Web traffic, orders, and campaign/source mix. These are investigation paths, not proven causes.\n\nThe funnel’s conversion and checkout-abandonment charts define the measures as SUM(conversion_rate) and SUM(cart_abandonment_rate). The abandonment source rows consequently show sums around 878–923, not a usable percentage. Fix and validate their rate aggregation before using them to explain the decline or trigger alerts. The detailed funnel table is also marked partial because duplicate rows at a non-additive time bucket were not aggregated.\n\n### Context needed for a daily brief or unattended alerts\n\nPlease define what “online” includes (Online alone, or also Mobile and Marketplace), the net-sales numerator/denominator and currency, the daily cutoff and timezone, and how to handle incomplete days and seasonal/promotion comparisons. For alerts, set the metric-specific absolute or percentage thresholds, required duration/sample size, data-refresh expectation, and escalation owner."
+    },
+    "shared_source_helper_http_attempts": 78,
+    "http_accounting": "excludes native MCP HTTP; not a total cost comparison"
+  },
+  "signalweave": {
+    "episode": {
+      "status": "complete",
+      "error": null,
+      "final_message": "The report was saved locally; it was not delivered as an alert.\n\nIn the historical dashboard data captured **2026-10-13**, monthly trends run from **Jan 2024 to Sep 2026**. The recorded Sep bucket is lower than Aug for Executive net sales (−40.2%) and the Online channel (−42.6%). Digital Commerce sessions fell 39.5% and its separate revenue metric fell 33.0%. September coverage is unverified, so these are bucket comparisons—not confirmed like-for-like declines. Values are in source units; no currency is specified.\n\nAcross the unfiltered channel-mix query, Online contributed **36.1%** of returned net sales; including Mobile and Marketplace would make those channels **57.2%**, if that matches your definition of digital. The report includes next steps and the daily source, cutoff, comparison, threshold, schedule, and recipient details needed before unattended reporting. **No recurring card or alert was approved.**",
+      "tool_calls": 11,
+      "seconds": 162.1057457499992,
+      "response_timeout_seconds": 480,
+      "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+      "wall_time_overrun_seconds": 0,
+      "transport": "codex_cli",
+      "model": "gpt-6-luna",
+      "effort": "xhigh",
+      "exit_code": 0,
+      "foreign_tools": []
+    },
+    "submission": {
+      "evidence_refs": [
+        "superset:dashboard:1",
+        "superset:dashboard:8",
+        "superset:chart:1",
+        "superset:chart:5",
+        "superset:chart:71",
+        "superset:chart:72",
+        "superset:chart:79"
+      ],
+      "missing_context": [
+        "Daily net-sales source, cutoff timezone, expected completion time, and partial-day handling",
+        "Definition of online and channel-to-platform mapping, including whether Mobile and Marketplace count",
+        "Currency and compatible revenue/net-sales population definitions",
+        "Daily comparison basis and absolute or percentage action thresholds for investigate, notify, or escalate",
+        "Schedule timezone, recipients, and delivery destination",
+        "Validated denominators and aggregation rules for conversion and cart-abandonment rates"
+      ],
+      "report": "## Digital commerce brief for the lead\n\n**Scope:** Historical Northstar dashboard evidence captured 2026-10-13. The monthly trends span Jan 2024–Sep 2026; the Digital Commerce detail chart lists event dates through 2026-09-19. September bucket coverage is explicitly unverified, so month-to-month differences below are recorded bucket arithmetic, not confirmed like-for-like declines. Neither metric has a stated currency; values are in source units.\n\n### Measured\n\n- **Executive net sales:** Sep 2026 recorded 1,371,704.27 vs Aug 2026 2,292,267.50 (−40.2%). The literal **Online** channel was 484,648.16 vs 843,730.63 (−42.6%).\n- **Contribution across the unfiltered channel-mix query:** returned net sales total 72,876,754.68. Online accounts for 26,291,371.54 (36.1%); Mobile 10,236,228.73 (14.0%); Marketplace 5,138,718.22 (7.1%); Store 31,210,436.19 (42.8%). If you define digital as Online + Mobile + Marketplace, those three sum to 41,666,318.49 (57.2%); the dashboard does not state that this is the business's intended definition of online.\n- **Digital funnel monthly platform totals:** sessions were 7,844 in Aug vs 4,744 in Sep (−39.5%); the separate revenue metric was 45,707.14 vs 30,631.88 (−33.0%). These are SUM(sessions) and SUM(revenue) across Web, Mobile Web, and App. They are not established as the same population or measure as Executive net_sales.\n\n### What to investigate next\n\nThe September reductions could reflect an incomplete month or delayed capture; the dashboards do not establish the cause. First compare equal daily windows and confirm each source's cutoff. The Executive trend is saved at monthly grain, so that comparison needs a daily net-sales source. Then reconcile Executive's Online/Mobile/Marketplace channel names to Digital Commerce's Web/Mobile Web/App platforms and verify the revenue definition and currency. Conversion and abandonment charts aggregate fields named conversion_rate and cart_abandonment_rate with SUM; confirm their denominators and correct aggregation before using them to diagnose funnel leakage.\n\n### Needed before a daily unattended report or alerts\n\n- The daily source and cutoff timezone, expected completion time, and how to handle partial days.\n- Whether “online” includes Mobile and Marketplace, plus the channel-to-platform mapping and currency.\n- The comparison basis (for example prior day, same weekday, or trailing 7 days) and the absolute or percentage thresholds for investigate, notify, or escalate.\n- Schedule timezone, recipients, and delivery destination.\n\nNo recurring card or alert has been approved."
+    },
+    "shared_source_helper_http_attempts": 74,
+    "http_accounting": "excludes native MCP HTTP; not a total cost comparison"
+  },
+  "interpretation": "Current-policy binary installed from a locally built checksummed archive into an isolated home; not published release download. Both first reports completed. One pair cannot establish quality or speed superiority; no recurring card or Jev decision was used for these first reports.",
+  "certified_one_line_installer_test": {
+    "passed": true,
+    "seconds": 18.68,
+    "source_sha256": "b643a49594dcee6d216001ad1d151e4d1619e4b477a1ff3a78c628789f4bd048",
+    "binary_sha256": "cc071487521f2b4e8aea4f6b74c446d9ca063ea4f400f434d42139a1639f3406",
+    "scope": "Actual native binary in installer PTY test using a simulated release transport, placeholder provider credential and no agent registration; no live provider API."
+  }
+}

@@ -234,6 +234,12 @@ are in scope, who receives the agent's report, and who runs the schedule**. Test
 a meaningful change, a quiet period, and missing evidence. An approved card
 alone does not schedule work or send an alert.
 
+For an existing card, ask your agent to use the guide's `monitor` path. The normal
+run needs only the approved card ID and a stable run key: SignalWeave fetches its
+sources. The agent need not rediscover the dashboards or copy their observations
+into a `context` argument. It can read omitted evidence from the saved receipt
+and use its existing company tools for deeper investigation when needed.
+
 Once those checks work, give your agent a concrete scheduling request:
 
 > Run my approved **[card name]** each weekday at **[time and timezone]**.

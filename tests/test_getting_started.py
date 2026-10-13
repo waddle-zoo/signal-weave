@@ -20,6 +20,32 @@ def test_agent_guide_distinguishes_bucket_arithmetic_from_comparable_changes(tas
     assert guide["inference_performed"] is False
 
 
+@pytest.mark.parametrize("provider", ["jev-latest", "openai-decisions", "chatgpt-plan-responses"])
+def test_recurring_agent_guide_uses_existing_card_bundle_without_repeating_onboarding(provider):
+    guide = agent_getting_started("monitor", decision_provider=provider)
+    assert [step["tool"] for step in guide["steps"]] == [
+        "get_insight_card", "evaluate_insight_card", "get_decision_receipt",
+    ]
+    assert "Start here" in guide["steps"][1]["purpose"]
+    assert "when needed" in guide["repeat"]
+    assert "Omit context" in guide["optional_context"]
+    assert "inside the context object" in guide["optional_context"]
+    assert "unverified" in guide["optional_context"]
+    assert guide["evaluation_example"] == {
+        "card_id": "<approved-card-id>",
+        "idempotency_key": "<card-id>:<run-id>",
+        "response_mode": "compact",
+    }
+    assert guide["inference_performed"] is False
+    assert "delivery" in guide["agent_owns"]
+
+
+def test_first_use_guide_still_exposes_discovery_and_owner_approval():
+    steps = {step["tool"] for step in agent_getting_started("start")["steps"]}
+    assert {"search_catalog", "inspect_resource", "onboard_insight_card",
+            "review_insight_card", "approve_insight_card"} <= steps
+
+
 @pytest.fixture
 def server(tmp_path):
     class NoInference:

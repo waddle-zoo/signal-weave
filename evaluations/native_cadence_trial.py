@@ -14,6 +14,7 @@ import copy
 import json
 import tempfile
 import time
+from collections import Counter
 from collections.abc import Mapping
 from datetime import datetime, timezone
 from pathlib import Path
@@ -62,6 +63,7 @@ OPTIONAL_NATIVE_TOOLS = frozenset({
     "get_insight_card", "evaluate_insight_card", "get_decision_receipt",
 })
 NATIVE_TOOLS = PRODUCTION_NATIVE_TOOLS
+NATIVE_DECISION_TOOLS = frozenset({"evaluate_insight_card", "get_decision_receipt"})
 PRODUCTION_COMMON_INSTRUCTIONS = (
     "You are the caller-owned agent for a retrospective archived monthly-close review, not a current alert. "
     "Use the same frozen reviewed card, saved notes, and source catalog provided to both arms. "
@@ -194,8 +196,7 @@ def make_outbox_submission(
     normalized_refs = [aliases.get(ref, ref) for ref in evidence_refs]
     if set(normalized_refs) - inspected_refs:
         raise ValueError("evidence_refs must cite a source inspected or a successful current-run receipt")
-    if len(set(normalized_refs)) != len(normalized_refs):
-        raise ValueError("evidence_refs must resolve to unique canonical references")
+    normalized_refs = list(dict.fromkeys(normalized_refs))
     if outcome in QUIET_OUTCOMES:
         if recipients:
             raise ValueError("quiet outcomes must have no recipients")
@@ -274,7 +275,16 @@ class CadenceSession(InstalledSession):
         self.outbox: list[dict] = []
         self.native_results: list[dict] = []
         self.evidence_aliases: dict[str, str] = {}
+        self.source_url_refs: dict[str, set[str]] = {}
         self.current_idempotency_key: str | None = None
+
+    def _record_snapshot_urls(self, snapshot: dict, ref: str, source_keys: set[str]) -> None:
+        source_url = snapshot.get("source_url")
+        if isinstance(source_url, str) and source_url:
+            self.source_url_refs.setdefault(source_url, set()).add(ref)
+        for source_key, evidence_url in _reported_source_url_bindings(snapshot):
+            if source_key in source_keys:
+                self.source_url_refs.setdefault(evidence_url, set()).add(ref)
 
     async def specs(self):
         specs = await super().specs()
@@ -351,6 +361,8 @@ class CadenceSession(InstalledSession):
             self.evidence_aliases[ref] = ref
             if isinstance(result.get("source_key"), str):
                 self.evidence_aliases[result["source_key"]] = ref
+            self._record_snapshot_urls(
+                result, ref, {source.key, resource, result.get("source_key")})
             self.adapter.audit.emit("shared_source_tool", name=name, arm=self.arm, ref=ref)
             return result
         if name == "finish_run" and self.phase == "monitoring":
@@ -358,9 +370,13 @@ class CadenceSession(InstalledSession):
             evidence_refs = set(self.agent_inspected) | set(self.adapter.inspected)
             evidence_aliases = dict(self.evidence_aliases)
             native_aliases = _current_native_evidence_aliases(
-                self, self.shared_card or {}, self.current_idempotency_key or "")
+                self, self.shared_card or {}, self.current_idempotency_key or "",
+                source_url_refs=self.source_url_refs)
             evidence_aliases.update(native_aliases)
             evidence_refs.update(native_aliases.values())
+            for source_url, refs in self.source_url_refs.items():
+                if len(refs) > 1:
+                    evidence_aliases.pop(source_url, None)
             if self.current_idempotency_key:
                 evidence_refs |= _current_receipt_refs(
                     self, self.shared_card or {}, self.current_idempotency_key)
@@ -408,6 +424,9 @@ class CadenceSession(InstalledSession):
             source_key = snapshot.get("source_key") if isinstance(snapshot, dict) else None
             if isinstance(source_key, str) and source_key:
                 self.evidence_aliases[source_key] = ref
+            resource = ref.split("|", 1)[-1]
+            if isinstance(snapshot, dict):
+                self._record_snapshot_urls(snapshot, ref, {resource, source_key})
         return result
 
 
@@ -570,6 +589,22 @@ def _reported_source_keys(value: Any) -> set[str]:
     return keys
 
 
+def _reported_source_url_bindings(value: Any) -> set[tuple[str, str]]:
+    bindings = set()
+    pending = [value]
+    while pending:
+        item = pending.pop()
+        if isinstance(item, dict):
+            source_key, source_url = item.get("source_key"), item.get("source_url")
+            if (isinstance(source_key, str) and source_key
+                    and isinstance(source_url, str) and source_url):
+                bindings.add((source_key, source_url))
+            pending.extend(item.values())
+        elif isinstance(item, list):
+            pending.extend(item)
+    return bindings
+
+
 def _native_primary_refs(response: dict, card: dict, expected_key: str,
                          primary_refs: dict[str, str]) -> set[str]:
     """Accept only a successful, on-card native result bound to this exact run key."""
@@ -610,7 +645,8 @@ def _native_success_count(session: CadenceSession, card: dict, expected_key: str
 
 
 def _current_native_evidence_aliases(session: CadenceSession, card: dict,
-                                     expected_key: str) -> dict[str, str]:
+                                     expected_key: str, *,
+                                     source_url_refs: dict[str, set[str]] | None = None) -> dict[str, str]:
     """Resolve only aliases bound to this card and its validated current receipt."""
     source_refs = {
         source["key"]: f"{source['adapter']}|{source['resource']}"
@@ -619,6 +655,7 @@ def _current_native_evidence_aliases(session: CadenceSession, card: dict,
                for field in ("key", "adapter", "resource"))
     }
     aliases: dict[str, str] = {}
+    url_refs = source_url_refs if source_url_refs is not None else {}
     for call in session.native_results:
         if call.get("returned") is not True:
             continue
@@ -626,6 +663,7 @@ def _current_native_evidence_aliases(session: CadenceSession, card: dict,
         if page_valid is not None:
             receipt, page = page_valid
             source_keys = _reported_source_keys(page["items"])
+            source_url_records = _reported_source_url_bindings(page["items"])
         else:
             valid = _valid_current_native_result(call.get("result", {}), card, expected_key)
             if valid is None:
@@ -636,12 +674,22 @@ def _current_native_evidence_aliases(session: CadenceSession, card: dict,
             source_keys.update(_reported_source_keys(result.get("evidence", [])))
             source_keys.update(_reported_source_keys(result.get("observations", [])))
             source_keys.update(_reported_source_keys(call["result"].get("resources", [])))
+            source_url_records = _reported_source_url_bindings([
+                result.get("evidence", []), result.get("observations", []),
+                call["result"].get("resources", []),
+            ])
         receipt_id = receipt.get("receipt_id")
         if isinstance(receipt_id, str) and receipt_id:
             aliases[receipt_id] = f"receipt:{expected_key}"
         for key in source_keys:
             if isinstance(key, str) and key in source_refs:
                 aliases[key] = source_refs[key]
+        for key, source_url in source_url_records:
+            if key in source_refs:
+                url_refs.setdefault(source_url, set()).add(source_refs[key])
+    for source_url, refs in url_refs.items():
+        if len(refs) == 1:
+            aliases[source_url] = next(iter(refs))
     return aliases
 
 
@@ -713,6 +761,33 @@ def product_use_status(arm: str, native_attempts: int, native_valid_results: int
     if native_valid_results:
         return "native_current_result_available"
     return "native_attempt_failed" if native_attempts else "product_not_used"
+
+
+def _native_decision_tool_error_count(calls: list[dict]) -> int:
+    return sum(call.get("returned") is False for call in calls)
+
+
+def _native_tool_argument_validation_error_count(events: list[dict],
+                                                dispatched_calls: list[dict]) -> int:
+    """Count audited schema rejects that never reached CadenceSession.call."""
+    dispatched = Counter(
+        (call.get("name"), canonical(call.get("arguments", {})))
+        for call in dispatched_calls
+    )
+    failures = 0
+    for event in events:
+        result = event.get("result")
+        if (event.get("kind") != "tool.result"
+                or event.get("name") not in NATIVE_DECISION_TOOLS
+                or not isinstance(result, dict)
+                or result.get("error") != "ValidationError"):
+            continue
+        signature = (event.get("name"), canonical(event.get("arguments", {})))
+        if dispatched[signature]:
+            dispatched[signature] -= 1
+        else:
+            failures += 1
+    return failures
 
 
 def _episode_prompt(session: CadenceSession, period: dict) -> dict:
@@ -982,6 +1057,7 @@ async def run_trial(scenario: dict, registration: Any, *, binary: Path,
                     max_turns=50, max_tool_calls=100, max_output_tokens=6000,
                     timeout_seconds=ONBOARDING_TIMEOUT_SECONDS,
                     instructions_override=(onboarding_instructions(server)
+                        + " For this simulation, the human owner is available through ask_owner; use it for missing business answers. An ordinary chat question receives no simulated reply. Do not infer policy from reviewer output."
                         + " Make the reviewed card and saved notes explicitly describe this as a retrospective review of archived monthly closes, not a current alert. "
                           "Preserve source measurement dates and cutoffs; do not claim warehouse freshness. "
                           "Use simulation_as_of for measurement dates; query_capture_at is only the replay gateway timestamp."),
@@ -1040,6 +1116,7 @@ async def run_trial(scenario: dict, registration: Any, *, binary: Path,
                             session.outbox = []
                             session.agent_inspected.clear()
                             session.evidence_aliases.clear()
+                            session.source_url_refs.clear()
                             session.phase_owner_topics.clear()
                             session.shared_card = copy.deepcopy(card)
                             session.native_results = []
@@ -1066,9 +1143,15 @@ async def run_trial(scenario: dict, registration: Any, *, binary: Path,
                             native_calls = [e for e in events if e.get("kind") == "tool.result"
                                             and e.get("name") in NATIVE_TOOLS]
                             decision_calls = [call for call in session.native_results
-                                              if call.get("name") in {"evaluate_insight_card", "get_decision_receipt"}]
+                                              if call.get("name") in NATIVE_DECISION_TOOLS]
+                            decision_tool_events = [event for event in events
+                                                    if event.get("kind") == "tool.result"
+                                                    and event.get("name") in NATIVE_DECISION_TOOLS]
+                            argument_validation_errors = _native_tool_argument_validation_error_count(
+                                decision_tool_events, decision_calls)
                             native_valid_results = _native_success_count(
                                 session, card, session.current_idempotency_key)
+                            native_tool_errors = _native_decision_tool_error_count(decision_calls)
                             api_status = product_use_status(arm, len(decision_calls), native_valid_results)
                             native_judgment = _native_judgment_score(
                                 session.native_results, card, label, public["destinations"],
@@ -1098,10 +1181,12 @@ async def run_trial(scenario: dict, registration: Any, *, binary: Path,
                                      "primary_current_proof_refs": proof_refs,
                                      "native_api_tool_calls": len(native_calls),
                                      "native_decision_usage": {
+                                         "tool_attempts": len(decision_tool_events),
+                                         "tool_argument_validation_errors": argument_validation_errors,
                                          "attempts": len(decision_calls),
                                          "responses": sum(call.get("returned") is True for call in decision_calls),
                                          "valid_current_results": native_valid_results,
-                                         "errors": sum(call.get("returned") is False for call in decision_calls),
+                                         "errors": native_tool_errors,
                                          "invalid_responses": sum(call.get("returned") is True
                                                                   for call in decision_calls)
                                          - native_valid_results,
@@ -1190,6 +1275,15 @@ async def run_trial(scenario: dict, registration: Any, *, binary: Path,
             "treatment_product_not_used": sum(r.get("treatment", {}).get("product_use_status") == "product_not_used" for r in results),
             "treatment_native_attempts": sum(
                 r.get("treatment", {}).get("native_decision_usage", {}).get("attempts", 0) for r in results),
+            "treatment_native_tool_attempts": sum(
+                r.get("treatment", {}).get("native_decision_usage", {}).get("tool_attempts", 0)
+                for r in results),
+            "treatment_native_tool_argument_validation_errors": sum(
+                r.get("treatment", {}).get("native_decision_usage", {}).get(
+                    "tool_argument_validation_errors", 0) for r in results),
+            "treatment_native_decision_tool_errors": sum(
+                r.get("treatment", {}).get("native_decision_usage", {}).get("errors", 0)
+                for r in results),
             "treatment_native_valid_current_results": sum(
                 r.get("treatment", {}).get("native_decision_usage", {}).get("valid_current_results", 0)
                 for r in results),

@@ -372,6 +372,82 @@ async def test_both_source_inspection_key_aliases_resolve_to_the_inspected_canon
 
 
 @pytest.mark.asyncio
+async def test_current_inspected_snapshot_and_nested_evidence_urls_are_citable():
+    scenario, _ = cadence_scenario()
+    public = _public_for_session(scenario)
+    adapter = SimpleNamespace(name="company_mcp", audit=Audit(), inspected=set(), catalog=[],
+                              period_context={"period_id": "month-01"})
+
+    class URLRegistry:
+        async def inspect(self, source, **_kwargs):
+            ref = f"{source.adapter}|{source.resource}"
+            adapter.inspected.add(ref)
+            return SimpleNamespace(model_dump=lambda mode: {
+                "source_key": source.key,
+                "source_url": f"simulation-ledger://{source.resource}/snapshot",
+                "error": None,
+                "evidence": [{"source_key": source.key,
+                              "source_url": f"simulation-ledger://{source.resource}/evidence"}],
+            })
+
+    session = trial.CadenceSession(
+        public, adapter, FakeServer(), False, arm="baseline", registry=URLRegistry())
+    session.phase = "monitoring"
+    await session.call("inspect_resource", {"adapter": "company_mcp", "resource": "monthly-sales"})
+    await session.call("inspect_source", {"ref": "company_mcp|monthly-sales"})
+
+    aliases = [
+        "simulation-ledger://monthly-sales/snapshot",
+        "simulation-ledger://monthly-sales/evidence",
+    ]
+    await session.call("finish_run", {
+        "outcome": "investigate", "recipients": ["analytics"],
+        "summary": "The inspected monthly sales source merits review.",
+        "evidence_refs": aliases,
+    })
+    assert session.submission["evidence_refs"] == ["company_mcp|monthly-sales"]
+    assert session.outbox[0]["evidence_refs"] == ["company_mcp|monthly-sales"]
+
+    with pytest.raises(ValueError, match="inspected or a successful current-run receipt"):
+        await session.call("finish_run", {
+            "outcome": "investigate", "recipients": ["analytics"],
+            "summary": "An unsupported citation must still fail.",
+            "evidence_refs": [*aliases, "company_mcp|not-inspected"],
+        })
+
+
+@pytest.mark.asyncio
+async def test_ambiguous_current_source_url_is_not_a_valid_citation():
+    scenario, _ = cadence_scenario()
+    public = _public_for_session(scenario)
+    adapter = SimpleNamespace(name="company_mcp", audit=Audit(), inspected=set(), catalog=[],
+                              period_context={"period_id": "month-01"})
+    shared_url = "simulation-ledger://shared/current"
+
+    class AmbiguousURLRegistry:
+        async def inspect(self, source, **_kwargs):
+            adapter.inspected.add(f"{source.adapter}|{source.resource}")
+            return SimpleNamespace(model_dump=lambda mode: {
+                "source_key": source.key, "source_url": shared_url, "error": None,
+            })
+
+    session = trial.CadenceSession(
+        public, adapter, FakeServer(), False, arm="baseline", registry=AmbiguousURLRegistry())
+    session.phase = "monitoring"
+    for resource in ("monthly-sales", "support-backlog"):
+        await session.call("inspect_resource", {"adapter": "company_mcp", "resource": resource})
+
+    assert session.source_url_refs[shared_url] == {
+        "company_mcp|monthly-sales", "company_mcp|support-backlog",
+    }
+    with pytest.raises(ValueError, match="inspected or a successful current-run receipt"):
+        await session.call("finish_run", {
+            "outcome": "investigate", "recipients": ["analytics"],
+            "summary": "The ambiguous source needs review.", "evidence_refs": [shared_url],
+        })
+
+
+@pytest.mark.asyncio
 async def test_both_arms_route_shared_catalog_and_inspection_to_same_local_fixture_registry():
     scenario, _ = cadence_scenario()
     public = _public_for_session(scenario)
@@ -611,11 +687,13 @@ async def test_live_path_passes_separate_onboarding_and_recurring_timeout_budget
     monkeypatch.setattr(trial, "assert_default_agent_profile", fake_assert_profile)
     monkeypatch.setattr(trial, "installed_server", lambda **_kwargs: ServerContext())
     episode_calls = []
+    onboarding_prompt = []
 
     async def fake_codex_episode(session, **kwargs):
         episode_calls.append((session.phase, session.arm, kwargs["max_tool_calls"],
                               kwargs["timeout_seconds"]))
         if session.phase == "onboarding":
+            onboarding_prompt.append(kwargs["instructions_override"])
             session.setup_complete = True
             session.card_id = card["id"]
             session.notes = "Use the owner's approved policy."
@@ -637,6 +715,14 @@ async def test_live_path_passes_separate_onboarding_and_recurring_timeout_budget
     )
 
     assert report["onboarding_complete"] is True
+    owner_channel_instruction = (
+        "For this simulation, the human owner is available through ask_owner; use it for missing "
+        "business answers. An ordinary chat question receives no simulated reply. Do not infer "
+        "policy from reviewer output."
+    )
+    assert len(onboarding_prompt) == 1
+    assert owner_channel_instruction in onboarding_prompt[0]
+    assert "call ask_owner for every" not in onboarding_prompt[0].lower()
     assert episode_calls == [
         ("onboarding", "treatment", 100, 900),
         ("monitoring", "baseline", 100, 360),
@@ -936,8 +1022,10 @@ def test_paged_receipt_aliases_use_actual_receipt_id_and_only_card_bound_source_
         "receipt": response["receipt"],
         "result_page": {
             "path": ["evidence"], "kind": "list", "items": [
-                {"source_key": "approved-sales", "values": {"current": 12}},
-                {"source_key": "not-on-the-frozen-card", "values": {"current": 99}},
+                {"source_key": "approved-sales",
+                 "source_url": "simulation-ledger://sales/current", "values": {"current": 12}},
+                {"source_key": "not-on-the-frozen-card",
+                 "source_url": "simulation-ledger://foreign/current", "values": {"current": 99}},
             ],
         },
     }
@@ -948,6 +1036,7 @@ def test_paged_receipt_aliases_use_actual_receipt_id_and_only_card_bound_source_
     assert trial._current_native_evidence_aliases(session, card, key) == {
         receipt_id: f"receipt:{key}",
         "approved-sales": "company_mcp|monthly-sales",
+        "simulation-ledger://sales/current": "company_mcp|monthly-sales",
     }
 
     invalid_calls = [
@@ -963,6 +1052,28 @@ def test_paged_receipt_aliases_use_actual_receipt_id_and_only_card_bound_source_
     for invalid in invalid_calls:
         session.native_results = [invalid]
         assert trial._current_native_evidence_aliases(session, card, key) == {}
+
+
+def test_current_native_result_maps_nested_evidence_urls_only_for_card_sources():
+    card, response = _card_and_native_response()
+    key = "hypatia-test/month-01"
+    response["result"]["evidence"] = [
+        {"source_key": "approved-sales", "source_url": "simulation-ledger://sales/evidence"},
+        {"source_key": "foreign-key", "source_url": "simulation-ledger://foreign/evidence"},
+    ]
+    session = SimpleNamespace(native_results=[{"name": "evaluate_insight_card", "returned": True,
+                                               "result": response}])
+
+    assert trial._current_native_evidence_aliases(session, card, key) == {
+        response["receipt"]["receipt_id"]: f"receipt:{key}",
+        "approved-sales": "company_mcp|monthly-sales",
+        "simulation-ledger://sales/evidence": "company_mcp|monthly-sales",
+    }
+
+    stale = {**response, "receipt": {**response["receipt"],
+                                      "idempotency_key": "hypatia-test/month-04"}}
+    session.native_results = [{"name": "evaluate_insight_card", "returned": True, "result": stale}]
+    assert trial._current_native_evidence_aliases(session, card, key) == {}
 
 
 def test_native_transport_result_and_policy_judgment_are_scored_separately():
@@ -1084,6 +1195,50 @@ async def test_owner_approval_uses_historical_current_period_and_finishes_onboar
     result = await session.call("finish_setup", {"card_id": card["id"]})
     assert result["setup_complete"] is True
     assert session.setup_complete is True
+
+
+def test_native_tool_error_count_survives_a_successful_retry():
+    calls = [
+        {"name": "evaluate_insight_card", "returned": False, "error_type": "TimeoutError"},
+        {"name": "evaluate_insight_card", "returned": True, "result": {"status": "ok"}},
+    ]
+    assert trial._native_decision_tool_error_count(calls) == 1
+    assert trial.product_use_status("treatment", native_attempts=2, native_valid_results=1) == (
+        "native_current_result_available"
+    )
+
+
+def test_native_argument_validation_errors_come_from_audit_not_product_results():
+    rejected_args = [
+        {"card_id": "card-1", "idempotency_key": "missing-window"},
+        {"card_id": "card-1", "window": 1},
+    ]
+    dispatched_validation_args = {"card_id": "card-1", "idempotency_key": "valid-window"}
+    receipt_args = {"receipt_id": "receipt-1"}
+    events = [
+        {"kind": "tool.result", "name": "evaluate_insight_card", "arguments": args,
+         "result": {"error": "ValidationError", "message": "argument schema mismatch"}}
+        for args in rejected_args
+    ] + [
+        {"kind": "tool.result", "name": "evaluate_insight_card",
+         "arguments": dispatched_validation_args,
+         "result": {"error": "ValidationError", "message": "product-side validation"}},
+        {"kind": "tool.result", "name": "get_decision_receipt", "arguments": receipt_args,
+         "result": {"error": "RuntimeError", "message": "receipt lookup failed"}},
+    ]
+    dispatched = [
+        {"name": "evaluate_insight_card", "arguments": dispatched_validation_args,
+         "returned": False, "error_type": "ValidationError"},
+        {"name": "get_decision_receipt", "arguments": receipt_args,
+         "returned": False, "error_type": "RuntimeError"},
+    ]
+
+    assert trial._native_tool_argument_validation_error_count(events, dispatched) == 2
+    assert trial._native_decision_tool_error_count(dispatched) == 2
+    assert len([event for event in events if event["kind"] == "tool.result"
+                and event["name"] in trial.NATIVE_DECISION_TOOLS]) == 4
+    assert trial.product_use_status("treatment", native_attempts=len(dispatched),
+                                    native_valid_results=0) == "native_attempt_failed"
 
 
 def test_usage_separates_jev_attempts_responses_successes_and_errors():

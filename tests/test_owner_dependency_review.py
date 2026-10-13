@@ -101,3 +101,25 @@ def test_reviewer_explains_global_source_gate_without_role_or_all_required_heuri
     assert "but do not make every source optional" in instructions
     assert "Do not infer requiredness from source roles" in instructions
     assert "have no source bindings or required flags to demand" in instructions
+
+
+def test_preapproval_review_checks_scope_intent_without_demanding_approval_field():
+    inputs = _inputs()
+    inputs["owner_answers"]["source_scope"] = (
+        "Sales is the metric population; Support is separate corroborating context."
+    )
+    inputs["source_context"]["catalog"][0]["contract"]["scope"] = "Generated monthly sales ledger."
+    inputs["source_context"]["catalog"][1]["contract"]["scope"] = "Separate support backlog."
+    payload = reviewer.review_payload(
+        inputs["public"], inputs["owner_answers"], inputs["artifact"], inputs["source_context"]
+    )
+
+    instructions = reviewer.REVIEW_INSTRUCTIONS
+    assert "This review runs before the installed approve_insight_card call" in instructions
+    assert "Do not reject solely because source_scope_confirmations is not yet on the draft or in notes" in instructions
+    assert "selected source scopes against the original owner brief and owner_answers" in instructions
+    assert "Leave exact-map validation to the installed approval call" in instructions
+    assert "source_scope_confirmations" not in payload["artifact"]
+    assert payload["source_context"]["catalog"][0]["contract"]["scope"] == "Generated monthly sales ledger."
+    assert payload["source_context"]["catalog"][1]["contract"]["scope"] == "Separate support backlog."
+    assert payload["owner_policy"]["owner_answers"] == inputs["owner_answers"]

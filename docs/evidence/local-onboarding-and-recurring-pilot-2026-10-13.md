@@ -1,6 +1,6 @@
 # Local onboarding and recurring-card pilot
 
-The latest native candidate completed a fresh laptop setup against local
+Native candidate revisions completed fresh laptop setup against local
 Northstar Superset. A separate live-Jev pilot completed card onboarding and
 four recurring policy cases. These establish working paths, not enterprise
 adoption or superiority over a frontier agent.
@@ -28,6 +28,14 @@ the arithmetic and found minor wording issues; no real human panel participated.
 The observed report times were 100 seconds for baseline and 157 for SignalWeave.
 One pair is not a speed benchmark, and this run did not use Jev for a recurring
 decision. [Setup and report evidence](human-native-onboarding-2026-10-13.json).
+
+A later fingerprint-verified build repeated this journey from a locally packaged
+archive: the real wizard finished, Codex registration was verified, live Superset
+health passed, and both first reports completed. Observed times were 173 seconds
+for baseline and 162 for SignalWeave; this second pair still establishes no speed
+advantage. The actual binary also passed the one-line install/PTY setup test using
+a simulated release transport. Neither exercise proves a published download or
+real human usability. [Current-build evidence](current-native-human-onboarding-2026-10-13.json).
 
 ## Reviewed card to recurring decisions
 
@@ -58,20 +66,58 @@ the policy. Three native judgments were wrong, although the frontier agent
 recovered the correct final outcomes. A test-only citation gate also rejected
 valid receipt references, invalidating a natural latency comparison.
 
-The corrected payload preserves the policy and facts, but a newly onboarded
+The first corrected payload preserved the policy and facts, but a newly onboarded
 five-watch card exceeded the unchanged token guard in three healthy cases. Only
-the missing-source case reached Jev. Both agents still completed all four
-workflows correctly; that demonstrates fallback, not a native advantage. Further
-question-budget and onboarding-dependency work is in progress. These cohorts are
-retained separately rather than pooled with the earlier four passing Jev cases.
+the missing-source case reached Jev. The next change preflights independent
+question batches against the same complete state, rather than discarding facts
+or raising the token limit. Source dependencies are now explicit in simulated
+owner review: a globally required source cannot silently become a prerequisite
+for an unrelated policy branch.
+
+The next completed four-case run had healthy live Jev requests, correct final
+agent outcomes in both arms, and six source-supported mock recipient messages.
+Its native routed decisions were correct in only two cases. In the quiet case,
+low support changed a correct raw `ignore` selection into `investigate`; in the
+notification case, the raw selection was already `investigate`. The frontier
+agent recovered the owner's intended outcomes. This is not native decision
+accuracy or an end-to-end advantage. A test citation gate also rejected actual
+source URLs, requiring retries; its timings cannot establish a natural speed
+comparison. [Captured outcomes](native-cadence-dialogue-pilot-2026-10-13.json).
+
+A bounded twelve-request sensitivity experiment replayed these four saved
+requests. Changing only the outcome question to apply the owner's ordered
+policy improved raw selections from three of four to four of four. Routed
+outcomes were still only three of four: notification support remained below the
+unchanged action floor. Removing metadata was tested separately but is **not**
+a production change. The control responses were cached, the cases were known,
+and there was one call per cell; this is diagnostic evidence, not a benchmark
+or independent holdout. [Inputs, results and limits](native-policy-input-sensitivity-2026-10-13.json).
+
+These cohorts are retained separately rather than pooled with the earlier four
+passing Jev cases. The next fresh owner-dialogue pilot completed onboarding and
+all four paired cases. Its four live native routed decisions and both agents'
+final outcomes matched the policy; independent review supported all six recipient
+messages. It retained two malformed evaluation attempts, a receipt lookup error,
+and a test-only alias-collision retry. The treatment took longer in every case.
+That is a functional pass, not a quality or speed win.
+[Fresh pilot evidence](native-cadence-owner-channel-pilot-2026-10-13.json).
+
+The next candidate clarifies the existing recurring path: evaluate the approved
+card before rereading its sources, omit copied source context, and investigate
+with company tools when needed. It also restores the planned-change instruction
+identified in adversarial review. A twelve-period trial is the next check, not an
+already-proven result. A successful API request, a correct raw
+selection, a routed decision and a useful final message remain separate scores.
 
 Test independently varied business cases and natural recurring cadences, including
 onboarding effort, total cost, concise recipient messages and source drift. Then
 validate with actual people and customer data. Earlier invalid fixtures and
 censored runs were retained separately, not counted as wins.
 
-The source candidate has passed 2,679 local tests (six skipped) and native CI on
-Apple Silicon, Intel Mac and Linux. The newer preview has not been published;
-the README's published installer still targets the older release.
-The committed code also passed 2,652 tests (six skipped) from a clean Git clone
-without private/untracked trials, using the locked dependency environment.
+The current working candidate passed 2,775 local tests (six skipped). The pushed
+`ad3c1ce` commit passed 2,723 tests (six skipped) from a clean Git clone without
+private/untracked trials, using the locked dependency environment, and native CI
+on Apple Silicon, Intel Mac and Linux. These are different source revisions;
+the working candidate still needs its own clean-clone and CI checks. The newer
+preview has not been published; the README's published installer still targets
+the older release.

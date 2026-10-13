@@ -1,0 +1,526 @@
+{
+  "status": "completed",
+  "onboarding_complete": true,
+  "protocol": {
+    "code": "5be6d76473bb69e29153b054106b735ee1be4ccf",
+    "dataset_sha256": "22acb4816312a2918c156bcca08813edce94ce9f8b2533f2f946b9a3c55ba9a8",
+    "selected_indices": [
+      0,
+      3,
+      6,
+      9
+    ],
+    "models": {
+      "onboarding": {
+        "model": "gpt-6-luna",
+        "effort": "xhigh"
+      },
+      "recurring_baseline": {
+        "model": "gpt-6-luna",
+        "effort": "xhigh"
+      },
+      "recurring_treatment": {
+        "model": "gpt-6-luna",
+        "effort": "xhigh"
+      },
+      "independent_owner_and_narrative_review": {
+        "model": "gpt-6-luna",
+        "effort": "xhigh"
+      }
+    },
+    "treatment_guidance": {
+      "mode": "production-guided",
+      "baseline_instructions": "production common goal",
+      "treatment_instructions": "production common goal + installed server.initialize.instructions verbatim",
+      "tool_definition_strategy": "installed default-profile Tool.description and inputSchema passed unchanged",
+      "runtime_capture": "onboarding.json records exact installed server instructions and native tool definitions",
+      "native_tools_available": [
+        "evaluate_insight_card",
+        "get_decision_receipt",
+        "get_insight_card",
+        "get_signalweave_guide",
+        "list_insight_cards"
+      ],
+      "profile_scope": "Restricted non-authoring default-profile monitoring subset: shared source tools plus guide, list/get card, evaluation, and receipt; card authoring/review/approval mutations are withheld.",
+      "excluded_default_profile_tools": [
+        "onboard_insight_card",
+        "review_insight_card",
+        "approve_insight_card"
+      ],
+      "mutation_tools_exposed": [],
+      "harness_auto_evaluation": false,
+      "native_tool_use_required_by_harness": false
+    },
+    "onboarding_limits": null,
+    "shared_source_transport": "Both arms use the same local typed SourceRegistry/PublicSourceAdapter for catalog search and inspection; this is not a real third-party connector. Treatment card evaluation still runs through the installed SignalWeave server over the same fixture."
+  },
+  "summary": {
+    "intended_cases": 4,
+    "paired_cases": 4,
+    "treatment_assigned": 4,
+    "treatment_observed": 4,
+    "baseline_observed": 4,
+    "treatment_outcome_correct": 4,
+    "treatment_routing_correct": 4,
+    "baseline_outcome_correct": 4,
+    "baseline_routing_correct": 4,
+    "treatment_native_current_result_available": 4,
+    "treatment_native_judgments_observed": 4,
+    "treatment_native_judgment_outcome_correct": 2,
+    "treatment_native_judgment_outcome_incorrect": 2,
+    "treatment_native_judgment_routing_correct": 2,
+    "treatment_native_attempt_failed": 0,
+    "treatment_product_not_used": 0,
+    "treatment_native_attempts": 14,
+    "treatment_native_valid_current_results": 4,
+    "quiet_grade_ineligible": 0,
+    "outbox_message_count": 6,
+    "quiet_zero_message_workflows": 2
+  },
+  "jev_attempts": 4,
+  "local_mock_outbox": [
+    {
+      "owner": "caller_owned_agent",
+      "sink": "local_mock_outbox",
+      "period_id": "period-595014fd6b188fb1",
+      "arm": "treatment",
+      "recipient_key": "analytics",
+      "destination": "slack://simulation-analytics",
+      "summary": "Retrospective close review: May 2025 vs April 2025; archived measurements cover both complete months through May 31 (measurement as of June 5, 2025). Executive Pulse’s generated Sales ledger fell 10.0%, from $12,079.54 to $10,871.59; all four declared channels fell 10.0%, and the partition reconciles. This meets the policy’s investigate band; notification requires a decline of at least 15% plus corroboration. Separate Web conversion (10%) and Finance revenue ($50,000) were flat; Support backlog (50 tickets) was flat and is diagnostic only. Replay gateway read: October 13, 2026; this does not establish warehouse freshness. Next step: Analytics to review the archived Sales movement; no cause is inferred.",
+      "evidence_refs": [
+        "company_mcp|resource-fd7ced0b3305cf92db4a",
+        "company_mcp|resource-bc5e054e60461fb10b8e",
+        "company_mcp|resource-2ecd7a55803804422a3e",
+        "company_mcp|resource-bcc430dd0048c951ef1a",
+        "receipt:northstar-outfitters-local/period-595014fd6b188fb1"
+      ],
+      "external_send_attempted": false
+    },
+    {
+      "owner": "caller_owned_agent",
+      "sink": "local_mock_outbox",
+      "period_id": "period-595014fd6b188fb1",
+      "arm": "baseline",
+      "recipient_key": "analytics",
+      "destination": "slack://simulation-analytics",
+      "summary": "Retrospective May 2025 close versus April, measured as of 2025-06-05: Northstar Executive Pulse's generated monthly Sales ledger fell 10% ($12,079.54 to $10,871.59); all four declared channels declined 10% and reconcile to the total. This material movement is above the under-10% ignore band but below the 15% notify threshold. Separate Web Funnel conversion and Finance Daily revenue were unchanged; Support backlog was also unchanged and is diagnostic only. The sources are archived fictional measurements; the replay gateway read occurred 2026-10-13 and says nothing about warehouse freshness. Next step: Analytics should investigate the Sales decline without assuming a cause or joining source populations.",
+      "evidence_refs": [
+        "company_mcp|resource-fd7ced0b3305cf92db4a",
+        "company_mcp|resource-bc5e054e60461fb10b8e",
+        "company_mcp|resource-2ecd7a55803804422a3e",
+        "company_mcp|resource-bcc430dd0048c951ef1a"
+      ],
+      "external_send_attempted": false
+    },
+    {
+      "owner": "caller_owned_agent",
+      "sink": "local_mock_outbox",
+      "period_id": "period-ea5811be69f45506",
+      "arm": "baseline",
+      "recipient_key": "leadership",
+      "destination": "slack://simulation-leadership",
+      "summary": "Retrospective archived close for 2025-08 (measurement as of 2025-09-05 06:00 UTC): generated Executive Pulse channel-ledger net sales fell 15.0% from July; Online and Store declined, and all four declared channels reconcile to the total. Separate Web Funnel conversion fell 1.01%; Finance revenue was flat. Support backlog was unchanged and is diagnostic only. This meets the reviewed notify rule through two declining Sales channels plus declining Web conversion. Next step: leadership review of this historical close. Gateway replay read at 2026-10-13 15:47 UTC is not warehouse freshness or current business evidence.",
+      "evidence_refs": [
+        "company_mcp|resource-fd7ced0b3305cf92db4a",
+        "company_mcp|resource-bc5e054e60461fb10b8e",
+        "company_mcp|resource-2ecd7a55803804422a3e",
+        "company_mcp|resource-bcc430dd0048c951ef1a"
+      ],
+      "external_send_attempted": false
+    },
+    {
+      "owner": "caller_owned_agent",
+      "sink": "local_mock_outbox",
+      "period_id": "period-ea5811be69f45506",
+      "arm": "treatment",
+      "recipient_key": "leadership",
+      "destination": "slack://simulation-leadership",
+      "summary": "Retrospective August 2025 close vs July 2025, from archived fictional measurements. The replay gateway read these records on 2026-10-13 at 15:47 UTC; that is not a warehouse freshness claim. Executive Pulse’s generated Sales ledger reports USD 6,677.30 vs USD 7,855.65 (-15.0%); online and store each fell 36.4%, while mobile and marketplace were flat, reconciling to the total within rounding. Separate Web Funnel conversion fell from 9.9% to 9.8% (-0.1 percentage point); Finance revenue was flat. This meets the reviewed notify rule: the decline is at least 15%, two Sales channels declined, and Web conversion declined. Support backlog was flat and diagnostic only. Leadership should review this archived close and request analytics follow-up if needed. No cause is established.",
+      "evidence_refs": [
+        "receipt:northstar-outfitters-local/period-ea5811be69f45506"
+      ],
+      "external_send_attempted": false
+    },
+    {
+      "owner": "caller_owned_agent",
+      "sink": "local_mock_outbox",
+      "period_id": "period-94ab485e76c762c8",
+      "arm": "treatment",
+      "recipient_key": "data-trust",
+      "destination": "slack://simulation-data-trust",
+      "summary": "Archived November 2025 close (compare October 2025; measurements as of 2025-12-05 06:00 UTC). Scope: Executive Pulse’s generated monthly Sales channel ledger, with Web Funnel, Finance Daily, and Support Operations kept as separate populations. Executive Pulse returned no rows, so Sales change and channel reconciliation cannot be assessed. Separate Web conversion (0.098), Finance revenue (USD 49,500), and Support backlog (50 tickets) were unchanged between October and November and cannot substitute for Sales. Replay reads occurred 2026-10-13 15:48 UTC; that timestamp is not warehouse freshness. Next: data trust should verify or restore the archived Sales capture and partition, then rerun this period’s review.",
+      "evidence_refs": [
+        "company_mcp|resource-fd7ced0b3305cf92db4a",
+        "company_mcp|resource-bc5e054e60461fb10b8e",
+        "company_mcp|resource-2ecd7a55803804422a3e",
+        "company_mcp|resource-bcc430dd0048c951ef1a"
+      ],
+      "external_send_attempted": false
+    },
+    {
+      "owner": "caller_owned_agent",
+      "sink": "local_mock_outbox",
+      "period_id": "period-94ab485e76c762c8",
+      "arm": "baseline",
+      "recipient_key": "data-trust",
+      "destination": "slack://simulation-data-trust",
+      "summary": "Archived close: 2025-11 vs 2025-10, measured as of 2025-12-05 06:00 UTC. Executive Pulse returned no Sales ledger rows and reported a simulated source failure, so Sales change and channel reconciliation cannot be assessed. Separate Web conversion and Finance revenue measurements were flat; Support backlog was flat and is diagnostic only. The replay gateway read occurred 2026-10-13 15:48:55 UTC and does not establish warehouse freshness. Next step: Data Trust should recover or reconcile the archived Executive Pulse partition, then reassess this close.",
+      "evidence_refs": [
+        "company_mcp|resource-fd7ced0b3305cf92db4a",
+        "company_mcp|resource-bc5e054e60461fb10b8e",
+        "company_mcp|resource-2ecd7a55803804422a3e",
+        "company_mcp|resource-bcc430dd0048c951ef1a"
+      ],
+      "external_send_attempted": false
+    }
+  ],
+  "narrative_review": {
+    "status": "completed",
+    "reviews": [
+      {
+        "message_id": "M01",
+        "verdict": "supported",
+        "rationale": "The cited archived May-versus-April Sales ledger supports the $12,079.54 to $10,871.59 decline, the 10% change across all four declared channels, and reconciliation. The cited Web, Finance, and Support measurements support the stated flat values and keep those populations distinct. The June 5 measurement cutoff and replay timestamp are clearly distinguished; no cause is asserted, and Analytics has a clear review step.",
+        "issues": []
+      },
+      {
+        "message_id": "M02",
+        "verdict": "supported",
+        "rationale": "The archived May-versus-April ledger supports the 10% Sales decline and matching declines in all four declared channels, with a reconciled total. The separate Web, Finance, and Support sources support the reported unchanged measures. The retrospective period and replay-versus-freshness distinction are clear, no cause or shared cohort is inferred, and Analytics is given a clear investigation step.",
+        "issues": []
+      },
+      {
+        "message_id": "M03",
+        "verdict": "supported",
+        "rationale": "The cited archived July-versus-August measurements support the 15% Sales decline, declines in Online and Store, flat Mobile and Marketplace, the 1.01% Web conversion decline, flat Finance revenue, and flat diagnostic Support backlog. The September 5 cutoff and later replay timestamp are distinguished. Scope remains historical and population-specific, no cause is claimed, and leadership is asked to review the historical close.",
+        "issues": []
+      },
+      {
+        "message_id": "M04",
+        "verdict": "supported",
+        "rationale": "The cited same-period receipt contains archived observations supporting the August Sales total and change, the channel movements and reconciliation within rounding, Web conversion moving from 9.9% to 9.8% (0.1 percentage point), and flat Finance and Support measures. The message makes the retrospective cutoff and replay timestamp clear, keeps populations separate, asserts no cause, and gives leadership a review step with possible Analytics follow-up.",
+        "issues": []
+      },
+      {
+        "message_id": "M05",
+        "verdict": "supported",
+        "rationale": "The cited November-versus-October archived Sales source reports a simulated failure and no rows, so the message appropriately says Sales change and reconciliation cannot be assessed. The separate Web, Finance, and Support sources support the stated unchanged values. The retrospective cutoff and replay freshness limitation are clear; the message does not infer a Sales outcome or cause and gives Data Trust a concrete recovery and rerun step.",
+        "issues": []
+      },
+      {
+        "message_id": "M06",
+        "verdict": "supported",
+        "rationale": "The cited archived Sales source reports the simulated failure and empty partition, supporting the statement that Sales change and reconciliation are unavailable. The separate sources support flat Web conversion, Finance revenue, and diagnostic Support backlog. The period and replay timestamp are clearly bounded, no cause or cross-population inference is made, and Data Trust has a clear recovery or reconciliation step before reassessment.",
+        "issues": []
+      }
+    ]
+  },
+  "periods": [
+    {
+      "period_id": "period-99d58d0d74b7ad34",
+      "baseline": {
+        "completed": true,
+        "episode_seconds": 27.305205000004207,
+        "score": {
+          "observed": true,
+          "category": "small_quiet",
+          "expected_outcome": "ignore",
+          "actual_outcome": "ignore",
+          "outcome_correct": true,
+          "expected_recipients": [],
+          "actual_recipients": [],
+          "routing_correct": true,
+          "expected_outbox_count": 0,
+          "actual_outbox_count": 0,
+          "outbox_count_correct": true,
+          "quiet_grade_eligible": true,
+          "evidence_mode": "primary_source_inspected_current_run",
+          "primary_current_proof": true,
+          "primary_current_proof_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ]
+        }
+      },
+      "treatment": {
+        "completed": true,
+        "episode_seconds": 44.8134152920029,
+        "score": {
+          "observed": true,
+          "category": "small_quiet",
+          "expected_outcome": "ignore",
+          "actual_outcome": "ignore",
+          "outcome_correct": true,
+          "expected_recipients": [],
+          "actual_recipients": [],
+          "routing_correct": true,
+          "expected_outbox_count": 0,
+          "actual_outbox_count": 0,
+          "outbox_count_correct": true,
+          "quiet_grade_eligible": true,
+          "evidence_mode": "primary_source_inspected_current_run",
+          "primary_current_proof": true,
+          "primary_current_proof_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ]
+        },
+        "product_use_status": "native_current_result_available",
+        "native_judgment": {
+          "observed": true,
+          "receipt_count": 1,
+          "actual_outcome": "investigate",
+          "expected_outcome": "ignore",
+          "outcome_correct": false,
+          "actual_recipients": [
+            "analytics"
+          ],
+          "expected_recipients": [],
+          "routing_correct": false
+        }
+      }
+    },
+    {
+      "period_id": "period-595014fd6b188fb1",
+      "baseline": {
+        "completed": true,
+        "episode_seconds": 16.51823074999993,
+        "score": {
+          "observed": true,
+          "category": "negative_material",
+          "expected_outcome": "investigate",
+          "actual_outcome": "investigate",
+          "outcome_correct": true,
+          "expected_recipients": [
+            "analytics"
+          ],
+          "actual_recipients": [
+            "analytics"
+          ],
+          "routing_correct": true,
+          "expected_outbox_count": 1,
+          "actual_outbox_count": 1,
+          "outbox_count_correct": true,
+          "quiet_grade_eligible": true,
+          "evidence_mode": "primary_source_inspected_current_run",
+          "primary_current_proof": true,
+          "primary_current_proof_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ]
+        }
+      },
+      "treatment": {
+        "completed": true,
+        "episode_seconds": 83.09971979100374,
+        "score": {
+          "observed": true,
+          "category": "negative_material",
+          "expected_outcome": "investigate",
+          "actual_outcome": "investigate",
+          "outcome_correct": true,
+          "expected_recipients": [
+            "analytics"
+          ],
+          "actual_recipients": [
+            "analytics"
+          ],
+          "routing_correct": true,
+          "expected_outbox_count": 1,
+          "actual_outbox_count": 1,
+          "outbox_count_correct": true,
+          "quiet_grade_eligible": true,
+          "evidence_mode": "primary_source_inspected_current_run",
+          "primary_current_proof": true,
+          "primary_current_proof_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ]
+        },
+        "product_use_status": "native_current_result_available",
+        "native_judgment": {
+          "observed": true,
+          "receipt_count": 1,
+          "actual_outcome": "investigate",
+          "expected_outcome": "investigate",
+          "outcome_correct": true,
+          "actual_recipients": [
+            "analytics"
+          ],
+          "expected_recipients": [
+            "analytics"
+          ],
+          "routing_correct": true
+        }
+      }
+    },
+    {
+      "period_id": "period-ea5811be69f45506",
+      "baseline": {
+        "completed": true,
+        "episode_seconds": 26.05242333299975,
+        "score": {
+          "observed": true,
+          "category": "corroborated_decline",
+          "expected_outcome": "notify",
+          "actual_outcome": "notify",
+          "outcome_correct": true,
+          "expected_recipients": [
+            "leadership"
+          ],
+          "actual_recipients": [
+            "leadership"
+          ],
+          "routing_correct": true,
+          "expected_outbox_count": 1,
+          "actual_outbox_count": 1,
+          "outbox_count_correct": true,
+          "quiet_grade_eligible": true,
+          "evidence_mode": "primary_source_inspected_current_run",
+          "primary_current_proof": true,
+          "primary_current_proof_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ]
+        }
+      },
+      "treatment": {
+        "completed": true,
+        "episode_seconds": 74.89086191700335,
+        "score": {
+          "observed": true,
+          "category": "corroborated_decline",
+          "expected_outcome": "notify",
+          "actual_outcome": "notify",
+          "outcome_correct": true,
+          "expected_recipients": [
+            "leadership"
+          ],
+          "actual_recipients": [
+            "leadership"
+          ],
+          "routing_correct": true,
+          "expected_outbox_count": 1,
+          "actual_outbox_count": 1,
+          "outbox_count_correct": true,
+          "quiet_grade_eligible": true,
+          "evidence_mode": "primary_source_inspected_current_run",
+          "primary_current_proof": true,
+          "primary_current_proof_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ]
+        },
+        "product_use_status": "native_current_result_available",
+        "native_judgment": {
+          "observed": true,
+          "receipt_count": 1,
+          "actual_outcome": "investigate",
+          "expected_outcome": "notify",
+          "outcome_correct": false,
+          "actual_recipients": [
+            "analytics"
+          ],
+          "expected_recipients": [
+            "leadership"
+          ],
+          "routing_correct": false
+        }
+      }
+    },
+    {
+      "period_id": "period-94ab485e76c762c8",
+      "baseline": {
+        "completed": true,
+        "episode_seconds": 31.978419958002632,
+        "score": {
+          "observed": true,
+          "category": "unavailable",
+          "expected_outcome": "insufficient_data",
+          "actual_outcome": "insufficient_data",
+          "outcome_correct": true,
+          "expected_recipients": [
+            "data-trust"
+          ],
+          "actual_recipients": [
+            "data-trust"
+          ],
+          "routing_correct": true,
+          "expected_outbox_count": 1,
+          "actual_outbox_count": 1,
+          "outbox_count_correct": true,
+          "quiet_grade_eligible": true,
+          "evidence_mode": "none",
+          "primary_current_proof": false,
+          "primary_current_proof_refs": []
+        }
+      },
+      "treatment": {
+        "completed": true,
+        "episode_seconds": 107.92495150000468,
+        "score": {
+          "observed": true,
+          "category": "unavailable",
+          "expected_outcome": "insufficient_data",
+          "actual_outcome": "insufficient_data",
+          "outcome_correct": true,
+          "expected_recipients": [
+            "data-trust"
+          ],
+          "actual_recipients": [
+            "data-trust"
+          ],
+          "routing_correct": true,
+          "expected_outbox_count": 1,
+          "actual_outbox_count": 1,
+          "outbox_count_correct": true,
+          "quiet_grade_eligible": true,
+          "evidence_mode": "native_bundle_current_run",
+          "primary_current_proof": true,
+          "primary_current_proof_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ]
+        },
+        "product_use_status": "native_current_result_available",
+        "native_judgment": {
+          "observed": true,
+          "receipt_count": 1,
+          "actual_outcome": "insufficient_data",
+          "expected_outcome": "insufficient_data",
+          "outcome_correct": true,
+          "actual_recipients": [
+            "data-trust"
+          ],
+          "expected_recipients": [
+            "data-trust"
+          ],
+          "routing_correct": true
+        }
+      }
+    }
+  ],
+  "binary_verifications": {
+    "preflight": {
+      "dirty": true,
+      "format_version": 1,
+      "frozen": true,
+      "git_commit": "786ef1889bad13bda63b31b1607d1637dc2bfa13",
+      "python": "3.12.10",
+      "source_sha256": "33c3f1f677c40b7c53255cdf1f2d7e918a17bab0859ec6d68f18034067780a4e",
+      "version": "0.2.0rc2",
+      "binary_sha256": "226ee5bbb4190661c01b173c142f0077effeca025dc6390324f242e692f3c1de"
+    },
+    "postflight": {
+      "dirty": true,
+      "format_version": 1,
+      "frozen": true,
+      "git_commit": "786ef1889bad13bda63b31b1607d1637dc2bfa13",
+      "python": "3.12.10",
+      "source_sha256": "33c3f1f677c40b7c53255cdf1f2d7e918a17bab0859ec6d68f18034067780a4e",
+      "version": "0.2.0rc2",
+      "binary_sha256": "226ee5bbb4190661c01b173c142f0077effeca025dc6390324f242e692f3c1de"
+    }
+  },
+  "limitations": [
+    "Synthetic source fixture and simulated owner/reviewers; not customer evidence or real human approval.",
+    "Retrospective monthly-close replay does not demonstrate a real 12-month scheduler or current warehouse freshness.",
+    "Shared catalog search and source inspection are a local typed fixture adapter, not a live third-party MCP connector.",
+    "Local mock outbox only; no Slack or other external delivery was attempted.",
+    "Narrative quality is an independent qualitative model review, not a keyword score."
+  ],
+  "interpretation": "Four known synthetic monthly closes; both final agents were correct, but native routed decisions matched only two cases. No demonstrated comparative advantage. Timings include a subsequently corrected test-only rejection of valid evidence URLs and must not be presented as natural product latency."
+}

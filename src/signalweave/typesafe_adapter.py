@@ -1968,21 +1968,49 @@ class JevJudger:
         # Nouls: independent yes/no probabilities are not a normalized decision
         # distribution and can make a benign case look like investigation simply
         # because several conditions are moderately plausible.
-        questions["outcome"] = Choice(
-            instructions=(
-                "Which single outcome best fits the current evidence and the owner's "
-                "card purpose and decision guidance? The card's decision_guidance is "
-                "human-authored policy: apply it, do not invent missing business rules. "
-                "Choose only from the allowed outcomes. Ignore, investigate, and "
-                "insufficient_data are always available; other outcomes require a "
-                "configured delivery route. Delivery is separately controlled by code. Do not invent "
-                "facts, sources, or destinations."
-                " Use code-computed numeric_conditions when supplied; apply the full policy "
-                "once to those facts and relevant context. Other questions in this request "
-                "are independent diagnostics, not additional policy prerequisites. Use "
-                "adapter-published owner_change_status or planned_change as authoritative "
+        outcome_instructions = (
+            "Which single outcome best fits the current evidence and the owner's "
+            "card purpose and decision guidance? The card's decision_guidance is "
+            "human-authored policy: apply it, do not invent missing business rules. "
+            "Choose only from the allowed outcomes. Ignore, investigate, and "
+            "insufficient_data are always available; other outcomes require a "
+            "configured delivery route. Delivery is separately controlled by code. Do not invent "
+            "facts, sources, or destinations."
+            " Use code-computed numeric_conditions when supplied; apply the full policy "
+            "once to those facts and relevant context. Other questions in this request "
+            "are independent diagnostics, not additional policy prerequisites. Use "
+            "adapter-published owner_change_status or planned_change as authoritative "
+            "source context when the card distinguishes planned from unplanned movement."
+        )
+        if card.decision_guidance.strip():
+            outcome_instructions = (
+                "Which outcome does the owner's card.decision_guidance select for the supplied "
+                "measurement window? Apply explicit ordered rules in their stated order, using "
+                "the normalized evidence and source definitions. This is a policy recommendation, "
+                "not an external action. A retrospective review or delivery-disabled execution does "
+                "not change which outcome the policy selects. Diagnostic watch items are not extra "
+                "trigger conditions. Do not invent a threshold, prerequisite, or causal explanation."
+                " Use adapter-published owner_change_status or planned_change as authoritative "
                 "source context when the card distinguishes planned from unplanned movement."
-            ),
+            )
+            outcome_criteria = {
+                key: (
+                    f"The owner's applicable rule selects {key}. Follow the owner's thresholds, "
+                    "exceptions, and fallback exactly; a configured route is not a trigger. "
+                    "Select investigation for uncertainty only when the policy calls for it, "
+                    "not as a replacement for an explicit quiet or notification rule."
+                )
+                for key in outcome_criteria
+            }
+        if card.numeric_conditions:
+            outcome_instructions += (
+                " Use the supplied code-computed numeric_conditions status and value fields "
+                "as facts while applying the full policy. These checks are not standalone "
+                "action rules. Unknown means unresolved, not false. Do not recalculate "
+                "comparisons or invent bindings."
+            )
+        questions["outcome"] = Choice(
+            instructions=outcome_instructions,
             criteria=outcome_criteria,
         )
 
