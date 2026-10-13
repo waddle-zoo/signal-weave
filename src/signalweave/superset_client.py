@@ -929,6 +929,7 @@ class SupersetClient:
                         "current_period": current_period,
                         "baseline_period": baseline_period,
                         "comparison_basis": "last_two_returned_time_buckets",
+                        "period_coverage": "unverified; bucket labels do not establish complete or comparable periods",
                         "time_bucket_count": len(ordered_keys),
                     }
                     subject_id, subject_label = f"{chart_id}:{metric_key}", chart_title

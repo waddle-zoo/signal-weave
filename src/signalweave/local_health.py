@@ -41,14 +41,18 @@ async def live_source_report(*, timeout_seconds: float = 15.0) -> tuple[bool, li
                 messages.append(f"{name}: request failed; check URL, credentials, and access scope.")
                 continue
             count = getattr(page, "total_count", None)
-            suffix = f"; catalog items visible: {count}" if count is not None else ""
-            messages.append(f"{name}: reachable and searchable{suffix}.")
+            suffix = f"; catalog entries reported: {count}" if count is not None else ""
+            messages.append(f"{name}: live catalog search succeeded{suffix}.")
         except asyncio.TimeoutError:
             healthy = False
             messages.append(f"{name}: timed out after {timeout_seconds:g}s.")
         except Exception:
             healthy = False
             messages.append(f"{name}: request failed; check URL, credentials, and access scope.")
+    messages.append(
+        "Catalog access only: resource-level permissions and data freshness are not checked. "
+        "No decision-provider judgment was requested."
+    )
     return healthy, messages
 
 

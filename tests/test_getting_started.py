@@ -5,11 +5,19 @@ import json
 import pytest
 
 from signalweave.engine import InsightEngine
-from signalweave.getting_started import getting_started
+from signalweave.getting_started import agent_getting_started, getting_started
 from signalweave.mcp_server import create_mcp
 from signalweave.runtime import Runtime
 from signalweave.sources import SourceRegistry
 from signalweave.store import SQLiteInsightCardStore, SQLiteMetricQueryCardStore
+
+
+@pytest.mark.parametrize("task", ["start", "monitor"])
+def test_agent_guide_distinguishes_bucket_arithmetic_from_comparable_changes(task):
+    guide = agent_getting_started(task)
+    assert any("Verify period coverage" in text and "beside the headline" in text
+               and "currency" in text for text in guide["limits"])
+    assert guide["inference_performed"] is False
 
 
 @pytest.fixture

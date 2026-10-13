@@ -51,6 +51,7 @@ def agent_getting_started(task: str = "start", *, decision_provider: str = "jev-
             "No runtime catalog expansion; add newly needed sources to the card with owner review.",
             "Jev makes the card-bounded policy judgment; it does not discover the business, infer causality, or replace the frontier agent's deeper investigation.",
             "A returned evidence bundle is not a causal finding. Distinguish facts, hypotheses, and unknowns.",
+            "A difference between the last two returned chart buckets is arithmetic, not proof of a like-for-like business decline. Verify period coverage and comparison basis; if unverified, put that caveat beside the headline, not only in setup questions. Never infer a currency from a metric name.",
             "Large compact responses explicitly omit evidence. Read relevant receipt pages before explaining or delivering an action; omitted evidence is not empty or an all-clear.",
             "SignalWeave does not schedule runs or send messages.",
             "Missing alert criteria can pause recurring automation while the agent still reports supported facts from inspected evidence. Do not withhold a useful current report merely because the notification policy needs owner confirmation.",

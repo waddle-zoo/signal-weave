@@ -1088,8 +1088,7 @@ def doctor(home: str | Path | None = None) -> tuple[bool, list[str]]:
     messages.extend(f"ERROR: {error}" for error in errors)
     if not errors:
         messages.append(
-            "Offline checks passed. Live source access and permissions remain unverified."
-            if profile == "agent"
-            else "Offline checks passed. Live credentials, source access, and Jev behavior remain unverified."
+            "Offline configuration checks passed; this offline check made no source or "
+            "decision-provider requests."
         )
     return not errors, messages

@@ -208,7 +208,14 @@ def test_status_and_ui_are_secret_free_and_show_next_steps(local_home):
 
 def test_ui_can_run_a_live_source_check_without_calling_jev(local_home, monkeypatch):
     async def fake_live_health_report():
-        return {"healthy": True, "messages": ["superset: reachable and searchable; catalog items visible: 4."]}
+        return {
+            "healthy": True,
+            "messages": [
+                "superset: live catalog search succeeded; catalog entries reported: 4.",
+                "Catalog access only: resource-level permissions and data freshness are not "
+                "checked. No decision-provider judgment was requested.",
+            ],
+        }
 
     monkeypatch.setattr("signalweave.local_ui.live_health_report", fake_live_health_report)
 
@@ -221,7 +228,40 @@ def test_ui_can_run_a_live_source_check_without_calling_jev(local_home, monkeypa
     response = asyncio.run(exercise())
     assert response.status_code == 200
     assert response.json()["live_health"]["healthy"] is True
-    assert "catalog items visible: 4" in response.text
+    assert "catalog entries reported: 4" in response.text
+    assert "No decision-provider judgment was requested." in response.text
+
+
+def test_cli_live_health_scopes_offline_and_live_results(local_home, monkeypatch, capsys):
+    async def fake_live_health_report():
+        return {
+            "healthy": True,
+            "messages": [
+                "superset: live catalog search succeeded; catalog entries reported: 48.",
+                "Catalog access only: resource-level permissions and data freshness are not "
+                "checked. No decision-provider judgment was requested.",
+            ],
+        }
+
+    monkeypatch.setattr("signalweave.local_health.live_health_report", fake_live_health_report)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["signalweave", "health", "--live", "--home", str(local_home)],
+    )
+    cli.main()
+
+    output = capsys.readouterr().out
+    assert (
+        "Offline configuration checks passed; this offline check made no source or "
+        "decision-provider requests."
+    ) in output
+    assert "live catalog search succeeded; catalog entries reported: 48" in output
+    assert (
+        "Catalog access only: resource-level permissions and data freshness are not checked. "
+        "No decision-provider judgment was requested."
+    ) in output
+    assert "Live source access and permissions remain unverified." not in output
 
 
 @pytest.mark.asyncio
@@ -242,8 +282,10 @@ async def test_live_source_check_is_bounded_and_does_not_call_jev(monkeypatch):
     healthy, messages = await live_source_report(timeout_seconds=1)
     assert healthy
     assert messages == [
-        "superset: reachable and searchable; catalog items visible: 3.",
-        "trino: reachable and searchable; catalog items visible: 3.",
+        "superset: live catalog search succeeded; catalog entries reported: 3.",
+        "trino: live catalog search succeeded; catalog entries reported: 3.",
+        "Catalog access only: resource-level permissions and data freshness are not checked. "
+        "No decision-provider judgment was requested.",
     ]
 
 
@@ -275,7 +317,11 @@ async def test_live_health_uses_the_real_registry_browse_and_failure_contract(mo
     if fails:
         assert "request failed" in messages[0]
     else:
-        assert "catalog items visible: 48" in messages[0]
+        assert "catalog entries reported: 48" in messages[0]
+    assert messages[-1] == (
+        "Catalog access only: resource-level permissions and data freshness are not checked. "
+        "No decision-provider judgment was requested."
+    )
 
 
 def test_cli_status_and_credential_list_are_human_readable(local_home, monkeypatch, capsys):

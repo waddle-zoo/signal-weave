@@ -228,6 +228,14 @@ This prevents a tenant-scoped MCP principal from seeing the adapter's implicit
 tenant deployment. A deployment can add any connector at construction time;
 Superset is not a required runtime dependency.
 
+Chart time-series deltas compare the last two returned buckets. Their
+`attributes.period_coverage` is unverified: a bucket label does not establish
+complete periods or a like-for-like comparison. Keep the arithmetic, but verify
+coverage before interpreting it as a business change. Additive grouped metrics
+retain both the pooled total and dimension-specific series; do not sum those
+representations together. Non-additive metrics retain separate series instead
+of pooling averages or rates.
+
 Dashboard snapshots expose `metadata.dashboard_scope` telemetry. A successful
 dashboard-filtered chart request increments `dashboard_scoped_requests`. The
 hosted Preset adapter also retains the provider's normalized dashboard filter

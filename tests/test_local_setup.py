@@ -228,7 +228,10 @@ def test_offline_doctor_does_not_build_runtime_or_touch_network(home, monkeypatc
         healthy, messages = setup.doctor()
     assert healthy
     assert "onboarding only" in "\n".join(messages)
-    assert "remain unverified" in "\n".join(messages)
+    assert (
+        "Offline configuration checks passed; this offline check made no source or "
+        "decision-provider requests."
+    ) in messages
     assert "test-local-key" not in "\n".join(messages)
     assert sorted(home.rglob("*")) == before
 

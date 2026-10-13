@@ -626,6 +626,7 @@ def test_time_series_rows_include_exact_returned_bucket_provenance():
         == "last_two_returned_time_buckets"
     )
     assert observations[0].attributes["time_bucket_count"] == 3
+    assert observations[0].attributes["period_coverage"].startswith("unverified;")
 
 
 def test_additive_grouped_sum_keeps_pooled_series_and_channel_children():

@@ -515,6 +515,17 @@ def test_chatgpt_login_rejects_oauth_state_mismatch_before_token_exchange(tmp_pa
     assert not (tmp_path / "signalweave" / chatgpt_auth.AUTH_FILE).exists()
 
 
+def test_recursive_unverified_jwt_is_rejected_before_jwks_network_access(monkeypatch):
+    jwt = chatgpt_auth.jwt
+    client = jwt.PyJWKClient(chatgpt_auth.JWKS_URL)
+    monkeypatch.setattr(client, "fetch_data", lambda: pytest.fail("malformed token reached JWKS"))
+    encode = jwt.utils.base64url_encode
+    token = b".".join((encode(b'{"alg":"RS256"}'),
+                       encode(b"[" * 20000 + b"]" * 20000), encode(b"invalid-signature"))).decode()
+    with pytest.raises(jwt.InvalidTokenError):
+        client.get_signing_key_from_jwt(token)
+
+
 def test_chatgpt_id_token_validation_checks_signature_issuer_audience_and_nonce(monkeypatch):
     private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
     monkeypatch.setattr(
