@@ -127,6 +127,13 @@ support keeping those operations in code or the calling agent's analysis. These
 sources supplied observations, not validated decompositions; no numerical
 condition was fabricated to turn the result into a pass. The focused rerun is a
 known-regression check, not an independent holdout or proof of enterprise value.
+It completed fresh onboarding through the normal API, including a known scalar
+coverage binding and corrected optional-source dependencies. Both final arms
+matched all four outcomes and recipients; native decisions matched only two.
+The treatment still took longer. Seven messages were source-supported, while
+one treatment notification claimed flat Finance/Support metrics without citing
+those sources. Correct routing is therefore not a complete communication pass.
+[Known-regression results](native-quality-known-regressions-2026-10-13.json).
 A successful API request, a correct raw
 selection, a routed decision and a useful final message remain separate scores.
 
@@ -140,6 +147,8 @@ The previous working candidate passed 2,775 local tests (six skipped). The pushe
 private/untracked trials, using the locked dependency environment, and native CI
 on Apple Silicon, Intel Mac and Linux. Its downloaded Apple Silicon CI binary
 also passed the real-binary one-line installer/PTY test. These are different
-source revisions; the new contract fixes still need their own checks. The newer
+source revisions. The contract-fix commit `e71deba` passed 2,792 tests (six skipped)
+from a clean clone, plus native CI on all three platforms. Its fingerprint-verified
+binary completed the live regression with unchanged pre/post identities. The newer
 preview has not been published; the README's published installer still targets
 the older release.
