@@ -556,7 +556,8 @@ def test_binary_smoke_drops_host_python_loader_and_provider_environment(tmp_path
 @pytest.mark.parametrize("returncode,stderr", [
     (0, 'Traceback (most recent call last):\n'
         '  File "/private/secret-path-sentinel", line 1\n'
-        'ValueError: secret-message-sentinel\n'),
+        'ValueError: secret-message-sentinel\n'
+        'runner cleanup marker\n'),
     (1, "secret-sentinel"),
 ])
 async def test_binary_checker_command_failures_do_not_echo_stderr(tmp_path, monkeypatch, capsys, returncode, stderr):
@@ -576,6 +577,7 @@ async def test_binary_checker_command_failures_do_not_echo_stderr(tmp_path, monk
     assert "secret-sentinel" not in diagnostic
     assert "secret-path-sentinel" not in diagnostic
     assert "secret-message-sentinel" not in diagnostic
+    assert "runner cleanup marker" not in diagnostic
     if returncode == 0:
         assert "ValueError" in str(error.value)
 
@@ -587,9 +589,44 @@ def test_binary_checker_withholds_nonstandard_exception_class():
         _check_stderr(
             'Traceback (most recent call last):\n'
             '  File "/private/secret-path-sentinel", line 1\n'
+            'ValueError: secret-cause-sentinel\n'
+            'During handling of the above exception, another exception occurred:\n'
             'PrivateError: secret-message-sentinel\n'
         )
 
     assert "PrivateError" not in str(error.value)
+    assert "ValueError" not in str(error.value)
     assert "secret-path-sentinel" not in str(error.value)
+    assert "secret-cause-sentinel" not in str(error.value)
     assert "secret-message-sentinel" not in str(error.value)
+
+
+def test_binary_checker_reports_builtin_baseexception_class():
+    from scripts.check_binary import _check_stderr
+
+    with pytest.raises(RuntimeError, match="diagnostic contents withheld") as error:
+        _check_stderr(
+            'Traceback (most recent call last):\n'
+            'SystemExit: secret-message-sentinel\n'
+        )
+
+    assert "SystemExit" in str(error.value)
+    assert "secret-message-sentinel" not in str(error.value)
+
+
+def test_binary_checker_skips_pyinstaller_footer_for_builtin_exception_class():
+    from scripts.check_binary import _check_stderr
+
+    with pytest.raises(RuntimeError, match="diagnostic contents withheld") as error:
+        _check_stderr(
+            'Traceback (most recent call last):\n'
+            '  File "/private/secret-path-sentinel", line 1\n'
+            'ModuleNotFoundError: secret-message-sentinel\n'
+            '[PYI-4242:ERROR] Failed to execute script; secret-footer-sentinel\n'
+        )
+
+    diagnostic = str(error.value)
+    assert "ModuleNotFoundError" in diagnostic
+    assert "secret-message-sentinel" not in diagnostic
+    assert "secret-path-sentinel" not in diagnostic
+    assert "secret-footer-sentinel" not in diagnostic

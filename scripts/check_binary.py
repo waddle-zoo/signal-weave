@@ -43,11 +43,24 @@ def _smoke_environment(user_home: Path) -> dict[str, str]:
 
 def _check_stderr(stderr: str) -> None:
     if "Traceback" in stderr:
-        last_line = next((line.strip() for line in reversed(stderr.splitlines()) if line.strip()), "")
-        exception_name = last_line.partition(":")[0]
-        exception_type = getattr(builtins, exception_name, None)
-        if not isinstance(exception_type, type) or not issubclass(exception_type, Exception):
-            exception_name = ""
+        exception_name = ""
+        for line in reversed(stderr.splitlines()):
+            stripped = line.strip()
+            # PyInstaller writes a bootloader footer after the Python traceback;
+            # it is not an exception line and must not mask the traceback cause.
+            if stripped.startswith(("[PYI-", "PYI-")):
+                continue
+            candidate, separator, _ = stripped.partition(":")
+            if not separator or not candidate.isidentifier():
+                continue
+            exception_type = builtins.__dict__.get(candidate)
+            if isinstance(exception_type, type) and issubclass(exception_type, BaseException):
+                exception_name = candidate
+                break
+            if candidate.endswith(("Error", "Exception", "Exit", "Interrupt")):
+                # A non-built-in final exception can follow a built-in cause; do
+                # not misreport the cause as the exception that ended the traceback.
+                break
         class_hint = f" (standard exception: {exception_name})" if exception_name else ""
         raise RuntimeError(
             f"Binary emitted a traceback on stderr{class_hint}; diagnostic contents withheld"
