@@ -77,6 +77,11 @@ def agent_getting_started(task: str = "start", *, decision_provider: str = "jev-
             "fresh approved source facts. Use your company tools for deeper investigation "
             "when needed, not to restate the same facts before every evaluation. Jev applies "
             "the card policy; you own investigation, narrative, cadence and delivery."
+            " Check source_contracts for this run's coverage/comparability before interpreting "
+            "observations; read any omitted contracts using the receipt's paging instructions."
+            " For a relative recurring window, use this run's measurement dates and cutoff; "
+            "onboarding examples are not permanent date restrictions. Do not override an "
+            "explicit owner-requested fixed window."
         )
         response["optional_context"] = (
             "Omit context for a normal card run. Supply it only for additional provenance-bearing "

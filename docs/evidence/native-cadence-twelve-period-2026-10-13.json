@@ -1,0 +1,2181 @@
+{
+  "status": "completed",
+  "protocol": {
+    "version": "native-cadence-v2",
+    "code": "5776b573a8056a8a4fa87b0d1a716e40ff54cde7",
+    "dataset_sha256": "22acb4816312a2918c156bcca08813edce94ce9f8b2533f2f946b9a3c55ba9a8",
+    "registration_pilot_indices": [
+      0,
+      3,
+      6,
+      9
+    ],
+    "selected_indices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
+    "selected_period_ids": [
+      "period-99d58d0d74b7ad34",
+      "period-48268088143da8bd",
+      "period-624514402053179d",
+      "period-595014fd6b188fb1",
+      "period-e03441c3cd4bb773",
+      "period-7dfd402810696527",
+      "period-ea5811be69f45506",
+      "period-db9e3e58d5521504",
+      "period-172749b1d081af89",
+      "period-94ab485e76c762c8",
+      "period-df6fa72fcf9c2d4f",
+      "period-52992f352cfabc1a"
+    ],
+    "company_count": 1,
+    "fixture_period_count": 12,
+    "cadence": "consecutive monthly closes",
+    "cold_onboarding": true,
+    "study_scope": "This is a retrospective monthly-close review of archived fixture measurements, not a current alert. Preserve each measurement cutoff; a replay gateway read now is not a warehouse freshness claim.",
+    "scheduler_claim": "No real scheduler, cadence execution, or current warehouse freshness is tested.",
+    "card_and_notes_frozen_after_onboarding": true,
+    "models": {
+      "onboarding": {
+        "model": "gpt-6-luna",
+        "effort": "xhigh"
+      },
+      "recurring_baseline": {
+        "model": "gpt-6-luna",
+        "effort": "xhigh"
+      },
+      "recurring_treatment": {
+        "model": "gpt-6-luna",
+        "effort": "xhigh"
+      },
+      "independent_owner_and_narrative_review": {
+        "model": "gpt-6-luna",
+        "effort": "xhigh"
+      }
+    },
+    "tool_limits_per_episode": {
+      "max_tool_calls": 100,
+      "timeout_seconds": 360
+    },
+    "onboarding_episode_limits": {
+      "max_tool_calls": 100,
+      "timeout_seconds": 900
+    },
+    "jev_attempt_limit": 20,
+    "replay_clock": {
+      "simulation_as_of": "Original historical monthly close; preserved verbatim.",
+      "query_capture_at": "One real UTC timestamp shared by both arms per case.",
+      "snapshot_mutation": "Only top-level captured_at/source_captured_at are stamped as a new synthetic gateway response; all measurement rows, business dates, cutoffs, and freshness annotations stay unchanged.",
+      "freshness_claim": "Gateway replay receipt is not a warehouse freshness assertion."
+    },
+    "comparison": "intention_to_treat_with_actual_native_use_reported_separately",
+    "native_measurement_semantics": {
+      "jev_successes": "Provider transport responses only; not policy correctness.",
+      "native_valid_current_results": "Returned receipt/result matched the current idempotency key, frozen card ID/version, and shadow-delivery contract; not judgment correctness.",
+      "native_judgment": "Post-run typed outcome and canonical routing scored against the private label; labels are not provided to either agent.",
+      "frontier_submission": "Scored separately as the caller-owned final outcome and routing after any evidence-based recovery."
+    },
+    "narrative_review_protocol": {
+      "max_tool_calls": 2,
+      "schema_correction_retries": 1,
+      "required_fields": [
+        "message_id",
+        "verdict",
+        "rationale"
+      ],
+      "issues_optional_default": [],
+      "missing_verdict_or_rationale_is_failure": true,
+      "positive_verdict_forced": false
+    },
+    "treatment_guidance": {
+      "mode": "production-guided",
+      "baseline_instructions": "production common goal",
+      "treatment_instructions": "production common goal + installed server.initialize.instructions verbatim",
+      "tool_definition_strategy": "installed default-profile Tool.description and inputSchema passed unchanged",
+      "runtime_capture": "onboarding.json records exact installed server instructions and native tool definitions",
+      "native_tools_available": [
+        "evaluate_insight_card",
+        "get_decision_receipt",
+        "get_insight_card",
+        "get_signalweave_guide",
+        "list_insight_cards"
+      ],
+      "profile_scope": "Restricted non-authoring default-profile monitoring subset: shared source tools plus guide, list/get card, evaluation, and receipt; card authoring/review/approval mutations are withheld.",
+      "excluded_default_profile_tools": [
+        "onboard_insight_card",
+        "review_insight_card",
+        "approve_insight_card"
+      ],
+      "mutation_tools_exposed": [],
+      "harness_auto_evaluation": false,
+      "native_tool_use_required_by_harness": false
+    },
+    "treatment_native_tools": [
+      "evaluate_insight_card",
+      "get_decision_receipt",
+      "get_insight_card",
+      "get_signalweave_guide",
+      "list_insight_cards"
+    ],
+    "precomputed_bundle": false,
+    "native_tool_use_required": false,
+    "delivery_enabled": false,
+    "sink": "caller_owned_agent_local_mock_outbox",
+    "source_data": "synthetic registered company MCP fixture; not customer or live BI data",
+    "shared_source_transport": "Both arms use the same local typed SourceRegistry/PublicSourceAdapter for catalog search and inspection; this is not a real third-party connector. Treatment card evaluation still runs through the installed SignalWeave server over the same fixture.",
+    "expansion": "No automatic expansion from the four-period stage gate.",
+    "binary_preflight": {
+      "dirty": true,
+      "format_version": 1,
+      "frozen": true,
+      "git_commit": "5776b573a8056a8a4fa87b0d1a716e40ff54cde7",
+      "python": "3.12.10",
+      "source_sha256": "04f9ec97629ba8742c08e5e9d6fee21fd4443f3bc134727e628f6becd1b772aa",
+      "version": "0.2.0rc2",
+      "binary_sha256": "fd0d9b888adf74118d6648e8aeeedacce91df791e64f78f7b8b3a3e4cdff8ef6"
+    },
+    "harness_sha256": {
+      "evaluations/native_cadence_trial.py": "e64206fbccaa443e5bbb10c1773dd86a325b5aac404bb5e49d19153bcf951ebc",
+      "evaluations/installed_workflow_trial.py": "aa9bacfcd20f28b945d309b28958dd71a77107c2e9484db4b7d9f1c89914fe41",
+      "evaluations/installed_trial_transport.py": "b73dc82391a99153ffd3c84000ac28fbecfa7e540a54d3f16e8de0cf5adf3055",
+      "evaluations/bootstrap_agent_trial.py": "3a56dc6d63667fbb341e88f1abe6997049e83ba8ed428b7d162645e7884e8759",
+      "evaluations/codex_trial_transport.py": "d1775c6e12f60e2856ae04298ca243e8faad0a8999a9aaaa28518e9084bbbc4f",
+      "scripts/binary_provenance.py": "a371e4c786bb3985c44125ab524726195bd0cd9ec4387496d965965091fb3240"
+    }
+  },
+  "onboarding_complete": true,
+  "summary": {
+    "intended_cases": 12,
+    "paired_cases": 12,
+    "treatment_assigned": 12,
+    "treatment_observed": 12,
+    "baseline_observed": 12,
+    "treatment_outcome_correct": 10,
+    "treatment_routing_correct": 10,
+    "baseline_outcome_correct": 12,
+    "baseline_routing_correct": 12,
+    "treatment_native_current_result_available": 12,
+    "treatment_native_judgments_observed": 12,
+    "treatment_native_judgment_outcome_correct": 6,
+    "treatment_native_judgment_outcome_incorrect": 6,
+    "treatment_native_judgment_routing_correct": 6,
+    "treatment_native_attempt_failed": 0,
+    "treatment_product_not_used": 0,
+    "treatment_native_attempts": 36,
+    "treatment_native_tool_attempts": 38,
+    "treatment_native_tool_argument_validation_errors": 2,
+    "treatment_native_decision_tool_errors": 0,
+    "treatment_native_valid_current_results": 12,
+    "quiet_grade_ineligible": 0,
+    "outbox_message_count": 20,
+    "quiet_zero_message_workflows": 4
+  },
+  "jev_attempts": 12,
+  "jev_budget_censored": false,
+  "elapsed_seconds": 1304.533689584001,
+  "usage": {
+    "codex_cli": {
+      "invocations": 28,
+      "responses": 28,
+      "successes": 28,
+      "errors": 0,
+      "input_tokens": 4884550,
+      "output_tokens": 86451,
+      "unknown_usage": 0,
+      "wall_seconds": 1338.51268721198
+    },
+    "jev": {
+      "attempts": 12,
+      "responses": 12,
+      "successes": 12,
+      "errors": 0,
+      "failed_attempts": 0,
+      "input_tokens": 151675,
+      "output_tokens": 2944,
+      "unknown_usage": 0,
+      "wall_seconds": 3.3972269149890053
+    }
+  },
+  "overhead": {
+    "native_product_calls": 48,
+    "native_product_tool_wall_seconds": 4.78978712396929,
+    "source_reads": 110,
+    "source_read_wall_seconds": 0.0573102990310872
+  },
+  "binary_verifications": {
+    "preflight": {
+      "dirty": true,
+      "format_version": 1,
+      "frozen": true,
+      "git_commit": "5776b573a8056a8a4fa87b0d1a716e40ff54cde7",
+      "python": "3.12.10",
+      "source_sha256": "04f9ec97629ba8742c08e5e9d6fee21fd4443f3bc134727e628f6becd1b772aa",
+      "version": "0.2.0rc2",
+      "binary_sha256": "fd0d9b888adf74118d6648e8aeeedacce91df791e64f78f7b8b3a3e4cdff8ef6"
+    },
+    "postflight": {
+      "dirty": true,
+      "format_version": 1,
+      "frozen": true,
+      "git_commit": "5776b573a8056a8a4fa87b0d1a716e40ff54cde7",
+      "python": "3.12.10",
+      "source_sha256": "04f9ec97629ba8742c08e5e9d6fee21fd4443f3bc134727e628f6becd1b772aa",
+      "version": "0.2.0rc2",
+      "binary_sha256": "fd0d9b888adf74118d6648e8aeeedacce91df791e64f78f7b8b3a3e4cdff8ef6"
+    }
+  },
+  "limitations": [
+    "Synthetic source fixture and simulated owner/reviewers; not customer evidence or real human approval.",
+    "Retrospective monthly-close replay does not demonstrate a real 12-month scheduler or current warehouse freshness.",
+    "Shared catalog search and source inspection are a local typed fixture adapter, not a live third-party MCP connector.",
+    "Local mock outbox only; no Slack or other external delivery was attempted.",
+    "Narrative quality is an independent qualitative model review, not a keyword score."
+  ],
+  "narrative_review": {
+    "status": "completed",
+    "reviews": [
+      {
+        "message_id": "M01",
+        "verdict": "supported",
+        "rationale": "The archived 2025-03 to 2025-04 Executive Pulse figures support the 10% total increase, four 10% channel increases, and reconciliation. The flat Web, Finance, and Support statements match their separate sources. The May 5, 2025 measurement cutoff is distinguished from the 2026 replay read, no cause is claimed, and Analytics has a clear review step.",
+        "issues": []
+      },
+      {
+        "message_id": "M02",
+        "verdict": "supported",
+        "rationale": "The cited archived sources all cover 2025-03 to 2025-04, and the Executive Pulse total and channels support the stated 10% movement and reconciliation. The message correctly says this does not establish the separately identified 2024-12/2025-01 close, keeps populations separate, distinguishes replay time from measurement time, and asks Data Trust to verify the mapping and rerun the intended archive.",
+        "issues": []
+      },
+      {
+        "message_id": "M03",
+        "verdict": "supported",
+        "rationale": "The archived Executive Pulse evidence supports the 2025-04 to 2025-05 total and channel decrease of 10% and the reconciliation; the separate Web, Finance, and Support figures are unchanged. The June 5, 2025 measurement cutoff is clear, replay is not presented as freshness, no cause is asserted, and Analytics is asked to review the archived close.",
+        "issues": []
+      },
+      {
+        "message_id": "M04",
+        "verdict": "supported",
+        "rationale": "The May-versus-April Executive Pulse totals, four channel changes, and reconciliation are supported by the cited archived evidence. The separate Web, Finance, and Support context and the May 31 measurement coverage are accurate. It avoids causal attribution and gives Analytics a clear historical review and comparison check.",
+        "issues": []
+      },
+      {
+        "message_id": "M05",
+        "verdict": "supported",
+        "rationale": "The May-to-June Executive Pulse values support the reported 14.99% decrease and matching channel declines; the declared channel balances reconcile. The separate Web and Finance figures are flat, and archived measurement and replay times are distinguished. The request to investigate source-specific drivers before attributing cause is clear.",
+        "issues": []
+      },
+      {
+        "message_id": "M06",
+        "verdict": "supported",
+        "rationale": "The archived May-to-June figures support the 14.99% decline, the four channel declines, and reconciliation. The Web, Finance, and Support measurements are unchanged in their separate populations. The message preserves the historical measurement date, does not infer cause or whole-company sales, and gives Analytics a clear review step.",
+        "issues": []
+      },
+      {
+        "message_id": "M07",
+        "verdict": "supported",
+        "rationale": "The June-to-July sales total and channel figures support the 15% decline, with Online down 60% and the other three channels flat; the total reconciles. Web conversion declined while Finance and Support were flat, as stated. The archived cutoff and replay distinction are clear, no cause is asserted, and the requested channel and close review is specific.",
+        "issues": []
+      },
+      {
+        "message_id": "M08",
+        "verdict": "supported",
+        "rationale": "The cited July-versus-June evidence supports the 15% total decline, Online-only channel decline, flat remaining channels, and reconciliation. The Web conversion change is accurately described as a 1% relative decrease; Finance and Support are flat. Historical timing and source separation are clear, with a specific review of Online ledger inputs.",
+        "issues": []
+      },
+      {
+        "message_id": "M09",
+        "verdict": "supported",
+        "rationale": "The archived July-to-August evidence supports the 15% total decline, the Online and Store decreases, and reconciliation; the cited Web source supports the 1.01% conversion decline and Finance is flat. The measurement cutoff is distinguished from replay time, the message limits claims to fictional separate populations, and leadership has a clear review step.",
+        "issues": []
+      },
+      {
+        "message_id": "M10",
+        "verdict": "supported",
+        "rationale": "The August-versus-July evidence supports the reported total and channel changes, reconciliation, declining Web conversion, and flat Finance and Support measures. It identifies the figures as archived fictional measurements, separates replay time from freshness, avoids causal attribution, and gives leadership a clear review step.",
+        "issues": []
+      },
+      {
+        "message_id": "M11",
+        "verdict": "supported",
+        "rationale": "The archived August-to-September evidence supports the 25% total and channel declines and reconciliation. The separate Web and Finance measures are flat, and Support backlog is correctly limited to context. The measurement window and replay read are distinguished, no cause is claimed, and the next step is clear.",
+        "issues": []
+      },
+      {
+        "message_id": "M12",
+        "verdict": "supported",
+        "rationale": "The cited September-versus-August figures support the 25% total decrease, declines across all four channels, and reconciliation; Web conversion and Finance revenue are unchanged. The message is clear that the evidence is fictional and historical, distinguishes replay from measurement time, avoids cause claims, and assigns Analytics a specific review.",
+        "issues": []
+      },
+      {
+        "message_id": "M13",
+        "verdict": "supported",
+        "rationale": "The archived September-to-October sources support the 25% decline across all four channels and reconciliation, as well as the separate 1% Finance decrease and flat Web and Support measures. It preserves the measurement cutoff, treats Support only as non-incident context, avoids causal claims, and gives leadership a clear historical review step.",
+        "issues": []
+      },
+      {
+        "message_id": "M14",
+        "verdict": "supported",
+        "rationale": "The cited 2025-09 to 2025-10 evidence supports the 25% Executive Pulse decline, four declining channels, reconciliation, 1% Finance decrease, and unchanged Web and Support measures. Historical scope and replay timing are clear; no cause is inferred, and leadership has an explicit review step.",
+        "issues": []
+      },
+      {
+        "message_id": "M15",
+        "verdict": "supported",
+        "rationale": "The primary Executive Pulse source is explicitly failed with no rows for the October-to-November 2025 comparison, while the cited separate sources support the unchanged Web, Finance, and Support statements. The message correctly leaves sales movement and reconciliation unassessed, preserves the measurement cutoff, and gives Data Trust a clear restore-and-review action.",
+        "issues": []
+      },
+      {
+        "message_id": "M16",
+        "verdict": "supported",
+        "rationale": "The cited Executive Pulse source is unavailable for the October-to-November 2025 window, so the message correctly says the required sales movement and reconciliation cannot be assessed. The separate unchanged-source statements are supported; measurement and replay times are distinguished, and restoring the archived snapshot before rerunning is clear.",
+        "issues": []
+      },
+      {
+        "message_id": "M17",
+        "verdict": "supported",
+        "rationale": "The December total and channel values in the archived Executive Pulse evidence are from separate captures and differ by $10; the November total reconciles. The message accurately presents the mismatch without classifying the movement, preserves the archived cutoff and replay distinction, and asks Data Trust to reconcile the captures.",
+        "issues": []
+      },
+      {
+        "message_id": "M18",
+        "verdict": "supported",
+        "rationale": "The message accurately distinguishes the cited November-to-December 2025 evidence from the period identified in saved notes. Its $3,841.10 total, $3,831.10 channel sum, and $10 mismatch are supported, as are the unchanged separate-source measures. It does not infer cause and gives Data Trust clear period-verification and reconciliation steps.",
+        "issues": []
+      },
+      {
+        "message_id": "M19",
+        "verdict": "needs_attention",
+        "rationale": "The cited sales figures and channel reconciliation are supported, but the Executive Pulse contract and ledger rows say January covers only 20 of 31 days and the comparison is non-comparable. The message omits this material coverage limitation while presenting a 40.645% monthly decline and discussing corroboration. That weakens period and scope clarity under the reviewed complete-month policy; the next step should address obtaining or validating a complete January close before interpreting the movement.",
+        "issues": []
+      },
+      {
+        "message_id": "M20",
+        "verdict": "supported",
+        "rationale": "The December-to-January source supports the reported balances, channel reconciliation, and January coverage of only 20 of 31 days; the contract explicitly marks the comparison partial and non-comparable. Separate Web, Finance, and Support statements are accurate. The message preserves historical and replay timing, avoids cause claims and classification of the movement, and clearly requests a complete archived close and reconciliation check.",
+        "issues": []
+      }
+    ]
+  },
+  "periods": [
+    {
+      "period_id": "period-99d58d0d74b7ad34",
+      "baseline": {
+        "completed": true,
+        "score": {
+          "observed": true,
+          "category": "small_quiet",
+          "expected_outcome": "ignore",
+          "actual_outcome": "ignore",
+          "outcome_correct": true,
+          "expected_recipients": [],
+          "actual_recipients": [],
+          "routing_correct": true,
+          "expected_outbox_count": 0,
+          "actual_outbox_count": 0,
+          "outbox_count_correct": true,
+          "quiet_grade_eligible": true,
+          "evidence_mode": "primary_source_inspected_current_run",
+          "primary_current_proof": true,
+          "primary_current_proof_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ]
+        },
+        "episode_seconds": 17.626902999996673,
+        "submission": {
+          "outcome": "ignore",
+          "recipients": [],
+          "summary": "Retrospective February 2025 close vs January, using generated Executive Pulse monthly channel balances: net sales fell 4% (USD 10,400 to 9,984); four channels reconcile to the total in both months. This is below the 10% materiality threshold. Separate Web conversion, Finance revenue, and Support backlog were unchanged. Measurements are archived through 2025-02-28 (as of 2025-03-05); the replay gateway read occurred 2026-10-13 and does not indicate warehouse freshness. No follow-up.",
+          "evidence_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bcc430dd0048c951ef1a"
+          ]
+        },
+        "usage": {
+          "codex_cli": {
+            "invocations": 1,
+            "responses": 1,
+            "successes": 1,
+            "errors": 0,
+            "input_tokens": 84893,
+            "output_tokens": 1062,
+            "unknown_usage": 0,
+            "wall_seconds": 17.61673687500297
+          },
+          "jev": {
+            "attempts": 0,
+            "responses": 0,
+            "successes": 0,
+            "errors": 0,
+            "failed_attempts": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "unknown_usage": 0,
+            "wall_seconds": 0
+          }
+        }
+      },
+      "treatment": {
+        "completed": true,
+        "score": {
+          "observed": true,
+          "category": "small_quiet",
+          "expected_outcome": "ignore",
+          "actual_outcome": "ignore",
+          "outcome_correct": true,
+          "expected_recipients": [],
+          "actual_recipients": [],
+          "routing_correct": true,
+          "expected_outbox_count": 0,
+          "actual_outbox_count": 0,
+          "outbox_count_correct": true,
+          "quiet_grade_eligible": true,
+          "evidence_mode": "primary_source_inspected_current_run",
+          "primary_current_proof": true,
+          "primary_current_proof_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ]
+        },
+        "native_judgment": {
+          "observed": true,
+          "receipt_count": 1,
+          "actual_outcome": "investigate",
+          "expected_outcome": "ignore",
+          "outcome_correct": false,
+          "actual_recipients": [
+            "analytics"
+          ],
+          "expected_recipients": [],
+          "routing_correct": false
+        },
+        "episode_seconds": 36.55044516599446,
+        "submission": {
+          "outcome": "ignore",
+          "recipients": [],
+          "summary": "Archived February 2025 close versus January 2025, evaluated in the 2026-10-13 replay: Executive Pulse generated channel ledger balances fell 4% (USD 10,400 to 9,984), with all four declared channels at -4% and the channel sum reconciling to the total. This is below the 10% materiality threshold, so ignore. Separate Web conversion, Finance revenue, and Support backlog were unchanged; Support is context only. No follow-up.",
+          "evidence_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bcc430dd0048c951ef1a",
+            "receipt:northstar-outfitters-local/period-99d58d0d74b7ad34"
+          ]
+        },
+        "native_decision_usage": {
+          "tool_attempts": 4,
+          "tool_argument_validation_errors": 0,
+          "attempts": 4,
+          "responses": 4,
+          "valid_current_results": 1,
+          "errors": 0,
+          "invalid_responses": 3
+        },
+        "usage": {
+          "codex_cli": {
+            "invocations": 1,
+            "responses": 1,
+            "successes": 1,
+            "errors": 0,
+            "input_tokens": 144448,
+            "output_tokens": 2868,
+            "unknown_usage": 0,
+            "wall_seconds": 36.5378094589978
+          },
+          "jev": {
+            "attempts": 1,
+            "responses": 1,
+            "successes": 1,
+            "errors": 0,
+            "failed_attempts": 0,
+            "input_tokens": 12653,
+            "output_tokens": 243,
+            "unknown_usage": 0,
+            "wall_seconds": 0.3238776250000228
+          }
+        }
+      }
+    },
+    {
+      "period_id": "period-48268088143da8bd",
+      "baseline": {
+        "completed": true,
+        "score": {
+          "observed": true,
+          "category": "upper_quiet",
+          "expected_outcome": "ignore",
+          "actual_outcome": "ignore",
+          "outcome_correct": true,
+          "expected_recipients": [],
+          "actual_recipients": [],
+          "routing_correct": true,
+          "expected_outbox_count": 0,
+          "actual_outbox_count": 0,
+          "outbox_count_correct": true,
+          "quiet_grade_eligible": true,
+          "evidence_mode": "primary_source_inspected_current_run",
+          "primary_current_proof": true,
+          "primary_current_proof_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ]
+        },
+        "episode_seconds": 32.50951066699781,
+        "submission": {
+          "outcome": "ignore",
+          "recipients": [],
+          "summary": "Retrospective close, 2025-02 to 2025-03: Executive Pulse generated monthly channel ledger balances rose 9.99%, and the total reconciles to the complete four-channel partition, so the movement is below the 10% materiality threshold. Separate Web conversion, Finance revenue, and Support backlog were flat. Measurements are archived through 2025-03-31 (measurement as of 2025-04-05); the 2026-10-13 replay read time does not establish warehouse freshness. No notification; continue with the next archived close.",
+          "evidence_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bcc430dd0048c951ef1a"
+          ]
+        },
+        "usage": {
+          "codex_cli": {
+            "invocations": 1,
+            "responses": 1,
+            "successes": 1,
+            "errors": 0,
+            "input_tokens": 85328,
+            "output_tokens": 1372,
+            "unknown_usage": 0,
+            "wall_seconds": 32.50065716700192
+          },
+          "jev": {
+            "attempts": 0,
+            "responses": 0,
+            "successes": 0,
+            "errors": 0,
+            "failed_attempts": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "unknown_usage": 0,
+            "wall_seconds": 0
+          }
+        }
+      },
+      "treatment": {
+        "completed": true,
+        "score": {
+          "observed": true,
+          "category": "upper_quiet",
+          "expected_outcome": "ignore",
+          "actual_outcome": "ignore",
+          "outcome_correct": true,
+          "expected_recipients": [],
+          "actual_recipients": [],
+          "routing_correct": true,
+          "expected_outbox_count": 0,
+          "actual_outbox_count": 0,
+          "outbox_count_correct": true,
+          "quiet_grade_eligible": true,
+          "evidence_mode": "primary_source_inspected_current_run",
+          "primary_current_proof": true,
+          "primary_current_proof_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ]
+        },
+        "native_judgment": {
+          "observed": true,
+          "receipt_count": 1,
+          "actual_outcome": "investigate",
+          "expected_outcome": "ignore",
+          "outcome_correct": false,
+          "actual_recipients": [
+            "analytics"
+          ],
+          "expected_recipients": [],
+          "routing_correct": false
+        },
+        "episode_seconds": 31.298256415997457,
+        "submission": {
+          "outcome": "ignore",
+          "recipients": [],
+          "summary": "Historical close: Mar 2025 vs Feb 2025; measurements cover 2025-02–2025-03. Replay evaluation was read on 2026-10-13 17:41:57Z. Executive Pulse generated monthly channel ledger balances rose from $9,984 to $10,981.40 (+9.99%); the four declared channels sum to both totals. Web conversion, Finance revenue, and Support backlog were unchanged in their separate populations. The reviewed rule ignores absolute net-sales movements below 10%, so this close is quiet. Next step: retain the classification with the archived close; no routing.",
+          "evidence_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bcc430dd0048c951ef1a"
+          ]
+        },
+        "native_decision_usage": {
+          "tool_attempts": 4,
+          "tool_argument_validation_errors": 0,
+          "attempts": 4,
+          "responses": 4,
+          "valid_current_results": 1,
+          "errors": 0,
+          "invalid_responses": 3
+        },
+        "usage": {
+          "codex_cli": {
+            "invocations": 1,
+            "responses": 1,
+            "successes": 1,
+            "errors": 0,
+            "input_tokens": 144410,
+            "output_tokens": 2326,
+            "unknown_usage": 0,
+            "wall_seconds": 31.286538334003126
+          },
+          "jev": {
+            "attempts": 1,
+            "responses": 1,
+            "successes": 1,
+            "errors": 0,
+            "failed_attempts": 0,
+            "input_tokens": 12768,
+            "output_tokens": 243,
+            "unknown_usage": 0,
+            "wall_seconds": 0.2648715830000583
+          }
+        }
+      }
+    },
+    {
+      "period_id": "period-624514402053179d",
+      "baseline": {
+        "completed": true,
+        "score": {
+          "observed": true,
+          "category": "positive_material",
+          "expected_outcome": "investigate",
+          "actual_outcome": "investigate",
+          "outcome_correct": true,
+          "expected_recipients": [
+            "analytics"
+          ],
+          "actual_recipients": [
+            "analytics"
+          ],
+          "routing_correct": true,
+          "expected_outbox_count": 1,
+          "actual_outbox_count": 1,
+          "outbox_count_correct": true,
+          "quiet_grade_eligible": true,
+          "evidence_mode": "primary_source_inspected_current_run",
+          "primary_current_proof": true,
+          "primary_current_proof_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ]
+        },
+        "episode_seconds": 22.419742332996975,
+        "submission": {
+          "outcome": "investigate",
+          "recipients": [
+            "analytics"
+          ],
+          "summary": "Archived Apr 2025 vs Mar 2025: Executive Pulse generated monthly USD channel balances rose 10% ($10,981.40 to $12,079.54); all four declared channels rose 10%, and their sum reconciles to the total. This is exactly at the 10% materiality boundary, outside the under-10% ignore band, so policy routes it to investigate. Separate Web conversion and Finance revenue were flat; Support backlog was flat and is not incident evidence. Measurements are cut off 2025-05-05; replay gateway read occurred 2026-10-13 and does not indicate warehouse freshness. Next: Analytics to review this archived movement; no cause is established.",
+          "evidence_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bcc430dd0048c951ef1a"
+          ]
+        },
+        "usage": {
+          "codex_cli": {
+            "invocations": 1,
+            "responses": 1,
+            "successes": 1,
+            "errors": 0,
+            "input_tokens": 85487,
+            "output_tokens": 1707,
+            "unknown_usage": 0,
+            "wall_seconds": 22.41208049999841
+          },
+          "jev": {
+            "attempts": 0,
+            "responses": 0,
+            "successes": 0,
+            "errors": 0,
+            "failed_attempts": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "unknown_usage": 0,
+            "wall_seconds": 0
+          }
+        }
+      },
+      "treatment": {
+        "completed": true,
+        "score": {
+          "observed": true,
+          "category": "positive_material",
+          "expected_outcome": "investigate",
+          "actual_outcome": "insufficient_data",
+          "outcome_correct": false,
+          "expected_recipients": [
+            "analytics"
+          ],
+          "actual_recipients": [
+            "data-trust"
+          ],
+          "routing_correct": false,
+          "expected_outbox_count": 1,
+          "actual_outbox_count": 1,
+          "outbox_count_correct": true,
+          "quiet_grade_eligible": true,
+          "evidence_mode": "primary_source_inspected_current_run",
+          "primary_current_proof": true,
+          "primary_current_proof_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ]
+        },
+        "native_judgment": {
+          "observed": true,
+          "receipt_count": 1,
+          "actual_outcome": "investigate",
+          "expected_outcome": "investigate",
+          "outcome_correct": true,
+          "actual_recipients": [
+            "analytics"
+          ],
+          "expected_recipients": [
+            "analytics"
+          ],
+          "routing_correct": true
+        },
+        "episode_seconds": 87.27816341700236,
+        "submission": {
+          "outcome": "insufficient_data",
+          "recipients": [
+            "data-trust"
+          ],
+          "summary": "For the archived 2024-12/2025-01 close identified in the saved notes, evidence is insufficient: all four approved sources returned 2025-03 to 2025-04 measurements. Executive Pulse reports a 10% increase and its four channels reconcile, but those facts do not establish the requested close. Web, Finance, and Support are separate populations; no joins are used. The gateway replay was read at 2026-10-13 17:43 UTC; measurements remain historical. Verify the period-to-source mapping, then rerun the approved card for the intended archive.",
+          "evidence_refs": [
+            "receipt:northstar-outfitters-local/period-624514402053179d",
+            "company_mcp|resource-fd7ced0b3305cf92db4a",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bcc430dd0048c951ef1a"
+          ]
+        },
+        "native_decision_usage": {
+          "tool_attempts": 3,
+          "tool_argument_validation_errors": 1,
+          "attempts": 2,
+          "responses": 2,
+          "valid_current_results": 1,
+          "errors": 0,
+          "invalid_responses": 1
+        },
+        "usage": {
+          "codex_cli": {
+            "invocations": 1,
+            "responses": 1,
+            "successes": 1,
+            "errors": 0,
+            "input_tokens": 157338,
+            "output_tokens": 4112,
+            "unknown_usage": 0,
+            "wall_seconds": 87.2661842499947
+          },
+          "jev": {
+            "attempts": 1,
+            "responses": 1,
+            "successes": 1,
+            "errors": 0,
+            "failed_attempts": 0,
+            "input_tokens": 12959,
+            "output_tokens": 246,
+            "unknown_usage": 0,
+            "wall_seconds": 0.24817116600024747
+          }
+        }
+      }
+    },
+    {
+      "period_id": "period-595014fd6b188fb1",
+      "baseline": {
+        "completed": true,
+        "score": {
+          "observed": true,
+          "category": "negative_material",
+          "expected_outcome": "investigate",
+          "actual_outcome": "investigate",
+          "outcome_correct": true,
+          "expected_recipients": [
+            "analytics"
+          ],
+          "actual_recipients": [
+            "analytics"
+          ],
+          "routing_correct": true,
+          "expected_outbox_count": 1,
+          "actual_outbox_count": 1,
+          "outbox_count_correct": true,
+          "quiet_grade_eligible": true,
+          "evidence_mode": "primary_source_inspected_current_run",
+          "primary_current_proof": true,
+          "primary_current_proof_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ]
+        },
+        "episode_seconds": 14.980872790998546,
+        "submission": {
+          "outcome": "investigate",
+          "recipients": [
+            "analytics"
+          ],
+          "summary": "Retrospective review of archived May 2025 generated Executive Pulse ledger balances: USD 10,871.59 versus USD 12,079.54 in April, down 10%; all four declared channels declined 10% and the total reconciles. Exactly 10% is outside the under-10% ignore band but below the 15% leadership notification threshold. Separate Web conversion and Finance revenue were unchanged; Support backlog was unchanged and is not incident evidence. Measurements are through 2025-05-31 (period as of 2025-06-05); the replay gateway read on 2026-10-13 is not a freshness claim. Analytics: investigate this historical movement and verify the archived comparison; no cause inferred.",
+          "evidence_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bcc430dd0048c951ef1a"
+          ]
+        },
+        "usage": {
+          "codex_cli": {
+            "invocations": 1,
+            "responses": 1,
+            "successes": 1,
+            "errors": 0,
+            "input_tokens": 85660,
+            "output_tokens": 1194,
+            "unknown_usage": 0,
+            "wall_seconds": 14.972921708002104
+          },
+          "jev": {
+            "attempts": 0,
+            "responses": 0,
+            "successes": 0,
+            "errors": 0,
+            "failed_attempts": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "unknown_usage": 0,
+            "wall_seconds": 0
+          }
+        }
+      },
+      "treatment": {
+        "completed": true,
+        "score": {
+          "observed": true,
+          "category": "negative_material",
+          "expected_outcome": "investigate",
+          "actual_outcome": "investigate",
+          "outcome_correct": true,
+          "expected_recipients": [
+            "analytics"
+          ],
+          "actual_recipients": [
+            "analytics"
+          ],
+          "routing_correct": true,
+          "expected_outbox_count": 1,
+          "actual_outbox_count": 1,
+          "outbox_count_correct": true,
+          "quiet_grade_eligible": true,
+          "evidence_mode": "primary_source_inspected_current_run",
+          "primary_current_proof": true,
+          "primary_current_proof_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ]
+        },
+        "native_judgment": {
+          "observed": true,
+          "receipt_count": 1,
+          "actual_outcome": "investigate",
+          "expected_outcome": "investigate",
+          "outcome_correct": true,
+          "actual_recipients": [
+            "analytics"
+          ],
+          "expected_recipients": [
+            "analytics"
+          ],
+          "routing_correct": true
+        },
+        "episode_seconds": 33.23156091700366,
+        "submission": {
+          "outcome": "investigate",
+          "recipients": [
+            "analytics"
+          ],
+          "summary": "Retrospective close: May 2025 vs Apr 2025. Executive Pulse’s generated monthly channel ledger totals $10,871.59 vs $12,079.54, down 10.0%; all four declared channels are down 10.0%, and their sums reconcile to the total. This reaches the 10% materiality floor but is below the 15% leadership-notify threshold, so policy routes investigate. Web conversion and Finance booked revenue were unchanged; Support backlog was also unchanged and is context only. These measurements cover Apr–May 2025; replay evaluation was read on 2026-10-13, not a warehouse freshness claim. Analytics should review the archived close and decide whether follow-up is warranted. No cause is established.",
+          "evidence_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bcc430dd0048c951ef1a"
+          ]
+        },
+        "native_decision_usage": {
+          "tool_attempts": 4,
+          "tool_argument_validation_errors": 0,
+          "attempts": 4,
+          "responses": 4,
+          "valid_current_results": 1,
+          "errors": 0,
+          "invalid_responses": 3
+        },
+        "usage": {
+          "codex_cli": {
+            "invocations": 1,
+            "responses": 1,
+            "successes": 1,
+            "errors": 0,
+            "input_tokens": 143107,
+            "output_tokens": 2526,
+            "unknown_usage": 0,
+            "wall_seconds": 33.19877324999834
+          },
+          "jev": {
+            "attempts": 1,
+            "responses": 1,
+            "successes": 1,
+            "errors": 0,
+            "failed_attempts": 0,
+            "input_tokens": 12932,
+            "output_tokens": 246,
+            "unknown_usage": 0,
+            "wall_seconds": 0.3328491659995052
+          }
+        }
+      }
+    },
+    {
+      "period_id": "period-e03441c3cd4bb773",
+      "baseline": {
+        "completed": true,
+        "score": {
+          "observed": true,
+          "category": "below_decline_trigger",
+          "expected_outcome": "investigate",
+          "actual_outcome": "investigate",
+          "outcome_correct": true,
+          "expected_recipients": [
+            "analytics"
+          ],
+          "actual_recipients": [
+            "analytics"
+          ],
+          "routing_correct": true,
+          "expected_outbox_count": 1,
+          "actual_outbox_count": 1,
+          "outbox_count_correct": true,
+          "quiet_grade_eligible": true,
+          "evidence_mode": "primary_source_inspected_current_run",
+          "primary_current_proof": true,
+          "primary_current_proof_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ]
+        },
+        "episode_seconds": 20.36236816699966,
+        "submission": {
+          "outcome": "investigate",
+          "recipients": [
+            "analytics"
+          ],
+          "summary": "Retrospective 2025-06 close vs 2025-05: Executive Pulse generated fictional channel ledger USD net sales fell 14.99% ($10,871.59 to $9,241.94); all four declared channels declined 14.99%, and their sums reconcile to the total. This meets the 10% materiality threshold but is below the 15% leadership-notify threshold. Separate Web conversion and Finance revenue were flat, with no corroborating decline. Please investigate the close and review source-specific drivers before attributing cause. Measurements are archived as of 2025-07-05 06:00 UTC; gateway replay read at 2026-10-13 17:45:29 UTC is not a freshness claim.",
+          "evidence_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bcc430dd0048c951ef1a"
+          ]
+        },
+        "usage": {
+          "codex_cli": {
+            "invocations": 1,
+            "responses": 1,
+            "successes": 1,
+            "errors": 0,
+            "input_tokens": 85977,
+            "output_tokens": 1377,
+            "unknown_usage": 0,
+            "wall_seconds": 20.354927583997778
+          },
+          "jev": {
+            "attempts": 0,
+            "responses": 0,
+            "successes": 0,
+            "errors": 0,
+            "failed_attempts": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "unknown_usage": 0,
+            "wall_seconds": 0
+          }
+        }
+      },
+      "treatment": {
+        "completed": true,
+        "score": {
+          "observed": true,
+          "category": "below_decline_trigger",
+          "expected_outcome": "investigate",
+          "actual_outcome": "investigate",
+          "outcome_correct": true,
+          "expected_recipients": [
+            "analytics"
+          ],
+          "actual_recipients": [
+            "analytics"
+          ],
+          "routing_correct": true,
+          "expected_outbox_count": 1,
+          "actual_outbox_count": 1,
+          "outbox_count_correct": true,
+          "quiet_grade_eligible": true,
+          "evidence_mode": "primary_source_inspected_current_run",
+          "primary_current_proof": true,
+          "primary_current_proof_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ]
+        },
+        "native_judgment": {
+          "observed": true,
+          "receipt_count": 1,
+          "actual_outcome": "investigate",
+          "expected_outcome": "investigate",
+          "outcome_correct": true,
+          "actual_recipients": [
+            "analytics"
+          ],
+          "expected_recipients": [
+            "analytics"
+          ],
+          "routing_correct": true
+        },
+        "episode_seconds": 35.04527845799748,
+        "submission": {
+          "outcome": "investigate",
+          "recipients": [
+            "analytics"
+          ],
+          "summary": "Retrospective archived June 2025 close (May 2025 baseline; fictional measurements). Executive Pulse generated monthly channel balances: USD 10,871.59 to USD 9,241.94 (-14.99%); Online, Store, Mobile, and Marketplace each fell, and their balances reconcile to the total. Separate Web Funnel conversion stayed 0.10, Finance Daily revenue stayed USD 50,000, and Support backlog stayed 50 tickets. The decline is material but below the 15% leadership-notify threshold, so this is investigate. Replay evaluation read: 2026-10-13 17:45:58 UTC; this is not the measurement date. Analytics: review the archived close records; the evidence does not establish a cause or whole-company sales.",
+          "evidence_refs": [
+            "receipt:northstar-outfitters-local/period-e03441c3cd4bb773",
+            "company_mcp|resource-fd7ced0b3305cf92db4a",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bcc430dd0048c951ef1a"
+          ]
+        },
+        "native_decision_usage": {
+          "tool_attempts": 4,
+          "tool_argument_validation_errors": 0,
+          "attempts": 4,
+          "responses": 4,
+          "valid_current_results": 1,
+          "errors": 0,
+          "invalid_responses": 3
+        },
+        "usage": {
+          "codex_cli": {
+            "invocations": 1,
+            "responses": 1,
+            "successes": 1,
+            "errors": 0,
+            "input_tokens": 144016,
+            "output_tokens": 2957,
+            "unknown_usage": 0,
+            "wall_seconds": 35.03511408299528
+          },
+          "jev": {
+            "attempts": 1,
+            "responses": 1,
+            "successes": 1,
+            "errors": 0,
+            "failed_attempts": 0,
+            "input_tokens": 12941,
+            "output_tokens": 246,
+            "unknown_usage": 0,
+            "wall_seconds": 0.26844066599733196
+          }
+        }
+      }
+    },
+    {
+      "period_id": "period-7dfd402810696527",
+      "baseline": {
+        "completed": true,
+        "score": {
+          "observed": true,
+          "category": "single_channel",
+          "expected_outcome": "investigate",
+          "actual_outcome": "investigate",
+          "outcome_correct": true,
+          "expected_recipients": [
+            "analytics"
+          ],
+          "actual_recipients": [
+            "analytics"
+          ],
+          "routing_correct": true,
+          "expected_outbox_count": 1,
+          "actual_outbox_count": 1,
+          "outbox_count_correct": true,
+          "quiet_grade_eligible": true,
+          "evidence_mode": "primary_source_inspected_current_run",
+          "primary_current_proof": true,
+          "primary_current_proof_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ]
+        },
+        "episode_seconds": 71.61462679100077,
+        "submission": {
+          "outcome": "investigate",
+          "recipients": [
+            "analytics"
+          ],
+          "summary": "Archived 2025-07 close vs 2025-06 (measurement cutoff 2025-08-05; replay read 2026-10-13): generated Executive Pulse channel balances fell 15.0% ($9,241.94 to $7,855.65), reconciling across four declared channels. Only Online declined (-60%); Store, Mobile, and Marketplace were flat. Separate Web conversion fell 1% relative (0.100 to 0.099); Finance revenue was flat. Support backlog was flat and is context only. Fewer than two Sales channels declined, so the policy routes this material movement to investigation. Next step: Analytics should review the archived Online balance and its ledger inputs. Sources are separate populations; no joins or shared cohort are inferred.",
+          "evidence_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bcc430dd0048c951ef1a"
+          ]
+        },
+        "usage": {
+          "codex_cli": {
+            "invocations": 1,
+            "responses": 1,
+            "successes": 1,
+            "errors": 0,
+            "input_tokens": 85890,
+            "output_tokens": 1917,
+            "unknown_usage": 0,
+            "wall_seconds": 71.58869229199627
+          },
+          "jev": {
+            "attempts": 0,
+            "responses": 0,
+            "successes": 0,
+            "errors": 0,
+            "failed_attempts": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "unknown_usage": 0,
+            "wall_seconds": 0
+          }
+        }
+      },
+      "treatment": {
+        "completed": true,
+        "score": {
+          "observed": true,
+          "category": "single_channel",
+          "expected_outcome": "investigate",
+          "actual_outcome": "investigate",
+          "outcome_correct": true,
+          "expected_recipients": [
+            "analytics"
+          ],
+          "actual_recipients": [
+            "analytics"
+          ],
+          "routing_correct": true,
+          "expected_outbox_count": 1,
+          "actual_outbox_count": 1,
+          "outbox_count_correct": true,
+          "quiet_grade_eligible": true,
+          "evidence_mode": "primary_source_inspected_current_run",
+          "primary_current_proof": true,
+          "primary_current_proof_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ]
+        },
+        "native_judgment": {
+          "observed": true,
+          "receipt_count": 1,
+          "actual_outcome": "investigate",
+          "expected_outcome": "investigate",
+          "outcome_correct": true,
+          "actual_recipients": [
+            "analytics"
+          ],
+          "expected_recipients": [
+            "analytics"
+          ],
+          "routing_correct": true
+        },
+        "episode_seconds": 62.674335208997945,
+        "submission": {
+          "outcome": "investigate",
+          "recipients": [
+            "analytics"
+          ],
+          "summary": "Archived fictional close, 2025-07 vs 2025-06 (measurement window; replay read 2026-10-13 is separate from warehouse freshness): Executive Pulse’s generated channel balances total USD 7,855.65 vs USD 9,241.94 (-15.0%), reconciling to the four declared channels; these are not whole-company sales. Online fell 60%; Store, Mobile, and Marketplace were flat. Separate Web Funnel conversion moved 10.0% to 9.9% (-1.0% relative); separate Finance booked revenue was flat at USD 50,000. The notify condition is not met because only one sales channel declined; investigate this material movement. Support backlog was unchanged at 50 tickets and is context only. Analytics: review the archived channel contribution and close records; no cause is established.",
+          "evidence_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bcc430dd0048c951ef1a"
+          ]
+        },
+        "native_decision_usage": {
+          "tool_attempts": 4,
+          "tool_argument_validation_errors": 0,
+          "attempts": 4,
+          "responses": 4,
+          "valid_current_results": 1,
+          "errors": 0,
+          "invalid_responses": 3
+        },
+        "usage": {
+          "codex_cli": {
+            "invocations": 1,
+            "responses": 1,
+            "successes": 1,
+            "errors": 0,
+            "input_tokens": 144220,
+            "output_tokens": 2897,
+            "unknown_usage": 0,
+            "wall_seconds": 62.66308908299834
+          },
+          "jev": {
+            "attempts": 1,
+            "responses": 1,
+            "successes": 1,
+            "errors": 0,
+            "failed_attempts": 0,
+            "input_tokens": 12964,
+            "output_tokens": 246,
+            "unknown_usage": 0,
+            "wall_seconds": 0.26957204200152773
+          }
+        }
+      }
+    },
+    {
+      "period_id": "period-ea5811be69f45506",
+      "baseline": {
+        "completed": true,
+        "score": {
+          "observed": true,
+          "category": "corroborated_decline",
+          "expected_outcome": "notify",
+          "actual_outcome": "notify",
+          "outcome_correct": true,
+          "expected_recipients": [
+            "leadership"
+          ],
+          "actual_recipients": [
+            "leadership"
+          ],
+          "routing_correct": true,
+          "expected_outbox_count": 1,
+          "actual_outbox_count": 1,
+          "outbox_count_correct": true,
+          "quiet_grade_eligible": true,
+          "evidence_mode": "primary_source_inspected_current_run",
+          "primary_current_proof": true,
+          "primary_current_proof_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ]
+        },
+        "episode_seconds": 17.3138526670009,
+        "submission": {
+          "outcome": "notify",
+          "recipients": [
+            "leadership"
+          ],
+          "summary": "Archived 2025-08 close vs 2025-07: Executive Pulse generated channel balances fell 15.0%; Online and Store each fell 36.429%, and the total reconciles to the complete four-channel partition. Separate Web Funnel conversion fell 1.01%, satisfying alternative corroboration; Finance revenue was flat. Measurements are through 2025-09-05 06:00 UTC; the 2026-10-13 gateway read is replay time, not a freshness claim. These fictional populations are not whole-company sales and were not joined. Leadership should review the archived close and channel movements; no cause is established.",
+          "evidence_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bcc430dd0048c951ef1a"
+          ]
+        },
+        "usage": {
+          "codex_cli": {
+            "invocations": 1,
+            "responses": 1,
+            "successes": 1,
+            "errors": 0,
+            "input_tokens": 85712,
+            "output_tokens": 1284,
+            "unknown_usage": 0,
+            "wall_seconds": 17.30584520800039
+          },
+          "jev": {
+            "attempts": 0,
+            "responses": 0,
+            "successes": 0,
+            "errors": 0,
+            "failed_attempts": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "unknown_usage": 0,
+            "wall_seconds": 0
+          }
+        }
+      },
+      "treatment": {
+        "completed": true,
+        "score": {
+          "observed": true,
+          "category": "corroborated_decline",
+          "expected_outcome": "notify",
+          "actual_outcome": "notify",
+          "outcome_correct": true,
+          "expected_recipients": [
+            "leadership"
+          ],
+          "actual_recipients": [
+            "leadership"
+          ],
+          "routing_correct": true,
+          "expected_outbox_count": 1,
+          "actual_outbox_count": 1,
+          "outbox_count_correct": true,
+          "quiet_grade_eligible": true,
+          "evidence_mode": "primary_source_inspected_current_run",
+          "primary_current_proof": true,
+          "primary_current_proof_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ]
+        },
+        "native_judgment": {
+          "observed": true,
+          "receipt_count": 1,
+          "actual_outcome": "investigate",
+          "expected_outcome": "notify",
+          "outcome_correct": false,
+          "actual_recipients": [
+            "analytics"
+          ],
+          "expected_recipients": [
+            "leadership"
+          ],
+          "routing_correct": false
+        },
+        "episode_seconds": 103.95981566699629,
+        "submission": {
+          "outcome": "notify",
+          "recipients": [
+            "leadership"
+          ],
+          "summary": "Archived fictional August 2025 close vs July (Executive Pulse): generated channel ledger net sales fell 15.0%, USD 7,855.65 to USD 6,677.30; the total reconciles to the four declared channels. Online and Store fell 36.4%; Mobile and Marketplace were flat. Separate Web Funnel conversion fell from 9.9% to 9.8%; Finance Daily revenue and Support backlog were flat. The reviewed notify rule is met: a decline of at least 15%, two declining sales channels, and a declining alternative corroborator. Next: leadership review the archived close. Evidence was read via replay on 2026-10-13; that timestamp is not warehouse freshness, and these measurements are not current business conditions.",
+          "evidence_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bcc430dd0048c951ef1a"
+          ]
+        },
+        "native_decision_usage": {
+          "tool_attempts": 4,
+          "tool_argument_validation_errors": 0,
+          "attempts": 4,
+          "responses": 4,
+          "valid_current_results": 1,
+          "errors": 0,
+          "invalid_responses": 3
+        },
+        "usage": {
+          "codex_cli": {
+            "invocations": 1,
+            "responses": 1,
+            "successes": 1,
+            "errors": 0,
+            "input_tokens": 147665,
+            "output_tokens": 5130,
+            "unknown_usage": 0,
+            "wall_seconds": 103.94752941699699
+          },
+          "jev": {
+            "attempts": 1,
+            "responses": 1,
+            "successes": 1,
+            "errors": 0,
+            "failed_attempts": 0,
+            "input_tokens": 12949,
+            "output_tokens": 246,
+            "unknown_usage": 0,
+            "wall_seconds": 0.28563916699931724
+          }
+        }
+      }
+    },
+    {
+      "period_id": "period-db9e3e58d5521504",
+      "baseline": {
+        "completed": true,
+        "score": {
+          "observed": true,
+          "category": "unconfirmed_decline",
+          "expected_outcome": "investigate",
+          "actual_outcome": "investigate",
+          "outcome_correct": true,
+          "expected_recipients": [
+            "analytics"
+          ],
+          "actual_recipients": [
+            "analytics"
+          ],
+          "routing_correct": true,
+          "expected_outbox_count": 1,
+          "actual_outbox_count": 1,
+          "outbox_count_correct": true,
+          "quiet_grade_eligible": true,
+          "evidence_mode": "primary_source_inspected_current_run",
+          "primary_current_proof": true,
+          "primary_current_proof_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ]
+        },
+        "episode_seconds": 20.183816625001782,
+        "submission": {
+          "outcome": "investigate",
+          "recipients": [
+            "analytics"
+          ],
+          "summary": "Archived September 2025 vs August 2025 close (measurement as of 2025-10-05 06:00 UTC; replay read 2026-10-13 17:50 UTC): Executive Pulse generated channel ledger net sales fell 25%, from $6,677.30 to $5,007.97; all four declared channels declined and reconcile to the partition. Separate Web conversion and Finance revenue were flat, so neither corroborates the decline for leadership notification. Policy outcome: investigate. Next step: Analytics to review the historical channel movement and source evidence. These are fictional archived measurements, not current conditions.",
+          "evidence_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bcc430dd0048c951ef1a"
+          ]
+        },
+        "usage": {
+          "codex_cli": {
+            "invocations": 1,
+            "responses": 1,
+            "successes": 1,
+            "errors": 0,
+            "input_tokens": 113246,
+            "output_tokens": 1435,
+            "unknown_usage": 0,
+            "wall_seconds": 20.17598149999685
+          },
+          "jev": {
+            "attempts": 0,
+            "responses": 0,
+            "successes": 0,
+            "errors": 0,
+            "failed_attempts": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "unknown_usage": 0,
+            "wall_seconds": 0
+          }
+        }
+      },
+      "treatment": {
+        "completed": true,
+        "score": {
+          "observed": true,
+          "category": "unconfirmed_decline",
+          "expected_outcome": "investigate",
+          "actual_outcome": "investigate",
+          "outcome_correct": true,
+          "expected_recipients": [
+            "analytics"
+          ],
+          "actual_recipients": [
+            "analytics"
+          ],
+          "routing_correct": true,
+          "expected_outbox_count": 1,
+          "actual_outbox_count": 1,
+          "outbox_count_correct": true,
+          "quiet_grade_eligible": true,
+          "evidence_mode": "primary_source_inspected_current_run",
+          "primary_current_proof": true,
+          "primary_current_proof_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ]
+        },
+        "native_judgment": {
+          "observed": true,
+          "receipt_count": 1,
+          "actual_outcome": "investigate",
+          "expected_outcome": "investigate",
+          "outcome_correct": true,
+          "actual_recipients": [
+            "analytics"
+          ],
+          "expected_recipients": [
+            "analytics"
+          ],
+          "routing_correct": true
+        },
+        "episode_seconds": 37.196908291996806,
+        "submission": {
+          "outcome": "investigate",
+          "recipients": [
+            "analytics"
+          ],
+          "summary": "Retrospective review: September 2025 vs August 2025 archived close. Executive Pulse generated channel balances (USD) fell 25% ($6,677.30 to $5,007.97); all four declared channels fell 25%, and their complete partition reconciles to the total. Separate Web Funnel conversion stayed at 9.8%, and Finance Daily booked revenue stayed at $50,000, so neither corroborates the decline. Support backlog stayed at 50 tickets; it is context, not incident evidence. Measurement window: August–September 2025; replay read: October 13, 2026, not a freshness claim. Next: investigate the archived close before assigning a cause.",
+          "evidence_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bcc430dd0048c951ef1a"
+          ]
+        },
+        "native_decision_usage": {
+          "tool_attempts": 3,
+          "tool_argument_validation_errors": 1,
+          "attempts": 2,
+          "responses": 2,
+          "valid_current_results": 1,
+          "errors": 0,
+          "invalid_responses": 1
+        },
+        "usage": {
+          "codex_cli": {
+            "invocations": 1,
+            "responses": 1,
+            "successes": 1,
+            "errors": 0,
+            "input_tokens": 181097,
+            "output_tokens": 2883,
+            "unknown_usage": 0,
+            "wall_seconds": 37.184112125003594
+          },
+          "jev": {
+            "attempts": 1,
+            "responses": 1,
+            "successes": 1,
+            "errors": 0,
+            "failed_attempts": 0,
+            "input_tokens": 12954,
+            "output_tokens": 246,
+            "unknown_usage": 0,
+            "wall_seconds": 0.2688491249937215
+          }
+        }
+      }
+    },
+    {
+      "period_id": "period-172749b1d081af89",
+      "baseline": {
+        "completed": true,
+        "score": {
+          "observed": true,
+          "category": "finance_corroboration",
+          "expected_outcome": "notify",
+          "actual_outcome": "notify",
+          "outcome_correct": true,
+          "expected_recipients": [
+            "leadership"
+          ],
+          "actual_recipients": [
+            "leadership"
+          ],
+          "routing_correct": true,
+          "expected_outbox_count": 1,
+          "actual_outbox_count": 1,
+          "outbox_count_correct": true,
+          "quiet_grade_eligible": true,
+          "evidence_mode": "primary_source_inspected_current_run",
+          "primary_current_proof": true,
+          "primary_current_proof_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ]
+        },
+        "episode_seconds": 22.934652957999788,
+        "submission": {
+          "outcome": "notify",
+          "recipients": [
+            "leadership"
+          ],
+          "summary": "Retrospective review of archived fictional 2025-10 Executive Pulse generated monthly channel ledger balances in USD versus 2025-09 (measurement cutoff: 2025-11-05 06:00 UTC). The total reconciles to the four declared channels; each declined 25%. Separate Finance Daily revenue declined 1%, meeting the alternative corroboration rule; Web Funnel conversion was flat. Support backlog was unchanged and is not incident or severity evidence. The replay gateway read was 2026-10-13 17:51 UTC and does not establish warehouse freshness. Next step: review the archived close under the monthly policy; this is not a current business incident.",
+          "evidence_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bcc430dd0048c951ef1a"
+          ]
+        },
+        "usage": {
+          "codex_cli": {
+            "invocations": 1,
+            "responses": 1,
+            "successes": 1,
+            "errors": 0,
+            "input_tokens": 85880,
+            "output_tokens": 1824,
+            "unknown_usage": 0,
+            "wall_seconds": 22.926676208000572
+          },
+          "jev": {
+            "attempts": 0,
+            "responses": 0,
+            "successes": 0,
+            "errors": 0,
+            "failed_attempts": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "unknown_usage": 0,
+            "wall_seconds": 0
+          }
+        }
+      },
+      "treatment": {
+        "completed": true,
+        "score": {
+          "observed": true,
+          "category": "finance_corroboration",
+          "expected_outcome": "notify",
+          "actual_outcome": "notify",
+          "outcome_correct": true,
+          "expected_recipients": [
+            "leadership"
+          ],
+          "actual_recipients": [
+            "leadership"
+          ],
+          "routing_correct": true,
+          "expected_outbox_count": 1,
+          "actual_outbox_count": 1,
+          "outbox_count_correct": true,
+          "quiet_grade_eligible": true,
+          "evidence_mode": "primary_source_inspected_current_run",
+          "primary_current_proof": true,
+          "primary_current_proof_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ]
+        },
+        "native_judgment": {
+          "observed": true,
+          "receipt_count": 1,
+          "actual_outcome": "investigate",
+          "expected_outcome": "notify",
+          "outcome_correct": false,
+          "actual_recipients": [
+            "analytics"
+          ],
+          "expected_recipients": [
+            "leadership"
+          ],
+          "routing_correct": false
+        },
+        "episode_seconds": 59.803041416998894,
+        "submission": {
+          "outcome": "notify",
+          "recipients": [
+            "leadership"
+          ],
+          "summary": "Retrospective 2025-10 close vs 2025-09. Scope: Executive Pulse generated USD channel balances; separate Web Funnel conversion, Finance Daily booked revenue, and Support backlog. Executive Pulse totals fell 25.0% ($5,007.97 to $3,755.98); all four declared channels declined and reconcile to the total. Finance revenue fell 1.0% ($50,000 to $49,500), while Web conversion and Support backlog were unchanged. This meets the reviewed notify rule. These are fictional archived measurements; the replay read at 2026-10-13 17:52 UTC is not a warehouse freshness claim. Next step: leadership review the close; these sources establish no cause.",
+          "evidence_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a",
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-bcc430dd0048c951ef1a"
+          ]
+        },
+        "native_decision_usage": {
+          "tool_attempts": 2,
+          "tool_argument_validation_errors": 0,
+          "attempts": 2,
+          "responses": 2,
+          "valid_current_results": 1,
+          "errors": 0,
+          "invalid_responses": 1
+        },
+        "usage": {
+          "codex_cli": {
+            "invocations": 1,
+            "responses": 1,
+            "successes": 1,
+            "errors": 0,
+            "input_tokens": 130712,
+            "output_tokens": 2763,
+            "unknown_usage": 0,
+            "wall_seconds": 59.790340542000195
+          },
+          "jev": {
+            "attempts": 1,
+            "responses": 1,
+            "successes": 1,
+            "errors": 0,
+            "failed_attempts": 0,
+            "input_tokens": 12990,
+            "output_tokens": 246,
+            "unknown_usage": 0,
+            "wall_seconds": 0.36041787499561906
+          }
+        }
+      }
+    },
+    {
+      "period_id": "period-94ab485e76c762c8",
+      "baseline": {
+        "completed": true,
+        "score": {
+          "observed": true,
+          "category": "unavailable",
+          "expected_outcome": "insufficient_data",
+          "actual_outcome": "insufficient_data",
+          "outcome_correct": true,
+          "expected_recipients": [
+            "data-trust"
+          ],
+          "actual_recipients": [
+            "data-trust"
+          ],
+          "routing_correct": true,
+          "expected_outbox_count": 1,
+          "actual_outbox_count": 1,
+          "outbox_count_correct": true,
+          "quiet_grade_eligible": true,
+          "evidence_mode": "none",
+          "primary_current_proof": false,
+          "primary_current_proof_refs": []
+        },
+        "episode_seconds": 26.204566083004465,
+        "submission": {
+          "outcome": "insufficient_data",
+          "recipients": [
+            "data-trust"
+          ],
+          "summary": "For the archived November 2025 close (comparison: October 2025), Executive Pulse, the required source for generated monthly channel ledger balances in USD, returned no rows, so net-sales movement and channel reconciliation cannot be assessed. Separate Web conversion and Finance revenue were unchanged; Support backlog was unchanged and is context only. Measurements are as of 2025-12-05 06:00 UTC. The gateway replay read occurred 2026-10-13 17:53 UTC and does not establish warehouse freshness. Next step: validate or restore the archived Executive Pulse snapshot, then rerun this retrospective review.",
+          "evidence_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bcc430dd0048c951ef1a"
+          ]
+        },
+        "usage": {
+          "codex_cli": {
+            "invocations": 1,
+            "responses": 1,
+            "successes": 1,
+            "errors": 0,
+            "input_tokens": 76218,
+            "output_tokens": 1024,
+            "unknown_usage": 0,
+            "wall_seconds": 26.196359708999807
+          },
+          "jev": {
+            "attempts": 0,
+            "responses": 0,
+            "successes": 0,
+            "errors": 0,
+            "failed_attempts": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "unknown_usage": 0,
+            "wall_seconds": 0
+          }
+        }
+      },
+      "treatment": {
+        "completed": true,
+        "score": {
+          "observed": true,
+          "category": "unavailable",
+          "expected_outcome": "insufficient_data",
+          "actual_outcome": "insufficient_data",
+          "outcome_correct": true,
+          "expected_recipients": [
+            "data-trust"
+          ],
+          "actual_recipients": [
+            "data-trust"
+          ],
+          "routing_correct": true,
+          "expected_outbox_count": 1,
+          "actual_outbox_count": 1,
+          "outbox_count_correct": true,
+          "quiet_grade_eligible": true,
+          "evidence_mode": "native_bundle_current_run",
+          "primary_current_proof": true,
+          "primary_current_proof_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ]
+        },
+        "native_judgment": {
+          "observed": true,
+          "receipt_count": 1,
+          "actual_outcome": "insufficient_data",
+          "expected_outcome": "insufficient_data",
+          "outcome_correct": true,
+          "actual_recipients": [
+            "data-trust"
+          ],
+          "expected_recipients": [
+            "data-trust"
+          ],
+          "routing_correct": true
+        },
+        "episode_seconds": 47.249411750002764,
+        "submission": {
+          "outcome": "insufficient_data",
+          "recipients": [
+            "data-trust"
+          ],
+          "summary": "Retrospective 2025-11 close vs 2025-10. Executive Pulse’s generated monthly channel ledger balances in USD, the metric of record, returned no rows because the archived primary capture was unavailable; net-sales movement and channel reconciliation cannot be assessed. Separate Web Funnel conversion was unchanged at 0.098; Finance Daily booked revenue was unchanged at USD 49,500; Support backlog was unchanged at 50 tickets (context only). No populations were joined. Measurement window: 2025-10–2025-11, as of 2025-12-05 06:00 UTC. Replay read: 2026-10-13 17:53 UTC, not a warehouse freshness claim. Next: verify or restore the archived Executive Pulse capture and complete channel partition, then review this close again.",
+          "evidence_refs": [
+            "receipt:northstar-outfitters-local/period-94ab485e76c762c8",
+            "company_mcp|resource-fd7ced0b3305cf92db4a",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bcc430dd0048c951ef1a"
+          ]
+        },
+        "native_decision_usage": {
+          "tool_attempts": 1,
+          "tool_argument_validation_errors": 0,
+          "attempts": 1,
+          "responses": 1,
+          "valid_current_results": 1,
+          "errors": 0,
+          "invalid_responses": 0
+        },
+        "usage": {
+          "codex_cli": {
+            "invocations": 1,
+            "responses": 1,
+            "successes": 1,
+            "errors": 0,
+            "input_tokens": 137085,
+            "output_tokens": 3082,
+            "unknown_usage": 0,
+            "wall_seconds": 47.23899050000182
+          },
+          "jev": {
+            "attempts": 1,
+            "responses": 1,
+            "successes": 1,
+            "errors": 0,
+            "failed_attempts": 0,
+            "input_tokens": 9508,
+            "output_tokens": 247,
+            "unknown_usage": 0,
+            "wall_seconds": 0.2314155420026509
+          }
+        }
+      }
+    },
+    {
+      "period_id": "period-df6fa72fcf9c2d4f",
+      "baseline": {
+        "completed": true,
+        "score": {
+          "observed": true,
+          "category": "total_mismatch",
+          "expected_outcome": "insufficient_data",
+          "actual_outcome": "insufficient_data",
+          "outcome_correct": true,
+          "expected_recipients": [
+            "data-trust"
+          ],
+          "actual_recipients": [
+            "data-trust"
+          ],
+          "routing_correct": true,
+          "expected_outbox_count": 1,
+          "actual_outbox_count": 1,
+          "outbox_count_correct": true,
+          "quiet_grade_eligible": true,
+          "evidence_mode": "primary_source_inspected_current_run",
+          "primary_current_proof": true,
+          "primary_current_proof_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ]
+        },
+        "episode_seconds": 27.020080458001758,
+        "submission": {
+          "outcome": "insufficient_data",
+          "recipients": [
+            "data-trust"
+          ],
+          "summary": "Retrospective 2025-12 close (comparison: 2025-11), using Executive Pulse generated monthly channel balances in USD. At the archived measurement cutoff (2026-01-05 06:00 UTC), December’s total is $3,841.10 while the four declared channels sum to $3,831.10; November reconciles. The total and channel values came from separate captures, so the required metric-of-record partition does not reconcile. Gateway replay read was 2026-10-13 17:54 UTC and is not a freshness claim. Data trust: reconcile the December total and channel captures at the archived cutoff before classifying the movement.",
+          "evidence_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ]
+        },
+        "usage": {
+          "codex_cli": {
+            "invocations": 1,
+            "responses": 1,
+            "successes": 1,
+            "errors": 0,
+            "input_tokens": 118988,
+            "output_tokens": 2048,
+            "unknown_usage": 0,
+            "wall_seconds": 27.012129457994888
+          },
+          "jev": {
+            "attempts": 0,
+            "responses": 0,
+            "successes": 0,
+            "errors": 0,
+            "failed_attempts": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "unknown_usage": 0,
+            "wall_seconds": 0
+          }
+        }
+      },
+      "treatment": {
+        "completed": true,
+        "score": {
+          "observed": true,
+          "category": "total_mismatch",
+          "expected_outcome": "insufficient_data",
+          "actual_outcome": "insufficient_data",
+          "outcome_correct": true,
+          "expected_recipients": [
+            "data-trust"
+          ],
+          "actual_recipients": [
+            "data-trust"
+          ],
+          "routing_correct": true,
+          "expected_outbox_count": 1,
+          "actual_outbox_count": 1,
+          "outbox_count_correct": true,
+          "quiet_grade_eligible": true,
+          "evidence_mode": "primary_source_inspected_current_run",
+          "primary_current_proof": true,
+          "primary_current_proof_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ]
+        },
+        "native_judgment": {
+          "observed": true,
+          "receipt_count": 1,
+          "actual_outcome": "ignore",
+          "expected_outcome": "insufficient_data",
+          "outcome_correct": false,
+          "actual_recipients": [],
+          "expected_recipients": [
+            "data-trust"
+          ],
+          "routing_correct": false
+        },
+        "episode_seconds": 104.01676108399988,
+        "submission": {
+          "outcome": "insufficient_data",
+          "recipients": [
+            "data-trust"
+          ],
+          "summary": "Archived fixture review: the source evidence is labeled 2025-11 to 2025-12 (December vs November); the replay gateway read was 2026-10-13 17:54 UTC. Saved notes designate the archived 2024-12/2025-01 close, so these values do not establish that designated period. Within the returned period, Executive Pulse total is $3,841.10 (+2.266%), while its four declared channel balances sum to $3,831.10, a $10.00 mismatch. Separate Web conversion, Finance revenue, and Support backlog are unchanged from November. Insufficient data: Data Trust should verify the intended-period capture and reconcile the aggregate to the complete channel partition.",
+          "evidence_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bcc430dd0048c951ef1a"
+          ]
+        },
+        "native_decision_usage": {
+          "tool_attempts": 2,
+          "tool_argument_validation_errors": 0,
+          "attempts": 2,
+          "responses": 2,
+          "valid_current_results": 1,
+          "errors": 0,
+          "invalid_responses": 1
+        },
+        "usage": {
+          "codex_cli": {
+            "invocations": 1,
+            "responses": 1,
+            "successes": 1,
+            "errors": 0,
+            "input_tokens": 135370,
+            "output_tokens": 5238,
+            "unknown_usage": 0,
+            "wall_seconds": 104.00482674999512
+          },
+          "jev": {
+            "attempts": 1,
+            "responses": 1,
+            "successes": 1,
+            "errors": 0,
+            "failed_attempts": 0,
+            "input_tokens": 13067,
+            "output_tokens": 243,
+            "unknown_usage": 0,
+            "wall_seconds": 0.25038458299968624
+          }
+        }
+      }
+    },
+    {
+      "period_id": "period-52992f352cfabc1a",
+      "baseline": {
+        "completed": true,
+        "score": {
+          "observed": true,
+          "category": "partial_month",
+          "expected_outcome": "insufficient_data",
+          "actual_outcome": "insufficient_data",
+          "outcome_correct": true,
+          "expected_recipients": [
+            "data-trust"
+          ],
+          "actual_recipients": [
+            "data-trust"
+          ],
+          "routing_correct": true,
+          "expected_outbox_count": 1,
+          "actual_outbox_count": 1,
+          "outbox_count_correct": true,
+          "quiet_grade_eligible": true,
+          "evidence_mode": "primary_source_inspected_current_run",
+          "primary_current_proof": true,
+          "primary_current_proof_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ]
+        },
+        "episode_seconds": 26.9950058750037,
+        "submission": {
+          "outcome": "insufficient_data",
+          "recipients": [
+            "data-trust"
+          ],
+          "summary": "Archived January 2026 vs December 2025 close, measured as of 2026-02-05: Executive Pulse reports generated channel ledger balances totaling $2,273.94 vs $3,831.10 (-40.645%), and channel sums reconcile to its declared partition. January covers only 20 of 31 days through Jan 20; its contract marks the comparison partial and non-comparable, so the reviewed monthly policy cannot classify this movement. Separate Web conversion and Finance revenue are flat; Support backlog is unchanged and is not incident evidence. The replay gateway read was 2026-10-13, not a warehouse freshness claim. Next step: obtain a complete archived January Executive Pulse close and recheck reconciliation.",
+          "evidence_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bcc430dd0048c951ef1a"
+          ]
+        },
+        "usage": {
+          "codex_cli": {
+            "invocations": 1,
+            "responses": 1,
+            "successes": 1,
+            "errors": 0,
+            "input_tokens": 121502,
+            "output_tokens": 2278,
+            "unknown_usage": 0,
+            "wall_seconds": 26.984690999997838
+          },
+          "jev": {
+            "attempts": 0,
+            "responses": 0,
+            "successes": 0,
+            "errors": 0,
+            "failed_attempts": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "unknown_usage": 0,
+            "wall_seconds": 0
+          }
+        }
+      },
+      "treatment": {
+        "completed": true,
+        "score": {
+          "observed": true,
+          "category": "partial_month",
+          "expected_outcome": "insufficient_data",
+          "actual_outcome": "investigate",
+          "outcome_correct": false,
+          "expected_recipients": [
+            "data-trust"
+          ],
+          "actual_recipients": [
+            "analytics"
+          ],
+          "routing_correct": false,
+          "expected_outbox_count": 1,
+          "actual_outbox_count": 1,
+          "outbox_count_correct": true,
+          "quiet_grade_eligible": true,
+          "evidence_mode": "primary_source_inspected_current_run",
+          "primary_current_proof": true,
+          "primary_current_proof_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ]
+        },
+        "native_judgment": {
+          "observed": true,
+          "receipt_count": 1,
+          "actual_outcome": "investigate",
+          "expected_outcome": "insufficient_data",
+          "outcome_correct": false,
+          "actual_recipients": [
+            "analytics"
+          ],
+          "expected_recipients": [
+            "data-trust"
+          ],
+          "routing_correct": false
+        },
+        "episode_seconds": 34.34260783300124,
+        "submission": {
+          "outcome": "investigate",
+          "recipients": [
+            "analytics"
+          ],
+          "summary": "Archived 2026-01 close vs 2025-12: Executive Pulse fictional channel ledger net sales fell 40.6% ($3,831.10 to $2,273.94); all four declared channels declined and the total reconciles to their partition. Separate Web Funnel conversion (9.8%) and Finance Daily revenue ($49,500) were flat, so the decline lacks the required corroboration for leadership notification. Support backlog was unchanged at 50 tickets and is not incident evidence. Measurements cover 2025-12 through 2026-01; replay evaluation was read 2026-10-13 17:56 UTC, not a freshness claim. Next step: Analytics to investigate this historical movement within the separate source scopes; no cause is established.",
+          "evidence_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "company_mcp|resource-bcc430dd0048c951ef1a",
+            "receipt:northstar-outfitters-local/period-52992f352cfabc1a"
+          ]
+        },
+        "native_decision_usage": {
+          "tool_attempts": 3,
+          "tool_argument_validation_errors": 0,
+          "attempts": 3,
+          "responses": 3,
+          "valid_current_results": 1,
+          "errors": 0,
+          "invalid_responses": 2
+        },
+        "usage": {
+          "codex_cli": {
+            "invocations": 1,
+            "responses": 1,
+            "successes": 1,
+            "errors": 0,
+            "input_tokens": 133528,
+            "output_tokens": 2571,
+            "unknown_usage": 0,
+            "wall_seconds": 34.3310322920006
+          },
+          "jev": {
+            "attempts": 1,
+            "responses": 1,
+            "successes": 1,
+            "errors": 0,
+            "failed_attempts": 0,
+            "input_tokens": 12990,
+            "output_tokens": 246,
+            "unknown_usage": 0,
+            "wall_seconds": 0.2927383749993169
+          }
+        }
+      }
+    }
+  ],
+  "comparative_result": {
+    "baseline_correct": 12,
+    "treatment_correct": 10,
+    "native_routed_correct": 6,
+    "paired_cases": 12,
+    "baseline_median_seconds": 22.67719764549838,
+    "treatment_median_seconds": 42.223160020999785,
+    "advantage_proven": false
+  },
+  "posthoc_findings": [
+    "The final agent misread an onboarding example's dates as a recurring date constraint in the +10% case; the typed decision was correct.",
+    "The incomplete-month case lost its live partial/non-comparable contract through MCPSourceAdapter, which replaced it with the catalog contract. The source-only control retained that context. This is a product defect, not an excluded case.",
+    "Six routed native judgments differed from the owner's policy; two were raw quiet selections downgraded by the unchanged support floor. Frontier recovery is scored separately.",
+    "Source-only narrative review supported an off-target period report; supported facts alone are not a correct business outcome.",
+    "The complete cohort is negative comparative evidence. The eight extra cases must not be pooled with passing pilot cases or presented as independent companies."
+  ]
+}

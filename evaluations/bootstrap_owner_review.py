@@ -17,7 +17,7 @@ from typing import Annotated
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, StringConstraints
 
 from evaluations import codex_trial_transport
-from signalweave.models import InsightCard
+from signalweave.models import InsightCard, SourceComparisonContract
 from signalweave.numeric_conditions import NumericCondition
 
 REVIEW_INSTRUCTIONS = (
@@ -104,6 +104,16 @@ REVIEW_INSTRUCTIONS = (
     "Raw observations may have no analytical_comparisons at all. Do not demand, invent, or "
     "approve invented comparison bindings to translate such a rule. Absence of a compiled "
     "check is not omission of a rule faithfully expressed in decision_guidance. "
+    "Distinguish numerical analysis from source quality: contract.comparison_contracts are "
+    "scalar coverage/comparability contracts, not analytical_comparisons. When the owner "
+    "requires a complete/comparable primary comparison and an inspected scalar contract "
+    "declares its exact key, assess whether the card binds that requirement through "
+    "required_comparison_keys. This does not require numeric_conditions or decomposition. "
+    "A quality binding on required=false is advisory and does not enforce a global prerequisite; "
+    "do not accept it as satisfying an owner-wide requirement for that source. "
+    "Do not invent a key from a window name. Baseline notes need no product-specific binding. "
+    "For a recurring relative window, onboarding example measurements and dates are not "
+    "permanent date restrictions; preserve a fixed date constraint only if the owner requested it. "
     "When numeric conditions ARE present, validate the executable source_key, comparison_key, measurement, "
     "segment, unit, threshold and comparator fields against the supplied typed contract; do not "
     "use a free-text label to reinterpret them. A contribution with segment=null means any "
@@ -140,6 +150,7 @@ CONTRACT_FIELDS = (
     "domain", "scope", "roles", "metric_names", "available_comparison_windows",
     "required_comparison_keys", "population", "grain", "freshness_sla_hours",
     "source_status", "authorized",
+    "comparison_contracts",
 )
 DESCRIPTION_FIELDS = ("ref", "adapter", "resource", "kind", "title", "description")
 COMPARISON_DESCRIPTION_FIELDS = (
@@ -217,6 +228,16 @@ def _project_contract(contract: object) -> dict:
             if type(value) not in (int, float) or not math.isfinite(value) or value < 0:
                 raise ValueError("contract.freshness_sla_hours must be finite and non-negative")
             projected[field] = value
+        elif field == "comparison_contracts":
+            if not isinstance(value, list) or len(value) > MAX_CONTEXT_LIST_ITEMS:
+                raise ValueError("contract.comparison_contracts must be a bounded list")
+            projected[field] = []
+            for comparison in value:
+                normalized = SourceComparisonContract.model_validate(comparison).model_dump(mode="json")
+                normalized["query_refs"] = _bounded_text_list(
+                    normalized["query_refs"], "contract.comparison_contracts.query_refs",
+                )
+                projected[field].append(normalized)
     return projected
 
 

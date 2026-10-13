@@ -700,6 +700,33 @@ def _compact_evaluation_response(response: dict[str, Any]) -> dict[str, Any]:
             "section_directory_complete": len(sections) == len(result),
             "instruction": "Read relevant receipt sections with result_path, offset and limit before explaining or delivering an action. An omitted section is not empty or an all-clear. The full result remains stored; pages perform no new source or model calls.",
         }
+        source_contracts = result.get("source_contracts")
+        if isinstance(source_contracts, list):
+            prefix = []
+            for source_contract in source_contracts:
+                candidate_prefix = [*prefix, source_contract]
+                candidate = {
+                    **compact,
+                    "result": {**compact["result"], "source_contracts": candidate_prefix},
+                    "evidence_access": evidence_access,
+                }
+                # Keep room for facts and explicit coverage. Quality precedes
+                # optional report details; never substitute catalog assertions.
+                if _json_bytes(candidate) > AGENT_HANDOFF_BYTES - 8 * 1024:
+                    break
+                prefix = candidate_prefix
+            compact["result"]["source_contracts"] = prefix
+            evidence_access["source_contract_coverage"] = {
+                "result_path": ["source_contracts"],
+                "total": len(source_contracts),
+                "included": len(prefix),
+                "coverage": "complete_section" if len(prefix) == len(source_contracts) else "partial_section",
+                "next_offset": None if len(prefix) == len(source_contracts) else len(prefix),
+            }
+            evidence_access["instruction"] += (
+                " Read omitted source_contracts before interpreting comparability or coverage; "
+                "a populated observation is not a complete comparison."
+            )
         observations = result.get("observations")
         if isinstance(observations, list):
             def observation_coverage(included: int) -> dict[str, Any]:
@@ -789,6 +816,13 @@ CARD_AUTHORING_GUIDANCE = (
     "Compare definitions within the same intended population and metric; clarify ambiguous owner "
     "wording before making it a recurring condition. A complete report "
     "means its bounded evidence checks passed, not that the full business policy is certified. "
+    "For recurring cards, distinguish reusable owner intent from the dates and values of the "
+    "onboarding example. Use each run's actual source measurement period and cutoff for a "
+    "relative window; preserve a fixed historical window only when the owner explicitly requests it. "
+    "If complete/comparable evidence is an owner prerequisite, bind required_comparison_keys "
+    "to inspected contract.comparison_contracts keys or applicable analytical_comparisons keys. "
+    "A scalar coverage contract does not require a decomposable analytical comparison. "
+    "Do not leave a known coverage requirement unbound merely because numerical analysis is unavailable. "
     "For threshold rules, distinguish a current level, signed between-period change in units, relative "
     "change, relative change in percent, and a segment's contribution to that change. Do not silently choose among them. "
     "For exact numerical boundaries over available analytical comparisons, add numeric_conditions "
@@ -1147,6 +1181,20 @@ def create_mcp(
             )
             evaluated_result = run.result.model_copy(update={"retrieval": bundle})
             result = evaluated_result.model_dump(mode="json")
+            result["source_contracts"] = [
+                {
+                    "source_key": resource.source_key,
+                    "adapter": resource.adapter,
+                    "resource": resource.resource,
+                    "source_url": resource.source_url,
+                    "captured_at": resource.captured_at.isoformat(),
+                    "source_captured_at": (
+                        resource.source_captured_at.isoformat() if resource.source_captured_at else None
+                    ),
+                    "contract": resource.contract.model_dump(mode="json"),
+                }
+                for resource in run.resources
+            ]
             report = build_investigation_report(run.card, evaluated_result, run.resources)
             result["report"] = report.model_dump(mode="json")
             result["report_markdown"] = render_investigation_report(report)
@@ -2326,6 +2374,11 @@ def create_mcp(
         inspect the receipt and decide what to do next. The durable receipt
         always retains the full result; ``response_mode='compact'`` only shapes
         this MCP response for the next agent turn.
+
+        ``source_contracts`` retains this run's source quality and comparison
+        coverage in the receipt. Check it before interpreting observations;
+        large handoffs explicitly page omitted contracts rather than treating
+        missing coverage as complete.
 
         Omit ``context`` for a normal run: approved source evidence is fetched
         automatically. Additional external facts may use a versioned context

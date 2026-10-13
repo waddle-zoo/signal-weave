@@ -28,6 +28,8 @@ def test_recurring_agent_guide_uses_existing_card_bundle_without_repeating_onboa
     ]
     assert "Start here" in guide["steps"][1]["purpose"]
     assert "when needed" in guide["repeat"]
+    assert "onboarding examples are not permanent date restrictions" in guide["repeat"]
+    assert "explicit owner-requested fixed window" in guide["repeat"]
     assert "Omit context" in guide["optional_context"]
     assert "inside the context object" in guide["optional_context"]
     assert "unverified" in guide["optional_context"]

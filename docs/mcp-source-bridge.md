@@ -138,6 +138,14 @@ layer validates reconciliation and computes contributions; the bridge does not
 infer or manufacture missing comparison data. Comparisons remain subject to the
 same snapshot identity and byte-budget checks.
 
+For scalar coverage, declare `contract.comparison_contracts` with a stable key,
+metric, definition, population, unit and window. Return that same meaning with
+this snapshot's coverage, comparability, detail and query references. A static
+catalog's `complete` assertion does not replace live quality. Missing or duplicate
+assertions, or a changed meaning, are unresolved rather than silently complete.
+Evaluations save the inspected contracts in the decision receipt; compact
+responses retain them or explicitly page an omitted prefix.
+
 When a reviewed resource promises specific numerical comparisons, declare their
 exact `AnalyticalComparison.key` values in the manifest's
 `resources[].descriptor.contract.required_comparison_keys`, for example:
@@ -149,8 +157,11 @@ exact `AnalyticalComparison.key` values in the manifest's
 The list defaults to empty and is bounded to 20 keys. Conversational proposal
 and onboarding copy these reviewed catalog requirements onto each selected
 `SourceRef.required_comparison_keys`, including automatically recommended
-sources. Caller fields in `selected_sources` and returned snapshot contents do
-not supply or replace these requirements. A valid observation alone cannot
+sources. An agent can add known scalar keys through
+`selected_sources[].required_comparison_keys` when the owner's card requires
+complete/comparable evidence. It cannot invent keys or remove the catalog's
+requirements; a scalar coverage binding does not require numerical decomposition.
+Returned snapshot contents do not replace these requirements. A valid observation alone cannot
 satisfy a required comparison: omitting a declared key triggers the existing
 missing-comparison check during evaluation.
 

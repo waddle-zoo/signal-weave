@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import re
+from collections import Counter
 from collections.abc import AsyncIterator, Callable, Iterable
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from contextvars import ContextVar
@@ -286,10 +287,45 @@ class MCPSourceAdapter:
             snapshot.source_key = source.key
             for item in [*snapshot.observations, *snapshot.evidence]:
                 item.source_key = source.key
+            current_comparisons = {
+                comparison.key: comparison for comparison in snapshot.contract.comparison_contracts
+            }
+            comparison_counts = Counter(
+                comparison.key for comparison in snapshot.contract.comparison_contracts
+            )
+            comparison_contracts = []
+            for declared in descriptor.contract.comparison_contracts:
+                current = current_comparisons.get(declared.key)
+                if current is None or comparison_counts[declared.key] != 1:
+                    comparison_contracts.append(declared.model_copy(deep=True, update={
+                        "coverage": "unknown",
+                        "comparable": False,
+                        "detail": "The live snapshot supplied no unique quality assertion for this declared comparison.",
+                        "query_refs": [],
+                    }))
+                    continue
+                # The manifest owns meaning and authority; the source supplies
+                # this run's coverage, comparability and evidence references.
+                # A changed definition is unresolved, not silently reauthorized.
+                same_meaning = all(
+                    getattr(current, field) == getattr(declared, field)
+                    for field in ("metric", "definition", "population", "unit", "comparison_window")
+                )
+                comparison_contracts.append(declared.model_copy(deep=True, update={
+                    "coverage": current.coverage if same_meaning else "unknown",
+                    "comparable": current.comparable if same_meaning else False,
+                    "detail": current.detail if same_meaning else (
+                        "Live comparison definition differs from the reviewed manifest; review the source binding."
+                    ),
+                    "query_refs": list(current.query_refs),
+                }))
+            severity = {"healthy": 0, "ambiguous": 1, "stale": 2, "unknown": 3, "failed": 4}
             snapshot.contract = descriptor.contract.model_copy(deep=True, update={
-                "source_status": (snapshot.contract.source_status
-                                  if snapshot.contract.source_status != "healthy"
-                                  else descriptor.contract.source_status),
+                "source_status": max(
+                    (snapshot.contract.source_status, descriptor.contract.source_status),
+                    key=severity.__getitem__,
+                ),
+                "comparison_contracts": comparison_contracts,
             })
             snapshot.title = descriptor.title
             snapshot.description = descriptor.description

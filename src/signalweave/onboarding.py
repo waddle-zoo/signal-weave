@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from typing import Any, Protocol
 from uuid import uuid4
 
-from pydantic import BaseModel, ConfigDict, Field, StrictBool, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, ValidationError, field_validator
 
 from .compiler import SUPPORTED_CAPABILITIES, base_plan
 from .models import (
@@ -73,6 +73,23 @@ class SelectedSourceInput(BaseModel):
             "can still decide without it. Authorization to read a source does not make it required."
         ),
     )
+    required_comparison_keys: list[str] = Field(
+        default_factory=list,
+        max_length=20,
+        description=(
+            "Known keys from this source's contract.comparison_contracts that the owner requires "
+            "to be complete/comparable for this card. Scalar quality bindings do not require "
+            "analytical_comparisons or numeric_conditions. Catalog-wide requirements are retained. "
+            "When required=false, quality failures are advisory, not global prerequisites."
+        ),
+    )
+
+    @field_validator("required_comparison_keys")
+    @classmethod
+    def validate_required_comparison_keys(cls, values: list[str]) -> list[str]:
+        if any(not value.strip() or len(value) > 160 for value in values):
+            raise ValueError("required comparison keys must be nonblank and at most 160 characters")
+        return values
 
 
 def _slug(value: str) -> str:
@@ -1966,6 +1983,17 @@ class InsightAuthoringService:
                 "and discover_insight_sources when available: "
                 + ", ".join(str(item) for item in unknown)
             )
+        for item in requested:
+            contract = matches[item.ref].contract
+            known_keys = set(contract.required_comparison_keys) | {
+                comparison.key for comparison in contract.comparison_contracts
+            }
+            unknown_keys = set(item.required_comparison_keys) - known_keys
+            if unknown_keys:
+                raise ValueError(
+                    "Selected source required_comparison_keys must be declared by its reviewed catalog contract: "
+                    + ", ".join(sorted(unknown_keys))
+                )
         source_refs = [
             SourceRef(
                 key=item.key or f"source-{_slug(item.ref)}",
@@ -1974,7 +2002,9 @@ class InsightAuthoringService:
                 label=item.label or matches[item.ref].title,
                 parameters=item.parameters,
                 required=item.required,
-                required_comparison_keys=list(matches[item.ref].contract.required_comparison_keys),
+                required_comparison_keys=list(dict.fromkeys(
+                    [*matches[item.ref].contract.required_comparison_keys, *item.required_comparison_keys]
+                )),
             )
             for item in requested
         ]

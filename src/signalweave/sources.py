@@ -5,6 +5,7 @@ import base64
 import inspect
 import json
 import re
+from collections import Counter
 from collections.abc import Iterable
 from typing import Protocol
 
@@ -23,6 +24,18 @@ def _inspection_contract(catalog: ResourceContract, snapshot: ResourceContract) 
     status = max((catalog.source_status, snapshot.source_status), key=severity.__getitem__)
     catalog_comparisons = {item.key: item for item in catalog.comparison_contracts}
     snapshot_comparisons = {item.key: item for item in snapshot.comparison_contracts}
+    counts = Counter(item.key for item in [*catalog.comparison_contracts, *snapshot.comparison_contracts])
+    catalog_counts = Counter(item.key for item in catalog.comparison_contracts)
+    snapshot_counts = Counter(item.key for item in snapshot.comparison_contracts)
+    for key in counts:
+        if catalog_counts[key] > 1 or snapshot_counts[key] > 1:
+            item = catalog_comparisons.get(key) or snapshot_comparisons[key]
+            snapshot_comparisons[key] = item.model_copy(deep=True, update={
+                "coverage": "unknown",
+                "comparable": False,
+                "detail": "Comparison keys are not unique; current quality cannot be established.",
+                "query_refs": [],
+            })
     # Catalog metadata supplies the stable definition; the inspection snapshot
     # may replace it with current coverage/comparability for this run. Keep
     # catalog-only contracts too so a later required-key check remains explicit.

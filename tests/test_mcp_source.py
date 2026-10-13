@@ -10,8 +10,9 @@ from datetime import datetime, timezone
 import pytest
 from mcp import types
 
+from signalweave.engine import InsightEngine
 from signalweave.mcp_source import build_mcp_sources
-from signalweave.models import SourceRef
+from signalweave.models import InsightCard, SourceRef
 from signalweave.sources import SourceRegistry
 
 
@@ -175,11 +176,14 @@ async def test_hostile_identity_fails_closed(tmp_path, manifest, payload, source
     assert snapshot.metadata == {}
 
 
-async def test_response_cannot_upgrade_configured_health(tmp_path, manifest, payload, source):
+@pytest.mark.parametrize("configured_status", ["stale", "failed"])
+async def test_response_cannot_upgrade_configured_health(
+    tmp_path, manifest, payload, source, configured_status,
+):
     entry = manifest["connections"][0]["resources"][0]
-    entry["descriptor"]["contract"]["source_status"] = "stale"
+    entry["descriptor"]["contract"]["source_status"] = configured_status
     adapter, = build(tmp_path, manifest, FakeTransport(payload))
-    assert (await adapter.inspect(source)).contract.source_status == "stale"
+    assert (await adapter.inspect(source)).contract.source_status == configured_status
     payload["contract"]["source_status"] = "failed"
     adapter, = build(tmp_path, manifest, FakeTransport(payload))
     assert (await adapter.inspect(source)).contract.source_status == "failed"
@@ -204,6 +208,264 @@ async def test_comparison_window_capabilities_are_manifest_owned(
     source.parameters["available_comparison_windows"] = ["caller-injected"]
     assert await adapter.authorize(source, authorized_tenants={"tenant-a"}) is None
     assert (await adapter.inspect(source)).error == "MCP source is not authorized"
+
+
+@pytest.mark.parametrize(
+    ("domain", "window"),
+    [
+        ("sales", "previous_period"),
+        ("business_intelligence", "fiscal/previous closed cycle@v2"),
+    ],
+)
+async def test_snapshot_downgrades_declared_comparison_without_replacing_catalog_meaning(
+    tmp_path, manifest, payload, source, domain, window,
+):
+    entry = manifest["connections"][0]["resources"][0]
+    catalog_comparison = {
+        "key": "orders-region",
+        "metric": "orders",
+        "definition": "Completed orders by region, from the approved query.",
+        "population": "production orders",
+        "unit": "count",
+        "comparison_window": window,
+        "coverage": "complete",
+        "comparable": True,
+        "query_refs": ["approved-orders"],
+    }
+    entry["descriptor"]["contract"].update(
+        domain=domain,
+        comparison_contracts=[catalog_comparison],
+        available_comparison_windows=[window],
+        required_comparison_keys=["orders-region"],
+        roles=["primary"],
+    )
+    snapshot_comparison = {
+        **catalog_comparison,
+        "coverage": "partial",
+        "comparable": False,
+        "detail": "Only 20 of 31 days are present; captures differ.",
+        "query_refs": ["sales-total:capture-r0", "channel-ledger:capture-r1"],
+    }
+    payload["contract"] = {
+        "tenant_id": "tenant-a",
+        "domain": domain,
+        "comparison_contracts": [snapshot_comparison],
+        "available_comparison_windows": [window],
+        "required_comparison_keys": ["orders-region"],
+        "roles": ["primary"],
+        # A healthy resource can still have a partial/noncomparable measurement.
+        "source_status": "healthy",
+        "authorized": True,
+    }
+    original_payload = deepcopy(payload)
+    adapter, = build(tmp_path, manifest, FakeTransport(payload))
+
+    result = await SourceRegistry([adapter], authorized_tenants={"tenant-a"}).inspect(source)
+
+    assert result.error is None
+    assert result.contract.source_status == "healthy"
+    assert result.contract.domain == domain
+    assert result.contract.available_comparison_windows == [window]
+    assert result.contract.required_comparison_keys == ["orders-region"]
+    assert result.contract.roles == ["primary"]
+    assert result.contract.authorized is True
+    assert len(result.contract.comparison_contracts) == 1
+    comparison = result.contract.comparison_contracts[0]
+    assert (comparison.key, comparison.metric) == ("orders-region", "orders")
+    assert comparison.definition == catalog_comparison["definition"]
+    assert comparison.population == "production orders"
+    assert comparison.unit == "count"
+    assert comparison.comparison_window == window
+    assert comparison.coverage == "partial"
+    assert comparison.comparable is False
+    assert comparison.detail == "Only 20 of 31 days are present; captures differ."
+    assert comparison.query_refs == ["sales-total:capture-r0", "channel-ledger:capture-r1"]
+    assert payload == original_payload
+
+
+async def test_snapshot_cannot_inject_comparison_meaning_or_foreign_keys(
+    tmp_path, manifest, payload, source,
+):
+    entry = manifest["connections"][0]["resources"][0]
+    catalog_comparison = {
+        "key": "orders-region",
+        "metric": "orders",
+        "definition": "Completed orders by region.",
+        "population": "production orders",
+        "unit": "count",
+        "comparison_window": "previous_period",
+        "coverage": "complete",
+        "comparable": True,
+        "query_refs": ["approved-orders"],
+    }
+    entry["descriptor"]["contract"].update(
+        comparison_contracts=[catalog_comparison],
+        available_comparison_windows=["previous_period"],
+        required_comparison_keys=["orders-region"],
+    )
+    payload["contract"] = {
+        "tenant_id": "tenant-a",
+        "comparison_contracts": [
+            {
+                **catalog_comparison,
+                "metric": "unapproved_metric",
+                "definition": "injected definition",
+                "population": "injected population",
+                "unit": "EUR",
+                "comparison_window": "unapproved-window",
+                "coverage": "complete",
+                "comparable": True,
+                "detail": "injected claim of complete coverage",
+                "query_refs": ["unapproved-query"],
+            },
+            {
+                **catalog_comparison,
+                "key": "snapshot-only-secret-metric",
+                "metric": "unapproved_metric",
+                "comparison_window": "unapproved-window",
+            },
+        ],
+        "available_comparison_windows": ["unapproved-window"],
+        "required_comparison_keys": ["snapshot-only-secret-metric"],
+        "authorized": True,
+    }
+    original_payload = deepcopy(payload)
+    adapter, = build(tmp_path, manifest, FakeTransport(payload))
+
+    result = await SourceRegistry([adapter], authorized_tenants={"tenant-a"}).inspect(source)
+
+    assert result.error is None
+    assert [item.key for item in result.contract.comparison_contracts] == ["orders-region"]
+    assert result.contract.required_comparison_keys == ["orders-region"]
+    assert result.contract.available_comparison_windows == ["previous_period"]
+    comparison = result.contract.comparison_contracts[0]
+    assert comparison.metric == "orders"
+    assert comparison.definition == "Completed orders by region."
+    assert comparison.population == "production orders"
+    assert comparison.unit == "count"
+    assert comparison.comparison_window == "previous_period"
+    assert comparison.coverage == "unknown"
+    assert comparison.comparable is False
+    assert "differs from the reviewed manifest" in comparison.detail
+    assert comparison.query_refs == ["unapproved-query"]
+    assert payload == original_payload
+
+
+@pytest.mark.parametrize("runtime_order", [("partial", "complete"), ("complete", "partial")])
+async def test_duplicate_runtime_comparison_keys_are_unknown_in_either_order(
+    tmp_path, manifest, payload, source, runtime_order,
+):
+    declared = {
+        "key": "orders-region",
+        "metric": "orders",
+        "definition": "Completed orders by region.",
+        "population": "production orders",
+        "unit": "count",
+        "comparison_window": "previous_period",
+        "coverage": "complete",
+        "comparable": True,
+        "query_refs": ["approved-orders"],
+    }
+    manifest["connections"][0]["resources"][0]["descriptor"]["contract"][
+        "comparison_contracts"
+    ] = [declared]
+    assertions = {
+        "partial": {
+            **declared,
+            "coverage": "partial",
+            "comparable": False,
+            "detail": "Only 20 of 31 days were captured.",
+            "query_refs": ["orders:capture-r1"],
+        },
+        "complete": {
+            **declared,
+            "coverage": "complete",
+            "comparable": True,
+            "detail": "Complete month asserted.",
+            "query_refs": ["orders:capture-r2"],
+        },
+    }
+    payload["contract"] = {
+        "tenant_id": "tenant-a",
+        "authorized": True,
+        "comparison_contracts": [assertions[key] for key in runtime_order],
+    }
+    original_payload = deepcopy(payload)
+    adapter, = build(tmp_path, manifest, FakeTransport(payload))
+
+    result = await SourceRegistry([adapter], authorized_tenants={"tenant-a"}).inspect(source)
+
+    assert result.error is None
+    assert len(result.contract.comparison_contracts) == 1
+    comparison = result.contract.comparison_contracts[0]
+    assert comparison.key == "orders-region"
+    assert comparison.metric == "orders"
+    assert comparison.unit == "count"
+    assert comparison.population == "production orders"
+    assert comparison.definition == "Completed orders by region."
+    assert comparison.coverage == "unknown"
+    assert comparison.comparable is False
+    assert comparison.detail == (
+        "The live snapshot supplied no unique quality assertion for this declared comparison."
+    )
+    assert comparison.query_refs == []
+    assert payload == original_payload
+
+
+async def test_missing_runtime_assertion_is_unknown_and_only_required_binding_blocks(
+    tmp_path, manifest, payload, source,
+):
+    entry = manifest["connections"][0]["resources"][0]
+    entry["descriptor"]["contract"]["comparison_contracts"] = [{
+        "key": "orders-region",
+        "metric": "orders",
+        "definition": "Completed orders by region.",
+        "population": "production orders",
+        "unit": "count",
+        "comparison_window": "previous_period",
+        "coverage": "complete",
+        "comparable": True,
+        "query_refs": ["approved-orders"],
+    }]
+    payload["contract"] = {"tenant_id": "tenant-a", "authorized": True}
+    adapter, = build(tmp_path, manifest, FakeTransport(payload))
+    registry = SourceRegistry([adapter], authorized_tenants={"tenant-a"})
+
+    optional_source = source.model_copy(update={"required_comparison_keys": []})
+    required_source = source.model_copy(update={"required_comparison_keys": ["orders-region"]})
+    optional_snapshot = await registry.inspect(optional_source)
+    required_snapshot = await registry.inspect(required_source)
+
+    for snapshot in (optional_snapshot, required_snapshot):
+        comparison = snapshot.contract.comparison_contracts[0]
+        assert comparison.coverage == "unknown"
+        assert comparison.comparable is False
+        assert comparison.query_refs == []
+        assert "no unique quality assertion" in comparison.detail
+
+    def card_for(source_ref):
+        return InsightCard(
+            id="comparison-presence-gate",
+            title="Orders review",
+            what_to_watch="Compare approved orders",
+            why_watch="Only interpret a declared comparable measurement",
+            sources=[source_ref],
+            comparison_windows=["previous_period"],
+        )
+
+    required_errors = InsightEngine._source_errors(
+        card_for(required_source), [required_snapshot]
+    )
+    optional_errors = InsightEngine._source_errors(
+        card_for(optional_source), [optional_snapshot]
+    )
+    assert any(
+        item.get("quality_status") == "comparison_incomplete" and item["blocking"]
+        for item in required_errors
+    )
+    assert not any(
+        item.get("quality_status") == "comparison_incomplete" for item in optional_errors
+    )
 
 
 @pytest.mark.parametrize("kind", ["exception", "is_error", "snapshot_error", "invalid", "text_only"])

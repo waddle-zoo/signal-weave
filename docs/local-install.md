@@ -239,6 +239,11 @@ run needs only the approved card ID and a stable run key: SignalWeave fetches it
 sources. The agent need not rediscover the dashboards or copy their observations
 into a `context` argument. It can read omitted evidence from the saved receipt
 and use its existing company tools for deeper investigation when needed.
+The saved receipt includes the inspected source contracts, not just the numbers.
+When your brief requires a complete/comparable period, the agent can bind a known
+scalar coverage key during onboarding; you do not need to fill out a numerical
+analysis form. It should keep example-period findings separate from the rule
+that repeats on later runs.
 
 Once those checks work, give your agent a concrete scheduling request:
 

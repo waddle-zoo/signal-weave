@@ -102,11 +102,32 @@ and a test-only alias-collision retry. The treatment took longer in every case.
 That is a functional pass, not a quality or speed win.
 [Fresh pilot evidence](native-cadence-owner-channel-pilot-2026-10-13.json).
 
-The next candidate clarifies the existing recurring path: evaluate the approved
-card before rereading its sources, omit copied source context, and investigate
-with company tools when needed. It also restores the planned-change instruction
-identified in adversarial review. A twelve-period trial is the next check, not an
-already-proven result. A successful API request, a correct raw
+The twelve-period expansion completed fresh onboarding and all 24 agent runs,
+using twelve live Jev calls without budget censorship. Baseline outcomes and
+routing matched in **12/12** cases; SignalWeave's final agent matched **10/12**;
+native routed decisions matched **6/12**. Median recurring episode times were
+22.7 seconds for baseline and 42.2 for treatment. This cohort does not establish
+an advantage. It is retained in full, not replaced by the passing pilot.
+[Twelve-period protocol and results](native-cadence-twelve-period-2026-10-13.json).
+
+One final failure was a frontier misread: it treated onboarding-example dates as
+a fixed recurring constraint although the approved card used a relative monthly
+window. Another omitted the incomplete current month. Investigation found that
+the production MCP bridge replaced live partial/non-comparable comparison
+contracts with static catalog contracts. The durable receipt also omitted those
+contracts, so its evidence pages could not recover the missing source quality.
+The candidate now preserves live quality without letting the source redefine
+catalog meaning, records inspected contracts in receipts, and prioritizes them
+in compact handoffs. Required scalar coverage bindings and numerical-analysis
+bindings are now distinguished in guidance and simulated owner review.
+
+The native failures also expose an analytical boundary: Jev must not be treated
+as an exact calculator or segment counter. [TypeSafe's documented limitations](https://docs.typesafe.ai/model-jaggedness/jev-1.13)
+support keeping those operations in code or the calling agent's analysis. These
+sources supplied observations, not validated decompositions; no numerical
+condition was fabricated to turn the result into a pass. The focused rerun is a
+known-regression check, not an independent holdout or proof of enterprise value.
+A successful API request, a correct raw
 selection, a routed decision and a useful final message remain separate scores.
 
 Test independently varied business cases and natural recurring cadences, including
@@ -114,10 +135,11 @@ onboarding effort, total cost, concise recipient messages and source drift. Then
 validate with actual people and customer data. Earlier invalid fixtures and
 censored runs were retained separately, not counted as wins.
 
-The current working candidate passed 2,775 local tests (six skipped). The pushed
-`ad3c1ce` commit passed 2,723 tests (six skipped) from a clean Git clone without
+The previous working candidate passed 2,775 local tests (six skipped). The pushed
+`5776b57` commit passed 2,749 tests (six skipped) from a clean Git clone without
 private/untracked trials, using the locked dependency environment, and native CI
-on Apple Silicon, Intel Mac and Linux. These are different source revisions;
-the working candidate still needs its own clean-clone and CI checks. The newer
+on Apple Silicon, Intel Mac and Linux. Its downloaded Apple Silicon CI binary
+also passed the real-binary one-line installer/PTY test. These are different
+source revisions; the new contract fixes still need their own checks. The newer
 preview has not been published; the README's published installer still targets
 the older release.

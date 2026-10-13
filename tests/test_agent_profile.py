@@ -3,13 +3,21 @@ from __future__ import annotations
 import pytest
 import typesafe_sdk
 
-from signalweave.mcp_server import AGENT_PROFILE_TOOLS, create_mcp
+from signalweave.mcp_server import AGENT_PROFILE_TOOLS, CARD_AUTHORING_GUIDANCE, create_mcp
 from signalweave.models import InsightCardStatus, InvestigationMode, PrincipalContext, RetrievalMode
 from signalweave.runtime import build_runtime
 from signalweave.typesafe_adapter import JevJudger
 from tests.test_diagnostics import comparison
 from tests.test_local_investigation import make_runtime
 from tests.test_typesafe_adapter import FakeClient, FakeNoul, FakeScore
+
+
+def test_authoring_distinguishes_coverage_bindings_from_numeric_analysis_and_example_dates():
+    assert "contract.comparison_contracts keys or applicable analytical_comparisons keys" in CARD_AUTHORING_GUIDANCE
+    assert "scalar coverage contract does not require a decomposable analytical comparison" in CARD_AUTHORING_GUIDANCE
+    assert "Do not leave a known coverage requirement unbound" in CARD_AUTHORING_GUIDANCE
+    assert "dates and values of the onboarding example" in CARD_AUTHORING_GUIDANCE
+    assert "only when the owner explicitly requests it" in CARD_AUTHORING_GUIDANCE
 
 
 async def test_agent_profile_exposes_only_the_repeated_analysis_surface(tmp_path):
