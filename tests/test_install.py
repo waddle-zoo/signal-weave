@@ -110,6 +110,34 @@ def test_native_detection_and_latest_install(install_env, system, arch, target):
                         f"{BASE}/download/{STABLE_VERSION}/signalweave-{STABLE_VERSION}-{target}.tar.gz"]
 
 
+def test_installer_warns_when_an_older_command_shadows_the_new_binary(install_env):
+    commands = Path(install_env["PATH"].split(os.pathsep)[0])
+    shadow = commands / "signalweave"
+    shadow.write_text('#!/bin/sh\nprintf "SignalWeave 0.1.0\\n"\n')
+    shadow.chmod(0o755)
+    original = shadow.read_bytes()
+    destination = installed(install_env)
+    env = {**install_env, "PATH": install_env["PATH"] + os.pathsep + str(destination.parent)}
+    release(env)
+    result = run(env, "--version", VERSION)
+    assert result.returncode == 0
+    assert "Another signalweave command currently takes precedence" in result.stdout
+    assert f'export PATH="{destination.parent}:$PATH"' in result.stdout
+    assert "type -a signalweave" in result.stdout
+    assert shadow.read_bytes() == original
+    assert destination.is_file()
+
+
+def test_installer_does_not_request_path_changes_when_new_binary_is_first(install_env):
+    destination = installed(install_env)
+    env = {**install_env, "PATH": str(destination.parent) + os.pathsep + install_env["PATH"]}
+    release(env)
+    result = run(env, "--version", VERSION)
+    assert result.returncode == 0
+    assert "export PATH=" not in result.stdout
+    assert "takes precedence" not in result.stdout
+
+
 def test_setup_without_a_terminal_installs_and_prints_resume_command(install_env):
     executable = b'#!/bin/sh\nprintf "%s\\n" "$*" >> "$SETUP_LOG"\n'
     release(install_env, version=STABLE_VERSION, executable=executable)

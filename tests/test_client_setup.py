@@ -154,6 +154,8 @@ def test_post_add_verification_failure_is_reported_without_raw_output(monkeypatc
 def test_cli_run_is_bounded_scrubbed_and_noninteractive(monkeypatch, tmp_path):
     monkeypatch.setenv("SIGNALWEAVE_API_TOKEN", "hidden")
     monkeypatch.setenv("TYPESAFE_API_KEY", "hidden")
+    monkeypatch.setenv("OPENAI_API_KEY", "hidden")
+    monkeypatch.setenv("OPENAI_API_KEY_FILE", "/private/provider.key")
     monkeypatch.setenv("SIGNALWEAVE_HOME", "preserved-runtime-setting")
     monkeypatch.setenv("ANTHROPIC_API_KEY", "preserved-agent-setting")
     seen = {}
@@ -170,6 +172,8 @@ def test_cli_run_is_bounded_scrubbed_and_noninteractive(monkeypatch, tmp_path):
     assert seen["kwargs"]["timeout"] == 5.0
     assert "SIGNALWEAVE_API_TOKEN" not in seen["kwargs"]["env"]
     assert "TYPESAFE_API_KEY" not in seen["kwargs"]["env"]
+    assert "OPENAI_API_KEY" not in seen["kwargs"]["env"]
+    assert "OPENAI_API_KEY_FILE" not in seen["kwargs"]["env"]
     assert seen["kwargs"]["env"]["SIGNALWEAVE_HOME"] == "preserved-runtime-setting"
     assert seen["kwargs"]["env"]["ANTHROPIC_API_KEY"] == "preserved-agent-setting"
 

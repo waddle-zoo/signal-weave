@@ -483,7 +483,11 @@ async def test_binary_checker_checks_stderr_after_shutdown_without_echo(
         yield None, None
         # Must be tested after context exit, not merely after list_tools.
         if shutdown_traceback:
-            errlog.write('Traceback (most recent call last):\nsecret-sentinel\n')
+            errlog.write(
+                'Traceback (most recent call last):\n'
+                '  File "/private/secret-path-sentinel", line 1\n'
+                'ValueError: secret-message-sentinel\n'
+            )
         else:
             errlog.write('ordinary shutdown log\n')
         errlog.flush()
@@ -515,11 +519,14 @@ async def test_binary_checker_checks_stderr_after_shutdown_without_echo(
     if shutdown_traceback:
         with pytest.raises(RuntimeError, match="diagnostic contents withheld") as error:
             await check_binary.check(binary, key, live=False)
-        assert "secret-sentinel" not in str(error.value)
+        assert "ValueError" in str(error.value)
+        assert "secret-path-sentinel" not in str(error.value)
+        assert "secret-message-sentinel" not in str(error.value)
     else:
         await check_binary.check(binary, key, live=False)
     captured = capsys.readouterr()
-    assert "secret-sentinel" not in captured.out + captured.err
+    assert "secret-path-sentinel" not in captured.out + captured.err
+    assert "secret-message-sentinel" not in captured.out + captured.err
 
 
 def test_binary_smoke_drops_host_python_loader_and_provider_environment(tmp_path, monkeypatch):
@@ -547,7 +554,10 @@ def test_binary_smoke_drops_host_python_loader_and_provider_environment(tmp_path
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("returncode,stderr", [
-    (0, "Traceback (most recent call last): secret-sentinel"), (1, "secret-sentinel"),
+    (0, 'Traceback (most recent call last):\n'
+        '  File "/private/secret-path-sentinel", line 1\n'
+        'ValueError: secret-message-sentinel\n'),
+    (1, "secret-sentinel"),
 ])
 async def test_binary_checker_command_failures_do_not_echo_stderr(tmp_path, monkeypatch, capsys, returncode, stderr):
     from scripts import check_binary
@@ -562,4 +572,24 @@ async def test_binary_checker_command_failures_do_not_echo_stderr(tmp_path, monk
     with pytest.raises(RuntimeError, match="diagnostic contents withheld") as error:
         await check_binary.check(tmp_path / "binary", key, live=False)
     captured = capsys.readouterr()
-    assert "secret-sentinel" not in str(error.value) + captured.out + captured.err
+    diagnostic = str(error.value) + captured.out + captured.err
+    assert "secret-sentinel" not in diagnostic
+    assert "secret-path-sentinel" not in diagnostic
+    assert "secret-message-sentinel" not in diagnostic
+    if returncode == 0:
+        assert "ValueError" in str(error.value)
+
+
+def test_binary_checker_withholds_nonstandard_exception_class():
+    from scripts.check_binary import _check_stderr
+
+    with pytest.raises(RuntimeError, match="diagnostic contents withheld") as error:
+        _check_stderr(
+            'Traceback (most recent call last):\n'
+            '  File "/private/secret-path-sentinel", line 1\n'
+            'PrivateError: secret-message-sentinel\n'
+        )
+
+    assert "PrivateError" not in str(error.value)
+    assert "secret-path-sentinel" not in str(error.value)
+    assert "secret-message-sentinel" not in str(error.value)

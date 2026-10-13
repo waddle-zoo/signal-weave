@@ -25,13 +25,18 @@ its release checksum, installs to `~/.local/bin`, then starts setup. No Python,
 Docker, or `sudo` is required. This preview has the older Jev-only wizard:
 
 ```sh
-set -o pipefail; curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' https://github.com/waddle-zoo/signal-weave/releases/download/v0.2.0rc1/install.sh | sh -s -- --version v0.2.0rc1 && "$HOME/.local/bin/signalweave" setup
+set -o pipefail; curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' https://github.com/waddle-zoo/signal-weave/releases/download/v0.2.0rc1/install.sh | sh -s -- --version v0.2.0rc1 && export PATH="$HOME/.local/bin:$PATH" && "$HOME/.local/bin/signalweave" setup
 ```
 
 If your organization does not permit curl-to-shell installation, download and
 inspect `install.sh` from that release first, then run it locally. The installer
 does not edit shell profiles or agent configuration; setup asks before agent
 registration.
+
+The command puts `~/.local/bin` first in this terminal's PATH so an older binary
+does not silently shadow the download. The installer does not change shell
+startup files. In a new terminal, follow its PATH instruction if needed; use
+`type -a signalweave` to check for an old binary, alias, or function.
 
 The remaining instructions describe the newer **unpublished source candidate**.
 They require a native build from this checkout, not the `v0.2.0rc1` download.
@@ -166,6 +171,10 @@ For an already configured local home, use `signalweave connect codex` (the
 older `--agent codex` spelling remains accepted).
 Registration is opt-in and uses the installed Codex or Claude CLI. A conflicting
 existing entry is left untouched; registration errors preserve your local setup.
+If an entry conflicts, inspect it in your agent's MCP settings. Remove or rename
+it only if you intend to replace it, then retry `signalweave connect codex` or
+`signalweave connect claude`. Repeating the printed add command will not resolve
+an existing-name conflict.
 Close concurrent agent-configuration edits while connecting. Registration is
 not a live source test. If the official CLI is unavailable, run **one** command
 for the agent you use:

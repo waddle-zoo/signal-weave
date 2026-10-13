@@ -1,4 +1,5 @@
 import asyncio
+import json
 
 import httpx
 import pytest
@@ -311,34 +312,49 @@ async def test_dashboard_paging_arguments_are_bounded():
             await client.list_dashboards(*args)
 
 
+@pytest.mark.parametrize(
+    ("page", "page_size", "query", "expected_query"),
+    [
+        (0, 5, "", {"page": 0, "page_size": 5}),
+        (
+            2,
+            7,
+            " revenue movement ",
+            {
+                "page": 2,
+                "page_size": 7,
+                "filters": [
+                    {
+                        "col": "dashboard_title",
+                        "opr": "ct",
+                        "value": "revenue movement",
+                    }
+                ],
+            },
+        ),
+    ],
+)
 @pytest.mark.asyncio
-async def test_dashboard_search_page_uses_server_side_json_filter():
-    class SearchClient(SupersetClient):
-        def __init__(self):
-            super().__init__("http://superset")
-            self.params = None
+async def test_dashboard_page_pagination_and_search_filter_are_encoded_in_q(
+    page, page_size, query, expected_query
+):
+    requests: list[httpx.Request] = []
 
-        async def _request(self, method, path, *, timeout, **kwargs):
-            del method, path, timeout
-            self.params = kwargs["params"]
-            return httpx.Response(
-                200,
-                json={
-                    "result": [{"id": 7, "dashboard_title": "Revenue movement"}],
-                    "count": 1,
-                },
-                request=httpx.Request("GET", "http://superset/api/v1/dashboard/"),
-            )
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(200, json={"result": []})
 
-    client = SearchClient()
-    dashboards, count = await client.list_dashboards_page(
-        page=0, page_size=10, query="revenue movement"
+    client = SupersetClient(
+        "http://superset.test", transport=httpx.MockTransport(handler)
     )
+    await client.list_dashboards_page(page=page, page_size=page_size, query=query)
 
-    assert dashboards[0]["id"] == 7
-    assert count == 1
-    assert '"dashboard_title"' in client.params["q"]
-    assert '"revenue movement"' in client.params["q"]
+    assert len(requests) == 1
+    request = requests[0]
+    assert request.method == "GET"
+    assert request.url.path == "/api/v1/dashboard/"
+    assert set(request.url.params.keys()) == {"q"}
+    assert json.loads(request.url.params["q"]) == expected_query
 
 
 @pytest.mark.asyncio
@@ -566,6 +582,43 @@ async def test_dashboard_snapshot_rejects_empty_selected_chart_ids(chart_ids):
         )
 
 
+def test_time_series_rows_include_exact_returned_bucket_provenance():
+    chart = {
+        "id": 42,
+        "params": {
+            "metrics": [{"label": "Revenue"}],
+            "granularity_sqla": "event_date",
+            "groupby": ["region"],
+        },
+    }
+    observations = SupersetClient.observations_from_chart_data(
+        chart,
+        [
+            {
+                "data": [
+                    {"event_date": "2026-11-30", "region": "NA", "Revenue": 20},
+                    {"event_date": "2026-01-02", "region": "NA", "Revenue": 10},
+                    {"event_date": "2026-04-03", "region": "EU", "Revenue": 5},
+                    {"event_date": "2026-11-30", "region": "EU", "Revenue": 10},
+                    {"event_date": "2026-04-03", "region": "NA", "Revenue": 10},
+                ]
+            }
+        ],
+    )
+
+    assert observations[0].current == 30
+    assert observations[0].baseline == 15
+    assert observations[0].change_pct == 100.0
+    assert observations[0].attributes["time_column"] == "event_date"
+    assert observations[0].attributes["current_period"] == "2026-11-30"
+    assert observations[0].attributes["baseline_period"] == "2026-04-03"
+    assert (
+        observations[0].attributes["comparison_basis"]
+        == "last_two_returned_time_buckets"
+    )
+    assert observations[0].attributes["time_bucket_count"] == 3
+
+
 def test_time_series_rows_become_a_comparable_observation():
     chart = {
         "id": 42,
@@ -593,6 +646,32 @@ def test_time_series_rows_become_a_comparable_observation():
     assert observations[0].current == 30
     assert observations[0].baseline == 15
     assert observations[0].change_pct == 100.0
+
+
+def test_single_time_bucket_has_raw_current_period_and_no_baseline_period():
+    observations = SupersetClient.observations_from_chart_data(
+        {
+            "id": 42,
+            "params": {
+                "metrics": [{"label": "Revenue"}],
+                "granularity_sqla": "event_date",
+            },
+        },
+        [{"data": [{"event_date": "2026-08-17", "Revenue": 12}]}],
+    )
+
+    observation = observations[0]
+    assert observation.current == 12
+    assert observation.baseline is None
+    assert observation.attributes["time_column"] == "event_date"
+    assert observation.attributes["current_period"] == "2026-08-17"
+    assert observation.attributes["baseline_period"] is None
+    assert (
+        observation.attributes["comparison_basis"]
+        == "last_two_returned_time_buckets"
+    )
+    assert observation.attributes["time_bucket_count"] == 1
+    assert observation.comparison_baselines == {}
 
 
 def test_time_series_rows_include_supported_comparison_baselines():
@@ -891,8 +970,8 @@ def test_table_chart_uses_date_like_column_as_time_and_numeric_column_as_metric(
         [
             {
                 "data": [
-                    {"order_date": 1, "region": "NA", "net_sales": 10},
-                    {"order_date": 2, "region": "NA", "net_sales": 12},
+                    {"order_date": "2026-02-11", "region": "NA", "net_sales": 10},
+                    {"order_date": "2026-05-27", "region": "NA", "net_sales": 12},
                 ]
             }
         ],
@@ -901,3 +980,6 @@ def test_table_chart_uses_date_like_column_as_time_and_numeric_column_as_metric(
     assert observations[0].metric == "net_sales"
     assert observations[0].current == 12
     assert observations[0].baseline == 10
+    assert observations[0].attributes["time_column"] == "order_date"
+    assert observations[0].attributes["current_period"] == "2026-05-27"
+    assert observations[0].attributes["baseline_period"] == "2026-02-11"

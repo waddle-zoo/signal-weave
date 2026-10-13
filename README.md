@@ -18,7 +18,7 @@ For the currently downloadable preview on macOS or Linux, install and start
 setup in one terminal line:
 
 ```sh
-set -o pipefail; curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' https://github.com/waddle-zoo/signal-weave/releases/download/v0.2.0rc1/install.sh | sh -s -- --version v0.2.0rc1 && "$HOME/.local/bin/signalweave" setup
+set -o pipefail; curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' https://github.com/waddle-zoo/signal-weave/releases/download/v0.2.0rc1/install.sh | sh -s -- --version v0.2.0rc1 && export PATH="$HOME/.local/bin:$PATH" && "$HOME/.local/bin/signalweave" setup
 ```
 
 Supports macOS 15+ (Apple Silicon/Intel) and Linux x64 with glibc 2.35+.

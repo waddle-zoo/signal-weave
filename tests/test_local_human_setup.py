@@ -96,6 +96,30 @@ def test_setup_update_replaces_a_source_secret_transactionally(local_home, tmp_p
     assert (local_home / "superset-password.key").read_text() == "second-password\n"
 
 
+def test_skipped_source_setup_gives_a_useful_next_step(tmp_path, monkeypatch, capsys):
+    answers = iter(["1", "5", "1", "n", "n"])
+    monkeypatch.setattr("builtins.input", lambda _: next(answers))
+    monkeypatch.setattr("signalweave.local_setup.getpass.getpass", lambda _: "local-test-key")
+    monkeypatch.setattr(sys, "argv", ["signalweave", "setup", "--home", str(tmp_path / "private")])
+    cli.main()
+    output = capsys.readouterr().out
+    assert "No BI source is connected yet. Next: `signalweave connections add`." in output
+    assert "`signalweave health --live`" not in output
+    assert "Start with a report" in output
+
+
+def test_registration_conflict_explains_recovery_without_replacing_entry(tmp_path, monkeypatch, capsys):
+    from signalweave.client_setup import AgentRegistrationStatus
+
+    monkeypatch.setattr("signalweave.client_setup.register_agent", lambda *_: AgentRegistrationStatus(
+        "codex", "conflict", "Existing entry differs", "codex mcp add signalweave -- new-binary serve"))
+    cli._connect_agent(tmp_path, "codex", required=False)
+    output = capsys.readouterr().out
+    assert "An existing signalweave entry was preserved" in output
+    assert "remove or rename it only if you intend to replace it" in output
+    assert "retry `signalweave connect codex`" in output
+
+
 def test_human_can_add_a_trino_catalog_connection(local_home, tmp_path):
     catalog = _private(
         tmp_path / "trino-catalog.json",

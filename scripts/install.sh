@@ -49,13 +49,14 @@ destination=$install_dir/signalweave
 [ ! -L "$destination" ] || fail 'Existing executable is a symlink; refusing replacement'
 
 print_path_guidance() {
-    case ":${PATH:-}:" in
-        *":$install_dir:"*) ;;
-        *)
-            escaped_install_dir=$(printf '%s' "$install_dir" | sed 's/[\\$"`]/\\&/g')
-            printf 'To run signalweave by name in this shell, use: export PATH="%s:$PATH"\n' "$escaped_install_dir"
-            ;;
-    esac
+    signalweave_command=$(command -v signalweave 2>/dev/null || true)
+    [ "$signalweave_command" = "$destination" ] && return 0
+    if [ -n "$signalweave_command" ]; then
+        printf '%s\n' 'Another signalweave command currently takes precedence over this installation.'
+    fi
+    escaped_install_dir=$(printf '%s' "$install_dir" | sed 's/[\\$"`]/\\&/g')
+    printf 'To run this installation by name in this shell, use: export PATH="%s:$PATH"\n' "$escaped_install_dir"
+    printf '%s\n' 'Check with: signalweave --version. If it still resolves elsewhere, inspect shell aliases/functions with: type -a signalweave'
 }
 
 resume_command() {

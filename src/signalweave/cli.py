@@ -267,7 +267,13 @@ def main() -> None:
                     )
             print("\nLocal configuration saved. No source process was started during setup.")
             print(f"Private home: {home}")
-            print("Run `signalweave health --live` when you are ready to test source access.")
+            setup_status = local_status(home)
+            has_sources = any(item.get("status") == "configured"
+                              for item in setup_status.get("connections", []))
+            if has_sources:
+                print("Next: `signalweave health --live` checks source access, not analytical readiness.")
+            else:
+                print("No BI source is connected yet. Next: `signalweave connections add`.")
             from .local_setup import read_config
 
             _, setup_values = read_config(home)
@@ -297,6 +303,7 @@ def main() -> None:
             print("Status: " + shlex.join(["signalweave", "status", "--home", str(home)]))
             print("Local UI: " + shlex.join(["signalweave", "ui", "--open", "--home", str(home)]))
             print("Then ask your agent: Use SignalWeave's getting-started guide to help me get my first useful report.")
+            print("Start with a report. Review its evidence and resolve missing business context before approving a daily card.")
             return
         if args.command == "auth":
             from .chatgpt_auth import auth_status, login, logout
@@ -571,6 +578,9 @@ def _connect_agent(home: Path, agent: str, *, required: bool = True) -> None:
         print("Restart or reconnect the agent, then call get_signalweave_guide.")
         return
     if status.command:
+        if status.outcome == "conflict":
+            print("An existing signalweave entry was preserved. Inspect it with your agent's MCP settings;")
+            print("remove or rename it only if you intend to replace it, then retry `signalweave connect " + agent + "`.")
         print("Registration was not verified. Review existing entries before running this manual command:")
         print(status.command)
     if status.outcome == "manual_required":

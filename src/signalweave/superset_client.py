@@ -220,20 +220,16 @@ class SupersetClient:
         """Return one permission-filtered dashboard page and its server count."""
         if page < 0 or page_size <= 0:
             raise ValueError("page must be non-negative and page_size must be positive")
-        params: dict[str, Any] = {"page": page, "page_size": page_size}
+        query_params: dict[str, Any] = {"page": page, "page_size": page_size}
         if query and query.strip():
-            params["q"] = json.dumps(
+            query_params["filters"] = [
                 {
-                    "filters": [
-                        {
-                            "col": "dashboard_title",
-                            "opr": "ct",
-                            "value": query.strip(),
-                        }
-                    ]
-                },
-                separators=(",", ":"),
-            )
+                    "col": "dashboard_title",
+                    "opr": "ct",
+                    "value": query.strip(),
+                }
+            ]
+        params = {"q": json.dumps(query_params, separators=(",", ":"))}
         response = await self._request(
             "GET", "/api/v1/dashboard/", timeout=30, params=params
         )
@@ -800,10 +796,11 @@ class SupersetClient:
                     time_value = row.get(time_key)
                     if time_value is not None:
                         values_by_time[time_value] = values_by_time.get(time_value, 0.0) + float(row[metric_key])
-                ordered_values = [
-                    values_by_time[key] for key in sorted(values_by_time, key=cls._sort_value)
-                ]
+                ordered_keys = sorted(values_by_time, key=cls._sort_value)
+                ordered_values = [values_by_time[key] for key in ordered_keys]
                 current = float(ordered_values[-1]) if ordered_values else None
+                current_period = ordered_keys[-1] if ordered_keys else None
+                baseline_period = ordered_keys[-2] if len(ordered_keys) >= 2 else None
                 comparison_baselines: dict[str, float] = {}
                 if len(ordered_values) >= 2:
                     comparison_baselines["previous_period"] = float(ordered_values[-2])
@@ -814,6 +811,16 @@ class SupersetClient:
                     round((current - baseline) / abs(baseline) * 100, 3)
                     if current is not None and baseline not in (None, 0)
                     else None
+                )
+                attributes: dict[str, Any] = {"viz_type": cls._viz_type(chart)}
+                attributes.update(
+                    {
+                        "time_column": time_key,
+                        "current_period": current_period,
+                        "baseline_period": baseline_period,
+                        "comparison_basis": "last_two_returned_time_buckets",
+                        "time_bucket_count": len(ordered_keys),
+                    }
                 )
                 observations.append(
                     Observation(
@@ -826,7 +833,7 @@ class SupersetClient:
                         baseline=baseline,
                         change_pct=change_pct,
                         comparison_baselines=comparison_baselines,
-                        attributes={"viz_type": cls._viz_type(chart)},
+                        attributes=attributes,
                         source_url=chart.get("url"),
                     )
                 )

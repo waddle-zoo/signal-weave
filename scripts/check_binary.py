@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import builtins
 import json
 import os
 import subprocess
@@ -42,7 +43,15 @@ def _smoke_environment(user_home: Path) -> dict[str, str]:
 
 def _check_stderr(stderr: str) -> None:
     if "Traceback" in stderr:
-        raise RuntimeError("Binary emitted a traceback on stderr; diagnostic contents withheld")
+        last_line = next((line.strip() for line in reversed(stderr.splitlines()) if line.strip()), "")
+        exception_name = last_line.partition(":")[0]
+        exception_type = getattr(builtins, exception_name, None)
+        if not isinstance(exception_type, type) or not issubclass(exception_type, Exception):
+            exception_name = ""
+        class_hint = f" (standard exception: {exception_name})" if exception_name else ""
+        raise RuntimeError(
+            f"Binary emitted a traceback on stderr{class_hint}; diagnostic contents withheld"
+        )
 
 
 async def check(binary: Path, key_file: Path | None, live: bool):
@@ -124,8 +133,7 @@ async def check(binary: Path, key_file: Path | None, live: bool):
             # Check after transport teardown: frozen shutdown tracebacks arrive after
             # initialize/list_tools succeed and can accompany a zero process exit.
             stderr.seek(0)
-            for line in stderr:
-                _check_stderr(line)
+            _check_stderr(stderr.read())
         result = {"standalone_startup": True, "private_setup": True, "default_home_serve": True,
                   "persisted_source_config": True,
                   "offline_doctor": True, "health_alias": True, "agent_config": True,
