@@ -546,6 +546,12 @@ async def test_dry_run_records_registration_selected_stage_gate_without_private_
     assert report["protocol"]["selected_period_ids"] == ["month-01", "month-04", "month-07", "month-10"]
     assert "retrospective monthly-close review" in report["protocol"]["study_scope"]
     assert "No real scheduler" in report["protocol"]["scheduler_claim"]
+    assert report["protocol"]["tool_limits_per_episode"] == {
+        "max_tool_calls": 100, "timeout_seconds": trial.RECURRING_TIMEOUT_SECONDS,
+    }
+    assert report["protocol"]["onboarding_episode_limits"] == {
+        "max_tool_calls": 100, "timeout_seconds": trial.ONBOARDING_TIMEOUT_SECONDS,
+    }
     assert report["protocol"]["replay_clock"]["freshness_claim"].startswith("Gateway replay receipt")
     assert "local typed SourceRegistry" in report["protocol"]["shared_source_transport"]
     assert "transport responses only" in (
@@ -569,6 +575,73 @@ async def test_dry_run_records_registration_selected_stage_gate_without_private_
         "positive_verdict_forced": False,
     }
     assert "quiet" not in (tmp_path / "trial" / "report.json").read_text()
+
+
+@pytest.mark.asyncio
+async def test_live_path_passes_separate_onboarding_and_recurring_timeout_budgets(tmp_path, monkeypatch):
+    scenario, registration = cadence_scenario()
+    key_file = tmp_path / "jev.key"
+    key_file.write_text("offline-test-key", encoding="utf-8")
+    card = {"id": "approved-card", "version": 1, "status": "approved",
+            "sources": [], "delivery_methods": []}
+
+    class LocalServer(FakeServer):
+        instructions = ""
+
+        async def call_tool(self, name, _arguments):
+            assert name == "get_insight_card"
+            return [], card
+
+    server = LocalServer()
+
+    class ServerContext:
+        async def __aenter__(self):
+            return server
+
+        async def __aexit__(self, *_args):
+            return False
+
+    monkeypatch.setattr(trial, "verify_binary", lambda _: {"source_sha256": "722"})
+    monkeypatch.setattr(trial, "_git_sha", lambda: "a" * 40)
+    monkeypatch.setattr(trial, "_file_hash", lambda _: "b" * 64)
+
+    async def fake_assert_profile(_server):
+        return []
+
+    monkeypatch.setattr(trial, "assert_default_agent_profile", fake_assert_profile)
+    monkeypatch.setattr(trial, "installed_server", lambda **_kwargs: ServerContext())
+    episode_calls = []
+
+    async def fake_codex_episode(session, **kwargs):
+        episode_calls.append((session.phase, session.arm, kwargs["max_tool_calls"],
+                              kwargs["timeout_seconds"]))
+        if session.phase == "onboarding":
+            session.setup_complete = True
+            session.card_id = card["id"]
+            session.notes = "Use the owner's approved policy."
+            session.owner_topics.add("policy")
+            session.data_signoff = {"status": "ready"}
+            return {"status": "complete", "exit_code": 0, "foreign_tools": [],
+                    "error": None, "tool_calls": 0}
+        if session.arm == "baseline":
+            session.submission = {"outcome": "ignore", "recipients": [],
+                                  "summary": "", "evidence_refs": []}
+            return {"status": "complete", "exit_code": 0, "foreign_tools": [],
+                    "error": None, "tool_calls": 0}
+        raise RuntimeError("stop after capturing the treatment episode timeout")
+
+    monkeypatch.setattr(trial, "codex_episode", fake_codex_episode)
+    report = await trial.run_trial(
+        scenario, registration, binary=tmp_path / "signalweave", key_file=key_file,
+        output=tmp_path / "live-timeout-capture", cases=4, live=True,
+    )
+
+    assert report["onboarding_complete"] is True
+    assert episode_calls == [
+        ("onboarding", "treatment", 100, 900),
+        ("monitoring", "baseline", 100, 360),
+        ("monitoring", "treatment", 100, 360),
+    ]
 
 
 @pytest.mark.asyncio

@@ -44,6 +44,8 @@ from signalweave.models import SourceRef
 VERSION = "native-cadence-v2"
 MODEL = "gpt-6-luna"
 EFFORT = "xhigh"
+ONBOARDING_TIMEOUT_SECONDS = 900
+RECURRING_TIMEOUT_SECONDS = 360
 RETROSPECTIVE_SCOPE = (
     "This is a retrospective monthly-close review of archived fixture measurements, not a current alert. "
     "Preserve each measurement cutoff; a replay gateway read now is not a warehouse freshness claim."
@@ -868,7 +870,10 @@ async def run_trial(scenario: dict, registration: Any, *, binary: Path,
                    "recurring_baseline": {"model": MODEL, "effort": EFFORT},
                    "recurring_treatment": {"model": MODEL, "effort": EFFORT},
                    "independent_owner_and_narrative_review": {"model": MODEL, "effort": EFFORT}},
-        "tool_limits_per_episode": {"max_tool_calls": 100, "timeout_seconds": 360},
+        "tool_limits_per_episode": {"max_tool_calls": 100, "timeout_seconds": RECURRING_TIMEOUT_SECONDS},
+        "onboarding_episode_limits": {
+            "max_tool_calls": 100, "timeout_seconds": ONBOARDING_TIMEOUT_SECONDS,
+        },
         "jev_attempt_limit": jev_budget,
         "replay_clock": {
             "simulation_as_of": "Original historical monthly close; preserved verbatim.",
@@ -975,7 +980,7 @@ async def run_trial(scenario: dict, registration: Any, *, binary: Path,
                 onboarding = await codex_episode(
                     treatment, key="", model=MODEL, effort=EFFORT, budget=budget, audit=audit,
                     max_turns=50, max_tool_calls=100, max_output_tokens=6000,
-                    timeout_seconds=360,
+                    timeout_seconds=ONBOARDING_TIMEOUT_SECONDS,
                     instructions_override=(onboarding_instructions(server)
                         + " Make the reviewed card and saved notes explicitly describe this as a retrospective review of archived monthly closes, not a current alert. "
                           "Preserve source measurement dates and cutoffs; do not claim warehouse freshness. "
@@ -1046,7 +1051,7 @@ async def run_trial(scenario: dict, registration: Any, *, binary: Path,
                                 session, key="", model=MODEL, effort=EFFORT,
                                 budget=budget, audit=audit, max_turns=40,
                                 max_tool_calls=100, max_output_tokens=4500,
-                                timeout_seconds=360, bundle=None,
+                                timeout_seconds=RECURRING_TIMEOUT_SECONDS, bundle=None,
                                 instructions_override=_monitoring_instructions(session),
                                 prompt_override=_episode_prompt(session, period),
                             )
