@@ -586,7 +586,14 @@ def test_time_series_rows_include_exact_returned_bucket_provenance():
     chart = {
         "id": 42,
         "params": {
-            "metrics": [{"label": "Revenue"}],
+            "metrics": [
+                {
+                    "expressionType": "SIMPLE",
+                    "aggregate": "SUM",
+                    "column": {"column_name": "revenue"},
+                    "label": "Revenue",
+                }
+            ],
             "granularity_sqla": "event_date",
             "groupby": ["region"],
         },
@@ -609,6 +616,8 @@ def test_time_series_rows_include_exact_returned_bucket_provenance():
     assert observations[0].current == 30
     assert observations[0].baseline == 15
     assert observations[0].change_pct == 100.0
+    assert "time_encoding" not in observations[0].attributes
+    assert "current_period_iso" not in observations[0].attributes
     assert observations[0].attributes["time_column"] == "event_date"
     assert observations[0].attributes["current_period"] == "2026-11-30"
     assert observations[0].attributes["baseline_period"] == "2026-04-03"
@@ -623,7 +632,14 @@ def test_time_series_rows_become_a_comparable_observation():
     chart = {
         "id": 42,
         "params": {
-            "metrics": [{"label": "Revenue"}],
+            "metrics": [
+                {
+                    "expressionType": "SIMPLE",
+                    "aggregate": "SUM",
+                    "column": {"column_name": "revenue"},
+                    "label": "Revenue",
+                }
+            ],
             "granularity_sqla": "period",
             "time_grain_sqla": "P1M",
             "groupby": ["region"],
@@ -646,6 +662,305 @@ def test_time_series_rows_become_a_comparable_observation():
     assert observations[0].current == 30
     assert observations[0].baseline == 15
     assert observations[0].change_pct == 100.0
+    assert observations[0].attributes["current_period"] == 2
+    assert observations[0].attributes["baseline_period"] == 1
+    assert "time_encoding" not in observations[0].attributes
+    assert "current_period_iso" not in observations[0].attributes
+
+
+def test_nonadditive_grouped_time_series_preserves_each_group_and_iso_provenance():
+    chart = {
+        "id": 42,
+        "slice_name": "Latency",
+        "params": {
+            "metrics": [
+                {
+                    "expressionType": "SIMPLE",
+                    "aggregate": "AVG",
+                    "column": {"column_name": "latency"},
+                    "label": "AVG(latency)",
+                }
+            ],
+            "granularity_sqla": "period",
+            "groupby": [{"column_name": "cluster_id", "label": "Cluster"}],
+        },
+    }
+    result = [
+        {
+            "colnames": ["period", "Cluster", "AVG(latency)"],
+            "coltypes": [2, 1, 0],
+            "data": [
+                [1709251200000, "A", 5],
+                [1709251200000, "B", 50],
+                [1711929600000, "A", 10],
+                [1711929600000, "B", 100],
+            ],
+        }
+    ]
+
+    extraction = SupersetClient.extract_chart_data(chart, result)
+    observations = extraction.observations
+    reversed_result = [{**result[0], "data": list(reversed(result[0]["data"]))}]
+
+    assert {(item.current, item.baseline) for item in observations} == {
+        (10.0, 5.0),
+        (100.0, 50.0),
+    }
+    assert 110.0 not in {item.current for item in observations}
+    assert {item.dimensions["Cluster"] for item in observations} == {"A", "B"}
+    assert all(item.attributes["dimensions"] == item.dimensions for item in observations)
+    assert all(
+        item.attributes["current_period_iso"] == "2024-04-01T00:00:00+00:00"
+        for item in observations
+    )
+    assert len({item.subject_id for item in observations}) == 2
+    assert {item.subject_id for item in observations} == {
+        item.subject_id
+        for item in SupersetClient.extract_chart_data(chart, reversed_result).observations
+    }
+    assert extraction.semantic_status == "extracted"
+
+
+@pytest.mark.parametrize(
+    ("spec", "metric_key", "expected"),
+    [
+        ({"expressionType": "SIMPLE", "aggregate": "SUM", "label": "Revenue"}, "Revenue", True),
+        ({"expressionType": "SIMPLE", "aggregate": "COUNT", "label": "Rows"}, "Rows", True),
+        ({"expressionType": "SQL", "sqlExpression": "SUM(revenue)", "label": "Revenue"}, "Revenue", True),
+        ({"expressionType": "SQL", "sqlExpression": "COUNT(*)", "label": "Rows"}, "Rows", True),
+        ({"expressionType": "SIMPLE", "aggregate": "AVG", "label": "Revenue"}, "Revenue", False),
+        ({"expressionType": "SIMPLE", "aggregate": "MAX", "label": "Maximum"}, "Maximum", False),
+        ({"expressionType": "SIMPLE", "aggregate": "MIN", "label": "Minimum"}, "Minimum", False),
+        ({"expressionType": "SIMPLE", "aggregate": "COUNT", "label": "Customers", "distinct": True}, "Customers", False),
+        ({"expressionType": "SQL", "sqlExpression": "SUM(success) / SUM(total)", "label": "Rate"}, "Rate", False),
+        ({"expressionType": "SQL", "sqlExpression": "COUNT(DISTINCT customer_id)", "label": "Customers"}, "Customers", False),
+        ({"expressionType": "SQL", "sqlExpression": "PERCENTILE_CONT(0.95)", "label": "p95"}, "p95", False),
+        ({"label": "Total Revenue"}, "Total Revenue", False),
+    ],
+)
+def test_only_explicit_additive_metric_definitions_are_poolable(spec, metric_key, expected):
+    chart = {"params": {"metrics": [spec]}}
+    assert SupersetClient._metric_is_additive(chart, metric_key) is expected
+
+
+def test_grouped_ratios_percentiles_and_unknown_metrics_remain_per_group():
+    extraction = SupersetClient.extract_chart_data(
+        {
+            "id": 42,
+            "params": {
+                "metrics": [
+                    {
+                        "expressionType": "SQL",
+                        "sqlExpression": "SUM(signups) / SUM(sessions)",
+                        "label": "Signup rate",
+                    },
+                    {
+                        "expressionType": "SQL",
+                        "sqlExpression": "PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY latency)",
+                        "label": "p95",
+                    },
+                    {"label": "Revenue"},
+                ],
+                "granularity_sqla": "period",
+                "groupby": ["cluster"],
+            },
+        },
+        [
+            {
+                "data": [
+                    {"period": 1, "cluster": "A", "Signup rate": 0.2, "p95": 10, "Revenue": 5},
+                    {"period": 1, "cluster": "B", "Signup rate": 0.6, "p95": 90, "Revenue": 50},
+                    {"period": 2, "cluster": "A", "Signup rate": 0.3, "p95": 11, "Revenue": 6},
+                    {"period": 2, "cluster": "B", "Signup rate": 0.7, "p95": 100, "Revenue": 60},
+                ]
+            }
+        ],
+    )
+
+    actual = {
+        metric: {
+            item.dimensions["cluster"]: (item.current, item.baseline)
+            for item in extraction.observations
+            if item.metric == metric
+        }
+        for metric in ("Signup rate", "p95", "Revenue")
+    }
+    assert actual == {
+        "Signup rate": {"A": (0.3, 0.2), "B": (0.7, 0.6)},
+        "p95": {"A": (11.0, 10.0), "B": (100.0, 90.0)},
+        "Revenue": {"A": (6.0, 5.0), "B": (60.0, 50.0)},
+    }
+
+
+@pytest.mark.parametrize("axis_source", ["params_columns", "saved_query_context"])
+def test_nonadditive_series_uses_declared_columns_as_group_axes(axis_source):
+    params = {
+        "metrics": [
+            {"expressionType": "SIMPLE", "aggregate": "AVG", "label": "AVG(latency)"}
+        ],
+        "granularity_sqla": "period",
+    }
+    chart = {"id": 42, "params": params}
+    dimension_key = "cluster"
+    if axis_source == "params_columns":
+        params["columns"] = [{"column_name": "cluster_id", "label": "Cluster"}]
+        dimension_key = "Cluster"
+    else:
+        chart["query_context"] = {"queries": [{"columns": ["cluster"]}]}
+
+    extraction = SupersetClient.extract_chart_data(
+        chart,
+        [
+            {
+                "data": [
+                    {"period": 2, dimension_key: "A", "AVG(latency)": 10},
+                    {"period": 2, dimension_key: "B", "AVG(latency)": 100},
+                ]
+            }
+        ],
+    )
+
+    assert {
+        item.dimensions[dimension_key]: item.current
+        for item in extraction.observations
+    } == {"A": 10.0, "B": 100.0}
+    assert all(item.baseline is None for item in extraction.observations)
+    assert extraction.semantic_status == "partial"
+
+
+def test_other_resolved_metrics_in_columns_are_not_group_axes():
+    extraction = SupersetClient.extract_chart_data(
+        {
+            "id": 42,
+            "params": {
+                "metrics": [
+                    {
+                        "expressionType": "SIMPLE",
+                        "aggregate": "AVG",
+                        "column": {"column_name": "latency"},
+                        "label": "AVG(latency)",
+                    },
+                    {
+                        "expressionType": "SIMPLE",
+                        "aggregate": "COUNT",
+                        "column": {"column_name": "event_id"},
+                        "label": "Sample count",
+                    },
+                ],
+                "granularity_sqla": "period",
+                "columns": ["cluster", "Sample count"],
+            },
+        },
+        [
+            {
+                "data": [
+                    {"period": 1, "cluster": "A", "AVG(latency)": 5, "Sample count": 10},
+                    {"period": 1, "cluster": "B", "AVG(latency)": 50, "Sample count": 100},
+                    {"period": 2, "cluster": "A", "AVG(latency)": 10, "Sample count": 11},
+                    {"period": 2, "cluster": "B", "AVG(latency)": 100, "Sample count": 101},
+                ]
+            }
+        ],
+    )
+
+    latency = {
+        item.dimensions["cluster"]: (item.current, item.baseline)
+        for item in extraction.observations
+        if item.metric == "AVG(latency)"
+    }
+    assert latency == {"A": (10.0, 5.0), "B": (100.0, 50.0)}
+    assert all(
+        "Sample count" not in item.dimensions
+        for item in extraction.observations
+        if item.metric == "AVG(latency)"
+    )
+
+
+def test_nonadditive_duplicate_bucket_without_group_is_not_summed():
+    extraction = SupersetClient.extract_chart_data(
+        {
+            "id": 42,
+            "params": {
+                "metrics": [
+                    {"expressionType": "SIMPLE", "aggregate": "AVG", "label": "AVG(latency)"}
+                ],
+                "granularity_sqla": "period",
+            },
+        },
+        [
+            {
+                "data": [
+                    {"period": 1, "AVG(latency)": 10},
+                    {"period": 1, "AVG(latency)": 100},
+                ]
+            }
+        ],
+    )
+
+    assert len(extraction.observations) == 1
+    assert extraction.observations[0].current is None
+    assert extraction.observations[0].baseline is None
+    assert extraction.semantic_status == "partial"
+
+
+def test_duplicate_nonadditive_group_bucket_is_not_summed():
+    extraction = SupersetClient.extract_chart_data(
+        {
+            "id": 42,
+            "params": {
+                "metrics": [
+                    {"expressionType": "SIMPLE", "aggregate": "AVG", "label": "AVG(latency)"}
+                ],
+                "granularity_sqla": "period",
+                "groupby": ["cluster"],
+            },
+        },
+        [
+            {
+                "data": [
+                    {"period": 1, "cluster": "A", "AVG(latency)": 8},
+                    {"period": 2, "cluster": "A", "AVG(latency)": 10},
+                    {"period": 2, "cluster": "A", "AVG(latency)": 20},
+                ]
+            }
+        ],
+    )
+
+    assert len(extraction.observations) == 1
+    assert extraction.observations[0].current is None
+    assert extraction.observations[0].baseline == 8
+    assert extraction.observations[0].change_pct is None
+    assert extraction.semantic_status == "partial"
+
+
+def test_missing_group_baseline_is_partial_not_zero():
+    extraction = SupersetClient.extract_chart_data(
+        {
+            "id": 42,
+            "params": {
+                "metrics": [{"label": "Revenue"}],
+                "granularity_sqla": "period",
+                "groupby": ["cluster"],
+            },
+        },
+        [
+            {
+                "data": [
+                    {"period": 1, "cluster": "A", "Revenue": 10},
+                    {"period": 2, "cluster": "A", "Revenue": 20},
+                    {"period": 2, "cluster": "B", "Revenue": 100},
+                ]
+            }
+        ],
+    )
+
+    observations = {item.dimensions["cluster"]: item for item in extraction.observations}
+    assert observations["A"].current == 20
+    assert observations["A"].baseline == 10
+    assert observations["B"].current == 100
+    assert observations["B"].baseline is None
+    assert observations["B"].change_pct is None
+    assert extraction.semantic_status == "partial"
 
 
 def test_single_time_bucket_has_raw_current_period_and_no_baseline_period():
@@ -672,6 +987,133 @@ def test_single_time_bucket_has_raw_current_period_and_no_baseline_period():
     )
     assert observation.attributes["time_bucket_count"] == 1
     assert observation.comparison_baselines == {}
+
+
+def test_declared_temporal_superset_columns_add_iso_periods_and_keep_raw_values():
+    observations = SupersetClient.observations_from_chart_data(
+        {
+            "id": 42,
+            "params": {
+                "metrics": [{"label": "SUM(net_sales)"}],
+                "granularity_sqla": "order_date",
+            },
+        },
+        [
+            {
+                "colnames": ["channel", "order_date", "SUM(net_sales)"],
+                "coltypes": [1, 2, 0],
+                "data": [
+                    ["web", 1709251200000, 10],
+                    ["web", 1711929600000, 20],
+                ],
+            }
+        ],
+    )
+
+    attributes = observations[0].attributes
+    assert attributes["current_period"] == 1711929600000
+    assert attributes["baseline_period"] == 1709251200000
+    assert attributes["time_encoding"] == "superset_epoch_milliseconds"
+    assert attributes["current_period_iso"] == "2024-04-01T00:00:00+00:00"
+    assert attributes["baseline_period_iso"] == "2024-03-01T00:00:00+00:00"
+
+
+def test_temporal_period_iso_conversion_respects_finite_datetime_bounds():
+    convert = SupersetClient._superset_epoch_milliseconds_iso
+    assert convert(-62135596800000) == "0001-01-01T00:00:00+00:00"
+    assert convert(253402300799999) == "9999-12-31T23:59:59.999000+00:00"
+    for value in (
+        -62135596800001,
+        253402300800000,
+        float("nan"),
+        float("inf"),
+        float("-inf"),
+        10**1000,
+        True,
+        "1711929600000",
+        None,
+    ):
+        assert convert(value) is None
+
+
+def test_mixed_period_values_and_type_declarations_are_not_guessed_as_dates():
+    chart = {
+        "id": 42,
+        "params": {"metrics": [{"label": "Revenue"}], "granularity_sqla": "period"},
+    }
+    mixed_values = SupersetClient.observations_from_chart_data(
+        chart,
+        [
+            {
+                "colnames": ["period", "Revenue"],
+                "coltypes": [2, 0],
+                "data": [[1709251200000, 10], ["2024-04-01", 20]],
+            }
+        ],
+    )[0].attributes
+    assert mixed_values["current_period"] == "2024-04-01"
+    assert mixed_values["baseline_period_iso"] == "2024-03-01T00:00:00+00:00"
+    assert "current_period_iso" not in mixed_values
+    assert mixed_values["time_encoding"] == "superset_epoch_milliseconds"
+
+    mixed_declarations = SupersetClient.observations_from_chart_data(
+        chart,
+        [
+            {"colnames": ["period", "Revenue"], "coltypes": [2, 0], "data": [[1709251200000, 10]]},
+            {"colnames": ["period", "Revenue"], "coltypes": [0, 0], "data": [[1711929600000, 20]]},
+        ],
+    )[0].attributes
+    assert mixed_declarations["current_period"] == 1711929600000
+    assert "time_encoding" not in mixed_declarations
+    assert "current_period_iso" not in mixed_declarations
+
+    partly_undeclared = SupersetClient.observations_from_chart_data(
+        chart,
+        [
+            {"colnames": ["period", "Revenue"], "coltypes": [2, 0], "data": [[1709251200000, 10]]},
+            {"data": [{"period": 1711929600000, "Revenue": 20}]},
+        ],
+    )[0].attributes
+    assert "time_encoding" not in partly_undeclared
+    assert "current_period_iso" not in partly_undeclared
+
+
+def test_typed_string_periods_do_not_claim_epoch_time_encoding():
+    attributes = SupersetClient.observations_from_chart_data(
+        {
+            "id": 42,
+            "params": {"metrics": [{"label": "Revenue"}], "granularity_sqla": "period"},
+        },
+        [
+            {
+                "colnames": ["period", "Revenue"],
+                "coltypes": [2, 0],
+                "data": [["2024-03-01", 10], ["2024-04-01", 20]],
+            }
+        ],
+    )[0].attributes
+
+    assert attributes["current_period"] == "2024-04-01"
+    assert attributes["baseline_period"] == "2024-03-01"
+    assert "time_encoding" not in attributes
+    assert "current_period_iso" not in attributes
+    assert "baseline_period_iso" not in attributes
+
+
+def test_temporal_single_bucket_keeps_raw_period_and_has_no_baseline_iso():
+    observation = SupersetClient.observations_from_chart_data(
+        {
+            "id": 42,
+            "params": {"metrics": [{"label": "Revenue"}], "granularity_sqla": "period"},
+        },
+        [{"colnames": ["period", "Revenue"], "coltypes": [2, 0], "data": [[1711929600000, 12]]}],
+    )[0]
+
+    assert observation.attributes["current_period"] == 1711929600000
+    assert observation.attributes["current_period_iso"] == "2024-04-01T00:00:00+00:00"
+    assert observation.attributes["baseline_period"] is None
+    assert "baseline_period_iso" not in observation.attributes
+    assert observation.attributes["time_bucket_count"] == 1
 
 
 def test_time_series_rows_include_supported_comparison_baselines():

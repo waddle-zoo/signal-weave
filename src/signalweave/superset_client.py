@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import inspect
 import json
+import re
 from collections.abc import Iterable
 from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import httpx
@@ -692,6 +695,61 @@ class SupersetClient:
         return [key for key in numeric_keys if key not in granularity and key != time_key], []
 
     @classmethod
+    def _group_keys(
+        cls, chart: dict[str, Any], rows: list[dict[str, Any]], time_key: str, metric_keys: list[str]
+    ) -> list[str]:
+        row_keys = list(dict.fromkeys(str(key) for row in rows for key in row))
+        normalized = {cls._normalized_key(key): key for key in row_keys}
+        params = cls._params(chart)
+        group_keys: list[str] = []
+        specs = [*cls._as_list(params.get("groupby")), *cls._as_list(params.get("columns"))]
+        context = cls._saved_query_context(chart)
+        if context:
+            for query in context.get("queries", []):
+                if isinstance(query, dict):
+                    specs.extend(cls._as_list(query.get("columns")))
+        for spec in specs:
+            candidates = cls._metric_candidates(spec)
+            if isinstance(spec, dict):
+                candidates.extend(
+                    str(spec[key]) for key in ("alias", "column_name") if spec.get(key)
+                )
+            match = next((key for key in candidates if key in row_keys), None)
+            if match is None:
+                match = next(
+                    (normalized[cls._normalized_key(key)] for key in candidates
+                     if cls._normalized_key(key) in normalized),
+                    None,
+                )
+            if match and match != time_key and match not in metric_keys and match not in group_keys:
+                group_keys.append(match)
+        return group_keys
+
+    @classmethod
+    def _metric_is_additive(cls, chart: dict[str, Any], metric_key: str) -> bool:
+        normalized_metric = cls._normalized_key(metric_key)
+        for spec in cls._metric_specs(chart):
+            candidates = cls._metric_candidates(spec)
+            if not any(cls._normalized_key(candidate) == normalized_metric for candidate in candidates):
+                continue
+            expression = spec if isinstance(spec, str) else None
+            if isinstance(spec, dict):
+                if any(spec.get(key) is True for key in ("distinct", "isDistinct", "is_distinct")):
+                    return False
+                expression_type = str(spec.get("expressionType", "")).upper()
+                if expression_type == "SIMPLE":
+                    return str(spec.get("aggregate", "")).upper() in {"SUM", "COUNT"}
+                if expression_type != "SQL":
+                    return False
+                expression = spec.get("sqlExpression")
+            return isinstance(expression, str) and re.fullmatch(
+                r"(?:SUM|COUNT)\s*\(\s*(?:\*|[A-Za-z_][\w.$]*)\s*\)",
+                expression.strip(),
+                re.IGNORECASE,
+            ) is not None
+        return False
+
+    @classmethod
     def _rows_from_result_item(cls, result: Any) -> list[dict[str, Any]]:
         """Normalize common Superset tabular result envelopes.
 
@@ -700,19 +758,23 @@ class SupersetClient:
         chart adapter keeps this normalization generic and leaves visualization
         semantics to the explicit metric/query definition.
         """
-        payload = result.get("data") if isinstance(result, dict) and "data" in result else result
+        envelope = result if isinstance(result, dict) else {}
+        payload = envelope.get("data", result)
         if isinstance(payload, list):
             if all(isinstance(row, dict) for row in payload):
                 return payload
+            columns, values = envelope.get("colnames"), payload
+        elif isinstance(payload, dict):
+            for key in ("records", "rows", "results", "values"):
+                rows = payload.get(key)
+                if isinstance(rows, list) and all(isinstance(row, dict) for row in rows):
+                    return rows
+            columns = payload.get("colnames", payload.get("columns"))
+            values = payload.get("data")
+            if columns is None:
+                columns = envelope.get("colnames")
+        else:
             return []
-        if not isinstance(payload, dict):
-            return []
-        for key in ("records", "rows", "results", "values"):
-            rows = payload.get(key)
-            if isinstance(rows, list) and all(isinstance(row, dict) for row in rows):
-                return rows
-        columns = payload.get("columns")
-        values = payload.get("data")
         if isinstance(columns, list) and isinstance(values, list):
             return [
                 {str(column): value for column, value in zip(columns, row, strict=False)}
@@ -720,6 +782,15 @@ class SupersetClient:
                 if isinstance(row, list)
             ]
         return []
+
+    @staticmethod
+    def _superset_epoch_milliseconds_iso(value: Any) -> str | None:
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            return None
+        try:
+            return (datetime(1970, 1, 1, tzinfo=timezone.utc) + timedelta(milliseconds=value)).isoformat()
+        except (OverflowError, ValueError):
+            return None
 
     @classmethod
     def _time_key(cls, chart: dict[str, Any], rows: list[dict[str, Any]]) -> str | None:
@@ -751,8 +822,24 @@ class SupersetClient:
         cls, chart: dict[str, Any], result: list[dict[str, Any]]
     ) -> ChartObservationExtraction:
         rows: list[dict[str, Any]] = []
+        declared_types: dict[str, set[int | None]] = {}
         for item in result:
-            rows.extend(cls._rows_from_result_item(item))
+            item_rows = cls._rows_from_result_item(item)
+            rows.extend(item_rows)
+            item_types: dict[str, int | None] = {}
+            for envelope in (item, item.get("data") if isinstance(item, dict) else None):
+                if not isinstance(envelope, dict):
+                    continue
+                names, types = envelope.get("colnames"), envelope.get("coltypes")
+                if not isinstance(names, list) or not isinstance(types, list):
+                    continue
+                for index, name in enumerate(names):
+                    if isinstance(name, str):
+                        column_type = types[index] if len(types) == len(names) and type(types[index]) is int else None
+                        item_types[name] = column_type if name not in item_types or item_types[name] == column_type else None
+            for row in item_rows:
+                for name in row:
+                    declared_types.setdefault(str(name), set()).add(item_types.get(str(name)))
         if not rows:
             return ChartObservationExtraction([], [], "no_data", ["The chart query returned no tabular rows."])
         columns = list(dict.fromkeys(str(key) for row in rows for key in row))
@@ -791,52 +878,86 @@ class SupersetClient:
             if not numeric_rows:
                 continue
             if time_key:
-                values_by_time: dict[Any, float] = {}
+                group_keys = cls._group_keys(chart, rows, time_key, metric_keys)
+                non_additive = not cls._metric_is_additive(chart, metric_key)
+                per_dimension = bool(group_keys) and non_additive
+                series: dict[str, tuple[dict[str, Any], dict[Any, list[float]]]] = {}
                 for row in numeric_rows:
-                    time_value = row.get(time_key)
-                    if time_value is not None:
-                        values_by_time[time_value] = values_by_time.get(time_value, 0.0) + float(row[metric_key])
-                ordered_keys = sorted(values_by_time, key=cls._sort_value)
-                ordered_values = [values_by_time[key] for key in ordered_keys]
-                current = float(ordered_values[-1]) if ordered_values else None
-                current_period = ordered_keys[-1] if ordered_keys else None
-                baseline_period = ordered_keys[-2] if len(ordered_keys) >= 2 else None
-                comparison_baselines: dict[str, float] = {}
-                if len(ordered_values) >= 2:
-                    comparison_baselines["previous_period"] = float(ordered_values[-2])
-                if len(ordered_values) >= 5:
-                    comparison_baselines["trailing_4_period_average"] = sum(ordered_values[-5:-1]) / 4
-                baseline = comparison_baselines.get("previous_period")
-                change_pct = (
-                    round((current - baseline) / abs(baseline) * 100, 3)
-                    if current is not None and baseline not in (None, 0)
-                    else None
-                )
-                attributes: dict[str, Any] = {"viz_type": cls._viz_type(chart)}
-                attributes.update(
-                    {
+                    dimensions = {key: row.get(key) for key in group_keys} if per_dimension else {}
+                    signature = json.dumps(dimensions, sort_keys=True, separators=(",", ":"), default=str)
+                    buckets = series.setdefault(signature, (dimensions, {}))[1]
+                    period = row.get(time_key)
+                    if period is not None:
+                        buckets.setdefault(period, []).append(float(row[metric_key]))
+                for signature, (dimensions, buckets) in series.items():
+                    ordered_keys = sorted(buckets, key=cls._sort_value)
+                    values_by_time: dict[Any, float | None] = {
+                        period: (values[0] if len(values) == 1 else None)
+                        if non_additive
+                        else sum(values)
+                        for period, values in buckets.items()
+                    }
+                    if non_additive and any(value is None for value in values_by_time.values()):
+                        notes.append("A non-additive time bucket had duplicate rows and was not aggregated.")
+                    current_period = ordered_keys[-1] if ordered_keys else None
+                    current = values_by_time.get(current_period)
+                    baseline_period = ordered_keys[-2] if len(ordered_keys) > 1 else None
+                    baseline = values_by_time.get(baseline_period)
+                    if per_dimension and baseline_period is None:
+                        notes.append("A grouped time series had no returned baseline bucket.")
+                    ordered_values = [values_by_time[key] for key in ordered_keys]
+                    comparison_baselines: dict[str, float] = {}
+                    if baseline is not None:
+                        comparison_baselines["previous_period"] = baseline
+                    if len(ordered_values) >= 5 and all(
+                        value is not None for value in ordered_values[-5:-1]
+                    ):
+                        comparison_baselines["trailing_4_period_average"] = sum(
+                            value for value in ordered_values[-5:-1] if value is not None
+                        ) / 4
+                    change_pct = (
+                        round((current - baseline) / abs(baseline) * 100, 3)
+                        if current is not None and baseline not in (None, 0)
+                        else None
+                    )
+                    attributes: dict[str, Any] = {
+                        "viz_type": cls._viz_type(chart),
                         "time_column": time_key,
                         "current_period": current_period,
                         "baseline_period": baseline_period,
                         "comparison_basis": "last_two_returned_time_buckets",
                         "time_bucket_count": len(ordered_keys),
                     }
-                )
-                observations.append(
-                    Observation(
-                        source_key=f"superset-chart:{chart_id}",
-                        subject_id=f"{chart_id}:{metric_key}",
-                        subject_label=chart_title,
-                        subject_type="superset_chart",
-                        metric=metric_key,
-                        current=current,
-                        baseline=baseline,
-                        change_pct=change_pct,
-                        comparison_baselines=comparison_baselines,
-                        attributes=attributes,
-                        source_url=chart.get("url"),
+                    subject_id, subject_label = f"{chart_id}:{metric_key}", chart_title
+                    if per_dimension:
+                        attributes["dimensions"] = dimensions
+                        series_hash = hashlib.sha256(signature.encode()).hexdigest()[:16]
+                        subject_id += f":{series_hash}"
+                        subject_label += " — " + ", ".join(
+                            f"{key}={value}" for key, value in dimensions.items()
+                        )
+                    if declared_types.get(time_key) == {2}:
+                        for key, value in (("current_period_iso", current_period), ("baseline_period_iso", baseline_period)):
+                            if normalized := cls._superset_epoch_milliseconds_iso(value):
+                                attributes[key] = normalized
+                        if "current_period_iso" in attributes or "baseline_period_iso" in attributes:
+                            attributes["time_encoding"] = "superset_epoch_milliseconds"
+                    observations.append(
+                        Observation(
+                            source_key=f"superset-chart:{chart_id}",
+                            subject_id=subject_id,
+                            subject_label=subject_label,
+                            subject_type="superset_chart",
+                            metric=metric_key,
+                            current=current,
+                            baseline=baseline,
+                            change_pct=change_pct,
+                            comparison_baselines=comparison_baselines,
+                            dimensions=dimensions,
+                            attributes=attributes,
+                            source_url=chart.get("url"),
+                        )
                     )
-                )
                 continue
 
             for index, row in enumerate(numeric_rows[:500]):

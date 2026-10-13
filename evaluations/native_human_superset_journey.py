@@ -195,6 +195,8 @@ async def run(args):
                               capture_output=True, text=True, timeout=120)
         result[command[0]] = {"returncode": proc.returncode, "output": json.loads(proc.stdout)}
         checkpoint()
+        if command[0] == "health" and (proc.returncode or not result["health"]["output"].get("healthy")):
+            raise RuntimeError("Live source health failed; do not claim completed onboarding")
     instructions = (
         "You are helping a retail business owner using their BI tools. Produce a concise useful "
         "first report, not an onboarding checklist. Read definitions and rows rather than trusting titles. "

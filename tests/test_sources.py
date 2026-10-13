@@ -459,6 +459,24 @@ async def test_source_registry_does_not_contact_foreign_tenant_adapters():
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("query", ["", "   "])
+async def test_source_registry_browse_keeps_limits_and_tenant_filters(query):
+    class Adapter(TenantBoundAdapter):
+        async def search_resources(self, query, *, limit, cursor=None, authorized_tenants=None):
+            assert query == ""
+            assert limit == 1
+            assert authorized_tenants == ["northstar"]
+            return await super().search_resources(query, limit=limit, cursor=cursor,
+                                                  authorized_tenants=authorized_tenants)
+
+    adapter = Adapter("northstar")
+    registry = SourceRegistry([adapter])
+    page = await registry.search_resources(query, limit=1, authorized_tenants=["northstar"])
+    assert len(page.resources) == 1
+    assert page.resources[0].contract.tenant_id == "northstar"
+
+
+@pytest.mark.asyncio
 async def test_source_registry_preserves_bounded_search_coverage_without_full_scan():
     registry = SourceRegistry([BoundedSearchAdapter()])
 

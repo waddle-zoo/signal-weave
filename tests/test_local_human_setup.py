@@ -231,6 +231,8 @@ async def test_live_source_check_is_bounded_and_does_not_call_jev(monkeypatch):
             return ["superset", "trino"]
 
         async def search_resources(self, query, *, adapter_name, limit):
+            assert query == ""  # Count the visible catalog, not hits for a made-up title.
+            assert limit == 1
             return SimpleNamespace(total_count=3)
 
     monkeypatch.setattr(
@@ -243,6 +245,37 @@ async def test_live_source_check_is_bounded_and_does_not_call_jev(monkeypatch):
         "superset: reachable and searchable; catalog items visible: 3.",
         "trino: reachable and searchable; catalog items visible: 3.",
     ]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("fails", [False, True])
+async def test_live_health_uses_the_real_registry_browse_and_failure_contract(monkeypatch, fails):
+    from signalweave.models import CatalogSearchPage
+    from signalweave.sources import SourceRegistry
+
+    class Adapter:
+        name = "company"
+
+        async def list_resources(self):
+            raise AssertionError("Bounded browsing must not scan the full catalog")
+
+        async def search_resources(self, query, *, limit, cursor=None):
+            assert query == ""
+            assert limit == 1
+            if fails:
+                raise PermissionError("private-credential-marker")
+            return CatalogSearchPage(total_count=48, provider=self.name, strategy="server-search")
+
+    registry = SourceRegistry([Adapter()])
+    monkeypatch.setattr("signalweave.local_health.build_runtime",
+                        lambda **_: SimpleNamespace(sources=registry))
+    healthy, messages = await live_source_report()
+    assert healthy is not fails
+    assert "private-credential-marker" not in " ".join(messages)
+    if fails:
+        assert "request failed" in messages[0]
+    else:
+        assert "catalog items visible: 48" in messages[0]
 
 
 def test_cli_status_and_credential_list_are_human_readable(local_home, monkeypatch, capsys):

@@ -257,8 +257,9 @@ class SourceRegistry:
         and are explicitly marked as ``local-scan-fallback`` so the caller can
         measure and replace that path before claiming enterprise scale.
         """
-        if not query.strip():
-            raise ValueError("catalog search query must not be empty")
+        # An empty query browses the same bounded, permission-filtered page.
+        # This lets an agent find assets without already knowing their titles.
+        query = query.strip()
         if not 1 <= limit <= 500:
             raise ValueError("catalog search limit must be between 1 and 500")
         multi_cursor: tuple[dict[str, str], dict[str, int]] | None = None

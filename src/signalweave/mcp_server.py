@@ -1200,6 +1200,7 @@ def create_mcp(
         This is lexical/connector-owned recall for a frontier agent. It does
         not decide which asset answers a business question; inspect the
         returned candidates and pass the exact approved refs to onboarding.
+        Use an empty query to browse a bounded page when the titles are unknown.
         """
         principal = request_principal(ctx)
         page = await runtime.sources.search_resources(

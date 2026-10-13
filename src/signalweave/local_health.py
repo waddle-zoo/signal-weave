@@ -32,10 +32,14 @@ async def live_source_report(*, timeout_seconds: float = 15.0) -> tuple[bool, li
         try:
             page = await asyncio.wait_for(
                 runtime.sources.search_resources(
-                    "signalweave healthcheck", adapter_name=name, limit=1
+                    "", adapter_name=name, limit=1
                 ),
                 timeout=timeout_seconds,
             )
+            if getattr(page, "strategy", None) == "adapter-error":
+                healthy = False
+                messages.append(f"{name}: request failed; check URL, credentials, and access scope.")
+                continue
             count = getattr(page, "total_count", None)
             suffix = f"; catalog items visible: {count}" if count is not None else ""
             messages.append(f"{name}: reachable and searchable{suffix}.")
