@@ -23,6 +23,21 @@ else:
     from binary_provenance import verify_binary
 
 ROOT = Path(__file__).resolve().parents[1]
+_SMOKE_ENVIRONMENT_PREFIXES = (
+    "SIGNALWEAVE_", "TYPESAFE_", "SUPERSET_", "PRESET_", "TRINO_", "OPENAI_",
+    "PYTHON", "DYLD_", "LD_",
+)
+
+
+def _smoke_environment(user_home: Path) -> dict[str, str]:
+    """Keep host credentials and interpreter/loader settings out of the binary."""
+    environment = {
+        key: value for key, value in os.environ.items()
+        if not key.upper().startswith(_SMOKE_ENVIRONMENT_PREFIXES)
+    }
+    environment.pop("VIRTUAL_ENV", None)
+    environment["HOME"] = str(user_home)
+    return environment
 
 
 def _check_stderr(stderr: str) -> None:
@@ -39,10 +54,7 @@ async def check(binary: Path, key_file: Path | None, live: bool):
         user_home = folder / "isolated-user"
         user_home.mkdir(mode=0o700)
         home = user_home / ".signalweave"
-        environment = {key: value for key, value in os.environ.items()
-                       if not key.startswith(("SIGNALWEAVE_", "TYPESAFE_", "SUPERSET_", "PRESET_", "TRINO_", "PYTHON"))}
-        environment.pop("VIRTUAL_ENV", None)
-        environment["HOME"] = str(user_home)
+        environment = _smoke_environment(user_home)
 
         def command(*args):
             completed = subprocess.run([str(binary), *args], cwd=folder, env=environment,

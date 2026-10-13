@@ -522,6 +522,29 @@ async def test_binary_checker_checks_stderr_after_shutdown_without_echo(
     assert "secret-sentinel" not in captured.out + captured.err
 
 
+def test_binary_smoke_drops_host_python_loader_and_provider_environment(tmp_path, monkeypatch):
+    from scripts.check_binary import _smoke_environment
+
+    inherited = {
+        "Python_ROOT_DIR": "/runner/python/x64",
+        "pythonLocation": "/runner/python/x64",
+        "DYLD_LIBRARY_PATH": "/runner/python/lib",
+        "LD_LIBRARY_PATH": "/runner/python/lib",
+        "OPENAI_API_KEY": "must-not-reach-smoke",
+        "SIGNALWEAVE_HOME": "/host/signalweave",
+        "VIRTUAL_ENV": "/host/venv",
+    }
+    for name, value in inherited.items():
+        monkeypatch.setenv(name, value)
+
+    user_home = tmp_path / "isolated-user"
+    environment = _smoke_environment(user_home)
+
+    assert all(name not in environment for name in inherited)
+    assert environment["HOME"] == str(user_home)
+    assert environment["PATH"] == os.environ["PATH"]
+
+
 @pytest.mark.asyncio
 @pytest.mark.parametrize("returncode,stderr", [
     (0, "Traceback (most recent call last): secret-sentinel"), (1, "secret-sentinel"),

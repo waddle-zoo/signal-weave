@@ -4,10 +4,13 @@
 
 <p align="center"><strong>Give your agent repeatable BI investigations—with evidence.</strong></p>
 
-SignalWeave is a local MCP for Codex and Claude. Save a human-reviewed brief
-once; your agent can revisit its approved BI sources, analyze fresh evidence,
-and explain what changed. Your agent does the discovery and reasoning. SignalWeave
-keeps the source scope and decision policy reusable.
+Stop checking the same dashboards by hand. SignalWeave helps Codex and Claude
+turn your business questions into reusable **cards**: what matters, where to
+look, and when someone should hear about it. On later runs, your agent gets fresh
+evidence and a typed policy decision—not another blank-page investigation.
+
+Keep your BI stack and your agent. SignalWeave runs locally as an MCP server;
+the agent still owns discovery, analysis, charts, and the explanation you read.
 
 ## Get started
 
@@ -32,29 +35,64 @@ changed in online sales. Show me the evidence and ask for missing context.”**
 > `v0.2.0rc2` source candidate but not in a downloadable release yet. The next native
 > release will have a one-command install that opens the expanded wizard.
 
-## How it works
+## Describe the investigation once
+
+A card is a reusable business brief, not a rigid list of metric thresholds.
+For example:
+
+> **Watch:** online sales and their contribution to net sales.
+>
+> **Why:** catch unexpected revenue losses before the weekly review.
+>
+> **Look for:** a meaningful drop, excluding planned promotions and reporting gaps.
+>
+> **Investigate:** which channels, products, or funnel stages explain the change?
+>
+> **Delivery:** involve Analytics and Data Trust first; send Leadership the
+> findings once the investigation supports them.
+
+Your agent finds the relevant dashboards and charts, checks their definitions,
+and helps turn that brief into a card with explicit sources and decision guidance.
+You resolve business ambiguity and approve what should repeat. Cards can span
+multiple sources; they do not require every team to monitor the same metrics or
+use the same notification rules.
+
+## Evidence, decisions, then explanation
 
 ```text
-Human intent → reviewed card → fresh BI evidence → agent analysis and report
+Your brief → reviewed card → fresh evidence → typed decision → agent investigation/report
 ```
 
-A card records what to watch, why it matters, questions to investigate, and the
-approved source references. On a later run, SignalWeave retrieves those sources
-and returns evidence plus the selected decision provider's judgment. Your agent
-can investigate beyond the card, explain likely drivers, and prepare a report.
-Scheduling and delivery stay with your agent or workflow runner.
+SignalWeave keeps the card, retrieves its approved sources, and returns the
+evidence, source references, decision probabilities, and a saved receipt.
+Your agent uses that bundle to investigate likely drivers, prepare a concise
+report, and decide what further source work is needed. Evidence is inspectable;
+large bundles can be read in pages rather than dumped into the agent's context.
+
+The decision layer answers a narrower question: **given this evidence and our
+policy, should we ignore, investigate, notify, or report missing information?**
+[TypeSafe's Jev](https://docs.typesafe.ai/introduction/coding-agents) applies
+plain-English criteria through typed questions and probability distributions.
+The source candidate also supports the
+[OpenAI Decisions API](https://developers.openai.com/api/docs/guides/decisions).
+This makes decisions usable in workflows without parsing a generated essay.
+It does not make a probability proof, establish causality, or replace the
+frontier agent's reasoning. ChatGPT-plan Responses is another candidate backend;
+its probabilities are model estimates, not native Decisions distributions.
+
+Use cards for a daily sales check, a customer-health digest, or a recurring
+operational investigation. The benefit to aim for is fewer repeated instructions,
+consistent business context, and useful evidence-backed messages—not more alerts.
+Scheduling and actual delivery stay with your agent or workflow runner;
+evaluating a card does not itself send a message.
 
 SignalWeave supports Superset, Preset, Trino, and reviewed read-only MCP source
 manifests. An MCP connection does not make an unsupported source automatically
 understandable; see the [source adapter contract](docs/source-adapters.md).
 
-## Honest status
-
-This is a local preview, not a customer-proven enterprise product. In one
-synthetic six-company onboarding trial, the guided SignalWeave path did not
-pass; direct use of company tools by the same agent performed better. See the
-[trial and evidence](docs/enterprise-onboarding-journeys-2026-10-02.md) and
-[known limits](docs/local-investigations.md).
+This is a preview. See [evaluations and evidence](docs/enterprise-onboarding-journeys-2026-10-02.md)
+and [current limits](docs/local-investigations.md) before relying on unattended
+workflows. Synthetic trials are not proof of success in your company.
 
 ## Develop
 
