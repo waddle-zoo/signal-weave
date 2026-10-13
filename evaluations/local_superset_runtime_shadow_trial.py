@@ -231,15 +231,29 @@ async def run_trial(
                     )
                 provider_client = adapter.client
                 server = create_mcp(runtime)
-                discover = _tool(server, "discover_insight_sources")
+                search = _tool(server, "search_catalog")
+                inspect = _tool(server, "inspect_resource")
                 onboard = _tool(server, "onboard_insight_card")
                 review_card = _tool(server, "review_insight_card")
                 approve = _tool(server, "approve_insight_card")
                 evaluate = _tool(server, "evaluate_insight_card")
                 get_receipt = _tool(server, "get_decision_receipt")
 
-                discovery = await discover(goal, adapter="superset", limit=10)
-                match = _select_match(discovery["matches"], title_contains)
+                catalog = await search(query=goal, adapter="superset", limit=100)
+                dashboard_matches = [
+                    {
+                        **resource,
+                        "ref": f"{resource['adapter']}|{resource['resource']}",
+                    }
+                    for resource in catalog["resources"]
+                    if resource.get("kind") == "dashboard"
+                ]
+                match = _select_match(dashboard_matches, title_contains)
+                inspected = await inspect(
+                    adapter=match["adapter"],
+                    resource=match["resource"],
+                    label=match["title"],
+                )
                 selected_sources = [{"ref": match["ref"], "label": match["title"]}]
                 onboarding = await onboard(
                     what_to_watch=goal,
@@ -274,24 +288,18 @@ async def run_trial(
                 )
                 card_id = onboarding["card"]["id"]
                 onboarding_review = (await review_card(card_id))["review"]
-                approval_args = {"card_id": card_id, "actor": principal_id}
-                if any(
-                    blocker["code"] == "comparison-window-mismatch"
-                    for blocker in onboarding_review.get("blockers", [])
-                ):
-                    approval_args.update(
-                        {
-                            "source_selection_fingerprint": onboarding_review[
-                                "source_selection_fingerprint"
-                            ],
-                            "source_selection_reason": (
-                                "The dashboard owner reviewed this fixed Sales Dashboard scope "
-                                "and explicitly accepts previous_period for this monitor; "
-                                "runtime evidence must still support the selected window."
-                            ),
-                        }
+                if onboarding_review["readiness_status"] != "ready_for_approval":
+                    blockers = onboarding_review.get("blockers", [])
+                    details = "; ".join(
+                        f"{item['code']}: {item['message']}"
+                        for item in blockers
+                    ) or "owner review is still required"
+                    raise RuntimeError(
+                        "Local Superset trial stopped before approval. The generated card "
+                        "has not been confirmed by an owner and must not be evaluated as "
+                        f"a successful post-onboarding run. Resolve: {details}"
                     )
-                approved = await approve(**approval_args)
+                approved = await approve(card_id=card_id, actor=principal_id)
                 approved_review = approved.get("onboarding_review") or onboarding_review
                 provider_after_approval = provider_client.requests_made
                 jev_before_evaluation = len(ContractClient.calls)
@@ -316,6 +324,9 @@ async def run_trial(
                 jev_after_replay = len(ContractClient.calls)
                 provider_after_replay = provider_client.requests_made
                 receipt = get_receipt(idempotency_key=idempotency_key)
+                exposed_tools = {
+                    tool.name for tool in server._tool_manager.list_tools()
+                }
 
                 result = evaluated["result"]
                 resources = evaluated.get("resources") or []
@@ -341,8 +352,17 @@ async def run_trial(
                 )
                 checks = {
                     "tenant_bound_runtime": adapter.tenant_id == tenant_id,
+                    "normal_agent_profile_used": (
+                        "evaluate_insight_card" in exposed_tools
+                        and "get_decision_receipt" in exposed_tools
+                        and "prepare_insight_run" not in exposed_tools
+                    ),
                     "discovery_found_requested_dashboard": match["ref"].startswith(
                         "superset|dashboard:"
+                    ),
+                    "selected_source_inspected_before_card_creation": (
+                        inspected.get("source_key") is not None
+                        and inspected.get("error") is None
                     ),
                     "human_reviewable_onboarding": onboarding["approval_required"] is True
                     and onboarding["status"] in {"ready_for_approval", "blocked"},
@@ -385,6 +405,7 @@ async def run_trial(
                 report = {
                     "trial": "local-superset-runtime-shadow",
                     "description": "Real local Superset through production runtime/MCP onboarding and delivery-disabled Jev shadow evaluation.",
+                    "mcp_profile": "agent",
                     "real_local_superset_transport": True,
                     "synthetic_typesafe_transport": True,
                     "live_jev_semantics_proven": False,
@@ -399,11 +420,13 @@ async def run_trial(
                         "max_jev_payload_bytes": max_jev_payload_bytes or 2_000_000,
                     },
                     "discovery": {
-                        "candidate_count": discovery.get("candidate_count"),
-                        "match_count": len(discovery.get("matches") or []),
+                        "candidate_count": catalog.get("total_count"),
+                        "match_count": len(dashboard_matches),
                         "selected_ref": match["ref"],
                         "selected_title": match["title"],
-                        "candidate_strategy": discovery.get("candidate_strategy"),
+                        "candidate_strategy": catalog.get("strategy"),
+                        "provider_warnings": catalog.get("warnings", []),
+                        "inspected_source_key": inspected.get("source_key"),
                     },
                     "onboarding": {
                         "status": onboarding["status"],

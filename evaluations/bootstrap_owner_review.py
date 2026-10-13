@@ -29,6 +29,11 @@ REVIEW_INSTRUCTIONS = (
     "Check exact outcomes: investigate, notify, escalate, ignore and insufficient_data are NOT "
     "interchangeable. Check thresholds and their units/boundaries, population, comparison basis, "
     "exclusions, missing-data policy, and required outcome-to-recipient mappings. "
+    "Do not require distinct sources used only as corroborating context to share one "
+    "population. Assess each source within its own stated scope and period; require matching "
+    "populations only when the owner explicitly requires it or the artifact combines the "
+    "sources into one metric/computation. Do not imply that contextual corroboration proves "
+    "a shared cohort or a company-wide result. "
     "Reject broadened or omitted conditions, extra recipients/actions, and unsupported causal rules. "
     "When a card is present, examine actual delivery_methods outcome/destination entries: "
     "prose cannot supply a missing route, and a notify route cannot substitute for investigate. "
@@ -40,6 +45,21 @@ REVIEW_INSTRUCTIONS = (
     "Preserve any explicit ordered policy, precedence, exception and quiet/no-action clause "
     "verbatim enough to retain its order and boundaries; do not compress those rules into a "
     "different threshold summary or change which exception wins. "
+    "Honor an explicit otherwise/fallback clause as an ordered branch for cases within its "
+    "stated scope, but do not broaden it. Wording such as ‘isolated, conflicting, or otherwise "
+    "ambiguous material movement’ does not automatically mean every material movement left "
+    "after earlier rules; it covers the stated categories, not an unstated ‘all other cases’ "
+    "branch. Do not demand exhaustive branches when a fallback clearly covers the case, and "
+    "do not infer that a coherent upward movement or an unassigned threshold interval is "
+    "covered merely because it is material. If applicability is unclear, request the owner's "
+    "actual clarification rather than strengthening the fallback or inventing an action. "
+    "This does not resolve a required policy term whose "
+    "meaning is undefined: if a material term or boundary (for example, ‘severe incident’) "
+    "changes the required action and the owner has not defined it, do not guess from source "
+    "metadata, SQL, runtime behavior or implementation jargon. Reject with a concise request "
+    "for human-in-the-loop owner clarification; the author should obtain the owner's actual "
+    "answer, revise the policy and submit it for review again. A fallback only settles that "
+    "ambiguity when its own wording explicitly covers it. "
     "The separately labeled source_context object is optional analysis/source-verification context from the current "
     "onboarding episode only. Use it to check whether optional source references, source "
     "scope, comparison declarations or claimed arithmetic are consistent with what was actually "
@@ -54,8 +74,15 @@ REVIEW_INSTRUCTIONS = (
     "If requirements are missing, conflicting or unclear, reject with concise actionable feedback "
     "identifying what needs owner clarification. Faithful paraphrases are acceptable. "
     "Separate owner-policy fidelity from code-owned execution guards. The normal action-confidence "
-    "floor is 0.70; do not lower, waive, or reinterpret it to approve an artifact, and do not "
-    "treat it as an owner business threshold. investigation_threshold is a support floor only "
+    "floor is 0.70; do not lower, waive, or reinterpret it to make a workflow replay pass, and do not "
+    "treat it as an owner business threshold. A low-support preview, conservative routed outcome, "
+    "or missing typed comparison does not by itself make an otherwise faithful card/policy "
+    "unapprovable for explicitly delivery-disabled, caller-managed shadow use. Shadow authorization "
+    "is not workflow certification: record acceptance as unassessed unless a current full "
+    "acceptance report passed, and never imply unattended delivery is ready. The caller-owned "
+    "frontier agent may analyze the returned source evidence and produce the final business report. "
+    "Still reject wrong owner policy, unsafe or unauthorized source/destination scope, and any "
+    "artifact that hides these limits from the operator. investigation_threshold is a support floor only "
     "when investigation_mode is bounded; it is irrelevant when investigation_mode is none and "
     "is never a business metric. retrieval_mode, investigation_mode, source-age limits, and "
     "investigation limits are execution settings, not owner policy. The execution_contract is "
@@ -423,16 +450,20 @@ def review_payload(public: dict, owner_answers: dict, artifact: dict,
 
 
 async def review_owner_artifact(*, public: dict, owner_answers: dict, artifact: dict,
-                              audit, budget, source_context: dict | None = None) -> dict:
+                              audit, budget, source_context: dict | None = None,
+                              model: str | None = None, effort: str = "high") -> dict:
     # Lazy import keeps the runner free to opt in without a circular dependency.
-    from evaluations.bootstrap_agent_trial import MODEL, BudgetExceeded, canonical, digest
+    from evaluations.bootstrap_agent_trial import MODEL, canonical, digest
 
+    selected_model = model or MODEL
+    if not selected_model or not effort:
+        raise ValueError("Reviewer model and reasoning effort must be nonempty")
     started = time.perf_counter()
     event_offset = len(audit.events)
     session = OwnerReviewSession()
     hashes = {"input_digest": None, "artifact_digest": None,
               "instructions_digest": digest(REVIEW_INSTRUCTIONS)}
-    request = {"model": MODEL, "effort": "high", "timeout_seconds": 90, "max_tool_calls": 2,
+    request = {"model": selected_model, "effort": effort, "timeout_seconds": 90, "max_tool_calls": 2,
                "synthetic": True, "human_approval": False, "policy_guarantee": False}
     validation_feedback = None
     try:
@@ -449,10 +480,8 @@ async def review_owner_artifact(*, public: dict, owner_answers: dict, artifact: 
     else:
         audit.emit("review.request", **request, **hashes, input_valid=True)
         try:
-            if budget.exhausted:
-                raise BudgetExceeded("Shared trial budget exhausted")
             episode = await codex_trial_transport.codex_episode(
-                session, key="", effort="high", budget=budget, audit=audit,
+                session, key="", model=selected_model, effort=effort, budget=budget, audit=audit,
                 max_turns=1, max_tool_calls=2, max_output_tokens=1200, timeout_seconds=90,
                 instructions_override=REVIEW_INSTRUCTIONS, prompt_override=payload,
             )
@@ -469,8 +498,7 @@ async def review_owner_artifact(*, public: dict, owner_answers: dict, artifact: 
         episode = {"status": "failed", "error": "malformed_episode_result"}
     complete = (episode.get("status") == "complete" and not episode.get("error")
                 and type(episode.get("exit_code")) is int and episode["exit_code"] == 0
-                and not episode.get("foreign_tools")
-                and not budget.exhausted and review is not None)
+                and not episode.get("foreign_tools") and review is not None)
     result = {
         "approved": bool(complete and review["approved"]),
         "reasons": review["reasons"] if complete else [validation_feedback or

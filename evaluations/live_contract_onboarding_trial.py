@@ -199,7 +199,7 @@ async def run_case(
         engine=InsightEngine(judger, registry=registry),
         principal=PrincipalContext(principal_id="trial-owner", tenant_id="default"),
     )
-    server = create_mcp(runtime)
+    server = create_mcp(runtime, profile="full")
     onboard = server._tool_manager.get_tool("onboard_insight_card").fn
     simulate = server._tool_manager.get_tool("simulate_insight_card").fn
     route = {

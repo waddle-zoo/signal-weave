@@ -345,7 +345,7 @@ async def run_trial(
             session_id=session_id,
             evaluator=evaluator,
         )
-        server = create_mcp(runtime)
+        server = create_mcp(runtime, profile="full")
         brief = task["brief"]
         card_id = f"card-{task['session_token']}"
         await call_tool(

@@ -62,6 +62,71 @@ _DESTINATIONS = [
     {"key": "data-trust", "label": "Data trust", "destination": "slack://simulation-data-trust", "authorized": True},
 ]
 
+_NUMERIC_PREFIX_BY_SUBJECT = {
+    "revenue-total": "net_sales_total",
+    "channel-online": "online_net_sales",
+    "channel-store": "store_net_sales",
+    "channel-mobile": "mobile_net_sales",
+    "channel-marketplace": "marketplace_net_sales",
+    "conversion-rate": "web_conversion_rate",
+    "web-sessions": "web_sessions",
+    "support-backlog": "support_backlog",
+    "finance-revenue": "finance_booked_revenue",
+}
+_NUMERIC_FIELDS = ("baseline", "current", "delta", "change_pct")
+
+
+def _northstar_numeric_facts(snapshots: dict[str, dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    """Expose a source-backed report vocabulary and independent score oracle.
+
+    Calculations here define evaluation expectations only; the agent receives
+    source observations and performs the analysis in its own workflow.
+    """
+
+    facts: dict[str, dict[str, Any]] = {}
+    field_descriptions = {
+        "baseline": "Source-reported baseline-period value.",
+        "current": "Source-reported current-period value.",
+        "delta": "Current-period value minus baseline-period value.",
+        "change_pct": "Source-reported percent change from baseline to current.",
+    }
+    for snapshot in snapshots.values():
+        source_ref = f"company_mcp|{snapshot['resource']}"
+        for observation in snapshot.get("observations", []):
+            prefix = _NUMERIC_PREFIX_BY_SUBJECT.get(str(observation.get("subject_id", "")))
+            if not prefix:
+                continue
+            unit = str(observation.get("unit") or "")
+            baseline, current = observation.get("baseline"), observation.get("current")
+            values = {
+                "baseline": baseline,
+                "current": current,
+                "delta": (current - baseline
+                          if type(current) in {int, float} and type(baseline) in {int, float}
+                          else None),
+                "change_pct": observation.get("change_pct"),
+            }
+            for field in _NUMERIC_FIELDS:
+                value = values[field]
+                if type(value) not in {int, float}:
+                    continue
+                fact_id = f"{prefix}_{field}"
+                facts[fact_id] = {
+                    "value": value,
+                    "unit": "percent" if field == "change_pct" else unit,
+                    "absolute_tolerance": (0.01 if field == "change_pct" or unit != "ratio" else 1e-8),
+                    "evidence_refs": [source_ref],
+                    "definition": f"{field_descriptions[field]} {observation.get('subject_label', prefix)}.",
+                }
+    return facts
+
+
+def _northstar_numeric_definitions(snapshots: dict[str, dict[str, Any]]) -> dict[str, dict[str, str]]:
+    return {
+        fact_id: {"definition": fact["definition"], "unit": fact["unit"]}
+        for fact_id, fact in _northstar_numeric_facts(snapshots).items()
+    }
+
 
 def _resource_id(source_ref: str) -> str:
     """Return a stable opaque id without carrying the original adapter/resource ref."""
@@ -164,19 +229,41 @@ def _period_snapshots(period_data: Any, case: Any, scenario_id: str,
     return snapshots
 
 
-def _private_label(case: Any, refs: dict[str, str]) -> dict[str, Any]:
+def _private_label(case: Any, refs: dict[str, str],
+                   snapshots: dict[str, dict[str, Any]]) -> dict[str, Any]:
     destination_by_outcome = {
         "notify": "leadership",
         "investigate": "analytics",
         "insufficient_data": "data-trust",
     }
+    outcome = case.historical_outcome.value
+    numeric_facts = _northstar_numeric_facts(snapshots)
+    required_numeric_facts = (
+        ["net_sales_total_baseline", "net_sales_total_current",
+         "net_sales_total_change_pct"]
+        if outcome in {"notify", "investigate"}
+        and all(f"net_sales_total_{field}" in numeric_facts
+                for field in _NUMERIC_FIELDS)
+        else []
+    )
     return {
         "historical_case_id": case.case_id,
-        "outcome": case.historical_outcome.value,
+        "outcome": outcome,
         "recipients": ([destination_by_outcome[case.historical_outcome.value]]
                        if case.historical_outcome.value in destination_by_outcome else []),
         "required_evidence_refs": [f"company_mcp|{refs[item]}" for item in case.required_explanation_sources],
-        "condition": case.variant_id,
+        # The generic final-agent scorer uses this field to distinguish an
+        # actionable event from a quiet period. Preserve the detailed Northstar
+        # variant separately for evaluator analysis; an ignore on an
+        # investigate/notify period is a missed workflow, not a safe abstention.
+        "condition": ("event" if outcome in {"notify", "investigate"}
+                      else "data_gap" if outcome == "insufficient_data" else "quiet"),
+        "variant_id": case.variant_id,
+        "required_owner_topics": ["metric_scope", "materiality", "routing", "data_gaps"],
+        "numeric_facts": numeric_facts,
+        "required_numeric_facts": required_numeric_facts,
+        "required_claim_types": [],
+        "allowed_claim_types": ["observation", "accounting_decomposition", "association", "hypothesis"],
     }
 
 
@@ -200,7 +287,7 @@ def build_northstar(seed_dir: Path, *, smoke: bool = False) -> dict[str, Any]:
     for case in first_week:
         period_id = f"setup-{case.case_id}"
         resources = _period_snapshots(period_data, case, scenario_id, refs, period_id, first_as_of)
-        label = _private_label(case, refs)
+        label = _private_label(case, refs, resources)
         owner_examples.append({
             "id": case.case_id,
             "as_of": first_as_of,
@@ -229,7 +316,12 @@ def build_northstar(seed_dir: Path, *, smoke: bool = False) -> dict[str, Any]:
         as_of = _iso(source_period["date"] + "T00:00:00+00:00")
         periods.append({"period_id": period_id, "as_of": as_of,
                         "snapshots": _period_snapshots(period_data, case, scenario_id, refs, period_id, as_of)})
-        private_periods[period_id] = _private_label(case, refs)
+        private_periods[period_id] = _private_label(
+            case, refs, periods[-1]["snapshots"]
+        )
+
+    numeric_vocabulary = sorted(_northstar_numeric_facts(onboarding_resources))
+    numeric_definitions = _northstar_numeric_definitions(onboarding_resources)
 
     public = {
         "company": "Northstar Outfitters Co.",
@@ -246,10 +338,12 @@ def build_northstar(seed_dir: Path, *, smoke: bool = False) -> dict[str, Any]:
         "onboarding": {"period_id": "onboarding-week-01", "as_of": first_as_of, "snapshots": onboarding_resources},
         "periods": periods,
         "catalog": _catalog(scenario_id, refs),
-        "numeric_vocabulary": [],
-        "submission_contract": {"mode": "native-only", "outcomes": ["ignore", "notify", "investigate", "insufficient_data"],
-                                 "claim_types": [], "number_units": [], "numeric_definitions": {},
-                                 "notes": "Native card/evidence routing only; no LLM numeric monitoring is part of this trial."},
+        "numeric_vocabulary": numeric_vocabulary,
+        "submission_contract": {"mode": "caller-agent-report", "outcomes": ["ignore", "notify", "investigate", "insufficient_data"],
+                                 "claim_types": ["observation", "accounting_decomposition", "association", "hypothesis"],
+                                 "number_units": sorted({item["unit"] for item in numeric_definitions.values()}),
+                                 "numeric_definitions": numeric_definitions,
+                                 "notes": "The caller-owned agent produces the final analysis. Identifiers are source-backed; for notify or investigate, report the primary net-sales baseline, current value, and source-reported percent change when available. Report a derived delta only when it reconciles with the source breakdown; otherwise explain the discrepancy."},
     }
     return {"scenario_id": scenario_id, "public": public, "private": {"family": "northstar-growth-history", "periods": private_periods},
             "owner_examples": owner_examples}

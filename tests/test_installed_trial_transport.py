@@ -3,6 +3,7 @@
 import asyncio
 import json
 import os
+import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
@@ -14,6 +15,7 @@ import pytest
 from evaluations import bootstrap_agent_trial as trial
 from evaluations import installed_trial_transport as transport
 from evaluations.bootstrap_scenarios import build_scenarios, public_scenario
+from signalweave.mcp_source import MCPConnection
 
 
 def test_manifest_uses_real_tenant_and_only_catalog_resources():
@@ -37,6 +39,28 @@ def test_manifest_uses_real_tenant_and_only_catalog_resources():
     assert "periods" not in json.dumps(manifest)
 
 
+def test_manifest_preserves_and_validates_mixed_native_adapter_identities():
+    public = {
+        "scenario_id": "company-mixed-sources",
+        "catalog": [
+            {"adapter": "stripe", "resource": "payments", "kind": "table", "title": "Payments"},
+            {"adapter": "superset", "resource": "sales-chart", "kind": "chart", "title": "Sales"},
+            {"adapter": "stripe", "resource": "refunds", "kind": "table", "title": "Refunds"},
+        ],
+    }
+
+    manifest = transport._manifest(public, "http://127.0.0.1:1234/private-route")
+
+    assert [item["name"] for item in manifest["connections"]] == ["stripe", "superset"]
+    assert [
+        resource["arguments"]["ref"]
+        for connection in manifest["connections"]
+        for resource in connection["resources"]
+    ] == ["stripe|payments", "stripe|refunds", "superset|sales-chart"]
+    for connection in manifest["connections"]:
+        MCPConnection.model_validate(connection)
+
+
 def test_minimal_environment_drops_unintended_keys(monkeypatch, tmp_path):
     monkeypatch.setenv("OPENAI_API_KEY", "never")
     monkeypatch.setenv("TYPESAFE_API_KEY", "never")
@@ -46,6 +70,60 @@ def test_minimal_environment_drops_unintended_keys(monkeypatch, tmp_path):
     assert "TYPESAFE_API_KEY" not in environment
     assert "HTTP_PROXY" not in environment
     assert environment["TYPESAFE_MAX_RETRIES"] == "0"
+
+
+@pytest.mark.asyncio
+async def test_setup_failure_reports_bounded_redacted_child_diagnostics(monkeypatch, tmp_path):
+    binary = tmp_path / "private" / "signalweave"
+    root = tmp_path / "private" / "trial"
+    home = root / "home"
+    key = root / "typesafe.key"
+    manifest = root / "company-mcp.json"
+    credential = "never-print-this-key"
+    captured = {}
+
+    def fail(command, *, cwd, env, **kwargs):
+        captured.update(command=command, cwd=cwd, env=env, kwargs=kwargs)
+        return subprocess.CompletedProcess(
+            command,
+            17,
+            stdout=f"setup could not read {manifest}; credential={credential}",
+            stderr=f"permission denied at {home}; TYPESAFE_API_KEY=echoed-secret",
+        )
+
+    monkeypatch.setattr(transport.subprocess, "run", fail)
+    audit = trial.Audit(secrets=(credential,))
+    with pytest.raises(RuntimeError, match="exit_code=17") as error:
+        await transport._run_setup(binary, root, home, key, manifest, "tenant", audit)
+
+    message = str(error.value)
+    assert "could not read [PRIVATE_MANIFEST]" in message
+    assert "permission denied at [PRIVATE_HOME]" in message
+    assert credential not in message
+    assert "echoed-secret" not in message
+    assert str(root) not in message and str(home) not in message
+    assert captured["cwd"] == str(root)
+    assert captured["env"]["HOME"] == str(home)
+    assert captured["command"][captured["command"].index("--key-file") + 1] == str(key)
+    assert "TYPESAFE_API_KEY" not in captured["env"]
+    assert captured["kwargs"]["capture_output"] is True
+
+
+@pytest.mark.asyncio
+async def test_setup_timeout_includes_bounded_child_output(monkeypatch, tmp_path):
+    paths = [tmp_path / part for part in ("binary", "root", "home", "key", "manifest")]
+    binary, root, home, key, manifest = paths
+    long_output = "x" * (transport.SETUP_DIAGNOSTIC_CHARS + 500)
+
+    def timeout(*args, **kwargs):
+        raise subprocess.TimeoutExpired(args[0], 90, output=long_output, stderr="still waiting")
+
+    monkeypatch.setattr(transport.subprocess, "run", timeout)
+    with pytest.raises(RuntimeError, match="timed out after 90 seconds") as error:
+        await transport._run_setup(binary, root, home, key, manifest, "tenant", trial.Audit())
+    message = str(error.value)
+    assert "still waiting" in message
+    assert message.count("x") <= transport.SETUP_DIAGNOSTIC_CHARS + 40
 
 
 def test_source_session_reads_through_adapter_and_audits(tmp_path):

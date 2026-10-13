@@ -1,13 +1,13 @@
-"""Agent onboarding through the executable, followed by frozen-card MCP replay.
+"""Default-agent onboarding and paired final-report comparison over shadow evidence.
 
 Research only. No reference card is installed and no private future label is
-available to the author, the binary, or the source server. Historical owner
-examples are explicit training inputs, never described as unseen holdouts.
+available to the author, the binary, or the source server.
 """
 from __future__ import annotations
 
 import argparse
 import asyncio
+import builtins
 import copy
 import json
 import tempfile
@@ -15,25 +15,179 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
+try:
+    from exceptiongroup import BaseExceptionGroup
+except ImportError:  # Python 3.11+ provides the same type in builtins.
+    BaseExceptionGroup = getattr(builtins, "BaseExceptionGroup", ())
+
 from evaluations.bootstrap_agent_trial import (
     COMMON_SYSTEM,
+    MODEL,
+    PRODUCT_TOOLS,
     Audit,
     PublicSourceAdapter,
     RequestBudget,
     ToolSession,
     card_fingerprint,
     digest,
-    function,
-    shift_timestamps,
     usage_summary,
     write_exclusive,
 )
 from evaluations.bootstrap_owner_review import review_owner_artifact
-from evaluations.bootstrap_scenarios import public_scenario
+from evaluations.bootstrap_scenarios import public_scenario, score_submission
 from evaluations.codex_trial_transport import codex_episode
 from evaluations.installed_first_report_trial import _file_hash, _git_sha
+from scripts.binary_provenance import verify_binary
+from signalweave.mcp_server import AGENT_PROFILE_TOOLS
 
-VERSION = "installed-workflow-v10"
+VERSION = "installed-workflow-v20"
+SHARED_SOURCE_PRODUCT_TOOLS = frozenset({"search_catalog", "inspect_resource"})
+
+
+def expected_human_clarification(expected: dict, unknown_topics: set[str], episode: dict) -> bool:
+    """Recognize a deliberate onboarding pause without counting it as setup success."""
+
+    topics = set(expected.get("unknown_owner_topics", []))
+    return bool(
+        expected.get("state") == "needs_human_clarification"
+        and topics
+        and topics <= unknown_topics
+        and episode.get("status") == "failed"
+        and episode.get("error") == "no_structured_submission"
+        and bool(episode.get("final_message", "").strip())
+        and not episode.get("foreign_tools")
+    )
+
+
+def expected_human_clarification_record(
+    expected: dict, unknown_topics: set[str], episode: dict, *,
+    inspected_refs: set[str], future_period_count: int,
+) -> dict | None:
+    """Capture an expected HIL pause without scoring unapproved future periods."""
+    if not expected_human_clarification(expected, unknown_topics, episode):
+        return None
+    return {
+        "onboarding_state": "needs_human_clarification",
+        "onboarding_expected_pause": True,
+        "unresolved_owner_topics": sorted(expected["unknown_owner_topics"]),
+        "preapproval_current_report": {
+            "final_message": episode.get("final_message", ""),
+            "inspected_source_refs": sorted(inspected_refs),
+            "scoring": "not_independently_scored",
+        },
+        "future_monitoring": {
+            "state": "not_run_pending_owner_answer",
+            "periods_not_scored": future_period_count,
+        },
+    }
+
+
+def _verify_binary_stage(binary: Path, expected: dict, checks: list[dict], stage: str) -> dict:
+    current = verify_binary(Path(binary))
+    if current != expected:
+        raise RuntimeError(f"installed trial binary changed after preflight ({stage})")
+    checks.append({"stage": stage, "metadata": current})
+    return current
+
+
+def _root_cause_summary(error: BaseException, audit: Audit, *, max_causes: int = 5,
+                        max_message_chars: int = 320, max_nodes: int = 32) -> list[dict[str, str]]:
+    """Flatten nested exception groups into bounded, redacted leaf diagnostics."""
+    pending: list[BaseException] = [error]
+    causes: list[dict[str, str]] = []
+    truncated = False
+    visited = 0
+    while pending and len(causes) < max_causes and visited < max_nodes:
+        current = pending.pop(0)
+        visited += 1
+        if isinstance(current, BaseExceptionGroup):
+            children = current.exceptions
+            allowed = min(max_causes + 1, max(0, max_nodes - visited - len(pending)))
+            if len(children) > allowed:
+                truncated = True
+            pending[0:0] = children[:allowed]
+            continue
+        message = audit.redact(str(current))
+        safe_message = " ".join(message.split())[:max_message_chars]
+        causes.append({
+            "type": type(current).__name__[:80],
+            "message": safe_message or "No exception message.",
+        })
+    if pending or truncated or visited >= max_nodes:
+        causes.append({"type": "truncated", "message": "Additional exception causes omitted."})
+    return causes
+
+
+def _agent_call_count(events: list[dict]) -> int:
+    return sum(
+        event.get("kind") == "api.request"
+        and event.get("provider") == "openai"
+        and event.get("transport") == "codex_cli"
+        for event in events
+    )
+
+
+def _is_binary_identity_failure(root_causes: list[dict[str, str]]) -> bool:
+    text = " ".join(cause.get("message", "") for cause in root_causes).lower()
+    return (
+        "binary" in text
+        and any(marker in text for marker in ("stale", "fingerprint", "changed", "build-info", "metadata"))
+    ) or (
+        "source" in text
+        and any(marker in text for marker in ("fingerprint", "sha256"))
+        and any(marker in text for marker in ("mismatch", "changed", "differs", "stale"))
+    )
+
+
+def _company_failure_status(root_causes: list[dict[str, str]], agent_calls: int) -> str:
+    if _is_binary_identity_failure(root_causes):
+        return "invalid_preflight"
+    if agent_calls == 0:
+        return "not_run"
+    return "onboarding_or_runtime_incomplete"
+
+
+def _invalid_preflight_report(*, scenarios, binary, output, model_settings, fixture_seed,
+                              error: Exception) -> dict:
+    """Write a no-agent preflight record without assigning business accuracy."""
+    output = Path(output)
+    output.mkdir(parents=True, exist_ok=False, mode=0o700)
+    audit = Audit()
+    root_causes = _root_cause_summary(error, audit)
+    intended = sum(len(scenario["public"]["periods"]) for scenario in scenarios)
+    protocol = {
+        "version": VERSION, "code": _git_sha(),
+        "dataset_sha256": digest(scenarios), "fixture_seed": fixture_seed,
+        "companies": len(scenarios), "monitoring_cases": intended,
+        "models": model_settings, "comparison": "paired_final_business_outcome_runtime",
+        "mcp_profile": "agent", "live": True, "delivery_enabled": False,
+        "binary_identity_status": "invalid_preflight",
+    }
+    preflight = {
+        "status": "invalid_preflight", "source_match": False,
+        "binary_path": str(Path(binary)), "agent_calls": 0,
+        "error_type": type(error).__name__, "root_causes": root_causes,
+        "not_run_reason": "Binary identity could not be verified before any agent call.",
+    }
+    report = {
+        "status": "invalid_preflight", "protocol": protocol, "preflight": preflight,
+        "companies": [], "binary_verifications": [], "passed": False,
+        "business_accuracy_status": "not_observed",
+        "summary": {
+            "onboarding_total": len(scenarios), "intended": intended,
+            "agent_calls": 0, "observed_business_cases": 0,
+            "not_run_business_cases": intended, "agent_correct": 0,
+            "agent_accuracy": None, "baseline_accuracy": None,
+            "observed_baseline_business_cases": 0,
+            "paired_observed_business_cases": 0,
+            "final_outcome_comparisons": 0,
+        },
+    }
+    write_exclusive(output / "protocol.json", protocol)
+    write_exclusive(output / "frozen-scenarios.json", scenarios)
+    write_exclusive(output / "preflight.json", preflight)
+    write_exclusive(output / "report.json", report)
+    return report
 
 
 def bind_examples(examples: list[dict], card: dict) -> list[dict]:
@@ -70,71 +224,133 @@ def bind_examples(examples: list[dict], card: dict) -> list[dict]:
     return result
 
 
+def bundle_visible_refs(evaluation: dict, card: dict) -> set[str]:
+    """Return source refs actually present in the agent-visible SignalWeave bundle."""
+    aliases = {
+        source["key"]: f"{source['adapter']}|{source['resource']}"
+        for source in card.get("sources", [])
+    }
+    visible: set[str] = set()
+
+    def add_record(record: object) -> None:
+        if not isinstance(record, dict):
+            return
+        source_key = record.get("source_key")
+        if isinstance(source_key, str) and source_key in aliases:
+            visible.add(aliases[source_key])
+        for field in ("provenance", "query_refs"):
+            refs = record.get(field, [])
+            if isinstance(refs, list):
+                visible.update(ref for ref in refs if isinstance(ref, str) and "|" in ref)
+
+    for section in (evaluation.get("result") or {}, evaluation.get("report") or {}):
+        if not isinstance(section, dict):
+            continue
+        for field in ("evidence", "observations", "numeric_claims", "provenance"):
+            records = section.get(field, [])
+            if isinstance(records, list):
+                for record in records:
+                    add_record(record)
+    return visible & set(aliases.values())
+
+
 class InstalledSession(ToolSession):
-    def __init__(self, *args, examples, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.examples = copy.deepcopy(examples)
-        self.acceptance_fingerprint = None
-        self.acceptance_report_id = None
-        self.offered_cases = None
+        self.agent_inspected: set[str] = set()
+        self.unknown_owner_topics: set[str] = set()
 
     async def specs(self):
         specs = await super().specs()
-        if self.phase == "onboarding":
-            specs.append(function(
-                "get_owner_examples",
-                "Get the synthetic owner's labeled historical examples, bound to this card's source aliases. "
-                "These are calibration examples, NOT future monitoring labels. Copy cases unchanged into "
-                "evaluate_card_workflow with the returned acceptance_outcomes. Never relabel them.",
-                {"card_id": {"type": "string"}}, ["card_id"]))
-        return specs
+        if self.treatment and self.phase == "monitoring":
+            specs = [spec for spec in specs if spec["name"] not in PRODUCT_TOOLS]
+        allowed = set(SHARED_SOURCE_PRODUCT_TOOLS)
+        if self.treatment and self.phase == "onboarding":
+            allowed |= set(PRODUCT_TOOLS)
+        tools = await self.server.list_tools()
+        available = {tool.name for tool in tools}
+        self.allowed_product = allowed & available if self.treatment else set()
+        for tool in tools:
+            if tool.name in allowed:
+                specs.append({"type": "function", "name": tool.name,
+                              "description": tool.description, "parameters": tool.inputSchema,
+                              "strict": False})
+        # The same default-profile source MCP schemas are offered to both arms.
+        # Prefer them over the harness's generic search schema when names overlap.
+        unique = {}
+        for spec in specs:
+            unique[spec["name"]] = spec
+        if self.treatment and self.phase == "onboarding":
+            review_tool = unique.get("request_synthetic_owner_approval")
+            if review_tool:
+                review_tool["description"] = (
+                    "After inspecting the current card and saving policy notes, request an "
+                    "independent synthetic owner-policy review. This default-agent trial has "
+                    "no simulate or preview tool; the runner performs one delivery-disabled "
+                    "native evaluation after approval. This is not human approval or certification."
+                )
+        return list(unique.values())
 
     async def call(self, name, arguments):
-        if name == "get_owner_examples" and self.phase == "onboarding":
-            card = await self.product("get_insight_card", {"card_id": arguments["card_id"]})
-            self.offered_cases = None
-            selected = {f"{source['adapter']}|{source['resource']}" for source in card["sources"]}
-            required = {ref for case in self.examples for ref in (
-                case.get("required_evidence_refs", []) + case.get("expected_retrieval_refs", [])
-            )}
-            missing = sorted(required - selected)
-            if missing:
-                # This is the supplied owner's calibration context, not inferred
-                # future truth. Do not make the author guess an opaque missing ID.
-                return {
-                    "status": "needs_source_review", "card_id": card["id"],
-                    "missing_required_source_refs": missing,
-                    "next_actions": [{"tool": "inspect_source", "arguments": {"ref": ref}} for ref in missing],
-                    "message": "Owner-labeled history requires these sources. Inspect them, then revise the card faithfully and request examples again. No source was added and no approval was granted.",
-                    "scope": "Supplied historical calibration requirements, not future labels or automatic source discovery.",
-                }
-            self.offered_cases = bind_examples(self.examples, card)
-            return {"cases": self.offered_cases,
-                    "acceptance_outcomes": sorted({x["expected_outcome"] for x in self.examples}),
-                    "scope": "Synthetic owner-labeled history for calibration; no future cases."}
-        if name == "evaluate_card_workflow":
-            if self.offered_cases is None or arguments.get("cases") != self.offered_cases:
-                raise ValueError("Use all unchanged owner examples from get_owner_examples; do not invent or relabel cases.")
-            expected_outcomes = {x["expected_outcome"] for x in self.examples}
-            if set(arguments.get("acceptance_outcomes") or []) != expected_outcomes:
-                raise ValueError("Cover every owner-labeled disposition with acceptance_outcomes.")
-            if arguments.get("thresholds") is not None:
-                raise ValueError("Use the unmodified production acceptance thresholds.")
-            card = await self.product("get_insight_card", {"card_id": arguments["card_id"]})
-            if bind_examples(self.examples, card) != self.offered_cases:
-                raise ValueError("Card source bindings changed; fetch current owner examples.")
+        if name == "ask_owner" and self.phase == "onboarding":
             result = await super().call(name, arguments)
-            if result.get("status") == "approved":
-                current = await self.product("get_insight_card", {"card_id": arguments["card_id"]})
-                self.acceptance_fingerprint = card_fingerprint(current)
-                self.acceptance_report_id = result["certification_report_id"]
+            if result.get("known") is False:
+                self.unknown_owner_topics.add(str(arguments.get("topic", "")))
             return result
-        if name in {"approve_insight_card", "finish_setup"}:
-            card = await self.product("get_insight_card", {"card_id": arguments["card_id"]})
-            if self.acceptance_fingerprint != card_fingerprint(card):
-                raise ValueError("This trial requires passing the owner's historical examples for the current card first.")
-            if name == "approve_insight_card" and arguments.get("workflow_report_id") != self.acceptance_report_id:
-                raise ValueError("Pass the current accepted workflow_report_id when approving.")
+        if (name == "request_synthetic_owner_approval" and self.treatment
+                and self.phase == "onboarding"):
+            card_id = arguments["card_id"]
+            card = await self.product("get_insight_card", {"card_id": card_id})
+            fingerprint = card_fingerprint(card)
+            if self.reviewed.get(card_id) != fingerprint:
+                return {"approved": False, "card_id": card_id,
+                        "missing_prerequisites": ["get_insight_card"],
+                        "next_actions": [{"tool": "get_insight_card", "arguments": {"card_id": card_id}}],
+                        "synthetic": True, "human_approval": False}
+            if self.owner_reviewer is None:
+                raise ValueError("Default-agent trial requires independent synthetic owner review")
+            review = await self.semantic_owner_review(card)
+            accepted = review.get("approved") is True
+            if accepted:
+                self.owner_approvals[card_id] = self.approval_fingerprint(card)
+            return {"card_id": card_id, "approved": accepted,
+                    "synthetic": True, "policy_correctness_validated": False,
+                    "human_approval": False, "owner_review": review,
+                    "reason": "Independent synthetic review of current owner policy, card, and notes; "
+                              "not actual human approval or certification."}
+        if (name == "finish_setup" and self.treatment and self.phase == "onboarding"):
+            if not self.notes or not self.adapter.inspected or not self.owner_topics:
+                raise ValueError("Inspect sources, consult owner and save reusable notes first")
+            if (self.require_agent_data_signoff
+                    and (not self.data_signoff or self.data_signoff.get("status") != "ready")):
+                raise ValueError("The agent data expert must sign off from inspected sources before setup can finish")
+            card_id = arguments.get("card_id")
+            if not card_id:
+                raise ValueError("Treatment requires a saved approved card")
+            card = await self.product("get_insight_card", {"card_id": card_id})
+            if card.get("status") != "approved":
+                raise ValueError("Card must be explicitly approved before shadow evaluation")
+            if (self.owner_reviewer is not None
+                    and self.semantic_approval != self.approval_fingerprint(card)):
+                return {"setup_complete": False,
+                        "reason": "Current card/notes need independent owner review.",
+                        "next_tools": ["request_synthetic_owner_approval", "finish_setup"]}
+            self.card_id = card_id
+            self.setup_source_context = self.owner_source_context()
+            self.setup_complete = True
+            return {"setup_complete": True, "card_id": card_id,
+                    "data_expert_signoff": copy.deepcopy(self.data_signoff),
+                    "shadow_evaluation": "one delivery-disabled native evaluation per period",
+                    "human_approval": "independent synthetic owner review; not actual human authorization"}
+        if name in SHARED_SOURCE_PRODUCT_TOOLS:
+            result = await self.product(name, arguments)
+            if name == "inspect_resource":
+                self.agent_inspected.add(f"{arguments['adapter']}|{arguments['resource']}")
+            return result
+        if self.phase == "monitoring" and name in {"inspect_source", "analyze_source"}:
+            result = await super().call(name, arguments)
+            self.agent_inspected.add(arguments["ref"])
+            return result
         return await super().call(name, arguments)
 
 
@@ -175,53 +391,181 @@ def score_native(output: dict, card: dict, label: dict, destinations: list[dict]
             "scope": "Native route and source-presence contract; not narrative or causal correctness."}
 
 
+async def assert_default_agent_profile(server) -> list[str]:
+    names = {tool.name for tool in await server.list_tools()}
+    expected = set(AGENT_PROFILE_TOOLS)
+    if names != expected:
+        raise RuntimeError("installed binary did not expose the certified default agent profile")
+    return sorted(names)
+
+
 def onboarding_instructions(server) -> str:
-    unavailable = (
-        "No independent historical acceptance snapshots are supplied: "
-        "record acceptance as unassessed, do not invent examples, and do not claim unattended "
-        "delivery is ready. "
+    return (
+        "You are authoring a reusable, delivery-disabled policy in the installed SignalWeave "
+        "default agent profile. Use only the tools offered in this trial. First call "
+        "get_signalweave_guide(task='start'). Ask the owner for the policy and use "
+        "search_catalog plus inspect_resource to verify candidate sources. Call "
+        "onboard_insight_card with the owner's intent and exact selected_sources refs copied "
+        "from inspected resources. numeric_conditions are optional: include one only when its "
+        "exact comparison key appears in the inspected source's analytical_comparisons; if no "
+        "applicable comparison is declared, omit numeric_conditions and retain the owner's "
+        "complete rule in decision_guidance. Never invent a comparison key from an observation "
+        "or metric name, and do not invent or change a threshold. Review the stored draft with "
+        "review_insight_card and resolve "
+        "its actual blockers; do not treat optional blank metadata as a blocker by itself. Read "
+        "the complete review result. Save concise policy notes, then record data-expert sign-off "
+        "using only inspected refs, including unresolved ambiguities. Request the independent "
+        "call request_synthetic_owner_approval for the synthetic owner-policy review, then "
+        "call approve_insight_card only when it accepts the "
+        "current card and notes. Before pausing for an unresolved alert rule, give a concise "
+        "current report from the inspected onboarding evidence, with each source's own "
+        "supported scope and period. Do not imply distinct source populations are one cohort "
+        "or make a wider company-wide claim. A pending rule pauses recurring automation and "
+        "card approval, not useful current analysis. Ask the human owner the precise missing "
+        "policy question; do not broaden an ambiguous fallback into an unstated universal rule. "
+        "Finish setup with that card ID only after approval. The runner then calls "
+        "evaluate_insight_card exactly once per monitoring period in shadow mode and supplies "
+        "that result to a separate final-report agent. Do not fetch future periods or claim real "
+        "human approval, certification, or delivery readiness. If a material ambiguity remains, "
+        "stop and explain the required human clarification.\n"
+        "Installed default-profile instructions:\n" + getattr(server, "instructions", "")
     )
-    assert unavailable in COMMON_SYSTEM
-    return COMMON_SYSTEM.replace(unavailable, "") + (
-        " You are using the installed SignalWeave MCP, not an in-process imitation. "
-        "Read get_signalweave_guide(task='monitor'). Ask the owner, inspect relevant sources, "
-        "draft your own minimal card, inspect it with get_insight_card and preview it. "
-        "The owner has supplied labeled historical examples: get_owner_examples(card_id) "
-        "returns them. Copy these unchanged, including each historical as_of clock, "
-        "to evaluate_card_workflow with acceptance_outcomes "
-        "and max_concurrency=1. If the report fails, inspect the actual mismatch and clarify "
-        "the card faithfully; never change labels, source measurements, or confidence floors. "
-        "After passing, save reusable notes and request_synthetic_owner_approval. An independent "
-        "owner model reviews the policy; correct its feedback if needed (three reviews max). "
-        "Then approve_insight_card with the passing workflow_report_id and finish_setup. "
-        "Authorization and acceptance are distinct. All later runs remain delivery-disabled. "
-        "Do not fetch future periods or use shell, filesystem or web tools. "
-        "Do not attempt to create a scheduler or send a message. "
-        "\nProduction MCP instructions:\n" + (server.instructions or ""))
+
+
+def monitoring_instructions(server, *, treatment: bool = True) -> str:
+    if treatment:
+        opening = (
+            " You are the caller-owned analytics agent producing the final business assessment. "
+            "Use the current SignalWeave evaluation bundle as evidence and typed triage input; "
+            "apply the owner's card, saved policy notes, measurements, and stated routes to "
+            "form the final outcome. Reconcile disagreements against source evidence. "
+        )
+        evidence = (
+            "Use the bundle's source facts and computed analyses; inspect only additional "
+            "authorized sources needed to answer the owner's questions. "
+        )
+        product_instructions = ""
+    else:
+        opening = (
+            " This is the notes-only baseline arm. The same owner-reviewed card, saved policy "
+            "notes, company context, source catalog, and approved destinations are provided. "
+            "Retrieve current evidence with the shared catalog and source tools, then form the "
+            "final business outcome from the owner's policy and measurements. "
+        )
+        evidence = (
+            "Use search_catalog, inspect_resource, inspect_source, and "
+            "analyze_source to retrieve authorized current-period evidence as needed. "
+        )
+        product_instructions = ""
+    return COMMON_SYSTEM + opening + (
+        "The frozen shared_card is the owner's policy for both arms. The treatment receives the "
+        "native SignalWeave evaluation bundle; the baseline does not. Both must produce an "
+        "independent final business report from the same policy and source tools. Do not assume "
+        "either arm is correct. Calculate requested comparisons "
+        "explicitly from source values, not by copying numbers from prose. Use the calculate "
+        "tool for each required arithmetic expression and verify the result before submission. "
+        "For additive metrics, calculate each row's metric, sum rows independently for each "
+        "period, calculate current minus baseline, then verify segment contributions sum to "
+        "the total delta. If the identities do not reconcile, do not submit the disputed "
+        "number; explain the mismatch. For rates, use the owner-defined numerator and "
+        "denominator at the same grain, and never average subgroup rates unless the owner's "
+        "definition calls for that. Distinguish accounting decomposition and timing association "
+        "from causal proof, and cite only source refs available in the provided evidence or "
+        "inspected in this period. " + evidence +
+        "Do not turn blank/undeclared optional metadata (such as population, grain, or scope) "
+        "into proof that records are missing or coverage is incomplete. Require an explicit "
+        "source-reported gap, a missing required source/value, or an owner/card rule that "
+        "requires the absent metadata before choosing insufficient_data. When the owner has "
+        "defined the metric and the returned source provides the requested comparison, report "
+        "the source-reported calculation with a precise scope qualification instead of adding "
+        "a new company-wide completeness prerequisite. Do not extrapolate beyond that source. "
+        "Before adding canonical numeric_claims, confirm the evidence validates every core "
+        "part of the owner's metric definition. If a required definition is explicitly unknown "
+        "or contradicted, choose the policy's data-quality outcome, leave canonical metric "
+        "numeric_claims empty, and state exactly what cannot be validated; do not turn a raw "
+        "computed total into the business metric. Match the card's delivery_methods[].destination "
+        "URI exactly to business.destinations[].destination, then submit that matching "
+        "business.destinations[].key. Never submit the card-local delivery_methods[].key, a "
+        "human label, or the URI itself. Submit one structured report with the final policy outcome, canonical recipient keys, "
+        "source-supported numeric facts from the provided vocabulary, claims, and evidence refs. "
+        "If the data supports an actionable outcome, do not choose ignore or insufficient_data "
+        "only because some optional catalog metadata is blank; qualify the scope and route the "
+        "work that can be done. Never send notifications: "
+        "submit_analysis records a proposed report only. Do not use private future labels. "
+        "\nInstalled MCP instructions:\n" + product_instructions)
 
 
 async def run_trial(scenarios, *, binary, key_file, output, jev_budget=100, live=False,
-                    stage_gate=6, fixture_seed=None):
+                    stage_gate=6, fixture_seed=None, author_model: str = MODEL,
+                    author_effort: str = "low", recurring_agent_model: str | None = None,
+                    recurring_agent_effort: str | None = None, reviewer_model: str | None = None,
+                    reviewer_effort: str = "high"):
+    recurring_model = recurring_agent_model or author_model
+    recurring_effort = recurring_agent_effort or author_effort
+    selected_reviewer_model = reviewer_model or MODEL
+    model_settings = {
+        "author": {"model": author_model, "effort": author_effort},
+        "recurring_agent": {"model": recurring_model, "effort": recurring_effort},
+        "reviewer": {"model": selected_reviewer_model, "effort": reviewer_effort},
+    }
+    if any(not settings["model"] or not settings["effort"] for settings in model_settings.values()):
+        raise ValueError("Every trial model and reasoning effort must be nonempty")
+    binary = Path(binary)
+    try:
+        binary_build = verify_binary(binary)
+    except Exception as error:
+        return _invalid_preflight_report(
+            scenarios=scenarios, binary=binary, output=output,
+            model_settings=model_settings, fixture_seed=fixture_seed, error=error,
+        )
+    binary_checks = [{"stage": "preflight", "metadata": binary_build}]
+    repo = Path(__file__).resolve().parents[1]
+    harness_files = (
+        "evaluations/installed_workflow_trial.py", "evaluations/installed_trial_transport.py",
+        "evaluations/installed_northstar_cases.py", "evaluations/installed_transfer_cases.py",
+        "evaluations/bootstrap_agent_trial.py", "evaluations/northstar_onboarding_gap_trial.py",
+        "evaluations/bootstrap_owner_review.py", "evaluations/codex_trial_transport.py",
+        "scripts/binary_provenance.py",
+    )
     output.mkdir(parents=True, exist_ok=False, mode=0o700)
-    protocol = {"version": VERSION, "code": _git_sha(), "binary_sha256": _file_hash(binary),
-                "harness_sha256": {name: _file_hash(Path(__file__).with_name(name)) for name in
-                                   ("installed_workflow_trial.py", "installed_trial_transport.py",
-                                    "installed_northstar_cases.py", "installed_transfer_cases.py", "bootstrap_agent_trial.py",
-                                    "bootstrap_owner_review.py", "codex_trial_transport.py")},
-                "dataset_sha256": digest(scenarios), "fixture_seed": fixture_seed,
-                "jev_attempt_limit": jev_budget,
-                "stop_expansion_after_first_cases": stage_gate,
-                "author_model": "gpt-5.6-luna", "owner_review_model": "gpt-5.6-luna",
-                "companies": len(scenarios), "monitoring_cases": sum(len(s["public"]["periods"]) for s in scenarios),
-                "expert_cards_seeded": False, "historical_examples_supplied": True,
-                "live": live, "delivery_enabled": False,
-                "limits": ["Known synthetic families, not new customer evidence.",
-                           "Agent authors card; recurring runs below test native MCP outcomes without a report-writing LLM.",
-                           "No measured comparative cost/latency advantage or real user usability claim.",
-                           "Read-only synthetic MCP source; not a fresh Superset extraction or arbitrary MCP auto-normalization.",
-                           "Metadata mappings and owner-labeled history are supplied, not auto-discovered from raw enterprise data."]}
+    protocol = {
+        "version": VERSION, "code": _git_sha(), "binary_sha256": binary_build["binary_sha256"],
+        "binary_build": binary_build,
+        "harness_sha256": {name: _file_hash(repo / name) for name in harness_files},
+        "dataset_sha256": digest(scenarios), "fixture_seed": fixture_seed,
+        "jev_attempt_limit": jev_budget, "stop_expansion_after_first_cases": stage_gate,
+        "models": model_settings,
+        "author_model": author_model, "author_effort": author_effort,
+        "recurring_agent_model": recurring_model, "recurring_agent_effort": recurring_effort,
+        "owner_review_model": selected_reviewer_model, "owner_review_effort": reviewer_effort,
+        "reviewer_model": selected_reviewer_model, "reviewer_effort": reviewer_effort,
+        "comparison": "paired_final_business_outcome_runtime",
+        "mcp_profile": "agent", "expected_agent_profile_tools": sorted(AGENT_PROFILE_TOOLS),
+        "shared_source_tools": sorted(SHARED_SOURCE_PRODUCT_TOOLS | {
+            "list_catalog", "search_catalog", "inspect_source", "analyze_source", "calculate", "ask_owner"
+        }),
+        "pairing_design": "Both monitoring arms use the same recurring model/effort, reviewed card, notes, and source tools; treatment gets the runner's single native evaluation bundle.",
+        "companies": len(scenarios),
+        "monitoring_cases": sum(len(s["public"]["periods"]) for s in scenarios),
+        "expert_cards_seeded": False, "historical_examples_supplied": False,
+        "live": live, "delivery_enabled": False,
+        "limits": [
+            "Known synthetic families, not new customer evidence.",
+            "Runtime comparison only: the notes-only baseline receives the treatment-authored reviewed card and notes; onboarding quality is not compared.",
+            "Both arms receive the same default-profile source tools, catalog, destinations, model, effort, and shared card. The treatment also receives its native SignalWeave evaluation bundle.",
+            "One delivery-disabled native evaluation is run per monitoring period; the final agent report is scored separately.",
+            "No measured comparative cost/latency advantage or real user usability claim.",
+            "Read-only synthetic MCP source; not a fresh Superset extraction or arbitrary MCP auto-normalization.",
+            "Metadata mappings are supplied, not auto-discovered from raw enterprise data.",
+            "Owner review is a synthetic policy review, not real human approval or data-quality certification.",
+        ],
+    }
     write_exclusive(output / "protocol.json", protocol)
     write_exclusive(output / "frozen-scenarios.json", scenarios)
+    write_exclusive(output / "preflight.json", {
+        "binary_build": binary_build, "source_match": True,
+        "required_mcp_profile": "agent", "expected_agent_profile_tools": sorted(AGENT_PROFILE_TOOLS),
+    })
     if not live:
         return {"status": "dry_run", **protocol}
     from evaluations.installed_trial_transport import installed_server
@@ -233,38 +577,65 @@ async def run_trial(scenarios, *, binary, key_file, output, jev_budget=100, live
     budget = RequestBudget(jev_budget)
     all_results = []
     for scenario in scenarios:
+        company_event_offset = len(audit.events)
         public = public_scenario(scenario)
+        public["require_agent_data_signoff"] = True
         adapter = PublicSourceAdapter(public["catalog"], public["scenario_id"], audit)
         adapter.set_period(public["onboarding"], datetime.now(timezone.utc))
         audit.episode = public["scenario_id"] + "/onboarding"
-        company_result = {"scenario_id": public["scenario_id"], "onboarding_complete": False, "periods": []}
+        company_result = {"scenario_id": public["scenario_id"], "onboarding_complete": False,
+                          "status": "pending", "periods": []}
         all_results.append(company_result)
 
         async def reviewer(**kwargs):
-            return await review_owner_artifact(**kwargs, audit=audit, budget=budget)
+            return await review_owner_artifact(
+                **kwargs, audit=audit, budget=budget,
+                model=selected_reviewer_model, effort=reviewer_effort,
+            )
 
         with tempfile.TemporaryDirectory(prefix="signalweave-installed-workflow-") as temporary:
             try:
+                _verify_binary_stage(binary, binary_build, binary_checks,
+                                     f"before_live_setup:{public['scenario_id']}")
                 async with installed_server(binary=binary, key_file=key_file, public=public,
                                             adapter=adapter, audit=audit, budget=budget,
                                             work=Path(temporary).resolve()) as server:
-                    # Compress simulated time into this live capture, preserving source
-                    # ages. Business observations remain explicitly historical replays.
-                    setup_delta = adapter.clock - datetime.fromisoformat(public["onboarding"]["as_of"])
-                    examples = shift_timestamps(copy.deepcopy(scenario["owner_examples"]), setup_delta)
+                    profile_tools = await assert_default_agent_profile(server)
                     session = InstalledSession(public, adapter, server, True,
-                                               examples=examples, owner_reviewer=reviewer)
+                                               owner_reviewer=reviewer)
                     started = time.perf_counter()
                     episode = await codex_episode(
-                        session, key="", effort="low", budget=budget, audit=audit, max_turns=50,
+                        session, key="", model=author_model, effort=author_effort,
+                        budget=budget, audit=audit, max_turns=50,
                         max_tool_calls=60, max_output_tokens=6000, timeout_seconds=360,
                         instructions_override=onboarding_instructions(server),
                         prompt_override={"phase": "onboarding", "business": session.public,
                                          "period": adapter.period_context})
                     company_result.update(onboarding=episode, onboarding_seconds=time.perf_counter() - started,
                                           owner_reviews=session.owner_review_records,
-                                          onboarding_complete=session.setup_complete, notes=session.notes)
+                                          onboarding_complete=session.setup_complete, notes=session.notes,
+                                          mcp_profile="agent", mcp_profile_tools=profile_tools)
                     if not session.setup_complete or episode.get("foreign_tools"):
+                        expected_pause = scenario["private"].get("onboarding_expectation", {})
+                        pause_record = expected_human_clarification_record(
+                            expected_pause, session.unknown_owner_topics, episode,
+                            inspected_refs=session.agent_inspected,
+                            future_period_count=len(public["periods"]),
+                        )
+                        if pause_record is not None:
+                            company_result.update(pause_record, status="human_clarification_pending")
+                            company_result["agent_calls"] = _agent_call_count(
+                                audit.events[company_event_offset:]
+                            )
+                            write_exclusive(
+                                output / f"{public['scenario_id']}-onboarding.json",
+                                audit.redact(company_result),
+                            )
+                            write_exclusive(
+                                output / f"{public['scenario_id']}-result.json",
+                                audit.redact(company_result),
+                            )
+                            continue
                         raise ValueError("onboarding_incomplete_or_foreign_tools")
                     card = await session.product("get_insight_card", {"card_id": session.card_id})
                     company_result["card"] = card
@@ -272,63 +643,306 @@ async def run_trial(scenarios, *, binary, key_file, output, jev_budget=100, live
                     frozen_plan = digest(card.get("compiled_plan"))
                     company_result["card_fingerprint"] = frozen_card
                     company_result["compiled_plan_fingerprint"] = frozen_plan
-                    company_result["calibration_report_id"] = session.acceptance_report_id
                     write_exclusive(output / f"{public['scenario_id']}-onboarding.json", company_result)
                     session.phase = "monitoring"
+                    baseline_adapter = PublicSourceAdapter(public["catalog"], public["scenario_id"], audit)
+                    baseline_session = InstalledSession(
+                        public, baseline_adapter, server, False, owner_reviewer=reviewer
+                    )
+                    baseline_session.phase = "monitoring"
+                    baseline_session.setup_complete = True
+                    baseline_session.notes = session.notes
+                    baseline_session.owner_topics = set(session.owner_topics)
+                    baseline_session.data_signoff = copy.deepcopy(session.data_signoff)
+                    baseline_session.shared_card = copy.deepcopy(card)
                     for period_index, period in enumerate(public["periods"]):
-                        if period_index == stage_gate and not all(r["exact"] for r in company_result["periods"]):
+                        if period_index == stage_gate and not all(
+                            r.get("outcome_comparison", {}).get("baseline", {}).get("exact")
+                            and r.get("outcome_comparison", {}).get("treatment", {}).get("exact")
+                            for r in company_result["periods"]
+                        ):
                             raise ValueError("initial_stage_failed; remaining intended cases retained as not run")
-                        adapter.set_period(period, datetime.now(timezone.utc))
-                        audit.episode = f"{public['scenario_id']}/{period['period_id']}"
-                        row = {"period_id": period["period_id"], "completed": False, "exact": False}
+                        period_clock = datetime.now(timezone.utc)
+                        adapter.set_period(period, period_clock)
+                        baseline_adapter.set_period(period, period_clock)
+                        episode_id = f"{public['scenario_id']}/{period['period_id']}"
+                        audit.episode = episode_id
+                        row = {"period_id": period["period_id"], "completed": False,
+                               "exact": False, "result": None}
+                        result = None
                         begin, offset = time.perf_counter(), len(audit.events)
                         try:
                             current = await session.product("get_insight_card", {"card_id": session.card_id})
                             if (card_fingerprint(current) != frozen_card
                                     or digest(current.get("compiled_plan")) != frozen_plan):
                                 raise ValueError("frozen_card_changed")
-                            result = await session.product("evaluate_insight_card", {
-                                "card_id": session.card_id, "idempotency_key": audit.episode})
-                            audit.emit("system.evaluation", response=result)
-                            before = (budget.used, adapter.inspections)
-                            replay = await session.product("evaluate_insight_card", {
-                                "card_id": session.card_id, "idempotency_key": audit.episode})
-                            # A receipt replay can change its replay marker, never the native result/report.
-                            replay_ok = (before == (budget.used, adapter.inspections)
-                                         and digest(result.get("result")) == digest(replay.get("result"))
-                                         and digest(result.get("report")) == digest(replay.get("report")))
-                            row.update(completed=True, result=result, replay_exact_no_calls=replay_ok)
-                            row["score"] = score_native(result, card,
-                                scenario["private"]["periods"][period["period_id"]], public["destinations"])
-                            row["exact"] = row["score"]["exact"] and replay_ok
+                            try:
+                                result = await session.product("evaluate_insight_card", {
+                                    "card_id": session.card_id, "idempotency_key": episode_id,
+                                    "response_mode": "compact",
+                                })
+                                audit.emit("system.evaluation", response=result)
+                                row["native_score"] = score_native(
+                                    result, card, scenario["private"]["periods"][period["period_id"]],
+                                    public["destinations"],
+                                )
+                                row["result"] = result
+                            except Exception as error:
+                                row["native_evaluation_error"] = type(error).__name__
+                                row["native_evaluation_root_causes"] = _root_cause_summary(error, audit)
+                                audit.emit("system.evaluation.error", error_type=type(error).__name__)
+
+                            order = ("baseline", "treatment") if period_index % 2 == 0 else ("treatment", "baseline")
+                            arm_results = {}
+                            for arm in order:
+                                arm_session = baseline_session if arm == "baseline" else session
+                                arm_session.phase = "monitoring"
+                                arm_session.submission = None
+                                arm_session.agent_inspected.clear()
+                                arm_session.phase_owner_topics.clear()
+                                arm_session.shared_card = copy.deepcopy(card)
+                                audit.episode = f"{episode_id}/{arm}"
+                                episode = None
+                                score = {"exact": False, "valid_submission": False,
+                                         "errors": ["agent_episode_not_completed"]}
+                                complete = False
+                                visible_refs: set[str] = set()
+                                arm_root_causes = []
+                                try:
+                                    episode = await codex_episode(
+                                        arm_session, key="", model=recurring_model,
+                                        effort=recurring_effort, budget=budget, audit=audit,
+                                        max_turns=20, max_tool_calls=30, max_output_tokens=5000,
+                                        timeout_seconds=180,
+                                        bundle=result if arm == "treatment" else None,
+                                        instructions_override=monitoring_instructions(
+                                            server, treatment=arm == "treatment",
+                                        ),
+                                        prompt_override={
+                                            "phase": "monitoring", "business": arm_session.public,
+                                            "period": arm_session.adapter.period_context,
+                                            "saved_notes": arm_session.notes,
+                                        },
+                                    )
+                                    complete = bool(
+                                        episode.get("status") == "complete"
+                                        and episode.get("error") in (None, "")
+                                        and episode.get("exit_code") == 0
+                                        and not episode.get("foreign_tools")
+                                        and arm_session.submission is not None
+                                    )
+                                    visible_refs = set(arm_session.agent_inspected)
+                                    if arm == "treatment" and result is not None:
+                                        visible_refs |= bundle_visible_refs(result, card)
+                                    score = score_submission(
+                                        scenario, period["period_id"], arm_session.submission or {},
+                                        inspected_refs=visible_refs,
+                                        asked_owner_topics=(arm_session.owner_topics |
+                                                            arm_session.phase_owner_topics),
+                                    )
+                                    if not complete:
+                                        score["exact"] = False
+                                except Exception as error:
+                                    arm_root_causes = _root_cause_summary(error, audit)
+                                    audit.emit("agent.arm.error", arm=arm,
+                                               error_type=type(error).__name__,
+                                               root_causes=arm_root_causes)
+                                observed = bool(complete and score.get("valid_submission") is True)
+                                arm_results[arm] = {
+                                    "completed": complete, "observed": observed,
+                                    "exact": bool(score.get("exact")) if observed else None,
+                                    "model": episode.get("model") if episode else None,
+                                    "effort": episode.get("effort") if episode else None,
+                                    "episode": episode, "submission": arm_session.submission,
+                                    "score": score, "visible_refs": sorted(visible_refs),
+                                    "source_reads": len(arm_session.agent_inspected),
+                                    "root_causes": arm_root_causes,
+                                }
+                            treatment_result = arm_results["treatment"]
+                            baseline_result = arm_results["baseline"]
+                            treatment_submission = treatment_result["submission"] or {}
+                            baseline_submission = baseline_result["submission"] or {}
+                            row.update(
+                                completed=treatment_result["completed"],
+                                observed=treatment_result["observed"],
+                                exact=treatment_result["exact"],
+                                agent_episode=treatment_result["episode"],
+                                submission=treatment_result["submission"],
+                                score=treatment_result["score"],
+                                agent_visible_refs=treatment_result["visible_refs"],
+                                baseline=baseline_result,
+                                treatment=treatment_result,
+                                agent_order=list(order),
+                                shared_card_digest=digest(card),
+                                source_reads={
+                                    "baseline_agent": baseline_result["source_reads"],
+                                    "treatment_agent": treatment_result["source_reads"],
+                                    "native_evaluation": adapter.inspections,
+                                },
+                                outcome_comparison={
+                                    "baseline": {
+                                        "observed": baseline_result["observed"],
+                                        "exact": baseline_result["exact"],
+                                        "outcome": baseline_submission.get("outcome"),
+                                        "recipients": baseline_submission.get("recipients"),
+                                    },
+                                    "treatment": {
+                                        "observed": treatment_result["observed"],
+                                        "exact": treatment_result["exact"],
+                                        "outcome": treatment_submission.get("outcome"),
+                                        "recipients": treatment_submission.get("recipients"),
+                                    },
+                                    "treatment_minus_baseline_exact": (
+                                        int(treatment_result["exact"]) - int(baseline_result["exact"])
+                                        if treatment_result["observed"] and baseline_result["observed"]
+                                        else None
+                                    ),
+                                    "same_model_effort": (
+                                        bool(baseline_result["model"] and treatment_result["model"]
+                                        and baseline_result["effort"] and treatment_result["effort"]
+                                        and baseline_result["model"] == treatment_result["model"]
+                                        and baseline_result["effort"] == treatment_result["effort"]
+                                        )
+                                    ),
+                                    "same_card_digest": (
+                                        digest(baseline_session.shared_card)
+                                        == digest(session.shared_card)
+                                    ),
+                                    "same_notes_digest": (
+                                        digest(baseline_session.notes) == digest(session.notes)
+                                    ),
+                                },
+                            )
                         except Exception as error:
                             row["error_type"] = type(error).__name__
-                            row["error"] = audit.redact(str(error)[:1000])
-                            audit.emit("episode.error", error_type=type(error).__name__)
-                        row.update(seconds=time.perf_counter() - begin, source_reads=adapter.inspections,
+                            row["root_causes"] = _root_cause_summary(error, audit)
+                            row["error"] = row["root_causes"]
+                            audit.emit("episode.error", error_type=type(error).__name__,
+                                       root_causes=row["root_causes"])
+                        audit.episode = episode_id
+                        row.update(seconds=time.perf_counter() - begin,
                                    usage=usage_summary(audit.events[offset:]))
                         company_result["periods"].append(row)
                         write_exclusive(output / f"{public['scenario_id']}-{period['period_id']}.json", audit.redact(row))
                         print(json.dumps({"company": public["company"], "period": period["period_id"],
                                           "exact": row["exact"], "error_type": row.get("error_type")}), flush=True)
             except Exception as error:
+                root_causes = _root_cause_summary(error, audit)
                 company_result["error_type"] = type(error).__name__
-                company_result["error"] = audit.redact(str(error)[:1000])
-                audit.emit("company.error", error_type=type(error).__name__)
+                company_result["root_causes"] = root_causes
+                company_result["error"] = root_causes
+                calls_so_far = _agent_call_count(audit.events[company_event_offset:])
+                company_result["status"] = _company_failure_status(root_causes, calls_so_far)
+                if company_result["status"] == "invalid_preflight":
+                    binary_checks.append({"stage": "before_live_setup", "status": "failed",
+                                          "root_causes": root_causes})
+                audit.emit("company.error", error_type=type(error).__name__,
+                           root_causes=root_causes, status=company_result["status"])
+        company_result["agent_calls"] = _agent_call_count(audit.events[company_event_offset:])
+        if company_result["status"] == "pending":
+            company_result["status"] = (
+                "completed" if len(company_result["periods"]) == len(public["periods"])
+                else "partial"
+            )
         present = {row["period_id"] for row in company_result["periods"]}
-        company_result["periods"].extend({"period_id": p["period_id"], "completed": False, "exact": False,
-                                           "error_type": "setup_or_runtime_incomplete"}
+        company_result["periods"].extend({"period_id": p["period_id"], "completed": False,
+                                           "observed": False, "exact": None,
+                                           "status": "not_run",
+                                           "error_type": company_result.get("error_type", "not_run")}
                                           for p in public["periods"] if p["period_id"] not in present)
         write_exclusive(output / f"{public['scenario_id']}-result.json", audit.redact(company_result))
     rows = [r for company in all_results for r in company["periods"]]
-    report = {"protocol": protocol, "companies": all_results,
+    certification_error = None
+    try:
+        _verify_binary_stage(binary, binary_build, binary_checks, "before_report_certification")
+    except Exception as error:
+        certification_error = _root_cause_summary(error, audit)
+        binary_checks.append({"stage": "before_report_certification", "status": "failed",
+                              "root_causes": certification_error})
+
+    intended = protocol["monitoring_cases"]
+    treatment_observed = [row for row in rows if row.get("observed") is True]
+    baseline_observed = [
+        row for row in rows
+        if row.get("outcome_comparison", {}).get("baseline", {}).get("observed") is True
+    ]
+    paired_observed = [
+        row for row in rows
+        if row.get("observed") is True
+        and row.get("outcome_comparison", {}).get("baseline", {}).get("observed") is True
+    ]
+    treatment_correct = sum(row.get("exact") is True for row in treatment_observed)
+    baseline_correct = sum(
+        row["outcome_comparison"]["baseline"].get("exact") is True
+        for row in baseline_observed
+    )
+    paired_both_correct = sum(
+        row.get("exact") is True
+        and row["outcome_comparison"]["baseline"].get("exact") is True
+        for row in paired_observed
+    )
+    agent_calls = sum(company.get("agent_calls", 0) for company in all_results)
+    has_invalid_preflight = any(company.get("status") == "invalid_preflight" for company in all_results)
+    if certification_error:
+        report_status = (
+            "invalid_preflight" if _is_binary_identity_failure(certification_error)
+            else "not_certified"
+        )
+        accuracy_status = "invalidated_by_provenance"
+    elif has_invalid_preflight:
+        report_status, accuracy_status = "invalid_preflight", "not_observed"
+    elif agent_calls == 0:
+        report_status, accuracy_status = "not_run", "not_observed"
+    elif len(treatment_observed) == intended and len(baseline_observed) == intended:
+        report_status, accuracy_status = "completed", "observed"
+    elif any(company.get("onboarding_expected_pause") is True for company in all_results):
+        report_status = "human_clarification_pending"
+        accuracy_status = "observed" if treatment_observed else "not_observed"
+    else:
+        report_status = "partial"
+        accuracy_status = "observed" if treatment_observed else "not_observed"
+
+    report = {"status": report_status, "business_accuracy_status": accuracy_status,
+              "preflight": {"status": "passed", "binary_build": binary_build},
+              "certification_error": certification_error,
+              "protocol": protocol, "companies": all_results,
               "summary": {"onboarding_complete": sum(c["onboarding_complete"] for c in all_results),
-                          "onboarding_total": len(scenarios), "correct": sum(r["exact"] for r in rows),
-                          "completed": sum(r["completed"] for r in rows), "intended": protocol["monitoring_cases"]},
+                          "expected_human_clarification": sum(
+                              c.get("onboarding_expected_pause") is True for c in all_results
+                          ),
+                          "future_periods_deferred_for_owner_clarification": sum(
+                              c.get("future_monitoring", {}).get("periods_not_scored", 0)
+                              for c in all_results
+                          ),
+                          "onboarding_total": len(scenarios),
+                          "agent_calls": agent_calls,
+                          "agent_correct": treatment_correct,
+                          "observed_business_cases": len(treatment_observed),
+                          "agent_accuracy": (
+                              treatment_correct / len(treatment_observed)
+                              if treatment_observed and accuracy_status == "observed" else None
+                          ),
+                          "baseline_correct": baseline_correct,
+                          "observed_baseline_business_cases": len(baseline_observed),
+                          "baseline_accuracy": (
+                              baseline_correct / len(baseline_observed)
+                              if baseline_observed and accuracy_status == "observed" else None
+                          ),
+                          "paired_both_correct": paired_both_correct,
+                          "paired_observed_business_cases": len(paired_observed),
+                          "not_run_business_cases": intended - len(treatment_observed),
+                          "not_run_baseline_business_cases": intended - len(baseline_observed),
+                          "final_outcome_comparisons": len(paired_observed),
+                          "native_correct": sum(r.get("native_score", {}).get("exact", False) for r in rows),
+                          "completed": sum(r.get("completed", False) for r in rows),
+                          "intended": intended},
               "jev_attempts": budget.used, "budget_censored": budget.exhausted,
+              "binary_verifications": binary_checks,
               "usage": usage_summary(audit.events),
-              "passed": bool(rows) and all(r["exact"] for r in rows) and not budget.exhausted,
-              "scope": "Installed synthetic onboarding and native execution; not enterprise completion."}
+              "passed": accuracy_status == "observed" and len(paired_observed) == intended
+              and paired_both_correct == intended and not budget.exhausted,
+              "scope": "Default-agent synthetic onboarding and paired final business reports over shadow evidence; not enterprise completion."}
+    write_exclusive(output / "binary-verifications.json", binary_checks)
     write_exclusive(output / "report.json", audit.redact(report))
     return report
 
@@ -345,6 +959,12 @@ def main():
     parser.add_argument("--live", action="store_true")
     parser.add_argument("--smoke", action="store_true")
     parser.add_argument("--jev-budget", type=int, default=100)
+    parser.add_argument("--author-model", default=MODEL)
+    parser.add_argument("--author-effort", default="low")
+    parser.add_argument("--recurring-agent-model")
+    parser.add_argument("--recurring-agent-effort")
+    parser.add_argument("--reviewer-model")
+    parser.add_argument("--reviewer-effort", default="high")
     args = parser.parse_args()
     if args.live and args.key_file is None:
         parser.error("--live requires --key-file")
@@ -367,7 +987,12 @@ def main():
             scenarios = [s for i, s in enumerate(scenarios) if i in args.company_index]
     report = asyncio.run(run_trial(scenarios, binary=args.binary.resolve(), key_file=args.key_file,
                                    output=args.output, jev_budget=args.jev_budget, live=args.live,
-                                   fixture_seed=args.seed))
+                                   fixture_seed=args.seed, author_model=args.author_model,
+                                   author_effort=args.author_effort,
+                                   recurring_agent_model=args.recurring_agent_model,
+                                   recurring_agent_effort=args.recurring_agent_effort,
+                                   reviewer_model=args.reviewer_model,
+                                   reviewer_effort=args.reviewer_effort))
     print(json.dumps({k: v for k, v in report.items() if k not in {"companies", "protocol"}}, indent=2))
 
 

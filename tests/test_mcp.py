@@ -43,19 +43,16 @@ def test_server_exposes_mcp_object():
             card_store=StubStore(),
             sources=SourceRegistry(),
             engine=InsightEngine(TestJudger()),
-        )
+        ),
+        profile="full",
     )
     assert server.name == "signal-weave"
     # These instructions travel in MCP initialization, including the standalone
     # executable. A newly connected agent should not need a separate setup skill.
     assert "onboard_insight_card" in server.instructions
-    assert "bootstrap_insight_card" in server.instructions
-    assert "Only call approve_insight_card after explicit owner approval" in server.instructions
-    assert "without workflow_report_id authorizes only" in server.instructions
-    assert "unassessed card" in server.instructions
-    assert "does not certify or authorize unattended delivery" in server.instructions
-    assert "not offline inference" in server.instructions
-    assert "not proof of causation" in server.instructions
+    assert "prepare_insight_run" in server.instructions
+    assert "typed Jev evaluation" in server.instructions
+    assert "calling agent owns" in server.instructions
 
 
 async def test_native_authoring_schema_and_dispatch_enforce_evidence_slots(tmp_path):

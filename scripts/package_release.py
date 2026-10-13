@@ -8,11 +8,15 @@ import io
 import json
 import platform
 import re
-import subprocess
 import tarfile
 from pathlib import Path
 
 import tomllib
+
+if __package__:
+    from .binary_provenance import verify_binary
+else:
+    from binary_provenance import verify_binary
 
 ROOT = Path(__file__).resolve().parents[1]
 TARGETS = {("Darwin", "arm64"): "darwin-arm64", ("Darwin", "x86_64"): "darwin-x86_64",
@@ -27,9 +31,9 @@ def package(binary: Path, output: Path, version: str, target: str) -> Path:
         raise ValueError("Native platform does not match the requested artifact target")
     if binary.is_symlink() or not binary.is_file() or not binary.stat().st_size:
         raise ValueError("Expected a nonempty regular binary")
-    commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
-    metadata = json.dumps({"version": version, "target": target, "commit": commit,
-                           "python": platform.python_version()}, indent=2).encode() + b"\n"
+    identity = verify_binary(binary)
+    metadata = json.dumps({**identity, "version": version, "target": target,
+                           "commit": identity["git_commit"]}, indent=2).encode() + b"\n"
     output.mkdir(parents=True, exist_ok=True)
     artifact = output / f"signalweave-{version}-{target}.tar.gz"
     checksum = artifact.with_name(artifact.name + ".sha256")

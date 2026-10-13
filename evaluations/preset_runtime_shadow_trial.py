@@ -180,7 +180,7 @@ async def _run_workspace(workspace: dict[str, Any], root: Path) -> dict[str, Any
             adapter_name=adapter_name,
         )
         runtime = build_runtime(adapters=[preset_adapter])
-        server = create_mcp(runtime)
+        server = create_mcp(runtime, profile="full")
         discover = _tool(server, "discover_insight_sources")
         onboard = _tool(server, "onboard_insight_card")
         approve = _tool(server, "approve_insight_card")

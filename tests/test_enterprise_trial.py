@@ -122,7 +122,7 @@ async def test_enterprise_fixture_is_reachable_through_mcp_and_trace(tmp_path):
         session_id="session-1",
         evaluator="research",
     )
-    server = create_mcp(runtime)
+    server = create_mcp(runtime, profile="full")
 
     _, resources_payload = await server.call_tool("list_resources", {"adapter": "superset"})
     resources = resources_payload["result"]

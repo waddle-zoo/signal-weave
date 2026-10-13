@@ -267,6 +267,8 @@ def fake_episode(monkeypatch):
     monkeypatch.setattr(transport, "child_environment", lambda: {"PATH": "/offline"})
 
     async def run(events=(), **kwargs):
+        episode_model = kwargs.pop("model", None)
+        episode_effort = kwargs.pop("effort", "low")
         if events is None:
             process.stdout.readline.side_effect = asyncio.Event().wait
         else:
@@ -275,12 +277,28 @@ def fake_episode(monkeypatch):
                 for event in events
             ] + [b""]
         return await transport.codex_episode(
-            session, key="unused", effort="low", budget=budget, audit=audit,
+            session, key="unused", model=episode_model, effort=episode_effort,
+            budget=budget, audit=audit,
             max_turns=2, max_tool_calls=3, max_output_tokens=100, **kwargs,
         )
 
     state.run = run
     return state
+
+
+async def test_selected_model_and_effort_reach_codex_process_and_audit(fake_episode):
+    result = await fake_episode.run([
+        {"type": "turn.completed", "usage": {"input_tokens": 5, "output_tokens": 2}},
+    ], model="gpt-6-luna", effort="xhigh")
+    command = list(fake_episode.spawn.call_args.args)
+    assert command[command.index("--model") + 1] == "gpt-6-luna"
+    settings = [command[i + 1] for i, arg in enumerate(command) if arg == "-c"]
+    assert 'model_reasoning_effort="xhigh"' in settings
+    request = next(event for event in fake_episode.audit.events if event["kind"] == "api.request")
+    response = next(event for event in fake_episode.audit.events if event["kind"] == "api.response")
+    assert (request["model"], request["effort"]) == ("gpt-6-luna", "xhigh")
+    assert (response["model"], response["effort"]) == ("gpt-6-luna", "xhigh")
+    assert (result["model"], result["effort"]) == ("gpt-6-luna", "xhigh")
 
 
 @pytest.mark.parametrize("phase", ["onboarding", "monitoring"])
@@ -321,6 +339,17 @@ async def test_episode_completion_usage_and_isolated_process_cleanup(fake_episod
     fake.process.terminate.assert_not_called()
     assert fake.budget.used == 0
     assert "fake-secret" not in trial.canonical(fake.audit.events)
+
+
+async def test_final_agent_handoff_is_preserved_in_episode_result(fake_episode):
+    fake = fake_episode
+    fake.session.submission = {}
+    result = await fake.run([
+        {"type": "item.completed", "item": {"type": "agent_message", "text": "Submitted report."}},
+        {"type": "turn.completed", "usage": {"input_tokens": 10, "output_tokens": 2}},
+    ])
+    assert result["status"] == "complete"
+    assert result["final_message"] == "Submitted report."
 
 
 async def test_custom_episode_preserves_precomputed_signalweave_bundle(fake_episode):
@@ -405,11 +434,15 @@ async def test_episode_timeout_kills_process_and_closes_server(fake_episode):
     assert fake_episode.audit.events[-1]["error_type"] == "episode_timeout"
 
 
-async def test_exhausted_shared_budget_stops_process(fake_episode):
+async def test_exhausted_jev_budget_does_not_abort_codex_agent(fake_episode):
     fake_episode.budget.exhausted = True
-    result = await fake_episode.run([{"type": "turn.started"}])
-    assert result["status"] == "failed" and result["error"] == "budget_exhausted"
-    fake_episode.process.terminate.assert_called_once()
+    fake_episode.session.phase = "onboarding"
+    fake_episode.session.setup_complete = True
+    result = await fake_episode.run([{"type": "turn.completed", "usage": {
+        "input_tokens": 10, "output_tokens": 2, "cached_input_tokens": 0,
+    }}])
+    assert result["status"] == "complete" and result["error"] is None
+    fake_episode.process.terminate.assert_not_called()
     assert fake_episode.closed
 
 

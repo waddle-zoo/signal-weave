@@ -44,7 +44,7 @@ def test_token_preset_server_fails_closed_without_static_principal(monkeypatch):
     monkeypatch.setenv("SIGNALWEAVE_AUTH_MODE", "token")
     monkeypatch.delenv("SIGNALWEAVE_TENANT_ID", raising=False)
     monkeypatch.delenv("SIGNALWEAVE_PRINCIPAL_ID", raising=False)
-    monkeypatch.setattr(cli, "build_runtime", lambda: SimpleNamespace(principal=None))
+    monkeypatch.setattr(cli, "build_runtime", lambda **_kwargs: SimpleNamespace(principal=None))
     monkeypatch.setattr(sys, "argv", ["signalweave", "serve", "--transport", "streamable-http"])
 
     with pytest.raises(RuntimeError, match="streamable HTTP requires"):
@@ -55,7 +55,7 @@ def test_token_http_fails_closed_without_any_static_principal(monkeypatch):
     monkeypatch.setenv("TYPESAFE_API_KEY", "test-cli-key")
     monkeypatch.delenv("PRESET_URL", raising=False)
     monkeypatch.setenv("SIGNALWEAVE_AUTH_MODE", "token")
-    monkeypatch.setattr(cli, "build_runtime", lambda: SimpleNamespace(principal=None))
+    monkeypatch.setattr(cli, "build_runtime", lambda **_kwargs: SimpleNamespace(principal=None))
     monkeypatch.setattr(sys, "argv", ["signalweave", "serve", "--transport", "streamable-http"])
 
     with pytest.raises(RuntimeError, match="streamable HTTP requires"):
@@ -81,6 +81,78 @@ def test_init_cli_and_repeated_init_do_not_print_key(monkeypatch, tmp_path, caps
     assert str(home / "config.toml") in captured.out
 
 
+def test_guided_agent_setup_saves_private_jev_key(monkeypatch, tmp_path, capsys):
+    home = tmp_path / "agent-only"
+    key_file = tmp_path / "typesafe-key"
+    key_file.write_text("test-agent-jev-key")
+    key_file.chmod(0o600)
+    monkeypatch.setattr(sys, "argv", [
+        "signalweave", "setup", "--home", str(home), "--non-interactive",
+        "--key-file", str(key_file), "--source", "skip", "--no-register-agent",
+    ])
+
+    cli.main()
+
+    environment = setup.read_config(home)[1]
+    assert environment["SIGNALWEAVE_MCP_PROFILE"] == "agent"
+    assert environment["SIGNALWEAVE_DECISION_PROVIDER"] == "jev"
+    assert (home / "typesafe.key").read_text() == "test-agent-jev-key\n"
+    assert (home / "typesafe.key").stat().st_mode & 0o777 == 0o600
+    assert "Local configuration saved" in capsys.readouterr().out
+
+
+def test_bare_command_starts_keyless_chatgpt_plan_setup(monkeypatch, tmp_path, capsys):
+    from signalweave import chatgpt_auth
+
+    monkeypatch.setattr(sys, "argv", ["signalweave"])
+    answers = iter(["3", "5", "1", "n", "n"])
+    monkeypatch.setattr("builtins.input", lambda _prompt: next(answers))
+    monkeypatch.setattr(
+        chatgpt_auth, "auth_status",
+        lambda _home: {"status": "connected", "account": None, "plan_usage": "enabled"},
+    )
+
+    cli.main()
+
+    home = Path.home() / ".signalweave"
+    environment = setup.read_config(home)[1]
+    assert environment["SIGNALWEAVE_DECISION_PROVIDER"] == "chatgpt-plan"
+    assert "TYPESAFE_API_KEY_FILE" not in environment
+    assert "OPENAI_API_KEY_FILE" not in environment
+    output = capsys.readouterr().out
+    assert "Choose how SignalWeave should make recurring card decisions" in output
+    assert "Local configuration saved" in output
+
+
+def test_bare_command_uses_configured_private_home_without_restarting_setup(local_home, monkeypatch, capsys):
+    monkeypatch.setenv("SIGNALWEAVE_HOME", str(local_home))
+    monkeypatch.setattr(sys, "argv", ["signalweave"])
+
+    def unexpected_prompt(_prompt):
+        raise AssertionError("A configured home must show status rather than starting setup")
+
+    monkeypatch.setattr("builtins.input", unexpected_prompt)
+    cli.main()
+    assert "SignalWeave:" in capsys.readouterr().out
+    assert sys.argv == ["signalweave", "status"]
+
+
+def test_noninteractive_chatgpt_setup_does_not_open_browser(monkeypatch, tmp_path, capsys):
+    home = tmp_path / "keyless-home"
+    monkeypatch.setattr(sys, "argv", [
+        "signalweave", "setup", "--home", str(home), "--non-interactive",
+        "--decision-provider", "chatgpt-plan", "--source", "skip", "--no-register-agent",
+    ])
+
+    cli.main()
+
+    environment = setup.read_config(home)[1]
+    assert environment["SIGNALWEAVE_DECISION_PROVIDER"] == "chatgpt-plan"
+    output = capsys.readouterr().out
+    assert "signalweave auth login" in output
+    assert "Opening OpenAI sign-in" not in output
+
+
 @pytest.mark.parametrize("home_mode", ["explicit", "environment", "default"])
 def test_stdio_loads_local_config_before_runtime_without_stdout(
     local_home, monkeypatch, tmp_path, capsys, home_mode,
@@ -95,21 +167,24 @@ def test_stdio_loads_local_config_before_runtime_without_stdout(
     calls = []
     runtime = object()
 
-    def build():
+    def build(**kwargs):
+        assert kwargs == {"mode": "jev"}
         assert os.environ["TYPESAFE_API_KEY_FILE"] == str(expected_home / "typesafe.key")
         assert os.environ["SIGNALWEAVE_STORE_PATH"] == str(expected_home / "state" / "signalweave.db")
         assert os.environ["SIGNALWEAVE_ALLOW_EMPTY_SOURCES"] == "1"
         calls.append("build")
         return runtime
 
-    def create(value):
+    def create(value, **kwargs):
         assert value is runtime
+        assert kwargs == {"profile": "agent"}
         return SimpleNamespace(run=lambda **kwargs: calls.append(kwargs))
 
     monkeypatch.setattr(cli, "build_runtime", build)
     monkeypatch.setattr(mcp_server, "create_mcp", create)
     monkeypatch.setattr(cli, "_run_stdio", lambda server: server.run(transport="stdio"))
     argv = ["signalweave", "serve"]
+    monkeypatch.setenv("SIGNALWEAVE_MCP_PROFILE", "agent")
     if home_mode == "environment":
         monkeypatch.setenv("SIGNALWEAVE_HOME", str(local_home))
     elif home_mode == "explicit":
@@ -136,29 +211,31 @@ def test_serve_remains_environment_driven_without_a_local_profile(monkeypatch):
     cli.main()
 
 
-def test_serve_without_jev_key_prints_setup_guidance_not_traceback(monkeypatch, capsys):
-    monkeypatch.setattr(cli, "_serve", lambda _args: pytest.fail("must validate before starting"))
+def test_serve_without_jev_key_fails_before_startup(monkeypatch, tmp_path, capsys):
+    monkeypatch.delenv("TYPESAFE_API_KEY", raising=False)
+    monkeypatch.delenv("TYPESAFE_API_KEY_FILE", raising=False)
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    calls = []
+    monkeypatch.setattr(cli, "_serve", lambda _args: calls.append(_args.profile))
     monkeypatch.setattr(sys, "argv", ["signalweave", "serve"])
     with pytest.raises(SystemExit) as error:
         cli.main()
     assert error.value.code == 1
-    captured = capsys.readouterr()
-    assert captured.out == ""
-    assert "TypeSafe key is missing" in captured.err
-    assert "signalweave setup" in captured.err
-    assert "Traceback" not in captured.err
+    assert calls == []
+    assert "TypeSafe key" in capsys.readouterr().err
 
 
-def test_local_serve_error_is_only_on_stderr(local_home, monkeypatch, capsys):
+def test_local_agent_serve_missing_jev_key_fails_cleanly(local_home, monkeypatch, capsys):
     (local_home / "typesafe.key").unlink()
-    monkeypatch.setattr(cli, "build_runtime", lambda: pytest.fail("runtime built before setup validation"))
+    monkeypatch.setenv("SIGNALWEAVE_MCP_PROFILE", "agent")
+    calls = []
+    monkeypatch.setattr(cli, "_serve", lambda _args: calls.append("served"))
     monkeypatch.setattr(sys, "argv", ["signalweave", "serve", "--home", str(local_home)])
     with pytest.raises(SystemExit) as error:
         cli.main()
     assert error.value.code == 1
-    captured = capsys.readouterr()
-    assert captured.out == ""
-    assert "missing or unreadable" in captured.err
+    assert calls == []
+    assert "TypeSafe key" in capsys.readouterr().err
 
 
 def test_explicit_missing_home_does_not_fall_back_to_environment(tmp_path, monkeypatch, capsys):
@@ -244,13 +321,35 @@ def test_run_requires_explicit_run_key(monkeypatch):
     assert error.value.code == 2
 
 
+def test_run_is_available_in_the_default_agent_profile(monkeypatch, tmp_path, capsys):
+    key_file = tmp_path / "typesafe-key"
+    key_file.write_text("test-run-jev-key")
+    key_file.chmod(0o600)
+    home = setup.initialize(tmp_path / "signalweave-home", key_file=key_file)
+    calls = []
+
+    async def run_card(card_id, run_key, output_dir=None):
+        calls.append((card_id, run_key, output_dir))
+        return {"card_id": card_id, "outcome": "investigate"}
+
+    monkeypatch.setitem(sys.modules, "signalweave.local_run", SimpleNamespace(run_card=run_card))
+    monkeypatch.setenv("SIGNALWEAVE_MCP_PROFILE", "agent")
+    monkeypatch.setattr(sys, "argv", [
+        "signalweave", "run", "card-123", "--run-key", "daily:123", "--home", str(home),
+    ])
+    cli.main()
+    assert calls == [("card-123", "daily:123", None)]
+    assert '"outcome": "investigate"' in capsys.readouterr().out
+
+
 @pytest.mark.asyncio
 @pytest.mark.parametrize("with_source", [True, False])
 @pytest.mark.parametrize("check_shutdown_flush", [True, False])
 async def test_installed_stdio_protocol_from_unrelated_directory(
     local_home, tmp_path, monkeypatch, with_source, check_shutdown_flush,
 ):
-    # Startup/tool discovery is offline: no tool that fetches data is invoked.
+    # MCP startup/tool discovery is offline: the key is wired but no judgment
+    # endpoint is contacted until the agent runs an approved card.
     config = local_home / "config.toml"
     if with_source:
         config.write_text(config.read_text() + '\nSUPERSET_URL = "http://127.0.0.1:9"\n')
@@ -263,7 +362,7 @@ async def test_installed_stdio_protocol_from_unrelated_directory(
         args=([] if entrypoint.exists() else ["-m", "signalweave.cli"]) + [
             "serve", "--home", str(local_home),
         ],
-        env=dict(os.environ),
+    env={**os.environ, "SIGNALWEAVE_MCP_PROFILE": "agent"},
     )
     if check_shutdown_flush:
         parameters.command = sys.executable
@@ -280,7 +379,10 @@ async def test_installed_stdio_protocol_from_unrelated_directory(
                     initialized = await session.initialize()
                     assert initialized.serverInfo.name
                     tools = await session.list_tools()
-                    assert "evaluate_insight_card" in {tool.name for tool in tools.tools}
+                    names = {tool.name for tool in tools.tools}
+                    assert "evaluate_insight_card" in names
+                    assert "get_decision_receipt" in names
+                    assert "prepare_insight_run" not in names
         stderr.seek(0)
         diagnostic = stderr.read()
     assert "Traceback" not in diagnostic
@@ -332,6 +434,8 @@ async def test_binary_checker_checks_stderr_after_shutdown_without_echo(
 ):
     from scripts import check_binary
 
+    monkeypatch.setattr(check_binary, "verify_binary", lambda _: {"fixture": True})
+
     binary = tmp_path / "binary"
     key = tmp_path / "key"
     key.write_text("test-only-key")
@@ -342,13 +446,30 @@ async def test_binary_checker_checks_stderr_after_shutdown_without_echo(
             def option(name):
                 return argv[argv.index(name) + 1]
 
-            setup_local(
-                option("--home"), key_file=option("--key-file"),
-                source=option("--source"), url=option("--url"),
-                username=option("--username"), secret_file=option("--secret-file"),
-                tenant=option("--tenant"), principal=option("--principal"),
-                agent=option("--agent"), non_interactive=True,
-            )
+            provider = option("--decision-provider") if "--decision-provider" in argv else "jev"
+            if provider == "openai-decisions":
+                setup_local(
+                    option("--home"), decision_provider=provider,
+                    openai_key_file=option("--openai-key-file"), source=option("--source"),
+                    non_interactive=True,
+                )
+            elif provider == "chatgpt-plan":
+                setup_local(
+                    option("--home"), decision_provider=provider,
+                    source=option("--source"), non_interactive=True,
+                )
+            else:
+                setup_local(
+                    option("--home"), key_file=option("--key-file"),
+                    source=option("--source"), url=option("--url"),
+                    username=option("--username"), secret_file=option("--secret-file"),
+                    tenant=option("--tenant"), principal=option("--principal"),
+                    agent=option("--agent"), non_interactive=True,
+                )
+        if argv[1] == "auth":
+            return SimpleNamespace(returncode=0, stderr="", stdout="ChatGPT plan: not_connected")
+        if argv[1] == "status":
+            return SimpleNamespace(returncode=0, stderr="", stdout="OPENAI_API_KEY: configured")
         return SimpleNamespace(returncode=0, stderr="", stdout=(
             f"SignalWeave {cli.__version__}" if argv[1] == "--version" else
             json.dumps({"binary": str(binary)}) if argv[1] == "agent-config"
@@ -407,6 +528,8 @@ async def test_binary_checker_checks_stderr_after_shutdown_without_echo(
 ])
 async def test_binary_checker_command_failures_do_not_echo_stderr(tmp_path, monkeypatch, capsys, returncode, stderr):
     from scripts import check_binary
+
+    monkeypatch.setattr(check_binary, "verify_binary", lambda _: {"fixture": True})
 
     key = tmp_path / "key"
     key.write_text("test-only-key")

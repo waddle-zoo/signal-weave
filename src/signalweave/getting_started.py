@@ -7,7 +7,64 @@ from typing import Literal
 GuideTask = Literal["start", "query", "report", "monitor"]
 
 
-def getting_started(task: GuideTask = "start") -> dict:
+def provider_label(provider: str) -> str:
+    return {"openai-decisions": "OpenAI Decisions",
+            "chatgpt-plan-responses": "ChatGPT-plan Responses"}.get(provider, "Jev")
+
+
+def _with_provider(value, provider: str):
+    label = provider_label(provider)
+    if label == "Jev":
+        return value
+    if isinstance(value, str):
+        return value.replace("Jev", label).replace("TypeSafe", "OpenAI")
+    if isinstance(value, list):
+        return [_with_provider(item, provider) for item in value]
+    if isinstance(value, dict):
+        return {key: _with_provider(item, provider) for key, item in value.items()}
+    return value
+
+
+def agent_getting_started(task: str = "start", *, decision_provider: str = "jev-latest") -> dict:
+    """Describe the narrow card-guided Jev decision path for the local agent."""
+    if task not in {"start", "monitor"}:
+        raise ValueError("The agent profile supports only start or monitor")
+    response = {
+        "task": task,
+        "purpose": "Reuse a human-reviewed card to fetch fresh evidence and get a typed Jev policy decision for your agent.",
+        "jev_used": False,
+        "inference_performed": False,
+        "decision_provider": decision_provider,
+        "agent_owns": ["source discovery", "deep investigation", "causal analysis", "explanation", "schedule", "delivery"],
+        "signalweave_owns": ["card storage", "approved source scope", "authorized retrieval", "Jev policy judgment", "evidence bundle", "durable decision receipt"],
+        "steps": [
+            {"tool": "list_insight_cards", "purpose": "Reuse an existing approved card when it already covers the recurring question."},
+            {"tool": "search_catalog", "purpose": "Recall source candidates; titles and lexical matches are not semantic proof."},
+            {"tool": "inspect_resource", "purpose": "Inspect likely sources, report the useful current findings with their periods and source-specific scopes, and clarify material missing context with the owner."},
+            {"tool": "onboard_insight_card", "purpose": "Save the owner's intent and exact selected_sources as a draft."},
+            {"tool": "review_insight_card", "purpose": "Check current source bindings and unresolved setup questions; ask the owner about material ambiguity."},
+            {"tool": "approve_insight_card", "purpose": "Request explicit owner approval after showing the saved card and source scope."},
+            {"tool": "evaluate_insight_card", "purpose": "On each recurring run, fetch approved sources and use Jev to apply the card's typed outcome policy; returns evidence and a durable receipt without delivering."},
+            {"tool": "get_decision_receipt", "purpose": "Read receipt evidence with result_path, offset and limit when a large handoff lists omitted sections; no new queries or inference. The full audit is available without result_path."},
+        ],
+        "limits": [
+            "No runtime catalog expansion; add newly needed sources to the card with owner review.",
+            "Jev makes the card-bounded policy judgment; it does not discover the business, infer causality, or replace the frontier agent's deeper investigation.",
+            "A returned evidence bundle is not a causal finding. Distinguish facts, hypotheses, and unknowns.",
+            "Large compact responses explicitly omit evidence. Read relevant receipt pages before explaining or delivering an action; omitted evidence is not empty or an all-clear.",
+            "SignalWeave does not schedule runs or send messages.",
+            "Missing alert criteria can pause recurring automation while the agent still reports supported facts from inspected evidence. Do not withhold a useful current report merely because the notification policy needs owner confirmation.",
+            "Source inspection may execute queries; respect user-approved access and cost limits.",
+        ],
+        "next": "Start with what the person wants to understand, inspect the relevant evidence and give one useful current report. Preserve distinct source scopes and uncertainty. Then review the reusable card and ask only for the missing context needed for recurring decisions or delivery.",
+    }
+    if task == "monitor":
+        response.pop("next", None)
+        response["repeat"] = "Reuse the same approved card ID and a stable per-run idempotency key; Jev applies the card policy, while the agent owns deeper investigation, cadence, narrative, and outcome-specific delivery."
+    return _with_provider(response, decision_provider)
+
+
+def getting_started(task: GuideTask = "start", *, decision_provider: str = "jev-latest") -> dict:
     """Describe actual tool paths without probing sources or exposing configuration."""
     common = {
         "task": task,
@@ -149,4 +206,6 @@ def getting_started(task: GuideTask = "start") -> dict:
                 "passing a small calibration set does not establish reliability on every later run."
             ),
         }
-    return result
+    result["decision_provider"] = decision_provider
+    result["inference_performed"] = False
+    return _with_provider(result, decision_provider)

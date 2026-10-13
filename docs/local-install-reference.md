@@ -34,7 +34,10 @@ Replace `vVERSION` and the platform with the actual artifact filename. Keep the
 executable at a persistent path and use that absolute path when registering
 your agent; the short guide's `~/.local/bin` commands apply to installer-based
 installs. Branch archives use the current package version but are **not stable
-releases**. `build-info.json` records their source commit and platform. Builds
+releases**. `build-info.json` records their source commit, production source
+fingerprint, binary checksum and platform. `signalweave --build-info` reads the
+identity embedded inside the executable. Trials reject a binary if its production
+source fingerprint differs from the checkout, even when its version is unchanged. Builds
 bundle Python, not source-server runtimes or company credentials.
 
 Only a pushed `vMAJOR.MINOR.PATCH` or `vMAJOR.MINOR.PATCHrcN` tag matching
@@ -81,7 +84,8 @@ sh install.sh --version vVERSION
 sh install.sh --version vVERSION --replace
 ```
 
-For this local preview, replace `vVERSION` with `v0.2.0rc2`. Default `latest`
+For the published local preview, replace `vVERSION` with `v0.2.0rc1`.
+The source candidate is `v0.2.0rc2` and has not been published yet. Default `latest`
 never accepts a prerelease; it does not silently opt users into preview builds.
 
 `--replace` opts into replacing an existing regular executable; without it the
@@ -101,10 +105,12 @@ for SignalWeave itself. A separately configured company MCP may have its own
 runtime requirements. The native release workflow builds macOS ARM64/x64 and
 Linux x64 artifacts; a branch build is not a published release.
 
-The production semantic core remains **Jev-only**; local setup does not add an
-offline model or heuristic fallback. Local-first means configuration and durable
-state live on your machine, while evaluation still uses configured sources and
-TypeSafe Jev.
+The default `agent` profile uses Jev for the approved card's typed policy
+decision and exposes only the onboarding, source inspection, card, and
+decision-receipt tools needed for that path. The `full` profile adds advanced
+metric-query, evaluation, certification, and webhook tools. Both profiles send
+configured decision evidence to TypeSafe. Local-first means configuration and
+durable receipts live on your machine; it does not make Jev calls offline.
 
 ## Install this checkout
 
@@ -145,8 +151,9 @@ directory. Keep that virtual environment in place.
 ## Initialize a private local home
 
 For a person installing SignalWeave, `setup` is the only command needed. It
-creates the private home, asks for the Jev key, walks through source connectors,
-and records the selected agent without requiring TOML editing:
+creates the private home, walks through source connectors, and records the
+selected agent without requiring TOML editing. The default card-decision path
+requires a TypeSafe key, which setup stores in the private local home:
 
 ```sh
 signalweave setup
@@ -354,17 +361,21 @@ The command forms and snippet schemas were checked against the official
 2026-09-30. Snippets include no secrets; the local process reads them from its
 configured home. Restart/reconnect the agent after registering the server.
 
-## Run an approved card once
+## Run an approved card from the CLI
+
+`run` executes the same approved-card Jev decision available through the
+default MCP. It is useful for a one-off human check or local smoke test; the MCP
+path is the normal handoff to Codex or Claude.
 
 ```sh
-signalweave run CARD_ID --run-key daily:2026-09-30 --home "$HOME/.signalweave"
-signalweave run CARD_ID --run-key daily:2026-09-30 --output ./reports --home "$HOME/.signalweave"
+signalweave run CARD_ID --run-key daily:2026-10-06 --home "$HOME/.signalweave"
+signalweave run CARD_ID --run-key daily:2026-10-06 --output ./reports --home "$HOME/.signalweave"
 ```
 
-`run` invokes the production card-evaluation path once and prints its JSON
-result. The optional `--output` is a directory, resolved from your current
+`run` invokes the card-evaluation path once and prints its JSON result. The
+optional `--output` is a directory, resolved from your current
 working directory, for rendered artifacts. Use a stable run key to retry the
 same evaluation idempotently; use a new key for a new evaluation. The card must
 already have completed review and approval and have approved source evidence.
 Live evaluation can make source and Jev requests. SignalWeave does not install
-a scheduler; scheduling and delivery remain with your existing caller.
+a scheduler, and scheduling and delivery remain with your existing caller.

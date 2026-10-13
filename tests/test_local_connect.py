@@ -66,7 +66,7 @@ def test_bare_interactive_setup_and_single_registration_command(tmp_path, monkey
     from signalweave import client_setup
 
     hidden = iter(["test-jev-credential", "test-password-credential"])
-    visible = iter(["superset", "https://bi.internal", "analyst", "claude", "", ""])
+    visible = iter(["1", "superset", "https://bi.internal", "analyst", "claude", "", ""])
     monkeypatch.setenv("SIGNALWEAVE_HOME", str(tmp_path / "wizard"))
     monkeypatch.setattr(setup.getpass, "getpass", lambda _: next(hidden))
     monkeypatch.setattr("builtins.input", lambda _: next(visible))
@@ -93,7 +93,7 @@ def test_interactive_setup_can_finish_a_codex_handoff(tmp_path, monkeypatch, cap
     from signalweave import client_setup
 
     monkeypatch.setattr(setup.getpass, "getpass", lambda _: "test-jev-credential")
-    visible = iter(["skip", "codex", "", ""])
+    visible = iter(["1", "skip", "codex", "", ""])
     monkeypatch.setattr("builtins.input", lambda _: next(visible))
     monkeypatch.setattr(
         client_setup,
@@ -116,7 +116,7 @@ def test_human_setup_can_add_two_connector_types_in_one_walkthrough(tmp_path, mo
     }]))
     hidden = iter(["test-jev-credential", "test-password-credential"])
     visible = iter([
-        "superset", "http://127.0.0.1:8088", "admin", "codex",
+        "1", "superset", "http://127.0.0.1:8088", "admin", "codex",
         "y", "trino", "https://trino.example", str(catalog), "n",
     ])
     monkeypatch.setenv("SIGNALWEAVE_HOME", str(tmp_path / "wizard"))
@@ -401,7 +401,7 @@ def test_hidden_prompt_never_falls_back_to_echo(tmp_path, monkeypatch):
 
     monkeypatch.setattr(setup.getpass, "getpass", insecure)
     with pytest.raises(setup.SetupError, match="secure terminal"):
-        setup.setup_local(tmp_path / "home")
+        setup.setup_local(tmp_path / "home", decision_provider="jev", source="skip")
     assert not (tmp_path / "home" / "typesafe.key").exists()
 
 

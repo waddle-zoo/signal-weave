@@ -128,7 +128,7 @@ async def test_configured_principal_completes_real_mcp_approval_offline(tmp_path
     runtime = Runtime(card_store=SQLiteInsightCardStore(tmp_path / "cards.db"), sources=registry,
                       engine=InsightEngine(ApprovalDouble(), registry, clock=lambda: adapter.clock),
                       principal=operator_principal(company))
-    server = create_mcp(runtime)
+    server = create_mcp(runtime, profile="full")
     draft = await dispatch(server, "draft_insight_card", {
         "title": "Identity regression", "what_to_watch": company["brief"],
         "why_watch": "Daily review", "decision_guidance": company["owner_policy"],

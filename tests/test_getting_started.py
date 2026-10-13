@@ -34,7 +34,7 @@ def server(tmp_path):
         card_store=SQLiteInsightCardStore(tmp_path / "cards.db"),
         metric_query_store=SQLiteMetricQueryCardStore(tmp_path / "cards.db"),
         sources=sources, engine=InsightEngine(NoInference(), sources),
-    ))
+    ), profile="full")
 
 
 @pytest.mark.parametrize("task", ["start", "query", "report", "monitor"])

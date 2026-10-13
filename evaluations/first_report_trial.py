@@ -347,7 +347,7 @@ async def run_trial(output: Path, *, live=False, key_file=None, company_limit=4,
                           engine=InsightEngine(judger, registry, clock=lambda source=adapter: source.clock),
                           decision_receipts=SQLiteDecisionReceiptStore(database),
                           principal=operator_principal(company))
-        server = create_mcp(runtime)
+        server = create_mcp(runtime, profile="full")
         author = Session(company=company, adapter=adapter, server=server, phase="onboarding", audit=audit)
         instructions = ("You are onboarding a recurring analytical review. Read catalog and inspect relevant sources, "
                         "derive the reusable policy from the brief, draft a minimal card, and preview a useful first "

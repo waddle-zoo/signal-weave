@@ -4,6 +4,7 @@ from evaluations.local_superset_runtime_shadow_review import review
 def _report() -> dict:
     return {
         "trial": "local-superset-runtime-shadow",
+        "mcp_profile": "agent",
         "real_local_superset_transport": True,
         "synthetic_typesafe_transport": True,
         "live_jev_semantics_proven": False,
@@ -39,7 +40,11 @@ def _report() -> dict:
             },
             "dashboard_scope_warning": None,
         },
-        "checks": {"tenant_bound_runtime": True},
+        "checks": {
+            "tenant_bound_runtime": True,
+            "normal_agent_profile_used": True,
+            "selected_source_inspected_before_card_creation": True,
+        },
         "passed": True,
         "not_proven": [
             "live Jev semantic accuracy or business usefulness",
@@ -78,3 +83,16 @@ def test_independent_review_rejects_undisclosed_scope_fallback():
 
     assert result["passed"] is False
     assert "unscoped chart-query fallback was not disclosed" in result["failures"]
+
+
+def test_independent_review_rejects_trial_that_bypasses_default_agent_profile():
+    report = _report()
+    report["mcp_profile"] = "full"
+    report["checks"]["normal_agent_profile_used"] = False
+    report["passed"] = True
+
+    result = review(report)
+
+    assert result["passed"] is False
+    assert "trial did not use the normal agent MCP profile" in result["failures"]
+    assert "normal card evaluation path was bypassed" in result["failures"]

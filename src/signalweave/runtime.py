@@ -59,6 +59,33 @@ class Runtime:
     principal: PrincipalContext | None = None
 
 
+class AgentOwnedJudger:
+    """Keyless guard used only by source-health preflights, never the served card profile."""
+
+    name = "agent-owned"
+    skip_semantic_compile = True
+    supports_judgment_chunking = False
+
+    @staticmethod
+    def _unsupported() -> RuntimeError:
+        return RuntimeError(
+            "This runtime was built without Jev; configure a TypeSafe key and use "
+            "build_runtime(mode='jev') for card decisions"
+        )
+
+    async def compile_plan(self, *_args: Any, **_kwargs: Any) -> Any:
+        raise self._unsupported()
+
+    async def judge(self, *_args: Any, **_kwargs: Any) -> Any:
+        raise self._unsupported()
+
+    async def select_metric_plan(self, *_args: Any, **_kwargs: Any) -> Any:
+        raise self._unsupported()
+
+    async def select_investigation_sources(self, *_args: Any, **_kwargs: Any) -> Any:
+        raise self._unsupported()
+
+
 def _env_flag(name: str, default: bool = False) -> bool:
     value = os.getenv(name)
     if value is None:
@@ -330,26 +357,54 @@ def build_runtime(
     credential_vault: HostedCredentialVault | None = None,
     http_transport: Any | None = None,
 ) -> Runtime:
-    """Build the Jev runtime around the source adapters a deployment installs.
+    """Build the runtime around the source adapters a deployment installs.
 
     Superset is the first shipped adapter, not a runtime requirement. Embedded
     deployments can pass adapters for Looker, Hex, a data catalog, or an
     internal artifact gateway here. The environment-driven CLI still registers
     Superset and Trino when their connector settings are present.
     """
-    mode = (mode or os.getenv("TYPESAFE_MODE", "jev")).lower()
+    mode = (
+        mode
+        or os.getenv("SIGNALWEAVE_DECISION_PROVIDER")
+        or os.getenv("TYPESAFE_MODE", "jev")
+    ).lower()
+    max_jev_payload_bytes = _env_int(
+        "SIGNALWEAVE_MAX_JEV_PAYLOAD_BYTES", DEFAULT_MAX_JEV_PAYLOAD_BYTES
+    )
     if mode == "jev":
         key = load_api_key()
         if not key:
             raise RuntimeError(
                 "TYPESAFE_MODE=jev requires TYPESAFE_API_KEY or TYPESAFE_API_KEY_FILE"
             )
-        max_jev_payload_bytes = _env_int(
-            "SIGNALWEAVE_MAX_JEV_PAYLOAD_BYTES", DEFAULT_MAX_JEV_PAYLOAD_BYTES
-        )
         judger = JevJudger(api_key=key, max_payload_bytes=max_jev_payload_bytes)
+    elif mode == "openai-decisions":
+        key = load_deployment_secret("OPENAI_API_KEY")
+        if not key:
+            raise RuntimeError(
+                "SIGNALWEAVE_DECISION_PROVIDER=openai-decisions requires "
+                "OPENAI_API_KEY or OPENAI_API_KEY_FILE"
+            )
+        from .openai_judger import OpenAIDecisionJudger, OpenAIDecisionsTransport
+
+        judger = OpenAIDecisionJudger(OpenAIDecisionsTransport(key))
+    elif mode == "chatgpt-plan":
+        from .chatgpt_auth import get_access_token
+        from .openai_judger import ChatGPTPlanResponsesTransport, OpenAIDecisionJudger
+
+        judger = OpenAIDecisionJudger(
+            ChatGPTPlanResponsesTransport(
+                lambda: get_access_token(os.getenv("SIGNALWEAVE_HOME"))
+            )
+        )
+    elif mode == "agent":
+        judger = AgentOwnedJudger()
     else:
-        raise ValueError("SignalWeave production runtime only supports TYPESAFE_MODE=jev")
+        raise ValueError(
+            "SignalWeave decision provider must be jev, openai-decisions, "
+            "chatgpt-plan, or agent"
+        )
     configured_adapters = list(adapters)
     mcp_sources_file = os.getenv("SIGNALWEAVE_MCP_SOURCES_FILE", "").strip()
     if mcp_sources_file:

@@ -9,7 +9,7 @@ from tests.test_onboarding_windows import dispatch
 
 async def test_preview_reports_without_approving_or_delivering(tmp_path):
     runtime, source, judger = make_runtime(tmp_path, approved=False)
-    server = create_mcp(runtime)
+    server = create_mcp(runtime, profile="full")
     preview = await dispatch(server, "preview_investigation_report", {"card_id": "repeat"})
     assert preview["status"] == "preview"
     assert preview["delivery_enabled"] is False
@@ -23,7 +23,7 @@ async def test_preview_reports_without_approving_or_delivering(tmp_path):
 
 async def test_recurring_report_replays_without_new_fetch_or_judgment(tmp_path):
     runtime, source, judger = make_runtime(tmp_path)
-    server = create_mcp(runtime)
+    server = create_mcp(runtime, profile="full")
     args = {"card_id": "repeat", "idempotency_key": "daily:one"}
     first = await dispatch(server, "evaluate_insight_card", args)
     replay = await dispatch(server, "evaluate_insight_card", args)
@@ -36,7 +36,7 @@ async def test_recurring_report_replays_without_new_fetch_or_judgment(tmp_path):
 
 async def test_report_is_saved_in_receipt_not_rebuilt_on_replay(tmp_path, monkeypatch):
     runtime, source, _ = make_runtime(tmp_path)
-    server = create_mcp(runtime)
+    server = create_mcp(runtime, profile="full")
     args = {"card_id": "repeat", "idempotency_key": "frozen-report"}
     first = await dispatch(server, "evaluate_insight_card", args)
 
@@ -68,7 +68,7 @@ async def test_local_run_writes_private_report_artifacts(tmp_path):
 
 async def test_older_receipt_never_invents_a_historical_report(tmp_path, monkeypatch):
     runtime, source, judger = make_runtime(tmp_path)
-    server = create_mcp(runtime)
+    server = create_mcp(runtime, profile="full")
     args = {"card_id": "repeat", "idempotency_key": "before-reports"}
     await dispatch(server, "evaluate_insight_card", args)
     receipt = runtime.decision_receipts.get_by_idempotency_key("before-reports")
@@ -90,7 +90,7 @@ async def test_incomplete_comparison_does_not_become_successful_first_report(tmp
     from tests.test_diagnostics import comparison
 
     runtime, _, _ = make_runtime(tmp_path, comparison(coverage="partial"), approved=False)
-    server = create_mcp(runtime)
+    server = create_mcp(runtime, profile="full")
     result = await dispatch(server, "preview_investigation_report", {"card_id": "repeat"})
     assert result["report"]["status"] == "blocked"
     assert result["result"]["outcome"] == "insufficient_data"
@@ -103,7 +103,7 @@ async def test_report_tool_cannot_read_other_tenants_card(tmp_path):
     card = runtime.card_store.get_card("repeat")
     runtime.card_store.save_card(card.model_copy(update={"principal_tenant": "private"}))
     runtime.principal = PrincipalContext(principal_id="reader", tenant_id="different")
-    server = create_mcp(runtime)
+    server = create_mcp(runtime, profile="full")
     with pytest.raises(Exception, match="scope|tenant|access"):
         await dispatch(server, "preview_investigation_report", {"card_id": "repeat"})
     assert source.calls == 0

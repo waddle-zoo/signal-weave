@@ -20,6 +20,7 @@ def review(report: dict[str, Any]) -> dict[str, Any]:
     require(report.get("synthetic_typesafe_transport") is True, "TypeSafe transport was not marked synthetic")
     require(report.get("live_jev_semantics_proven") is False, "report overclaims live Jev semantics")
     require(report.get("managed_hosting_proven") is False, "report overclaims managed hosting")
+    require(report.get("mcp_profile") == "agent", "trial did not use the normal agent MCP profile")
 
     discovery = report.get("discovery") or {}
     require(int(discovery.get("match_count", 0)) >= 1, "discovery returned no candidates")
@@ -67,6 +68,14 @@ def review(report: dict[str, Any]) -> dict[str, Any]:
         )
 
     checks = report.get("checks") or {}
+    require(
+        checks.get("normal_agent_profile_used") is True,
+        "normal card evaluation path was bypassed",
+    )
+    require(
+        checks.get("selected_source_inspected_before_card_creation") is True,
+        "source was not inspected before card creation",
+    )
     require(bool(checks) and all(checks.values()), "producer checks did not all pass")
     require(report.get("passed") is True, "producer did not report pass")
     require(

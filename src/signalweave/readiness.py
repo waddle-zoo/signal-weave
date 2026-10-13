@@ -1,9 +1,7 @@
 """Deployment liveness and readiness checks.
 
-The HTTP process can be alive while its Jev runtime, source registry, or
-identity boundary is unusable.  Keep this report deliberately local and
-non-secret: it checks startup configuration and object wiring, not provider
-connectivity or a paid Jev request.
+Keep this report deliberately local and non-secret: it checks startup
+configuration and object wiring, not provider connectivity or a model request.
 """
 
 from __future__ import annotations
@@ -17,6 +15,7 @@ def deployment_readiness(
     runtime: Runtime,
     *,
     request_scoped_principal: bool = False,
+    profile: str = "full",
 ) -> dict[str, Any]:
     """Return a safe startup-readiness report for a deployed runtime.
 
@@ -26,15 +25,23 @@ def deployment_readiness(
     pretending it is a live connectivity check.
     """
 
+    if profile not in {"agent", "full"}:
+        raise ValueError("readiness profile must be 'agent' or 'full'")
     judger = runtime.engine.judger
     judger_name = str(getattr(judger, "name", ""))
+    decision_provider_required = profile in {"agent", "full"}
+    provider_wired = judger_name.startswith("jev") or judger_name in {
+        "openai-decisions",
+        "chatgpt-plan-responses",
+    }
     checks = {
-        "jev_decision_path": judger_name.startswith("jev"),
+        "decision_provider_wired": provider_wired if decision_provider_required else "not_required",
         "source_adapter": bool(runtime.sources.adapter_names()),
         "durable_card_store": runtime.card_store is not None,
-        "durable_receipt_store": runtime.decision_receipts is not None,
         "identity_boundary": bool(runtime.principal) or request_scoped_principal,
     }
+    if decision_provider_required:
+        checks["durable_receipt_store"] = runtime.decision_receipts is not None
     ready = all(checks.values())
     principal_mode = (
         "request_scoped"
@@ -50,6 +57,7 @@ def deployment_readiness(
         "checks": checks,
         "source_adapters": runtime.sources.adapter_names(),
         "decision_path": judger_name or "unconfigured",
+        "profile": profile,
         "principal_mode": principal_mode,
         "network_checks": 0,
         "jev_requests": 0,

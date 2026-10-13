@@ -38,6 +38,7 @@ def test_one_command_interactive_setup_walkthrough_is_human_first(tmp_path, monk
     home = tmp_path / "human home"
     secrets = iter(["test-typesafe-key", "test-superset-password"])
     answers = iter([
+        "1",                         # Jev decision provider
         "1",                         # Superset
         "http://localhost:8088",     # source URL
         "admin",                     # username
@@ -53,14 +54,18 @@ def test_one_command_interactive_setup_walkthrough_is_human_first(tmp_path, monk
 
     output = capsys.readouterr().out
     assert "Local configuration saved" in output
-    assert "test-typesafe-key" not in output
     assert "test-superset-password" not in output
     report = local_status(home)
     assert report["status"] == "ready_for_agent"
     assert report["agents"]["selected"] == "codex"
+    assert report["jev"]["status"] == "configured"
     assert next(item for item in report["connections"] if item["type"] == "superset")["status"] == "configured"
     config = (home / "config.toml").read_text()
+    assert "SIGNALWEAVE_MCP_PROFILE = \"agent\"" in config
+    assert "SIGNALWEAVE_DECISION_PROVIDER = \"jev\"" in config
     assert "TYPESAFE_API_KEY_FILE = \"typesafe.key\"" in config
+    assert (home / "typesafe.key").read_text() == "test-typesafe-key\n"
+    assert (home / "typesafe.key").stat().st_mode & 0o777 == 0o600
     assert "SUPERSET_PASSWORD_FILE = \"superset-password.key\"" in config
     assert "test-typesafe-key" not in config
     assert "test-superset-password" not in config
@@ -170,6 +175,7 @@ def test_status_and_ui_are_secret_free_and_show_next_steps(local_home):
     page, status, health = asyncio.run(exercise())
     assert page.status_code == 200
     assert "Is SignalWeave ready?" in page.text
+    assert "Decision provider" in page.text
     assert status.status_code == 200
     assert status.json()["status"] == "onboarding_only"
     assert "test-typesafe-key" not in status.text
@@ -205,7 +211,7 @@ async def test_live_source_check_is_bounded_and_does_not_call_jev(monkeypatch):
 
     monkeypatch.setattr(
         "signalweave.local_health.build_runtime",
-        lambda: SimpleNamespace(sources=Sources()),
+        lambda **_kwargs: SimpleNamespace(sources=Sources()),
     )
     healthy, messages = await live_source_report(timeout_seconds=1)
     assert healthy

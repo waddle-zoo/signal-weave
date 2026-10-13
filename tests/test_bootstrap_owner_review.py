@@ -85,7 +85,9 @@ async def test_label_safe_payload_same_episode_audit_hashes_and_counters(monkeyp
         return copy.deepcopy(COMPLETE)
 
     monkeypatch.setattr(transport, "codex_episode", episode)
-    result = await reviewer.review_owner_artifact(**inputs, audit=audit, budget=budget)
+    result = await reviewer.review_owner_artifact(
+        **inputs, audit=audit, budget=budget, model="gpt-6-luna", effort="xhigh",
+    )
 
     payload = observed["prompt_override"]
     assert set(payload) == {"owner_policy", "source_context", "execution_contract", "artifact"}
@@ -103,7 +105,8 @@ async def test_label_safe_payload_same_episode_audit_hashes_and_counters(monkeyp
     assert payload["artifact"]["card"]["numeric_conditions"] == inputs["artifact"]["card"]["numeric_conditions"]
     assert "SECRET_" not in canonical(payload) and "WRONG_OWNER_SOURCE" not in canonical(payload)
     assert observed["instructions_override"] == reviewer.REVIEW_INSTRUCTIONS
-    assert observed["effort"] == "high" and observed["timeout_seconds"] == 90
+    assert observed["model"] == "gpt-6-luna"
+    assert observed["effort"] == "xhigh" and observed["timeout_seconds"] == 90
     assert observed["max_tool_calls"] == 2 and observed["key"] == ""
     assert observed["audit"] is audit and observed["budget"] is budget
     assert result["approved"] is True and result["episode"] == COMPLETE
@@ -115,11 +118,20 @@ async def test_label_safe_payload_same_episode_audit_hashes_and_counters(monkeyp
     assert result["instructions_digest"] == digest(reviewer.REVIEW_INSTRUCTIONS)
     assert [event["kind"] for event in audit.events] == ["review.request", "tool.result", "review.result"]
     assert {event["episode"] for event in audit.events} == {"company:arm:onboarding"}
-    assert audit.events[0]["model"] == MODEL == "gpt-5.6-luna"
+    assert audit.events[0]["model"] == "gpt-6-luna"
+    assert audit.events[0]["effort"] == "xhigh"
     assert audit.events[-1]["approved"] is True
     assert audit.events[-1]["episode_result"] == COMPLETE
     assert "SECRET_" not in canonical(audit.events)
     assert inputs == before
+
+
+def test_owner_reviewer_separates_shadow_authorization_from_replay_certification():
+    assert "low-support preview" in reviewer.REVIEW_INSTRUCTIONS
+    assert "delivery-disabled, caller-managed shadow use" in reviewer.REVIEW_INSTRUCTIONS
+    assert "record acceptance as unassessed" in reviewer.REVIEW_INSTRUCTIONS
+    assert "frontier agent may analyze the returned source evidence" in reviewer.REVIEW_INSTRUCTIONS
+    assert "do not lower, waive, or reinterpret it to make a workflow replay pass" in reviewer.REVIEW_INSTRUCTIONS
 
 
 async def test_baseline_notes_need_no_card_and_rejection_retains_actionable_reasons(monkeypatch, inputs):
@@ -187,7 +199,7 @@ def test_execution_settings_do_not_replace_owner_thresholds(inputs):
     assert "20%" in payload["owner_policy"]["owner_answers"]["materiality"]
 
 
-@pytest.mark.parametrize("fault", ["failed", "error", "exit", "bool-exit", "foreign", "budget", "exception",
+@pytest.mark.parametrize("fault", ["failed", "error", "exit", "bool-exit", "foreign", "exception",
                                        "missing", "malformed", "malformed-episode"])
 async def test_failed_or_missing_review_cannot_approve_even_after_positive_tool(monkeypatch, inputs, fault):
     audit, budget = Audit(secrets=("never-log-this-exception",)), RequestBudget(1)
@@ -206,8 +218,6 @@ async def test_failed_or_missing_review_cannot_approve_even_after_positive_tool(
             result["exit_code"] = False
         elif fault == "foreign":
             result["foreign_tools"] = ["shell"]
-        elif fault == "budget":
-            budget.exhausted = True
         elif fault == "exception":
             audit.emit("tool.result", name="record_owner_review", result=session.submission)
             raise RuntimeError("never-log-this-exception")
@@ -297,21 +307,23 @@ async def test_actual_transport_overrides_need_no_adapter_and_use_luna_high(monk
     assert events[-1]["kind"] == "review.result"
 
 
-async def test_preexhausted_budget_does_not_launch_reviewer(monkeypatch, inputs):
+async def test_exhausted_jev_budget_does_not_block_independent_owner_review(monkeypatch, inputs):
     called = False
 
-    async def forbidden(*args, **kwargs):
+    async def review(session, **kwargs):
         nonlocal called
         called = True
-        raise AssertionError("No invocation after budget exhaustion")
+        await session.call("record_owner_review", {
+            "approved": True, "reasons": ["The owner policy is represented."],
+        })
+        return copy.deepcopy(COMPLETE)
 
-    monkeypatch.setattr(transport, "codex_episode", forbidden)
+    monkeypatch.setattr(transport, "codex_episode", review)
     budget = RequestBudget(0, exhausted=True)
     result = await reviewer.review_owner_artifact(**inputs, audit=Audit(), budget=budget)
-    assert not called
-    assert result["approved"] is False
-    assert result["episode"]["error"] == "BudgetExceeded"
-    assert result["episode"]["tool_calls"] == 0
+    assert called
+    assert result["approved"] is True
+    assert result["episode"]["status"] == "complete"
 
 
 def test_current_onboarding_source_context_is_bounded_and_cannot_leak_future_oracle(inputs):
@@ -499,6 +511,27 @@ def test_review_instructions_preserve_ordered_policy_precedence_and_exceptions()
     assert "precedence" in reviewer.REVIEW_INSTRUCTIONS
     assert "exception" in reviewer.REVIEW_INSTRUCTIONS
     assert "do not compress" in reviewer.REVIEW_INSTRUCTIONS
+    assert "does not automatically mean every material movement left after earlier rules" in reviewer.REVIEW_INSTRUCTIONS
+    assert "coherent upward movement" in reviewer.REVIEW_INSTRUCTIONS
+    assert "request the owner's actual clarification" in reviewer.REVIEW_INSTRUCTIONS
+
+
+def test_review_instructions_allow_distinct_scoped_sources_as_corroboration():
+    instructions = reviewer.REVIEW_INSTRUCTIONS
+    assert "distinct sources used only as corroborating context" in instructions
+    assert "Assess each source within its own stated scope and period" in instructions
+    assert "only when the owner explicitly requires it" in instructions
+    assert "Do not imply that contextual corroboration proves a shared cohort" in instructions
+
+
+def test_review_instructions_honor_fallbacks_but_escalate_undefined_terms():
+    instructions = reviewer.REVIEW_INSTRUCTIONS
+    assert "otherwise/fallback clause" in instructions
+    assert "Do not demand exhaustive branches when a fallback clearly covers the case" in instructions
+    assert "‘severe incident’" in instructions
+    assert "human-in-the-loop owner clarification" in instructions
+    assert "obtain the owner's actual answer" in instructions
+    assert "A fallback only settles that ambiguity when its own wording explicitly covers it" in instructions
 
 
 def test_execution_contract_rejects_unbound_numeric_conditions_and_exposes_typed_semantics(inputs):

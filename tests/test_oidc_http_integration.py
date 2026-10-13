@@ -134,6 +134,7 @@ async def test_signed_oidc_token_scopes_the_real_mcp_http_surface(tmp_path):
     )
     server = create_mcp(
         runtime,
+        profile="full",
         principal_resolver=lambda _ctx: principal_from_access_token(
             get_access_token(), required_scopes=["insights:read"]
         ),
@@ -319,6 +320,7 @@ async def test_oidc_request_tenant_selects_only_matching_preset_connection(
     assert runtime.sources.authorized_tenants == frozenset()
     server = create_mcp(
         runtime,
+        profile="full",
         principal_resolver=lambda _ctx: principal_from_access_token(
             get_access_token(), required_scopes=["insights:read"]
         ),
@@ -443,6 +445,7 @@ async def test_oidc_http_uses_production_environment_preset_bootstrap(monkeypatc
     assert runtime.sources.authorized_tenants == frozenset({"tenant-a"})
     server = create_mcp(
         runtime,
+        profile="full",
         principal_resolver=lambda _ctx: principal_from_access_token(
             get_access_token(), required_scopes=["insights:read"]
         ),

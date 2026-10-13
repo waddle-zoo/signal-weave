@@ -10,7 +10,7 @@ from signalweave.engine import InsightEngine
 from signalweave.mcp_server import create_mcp
 from signalweave.models import PrincipalContext, ResourceDescriptor, ResourceSnapshot, SourceRef
 from signalweave.readiness import deployment_readiness
-from signalweave.runtime import Runtime
+from signalweave.runtime import AgentOwnedJudger, Runtime
 from signalweave.sources import SourceRegistry
 from signalweave.store import (
     InMemoryDecisionFeedbackStore,
@@ -70,7 +70,8 @@ def test_readiness_report_is_safe_and_has_no_network_or_jev_work(tmp_path):
             tmp_path,
             principal=PrincipalContext(tenant_id="acme", principal_id="agent"),
             sources=[SourceDouble()],
-        )
+        ),
+        profile="agent",
     )
 
     assert report["status"] == "ready"
@@ -79,7 +80,41 @@ def test_readiness_report_is_safe_and_has_no_network_or_jev_work(tmp_path):
     assert report["principal_mode"] == "static"
     assert report["network_checks"] == 0
     assert report["jev_requests"] == 0
+    assert report["checks"]["decision_provider_wired"] is True
     assert all(field not in report for field in ("api_key", "access_token", "secret", "password"))
+
+
+@pytest.mark.parametrize("provider_name", ["openai-decisions", "chatgpt-plan-responses"])
+def test_readiness_accepts_non_jev_provider_wiring_without_auth_probe(tmp_path, provider_name):
+    runtime = _runtime(
+        tmp_path,
+        principal=PrincipalContext(tenant_id="acme", principal_id="agent"),
+        sources=[SourceDouble()],
+    )
+    runtime.engine.judger = JevDouble()
+    runtime.engine.judger.name = provider_name
+
+    report = deployment_readiness(runtime, profile="agent")
+
+    assert report["status"] == "ready"
+    assert report["checks"]["decision_provider_wired"] is True
+    assert report["decision_path"] == provider_name
+    assert report["network_checks"] == 0
+    assert report["jev_requests"] == 0
+
+
+def test_readiness_rejects_unconfigured_agent_owned_guard(tmp_path):
+    runtime = _runtime(
+        tmp_path,
+        principal=PrincipalContext(tenant_id="acme", principal_id="agent"),
+        sources=[SourceDouble()],
+    )
+    runtime.engine.judger = AgentOwnedJudger()
+
+    report = deployment_readiness(runtime, profile="agent")
+
+    assert report["status"] == "not_ready"
+    assert report["checks"]["decision_provider_wired"] is False
 
 
 def test_readiness_fails_closed_without_source_or_identity(tmp_path):
@@ -91,14 +126,19 @@ def test_readiness_fails_closed_without_source_or_identity(tmp_path):
     assert report["checks"]["identity_boundary"] is False
 
 
+@pytest.mark.parametrize(
+    "provider_name",
+    ["jev-readiness-test", "openai-decisions", "chatgpt-plan-responses"],
+)
 @pytest.mark.asyncio
-async def test_readyz_is_public_but_mcp_remains_bearer_protected(tmp_path):
+async def test_readyz_is_public_but_mcp_remains_bearer_protected(tmp_path, provider_name):
     runtime = _runtime(
         tmp_path,
         principal=PrincipalContext(tenant_id="acme", principal_id="agent"),
         sources=[SourceDouble()],
     )
-    server = create_mcp(runtime, require_principal=True)
+    runtime.engine.judger.name = provider_name
+    server = create_mcp(runtime, profile="full", require_principal=True)
     server_app = server.streamable_http_app()
     app = BearerTokenMiddleware(server_app, token="deployment-token")
 
@@ -111,6 +151,8 @@ async def test_readyz_is_public_but_mcp_remains_bearer_protected(tmp_path):
             ready = await client.get("/readyz")
             assert ready.status_code == 200
             assert ready.json()["startup_ready"] is True
+            assert ready.json()["decision_path"] == provider_name
+            assert ready.json()["checks"]["decision_provider_wired"] is True
 
             health = await client.get("/healthz")
             assert health.status_code == 200

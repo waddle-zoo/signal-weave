@@ -26,7 +26,7 @@ from .evaluation import (
     card_acceptance_digest,
     has_current_evidence_admission_policy,
 )
-from .getting_started import GuideTask, getting_started
+from .getting_started import GuideTask, agent_getting_started, getting_started, provider_label
 from .models import (
     CardDeliveryMethods,
     CertificationRecord,
@@ -120,6 +120,20 @@ def _evaluation_card(card: InsightCard) -> dict[str, Any]:
 
 
 ResponseMode = Literal["compact", "full"]
+MCPProfile = Literal["agent", "full"]
+
+AGENT_PROFILE_TOOLS = frozenset({
+    "get_signalweave_guide",
+    "search_catalog",
+    "inspect_resource",
+    "onboard_insight_card",
+    "review_insight_card",
+    "approve_insight_card",
+    "list_insight_cards",
+    "get_insight_card",
+    "evaluate_insight_card",
+    "get_decision_receipt",
+})
 
 
 def _compact_text(value: Any, limit: int = 420) -> Any:
@@ -523,6 +537,56 @@ def _compact_simulation_response(response: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
+AGENT_HANDOFF_BYTES = 64 * 1024
+RECEIPT_PAGE_BYTES = 32 * 1024
+
+
+def _json_bytes(value: Any) -> int:
+    return len(json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode("utf-8"))
+
+
+def _receipt_result_page(result: dict[str, Any], path: list[str], offset: int, limit: int) -> dict:
+    """Read a lossless, byte-bounded slice without refetching data or inference."""
+    if not path or len(path) > 8 or not all(isinstance(key, str) and len(key) <= 256 for key in path):
+        raise ValueError("result_path must contain one to eight field names or list indexes")
+    if isinstance(offset, bool) or not isinstance(offset, int) or offset < 0:
+        raise ValueError("offset must be a nonnegative integer")
+    if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 100:
+        raise ValueError("limit must be between 1 and 100")
+    value: Any = result
+    for key in path:
+        if isinstance(value, dict) and key in value:
+            value = value[key]
+        elif isinstance(value, list) and key.isascii() and key.isdecimal() and int(key) < len(value):
+            value = value[int(key)]
+        else:
+            raise ValueError("result_path does not exist in this receipt")
+    kind = "list" if isinstance(value, list) else "object" if isinstance(value, dict) else "scalar"
+    entries = list(value.items()) if kind == "object" else value if kind == "list" else [value]
+    page: dict[str, Any] = {
+        "path": path, "kind": kind, "offset": offset, "total": len(entries),
+        "items": [], "has_more": False, "next_offset": None, "oversized_item": None,
+        "byte_budget": RECEIPT_PAGE_BYTES,
+    }
+    for index in range(offset, min(len(entries), offset + limit)):
+        entry = {"key": entries[index][0], "value": entries[index][1]} if kind == "object" else entries[index]
+        if _json_bytes({**page, "items": [*page["items"], entry]}) > RECEIPT_PAGE_BYTES - 1024:
+            if not page["items"]:
+                page["oversized_item"] = {
+                    "index": index,
+                    "path": [*path, entries[index][0] if kind == "object" else str(index)] if kind != "scalar" else path,
+                    "instruction": "Read this nested path, or explicitly request the full receipt for an oversized scalar. No value was truncated.",
+                }
+            break
+        page["items"].append(entry)
+    next_offset = offset + len(page["items"])
+    page["has_more"] = next_offset < len(entries)
+    page["next_offset"] = next_offset if page["has_more"] else None
+    page["section_complete"] = offset == 0 and next_offset == len(entries) and page["oversized_item"] is None
+    page["coverage"] = "complete_section" if page["section_complete"] else "partial_section"
+    return page
+
+
 def _compact_evaluation_response(response: dict[str, Any]) -> dict[str, Any]:
     """Return one evidence bundle without repeating the same payload three times.
 
@@ -530,7 +594,8 @@ def _compact_evaluation_response(response: dict[str, Any]) -> dict[str, Any]:
     receipt.  The normal agent handoff only needs the active card, receipt
     metadata, and the structured result; returning the top-level resources,
     plan, retrieval bundle, and rendered markdown again needlessly expands the
-    next model context.  No evidence fields are dropped from ``result``.
+    next model context. Large results use explicit receipt-backed paging,
+    never silent evidence truncation. This does not alter the saved judgment.
     """
     result = dict(response.get("result") or {})
     had_markdown = isinstance(result.pop("report_markdown", None), str)
@@ -546,6 +611,40 @@ def _compact_evaluation_response(response: dict[str, Any]) -> dict[str, Any]:
     if "card" in response:
         compact["card"] = _compact_card(response.get("card"))
     compact["report_markdown_available"] = had_markdown
+    if _json_bytes(compact) > AGENT_HANDOFF_BYTES:
+        receipt_id = (response.get("receipt") or {}).get("receipt_id")
+        if not isinstance(receipt_id, str) or not receipt_id:
+            raise ValueError("A large compact handoff requires a durable receipt for evidence reads")
+        summary_fields = (
+            "card_id", "outcome", "summary", "rationale", "confidence", "probabilities",
+            "delivery_methods", "source_keys", "evaluator", "evaluated_at",
+        )
+        compact["result"] = {}
+        for key in summary_fields:
+            if key in result and _json_bytes(result[key]) <= 4096:
+                candidate = {**compact["result"], key: result[key]}
+                if _json_bytes(candidate) <= 24 * 1024:
+                    compact["result"] = candidate
+        sections = []
+        for key, value in result.items():
+            entry = {"path": [key], "count": len(value) if isinstance(value, (list, dict)) else 1}
+            if len(key) > 256 or len(sections) >= 50 or _json_bytes([*sections, entry]) > 12 * 1024:
+                break
+            sections.append(entry)
+        compact["evidence_access"] = {
+            "coverage": "not_included_in_handoff", "complete": False,
+            "tool": "get_decision_receipt",
+            "receipt_id": receipt_id,
+            "available_sections": sections,
+            "section_directory_total": len(result),
+            "section_directory_complete": len(sections) == len(result),
+            "instruction": "Read relevant receipt sections with result_path, offset and limit before explaining or delivering an action. An omitted section is not empty or an all-clear. The full result remains stored; pages perform no new source or model calls.",
+        }
+        if _json_bytes(compact) > AGENT_HANDOFF_BYTES:
+            compact.pop("card", None)
+            compact["card_details_available"] = True
+        if _json_bytes(compact) > AGENT_HANDOFF_BYTES:
+            raise ValueError("Compact receipt metadata exceeds the handoff bound; explicitly request the full audit")
     return compact
 
 
@@ -622,13 +721,16 @@ CARD_AUTHORING_GUIDANCE = (
 def create_mcp(
     runtime: Runtime | None = None,
     *,
+    profile: MCPProfile = "agent",
     principal_resolver: Callable[[Context], PrincipalContext] | None = None,
     http_principal_resolver: Callable[[], PrincipalContext] | None = None,
     auth_settings: Any | None = None,
     token_verifier: Any | None = None,
     require_principal: bool = False,
 ) -> FastMCP:
-    runtime = runtime or build_runtime()
+    if profile not in {"agent", "full"}:
+        raise ValueError("MCP profile must be 'agent' or 'full'")
+    runtime = runtime or build_runtime(mode="agent" if profile == "agent" else "jev")
     if require_principal and runtime.principal is None and principal_resolver is None:
         raise RuntimeError(
             "the HTTP MCP server requires a deployment or request principal; "
@@ -644,74 +746,37 @@ def create_mcp(
     decision_feedback = runtime.decision_feedback or InMemoryDecisionFeedbackStore()
     certification_reports = runtime.certification_reports or InMemoryCertificationReportStore()
     idempotency_locks: dict[str, asyncio.Lock] = {}
+    decision_provider = str(getattr(runtime.engine.judger, "name", "jev-latest"))
     mcp = FastMCP(
         "signal-weave",
         instructions=(
-            "New users: call get_signalweave_guide first for the query, report or monitor path. "
-            "SignalWeave saves and repeats reviewed investigations using TypeSafe Jev. "
-            "Start with the user's business question, not a JSON form: use "
-            "list_resources/search_catalog and inspect_resource first so the frontier agent can choose and understand the "
-            "assets. Then use bootstrap_insight_card or onboard_insight_card with exact selected_sources to save the "
-            "agent's reviewed scope. The normal selected-source path is fixed/none: Jev does not discover assets or "
-            "perform the investigation. Choose retrieval_mode=expand or investigation_mode=bounded only when the "
-            "owner explicitly wants SignalWeave to make that bounded runtime selection. Read its setup_questions "
-            "and review blockers. "
-            "A model selecting one metric source does not confirm anchor-only scope; when the goal asks why a movement "
-            "happened or names related context, inspect adapter-published relationship candidates and preserve required "
-            "partition, deployment, lineage, quality, or ownership sources before choosing fixed. "
-            "setup_questions and review blockers. Inspect the proposed sources; ask "
-            "the owner only for unresolved metric definitions, comparison periods, "
-            "materiality rules, or notification destinations. Never invent those answers. "
-            "Keep one-time setup questions separate from recurring analytical questions. "
-            "After the owner answers, preserve the answer as policy or source meaning, "
-            "not as an unanswered check on every run. Match each requested outcome to "
-            "its exact delivery_methods entry; prose cannot supply a missing route. "
-            "Treat delivery_methods.key as the stable caller-owned route identifier, not a human label. "
-            "When a caller has a separate recipient directory, resolve the canonical recipient by exact "
-            "delivery_methods.destination equality; never derive a recipient from label or prose. "
-            "Preserve the owner's rules in decision_guidance and required source "
-            "contracts. watch_for and questions are advisory analysis prompts by default, "
-            "not an implicit completeness checklist. Use evidence_requirements with exact "
-            "one-based question:N or watch:N keys set to true only for owner-mandated "
-            "prerequisites. They do not waive a required source or explicit comparison. "
-            "Review the effective requirements; follow_up_guidance cannot change them. Simulate the "
-            "draft and show the owner the selected sources, "
-            "calculations, uncertainties, and intended routes before requesting explicit "
-            "approval. Before claiming onboarding is tested, replay owner-labeled setup examples "
-            "with evaluate_card_workflow(acceptance_outcomes=[the owner's intended outcomes]). "
-            "Choose examples covering actionable, quiet, and missing-evidence situations under "
-            "the owner's policy (these need not map to three different outcomes), exact delivery keys and "
-            "expected_delivery_destinations, plus required evidence and retrieval references. "
-            "Labels come from the owner, never from the model's result. Inspect failed cases' "
-            "evidence_plan and workflow; repair missing source context or an unintended required "
-            "check, not thresholds or expected answers. Repeat on the revised card. Supply the "
-            "passing certification_report_id as workflow_report_id when approving for certified use. "
-            "If historical cases are unavailable, do not invent them. With explicit owner "
-            "authorization, approve_insight_card without workflow_report_id authorizes only "
-            "an unassessed card for caller-managed, delivery-disabled shadow evaluation; it "
-            "does not certify or authorize unattended delivery. Record that limitation. A successful "
-            "preview or policy-only review is not an acceptance test. Only call approve_insight_card after explicit owner approval; tool access "
-            "is not approval. Similar catalog titles are not automatically the same metric. "
-            "If the owner confirms a bounded source selection despite duplicate titles or "
-            "omitted suggestions, use a fixed card with investigation_mode=none, call "
-            "review_insight_card (and remember its adapter scope), then pass that review's source_selection_fingerprint "
-            "and the owner's source_selection_reason to approve_insight_card. This does "
-            "not override missing definitions, unhealthy sources or permissions. "
-            "For an owner-approved dynamic card (retrieval_mode=expand or investigation_mode=bounded), "
-            "pass the current review fingerprint and source-selection reason plus "
-            "dynamic_scope_acknowledged=true; this explicitly acknowledges bounded runtime related-source "
-            "retrieval and does not authorize unbounded discovery. "
-            "For repeat runs, reuse the approved card instead of "
-            "recreating it. Use a stable idempotency key for retries and a new key for "
-            "new observations. Use response_mode=compact on evaluate_insight_card for the "
-            "normal agent handoff; the durable decision receipt retains the full result and "
-            "response_mode=full remains available for an exhaustive audit. Return the evidence, numerical analysis, limitations, "
-            "and workflow handoff. Correlation and accounting contributions are not "
-            "proof of causation. SignalWeave does not schedule runs or send messages; "
-            "your agent or scheduler owns those actions. Selected evidence is sent "
-            "to TypeSafe; local installation is not offline inference."
-            + CARD_AUTHORING_GUIDANCE
-        ),
+            "Start with get_signalweave_guide. The default agent profile stores a human-reviewed card, "
+            "fetches only its approved source scope, and calls Jev for the card's typed policy judgment. "
+            "Use search_catalog and inspect_resource to discover and verify sources, onboard_insight_card "
+            "to save the owner's intent and exact source references, then review and obtain explicit approval. "
+            "Give the person a useful current analysis from inspected evidence, with each source's scope and "
+            "period. Pending alert criteria require confirmation before automation; they do not prevent "
+            "reporting supported facts. Honor an owner's explicit fallback rather than demanding an "
+            "exhaustive rule for every possible movement. "
+            "On each recurring run, call evaluate_insight_card once with a stable idempotency key. It returns "
+            "a durable, delivery-disabled decision and evidence bundle. Jev applies the card's policy; the "
+            "frontier agent owns deeper discovery, causal investigation, narrative, scheduling, and delivery. "
+            "Use get_decision_receipt to recover a result after a retry. Do not call prepare_insight_run as a "
+            "second fetch for the same run. Dynamic source expansion is outside this profile. The full profile "
+            "is an explicit opt-in for metric-query, evaluation, certification, and webhook tools."
+            if profile == "agent"
+            else (
+                "Full SignalWeave MCP profile. For repeated analysis, begin with get_signalweave_guide, "
+                "use onboard_insight_card to create a human-reviewed fixed-source card, and use "
+                "evaluate_insight_card to return a typed Jev evaluation of its approved policy and an "
+                "evidence bundle. The calling agent owns deeper investigation and narrative. "
+                "prepare_insight_run is an advanced source-only path for callers that explicitly own "
+                "the subsequent decision step; do not use it instead of evaluate_insight_card when "
+                "SignalWeave/Jev should apply the card policy. Advanced metric-query, certification, "
+                "and webhook capabilities are also exposed in this profile. A caller-owned scheduler "
+                "handles delivery."
+            ) + CARD_AUTHORING_GUIDANCE
+        ).replace("Jev", provider_label(decision_provider)),
         auth=auth_settings,
         token_verifier=token_verifier,
     )
@@ -1085,17 +1150,30 @@ def create_mcp(
             )
         return refs
 
-    @mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False, "openWorldHint": False})
-    def get_signalweave_guide(
-        task: GuideTask = "start", ctx: Context | None = None,
-    ) -> dict[str, Any]:
-        """Start here: help a person query, report on, or monitor their existing BI.
-
-        Returns the supported tool sequence, what to ask the owner, and where to
-        stop. No source access, paid inference, approval, scheduling or delivery.
-        """
+    def _guide(task: str, ctx: Context | None) -> dict[str, Any]:
         request_principal(ctx)
-        return getting_started(task)
+        if profile == "agent":
+            return agent_getting_started(task, decision_provider=decision_provider)
+        return getting_started(task, decision_provider=decision_provider)  # type: ignore[arg-type]
+
+    if profile == "agent":
+
+        @mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False, "openWorldHint": False})
+        def get_signalweave_guide(
+            task: Literal["start", "monitor"] = "start",
+            ctx: Context | None = None,
+        ) -> dict[str, Any]:
+            """Explain card onboarding and recurring decisions using the configured provider."""
+            return _guide(task, ctx)
+
+    else:
+
+        @mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False, "openWorldHint": False})
+        def get_signalweave_guide(
+            task: GuideTask = "start", ctx: Context | None = None,
+        ) -> dict[str, Any]:
+            """Explain the optional legacy full-profile workflows."""
+            return _guide(task, ctx)
 
     @mcp.tool()
     async def list_resources(
@@ -2120,17 +2198,17 @@ def create_mcp(
             ResponseMode,
             Field(
                 description=(
-                    "Use compact for the normal agent handoff: it preserves the complete "
-                    "structured evidence result while removing repeated resources, plans and "
-                    "rendered markdown. Use full for an exhaustive audit response."
+                    "Use compact for the normal agent handoff: small results retain evidence; "
+                    "large results include receipt-backed paging instructions and explicit "
+                    "coverage. Use full for an exhaustive audit response."
                 )
             ),
-        ] = "full",
+        ] = "compact" if profile == "agent" else "full",
         ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Run an approved card in delivery-disabled shadow mode.
 
-        The result is Jev-backed and durable. SignalWeave never sends the
+        The result uses the configured decision provider and is durable. SignalWeave never sends the
         configured delivery methods; a caller-owned scheduler or agent may
         inspect the receipt and decide what to do next. The durable receipt
         always retains the full result; ``response_mode='compact'`` only shapes
@@ -2162,13 +2240,20 @@ def create_mcp(
     def get_decision_receipt(
         idempotency_key: str | None = None,
         receipt_id: str | None = None,
+        result_path: Annotated[list[str] | None, Field(min_length=1, max_length=8)] = None,
+        offset: Annotated[int, Field(ge=0)] = 0,
+        limit: Annotated[int, Field(ge=1, le=100)] = 25,
         ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Recover one durable shadow result and its operator labels.
 
         A caller can use either the scheduler's idempotency key or the
         receipt id returned by ``evaluate_insight_card``. The card scope check
-        runs before any receipt data is returned.
+        runs before any receipt data is returned. Set result_path to field names
+        (for example ["evidence"] or ["report", "issues"]) and optional list
+        indexes for a byte-bounded page. Objects return key/value entries;
+        lists retain exact items. Follow next_offset until has_more is false.
+        Pages do not rerun sources or models. Omit result_path for the full audit.
         """
         principal = request_principal(ctx)
         key = idempotency_key.strip() if idempotency_key else None
@@ -2187,6 +2272,12 @@ def create_mcp(
         if receipt is None:
             raise ValueError("unknown decision receipt")
         get_scoped_card(receipt.card_id, principal)
+        if result_path is not None:
+            return {
+                "status": "found",
+                "receipt": receipt.model_dump(mode="json", exclude={"result"}),
+                "result_page": _receipt_result_page(receipt.result, result_path, offset, limit),
+            }
         feedback = decision_feedback.list(receipt_id=receipt.receipt_id)
         return {
             "status": "found",
@@ -2754,6 +2845,60 @@ def create_mcp(
             }
         return payload
 
+    @mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False, "openWorldHint": False})
+    async def prepare_insight_run(
+        card_id: str,
+        ctx: Context | None = None,
+    ) -> dict[str, Any]:
+        """Fetch exact approved sources without making a Jev decision.
+
+        This source-only handoff is an advanced alternative for a caller that
+        intentionally owns the decision step. The normal recurring-card path
+        is evaluate_insight_card, which applies the approved policy with Jev.
+        """
+        principal = request_principal(ctx)
+        card = get_scoped_card(card_id, principal)
+        if card.status != InsightCardStatus.APPROVED:
+            raise ValueError("prepare_insight_run requires an owner-approved card")
+        if card.retrieval_mode != RetrievalMode.FIXED or card.investigation_mode != InvestigationMode.NONE:
+            raise ValueError(
+                "prepare_insight_run supports fixed card sources only; set retrieval_mode=fixed "
+                "and investigation_mode=none, then explicitly include every source the agent needs"
+            )
+        if not card.sources:
+            raise ValueError("prepare_insight_run requires at least one approved card source")
+
+        resources = await runtime.sources.resolve(
+            card.sources,
+            authorized_tenants=[principal.tenant_id] if principal else None,
+        )
+        payloads = [resource.model_dump(mode="json") for resource in resources]
+        errors = [
+            {"source_key": resource.source_key, "error": resource.error}
+            for resource in resources
+            if resource.error
+        ]
+        return {
+            "status": "partial" if errors else "fetched",
+            "run_id": str(uuid4()),
+            "captured_at": datetime.now(timezone.utc).isoformat(),
+            "card": _evaluation_card(card),
+            "sources": payloads,
+            "source_count": len(payloads),
+            "source_errors": errors,
+            "persisted": False,
+            "jev_used": False,
+            "decision_made": False,
+            "delivery_enabled": False,
+            "agent_contract": (
+                "Analyze only the returned source evidence in the context of the card. Separate "
+                "observations from hypotheses; verify source health, freshness, definition, and "
+                "comparison period, and state missing or conflicting evidence. A fetched source "
+                "is not proof that the requested analysis is complete. Do not claim causation from "
+                "correlation alone. The calling agent owns any follow-up queries, schedule, and delivery."
+            ),
+        }
+
     @mcp.resource("insight://catalog")
     def insight_catalog(ctx: Context | None = None) -> str:
         """Human-readable catalog for an MCP client."""
@@ -2787,10 +2932,10 @@ def create_mcp(
         report = deployment_readiness(
             runtime,
             request_scoped_principal=bool(http_principal_resolver or principal_resolver),
+            profile=profile,
         )
         return JSONResponse(report, status_code=200 if report["startup_ready"] else 503)
 
-    @mcp.custom_route("/webhooks/evaluate", methods=["POST"])
     async def evaluate_webhook(request: Request) -> JSONResponse:
         """Push-triggered card evaluation endpoint for schedulers and source alerts."""
         if http_principal_resolver is None:
@@ -2873,6 +3018,13 @@ def create_mcp(
             status_code = 409 if "draft" in message or "already being evaluated" in message else 404
             return JSONResponse({"error": str(error)}, status_code=status_code)
         return JSONResponse(result)
+
+    if profile == "full":
+        mcp.custom_route("/webhooks/evaluate", methods=["POST"])(evaluate_webhook)
+    else:
+        for tool in mcp._tool_manager.list_tools():
+            if tool.name not in AGENT_PROFILE_TOOLS:
+                mcp.remove_tool(tool.name)
 
     return mcp
 

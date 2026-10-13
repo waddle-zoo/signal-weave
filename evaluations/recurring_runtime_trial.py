@@ -705,7 +705,7 @@ async def _author_company(company, audit, judger, output):
                       decision_receipts=SQLiteDecisionReceiptStore(database),
                       principal=operator_principal(public))
     session = SetupSession(company=public, setup_periods=setup, adapter=adapter,
-                           server=create_mcp(runtime), audit=audit)
+                           server=create_mcp(runtime, profile="full"), audit=audit)
     instructions = (
         "You are authoring one recurring analytical card for a synthetic company. "
         "Read catalog and current_setup_period, inspect the relevant sources, ask no invented questions, "
@@ -842,7 +842,7 @@ async def run_trial(output: Path, *, live: bool = False, key_file: str | None = 
                                   engine=InsightEngine(judger, registry, clock=lambda a=adapter: a.clock),
                                   decision_receipts=SQLiteDecisionReceiptStore(database),
                                   principal=operator_principal(public))
-                session = RecurringSession(company=public, adapter=adapter, server=create_mcp(runtime),
+                session = RecurringSession(company=public, adapter=adapter, server=create_mcp(runtime, profile="full"),
                                            audit=audit, treatment=treatment, card_id=card.id, card=card)
                 preflight = None
                 if treatment:

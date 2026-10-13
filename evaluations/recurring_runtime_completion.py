@@ -192,7 +192,7 @@ async def run_completion(parent: Path, output: Path, *, live=False, key_file=Non
         runtime = trial.Runtime(card_store=store, sources=sources,
                                 engine=trial.InsightEngine(judger, sources, clock=lambda a=adapter: a.clock),
                                 decision_receipts=trial.SQLiteDecisionReceiptStore(db), principal=trial.operator_principal(public))
-        session = GuardedSession(company=public, adapter=adapter, server=trial.create_mcp(runtime), audit=audit,
+        session = GuardedSession(company=public, adapter=adapter, server=trial.create_mcp(runtime, profile="full"), audit=audit,
                                  treatment=True, card_id=card.id, card=card, frozen_public_card=frozen[cid]["card"],
                                  card_store=store)
         previous = next(row for row in original["results"] if row["company"] == cid and row["arm"] == "signalweave")

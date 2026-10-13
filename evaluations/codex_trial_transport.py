@@ -151,13 +151,16 @@ async def serve_trial(bridge: TrialMCP):
 async def codex_episode(session, *, key, effort, budget, audit, max_turns,
                         max_tool_calls, max_output_tokens, bundle=None,
                         timeout_seconds=360, instructions_override=None,
-                        prompt_override=None) -> dict:
+                        prompt_override=None, model: str | None = None) -> dict:
     from evaluations.bootstrap_agent_trial import (
         COMMON_SYSTEM,
         MODEL,
         SIGNALWEAVE_BUNDLE_INSTRUCTIONS,
         canonical,
     )
+    selected_model = model or MODEL
+    if not selected_model or not effort:
+        raise ValueError("Codex model and reasoning effort must be nonempty")
     shared_card = getattr(session, "shared_card", None)
 
     if instructions_override is not None or prompt_override is not None:
@@ -244,17 +247,19 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
     request_id = -(1 + sum(e["kind"] == "api.request" and e.get("provider") == "openai"
                           for e in audit.events))
     audit.emit("api.request", provider="openai", request_id=request_id,
-               transport="codex_cli", accounting_unit="agent_invocation", model=MODEL,
+               transport="codex_cli", accounting_unit="agent_invocation",
+               model=selected_model, effort=effort,
                prompt=prompt, tools=list(bridge.specs.values()))
     started = time.perf_counter()
     usage = None
     error = None
     foreign_tools = []
+    final_message = ""
     exit_code = None
     with tempfile.TemporaryDirectory(prefix="signalweave-agent-") as cwd:
         async with serve_trial(bridge) as url:
             process = await asyncio.create_subprocess_exec(
-                *codex_command(cwd, url, model=MODEL, effort=effort),
+                *codex_command(cwd, url, model=selected_model, effort=effort),
                 env=child_environment(), stdin=asyncio.subprocess.PIPE,
                 stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
                 limit=8 * 1024 * 1024)
@@ -279,10 +284,17 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
                         item = event.get("item", {})
                         if item.get("type") in {"command_execution", "web_search", "file_change"}:
                             foreign_tools.append(item["type"])
+                        if item.get("type") == "agent_message" and isinstance(item.get("text"), str):
+                            final_message = item["text"]
                         if item.get("type") == "mcp_tool_call" and item.get("server") != "trial":
                             foreign_tools.append(str(item.get("server")))
-                        if foreign_tools or bridge.exhausted or budget.exhausted:
-                            error = "foreign_tool_used" if foreign_tools else "budget_exhausted"
+                        # In the local-MCP comparison this budget limits live Jev
+                        # requests, not the Codex subscription-backed agent. A
+                        # depleted Jev budget must be recorded as treatment
+                        # censoring; it must not kill the baseline agent (or a
+                        # reviewer) and bias the paired cohort by run order.
+                        if foreign_tools or bridge.exhausted:
+                            error = "foreign_tool_used" if foreign_tools else "tool_call_budget_exhausted"
                             break
                     if error:
                         process.terminate()
@@ -307,17 +319,21 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
         normalized = dict(usage)
         normalized["input_tokens_details"] = {"cached_tokens": usage.get("cached_input_tokens", 0)}
         audit.emit("api.response", provider="openai", request_id=request_id,
-                   transport="codex_cli", usage=normalized, seconds=time.perf_counter() - started)
+                   transport="codex_cli", model=selected_model, effort=effort,
+                   usage=normalized, seconds=time.perf_counter() - started)
     else:
         audit.emit("api.error", provider="openai", request_id=request_id,
+                   model=selected_model, effort=effort,
                    error_type=error or "missing_usage", usage_known=False)
     done = session.setup_complete if session.phase == "onboarding" else session.submission is not None
     success = done and not error and exit_code == 0
     elapsed = time.perf_counter() - started
     return {"status": "complete" if success else "failed", "error": error if success else
             error or ("codex_exit" if exit_code else "no_structured_submission"),
+            "final_message": audit.redact(final_message[:12000]),
             "tool_calls": bridge.calls, "seconds": elapsed,
             "response_timeout_seconds": timeout_seconds,
             "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
             "wall_time_overrun_seconds": max(0., elapsed - timeout_seconds),
-            "transport": "codex_cli", "exit_code": exit_code, "foreign_tools": foreign_tools}
+            "transport": "codex_cli", "model": selected_model, "effort": effort,
+            "exit_code": exit_code, "foreign_tools": foreign_tools}

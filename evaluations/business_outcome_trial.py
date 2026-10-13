@@ -365,7 +365,7 @@ async def run_trial(output, *, live=False, key_file=None, company_limit=3):
                               engine=InsightEngine(judger, registry, clock=lambda a=adapter: a.clock),
                               decision_receipts=SQLiteDecisionReceiptStore(database),
                               principal=operator_principal(company))
-            session = BusinessSession(company=company, adapter=adapter, server=create_mcp(runtime),
+            session = BusinessSession(company=company, adapter=adapter, server=create_mcp(runtime, profile="full"),
                                       audit=audit, treatment=treatment, card_id=card.id)
             extra = ("Use evaluate_workflow each period. Its outcome, status and recipients are authoritative; "
                      "you are the final writer, not a policy override. Retain all its source-backed numeric "

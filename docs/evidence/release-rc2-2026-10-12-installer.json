@@ -1,0 +1,18 @@
+{
+  "scope": "Process-level fresh installer and terminal wizard tests with a certified native binary, fake HTTPS release transport, dummy credentials and temporary private homes. These checks do not establish actual BI credentials, model entitlement, company onboarding or final business output quality.",
+  "version": "0.2.0rc2",
+  "source_sha256": "0745d7ed7475ee54d1c1e7b5483bbb1aba5e2fdc9ab2b70f696e51c1166ac497",
+  "binary_sha256": "ed913b3851fa1fdba6c9d68f2b5ceb7db940c37dff3f490f4125908423d025ef",
+  "offline_installer_journey_provenance": {"passed": 59, "skipped_native_opt_in": 2},
+  "native_pty_onboarding_opt_in": {"passed": 1, "skipped": 0},
+  "native_installer_package_mcp_smoke_opt_in": {"passed": 1, "skipped": 0},
+  "identity_checked_before_and_after": true,
+  "controlling_terminal_for_piped_install": true,
+  "private_credentials_and_paths_with_spaces": true,
+  "setup_recovery_preserves_configuration": true,
+  "explicit_version_mismatch_rejected_before_old_wizard": true,
+  "verified_atomic_upgrade_then_setup": true,
+  "shell_profiles_modified": false,
+  "real_user_agent_config_modified": false,
+  "live_provider_requests": false
+}

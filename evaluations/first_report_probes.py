@@ -336,7 +336,7 @@ async def run_probes(
                 decision_receipts=SQLiteDecisionReceiptStore(database),
                 principal=operator_principal(company),
             )
-            server = create_mcp(runtime)
+            server = create_mcp(runtime, profile="full")
             audit.episode = f"{company_id}:probe:jev"
             started = time.perf_counter()
             native = await dispatch(server, "evaluate_insight_card", {

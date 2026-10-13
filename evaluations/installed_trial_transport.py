@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import re
 import secrets
 import socket
 import subprocess
@@ -35,6 +36,7 @@ from evaluations.bootstrap_agent_trial import Audit, PublicSourceAdapter, Reques
 from signalweave.models import SourceRef
 
 MCP_INITIALIZE_TIMEOUT_SECONDS = 30
+SETUP_DIAGNOSTIC_CHARS = 1800
 
 
 class InstalledServer:
@@ -109,6 +111,32 @@ def _minimal_environment(home: Path, *, jev_url: str | None = None) -> dict[str,
     if jev_url:
         environment["TYPESAFE_BASE_URL"] = jev_url
     return environment
+
+
+def _safe_setup_detail(
+    value: str | bytes | None,
+    *,
+    audit: Audit,
+    private_paths: tuple[tuple[Path, str], ...],
+) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, bytes):
+        value = value.decode("utf-8", errors="replace")
+    for path, placeholder in sorted(private_paths, key=lambda item: len(str(item[0])), reverse=True):
+        value = value.replace(str(path), placeholder)
+    value = audit.redact(value)
+    # Protect against a setup diagnostic that echoes a credential in a labeled field.
+    value = re.sub(
+        r"(?i)((?:[a-z0-9_.-]*_)?(?:api[_ -]?key|authorization|access[_ -]?token|secret)\b\s*[:=]\s*)([^\s,;]+)",
+        r"\1[REDACTED]",
+        value,
+    )
+    value = "".join(char if char in "\n\t" or char.isprintable() else " " for char in value)
+    value = value.strip()
+    if len(value) > SETUP_DIAGNOSTIC_CHARS:
+        value = "[earlier output truncated]" + value[-SETUP_DIAGNOSTIC_CHARS:]
+    return value or "(empty)"
 
 
 class _SourceSession:
@@ -204,37 +232,45 @@ async def _source_server(session: _SourceSession) -> AsyncIterator[str]:
 
 def _manifest(public: dict[str, Any], source_url: str) -> dict[str, Any]:
     tenant = public["scenario_id"]
-    resources = []
+    resources_by_adapter: dict[str, list[dict[str, Any]]] = {}
     for item in public["catalog"]:
         descriptor = dict(item)
         contract = dict(descriptor.get("contract") or {})
         contract["tenant_id"] = tenant
         descriptor["contract"] = contract
         resource = descriptor["resource"]
-        resources.append(
+        adapter = descriptor["adapter"]
+        resources_by_adapter.setdefault(adapter, []).append(
             {
                 "descriptor": descriptor,
                 "source_key": resource,
                 "tool": "read_snapshot",
-                "arguments": {"ref": f"company_mcp|{resource}"},
+                "arguments": {"ref": f"{adapter}|{resource}"},
             }
         )
     return {
         "version": 1,
         "connections": [
             {
-                "name": "company_mcp",
+                "name": adapter,
                 "tenant_id": tenant,
                 "read_only": True,
                 "transport": {"type": "streamable-http", "url": source_url},
                 "resources": resources,
             }
+            for adapter, resources in resources_by_adapter.items()
         ],
     }
 
 
 async def _run_setup(
-    binary: Path, root: Path, home: Path, key: Path, manifest: Path, tenant: str
+    binary: Path,
+    root: Path,
+    home: Path,
+    key: Path,
+    manifest: Path,
+    tenant: str,
+    audit: Audit,
 ) -> None:
     command = [
         str(binary),
@@ -255,17 +291,42 @@ async def _run_setup(
         "--agent",
         "codex",
     ]
-    completed = await asyncio.to_thread(
-        subprocess.run,
-        command,
-        cwd=str(root),
-        env=_minimal_environment(home),
-        text=True,
-        capture_output=True,
-        timeout=90,
+    private_paths = (
+        (root, "[PRIVATE_TRIAL_DIR]"),
+        (home, "[PRIVATE_HOME]"),
+        (key, "[PRIVATE_KEY_FILE]"),
+        (manifest, "[PRIVATE_MANIFEST]"),
+        (binary, "[INSTALLED_BINARY]"),
     )
+    try:
+        completed = await asyncio.to_thread(
+            subprocess.run,
+            command,
+            cwd=str(root),
+            env=_minimal_environment(home),
+            text=True,
+            capture_output=True,
+            timeout=90,
+        )
+    except subprocess.TimeoutExpired as error:
+        stdout = _safe_setup_detail(error.stdout, audit=audit, private_paths=private_paths)
+        stderr = _safe_setup_detail(error.stderr, audit=audit, private_paths=private_paths)
+        raise RuntimeError(
+            "installed binary setup timed out after 90 seconds; "
+            f"stdout={stdout}; stderr={stderr}"
+        ) from None
+    except OSError as error:
+        detail = _safe_setup_detail(str(error), audit=audit, private_paths=private_paths)
+        raise RuntimeError(
+            f"installed binary setup could not start ({type(error).__name__}): {detail}"
+        ) from None
     if completed.returncode:
-        raise RuntimeError("installed binary setup failed")
+        stdout = _safe_setup_detail(completed.stdout, audit=audit, private_paths=private_paths)
+        stderr = _safe_setup_detail(completed.stderr, audit=audit, private_paths=private_paths)
+        raise RuntimeError(
+            "installed binary setup failed "
+            f"(exit_code={completed.returncode}); stdout={stdout}; stderr={stderr}"
+        )
 
 
 async def _jev_proxy_handler(request: Request) -> Response:
@@ -424,7 +485,8 @@ async def installed_server(
             manifest = root / "company-mcp.json"
             _private_file(manifest, json.dumps(_manifest(public, source_url), allow_nan=False))
             await _run_setup(
-                binary.resolve(), root, home, private_key, manifest, public["scenario_id"]
+                binary.resolve(), root, home, private_key, manifest,
+                public["scenario_id"], audit,
             )
             async with _jev_proxy(audit, budget) as jev_url:
                 environment = _minimal_environment(home, jev_url=jev_url)

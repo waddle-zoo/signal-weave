@@ -176,7 +176,7 @@ async def readiness_case(tmp_path, request):
         certification_reports=reports,
         principal=PrincipalContext(principal_id="test-principal", tenant_id="default"),
     )
-    server = create_mcp(runtime)
+    server = create_mcp(runtime, profile="full")
     drafted = await tool(server, "draft_insight_card")(
         title="Policy migration readiness", what_to_watch="Checkout conversion",
         why_watch="Determine whether the operating owner needs to respond.",

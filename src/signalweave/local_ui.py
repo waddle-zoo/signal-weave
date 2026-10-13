@@ -125,6 +125,14 @@ _PAGE = """<!doctype html>
         '<div class="card">' + esc(step) + "</div>").join("");
       const error = data.error ? '<div class="card" style="margin-top:12px;color:var(--red)">' + esc(data.error) + "</div>" : "";
       const agent = ((data.agents || {}).selected || "not connected").replaceAll("_", " ");
+      const decision = data.decision_provider || {};
+      const providerNames = {
+        "jev": "Jev",
+        "openai-decisions": "OpenAI Decisions",
+        "chatgpt-plan": "ChatGPT plan",
+        "agent": "Agent-owned",
+      };
+      const providerName = providerNames[decision.selected] || "Not selected";
       const live = data.live_health ?
         '<section><h2>Source health</h2><div class="card"><div class="value">' +
         (data.live_health.healthy ? 'Reachable' : 'Needs attention') +
@@ -134,8 +142,9 @@ _PAGE = """<!doctype html>
         '<div class="summary">' +
           '<div class="card"><div class="label">Overall</div><div class="value">' + esc(data.status).replaceAll("_", " ") +
             '</div><div class="small">' + esc(data.home) + "</div></div>" +
-          '<div class="card"><div class="label">Jev</div><div class="value">' + esc((data.jev || {}).status || "unknown") +
-            '</div><div class="small">Configured locally; a live provider check is explicit.</div></div>' +
+          '<div class="card"><div class="label">Decision provider</div><div class="value">' + esc(providerName) +
+            '</div><div class="small">' + esc(decision.status || "unknown").replaceAll("_", " ") +
+              '; live provider acceptance is checked during an evaluation.</div></div>' +
           '<div class="card"><div class="label">Agent handoff</div><div class="value">' + esc(agent) + '</div><div class="small">Use the CLI to register Codex or Claude.</div></div>' +
         '</div>' + error +
         '<section><h2>Connections</h2><div class="rows">' + (connections || row("Sources", "Add a source with the CLI", "not_configured")) + "</div></section>" +

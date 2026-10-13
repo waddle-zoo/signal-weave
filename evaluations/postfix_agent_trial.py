@@ -500,7 +500,7 @@ async def _run_session(
         session_id=session_id,
         store_path=store_dir / f"{session_id}.json",
     )
-    server = create_mcp(runtime)
+    server = create_mcp(runtime, profile="full")
 
     async def call_tool(name: str, arguments: dict[str, Any]) -> Any:
         started = time.perf_counter()

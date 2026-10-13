@@ -330,7 +330,7 @@ def make_server(
         context_provider=context_provider,
         principal=PrincipalContext(principal_id="test-principal", tenant_id="default"),
     )
-    server = create_mcp(runtime)
+    server = create_mcp(runtime, profile="full")
     server._test_runtime = runtime
     return server
 
@@ -364,6 +364,7 @@ async def test_mcp_can_use_trusted_request_principal_for_shared_catalog(tmp_path
     )
     server = create_mcp(
         runtime,
+        profile="full",
         principal_resolver=lambda context: PrincipalContext(
             principal_id=context.principal_id,
             tenant_id=context.tenant_id,
@@ -863,6 +864,7 @@ async def test_oidc_style_webhook_resolver_scopes_card_evaluation_without_shared
     )
     server = create_mcp(
         runtime,
+        profile="full",
         http_principal_resolver=lambda: PrincipalContext(
             principal_id="b-user", tenant_id="tenant-b", authorization_source="oidc:test"
         ),
@@ -1504,7 +1506,7 @@ def test_enterprise_readiness_blocks_stale_workflow_certification(tmp_path):
         certification_reports=reports,
         principal=PrincipalContext(principal_id="test-principal", tenant_id="default"),
     )
-    server = create_mcp(runtime)
+    server = create_mcp(runtime, profile="full")
     runtime.card_store.save_card(
         InsightCard(
             id="stale-card",
@@ -1716,7 +1718,8 @@ async def test_discovery_requires_jev_resource_ranking(tmp_path):
             card_store=JsonInsightCardStore(tmp_path / "cards.json"),
             sources=registry,
             engine=InsightEngine(NoResourceRankingJudger(), registry=registry),
-        )
+        ),
+        profile="full",
     )
 
     with pytest.raises(RuntimeError, match="does not support resource discovery"):

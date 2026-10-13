@@ -446,7 +446,7 @@ async def _run_trial_loaded(
         raise RuntimeError("Preset request path telemetry must be a mapping")
     if isinstance(provider_paths_before, dict):
         provider_paths_before = dict(provider_paths_before)
-    server = create_mcp(runtime)
+    server = create_mcp(runtime, profile="full")
     if reviewed_card is None:
         onboarding = await _tool(server, "onboard_insight_card")(
             what_to_watch=goal,

@@ -1,0 +1,32 @@
+{
+  "scope": "Current-source macOS ARM64 native candidate: isolated setup, default ten-tool MCP handshake, one approved synthetic card using live Jev, and process-restart receipt replay. Runtime smoke only, not complete business onboarding or comparative enterprise quality proof.",
+  "version": "0.2.0rc2",
+  "superseded_by": "release-rc2-2026-10-12-native-22498e8a.json",
+  "source_sha256": "01293548302d0f3299f7bf6b7ff810cbe03468909aae9624c35e0410742e6e30",
+  "binary_sha256": "2e0a939f9078ea10c96d83e60cf1ea1a2d6816f614dcb3c6b16b4069b66bb044",
+  "git_commit": "114614ae0ab080e77023ad175bad05d977ea0d4c",
+  "dirty_source": true,
+  "command": ".venv/bin/python scripts/check_binary.py --binary dist/signalweave --live --key-file <authorized-private-key-file>",
+  "exit_code": 0,
+  "standalone_startup": true,
+  "private_setup": true,
+  "default_home_serve": true,
+  "persisted_source_config": true,
+  "offline_doctor": true,
+  "health_alias": true,
+  "agent_config": true,
+  "stdio_tools": 10,
+  "different_cwd": true,
+  "live_jev": true,
+  "live_outcome": "notify",
+  "measured_delta": -20,
+  "process_restart_replay": true,
+  "provider_setup_checks_offline_only": ["jev", "openai-decisions", "chatgpt-plan"],
+  "separate_checks": {
+    "current_native_installer_pty": {"passed": 1, "deselected": 3},
+    "cli_provider_provenance_source_tests": {"passed": 62, "skipped": 1},
+    "source_test_skip": "Optional native PTY test; separately enabled and passed above.",
+    "terminal_permissions": "PTY checks require controlling-terminal access; sandbox-denied execution is not counted as a product failure."
+  },
+  "release_status": "Locally built and packaged candidate; not published to GitHub."
+}

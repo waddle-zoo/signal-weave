@@ -30,7 +30,7 @@ class SetupError(ValueError):
 
 
 _SECRET_NAMES = (
-    "TYPESAFE_API_KEY", "PRESET_ACCESS_TOKEN", "PRESET_API_TOKEN_NAME",
+    "TYPESAFE_API_KEY", "OPENAI_API_KEY", "PRESET_ACCESS_TOKEN", "PRESET_API_TOKEN_NAME",
     "PRESET_API_TOKEN_SECRET", "SIGNALWEAVE_API_TOKEN", "PUSH_WEBHOOK_TOKEN",
     "SUPERSET_PASSWORD",
 )
@@ -48,7 +48,9 @@ _PATH_NAMES = {
 }
 _ENV_NAMES = {
     *_PATH_NAMES, *_SECRET_NAMES,
-    "TYPESAFE_MODE", "SIGNALWEAVE_STORE_BACKEND", "SIGNALWEAVE_TENANT_ID",
+    "TYPESAFE_MODE", "SIGNALWEAVE_DECISION_PROVIDER", "OPENAI_DECISIONS_MODEL",
+    "OPENAI_RESPONSES_MODEL", "SIGNALWEAVE_MAX_DECISION_INPUT_TOKENS",
+    "SIGNALWEAVE_STORE_BACKEND", "SIGNALWEAVE_TENANT_ID",
     "TYPESAFE_TIMEOUT_SECONDS", "TYPESAFE_MAX_RETRIES", "TYPESAFE_RETRY_BACKOFF_SECONDS",
     "SIGNALWEAVE_ALLOW_EMPTY_SOURCES",
     "SIGNALWEAVE_AGENT",
@@ -61,6 +63,7 @@ _ENV_NAMES = {
     "PRESET_MAX_RESULT_ROWS", "PRESET_MAX_SNAPSHOT_BYTES", "PRESET_API_BASE_URL",
     "PRESET_RETAIN_RAW_RESULTS", "PRESET_RETENTION_HOURS", "SIGNALWEAVE_AUTH_MODE",
     "SIGNALWEAVE_ALLOW_INSECURE_HTTP", "SIGNALWEAVE_ALLOW_INSECURE_OIDC",
+    "SIGNALWEAVE_MCP_PROFILE",
     "SIGNALWEAVE_OIDC_ISSUER_URL", "SIGNALWEAVE_OIDC_AUDIENCE",
     "SIGNALWEAVE_OIDC_TENANT_CLAIM", "SIGNALWEAVE_OIDC_REQUIRED_SCOPES",
     "SIGNALWEAVE_OIDC_JWKS_URL", "SIGNALWEAVE_OIDC_ALGORITHMS",
@@ -70,6 +73,7 @@ _ENV_NAMES = {
 }
 _CREDENTIAL_FILES = {
     "TYPESAFE_API_KEY": "typesafe.key",
+    "OPENAI_API_KEY": "openai.key",
     "PRESET_API_TOKEN_NAME": "preset-token-name.key",
     "PRESET_API_TOKEN_SECRET": "preset-token-secret.key",
     "PRESET_ACCESS_TOKEN": "preset-access-token.key",
@@ -80,6 +84,8 @@ _CREDENTIAL_FILES = {
 _CREDENTIAL_ALIASES = {
     "typesafe": "TYPESAFE_API_KEY",
     "jev": "TYPESAFE_API_KEY",
+    "openai": "OPENAI_API_KEY",
+    "openai-api-key": "OPENAI_API_KEY",
     "superset-password": "SUPERSET_PASSWORD",
     "preset-token-name": "PRESET_API_TOKEN_NAME",
     "preset-api-token-name": "PRESET_API_TOKEN_NAME",
@@ -209,6 +215,7 @@ version = 1
 
 [environment]
 TYPESAFE_MODE = "jev"
+SIGNALWEAVE_MCP_PROFILE = "agent"
 TYPESAFE_API_KEY_FILE = "typesafe.key"
 SIGNALWEAVE_STORE_BACKEND = "sqlite"
 SIGNALWEAVE_STORE_PATH = "state/signalweave.db"
@@ -259,6 +266,18 @@ def _ask_source() -> str:
     print("  5) Skip for now")
     selected = _ask("Source", "skip").lower()
     return _SOURCE_CHOICES.get(selected, selected)
+
+
+def _ask_decision_provider() -> str:
+    print("\nChoose how SignalWeave should make recurring card decisions:")
+    print("  1) Jev                 TypeSafe typed decisions; requires a Jev API key")
+    print("  2) OpenAI Decisions    Typed API decisions; requires an OpenAI API key")
+    print("  3) ChatGPT plan        No API key; browser consent, Responses (not Decisions API)")
+    selected = _ask("Decision provider", "1").strip().lower()
+    provider = {"1": "jev", "2": "openai-decisions", "3": "chatgpt-plan"}.get(selected, selected)
+    if provider not in {"jev", "openai-decisions", "chatgpt-plan"}:
+        raise SetupError("Choose 1 for Jev, 2 for OpenAI Decisions, or 3 for ChatGPT plan sign-in")
+    return provider
 
 
 def _ask_agent() -> str:
@@ -444,6 +463,7 @@ def set_credential(
         candidate = _hidden(
             {
                 "TYPESAFE_API_KEY": "TypeSafe API key",
+                "OPENAI_API_KEY": "OpenAI API key",
                 "SUPERSET_PASSWORD": "Superset password",
             }.get(key, key.replace("_", " ").title()),
             preserve_spaces=preserve_spaces,
@@ -453,6 +473,11 @@ def set_credential(
         if key == "TYPESAFE_API_KEY"
         else _secret(candidate, preserve_spaces=preserve_spaces)
     )
+    if key == "OPENAI_API_KEY" and (
+        any(character.isspace() for character in candidate)
+        or is_obvious_placeholder(candidate)
+    ):
+        raise SetupError("OpenAI API key must be one non-empty real key")
     filename = _CREDENTIAL_FILES[key]
     destination = root / filename
     config_path = root / "config.toml"
@@ -498,6 +523,7 @@ def credential_status(home: str | Path | None = None) -> dict[str, str]:
 
 def setup_local(
     home: str | Path | None = None, *, key_file: str | Path | None = None,
+    decision_provider: str | None = None, openai_key_file: str | Path | None = None,
     source: str | None = None, url: str | None = None, username: str | None = None,
     secret_file: str | Path | None = None, token_name_file: str | Path | None = None,
     access_token_file: str | Path | None = None,
@@ -507,6 +533,7 @@ def setup_local(
     catalog_file: str | Path | None = None, trino_user: str | None = None,
     trino_catalog: str | None = None, trino_schema: str | None = None,
     trino_max_rows: str | int | None = None,
+    profile: str | None = None,
     update: bool = False,
 ) -> tuple[Path, str]:
     """Configure a local, single-tenant stdio installation without contacting sources.
@@ -531,6 +558,9 @@ def setup_local(
         configured = read_config(root)[1] if original is not None else {}
         values = dict(configured)
         pending: dict[Path, str] = {}
+        selected_profile = (profile or values.get("SIGNALWEAVE_MCP_PROFILE", "agent")).strip().lower()
+        if selected_profile not in {"agent", "full"}:
+            raise SetupError("MCP profile must be agent or full")
 
         def add(name: str, value: str) -> None:
             if name in values and values[name] != value:
@@ -559,6 +589,11 @@ def setup_local(
                     raise SetupError("Missing credential file; supply --key-file / --secret-file / --token-name-file")
                 candidate = _hidden(label, preserve_spaces=preserve_spaces)
             candidate = _validate_key(candidate) if name == "TYPESAFE_API_KEY" else _secret(candidate, preserve_spaces=preserve_spaces)
+            if name == "OPENAI_API_KEY" and (
+                any(character.isspace() for character in candidate)
+                or is_obvious_placeholder(candidate)
+            ):
+                raise SetupError("OpenAI API key must be one non-empty real key")
             if current is not None and candidate != current and not update:
                 raise SetupError(
                     "Setup will not replace an existing credential; use --update to change it"
@@ -579,7 +614,28 @@ def setup_local(
             values.pop(name, None)
             add(f"{name}_FILE", filename)
 
-        credential("TYPESAFE_API_KEY", "typesafe.key", key_file, "TypeSafe API key")
+        add("SIGNALWEAVE_MCP_PROFILE", selected_profile)
+        selected_provider = (
+            decision_provider
+            or values.get("SIGNALWEAVE_DECISION_PROVIDER")
+            or values.get("TYPESAFE_MODE")
+        )
+        if selected_provider is None:
+            selected_provider = "jev" if non_interactive else _ask_decision_provider()
+        selected_provider = selected_provider.strip().lower()
+        if selected_provider not in {"jev", "openai-decisions", "chatgpt-plan"}:
+            raise SetupError("Decision provider must be jev, openai-decisions, or chatgpt-plan")
+        add("SIGNALWEAVE_DECISION_PROVIDER", selected_provider)
+        if selected_provider == "jev":
+            if openai_key_file is not None:
+                raise SetupError("--openai-key-file requires --decision-provider openai-decisions")
+            credential("TYPESAFE_API_KEY", "typesafe.key", key_file, "TypeSafe / Jev API key")
+        elif selected_provider == "openai-decisions":
+            if key_file is not None:
+                raise SetupError("--key-file is for Jev; use --openai-key-file for OpenAI Decisions")
+            credential("OPENAI_API_KEY", "openai.key", openai_key_file, "OpenAI API key")
+        elif key_file is not None or openai_key_file is not None:
+            raise SetupError("API key files are not used for ChatGPT-plan sign-in")
         for name, explicit in (
             ("SIGNALWEAVE_TENANT_ID", tenant),
             ("SIGNALWEAVE_PRINCIPAL_ID", principal),
@@ -727,7 +783,6 @@ def setup_local(
         if agent not in {"codex", "claude"}:
             raise SetupError("Choose codex or claude")
         add("SIGNALWEAVE_AGENT", agent)
-        add("TYPESAFE_MODE", "jev")
         values.setdefault("SIGNALWEAVE_STORE_BACKEND", "sqlite")
         values.setdefault("SIGNALWEAVE_STORE_PATH", "state/signalweave.db")
         values.setdefault("SIGNALWEAVE_ALLOW_EMPTY_SOURCES", "1")
@@ -881,7 +936,19 @@ def validate_key_configuration() -> str:
     if key and key_file:
         raise SetupError("Set only one of TYPESAFE_API_KEY or TYPESAFE_API_KEY_FILE")
     if key_file:
-        _validate_key(_read_private(Path(key_file)))
+        try:
+            key = _read_private(Path(key_file))
+        except SetupError as error:
+            if str(error) not in {
+                "A required local file or directory is missing or unreadable",
+                "Could not read a local UTF-8 file",
+            }:
+                raise
+            raise SetupError(
+                "TypeSafe key file is missing or unreadable; run "
+                "`signalweave credentials set typesafe` to repair it"
+            ) from None
+        _validate_key(key)
         return "readable private file"
     if key:
         _validate_key(key)
@@ -892,17 +959,63 @@ def validate_key_configuration() -> str:
     )
 
 
-def doctor() -> tuple[bool, list[str]]:
+def _validate_openai_key_configuration() -> str:
+    key_file = os.getenv("OPENAI_API_KEY_FILE", "").strip()
+    key = os.getenv("OPENAI_API_KEY", "").strip()
+    if key and key_file:
+        raise SetupError("Set only one of OPENAI_API_KEY or OPENAI_API_KEY_FILE")
+    if key_file:
+        try:
+            key = _read_private(Path(key_file))
+        except SetupError:
+            raise SetupError(
+                "OpenAI key file is missing or unreadable; run `signalweave credentials set openai` to repair it"
+            ) from None
+    if not key:
+        raise SetupError(
+            "OpenAI API key is missing; run `signalweave credentials set openai` or choose ChatGPT sign-in"
+        )
+    if any(character.isspace() for character in key) or is_obvious_placeholder(key):
+        raise SetupError("OpenAI API key is invalid; provide one real API key")
+    return "readable private file" if key_file else "environment"
+
+
+def validate_decision_configuration(home: str | Path | None = None) -> tuple[str, str]:
+    """Validate the chosen card-decision provider without making network calls."""
+    provider = os.getenv(
+        "SIGNALWEAVE_DECISION_PROVIDER", os.getenv("TYPESAFE_MODE", "jev")
+    ).strip().lower()
+    if provider == "jev":
+        return provider, validate_key_configuration()
+    if provider == "openai-decisions":
+        return provider, _validate_openai_key_configuration()
+    if provider == "chatgpt-plan":
+        from .chatgpt_auth import auth_status
+
+        state = auth_status(home or os.getenv("SIGNALWEAVE_HOME"))
+        if state["status"] != "connected":
+            raise SetupError(
+                "ChatGPT-plan sign-in is not ready; run `signalweave auth login` and approve plan usage"
+            )
+        return provider, "ChatGPT plan connected"
+    raise SetupError(
+        "SIGNALWEAVE_DECISION_PROVIDER must be jev, openai-decisions, or chatgpt-plan"
+    )
+
+
+def doctor(home: str | Path | None = None) -> tuple[bool, list[str]]:
     """Check the effective environment offline, returning only fixed/safe messages."""
-    messages = ["Offline configuration check only; no provider or Jev requests were made."]
+    messages = ["Offline configuration check only; no provider requests were made."]
     errors: list[str] = []
-    try:
-        source = validate_key_configuration()
-        messages.append(f"TypeSafe key: {source} (acceptance not tested).")
-    except SetupError as error:
-        errors.append(str(error))
-    if os.getenv("TYPESAFE_MODE", "jev").lower() != "jev":
-        errors.append("TYPESAFE_MODE must be jev")
+    profile = os.getenv("SIGNALWEAVE_MCP_PROFILE", "agent").strip().lower()
+    if profile not in {"agent", "full"}:
+        errors.append("SIGNALWEAVE_MCP_PROFILE must be agent or full")
+    elif profile in {"agent", "full"}:
+        try:
+            provider, source = validate_decision_configuration(home)
+            messages.append(f"Decision provider: {provider} ({source}; live acceptance not tested).")
+        except SetupError as error:
+            errors.append(str(error))
     tenant = os.getenv("SIGNALWEAVE_TENANT_ID", "").strip()
     principal = os.getenv("SIGNALWEAVE_PRINCIPAL_ID", "").strip()
     if bool(tenant) != bool(principal):
@@ -974,5 +1087,9 @@ def doctor() -> tuple[bool, list[str]]:
         errors.append("SIGNALWEAVE_STORE_BACKEND must be sqlite or json")
     messages.extend(f"ERROR: {error}" for error in errors)
     if not errors:
-        messages.append("Offline checks passed. Live credentials, source access, and Jev behavior remain unverified.")
+        messages.append(
+            "Offline checks passed. Live source access and permissions remain unverified."
+            if profile == "agent"
+            else "Offline checks passed. Live credentials, source access, and Jev behavior remain unverified."
+        )
     return not errors, messages

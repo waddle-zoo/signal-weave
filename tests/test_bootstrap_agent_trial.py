@@ -101,6 +101,30 @@ def test_same_card_monitoring_is_scoped_to_each_company_period_pair():
     assert not trial.same_card_monitoring_observed(rows)
 
 
+def test_end_to_end_pairing_requires_both_arms_to_finish_each_company_onboarding():
+    rows = [
+        {"phase": "onboarding", "scenario_id": "company-a", "arm": arm,
+         "status": "complete"}
+        for arm in trial.ARMS
+    ]
+    assert trial.paired_onboarding_completed(rows)
+    rows[-1]["status"] = "failed"
+    assert not trial.paired_onboarding_completed(rows)
+    rows[-1]["status"] = "complete"
+    rows.pop()
+    assert not trial.paired_onboarding_completed(rows)
+
+
+def test_parser_exposes_separate_runtime_and_end_to_end_comparison_modes():
+    runtime_args = trial.parser().parse_args(["--output", "runtime"])
+    end_to_end_args = trial.parser().parse_args([
+        "--comparison-mode", "end-to-end", "--output", "end-to-end",
+    ])
+
+    assert runtime_args.comparison_mode == "shared-card-runtime"
+    assert end_to_end_args.comparison_mode == "end-to-end"
+
+
 def test_card_fingerprint_ignores_response_transport_metadata():
     card = {"id": "card-1", "title": "Growth", "what_to_watch": "conversion"}
     compact = {**card, "response_mode": "compact", "details_available": True}
@@ -137,7 +161,7 @@ def make_session(tmp_path, public, treatment=True, onboarding_surface="full"):
                       engine=InsightEngine(OfflineJudger(), registry),
                       metric_query_store=JsonMetricQueryCardStore(tmp_path / "metric-cards.json"),
                       principal=PrincipalContext(principal_id="offline", tenant_id=public["scenario_id"]))
-    return trial.ToolSession(public, adapter, create_mcp(runtime), treatment,
+    return trial.ToolSession(public, adapter, create_mcp(runtime, profile="full"), treatment,
                              onboarding_surface=onboarding_surface)
 
 

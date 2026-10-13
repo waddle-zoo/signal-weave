@@ -74,7 +74,7 @@ async def run_card(
     A caller supplies one stable run key per reporting period. Retrying that key
     replays the saved result; the next period uses a new key and fresh sources.
     """
-    server = create_mcp(runtime or build_runtime())
+    server = create_mcp(runtime or build_runtime(), profile="full")
     response = await server.call_tool("evaluate_insight_card", {
         "card_id": card_id, "idempotency_key": run_key,
     })

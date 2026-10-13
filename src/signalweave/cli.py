@@ -21,7 +21,7 @@ from .local_setup import (
     local_environment,
     set_credential,
     setup_local,
-    validate_key_configuration,
+    validate_decision_configuration,
 )
 from .local_status import local_status
 from .runtime import build_runtime, load_deployment_secret
@@ -42,6 +42,14 @@ def _http_api_token() -> str | None:
     return load_deployment_secret("SIGNALWEAVE_API_TOKEN")
 
 
+class _BuildInfoAction(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        from .build_info import build_info
+
+        print(json.dumps(build_info(), sort_keys=True))
+        parser.exit()
+
+
 def main() -> None:
     distribution = "standalone executable" if getattr(sys, "frozen", False) else "Python CLI"
     parser = argparse.ArgumentParser(
@@ -54,6 +62,8 @@ def main() -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("--version", action="version", version=f"SignalWeave {__version__}")
+    parser.add_argument("--build-info", action=_BuildInfoAction, nargs=0, default=argparse.SUPPRESS,
+                        help="Show the native build's version and source fingerprint")
     commands = parser.add_subparsers(dest="command", required=True)
     init = commands.add_parser(
         "init", help="Create private local configuration and state (advanced; setup is the normal path)"
@@ -62,15 +72,25 @@ def main() -> None:
     init.add_argument("--key-file", help="Copy a private TypeSafe key file instead of prompting")
     setup = commands.add_parser(
         "setup",
-        help="Guided human setup: Jev key, connectors, credentials, and agent handoff",
+        help="Guided human setup: connectors, credentials, and agent handoff",
         description=(
             "Walk through a private local setup. Secrets are hidden and stored under "
-            "~/.signalweave; no TOML editing is required."
+            "~/.signalweave; no TOML editing is required. Choose Jev, OpenAI Decisions, or ChatGPT-plan Responses."
         ),
     )
     setup.add_argument("--home", help="Local home (default: SIGNALWEAVE_HOME or ~/.signalweave)")
+    setup.add_argument(
+        "--profile", choices=["agent", "full"], default=None,
+        help="agent is the normal card workflow; full adds advanced tools",
+    )
     setup.add_argument("--non-interactive", action="store_true", help="Never prompt; credentials must exist or use private files")
     setup.add_argument("--key-file", help="Private file containing the TypeSafe key")
+    setup.add_argument(
+        "--decision-provider",
+        choices=["jev", "openai-decisions", "chatgpt-plan"],
+        help="Card decision backend (interactive setup explains the tradeoffs)",
+    )
+    setup.add_argument("--openai-key-file", help="Private file containing the OpenAI API key")
     setup.add_argument("--source", choices=["superset", "preset", "trino", "mcp", "skip"])
     setup.add_argument("--url", help="Superset or Preset workspace URL")
     setup.add_argument("--username", help="Superset username")
@@ -131,12 +151,21 @@ def main() -> None:
     credentials_set.add_argument(
         "name",
         help=(
-            "typesafe, superset-password, preset-api-token-name, "
+            "typesafe, openai, superset-password, preset-api-token-name, "
             "preset-api-token-secret, preset-access-token, or jev"
         ),
     )
     credentials_set.add_argument("--home", help="Local home (default: SIGNALWEAVE_HOME or ~/.signalweave)")
     credentials_set.add_argument("--file", dest="secret_file", help="Read the secret from a private file")
+    auth = commands.add_parser("auth", help="Manage local ChatGPT-plan sign-in")
+    auth_sub = auth.add_subparsers(dest="auth_command", required=True)
+    for command, help_text in (
+        ("login", "Connect or reconnect ChatGPT-plan access in your browser"),
+        ("status", "Show secret-free ChatGPT-plan connection status"),
+        ("logout", "Remove local ChatGPT tokens"),
+    ):
+        auth_command = auth_sub.add_parser(command, help=help_text)
+        auth_command.add_argument("--home", help="Local home (default: SIGNALWEAVE_HOME or ~/.signalweave)")
     connections = commands.add_parser(
         "connections", help="Add, update, or list Superset, Preset, Trino, or MCP sources"
     )
@@ -175,7 +204,10 @@ def main() -> None:
     snippet = commands.add_parser("agent-config", help="Print configuration; never edits agent files")
     snippet.add_argument("--home", help="Local home (default: SIGNALWEAVE_HOME or ~/.signalweave)")
     snippet.add_argument("--agent", choices=["codex", "claude"], required=True)
-    run = commands.add_parser("run", help="Evaluate an approved card once and print its JSON result")
+    run = commands.add_parser(
+        "run",
+        help="Run an approved insight card once through the configured decision provider",
+    )
     run.add_argument("card", metavar="CARD")
     run.add_argument("--run-key", required=True, help="Stable idempotency key for this evaluation")
     run.add_argument("--output", type=Path, help="Directory for rendered output")
@@ -188,20 +220,33 @@ def main() -> None:
         help="Local home (default: configured ~/.signalweave; otherwise deployment environment)",
     )
     serve.add_argument("--transport", choices=["stdio", "streamable-http"], default="stdio")
+    serve.add_argument(
+        "--profile",
+        choices=["agent", "full"],
+        default=None,
+        help="MCP tools to expose (default: agent; full adds advanced legacy tools)",
+    )
     serve.add_argument("--host", default=None)
     serve.add_argument("--port", type=int, default=None)
 
+    if len(sys.argv) == 1:
+        selected_home = Path(os.environ.get("SIGNALWEAVE_HOME") or Path.home() / ".signalweave").expanduser()
+        existing_home = selected_home / "config.toml"
+        sys.argv.append("status" if existing_home.is_file() else "setup")
     args = parser.parse_args()
     try:
         if args.command == "setup":
             options = vars(args).copy()
             options.pop("command")
             register = options.pop("register_agent")
+            options["profile"] = (
+                options.get("profile") or os.getenv("SIGNALWEAVE_MCP_PROFILE", "agent").strip().lower()
+            )
             guided_sources = not options.get("non_interactive") and options.get("source") is None
             if guided_sources:
                 print("SignalWeave setup")
                 print("Private home: " + str(options.get("home") or Path.home() / ".signalweave"))
-                print("Enter your Jev key and the sources your agent may read. Secrets stay hidden and local.")
+                print("Choose a decision provider, then connect the BI sources your agent may read.")
             home, agent = setup_local(**options)
             if guided_sources:
                 # A first-time human often has more than one useful system. Keep
@@ -223,6 +268,22 @@ def main() -> None:
             print("\nLocal configuration saved. No source process was started during setup.")
             print(f"Private home: {home}")
             print("Run `signalweave health --live` when you are ready to test source access.")
+            from .local_setup import read_config
+
+            _, setup_values = read_config(home)
+            decision_provider = setup_values.get("SIGNALWEAVE_DECISION_PROVIDER", "jev")
+            if decision_provider == "chatgpt-plan" and not options.get("non_interactive"):
+                from .chatgpt_auth import auth_status, login
+
+                if auth_status(home)["status"] != "connected":
+                    try:
+                        login(home)
+                        print("ChatGPT plan connected for SignalWeave.")
+                    except SetupError as error:
+                        print(f"ChatGPT sign-in is still needed: {error}")
+                        print("Run `signalweave auth login` when ready; local setup is saved.")
+            elif decision_provider == "chatgpt-plan":
+                print("Next: run `signalweave auth login` to authorize ChatGPT-plan usage in your browser.")
             if register is True or (register is None and guided_sources and _ask_yes_no(
                 f"\nConnect SignalWeave to {agent.title()} now? [Y/n]: ", default=True,
             )):
@@ -236,6 +297,24 @@ def main() -> None:
             print("Status: " + shlex.join(["signalweave", "status", "--home", str(home)]))
             print("Local UI: " + shlex.join(["signalweave", "ui", "--open", "--home", str(home)]))
             print("Then ask your agent: Use SignalWeave's getting-started guide to help me get my first useful report.")
+            return
+        if args.command == "auth":
+            from .chatgpt_auth import auth_status, login, logout
+
+            if args.auth_command == "login":
+                state = login(args.home)
+                print(f"ChatGPT plan: {state['status']} ({state.get('account') or 'account hidden'})")
+                print("Tokens are stored in your private SignalWeave home; they are not Codex CLI credentials.")
+            elif args.auth_command == "status":
+                state = auth_status(args.home)
+                print(f"ChatGPT plan: {state['status']}")
+                if state.get("account"):
+                    print(f"Account: {state['account']}")
+                print(f"Plan usage: {state['plan_usage']}")
+            else:
+                removed = logout(args.home)
+                print("Local ChatGPT tokens removed." if removed else "No local ChatGPT sign-in was saved.")
+                print("To revoke remote access too, disconnect SignalWeave in ChatGPT settings.")
             return
         if args.command == "connect":
             from .local_setup import read_config
@@ -370,7 +449,7 @@ def main() -> None:
         )
         with context as local_home:
             if args.command in {"doctor", "health"}:
-                healthy, messages = doctor()
+                healthy, messages = doctor(local_home)
                 report = {"healthy": healthy, "mode": "offline", "messages": messages}
                 if args.live:
                     if healthy:
@@ -391,8 +470,16 @@ def main() -> None:
                 if not report["healthy"]:
                     raise SystemExit(1)
                 return
-            if local_home is not None or args.command == "serve":
-                validate_key_configuration()
+            if args.command in {"serve", "run"}:
+                if args.command == "serve":
+                    selected_profile = (
+                        args.profile or os.getenv("SIGNALWEAVE_MCP_PROFILE", "agent").strip().lower()
+                    )
+                    if selected_profile not in {"agent", "full"}:
+                        raise SetupError("SIGNALWEAVE_MCP_PROFILE must be agent or full")
+                validate_decision_configuration(local_home)
+            elif local_home is not None:
+                validate_decision_configuration()
             if args.command == "run":
                 from .local_run import run_card
 
@@ -427,6 +514,9 @@ def _print_status(report: dict[str, object]) -> None:
         print(f"Home: {report['home']}")
     if report.get("error"):
         print(f"Setup: {report['error']}")
+    decision = report.get("decision_provider")
+    if isinstance(decision, dict):
+        print(f"Decision provider: {decision.get('selected', 'not configured')} ({decision.get('status', 'unknown')})")
     jev = report.get("jev")
     if isinstance(jev, dict):
         print(f"Jev: {jev.get('status', 'unknown')} (live judgment check: {jev.get('live_check', 'not run')})")
@@ -513,8 +603,15 @@ def _run_stdio(server) -> None:
 
 def _serve(args: argparse.Namespace) -> None:
     from .mcp_server import create_mcp
+
+    profile = args.profile or os.getenv("SIGNALWEAVE_MCP_PROFILE", "agent").strip().lower()
+    if profile not in {"agent", "full"}:
+        raise RuntimeError("SIGNALWEAVE_MCP_PROFILE must be agent or full")
+    runtime_mode = os.getenv(
+        "SIGNALWEAVE_DECISION_PROVIDER", os.getenv("TYPESAFE_MODE", "jev")
+    ).strip().lower()
     if args.transport == "stdio":
-        server = create_mcp(build_runtime())
+        server = create_mcp(build_runtime(mode=runtime_mode), profile=profile)
         _run_stdio(server)
         return
 
@@ -549,7 +646,8 @@ def _serve(args: argparse.Namespace) -> None:
             validate_token_resource=False,
         )
         server = create_mcp(
-            build_runtime(),
+            build_runtime(mode=runtime_mode),
+            profile=profile,
             principal_resolver=lambda _ctx: principal_from_access_token(
                 get_access_token(),
                 tenant_claim=oidc.tenant_claim,
@@ -566,14 +664,14 @@ def _serve(args: argparse.Namespace) -> None:
             require_principal=True,
         )
     else:
-        runtime = build_runtime()
+        runtime = build_runtime(mode=runtime_mode)
         if runtime.principal is None:
             raise RuntimeError(
                 "token-authenticated streamable HTTP requires "
                 "SIGNALWEAVE_TENANT_ID and SIGNALWEAVE_PRINCIPAL_ID; use stdio for "
                 "an intentionally unscoped local process"
             )
-        server = create_mcp(runtime, require_principal=True)
+        server = create_mcp(runtime, profile=profile, require_principal=True)
     server.settings.host = args.host
     server.settings.port = args.port
 

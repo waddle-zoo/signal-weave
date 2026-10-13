@@ -70,7 +70,7 @@ async def run_probe(primary, output, *, live=False, key_file=None):
                           principal=operator_principal(company))
         row = {"company": company_id, "period": period_id}
         try:
-            native = await dispatch(create_mcp(runtime), "evaluate_insight_card", {
+            native = await dispatch(create_mcp(runtime, profile="full"), "evaluate_insight_card", {
                 "card_id": card.id, "idempotency_key": period_id})
             row.update(native=native, score=score(native_submission(native, company["destinations"]), expected[company_id][period_id]))
         except Exception as error:

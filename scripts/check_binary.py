@@ -17,6 +17,11 @@ from pathlib import Path
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
+if __package__:
+    from .binary_provenance import verify_binary
+else:
+    from binary_provenance import verify_binary
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -26,6 +31,7 @@ def _check_stderr(stderr: str) -> None:
 
 
 async def check(binary: Path, key_file: Path | None, live: bool):
+    identity = verify_binary(binary)
     with tempfile.TemporaryDirectory(prefix="signalweave-binary-check-") as temporary:
         # macOS aliases /var to /private/var; the setup contract rejects symlink
         # ancestors. Canonicalize only this newly created temporary test directory.
@@ -95,7 +101,9 @@ async def check(binary: Path, key_file: Path | None, live: bool):
                         names = [tool.name for tool in (await session.list_tools()).tools]
                         assert "onboard_insight_card" in names and "evaluate_insight_card" in names
                         assert "get_signalweave_guide" in names
-                        for task in ("start", "query", "report", "monitor"):
+                        # The default agent profile intentionally exposes the
+                        # minimal guide set; query/report guides require full.
+                        for task in ("start", "monitor"):
                             guide = await session.call_tool("get_signalweave_guide", {"task": task})
                             assert not guide.isError
                             assert guide.structuredContent["task"] == task
@@ -111,7 +119,34 @@ async def check(binary: Path, key_file: Path | None, live: bool):
                   "offline_doctor": True, "health_alias": True, "agent_config": True,
                   "stdio_tools": len(names), "different_cwd": True, "live": live,
                   "version": binary_version}
-        result["orientation_paths"] = ["start", "query", "report", "monitor"]
+        result["build"] = identity
+        result["orientation_paths"] = ["start", "monitor"]
+        # Exercise the no-Jev install variants in the actual frozen binary.
+        openai_key = folder / "openai-input.key"
+        openai_key.write_text("offline-openai-packaging-check-not-a-real-key")
+        openai_key.chmod(0o600)
+        openai_home = user_home / "openai-profile"
+        command(
+            "setup", "--non-interactive", "--home", str(openai_home),
+            "--decision-provider", "openai-decisions", "--openai-key-file", str(openai_key),
+            "--source", "skip", "--no-register-agent",
+        )
+        openai_settings = tomllib.loads((openai_home / "config.toml").read_text())["environment"]
+        assert openai_settings["SIGNALWEAVE_DECISION_PROVIDER"] == "openai-decisions"
+        assert "TYPESAFE_API_KEY_FILE" not in openai_settings
+        assert "OPENAI_API_KEY: configured" in command("status", "--home", str(openai_home))
+
+        chatgpt_home = user_home / "chatgpt-profile"
+        command(
+            "setup", "--non-interactive", "--home", str(chatgpt_home),
+            "--decision-provider", "chatgpt-plan", "--source", "skip", "--no-register-agent",
+        )
+        chatgpt_settings = tomllib.loads((chatgpt_home / "config.toml").read_text())["environment"]
+        assert chatgpt_settings["SIGNALWEAVE_DECISION_PROVIDER"] == "chatgpt-plan"
+        assert "TYPESAFE_API_KEY_FILE" not in chatgpt_settings
+        assert "OPENAI_API_KEY_FILE" not in chatgpt_settings
+        assert "ChatGPT plan: not_connected" in command("auth", "status", "--home", str(chatgpt_home))
+        result["decision_provider_setup"] = ["jev", "openai-decisions", "chatgpt-plan"]
         if live:
             # Test-only imports; neither trial fixtures nor this checker are bundled.
             sys.path.insert(0, str(ROOT))

@@ -19,6 +19,7 @@ from scripts.package_release import ROOT, TARGETS, package
 INSTALLER = ROOT / "scripts/install.sh"
 VERSION = "v" + tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]["version"]
 STABLE_VERSION = "v1.2.3"
+OLD_VERSION = "v1.2.2"
 BASE = "https://github.com/waddle-zoo/signal-weave/releases"
 
 
@@ -109,6 +110,65 @@ def test_native_detection_and_latest_install(install_env, system, arch, target):
                         f"{BASE}/download/{STABLE_VERSION}/signalweave-{STABLE_VERSION}-{target}.tar.gz"]
 
 
+def test_setup_without_a_terminal_installs_and_prints_resume_command(install_env):
+    executable = b'#!/bin/sh\nprintf "%s\\n" "$*" >> "$SETUP_LOG"\n'
+    release(install_env, version=STABLE_VERSION, executable=executable)
+    log = Path(install_env["HOME"]) / "setup.log"
+    result = run({**install_env, "SETUP_LOG": str(log)}, "--setup")
+    assert result.returncode == 2
+    assert log.read_text().splitlines() == ["--help"]
+    assert "needs an interactive terminal" in result.stderr
+    assert f'"{installed(install_env)}" setup' in result.stderr
+    assert installed(install_env).is_file()
+
+
+def test_setup_without_a_terminal_does_not_run_or_replace_existing_binary(install_env):
+    executable = b'''#!/bin/sh
+case "$1" in
+    --version) printf 'SignalWeave 1.2.3\\n' ;;
+    setup) exit 17 ;;
+esac
+exit 0
+'''
+    release(install_env, version=STABLE_VERSION, executable=executable)
+    result = run(install_env, "--setup")
+    assert result.returncode == 2
+    assert installed(install_env).is_file()
+    assert "needs an interactive terminal" in result.stderr
+    assert '"' + str(installed(install_env)) + '" setup' in result.stderr
+
+
+def test_setup_rerun_reuses_existing_install_without_replacing_it(install_env):
+    executable = b'''#!/bin/sh
+case "$1" in
+    --version) printf 'SignalWeave 1.2.3\\n' ;;
+    setup) exit 0 ;;
+esac
+exit 0
+'''
+    release(install_env, version=STABLE_VERSION, executable=executable)
+    first = run(install_env, "--version", STABLE_VERSION)
+    assert first.returncode == 0, first.stderr
+    original = installed(install_env).read_bytes()
+    requests_before = Path(install_env["REQUEST_LOG"]).read_text()
+
+    resumed = run(install_env, "--setup")
+
+    assert resumed.returncode == 2
+    assert installed(install_env).read_bytes() == original
+    assert Path(install_env["REQUEST_LOG"]).read_text() == requests_before
+    assert "keeping it and resuming setup" in resumed.stdout
+    assert "needs an interactive terminal" in resumed.stderr
+
+
+def test_installer_help_documents_guided_setup(install_env):
+    result = run(install_env, "--help")
+    assert result.returncode == 0
+    assert "[--setup]" in result.stdout
+    assert "guided first-run wizard" in result.stdout
+    assert not Path(install_env["REQUEST_LOG"]).exists()
+
+
 @pytest.mark.parametrize("version", ["v1.2.3", "v1.2.3rc1", "v1.2.3rc12"])
 def test_explicit_version_no_latest_lookup(install_env, version):
     release(install_env, version=version)
@@ -169,12 +229,19 @@ def test_duplicate_member_rejected(install_env):
 
 
 def test_existing_requires_explicit_replacement(install_env):
-    release(install_env)
-    assert run(install_env, "--version", VERSION).returncode == 0
+    old_executable = b'''#!/bin/sh
+case "$1" in --version) printf 'SignalWeave 1.2.2\\n';; esac
+exit 0
+'''
+    release(install_env, version=OLD_VERSION, executable=old_executable)
+    assert run(install_env, "--version", OLD_VERSION).returncode == 0
     original = installed(install_env).read_bytes()
-    release(install_env, executable=b"#!/bin/sh\n# new version\nexit 0\n")
-    assert run(install_env, "--version", VERSION).returncode != 0
+    release(install_env, version=OLD_VERSION, executable=b"#!/bin/sh\n# new payload\nexit 0\n")
+    mismatch = run(install_env, "--version", VERSION)
+    assert mismatch.returncode != 0
+    assert f"Installed SignalWeave v1.2.2 differs from requested {VERSION}" in mismatch.stderr
     assert installed(install_env).read_bytes() == original
+    release(install_env, version=VERSION, executable=b"#!/bin/sh\n# new version\nexit 0\n")
     assert run(install_env, "--version", VERSION, "--replace").returncode == 0
     assert installed(install_env).read_bytes() != original
 
@@ -209,7 +276,18 @@ def test_unsupported_platform_no_download(install_env):
 
 def test_package_archive_is_small_explicit_contract(tmp_path):
     binary = tmp_path / "binary"
-    binary.write_bytes(b"fake binary")
+    from scripts.binary_provenance import build_metadata
+
+    metadata = build_metadata(ROOT)
+    binary.write_text(f'''#!{sys.executable}
+import json, sys
+metadata = {metadata!r}
+if sys.argv[1:] == ["--build-info"]:
+    print(json.dumps(metadata, sort_keys=True))
+elif sys.argv[1:] == ["--help"]:
+    print("fake SignalWeave for package contract")
+''')
+    binary.chmod(0o755)
     target = TARGETS[(platform.system(), platform.machine())]
     artifact = package(binary, tmp_path / "release", VERSION, target)
     with tarfile.open(artifact) as archive:
@@ -282,13 +360,23 @@ async def test_binary_without_setup_cannot_pass_release_smoke(tmp_path):
     old_binary = tmp_path / "old-binary"
     old_binary.write_text('#!/bin/sh\ncase "$1" in setup) exit 2;; *) exit 0;; esac\n')
     old_binary.chmod(0o755)
-    with pytest.raises(RuntimeError, match="Binary command failed"):
+    with pytest.raises(ValueError, match="build-info|metadata"):
         await check(old_binary, None, live=False)
 
 
-@pytest.mark.skipif(not os.getenv("SIGNALWEAVE_TEST_BINARY"), reason="Opt-in native binary installer smoke")
+@pytest.mark.skipif(
+    not (os.getenv("SIGNALWEAVE_TEST_BINARY") and os.getenv("SIGNALWEAVE_TEST_BINARY_SHA256")
+         and os.getenv("SIGNALWEAVE_TEST_BINARY_VERSION")),
+    reason="Requires coordinator-certified latest binary path, SHA-256, and version",
+)
 def test_real_binary_installs_and_initializes(install_env, tmp_path):
+    from scripts.binary_provenance import verify_binary
+
     binary = Path(os.environ["SIGNALWEAVE_TEST_BINARY"]).resolve()
+    identity = verify_binary(binary)
+    print("Certified binary identity: " + json.dumps(identity, sort_keys=True), flush=True)
+    assert identity["binary_sha256"] == os.environ["SIGNALWEAVE_TEST_BINARY_SHA256"]
+    assert identity["version"] == os.environ["SIGNALWEAVE_TEST_BINARY_VERSION"] == VERSION.removeprefix("v")
     system, architecture = platform.system(), platform.machine()
     env = {**install_env, "TEST_OS": system, "TEST_ARCH": architecture}
     package(binary, Path(env["FIXTURES"]), VERSION, TARGETS[(system, architecture)])

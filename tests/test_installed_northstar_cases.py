@@ -1,6 +1,7 @@
 import json
 from datetime import datetime
 
+from evaluations.bootstrap_scenarios import score_submission
 from evaluations.installed_northstar_cases import build_northstar
 from evaluations.northstar_growth_history_trial import (
     DEFAULT_SPEC,
@@ -73,7 +74,7 @@ def test_smoke_is_the_next_week_known_family_not_a_novel_holdout(tmp_path):
     smoke = build_northstar(_write_seed_dir(tmp_path / "seed2"), smoke=True)
     assert len(smoke["public"]["periods"]) == 6
     assert {item["condition"] for item in smoke["private"]["periods"].values()} == {
-        item["condition"] for item in full["private"]["periods"].values() if item["condition"] in {
+        item["condition"] for item in full["private"]["periods"].values() if item["variant_id"] in {
             "day-01-no-change", "day-02-modest-movement", "day-03-isolated-channel",
             "day-04-corroborated-decline", "day-05-conflicting-sources", "day-06-source-unavailable",
         }
@@ -90,6 +91,74 @@ def test_private_outcomes_match_original_known_register(tmp_path):
     assert [item["expected_outcome"] for item in scenario["owner_examples"]] == [
         case.historical_outcome.value for case in original[:6]
     ]
+
+
+def test_installed_labels_score_actionable_abstentions_as_missed_work(tmp_path):
+    scenario = build_northstar(_write_seed_dir(tmp_path / "seed"), smoke=True)
+    period_id, event = next(
+        (period_id, label)
+        for period_id, label in scenario["private"]["periods"].items()
+        if label["outcome"] in {"notify", "investigate"}
+    )
+    assert event["condition"] == "event"
+    missed_action = score_submission(
+        scenario,
+        period_id,
+        {"outcome": "ignore", "recipients": [], "evidence_refs": [],
+         "numeric_claims": [], "claims": []},
+        inspected_refs=set(scenario["public"]["periods"][0]["snapshots"]),
+        asked_owner_topics=event["required_owner_topics"],
+    )
+    assert missed_action["missed_event"] is True
+    assert missed_action["exact"] is False
+
+
+def test_installed_private_label_matches_generic_final_agent_scorer(tmp_path):
+    scenario = build_northstar(_write_seed_dir(tmp_path / "seed"), smoke=True)
+    for label in scenario["private"]["periods"].values():
+        assert label["condition"] in {"event", "data_gap", "quiet"}
+        assert label["variant_id"]
+        assert label["required_owner_topics"] == [
+            "metric_scope", "materiality", "routing", "data_gaps"
+        ]
+        assert "net_sales_total_delta" in label["numeric_facts"]
+        assert label["required_numeric_facts"] == (
+            ["net_sales_total_baseline", "net_sales_total_current",
+             "net_sales_total_change_pct"]
+            if label["outcome"] in {"notify", "investigate"}
+            and label["condition"] == "event"
+            else []
+        )
+
+
+def test_northstar_numeric_contract_scores_source_supported_report_values(tmp_path):
+    scenario = build_northstar(_write_seed_dir(tmp_path / "seed"), smoke=True)
+    period_id, label = next(
+        (period_id, item)
+        for period_id, item in scenario["private"]["periods"].items()
+        if item["outcome"] == "notify"
+    )
+    claims = [
+        {"fact": fact_id, "value": label["numeric_facts"][fact_id]["value"],
+         "unit": label["numeric_facts"][fact_id]["unit"],
+         "evidence_refs": label["numeric_facts"][fact_id]["evidence_refs"]}
+        for fact_id in label["required_numeric_facts"]
+    ]
+    citations = sorted(set(label["required_evidence_refs"]) |
+                       {ref for claim in claims for ref in claim["evidence_refs"]})
+    result = score_submission(
+        scenario,
+        period_id,
+        {"outcome": label["outcome"], "recipients": label["recipients"],
+         "evidence_refs": citations, "numeric_claims": claims, "claims": []},
+        inspected_refs=set(scenario["public"]["periods"][0]["snapshots"]),
+        asked_owner_topics=label["required_owner_topics"],
+    )
+    assert result["valid_submission"] is True
+    assert result["numeric_precision"] == 1
+    assert result["numeric_recall"] == 1
+    assert result["evidence_recall"] == 1
+    assert result["exact"] is True
 
 
 def test_future_source_metadata_does_not_disclose_scenario_family(tmp_path):

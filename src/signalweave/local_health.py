@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 from typing import Any
 
 from .runtime import build_runtime
@@ -18,7 +19,10 @@ async def live_source_report(*, timeout_seconds: float = 15.0) -> tuple[bool, li
     """
     if timeout_seconds <= 0:
         raise ValueError("timeout_seconds must be positive")
-    runtime = build_runtime()
+    profile = os.getenv("SIGNALWEAVE_MCP_PROFILE", "agent").strip().lower()
+    if profile not in {"agent", "full"}:
+        return False, ["SIGNALWEAVE_MCP_PROFILE must be agent or full."]
+    runtime = build_runtime(mode="agent" if profile == "agent" else "jev")
     names = runtime.sources.adapter_names()
     if not names:
         return False, ["No source adapters are configured."]

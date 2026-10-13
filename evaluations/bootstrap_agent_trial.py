@@ -463,7 +463,23 @@ def common_tools(public: dict, phase: str) -> list[dict]:
                  {"notes": text}, ["notes"]),
     ]
     if phase == "onboarding":
+        if public.get("require_agent_data_signoff"):
+            tools.append(function(
+                "sign_off_data_foundation",
+                "As the data expert, record whether inspected source evidence supports the requested metric, population, grain and comparison. Cite only sources you actually inspected. If a material ambiguity remains, mark not_ready and explain it; do not sign off by assuming.",
+                {
+                    "status": {"type": "string", "enum": ["ready", "not_ready"]},
+                    "metric_definition": {"type": "string"},
+                    "population": {"type": "string"},
+                    "grain_and_comparison": {"type": "string"},
+                    "verified_source_refs": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+                    "unresolved_ambiguities": {"type": "array", "items": {"type": "string"}},
+                },
+                ["status", "metric_definition", "population", "grain_and_comparison",
+                 "verified_source_refs", "unresolved_ambiguities"],
+            ))
         tools.append(function("finish_setup", "Finish onboarding after inspection and policy lookup. "
+                              "When requested, the acting agent must first sign off as the data expert. "
                               "Treatment requires an explicitly approved, dry-run-tested card; "
                               "baseline uses its durable notes and leaves card_id null.",
                               {"card_id": {"type": ["string", "null"]}}, []))
@@ -514,6 +530,23 @@ def same_card_monitoring_observed(rows: list[dict[str, Any]]) -> bool:
     )
 
 
+def paired_onboarding_completed(rows: list[dict[str, Any]]) -> bool:
+    """Require both arms to finish onboarding for every selected company."""
+    expected = {
+        (str(row.get("scenario_id")), arm)
+        for row in rows
+        if row.get("phase") == "onboarding"
+        for arm in ARMS
+    }
+    completed = {
+        (str(row.get("scenario_id")), row.get("arm"))
+        for row in rows
+        if row.get("phase") == "onboarding" and row.get("status") == "complete"
+    }
+    companies = {str(row.get("scenario_id")) for row in rows}
+    return bool(companies) and expected == completed and len(expected) == len(companies) * len(ARMS)
+
+
 class ToolSession:
     def __init__(self, public: dict, adapter: PublicSourceAdapter, server, treatment: bool,
                  *, registry: SourceRegistry | None = None, owner_reviewer=None,
@@ -521,10 +554,14 @@ class ToolSession:
         self.tenant_id = public["scenario_id"]
         self.public = agent_context(public)
         self.owner = {"owner_answers": copy.deepcopy(public["owner_answers"])}
+        self.agent_final_decision = bool(public.get("agent_final_decision", False))
+        self.no_owner_during_monitoring = bool(public.get("no_owner_during_monitoring", False))
+        self.require_agent_data_signoff = bool(public.get("require_agent_data_signoff", False))
         self.adapter, self.server, self.treatment = adapter, server, treatment
         self.registry = registry or SourceRegistry([adapter])
         self.notes = ""
         self.owner_topics: set[str] = set()
+        self.phase_owner_topics: set[str] = set()
         self.reviewed: dict[str, str] = {}
         self.simulated: dict[str, str] = {}
         self.owner_approvals: dict[str, str] = {}
@@ -535,6 +572,7 @@ class ToolSession:
         self.shared_card: dict | None = None
         self.latest_card: dict | None = None
         self.setup_complete = False
+        self.data_signoff: dict | None = None
         self.submission: dict | None = None
         self.phase = "onboarding"
         self.allowed_product: set[str] = set()
@@ -691,7 +729,9 @@ class ToolSession:
             raise ValueError("Current policy has no matching independent owner review")
 
     async def specs(self) -> list[dict]:
-        specs = common_tools(self.public, self.phase)
+        tool_context = {**self.public,
+                        "require_agent_data_signoff": self.require_agent_data_signoff}
+        specs = common_tools(tool_context, self.phase)
         if self.owner_reviewer is not None and self.phase != "onboarding":
             specs = [tool for tool in specs if tool["name"] != "save_notes"]
         if self.owner_reviewer is not None and self.phase == "onboarding":
@@ -782,7 +822,36 @@ class ToolSession:
             return {"value": calculate(arguments["expression"])}
         if name == "ask_owner":
             self.owner_topics.add(arguments["topic"])
+            self.phase_owner_topics.add(arguments["topic"])
+            if self.phase == "monitoring" and self.no_owner_during_monitoring:
+                return {
+                    "topic": arguments["topic"],
+                    "known": False,
+                    "answer": "No owner is available during this autonomous monitoring run. "
+                              "Use only the policy and data context signed off during onboarding.",
+                }
             return ask_owner(self.owner, arguments["topic"])
+        if (name == "sign_off_data_foundation" and self.phase == "onboarding"
+                and self.require_agent_data_signoff):
+            refs = arguments["verified_source_refs"]
+            if not refs or len(refs) != len(set(refs)):
+                raise ValueError("Data-expert signoff requires unique, inspected source refs")
+            uninspected = set(refs) - self.adapter.inspected
+            if uninspected:
+                raise ValueError("Data-expert signoff may cite only inspected refs: " + ", ".join(sorted(uninspected)))
+            for field in ("metric_definition", "population", "grain_and_comparison"):
+                value = arguments[field]
+                if not isinstance(value, str) or not value.strip() or len(value) > 2_000:
+                    raise ValueError(f"{field} must be non-empty text up to 2000 characters")
+            ambiguities = arguments["unresolved_ambiguities"]
+            if not isinstance(ambiguities, list) or any(not isinstance(item, str) or not item.strip() for item in ambiguities):
+                raise ValueError("unresolved_ambiguities must be a list of non-empty strings")
+            if arguments["status"] == "ready" and ambiguities:
+                raise ValueError("Cannot sign off ready while ambiguities remain unresolved")
+            self.data_signoff = copy.deepcopy(arguments)
+            return {"recorded": True, "agent_is_data_expert": True,
+                    "ready": arguments["status"] == "ready",
+                    "remaining_ambiguities": ambiguities}
         if name == "save_notes":
             if self.owner_reviewer is not None and self.phase != "onboarding":
                 raise ValueError("Reviewed policy notes are frozen during monitoring in both trial arms")
@@ -793,6 +862,8 @@ class ToolSession:
         if name == "finish_setup" and self.phase == "onboarding":
             if not self.notes or not self.adapter.inspected or not self.owner_topics:
                 raise ValueError("Inspect sources, consult owner and save reusable notes first")
+            if self.require_agent_data_signoff and (not self.data_signoff or self.data_signoff.get("status") != "ready"):
+                raise ValueError("The agent data expert must sign off from inspected sources before setup can finish")
             card_id = arguments.get("card_id")
             if self.treatment:
                 if not card_id:
@@ -809,6 +880,7 @@ class ToolSession:
             self.setup_source_context = self.owner_source_context()
             self.setup_complete = True
             return {"setup_complete": True, "card_id": self.card_id,
+                    "data_expert_signoff": copy.deepcopy(self.data_signoff),
                     "human_approval": ("independent simulated-owner model review; not actual human authorization"
                                        if self.owner_reviewer is not None else
                                        "synthetic procedural approval, not proof of policy correctness")}
@@ -886,6 +958,23 @@ class ToolSession:
             if before == after:
                 self.simulated[card_id] = before
         return result
+
+
+def signalweave_bundle_instructions(session: ToolSession) -> str:
+    if not session.agent_final_decision:
+        return SIGNALWEAVE_BUNDLE_INSTRUCTIONS
+    return (
+        " A SignalWeave bundle is available as a bounded evidence/retrieval aid, not as "
+        "the final business decision. You own the final user-facing analysis and outcome. "
+        "Read the human-signed-off card policy and the source-backed evidence; do not "
+        "copy Jev's outcome or recipient without checking whether the evidence supports "
+        "it. You may agree with or override the Jev disposition. Use the bundle's source "
+        "references and provenance, inspect additional authorized sources when needed, "
+        "and report supported values with their population, period, and caveats. If sources "
+        "conflict, say so and choose investigate or insufficient_data according to the "
+        "signed-off policy. Do not claim causation from temporal association. The owner is "
+        "unavailable during this autonomous run; unresolved policy is not yours to invent."
+    )
 
 
 async def luna_episode(session: ToolSession, *, key: str, effort: str, budget: RequestBudget,
@@ -966,6 +1055,15 @@ async def luna_episode(session: ToolSession, *, key: str, effort: str, budget: R
                          "SignalWeave's Jev call is a bounded typed policy judgment over the evidence you selected; it is not a substitute for your investigation. Approval models a synthetic owner's procedural review only. Save notes "
                          "and finish_setup with the card ID. No actual human has validated it.")
         instructions += "\nProduction MCP initialization instructions:\n" + (session.server.instructions or "")
+    if session.phase == "onboarding" and session.require_agent_data_signoff:
+        instructions += (
+            " The business owner defines intent and answers policy questions; you are the data expert. "
+            "Independently inspect and reconcile source definitions, population, grain, and comparison. "
+            "Before finish_setup, call sign_off_data_foundation with exact inspected refs. Sign ready only "
+            "when the source mapping and the owner's clarified meaning align; otherwise mark not_ready and "
+            "state the unresolved ambiguity so the owner can clarify it. This is your data-quality signoff, "
+            "not a claim that a real human has approved delivery."
+        )
     shared_card = getattr(session, "shared_card", None)
     if session.phase == "monitoring" and shared_card is not None:
         instructions += (
@@ -975,7 +1073,7 @@ async def luna_episode(session: ToolSession, *, key: str, effort: str, budget: R
             "card-backed evaluation bundle. Do not infer a different policy from the card."
         )
     if session.phase == "monitoring" and session.treatment and bundle is not None:
-        instructions += SIGNALWEAVE_BUNDLE_INSTRUCTIONS
+        instructions += signalweave_bundle_instructions(session)
     prompt = {"phase": session.phase, "period": session.adapter.period_context,
               "business": session.public, "saved_notes": session.notes,
               "shared_card": shared_card,
@@ -1335,6 +1433,9 @@ def select_scenarios(scenarios: list[dict], scenario_ids: list[str] | None, limi
 
 async def run_trial(args, *, scenarios_override: list[dict] | None = None) -> dict:
     owner_review_mode = getattr(args, "owner_review", "procedural")
+    comparison_mode = getattr(args, "comparison_mode", "shared-card-runtime")
+    if comparison_mode not in {"shared-card-runtime", "end-to-end"}:
+        raise ValueError("comparison_mode must be shared-card-runtime or end-to-end")
     if owner_review_mode == "independent" and getattr(args, "agent_transport", "api") != "codex":
         raise ValueError("Independent owner review currently requires the Codex research transport")
     openai_key, jev_key = credentials(args)  # Fail before creating output or calling a provider.
@@ -1358,11 +1459,12 @@ async def run_trial(args, *, scenarios_override: list[dict] | None = None) -> di
               "connector_profile": bool(getattr(args, "connector_profile", False)),
               "catalog_noise": int(getattr(args, "catalog_noise", 0)),
               "push_gated": bool(getattr(args, "push_gated", False)),
+              "comparison_mode": comparison_mode,
               "dataset_digest": dataset_digest(scenarios), "selected_companies": len(scenarios),
               "selected_scenario_ids": [scenario["scenario_id"] for scenario in scenarios],
               "public_context_digest": digest([public_scenario(scenario) for scenario in scenarios]),
               "onboarding_surface": "guided",
-              "same_card_monitoring": True,
+              "same_card_monitoring": comparison_mode == "shared-card-runtime",
               "max_api_requests": args.max_api_requests, "max_turns": args.max_turns,
               "max_tool_calls": args.max_tool_calls, "max_output_tokens": args.max_output_tokens,
               "openai_transport_retries": OPENAI_TRANSPORT_RETRIES,
@@ -1380,6 +1482,14 @@ async def run_trial(args, *, scenarios_override: list[dict] | None = None) -> di
                          "Scorer checks structured fields, not narrative entailment; prose needs independent review.",
                          "Push-gated treatment skips the downstream agent only for a complete Jev ignore with provenance; action outcomes still wake it.",
                          "Without --push-gated every warm run wakes Luna in both arms; no wakeup savings are claimed."]}
+    if comparison_mode == "end-to-end":
+        config["limits"].append(
+            "End-to-end mode lets each arm use its own onboarding artifacts; results include onboarding differences and do not isolate runtime value under a shared card."
+        )
+    else:
+        config["limits"].append(
+            "Shared-card-runtime mode gives both arms the same treatment-authored card; it does not compare end-to-end onboarding quality."
+        )
     episode_runner = luna_episode
     owner_reviewer = None
     if owner_review_mode == "independent":
@@ -1432,7 +1542,7 @@ async def run_trial(args, *, scenarios_override: list[dict] | None = None) -> di
                               principal=PrincipalContext(principal_id="synthetic-owner",
                                                          tenant_id=public["scenario_id"]))
             sessions[arm] = ToolSession(
-                public, adapter, create_mcp(runtime), arm == ARMS[1],
+                public, adapter, create_mcp(runtime, profile="full"), arm == ARMS[1],
                 registry=registry,
                 owner_reviewer=owner_reviewer,
                 onboarding_surface="guided",
@@ -1441,21 +1551,27 @@ async def run_trial(args, *, scenarios_override: list[dict] | None = None) -> di
         shared_card_seeded = False
         for phase, period in periods:
             if phase == "monitoring" and not shared_card_seeded:
-                # The treatment's approved card is the owner-authored policy
-                # artifact for the monitoring comparison. Supplying that exact
-                # snapshot to the baseline prevents a hidden card advantage.
-                shared_card = sessions[ARMS[1]].latest_card
-                if shared_card is not None:
-                    for candidate in sessions.values():
-                        candidate.shared_card = copy.deepcopy(shared_card)
+                if comparison_mode == "shared-card-runtime":
+                    # The treatment's approved card is the owner-authored
+                    # policy artifact for runtime-only comparisons.
+                    shared_card = sessions[ARMS[1]].latest_card
+                    if shared_card is not None:
+                        for candidate in sessions.values():
+                            candidate.shared_card = copy.deepcopy(shared_card)
+                    else:
+                        config["same_card_monitoring"] = False
                 else:
-                    config["same_card_monitoring"] = False
+                    # In an end-to-end comparison each arm uses only what it
+                    # produced during its own onboarding episode.
+                    for candidate in sessions.values():
+                        candidate.shared_card = None
                 shared_card_seeded = True
             # Alternate pair order by period to reduce provider/cache ordering bias.
             order.reverse()
             for arm in order:
                 session = sessions[arm]
                 session.phase, session.submission = phase, None
+                session.phase_owner_topics.clear()
                 # Fixed scenario clock preserves original chronological spacing and ages.
                 period_clock = clock + (datetime.fromisoformat(period["as_of"])
                                         - datetime.fromisoformat(public["onboarding"]["as_of"]))
@@ -1513,8 +1629,10 @@ async def run_trial(args, *, scenarios_override: list[dict] | None = None) -> di
                     audit.emit("episode.error", error_type=type(error).__name__)
                 row.update(seconds=time.perf_counter() - started, usage=usage_summary(audit.events[offset:]),
                            submission=session.submission, notes=session.notes, card_id=session.card_id,
+                           data_expert_signoff=copy.deepcopy(session.data_signoff),
                            system_output=system_output, inspected_refs=sorted(session.adapter.inspected),
                            source_reads=session.adapter.inspections, asked_owner_topics=sorted(session.owner_topics),
+                           asked_owner_topics_this_phase=sorted(session.phase_owner_topics),
                            shared_card_digest=(digest(session.shared_card)
                                                if phase == "monitoring" and session.shared_card is not None
                                                else None))
@@ -1573,7 +1691,10 @@ async def run_trial(args, *, scenarios_override: list[dict] | None = None) -> di
     # assertion is pair-scoped: every company/period must have one identical
     # non-empty digest across the two arms.
     report["same_card_monitoring_observed"] = same_card_monitoring_observed(rows)
-    if not config.get("same_card_monitoring", False):
+    report["paired_onboarding_completed"] = paired_onboarding_completed(rows)
+    if comparison_mode == "shared-card-runtime" and not config.get("same_card_monitoring", False):
+        report["comparative_eligible"] = False
+    if comparison_mode == "end-to-end" and not report["paired_onboarding_completed"]:
         report["comparative_eligible"] = False
     if config.get("agent_transport") == "codex_cli":
         report["measured_dollar_cost_comparison_available"] = False
@@ -1602,6 +1723,9 @@ def parser() -> argparse.ArgumentParser:
                         help="Add this many scoped archive/sandbox/regional/forecast/partner alternatives per canonical resource (0-20)")
     result.add_argument("--push-gated", action="store_true",
                         help="In treatment, do not wake the downstream agent for a complete Jev ignore with provenance")
+    result.add_argument("--comparison-mode", choices=["shared-card-runtime", "end-to-end"],
+                        default="shared-card-runtime",
+                        help="Use one shared treatment card to isolate runtime, or each arm's own setup artifacts for end-to-end comparison")
     result.add_argument("--limit", type=int, default=6, help="Maximum companies, not periods")
     result.add_argument("--scenario-id", action="append", help="Explicit development subset; repeat per company. No periods are omitted.")
     result.add_argument("--seed", type=int, default=DEFAULT_SEED)

@@ -60,6 +60,22 @@ def local_status(home: str | Path | None = None) -> dict[str, Any]:
     except SetupError as error:
         credentials = {"error": str(error)}
     key_ready = credentials.get("TYPESAFE_API_KEY") == "configured"
+    profile = configured.get("SIGNALWEAVE_MCP_PROFILE", "agent")
+    key_required = profile in {"agent", "full"}
+    provider = configured.get(
+        "SIGNALWEAVE_DECISION_PROVIDER", configured.get("TYPESAFE_MODE", "jev")
+    ).strip().lower()
+    openai_ready = credentials.get("OPENAI_API_KEY") == "configured"
+    chatgpt = {"status": "not_connected", "account": None, "plan_usage": "not_enabled"}
+    if provider == "chatgpt-plan":
+        from .chatgpt_auth import auth_status
+
+        chatgpt = auth_status(root)
+    decision_ready = (
+        provider == "jev" and key_ready
+        or provider == "openai-decisions" and openai_ready
+        or provider == "chatgpt-plan" and chatgpt["status"] == "connected"
+    )
     connections = [
         _connection("superset", "Superset", configured, url_key="SUPERSET_URL"),
         _connection("preset", "Preset", configured, url_key="PRESET_URL"),
@@ -87,15 +103,22 @@ def local_status(home: str | Path | None = None) -> dict[str, Any]:
         },
     ]
     configured_connections = [item for item in connections if item["status"] == "configured"]
-    if not key_ready:
+    if key_required and not decision_ready:
         overall = "setup_required"
     elif not configured_connections:
         overall = "onboarding_only"
     else:
         overall = "ready_for_agent"
     next_steps: list[str] = []
-    if not key_ready:
-        next_steps.append("Run `signalweave credentials set typesafe`.")
+    if key_required and not decision_ready:
+        if provider == "jev":
+            next_steps.append("Run `signalweave credentials set typesafe`.")
+        elif provider == "openai-decisions":
+            next_steps.append("Run `signalweave credentials set openai`.")
+        elif provider == "chatgpt-plan":
+            next_steps.append("Run `signalweave auth login` and approve ChatGPT-plan usage.")
+        else:
+            next_steps.append("Run `signalweave setup` and choose a decision provider.")
     if not configured_connections:
         next_steps.append("Run `signalweave connections add` to connect a source.")
     if configured_connections:
@@ -109,9 +132,14 @@ def local_status(home: str | Path | None = None) -> dict[str, Any]:
             "tenant": configured.get("SIGNALWEAVE_TENANT_ID", "local"),
             "principal": configured.get("SIGNALWEAVE_PRINCIPAL_ID", "local"),
         },
+        "decision_provider": {
+            "selected": provider,
+            "status": "configured" if decision_ready else "needs_setup",
+            "chatgpt_plan": chatgpt if provider == "chatgpt-plan" else None,
+        },
         "jev": {
-            "status": "configured" if key_ready else "missing",
-            "mode": configured.get("TYPESAFE_MODE", "jev"),
+            "status": "configured" if provider == "jev" and key_ready else "not_selected",
+            "mode": "jev",
             "live_check": "not_run",
         },
         "credentials": credentials,

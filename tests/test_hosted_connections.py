@@ -2440,6 +2440,7 @@ async def test_shared_runtime_mcp_principal_never_contacts_foreign_preset(
     )
     server = create_mcp(
         runtime,
+        profile="full",
         principal_resolver=lambda _ctx: PrincipalContext(
             principal_id="northstar-agent", tenant_id="northstar"
         ),

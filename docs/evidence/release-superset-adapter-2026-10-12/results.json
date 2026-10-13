@@ -1,0 +1,403 @@
+{
+  "trial": "release_superset_adapter_trial",
+  "date": "2026-10-12",
+  "source_classification": "loopback HTTP fixture; not an actual Superset container",
+  "fixture_protocol": "Superset read-only REST response shapes based on existing client tests",
+  "live_jev_requested": true,
+  "live_jev_max_forwarded_attempts": 3,
+  "card_policy": "Report only numeric facts returned by the selected chart. Choose ignore when the source retrieves typed rows and no owner-defined exception rule is present. Choose insufficient_data when retrieval fails, the declared metric is absent or non-numeric, or a requested conclusion needs missing evidence. Do not infer a comparison, threshold, population, aggregate, cause, or delivery route from a title or renderer. A chart's visualization type describes its display; interpret values only from the returned rows and explicit saved metric fields.",
+  "comparison_metadata_injected": false,
+  "analytical_comparisons_injected": false,
+  "card_source_scope": {
+    "adapter": "superset",
+    "resource": "dashboard:41",
+    "chart_ids": [
+      "312"
+    ]
+  },
+  "fixture_url": "http://127.0.0.1:59225",
+  "native_setup": {
+    "exit_code": 0,
+    "profile": "agent",
+    "source": "superset",
+    "agent_registration": "disabled",
+    "private_home_isolated": true,
+    "credentials_printed": false
+  },
+  "native_health_live": {
+    "exit_code": 0,
+    "json_output": true,
+    "mode": "offline_and_live_source",
+    "healthy": true,
+    "messages": [
+      "Offline configuration check only; no provider requests were made.",
+      "Decision provider: jev (readable private file; live acceptance not tested).",
+      "Superset: configuration present (connectivity and access not tested).",
+      "Offline checks passed. Live source access and permissions remain unverified.",
+      "superset: reachable and searchable; catalog items visible: 0."
+    ]
+  },
+  "native_mcp": {
+    "initialized": true,
+    "protocol_version": "2025-11-25",
+    "profile": "agent",
+    "tools": [
+      "approve_insight_card",
+      "evaluate_insight_card",
+      "get_decision_receipt",
+      "get_insight_card",
+      "get_signalweave_guide",
+      "inspect_resource",
+      "list_insight_cards",
+      "onboard_insight_card",
+      "review_insight_card",
+      "search_catalog"
+    ],
+    "tool_count": 10,
+    "exact_default_tool_contract": true,
+    "guide": {
+      "report_before_automation": true,
+      "pending_alert_criteria_do_not_block_reporting": true,
+      "exact_phrase_present_in_guide_tool_output": false,
+      "MCP_server_instruction_phrase_captured": false,
+      "note": "The initial runner checked only the guide tool result, not MCP initialization instructions; false is not evidence that the server instructions omit the fallback."
+    }
+  },
+  "catalog_pagination": {
+    "page_count": 5,
+    "requested_pages": [
+      0,
+      0,
+      0,
+      0,
+      1
+    ],
+    "selected_refs": [
+      "dashboard:41",
+      "dashboard:42"
+    ],
+    "complete": true
+  },
+  "dashboard_inspection": {
+    "chart_count": 12,
+    "charts": [
+      {
+        "id": "301",
+        "title": "Regional revenue table",
+        "viz_type": "table",
+        "semantic_status": "extracted",
+        "row_count": 2,
+        "observation_count": 2,
+        "cache_status": "uncached",
+        "data_scope": "dashboard_scoped",
+        "error_present": false,
+        "semantic_notes": []
+      },
+      {
+        "id": "302",
+        "title": "Daily revenue line",
+        "viz_type": "echarts_timeseries_line",
+        "semantic_status": "extracted",
+        "row_count": 3,
+        "observation_count": 1,
+        "cache_status": "uncached",
+        "data_scope": "dashboard_scoped",
+        "error_present": false,
+        "semantic_notes": []
+      },
+      {
+        "id": "303",
+        "title": "Regional stacked revenue and orders",
+        "viz_type": "echarts_timeseries_bar",
+        "semantic_status": "extracted",
+        "row_count": 4,
+        "observation_count": 2,
+        "cache_status": "mixed",
+        "data_scope": "dashboard_scoped",
+        "error_present": false,
+        "semantic_notes": []
+      },
+      {
+        "id": "304",
+        "title": "Genre year heatmap",
+        "viz_type": "heatmap_v2",
+        "semantic_status": "extracted",
+        "row_count": 4,
+        "observation_count": 1,
+        "cache_status": "uncached",
+        "data_scope": "dashboard_scoped",
+        "error_present": false,
+        "semantic_notes": []
+      },
+      {
+        "id": "305",
+        "title": "Net sales big number",
+        "viz_type": "big_number_total",
+        "semantic_status": "extracted",
+        "row_count": 1,
+        "observation_count": 1,
+        "cache_status": "uncached",
+        "data_scope": "dashboard_scoped",
+        "error_present": false,
+        "semantic_notes": []
+      },
+      {
+        "id": "306",
+        "title": "Revenue with null rows",
+        "viz_type": "table",
+        "semantic_status": "extracted",
+        "row_count": 4,
+        "observation_count": 2,
+        "cache_status": "uncached",
+        "data_scope": "dashboard_scoped",
+        "error_present": false,
+        "semantic_notes": []
+      },
+      {
+        "id": "307",
+        "title": "Unknown renderer numeric result",
+        "viz_type": "custom_unknown_visualization",
+        "semantic_status": "extracted",
+        "row_count": 2,
+        "observation_count": 2,
+        "cache_status": "uncached",
+        "data_scope": "dashboard_scoped",
+        "error_present": false,
+        "semantic_notes": []
+      },
+      {
+        "id": "308",
+        "title": "Bubble result",
+        "viz_type": "bubble_v2",
+        "semantic_status": "partial",
+        "row_count": 2,
+        "observation_count": 2,
+        "cache_status": "uncached",
+        "data_scope": "dashboard_scoped",
+        "error_present": false,
+        "semantic_notes": [
+          "Metric definition was not present in result rows: SUM(quantity_ordered).",
+          "Metric definition was not present in result rows: COUNT_DISTINCT(country)."
+        ]
+      },
+      {
+        "id": "309",
+        "title": "Orders histogram",
+        "viz_type": "histogram_v2",
+        "semantic_status": "extracted",
+        "row_count": 2,
+        "observation_count": 2,
+        "cache_status": "uncached",
+        "data_scope": "dashboard_scoped",
+        "error_present": false,
+        "semantic_notes": []
+      },
+      {
+        "id": "310",
+        "title": "Empty result chart",
+        "viz_type": "gantt_chart",
+        "semantic_status": "no_data",
+        "row_count": 0,
+        "observation_count": 0,
+        "cache_status": "uncached",
+        "data_scope": "dashboard_scoped",
+        "error_present": true,
+        "semantic_notes": [
+          "The chart query returned no tabular rows."
+        ]
+      },
+      {
+        "id": "311",
+        "title": "Saved query context fallback",
+        "viz_type": "table",
+        "semantic_status": "extracted",
+        "row_count": 2,
+        "observation_count": 2,
+        "cache_status": "uncached",
+        "data_scope": "chart_query_fallback",
+        "error_present": false,
+        "semantic_notes": []
+      },
+      {
+        "id": "312",
+        "title": "Wide cohort events table",
+        "viz_type": "table",
+        "semantic_status": "extracted",
+        "row_count": 400,
+        "observation_count": 400,
+        "cache_status": "uncached",
+        "data_scope": "dashboard_scoped",
+        "error_present": false,
+        "semantic_notes": []
+      }
+    ],
+    "snapshot_json_bytes": 192542,
+    "numeric_observation_count": 417,
+    "dashboard_scope": {
+      "dashboard_scoped_requests": 11,
+      "chart_query_fallbacks": 1
+    },
+    "contract_comparison_windows": [],
+    "analytical_comparisons": 0,
+    "no_comparison_contracts_injected": true,
+    "provider_cache_key_leaked": false
+  },
+  "chart_scope_inspection": {
+    "resource": "chart:312",
+    "snapshot_json_bytes": 171625,
+    "numeric_observations": 400,
+    "contract_comparison_windows": [],
+    "analytical_comparisons": 0,
+    "semantic_status": "extracted"
+  },
+  "source_payload_check": {
+    "wide_chart_rows": 400,
+    "wide_chart_numeric_observations": 400,
+    "dashboard_snapshot_bytes": 192542,
+    "chart_snapshot_bytes": 171625,
+    "result_under_default_1mb_snapshot_limit": true
+  },
+  "card_preflight": {
+    "card_id": "card-wide-chart-evidence-check-366f8c1d",
+    "readiness_status": "ready_for_approval",
+    "status": "approved",
+    "review_actor": "release-superset-fixture-reviewer (synthetic trial actor)",
+    "workflow_acceptance": "unassessed",
+    "delivery_methods": []
+  },
+  "approved_card_execution": {
+    "status": "completed",
+    "card_id": "card-wide-chart-evidence-check-366f8c1d",
+    "source_ref": "superset|dashboard:41",
+    "source_parameters": {
+      "chart_ids": [
+        "312"
+      ]
+    },
+    "outcome": "investigate",
+    "delivery_enabled": false,
+    "evaluator": "jev-latest",
+    "source_count": null,
+    "source_count_measured": false,
+    "source_count_note": "Initial runner read a nonexistent top-level result.sources field. The recorded zero was invalid; the redacted response summary does not contain telemetry needed to reconstruct the actual count.",
+    "result_json_bytes": 595094,
+    "response_has_error": false,
+    "full_raw_result_persisted": false
+  },
+  "evaluation_payload_check": {
+    "compact_mcp_response_bytes": 595094,
+    "jeV_state_bytes": 16141,
+    "jeV_request_bytes": 18470,
+    "jeV_attempts_so_far": 1,
+    "source_numeric_observations": 400
+  },
+  "binary_identity": {
+    "before": {
+      "dirty": true,
+      "format_version": 1,
+      "frozen": true,
+      "git_commit": "114614ae0ab080e77023ad175bad05d977ea0d4c",
+      "python": "3.12.10",
+      "source_sha256": "22498e8a38a937a29a4d06987ef297bd7a5e2fbe7f8a170d952c7f67a9c0f11c",
+      "version": "0.2.0rc2",
+      "binary_sha256": "4dbc21d4bbf07a6979bc82f200aab2cc541c60c3f9f31e7b594a9eb87c2b1521"
+    },
+    "after": {
+      "dirty": true,
+      "format_version": 1,
+      "frozen": true,
+      "git_commit": "114614ae0ab080e77023ad175bad05d977ea0d4c",
+      "python": "3.12.10",
+      "source_sha256": "22498e8a38a937a29a4d06987ef297bd7a5e2fbe7f8a170d952c7f67a9c0f11c",
+      "version": "0.2.0rc2",
+      "binary_sha256": "4dbc21d4bbf07a6979bc82f200aab2cc541c60c3f9f31e7b594a9eb87c2b1521"
+    },
+    "unchanged": true
+  },
+  "fixture_http": {
+    "login_requests": 2,
+    "request_counts": {
+      "/api/v1/chart/301": 1,
+      "/api/v1/chart/301/data/": 1,
+      "/api/v1/chart/302": 1,
+      "/api/v1/chart/302/data/": 1,
+      "/api/v1/chart/303": 1,
+      "/api/v1/chart/303/data/": 1,
+      "/api/v1/chart/304": 1,
+      "/api/v1/chart/304/data/": 1,
+      "/api/v1/chart/305": 1,
+      "/api/v1/chart/305/data/": 1,
+      "/api/v1/chart/306": 1,
+      "/api/v1/chart/306/data/": 1,
+      "/api/v1/chart/307": 1,
+      "/api/v1/chart/307/data/": 1,
+      "/api/v1/chart/308": 1,
+      "/api/v1/chart/308/data/": 1,
+      "/api/v1/chart/309": 1,
+      "/api/v1/chart/309/data/": 1,
+      "/api/v1/chart/310": 1,
+      "/api/v1/chart/310/data/": 1,
+      "/api/v1/chart/311": 1,
+      "/api/v1/chart/311/data/": 1,
+      "/api/v1/chart/312": 4,
+      "/api/v1/chart/312/data/": 2,
+      "/api/v1/chart/data": 2,
+      "/api/v1/dashboard/": 5,
+      "/api/v1/dashboard/41": 8,
+      "/api/v1/security/login": 2
+    },
+    "dashboard_scoped_chart_data_requests": 13,
+    "chart_query_context_fallback_posts": 2,
+    "saved_query_context_post_summaries": [
+      {
+        "chart_id": "311",
+        "body_bytes": 244,
+        "result_format": "json",
+        "result_type": "full",
+        "force": false,
+        "query_limits": [
+          {
+            "row_limit": 10000,
+            "series_limit": 0
+          }
+        ]
+      },
+      {
+        "chart_id": "312",
+        "body_bytes": 526,
+        "result_format": "json",
+        "result_type": "full",
+        "force": false,
+        "query_limits": [
+          {
+            "row_limit": 500,
+            "series_limit": 0
+          }
+        ]
+      }
+    ],
+    "credentials_or_cache_keys_recorded": false
+  },
+  "jev_proxy": {
+    "forwarded_attempts": 1,
+    "budget_rejections": 0,
+    "max_forwarded_attempts": 3,
+    "requests": [
+      {
+        "attempt": 1,
+        "model": "jev-latest",
+        "request_bytes": 18470,
+        "state_bytes": 16141,
+        "question_count": 1,
+        "status_code": 200,
+        "usage": {
+          "input_tokens": 7421,
+          "output_tokens": 50
+        },
+        "seconds": 0.247
+      }
+    ],
+    "raw_request_or_response_bodies_recorded": false
+  },
+  "generated_at": "2026-10-13T02:03:42Z"
+}
