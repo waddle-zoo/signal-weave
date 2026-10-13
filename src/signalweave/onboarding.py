@@ -65,7 +65,14 @@ class SelectedSourceInput(BaseModel):
     )
     label: str | None = None
     parameters: dict[str, Any] = Field(default_factory=dict)
-    required: StrictBool = True
+    required: StrictBool = Field(
+        default=True,
+        description=(
+            "A required source is a prerequisite for every card decision: its absence forces insufficient_data. "
+            "Set false for optional context or branch-specific corroboration when the owner's policy "
+            "can still decide without it. Authorization to read a source does not make it required."
+        ),
+    )
 
 
 def _slug(value: str) -> str:

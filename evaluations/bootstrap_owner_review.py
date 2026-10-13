@@ -67,9 +67,16 @@ REVIEW_INSTRUCTIONS = (
     "business policy. Do not reject a faithful quiet/ignore rule because optional source "
     "validation or calculation is absent, unless the owner_policy explicitly makes that evidence "
     "a condition. Never infer thresholds, outcomes, recipients, private labels or future facts "
-    "from source_context. "
-    "For baseline notes without a card, apply the same original-policy fidelity criteria to "
-    "the notes' conditions/outcomes/recipients; do NOT require a card, product-specific fields, "
+    "from source_context. Source roles are descriptive metadata, not a rule for requiredness. "
+    "In execution_contract.source_bindings, required=true is a global prerequisite for every "
+    "card decision: missing or unusable evidence from that source forces insufficient_data, "
+    "even when a particular owner-policy branch would not otherwise use it. Assess each required "
+    "flag against the original owner brief, glossary and owner_answers; reject an unjustified global gate, "
+    "but do not make every source optional. required=false is appropriate only when the owner "
+    "permits a decision without that source, including branch-specific or corroborating context. "
+    "Do not infer requiredness from source roles such as primary or diagnostic. Baseline notes "
+    "without a card have no source bindings or required flags to demand; apply the same "
+    "original-policy fidelity criteria to the notes' conditions/outcomes/recipients; do NOT require a card, product-specific fields, "
     "or tool usage. A card is not an advantage or evidence of correctness. "
     "If requirements are missing, conflicting or unclear, reject with concise actionable feedback "
     "identifying what needs owner clarification. Faithful paraphrases are acceptable. "
@@ -121,11 +128,11 @@ MAX_INSPECTED_SOURCES = 32
 MAX_CONTEXT_LIST_ITEMS = 100
 MAX_CONTEXT_TEXT = 4_000
 CONTRACT_LIST_FIELDS = {
-    "metric_names", "available_comparison_windows", "required_comparison_keys",
+    "metric_names", "available_comparison_windows", "required_comparison_keys", "roles",
 }
 CONTRACT_TEXT_FIELDS = {"domain", "scope", "population", "grain", "source_status"}
 CONTRACT_FIELDS = (
-    "domain", "scope", "metric_names", "available_comparison_windows",
+    "domain", "scope", "roles", "metric_names", "available_comparison_windows",
     "required_comparison_keys", "population", "grain", "freshness_sla_hours",
     "source_status", "authorized",
 )
@@ -320,12 +327,16 @@ def _execution_contract(card: dict | None, source_context: dict | None = None) -
                 not isinstance(value, str) or not value.strip() for value in comparison_keys
             ):
                 raise ValueError(f"card.sources[{index}].required_comparison_keys is invalid")
+            required_source = source.get("required", True)
+            if type(required_source) is not bool:
+                raise ValueError(f"card.sources[{index}].required must be boolean")
             if source["key"] in by_key:
                 raise ValueError(f"card.sources contains duplicate key: {source['key']}")
             binding = {
                 "key": source["key"],
                 "adapter": source["adapter"],
                 "resource": source["resource"],
+                "required": required_source,
                 "required_comparison_keys": list(comparison_keys),
             }
             by_key[source["key"]] = binding

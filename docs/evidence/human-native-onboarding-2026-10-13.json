@@ -79,6 +79,13 @@
     "scope": "full local checkout suite with required controlling-terminal permissions; includes local untracked historical evaluation tests",
     "claim": "software regression coverage, not enterprise business accuracy"
   },
+  "clean_committed_clone_test_suite": {
+    "commit": "786ef1889bad13bda63b31b1607d1637dc2bfa13",
+    "passed": 2652,
+    "skipped": 6,
+    "private_untracked_trials_required": false,
+    "environment": "Clean Git clone; shared locked dependency environment; PYTHONPATH points to clone source. A Git archive was not a valid substitute because research provenance checks require Git metadata."
+  },
   "invalid_or_incomplete_runs_kept_separate": [
     "The first isolated registration attempt used a nonexistent CODEX_HOME; this was a harness error.",
     "A first-report agent misconverted epoch dates before readable date provenance was added.",

@@ -7,6 +7,7 @@ import os
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any, Protocol
 
 from .config import is_obvious_placeholder
@@ -942,13 +943,18 @@ class JevJudger:
 
     @staticmethod
     def _evidence_for_role_chunk(
-        state: Mapping[str, Any], observations: list[Observation]
+        state: Mapping[str, Any],
+        observations: list[Observation],
+        all_observations: list[Observation],
     ) -> list[dict[str, Any]]:
         """Keep source evidence aligned with the observation chunk being judged."""
 
-        observation_keys = {
-            (item.source_key, item.subject_id, item.metric) for item in observations
-        }
+        observations_by_subject: dict[tuple[str, str], list[Observation]] = {}
+        for item in all_observations:
+            observations_by_subject.setdefault((item.source_key, item.subject_id), []).append(item)
+        chunk_metrics: dict[tuple[str, str], set[str]] = {}
+        for item in observations:
+            chunk_metrics.setdefault((item.source_key, item.subject_id), set()).add(item.metric)
         source_keys = {item.source_key for item in observations}
         selected: list[dict[str, Any]] = []
         derived_counts: dict[str, int] = {}
@@ -956,10 +962,30 @@ class JevJudger:
             if not isinstance(item, Mapping):
                 continue
             values = item.get("values")
-            metric = values.get("metric") if isinstance(values, Mapping) else None
-            key = (item.get("source_key"), item.get("subject_id"), metric)
+            explicit_metric = values.get("metric") if isinstance(values, Mapping) else None
+            subject_key = (
+                str(item.get("source_key", "")),
+                str(item.get("subject_id", "")),
+            )
+            full_matches = observations_by_subject.get(subject_key, [])
+            current_metrics = chunk_metrics.get(subject_key, set())
+            if explicit_metric is not None:
+                metric_matches = explicit_metric in current_metrics
+            else:
+                subject_label = item.get("subject_label")
+                label_matches = [
+                    observation
+                    for observation in full_matches
+                    if subject_label
+                    and subject_label != "unknown"
+                    and observation.subject_label == subject_label
+                ]
+                bound_metrics = {observation.metric for observation in label_matches}
+                metric_matches = len(bound_metrics) == 1 and bound_metrics.issubset(
+                    current_metrics
+                )
             origin = item.get("origin")
-            if origin == "source" and key in observation_keys:
+            if origin == "source" and metric_matches:
                 selected.append(dict(item))
                 continue
             # Derived and context evidence is useful only when it belongs to
@@ -1225,7 +1251,7 @@ class JevJudger:
 
         evidence_rollup = {
             "observation_count": len(observations),
-            "classified_count": len(observation_records),
+            "classified_count": len(evidence_answers),
             "unclassified_count": len(observations) - len(evidence_answers),
             "role_counts": role_counts,
             "top_by_role": {
@@ -1314,69 +1340,173 @@ class JevJudger:
         return {key: value[key] for key in allowed if key in value}
 
     @staticmethod
-    def _judgment_observation_payload(item: Observation) -> dict[str, Any]:
-        """Send the normalized measurement contract, not connector row detail."""
+    def _compact_judgment_plan_payload(
+        value: Any, card: Mapping[str, Any]
+    ) -> dict[str, Any] | None:
+        """Reference exact card duplicates and retain every other plan value."""
 
-        return {
-            "source_key": item.source_key,
-            "subject_id": item.subject_id,
-            "subject_label": item.subject_label,
-            "subject_type": item.subject_type,
-            "metric": item.metric,
-            "unit": item.unit,
-            "current": item.current,
-            "baseline": item.baseline,
-            "previous": item.previous,
-            "change_pct": item.change_pct,
-            "comparison_baselines": item.comparison_baselines,
-            "dimensions": compact_json_value(item.dimensions, max_string=400, max_items=12, max_depth=3),
-            "freshness": item.freshness,
-            "source_url": item.source_url,
-            "attributes": compact_json_value(item.attributes, max_string=400, max_items=24, max_depth=3),
+        if not isinstance(value, Mapping):
+            return None
+        allowed = (
+            "card_id",
+            "card_version",
+            "selected_source_keys",
+            "comparison_windows",
+            "capabilities",
+            "watch_for",
+            "questions",
+            "delivery_method_keys",
+        )
+        plan = {key: value[key] for key in allowed if key in value}
+        card_sources = card.get("sources", []) if isinstance(card, Mapping) else []
+        delivery_methods = card.get("delivery_methods", []) if isinstance(card, Mapping) else []
+        card_values = {
+            "card_id": (card.get("id"), "card.id"),
+            "card_version": (card.get("version"), "card.version"),
+            "selected_source_keys": (
+                [
+                    item["key"]
+                    for item in card_sources
+                    if isinstance(item, Mapping) and "key" in item
+                ],
+                "card.sources[*].key",
+            ),
+            "comparison_windows": (card.get("comparison_windows"), "card.comparison_windows"),
+            "watch_for": (card.get("watch_for"), "card.watch_for"),
+            "questions": (card.get("questions"), "card.questions"),
+            "delivery_method_keys": (
+                [
+                    item["key"]
+                    for item in delivery_methods
+                    if isinstance(item, Mapping) and "key" in item
+                ],
+                "card.delivery_methods[*].key",
+            ),
         }
+        references = {}
+        for key, (card_value, path) in card_values.items():
+            if key in plan and plan[key] == card_value:
+                del plan[key]
+                references[key] = path
+        if references:
+            plan["_references"] = references
+        return plan
+
+    @staticmethod
+    def _judgment_observation_payload(item: Observation) -> dict[str, Any]:
+        """Send every normalized fact without duplicating connector row payloads."""
+
+        return item.model_dump(mode="json")
+
+    @staticmethod
+    def _ordered_json_value(value: Any) -> Any:
+        """Make optional metadata compaction independent of connector key order."""
+
+        if isinstance(value, Mapping):
+            return {
+                str(key): JevJudger._ordered_json_value(item)
+                for key, item in sorted(value.items(), key=lambda pair: str(pair[0]))
+            }
+        if isinstance(value, (list, tuple)):
+            return [JevJudger._ordered_json_value(item) for item in value]
+        return value
+
+    @staticmethod
+    def _judgment_source_payload(value: Any) -> dict[str, Any]:
+        """Keep source identity/contracts intact and bound optional metadata only."""
+
+        if hasattr(value, "model_dump"):
+            payload = value.model_dump(
+                mode="json",
+                exclude={"observations", "evidence", "analytical_comparisons"},
+            )
+        elif isinstance(value, Mapping):
+            payload = {
+                key: item
+                for key, item in value.items()
+                if key not in {"observations", "evidence", "analytical_comparisons"}
+            }
+        else:
+            return {"value": value}
+
+        contract = payload.get("contract")
+        contract_values = contract if isinstance(contract, Mapping) else {}
+        metadata = payload.get("metadata")
+        if isinstance(metadata, Mapping):
+            optional_metadata = {
+                key: item
+                for key, item in metadata.items()
+                if key not in contract_values or item != contract_values[key]
+            }
+            payload["metadata"] = compact_json_value(
+                JevJudger._ordered_json_value(optional_metadata),
+                max_string=240,
+                max_items=24,
+                max_depth=2,
+            )
+        if isinstance(payload.get("description"), str):
+            payload["description"] = compact_json_value(payload["description"], max_string=500)
+        return payload
 
     @staticmethod
     def _judgment_evidence_payload(
         state: Mapping[str, Any], observations: list[Observation]
     ) -> list[dict[str, Any]]:
-        """Retain non-duplicate semantic evidence for the final decision."""
+        """Drop duplicated normalized values but retain extra evidence semantics."""
 
-        observation_keys = {
-            (item.source_key, item.subject_id, item.metric) for item in observations
-        }
+        observations_by_subject: dict[tuple[str, str], list[Observation]] = {}
+        for observation in observations:
+            observations_by_subject.setdefault(
+                (observation.source_key, observation.subject_id), []
+            ).append(observation)
         selected: list[dict[str, Any]] = []
         for raw in state.get("evidence", []) or []:
+            if hasattr(raw, "model_dump"):
+                raw = raw.model_dump(mode="json")
             if not isinstance(raw, Mapping):
                 continue
+            payload = dict(raw)
             values = raw.get("values")
-            metric = values.get("metric") if isinstance(values, Mapping) else None
-            key = (raw.get("source_key"), raw.get("subject_id"), metric)
-            # The engine emits one source Evidence row for every Observation.
-            # The normalized observation is the canonical copy; preserve only
-            # source rows that add semantic/quality fields or are not duplicates.
-            if raw.get("origin") == "source" and key in observation_keys:
-                extra_keys = {
-                    "metric_semantics", "risk_direction", "risk_change_pct",
-                    "quality_status", "comparability", "owner_change_status",
-                    "planned_change", "error",
-                }
-                if not isinstance(values, Mapping) or not extra_keys.intersection(values):
-                    continue
-                values = {
-                    key: values[key]
-                    for key in extra_keys
-                    if key in values
-                }
-            selected.append({
-                "source_key": raw.get("source_key", "unknown"),
-                "subject_id": raw.get("subject_id", "unknown"),
-                "subject_label": raw.get("subject_label", "unknown"),
-                "statement": compact_json_value(raw.get("statement", ""), max_string=500),
-                "values": compact_json_value(values or {}, max_string=400, max_items=20, max_depth=3),
-                "source_url": raw.get("source_url"),
-                "origin": raw.get("origin", "source"),
-                "provenance": list(raw.get("provenance", []) or [])[:8],
-            })
+            candidates = observations_by_subject.get(
+                (str(raw.get("source_key", "")), str(raw.get("subject_id", ""))),
+                [],
+            )
+            explicit_metric = values.get("metric") if isinstance(values, Mapping) else None
+            if raw.get("origin") == "source" and isinstance(values, Mapping):
+                if explicit_metric is not None:
+                    matching = [
+                        observation
+                        for observation in candidates
+                        if observation.metric == explicit_metric
+                    ]
+                else:
+                    subject_label = raw.get("subject_label")
+                    matching = [
+                        observation
+                        for observation in candidates
+                        if subject_label
+                        and subject_label != "unknown"
+                        and observation.subject_label == subject_label
+                    ]
+                if len(matching) == 1:
+                    canonical = matching[0].model_dump(mode="json")
+                    canonical_values = {
+                        **canonical.get("dimensions", {}),
+                        **canonical.get("attributes", {}),
+                        **canonical,
+                    }
+                    payload["values"] = {
+                        key: value
+                        for key, value in values.items()
+                        if key not in canonical_values or value != canonical_values[key]
+                    }
+                    if payload.get("provenance") == canonical.get("attributes", {}).get(
+                        "record_ids"
+                    ):
+                        payload.pop("provenance")
+                    if payload.get("source_url") == canonical.get("source_url"):
+                        payload.pop("source_url")
+            selected.append(payload)
         return selected
 
     @staticmethod
@@ -1457,72 +1587,73 @@ class JevJudger:
         """Build the final judgment state without repeated connector payloads."""
 
         compact = {
-            "card": compact_json_value(
-                JevJudger._judgment_card_payload(card),
-                max_string=800, max_items=50, max_depth=5,
+            "card": JevJudger._judgment_card_payload(card),
+            "sources": sorted(
+                (
+                    JevJudger._judgment_source_payload(item)
+                    for item in state.get("sources", []) or []
+                    if isinstance(item, Mapping) or hasattr(item, "model_dump")
+                ),
+                key=lambda item: str(item.get("source_key", item.get("key", ""))),
             ),
-            "insight_plan": compact_json_value(
-                JevJudger._judgment_plan_payload(state.get("insight_plan")),
-                max_string=800, max_items=50, max_depth=5,
-            ),
-            "sources": state.get("sources", []) or [],
         }
-        compact["sources"] = [
-            compact_resource_snapshot_payload(item)
-            for item in compact.get("sources", []) or []
-            if isinstance(item, Mapping)
+        compact["insight_plan"] = JevJudger._compact_judgment_plan_payload(
+            state.get("insight_plan"), compact["card"]
+        )
+        compact["observations"] = [
+            JevJudger._judgment_observation_payload(item) for item in observations
         ]
-        compact["observations"] = compact_json_value(
-            [JevJudger._judgment_observation_payload(item) for item in observations],
-            max_string=800,
-            max_items=100,
-            max_depth=5,
-        )
-        compact["evidence"] = compact_json_value(
-            JevJudger._judgment_evidence_payload(state, observations),
-            max_string=500, max_items=100, max_depth=4,
-        )
-        compact["source_errors"] = compact_json_value(
-            [
-                {
-                    key: item[key]
-                    for key in ("source_key", "resource", "label", "message", "blocking", "quality_status", "source_url")
-                    if key in item
-                }
-                for item in (state.get("source_errors", []) or [])
-                if isinstance(item, Mapping)
-            ],
-            max_string=500, max_items=40, max_depth=3,
-        )
-        compact["analyses"] = compact_json_value(
-            JevJudger._judgment_analysis_payload(state.get("analyses")),
-            max_string=500, max_items=100, max_depth=4,
-        )
-        compact["numeric_conditions"] = compact_json_value(
-            state.get("numeric_conditions", []), max_string=500, max_items=50, max_depth=4
-        )
+        compact["evidence"] = JevJudger._judgment_evidence_payload(state, observations)
+        compact["source_errors"] = list(state.get("source_errors", []) or [])
+        compact["analyses"] = list(state.get("analyses", []) or [])
+        compact["numeric_conditions"] = list(state.get("numeric_conditions", []) or [])
         for key in ("numeric_condition_semantics", "computed_analysis_semantics"):
             if key in state:
                 compact[key] = compact_json_value(
                     state[key], max_string=900, max_items=30, max_depth=3
                 )
-        compact["context"] = JevJudger._judgment_context_payload(state.get("context"))
-        investigation = state.get("investigation")
-        if isinstance(investigation, Mapping):
-            compact["investigation"] = compact_json_value(
-                {
-                    key: investigation[key]
-                    for key in (
-                        "mode", "attempted", "failed", "need_probability", "candidate_count",
-                        "candidate_limit", "catalog_count", "catalog_has_more",
-                        "catalog_strategy", "selected", "omitted_refs", "evaluator",
-                        "context_version", "warnings",
-                    )
-                    if key in investigation
-                },
-                max_string=500, max_items=40, max_depth=4,
-            )
+        compact["context"] = state.get("context")
+        if state.get("investigation") is not None:
+            compact["investigation"] = state["investigation"]
         return compact
+
+    def _judgment_question_batches(
+        self, state: dict[str, Any], questions: dict[str, Any]
+    ) -> list[dict[str, Any]]:
+        """Greedily preflight maximal question batches over one unchanged state."""
+
+        batches: list[dict[str, Any]] = []
+        current: dict[str, Any] = {}
+
+        def raise_budget_error(batch: dict[str, Any]) -> None:
+            payload = {"state": state, "questions": self._question_budget_payload(batch)}
+            encoded = json.dumps(
+                payload, ensure_ascii=False, separators=(",", ":")
+            ).encode("utf-8")
+            raise JevPayloadError(
+                stage="judgment",
+                observed_bytes=len(encoded),
+                budget_bytes=self.max_payload_bytes,
+                observed_tokens=estimate_json_tokens(payload),
+                budget_tokens=self.max_input_tokens,
+            )
+
+        for key, question in questions.items():
+            candidate = {**current, key: question}
+            if not self._request_over_budget(state, candidate):
+                current = candidate
+                continue
+            if current:
+                batches.append(current)
+                current = {key: question}
+                if self._request_over_budget(state, current):
+                    raise_budget_error(current)
+            else:
+                raise_budget_error(candidate)
+
+        if current:
+            batches.append(current)
+        return batches
 
     @staticmethod
     def _lossless_judgment_state(
@@ -1596,22 +1727,30 @@ class JevJudger:
             # state fit the same provider budget.
             while end > start:
                 chunk = observations[start:end]
-                chunk_state = self._evidence_role_chunk_state(state, card, chunk)
+                chunk_state = self._evidence_role_chunk_state(
+                    state, card, chunk, observations
+                )
                 if not self._request_over_budget(
                     chunk_state, self._evidence_role_questions(len(chunk))
                 ):
                     break
                 if end == start + 1:
-                    chunk_state = self._minimal_evidence_role_chunk_state(state, card, chunk)
+                    chunk_state = self._minimal_evidence_role_chunk_state(
+                        state, card, chunk, observations
+                    )
                     break
                 end = start + max(1, (end - start) // 2)
             chunk = observations[start:end]
             if chunk_state is None:
-                chunk_state = self._evidence_role_chunk_state(state, card, chunk)
+                chunk_state = self._evidence_role_chunk_state(
+                    state, card, chunk, observations
+                )
             if self._request_over_budget(
                 chunk_state, self._evidence_role_questions(len(chunk))
             ):
-                chunk_state = self._minimal_evidence_role_chunk_state(state, card, chunk)
+                chunk_state = self._minimal_evidence_role_chunk_state(
+                    state, card, chunk, observations
+                )
             response = await self._system_one_with_retry(
                 state=chunk_state,
                 questions=self._evidence_role_questions(len(chunk)),
@@ -1631,6 +1770,7 @@ class JevJudger:
         state: Mapping[str, Any],
         card: InsightCard,
         chunk: list[Observation],
+        all_observations: list[Observation],
     ) -> dict[str, Any]:
         source_keys = {item.source_key for item in chunk}
         chunk_state = {
@@ -1639,7 +1779,7 @@ class JevJudger:
             "insight_plan": state.get("insight_plan"),
             "sources": state.get("sources", []),
             "observations": [item.model_dump(mode="json") for item in chunk],
-            "evidence": cls._evidence_for_role_chunk(state, chunk),
+            "evidence": cls._evidence_for_role_chunk(state, chunk, all_observations),
             "analyses": [
                 item for item in (state.get("analyses", []) or [])
                 if not isinstance(item, Mapping) or item.get("source_key") in source_keys
@@ -1656,9 +1796,10 @@ class JevJudger:
         state: Mapping[str, Any],
         card: InsightCard,
         chunk: list[Observation],
+        all_observations: list[Observation],
     ) -> dict[str, Any]:
         """Last-resort projection for one unusually large connector item."""
-        full = cls._evidence_role_chunk_state(state, card, chunk)
+        full = cls._evidence_role_chunk_state(state, card, chunk, all_observations)
         return compact_json_value(
             {
                 "card": full.get("card"),
@@ -1685,43 +1826,49 @@ class JevJudger:
         from typesafe_sdk import Choice, Noul
 
         if state.get("numeric_conditions"):
-            state = {**state, "numeric_condition_semantics": (
-                "numeric_conditions are code-computed checks from the owner's approved "
-                "measurement bindings and thresholds. Use their true/false values rather "
-                "than recalculating comparisons. Unknown means that exact computation could "
-                "not be established, not false. Checks are facts, not standalone action rules: "
-                "apply decision_guidance to combine them with relevant semantic evidence, "
-                "including alternatives, conjunctions and exceptions. Do not require an "
-                "answer to an irrelevant branch. These checks cannot prove causation."
-            )}
+            state = {
+                **state,
+                "numeric_condition_semantics": (
+                    "numeric_conditions are code-computed checks from the owner's approved "
+                    "measurement bindings and thresholds. Use their true/false values rather "
+                    "than recalculating comparisons. Unknown means that exact computation could "
+                    "not be established, not false. Checks are facts, not standalone action rules: "
+                    "apply decision_guidance to combine them with relevant semantic evidence, "
+                    "including alternatives, conjunctions and exceptions. Do not require an "
+                    "answer to an irrelevant branch. These checks cannot prove causation."
+                ),
+            }
 
         if state.get("analyses"):
             # Define the calculation contract, not company-specific trigger rules.
             # Net movement can cancel even when individual effects are material.
-            state = {**state, "computed_analysis_semantics": {
-                "delta": "Current aggregate minus baseline aggregate, in the comparison unit.",
-                "within_effect": (
-                    "Aggregate within-group rate change from the symmetric rate decomposition, "
-                    "in the rate unit. This is not any single segment's contribution or total delta."
-                ),
-                "mix_effect": (
-                    "Aggregate rate change attributable to the change in group weights, "
-                    "in the rate unit. Within effect plus mix effect reconciles to total delta; "
-                    "neither is causal attribution."
-                ),
-                "contribution": (
-                    "A segment's signed additive contribution to delta, in the same unit as delta; "
-                    "not a percentage share of delta and not proof of a causal mechanism. "
-                    "Opposing contributions can cancel to zero aggregate delta without either "
-                    "contribution being zero. Use the computed contribution values for segment "
-                    "conditions, and aggregate delta for aggregate conditions."
-                ),
-                "policy": (
-                    "Apply only the owner's stated conditions, alternatives, conjunctions and "
-                    "exceptions. A present watch item is not automatically an action trigger; "
-                    "decision_guidance determines which conditions warrant each outcome."
-                ),
-            }}
+            state = {
+                **state,
+                "computed_analysis_semantics": {
+                    "delta": "Current aggregate minus baseline aggregate, in the comparison unit.",
+                    "within_effect": (
+                        "Aggregate within-group rate change from the symmetric rate decomposition, "
+                        "in the rate unit. This is not any single segment's contribution or total delta."
+                    ),
+                    "mix_effect": (
+                        "Aggregate rate change attributable to the change in group weights, "
+                        "in the rate unit. Within effect plus mix effect reconciles to total delta; "
+                        "neither is causal attribution."
+                    ),
+                    "contribution": (
+                        "A segment's signed additive contribution to delta, in the same unit as delta; "
+                        "not a percentage share of delta and not proof of a causal mechanism. "
+                        "Opposing contributions can cancel to zero aggregate delta without either "
+                        "contribution being zero. Use the computed contribution values for segment "
+                        "conditions, and aggregate delta for aggregate conditions."
+                    ),
+                    "policy": (
+                        "Apply only the owner's stated conditions, alternatives, conjunctions and "
+                        "exceptions. A present watch item is not automatically an action trigger; "
+                        "decision_guidance determines which conditions warrant each outcome."
+                    ),
+                },
+            }
 
         # Each owner-authored item gets a typed judgment. That is what makes a
         # result useful for cards with many metrics: the caller gets the exact
@@ -1807,7 +1954,8 @@ class JevJudger:
                         "Apply its stated trigger conditions and exceptions, including the distinction "
                         "between overall and segment-level conditions. A recipient label identifies "
                         "a destination, not a trigger or an additional prerequisite. Configured routes:",
-                    ] + [
+                    ]
+                    + [
                         f"Delivery method {method.key}: {method.instructions or method.label}"
                         for method in methods
                     ]
@@ -1844,24 +1992,18 @@ class JevJudger:
             else {}
         )
         full_questions = {**questions, **evidence_questions}
-        # Use the exact state for the ordinary-path preflight.  The compact
-        # state can be smaller only because it truncates values; if that
-        # projection fits while the real evidence does not, it would simply
-        # move the provider overflow back into the transport call.
+        # First check the exact ordinary-path state. The default compact state
+        # below removes duplicate/raw connector payload, not normalized facts.
         judgment_state = self._lossless_judgment_state(state, card, observations)
         split_evidence = self._request_over_budget(judgment_state, full_questions)
+        question_batches: list[dict[str, Any]]
         evidence_answers: dict[str, Any] = {}
-        if split_evidence:
-            if self.evidence_role_classification:
-                # This is an explicit legacy/experimental mode. A wide
-                # dashboard is first semantically classified in bounded Jev
-                # batches, then synthesized.
-                evidence_answers = await self._judge_evidence_roles(
-                    state, card, plan, observations
-                )
-            # The default path sends one compact source rollup to the final
-            # Jev decision. It does not classify every raw dashboard metric;
-            # the frontier agent or connector owns that analytical work.
+        if split_evidence and self.evidence_role_classification:
+            # This explicit experimental mode classifies each observation in
+            # bounded batches, then synthesizes those judgments.
+            evidence_answers = await self._judge_evidence_roles(state, card, plan, observations)
+            # This opt-in path synthesizes bounded semantic role judgments;
+            # the ordinary path below preserves every normalized observation.
             judgment_state = self._compact_synthesis_state(
                 state,
                 card,
@@ -1878,8 +2020,7 @@ class JevJudger:
                 + (
                     "The evidence roles were classified in bounded Jev batches."
                     if self.evidence_role_classification
-                    else
-                    "Do not infer a causal story from the compact examples; the frontier agent or source adapter owns the deep analysis."
+                    else "Do not infer a causal story from the compact examples; the frontier agent or source adapter owns the deep analysis."
                 )
             )
             for question in questions.values():
@@ -1897,7 +2038,9 @@ class JevJudger:
                         **judgment_state["evidence_rollup"],
                         "top_by_role": {
                             role: items[:4]
-                            for role, items in judgment_state["evidence_rollup"]["top_by_role"].items()
+                            for role, items in judgment_state["evidence_rollup"][
+                                "top_by_role"
+                            ].items()
                         },
                     },
                 }
@@ -1943,9 +2086,9 @@ class JevJudger:
                         ),
                         "top_by_role": {
                             role: items[:1]
-                            for role, items in judgment_state.get(
-                                "evidence_rollup", {}
-                            ).get("top_by_role", {}).items()
+                            for role, items in judgment_state.get("evidence_rollup", {})
+                            .get("top_by_role", {})
+                            .items()
                         },
                     },
                     "analyses": [],
@@ -1980,7 +2123,9 @@ class JevJudger:
                         **judgment_state["evidence_rollup"],
                         "top_by_role": {
                             role: items[:2]
-                            for role, items in judgment_state["evidence_rollup"]["top_by_role"].items()
+                            for role, items in judgment_state["evidence_rollup"][
+                                "top_by_role"
+                            ].items()
                         },
                     },
                 }
@@ -1995,7 +2140,9 @@ class JevJudger:
                         **judgment_state["evidence_rollup"],
                         "top_by_role": {
                             role: items[:1]
-                            for role, items in judgment_state["evidence_rollup"]["top_by_role"].items()
+                            for role, items in judgment_state["evidence_rollup"][
+                                "top_by_role"
+                            ].items()
                         },
                     },
                 }
@@ -2028,15 +2175,41 @@ class JevJudger:
                         "omitted_detail_must_be_treated_as_unresolved_not_absent": True,
                     },
                 }
+            question_batches = [questions]
+        elif split_evidence:
+            # Keep the complete owner policy and normalized facts identical in
+            # every request; only independent typed questions are partitioned.
+            judgment_state = self._compact_judgment_state(state, card, observations)
+            question_batches = self._judgment_question_batches(judgment_state, full_questions)
         else:
             # Preserve the efficient single decision request for ordinary
             # cards. Per-observation role judgments are not part of the
             # default Jev contract.
             questions = full_questions
-        response = await self._system_one_with_retry(
-            state=judgment_state, questions=questions, stage="judgment"
-        )
-        self.metrics.record(response)
+            question_batches = [questions]
+
+        if len(question_batches) == 1:
+            response = await self._system_one_with_retry(
+                state=judgment_state, questions=question_batches[0], stage="judgment"
+            )
+            self.metrics.record(response)
+        else:
+            merged_choices: dict[str, Any] = {}
+            merged_nouls: dict[str, Any] = {}
+            for batch in question_batches:
+                part = await self._system_one_with_retry(
+                    state=judgment_state, questions=batch, stage="judgment"
+                )
+                self.metrics.record(part)
+                for key, answer in part.choices.items():
+                    if key in merged_choices:
+                        raise RuntimeError(f"duplicate Jev choice in question batches: {key}")
+                    merged_choices[key] = answer
+                for key, answer in part.nouls.items():
+                    if key in merged_nouls:
+                        raise RuntimeError(f"duplicate Jev Noul in question batches: {key}")
+                    merged_nouls[key] = answer
+            response = SimpleNamespace(choices=merged_choices, nouls=merged_nouls)
         if not split_evidence:
             evidence_answers = {
                 key: answer
@@ -2118,8 +2291,11 @@ class JevJudger:
             rationale=(
                 f"Jev evaluated the card's typed watch, question, and outcome judgments; "
                 f"selected={selected_outcome}, support={confidence:.2f}; routed={outcome.value}."
-                + (" Code used the investigation fallback because support was below the card's confidence threshold."
-                   if confidence < card.action_confidence_threshold else "")
+                + (
+                    " Code used the investigation fallback because support was below the card's confidence threshold."
+                    if confidence < card.action_confidence_threshold
+                    else ""
+                )
             ),
             confidence=confidence,
             probabilities=action_probabilities,

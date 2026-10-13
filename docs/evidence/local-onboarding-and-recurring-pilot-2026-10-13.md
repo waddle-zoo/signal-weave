@@ -50,6 +50,21 @@ human-facing quality pass. Delivery stayed disabled throughout.
 
 ## What remains
 
+The subsequent natural-workflow trials exposed additional gaps. With weakened
+optional-tool guidance, both agents completed four cases correctly but the
+treatment never used Jev; that is not Jev evidence. Restoring the production MCP
+guidance exposed a payload fallback that dropped measurement values and shortened
+the policy. Three native judgments were wrong, although the frontier agent
+recovered the correct final outcomes. A test-only citation gate also rejected
+valid receipt references, invalidating a natural latency comparison.
+
+The corrected payload preserves the policy and facts, but a newly onboarded
+five-watch card exceeded the unchanged token guard in three healthy cases. Only
+the missing-source case reached Jev. Both agents still completed all four
+workflows correctly; that demonstrates fallback, not a native advantage. Further
+question-budget and onboarding-dependency work is in progress. These cohorts are
+retained separately rather than pooled with the earlier four passing Jev cases.
+
 Test independently varied business cases and natural recurring cadences, including
 onboarding effort, total cost, concise recipient messages and source drift. Then
 validate with actual people and customer data. Earlier invalid fixtures and
@@ -58,3 +73,5 @@ censored runs were retained separately, not counted as wins.
 The source candidate has passed 2,679 local tests (six skipped) and native CI on
 Apple Silicon, Intel Mac and Linux. The newer preview has not been published;
 the README's published installer still targets the older release.
+The committed code also passed 2,652 tests (six skipped) from a clean Git clone
+without private/untracked trials, using the locked dependency environment.

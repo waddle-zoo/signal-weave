@@ -108,7 +108,14 @@ class SourceRef(BaseModel):
     resource: str = Field(min_length=1, max_length=500)
     label: str = Field(min_length=1, max_length=240)
     parameters: dict[str, Any] = Field(default_factory=dict, max_length=50)
-    required: bool = True
+    required: bool = Field(
+        default=True,
+        description=(
+            "A required source is a prerequisite for every card decision: its absence forces insufficient_data. "
+            "Set false for optional context or branch-specific corroboration when the owner's policy "
+            "can still decide without it. Authorization to read a source does not make it required."
+        ),
+    )
     required_comparison_keys: list[str] = Field(
         default_factory=list, max_length=20,
         description=(

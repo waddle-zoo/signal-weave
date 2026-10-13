@@ -53,6 +53,10 @@ def test_server_exposes_shared_authoring_guidance(tmp_path):
     assert "Never invent a recipient" in CARD_AUTHORING_GUIDANCE
     assert "large but unchanged level" in CARD_AUTHORING_GUIDANCE
     assert "independently of the model's answers" in CARD_AUTHORING_GUIDANCE
+    assert "Separate authorized source scope from required decision dependencies" in CARD_AUTHORING_GUIDANCE
+    assert "prerequisite for every policy outcome: its absence forces insufficient_data" in CARD_AUTHORING_GUIDANCE
+    assert "Mark optional or branch-specific context sources required=false" in CARD_AUTHORING_GUIDANCE
+    assert "an optional source's absence must not block unrelated policy branches" in CARD_AUTHORING_GUIDANCE
 
 
 @pytest.mark.parametrize("name", ["draft_insight_card", "propose_insight_card", "onboard_insight_card"])

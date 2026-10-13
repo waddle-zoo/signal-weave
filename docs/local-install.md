@@ -153,11 +153,22 @@ signalweave setup --source preset --url https://workspace.app.preset.io \
   --agent codex --register-agent
 ```
 
+Already use a Superset or Preset MCP in your agent? Keep it for broader
+investigation, and connect SignalWeave directly to the same BI workspace in
+setup. SignalWeave does not import your agent's MCP connections. An arbitrary
+company MCP needs a [compatible source bridge](mcp-source-bridge.md), not just
+an existing entry in Codex or Claude.
+
 Other company systems can be brought in through the reviewed MCP bridge without
 teaching the local CLI to store arbitrary provider secrets. To add or repair one
 connector later, rerun `signalweave connections add` or use `connections update`;
 to rotate one secret, use `signalweave credentials set NAME`. Run
 `signalweave --help` at any time for the complete command list.
+
+Reconnect SignalWeave in your agent after changing connections or credentials;
+already-running servers may still use their startup configuration. If you switch
+BI workspaces, review existing cards before reuse: the same chart ID can mean
+something different in another workspace.
 
 ## 2. Connect your agent
 
@@ -222,6 +233,18 @@ Before relying on a recurring workflow, agree on **what matters, which sources
 are in scope, who receives the agent's report, and who runs the schedule**. Test
 a meaningful change, a quiet period, and missing evidence. An approved card
 alone does not schedule work or send an alert.
+
+Once those checks work, give your agent a concrete scheduling request:
+
+> Run my approved **[card name]** each weekday at **[time and timezone]**.
+> Follow its delivery rules and send one short evidence-backed message to
+> **[destination]** when it matters; send nothing for quiet runs. Include what
+> changed, why it matters, and the next step. Confirm the schedule and delivery
+> access before activating it. If you cannot schedule or deliver, tell me what
+> is missing—do not say the automation is running.
+
+Use your agent or workflow runner's supported scheduler. A laptop-based runner
+may need the machine awake; SignalWeave itself does not run this schedule.
 
 **Trouble?** Run `"$HOME/.local/bin/signalweave" doctor` for an offline config
 check. See the [reference](local-install-reference.md) for supported source

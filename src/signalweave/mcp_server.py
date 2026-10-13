@@ -539,10 +539,63 @@ def _compact_simulation_response(response: dict[str, Any]) -> dict[str, Any]:
 
 AGENT_HANDOFF_BYTES = 64 * 1024
 RECEIPT_PAGE_BYTES = 32 * 1024
+_COMPACT_OBSERVATION_ATTRIBUTE_BYTES = 2 * 1024
+_COMPACT_OBSERVATION_ATTRIBUTE_VALUE_BYTES = 1024
+_COMPACT_OBSERVATION_OMITTED_KEYS = 24
+_COMPACT_OBSERVATION_KEY_CHARS = 160
+_COMPACT_OBSERVATION_PREFIX_ITEMS = 100
 
 
 def _json_bytes(value: Any) -> int:
     return len(json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode("utf-8"))
+
+
+def _compact_observation(observation: Any, index: int) -> Any:
+    """Keep normalized facts and compact attributes; point omitted detail to its receipt."""
+    if not isinstance(observation, dict):
+        return observation
+    compact = dict(observation)
+    attributes = compact.get("attributes")
+    if not isinstance(attributes, dict) or not attributes:
+        return compact
+
+    kept: dict[str, Any] = {}
+    omitted: list[str] = []
+    kept_bytes = 0
+    for key, value in attributes.items():
+        name = str(key)
+        normalized_name = name.casefold().replace("-", "_")
+        raw_provenance = (
+            "provenance" in normalized_name
+            or normalized_name in {
+                "raw", "raw_data", "raw_payload", "connector_payload", "source_payload",
+            }
+        )
+        item_bytes = _json_bytes({name: value})
+        if (
+            raw_provenance
+            or item_bytes > _COMPACT_OBSERVATION_ATTRIBUTE_VALUE_BYTES
+            or kept_bytes + item_bytes > _COMPACT_OBSERVATION_ATTRIBUTE_BYTES
+        ):
+            omitted.append(name)
+            continue
+        kept[name] = value
+        kept_bytes += item_bytes
+
+    if not omitted:
+        return compact
+    compact["attributes"] = kept
+    shown_keys = [key[:_COMPACT_OBSERVATION_KEY_CHARS] for key in omitted[:_COMPACT_OBSERVATION_OMITTED_KEYS]]
+    compact["attributes_omitted"] = {
+        "count": len(omitted),
+        "keys": shown_keys,
+        "keys_complete": (
+            len(omitted) <= _COMPACT_OBSERVATION_OMITTED_KEYS
+            and all(len(key) <= _COMPACT_OBSERVATION_KEY_CHARS for key in omitted)
+        ),
+        "receipt_path": ["observations", str(index), "attributes"],
+    }
+    return compact
 
 
 def _receipt_result_page(result: dict[str, Any], path: list[str], offset: int, limit: int) -> dict:
@@ -599,6 +652,12 @@ def _compact_evaluation_response(response: dict[str, Any]) -> dict[str, Any]:
     """
     result = dict(response.get("result") or {})
     had_markdown = isinstance(result.pop("report_markdown", None), str)
+    observations = result.get("observations")
+    if isinstance(observations, list):
+        result["observations"] = [
+            _compact_observation(item, index)
+            for index, item in enumerate(observations)
+        ]
     if isinstance(result.get("retrieval"), dict):
         result["retrieval"] = _compact_bundle(result["retrieval"])
     compact: dict[str, Any] = {
@@ -617,7 +676,8 @@ def _compact_evaluation_response(response: dict[str, Any]) -> dict[str, Any]:
             raise ValueError("A large compact handoff requires a durable receipt for evidence reads")
         summary_fields = (
             "card_id", "outcome", "summary", "rationale", "confidence", "probabilities",
-            "delivery_methods", "source_keys", "evaluator", "evaluated_at",
+            "warnings", "retrieval", "evidence_plan", "delivery_methods", "source_keys",
+            "evaluator", "evaluated_at",
         )
         compact["result"] = {}
         for key in summary_fields:
@@ -631,7 +691,7 @@ def _compact_evaluation_response(response: dict[str, Any]) -> dict[str, Any]:
             if len(key) > 256 or len(sections) >= 50 or _json_bytes([*sections, entry]) > 12 * 1024:
                 break
             sections.append(entry)
-        compact["evidence_access"] = {
+        evidence_access = {
             "coverage": "not_included_in_handoff", "complete": False,
             "tool": "get_decision_receipt",
             "receipt_id": receipt_id,
@@ -640,6 +700,50 @@ def _compact_evaluation_response(response: dict[str, Any]) -> dict[str, Any]:
             "section_directory_complete": len(sections) == len(result),
             "instruction": "Read relevant receipt sections with result_path, offset and limit before explaining or delivering an action. An omitted section is not empty or an all-clear. The full result remains stored; pages perform no new source or model calls.",
         }
+        observations = result.get("observations")
+        if isinstance(observations, list):
+            def observation_coverage(included: int) -> dict[str, Any]:
+                complete = included == len(observations)
+                return {
+                    "result_path": ["observations"],
+                    "total": len(observations),
+                    "included": included,
+                    "coverage": "complete_section" if complete else "partial_section",
+                    "next_offset": None if complete else included,
+                }
+
+            compact["result"]["observations"] = []
+            evidence_access["observation_coverage"] = observation_coverage(0)
+            compact["evidence_access"] = evidence_access
+            if _json_bytes(compact) > AGENT_HANDOFF_BYTES and "card" in compact:
+                compact.pop("card")
+                compact["card_details_available"] = True
+            prefix: list[Any] = []
+            for item in observations[:_COMPACT_OBSERVATION_PREFIX_ITEMS]:
+                candidate_prefix = [*prefix, item]
+                candidate_access = {
+                    **evidence_access,
+                    "observation_coverage": observation_coverage(len(candidate_prefix)),
+                }
+                candidate = {
+                    **compact,
+                    "result": {**compact["result"], "observations": candidate_prefix},
+                    "evidence_access": candidate_access,
+                }
+                if _json_bytes(candidate) > AGENT_HANDOFF_BYTES and "card" in compact:
+                    compact.pop("card")
+                    compact["card_details_available"] = True
+                    candidate = {
+                        **compact,
+                        "result": {**compact["result"], "observations": candidate_prefix},
+                        "evidence_access": candidate_access,
+                    }
+                if _json_bytes(candidate) > AGENT_HANDOFF_BYTES:
+                    break
+                prefix = candidate_prefix
+            compact["result"]["observations"] = prefix
+            evidence_access["observation_coverage"] = observation_coverage(len(prefix))
+        compact["evidence_access"] = evidence_access
         if _json_bytes(compact) > AGENT_HANDOFF_BYTES:
             compact.pop("card", None)
             compact["card_details_available"] = True
@@ -702,6 +806,11 @@ CARD_AUTHORING_GUIDANCE = (
     "advisory by default; set evidence_requirements=true only for a question or watch item "
     "the owner explicitly requires before automatic routing. Required sources and explicitly "
     "bound comparisons remain separate hard requirements. "
+    "Separate authorized source scope from required decision dependencies: use required=true "
+    "only for an owner-confirmed prerequisite for every policy outcome: its absence forces "
+    "insufficient_data. Mark optional or branch-specific context sources required=false. Confirm missing-source "
+    "behavior with the owner for each relevant case; an optional source's absence must not "
+    "block unrelated policy branches. "
     "Instructions about how to write a report (for example, avoid causal claims) belong in "
     "follow_up_guidance, not watch_for: writing instructions are not observable evidence. "
     "watch_for and questions may be empty when the policy requires no separate semantic assessment. "
