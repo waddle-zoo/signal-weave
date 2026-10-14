@@ -20,8 +20,9 @@ from test_install import install_env as install_env
 
 from scripts.binary_provenance import build_metadata, verify_binary
 
-PROJECT_PYTHON = ROOT / ".venv/bin/python"
-CLI_PYTHON = str(PROJECT_PYTHON if PROJECT_PYTHON.is_file() else Path(sys.executable))
+# Use the dependency environment running pytest, not an unrelated or partially
+# created checkout venv. Keep its path unresolved to preserve venv activation.
+CLI_PYTHON = sys.executable
 
 
 def _piped_install(

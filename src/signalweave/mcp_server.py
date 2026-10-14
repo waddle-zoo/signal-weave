@@ -433,13 +433,17 @@ def _compact_plan(plan: Any) -> Any:
 
 
 def _compact_card(card: Any) -> dict[str, Any]:
-    """Return the stored card with a compact latest review for normal agent reads."""
+    """Return active card fields; keep review packets only while a card is a draft."""
     if not isinstance(card, dict):
         return {}
     result = dict(card)
     result.pop("onboarding_review_history", None)
     result.pop("onboarding_corrections", None)
-    if result.get("onboarding_review"):
+    if result.get("status") == InsightCardStatus.APPROVED.value:
+        # The approval review can contain the full discovery candidate catalog.
+        # It remains in storage and is available through response_mode="full".
+        result.pop("onboarding_review", None)
+    elif result.get("onboarding_review"):
         result["onboarding_review"] = _compact_review(result["onboarding_review"])
     if result.get("compiled_plan"):
         result["compiled_plan"] = _compact_plan(result["compiled_plan"])
@@ -598,6 +602,75 @@ def _compact_observation(observation: Any, index: int) -> Any:
     return compact
 
 
+def _deferred_observation_facts(observations: list[Any]) -> dict[str, Any]:
+    """Index every normalized field without duplicating bulky raw attributes."""
+    fields = sorted({
+        key
+        for observation in observations
+        if isinstance(observation, dict)
+        for key in observation
+        if key != "attributes"
+    })
+    rows = []
+    attributes_present_indices = []
+    for index, observation in enumerate(observations):
+        full_ref = ["judgment_state", "observations", str(index)]
+        if not isinstance(observation, dict):
+            rows.append({"index": index, "full_ref": full_ref, "value": observation})
+            continue
+        row = {
+            "index": index,
+            "full_ref": full_ref,
+            "values": [observation[field] if field in observation else None for field in fields],
+        }
+        missing_fields = [field for field in fields if field not in observation]
+        if missing_fields:
+            row["missing_fields"] = missing_fields
+        if "attributes" in observation:
+            attributes_present_indices.append(index)
+        rows.append(row)
+    return {
+        "record_count": len(observations),
+        "fields": fields,
+        "rows": rows,
+        "rows_complete": True,
+        "attributes_path_suffix": ["attributes"],
+        "attributes_present_indices": attributes_present_indices,
+        "value_encoding": (
+            "Each row's values align by position with fields. Null and absent values are unknown; "
+            "missing_fields distinguishes an absent key from explicit null. For indices in "
+            "attributes_present_indices, append attributes_path_suffix to full_ref to read untouched attributes."
+        ),
+    }
+
+
+def _deferred_source_access(source_by_key: dict[str, Any]) -> list[dict[str, Any]]:
+    """Give exact receipt paths for source detail without inlining snapshots."""
+    path_fields = {
+        "snapshot_path": None,
+        "metadata_path": "metadata",
+        "contract_path": "contract",
+        "analytical_comparisons_path": "analytical_comparisons",
+        "observations_path": "observations",
+        "evidence_path": "evidence",
+    }
+    sources = []
+    for source_key, snapshot in source_by_key.items():
+        if not isinstance(source_key, str) or not isinstance(snapshot, dict):
+            continue
+        base = ["source_by_key", source_key]
+        entry: dict[str, Any] = {"source_key": source_key, "snapshot_path": base}
+        adapter = snapshot.get("adapter")
+        resource = snapshot.get("resource")
+        if isinstance(adapter, str) and isinstance(resource, str):
+            entry["source_id"] = f"{adapter}|{resource}"
+        for path_name, field in path_fields.items():
+            if field is not None and field in snapshot:
+                entry[path_name] = [*base, field]
+        sources.append(entry)
+    return sources
+
+
 def _receipt_result_page(result: dict[str, Any], path: list[str], offset: int, limit: int) -> dict:
     """Read a lossless, byte-bounded slice without refetching data or inference."""
     if not path or len(path) > 8 or not all(isinstance(key, str) and len(key) <= 256 for key in path):
@@ -675,7 +748,7 @@ def _compact_evaluation_response(response: dict[str, Any]) -> dict[str, Any]:
         if not isinstance(receipt_id, str) or not receipt_id:
             raise ValueError("A large compact handoff requires a durable receipt for evidence reads")
         summary_fields = (
-            "card_id", "outcome", "summary", "rationale", "confidence", "probabilities",
+            "card_id", "outcome", "judgment", "summary", "rationale", "confidence", "probabilities",
             "warnings", "retrieval", "evidence_plan", "delivery_methods", "source_keys",
             "evaluator", "evaluated_at",
         )
@@ -700,6 +773,32 @@ def _compact_evaluation_response(response: dict[str, Any]) -> dict[str, Any]:
             "section_directory_complete": len(sections) == len(result),
             "instruction": "Read relevant receipt sections with result_path, offset and limit before explaining or delivering an action. An omitted section is not empty or an all-clear. The full result remains stored; pages perform no new source or model calls.",
         }
+        judgment = result.get("judgment")
+        if isinstance(judgment, dict) and judgment.get("status") == "deferred":
+            judgment_state = result.get("judgment_state")
+            if isinstance(judgment_state, dict):
+                for field, access_key in (
+                    ("observations", "observation_coverage"),
+                    ("evidence", "evidence_coverage"),
+                ):
+                    values = judgment_state.get(field)
+                    if isinstance(values, (list, dict)):
+                        evidence_access[access_key] = {
+                            "result_path": ["judgment_state", field],
+                            "total": len(values),
+                            "included": 0,
+                            "coverage": "partial_section",
+                            "next_offset": 0,
+                        }
+            source_by_key = result.get("source_by_key")
+            if isinstance(source_by_key, dict):
+                evidence_access["source_snapshot_coverage"] = {
+                    "result_path": ["source_by_key"],
+                    "total": len(source_by_key),
+                    "included": 0,
+                    "coverage": "partial_section",
+                    "next_offset": 0,
+                }
         source_contracts = result.get("source_contracts")
         if isinstance(source_contracts, list):
             prefix = []
@@ -727,6 +826,87 @@ def _compact_evaluation_response(response: dict[str, Any]) -> dict[str, Any]:
                 " Read omitted source_contracts before interpreting comparability or coverage; "
                 "a populated observation is not a complete comparison."
             )
+        if isinstance(judgment, dict) and judgment.get("status") == "deferred":
+            judgment_state = result.get("judgment_state")
+            raw_observations = (
+                judgment_state.get("observations")
+                if isinstance(judgment_state, dict) else None
+            )
+            source_by_key = result.get("source_by_key")
+            if isinstance(source_by_key, dict):
+                evidence_access["source_directory"] = _deferred_source_access(source_by_key)
+            if isinstance(raw_observations, list):
+                facts = _deferred_observation_facts(raw_observations)
+                evidence_access["instruction"] = (
+                    "This judgment is deferred and has no policy outcome. Read result.observation_facts "
+                    "first for every normalized observation; use source_directory paths for source-specific "
+                    "metadata, definitions, and contracts only when needed. Page raw attributes or duplicate "
+                    "evidence only when they add needed provenance. A complete fact overview does not assert "
+                    "complete source coverage or a comparable period. Missing/null values and unsupported "
+                    "measurement bounds remain unknown; do not infer date boundaries from run timestamps or row order. "
+                    "Receipt pages perform no source or model calls."
+                )
+                facts_access = {
+                    "result_path": ["observation_facts"],
+                    "raw_result_path": ["judgment_state", "observations"],
+                    "total": len(raw_observations),
+                    "included": len(raw_observations),
+                    "coverage": "complete_normalized_observation_rows",
+                    "attributes_included": False,
+                    "attributes_path_suffix": ["attributes"],
+                    "source_coverage_asserted": False,
+                }
+                candidate_result = {**compact["result"], "observation_facts": facts}
+                candidate_access = {**evidence_access, "observation_facts": facts_access}
+                candidate = {
+                    **compact,
+                    "result": candidate_result,
+                    "evidence_access": candidate_access,
+                }
+                if _json_bytes(candidate) > AGENT_HANDOFF_BYTES:
+                    candidate_access = dict(candidate_access)
+                    candidate_access.pop("source_directory", None)
+                    candidate = {
+                        **compact,
+                        "result": candidate_result,
+                        "evidence_access": candidate_access,
+                    }
+                if _json_bytes(candidate) <= AGENT_HANDOFF_BYTES:
+                    compact["result"] = candidate_result
+                    evidence_access.clear()
+                    evidence_access.update(candidate_access)
+                    if "source_directory" not in evidence_access:
+                        evidence_access["instruction"] = (
+                            "This judgment is deferred and has no policy outcome. Read result.observation_facts "
+                            "first, then use source_snapshot_coverage.result_path to page source_by_key. Each "
+                            "snapshot preserves its adapter/resource identity and nested metadata, definitions, "
+                            "and contracts. Page raw attributes or duplicate evidence only when they add needed "
+                            "provenance. A complete fact overview does not assert source coverage or comparability; "
+                            "missing values and measurement bounds remain unknown."
+                        )
+                else:
+                    fallback_access = {
+                        **evidence_access,
+                        "observation_facts": {
+                            "raw_result_path": ["judgment_state", "observations"],
+                            "total": len(raw_observations),
+                            "included": 0,
+                            "coverage": "not_included_within_handoff_byte_bound",
+                            "next_offset": 0,
+                        },
+                    }
+                    fallback_access["instruction"] = (
+                        "This judgment is deferred and has no policy outcome. The complete normalized "
+                        "observation_facts overview exceeds this handoff's byte bound and was not included. "
+                        "Use get_decision_receipt to page judgment_state.observations and source_by_key only "
+                        "as needed; no rows were sampled or truncated in storage. Read source contracts "
+                        "separately for coverage and comparability. Missing values and measurement bounds "
+                        "remain unknown; pages make no new source or model calls."
+                    )
+                    if _json_bytes({**compact, "evidence_access": fallback_access}) > AGENT_HANDOFF_BYTES:
+                        fallback_access.pop("source_directory", None)
+                    evidence_access.clear()
+                    evidence_access.update(fallback_access)
         observations = result.get("observations")
         if isinstance(observations, list):
             def observation_coverage(included: int) -> dict[str, Any]:
@@ -873,6 +1053,7 @@ def create_mcp(
 ) -> FastMCP:
     if profile not in {"agent", "full"}:
         raise ValueError("MCP profile must be 'agent' or 'full'")
+    default_card_response_mode: ResponseMode = "compact" if profile == "agent" else "full"
     runtime = runtime or build_runtime(mode="agent" if profile == "agent" else "jev")
     if require_principal and runtime.principal is None and principal_resolver is None:
         raise RuntimeError(
@@ -1199,6 +1380,81 @@ def create_mcp(
             result["report"] = report.model_dump(mode="json")
             result["report_markdown"] = render_investigation_report(report)
         except Exception as error:  # noqa: BLE001 - persist failed claims for replay safety
+            handoff = getattr(error, "prepared_handoff", None)
+            if (
+                isinstance(error, JevPayloadError)
+                and error.stage == "judgment"
+                and isinstance(handoff, dict)
+            ):
+                deferred_card = handoff["card"]
+                resources = handoff["resources"]
+                plan = handoff["plan"]
+                materials = handoff["materials"]
+                source_by_key = {
+                    resource.source_key: resource.model_dump(mode="json")
+                    for resource in resources
+                }
+                result = {
+                    "card_id": deferred_card.id,
+                    "outcome": None,
+                    "delivery_enabled": False,
+                    "delivery_methods": [],
+                    "source_keys": list(source_by_key),
+                    "judgment": {
+                        "status": "deferred",
+                        "reason": "local_judgment_payload_over_budget",
+                        "input_budget": {
+                            "stage": error.stage,
+                            "observed_bytes": error.observed_bytes,
+                            "budget_bytes": error.budget_bytes,
+                            "observed_tokens": error.observed_tokens,
+                            "budget_tokens": error.budget_tokens,
+                        },
+                        "provider_call_attempts": error.provider_call_attempts,
+                        "attempt_scope": "current_judgment",
+                        "provider_call_attempted": (
+                            None
+                            if error.provider_call_attempts is None
+                            else error.provider_call_attempts > 0
+                        ),
+                    },
+                    "judgment_state": materials.state,
+                    "source_by_key": source_by_key,
+                    "source_contracts": [
+                        {
+                            "source_key": resource.source_key,
+                            "adapter": resource.adapter,
+                            "resource": resource.resource,
+                            "source_url": resource.source_url,
+                            "captured_at": resource.captured_at.isoformat(),
+                            "source_captured_at": (
+                                resource.source_captured_at.isoformat()
+                                if resource.source_captured_at else None
+                            ),
+                            "contract": resource.contract.model_dump(mode="json"),
+                        }
+                        for resource in resources
+                    ],
+                    "retrieval": bundle.model_dump(mode="json"),
+                }
+                receipt = prepared.model_copy(
+                    update={
+                        "delivery_mode": "shadow",
+                        "status": ReceiptStatus.DECISION_DEFERRED,
+                        "outcome": None,
+                        "delivery_enabled": False,
+                        "delivery_method_keys": [],
+                        "result": result,
+                    }
+                )
+                decision_receipts.save(receipt)
+                return {
+                    "receipt": receipt.model_dump(mode="json", exclude={"result"}),
+                    "replayed": False,
+                    "card": _evaluation_card(deferred_card),
+                    "plan": plan.model_dump(mode="json"),
+                    "result": result,
+                }
             failure: dict[str, Any] = {"error": f"{type(error).__name__}: {error}"}
             if isinstance(error, (EvaluationPayloadError, JevPayloadError)):
                 failure["jev_payload_budget"] = {
@@ -1263,6 +1519,8 @@ def create_mcp(
                 workflow_step_key=workflow_step_key,
             )
             if "error" not in response["result"]:
+                if response["result"].get("judgment", {}).get("status") == "deferred":
+                    return response
                 if "report" in response["result"]:
                     response["report"] = response["result"]["report"]
                     response["report_markdown"] = response["result"]["report_markdown"]
@@ -2369,10 +2627,12 @@ def create_mcp(
     ) -> dict[str, Any]:
         """Run an approved card in delivery-disabled shadow mode.
 
-        The result uses the configured decision provider and is durable. SignalWeave never sends the
-        configured delivery methods; a caller-owned scheduler or agent may
-        inspect the receipt and decide what to do next. The durable receipt
-        always retains the full result; ``response_mode='compact'`` only shapes
+        The result uses the configured decision provider and is durable. A local
+        judgment-payload limit after source retrieval returns a ``deferred``
+        judgment, not a policy outcome; its complete state is available through
+        receipt pages. SignalWeave never sends configured delivery methods; a
+        caller-owned agent may inspect the receipt and decide what to do next.
+        The durable receipt retains the full result; compact mode only shapes
         this MCP response for the next agent turn.
 
         ``source_contracts`` retains this run's source quality and comparison
@@ -2419,7 +2679,9 @@ def create_mcp(
         """Recover one durable shadow result and its operator labels.
 
         A caller can use either the scheduler's idempotency key or the
-        receipt id returned by ``evaluate_insight_card``. The card scope check
+        receipt id returned by ``evaluate_insight_card``. Deferred judgments
+        have no outcome; their full prepared state is available through pages.
+        The card scope check
         runs before any receipt data is returned. Set result_path to field names
         (for example ["evidence"] or ["report", "issues"]) and optional list
         indexes for a byte-bounded page. Objects return key/value entries;
@@ -2680,7 +2942,7 @@ def create_mcp(
         receipt = decision_receipts.get_by_idempotency_key(key)
         if receipt is None:
             raise ValueError("unknown decision receipt for idempotency_key")
-        if receipt.status == ReceiptStatus.PREPARED:
+        if receipt.status in {ReceiptStatus.PREPARED, ReceiptStatus.DECISION_DEFERRED}:
             raise ValueError("decision is not complete; feedback can be recorded after evaluation")
         card = get_scoped_card(receipt.card_id, principal)
         stable_feedback_id = feedback_id.strip() if feedback_id else None
@@ -2993,13 +3255,14 @@ def create_mcp(
         response_mode: Annotated[
             ResponseMode,
             Field(description="Use compact for normal agent reads or full for the complete stored review packet."),
-        ] = "full",
+        ] = default_card_response_mode,
         ctx: Context | None = None,
     ) -> dict[str, Any]:
-        """Return active policy, compiled plan and latest review by stable ID.
+        """Return active policy and plan by stable ID.
 
-        Set include_history=true for prior reviews and correction audit records.
-        History stays persisted but is not repeated in ordinary agent reads.
+        Compact reads of approved cards omit the discovery review packet; use
+        response_mode="full" to inspect it. Set include_history=true in full
+        mode for prior reviews and correction audit records.
         """
         principal = request_principal(ctx)
         if include_history and response_mode == "compact":

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import math
 from collections.abc import Callable
+from contextlib import nullcontext
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from time import perf_counter
@@ -412,12 +413,31 @@ class InsightEngine:
         materials = self._evaluation_materials(
             evaluation_card, plan, resources, context, investigation
         )
-        judgment_payload_bytes = self._assert_jev_payload_budget(
-            materials.state, stage="judgment"
+        observe_attempts = getattr(self.judger, "observe_request_attempts", None)
+        attempt_scope = (
+            observe_attempts() if callable(observe_attempts) else nullcontext(None)
         )
-        result = await self.judger.judge(
-            materials.state, evaluation_card, plan, materials.observations
-        )
+        with attempt_scope as request_attempts:
+            try:
+                judgment_payload_bytes = self._assert_jev_payload_budget(
+                    materials.state, stage="judgment"
+                )
+                result = await self.judger.judge(
+                    materials.state, evaluation_card, plan, materials.observations
+                )
+            except JevPayloadError as error:
+                if error.stage == "judgment":
+                    attempts = getattr(request_attempts, "count", None)
+                    error.provider_call_attempts = (
+                        attempts if isinstance(attempts, int) else None
+                    )
+                    error.prepared_handoff = {
+                        "card": evaluation_card,
+                        "resources": resources,
+                        "plan": plan,
+                        "materials": materials,
+                    }
+                raise
         result = result.model_copy(
             update={"analyses": materials.analyses}
         )

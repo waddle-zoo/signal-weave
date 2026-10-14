@@ -45,14 +45,15 @@ def agent_getting_started(task: str = "start", *, decision_provider: str = "jev-
             {"tool": "review_insight_card", "purpose": "Check current source bindings and unresolved setup questions; ask the owner about material ambiguity."},
             {"tool": "approve_insight_card", "purpose": "Request explicit owner approval after showing the saved card and source scope."},
             {"tool": "evaluate_insight_card", "purpose": "On each recurring run, fetch approved sources and use Jev to apply the card's typed outcome policy; returns evidence and a durable receipt without delivering."},
-            {"tool": "get_decision_receipt", "purpose": "Read receipt evidence with result_path, offset and limit when a large handoff lists omitted sections; no new queries or inference. The full audit is available without result_path."},
+            {"tool": "get_decision_receipt", "purpose": "Read only needed omitted receipt details with result_path, offset and limit; a deferred handoff's observation_facts is the first view. Paging makes no new queries or inference."},
         ],
         "limits": [
             "No runtime catalog expansion; add newly needed sources to the card with owner review.",
             "Jev makes the card-bounded policy judgment; it does not discover the business, infer causality, or replace the frontier agent's deeper investigation.",
             "A returned evidence bundle is not a causal finding. Distinguish facts, hypotheses, and unknowns.",
             "A difference between the last two returned chart buckets is arithmetic, not proof of a like-for-like business decline. Verify period coverage and comparison basis; if unverified, put that caveat beside the headline, not only in setup questions. Never infer a currency from a metric name.",
-            "Large compact responses explicitly omit evidence. Read relevant receipt pages before explaining or delivering an action; omitted evidence is not empty or an all-clear.",
+            "Large compact responses may omit detail. Read included observation_facts first on a deferred handoff, then page only relevant receipt details; omitted evidence is not empty or an all-clear.",
+            "For a deferred judgment, read observation_facts first when included; otherwise page its raw observation path. Then page only relevant attributes, definitions, or source contracts. A complete row overview does not establish source coverage or comparability; missing values and dates stay unknown.",
             "SignalWeave does not schedule runs or send messages.",
             "Missing alert criteria can pause recurring automation while the agent still reports supported facts from inspected evidence. Do not withhold a useful current report merely because the notification policy needs owner confirmation.",
             "Source inspection may execute queries; respect user-approved access and cost limits.",
@@ -72,13 +73,20 @@ def agent_getting_started(task: str = "start", *, decision_provider: str = "jev-
             "response_mode": "compact",
         }
         response["repeat"] = (
-            "Reuse the approved card and a stable per-run idempotency key. Evaluate before "
+            "Use the approved policy and current source facts already in the packet; do not "
+            "fetch the card, guide, or receipt again when they are already available. Reuse "
+            "the approved card and a stable per-run idempotency key. Evaluate before "
             "repeating source reads or analysis; the evidence bundle already contains the "
             "fresh approved source facts. Use your company tools for deeper investigation "
             "when needed, not to restate the same facts before every evaluation. Jev applies "
             "the card policy; you own investigation, narrative, cadence and delivery."
             " Check source_contracts for this run's coverage/comparability before interpreting "
             "observations; read any omitted contracts using the receipt's paging instructions."
+            " If judgment is deferred, start with observation_facts when included (otherwise "
+            "use its raw receipt path) and page only relevant "
+            "unknown details; a complete row overview is not proof of complete coverage or "
+            "comparability. Do not carry a prior typed result forward when current evidence "
+            "contradicts it."
             " For a relative recurring window, use this run's measurement dates and cutoff; "
             "onboarding examples are not permanent date restrictions. Do not override an "
             "explicit owner-requested fixed window."

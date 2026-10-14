@@ -4,7 +4,9 @@ import asyncio
 import json
 import math
 import os
-from collections.abc import Mapping
+from collections.abc import Iterator, Mapping
+from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass
 from pathlib import Path
 from types import SimpleNamespace
@@ -154,6 +156,7 @@ class JevPayloadError(ValueError):
         self.budget_bytes = budget_bytes
         self.observed_tokens = observed_tokens
         self.budget_tokens = budget_tokens
+        self.provider_call_attempts: int | None = None
         token_detail = (
             f", estimated {observed_tokens} > {budget_tokens} input tokens"
             if observed_tokens is not None and budget_tokens is not None
@@ -170,6 +173,7 @@ class JudgerMetrics:
     """Small, non-sensitive counters used by the local benchmark harness."""
 
     requests: int = 0
+    request_attempts: int = 0
     input_tokens: int = 0
     output_tokens: int = 0
     payload_bytes: int = 0
@@ -187,6 +191,11 @@ class JudgerMetrics:
 
     def record_payload(self, payload_bytes: int) -> None:
         self.payload_bytes += max(0, int(payload_bytes))
+
+
+@dataclass
+class _RequestAttemptCounter:
+    count: int = 0
 
 
 class JevJudger:
@@ -295,6 +304,24 @@ class JevJudger:
             ).strip().lower() in {"1", "true", "yes", "on"}
         self.evidence_role_classification = bool(evidence_role_classification)
         self.metrics = JudgerMetrics()
+        self._active_request_attempts: ContextVar[_RequestAttemptCounter | None] = (
+            ContextVar("signalweave_jev_request_attempts", default=None)
+        )
+
+    @contextmanager
+    def observe_request_attempts(self) -> Iterator[_RequestAttemptCounter]:
+        """Attribute Jev call attempts to one logical judger invocation.
+
+        ContextVar task inheritance intentionally shares this mutable counter
+        with child tasks, while concurrent root invocations receive distinct
+        counters. The global metrics remain available for diagnostics.
+        """
+        counter = _RequestAttemptCounter()
+        token = self._active_request_attempts.set(counter)
+        try:
+            yield counter
+        finally:
+            self._active_request_attempts.reset(token)
 
     async def rank_resources(
         self, goal: str, resources: list[ResourceDescriptor]
@@ -508,6 +535,10 @@ class JevJudger:
                     timeout=self._timeout,
                     retry=RetryPolicy(max_retries=0),
                 ) as client:
+                    self.metrics.request_attempts += 1
+                    invocation_attempts = self._active_request_attempts.get()
+                    if invocation_attempts is not None:
+                        invocation_attempts.count += 1
                     return await client.system_one(state=state, questions=questions)
             except Exception as error:  # noqa: BLE001 - classify transport failures below
                 if not self._is_retryable_transport_error(error) or attempt >= self._max_retries:

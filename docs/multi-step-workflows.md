@@ -104,6 +104,22 @@ If the second result is still `retrieve_evidence`, the agent can continue the
 bounded loop. If it is `repair_source` or `request_review`, no leadership
 delivery is implied. A parent receipt mismatch is rejected before evaluation.
 
+## Deferred judgment handoff
+
+If `evaluate_insight_card` returns `result.judgment.status="deferred"`, no
+policy outcome was produced. This is a local judgment-payload limit after the
+approved sources were read; it is not `insufficient_data`, `ignore`, or a
+business decision. If the compact response includes `result.observation_facts`,
+start there: it indexes all normalized observations and links each row to its
+untouched receipt value. Complete row indexing does not establish source
+coverage or comparability. Use `evidence_access.source_directory` to page only
+relevant attributes, metadata, definitions, analytical comparisons, or source
+contracts; avoid rereading duplicate evidence wrappers by default. Reuse the
+receipt rather than fetching the card or guide again when they are already in
+the packet. Reusing the same idempotency key reads the receipt without repeating
+source or provider calls. Do not carry a prior typed result forward when current
+evidence contradicts it.
+
 ## Northstar example
 
 For “online sales fell; explain why and notify Analytics + Data Trust before

@@ -1,9 +1,20 @@
 import json
 
+from signalweave.mcp_server import create_mcp
+from signalweave.models import DeliveryMethod
+from signalweave.numeric_conditions import NumericCondition
 from tests.test_onboarding import make_server, tool
 
 
-async def _draft(server):
+async def _draft(server, *, source_parameters=None):
+    source = {
+        "key": "growth",
+        "adapter": "superset",
+        "resource": "dashboard:7",
+        "label": "Growth overview",
+    }
+    if source_parameters is not None:
+        source["parameters"] = source_parameters
     response = await tool(server, "draft_insight_card")(
         title="Compact response contract",
         what_to_watch="Checkout conversion and the evidence that explains a material movement.",
@@ -11,14 +22,7 @@ async def _draft(server):
         watch_for=["Conversion falls materially"],
         questions=["What changed and what evidence explains it?"],
         decision_guidance="Investigate when the evidence is incomplete; notify Growth Ops when corroborated.",
-        sources=[
-            {
-                "key": "growth",
-                "adapter": "superset",
-                "resource": "dashboard:7",
-                "label": "Growth overview",
-            }
-        ],
+        sources=[source],
     )
     return response["card"]["id"]
 
@@ -140,3 +144,90 @@ async def test_compact_card_read_keeps_latest_review_and_full_read_keeps_legacy_
     assert compact["response_mode"] == "compact"
     assert "response_mode" not in full
     assert "details_available" not in full
+
+
+async def test_agent_default_compact_approved_card_preserves_policy_and_full_audit(tmp_path):
+    server = make_server(tmp_path)
+    card_id = await _draft(
+        server,
+        source_parameters={"dashboard_filters": {"region": "west"}, "saved_query": "sales-v3"},
+    )
+    for _ in range(3):
+        await tool(server, "review_insight_card")(card_id)
+    await tool(server, "simulate_insight_card")(card_id)
+    approved = await tool(server, "approve_insight_card")(card_id)
+    assert approved["status"] == "approved"
+    stored_card = server._test_runtime.card_store.get_card(card_id)
+    source = stored_card.sources[0].model_copy(
+        update={"required_comparison_keys": ["growth-total"]}
+    )
+    server._test_runtime.card_store.save_card(stored_card.model_copy(update={
+        "sources": [source],
+        "numeric_conditions": [NumericCondition(
+            text="Growth total increased.",
+            source_key="growth",
+            comparison_key="growth-total",
+            measurement="delta",
+            unit="USD",
+            threshold=0,
+            comparator=">",
+        )],
+        "delivery_methods": [DeliveryMethod(
+            key="growth-ops",
+            outcome="notify",
+            label="Growth Ops",
+            destination="slack://growth-ops",
+        )],
+    }))
+
+    agent_server = create_mcp(server._test_runtime, profile="agent")
+    full_schema = next(spec for spec in await server.list_tools() if spec.name == "get_insight_card")
+    agent_schema = next(spec for spec in await agent_server.list_tools() if spec.name == "get_insight_card")
+    assert full_schema.inputSchema["properties"]["response_mode"]["default"] == "full"
+    assert agent_schema.inputSchema["properties"]["response_mode"]["default"] == "compact"
+
+    full = tool(server, "get_insight_card")(card_id)
+    compact = tool(agent_server, "get_insight_card")(card_id)
+    explicit_full = tool(agent_server, "get_insight_card")(card_id, response_mode="full")
+
+    assert full["onboarding_review"]["source_candidates"]
+    assert "onboarding_review" not in compact
+    assert explicit_full == full
+    assert compact["response_mode"] == "compact"
+    assert compact["details_available"] is True
+    preserved_fields = (
+        "id",
+        "title",
+        "what_to_watch",
+        "why_watch",
+        "watch_for",
+        "questions",
+        "numeric_conditions",
+        "evidence_requirements",
+        "decision_guidance",
+        "follow_up_guidance",
+        "sources",
+        "comparison_windows",
+        "action_confidence_threshold",
+        "owner",
+        "version",
+        "max_source_age_hours",
+        "delivery_methods",
+        "retrieval_mode",
+        "investigation_mode",
+        "max_investigation_sources",
+        "investigation_threshold",
+        "principal_id",
+        "principal_tenant",
+        "status",
+        "approved_by",
+        "approved_at",
+    )
+    assert all(compact[field] == full[field] for field in preserved_fields)
+    assert compact["sources"][0]["parameters"] == {
+        "dashboard_filters": {"region": "west"},
+        "saved_query": "sales-v3",
+    }
+    assert compact["numeric_conditions"]
+    assert compact["delivery_methods"]
+    assert len(json.dumps(compact)) < len(json.dumps(full))

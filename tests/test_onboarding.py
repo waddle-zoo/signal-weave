@@ -1310,10 +1310,12 @@ async def test_payload_budget_failure_is_persisted_as_structured_receipt(tmp_pat
         "status": "exceeded",
     }
     assert receipt["result"]["jev_payload_budget"]["observed_bytes"] > 1_024
+    assert "judgment_state" not in receipt["result"]
+    assert "prepared_handoff" not in receipt["result"]
 
 
 @pytest.mark.asyncio
-async def test_question_budget_failure_is_persisted_as_structured_receipt(tmp_path):
+async def test_question_budget_failure_is_persisted_as_deferred_receipt(tmp_path):
     server = make_server(tmp_path, judger=QuestionBudgetJevDouble())
     server._test_runtime.card_store.save_card(
         InsightCard(
@@ -1335,21 +1337,30 @@ async def test_question_budget_failure_is_persisted_as_structured_receipt(tmp_pa
         )
     )
 
-    with pytest.raises(JevPayloadError, match="judgment Jev payload exceeded"):
-        await tool(server, "evaluate_insight_card")(
-            "question-budget-card", idempotency_key="daily:question-budget-card"
-        )
+    response = await tool(server, "evaluate_insight_card")(
+        "question-budget-card", idempotency_key="daily:question-budget-card"
+    )
 
     receipt = tool(server, "get_decision_receipt")(
         idempotency_key="daily:question-budget-card"
     )
-    assert receipt["receipt"]["status"] == "failed"
-    assert receipt["result"]["jev_payload_budget"] == {
+    assert response["receipt"]["status"] == "decision_deferred"
+    assert response["receipt"]["outcome"] is None
+    assert response["receipt"]["delivery_enabled"] is False
+    assert response["result"]["outcome"] is None
+    assert response["result"]["judgment"]["status"] == "deferred"
+    assert response["result"]["judgment"]["input_budget"] == {
         "stage": "judgment",
         "observed_bytes": 2_048,
         "budget_bytes": 1_024,
-        "status": "exceeded",
+        "observed_tokens": None,
+        "budget_tokens": None,
     }
+    assert response["result"]["judgment"]["provider_call_attempts"] is None
+    assert response["result"]["judgment"]["attempt_scope"] == "current_judgment"
+    assert response["result"]["judgment"]["provider_call_attempted"] is None
+    assert receipt["receipt"]["status"] == "decision_deferred"
+    assert receipt["result"]["judgment"]["status"] == "deferred"
 
 
 @pytest.mark.asyncio

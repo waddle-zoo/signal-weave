@@ -284,6 +284,7 @@ class ReceiptStatus(StrEnum):
     REPLAYED = "replayed"
     DELIVERED = "delivered"
     DELIVERY_DISABLED = "delivery_disabled"
+    DECISION_DEFERRED = "decision_deferred"
     FAILED = "failed"
 
 
