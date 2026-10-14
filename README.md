@@ -52,6 +52,16 @@ adds guided agent registration, OpenAI Decisions, and ChatGPT-plan sign-in;
 those options require a build from this checkout until the next native release
 is published.
 
+With a current-source build, install the bundled workflow skill in your project:
+
+```sh
+signalweave skills install --agent codex   # or: --agent claude
+```
+
+Then ask your agent to use `$signalweave`. The skill guides source discovery,
+owner clarification, card review, recurring runs, and concise evidence-backed
+messages. See the [agent walkthrough](docs/agent-workflows.md).
+
 ## What you can build
 
 | Workflow | What the card preserves | What your agent does with the result |
@@ -151,7 +161,7 @@ serve your existing agents and workflow runners without installing a new BI UI.
 
 Explore the [Northstar sales workflow](docs/northstar-growth-history-trial.md),
 [company MCP example](examples/local-investigation/README.md), and
-[latest paired agent trials](docs/evidence/local-onboarding-and-recurring-pilot-2026-10-13.md).
+[evaluation index](docs/evaluations.md) for the current results and useful historical trials.
 Reports include the setup, measured results, and open issues. They are simulated
 evaluations, not customer performance guarantees.
 

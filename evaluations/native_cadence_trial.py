@@ -42,7 +42,7 @@ from evaluations.installed_workflow_trial import (
 from scripts.binary_provenance import verify_binary
 from signalweave.models import SourceRef
 
-VERSION = "native-cadence-v2"
+VERSION = "native-cadence-v3"
 MODEL = "gpt-6-luna"
 EFFORT = "xhigh"
 ONBOARDING_TIMEOUT_SECONDS = 900
@@ -935,7 +935,8 @@ async def run_trial(scenario: dict, registration: Any, *, binary: Path,
     output = Path(output)
     output.mkdir(mode=0o700, parents=True, exist_ok=False)
     public = public_scenario(scenario)
-    public["brief"] = f"{public['brief'].rstrip()}\n\nTrial scope: {RETROSPECTIVE_SCOPE}"
+    study_scope = scenario.get("study_scope", RETROSPECTIVE_SCOPE)
+    public["brief"] = f"{public['brief'].rstrip()}\n\nTrial scope: {study_scope}"
     public["require_agent_data_signoff"] = True
     pilot = _pilot_indices(registration)
     active_native_tools = (PRODUCTION_NATIVE_TOOLS if guidance_mode == PRODUCTION_GUIDED_MODE
@@ -951,7 +952,7 @@ async def run_trial(scenario: dict, registration: Any, *, binary: Path,
         "workflow_skill_sha256": digest(workflow_skill) if workflow_skill else None,
         "workflow_skill_delivery": "explicit bundled skill text in the agent instructions; not automatic skill discovery" if workflow_skill else None,
         "review_batch_size": review_batch_size,
-        "study_scope": RETROSPECTIVE_SCOPE,
+        "study_scope": study_scope,
         "scheduler_claim": "No real scheduler, cadence execution, or current warehouse freshness is tested.",
         "card_and_notes_frozen_after_onboarding": True,
         "models": {"onboarding": {"model": MODEL, "effort": EFFORT},
@@ -1251,8 +1252,9 @@ async def run_trial(scenario: dict, registration: Any, *, binary: Path,
                                                 for message in messages}, audit=audit, budget=budget)
                         reviews.extend(batch.get("reviews", []))
                         review_batches.append(batch)
-                    narrative_review = {"status": "completed" if all(
-                        batch.get("status") == "completed" for batch in review_batches) else "incomplete",
+                    narrative_review = {"status": ("not_applicable_no_messages" if not review_batches else
+                        "completed" if all(batch.get("status") == "completed" for batch in review_batches)
+                        else "incomplete"),
                         "reviews": reviews, "batches": review_batches}
                 else:
                     narrative_review = {"status": "not_run_onboarding_incomplete", "reviews": []}

@@ -12,6 +12,7 @@ import argparse
 import asyncio
 import copy
 import json
+import math
 from collections import Counter
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -20,10 +21,10 @@ from evaluations.bootstrap_agent_trial import digest, shift_timestamps, write_ex
 from evaluations.bootstrap_scenarios import build_scenarios
 from evaluations.native_cadence_trial import run_trial
 
-VERSION = "agent-workflow-cohort-v1"
+VERSION = "agent-workflow-cohort-v2"
 DEFAULT_SEED = 20261013
 CONTEXTS = ("ordinary_export", "reordered_export", "irrelevant_outage",
-            "wide_catalog", "partial_quality_export", "definition_drift")
+            "new_scale_export", "large_decoy_movement", "sparse_optional_export")
 
 
 def _replace(value, mapping: dict[str, str]):
@@ -55,6 +56,88 @@ def _bridge_identity(scenario: dict) -> dict:
     return transformed
 
 
+def export_comparison_valid(family: str, primary: dict, snapshots: dict) -> bool:
+    """Derive provider quality from export facts, never private labels or expected routes.
+
+    This is a synthetic exporter contract, not a production discovery algorithm.
+    It deliberately checks the raw omissions used by the existing six fixtures.
+    """
+    values = [item.get("values", {}) for item in primary.get("evidence", [])]
+    payload = values[0] if values else {}
+    def finite(value):
+        return type(value) in {int, float} and math.isfinite(value)
+    def control_payloads(role):
+        return [item.get("values", {}) for snapshot in snapshots.values()
+                if snapshot.get("contract", {}).get("roles") == [role]
+                for item in snapshot.get("evidence", [])]
+    if family == "retail":
+        rows = payload.get("rows", [])
+        return (payload.get("refund_timing") == "posting_week" and bool(payload.get("rows"))
+                and all(all(finite(row.get(key)) for key in (
+                    "baseline_gross", "baseline_refunds", "current_gross", "current_refunds"))
+                        for row in rows)
+                and all(isinstance(row.get("channel"), str) and row["channel"] for row in rows)
+                and len({row["channel"] for row in rows}) == len(rows))
+    if family in {"saas", "support"}:
+        comparisons = primary.get("analytical_comparisons", [])
+        if len(comparisons) != 1:
+            return False
+        comp = comparisons[0]
+        declared = primary.get("contract", {}).get("comparison_contracts", [])
+        if len(declared) != 1 or comp.get("definition") != declared[0].get("definition"):
+            return False
+        if family == "saas":
+            definitions = control_payloads("quality")
+            if (len(definitions) != 1 or not definitions[0].get("definition_version")
+                    or definitions[0].get("eligible_population") != comp.get("definition")):
+                return False
+        segments = comp.get("segments", [])
+        if (not segments or any(not isinstance(segment.get("segment"), str)
+                                or not segment["segment"].strip() for segment in segments)
+                or len({segment.get("segment") for segment in segments}) != len(segments)):
+            return False
+        totals = [comp.get("baseline_total", {}), comp.get("current_total", {})]
+        totals += [segment.get(period, {}) for segment in segments
+                   for period in ("baseline", "current")]
+        valid_counts = bool(totals) and all(finite(value.get("denominator"))
+                                  and value["denominator"] > 0
+                                  and finite(value.get("numerator"))
+                                  and 0 <= value["numerator"] <= value["denominator"] for value in totals)
+        if not valid_counts:
+            return False
+        return all(math.isclose(sum(segment[period][field] for segment in segments),
+                                comp[period + "_total"][field])
+                   for period in ("baseline", "current") for field in ("numerator", "denominator"))
+    if family == "ops":
+        deployments = control_payloads("diagnostic")
+        clusters = payload.get("cluster_population")
+        return (type(payload.get("affected_regions")) is int
+                and isinstance(payload.get("cluster_population"), list)
+                and bool(clusters) and all(isinstance(item, str) and item for item in clusters)
+                and len(set(clusters)) == len(clusters)
+                and len(deployments) == 1
+                and set(clusters) == set(deployments[0].get("target_population", []))
+                and 0 <= payload["affected_regions"] <= len(clusters)
+                and all(finite(payload.get(key)) for key in (
+                    "baseline_p95_ms", "current_p95_ms", "baseline_lag_ms", "current_lag_ms")))
+    if family == "marketplace":
+        return (payload.get("coverage") == "all_completed_purchases"
+                and payload.get("identity") == "customer_id"
+                and payload.get("aggregation") == "count_distinct"
+                and all(finite(payload.get(key)) and payload[key] >= 0
+                        and float(payload[key]).is_integer()
+                        for key in ("baseline_distinct_buyers", "current_distinct_buyers")))
+    if family == "finance":
+        controls = [item for item in control_payloads("quality") if "expected_partitions" in item]
+        return (len(controls) == 1
+                and type(controls[0].get("expected_partitions")) is int
+                and type(controls[0].get("closed_partitions")) is int
+                and controls[0]["expected_partitions"] > 0
+                and controls[0]["closed_partitions"] == controls[0]["expected_partitions"]
+                and controls[0].get("watermark") == primary.get("captured_at"))
+    raise ValueError("unsupported synthetic exporter family")
+
+
 def build_cohort(seed: int = DEFAULT_SEED) -> list[dict]:
     """Preserve existing meaning/labels; independently generate scales and IDs per close."""
     bases = [_bridge_identity(item) for item in build_scenarios(
@@ -82,7 +165,8 @@ def build_cohort(seed: int = DEFAULT_SEED) -> list[dict]:
         for ref, snapshot in scenario["public"]["onboarding"]["snapshots"].items():
             snapshot["contract"] = copy.deepcopy(next(item["contract"] for item in target.values()
                 if ref == f"{item['adapter']}|{item['resource']}"))
-        family = scenario["private"]["family"]
+        family = next(item["contract"]["domain"] for item in scenario["public"]["catalog"]
+                      if item["contract"].get("roles") == ["primary"])
         for context_index, context in enumerate(CONTEXTS):
             generated = _bridge_identity(build_scenarios(seed + 1009 * (context_index + 1),
                                         connector_profile=True, catalog_noise=20)[company_index])
@@ -103,7 +187,6 @@ def build_cohort(seed: int = DEFAULT_SEED) -> list[dict]:
                 shifted["period_id"] = period_id
                 for ref, snapshot in shifted["snapshots"].items():
                     snapshot.setdefault("metadata", {})["period_id"] = period_id
-                    snapshot["metadata"]["fixture_context"] = context
                     descriptor = next(item for item in target.values()
                                       if ref == f"{item['adapter']}|{item['resource']}")
                     snapshot["contract"] = copy.deepcopy(descriptor["contract"])
@@ -116,24 +199,29 @@ def build_cohort(seed: int = DEFAULT_SEED) -> list[dict]:
                     if context == "irrelevant_outage" and not descriptor["contract"].get("roles"):
                         snapshot["error"] = "Synthetic read-only source unavailable for this close."
                         snapshot["evidence"] = []
-                    if label["condition"] == "quality" and descriptor["contract"].get("roles") == ["primary"]:
+                    if context == "large_decoy_movement" and not descriptor["contract"].get("roles"):
+                        for evidence in snapshot.get("evidence", []):
+                            payload = evidence.get("values", {})
+                            if type(payload.get("current")) in {int, float}:
+                                payload["current"] *= 7
+                    if context == "sparse_optional_export" and not descriptor["contract"].get("roles"):
+                        snapshot["evidence"] = []
+                for snapshot in shifted["snapshots"].values():
+                    if snapshot["contract"].get("roles") == ["primary"]:
+                        valid = export_comparison_valid(family, snapshot, shifted["snapshots"])
                         for binding in snapshot["contract"].get("comparison_contracts", []):
-                            binding.update(coverage="unknown", comparable=False,
-                                detail="The source export explicitly cannot validate the owner's metric definition or full eligible population.")
-                        if context == "partial_quality_export":
-                            for comparison in snapshot.get("analytical_comparisons", []):
-                                comparison.update(coverage="partial", comparable=False)
-                            snapshot["metadata"]["export_coverage"] = "Incomplete business population; do not call a decline from this export."
-                        if context == "definition_drift":
-                            for binding in snapshot["contract"].get("comparison_contracts", []):
-                                binding["definition"] = "Unreviewed eligibility revision; historical mapping unavailable."
-                            for comparison in snapshot.get("analytical_comparisons", []):
-                                comparison["comparable"] = False
+                            binding.update(coverage="complete" if valid else "unknown", comparable=valid,
+                                detail="Exporter checked the declared metric definition and eligible population against the raw export; see cited export for any missing timing, definition, denominator, cluster, union, or partition facts.")
                 periods.append(shifted)
                 labels[period_id] = {**label, "context": context, "family": family}
         scenario["public"]["periods"] = periods
         scenario["private"]["periods"] = labels
-        scenario["cadence"] = "eighteen consecutive fictional weekly business closes"
+        scenario["cadence"] = "eighteen independent weekly scenario episodes; not a longitudinal ledger"
+        scenario["study_scope"] = (
+            "Fictional retrospective weekly business reviews. Each episode contains an independent "
+            "current/prior-week export; dates order the simulated runs but adjacent episodes are "
+            "not one continuous ledger. Preserve the returned measurement windows and source cutoffs."
+        )
         scenario["public"]["no_owner_during_monitoring"] = True
         scenario["public"]["brief"] += (
             " This is a fictional retrospective weekly-close review. Ask the owner for "
@@ -181,6 +269,7 @@ async def run(args) -> dict:
                 "concurrency": args.concurrency, "jev_cap_per_company": args.jev_budget,
                 "source_transport": "real loopback HTTP company-MCP bridge carrying synthetic normalized exports, not hosted BI accounts",
                 "company_statistical_unit": "six related business-family simulations; repeated periods are not independent companies",
+                "source_contract_scope": "Checks normalized exporter definitions, counts, partitions and population declarations. The supplied distinct-buyer union result is not an independent audit of source SQL or raw-row deduplication.",
                 "comparison": "same reviewed card, notes, sources, Luna model/effort; treatment adds native SignalWeave and distributed skill",
                 "stage_gate": "pilot retained separately; full cohort never stops after an incorrect outcome",
                 "claim": "functional and comparative workflow evidence; no billed warehouse savings or real customer usability claim"}

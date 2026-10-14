@@ -3,6 +3,7 @@
 import asyncio
 import json
 import os
+import signal
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
@@ -16,6 +17,19 @@ from evaluations import bootstrap_agent_trial as trial
 from evaluations import installed_trial_transport as transport
 from evaluations.bootstrap_scenarios import build_scenarios, public_scenario
 from signalweave.mcp_source import MCPConnection
+
+
+@pytest.mark.asyncio
+async def test_embedded_source_server_does_not_replace_controller_signals():
+    public = public_scenario(build_scenarios()[0])
+    audit = trial.Audit()
+    adapter = trial.PublicSourceAdapter(public["catalog"], public["scenario_id"], audit)
+    adapter.set_period(public["onboarding"], datetime.now(timezone.utc))
+    handlers = {value: signal.getsignal(value) for value in (signal.SIGINT, signal.SIGTERM)}
+    source = transport._SourceSession(adapter, audit, public["scenario_id"])
+    async with transport._source_server(source):
+        assert {value: signal.getsignal(value) for value in handlers} == handlers
+    assert {value: signal.getsignal(value) for value in handlers} == handlers
 
 
 def test_manifest_uses_real_tenant_and_only_catalog_resources():

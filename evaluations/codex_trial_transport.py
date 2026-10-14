@@ -13,7 +13,7 @@ import secrets
 import socket
 import tempfile
 import time
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, nullcontext
 
 import uvicorn
 from jsonschema import validate
@@ -133,6 +133,7 @@ async def serve_trial(bridge: TrialMCP):
     sock.listen(128)
     port = sock.getsockname()[1]
     server = uvicorn.Server(uvicorn.Config(app, log_level="critical", access_log=False))
+    server.capture_signals = nullcontext
     task = asyncio.create_task(server.serve(sockets=[sock]))
     try:
         async with asyncio.timeout(10):

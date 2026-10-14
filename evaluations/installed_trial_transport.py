@@ -16,7 +16,7 @@ import subprocess
 import tempfile
 import time
 from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, nullcontext
 from pathlib import Path
 from typing import Any
 
@@ -216,6 +216,8 @@ async def _source_server(session: _SourceSession) -> AsyncIterator[str]:
     sock.listen(128)
     port = sock.getsockname()[1]
     uvicorn_server = uvicorn.Server(uvicorn.Config(app, log_level="critical", access_log=False))
+    # Embedded test servers must not replace the experiment controller's signal handler.
+    uvicorn_server.capture_signals = nullcontext
     task = asyncio.create_task(uvicorn_server.serve(sockets=[sock]))
     try:
         async with asyncio.timeout(10):
@@ -444,6 +446,7 @@ async def _jev_proxy(audit: Audit, budget: RequestBudget) -> AsyncIterator[str]:
     sock.listen(128)
     port = sock.getsockname()[1]
     server = uvicorn.Server(uvicorn.Config(app, log_level="critical", access_log=False))
+    server.capture_signals = nullcontext
     task = asyncio.create_task(server.serve(sockets=[sock]))
     try:
         async with asyncio.timeout(10):
