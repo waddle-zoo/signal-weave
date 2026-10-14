@@ -204,6 +204,12 @@ def main() -> None:
     snippet = commands.add_parser("agent-config", help="Print configuration; never edits agent files")
     snippet.add_argument("--home", help="Local home (default: SIGNALWEAVE_HOME or ~/.signalweave)")
     snippet.add_argument("--agent", choices=["codex", "claude"], required=True)
+    skills = commands.add_parser("skills", help="Show or explicitly install the bundled agent skill")
+    skills_sub = skills.add_subparsers(dest="skills_command", required=True)
+    skills_sub.add_parser("show", help="Print the bundled SignalWeave skill instructions")
+    skills_install = skills_sub.add_parser("install", help="Install the skill in an explicit agent scope")
+    skills_install.add_argument("--agent", choices=["codex", "claude"], required=True)
+    skills_install.add_argument("--scope", choices=["project", "user"], default="project")
     run = commands.add_parser(
         "run",
         help="Run an approved insight card once through the configured decision provider",
@@ -235,6 +241,21 @@ def main() -> None:
         sys.argv.append("status" if existing_home.is_file() else "setup")
     args = parser.parse_args()
     try:
+        if args.command == "skills":
+            from .skill_install import SkillInstallError, install_skill, skill_text
+
+            if args.skills_command == "show":
+                try:
+                    print(skill_text(), end="")
+                except SkillInstallError as error:
+                    raise SetupError(str(error)) from None
+                return
+            try:
+                status, target = install_skill(args.agent, args.scope)
+            except SkillInstallError as error:
+                raise SetupError(str(error)) from None
+            print(f"SignalWeave skill {status.replace('_', ' ')}: {target}")
+            return
         if args.command == "setup":
             options = vars(args).copy()
             options.pop("command")

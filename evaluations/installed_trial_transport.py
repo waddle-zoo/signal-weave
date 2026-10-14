@@ -24,6 +24,7 @@ import httpx
 import uvicorn
 from mcp import ClientSession, StdioServerParameters, types
 from mcp.client.stdio import stdio_client
+from mcp.client.streamable_http import streamable_http_client
 from mcp.server.lowlevel import Server
 from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
 from starlette.applications import Starlette
@@ -468,8 +469,11 @@ async def installed_server(
     audit: Audit,
     budget: RequestBudget,
     work: Path,
+    transport: str = "stdio",
 ) -> AsyncIterator[InstalledServer]:
     """Set up and serve one installed trial binary in an isolated private home."""
+    if transport not in {"stdio", "streamable-http"}:
+        raise ValueError("unsupported installed transport")
     work = work.resolve()
     work.mkdir(mode=0o700, parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="installed-trial-", dir=work) as temporary:
@@ -490,6 +494,10 @@ async def installed_server(
             )
             async with _jev_proxy(audit, budget) as jev_url:
                 environment = _minimal_environment(home, jev_url=jev_url)
+                if transport == "streamable-http":
+                    async with _installed_http_server(binary, home, root, environment, audit) as server:
+                        yield server
+                    return
                 parameters = StdioServerParameters(
                     command=str(binary.resolve()),
                     args=["serve", "--home", str(home)],
@@ -502,3 +510,54 @@ async def installed_server(
                             initialized = await _initialize_mcp_session(session)
                             instructions = getattr(initialized, "instructions", None)
                             yield InstalledServer(session, instructions, audit)
+
+
+@asynccontextmanager
+async def _installed_http_server(binary: Path, home: Path, root: Path,
+                                 environment: dict, audit: Audit) -> AsyncIterator[InstalledServer]:
+    """Exercise the actual native CLI's authenticated HTTP server, not an embedded double."""
+    token = secrets.token_urlsafe(32)
+    audit.secrets = (*audit.secrets, token)
+    with socket.socket() as probe:
+        probe.bind(("127.0.0.1", 0))
+        port = probe.getsockname()[1]
+    url = f"http://127.0.0.1:{port}"
+    command = [str(binary.resolve()), "serve", "--home", str(home),
+               "--transport", "streamable-http", "--host", "127.0.0.1", "--port", str(port)]
+    with open(os.devnull, "w") as errlog:
+        process = await asyncio.create_subprocess_exec(
+            *command, cwd=str(root), env={**environment, "SIGNALWEAVE_API_TOKEN": token},
+            stdout=errlog, stderr=errlog)
+        try:
+            async with httpx.AsyncClient(timeout=2) as probe_client:
+                async with asyncio.timeout(40):
+                    while True:
+                        if process.returncode is not None:
+                            raise RuntimeError("installed HTTP runtime exited before readiness")
+                        try:
+                            readiness = await probe_client.get(url + "/readyz")
+                            if readiness.status_code == 200:
+                                break
+                        except httpx.TransportError:
+                            pass
+                        await asyncio.sleep(.1)
+                unauthorized = await probe_client.post(url + "/mcp")
+                if unauthorized.status_code != 401:
+                    raise RuntimeError("installed HTTP MCP did not enforce bearer authentication")
+                audit.emit("native.http.preflight", ready_status=readiness.status_code,
+                           unauthorized_status=unauthorized.status_code,
+                           deployment="one-process-loopback-token-sidecar")
+            async with httpx.AsyncClient(headers={"Authorization": "Bearer " + token},
+                                         timeout=120) as client:
+                async with streamable_http_client(url + "/mcp", http_client=client) as (read, write, _):
+                    async with ClientSession(read, write) as session:
+                        initialized = await _initialize_mcp_session(session)
+                        yield InstalledServer(session, getattr(initialized, "instructions", None), audit)
+        finally:
+            if process.returncode is None:
+                process.terminate()
+                try:
+                    await asyncio.wait_for(process.wait(), timeout=10)
+                except TimeoutError:
+                    process.kill()
+                    await process.wait()

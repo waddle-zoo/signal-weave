@@ -65,7 +65,7 @@ OPTIONAL_NATIVE_TOOLS = frozenset({
 NATIVE_TOOLS = PRODUCTION_NATIVE_TOOLS
 NATIVE_DECISION_TOOLS = frozenset({"evaluate_insight_card", "get_decision_receipt"})
 PRODUCTION_COMMON_INSTRUCTIONS = (
-    "You are the caller-owned agent for a retrospective archived monthly-close review, not a current alert. "
+    "You are the caller-owned agent for a retrospective archived business review, not a current alert. "
     "Use the same frozen reviewed card, saved notes, and source catalog provided to both arms. "
     "Inspect current-period evidence and compute only as useful. Make an independent assessment from evidence; "
     "a typed card decision is input, not proof, and you may disagree when same-period evidence supports it. "
@@ -108,22 +108,25 @@ def _pilot_indices(registration: Any) -> list[int]:
     return list(raw)
 
 
-def select_periods(scenario: dict, registration: Any, cases: int = 4) -> list[dict]:
+def select_periods(scenario: dict, registration: Any, cases: int | str = 4) -> list[dict]:
     """Select public periods and private labels separately; labels never enter prompts."""
-    if cases not in {4, 12}:
-        raise ValueError("cases must be 4 (stage gate) or 12")
+    if cases not in {4, 12, "all"}:
+        raise ValueError("cases must be 4 (stage gate), 12, or 'all'")
     public, private = scenario.get("public"), scenario.get("private")
     if not isinstance(public, dict) or not isinstance(private, dict):
         raise ValueError("cadence scenario must have public and private sections")
     periods = public.get("periods")
     labels = private.get("periods")
-    if not isinstance(periods, list) or len(periods) != 12 or not isinstance(labels, dict):
-        raise ValueError("cadence fixture must provide twelve public periods and a private label map")
+    if (not isinstance(periods, list) or not periods or not isinstance(labels, dict)
+            or (cases != "all" and len(periods) != 12)):
+        raise ValueError("cadence fixture must provide public periods and a private label map; legacy selection requires twelve")
     clocks = [_iso_clock(period["as_of"]) for period in periods]
-    if any((b.year * 12 + b.month) - (a.year * 12 + a.month) != 1
-           for a, b in zip(clocks, clocks[1:], strict=False)):
+    if any(b <= a for a, b in zip(clocks, clocks[1:], strict=False)):
+        raise ValueError("cadence periods must have strictly increasing measurement cutoffs")
+    if cases != "all" and any((b.year * 12 + b.month) - (a.year * 12 + a.month) != 1
+                             for a, b in zip(clocks, clocks[1:], strict=False)):
         raise ValueError("cadence periods must be consecutive monthly closes")
-    indices = _pilot_indices(registration) if cases == 4 else list(range(12))
+    indices = _pilot_indices(registration) if cases == 4 else list(range(len(periods)))
     if any(index < 0 or index >= len(periods) for index in indices):
         raise ValueError("registration pilot index is outside the cadence period list")
     selected = []
@@ -876,7 +879,7 @@ async def _review_messages(messages: list[dict], *, public: dict, card: dict, no
     review_rows = []
     for index, message in enumerate(messages, start=1):
         period = evidence_by_period[message["period_id"]]
-        review_rows.append({"message_id": f"M{index:02d}",
+        review_rows.append({"message_id": message.get("message_id", f"M{index:02d}"),
                             "recipient_key": message["recipient_key"],
                             "summary": message["summary"],
                             "evidence_refs": message["evidence_refs"],
@@ -915,12 +918,18 @@ async def _review_messages(messages: list[dict], *, public: dict, card: dict, no
 
 
 async def run_trial(scenario: dict, registration: Any, *, binary: Path,
-                    key_file: Path | None, output: Path, cases: int = 4,
+                    key_file: Path | None, output: Path, cases: int | str = 4,
                     jev_budget: int = 20, live: bool = False,
-                    guidance_mode: str = PRODUCTION_GUIDED_MODE) -> dict:
+                    guidance_mode: str = PRODUCTION_GUIDED_MODE,
+                    workflow_skill: str | None = None,
+                    transport: str = "stdio", review_batch_size: int = 12) -> dict:
     if guidance_mode not in GUIDANCE_MODES:
         raise ValueError(f"guidance_mode must be one of {sorted(GUIDANCE_MODES)}")
     selected = select_periods(scenario, registration, cases)
+    if transport not in {"stdio", "streamable-http"}:
+        raise ValueError("invalid native transport")
+    if type(review_batch_size) is not int or not 1 <= review_batch_size <= 20:
+        raise ValueError("review_batch_size must be from 1 to 20")
     binary = Path(binary)
     build = verify_binary(binary)
     output = Path(output)
@@ -936,8 +945,12 @@ async def run_trial(scenario: dict, registration: Any, *, binary: Path,
         "registration_pilot_indices": pilot,
         "selected_indices": [row["index"] for row in selected],
         "selected_period_ids": [row["period"]["period_id"] for row in selected],
-        "company_count": 1, "fixture_period_count": 12,
-        "cadence": "consecutive monthly closes", "cold_onboarding": True,
+        "company_count": 1, "fixture_period_count": len(public["periods"]),
+        "cadence": scenario.get("cadence", "consecutive monthly closes"), "cold_onboarding": True,
+        "native_transport": transport,
+        "workflow_skill_sha256": digest(workflow_skill) if workflow_skill else None,
+        "workflow_skill_delivery": "explicit bundled skill text in the agent instructions; not automatic skill discovery" if workflow_skill else None,
+        "review_batch_size": review_batch_size,
         "study_scope": RETROSPECTIVE_SCOPE,
         "scheduler_claim": "No real scheduler, cadence execution, or current warehouse freshness is tested.",
         "card_and_notes_frozen_after_onboarding": True,
@@ -1012,8 +1025,8 @@ async def run_trial(scenario: dict, registration: Any, *, binary: Path,
         report = {"status": "dry_run", "protocol": protocol, "binary_verifications": [build]}
         write_exclusive(output / "report.json", report)
         return report
-    if key_file is None or not 1 <= jev_budget <= 20:
-        raise ValueError("live run requires --key-file and a Jev budget from 1 to 20")
+    if key_file is None or not 1 <= jev_budget <= 100:
+        raise ValueError("live run requires --key-file and a Jev budget from 1 to 100")
     secret = Path(key_file).read_text(encoding="utf-8").strip()
     if not secret:
         raise ValueError("empty Jev key")
@@ -1041,7 +1054,7 @@ async def run_trial(scenario: dict, registration: Any, *, binary: Path,
 
             async with installed_server(binary=binary, key_file=Path(key_file), public=public,
                                         adapter=product_adapter, audit=audit, budget=budget,
-                                        work=work) as server:
+                                        work=work, transport=transport) as server:
                 profile_tools = await assert_default_agent_profile(server)
                 installed_tools = await server.list_tools()
                 installed_native_definitions = {
@@ -1056,9 +1069,16 @@ async def run_trial(scenario: dict, registration: Any, *, binary: Path,
                     treatment, key="", model=MODEL, effort=EFFORT, budget=budget, audit=audit,
                     max_turns=50, max_tool_calls=100, max_output_tokens=6000,
                     timeout_seconds=ONBOARDING_TIMEOUT_SECONDS,
-                    instructions_override=(onboarding_instructions(server)
+                    instructions_override=((
+                        "Use the installed SignalWeave default agent MCP and the shipped workflow skill below. "
+                        "The owner is simulated via ask_owner. Save reusable notes, sign_off_data_foundation, "
+                        "request_synthetic_owner_approval, then finish_setup with the approved card ID. "
+                        "These trial support tools record simulated sign-off, not real human authorization. "
+                        "\nInstalled MCP instructions:\n" + (server.instructions or "")
+                        + "\nShipped SignalWeave skill:\n" + workflow_skill
+                        if workflow_skill else onboarding_instructions(server))
                         + " For this simulation, the human owner is available through ask_owner; use it for missing business answers. An ordinary chat question receives no simulated reply. Do not infer policy from reviewer output."
-                        + " Make the reviewed card and saved notes explicitly describe this as a retrospective review of archived monthly closes, not a current alert. "
+                        + " Make the reviewed card and saved notes explicitly describe this as a retrospective review of archived reporting periods, not a current alert. "
                           "Preserve source measurement dates and cutoffs; do not claim warehouse freshness. "
                           "Use simulation_as_of for measurement dates; query_capture_at is only the replay gateway timestamp."),
                     prompt_override={"phase": "onboarding", "business": treatment.public,
@@ -1129,7 +1149,9 @@ async def run_trial(scenario: dict, registration: Any, *, binary: Path,
                                 budget=budget, audit=audit, max_turns=40,
                                 max_tool_calls=100, max_output_tokens=4500,
                                 timeout_seconds=RECURRING_TIMEOUT_SECONDS, bundle=None,
-                                instructions_override=_monitoring_instructions(session),
+                                instructions_override=(_monitoring_instructions(session)
+                                    + ("\nShipped SignalWeave skill:\n" + workflow_skill
+                                       if workflow_skill and session.treatment else "")),
                                 prompt_override=_episode_prompt(session, period),
                             )
                             complete = (episode.get("status") == "complete"
@@ -1219,9 +1241,19 @@ async def run_trial(scenario: dict, registration: Any, *, binary: Path,
                 if setup_complete:
                     flat_outbox = [{**message, "message_id": f"M{index:02d}"}
                                    for index, message in enumerate(outbox, start=1)]
-                    narrative_review = await _review_messages(
-                        flat_outbox, public=treatment.public, card=card, notes=notes,
-                        evidence_by_period=evidence_by_period, audit=audit, budget=budget)
+                    reviews = []
+                    review_batches = []
+                    for offset in range(0, len(flat_outbox), review_batch_size):
+                        messages = flat_outbox[offset:offset + review_batch_size]
+                        batch = await _review_messages(
+                            messages, public=treatment.public, card=card, notes=notes,
+                            evidence_by_period={message["period_id"]: evidence_by_period[message["period_id"]]
+                                                for message in messages}, audit=audit, budget=budget)
+                        reviews.extend(batch.get("reviews", []))
+                        review_batches.append(batch)
+                    narrative_review = {"status": "completed" if all(
+                        batch.get("status") == "completed" for batch in review_batches) else "incomplete",
+                        "reviews": reviews, "batches": review_batches}
                 else:
                     narrative_review = {"status": "not_run_onboarding_incomplete", "reviews": []}
         audit.episode = "trial-complete"
@@ -1247,15 +1279,15 @@ async def run_trial(scenario: dict, registration: Any, *, binary: Path,
     treatment_native_available = [row for row in results if row.get("treatment", {}).get(
         "product_use_status") == "native_current_result_available"]
     report = {
-        "status": ("completed" if setup_complete and len(results) == cases and postflight else
+        "status": ("completed" if setup_complete and len(results) == len(selected) and postflight else
                    "partial" if setup_complete else "onboarding_incomplete"),
         "protocol": protocol, "onboarding_complete": setup_complete,
         "card_digest": digest(card) if card else None, "notes_digest": digest(notes) if setup_complete else None,
         "periods": results, "local_mock_outbox": outbox,
         "narrative_review": narrative_review,
         "summary": {
-            "intended_cases": cases, "paired_cases": len(results),
-            "treatment_assigned": cases, "treatment_observed": len(treatment_observed),
+            "intended_cases": len(selected), "paired_cases": len(results),
+            "treatment_assigned": len(selected), "treatment_observed": len(treatment_observed),
             "baseline_observed": len(baseline_observed),
             "treatment_outcome_correct": sum(r["treatment"]["score"].get("outcome_correct") is True for r in results if r.get("treatment")),
             "treatment_routing_correct": sum(r["treatment"]["score"].get("routing_correct") is True for r in results if r.get("treatment")),

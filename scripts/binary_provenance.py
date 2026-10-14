@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 BUILD_INPUTS = (
     "pyproject.toml", "uv.lock", "LICENSE", "MANIFEST.in",
     "scripts/build_binary.py", "scripts/frozen_entrypoint.py",
-    "scripts/binary_provenance.py",
+    "scripts/binary_provenance.py", "skills/signalweave/SKILL.md",
 )
 
 

@@ -56,6 +56,17 @@ def test_dependency_change_invalidates_binary(tmp_path):
         verify_binary(binary, root)
 
 
+def test_canonical_skill_change_invalidates_binary(tmp_path):
+    root = source_tree(tmp_path)
+    skill = root / "skills" / "signalweave" / "SKILL.md"
+    skill.parent.mkdir(parents=True)
+    skill.write_text("instructions = 'first'\n")
+    binary = executable(root, identity(root))
+    skill.write_text("instructions = 'changed'\n")
+    with pytest.raises(ValueError, match="stale"):
+        verify_binary(binary, root)
+
+
 @pytest.mark.parametrize("metadata", [{}, {"format_version": 1, "frozen": False},
                                      {"format_version": 1, "frozen": True}])
 def test_binary_without_complete_native_metadata_is_rejected(tmp_path, metadata):
