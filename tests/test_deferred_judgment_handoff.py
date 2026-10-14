@@ -357,8 +357,9 @@ async def test_compact_deferred_handoff_pages_exact_state_and_source_snapshots(t
     assert facts["rows_complete"] is True
     assert len(facts["rows"]) == 117
     assert response["evidence_access"]["observation_facts"] == {
-        "result_path": ["observation_facts"],
-        "raw_result_path": ["judgment_state", "observations"],
+        "location": "inline_projection",
+        "inline_result_path": ["observation_facts"],
+        "result_path": ["judgment_state", "observations"],
         "total": 117,
         "included": 117,
         "coverage": "complete_normalized_observation_rows",
@@ -405,7 +406,8 @@ async def test_compact_deferred_handoff_pages_exact_state_and_source_snapshots(t
     assert source_observations == stored_source["observations"]
 
     observations = await read_all_pages(
-        server, receipt_id, ["judgment_state", "observations"], limit=25,
+        server, receipt_id,
+        response["evidence_access"]["observation_facts"]["result_path"], limit=25,
     )
     assert len(observations) == 117
     assert observations == full["result"]["judgment_state"]["observations"]
@@ -440,7 +442,8 @@ async def test_compact_deferred_omits_whole_overview_when_it_cannot_fit_and_keep
     assert len(json.dumps(response, ensure_ascii=False).encode("utf-8")) < 64 * 1024
     assert "observation_facts" not in response["result"]
     assert response["evidence_access"]["observation_facts"] == {
-        "raw_result_path": ["judgment_state", "observations"],
+        "location": "receipt_only",
+        "result_path": ["judgment_state", "observations"],
         "total": 1_000,
         "included": 0,
         "coverage": "not_included_within_handoff_byte_bound",
@@ -449,7 +452,8 @@ async def test_compact_deferred_omits_whole_overview_when_it_cannot_fit_and_keep
     assert response["card"]["decision_guidance"] == approved_card().decision_guidance
     receipt_id = response["receipt"]["receipt_id"]
     observations = await read_all_pages(
-        server, receipt_id, ["judgment_state", "observations"], limit=25,
+        server, receipt_id,
+        response["evidence_access"]["observation_facts"]["result_path"], limit=25,
     )
     assert len(observations) == 1_000
     assert observations[-1]["subject_id"] == "row-0999"

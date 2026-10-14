@@ -839,7 +839,8 @@ def _compact_evaluation_response(response: dict[str, Any]) -> dict[str, Any]:
                 facts = _deferred_observation_facts(raw_observations)
                 evidence_access["instruction"] = (
                     "This judgment is deferred and has no policy outcome. Read result.observation_facts "
-                    "first for every normalized observation; use source_directory paths for source-specific "
+                    "first for every normalized observation; this is an inline projection, not a stored receipt section. "
+                    "Use the advertised result_path or row full_ref for receipt reads, and source_directory paths for source-specific "
                     "metadata, definitions, and contracts only when needed. Page raw attributes or duplicate "
                     "evidence only when they add needed provenance. A complete fact overview does not assert "
                     "complete source coverage or a comparable period. Missing/null values and unsupported "
@@ -847,8 +848,9 @@ def _compact_evaluation_response(response: dict[str, Any]) -> dict[str, Any]:
                     "Receipt pages perform no source or model calls."
                 )
                 facts_access = {
-                    "result_path": ["observation_facts"],
-                    "raw_result_path": ["judgment_state", "observations"],
+                    "location": "inline_projection",
+                    "inline_result_path": ["observation_facts"],
+                    "result_path": ["judgment_state", "observations"],
                     "total": len(raw_observations),
                     "included": len(raw_observations),
                     "coverage": "complete_normalized_observation_rows",
@@ -888,7 +890,8 @@ def _compact_evaluation_response(response: dict[str, Any]) -> dict[str, Any]:
                     fallback_access = {
                         **evidence_access,
                         "observation_facts": {
-                            "raw_result_path": ["judgment_state", "observations"],
+                            "location": "receipt_only",
+                            "result_path": ["judgment_state", "observations"],
                             "total": len(raw_observations),
                             "included": 0,
                             "coverage": "not_included_within_handoff_byte_bound",
