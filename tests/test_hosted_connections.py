@@ -830,6 +830,7 @@ async def test_preset_metadata_only_never_fetches_chart_data():
                     "result": {
                         "id": 7,
                         "dashboard_title": "Growth",
+                        "url": "dashboard/7",
                         "position_json": {
                             "chart-101": {"type": "CHART", "meta": {"chartId": 101}}
                         },
@@ -854,8 +855,52 @@ async def test_preset_metadata_only_never_fetches_chart_data():
 
     assert snapshot.observations == []
     assert snapshot.metadata["data_policy_mode"] == "metadata_only"
+    assert snapshot.source_url == "https://workspace.app.preset.test/dashboard/7"
+    assert snapshot.evidence[0].source_url == snapshot.source_url
     assert "/api/v1/chart/101" not in paths
     assert "/api/v1/chart/data" not in paths
+
+
+@pytest.mark.asyncio
+async def test_preset_metadata_only_chart_links_use_workspace_origin():
+    paths: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        paths.append(request.url.path)
+        assert request.url.host == "workspace.app.preset.test"
+        if request.url.path == "/api/v1/chart/101":
+            return httpx.Response(
+                200,
+                json={
+                    "result": {
+                        "id": 101,
+                        "slice_name": "Revenue",
+                        "url": "explore/?slice_id=101",
+                    }
+                },
+            )
+        raise AssertionError(f"metadata-only must not fetch chart data: {request.url}")
+
+    client = PresetCloudClient(
+        "https://workspace.app.preset.test",
+        access_token="preset-token",
+        api_base_url="https://api.preset.test",
+        transport=httpx.MockTransport(handler),
+    )
+    adapter = PresetAdapter(
+        client,
+        tenant_id="northstar",
+        policy=HostedDataPolicy(mode=HostedDataMode.METADATA_ONLY),
+    )
+
+    snapshot = await adapter.inspect(
+        SourceRef(key="revenue", adapter="preset", resource="chart:101", label="Revenue")
+    )
+
+    expected_url = "https://workspace.app.preset.test/explore/?slice_id=101"
+    assert snapshot.source_url == expected_url
+    assert snapshot.evidence[0].source_url == expected_url
+    assert paths == ["/api/v1/chart/101"]
 
 
 @pytest.mark.asyncio
