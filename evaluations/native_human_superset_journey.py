@@ -47,6 +47,7 @@ def terminal_setup(binary: Path, env: dict, key: str, url: str) -> dict:
         ("Agent [codex]:", "1\n"),
         ("Add another source?", "n\n"),
         ("Connect SignalWeave to Codex now?", "y\n"),
+        ("Install the bundled SignalWeave skill for Codex", "y\n"),
     ]
     text = ""
     started = time.monotonic()

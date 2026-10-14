@@ -19,9 +19,9 @@ from pathlib import Path
 
 from evaluations.bootstrap_agent_trial import digest, shift_timestamps, write_exclusive
 from evaluations.bootstrap_scenarios import build_scenarios
-from evaluations.native_cadence_trial import run_trial
+from evaluations.native_cadence_trial import EXECUTION_MODES, run_trial
 
-VERSION = "agent-workflow-cohort-v2"
+VERSION = "agent-workflow-cohort-v4"
 DEFAULT_SEED = 20261013
 CONTEXTS = ("ordinary_export", "reordered_export", "irrelevant_outage",
             "new_scale_export", "large_decoy_movement", "sparse_optional_export")
@@ -167,6 +167,16 @@ def build_cohort(seed: int = DEFAULT_SEED) -> list[dict]:
                 if ref == f"{item['adapter']}|{item['resource']}"))
         family = next(item["contract"]["domain"] for item in scenario["public"]["catalog"]
                       if item["contract"].get("roles") == ["primary"])
+        if family == "ops":
+            # A scripted owner can resolve the incomplete otherwise branch when
+            # the author asks a focused follow-up. This is policy, not an episode label.
+            scenario["public"]["owner_followup_answers"] = {
+                "materiality": scenario["public"]["owner_answers"]["materiality"]
+                    + " To clarify the other complete-data cases: when the required signals are "
+                      "complete and comparable but the full joint investigation condition is not met, "
+                      "ignore. Missing, partial, mismatched or incomparable required evidence still "
+                      "uses the data-gap route; it must never be treated as an all-clear."
+            }
         for context_index, context in enumerate(CONTEXTS):
             generated = _bridge_identity(build_scenarios(seed + 1009 * (context_index + 1),
                                         connector_profile=True, catalog_noise=20)[company_index])
@@ -248,6 +258,9 @@ def summarize(reports: list[dict], intended_companies: int) -> dict:
 
 
 async def run(args) -> dict:
+    execution_mode = getattr(args, "execution_mode", "agent-tool")
+    if execution_mode not in EXECUTION_MODES:
+        raise ValueError("invalid cohort execution mode")
     scenarios = build_cohort(args.seed)
     if args.company_index is not None:
         if len(set(args.company_index)) != len(args.company_index) or any(
@@ -267,10 +280,13 @@ async def run(args) -> dict:
                 "paired_cases": sum(len(s["public"]["periods"]) for s in scenarios),
                 "dataset_digest": digest(scenarios), "workflow_skill_digest": digest(skill),
                 "concurrency": args.concurrency, "jev_cap_per_company": args.jev_budget,
+                "execution_mode": execution_mode,
+                "owner_dialogue": "Scripted same-topic clarification is revealed only on an explicit follow-up question, journaled and capped at sixteen turns. The reviewer receives only answers actually provided in dialogue trials. Not real human validation.",
                 "source_transport": "real loopback HTTP company-MCP bridge carrying synthetic normalized exports, not hosted BI accounts",
                 "company_statistical_unit": "six related business-family simulations; repeated periods are not independent companies",
                 "source_contract_scope": "Checks normalized exporter definitions, counts, partitions and population declarations. The supplied distinct-buyer union result is not an independent audit of source SQL or raw-row deduplication.",
                 "comparison": "same reviewed card, notes, sources, Luna model/effort; treatment adds native SignalWeave and distributed skill",
+                "recurring_controller": ("Caller-owned native preflight: complete current ignore can suppress the frontier; other results or errors go to the same frontier with source tools. No private labels select the branch." if execution_mode == "decision-first" else "Both arms start a frontier episode; native tool use remains agent-selected."),
                 "stage_gate": "pilot retained separately; full cohort never stops after an incorrect outcome",
                 "claim": "functional and comparative workflow evidence; no billed warehouse savings or real customer usability claim"}
     write_exclusive(args.output / "protocol.json", protocol)
@@ -287,6 +303,7 @@ async def run(args) -> dict:
                 scenario, {"pilot_indices": [0, 1, 2, 3]}, binary=args.binary,
                 key_file=args.key_file, output=args.output / f"company-{index:02d}",
                 cases="all", jev_budget=args.jev_budget, live=True, workflow_skill=skill,
+                execution_mode=execution_mode,
                 transport="stdio" if index % 2 == 0 else "streamable-http")
 
     reports = await asyncio.gather(*(company(index, scenario) for index, scenario in enumerate(scenarios)))
@@ -308,6 +325,7 @@ def main():
     parser.add_argument("--concurrency", type=int, choices=[1, 2, 3], default=2)
     parser.add_argument("--jev-budget", type=int, default=80)
     parser.add_argument("--pilot", action="store_true")
+    parser.add_argument("--execution-mode", choices=sorted(EXECUTION_MODES), default="agent-tool")
     parser.add_argument("--live", action="store_true")
     args = parser.parse_args()
     if not 1 <= args.jev_budget <= 100:

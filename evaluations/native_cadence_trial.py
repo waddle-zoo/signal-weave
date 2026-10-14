@@ -12,6 +12,7 @@ import argparse
 import asyncio
 import copy
 import json
+import math
 import tempfile
 import time
 from collections import Counter
@@ -64,6 +65,7 @@ OPTIONAL_NATIVE_TOOLS = frozenset({
 })
 NATIVE_TOOLS = PRODUCTION_NATIVE_TOOLS
 NATIVE_DECISION_TOOLS = frozenset({"evaluate_insight_card", "get_decision_receipt"})
+EXECUTION_MODES = frozenset({"agent-tool", "decision-first"})
 PRODUCTION_COMMON_INSTRUCTIONS = (
     "You are the caller-owned agent for a retrospective archived business review, not a current alert. "
     "Use the same frozen reviewed card, saved notes, and source catalog provided to both arms. "
@@ -700,6 +702,261 @@ def _current_receipt_refs(session: CadenceSession, card: dict, expected_key: str
     return {f"receipt:{expected_key}"} if _native_success_count(session, card, expected_key) else set()
 
 
+def _required_card_source_refs(card: dict) -> dict[str, tuple[str, str]] | None:
+    sources = card.get("sources")
+    if not isinstance(sources, list):
+        return None
+    required = {}
+    for source in sources:
+        if not isinstance(source, dict):
+            return None
+        is_required = source.get("required", True)
+        if type(is_required) is not bool:
+            return None
+        if not is_required:
+            continue
+        key, adapter, resource = (source.get("key"), source.get("adapter"),
+                                  source.get("resource"))
+        if not all(isinstance(value, str) and value for value in (key, adapter, resource)):
+            return None
+        if key in required:
+            return None
+        required[key] = (adapter, resource)
+    return required
+
+
+def _unit_interval_number(value: Any) -> bool:
+    if type(value) not in (int, float):
+        return False
+    try:
+        return math.isfinite(value) and 0 <= value <= 1
+    except OverflowError:
+        return False
+
+
+def _explicit_source_issue(item: Any) -> bool:
+    if not isinstance(item, dict):
+        return False
+    values = item.get("values")
+    details = [item, values] if isinstance(values, dict) else [item]
+    for detail in details:
+        if detail.get("error") or detail.get("message") or detail.get("blocking") is True:
+            return True
+        status = detail.get("quality_status")
+        if status not in (None, "", "healthy", "complete"):
+            return True
+    return False
+
+
+def _required_source_has_quality_issue(response: dict, result: dict,
+                                       contracts_by_key: dict[str, dict],
+                                       required_keys: set[str]) -> bool:
+    for key in required_keys:
+        source_contract = contracts_by_key[key].get("contract")
+        if isinstance(source_contract, dict):
+            status = source_contract.get("source_status")
+            if (status is not None and status != "healthy") or source_contract.get("authorized") is False:
+                return True
+
+    for collection in (result.get("source_errors"), result.get("evidence"),
+                       response.get("resources")):
+        if isinstance(collection, list) and any(
+            isinstance(item, dict) and item.get("source_key") in required_keys
+            and _explicit_source_issue(item)
+            for item in collection
+        ):
+            return True
+
+    observations = result.get("observations")
+    if isinstance(observations, list):
+        for item in observations:
+            if not isinstance(item, dict) or item.get("source_key") not in required_keys:
+                continue
+            attributes = item.get("attributes")
+            status = attributes.get("source_status") if isinstance(attributes, dict) else None
+            freshness = item.get("freshness")
+            if ((status is not None and status != "healthy")
+                    or isinstance(freshness, str) and "stale" in freshness.lower()):
+                return True
+    return False
+
+
+def _required_source_evidence_keys(result: dict) -> set[str]:
+    keys = set()
+    for collection_name in ("evidence", "observations"):
+        collection = result.get(collection_name)
+        if not isinstance(collection, list):
+            continue
+        for item in collection:
+            if (isinstance(item, dict) and isinstance(item.get("source_key"), str)
+                    and item.get("source_key") and not _explicit_source_issue(item)):
+                keys.add(item["source_key"])
+    return keys
+
+
+def _native_handoff_complete(response: dict, result: dict) -> bool:
+    access = response.get("evidence_access")
+    if access is None:
+        access = result.get("evidence_access")
+    if access is None:
+        return True
+    if not isinstance(access, dict) or access.get("complete") is not True:
+        return False
+    for field in ("source_contract_coverage", "observation_coverage"):
+        section = access.get(field)
+        if section is not None and (
+            not isinstance(section, dict) or section.get("coverage") != "complete_section"
+        ):
+            return False
+    return True
+
+
+def _decision_first_quiet_eligibility(session: CadenceSession, response: Any,
+                                      expected_key: str) -> dict:
+    """Allow a no-frontier quiet only on a bound, fully covered native result."""
+    valid = _valid_current_native_result(response, session.shared_card or {}, expected_key)
+    if valid is None:
+        return {"eligible": False, "reason": "invalid_current_receipt",
+                "valid_current_result": False, "evidence_mode": "none", "proof_refs": []}
+    receipt, result = valid
+    if (not isinstance(receipt.get("receipt_id"), str)
+            or not receipt["receipt_id"].strip()):
+        return {"eligible": False, "reason": "missing_receipt_id",
+                "valid_current_result": False, "evidence_mode": "none", "proof_refs": []}
+    if result.get("outcome") != "ignore":
+        return {"eligible": False, "reason": "native_non_ignore",
+                "valid_current_result": True, "evidence_mode": "none", "proof_refs": []}
+    delivery_methods = result.get("delivery_methods")
+    if not isinstance(delivery_methods, list) or delivery_methods:
+        return {"eligible": False, "reason": "native_ignore_has_delivery_methods",
+                "valid_current_result": True, "evidence_mode": "none", "proof_refs": []}
+    if not _native_handoff_complete(response, result):
+        return {"eligible": False, "reason": "incomplete_receipt_handoff",
+                "valid_current_result": True, "evidence_mode": "none", "proof_refs": []}
+
+    card = session.shared_card or {}
+    required_refs = _required_card_source_refs(card)
+    if not required_refs:
+        return {"eligible": False, "reason": "required_source_coverage_unavailable",
+                "valid_current_result": True, "evidence_mode": "none", "proof_refs": []}
+
+    confidence = result.get("confidence")
+    threshold = card.get("action_confidence_threshold", 0.70)
+    if confidence is None:
+        return {"eligible": False, "reason": "confidence_missing",
+                "valid_current_result": True, "evidence_mode": "none", "proof_refs": []}
+    if not _unit_interval_number(confidence) or not _unit_interval_number(threshold):
+        return {"eligible": False, "reason": "confidence_invalid",
+                "valid_current_result": True, "evidence_mode": "none", "proof_refs": []}
+    if confidence < threshold:
+        return {"eligible": False, "reason": "confidence_below_threshold",
+                "valid_current_result": True, "evidence_mode": "none", "proof_refs": []}
+
+    source_contracts = result.get("source_contracts")
+    if not isinstance(source_contracts, list):
+        return {"eligible": False, "reason": "required_source_contracts_missing",
+                "valid_current_result": True, "evidence_mode": "none", "proof_refs": []}
+    contracts_by_key = {}
+    for item in source_contracts:
+        if isinstance(item, dict) and item.get("source_key") in required_refs:
+            contracts_by_key.setdefault(item["source_key"], []).append(item)
+    if any(
+        len(contracts_by_key.get(key, [])) != 1
+        or (contracts_by_key[key][0].get("adapter"), contracts_by_key[key][0].get("resource"))
+        != source_ref
+        for key, source_ref in required_refs.items()
+    ):
+        return {"eligible": False, "reason": "required_source_contracts_incomplete",
+                "valid_current_result": True, "evidence_mode": "none", "proof_refs": []}
+
+    if _required_source_has_quality_issue(response, result,
+                                          {key: items[0] for key, items in contracts_by_key.items()},
+                                          set(required_refs)):
+        return {"eligible": False, "reason": "required_source_quality_unhealthy",
+                "valid_current_result": True, "evidence_mode": "none", "proof_refs": []}
+
+    if not set(required_refs).issubset(_required_source_evidence_keys(result)):
+        return {"eligible": False, "reason": "required_source_evidence_incomplete",
+                "valid_current_result": True, "evidence_mode": "none", "proof_refs": []}
+    # Controller routing uses the card's required scope. Benchmark grading below
+    # intentionally keeps its separate catalog-role-based primary-source proof.
+    proof_refs = sorted({f"{adapter}|{resource}" for adapter, resource in required_refs.values()})
+    return {"eligible": True, "reason": None, "valid_current_result": True,
+            "evidence_mode": "required_card_sources_current_run", "proof_refs": proof_refs}
+
+
+async def _decision_first_preflight(session: CadenceSession, audit: Audit) -> dict:
+    """Run one native decision before the frontier, shortcutting only complete quiet."""
+    expected_key = session.current_idempotency_key or ""
+    card = session.shared_card or {}
+    started = time.perf_counter()
+    event_offset = len(audit.events)
+    call_offset = len(session.native_results)
+    response = None
+    error_type = None
+    eligibility = {"eligible": False, "reason": "missing_current_card_or_run_key",
+                   "valid_current_result": False, "evidence_mode": "none", "proof_refs": []}
+    if isinstance(card.get("id"), str) and card["id"] and expected_key:
+        try:
+            response = await session.call("evaluate_insight_card", {
+                "card_id": card["id"], "idempotency_key": expected_key,
+            })
+        except Exception as error:  # failure is evidence for the normal agent fallback
+            error_type = type(error).__name__
+            eligibility["reason"] = "native_call_failed"
+        else:
+            eligibility = _decision_first_quiet_eligibility(session, response, expected_key)
+
+    status = "fallback"
+    if eligibility["eligible"]:
+        try:
+            await session.call("finish_run", {
+                "outcome": "ignore", "recipients": [], "summary": "",
+                "evidence_refs": [f"receipt:{expected_key}"],
+            })
+        except Exception as error:  # do not suppress the agent's recovery path
+            session.submission = None
+            session.outbox.clear()
+            error_type = type(error).__name__
+            eligibility = {**eligibility, "eligible": False,
+                           "reason": "quiet_handoff_failed"}
+        else:
+            if (session.submission is not None
+                    and session.submission.get("outcome") == "ignore"
+                    and not session.outbox):
+                status = "quiet_shortcut"
+            else:
+                session.submission = None
+                session.outbox.clear()
+                eligibility = {**eligibility, "eligible": False,
+                               "reason": "quiet_handoff_not_recorded"}
+
+    events = audit.events[event_offset:]
+    calls = session.native_results[call_offset:]
+    result = response.get("result") if isinstance(response, dict) else None
+    receipt = response.get("receipt") if isinstance(response, dict) else None
+    record = {
+        "attempted": bool(calls), "status": status,
+        "fallback_reason": eligibility.get("reason"),
+        "valid_current_result": eligibility.get("valid_current_result", False),
+        "native_outcome": result.get("outcome") if isinstance(result, dict) else None,
+        "receipt_id": receipt.get("receipt_id") if isinstance(receipt, dict) else None,
+        "evidence_mode": eligibility.get("evidence_mode", "none"),
+        "proof_refs": eligibility.get("proof_refs", []),
+        "attempts": len(calls),
+        "responses": sum(call.get("returned") is True for call in calls),
+        "error_type": error_type,
+        "seconds": time.perf_counter() - started,
+        "usage": _usage(events),
+        "overhead": _overhead(events),
+        "_bundle": response,
+    }
+    audit.emit("decision_first.preflight", status=status,
+               fallback_reason=record["fallback_reason"], attempts=record["attempts"],
+               seconds=record["seconds"], evidence_mode=record["evidence_mode"])
+    return record
+
+
 def _native_judgment_score(native_results: list[dict], card: dict, label: dict,
                            destinations: list[dict], expected_key: str) -> dict:
     """Score the current typed judgment separately from API/tool transport success."""
@@ -793,23 +1050,43 @@ def _native_tool_argument_validation_error_count(events: list[dict],
     return failures
 
 
-def _episode_prompt(session: CadenceSession, period: dict) -> dict:
-    return {"phase": "monitoring", "business": session.public,
-            "period": session.adapter.period_context,
-            "saved_notes": session.notes,
-            "evaluation_idempotency_key": session.current_idempotency_key
-            or f"{session.tenant_id}/{period['period_id']}",
-            "delivery": "local_mock_outbox_only"}
+def _episode_prompt(session: CadenceSession, period: dict, *,
+                    controller_preflight: dict | None = None) -> dict:
+    prompt = {"phase": "monitoring", "business": session.public,
+              "period": session.adapter.period_context,
+              "saved_notes": session.notes,
+              "evaluation_idempotency_key": session.current_idempotency_key
+              or f"{session.tenant_id}/{period['period_id']}",
+              "delivery": "local_mock_outbox_only"}
+    if controller_preflight is not None:
+        prompt["decision_first_preflight"] = {
+            "status": controller_preflight["status"],
+            "fallback_reason": controller_preflight["fallback_reason"],
+            "valid_current_result": controller_preflight["valid_current_result"],
+            "error_type": controller_preflight["error_type"],
+            "native_bundle": controller_preflight["_bundle"],
+        }
+    return prompt
 
 
-def _monitoring_instructions(session: CadenceSession) -> str:
+def _monitoring_instructions(session: CadenceSession, *, decision_first_fallback: bool = False) -> str:
     if session.guidance_mode == OPTIONAL_TOOL_MODE:
-        return COMMON_INSTRUCTIONS
-    if not session.treatment:
-        return PRODUCTION_COMMON_INSTRUCTIONS
-    return (PRODUCTION_COMMON_INSTRUCTIONS
-            + "\n\nInstalled default-agent MCP instructions (verbatim):\n"
-            + (session.server.instructions or ""))
+        instructions = COMMON_INSTRUCTIONS
+    elif not session.treatment:
+        instructions = PRODUCTION_COMMON_INSTRUCTIONS
+    else:
+        instructions = (PRODUCTION_COMMON_INSTRUCTIONS
+                        + "\n\nInstalled default-agent MCP instructions (verbatim):\n"
+                        + (session.server.instructions or ""))
+    if decision_first_fallback:
+        instructions += (
+            "\n\nA controller preflight result is included as candidate evidence. Verify its "
+            "card/version/run-key binding and explicit coverage before relying on it. If it is "
+            "invalid, stale, partial, or non-quiet, recover with the available approved source "
+            "and receipt tools as needed. Make your own caller-owned final submission; do not "
+            "treat the controller result as an order."
+        )
+    return instructions
 
 
 def _usage(events: list[dict]) -> dict:
@@ -872,6 +1149,72 @@ def _overhead(events: list[dict]) -> dict:
             "source_read_wall_seconds": sum(e.get("seconds", 0) for e in source)}
 
 
+def _completed_pair_count(results: list[dict]) -> int:
+    completed = set()
+    for row in results:
+        if (not isinstance(row, dict) or row.get("treatment_assigned") is not True
+                or not isinstance(row.get("period_id"), str)):
+            continue
+        if (isinstance(row.get("baseline"), dict)
+                and row["baseline"].get("completed") is True
+                and isinstance(row.get("treatment"), dict)
+                and row["treatment"].get("completed") is True):
+            completed.add(row["period_id"])
+    return len(completed)
+
+
+def _all_assigned_pairs_complete(results: list[dict], selected: list[dict]) -> bool:
+    expected_ids = [case["period"]["period_id"] for case in selected]
+    if len(results) != len(expected_ids) or len(set(expected_ids)) != len(expected_ids):
+        return False
+    rows = {row.get("period_id"): row for row in results if isinstance(row, dict)}
+    if len(rows) != len(results) or set(rows) != set(expected_ids):
+        return False
+    return all(
+        rows[period_id].get("treatment_assigned") is True
+        and isinstance(rows[period_id].get("baseline"), dict)
+        and rows[period_id]["baseline"].get("completed") is True
+        and isinstance(rows[period_id].get("treatment"), dict)
+        and rows[period_id]["treatment"].get("completed") is True
+        for period_id in expected_ids
+    )
+
+
+def _narrative_reviews_complete(review: dict, outbox: list[dict]) -> bool:
+    if not isinstance(review, dict):
+        return False
+    reviews = review.get("reviews")
+    if not isinstance(reviews, list):
+        return False
+    if not outbox:
+        return review.get("status") == "not_applicable_no_messages" and not reviews
+    batches = review.get("batches")
+    if (review.get("status") != "completed" or not isinstance(batches, list)
+            or not batches or any(not isinstance(batch, dict)
+                                  or batch.get("status") != "completed" for batch in batches)):
+        return False
+    expected_ids = {f"M{index:02d}" for index in range(1, len(outbox) + 1)}
+    if len(reviews) != len(expected_ids):
+        return False
+    by_id = {item.get("message_id"): item for item in reviews if isinstance(item, dict)}
+    return (set(by_id) == expected_ids and len(by_id) == len(reviews)
+            and all(item.get("verdict") in {"supported", "needs_attention", "cannot_assess"}
+                    and isinstance(item.get("rationale"), str) and item["rationale"].strip()
+                    for item in by_id.values()))
+
+
+def _trial_completion_status(*, setup_complete: bool, results: list[dict],
+                             selected: list[dict], narrative_review: dict,
+                             outbox: list[dict], postflight: Any) -> str:
+    if not setup_complete:
+        return "onboarding_incomplete"
+    if (_all_assigned_pairs_complete(results, selected)
+            and _narrative_reviews_complete(narrative_review, outbox)
+            and bool(postflight)):
+        return "completed"
+    return "partial"
+
+
 async def _review_messages(messages: list[dict], *, public: dict, card: dict, notes: str,
                            evidence_by_period: dict, audit: Audit, budget: RequestBudget) -> dict:
     if not messages:
@@ -921,10 +1264,13 @@ async def run_trial(scenario: dict, registration: Any, *, binary: Path,
                     key_file: Path | None, output: Path, cases: int | str = 4,
                     jev_budget: int = 20, live: bool = False,
                     guidance_mode: str = PRODUCTION_GUIDED_MODE,
+                    execution_mode: str = "agent-tool",
                     workflow_skill: str | None = None,
                     transport: str = "stdio", review_batch_size: int = 12) -> dict:
     if guidance_mode not in GUIDANCE_MODES:
         raise ValueError(f"guidance_mode must be one of {sorted(GUIDANCE_MODES)}")
+    if execution_mode not in EXECUTION_MODES:
+        raise ValueError(f"execution_mode must be one of {sorted(EXECUTION_MODES)}")
     selected = select_periods(scenario, registration, cases)
     if transport not in {"stdio", "streamable-http"}:
         raise ValueError("invalid native transport")
@@ -948,6 +1294,7 @@ async def run_trial(scenario: dict, registration: Any, *, binary: Path,
         "selected_period_ids": [row["period"]["period_id"] for row in selected],
         "company_count": 1, "fixture_period_count": len(public["periods"]),
         "cadence": scenario.get("cadence", "consecutive monthly closes"), "cold_onboarding": True,
+        "execution_mode": execution_mode,
         "native_transport": transport,
         "workflow_skill_sha256": digest(workflow_skill) if workflow_skill else None,
         "workflow_skill_delivery": "explicit bundled skill text in the agent instructions; not automatic skill discovery" if workflow_skill else None,
@@ -976,6 +1323,7 @@ async def run_trial(scenario: dict, registration: Any, *, binary: Path,
             "native_valid_current_results": "Returned receipt/result matched the current idempotency key, frozen card ID/version, and shadow-delivery contract; not judgment correctness.",
             "native_judgment": "Post-run typed outcome and canonical routing scored against the private label; labels are not provided to either agent.",
             "frontier_submission": "Scored separately as the caller-owned final outcome and routing after any evidence-based recovery.",
+            "decision_first_ignore_shortcut": "Only a current card/version/run-key-bound ignore with complete required-source evidence and receipt coverage may skip the treatment frontier; every other result falls back to the same frontier and source tools.",
         },
         "narrative_review_protocol": {
             "max_tool_calls": 2,
@@ -1005,11 +1353,12 @@ async def run_trial(scenario: dict, registration: Any, *, binary: Path,
                 "onboard_insight_card", "review_insight_card", "approve_insight_card"
             ],
             "mutation_tools_exposed": [],
-            "harness_auto_evaluation": False,
-            "native_tool_use_required_by_harness": False,
+            "harness_auto_evaluation": execution_mode == "decision-first",
+            "native_tool_use_required_by_harness": execution_mode == "decision-first",
         },
         "treatment_native_tools": sorted(active_native_tools),
-        "precomputed_bundle": False, "native_tool_use_required": False,
+        "precomputed_bundle": False, "native_tool_use_required": execution_mode == "decision-first",
+        "decision_first_controller": ("One current card evaluation precedes the treatment frontier; valid complete ignore may short-circuit, while failures, non-ignore, or incomplete coverage are handed to the same frontier as candidate evidence. No private labels participate." if execution_mode == "decision-first" else None),
         "delivery_enabled": False, "sink": "caller_owned_agent_local_mock_outbox",
         "source_data": "synthetic registered company MCP fixture; not customer or live BI data",
         "shared_source_transport": "Both arms use the same local typed SourceRegistry/PublicSourceAdapter for catalog search and inspection; this is not a real third-party connector. Treatment card evaluation still runs through the installed SignalWeave server over the same fixture.",
@@ -1143,26 +1492,44 @@ async def run_trial(scenario: dict, registration: Any, *, binary: Path,
                             session.native_results = []
                             session.current_idempotency_key = f"{session.tenant_id}/{period_id}"
                             audit.episode = f"{public['scenario_id']}/{period_id}/{arm}"
-                            offset = len(audit.events)
-                            started = time.perf_counter()
-                            episode = await codex_episode(
-                                session, key="", model=MODEL, effort=EFFORT,
-                                budget=budget, audit=audit, max_turns=40,
-                                max_tool_calls=100, max_output_tokens=4500,
-                                timeout_seconds=RECURRING_TIMEOUT_SECONDS, bundle=None,
-                                instructions_override=(_monitoring_instructions(session)
-                                    + ("\nShipped SignalWeave skill:\n" + workflow_skill
-                                       if workflow_skill and session.treatment else "")),
-                                prompt_override=_episode_prompt(session, period),
-                            )
-                            complete = (episode.get("status") == "complete"
-                                        and not episode.get("error")
-                                        and episode.get("exit_code") == 0
-                                        and not episode.get("foreign_tools")
-                                        and session.submission is not None)
-                            events = audit.events[offset:]
-                            usage = _usage(events)
-                            jev_attempts = usage["jev"]["attempts"]
+                            arm_offset = len(audit.events)
+                            arm_started = time.perf_counter()
+                            controller_preflight = None
+                            if arm == "treatment" and execution_mode == "decision-first":
+                                controller_preflight = await _decision_first_preflight(session, audit)
+                            frontier_offset = len(audit.events)
+                            episode = None
+                            episode_seconds = None
+                            if (controller_preflight is not None
+                                    and controller_preflight["status"] == "quiet_shortcut"):
+                                complete = (session.submission is not None
+                                            and session.submission.get("outcome") == "ignore"
+                                            and not session.outbox)
+                            else:
+                                started = time.perf_counter()
+                                episode = await codex_episode(
+                                    session, key="", model=MODEL, effort=EFFORT,
+                                    budget=budget, audit=audit, max_turns=40,
+                                    max_tool_calls=100, max_output_tokens=4500,
+                                    timeout_seconds=RECURRING_TIMEOUT_SECONDS, bundle=None,
+                                    instructions_override=(_monitoring_instructions(
+                                        session, decision_first_fallback=controller_preflight is not None)
+                                        + ("\nShipped SignalWeave skill:\n" + workflow_skill
+                                           if workflow_skill and session.treatment else "")),
+                                    prompt_override=_episode_prompt(
+                                        session, period, controller_preflight=controller_preflight),
+                                )
+                                episode_seconds = time.perf_counter() - started
+                                complete = (episode.get("status") == "complete"
+                                            and not episode.get("error")
+                                            and episode.get("exit_code") == 0
+                                            and not episode.get("foreign_tools")
+                                            and session.submission is not None)
+                            events = audit.events[arm_offset:]
+                            episode_events = audit.events[frontier_offset:]
+                            arm_usage = _usage(events)
+                            usage = _usage(episode_events) if episode is not None else None
+                            jev_attempts = arm_usage["jev"]["attempts"]
                             native_calls = [e for e in events if e.get("kind") == "tool.result"
                                             and e.get("name") in NATIVE_TOOLS]
                             decision_calls = [call for call in session.native_results
@@ -1196,15 +1563,21 @@ async def run_trial(scenario: dict, registration: Any, *, binary: Path,
                             if not complete:
                                 score["outcome_correct"] = score["routing_correct"] = score["outbox_count_correct"] = None
                             entry = {"completed": complete, "episode": episode,
+                                     "frontier_invoked": episode is not None,
                                      "submission": copy.deepcopy(session.submission),
                                      "outbox": copy.deepcopy(session.outbox), "score": score,
                                      "source_reads": sorted(session.agent_inspected | session.adapter.inspected),
                                      "evidence_mode": evidence_mode,
                                      "primary_current_proof": evidence_mode != "none",
                                      "primary_current_proof_refs": proof_refs,
-                                     "native_api_tool_calls": len(native_calls),
+                                     "native_api_tool_calls": (
+                                         len(native_calls)
+                                         + (controller_preflight["attempts"]
+                                            if controller_preflight else 0)),
                                      "native_decision_usage": {
-                                         "tool_attempts": len(decision_tool_events),
+                                         "tool_attempts": (len(decision_tool_events)
+                                                            + (controller_preflight["attempts"]
+                                                               if controller_preflight else 0)),
                                          "tool_argument_validation_errors": argument_validation_errors,
                                          "attempts": len(decision_calls),
                                          "responses": sum(call.get("returned") is True for call in decision_calls),
@@ -1215,13 +1588,23 @@ async def run_trial(scenario: dict, registration: Any, *, binary: Path,
                                          - native_valid_results,
                                      },
                                      "native_judgment": native_judgment,
-                                     "evaluate_tool_calls": sum(e.get("name") == "evaluate_insight_card"
-                                                                for e in native_calls),
+                                     "evaluate_tool_calls": (
+                                         sum(e.get("name") == "evaluate_insight_card"
+                                             for e in native_calls)
+                                         + (controller_preflight["attempts"]
+                                            if controller_preflight else 0)),
                                      "native_valid_current_results": native_valid_results,
                                      "jev_attempts": jev_attempts,
                                      "product_use_status": api_status,
-                                     "episode_seconds": time.perf_counter() - started,
-                                     "usage": usage, "overhead": _overhead(events)}
+                                     "episode_seconds": episode_seconds,
+                                     "arm_seconds": time.perf_counter() - arm_started,
+                                     "usage": usage,
+                                     "overhead": _overhead(episode_events) if episode is not None else None}
+                            if controller_preflight is not None:
+                                entry["decision_first_preflight"] = {
+                                    key: value for key, value in controller_preflight.items()
+                                    if key != "_bundle"
+                                }
                             row[arm] = entry
                             outbox.extend(copy.deepcopy(session.outbox))
                         sources = dict(native_review_sources)
@@ -1281,16 +1664,31 @@ async def run_trial(scenario: dict, registration: Any, *, binary: Path,
     treatment_native_available = [row for row in results if row.get("treatment", {}).get(
         "product_use_status") == "native_current_result_available"]
     report = {
-        "status": ("completed" if setup_complete and len(results) == len(selected) and postflight else
-                   "partial" if setup_complete else "onboarding_incomplete"),
+        "status": _trial_completion_status(
+            setup_complete=setup_complete, results=results, selected=selected,
+            narrative_review=narrative_review, outbox=outbox, postflight=postflight,
+        ),
         "protocol": protocol, "onboarding_complete": setup_complete,
         "card_digest": digest(card) if card else None, "notes_digest": digest(notes) if setup_complete else None,
         "periods": results, "local_mock_outbox": outbox,
         "narrative_review": narrative_review,
         "summary": {
-            "intended_cases": len(selected), "paired_cases": len(results),
-            "treatment_assigned": len(selected), "treatment_observed": len(treatment_observed),
+            "intended_cases": len(selected), "paired_cases": _completed_pair_count(results),
+            "treatment_assigned": sum(
+                row.get("treatment_assigned") is True for row in results),
+            "treatment_observed": len(treatment_observed),
             "baseline_observed": len(baseline_observed),
+            "decision_first_preflight_attempts": sum(
+                row.get("treatment", {}).get("decision_first_preflight", {}).get("attempts", 0)
+                for row in results),
+            "decision_first_quiet_shortcuts": sum(
+                row.get("treatment", {}).get("decision_first_preflight", {}).get("status")
+                == "quiet_shortcut" for row in results),
+            "decision_first_preflight_seconds": sum(
+                row.get("treatment", {}).get("decision_first_preflight", {}).get("seconds", 0.0)
+                for row in results),
+            "treatment_frontier_invoked": sum(
+                row.get("treatment", {}).get("frontier_invoked") is True for row in results),
             "treatment_outcome_correct": sum(r["treatment"]["score"].get("outcome_correct") is True for r in results if r.get("treatment")),
             "treatment_routing_correct": sum(r["treatment"]["score"].get("routing_correct") is True for r in results if r.get("treatment")),
             "baseline_outcome_correct": sum(r["baseline"]["score"].get("outcome_correct") is True for r in results if r.get("baseline")),
@@ -1363,6 +1761,9 @@ def main() -> None:
     parser.add_argument("--guidance-mode", choices=sorted(GUIDANCE_MODES),
                          default=PRODUCTION_GUIDED_MODE,
                          help="Production server guidance by default; optional-tools preserves the earlier study guidance")
+    parser.add_argument("--execution-mode", choices=sorted(EXECUTION_MODES),
+                        default="agent-tool",
+                        help="Use the natural agent-tool caller, or experimentally preflight native decisions before the treatment frontier")
     parser.add_argument("--live", action="store_true", help="Run isolated native onboarding and recurring MCP episodes")
     args = parser.parse_args()
     if args.live and args.key_file is None:
@@ -1373,7 +1774,8 @@ def main() -> None:
     report = asyncio.run(run_trial(scenario, registration, binary=args.binary.resolve(),
                                    key_file=args.key_file, output=args.output,
                                    cases=args.cases, jev_budget=args.jev_budget, live=args.live,
-                                   guidance_mode=args.guidance_mode))
+                                   guidance_mode=args.guidance_mode,
+                                   execution_mode=args.execution_mode))
     print(json.dumps(report, indent=2))
 
 

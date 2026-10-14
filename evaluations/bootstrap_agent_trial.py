@@ -456,8 +456,11 @@ def common_tools(public: dict, phase: str) -> list[dict]:
                  {"ref": text}, ["ref"]),
         function("calculate", "Evaluate bounded numerical arithmetic (+ - * /); no code execution.",
                  {"expression": text}, ["expression"]),
-        function("ask_owner", "Ask the human owner's known policies, not missing measurements or answers.",
-                 {"topic": {"type": "string", "enum": public["owner_topics"]}}, ["topic"]),
+        function("ask_owner", "Ask the simulated owner's policy, not missing measurements. "
+                 "If a prior answer is unclear, ask a focused same-topic follow-up using question. "
+                 "This is scripted dialogue, not real human validation.",
+                 {"topic": {"type": "string", "enum": public["owner_topics"]},
+                  "question": {"type": "string", "minLength": 1, "maxLength": 4000}}, ["topic"]),
         function("save_notes", "Replace durable agent notes for subsequent periods. Preserve context "
     "and policy, not current numbers as future truth. Same facility in both arms.",
                  {"notes": text}, ["notes"]),
@@ -554,6 +557,14 @@ class ToolSession:
         self.tenant_id = public["scenario_id"]
         self.public = agent_context(public)
         self.owner = {"owner_answers": copy.deepcopy(public["owner_answers"])}
+        self.owner_followup_answers = copy.deepcopy(public.get("owner_followup_answers", {}))
+        if (not isinstance(self.owner_followup_answers, dict)
+                or any(topic not in public["owner_topics"] or not isinstance(answer, str)
+                       or not answer.strip() or len(answer) > 8000
+                       for topic, answer in self.owner_followup_answers.items())):
+            raise ValueError("Owner follow-ups must be bounded policy text for declared topics")
+        self.observed_owner_answers: dict[str, str] = {}
+        self.owner_turns = 0
         self.agent_final_decision = bool(public.get("agent_final_decision", False))
         self.no_owner_during_monitoring = bool(public.get("no_owner_during_monitoring", False))
         self.require_agent_data_signoff = bool(public.get("require_agent_data_signoff", False))
@@ -624,11 +635,17 @@ class ToolSession:
             "current_period": self.adapter.period_context,
         })
 
+    def _owner_review_answers(self) -> dict:
+        # Preserve legacy static-policy studies. Dialogue trials reveal only
+        # answers actually supplied, never the unrevealed clarification script.
+        return copy.deepcopy(self.observed_owner_answers if self.owner_followup_answers
+                             else self.owner["owner_answers"])
+
     def approval_fingerprint(self, card: dict | None) -> str:
         if self.owner_reviewer is None:
             return card_fingerprint(card or {})
         return digest({"card": card_fingerprint(card) if card else None, "notes": self.notes,
-                       "owner_answers": self.owner["owner_answers"],
+                       "owner_answers": self._owner_review_answers(),
                        "source_context_digest": digest(self.owner_source_context()),
                        "public_owner_context": {key: self.public[key] for key in
                                                 ("brief", "glossary", "destinations")}})
@@ -690,7 +707,7 @@ class ToolSession:
             decision = await self.owner_reviewer(
                 public=copy.deepcopy(self.public),
                 source_context=self.owner_source_context(),
-                owner_answers=copy.deepcopy(self.owner["owner_answers"]), artifact=artifact)
+                owner_answers=self._owner_review_answers(), artifact=artifact)
         except Exception as error:
             decision = {"approved": False, "reasons": ["Owner review failed."],
                         "error_type": type(error).__name__}
@@ -821,8 +838,10 @@ class ToolSession:
         if name == "calculate":
             return {"value": calculate(arguments["expression"])}
         if name == "ask_owner":
-            self.owner_topics.add(arguments["topic"])
-            self.phase_owner_topics.add(arguments["topic"])
+            topic = arguments["topic"]
+            followup = topic in self.owner_topics
+            self.owner_topics.add(topic)
+            self.phase_owner_topics.add(topic)
             if self.phase == "monitoring" and self.no_owner_during_monitoring:
                 return {
                     "topic": arguments["topic"],
@@ -830,7 +849,23 @@ class ToolSession:
                     "answer": "No owner is available during this autonomous monitoring run. "
                               "Use only the policy and data context signed off during onboarding.",
                 }
-            return ask_owner(self.owner, arguments["topic"])
+            question = arguments.get("question")
+            if question is not None and (
+                    not isinstance(question, str) or not question.strip() or len(question) > 4000):
+                raise ValueError("Owner question must be nonempty text up to 4000 characters")
+            if self.owner_turns >= 16:
+                raise ValueError("Simulated owner dialogue exhausted its sixteen-turn cap")
+            self.owner_turns += 1
+            clarified = bool(followup and question and topic in self.owner_followup_answers)
+            if clarified:
+                self.owner["owner_answers"][topic] = self.owner_followup_answers[topic]
+            response = ask_owner(self.owner, topic)
+            if response["known"]:
+                self.observed_owner_answers[topic] = response["answer"]
+            self.adapter.audit.emit("owner.dialogue", topic=topic, question=question,
+                                    answer=response["answer"], known=response["known"],
+                                    turn=self.owner_turns, scripted_clarification=clarified)
+            return response
         if (name == "sign_off_data_foundation" and self.phase == "onboarding"
                 and self.require_agent_data_signoff):
             refs = arguments["verified_source_refs"]

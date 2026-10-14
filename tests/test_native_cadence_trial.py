@@ -618,6 +618,7 @@ async def test_dry_run_records_registration_selected_stage_gate_without_private_
         output=tmp_path / "trial", cases=4, live=False,
     )
     assert report["status"] == "dry_run"
+    assert report["protocol"]["execution_mode"] == "agent-tool"
     assert report["protocol"]["selected_indices"] == [0, 3, 6, 9]
     assert report["protocol"]["selected_period_ids"] == ["month-01", "month-04", "month-07", "month-10"]
     assert "retrospective monthly-close review" in report["protocol"]["study_scope"]
@@ -651,6 +652,28 @@ async def test_dry_run_records_registration_selected_stage_gate_without_private_
         "positive_verdict_forced": False,
     }
     assert "quiet" not in (tmp_path / "trial" / "report.json").read_text()
+
+
+@pytest.mark.asyncio
+async def test_decision_first_mode_is_explicit_and_agent_tool_remains_default(tmp_path, monkeypatch):
+    scenario, registration = cadence_scenario()
+    monkeypatch.setattr(trial, "verify_binary", lambda _: {"source_sha256": "722"})
+    monkeypatch.setattr(trial, "_git_sha", lambda: "a" * 40)
+    monkeypatch.setattr(trial, "_file_hash", lambda _: "b" * 64)
+    report = await trial.run_trial(
+        scenario, registration, binary=tmp_path / "signalweave", key_file=None,
+        output=tmp_path / "decision-first-dry-run", cases=4, live=False,
+        execution_mode="decision-first",
+    )
+    assert report["protocol"]["execution_mode"] == "decision-first"
+    assert report["protocol"]["native_tool_use_required"] is True
+    assert report["protocol"]["treatment_guidance"]["harness_auto_evaluation"] is True
+    with pytest.raises(ValueError, match="execution_mode"):
+        await trial.run_trial(
+            scenario, registration, binary=tmp_path / "signalweave", key_file=None,
+            output=tmp_path / "invalid-mode", cases=4, live=False,
+            execution_mode="benchmark-labels",
+        )
 
 
 @pytest.mark.asyncio
@@ -728,6 +751,106 @@ async def test_live_path_passes_separate_onboarding_and_recurring_timeout_budget
         ("monitoring", "baseline", 100, 360),
         ("monitoring", "treatment", 100, 360),
     ]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("current_result", [True, False], ids=["complete-ignore", "stale-result"])
+async def test_live_decision_first_shortcuts_only_current_ignore_else_uses_same_frontier(
+        tmp_path, monkeypatch, current_result):
+    scenario, _ = cadence_scenario()
+    scenario["public"]["periods"] = scenario["public"]["periods"][:1]
+    scenario["private"]["periods"] = {"month-01": scenario["private"]["periods"]["month-01"]}
+    scenario["public"]["catalog"] = _card_catalog()
+    key_file = tmp_path / "jev.key"
+    key_file.write_text("offline-test-key", encoding="utf-8")
+    card, native_result = _card_and_native_response()
+    card["status"] = "approved"
+    card["delivery_methods"] = []
+    if not current_result:
+        native_result["receipt"]["idempotency_key"] = "hypatia-test/month-12"
+
+    class LocalServer(FakeServer):
+        instructions = "approved local test instructions"
+
+        async def call_tool(self, name, arguments):
+            if name == "get_insight_card":
+                return [], card
+            if name == "evaluate_insight_card":
+                assert arguments == {"card_id": card["id"],
+                                     "idempotency_key": "hypatia-test/month-01"}
+                return [], native_result
+            raise AssertionError(f"unexpected product tool: {name}")
+
+    server = LocalServer()
+
+    class ServerContext:
+        async def __aenter__(self):
+            return server
+
+        async def __aexit__(self, *_args):
+            return False
+
+    monkeypatch.setattr(trial, "verify_binary", lambda _: {"source_sha256": "722"})
+    monkeypatch.setattr(trial, "_git_sha", lambda: "a" * 40)
+    monkeypatch.setattr(trial, "_file_hash", lambda _: "b" * 64)
+    episodes, frontier_context = [], []
+
+    async def empty_async():
+        return []
+
+    monkeypatch.setattr(trial, "assert_default_agent_profile", lambda _server: empty_async())
+    monkeypatch.setattr(trial, "installed_server", lambda **_kwargs: ServerContext())
+
+    async def fake_codex_episode(session, **kwargs):
+        episodes.append((session.phase, session.arm))
+        if session.phase == "onboarding":
+            session.setup_complete = True
+            session.card_id = card["id"]
+            session.notes = "Approved policy notes."
+            session.owner_topics.add("policy")
+            session.data_signoff = {"status": "ready"}
+        elif session.arm == "baseline":
+            session.submission = {"outcome": "ignore", "recipients": [],
+                                  "summary": "", "evidence_refs": []}
+        else:
+            frontier_context.append(kwargs)
+            specs = await session.specs()
+            names = {spec["name"] for spec in specs}
+            assert {"search_catalog", "inspect_resource", "finish_run"} <= names
+            assert "evaluate_insight_card" in names
+            assert kwargs["prompt_override"]["decision_first_preflight"]["status"] == "fallback"
+            assert kwargs["prompt_override"]["decision_first_preflight"]["native_bundle"] == native_result
+            assert "recover with the available approved source" in kwargs["instructions_override"]
+            session.submission = {"outcome": "ignore", "recipients": [],
+                                  "summary": "", "evidence_refs": []}
+        return {"status": "complete", "exit_code": 0, "foreign_tools": [],
+                "error": None, "tool_calls": 0}
+
+    monkeypatch.setattr(trial, "codex_episode", fake_codex_episode)
+    report = await trial.run_trial(
+        scenario, {"pilot_indices": [0, 3, 6, 9]}, binary=tmp_path / "signalweave",
+        key_file=key_file, output=tmp_path / f"decision-first-{current_result}",
+        cases="all", live=True, execution_mode="decision-first",
+    )
+
+    treatment = report["periods"][0]["treatment"]
+    if current_result:
+        assert episodes == [("onboarding", "treatment"), ("monitoring", "baseline")]
+        assert treatment["frontier_invoked"] is False
+        assert treatment["decision_first_preflight"]["status"] == "quiet_shortcut"
+        assert treatment["decision_first_preflight"]["attempts"] == 1
+        assert treatment["episode"] is None
+        assert treatment["usage"] is None
+        assert treatment["arm_seconds"] >= treatment["decision_first_preflight"]["seconds"]
+    else:
+        assert episodes == [("onboarding", "treatment"), ("monitoring", "baseline"),
+                            ("monitoring", "treatment")]
+        assert treatment["frontier_invoked"] is True
+        assert treatment["decision_first_preflight"]["status"] == "fallback"
+        assert treatment["decision_first_preflight"]["fallback_reason"] == "invalid_current_receipt"
+        assert len(frontier_context) == 1
+    assert report["status"] == "completed"
+    assert report["summary"]["paired_cases"] == 1
 
 
 @pytest.mark.asyncio
@@ -894,15 +1017,19 @@ def _card_and_native_response(idempotency_key="hypatia-test/month-01"):
          "required": True},
         {"key": "optional-quality", "adapter": "company_mcp", "resource": "quality",
          "required": False},
-    ]}
+    ], "action_confidence_threshold": 0.70}
     response = {
         "receipt": {"receipt_id": f"receipt-{idempotency_key.rsplit('/', 1)[-1]}",
                     "idempotency_key": idempotency_key, "card_id": "card-1",
                     "card_version": 3, "status": "delivery_disabled",
                     "delivery_mode": "shadow", "delivery_enabled": False},
-        "result": {"card_id": "card-1", "outcome": "ignore",
+        "result": {"card_id": "card-1", "outcome": "ignore", "confidence": 0.90,
+                   "delivery_methods": [],
                    "source_keys": ["approved-sales"],
-                   "evidence": [{"source_key": "approved-sales"}], "observations": []},
+                   "evidence": [{"source_key": "approved-sales"}], "observations": [],
+                   "source_contracts": [{"source_key": "approved-sales",
+                                         "adapter": "company_mcp", "resource": "monthly-sales",
+                                         "contract": {"roles": ["primary"]}}]},
         "resources": [{"source_key": "approved-sales", "error": None}],
     }
     return card, response
@@ -911,10 +1038,277 @@ def _card_and_native_response(idempotency_key="hypatia-test/month-01"):
 def _card_catalog():
     return [
         {"adapter": "company_mcp", "resource": "monthly-sales",
+         "kind": "table", "title": "Monthly sales",
          "contract": {"roles": ["primary"]}},
         {"adapter": "company_mcp", "resource": "quality",
+         "kind": "table", "title": "Quality context",
          "contract": {"roles": ["corroborates"]}},
     ]
+
+
+def _decision_session(card, response, key="hypatia-test/month-01"):
+    return SimpleNamespace(
+        shared_card=card, current_idempotency_key=key,
+        adapter=SimpleNamespace(catalog=_card_catalog()),
+        native_results=[{"name": "evaluate_insight_card", "returned": True,
+                         "arguments": {"card_id": card["id"], "idempotency_key": key},
+                         "result": response}],
+    )
+
+
+def test_decision_first_quiet_requires_current_bound_complete_required_source_bundle():
+    card, response = _card_and_native_response()
+    key = "hypatia-test/month-01"
+    eligibility = trial._decision_first_quiet_eligibility(
+        _decision_session(card, response), response, key)
+    assert eligibility == {
+        "eligible": True, "reason": None, "valid_current_result": True,
+        "evidence_mode": "required_card_sources_current_run",
+        "proof_refs": ["company_mcp|monthly-sales"],
+    }
+
+
+def test_decision_first_uses_required_card_sources_without_catalog_roles_but_grading_stays_role_based():
+    card, response = _card_and_native_response()
+    session = _decision_session(card, response)
+    session.adapter.catalog = [{"adapter": "company_mcp", "resource": "monthly-sales",
+                                "contract": {"roles": ["corroborates"]}}]
+
+    eligibility = trial._decision_first_quiet_eligibility(
+        session, response, "hypatia-test/month-01")
+
+    assert eligibility["eligible"] is True
+    assert eligibility["evidence_mode"] == "required_card_sources_current_run"
+    assert eligibility["proof_refs"] == ["company_mcp|monthly-sales"]
+    assert trial._current_receipt_refs(session, card, "hypatia-test/month-01") == {
+        "receipt:hypatia-test/month-01"}
+    assert trial._evidence_proof(session, expected_key="hypatia-test/month-01") == ("none", [])
+
+
+def test_decision_first_does_not_shortcut_when_card_has_no_required_sources():
+    card, response = _card_and_native_response()
+    card["sources"] = [dict(source, required=False) for source in card["sources"]]
+    result = trial._decision_first_quiet_eligibility(
+        _decision_session(card, response), response, "hypatia-test/month-01")
+    assert result["eligible"] is False
+    assert result["reason"] == "required_source_coverage_unavailable"
+
+
+@pytest.mark.parametrize(("confidence", "threshold", "reason"), [
+    (0.69, 0.70, "confidence_below_threshold"),
+    (None, 0.70, "confidence_missing"),
+    (float("nan"), 0.70, "confidence_invalid"),
+    (1.01, 0.70, "confidence_invalid"),
+    (0.90, float("inf"), "confidence_invalid"),
+])
+def test_decision_first_requires_finite_confidence_at_card_floor(confidence, threshold, reason):
+    card, response = _card_and_native_response()
+    card["action_confidence_threshold"] = threshold
+    if confidence is None:
+        response["result"].pop("confidence")
+    else:
+        response["result"]["confidence"] = confidence
+    result = trial._decision_first_quiet_eligibility(
+        _decision_session(card, response), response, "hypatia-test/month-01")
+    assert result["eligible"] is False
+    assert result["reason"] == reason
+
+
+@pytest.mark.parametrize("mutation", [
+    lambda response: response["result"]["source_contracts"][0]["contract"].update(
+        source_status="stale"),
+    lambda response: response["result"]["evidence"][0].update(
+        values={"error": "source unavailable"}),
+    lambda response: response["result"].update(source_errors=[{
+        "source_key": "approved-sales", "message": "partial source failure",
+        "blocking": False, "quality_status": "partial",
+    }]),
+    lambda response: response.update(resources=[{
+        "source_key": "approved-sales", "error": "source unavailable",
+    }]),
+])
+def test_decision_first_falls_back_on_explicit_required_source_quality_issue(mutation):
+    card, response = _card_and_native_response()
+    mutation(response)
+    result = trial._decision_first_quiet_eligibility(
+        _decision_session(card, response), response, "hypatia-test/month-01")
+    assert result["eligible"] is False
+    assert result["reason"] == "required_source_quality_unhealthy"
+
+
+def test_decision_first_ignores_optional_source_absence_and_source_scoped_warning():
+    card, response = _card_and_native_response()
+    response["result"]["warnings"] = ["An optional context source was unavailable."]
+    response["result"]["source_errors"] = [{
+        "source_key": "optional-quality", "message": "optional context unavailable",
+        "blocking": False,
+    }]
+    result = trial._decision_first_quiet_eligibility(
+        _decision_session(card, response), response, "hypatia-test/month-01")
+    assert result["eligible"] is True
+    assert result["proof_refs"] == ["company_mcp|monthly-sales"]
+
+
+@pytest.mark.parametrize(("mutation", "reason"), [
+    (lambda response: {**response, "receipt": {**response["receipt"], "status": "failed"}},
+     "invalid_current_receipt"),
+    (lambda response: {**response, "receipt": {**response["receipt"], "card_id": "other-card"}},
+     "invalid_current_receipt"),
+    (lambda response: {**response, "receipt": {**response["receipt"], "card_version": 2}},
+     "invalid_current_receipt"),
+    (lambda response: {**response, "receipt": {**response["receipt"],
+                                                "idempotency_key": "hypatia-test/old"}},
+     "invalid_current_receipt"),
+    (lambda response: {**response, "evidence_access": {"complete": False,
+                                                        "source_contract_coverage": {
+                                                            "coverage": "partial_section"}}},
+     "incomplete_receipt_handoff"),
+    (lambda response: {**response, "result": {**response["result"], "outcome": "notify"}},
+     "native_non_ignore"),
+    (lambda response: {**response, "result": {**response["result"], "source_contracts": []}},
+     "required_source_contracts_incomplete"),
+    (lambda response: {**response, "result": {**response["result"], "source_contracts": [{
+        **response["result"]["source_contracts"][0], "source_key": "wrong-alias",
+    }]}}, "required_source_contracts_incomplete"),
+    (lambda response: {**response, "result": {**response["result"], "evidence": [],
+                                               "source_keys": []},
+                       "resources": []},
+     "required_source_evidence_incomplete"),
+])
+def test_decision_first_invalid_or_incomplete_result_requires_frontier_fallback(mutation, reason):
+    card, valid = _card_and_native_response()
+    response = mutation(valid)
+    result = trial._decision_first_quiet_eligibility(
+        _decision_session(card, response), response, "hypatia-test/month-01")
+    assert result["eligible"] is False
+    assert result["reason"] == reason
+
+
+@pytest.mark.asyncio
+async def test_decision_first_preflight_shortcuts_only_after_recording_current_quiet():
+    card, response = _card_and_native_response()
+    key = "hypatia-test/month-01"
+
+    class ControllerSession:
+        shared_card = card
+        current_idempotency_key = key
+        adapter = SimpleNamespace(catalog=[{
+            "adapter": "company_mcp", "resource": "monthly-sales",
+            "contract": {"roles": ["corroborates"]},
+        }])
+
+        def __init__(self):
+            self.native_results = []
+            self.submission = None
+            self.outbox = []
+            self.calls = []
+
+        async def call(self, name, arguments):
+            self.calls.append((name, arguments))
+            if name == "evaluate_insight_card":
+                assert arguments == {"card_id": card["id"], "idempotency_key": key}
+                self.native_results.append({"name": name, "arguments": arguments,
+                                            "returned": True, "result": response})
+                return response
+            assert name == "finish_run"
+            self.submission = {"outcome": arguments["outcome"], "recipients": [],
+                               "summary": "", "evidence_refs": arguments["evidence_refs"]}
+            return {"recorded": True, "message_count": 0}
+
+    session, audit = ControllerSession(), Audit()
+    preflight = await trial._decision_first_preflight(session, audit)
+    assert preflight["status"] == "quiet_shortcut"
+    assert preflight["attempts"] == preflight["responses"] == 1
+    assert preflight["valid_current_result"] is True
+    assert preflight["evidence_mode"] == "required_card_sources_current_run"
+    assert preflight["proof_refs"] == ["company_mcp|monthly-sales"]
+    assert preflight["seconds"] >= 0
+    assert preflight["usage"]["jev"]["attempts"] == 0
+    assert preflight["overhead"]["native_product_calls"] == 0
+    assert [name for name, _ in session.calls] == ["evaluate_insight_card", "finish_run"]
+    assert session.submission["outcome"] == "ignore"
+    assert session.outbox == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("failure_stage", ["evaluate", "finish_run"])
+async def test_decision_first_tool_failure_records_attempt_and_falls_back(failure_stage):
+    card, response = _card_and_native_response()
+    key = "hypatia-test/month-01"
+
+    class FailingSession:
+        shared_card = card
+        current_idempotency_key = key
+        adapter = SimpleNamespace(catalog=_card_catalog())
+
+        def __init__(self):
+            self.native_results = []
+            self.submission = None
+            self.outbox = []
+
+        async def call(self, name, arguments):
+            if name == "evaluate_insight_card":
+                if failure_stage == "evaluate":
+                    self.native_results.append({"name": name, "arguments": arguments,
+                                                "returned": False, "error_type": "RuntimeError"})
+                    raise RuntimeError("sanitized test failure")
+                self.native_results.append({"name": name, "arguments": arguments,
+                                            "returned": True, "result": response})
+                return response
+            assert name == "finish_run"
+            self.submission = {"outcome": "ignore", "recipients": [],
+                               "summary": "", "evidence_refs": []}
+            self.outbox.append({"unexpected": True})
+            raise RuntimeError("handoff failed")
+
+    session = FailingSession()
+    preflight = await trial._decision_first_preflight(session, Audit())
+    assert preflight["status"] == "fallback"
+    assert preflight["attempts"] == 1
+    assert preflight["error_type"] == "RuntimeError"
+    assert preflight["fallback_reason"] == (
+        "native_call_failed" if failure_stage == "evaluate" else "quiet_handoff_failed")
+    if failure_stage == "evaluate":
+        assert preflight["responses"] == 0
+    else:
+        assert preflight["responses"] == 1
+        assert session.submission is None
+        assert session.outbox == []
+
+
+def test_trial_completion_counts_complete_pairs_and_requires_completed_reviews_or_no_outbox():
+    selected = [{"period": {"period_id": "p1"}}, {"period": {"period_id": "p2"}}]
+
+    def row(period_id, baseline=True, treatment=True):
+        return {"period_id": period_id, "treatment_assigned": True,
+                "baseline": {"completed": baseline}, "treatment": {"completed": treatment}}
+
+    no_messages = {"status": "not_applicable_no_messages", "reviews": [], "batches": []}
+    rows = [row("p1"), row("p2", treatment=False)]
+    assert trial._completed_pair_count(rows) == 1
+    assert trial._trial_completion_status(
+        setup_complete=True, results=rows, selected=selected,
+        narrative_review=no_messages, outbox=[], postflight={"ok": True}) == "partial"
+
+    complete_rows = [row("p1"), row("p2")]
+    assert trial._completed_pair_count(complete_rows) == 2
+    assert trial._completed_pair_count([row("p1"), row("p1")]) == 1
+    assert trial._trial_completion_status(
+        setup_complete=True, results=complete_rows, selected=selected,
+        narrative_review=no_messages, outbox=[], postflight={"ok": True}) == "completed"
+    pending_review = {"status": "incomplete", "reviews": [],
+                      "batches": [{"status": "not_completed"}]}
+    assert trial._trial_completion_status(
+        setup_complete=True, results=complete_rows, selected=selected,
+        narrative_review=pending_review, outbox=[{"message_id": "M01"}],
+        postflight={"ok": True}) == "partial"
+    done_review = {"status": "completed", "reviews": [{
+        "message_id": "M01", "verdict": "needs_attention", "rationale": "Names no comparison period.",
+    }], "batches": [{"status": "completed"}]}
+    assert trial._trial_completion_status(
+        setup_complete=True, results=complete_rows, selected=selected,
+        narrative_review=done_review, outbox=[{"message_id": "M01"}],
+        postflight={"ok": True}) == "completed"
 
 
 def test_quiet_evidence_proof_maps_card_alias_and_rejects_stale_receipt_or_wrong_card():
