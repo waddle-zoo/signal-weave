@@ -18,6 +18,7 @@ import secrets
 import subprocess
 import sys
 import tarfile
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -126,8 +127,11 @@ PAIRED_BASELINE_INSTRUCTIONS = (
     "approved sources, and review limits, plus source-linked numeric claims. Do not claim the card "
     "was evaluated or that a typed policy decision exists. Do not assume a quiet, business-change, "
     "or data-quality category; use one only when the source evidence and owner policy support it. "
-    "Do not invent thresholds or causes. Use the "
-    "shared source tools for any needed drilldown and cite the captured source titles/links and "
+    "Do not invent thresholds or causes. The frozen source ResourceSnapshots are the shared "
+    "baseline evidence. Use their facts when they cover a claim; the shared source tools remain "
+    "available for deeper or otherwise needed drilldown, but do not repeat BI reads solely to "
+    "duplicate facts already covered. Compare supplemental drilldown with the frozen snapshots "
+    "and report conflicts rather than silently choosing one. Cite the captured source titles/links and "
     "periods. Finish with submit_report, then stop."
 )
 
@@ -135,8 +139,12 @@ PAIRED_TREATMENT_PREFIX = (
     "This is a paired recurring readout using the same owner-reviewed card, review, owner notes, "
     "three questions, and captured Superset source-response snapshot as the baseline. The shared "
     "snapshot consists of real read-only Superset HTTP responses captured at request time; it is "
-    "not an atomic warehouse snapshot or an as-of guarantee. Use the approved scope and the same "
-    "source tools for numeric facts in the report. Produce one human-facing readout of at most "
+    "not an atomic warehouse snapshot or an as-of guarantee. Use source facts from the evaluation "
+    "receipt when they cover a claim; its ResourceSnapshots are the same frozen snapshots exposed "
+    "through the shared source tools. Those tools remain equally available for deeper or otherwise "
+    "needed drilldown, but do not repeat BI reads solely to duplicate covered facts. Compare any "
+    "supplemental drilldown with the frozen snapshots and report conflicts rather than silently "
+    "choosing one. Produce one human-facing readout of at most "
     "300 words including a compact card panel with actual outcome/judgment status (or no judgment), "
     "numeric-condition statuses, and approved-source coverage/limits; then answer the three "
     "business questions with cited numeric/source claims. Keep any typed judgment separate from "
@@ -156,8 +164,10 @@ PAIRED_TREATMENT_MODES = {
         "Apply the shipped-skill deferred path: call evaluate_insight_card once with the supplied "
         "idempotency key. If result.judgment.status is deferred, that is no typed policy outcome. "
         "Follow the installed skill and the returned root-level evidence_access pointers, starting "
-        "with any included observation_facts. Use the same shared source tools for the three "
-        "business questions. Page only a specific omitted contract, quality detail, or observation "
+        "with any included observation_facts. The approved source ResourceSnapshots are already "
+        "frozen for both arms; the shared source tools remain equally available for deeper or needed "
+        "drilldown. Do not repeat BI reads only to duplicate facts already covered by those snapshots. "
+        "Page only a specific omitted contract, quality detail, or observation "
         "attribute needed to support a claim or resolve a material unknown; do not exhaustively fetch "
         "source_by_key, source_contracts, and duplicate observation/evidence representations. "
         "Do not force a policy result or use readout facts to alter the card policy. If a typed "
@@ -212,8 +222,12 @@ def instructions_for(stage: str, skill_text: str) -> str:
         "invent metric definitions, comparison windows, thresholds, recipients, or desired outcomes. "
         "Answer all three questions from inspected evidence. Treat returned periods and comparison "
         "coverage exactly as reported; a recent bucket is not proof of a complete/comparable period. "
-        "Follow up with direct source-tool reads only inside the approved snapshot; missing snapshot "
-        "coverage is a gap, not permission to expand scope. Label saved-chart query rows as such. "
+        "The shared read-only source tools remain equally available for deeper or needed drilldown "
+        "inside the approved card scope. The dashboard source snapshot is frozen and shared across "
+        "arms; use its facts when they cover a claim, without repeating reads just to duplicate them. "
+        "Supplemental saved-chart query rows are separately captured and replayed identically; label "
+        "their query scope and report conflicts with the ResourceSnapshot rather than silently "
+        "choosing one. Missing evidence is a gap, not permission to expand scope. "
         "Keep observed facts separate from hypotheses; request-time capture timestamps are not "
         "warehouse freshness. Cite source titles/links and periods. No messages or schedules. Use "
         "only the supplied trial tools; no shell, web, filesystem, or other tools."
@@ -319,8 +333,12 @@ def card_panel(
         "outcome": None if deferred or failed_without_judgment else result.get("outcome", receipt.get("outcome")),
         "probabilities": None if deferred or failed_without_judgment else result.get("probabilities"),
         "input_budget": judgment.get("input_budget"),
-        "provider_request_count": judgment.get("provider_request_count"),
-        "judgment_request_sent": judgment.get("judgment_request_sent"),
+        "provider_call_attempts": judgment.get("provider_call_attempts"),
+        "provider_call_attempt_scope": judgment.get("attempt_scope"),
+        "provider_call_attempted": judgment.get("provider_call_attempted"),
+        "provider_attempt_fields_semantics": (
+            "Reported current-judgment attempts only; this does not confirm provider receipt or billing."
+        ),
         "receipt_id": receipt.get("receipt_id"),
         "source_keys": result.get("source_keys"),
         "source_contracts": result.get("source_contracts"),
@@ -334,13 +352,12 @@ def card_panel(
     }
 
 
-_CAPTURE_TIME_FIELDS = frozenset({"captured_at", "source_captured_at"})
 _BUSINESS_SNAPSHOT_FIELDS = (
     "observations", "analytical_comparisons", "evidence", "error",
 )
 _SOURCE_DEFINITION_FIELDS = (
     "source_key", "adapter", "resource", "title", "description",
-    "metadata", "source_url", "contract",
+    "metadata", "source_url", "source_captured_at", "contract",
 )
 _RESOURCE_SNAPSHOT_FIELDS = (
     "source_key", "adapter", "resource", "title", "description",
@@ -349,21 +366,9 @@ _RESOURCE_SNAPSHOT_FIELDS = (
 )
 
 
-def _without_capture_times(value: Any) -> Any:
-    if isinstance(value, dict):
-        return {
-            key: _without_capture_times(item)
-            for key, item in value.items()
-            if key not in _CAPTURE_TIME_FIELDS
-        }
-    if isinstance(value, list):
-        return [_without_capture_times(item) for item in value]
-    return value
-
-
 def _digest_json(value: Any) -> str:
     encoded = json.dumps(
-        _without_capture_times(value), sort_keys=True, separators=(",", ":"),
+        value, sort_keys=True, separators=(",", ":"),
         ensure_ascii=False, allow_nan=False,
     ).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()
@@ -436,10 +441,7 @@ def _snapshot_mismatch_paths(
                 paths.append(pointer(parts))
                 return
             if isinstance(a, dict) and isinstance(b, dict):
-                keys = sorted(
-                    (set(a) | set(b)) - _CAPTURE_TIME_FIELDS,
-                    key=str,
-                )
+                keys = sorted(set(a) | set(b), key=str)
                 for key in keys:
                     if len(paths) >= max_paths:
                         truncated = True
@@ -486,14 +488,16 @@ def compare_paired_source_snapshots(
         "helper_snapshot_issue": helper_issue,
         "receipt_page_calls": receipt_page_calls,
         "receipt_reads_are_local_read_only_and_do_not_rerun_sources_or_models": True,
-        "capture_times_excluded_from_digests": sorted(_CAPTURE_TIME_FIELDS),
+        "capture_times_excluded_from_digests": ["/captured_at (ResourceSnapshot receive time only)"],
         "business_data_digest_scope": list(_BUSINESS_SNAPSHOT_FIELDS),
         "source_definition_digest_scope": list(_SOURCE_DEFINITION_FIELDS),
         "source_definition_limit": (
-            "ResourceSnapshot identity, metadata, and contract only; raw saved-chart query params "
-            "are not compared because the native receipt does not expose them."
+            "ResourceSnapshot identity, metadata (including chart cache status), source_captured_at, "
+            "and contract are compared. Raw saved-chart query params are not in the native receipt; "
+            "they remain present in the shared frozen helper snapshot and are identical to both arms."
         ),
         "helper_snapshot_is_frozen_but_native_evaluation_uses_separate_live_reads": True,
+        "parity_gate_requires_all_resource_snapshot_fields_equal_before_readout_episodes": True,
         "atomic_warehouse_snapshot_or_total_source_cost_claim": False,
         "per_source": {},
     }
@@ -513,6 +517,19 @@ def compare_paired_source_snapshots(
                 "source_definition_status": "unverified",
             }
             continue
+        helper_missing = sorted(set(_RESOURCE_SNAPSHOT_FIELDS) - set(helper))
+        native_missing = sorted(set(_RESOURCE_SNAPSHOT_FIELDS) - set(native))
+        if helper_missing or native_missing:
+            comparison["per_source"][key] = {
+                "business_data_status": "unverified",
+                "source_definition_status": "unverified",
+                "snapshot_completeness": {
+                    "status": "incomplete",
+                    "helper_missing_fields": helper_missing,
+                    "native_missing_fields": native_missing,
+                },
+            }
+            continue
         helper_digests = _snapshot_digest_pair(helper)
         native_digests = _snapshot_digest_pair(native)
         comparison["per_source"][key] = {
@@ -520,6 +537,7 @@ def compare_paired_source_snapshots(
                 "equal" if helper_digests["business_data_sha256"] == native_digests["business_data_sha256"]
                 else "different"
             ),
+            "snapshot_completeness": {"status": "complete"},
             "source_definition_status": (
                 "equal" if helper_digests["source_definition_sha256"] == native_digests["source_definition_sha256"]
                 else "different"
@@ -554,7 +572,7 @@ def compare_paired_source_snapshots(
         "different"
         if helper_keys != native_keys
         or "different" in {
-            comparison["business_data_status"], comparison["source_definition_status"]
+            comparison["business_data_status"], comparison["source_definition_status"],
         }
         else "equal"
         if comparison["business_data_status"] == comparison["source_definition_status"] == "equal"
@@ -583,6 +601,7 @@ class ReceiptPageReader:
         self.native = native
         self.max_calls = max_calls
         self.calls = 0
+        self.elapsed_seconds = 0.0
         self.idempotency_key: str | None = None
         self.expected_receipt_id: str | None = None
 
@@ -599,6 +618,7 @@ class ReceiptPageReader:
             raise ReceiptPageReadError("receipt_page_call_budget_exhausted", path)
         if not self.idempotency_key:
             raise ReceiptPageReadError("idempotency_key_unavailable", path)
+        started = time.perf_counter()
         try:
             _, response = await self.native.call_tool("get_decision_receipt", {
                 "idempotency_key": self.idempotency_key,
@@ -608,10 +628,12 @@ class ReceiptPageReader:
             })
         except Exception as error:  # noqa: BLE001 - retain only safe failure metadata
             self.calls += 1
+            self.elapsed_seconds += time.perf_counter() - started
             raise ReceiptPageReadError(
                 "receipt_page_read_failed", path, error_type=type(error).__name__
             ) from None
         self.calls += 1
+        self.elapsed_seconds += time.perf_counter() - started
         if not isinstance(response, dict) or response.get("status") != "found":
             raise ReceiptPageReadError("receipt_not_found", path)
         receipt = response.get("receipt")
@@ -848,9 +870,19 @@ class ReceiptPageReader:
         raise ReceiptPageReadError("receipt_page_call_budget_exhausted", path)
 
 
-_SOURCE_SNAPSHOT_FIELDS = tuple(dict.fromkeys(
-    (*_BUSINESS_SNAPSHOT_FIELDS, *_SOURCE_DEFINITION_FIELDS)
-))
+_SOURCE_SNAPSHOT_FIELDS = _RESOURCE_SNAPSHOT_FIELDS
+
+
+def _complete_resource_snapshot_map(value: Any) -> bool:
+    return (
+        isinstance(value, dict)
+        and bool(value)
+        and all(
+            isinstance(snapshot, dict)
+            and set(_RESOURCE_SNAPSHOT_FIELDS) <= set(snapshot)
+            for snapshot in value.values()
+        )
+    )
 
 
 async def native_source_snapshots_for_comparison(
@@ -865,21 +897,14 @@ async def native_source_snapshots_for_comparison(
     result = evaluation.get("result")
     result = result if isinstance(result, dict) else {}
     direct = result.get("source_by_key")
-    if isinstance(direct, dict) and all(isinstance(value, dict) for value in direct.values()):
+    if _complete_resource_snapshot_map(direct):
         return direct, "available_in_evaluation", 0, None
 
     receipt = evaluation.get("receipt")
     receipt = receipt if isinstance(receipt, dict) else {}
-    judgment = result.get("judgment")
-    judgment = judgment if isinstance(judgment, dict) else {}
-    if not (
-        receipt.get("status") == "decision_deferred"
-        or judgment.get("status") == "deferred"
-    ):
-        return None, "not_exposed_for_non_deferred_result", 0, None
     key = idempotency_key or receipt.get("idempotency_key")
     if not isinstance(key, str) or not key:
-        return None, "deferred_idempotency_key_unavailable", 0, None
+        return None, "receipt_idempotency_key_unavailable", 0, None
 
     page_reader = reader or ReceiptPageReader(native)
     page_reader.select_receipt(key, receipt.get("receipt_id"))
@@ -899,7 +924,13 @@ async def native_source_snapshots_for_comparison(
         return None, "unverified_receipt_source_snapshot", page_reader.calls - calls_before, issue
     return (
         sources,
-        "available_from_deferred_receipt",
+        (
+            "available_from_deferred_receipt"
+            if (receipt.get("status") == "decision_deferred"
+                or (isinstance(result.get("judgment"), dict)
+                    and result["judgment"].get("status") == "deferred"))
+            else "available_from_decision_receipt"
+        ),
         page_reader.calls - calls_before,
         None,
     )
@@ -923,6 +954,98 @@ def helper_source_snapshots_by_key(
         if isinstance(item, dict):
             sources[key] = item
     return sources
+
+
+def validate_source_snapshots_for_card(
+    sources: dict[str, dict[str, Any]] | None,
+    card: dict[str, Any],
+) -> dict[str, dict[str, Any]]:
+    """Require complete typed snapshots for exactly the approved source aliases."""
+    refs = [SourceRef.model_validate(item) for item in card.get("sources", [])]
+    expected = {source.key: source for source in refs}
+    if not expected or sources is None or set(sources) != set(expected):
+        raise ValueError("preflight ResourceSnapshots do not cover exactly the approved source aliases")
+    validated: dict[str, dict[str, Any]] = {}
+    for key, source in expected.items():
+        snapshot = sources[key]
+        if not isinstance(snapshot, dict) or not set(_RESOURCE_SNAPSHOT_FIELDS) <= set(snapshot):
+            raise ValueError(f"preflight ResourceSnapshot is incomplete for approved alias {key}")
+        if (
+            snapshot.get("source_key") != key
+            or snapshot.get("adapter") != source.adapter
+            or snapshot.get("resource") != source.resource
+        ):
+            raise ValueError(f"preflight ResourceSnapshot identity differs for approved alias {key}")
+        validated[key] = copy.deepcopy(snapshot)
+    return validated
+
+
+async def run_native_preflight(
+    native: InstalledServer,
+    *,
+    card: dict[str, Any],
+    idempotency_key: str,
+    reader: ReceiptPageReader,
+) -> tuple[dict[str, Any], dict[str, dict[str, Any]] | None, str, int, dict[str, Any] | None]:
+    """Make the one paid evaluation before readout agents; retain source snapshots only for baseline."""
+    card_id = card.get("id")
+    if not isinstance(card_id, str) or not card_id:
+        raise ValueError("approved card id is required for paired preflight")
+    started = time.perf_counter()
+    _, evaluation = await native.call_tool("evaluate_insight_card", {
+        "card_id": card_id,
+        "idempotency_key": idempotency_key,
+        "response_mode": "compact",
+    })
+    evaluation_seconds = time.perf_counter() - started
+    if not isinstance(evaluation, dict):
+        raise RuntimeError("native preflight returned no structured evaluation")
+    receipt = evaluation.get("receipt")
+    if (
+        not isinstance(receipt, dict)
+        or receipt.get("idempotency_key") != idempotency_key
+        or receipt.get("card_id") != card_id
+        or evaluation.get("replayed") is not False
+    ):
+        raise RuntimeError("native preflight did not create the expected fresh card receipt")
+    sources, status, page_calls, issue = await native_source_snapshots_for_comparison(
+        native,
+        evaluation,
+        idempotency_key=idempotency_key,
+        reader=reader,
+    )
+    if sources is not None:
+        try:
+            sources = validate_source_snapshots_for_card(sources, card)
+        except ValueError as error:
+            sources = None
+            status = "unverified_preflight_resource_snapshots"
+            issue = {"reason": str(error)}
+    result = evaluation.get("result")
+    result = result if isinstance(result, dict) else {}
+    judgment = result.get("judgment")
+    judgment = judgment if isinstance(judgment, dict) else {}
+    summary = {
+        "status": "source_snapshots_available" if sources is not None else "source_snapshots_unverified",
+        "idempotency_key": idempotency_key,
+        "receipt_id": receipt.get("receipt_id"),
+        "receipt_status": receipt.get("status"),
+        "replayed": evaluation.get("replayed"),
+        "native_evaluate_tool_calls": 1,
+        "native_evaluate_wall_seconds": evaluation_seconds,
+        "source_snapshot_status": status,
+        "source_snapshot_keys": sorted(sources) if sources is not None else None,
+        "receipt_snapshot_page_calls": page_calls,
+        "receipt_snapshot_page_elapsed_seconds": reader.elapsed_seconds,
+        "reported_provider_call_attempts": judgment.get("provider_call_attempts"),
+        "reported_provider_call_attempt_scope": judgment.get("attempt_scope"),
+        "reported_provider_call_attempted": judgment.get("provider_call_attempted"),
+        "provider_attempt_fields_are_not_billing_or_provider_receipt_confirmation": True,
+        "native_superset_internal_http_attempts": None,
+        "native_superset_internal_http_attempts_note": "The evaluation API does not expose its adapter HTTP attempt count; unknown is not zero.",
+        "issue": issue,
+    }
+    return summary, sources, status, page_calls, issue
 
 
 def helper_source_snapshots_from_audit(
@@ -1148,12 +1271,18 @@ class CardJourneySession(ReportSession):
         max_data_reads: int = MAX_DATA_READS,
         source_snapshot: PairedSourceSnapshot | None = None,
         max_report_words: int | None = None,
+        expected_replay_key: str | None = None,
+        expected_replay_card_id: str | None = None,
+        expected_replay_receipt_id: str | None = None,
     ):
         super().__init__(adapter, native)
         self.stage = stage
         self.max_data_reads = max_data_reads
         self.source_snapshot = source_snapshot
         self.max_report_words = max_report_words
+        self.expected_replay_key = expected_replay_key
+        self.expected_replay_card_id = expected_replay_card_id
+        self.expected_replay_receipt_id = expected_replay_receipt_id
         self.discovery_calls = 0
         self.discovery_calls_by_tool: dict[str, int] = {}
         self.data_reads = 0
@@ -1162,6 +1291,40 @@ class CardJourneySession(ReportSession):
         self.review: dict[str, Any] | None = None
         self.review_adapter: str | None = None
         self.evaluation: dict[str, Any] | None = None
+        self.native_tool_calls_by_name: dict[str, int] = {}
+        self.native_tool_elapsed_seconds_by_name: dict[str, float] = {}
+
+    async def _call_native_tool(self, name: str, arguments: dict[str, Any]):
+        started = time.perf_counter()
+        try:
+            return await super().call(name, arguments)
+        finally:
+            self.native_tool_calls_by_name[name] = self.native_tool_calls_by_name.get(name, 0) + 1
+            self.native_tool_elapsed_seconds_by_name[name] = (
+                self.native_tool_elapsed_seconds_by_name.get(name, 0.0)
+                + (time.perf_counter() - started)
+            )
+
+    async def _assert_preflight_receipt_available(self) -> None:
+        if not self.expected_replay_key:
+            return
+        response = await self._call_native_tool("get_decision_receipt", {
+            "idempotency_key": self.expected_replay_key,
+            "result_path": ["card_id"],
+            "offset": 0,
+            "limit": 1,
+        })
+        receipt = response.get("receipt") if isinstance(response, dict) else None
+        if (
+            not isinstance(response, dict)
+            or response.get("status") != "found"
+            or not isinstance(receipt, dict)
+            or receipt.get("idempotency_key") != self.expected_replay_key
+            or receipt.get("card_id") != self.expected_replay_card_id
+            or receipt.get("receipt_id") != self.expected_replay_receipt_id
+            or receipt.get("status") == "prepared"
+        ):
+            raise ValueError("paired preflight receipt is unavailable; refusing a possible new evaluation")
 
     async def specs(self):
         specs = await super().specs()
@@ -1187,8 +1350,18 @@ class CardJourneySession(ReportSession):
         if name == "approve_insight_card":
             raise ValueError("owner approval is a separate human action in this trial")
         if name == "evaluate_insight_card":
+            if self.expected_replay_key:
+                if (
+                    set(arguments) - {"card_id", "idempotency_key", "response_mode"}
+                    or arguments.get("card_id") != self.expected_replay_card_id
+                    or arguments.get("idempotency_key") != self.expected_replay_key
+                    or arguments.get("response_mode", "compact") != "compact"
+                ):
+                    raise ValueError("paired evaluation must replay the exact preflight card/key without context")
             if self.evaluation is not None:
                 raise ValueError("evaluate_insight_card may be called only once per run")
+            if name == "evaluate_insight_card" and self.expected_replay_key:
+                await self._assert_preflight_receipt_available()
         if name == "submit_report" and self.max_report_words is not None:
             report = arguments.get("report")
             words = len(report.split()) if isinstance(report, str) else 0
@@ -1204,6 +1377,8 @@ class CardJourneySession(ReportSession):
             "find_dashboards", "read_dashboard", "read_chart_rows"
         }:
             result = self.source_snapshot.call(name, arguments)
+        elif self.native is not None and name in (SETUP_TOOLS | MONITOR_TOOLS):
+            result = await self._call_native_tool(name, arguments)
         else:
             result = await super().call(name, arguments)
         if name == "onboard_insight_card" and isinstance(result, dict):
@@ -1220,6 +1395,16 @@ class CardJourneySession(ReportSession):
             adapter = arguments.get("adapter")
             self.review_adapter = adapter if isinstance(adapter, str) else None
         elif name == "evaluate_insight_card" and isinstance(result, dict):
+            if self.expected_replay_key and result.get("replayed") is not True:
+                raise ValueError("preflight evaluation was not replayed; refusing to count it as treatment")
+            if self.expected_replay_key:
+                receipt = result.get("receipt")
+                if (
+                    not isinstance(receipt, dict)
+                    or receipt.get("idempotency_key") != self.expected_replay_key
+                    or receipt.get("receipt_id") != self.expected_replay_receipt_id
+                ):
+                    raise ValueError("treatment evaluation did not return the preflight receipt")
             self.evaluation = result
         return result
 
@@ -1389,8 +1574,14 @@ async def capture_paired_source_snapshot(
             charts[chart_id] = {
                 "chart_id": chart_id,
                 "title": chart.get("slice_name"),
+                "chart_metadata": copy.deepcopy(chart),
                 "saved_query_definition": chart.get("params"),
                 "rows": rows,
+                "query_response_metadata": [
+                    {key: copy.deepcopy(value) for key, value in envelope.items() if key != "data"}
+                    for envelope in envelopes
+                    if isinstance(envelope, dict)
+                ],
                 "scope": "standalone saved chart query, not dashboard filter context",
             }
             captured.append({
@@ -1573,41 +1764,97 @@ async def _run_paired_recurring(
     capture_adapter = SupersetAdapter(
         SupersetClient(args.superset_url, "admin", "admin"), tenant_id="local"
     )
+    capture_started = time.perf_counter()
     snapshot = await capture_paired_source_snapshot(capture_adapter, card)
+    snapshot_capture_seconds = time.perf_counter() - capture_started
+    idempotency_key = f"paired-superset-preflight-{secrets.token_hex(12)}"
+    preflight_reader = ReceiptPageReader(native)
+    preflight, native_sources, native_source_status, preflight_page_calls, native_issue = (
+        await run_native_preflight(
+            native,
+            card=card,
+            idempotency_key=idempotency_key,
+            reader=preflight_reader,
+        )
+    )
+    source_comparison = compare_paired_source_snapshots(
+        helper_source_snapshots_by_key(snapshot, card),
+        native_sources,
+        native_status=native_source_status,
+        receipt_page_calls=preflight_page_calls,
+        native_issue=native_issue,
+    )
+    parity_gate_passed = source_comparison["status"] == "equal"
     paired: dict[str, Any] = {
         "phase": "paired-recurring",
-        "treatment_recipe_version": "skill-guided-deferred-v2",
+        "treatment_recipe_version": "skill-guided-deferred-v3-same-key-preflight",
         "historical_explicit_deferred_trial_preserved_separately": True,
-        "comparison_design": "same reviewed card, owner notes, three questions, and exact frozen Superset helper responses in both arms; two repeats; treatment policy mode varies by repeat; native evaluation separately reads live approved sources",
+        "comparison_design": "one complete production Superset helper capture is frozen for both arms; one native preflight evaluation is source-snapshot-compared before readout episodes; only a full ResourceSnapshot match admits the readouts; treatment modes replay that one preflight key",
         "mode_interpretation": (
             "Both treatment modes run the same candidate binary, approved card, notes, source tools, "
-            "and captured source responses. original_policy does not consume deferred receipt pages. "
+            "and frozen source responses. original_policy does not consume deferred receipt pages. "
             "skill_guided_deferred follows the currently shipped skill and pages only relevant omitted "
             "details. This is a changed recipe from the archived explicit_deferred trial, whose prompt "
             "required exhaustive paging; do not pool or relabel those earlier results. It is not a "
             "comparison against the prior binary/runtime."
         ),
         "snapshot": snapshot.manifest,
+        "preflight": preflight,
+        "preflight_source_snapshot_comparison": source_comparison,
+        "paired_input_parity_gate": {
+            "status": "passed" if parity_gate_passed else "failed",
+            "readout_episodes_started": 0,
+            "comparison_scope": "all ResourceSnapshot fields except only the root captured_at receive timestamp; includes nested timestamps, source_captured_at, metadata/cache status, contracts, observations, evidence, and source errors",
+            "saved_chart_params_and_query_response_metadata": "retained in the complete frozen helper tool snapshot and replayed identically to both arms; not asserted to be present in the native receipt",
+            "baseline_receives": "approved card, review, owner notes, questions, and frozen source-tool snapshot only; no native evaluation or policy judgment",
+            "treatment_receives": "same frozen source-tool snapshot plus evaluate_insight_card replay of the exact preflight key",
+        },
         "fresh_wizard_runs_in_this_phase": 1,
-        "post_evaluation_receipt_page_call_cap_total": MAX_RECEIPT_PAGE_CALLS,
+        "preflight_receipt_snapshot_page_call_cap_total": MAX_RECEIPT_PAGE_CALLS,
         "report_word_limit": MAX_PAIRED_REPORT_WORDS,
         "report_word_count_method": "whitespace-delimited words in submitted report only",
         "repeat_count": PAIRED_REPETITIONS,
         "policy_modes": list(PAIRED_POLICY_MODES),
         "limitations": [
-            "The shared dashboard/chart responses are captured from real read-only Superset HTTP and replayed identically to all four readout agents; the capture is not atomic.",
+            "The shared dashboard/chart responses are captured from real read-only Superset HTTP and replayed identically to every readout agent; the capture is not atomic.",
             "Capture timestamps are request-time observations, not warehouse as-of timestamps or freshness proof.",
-            "Native evaluation performs separate live approved-source reads; those are not instrumented or redirected through the frozen helper snapshot. The report compares per-source ResourceSnapshot digests when the durable deferred receipt exposes them, excluding captured_at and source_captured_at but still comparing metadata, data-quality warnings, and contracts; otherwise parity is unverified.",
-            "Business-data digests cover observations, analytical comparisons, evidence, and source error state. Source-definition digests cover ResourceSnapshot identity, metadata, and contract; raw saved-chart query params are not compared because the native receipt does not expose them.",
-            "A matching digest means those prepared ResourceSnapshot fields matched the earlier captured helper response; it does not prove an atomic warehouse snapshot, identical underlying HTTP requests, or total source-cost parity.",
+            "The native preflight uses separate live approved-source reads. Readout episodes start only if every ResourceSnapshot business and definition field matches the frozen helper snapshot; any difference or unavailable field stops the paired analysis before readout model calls.",
+            "Only the root ResourceSnapshot captured_at receive-time is excluded from parity hashes. Root source_captured_at and all nested timestamps, metadata/cache state, quality warnings, and contracts remain in the comparison.",
+            "Raw saved-chart query parameters and query-response metadata are preserved in the shared helper fixture because the receipt does not contain them; no receipt-only substitution is made for the source-tool outputs.",
+            "A matching snapshot is not proof of an atomic warehouse state, identical HTTP request sequence, or total connector-cost parity. Native adapter HTTP subrequests are not exposed by the evaluation API.",
             "No numeric outcome labels or expected business classes are supplied; two repeats are descriptive, not a generalization sample.",
-            "Direct helper and native internal reads do not support a total warehouse-cost comparison.",
+            "No source-cost savings claim is made. One-time helper capture, native preflight, receipt pages, and agent calls are measured separately; the native preflight is included in treatment all-in.",
             "The trial tool prevents reports over 300 whitespace-delimited words from being submitted.",
             "The skill_guided_deferred recipe follows shipped evidence-access guidance; it does not require exhaustive receipt paging or duplicate representations.",
         ],
         "repeats": [],
     }
-    receipt_reader = ReceiptPageReader(native)
+    if not parity_gate_passed:
+        paired["comparison_status"] = "ineligible_source_snapshot_mismatch_or_unverified"
+        paired["measurement_accounting"] = {
+            "categories_are_disjoint": True,
+            "shared_helper_capture_wall_seconds": snapshot_capture_seconds,
+            "shared_helper_superset_http_attempts": snapshot.manifest["superset_http_attempts"],
+            "native_preflight_evaluate_calls": 1,
+            "native_preflight_evaluate_wall_seconds": preflight["native_evaluate_wall_seconds"],
+            "native_preflight_receipt_page_calls": preflight_page_calls,
+            "native_preflight_receipt_page_elapsed_seconds": preflight_reader.elapsed_seconds,
+            "native_preflight_internal_superset_http_attempts": None,
+            "readout_agent_model_calls": 0,
+            "source_cost_savings_claim": False,
+            "treatment_all_in_includes_preflight": True,
+            "treatment_all_in_measured_seconds_subtotal": (
+                snapshot_capture_seconds
+                + preflight["native_evaluate_wall_seconds"]
+                + preflight_reader.elapsed_seconds
+            ),
+        }
+        return paired
+
+    treatment_episode_seconds: list[float] = []
+    baseline_episode_seconds: list[float] = []
+    treatment_native_calls: dict[str, int] = {}
+    treatment_native_call_seconds: dict[str, float] = {}
     for repeat, mode in enumerate(PAIRED_POLICY_MODES, start=1):
         baseline = CardJourneySession(
             None,
@@ -1623,6 +1870,7 @@ async def _run_paired_recurring(
             snapshot=snapshot.manifest,
             repeat=repeat,
         )
+        baseline_started = time.perf_counter()
         baseline_episode = await _run_episode(
             baseline,
             audit=audit,
@@ -1630,14 +1878,17 @@ async def _run_paired_recurring(
             prompt=baseline_prompt,
             skill=skill,
         )
+        baseline_episode_seconds.append(time.perf_counter() - baseline_started)
 
-        idempotency_key = f"paired-superset-{repeat}-{secrets.token_hex(12)}"
         treatment = CardJourneySession(
             None,
             native,
             stage="paired-treatment",
             source_snapshot=snapshot,
             max_report_words=MAX_PAIRED_REPORT_WORDS,
+            expected_replay_key=idempotency_key,
+            expected_replay_card_id=card["id"],
+            expected_replay_receipt_id=preflight["receipt_id"],
         )
         treatment_prompt = build_paired_prompt(
             owner_context=owner_context,
@@ -1649,6 +1900,7 @@ async def _run_paired_recurring(
             policy_mode=mode,
             idempotency_key=idempotency_key,
         )
+        treatment_started = time.perf_counter()
         treatment_episode = await _run_episode(
             treatment,
             audit=audit,
@@ -1656,21 +1908,26 @@ async def _run_paired_recurring(
             prompt=treatment_prompt,
             skill=skill,
         )
-        native_sources, native_source_status, receipt_page_calls, native_issue = (
-            await native_source_snapshots_for_comparison(
-                native,
-                treatment.evaluation,
-                idempotency_key=idempotency_key,
-                reader=receipt_reader,
-            )
+        treatment_episode_seconds.append(time.perf_counter() - treatment_started)
+        for name, count in treatment.native_tool_calls_by_name.items():
+            treatment_native_calls[name] = treatment_native_calls.get(name, 0) + count
+        for name, seconds in treatment.native_tool_elapsed_seconds_by_name.items():
+            treatment_native_call_seconds[name] = treatment_native_call_seconds.get(name, 0.0) + seconds
+        treatment_evaluation = treatment.evaluation or {}
+        treatment_receipt = treatment_evaluation.get("receipt")
+        treatment_receipt = treatment_receipt if isinstance(treatment_receipt, dict) else {}
+        replay_verified = (
+            treatment_evaluation.get("replayed") is True
+            and treatment_receipt.get("idempotency_key") == idempotency_key
+            and treatment_receipt.get("receipt_id") == preflight["receipt_id"]
+            and treatment_receipt.get("card_id") == card["id"]
         )
-        source_comparison = compare_paired_source_snapshots(
-            helper_source_snapshots_by_key(snapshot, card),
-            native_sources,
-            native_status=native_source_status,
-            receipt_page_calls=receipt_page_calls,
-            native_issue=native_issue,
+        treatment_source_comparison = copy.deepcopy(source_comparison)
+        treatment_source_comparison["treatment_replay_status"] = (
+            "same_preflight_receipt_replayed" if replay_verified else "unverified_treatment_replay"
         )
+        if not replay_verified:
+            treatment_source_comparison["status"] = "unverified"
         baseline_report = baseline.submission.get("report") if baseline.submission else None
         treatment_report = treatment.submission.get("report") if treatment.submission else None
         paired["repeats"].append({
@@ -1686,6 +1943,7 @@ async def _run_paired_recurring(
                 "source_snapshot_replayed": True,
                 "source_snapshot_sha256": snapshot.manifest["snapshot_sha256"],
                 "shared_tool_names": sorted(SHARED_SOURCE_TOOLS),
+                "episode_wall_seconds": baseline_episode_seconds[-1],
             },
             "treatment": {
                 "episode": treatment_episode,
@@ -1696,12 +1954,17 @@ async def _run_paired_recurring(
                 **_source_budget_summary(treatment),
                 "source_snapshot_replayed": True,
                 "source_snapshot_sha256": snapshot.manifest["snapshot_sha256"],
-                "native_source_snapshot_comparison": source_comparison,
+                "native_source_snapshot_comparison": treatment_source_comparison,
                 "shared_tool_names": sorted(SHARED_SOURCE_TOOLS),
                 "native_monitor_tools": sorted(MONITOR_TOOLS),
+                "episode_wall_seconds": treatment_episode_seconds[-1],
+                "native_tool_calls_by_name": treatment.native_tool_calls_by_name,
+                "native_tool_elapsed_seconds_by_name": treatment.native_tool_elapsed_seconds_by_name,
+                "same_preflight_receipt_replay_verified": replay_verified,
             },
         })
-    paired["receipt_page_calls_total"] = receipt_reader.calls
+    paired["comparison_status"] = "eligible_source_snapshot_parity_verified"
+    paired["paired_input_parity_gate"]["readout_episodes_started"] = 2 * len(PAIRED_POLICY_MODES)
     snapshot_fingerprint_reused = len({
         arm["source_snapshot_sha256"]
         for item in paired["repeats"]
@@ -1714,9 +1977,59 @@ async def _run_paired_recurring(
     )
     paired["snapshot_manifest_fingerprint_reused_across_episodes"] = snapshot_fingerprint_reused
     paired["shared_agent_source_tool_snapshot_parity"] = source_tool_parity
-    paired["shared_helper_snapshot_replayed_identically"] = (
-        snapshot_fingerprint_reused and source_tool_parity["status"] == "equal"
-    )
+    paired["shared_helper_snapshot_replayed_identically"] = snapshot_fingerprint_reused
+    paired["measurement_accounting"] = {
+        "categories_are_disjoint": True,
+        "shared_helper_capture": {
+            "wall_seconds": snapshot_capture_seconds,
+            "superset_http_attempts": snapshot.manifest["superset_http_attempts"],
+            "superset_request_counts_by_path": snapshot.manifest["superset_http_request_counts_by_path"],
+            "source_capture_data_read_calls": snapshot.manifest["data_read_calls"],
+            "agent_tool_calls_use_frozen_responses": True,
+            "source_cost_savings_claim": False,
+        },
+        "native_preflight": preflight,
+        "baseline_agent": {
+            "episode_wall_seconds_total": sum(baseline_episode_seconds),
+            "native_tool_calls": 0,
+            "live_superset_http_attempts_during_episode": 0,
+        },
+        "treatment_agent": {
+            "episode_wall_seconds_total": sum(treatment_episode_seconds),
+            "native_tool_calls_by_name": treatment_native_calls,
+            "native_tool_elapsed_seconds_by_name": treatment_native_call_seconds,
+            "evaluate_insight_card_calls_are_cached_replays": (
+                treatment_native_calls.get("evaluate_insight_card", 0) == PAIRED_REPETITIONS
+            ),
+            "live_superset_http_attempts_during_episode": 0,
+        },
+        "treatment_all_in": {
+            "includes_shared_helper_capture": True,
+            "includes_native_preflight": True,
+            "includes_preflight_receipt_snapshot_pages": True,
+            "native_preflight_evaluate_calls": preflight["native_evaluate_tool_calls"],
+            "native_preflight_evaluate_wall_seconds": preflight["native_evaluate_wall_seconds"],
+            "native_preflight_receipt_page_calls": preflight_page_calls,
+            "native_preflight_receipt_page_elapsed_seconds": preflight_reader.elapsed_seconds,
+            "shared_helper_capture_wall_seconds": snapshot_capture_seconds,
+            "shared_helper_superset_http_attempts": snapshot.manifest["superset_http_attempts"],
+            "agent_episode_wall_seconds_total": sum(treatment_episode_seconds),
+            "measured_wall_seconds_subtotal": (
+                snapshot_capture_seconds
+                + preflight["native_evaluate_wall_seconds"]
+                + preflight_reader.elapsed_seconds
+                + sum(treatment_episode_seconds)
+            ),
+            "native_superset_internal_http_attempts": None,
+            "source_cost_savings_claim": False,
+        },
+        "limitations": [
+            "The shared helper capture is counted once as experiment input preparation and included in treatment all-in; the separate time/call categories are not added twice.",
+            "Native evaluation's internal Superset HTTP attempts are not exposed and remain unknown, not zero.",
+            "Provider call attempt fields are reported as returned; they do not confirm provider receipt or billing.",
+            "No total source-cost parity or source-cost savings inference is made from frozen replay.",
+        ],
+    }
     return paired
 
 
