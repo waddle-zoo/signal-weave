@@ -14,6 +14,7 @@ import copy
 import hashlib
 import json
 import os
+import re
 import secrets
 import subprocess
 import sys
@@ -31,7 +32,9 @@ from evaluations.codex_trial_transport import codex_episode
 from evaluations.installed_trial_transport import InstalledServer, _initialize_mcp_session
 from evaluations.native_human_superset_journey import ReportSession, terminal_setup
 from scripts.binary_provenance import verify_binary
+from signalweave.local_setup import SetupError, local_environment
 from signalweave.models import SourceRef
+from signalweave.runtime import build_runtime
 from signalweave.sources import SourceRegistry
 from signalweave.superset_adapter import SupersetAdapter
 from signalweave.superset_client import SupersetClient
@@ -1498,10 +1501,94 @@ class PairedSourceSnapshot:
         raise ValueError(f"tool is not part of the paired source snapshot: {name}")
 
 
+class PairedSourceCaptureError(ValueError):
+    """A sanitized source-capture failure that must stop native preflight."""
+
+    def __init__(self, diagnostic: dict[str, Any]) -> None:
+        self.diagnostic = copy.deepcopy(diagnostic)
+        super().__init__(diagnostic["message"])
+
+
+def _safe_source_error_fields(error: str | None) -> dict[str, Any]:
+    """Keep an exception class/status, never the provider's arbitrary message."""
+    if not error:
+        return {}
+    prefix = error.split(":", 1)[0].strip()
+    error_type = prefix if re.fullmatch(r"[A-Za-z][A-Za-z0-9_.]{0,79}", prefix) else "SourceError"
+    match = re.search(r"(?<!\d)([1-5]\d\d)(?!\d)", error)
+    fields: dict[str, Any] = {"error_type": error_type}
+    if match:
+        fields["http_status"] = int(match.group(1))
+    return fields
+
+
+def _source_capture_diagnostic(
+    source: SourceRef,
+    code: str,
+    *,
+    error: str | None = None,
+    chart_count: int | None = None,
+    observation_count: int | None = None,
+) -> dict[str, Any]:
+    details = _safe_source_error_fields(error)
+    error_description = details.get("error_type", "")
+    if "http_status" in details:
+        error_description += f" HTTP {details['http_status']}"
+    safe_resource = (
+        source.resource
+        if re.fullmatch(r"dashboard:[0-9]+", source.resource)
+        else "approved dashboard"
+    )
+    message = (
+        f"Approved source {source.key} ({safe_resource}) was rejected during capture"
+        + (f" ({error_description})" if error_description else "")
+        + "; native preflight and readout episodes were skipped."
+    )
+    diagnostic: dict[str, Any] = {
+        "status": "failed",
+        "code": code,
+        "source_key": source.key,
+        "resource": safe_resource,
+        "message": message,
+        **details,
+    }
+    if chart_count is not None:
+        diagnostic["chart_inventory_count"] = chart_count
+    if observation_count is not None:
+        diagnostic["observation_count"] = observation_count
+    return diagnostic
+
+
+def _paired_capture_rejection(
+    diagnostic: dict[str, Any], *, capture_seconds: float,
+) -> dict[str, Any]:
+    return {
+        "phase": "paired-recurring",
+        "comparison_status": "ineligible_source_capture_error_or_incomplete",
+        "source_capture": copy.deepcopy(diagnostic),
+        "paired_input_parity_gate": {
+            "status": "failed",
+            "reason": diagnostic["code"],
+            "readout_episodes_started": 0,
+        },
+        "measurement_accounting": {
+            "categories_are_disjoint": True,
+            "shared_helper_capture_wall_seconds": capture_seconds,
+            "shared_helper_superset_http_attempts": None,
+            "native_preflight_evaluate_calls": 0,
+            "native_preflight_receipt_page_calls": 0,
+            "readout_agent_model_calls": 0,
+            "source_cost_savings_claim": False,
+        },
+        "repeats": [],
+    }
+
+
 async def capture_paired_source_snapshot(
     adapter: SupersetAdapter,
     card: dict[str, Any],
     *,
+    registry: SourceRegistry | None = None,
     max_data_reads: int = MAX_DATA_READS,
     max_bytes: int = MAX_PAIRED_SNAPSHOT_BYTES,
 ) -> PairedSourceSnapshot:
@@ -1518,7 +1605,9 @@ async def capture_paired_source_snapshot(
     ):
         raise ValueError("paired Superset snapshot supports only approved dashboard sources")
     if len(validated_sources) > max_data_reads:
-        raise ValueError("paired_snapshot_data_read_budget_exhausted")
+        raise PairedSourceCaptureError(_source_capture_diagnostic(
+            validated_sources[0], "paired_snapshot_data_read_budget_exhausted",
+        ))
 
     started_at = datetime.now(timezone.utc)
     http_before = adapter.client.requests_made
@@ -1528,13 +1617,58 @@ async def capture_paired_source_snapshot(
     resources: list[dict[str, Any]] = []
     captured: list[dict[str, Any]] = []
     source_snapshot_sha256_by_key: dict[str, str] = {}
-    registry = SourceRegistry(
-        [adapter],
-        max_snapshot_bytes=NATIVE_MAX_SOURCE_SNAPSHOT_BYTES,
-    )
+    if registry is None:
+        registry = SourceRegistry(
+            [adapter],
+            max_snapshot_bytes=NATIVE_MAX_SOURCE_SNAPSHOT_BYTES,
+        )
+    elif registry._get(adapter.name) is not adapter:
+        raise PairedSourceCaptureError(_source_capture_diagnostic(
+            validated_sources[0], "paired_runtime_registry_adapter_mismatch",
+        ))
     registry_started_at = datetime.now(timezone.utc)
     resource_snapshots = await registry.resolve(validated_sources)
     registry_finished_at = datetime.now(timezone.utc)
+    chart_summaries_by_key: dict[str, list[dict[str, Any]]] = {}
+    for source, resource_snapshot in zip(validated_sources, resource_snapshots, strict=True):
+        if resource_snapshot.error:
+            raise PairedSourceCaptureError(_source_capture_diagnostic(
+                source,
+                "paired_snapshot_source_error",
+                error=resource_snapshot.error,
+            ))
+        metadata = resource_snapshot.metadata
+        chart_metadata = metadata.get("charts") if isinstance(metadata, dict) else None
+        if not isinstance(chart_metadata, list):
+            raise PairedSourceCaptureError(_source_capture_diagnostic(
+                source, "paired_snapshot_chart_inventory_missing_or_invalid",
+            ))
+        valid_charts = [
+            item for item in chart_metadata
+            if isinstance(item, dict) and str(item.get("id", "")).isdigit()
+        ]
+        if not valid_charts:
+            raise PairedSourceCaptureError(_source_capture_diagnostic(
+                source,
+                "paired_snapshot_chart_inventory_empty",
+                chart_count=len(chart_metadata),
+            ))
+        if len(valid_charts) != len(chart_metadata):
+            raise PairedSourceCaptureError(_source_capture_diagnostic(
+                source,
+                "paired_snapshot_chart_inventory_invalid_entries",
+                chart_count=len(chart_metadata),
+            ))
+        chart_summaries_by_key[source.key] = valid_charts
+
+    observation_count = sum(len(snapshot.observations) for snapshot in resource_snapshots)
+    if observation_count == 0:
+        raise PairedSourceCaptureError(_source_capture_diagnostic(
+            validated_sources[0],
+            "paired_snapshot_observations_empty",
+            observation_count=observation_count,
+        ))
+
     data_read_calls = len(validated_sources)
     captured.append({
         "kind": "production_source_registry_resolve",
@@ -1551,10 +1685,7 @@ async def capture_paired_source_snapshot(
         dashboards[dashboard_id] = dashboard
         source_snapshot_sha256_by_key[source.key] = _full_snapshot_digest(dashboard)
 
-        snapshot_metadata = dashboard.get("metadata", {})
-        chart_metadata = snapshot_metadata.get("charts", []) if isinstance(snapshot_metadata, dict) else []
-        if not isinstance(chart_metadata, list):
-            raise ValueError("approved dashboard snapshot did not return a chart list")
+        chart_metadata = chart_summaries_by_key[source.key]
         descriptor = {
             "adapter": "superset",
             "resource": source.resource,
@@ -1572,16 +1703,24 @@ async def capture_paired_source_snapshot(
         resources.append(descriptor)
 
         for chart_summary in chart_metadata:
-            if not isinstance(chart_summary, dict):
-                continue
             chart_id = str(chart_summary.get("id", ""))
             if not chart_id.isdigit() or chart_id in charts:
                 continue
             if data_read_calls >= max_data_reads:
-                raise ValueError("paired_snapshot_data_read_budget_exhausted")
+                raise PairedSourceCaptureError(_source_capture_diagnostic(
+                    source, "paired_snapshot_data_read_budget_exhausted",
+                    chart_count=len(chart_metadata),
+                ))
             request_started = datetime.now(timezone.utc)
-            chart = await adapter.client.get_chart_metadata(chart_id)
-            envelopes = await adapter.client.chart_data(chart)
+            try:
+                chart = await adapter.client.get_chart_metadata(chart_id)
+                envelopes = await adapter.client.chart_data(chart)
+            except Exception as error:  # noqa: BLE001 - source boundary; do not expose provider text
+                raise PairedSourceCaptureError(_source_capture_diagnostic(
+                    source,
+                    "paired_snapshot_chart_read_failed",
+                    error=f"{type(error).__name__}: {error}",
+                )) from None
             rows = [
                 row
                 for envelope in envelopes
@@ -1609,6 +1748,14 @@ async def capture_paired_source_snapshot(
                 "request_finished_at": request_finished.isoformat(),
             })
 
+    if not any(chart["rows"] for chart in charts.values()):
+        raise PairedSourceCaptureError(_source_capture_diagnostic(
+            validated_sources[0],
+            "paired_snapshot_chart_rows_empty",
+            chart_count=len(charts),
+            observation_count=observation_count,
+        ))
+
     finished_at = datetime.now(timezone.utc)
     http_paths_after = dict(adapter.client.request_path_counts)
     http_path_counts = {
@@ -1621,7 +1768,16 @@ async def capture_paired_source_snapshot(
         digest_payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False
     ).encode("utf-8")
     if len(snapshot_bytes) > max_bytes:
-        raise ValueError("paired_snapshot_payload_budget_exhausted")
+        raise PairedSourceCaptureError({
+            "status": "failed",
+            "code": "paired_snapshot_payload_budget_exhausted",
+            "message": (
+                "The captured approved-source snapshot exceeded its configured byte cap; "
+                "native preflight and readout episodes were skipped."
+            ),
+            "snapshot_payload_bytes": len(snapshot_bytes),
+            "snapshot_payload_byte_cap": max_bytes,
+        })
     fingerprint = hashlib.sha256(snapshot_bytes).hexdigest()
     manifest = {
         "status": "captured",
@@ -1637,8 +1793,14 @@ async def capture_paired_source_snapshot(
         ),
         "source_snapshot_fields": list(_RESOURCE_SNAPSHOT_FIELDS),
         "source_snapshot_sha256_by_key": source_snapshot_sha256_by_key,
-        "native_per_source_snapshot_byte_cap": NATIVE_MAX_SOURCE_SNAPSHOT_BYTES,
+        "native_per_source_snapshot_byte_cap": getattr(
+            registry, "_max_snapshot_bytes", NATIVE_MAX_SOURCE_SNAPSHOT_BYTES
+        ),
         "dashboard_count": len(dashboards),
+        "chart_inventory_count_by_source_key": {
+            key: len(value) for key, value in chart_summaries_by_key.items()
+        },
+        "observation_count": observation_count,
         "chart_query_count": len(charts),
         "snapshot_payload_bytes": len(snapshot_bytes),
         "snapshot_payload_byte_cap": max_bytes,
@@ -1771,6 +1933,7 @@ async def _owner_approval(native, session: CardJourneySession, adapter: str | No
 async def _run_paired_recurring(
     *,
     args: argparse.Namespace,
+    local_home: Path,
     native: InstalledServer,
     audit: Audit,
     owner_context: str,
@@ -1779,11 +1942,60 @@ async def _run_paired_recurring(
     review: dict[str, Any],
     owner_notes: str,
 ) -> dict[str, Any]:
-    capture_adapter = SupersetAdapter(
-        SupersetClient(args.superset_url, "admin", "admin"), tenant_id="local"
-    )
     capture_started = time.perf_counter()
-    snapshot = await capture_paired_source_snapshot(capture_adapter, card)
+    try:
+        with local_environment(local_home):
+            runtime = build_runtime()
+            capture_registry = runtime.sources
+            try:
+                capture_adapter = capture_registry._get("superset")
+            except ValueError:
+                diagnostic = {
+                    "status": "failed",
+                    "code": "paired_runtime_superset_adapter_unavailable",
+                    "message": (
+                        "The configured local runtime has no Superset adapter; native preflight "
+                        "and readout episodes were skipped."
+                    ),
+                }
+                return _paired_capture_rejection(
+                    diagnostic, capture_seconds=time.perf_counter() - capture_started,
+                )
+            if not isinstance(capture_adapter, SupersetAdapter):
+                diagnostic = {
+                    "status": "failed",
+                    "code": "paired_runtime_superset_adapter_invalid",
+                    "message": (
+                        "The configured local runtime did not provide the expected Superset "
+                        "adapter; native preflight and readout episodes were skipped."
+                    ),
+                }
+                return _paired_capture_rejection(
+                    diagnostic, capture_seconds=time.perf_counter() - capture_started,
+                )
+            snapshot = await capture_paired_source_snapshot(
+                capture_adapter, card, registry=capture_registry,
+            )
+    except PairedSourceCaptureError as error:
+        return _paired_capture_rejection(
+            error.diagnostic, capture_seconds=time.perf_counter() - capture_started,
+        )
+    except (SetupError, OSError, RuntimeError, ValueError) as error:
+        error_type = type(error).__name__
+        if not re.fullmatch(r"[A-Za-z][A-Za-z0-9_.]{0,79}", error_type):
+            error_type = "RuntimeSetupError"
+        return _paired_capture_rejection(
+            {
+                "status": "failed",
+                "code": "paired_local_runtime_initialization_failed",
+                "error_type": error_type,
+                "message": (
+                    "The configured local runtime could not be initialized; native preflight "
+                    "and readout episodes were skipped. See local setup diagnostics privately."
+                ),
+            },
+            capture_seconds=time.perf_counter() - capture_started,
+        )
     snapshot_capture_seconds = time.perf_counter() - capture_started
     idempotency_key = f"paired-superset-preflight-{secrets.token_hex(12)}"
     preflight_reader = ReceiptPageReader(native)
@@ -2383,6 +2595,7 @@ async def run(args: argparse.Namespace) -> None:
                 owner_notes = approval.get("source_selection_reason", "")
                 result["paired_recurring"] = await _run_paired_recurring(
                     args=args,
+                    local_home=home / ".signalweave",
                     native=native,
                     audit=audit,
                     owner_context=owner_context,

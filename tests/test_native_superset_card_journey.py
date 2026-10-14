@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+from contextlib import contextmanager
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -50,7 +51,7 @@ from evaluations.native_superset_card_journey import (
     source_tool_snapshot_parity_from_events,
     verify_capture_imports,
 )
-from signalweave.models import SourceRef
+from signalweave.models import Observation, ResourceSnapshot, SourceRef
 from signalweave.superset_adapter import SupersetAdapter
 from signalweave.superset_client import SupersetClient
 
@@ -806,15 +807,39 @@ async def test_treatment_replay_is_guarded_by_exact_existing_receipt_and_same_ke
 
 
 @pytest.mark.asyncio
-async def test_paired_source_mismatch_stops_before_any_readout_episode(monkeypatch):
+async def test_paired_capture_uses_explicit_local_runtime_registry_and_mismatch_stops_readouts(monkeypatch):
     snapshot = PairedSourceSnapshot(
         dashboards={"7": _resource_snapshot(captured_at="helper")},
         charts={}, resources=[],
         manifest={"snapshot_sha256": "f" * 64, "superset_http_attempts": 3},
     )
-    async def frozen_capture(*args, **kwargs):
+    local_home = Path("/private/trial-human-home/.signalweave")
+    adapter = SupersetAdapter(SupersetClient("https://superset.invalid"), tenant_id="trial")
+
+    class RuntimeRegistry:
+        def _get(self, name):
+            assert name == "superset"
+            return adapter
+
+    registry = RuntimeRegistry()
+    observed = {}
+
+    @contextmanager
+    def fake_local_environment(home):
+        observed["local_home"] = home
+        yield home
+
+    def fake_build_runtime():
+        observed["runtime_built"] = True
+        return SimpleNamespace(sources=registry)
+
+    async def frozen_capture(capture_adapter, card, *, registry):
+        observed["capture_adapter"] = capture_adapter
+        observed["capture_registry"] = registry
         return snapshot
 
+    monkeypatch.setattr("evaluations.native_superset_card_journey.local_environment", fake_local_environment)
+    monkeypatch.setattr("evaluations.native_superset_card_journey.build_runtime", fake_build_runtime)
     monkeypatch.setattr(
         "evaluations.native_superset_card_journey.capture_paired_source_snapshot",
         frozen_capture,
@@ -837,16 +862,154 @@ async def test_paired_source_mismatch_stops_before_any_readout_episode(monkeypat
         "key": "primary", "adapter": "superset", "resource": "dashboard:7", "label": "Sales",
     }]}
     result = await _run_paired_recurring(
-        args=SimpleNamespace(superset_url="https://superset.invalid"),
+        args=SimpleNamespace(), local_home=local_home,
         native=object(), audit=SimpleNamespace(events=[]), owner_context="Owner context",
         skill="---\nname: signalweave\n---\n", card=card,
         review={"readiness_status": "ready"}, owner_notes="Owner notes",
     )
+    assert observed == {
+        "local_home": local_home,
+        "runtime_built": True,
+        "capture_adapter": adapter,
+        "capture_registry": registry,
+    }
     assert result["comparison_status"] == "ineligible_source_snapshot_mismatch_or_unverified"
     assert result["paired_input_parity_gate"]["status"] == "failed"
     assert result["paired_input_parity_gate"]["readout_episodes_started"] == 0
     assert result["repeats"] == []
     assert result["measurement_accounting"]["readout_agent_model_calls"] == 0
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    (
+        "source_error", "charts", "observations", "chart_rows",
+        "expected_code", "payload_byte_cap",
+    ),
+    [
+        (
+            "HTTPStatusError: 403 Forbidden; password=must-not-leak",
+            [{"id": "9"}], [], [], "paired_snapshot_source_error", None,
+        ),
+        (None, [], [], [], "paired_snapshot_chart_inventory_empty", None),
+        (
+            None, [{"id": "9"}], [], [{"net_sales": 12}],
+            "paired_snapshot_observations_empty", None,
+        ),
+        (
+            None, [{"id": "9"}], [Observation(metric="net_sales", current=12)], [],
+            "paired_snapshot_chart_rows_empty", None,
+        ),
+        (
+            None, [{"id": "9"}], [Observation(metric="net_sales", current=12)],
+            [{"net_sales": 12}], "paired_snapshot_payload_budget_exhausted", 1,
+        ),
+    ],
+)
+async def test_paired_capture_rejects_source_error_or_empty_chart_inventory_before_native_preflight(
+    monkeypatch, source_error, charts, observations, chart_rows, expected_code,
+    payload_byte_cap,
+):
+    local_home = Path("/private/trial-human-home/.signalweave")
+    class FakeClient:
+        requests_made = 0
+        request_path_counts = {}
+
+        async def get_chart_metadata(self, chart_id):
+            self.requests_made += 1
+            return {"id": chart_id, "slice_name": "Sales", "params": {}}
+
+        async def chart_data(self, chart):
+            self.requests_made += 1
+            return [{"data": chart_rows}]
+
+        @staticmethod
+        def _rows_from_result_item(envelope):
+            return envelope["data"]
+
+    client = FakeClient()
+    adapter = SupersetAdapter(client, tenant_id="trial")
+    source_snapshot = ResourceSnapshot(
+        source_key="primary",
+        adapter="superset",
+        resource="dashboard:7",
+        title="Sales dashboard",
+        metadata={"charts": charts},
+        observations=observations,
+        error=source_error,
+    )
+
+    class RuntimeRegistry:
+        _max_snapshot_bytes = 1_000_000
+
+        def _get(self, name):
+            assert name == "superset"
+            return adapter
+
+        async def resolve(self, sources):
+            assert [source.resource for source in sources] == ["dashboard:7"]
+            return [source_snapshot]
+
+    registry = RuntimeRegistry()
+    if payload_byte_cap is not None:
+        capture = capture_paired_source_snapshot
+
+        async def capture_with_small_payload_cap(*args, **kwargs):
+            return await capture(*args, max_bytes=payload_byte_cap, **kwargs)
+
+        monkeypatch.setattr(
+            "evaluations.native_superset_card_journey.capture_paired_source_snapshot",
+            capture_with_small_payload_cap,
+        )
+
+    @contextmanager
+    def fake_local_environment(home):
+        assert home == local_home
+        yield home
+
+    monkeypatch.setattr("evaluations.native_superset_card_journey.local_environment", fake_local_environment)
+    monkeypatch.setattr(
+        "evaluations.native_superset_card_journey.build_runtime",
+        lambda: SimpleNamespace(sources=registry),
+    )
+
+    async def forbidden_preflight(*args, **kwargs):
+        raise AssertionError("source capture failure must stop before native evaluation")
+
+    monkeypatch.setattr(
+        "evaluations.native_superset_card_journey.run_native_preflight", forbidden_preflight,
+    )
+    card = {"id": "card-1", "sources": [{
+        "key": "primary", "adapter": "superset", "resource": "dashboard:7", "label": "Sales",
+    }]}
+    result = await _run_paired_recurring(
+        args=SimpleNamespace(), local_home=local_home, native=object(),
+        audit=SimpleNamespace(events=[]), owner_context="Owner context",
+        skill="---\nname: signalweave\n---\n", card=card,
+        review={"readiness_status": "ready"}, owner_notes="Owner notes",
+    )
+
+    diagnostic = result["source_capture"]
+    assert diagnostic["code"] == expected_code
+    assert diagnostic["status"] == "failed"
+    assert "must-not-leak" not in json.dumps(diagnostic)
+    assert result["comparison_status"] == "ineligible_source_capture_error_or_incomplete"
+    assert result["paired_input_parity_gate"] == {
+        "status": "failed",
+        "reason": expected_code,
+        "readout_episodes_started": 0,
+    }
+    assert result["measurement_accounting"]["native_preflight_evaluate_calls"] == 0
+    assert result["measurement_accounting"]["readout_agent_model_calls"] == 0
+    assert result["repeats"] == []
+    assert client.requests_made == (
+        2
+        if expected_code in {
+            "paired_snapshot_chart_rows_empty",
+            "paired_snapshot_payload_budget_exhausted",
+        }
+        else 0
+    )
 
 
 @pytest.mark.asyncio
@@ -967,8 +1130,10 @@ async def test_production_superset_adapter_capture_preserves_registry_contracts_
     }]}
     source = SourceRef.model_validate(card["sources"][0])
     raw_adapter_snapshot = (await adapter.inspect(source)).model_dump(mode="json")
-    with pytest.raises(ValueError, match="paired_snapshot_data_read_budget_exhausted"):
+    assert raw_adapter_snapshot["observations"]
+    with pytest.raises(ValueError) as budget_error:
         await capture_paired_source_snapshot(adapter, card, max_data_reads=1)
+    assert budget_error.value.diagnostic["code"] == "paired_snapshot_data_read_budget_exhausted"
     snapshot = await capture_paired_source_snapshot(adapter, card, max_data_reads=2)
     assert snapshot.manifest["dashboard_count"] == 1
     assert snapshot.manifest["chart_query_count"] == 1
