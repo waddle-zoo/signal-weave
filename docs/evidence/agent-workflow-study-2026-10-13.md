@@ -74,16 +74,24 @@ fixture and verifies exact workflow input and label digests.
   is in place. Receipt-page tests passed **21 focused tests**: they compare all
   **117** inline fact rows with raw receipt rows and exercise deferred-state
   persistence with **117 and 1,000** observations. In a separate native replay,
-  a clean frozen RC2 binary (`b9e3a66a…`, source `4eeab4a4…`, commit `c6e693f`)
+  an experimental candidate (`b9e3a66a…`, source `4eeab4a4…`, commit `c6e693f`)
   returned the same raw observation through the advertised pointer as inline,
-  but equality was checked only for the **first** row, not all 117. This tests an
-  existing receipt, not a fresh source/provider evaluation or report. Real
+  but equality was checked only for the **first** row, not all 117. A later local
+  candidate (`c4073fe`, source `73307570…`, binary `e3363e…`; not published RC2)
+  repeated first-row pointer equality, inspected one fresh chart, and verified
+  seven absolute source URLs on `127.0.0.1:18089` plus the MCP schema's
+  item-count limit description. Neither replay is a fresh multi-source
+  evaluation or report. Real
   Codex stdio guide calls completed at client-default and 30s settings with an
   `item.completed` event for `type=mcp_tool_call` (`server=trial`,
   `tool=get_signalweave_guide`, `status=completed`, `error=null`, result
   `inference_performed=false`); end-to-end including one Luna turn:
   **17.98s / 15.70s**. Guide-only handoff proof, not a fresh source/report test
-  or a standalone startup/throughput benchmark.
+  or a standalone startup/throughput benchmark. The restricted full-suite run
+  reported **2,981 passed / 7 skipped / 2 environment failures**; both blocked
+  test IDs later passed in a targeted **135-test / 6.13s** rerun with PTY,
+  loopback, and hosted connections. This was not a single combined 2,983-test
+  run.
 - The October 13 root trials froze `6a1b975`. October 14 checks use the
   fingerprints stated above, including source commit `c6e693f` for the clean
   receipt replay. The published native `v0.2.0rc2` includes the October 13 root
