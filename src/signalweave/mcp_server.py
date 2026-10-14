@@ -2674,9 +2674,17 @@ def create_mcp(
     def get_decision_receipt(
         idempotency_key: str | None = None,
         receipt_id: str | None = None,
-        result_path: Annotated[list[str] | None, Field(min_length=1, max_length=8)] = None,
-        offset: Annotated[int, Field(ge=0)] = 0,
-        limit: Annotated[int, Field(ge=1, le=100)] = 25,
+        result_path: Annotated[list[str] | None, Field(
+            min_length=1, max_length=8,
+            description="Path within the stored receipt result. Use an advertised result_path or full_ref, not an inline_result_path.",
+        )] = None,
+        offset: Annotated[int, Field(
+            ge=0, description="Zero-based collection item offset; use the returned next_offset to continue.",
+        )] = 0,
+        limit: Annotated[int, Field(
+            ge=1, le=100,
+            description="Maximum collection items per page (1-100), not a token or byte budget. Byte bounds may return fewer items.",
+        )] = 25,
         ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Recover one durable shadow result and its operator labels.
@@ -2688,7 +2696,8 @@ def create_mcp(
         runs before any receipt data is returned. Set result_path to field names
         (for example ["evidence"] or ["report", "issues"]) and optional list
         indexes for a byte-bounded page. Objects return key/value entries;
-        lists retain exact items. Follow next_offset until has_more is false.
+        lists retain exact items. offset and limit count collection items, not
+        tokens or bytes. Follow next_offset until has_more is false.
         Pages do not rerun sources or models. Omit result_path for the full audit.
         """
         principal = request_principal(ctx)
