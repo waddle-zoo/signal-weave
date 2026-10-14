@@ -30,16 +30,19 @@ agent; add a shared, repeatable brief for investigations, alerts, and reports.
 On macOS or Linux, install the published native preview and start setup:
 
 ```sh
-set -o pipefail; curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' https://github.com/waddle-zoo/signal-weave/releases/download/v0.2.0rc1/install.sh | sh -s -- --version v0.2.0rc1 && export PATH="$HOME/.local/bin:$PATH" && "$HOME/.local/bin/signalweave" setup
+set -o pipefail; curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' https://github.com/waddle-zoo/signal-weave/releases/download/v0.2.0rc2/install.sh | sh -s -- --version v0.2.0rc2 --setup && export PATH="$HOME/.local/bin:$PATH"
 ```
 
 Supports macOS 15+ (Apple Silicon/Intel) and Linux x64 with glibc 2.35+.
 The macOS preview is not notarized; managed devices may require an approved
 install method.
 
-The wizard collects your Jev key and BI connection, then prints the command to
-connect Codex or Claude. Credentials stay in your private `~/.signalweave`
-directory. Run that registration command, then ask your agent:
+Already installed? Add `--replace` before `--setup` to upgrade while preserving
+your local data.
+
+The wizard lets you choose Jev, OpenAI Decisions, or ChatGPT-plan sign-in,
+connect your BI sources, and register with Codex or Claude. Credentials stay in
+your private `~/.signalweave` directory. Then ask your agent:
 
 > Use SignalWeave to set up a daily online-sales check. Help me choose the
 > sources and alert criteria, show me a trial run, and ask about missing context.
@@ -48,6 +51,10 @@ directory. Run that registration command, then ask your agent:
 
 See [release compatibility](docs/local-install-reference.md#release-compatibility)
 for available builds and upgrade instructions.
+
+To remove the native executable, run `signalweave uninstall`; local data stays
+for a reinstall. See [uninstall instructions](docs/local-install.md#uninstall)
+to remove the agent connection or permanently purge local data.
 
 Install the bundled workflow skill in your project:
 

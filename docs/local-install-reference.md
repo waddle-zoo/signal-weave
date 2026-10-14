@@ -121,9 +121,12 @@ native release.
 - **`v0.2.0rc1`:** published native preview with Jev-only setup and manual agent
   registration. It predates the bundled workflow skill, guided registration,
   OpenAI Decisions, and ChatGPT-plan sign-in.
-- **`0.2.0rc2` in `pyproject.toml`:** includes those additions. Until a matching
-  native release is published, use an Actions build or
-  [build the checkout](#install-this-checkout) to use them.
+- **[`v0.2.0rc2`](https://github.com/waddle-zoo/signal-weave/releases/tag/v0.2.0rc2):**
+  published native preview with guided registration, bundled workflow skills,
+  all three provider choices, connection and credential management, local health
+  UI, and native `uninstall` with optional `--purge`. This is the version pinned
+  in the installation guides. All three platform builds passed actual installed
+  setup, MCP startup, reinstall, and uninstall checks.
 
 Release maintainers must update the pinned install commands in `README.md` and
 `docs/local-install.md`, and this compatibility section, when a new native

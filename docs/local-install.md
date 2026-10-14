@@ -16,12 +16,12 @@ For available builds and command compatibility, see the
 
 ## 1. Install once, then use the guided setup
 
-Use the exact published preview below. It downloads the native binary, checks
+Use the published native preview below. It downloads the binary, checks
 its release checksum, installs to `~/.local/bin`, then starts setup. No Python,
-Docker, or `sudo` is required. This preview has the older Jev-only wizard:
+Docker, or `sudo` is required:
 
 ```sh
-set -o pipefail; curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' https://github.com/waddle-zoo/signal-weave/releases/download/v0.2.0rc1/install.sh | sh -s -- --version v0.2.0rc1 && export PATH="$HOME/.local/bin:$PATH" && "$HOME/.local/bin/signalweave" setup
+set -o pipefail; curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' https://github.com/waddle-zoo/signal-weave/releases/download/v0.2.0rc2/install.sh | sh -s -- --version v0.2.0rc2 --setup && export PATH="$HOME/.local/bin:$PATH"
 ```
 
 If your organization does not permit curl-to-shell installation, download and
@@ -29,8 +29,11 @@ inspect `install.sh` from that release first, then run it locally. The installer
 does not edit shell profiles or agent configuration; setup asks before agent
 registration.
 
-The command puts `~/.local/bin` first in this terminal's PATH so an older binary
-does not silently shadow the download. The installer does not change shell
+To upgrade an existing installation, add `--replace` before `--setup`. Stop
+running SignalWeave servers first; configuration and cards are preserved.
+
+Setup runs the newly installed executable by its exact path. On completion,
+the command puts `~/.local/bin` first in this terminal's PATH. The installer does not change shell
 startup files. In a new terminal, follow its PATH instruction if needed; use
 `type -a signalweave` to check for an old binary, alias, or function.
 
