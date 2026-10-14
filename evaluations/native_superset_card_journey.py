@@ -31,6 +31,7 @@ from evaluations.installed_trial_transport import InstalledServer, _initialize_m
 from evaluations.native_human_superset_journey import ReportSession, terminal_setup
 from scripts.binary_provenance import verify_binary
 from signalweave.models import SourceRef
+from signalweave.sources import SourceRegistry
 from signalweave.superset_adapter import SupersetAdapter
 from signalweave.superset_client import SupersetClient
 
@@ -50,8 +51,13 @@ MAX_EPISODE_TURNS = 20
 MAX_EPISODE_TOOL_CALLS = 60
 MAX_PAIRED_REPORT_WORDS = 300
 MAX_PAIRED_SNAPSHOT_BYTES = 4_000_000
+NATIVE_MAX_SOURCE_SNAPSHOT_BYTES = 1_000_000
+MAX_RECEIPT_PAGE_CALLS = 200
+MAX_RECEIPT_PATH_DEPTH = 8
+RECEIPT_PAGE_LIMIT = 100
+MAX_SNAPSHOT_MISMATCH_PATHS = 100
 PAIRED_REPETITIONS = 2
-PAIRED_POLICY_MODES = ("original_policy", "explicit_deferred")
+PAIRED_POLICY_MODES = ("original_policy", "skill_guided_deferred")
 SETUP_TOOLS = frozenset({
     "get_signalweave_guide", "search_catalog", "inspect_resource",
     "onboard_insight_card", "review_insight_card", "list_insight_cards", "get_insight_card",
@@ -146,15 +152,16 @@ PAIRED_TREATMENT_MODES = {
         "do not consume deferred receipt pages in this mode. Continue only from the same shared "
         "source tools and clearly separate the missing judgment from evidence."
     ),
-    "explicit_deferred": (
-        "Apply the explicit deferred path: call evaluate_insight_card once with the supplied "
-        "idempotency key. If result.judgment.status is deferred, follow result.evidence_access: "
-        "page every relevant advertised result_path with get_decision_receipt, offset, and limit, "
-        "following next_offset until complete. Include source_by_key, source_contracts, and the "
-        "advertised judgment_state observation/evidence pages before analysis. Use those materials "
-        "only as evidence for your frontier analysis. They are not a typed policy "
-        "outcome; do not invent one. Compare source claims with the same shared source snapshot. "
-        "If a typed judgment is returned instead, report that as-is and do not force a deferral."
+    "skill_guided_deferred": (
+        "Apply the shipped-skill deferred path: call evaluate_insight_card once with the supplied "
+        "idempotency key. If result.judgment.status is deferred, that is no typed policy outcome. "
+        "Follow the installed skill and the returned root-level evidence_access pointers, starting "
+        "with any included observation_facts. Use the same shared source tools for the three "
+        "business questions. Page only a specific omitted contract, quality detail, or observation "
+        "attribute needed to support a claim or resolve a material unknown; do not exhaustively fetch "
+        "source_by_key, source_contracts, and duplicate observation/evidence representations. "
+        "Do not force a policy result or use readout facts to alter the card policy. If a typed "
+        "judgment is returned instead, report it as-is."
     ),
 }
 
@@ -192,8 +199,10 @@ def instructions_for(stage: str, skill_text: str) -> str:
         task_rules = MONITOR_INSTRUCTIONS
     elif stage == "paired-baseline":
         task_rules = PAIRED_BASELINE_INSTRUCTIONS
-    elif stage in {"paired-treatment-original_policy", "paired-treatment-explicit_deferred"}:
+    elif stage.startswith("paired-treatment-"):
         mode = stage.removeprefix("paired-treatment-")
+        if mode not in PAIRED_TREATMENT_MODES:
+            raise ValueError(f"unknown paired treatment policy mode: {mode}")
         task_rules = PAIRED_TREATMENT_PREFIX + PAIRED_TREATMENT_MODES[mode] + " Finish with submit_report, then stop."
     else:
         raise ValueError(f"unknown journey stage: {stage}")
@@ -333,6 +342,11 @@ _SOURCE_DEFINITION_FIELDS = (
     "source_key", "adapter", "resource", "title", "description",
     "metadata", "source_url", "contract",
 )
+_RESOURCE_SNAPSHOT_FIELDS = (
+    "source_key", "adapter", "resource", "title", "description",
+    "observations", "analytical_comparisons", "evidence", "metadata",
+    "error", "source_url", "captured_at", "source_captured_at", "contract",
+)
 
 
 def _without_capture_times(value: Any) -> Any:
@@ -355,6 +369,15 @@ def _digest_json(value: Any) -> str:
     return hashlib.sha256(encoded).hexdigest()
 
 
+def _full_snapshot_digest(snapshot: dict[str, Any]) -> str:
+    """Digest the exact serialized ResourceSnapshot, including capture times."""
+    encoded = json.dumps(
+        snapshot, sort_keys=True, separators=(",", ":"),
+        ensure_ascii=False, allow_nan=False,
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
 def _snapshot_digest_pair(snapshot: dict[str, Any]) -> dict[str, str]:
     return {
         "business_data_sha256": _digest_json({
@@ -366,17 +389,101 @@ def _snapshot_digest_pair(snapshot: dict[str, Any]) -> dict[str, str]:
     }
 
 
+def _snapshot_field_statuses(
+    helper: dict[str, Any], native: dict[str, Any], fields: tuple[str, ...],
+) -> dict[str, str]:
+    return {
+        field: (
+            "equal"
+            if field in helper and field in native
+            and _digest_json(helper[field]) == _digest_json(native[field])
+            else "different"
+        )
+        for field in fields
+    }
+
+
+def _snapshot_mismatch_paths(
+    helper: dict[str, Any],
+    native: dict[str, Any],
+    fields: tuple[str, ...],
+    *,
+    max_paths: int = MAX_SNAPSHOT_MISMATCH_PATHS,
+) -> dict[str, dict[str, Any]]:
+    """Return bounded JSON paths only; never copy mismatching source values."""
+    missing = object()
+    differences: dict[str, dict[str, Any]] = {}
+
+    def pointer(parts: list[str | int]) -> str:
+        return "/" + "/".join(
+            str(part).replace("~", "~0").replace("/", "~1") for part in parts
+        )
+
+    for field in fields:
+        left = helper.get(field, missing)
+        right = native.get(field, missing)
+        if left is not missing and right is not missing and _digest_json(left) == _digest_json(right):
+            continue
+        paths: list[str] = []
+        truncated = False
+
+        def visit(a: Any, b: Any, parts: list[str | int], paths: list[str]) -> None:
+            nonlocal truncated
+            if len(paths) >= max_paths:
+                truncated = True
+                return
+            if a is missing or b is missing:
+                paths.append(pointer(parts))
+                return
+            if isinstance(a, dict) and isinstance(b, dict):
+                keys = sorted(
+                    (set(a) | set(b)) - _CAPTURE_TIME_FIELDS,
+                    key=str,
+                )
+                for key in keys:
+                    if len(paths) >= max_paths:
+                        truncated = True
+                        return
+                    visit(a.get(key, missing), b.get(key, missing), [*parts, str(key)], paths)
+                return
+            if isinstance(a, list) and isinstance(b, list):
+                for index in range(max(len(a), len(b))):
+                    if len(paths) >= max_paths:
+                        truncated = True
+                        return
+                    visit(
+                        a[index] if index < len(a) else missing,
+                        b[index] if index < len(b) else missing,
+                        [*parts, index],
+                        paths,
+                    )
+                return
+            if type(a) is not type(b) or a != b:
+                paths.append(pointer(parts))
+
+        visit(left, right, [field], paths)
+        if paths:
+            differences[field] = {"paths": paths, "truncated": truncated}
+    return differences
+
+
 def compare_paired_source_snapshots(
     helper_by_key: dict[str, dict[str, Any]],
     native_by_key: dict[str, dict[str, Any]] | None,
     *,
     native_status: str,
     receipt_page_calls: int = 0,
+    helper_status: str = "available",
+    native_issue: dict[str, Any] | None = None,
+    helper_issue: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Compare only matching typed source snapshots; never infer parity from absence."""
     comparison: dict[str, Any] = {
         "status": "unverified",
         "native_snapshot_status": native_status,
+        "native_snapshot_issue": native_issue,
+        "helper_snapshot_status": helper_status,
+        "helper_snapshot_issue": helper_issue,
         "receipt_page_calls": receipt_page_calls,
         "receipt_reads_are_local_read_only_and_do_not_rerun_sources_or_models": True,
         "capture_times_excluded_from_digests": sorted(_CAPTURE_TIME_FIELDS),
@@ -390,7 +497,7 @@ def compare_paired_source_snapshots(
         "atomic_warehouse_snapshot_or_total_source_cost_claim": False,
         "per_source": {},
     }
-    if native_by_key is None:
+    if native_by_key is None or helper_status != "available":
         return comparison
 
     helper_keys = set(helper_by_key)
@@ -416,6 +523,18 @@ def compare_paired_source_snapshots(
             "source_definition_status": (
                 "equal" if helper_digests["source_definition_sha256"] == native_digests["source_definition_sha256"]
                 else "different"
+            ),
+            "business_data_fields": _snapshot_field_statuses(
+                helper, native, _BUSINESS_SNAPSHOT_FIELDS,
+            ),
+            "business_data_mismatch_paths": _snapshot_mismatch_paths(
+                helper, native, _BUSINESS_SNAPSHOT_FIELDS,
+            ),
+            "source_definition_fields": _snapshot_field_statuses(
+                helper, native, _SOURCE_DEFINITION_FIELDS,
+            ),
+            "source_definition_mismatch_paths": _snapshot_mismatch_paths(
+                helper, native, _SOURCE_DEFINITION_FIELDS,
             ),
             "helper_digests": helper_digests,
             "native_digests": native_digests,
@@ -444,17 +563,310 @@ def compare_paired_source_snapshots(
     return comparison
 
 
+class ReceiptPageReadError(RuntimeError):
+    def __init__(self, reason: str, path: list[str], *, error_type: str | None = None):
+        super().__init__(reason)
+        self.reason = reason
+        self.path = list(path)
+        self.error_type = error_type
+
+
+class ReceiptPageReader:
+    """Reassemble only requested receipt subtrees from byte-bounded result pages."""
+
+    def __init__(
+        self,
+        native: InstalledServer,
+        *,
+        max_calls: int = MAX_RECEIPT_PAGE_CALLS,
+    ) -> None:
+        self.native = native
+        self.max_calls = max_calls
+        self.calls = 0
+        self.idempotency_key: str | None = None
+        self.expected_receipt_id: str | None = None
+
+    def select_receipt(self, idempotency_key: str, receipt_id: str | None = None) -> None:
+        if not idempotency_key:
+            raise ValueError("receipt paging requires the saved idempotency key")
+        self.idempotency_key = idempotency_key
+        self.expected_receipt_id = receipt_id
+
+    async def _page(self, path: list[str], offset: int) -> dict[str, Any]:
+        if not 1 <= len(path) <= MAX_RECEIPT_PATH_DEPTH:
+            raise ReceiptPageReadError("result_path_depth_exceeded", path)
+        if self.calls >= self.max_calls:
+            raise ReceiptPageReadError("receipt_page_call_budget_exhausted", path)
+        if not self.idempotency_key:
+            raise ReceiptPageReadError("idempotency_key_unavailable", path)
+        try:
+            _, response = await self.native.call_tool("get_decision_receipt", {
+                "idempotency_key": self.idempotency_key,
+                "result_path": path,
+                "offset": offset,
+                "limit": RECEIPT_PAGE_LIMIT,
+            })
+        except Exception as error:  # noqa: BLE001 - retain only safe failure metadata
+            self.calls += 1
+            raise ReceiptPageReadError(
+                "receipt_page_read_failed", path, error_type=type(error).__name__
+            ) from None
+        self.calls += 1
+        if not isinstance(response, dict) or response.get("status") != "found":
+            raise ReceiptPageReadError("receipt_not_found", path)
+        receipt = response.get("receipt")
+        if not isinstance(receipt, dict):
+            raise ReceiptPageReadError("receipt_metadata_missing", path)
+        if receipt.get("idempotency_key") != self.idempotency_key:
+            raise ReceiptPageReadError("idempotency_key_mismatch", path)
+        if (
+            self.expected_receipt_id is not None
+            and receipt.get("receipt_id") != self.expected_receipt_id
+        ):
+            raise ReceiptPageReadError("receipt_id_mismatch", path)
+        page = response.get("result_page")
+        if (
+            not isinstance(page, dict)
+            or page.get("path") != path
+            or page.get("offset") != offset
+        ):
+            raise ReceiptPageReadError("malformed_receipt_page", path)
+        return page
+
+    async def read_object_keys(self, path: list[str]) -> list[str]:
+        keys: list[str] = []
+        offset = 0
+        total: int | None = None
+        for _ in range(self.max_calls + 1):
+            page = await self._page(path, offset)
+            if page.get("kind") != "object" or not isinstance(page.get("items"), list):
+                raise ReceiptPageReadError("expected_object_page", path)
+            page_total = page.get("total")
+            if isinstance(page_total, bool) or not isinstance(page_total, int):
+                raise ReceiptPageReadError("malformed_page_total", path)
+            if total is None:
+                total = page_total
+            elif total != page_total:
+                raise ReceiptPageReadError("page_total_changed", path)
+            items = page["items"]
+            for item in items:
+                if not isinstance(item, dict) or not isinstance(item.get("key"), str):
+                    raise ReceiptPageReadError("malformed_object_entry", path)
+                keys.append(item["key"])
+            oversized = page.get("oversized_item")
+            if oversized is not None:
+                child_path = oversized.get("path") if isinstance(oversized, dict) else None
+                index = oversized.get("index") if isinstance(oversized, dict) else None
+                if (
+                    not isinstance(child_path, list)
+                    or len(child_path) != len(path) + 1
+                    or child_path[:-1] != path
+                    or not isinstance(child_path[-1], str)
+                    or isinstance(index, bool)
+                    or not isinstance(index, int)
+                    or index != offset + len(items)
+                ):
+                    raise ReceiptPageReadError("malformed_oversized_branch", path)
+                keys.append(child_path[-1])
+                offset = index + 1
+                continue
+            if not page.get("has_more"):
+                if total is None or len(keys) != total or len(set(keys)) != total:
+                    raise ReceiptPageReadError("object_keys_incomplete", path)
+                return keys
+            next_offset = page.get("next_offset")
+            if (
+                not items
+                or next_offset != offset + len(items)
+                or next_offset <= offset
+            ):
+                raise ReceiptPageReadError("object_page_did_not_advance", path)
+            offset = next_offset
+        raise ReceiptPageReadError("receipt_page_call_budget_exhausted", path)
+
+    async def read_value(self, path: list[str]) -> Any:
+        if not 1 <= len(path) <= MAX_RECEIPT_PATH_DEPTH:
+            raise ReceiptPageReadError("result_path_depth_exceeded", path)
+        first = await self._page(path, 0)
+        kind = first.get("kind")
+        total = first.get("total")
+        items = first.get("items")
+        if kind not in {"object", "list", "scalar"} or not isinstance(items, list):
+            raise ReceiptPageReadError("malformed_receipt_page", path)
+        if isinstance(total, bool) or not isinstance(total, int) or total < 0:
+            raise ReceiptPageReadError("malformed_page_total", path)
+        if kind == "scalar":
+            if first.get("oversized_item") is not None:
+                raise ReceiptPageReadError("oversized_scalar_unreadable", path)
+            if total != 1 or len(items) != 1 or first.get("has_more"):
+                raise ReceiptPageReadError("scalar_page_incomplete", path)
+            return items[0]
+
+        object_values: dict[str, Any] = {}
+        list_values: dict[int, Any] = {}
+        offset = 0
+        page = first
+        while True:
+            if page.get("kind") != kind or page.get("total") != total:
+                raise ReceiptPageReadError("page_shape_changed", path)
+            items = page.get("items")
+            if not isinstance(items, list):
+                raise ReceiptPageReadError("malformed_page_items", path)
+            for relative_index, item in enumerate(items):
+                absolute_index = offset + relative_index
+                if kind == "object":
+                    if (
+                        not isinstance(item, dict)
+                        or not isinstance(item.get("key"), str)
+                        or "value" not in item
+                        or item["key"] in object_values
+                    ):
+                        raise ReceiptPageReadError("malformed_object_entry", path)
+                    object_values[item["key"]] = item["value"]
+                else:
+                    if absolute_index in list_values:
+                        raise ReceiptPageReadError("duplicate_list_index", path)
+                    list_values[absolute_index] = item
+
+            oversized = page.get("oversized_item")
+            if oversized is not None:
+                child_path = oversized.get("path") if isinstance(oversized, dict) else None
+                index = oversized.get("index") if isinstance(oversized, dict) else None
+                if (
+                    not isinstance(child_path, list)
+                    or len(child_path) != len(path) + 1
+                    or child_path[:-1] != path
+                    or isinstance(index, bool)
+                    or not isinstance(index, int)
+                    or index != offset + len(items)
+                    or (kind == "object" and not isinstance(child_path[-1], str))
+                    or (
+                        kind == "list"
+                        and (not child_path[-1].isascii() or not child_path[-1].isdecimal()
+                             or int(child_path[-1]) != index)
+                    )
+                ):
+                    raise ReceiptPageReadError("malformed_oversized_branch", path)
+                nested = await self.read_value(child_path)
+                if kind == "object":
+                    key = child_path[-1]
+                    if key in object_values:
+                        raise ReceiptPageReadError("duplicate_object_key", child_path)
+                    object_values[key] = nested
+                else:
+                    if index in list_values:
+                        raise ReceiptPageReadError("duplicate_list_index", child_path)
+                    list_values[index] = nested
+                offset = index + 1
+            elif page.get("has_more"):
+                next_offset = page.get("next_offset")
+                if (
+                    not items
+                    or next_offset != offset + len(items)
+                    or next_offset <= offset
+                ):
+                    raise ReceiptPageReadError("page_did_not_advance", path)
+                offset = next_offset
+            else:
+                values_count = len(object_values) if kind == "object" else len(list_values)
+                if values_count != total:
+                    raise ReceiptPageReadError("section_incomplete", path)
+                if kind == "object":
+                    return object_values
+                if set(list_values) != set(range(total)):
+                    raise ReceiptPageReadError("list_indexes_incomplete", path)
+                return [list_values[index] for index in range(total)]
+            page = await self._page(path, offset)
+
+    async def read_selected_object(
+        self,
+        path: list[str],
+        selected_fields: tuple[str, ...],
+    ) -> dict[str, Any]:
+        selected = set(selected_fields)
+        values: dict[str, Any] = {}
+        seen: set[str] = set()
+        offset = 0
+        total: int | None = None
+        for _ in range(self.max_calls + 1):
+            page = await self._page(path, offset)
+            if page.get("kind") != "object" or not isinstance(page.get("items"), list):
+                raise ReceiptPageReadError("expected_object_page", path)
+            page_total = page.get("total")
+            if isinstance(page_total, bool) or not isinstance(page_total, int):
+                raise ReceiptPageReadError("malformed_page_total", path)
+            if total is None:
+                total = page_total
+            elif total != page_total:
+                raise ReceiptPageReadError("page_total_changed", path)
+            items = page["items"]
+            for item in items:
+                if (
+                    not isinstance(item, dict)
+                    or not isinstance(item.get("key"), str)
+                    or "value" not in item
+                    or item["key"] in seen
+                ):
+                    raise ReceiptPageReadError("malformed_object_entry", path)
+                key = item["key"]
+                seen.add(key)
+                if key in selected:
+                    values[key] = item["value"]
+            oversized = page.get("oversized_item")
+            if oversized is not None:
+                child_path = oversized.get("path") if isinstance(oversized, dict) else None
+                index = oversized.get("index") if isinstance(oversized, dict) else None
+                if (
+                    not isinstance(child_path, list)
+                    or len(child_path) != len(path) + 1
+                    or child_path[:-1] != path
+                    or not isinstance(child_path[-1], str)
+                    or isinstance(index, bool)
+                    or not isinstance(index, int)
+                    or index != offset + len(items)
+                    or child_path[-1] in seen
+                ):
+                    raise ReceiptPageReadError("malformed_oversized_branch", path)
+                key = child_path[-1]
+                seen.add(key)
+                if key in selected:
+                    values[key] = await self.read_value(child_path)
+                offset = index + 1
+            elif page.get("has_more"):
+                next_offset = page.get("next_offset")
+                if not items or next_offset != offset + len(items) or next_offset <= offset:
+                    raise ReceiptPageReadError("page_did_not_advance", path)
+                offset = next_offset
+            else:
+                if total is None or len(seen) != total:
+                    raise ReceiptPageReadError("object_section_incomplete", path)
+                missing = selected - values.keys()
+                if missing:
+                    missing_key = sorted(missing)[0]
+                    raise ReceiptPageReadError("snapshot_field_missing", [*path, missing_key])
+                return {key: values[key] for key in selected_fields}
+        raise ReceiptPageReadError("receipt_page_call_budget_exhausted", path)
+
+
+_SOURCE_SNAPSHOT_FIELDS = tuple(dict.fromkeys(
+    (*_BUSINESS_SNAPSHOT_FIELDS, *_SOURCE_DEFINITION_FIELDS)
+))
+
+
 async def native_source_snapshots_for_comparison(
     native: InstalledServer,
     evaluation: dict[str, Any] | None,
-) -> tuple[dict[str, dict[str, Any]] | None, str, int]:
-    """Read deferred prepared snapshots from the durable local receipt, if available."""
+    *,
+    idempotency_key: str | None = None,
+    reader: ReceiptPageReader | None = None,
+) -> tuple[dict[str, dict[str, Any]] | None, str, int, dict[str, Any] | None]:
+    """Read only typed ResourceSnapshot fields from a saved deferred receipt."""
     evaluation = evaluation if isinstance(evaluation, dict) else {}
     result = evaluation.get("result")
     result = result if isinstance(result, dict) else {}
     direct = result.get("source_by_key")
     if isinstance(direct, dict) and all(isinstance(value, dict) for value in direct.values()):
-        return direct, "available_in_evaluation", 0
+        return direct, "available_in_evaluation", 0, None
 
     receipt = evaluation.get("receipt")
     receipt = receipt if isinstance(receipt, dict) else {}
@@ -464,57 +876,33 @@ async def native_source_snapshots_for_comparison(
         receipt.get("status") == "decision_deferred"
         or judgment.get("status") == "deferred"
     ):
-        return None, "not_exposed_for_non_deferred_result", 0
-    receipt_id = receipt.get("receipt_id")
-    if not isinstance(receipt_id, str) or not receipt_id:
-        return None, "deferred_receipt_id_unavailable", 0
+        return None, "not_exposed_for_non_deferred_result", 0, None
+    key = idempotency_key or receipt.get("idempotency_key")
+    if not isinstance(key, str) or not key:
+        return None, "deferred_idempotency_key_unavailable", 0, None
 
-    sources: dict[str, dict[str, Any]] = {}
-    offset = 0
-    total: int | None = None
-    page_calls = 0
-    for _ in range(20):
-        try:
-            _, response = await native.call_tool("get_decision_receipt", {
-                "receipt_id": receipt_id,
-                "result_path": ["source_by_key"],
-                "offset": offset,
-                "limit": 100,
-            })
-        except Exception:  # noqa: BLE001 - report unavailable without leaking receipt contents
-            return None, "receipt_page_read_failed", page_calls
-        page_calls += 1
-        if not isinstance(response, dict) or response.get("status") != "found":
-            return None, "receipt_page_unavailable", page_calls
-        page = response.get("result_page")
-        if not isinstance(page, dict) or page.get("kind") != "object":
-            return None, "source_snapshot_section_unavailable", page_calls
-        if page.get("oversized_item") is not None:
-            return None, "source_snapshot_page_contains_oversized_item", page_calls
-        items = page.get("items")
-        if not isinstance(items, list):
-            return None, "source_snapshot_page_malformed", page_calls
-        if total is None:
-            total = page.get("total") if isinstance(page.get("total"), int) else None
-        for item in items:
-            if (
-                not isinstance(item, dict)
-                or not isinstance(item.get("key"), str)
-                or not isinstance(item.get("value"), dict)
-                or item["key"] in sources
-            ):
-                return None, "source_snapshot_page_malformed", page_calls
-            sources[item["key"]] = item["value"]
-        next_offset = page.get("next_offset")
-        if not page.get("has_more"):
-            if total is None or len(sources) != total:
-                return None, "source_snapshot_page_incomplete", page_calls
-            return sources, "available_from_deferred_receipt", page_calls
-        expected_next = offset + len(items)
-        if not items or next_offset != expected_next or expected_next <= offset:
-            return None, "source_snapshot_page_incomplete", page_calls
-        offset = expected_next
-    return None, "source_snapshot_page_limit_reached", page_calls
+    page_reader = reader or ReceiptPageReader(native)
+    page_reader.select_receipt(key, receipt.get("receipt_id"))
+    calls_before = page_reader.calls
+    try:
+        source_keys = await page_reader.read_object_keys(["source_by_key"])
+        sources = {
+            source_key: await page_reader.read_selected_object(
+                ["source_by_key", source_key], _SOURCE_SNAPSHOT_FIELDS
+            )
+            for source_key in source_keys
+        }
+    except ReceiptPageReadError as error:
+        issue = {"reason": error.reason, "path": error.path}
+        if error.error_type:
+            issue["error_type"] = error.error_type
+        return None, "unverified_receipt_source_snapshot", page_reader.calls - calls_before, issue
+    return (
+        sources,
+        "available_from_deferred_receipt",
+        page_reader.calls - calls_before,
+        None,
+    )
 
 
 def helper_source_snapshots_by_key(
@@ -535,6 +923,217 @@ def helper_source_snapshots_by_key(
         if isinstance(item, dict):
             sources[key] = item
     return sources
+
+
+def helper_source_snapshots_from_audit(
+    audit_path: Path,
+    approved_sources: list[dict[str, Any]],
+) -> tuple[dict[str, dict[str, Any]], str, dict[str, Any] | None, dict[str, int]]:
+    """Recover only baseline read_dashboard snapshots; reject missing or conflicting repeats."""
+    expected = {
+        source.get("key"): source.get("resource")
+        for source in approved_sources
+        if isinstance(source, dict)
+        and isinstance(source.get("key"), str)
+        and isinstance(source.get("resource"), str)
+    }
+    snapshots: dict[str, dict[str, Any]] = {}
+    digests: dict[str, dict[str, str]] = {}
+    counts: dict[str, int] = {}
+    malformed_lines = 0
+    with audit_path.open(encoding="utf-8") as stream:
+        for line in stream:
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                malformed_lines += 1
+                continue
+            if (
+                not isinstance(event, dict)
+                or event.get("kind") != "tool.result"
+                or event.get("episode") != "paired-baseline"
+                or event.get("name") != "read_dashboard"
+            ):
+                continue
+            snapshot = event.get("result")
+            if not isinstance(snapshot, dict):
+                continue
+            key = snapshot.get("source_key")
+            if key not in expected or snapshot.get("resource") != expected[key]:
+                continue
+            snapshot_digests = _snapshot_digest_pair(snapshot)
+            counts[key] = counts.get(key, 0) + 1
+            if key in digests and digests[key] != snapshot_digests:
+                return snapshots, "conflicting", {
+                    "reason": "replayed_helper_snapshot_digest_changed",
+                    "source_key": key,
+                }, counts
+            snapshots.setdefault(key, snapshot)
+            digests.setdefault(key, snapshot_digests)
+    missing = sorted(set(expected) - set(snapshots))
+    if malformed_lines or missing:
+        return snapshots, "incomplete", {
+            "reason": "helper_audit_snapshot_missing_or_malformed",
+            "missing_source_keys": missing,
+            "malformed_line_count": malformed_lines,
+        }, counts
+    if not expected:
+        return {}, "incomplete", {"reason": "approved_source_scope_missing"}, counts
+    return snapshots, "available", None, counts
+
+
+def source_tool_snapshot_parity_from_events(
+    events: list[dict[str, Any]],
+    approved_sources: list[dict[str, Any]],
+    *,
+    expected_modes: tuple[str, ...] | None = None,
+) -> dict[str, Any]:
+    """Verify both agent arms received the same full replayed ResourceSnapshots."""
+    expected = {
+        source.get("key"): source.get("resource")
+        for source in approved_sources
+        if isinstance(source, dict)
+        and isinstance(source.get("key"), str)
+        and isinstance(source.get("resource"), str)
+    }
+    samples: dict[str, dict[str, dict[str, list[dict[str, Any]]]]] = {}
+    counts: dict[str, dict[str, int]] = {}
+    for event in events:
+        if (
+            not isinstance(event, dict)
+            or event.get("kind") != "tool.result"
+            or event.get("name") != "read_dashboard"
+        ):
+            continue
+        episode = event.get("episode")
+        if episode == "paired-baseline":
+            arm = "baseline"
+        elif isinstance(episode, str) and episode.startswith("paired-treatment-"):
+            arm = episode.removeprefix("paired-treatment-")
+        else:
+            continue
+        snapshot = event.get("result")
+        if not isinstance(snapshot, dict):
+            continue
+        key = snapshot.get("source_key")
+        if key not in expected or snapshot.get("resource") != expected[key]:
+            continue
+        samples.setdefault(arm, {}).setdefault(key, {}).setdefault(
+            _full_snapshot_digest(snapshot), snapshot
+        )
+        counts.setdefault(arm, {})[key] = counts.setdefault(arm, {}).get(key, 0) + 1
+
+    modes = sorted(mode for mode in samples if mode != "baseline")
+    per_mode: dict[str, Any] = {}
+    for mode in modes:
+        per_source: dict[str, Any] = {}
+        semantic_comparison = compare_paired_source_snapshots(
+            {
+                key: next(iter(versions.values()))
+                for key, versions in samples.get("baseline", {}).items()
+                if versions
+            },
+            {
+                key: next(iter(versions.values()))
+                for key, versions in samples.get(mode, {}).items()
+                if versions
+            },
+            native_status="audited_shared_source_tool_replay",
+        )
+        for key in sorted(expected):
+            baseline_versions = samples.get("baseline", {}).get(key, {})
+            treatment_versions = samples.get(mode, {}).get(key, {})
+            if not baseline_versions or not treatment_versions:
+                status = "unverified"
+            elif (
+                len(baseline_versions) == 1
+                and len(treatment_versions) == 1
+                and set(baseline_versions) == set(treatment_versions)
+            ):
+                status = "equal"
+            else:
+                status = "different"
+            field_comparison = semantic_comparison.get("per_source", {}).get(key, {})
+            per_source[key] = {
+                "status": status,
+                "baseline_read_count": counts.get("baseline", {}).get(key, 0),
+                "treatment_read_count": counts.get(mode, {}).get(key, 0),
+                "baseline_snapshot_sha256": next(iter(baseline_versions), None),
+                "treatment_snapshot_sha256": next(iter(treatment_versions), None),
+                "business_data_fields": field_comparison.get("business_data_fields"),
+                "business_data_mismatch_paths": field_comparison.get("business_data_mismatch_paths"),
+                "source_definition_fields": field_comparison.get("source_definition_fields"),
+                "source_definition_mismatch_paths": field_comparison.get("source_definition_mismatch_paths"),
+            }
+        statuses = [item["status"] for item in per_source.values()]
+        mode_status = (
+            "different" if "different" in statuses
+            else "unverified" if not statuses or "unverified" in statuses
+            else "equal"
+        )
+        per_mode[mode] = {"status": mode_status, "per_source": per_source}
+
+    mode_statuses = [item["status"] for item in per_mode.values()]
+    overall = (
+        "different" if "different" in mode_statuses
+        else "unverified" if not modes
+        or (expected_modes is not None and set(modes) != set(expected_modes))
+        or "unverified" in mode_statuses
+        else "equal"
+    )
+    return {
+        "status": overall,
+        "comparison": "audited read_dashboard outputs, baseline versus each treatment mode",
+        "source_snapshot_fields": list(_RESOURCE_SNAPSHOT_FIELDS),
+        "capture_timestamps_included": True,
+        "catalog_contract_and_metadata_quality_are_included": True,
+        "per_mode": per_mode,
+    }
+
+
+def source_tool_snapshot_parity_from_audit(
+    audit_path: Path,
+    approved_sources: list[dict[str, Any]],
+    *,
+    expected_modes: tuple[str, ...] | None = None,
+) -> dict[str, Any]:
+    events: list[dict[str, Any]] = []
+    malformed_lines = 0
+    with audit_path.open(encoding="utf-8") as stream:
+        for line in stream:
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                malformed_lines += 1
+                continue
+            if isinstance(event, dict):
+                events.append(event)
+    result = source_tool_snapshot_parity_from_events(
+        events, approved_sources, expected_modes=expected_modes,
+    )
+    result["malformed_audit_line_count"] = malformed_lines
+    if malformed_lines and result["status"] == "equal":
+        result["status"] = "unverified"
+        result["issue"] = "malformed_audit_lines_could_hide_source_reads"
+    return result
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _posthoc_output_path(results_path: Path) -> Path:
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    candidate = results_path.with_name(f"posthoc-source-parity-{stamp}.json")
+    suffix = 1
+    while candidate.exists():
+        candidate = results_path.with_name(f"posthoc-source-parity-{stamp}-{suffix}.json")
+        suffix += 1
+    return candidate
 
 
 class CardJourneySession(ReportSession):
@@ -709,36 +1308,45 @@ async def capture_paired_source_snapshot(
         raise ValueError("paired snapshot requires one to three approved card sources")
     if max_data_reads < 1 or max_bytes < 1:
         raise ValueError("paired snapshot data-read and byte caps must be positive")
+    validated_sources = [SourceRef.model_validate(item) for item in source_refs]
+    if any(
+        source.adapter != "superset" or not source.resource.startswith("dashboard:")
+        for source in validated_sources
+    ):
+        raise ValueError("paired Superset snapshot supports only approved dashboard sources")
+    if len(validated_sources) > max_data_reads:
+        raise ValueError("paired_snapshot_data_read_budget_exhausted")
 
     started_at = datetime.now(timezone.utc)
     http_before = adapter.client.requests_made
+    http_paths_before = dict(adapter.client.request_path_counts)
     dashboards: dict[str, dict[str, Any]] = {}
     charts: dict[str, dict[str, Any]] = {}
     resources: list[dict[str, Any]] = []
-    captured: list[dict[str, str]] = []
-    data_read_calls = 0
+    captured: list[dict[str, Any]] = []
+    source_snapshot_sha256_by_key: dict[str, str] = {}
+    registry = SourceRegistry(
+        [adapter],
+        max_snapshot_bytes=NATIVE_MAX_SOURCE_SNAPSHOT_BYTES,
+    )
+    registry_started_at = datetime.now(timezone.utc)
+    resource_snapshots = await registry.resolve(validated_sources)
+    registry_finished_at = datetime.now(timezone.utc)
+    data_read_calls = len(validated_sources)
+    captured.append({
+        "kind": "production_source_registry_resolve",
+        "resource_count": len(validated_sources),
+        "request_started_at": registry_started_at.isoformat(),
+        "request_finished_at": registry_finished_at.isoformat(),
+    })
 
-    for raw_source in source_refs:
-        source = SourceRef.model_validate(raw_source)
-        if source.adapter != "superset" or not source.resource.startswith("dashboard:"):
-            raise ValueError("paired Superset snapshot supports only approved dashboard sources")
+    for source, resource_snapshot in zip(validated_sources, resource_snapshots, strict=True):
         dashboard_id = source.resource.removeprefix("dashboard:")
         if not dashboard_id.isdigit() or dashboard_id in dashboards:
             raise ValueError("approved dashboard references must be unique numeric IDs")
-        if data_read_calls >= max_data_reads:
-            raise ValueError("paired_snapshot_data_read_budget_exhausted")
-        request_started = datetime.now(timezone.utc)
-        resource_snapshot = await adapter.inspect(source)
         dashboard = resource_snapshot.model_dump(mode="json")
-        request_finished = datetime.now(timezone.utc)
-        data_read_calls += 1
         dashboards[dashboard_id] = dashboard
-        captured.append({
-            "kind": "dashboard",
-            "resource": source.resource,
-            "request_started_at": request_started.isoformat(),
-            "request_finished_at": request_finished.isoformat(),
-        })
+        source_snapshot_sha256_by_key[source.key] = _full_snapshot_digest(dashboard)
 
         snapshot_metadata = dashboard.get("metadata", {})
         chart_metadata = snapshot_metadata.get("charts", []) if isinstance(snapshot_metadata, dict) else []
@@ -793,6 +1401,12 @@ async def capture_paired_source_snapshot(
             })
 
     finished_at = datetime.now(timezone.utc)
+    http_paths_after = dict(adapter.client.request_path_counts)
+    http_path_counts = {
+        path: count - http_paths_before.get(path, 0)
+        for path, count in http_paths_after.items()
+        if count - http_paths_before.get(path, 0) > 0
+    }
     digest_payload = {"dashboards": dashboards, "charts": charts, "resources": resources}
     snapshot_bytes = json.dumps(
         digest_payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False
@@ -808,6 +1422,13 @@ async def capture_paired_source_snapshot(
         "capture_is_atomic": False,
         "timestamps_are_query_capture_times_not_warehouse_as_of": True,
         "approved_sources": [source.resource for source in (SourceRef.model_validate(item) for item in source_refs)],
+        "source_snapshot_capture_method": (
+            "production SourceRegistry.resolve using the configured SupersetAdapter; "
+            "catalog-owned contract merge and resolution metadata are retained"
+        ),
+        "source_snapshot_fields": list(_RESOURCE_SNAPSHOT_FIELDS),
+        "source_snapshot_sha256_by_key": source_snapshot_sha256_by_key,
+        "native_per_source_snapshot_byte_cap": NATIVE_MAX_SOURCE_SNAPSHOT_BYTES,
         "dashboard_count": len(dashboards),
         "chart_query_count": len(charts),
         "snapshot_payload_bytes": len(snapshot_bytes),
@@ -815,6 +1436,7 @@ async def capture_paired_source_snapshot(
         "data_read_calls": data_read_calls,
         "data_read_cap": max_data_reads,
         "superset_http_attempts": adapter.client.requests_made - http_before,
+        "superset_http_request_counts_by_path": http_path_counts,
         "captured_requests": captured,
     }
     return PairedSourceSnapshot(
@@ -954,10 +1576,20 @@ async def _run_paired_recurring(
     snapshot = await capture_paired_source_snapshot(capture_adapter, card)
     paired: dict[str, Any] = {
         "phase": "paired-recurring",
+        "treatment_recipe_version": "skill-guided-deferred-v2",
+        "historical_explicit_deferred_trial_preserved_separately": True,
         "comparison_design": "same reviewed card, owner notes, three questions, and exact frozen Superset helper responses in both arms; two repeats; treatment policy mode varies by repeat; native evaluation separately reads live approved sources",
-        "mode_interpretation": "Both treatment modes run the same candidate binary. original_policy means the agent does not consume a deferred receipt bundle; explicit_deferred means it pages and uses the bundle when the candidate returns decision_deferred. This is not a comparison against the prior binary/runtime.",
+        "mode_interpretation": (
+            "Both treatment modes run the same candidate binary, approved card, notes, source tools, "
+            "and captured source responses. original_policy does not consume deferred receipt pages. "
+            "skill_guided_deferred follows the currently shipped skill and pages only relevant omitted "
+            "details. This is a changed recipe from the archived explicit_deferred trial, whose prompt "
+            "required exhaustive paging; do not pool or relabel those earlier results. It is not a "
+            "comparison against the prior binary/runtime."
+        ),
         "snapshot": snapshot.manifest,
         "fresh_wizard_runs_in_this_phase": 1,
+        "post_evaluation_receipt_page_call_cap_total": MAX_RECEIPT_PAGE_CALLS,
         "report_word_limit": MAX_PAIRED_REPORT_WORDS,
         "report_word_count_method": "whitespace-delimited words in submitted report only",
         "repeat_count": PAIRED_REPETITIONS,
@@ -965,15 +1597,17 @@ async def _run_paired_recurring(
         "limitations": [
             "The shared dashboard/chart responses are captured from real read-only Superset HTTP and replayed identically to all four readout agents; the capture is not atomic.",
             "Capture timestamps are request-time observations, not warehouse as-of timestamps or freshness proof.",
-            "Native evaluation performs separate live approved-source reads; those are not instrumented or redirected through the frozen helper snapshot. The report compares per-source ResourceSnapshot digests when the durable deferred receipt exposes them, excluding captured_at and source_captured_at; otherwise parity is unverified.",
+            "Native evaluation performs separate live approved-source reads; those are not instrumented or redirected through the frozen helper snapshot. The report compares per-source ResourceSnapshot digests when the durable deferred receipt exposes them, excluding captured_at and source_captured_at but still comparing metadata, data-quality warnings, and contracts; otherwise parity is unverified.",
             "Business-data digests cover observations, analytical comparisons, evidence, and source error state. Source-definition digests cover ResourceSnapshot identity, metadata, and contract; raw saved-chart query params are not compared because the native receipt does not expose them.",
             "A matching digest means those prepared ResourceSnapshot fields matched the earlier captured helper response; it does not prove an atomic warehouse snapshot, identical underlying HTTP requests, or total source-cost parity.",
             "No numeric outcome labels or expected business classes are supplied; two repeats are descriptive, not a generalization sample.",
             "Direct helper and native internal reads do not support a total warehouse-cost comparison.",
             "The trial tool prevents reports over 300 whitespace-delimited words from being submitted.",
+            "The skill_guided_deferred recipe follows shipped evidence-access guidance; it does not require exhaustive receipt paging or duplicate representations.",
         ],
         "repeats": [],
     }
+    receipt_reader = ReceiptPageReader(native)
     for repeat, mode in enumerate(PAIRED_POLICY_MODES, start=1):
         baseline = CardJourneySession(
             None,
@@ -1022,14 +1656,20 @@ async def _run_paired_recurring(
             prompt=treatment_prompt,
             skill=skill,
         )
-        native_sources, native_source_status, receipt_page_calls = (
-            await native_source_snapshots_for_comparison(native, treatment.evaluation)
+        native_sources, native_source_status, receipt_page_calls, native_issue = (
+            await native_source_snapshots_for_comparison(
+                native,
+                treatment.evaluation,
+                idempotency_key=idempotency_key,
+                reader=receipt_reader,
+            )
         )
         source_comparison = compare_paired_source_snapshots(
             helper_source_snapshots_by_key(snapshot, card),
             native_sources,
             native_status=native_source_status,
             receipt_page_calls=receipt_page_calls,
+            native_issue=native_issue,
         )
         baseline_report = baseline.submission.get("report") if baseline.submission else None
         treatment_report = treatment.submission.get("report") if treatment.submission else None
@@ -1061,12 +1701,185 @@ async def _run_paired_recurring(
                 "native_monitor_tools": sorted(MONITOR_TOOLS),
             },
         })
-    paired["shared_helper_snapshot_replayed_identically"] = len({
+    paired["receipt_page_calls_total"] = receipt_reader.calls
+    snapshot_fingerprint_reused = len({
         arm["source_snapshot_sha256"]
         for item in paired["repeats"]
         for arm in (item["baseline"], item["treatment"])
     }) == 1
+    source_tool_parity = source_tool_snapshot_parity_from_events(
+        audit.events,
+        [item for item in card.get("sources", []) if isinstance(item, dict)],
+        expected_modes=PAIRED_POLICY_MODES,
+    )
+    paired["snapshot_manifest_fingerprint_reused_across_episodes"] = snapshot_fingerprint_reused
+    paired["shared_agent_source_tool_snapshot_parity"] = source_tool_parity
+    paired["shared_helper_snapshot_replayed_identically"] = (
+        snapshot_fingerprint_reused and source_tool_parity["status"] == "equal"
+    )
     return paired
+
+
+async def verify_saved_paired_results(results_path: Path) -> dict[str, Any]:
+    """Verify prepared-source parity from the saved trial and durable receipts only."""
+    results_path = results_path.resolve()
+    results_sha256_before = _sha256_file(results_path)
+    results = json.loads(results_path.read_text(encoding="utf-8"))
+    paired = results.get("paired_recurring")
+    if not isinstance(paired, dict) or not isinstance(paired.get("repeats"), list):
+        raise ValueError("saved results do not contain paired-recurring repeats")
+
+    artifact_dir = results_path.parent
+    audit_path = artifact_dir / "audit.jsonl"
+    home = artifact_dir / "human-home"
+    signalweave_home = home / ".signalweave"
+    binary = home / ".local" / "bin" / "signalweave"
+    if not audit_path.is_file() or not binary.is_file():
+        raise FileNotFoundError("saved audit or isolated native binary is missing beside results")
+
+    approved_sources = []
+    for repeat in paired["repeats"]:
+        panel = (repeat.get("treatment") or {}).get("card_panel") or {}
+        if isinstance(panel.get("approved_sources"), list):
+            approved_sources = panel["approved_sources"]
+            if approved_sources:
+                break
+    helper_sources, helper_status, helper_issue, helper_read_counts = (
+        helper_source_snapshots_from_audit(audit_path, approved_sources)
+    )
+    saved_modes = tuple(dict.fromkeys(
+        item.get("policy_mode")
+        for item in paired["repeats"]
+        if isinstance(item, dict) and isinstance(item.get("policy_mode"), str)
+    ))
+    agent_source_tool_parity = source_tool_snapshot_parity_from_audit(
+        audit_path, approved_sources, expected_modes=saved_modes,
+    )
+
+    expected_binary = (results.get("binary") or {}).get("binary_sha256")
+    binary_sha256 = _sha256_file(binary)
+    if not isinstance(expected_binary, str) or binary_sha256 != expected_binary:
+        raise ValueError("isolated native binary does not match the saved trial identity")
+
+    env = {
+        key: os.environ[key]
+        for key in ("PATH", "TMPDIR", "LANG", "LC_ALL")
+        if key in os.environ
+    }
+    env.update(
+        HOME=str(home),
+        CODEX_HOME=str(home / ".codex"),
+        TYPESAFE_MAX_RETRIES="0",
+    )
+    audit = Audit()
+    reader: ReceiptPageReader | None = None
+    comparisons: list[dict[str, Any]] = []
+    async with stdio_client(StdioServerParameters(
+        command=str(binary),
+        args=["serve", "--transport", "stdio", "--home", str(signalweave_home)],
+        env=env,
+    )) as streams:
+        async with ClientSession(*streams) as client:
+            initialized = await _initialize_mcp_session(client)
+            native = InstalledServer(client, initialized.instructions, audit)
+            reader = ReceiptPageReader(native, max_calls=MAX_RECEIPT_PAGE_CALLS)
+            for repeat in paired["repeats"]:
+                treatment = repeat.get("treatment") or {}
+                panel = treatment.get("card_panel") or {}
+                episode = treatment.get("episode") or {}
+                idempotency_key = repeat.get("idempotency_key")
+                evaluation = {
+                    "receipt": {
+                        "receipt_id": panel.get("receipt_id"),
+                        "status": panel.get("receipt_status"),
+                    },
+                    "result": {
+                        "judgment": {"status": panel.get("judgment_status")},
+                    },
+                }
+                native_sources, native_status, page_calls, native_issue = (
+                    await native_source_snapshots_for_comparison(
+                        native,
+                        evaluation,
+                        idempotency_key=idempotency_key,
+                        reader=reader,
+                    )
+                )
+                comparison = compare_paired_source_snapshots(
+                    helper_sources,
+                    native_sources,
+                    native_status=native_status,
+                    receipt_page_calls=page_calls,
+                    helper_status=helper_status,
+                    native_issue=native_issue,
+                    helper_issue=helper_issue,
+                )
+                comparisons.append({
+                    "repeat": repeat.get("repeat"),
+                    "policy_mode": repeat.get("policy_mode"),
+                    "idempotency_key": idempotency_key,
+                    "receipt_id": panel.get("receipt_id"),
+                    "agent_episode": {
+                        "status": episode.get("status"),
+                        "error": episode.get("error"),
+                        "submission_present": treatment.get("submission") is not None,
+                    },
+                    "native_source_snapshot_comparison": comparison,
+                })
+
+    page_calls_total = reader.calls if reader else 0
+    statuses = [
+        item["native_source_snapshot_comparison"]["status"]
+        for item in comparisons
+    ]
+    overall_parity = (
+        "equal" if statuses and all(status == "equal" for status in statuses)
+        else "different" if any(status == "different" for status in statuses)
+        else "unverified"
+    )
+    results_sha256_after = _sha256_file(results_path)
+    report = {
+        "verification_kind": "posthoc_saved_receipt_source_parity",
+        "status": "complete" if statuses and all(status != "unverified" for status in statuses) else "partial_unverified",
+        "source_snapshot_parity": overall_parity,
+        "does_not_rewrite_original_results": True,
+        "original_results_sha256": results_sha256_before,
+        "original_results_unchanged": results_sha256_before == results_sha256_after,
+        "audit_sha256": _sha256_file(audit_path),
+        "native_binary_sha256": binary_sha256,
+        "native_binary_matches_saved_trial": True,
+        "receipt_access": {
+            "mode": "fresh isolated native MCP process; get_decision_receipt by saved idempotency key only",
+            "local_home": str(signalweave_home),
+            "result_paths_read": ["source_by_key/<approved-alias>/<ResourceSnapshot-field>"],
+            "receipt_page_limit": RECEIPT_PAGE_LIMIT,
+            "max_result_path_depth": MAX_RECEIPT_PATH_DEPTH,
+            "max_get_decision_receipt_calls_total": MAX_RECEIPT_PAGE_CALLS,
+            "get_decision_receipt_calls": page_calls_total,
+            "evaluate_insight_card_calls": 0,
+            "provider_calls": 0,
+            "source_adapter_calls": 0,
+        },
+        "helper_snapshot_audit": {
+            "status": helper_status,
+            "read_dashboard_result_counts_by_source": helper_read_counts,
+            "issue": helper_issue,
+        },
+        "shared_agent_source_tool_snapshot_parity": agent_source_tool_parity,
+        "comparisons": comparisons,
+        "interpretation_limits": [
+            "This verifies only selected typed ResourceSnapshot fields against the separately captured helper response, excluding capture timestamps.",
+            "It does not establish an atomic warehouse snapshot, identical underlying HTTP requests, a total source-cost comparison, or a causal/product win.",
+            "A saved treatment with no submitted report remains an incomplete agent episode even if its source digests match.",
+            "A scalar too large for the receipt page API, a missing field, path-depth limit, or page-call cap is recorded as unverified at the exact path; no missing value is inferred.",
+        ],
+    }
+    output_path = _posthoc_output_path(results_path)
+    with output_path.open("x", encoding="utf-8") as stream:
+        json.dump(report, stream, ensure_ascii=False, indent=2, allow_nan=False)
+        stream.write("\n")
+    return {"output": str(output_path), "status": report["status"], "source_snapshot_parity": overall_parity,
+            "get_decision_receipt_calls": page_calls_total}
 
 
 async def run(args: argparse.Namespace) -> None:
@@ -1291,12 +2104,17 @@ async def run(args: argparse.Namespace) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--archive", type=Path, required=True)
-    parser.add_argument("--archive-origin", choices=["github-actions", "local-build"], required=True)
-    parser.add_argument("--key-file", type=Path, required=True)
-    parser.add_argument("--owner-context-file", type=Path, required=True)
+    parser.add_argument("--archive", type=Path)
+    parser.add_argument("--archive-origin", choices=["github-actions", "local-build"])
+    parser.add_argument("--key-file", type=Path)
+    parser.add_argument("--owner-context-file", type=Path)
     parser.add_argument("--superset-url", default="http://127.0.0.1:18089")
-    parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--output", type=Path)
+    parser.add_argument(
+        "--verify-saved-results",
+        type=Path,
+        help="Read only saved trial results/audit and durable receipts; does not evaluate cards or call sources/providers.",
+    )
     parser.add_argument(
         "--phase",
         choices=("original", "paired-recurring"),
@@ -1304,7 +2122,17 @@ def main() -> None:
         help="Keep the historical one-shot comparison, or run two matched recurring readout pairs after approval.",
     )
     parser.add_argument("--execute", action="store_true", help="Explicitly enable live model calls and interactive owner approval")
-    asyncio.run(run(parser.parse_args()))
+    args = parser.parse_args()
+    if args.verify_saved_results is not None:
+        if args.execute:
+            parser.error("--verify-saved-results cannot be combined with --execute")
+        print(json.dumps(asyncio.run(verify_saved_paired_results(args.verify_saved_results))))
+        return
+    required = ("archive", "archive_origin", "key_file", "owner_context_file", "output")
+    missing = [name.replace("_", "-") for name in required if getattr(args, name) is None]
+    if missing:
+        parser.error("the following arguments are required for a trial run: " + ", ".join("--" + name for name in missing))
+    asyncio.run(run(args))
 
 
 if __name__ == "__main__":

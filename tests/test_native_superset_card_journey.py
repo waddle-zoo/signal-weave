@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import copy
 import hashlib
+import json
 from types import SimpleNamespace
 
+import httpx
 import pytest
 
 from evaluations.native_superset_card_journey import (
@@ -15,6 +18,8 @@ from evaluations.native_superset_card_journey import (
     MAX_EPISODE_TURNS,
     MAX_PAIRED_REPORT_WORDS,
     MAX_PAIRED_SNAPSHOT_BYTES,
+    MAX_RECEIPT_PAGE_CALLS,
+    MAX_RECEIPT_PATH_DEPTH,
     MONITOR_INSTRUCTIONS,
     MONITOR_TOOLS,
     PAIRED_POLICY_MODES,
@@ -32,12 +37,17 @@ from evaluations.native_superset_card_journey import (
     card_panel,
     compare_paired_source_snapshots,
     helper_source_snapshots_by_key,
+    helper_source_snapshots_from_audit,
     instructions_for,
     load_installed_skill,
     native_source_snapshots_for_comparison,
     run,
     skill_path,
+    source_tool_snapshot_parity_from_events,
 )
+from signalweave.models import SourceRef
+from signalweave.superset_adapter import SupersetAdapter
+from signalweave.superset_client import SupersetClient
 
 
 class NativeTools:
@@ -219,7 +229,7 @@ def test_paired_prompt_gives_both_arms_the_same_card_notes_questions_and_snapsho
     treatment = build_paired_prompt(
         owner_context="Owner-defined reporting context.", card=card, review=review,
         owner_notes="Owner selected these source meanings.", snapshot=snapshot, repeat=1,
-        policy_mode="explicit_deferred", idempotency_key="run-1",
+        policy_mode="skill_guided_deferred", idempotency_key="run-1",
     )
     repeat_two = build_paired_prompt(
         owner_context="Owner-defined reporting context.", card=card, review=review,
@@ -228,7 +238,7 @@ def test_paired_prompt_gives_both_arms_the_same_card_notes_questions_and_snapsho
     for field in ("owner_context", "reviewed_card", "source_review", "owner_notes", "source_snapshot"):
         assert baseline[field] == treatment[field]
     assert all(question in baseline["request"] for question in BUSINESS_QUESTIONS)
-    assert treatment["paired_policy_mode"] == "explicit_deferred"
+    assert treatment["paired_policy_mode"] == "skill_guided_deferred"
     assert treatment["new_idempotency_key"] == "run-1"
     assert "paired_policy_mode" not in baseline
     assert baseline["source_snapshot"] == repeat_two["source_snapshot"]
@@ -236,19 +246,23 @@ def test_paired_prompt_gives_both_arms_the_same_card_notes_questions_and_snapsho
     assert "expected_outcome" not in str(baseline)
     assert baseline["source_snapshot"]["timestamps_are_query_capture_times_not_warehouse_as_of"] is True
     assert PAIRED_REPETITIONS == 2
-    assert PAIRED_POLICY_MODES == ("original_policy", "explicit_deferred")
+    assert PAIRED_POLICY_MODES == ("original_policy", "skill_guided_deferred")
 
 
 def test_paired_treatment_instructions_are_conditional_and_never_promote_deferred_to_outcome():
     skill = "---\nname: signalweave\n---\n"
     original = instructions_for("paired-treatment-original_policy", skill)
-    deferred = instructions_for("paired-treatment-explicit_deferred", skill)
+    deferred = instructions_for("paired-treatment-skill_guided_deferred", skill)
     assert "captured Superset source-response snapshot" in original
     assert "do not consume deferred receipt pages in this mode" in original
-    assert "result.evidence_access" in deferred
-    assert "Include source_by_key, source_contracts" in deferred
-    assert "following next_offset until complete" in deferred
-    assert "They are not a typed policy outcome" in deferred
+    assert "observation_facts" in deferred
+    assert "only a specific omitted contract, quality detail, or observation" in deferred
+    assert "do not exhaustively fetch" in deferred
+    assert "root-level evidence_access" in deferred
+    assert "Include source_by_key, source_contracts" not in deferred
+    assert "Page each advertised result_path" not in deferred
+    assert "They are not a typed policy outcome" not in deferred
+    assert "no typed policy outcome" in deferred
     assert "use one only when source evidence and owner policy support it" in deferred
     assert "at most 300 words" in deferred
     assert "at most 300 words" in instructions_for("paired-baseline", skill)
@@ -300,8 +314,49 @@ def _resource_snapshot(*, captured_at, sales=12, chart_sql="select sales", contr
         "source_url": "https://superset.local/dashboard/7",
         "captured_at": captured_at,
         "source_captured_at": None,
-        "contract": {"version": contract_version, "grain": "month"},
+        "contract": {
+            "version": contract_version,
+            "grain": "month",
+            "available_comparison_windows": ["previous_month"],
+        },
     }
+
+
+def _page_from_saved_result(result, path, offset, limit):
+    value = result
+    for part in path:
+        if isinstance(value, dict) and part in value:
+            value = value[part]
+        elif isinstance(value, list) and part.isascii() and part.isdecimal() and int(part) < len(value):
+            value = value[int(part)]
+        else:
+            raise AssertionError(f"invalid nested receipt path: {path}")
+    kind = "list" if isinstance(value, list) else "object" if isinstance(value, dict) else "scalar"
+    entries = list(value.items()) if kind == "object" else value if kind == "list" else [value]
+    page = {
+        "path": path, "kind": kind, "offset": offset, "total": len(entries),
+        "items": [], "has_more": False, "next_offset": None,
+        "oversized_item": None,
+    }
+    for index in range(offset, min(len(entries), offset + limit)):
+        entry = {"key": entries[index][0], "value": entries[index][1]} if kind == "object" else entries[index]
+        candidate = {**page, "items": [*page["items"], entry]}
+        if len(json.dumps(candidate, separators=(",", ":")).encode()) > 31 * 1024:
+            if not page["items"]:
+                child = entries[index][0] if kind == "object" else str(index)
+                page["oversized_item"] = {
+                    "index": index,
+                    "path": path if kind == "scalar" else [*path, child],
+                }
+            break
+        page["items"].append(entry)
+    next_offset = offset + len(page["items"])
+    page["has_more"] = next_offset < len(entries)
+    page["next_offset"] = next_offset if page["has_more"] else None
+    page["section_complete"] = offset == 0 and next_offset == len(entries) and page["oversized_item"] is None
+    page["coverage"] = "complete_section" if page["section_complete"] else "partial_section"
+    page["byte_budget"] = 32 * 1024
+    return page
 
 
 def test_source_snapshot_digests_ignore_capture_times_but_compare_business_and_definition_fields():
@@ -325,6 +380,13 @@ def test_source_snapshot_digests_ignore_capture_times_but_compare_business_and_d
     assert changed_data["status"] == "different"
     assert changed_data["business_data_status"] == "different"
     assert changed_data["source_definition_status"] == "equal"
+    assert changed_data["per_source"]["primary"]["business_data_fields"]["observations"] == "different"
+    assert changed_data["per_source"]["primary"]["business_data_fields"]["evidence"] == "different"
+    assert changed_data["per_source"]["primary"]["business_data_fields"]["analytical_comparisons"] == "equal"
+    assert changed_data["per_source"]["primary"]["business_data_mismatch_paths"] == {
+        "observations": {"paths": ["/observations/0/current"], "truncated": False},
+        "evidence": {"paths": ["/evidence/0/values/sales"], "truncated": False},
+    }
 
     changed_definition = compare_paired_source_snapshots(
         {"primary": helper},
@@ -333,6 +395,29 @@ def test_source_snapshot_digests_ignore_capture_times_but_compare_business_and_d
     )
     assert changed_definition["business_data_status"] == "equal"
     assert changed_definition["source_definition_status"] == "different"
+    assert changed_definition["per_source"]["primary"]["source_definition_fields"]["metadata"] == "different"
+    assert changed_definition["per_source"]["primary"]["source_definition_fields"]["contract"] == "equal"
+    assert changed_definition["per_source"]["primary"]["source_definition_mismatch_paths"] == {
+        "metadata": {
+            "paths": ["/metadata/charts/0/query_definition"],
+            "truncated": False,
+        },
+    }
+
+    changed_contract = _resource_snapshot(captured_at="later")
+    changed_contract["contract"]["available_comparison_windows"] = ["previous_week"]
+    contract_diff = compare_paired_source_snapshots(
+        {"primary": helper}, {"primary": changed_contract},
+        native_status="available_from_deferred_receipt",
+    )
+    assert contract_diff["status"] == "different"
+    assert contract_diff["source_definition_status"] == "different"
+    assert contract_diff["per_source"]["primary"]["source_definition_mismatch_paths"] == {
+        "contract": {
+            "paths": ["/contract/available_comparison_windows/0"],
+            "truncated": False,
+        },
+    }
 
 
 def test_missing_native_source_material_is_unverified_not_assumed_equal():
@@ -359,43 +444,195 @@ def test_helper_snapshots_are_joined_using_card_alias_and_approved_dashboard_sco
     }]}) == {}
 
 
+def test_posthoc_helper_snapshots_require_matching_source_scope_and_stable_replays(tmp_path):
+    snapshot = _resource_snapshot(captured_at="request-one")
+    events = [
+        {"kind": "tool.result", "episode": "paired-baseline", "name": "read_dashboard", "result": snapshot},
+        {"kind": "tool.result", "episode": "paired-baseline", "name": "read_dashboard", "result": {
+            **snapshot, "captured_at": "request-two",
+        }},
+        {"kind": "tool.result", "episode": "paired-treatment-skill_guided_deferred", "name": "read_dashboard", "result": {
+            **snapshot, "observations": [{"metric": "ignored-treatment-event"}],
+        }},
+    ]
+    path = tmp_path / "audit.jsonl"
+    path.write_text("\n".join(json.dumps(event) for event in events) + "\n", encoding="utf-8")
+    sources, status, issue, counts = helper_source_snapshots_from_audit(
+        path, [{"key": "primary", "resource": "dashboard:7"}],
+    )
+    assert status == "available"
+    assert issue is None
+    assert counts == {"primary": 2}
+    assert sources["primary"]["captured_at"] == "request-one"
+
+    conflicting = dict(snapshot, observations=[{"metric": "changed"}])
+    path.write_text("\n".join(json.dumps(event) for event in (
+        events[0],
+        {"kind": "tool.result", "episode": "paired-baseline", "name": "read_dashboard", "result": conflicting},
+    )) + "\n", encoding="utf-8")
+    sources, status, issue, _ = helper_source_snapshots_from_audit(
+        path, [{"key": "primary", "resource": "dashboard:7"}],
+    )
+    assert status == "conflicting"
+    assert issue == {"reason": "replayed_helper_snapshot_digest_changed", "source_key": "primary"}
+
+
+def test_paired_agent_source_parity_includes_contracts_and_quality_metadata():
+    snapshot = _resource_snapshot(captured_at="shared")
+    snapshot["metadata"]["data_quality"] = {
+        "status": "partial", "warnings": ["baseline period is absent"],
+    }
+    snapshot["contract"].update({
+        "population": "orders", "available_comparison_windows": ["previous_month"],
+    })
+    events = [
+        {
+            "kind": "tool.result", "episode": episode,
+            "name": "read_dashboard", "result": copy.deepcopy(snapshot),
+        }
+        for episode in (
+            "paired-baseline",
+            "paired-treatment-original_policy",
+            "paired-treatment-skill_guided_deferred",
+        )
+    ]
+    parity = source_tool_snapshot_parity_from_events(
+        events, [{"key": "primary", "resource": "dashboard:7"}],
+        expected_modes=PAIRED_POLICY_MODES,
+    )
+    assert parity["status"] == "equal"
+    assert parity["catalog_contract_and_metadata_quality_are_included"] is True
+    for mode in PAIRED_POLICY_MODES:
+        assert parity["per_mode"][mode]["per_source"]["primary"]["status"] == "equal"
+
+    changed = copy.deepcopy(snapshot)
+    changed["captured_at"] = "new-capture-time"
+    changed["metadata"]["data_quality"]["warnings"] = ["comparison window is unknown"]
+    changed["contract"]["available_comparison_windows"] = ["previous_week"]
+    events[-1]["result"] = changed
+    mismatch = source_tool_snapshot_parity_from_events(
+        events, [{"key": "primary", "resource": "dashboard:7"}],
+        expected_modes=PAIRED_POLICY_MODES,
+    )
+    source = mismatch["per_mode"]["skill_guided_deferred"]["per_source"]["primary"]
+    assert mismatch["status"] == "different"
+    assert source["business_data_fields"]["observations"] == "equal"
+    assert source["source_definition_mismatch_paths"] == {
+        "metadata": {
+            "paths": ["/metadata/data_quality/warnings/0"],
+            "truncated": False,
+        },
+        "contract": {
+            "paths": ["/contract/available_comparison_windows/0"],
+            "truncated": False,
+        },
+    }
+
+
 @pytest.mark.asyncio
-async def test_deferred_receipt_source_pages_are_read_only_and_malformed_or_oversized_pages_fail_closed():
+async def test_deferred_receipt_pages_reassemble_only_snapshot_fields_under_real_page_shape():
     resource = _resource_snapshot(captured_at="native")
+    resource["observations"] = [
+        {
+            "source_key": "primary", "metric": f"metric-{index}", "current": index,
+            "attributes": {"context": "x" * 1800},
+        }
+        for index in range(80)
+    ]
+    resource["metadata"] = {
+        "chart_definitions": [
+            {"chart": f"chart-{index}", "sql": f"SELECT {index} AS value " + "x" * 6000}
+            for index in range(12)
+        ],
+        "opaque_connector_metadata": {"nested": {"definition": "d" * 9000}},
+        "captured_at": "native-time",
+    }
+    full_result = {"source_by_key": {"primary": resource}}
 
     class FakeNative:
-        def __init__(self, page):
-            self.page = page
+        def __init__(self):
             self.calls = []
 
         async def call_tool(self, name, arguments):
-            self.calls.append((name, arguments))
-            return [], {"status": "found", "result_page": self.page}
+            assert name == "get_decision_receipt"
+            assert arguments["limit"] == 100
+            assert len(arguments["result_path"]) <= MAX_RECEIPT_PATH_DEPTH
+            self.calls.append(arguments)
+            return [], {
+                "status": "found",
+                "receipt": {
+                    "receipt_id": "receipt-1",
+                    "idempotency_key": "run-1",
+                },
+                "result_page": _page_from_saved_result(
+                    full_result,
+                    arguments["result_path"], arguments["offset"], arguments["limit"]
+                ),
+            }
 
-    native = FakeNative({
-        "kind": "object", "items": [{"key": "primary", "value": resource}],
-        "total": 1, "has_more": False, "next_offset": None, "oversized_item": None,
-    })
+    native = FakeNative()
     evaluation = {
         "receipt": {"receipt_id": "receipt-1", "status": "decision_deferred"},
         "result": {"judgment": {"status": "deferred"}},
     }
-    sources, status, calls = await native_source_snapshots_for_comparison(native, evaluation)
-    assert sources == {"primary": resource}
+    sources, status, calls, issue = await native_source_snapshots_for_comparison(
+        native, evaluation, idempotency_key="run-1",
+    )
+    assert sources == {"primary": {
+        key: value for key, value in resource.items()
+        if key in {
+            "source_key", "adapter", "resource", "title", "description", "observations",
+            "analytical_comparisons", "evidence", "metadata", "error", "source_url", "contract",
+        }
+    }}
     assert status == "available_from_deferred_receipt"
-    assert calls == 1
-    assert native.calls == [("get_decision_receipt", {
-        "receipt_id": "receipt-1", "result_path": ["source_by_key"], "offset": 0, "limit": 100,
-    })]
+    assert issue is None
+    assert 1 < calls < MAX_RECEIPT_PAGE_CALLS
+    assert len(native.calls) == calls
+    assert all(call["idempotency_key"] == "run-1" for call in native.calls)
+    assert any(call["result_path"] == ["source_by_key", "primary", "metadata", "chart_definitions"] for call in native.calls)
+    assert any(call["result_path"] == ["source_by_key", "primary", "observations"] for call in native.calls)
+    helper = copy.deepcopy(resource)
+    helper["captured_at"] = "helper-time"
+    helper["metadata"]["captured_at"] = "helper-time"
+    parity = compare_paired_source_snapshots(
+        {"primary": helper}, sources, native_status=status, receipt_page_calls=calls,
+    )
+    assert parity["business_data_status"] == "equal"
+    assert parity["source_definition_status"] == "equal"
 
-    oversized = FakeNative({
-        "kind": "object", "items": [], "total": 1, "has_more": True,
-        "next_offset": 0, "oversized_item": {"path": ["source_by_key", "primary"]},
-    })
-    sources, status, calls = await native_source_snapshots_for_comparison(oversized, evaluation)
+
+@pytest.mark.asyncio
+async def test_oversized_scalar_reports_exact_unverified_path_without_fabricating_value():
+    resource = _resource_snapshot(captured_at="native")
+    resource["source_url"] = "x" * (40 * 1024)
+    full_result = {"source_by_key": {"primary": resource}}
+
+    class FakeNative:
+        async def call_tool(self, name, arguments):
+            page = _page_from_saved_result(
+                full_result,
+                arguments["result_path"], arguments["offset"], arguments["limit"],
+            )
+            return [], {
+                "status": "found",
+                "receipt": {"receipt_id": "receipt-1", "idempotency_key": "run-1"},
+                "result_page": page,
+            }
+
+    sources, status, calls, issue = await native_source_snapshots_for_comparison(
+        FakeNative(),
+        {"receipt": {"receipt_id": "receipt-1", "status": "decision_deferred"},
+         "result": {"judgment": {"status": "deferred"}}},
+        idempotency_key="run-1",
+    )
     assert sources is None
-    assert status == "source_snapshot_page_contains_oversized_item"
-    assert calls == 1
+    assert status == "unverified_receipt_source_snapshot"
+    assert calls <= MAX_RECEIPT_PAGE_CALLS
+    assert issue == {
+        "reason": "oversized_scalar_unreadable",
+        "path": ["source_by_key", "primary", "source_url"],
+    }
 
 
 @pytest.mark.asyncio
@@ -419,43 +656,68 @@ async def test_paired_reports_are_rejected_above_300_words_and_accept_exact_limi
 
 
 @pytest.mark.asyncio
-async def test_snapshot_capture_is_live_adapter_scoped_and_obeys_separate_read_cap(monkeypatch):
-    class Client:
-        requests_made = 0
+async def test_production_superset_adapter_capture_preserves_registry_contracts_and_quality():
+    requests = []
+    dashboard_metadata = {
+        "id": "7",
+        "dashboard_title": "Sales dashboard",
+        "description": "approved source",
+        "url": "https://superset.local/dashboard/7",
+        "roles": ["approved-source"],
+        "available_comparison_windows": ["previous_month"],
+        "position_json": {
+            "CHART-9": {
+                "type": "CHART",
+                "meta": {"chartId": 9, "sliceName": "Monthly sales", "viz_type": "table"},
+            },
+        },
+    }
+    chart_metadata = {
+        "id": "9",
+        "slice_name": "Monthly sales",
+        "viz_type": "table",
+        "url": "https://superset.local/chart/9",
+        "params": {
+            "datasource": "17__table",
+            "metrics": ["net_sales"],
+            "granularity_sqla": "month",
+            "time_range": "Last 2 months",
+        },
+    }
 
-        async def get_chart_metadata(self, chart_id):
-            self.requests_made += 1
-            return {"id": chart_id, "slice_name": "Monthly sales", "params": {"time": "month"}}
-
-        async def chart_data(self, chart):
-            self.requests_made += 1
-            return [{"data": [{"month": "2026-09", "sales": 12}]}]
-
-        @staticmethod
-        def _rows_from_result_item(envelope):
-            return envelope["data"]
-
-    class Adapter:
-        def __init__(self):
-            self.client = Client()
-
-        async def inspect(self, source):
-            assert source.key == "primary"
-            assert source.parameters == {"chart_ids": ["9"]}
-            return SimpleNamespace(model_dump=lambda mode: {
-                "resource": "dashboard:7",
-                "title": "Sales dashboard",
-                "description": "approved source",
-                "source_url": "https://superset.local/dashboard/7",
-                "contract": {"domain": "sales"},
-                "metadata": {"charts": [{"id": "9", "title": "Monthly sales"}]},
+    async def handler(request):
+        requests.append((request.method, request.url.path))
+        if request.url.path == "/api/v1/dashboard/7":
+            return httpx.Response(200, json={"result": dashboard_metadata})
+        if request.url.path == "/api/v1/chart/9":
+            return httpx.Response(200, json={"result": chart_metadata})
+        if request.url.path == "/api/v1/chart/9/data/":
+            return httpx.Response(200, json={
+                "result": [{
+                    "data": [{"month": "2026-09", "net_sales": 12}],
+                    "is_cached": False,
+                }],
+                "dashboard_filters": {"period": "default"},
             })
+        if request.url.path == "/api/v1/chart/data":
+            return httpx.Response(200, json={
+                "result": [{
+                    "data": [{"month": "2026-09", "net_sales": 12}],
+                    "is_cached": False,
+                }],
+            })
+        raise AssertionError(f"unexpected offline Superset request: {request.method} {request.url.path}")
 
-    adapter = Adapter()
+    client = SupersetClient(
+        "https://superset.local", transport=httpx.MockTransport(handler),
+    )
+    adapter = SupersetAdapter(client, tenant_id="local")
     card = {"sources": [{
         "key": "primary", "adapter": "superset", "resource": "dashboard:7", "label": "Sales",
         "parameters": {"chart_ids": ["9"]},
     }]}
+    source = SourceRef.model_validate(card["sources"][0])
+    raw_adapter_snapshot = (await adapter.inspect(source)).model_dump(mode="json")
     with pytest.raises(ValueError, match="paired_snapshot_data_read_budget_exhausted"):
         await capture_paired_source_snapshot(adapter, card, max_data_reads=1)
     snapshot = await capture_paired_source_snapshot(adapter, card, max_data_reads=2)
@@ -466,9 +728,49 @@ async def test_snapshot_capture_is_live_adapter_scoped_and_obeys_separate_read_c
     assert snapshot.manifest["snapshot_payload_byte_cap"] == MAX_PAIRED_SNAPSHOT_BYTES
     assert snapshot.manifest["capture_is_atomic"] is False
     assert snapshot.manifest["timestamps_are_query_capture_times_not_warehouse_as_of"] is True
+    assert snapshot.manifest["source_snapshot_capture_method"].startswith("production SourceRegistry.resolve")
+    assert snapshot.manifest["source_snapshot_sha256_by_key"]["primary"]
+    assert snapshot.manifest["superset_http_attempts"] == 7
+    assert snapshot.manifest["superset_http_request_counts_by_path"] == {
+        "/api/v1/dashboard/7": 3,
+        "/api/v1/chart/9": 2,
+        "/api/v1/chart/9/data/": 1,
+        "/api/v1/chart/data": 1,
+    }
+    captured = snapshot.dashboards["7"]
+    assert captured["metadata"]["signalweave_resolution"] == {
+        "authorized": True, "reason": "authorized",
+    }
+    assert captured["metadata"]["data_quality"]["status"] == "partial"
+    assert captured["metadata"]["data_quality"]["missing_baseline_chart_ids"] == ["9"]
+    assert captured["metadata"]["charts"][0]["cache_status"] == "uncached"
+    assert captured["contract"]["domain"] == "bi"
+    assert captured["contract"]["population"] == ""
+    assert captured["contract"]["grain"] == ""
+    assert captured["contract"]["available_comparison_windows"] == ["previous_month"]
+    assert captured["contract"]["roles"] == ["approved-source"]
+
+    old_capture_comparison = compare_paired_source_snapshots(
+        {"primary": raw_adapter_snapshot}, {"primary": captured},
+        native_status="captured_by_source_registry",
+    )
+    old_paths = old_capture_comparison["per_source"]["primary"]["source_definition_mismatch_paths"]
+    assert old_capture_comparison["source_definition_status"] == "different"
+    assert old_paths == {
+        "metadata": {"paths": ["/metadata/signalweave_resolution"], "truncated": False},
+        "contract": {"paths": ["/contract/roles/0"], "truncated": False},
+    }
+
+    baseline = CardJourneySession(None, stage="paired-baseline", source_snapshot=snapshot)
+    treatment = CardJourneySession(None, stage="paired-treatment", source_snapshot=snapshot)
+    baseline_result = await baseline.call("read_dashboard", {"id": "7"})
+    treatment_result = await treatment.call("read_dashboard", {"id": "dashboard:7"})
+    assert baseline_result == treatment_result == captured
+    assert baseline.data_reads == treatment.data_reads == 1
+    assert snapshot.manifest["superset_http_attempts"] == 7
     assert snapshot.call("find_dashboards", {"query": "sales"})["total_count"] == 1
     rows = snapshot.call("read_chart_rows", {"id": "chart:9", "limit": 10})
-    assert rows["rows"] == [{"month": "2026-09", "sales": 12}]
+    assert rows["rows"] == [{"month": "2026-09", "net_sales": 12}]
     assert rows["coverage"] == "all_returned_query_rows"
 
 
