@@ -45,6 +45,24 @@ BUSINESS_QUESTIONS = (
 SHARED_SOURCE_TOOLS = frozenset({
     "find_dashboards", "read_dashboard", "read_chart_rows", "submit_report",
 })
+
+
+def verify_capture_imports() -> dict[str, Any]:
+    """Reject mixed checkout imports before credentials, network, or models."""
+    checkout = Path(__file__).resolve().parents[1]
+    expected = checkout / "src" / "signalweave"
+    checked = 0
+    for name, module in tuple(sys.modules.items()):
+        if name != "signalweave" and not name.startswith("signalweave."):
+            continue
+        filename = getattr(module, "__file__", None)
+        if not filename or not Path(filename).resolve().is_relative_to(expected):
+            raise RuntimeError(
+                "Mixed SignalWeave checkout imports; run with this checkout's src on "
+                "PYTHONPATH or use its uv environment before starting the live trial."
+            )
+        checked += 1
+    return {"checkout": str(checkout), "package_root": str(expected), "modules_checked": checked}
 DISCOVERY_TOOLS = frozenset({"find_dashboards", "search_catalog"})
 DATA_READ_TOOLS = frozenset({"read_dashboard", "read_chart_rows", "inspect_resource"})
 MAX_DATA_READS = 60
@@ -2198,6 +2216,7 @@ async def verify_saved_paired_results(results_path: Path) -> dict[str, Any]:
 async def run(args: argparse.Namespace) -> None:
     if not args.execute:
         raise SystemExit("No provider calls are made unless --execute is explicitly supplied.")
+    capture_imports = verify_capture_imports()
     phase = getattr(args, "phase", "original")
     if phase not in {"original", "paired-recurring"}:
         raise ValueError("phase must be original or paired-recurring")
@@ -2235,6 +2254,7 @@ async def run(args: argparse.Namespace) -> None:
     result: dict[str, Any] = {
         "phase": phase,
         "binary": identity,
+        "coordinator_capture_imports": capture_imports,
         "archive_sha256": expected,
         "archive_origin": args.archive_origin,
         "trial_scope": (

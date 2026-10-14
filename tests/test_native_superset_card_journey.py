@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+from pathlib import Path
 from types import SimpleNamespace
 
 import httpx
@@ -47,6 +48,7 @@ from evaluations.native_superset_card_journey import (
     run_native_preflight,
     skill_path,
     source_tool_snapshot_parity_from_events,
+    verify_capture_imports,
 )
 from signalweave.models import SourceRef
 from signalweave.superset_adapter import SupersetAdapter
@@ -1110,3 +1112,20 @@ async def test_owner_approval_does_not_acknowledge_dynamic_scope_or_oversized_ca
 async def test_trial_does_not_start_without_explicit_execute_flag():
     with pytest.raises(SystemExit, match="No provider calls"):
         await run(SimpleNamespace(execute=False))
+
+
+def test_capture_imports_are_from_this_checkout():
+    result = verify_capture_imports()
+    assert result["modules_checked"] > 0
+    assert Path(result["package_root"]) == Path(__file__).resolve().parents[1] / "src" / "signalweave"
+
+
+@pytest.mark.asyncio
+async def test_mixed_capture_imports_stop_before_credentials_or_live_calls(monkeypatch, tmp_path):
+    import signalweave.superset_client as client_module
+
+    monkeypatch.setattr(client_module, "__file__", str(tmp_path / "other-checkout" / "superset_client.py"))
+    # No owner_context_file, archive, or credentials are supplied: the import
+    # gate must reject this before any of those or live calls can be reached.
+    with pytest.raises(RuntimeError, match="Mixed SignalWeave checkout imports"):
+        await run(SimpleNamespace(execute=True))
