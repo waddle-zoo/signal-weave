@@ -84,9 +84,9 @@ sh install.sh --version vVERSION
 sh install.sh --version vVERSION --replace
 ```
 
-For the published local preview, replace `vVERSION` with `v0.2.0rc1`.
-The source candidate is `v0.2.0rc2` and has not been published yet. Default `latest`
-never accepts a prerelease; it does not silently opt users into preview builds.
+Default `latest` never accepts a prerelease; select previews explicitly with
+`--version`. See [release compatibility](#release-compatibility) when choosing
+a build.
 
 `--replace` opts into replacing an existing regular executable; without it the
 installer refuses an existing destination. Configuration and cards are untouched.
@@ -111,6 +111,24 @@ decision-receipt tools needed for that path. The `full` profile adds advanced
 metric-query, evaluation, certification, and webhook tools. Both profiles send
 configured decision evidence to TypeSafe. Local-first means configuration and
 durable receipts live on your machine; it does not make Jev calls offline.
+
+## Release compatibility
+
+The README and workflow guides describe the repository's current capabilities.
+Published binaries are immutable snapshots; merging code does not publish a
+native release.
+
+- **`v0.2.0rc1`:** published native preview with Jev-only setup and manual agent
+  registration. It predates the bundled workflow skill, guided registration,
+  OpenAI Decisions, and ChatGPT-plan sign-in.
+- **`0.2.0rc2` in `pyproject.toml`:** includes those additions. Until a matching
+  native release is published, use an Actions build or
+  [build the checkout](#install-this-checkout) to use them.
+
+Release maintainers must update the pinned install commands in `README.md` and
+`docs/local-install.md`, and this compatibility section, when a new native
+release is published. Do not point installation instructions at unpublished
+assets or assume `releases/latest` selects a release candidate.
 
 ## Install this checkout
 

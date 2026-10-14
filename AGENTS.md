@@ -48,6 +48,9 @@ unrelated repositories as part of work in this repository.
 3. Add or update representative tests, including failure and insufficient-data
    paths where relevant.
 4. Update examples and documentation when behavior or configuration changes.
+   Write capability descriptions for `main`, not a temporary branch or source
+   candidate. Keep published-binary compatibility in the installation reference;
+   only update download links to verified published assets.
 5. Run `make verify` and `git diff --check`.
 6. Inspect the final diff for accidental fixtures, credentials, generated files,
    unrelated formatting, and changes outside this repository.

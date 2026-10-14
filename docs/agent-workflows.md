@@ -5,8 +5,8 @@ typed policy decision with evidence. Your agent does the deeper analysis and
 writes the explanation. This guide uses the normal `agent` profile over local
 stdio or a deployed HTTP service.
 
-The skill commands require a build of the current source candidate; the
-published `v0.2.0rc1` predates them. See the [build instructions](local-install-reference.md#install-this-checkout).
+For supported builds and upgrades, see
+[release compatibility](local-install-reference.md#release-compatibility).
 
 ## 1. Set up the connection
 

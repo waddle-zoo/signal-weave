@@ -11,12 +11,8 @@ x64 with glibc 2.35+ (not Alpine/musl). macOS builds are not Developer-ID signed
 or notarized; company device-management policies may block them. Do not disable
 those controls—use an administrator-approved installation path instead.
 
-> **Published preview:** `v0.2.0rc1` is available for trying the local runtime.
-> Installation, guided setup, local agent handoff, and source retrieval have been
-> tested. This preview is not a claim of enterprise analytical quality.
-> The published `v0.2.0rc1` binary predates the provider choices in this
-> checkout and the installer's `--setup` option. A newer release built from
-> this source is required for the one-line flow and newer provider integrations.
+For available builds and command compatibility, see the
+[release reference](local-install-reference.md#release-compatibility).
 
 ## 1. Install once, then use the guided setup
 
@@ -38,12 +34,7 @@ does not silently shadow the download. The installer does not change shell
 startup files. In a new terminal, follow its PATH instruction if needed; use
 `type -a signalweave` to check for an old binary, alias, or function.
 
-The remaining instructions describe the newer **unpublished source candidate**.
-They require a native build from this checkout, not the `v0.2.0rc1` download.
-Do not use a `releases/latest` URL for this prerelease: the latest stable release
-is older and does not provide this installer flow.
-
-In the source candidate, bare `signalweave` opens guided setup on first run and
+Bare `signalweave` opens guided setup on first run and
 shows local status on subsequent runs.
 
 That one guided command walks through setup in this order:
@@ -256,6 +247,36 @@ Once those checks work, give your agent a concrete scheduling request:
 
 Use your agent or workflow runner's supported scheduler. A laptop-based runner
 may need the machine awake; SignalWeave itself does not run this schedule.
+
+## Uninstall
+
+Stop any running SignalWeave server and remove its connection using the agent
+you registered:
+
+```sh
+codex mcp remove signalweave                     # Codex
+claude mcp remove --scope user signalweave        # Claude Code
+signalweave uninstall
+```
+
+Uninstall shows the exact executable and data paths and asks for confirmation.
+It removes the native executable but keeps your local configuration,
+credentials, cards, and receipts for a reinstall. To permanently remove the
+selected private home as well:
+
+```sh
+signalweave uninstall --purge
+```
+
+Use `--home /absolute/private/home` for a non-default data directory and `--yes`
+only when you have reviewed the plan. Purge cannot be undone without a backup.
+It refuses homes inside repositories and does not follow symlinks, delete
+external credential files, revoke remote authorizations, or edit agent settings.
+Remove installed workflow skills from the exact paths reported by
+`signalweave skills install` if you no longer want them; user-modified skills are
+never removed automatically. Restart your agent after removing the MCP connection.
+Python installations should be uninstalled with the package manager used to
+install them, not with native self-uninstall.
 
 **Trouble?** Run `"$HOME/.local/bin/signalweave" doctor` for an offline config
 check. See the [reference](local-install-reference.md) for supported source

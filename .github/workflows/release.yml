@@ -106,6 +106,21 @@ jobs:
       - name: Install the real binary through fixture HTTPS and initialize
         env:
           SIGNALWEAVE_TEST_BINARY: dist/signalweave
+        run: |
+          # The test refuses stale binaries and requires all three identity
+          # values; providing just a path would silently skip this smoke test.
+          uv run python - <<'PY'
+          import os
+          from pathlib import Path
+          from scripts.binary_provenance import verify_binary
+          identity = verify_binary(Path(os.environ['SIGNALWEAVE_TEST_BINARY']))
+          with open(os.environ['GITHUB_ENV'], 'a') as output:
+              output.write('SIGNALWEAVE_TEST_BINARY_SHA256=' + identity['binary_sha256'] + '\n')
+              output.write('SIGNALWEAVE_TEST_BINARY_VERSION=' + identity['version'] + '\n')
+          PY
+      - name: Verify installed binary setup, MCP, reinstall, and uninstall
+        env:
+          SIGNALWEAVE_TEST_BINARY: dist/signalweave
         run: uv run pytest tests/test_install.py -k real_binary -q
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:

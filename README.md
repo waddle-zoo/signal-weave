@@ -27,8 +27,7 @@ agent; add a shared, repeatable brief for investigations, alerts, and reports.
 
 ## Get started
 
-For the currently downloadable preview on macOS or Linux, install and start
-setup in one terminal line:
+On macOS or Linux, install the published native preview and start setup:
 
 ```sh
 set -o pipefail; curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' https://github.com/waddle-zoo/signal-weave/releases/download/v0.2.0rc1/install.sh | sh -s -- --version v0.2.0rc1 && export PATH="$HOME/.local/bin:$PATH" && "$HOME/.local/bin/signalweave" setup
@@ -47,12 +46,10 @@ directory. Run that registration command, then ask your agent:
 
 [Local setup guide](docs/local-install.md) · [Server deployment](docs/server-deployment.md)
 
-The downloadable `v0.2.0rc1` uses Jev. This branch's `v0.2.0rc2` source candidate
-adds guided agent registration, OpenAI Decisions, and ChatGPT-plan sign-in;
-those options require a build from this checkout until the next native release
-is published.
+See [release compatibility](docs/local-install-reference.md#release-compatibility)
+for available builds and upgrade instructions.
 
-With a current-source build, install the bundled workflow skill in your project:
+Install the bundled workflow skill in your project:
 
 ```sh
 signalweave skills install --agent codex   # or: --agent claude
@@ -118,8 +115,8 @@ SignalWeave gives the agent:
 
 [TypeSafe Jev](https://docs.typesafe.ai/introduction) applies plain-English
 policy through typed judgments and probability distributions. That lets a
-workflow branch on a decision without parsing an essay. The source candidate
-also supports [OpenAI Decisions](https://developers.openai.com/api/docs/guides/decisions)
+workflow branch on a decision without parsing an essay. SignalWeave also
+supports [OpenAI Decisions](https://developers.openai.com/api/docs/guides/decisions)
 and ChatGPT-plan Responses; Responses probabilities are model estimates rather
 than native Decisions distributions.
 
@@ -147,7 +144,7 @@ select approved definitions and compile bounded SQL for Trino.
 ## Local or server
 
 - **Local:** the native executable connects to your agent over stdio, with
-  private card and receipt storage. The source candidate includes CLI connection
+  private card and receipt storage. The CLI includes connection
   management, credential rotation, live health checks, and an optional local UI.
 - **Server:** expose the same card workflow through Streamable HTTP MCP, with
   bearer-token or OIDC authentication, persistent storage, and health endpoints.

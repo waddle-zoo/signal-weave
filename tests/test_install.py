@@ -348,6 +348,9 @@ def test_release_workflow_pins_actions_and_has_no_model_secrets():
     assert "secrets." not in workflow and "--clobber" not in workflow
     assert "uv sync --locked" in workflow and "scripts/check_binary.py" in workflow
     assert "github.event_name == 'push'" in workflow
+    assert "SIGNALWEAVE_TEST_BINARY_SHA256=" in workflow
+    assert "SIGNALWEAVE_TEST_BINARY_VERSION=" in workflow
+    assert "Verify installed binary setup, MCP, reinstall, and uninstall" in workflow
 
 
 def test_intel_release_builds_cryptography_static_and_checks_linkage():
@@ -447,3 +450,24 @@ def test_real_binary_installs_and_initializes(install_env, tmp_path):
     assert report["private_setup"] and report["persisted_source_config"]
     assert report["offline_doctor"] and report["agent_config"] and report["stdio_tools"] > 0
     assert report["different_cwd"] and not report["live"]
+    # Exercise removal of the installed executable, never the build output.
+    private_home = Path(env["HOME"]) / ".signalweave"
+    def native(*args):
+        return subprocess.run(
+            [str(installed(env)), *args], cwd=tmp_path, env=env,
+            capture_output=True, text=True, timeout=90,
+        )
+    result = native("setup", "--non-interactive", "--source", "skip",
+                    "--decision-provider", "chatgpt-plan", "--no-register-agent")
+    assert result.returncode == 0, "Installed setup failed; diagnostics withheld"
+    original_config = (private_home / "config.toml").read_bytes()
+    result = native("uninstall", "--yes")
+    assert result.returncode == 0, "Native uninstall failed; diagnostics withheld"
+    assert not installed(env).exists()
+    assert (private_home / "config.toml").read_bytes() == original_config
+    assert binary.exists(), "Uninstall must not remove the original build"
+    assert run(env, "--version", VERSION, timeout=90).returncode == 0
+    result = native("uninstall", "--purge", "--yes")
+    assert result.returncode == 0, "Native purge failed; diagnostics withheld"
+    assert not installed(env).exists() and not private_home.exists()
+    assert binary.exists()
