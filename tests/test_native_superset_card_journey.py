@@ -37,6 +37,7 @@ from evaluations.native_superset_card_journey import (
     _source_budget_summary,
     build_actor_prompt,
     build_paired_prompt,
+    cache_status_only_variance_eligibility,
     capture_paired_source_snapshot,
     card_panel,
     compare_paired_source_snapshots,
@@ -283,6 +284,15 @@ def test_paired_treatment_instructions_are_conditional_and_never_promote_deferre
     assert "They are not a typed policy outcome" not in deferred
     assert "no typed policy outcome" in deferred
     assert "use one only when source evidence and owner policy support it" in deferred
+    baseline_cache_optin = instructions_for(
+        "paired-baseline", skill, allow_transport_cache_variance=True,
+    )
+    treatment_cache_optin = instructions_for(
+        "paired-treatment-original_policy", skill, allow_transport_cache_variance=True,
+    )
+    for instructions in (baseline_cache_optin, treatment_cache_optin):
+        assert "cache_status describes transport/cache provenance, not data freshness" in instructions
+        assert "may have different cache_status values because they are separate queries" in instructions
     assert "remain equally available" in deferred
     assert "do not repeat BI reads solely to duplicate covered facts" in deferred
     assert "remain equally available" in instructions_for("paired-baseline", skill)
@@ -364,6 +374,17 @@ def _resource_snapshot(*, captured_at, sales=12, chart_sql="select sales", contr
             "available_comparison_windows": ["previous_month"],
         },
     }
+
+
+def _cache_variance_snapshots():
+    helper = _resource_snapshot(captured_at="request-time")
+    helper["metadata"]["charts"][0]["cache_status"] = "cached"
+    helper["evidence"][0]["values"]["cache_status"] = "cached"
+    native = copy.deepcopy(helper)
+    native["metadata"]["charts"][0]["cache_status"] = "uncached"
+    native["evidence"][0]["values"]["cache_status"] = "mixed"
+    native["captured_at"] = "another-request-time"
+    return {"primary": helper}, {"primary": native}
 
 
 def _page_from_saved_result(result, path, offset, limit):
@@ -496,6 +517,75 @@ def test_nested_timestamps_cache_status_and_source_capture_time_remain_parity_fi
     assert source["source_definition_mismatch_paths"]["source_captured_at"]["paths"] == [
         "/source_captured_at",
     ]
+
+
+def test_cache_variance_eligibility_is_narrow_and_keeps_the_strict_difference():
+    helper, native = _cache_variance_snapshots()
+    strict = compare_paired_source_snapshots(
+        helper, native, native_status="available_from_decision_receipt",
+    )
+    assert strict["status"] == "different"
+    assert strict["per_source"]["primary"]["business_data_mismatch_paths"] == {
+        "evidence": {"paths": ["/evidence/0/values/cache_status"], "truncated": False},
+    }
+    assert strict["per_source"]["primary"]["source_definition_mismatch_paths"] == {
+        "metadata": {"paths": ["/metadata/charts/0/cache_status"], "truncated": False},
+    }
+
+    eligibility = cache_status_only_variance_eligibility(helper, native, strict)
+    assert eligibility == {
+        "eligible": True,
+        "reason": "cache_status_only_variance",
+        "cache_status_differences": [
+            {
+                "source_key": "primary", "path": "/evidence/0/values/cache_status",
+                "helper_cache_status": "cached", "native_cache_status": "mixed",
+            },
+            {
+                "source_key": "primary", "path": "/metadata/charts/0/cache_status",
+                "helper_cache_status": "cached", "native_cache_status": "uncached",
+            },
+        ],
+    }
+
+
+@pytest.mark.parametrize(
+    "difference",
+    [
+        "quality", "unit", "error", "source_freshness", "nested_timestamp",
+        "contract", "definition", "unknown_cache_status", "truncated", "missing",
+    ],
+)
+def test_cache_variance_eligibility_rejects_every_other_or_unverified_difference(difference):
+    helper, native = _cache_variance_snapshots()
+    if difference == "quality":
+        native["primary"]["observations"][0]["quality_warning"] = "partial"
+    elif difference == "unit":
+        helper["primary"]["analytical_comparisons"] = [{"metric": "sales", "unit": "USD"}]
+        native["primary"]["analytical_comparisons"] = [{"metric": "sales", "unit": "count"}]
+    elif difference == "error":
+        native["primary"]["error"] = "source warning"
+    elif difference == "source_freshness":
+        native["primary"]["source_captured_at"] = "2026-10-14T00:00:00Z"
+    elif difference == "nested_timestamp":
+        native["primary"]["observations"][0]["captured_at"] = "another-observation-time"
+    elif difference == "contract":
+        native["primary"]["contract"]["grain"] = "day"
+    elif difference == "definition":
+        native["primary"]["metadata"]["charts"][0]["query_definition"] = "select net_sales"
+    elif difference == "unknown_cache_status":
+        native["primary"]["metadata"]["charts"][0]["cache_status"] = "stale"
+    elif difference == "missing":
+        native["primary"].pop("contract")
+
+    strict = compare_paired_source_snapshots(
+        helper, native, native_status="available_from_decision_receipt",
+    )
+    if difference == "truncated":
+        strict["per_source"]["primary"]["source_definition_mismatch_paths"]["metadata"]["truncated"] = True
+    result = cache_status_only_variance_eligibility(helper, native, strict)
+    assert result["eligible"] is False
+    assert result["cache_status_differences"] == []
 
 
 def test_resource_snapshot_identity_must_match_and_missing_fields_are_unverified():
@@ -878,6 +968,100 @@ async def test_paired_capture_uses_explicit_local_runtime_registry_and_mismatch_
     assert result["paired_input_parity_gate"]["readout_episodes_started"] == 0
     assert result["repeats"] == []
     assert result["measurement_accounting"]["readout_agent_model_calls"] == 0
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("allow_variance", [False, True])
+async def test_paired_cache_status_variance_requires_opt_in_and_keeps_strict_gate_failed(
+    monkeypatch, allow_variance,
+):
+    helper_by_key, native_by_key = _cache_variance_snapshots()
+    snapshot = PairedSourceSnapshot(
+        dashboards={"7": helper_by_key["primary"]}, charts={}, resources=[],
+        manifest={
+            "snapshot_sha256": "f" * 64, "captured_at_started": "t0", "captured_at_finished": "t1",
+            "superset_http_attempts": 3, "superset_http_request_counts_by_path": {}, "data_read_calls": 1,
+        },
+    )
+    local_home = Path("/private/trial-human-home/.signalweave")
+    adapter = SupersetAdapter(SupersetClient("https://superset.invalid"), tenant_id="trial")
+
+    class RuntimeRegistry:
+        def _get(self, name):
+            assert name == "superset"
+            return adapter
+
+    @contextmanager
+    def fake_local_environment(home):
+        assert home == local_home
+        yield home
+
+    monkeypatch.setattr("evaluations.native_superset_card_journey.local_environment", fake_local_environment)
+    monkeypatch.setattr(
+        "evaluations.native_superset_card_journey.build_runtime",
+        lambda: SimpleNamespace(sources=RuntimeRegistry()),
+    )
+
+    async def frozen_capture(*args, **kwargs):
+        return snapshot
+
+    async def fake_preflight(*args, **kwargs):
+        return (
+            {
+                "status": "source_snapshots_available", "native_evaluate_tool_calls": 1,
+                "native_evaluate_wall_seconds": 0.2, "receipt_id": "receipt-preflight",
+            }, native_by_key, "available_from_decision_receipt", 0, None,
+        )
+
+    episode_calls = []
+
+    async def fake_episode(session, **kwargs):
+        episode_calls.append(kwargs)
+        session.submission = {"report": "Evidence-backed readout."}
+        if kwargs["stage"].startswith("paired-treatment-"):
+            session.evaluation = {
+                "replayed": True,
+                "receipt": {
+                    "idempotency_key": kwargs["prompt"]["new_idempotency_key"],
+                    "receipt_id": "receipt-preflight", "card_id": "card-1",
+                },
+                "result": {"judgment": {"status": "deferred"}},
+            }
+        return {"status": "complete"}
+
+    monkeypatch.setattr("evaluations.native_superset_card_journey.capture_paired_source_snapshot", frozen_capture)
+    monkeypatch.setattr("evaluations.native_superset_card_journey.run_native_preflight", fake_preflight)
+    monkeypatch.setattr("evaluations.native_superset_card_journey._run_episode", fake_episode)
+    card = {"id": "card-1", "sources": [{
+        "key": "primary", "adapter": "superset", "resource": "dashboard:7", "label": "Sales",
+    }]}
+    result = await _run_paired_recurring(
+        args=SimpleNamespace(allow_transport_cache_variance=True) if allow_variance else SimpleNamespace(),
+        local_home=local_home, native=object(), audit=SimpleNamespace(events=[]),
+        owner_context="Owner context", skill="---\nname: signalweave\n---\n", card=card,
+        review={"readiness_status": "ready"}, owner_notes="Owner notes",
+    )
+
+    assert result["strict_source_snapshot_status"] == "different"
+    assert result["paired_input_parity_gate"]["status"] == "failed"
+    assert result["paired_input_parity_gate"]["strict_source_snapshot_status"] == "different"
+    if allow_variance:
+        assert result["comparison_status"] == "eligible_business_evidence_cache_only_variance"
+        assert result["report_input_eligibility_gate"]["status"] == "eligible"
+        assert result["report_input_eligibility_gate"]["readout_episodes_started"] == 4
+        assert result["preflight_source_snapshot_comparison"]["status"] == "different"
+        assert result["paired_input_parity_gate"]["readout_episodes_started"] == 4
+        assert result["measurement_accounting"]["treatment_all_in"]["source_cost_savings_claim"] is False
+        assert len(episode_calls) == 4
+        assert all(call["allow_transport_cache_variance"] is True for call in episode_calls)
+    else:
+        assert result["comparison_status"] == "ineligible_source_snapshot_mismatch_or_unverified"
+        assert result["report_input_eligibility_gate"]["status"] == "ineligible"
+        assert result["report_input_eligibility_gate"]["basis"] == "cache_status_variance_opt_in_not_enabled"
+        assert result["report_input_eligibility_gate"]["readout_episodes_started"] == 0
+        assert result["repeats"] == []
+        assert result["measurement_accounting"]["readout_agent_model_calls"] == 0
+        assert episode_calls == []
 
 
 @pytest.mark.asyncio

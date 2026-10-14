@@ -78,6 +78,10 @@ MAX_RECEIPT_PAGE_CALLS = 200
 MAX_RECEIPT_PATH_DEPTH = 8
 RECEIPT_PAGE_LIMIT = 100
 MAX_SNAPSHOT_MISMATCH_PATHS = 100
+_CACHE_STATUS_VALUES = frozenset({"cached", "uncached", "mixed", "unknown"})
+_CACHE_STATUS_PATH = re.compile(
+    r"/(?:metadata/charts/(\d+)/cache_status|evidence/(\d+)/values/cache_status)"
+)
 PAIRED_REPETITIONS = 2
 PAIRED_POLICY_MODES = ("original_policy", "skill_guided_deferred")
 SETUP_TOOLS = frozenset({
@@ -174,6 +178,13 @@ PAIRED_TREATMENT_PREFIX = (
     "use one only when source evidence and owner policy support it. Do not invent thresholds or causes. "
 )
 
+PAIRED_CACHE_VARIANCE_NOTE = (
+    "Protocol note: cache_status describes transport/cache provenance, not data freshness, "
+    "quality, or warehouse as-of time. Native preflight and helper requests may have different "
+    "cache_status values because they are separate queries. Do not infer freshness or quality "
+    "from that difference; use the source timestamps and quality evidence as captured."
+)
+
 PAIRED_TREATMENT_MODES = {
     "original_policy": (
         "Apply the original card policy path: call evaluate_insight_card once with the supplied "
@@ -215,7 +226,9 @@ def load_installed_skill(home: Path) -> tuple[str, str]:
     return content, hashlib.sha256(content.encode("utf-8")).hexdigest()
 
 
-def instructions_for(stage: str, skill_text: str) -> str:
+def instructions_for(
+    stage: str, skill_text: str, *, allow_transport_cache_variance: bool = False,
+) -> str:
     """Supply the actual packaged skill verbatim to both ephemeral Codex arms.
 
     The evaluation transport disables host skill discovery, so merely installing
@@ -254,6 +267,8 @@ def instructions_for(stage: str, skill_text: str) -> str:
         "only the supplied trial tools; no shell, web, filesystem, or other tools."
         if stage.startswith("paired-") else COMMON_INSTRUCTIONS
     )
+    if stage.startswith("paired-") and allow_transport_cache_variance:
+        task_rules += " " + PAIRED_CACHE_VARIANCE_NOTE
     return (
         common
         + "\n\nInstalled SignalWeave skill (verbatim):\n<signalweave-skill>\n"
@@ -600,6 +615,110 @@ def compare_paired_source_snapshots(
         else "unverified"
     )
     return comparison
+
+
+def cache_status_only_variance_eligibility(
+    helper_by_key: dict[str, dict[str, Any]],
+    native_by_key: dict[str, dict[str, Any]] | None,
+    comparison: dict[str, Any],
+) -> dict[str, Any]:
+    """Qualify only complete Superset snapshots differing at known cache-status leaves."""
+    denied = {"eligible": False, "reason": "cache_status_only_variance_not_verified", "cache_status_differences": []}
+    if (
+        comparison.get("status") != "different"
+        or comparison.get("helper_snapshot_status") != "available"
+        or comparison.get("native_snapshot_status") not in {
+            "available_in_evaluation", "available_from_decision_receipt",
+            "available_from_deferred_receipt",
+        }
+        or not isinstance(native_by_key, dict)
+        or not helper_by_key
+        or set(helper_by_key) != set(native_by_key)
+        or set(comparison.get("per_source", {})) != set(helper_by_key)
+    ):
+        return denied
+
+    differences: list[dict[str, str]] = []
+    for key in sorted(helper_by_key):
+        helper, native = helper_by_key[key], native_by_key[key]
+        source = comparison["per_source"][key]
+        if (
+            not isinstance(helper, dict) or not isinstance(native, dict)
+            or not set(_RESOURCE_SNAPSHOT_FIELDS) <= set(helper)
+            or not set(_RESOURCE_SNAPSHOT_FIELDS) <= set(native)
+            or helper.get("adapter") != "superset" or native.get("adapter") != "superset"
+            or helper.get("source_key") != key or native.get("source_key") != key
+            or (source.get("snapshot_completeness") or {}).get("status") != "complete"
+        ):
+            return denied
+
+        groups = (
+            (source.get("business_data_fields"), source.get("business_data_mismatch_paths"), "evidence", "evidence"),
+            (source.get("source_definition_fields"), source.get("source_definition_mismatch_paths"), "metadata", "metadata"),
+        )
+        for statuses, mismatch_paths, allowed_field, expected_root in groups:
+            if not isinstance(statuses, dict) or not isinstance(mismatch_paths, dict):
+                return denied
+            differing_fields = {field for field, status in statuses.items() if status == "different"}
+            if set(statuses.values()) - {"equal", "different"} or set(mismatch_paths) != differing_fields:
+                return denied
+            for field in differing_fields:
+                detail = mismatch_paths[field]
+                paths = detail.get("paths") if isinstance(detail, dict) else None
+                if (
+                    field != allowed_field or not isinstance(detail, dict)
+                    or set(detail) != {"paths", "truncated"} or detail.get("truncated") is not False
+                    or not isinstance(paths, list) or not paths
+                ):
+                    return denied
+                for path in paths:
+                    match = _CACHE_STATUS_PATH.fullmatch(path) if isinstance(path, str) else None
+                    if not match or ("metadata" if match.group(1) else "evidence") != expected_root:
+                        return denied
+                    index = int(match.group(1) or match.group(2))
+                    branch = "charts" if match.group(1) else "evidence"
+                    values = (
+                        (helper.get("metadata") or {}).get("charts", [])
+                        if branch == "charts" else helper.get("evidence", [])
+                    )
+                    native_values = (
+                        (native.get("metadata") or {}).get("charts", [])
+                        if branch == "charts" else native.get("evidence", [])
+                    )
+                    if not isinstance(values, list) or not isinstance(native_values, list):
+                        return denied
+                    try:
+                        left = values[index].get("cache_status") if branch == "charts" else values[index].get("values", {}).get("cache_status")
+                        right = native_values[index].get("cache_status") if branch == "charts" else native_values[index].get("values", {}).get("cache_status")
+                    except (IndexError, AttributeError, TypeError):
+                        return denied
+                    if (
+                        not isinstance(left, str) or left not in _CACHE_STATUS_VALUES
+                        or not isinstance(right, str) or right not in _CACHE_STATUS_VALUES
+                        or left == right
+                    ):
+                        return denied
+                    differences.append({
+                        "source_key": key, "path": path,
+                        "helper_cache_status": left, "native_cache_status": right,
+                    })
+        if (
+            source.get("business_data_status") != (
+                "different" if source.get("business_data_fields", {}).get("evidence") == "different" else "equal"
+            )
+            or source.get("source_definition_status") != (
+                "different" if source.get("source_definition_fields", {}).get("metadata") == "different" else "equal"
+            )
+        ):
+            return denied
+
+    if not differences:
+        return denied
+    return {
+        "eligible": True,
+        "reason": "cache_status_only_variance",
+        "cache_status_differences": differences,
+    }
 
 
 class ReceiptPageReadError(RuntimeError):
@@ -1828,7 +1947,10 @@ def _review_readiness(session: CardJourneySession) -> str | None:
     return session.review.get("readiness_status") if session.review else None
 
 
-async def _run_episode(session, *, audit: Audit, stage: str, prompt: dict[str, Any], skill: str):
+async def _run_episode(
+    session, *, audit: Audit, stage: str, prompt: dict[str, Any], skill: str,
+    allow_transport_cache_variance: bool = False,
+):
     audit.episode = stage
     return await codex_episode(
         session,
@@ -1841,7 +1963,9 @@ async def _run_episode(session, *, audit: Audit, stage: str, prompt: dict[str, A
         max_tool_calls=MAX_EPISODE_TOOL_CALLS,
         max_output_tokens=7000,
         timeout_seconds=480,
-        instructions_override=instructions_for(stage, skill),
+        instructions_override=instructions_for(
+            stage, skill, allow_transport_cache_variance=allow_transport_cache_variance,
+        ),
         prompt_override=prompt,
     )
 
@@ -2014,12 +2138,53 @@ async def _run_paired_recurring(
         receipt_page_calls=preflight_page_calls,
         native_issue=native_issue,
     )
-    parity_gate_passed = source_comparison["status"] == "equal"
+    strict_snapshot_status = source_comparison["status"]
+    allow_cache_variance = bool(getattr(args, "allow_transport_cache_variance", False))
+    cache_variance = (
+        cache_status_only_variance_eligibility(
+            helper_source_snapshots_by_key(snapshot, card), native_sources, source_comparison,
+        )
+        if allow_cache_variance else {
+            "eligible": False, "reason": "opt_in_not_enabled", "cache_status_differences": [],
+        }
+    )
+    parity_gate_passed = strict_snapshot_status == "equal"
+    report_inputs_eligible = parity_gate_passed or cache_variance["eligible"]
+    report_eligibility_status = (
+        "eligible_source_snapshot_parity_verified" if parity_gate_passed
+        else "eligible_business_evidence_cache_only_variance" if cache_variance["eligible"]
+        else "ineligible_source_snapshot_mismatch_or_unverified"
+    )
     paired: dict[str, Any] = {
         "phase": "paired-recurring",
-        "treatment_recipe_version": "skill-guided-deferred-v3-same-key-preflight",
+        "treatment_recipe_version": (
+            "paired-recurring-cache-status-variance-v1"
+            if allow_cache_variance else "skill-guided-deferred-v3-same-key-preflight"
+        ),
+        "allow_transport_cache_variance": allow_cache_variance,
+        "strict_source_snapshot_status": strict_snapshot_status,
+        "report_input_eligibility_gate": {
+            "status": "eligible" if report_inputs_eligible else "ineligible",
+            "qualification": report_eligibility_status,
+            "basis": (
+                "strict_full_resource_snapshot_match" if parity_gate_passed
+                else "explicit_cache_status_only_variance_opt_in" if cache_variance["eligible"]
+                else cache_variance["reason"] if allow_cache_variance
+                else "cache_status_variance_opt_in_not_enabled"
+            ),
+            "strict_source_snapshot_status": strict_snapshot_status,
+            "cache_status_differences": cache_variance["cache_status_differences"],
+            "readout_episodes_started": 0,
+            "source_cost_savings_claim": False,
+        },
         "historical_explicit_deferred_trial_preserved_separately": True,
-        "comparison_design": "one complete production Superset helper capture is frozen for both arms; one native preflight evaluation is source-snapshot-compared before readout episodes; only a full ResourceSnapshot match admits the readouts; treatment modes replay that one preflight key",
+        "comparison_design": (
+            "One complete production Superset helper capture is frozen for both arms. Strict "
+            "ResourceSnapshot comparison remains unchanged. Readouts require a strict full match, "
+            "except when explicit cache-status opt-in qualifies complete snapshots whose only "
+            "differences are allowlisted cache_status leaves; that admits descriptive report "
+            "inputs only, not parity or source-cost claims. Treatment modes replay one preflight key."
+        ),
         "mode_interpretation": (
             "Both treatment modes run the same candidate binary, approved card, notes, source tools, "
             "and frozen source responses. original_policy does not consume deferred receipt pages. "
@@ -2033,6 +2198,11 @@ async def _run_paired_recurring(
         "preflight_source_snapshot_comparison": source_comparison,
         "paired_input_parity_gate": {
             "status": "passed" if parity_gate_passed else "failed",
+            "strict_source_snapshot_status": strict_snapshot_status,
+            "reason": None if parity_gate_passed else (
+                "strict_snapshot_different_cache_status_only_variance_opted_in"
+                if cache_variance["eligible"] else "strict_snapshot_not_equal"
+            ),
             "readout_episodes_started": 0,
             "comparison_scope": "all ResourceSnapshot fields except only the root captured_at receive timestamp; includes nested timestamps, source_captured_at, metadata/cache status, contracts, observations, evidence, and source errors",
             "saved_chart_params_and_query_response_metadata": "retained in the complete frozen helper tool snapshot and replayed identically to both arms; not asserted to be present in the native receipt",
@@ -2048,7 +2218,8 @@ async def _run_paired_recurring(
         "limitations": [
             "The shared dashboard/chart responses are captured from real read-only Superset HTTP and replayed identically to every readout agent; the capture is not atomic.",
             "Capture timestamps are request-time observations, not warehouse as-of timestamps or freshness proof.",
-            "The native preflight uses separate live approved-source reads. Readout episodes start only if every ResourceSnapshot business and definition field matches the frozen helper snapshot; any difference or unavailable field stops the paired analysis before readout model calls.",
+            "The native preflight uses separate live approved-source reads. By default any ResourceSnapshot difference stops before readout calls. Explicit cache-status opt-in admits only complete Superset snapshots with differences at exact allowlisted cache_status leaves; strict comparison remains different and all other differences still stop.",
+            "cache_status is transport/cache provenance, not freshness or source quality; it may differ because native preflight and helper requests are separate queries. No source-cost savings or full-parity claim is made for that protocol.",
             "Only the root ResourceSnapshot captured_at receive-time is excluded from parity hashes. Root source_captured_at and all nested timestamps, metadata/cache state, quality warnings, and contracts remain in the comparison.",
             "Raw saved-chart query parameters and query-response metadata are preserved in the shared helper fixture because the receipt does not contain them; no receipt-only substitution is made for the source-tool outputs.",
             "A matching snapshot is not proof of an atomic warehouse state, identical HTTP request sequence, or total connector-cost parity. Native adapter HTTP subrequests are not exposed by the evaluation API.",
@@ -2059,7 +2230,7 @@ async def _run_paired_recurring(
         ],
         "repeats": [],
     }
-    if not parity_gate_passed:
+    if not report_inputs_eligible:
         paired["comparison_status"] = "ineligible_source_snapshot_mismatch_or_unverified"
         paired["measurement_accounting"] = {
             "categories_are_disjoint": True,
@@ -2107,6 +2278,7 @@ async def _run_paired_recurring(
             stage="paired-baseline",
             prompt=baseline_prompt,
             skill=skill,
+            allow_transport_cache_variance=allow_cache_variance,
         )
         baseline_episode_seconds.append(time.perf_counter() - baseline_started)
 
@@ -2137,6 +2309,7 @@ async def _run_paired_recurring(
             stage=f"paired-treatment-{mode}",
             prompt=treatment_prompt,
             skill=skill,
+            allow_transport_cache_variance=allow_cache_variance,
         )
         treatment_episode_seconds.append(time.perf_counter() - treatment_started)
         for name, count in treatment.native_tool_calls_by_name.items():
@@ -2193,8 +2366,9 @@ async def _run_paired_recurring(
                 "same_preflight_receipt_replay_verified": replay_verified,
             },
         })
-    paired["comparison_status"] = "eligible_source_snapshot_parity_verified"
+    paired["comparison_status"] = report_eligibility_status
     paired["paired_input_parity_gate"]["readout_episodes_started"] = 2 * len(PAIRED_POLICY_MODES)
+    paired["report_input_eligibility_gate"]["readout_episodes_started"] = 2 * len(PAIRED_POLICY_MODES)
     snapshot_fingerprint_reused = len({
         arm["source_snapshot_sha256"]
         for item in paired["repeats"]
@@ -2432,6 +2606,8 @@ async def run(args: argparse.Namespace) -> None:
     phase = getattr(args, "phase", "original")
     if phase not in {"original", "paired-recurring"}:
         raise ValueError("phase must be original or paired-recurring")
+    if bool(getattr(args, "allow_transport_cache_variance", False)) and phase != "paired-recurring":
+        raise ValueError("transport cache variance is available only for paired-recurring")
     owner_context = args.owner_context_file.read_text(encoding="utf-8").strip()
     if not owner_context:
         raise ValueError("owner context file must contain real owner-provided context")
@@ -2667,8 +2843,19 @@ def main() -> None:
         default="original",
         help="Keep the historical one-shot comparison, or run two matched recurring readout pairs after approval.",
     )
+    parser.add_argument(
+        "--allow-transport-cache-variance",
+        action="store_true",
+        help=(
+            "Opt in to descriptive paired reports only when complete Superset snapshots differ "
+            "solely at allowlisted cache_status leaves; strict comparison remains different, "
+            "with no full-parity or source-cost claim. Requires --phase paired-recurring."
+        ),
+    )
     parser.add_argument("--execute", action="store_true", help="Explicitly enable live model calls and interactive owner approval")
     args = parser.parse_args()
+    if args.allow_transport_cache_variance and args.phase != "paired-recurring":
+        parser.error("--allow-transport-cache-variance requires --phase paired-recurring")
     if args.verify_saved_results is not None:
         if args.execute:
             parser.error("--verify-saved-results cannot be combined with --execute")
