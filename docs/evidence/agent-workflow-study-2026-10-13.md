@@ -58,7 +58,10 @@ fixture and verifies exact workflow input and label digests.
   This session's earlier non-elevated `semctl: Operation not permitted` was a
   sandbox limit, not a product failure; the later native run supersedes it as
   journey evidence.
-- Commit `6a1b975` is pushed to its branch, not merged to main or published.
+- These trials froze `6a1b975`. The published native `v0.2.0rc2` includes that
+  code through release commit `b8917e5`; subsequent experimental evidence-handoff
+  changes are not in that release. None of these trial results is a main-merge
+  or enterprise-readiness certification.
 - The full v4 root report records 250 native attempts across 108 cases (253
   tool attempts: 3 argument-validation errors and 15 decision-tool errors; 180
   valid current results; zero budget-censored companies). Its 144 mock-outbox
