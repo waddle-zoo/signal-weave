@@ -61,12 +61,14 @@ fixture and verifies exact workflow input and label digests.
   sandbox limit, not a product failure; the later native run supersedes it as
   journey evidence.
 - Oct 14 supporting checks (not agent-efficacy results): onboarding-guidance
-  suites **42+22 tests**, source-capture suite **49 passed**, native full suite
-  **2,946 passed / 7 skipped** before the harness, and **2/2** installed-binary
+  suites **42+22 tests**, source-capture suite **49 passed**, Python full
+  regression suite **2,946 passed / 7 skipped** before the harness (separate
+  from the **2** native tests), and **2/2** installed-binary
   checks in **291.72s**. An exploratory packaging probe measured one-file
   `--version` at **14.45s** and **16.336/14.374/9.025s**, one-file `--help` at
   **10.71s**, versus an isolated one-dir cold build of **11.91s** and warm
-  `--help` at **0.680/0.554/0.434/0.463s**. Commands differ; this is not a
+  `--help` at **0.680s** and warm `--version` at **0.554/0.434/0.463s**.
+  Commands differ; this is not a
   controlled startup benchmark, and no packaging fix or release-format change
   is in place. Receipt-page tests passed **21 focused tests**: they compare all
   **117** inline fact rows with raw receipt rows and exercise deferred-state
@@ -81,7 +83,9 @@ fixture and verifies exact workflow input and label digests.
   `inference_performed=false`); end-to-end including one Luna turn:
   **17.98s / 15.70s**. Guide-only handoff proof, not a fresh source/report test
   or a standalone startup/throughput benchmark.
-- These trials froze `6a1b975`. The published native `v0.2.0rc2` includes that
+- The October 13 root trials froze `6a1b975`. October 14 checks use the
+  fingerprints stated above, including source commit `c6e693f` for the clean
+  receipt replay. The published native `v0.2.0rc2` includes the October 13 root
   code through release commit `b8917e5`; subsequent experimental evidence-handoff
   changes are not in that release. None of these trial results is a main-merge
   or enterprise-readiness certification.
