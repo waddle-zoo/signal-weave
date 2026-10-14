@@ -82,7 +82,6 @@ _CACHE_STATUS_VALUES = frozenset({"cached", "uncached", "mixed", "unknown"})
 _CACHE_STATUS_PATH = re.compile(
     r"/(?:metadata/charts/(\d+)/cache_status|evidence/(\d+)/values/cache_status)"
 )
-PAIRED_REPETITIONS = 2
 PAIRED_POLICY_MODES = ("original_policy", "skill_guided_deferred")
 SETUP_TOOLS = frozenset({
     "get_signalweave_guide", "search_catalog", "inspect_resource",
@@ -301,8 +300,8 @@ def build_paired_prompt(
     policy_mode: str | None = None,
     idempotency_key: str | None = None,
 ) -> dict[str, Any]:
-    if repeat not in {1, 2}:
-        raise ValueError("paired recurring readouts are limited to two repeats")
+    if not isinstance(repeat, int) or repeat < 1 or repeat > len(PAIRED_POLICY_MODES):
+        raise ValueError("paired recurring readout index is outside the available policy modes")
     prompt: dict[str, Any] = {
         "request": (
             "Prepare one concise, source-backed readout using the same captured source responses "
@@ -719,6 +718,35 @@ def cache_status_only_variance_eligibility(
         "reason": "cache_status_only_variance",
         "cache_status_differences": differences,
     }
+
+
+def _selected_paired_policy_modes(args: argparse.Namespace) -> tuple[str, ...]:
+    requested = getattr(args, "paired_policy_modes", None)
+    if requested is None:
+        return PAIRED_POLICY_MODES
+    if not isinstance(requested, (list, tuple)):
+        raise ValueError("paired policy modes must be a sequence")
+    modes = tuple(requested)
+    if not modes:
+        raise ValueError("at least one paired policy mode must be selected")
+    if len(modes) > len(PAIRED_POLICY_MODES):
+        raise ValueError("too many paired policy modes were selected")
+    if any(not isinstance(mode, str) or mode not in PAIRED_POLICY_MODES for mode in modes):
+        raise ValueError("unknown paired policy mode")
+    if len(set(modes)) != len(modes):
+        raise ValueError("paired policy modes must be unique")
+    return modes
+
+
+def _saved_paired_policy_modes(paired: dict[str, Any]) -> tuple[str, ...]:
+    saved_modes = paired.get("policy_modes")
+    if saved_modes is None:
+        saved_modes = list(dict.fromkeys(
+            item.get("policy_mode")
+            for item in paired.get("repeats", [])
+            if isinstance(item, dict) and isinstance(item.get("policy_mode"), str)
+        ))
+    return _selected_paired_policy_modes(argparse.Namespace(paired_policy_modes=saved_modes))
 
 
 class ReceiptPageReadError(RuntimeError):
@@ -2066,6 +2094,7 @@ async def _run_paired_recurring(
     review: dict[str, Any],
     owner_notes: str,
 ) -> dict[str, Any]:
+    policy_modes = _selected_paired_policy_modes(args)
     capture_started = time.perf_counter()
     try:
         with local_environment(local_home):
@@ -2186,7 +2215,7 @@ async def _run_paired_recurring(
             "inputs only, not parity or source-cost claims. Treatment modes replay one preflight key."
         ),
         "mode_interpretation": (
-            "Both treatment modes run the same candidate binary, approved card, notes, source tools, "
+            "Each selected treatment mode uses the same candidate binary, approved card, notes, source tools, "
             "and frozen source responses. original_policy does not consume deferred receipt pages. "
             "skill_guided_deferred follows the currently shipped skill and pages only relevant omitted "
             "details. This is a changed recipe from the archived explicit_deferred trial, whose prompt "
@@ -2213,8 +2242,8 @@ async def _run_paired_recurring(
         "preflight_receipt_snapshot_page_call_cap_total": MAX_RECEIPT_PAGE_CALLS,
         "report_word_limit": MAX_PAIRED_REPORT_WORDS,
         "report_word_count_method": "whitespace-delimited words in submitted report only",
-        "repeat_count": PAIRED_REPETITIONS,
-        "policy_modes": list(PAIRED_POLICY_MODES),
+        "repeat_count": len(policy_modes),
+        "policy_modes": list(policy_modes),
         "limitations": [
             "The shared dashboard/chart responses are captured from real read-only Superset HTTP and replayed identically to every readout agent; the capture is not atomic.",
             "Capture timestamps are request-time observations, not warehouse as-of timestamps or freshness proof.",
@@ -2223,7 +2252,7 @@ async def _run_paired_recurring(
             "Only the root ResourceSnapshot captured_at receive-time is excluded from parity hashes. Root source_captured_at and all nested timestamps, metadata/cache state, quality warnings, and contracts remain in the comparison.",
             "Raw saved-chart query parameters and query-response metadata are preserved in the shared helper fixture because the receipt does not contain them; no receipt-only substitution is made for the source-tool outputs.",
             "A matching snapshot is not proof of an atomic warehouse state, identical HTTP request sequence, or total connector-cost parity. Native adapter HTTP subrequests are not exposed by the evaluation API.",
-            "No numeric outcome labels or expected business classes are supplied; two repeats are descriptive, not a generalization sample.",
+            "No numeric outcome labels or expected business classes are supplied; each selected policy mode runs once per arm, so results are descriptive, not a generalization sample.",
             "No source-cost savings claim is made. One-time helper capture, native preflight, receipt pages, and agent calls are measured separately; the native preflight is included in treatment all-in.",
             "The trial tool prevents reports over 300 whitespace-delimited words from being submitted.",
             "The skill_guided_deferred recipe follows shipped evidence-access guidance; it does not require exhaustive receipt paging or duplicate representations.",
@@ -2256,7 +2285,7 @@ async def _run_paired_recurring(
     baseline_episode_seconds: list[float] = []
     treatment_native_calls: dict[str, int] = {}
     treatment_native_call_seconds: dict[str, float] = {}
-    for repeat, mode in enumerate(PAIRED_POLICY_MODES, start=1):
+    for repeat, mode in enumerate(policy_modes, start=1):
         baseline = CardJourneySession(
             None,
             stage="paired-baseline",
@@ -2367,8 +2396,9 @@ async def _run_paired_recurring(
             },
         })
     paired["comparison_status"] = report_eligibility_status
-    paired["paired_input_parity_gate"]["readout_episodes_started"] = 2 * len(PAIRED_POLICY_MODES)
-    paired["report_input_eligibility_gate"]["readout_episodes_started"] = 2 * len(PAIRED_POLICY_MODES)
+    readout_episode_count = 2 * len(paired["repeats"])
+    paired["paired_input_parity_gate"]["readout_episodes_started"] = readout_episode_count
+    paired["report_input_eligibility_gate"]["readout_episodes_started"] = readout_episode_count
     snapshot_fingerprint_reused = len({
         arm["source_snapshot_sha256"]
         for item in paired["repeats"]
@@ -2377,7 +2407,7 @@ async def _run_paired_recurring(
     source_tool_parity = source_tool_snapshot_parity_from_events(
         audit.events,
         [item for item in card.get("sources", []) if isinstance(item, dict)],
-        expected_modes=PAIRED_POLICY_MODES,
+        expected_modes=policy_modes,
     )
     paired["snapshot_manifest_fingerprint_reused_across_episodes"] = snapshot_fingerprint_reused
     paired["shared_agent_source_tool_snapshot_parity"] = source_tool_parity
@@ -2402,8 +2432,9 @@ async def _run_paired_recurring(
             "episode_wall_seconds_total": sum(treatment_episode_seconds),
             "native_tool_calls_by_name": treatment_native_calls,
             "native_tool_elapsed_seconds_by_name": treatment_native_call_seconds,
+            "expected_cached_evaluate_insight_card_replays": len(policy_modes),
             "evaluate_insight_card_calls_are_cached_replays": (
-                treatment_native_calls.get("evaluate_insight_card", 0) == PAIRED_REPETITIONS
+                treatment_native_calls.get("evaluate_insight_card", 0) == len(policy_modes)
             ),
             "live_superset_http_attempts_during_episode": 0,
         },
@@ -2464,11 +2495,7 @@ async def verify_saved_paired_results(results_path: Path) -> dict[str, Any]:
     helper_sources, helper_status, helper_issue, helper_read_counts = (
         helper_source_snapshots_from_audit(audit_path, approved_sources)
     )
-    saved_modes = tuple(dict.fromkeys(
-        item.get("policy_mode")
-        for item in paired["repeats"]
-        if isinstance(item, dict) and isinstance(item.get("policy_mode"), str)
-    ))
+    saved_modes = _saved_paired_policy_modes(paired)
     agent_source_tool_parity = source_tool_snapshot_parity_from_audit(
         audit_path, approved_sources, expected_modes=saved_modes,
     )
@@ -2602,12 +2629,15 @@ async def verify_saved_paired_results(results_path: Path) -> dict[str, Any]:
 async def run(args: argparse.Namespace) -> None:
     if not args.execute:
         raise SystemExit("No provider calls are made unless --execute is explicitly supplied.")
-    capture_imports = verify_capture_imports()
     phase = getattr(args, "phase", "original")
     if phase not in {"original", "paired-recurring"}:
         raise ValueError("phase must be original or paired-recurring")
+    if getattr(args, "paired_policy_modes", None) is not None and phase != "paired-recurring":
+        raise ValueError("paired policy mode selection is available only for paired-recurring")
+    policy_modes = _selected_paired_policy_modes(args) if phase == "paired-recurring" else ()
     if bool(getattr(args, "allow_transport_cache_variance", False)) and phase != "paired-recurring":
         raise ValueError("transport cache variance is available only for paired-recurring")
+    capture_imports = verify_capture_imports()
     owner_context = args.owner_context_file.read_text(encoding="utf-8").strip()
     if not owner_context:
         raise ValueError("owner context file must contain real owner-provided context")
@@ -2646,7 +2676,7 @@ async def run(args: argparse.Namespace) -> None:
         "archive_sha256": expected,
         "archive_origin": args.archive_origin,
         "trial_scope": (
-            "fresh native setup; real Codex with installed shipped skill; approved card; paired recurring readouts; captured live read-only Superset HTTP; explicit human approval; delivery disabled"
+            f"fresh native setup; real Codex with installed shipped skill; approved card; one matched baseline/treatment readout pair per selected policy mode ({', '.join(policy_modes)}); captured live read-only Superset HTTP; explicit human approval; delivery disabled"
             if phase == "paired-recurring"
             else "fresh native setup; real Codex with installed shipped skill; paired source tools; live read-only Superset HTTP; explicit human approval; one delivery-disabled card evaluation; direct chart drilldown"
         ),
@@ -2666,7 +2696,7 @@ async def run(args: argparse.Namespace) -> None:
             (
                 "No external message or schedule is created; a current snapshot is not a recurrence-quality claim."
                 if phase == "original"
-                else "No external message or schedule is created; two repeats are descriptive, not a recurrence-quality claim or superiority test."
+                else "No external message or schedule is created; each selected policy mode runs once per arm, so the result is descriptive, not a recurrence-quality claim or superiority test."
             ),
             "Shared source-helper HTTP counts exclude native MCP source HTTP and auth/login requests.",
             "Discovery calls (find_dashboards/search_catalog) are tracked separately and do not consume the 60-call data-read cap; read_dashboard, read_chart_rows, and inspect_resource do.",
@@ -2841,7 +2871,15 @@ def main() -> None:
         "--phase",
         choices=("original", "paired-recurring"),
         default="original",
-        help="Keep the historical one-shot comparison, or run two matched recurring readout pairs after approval.",
+        help="Keep the historical one-shot comparison, or run matched recurring readout pairs after approval.",
+    )
+    parser.add_argument(
+        "--paired-policy-mode",
+        choices=PAIRED_POLICY_MODES,
+        action="append",
+        dest="paired_policy_modes",
+        default=None,
+        help="Select a paired-recurring treatment mode; repeat to include multiple modes (default: all modes).",
     )
     parser.add_argument(
         "--allow-transport-cache-variance",
@@ -2854,6 +2892,8 @@ def main() -> None:
     )
     parser.add_argument("--execute", action="store_true", help="Explicitly enable live model calls and interactive owner approval")
     args = parser.parse_args()
+    if args.paired_policy_modes is not None and args.phase != "paired-recurring":
+        parser.error("--paired-policy-mode requires --phase paired-recurring")
     if args.allow_transport_cache_variance and args.phase != "paired-recurring":
         parser.error("--allow-transport-cache-variance requires --phase paired-recurring")
     if args.verify_saved_results is not None:

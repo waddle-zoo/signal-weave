@@ -25,7 +25,6 @@ from evaluations.native_superset_card_journey import (
     MONITOR_INSTRUCTIONS,
     MONITOR_TOOLS,
     PAIRED_POLICY_MODES,
-    PAIRED_REPETITIONS,
     SETUP_TOOLS,
     SHARED_SOURCE_TOOLS,
     CardJourneySession,
@@ -34,6 +33,7 @@ from evaluations.native_superset_card_journey import (
     _owner_approval,
     _run_episode,
     _run_paired_recurring,
+    _saved_paired_policy_modes,
     _source_budget_summary,
     build_actor_prompt,
     build_paired_prompt,
@@ -45,6 +45,7 @@ from evaluations.native_superset_card_journey import (
     helper_source_snapshots_from_audit,
     instructions_for,
     load_installed_skill,
+    main,
     native_source_snapshots_for_comparison,
     run,
     run_native_preflight,
@@ -253,7 +254,6 @@ def test_paired_prompt_gives_both_arms_the_same_card_notes_questions_and_snapsho
     assert "expected_outcome" not in str(baseline)
     assert "provider_call_attempts" not in str(baseline)
     assert baseline["source_snapshot"]["timestamps_are_query_capture_times_not_warehouse_as_of"] is True
-    assert PAIRED_REPETITIONS == 2
     assert PAIRED_POLICY_MODES == ("original_policy", "skill_guided_deferred")
 
     original_treatment = build_paired_prompt(
@@ -971,9 +971,12 @@ async def test_paired_capture_uses_explicit_local_runtime_registry_and_mismatch_
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("allow_variance", [False, True])
+@pytest.mark.parametrize(
+    ("allow_variance", "selected_modes"),
+    [(False, None), (True, None), (True, ("skill_guided_deferred",))],
+)
 async def test_paired_cache_status_variance_requires_opt_in_and_keeps_strict_gate_failed(
-    monkeypatch, allow_variance,
+    monkeypatch, allow_variance, selected_modes,
 ):
     helper_by_key, native_by_key = _cache_variance_snapshots()
     snapshot = PairedSourceSnapshot(
@@ -1014,11 +1017,19 @@ async def test_paired_cache_status_variance_requires_opt_in_and_keeps_strict_gat
         )
 
     episode_calls = []
+    observed_expected_modes = []
+
+    def fake_source_tool_parity(events, approved_sources, *, expected_modes=None):
+        observed_expected_modes.append(expected_modes)
+        return {"status": "equal"}
 
     async def fake_episode(session, **kwargs):
         episode_calls.append(kwargs)
         session.submission = {"report": "Evidence-backed readout."}
         if kwargs["stage"].startswith("paired-treatment-"):
+            session.native_tool_calls_by_name["evaluate_insight_card"] = (
+                session.native_tool_calls_by_name.get("evaluate_insight_card", 0) + 1
+            )
             session.evaluation = {
                 "replayed": True,
                 "receipt": {
@@ -1032,28 +1043,45 @@ async def test_paired_cache_status_variance_requires_opt_in_and_keeps_strict_gat
     monkeypatch.setattr("evaluations.native_superset_card_journey.capture_paired_source_snapshot", frozen_capture)
     monkeypatch.setattr("evaluations.native_superset_card_journey.run_native_preflight", fake_preflight)
     monkeypatch.setattr("evaluations.native_superset_card_journey._run_episode", fake_episode)
+    monkeypatch.setattr(
+        "evaluations.native_superset_card_journey.source_tool_snapshot_parity_from_events",
+        fake_source_tool_parity,
+    )
     card = {"id": "card-1", "sources": [{
         "key": "primary", "adapter": "superset", "resource": "dashboard:7", "label": "Sales",
     }]}
     result = await _run_paired_recurring(
-        args=SimpleNamespace(allow_transport_cache_variance=True) if allow_variance else SimpleNamespace(),
+        args=SimpleNamespace(
+            allow_transport_cache_variance=allow_variance,
+            paired_policy_modes=list(selected_modes) if selected_modes is not None else None,
+        ),
         local_home=local_home, native=object(), audit=SimpleNamespace(events=[]),
         owner_context="Owner context", skill="---\nname: signalweave\n---\n", card=card,
         review={"readiness_status": "ready"}, owner_notes="Owner notes",
     )
 
+    expected_modes = selected_modes or PAIRED_POLICY_MODES
+    expected_episode_count = 2 * len(expected_modes)
     assert result["strict_source_snapshot_status"] == "different"
+    assert result["repeat_count"] == len(expected_modes)
+    assert result["policy_modes"] == list(expected_modes)
     assert result["paired_input_parity_gate"]["status"] == "failed"
     assert result["paired_input_parity_gate"]["strict_source_snapshot_status"] == "different"
     if allow_variance:
         assert result["comparison_status"] == "eligible_business_evidence_cache_only_variance"
         assert result["report_input_eligibility_gate"]["status"] == "eligible"
-        assert result["report_input_eligibility_gate"]["readout_episodes_started"] == 4
+        assert result["report_input_eligibility_gate"]["readout_episodes_started"] == expected_episode_count
         assert result["preflight_source_snapshot_comparison"]["status"] == "different"
-        assert result["paired_input_parity_gate"]["readout_episodes_started"] == 4
+        assert result["paired_input_parity_gate"]["readout_episodes_started"] == expected_episode_count
         assert result["measurement_accounting"]["treatment_all_in"]["source_cost_savings_claim"] is False
-        assert len(episode_calls) == 4
+        assert len(episode_calls) == expected_episode_count
         assert all(call["allow_transport_cache_variance"] is True for call in episode_calls)
+        assert sum(call["stage"] == "paired-baseline" for call in episode_calls) == len(expected_modes)
+        assert sum(call["stage"].startswith("paired-treatment-") for call in episode_calls) == len(expected_modes)
+        treatment_accounting = result["measurement_accounting"]["treatment_agent"]
+        assert treatment_accounting["expected_cached_evaluate_insight_card_replays"] == len(expected_modes)
+        assert treatment_accounting["evaluate_insight_card_calls_are_cached_replays"] is True
+        assert observed_expected_modes == [expected_modes]
     else:
         assert result["comparison_status"] == "ineligible_source_snapshot_mismatch_or_unverified"
         assert result["report_input_eligibility_gate"]["status"] == "ineligible"
@@ -1062,6 +1090,59 @@ async def test_paired_cache_status_variance_requires_opt_in_and_keeps_strict_gat
         assert result["repeats"] == []
         assert result["measurement_accounting"]["readout_agent_model_calls"] == 0
         assert episode_calls == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("selected_modes", "message"),
+    [
+        (["not-a-policy"], "unknown"),
+        (["original_policy", "original_policy"], "unique"),
+        ([], "at least one"),
+        (["original_policy", "skill_guided_deferred", "original_policy"], "too many"),
+    ],
+)
+async def test_invalid_paired_policy_modes_fail_before_capture_native_or_model(
+    monkeypatch, selected_modes, message,
+):
+    calls = []
+
+    async def forbidden(*args, **kwargs):
+        calls.append((args, kwargs))
+        raise AssertionError("invalid modes must fail before capture, native preflight, or model calls")
+
+    monkeypatch.setattr("evaluations.native_superset_card_journey.capture_paired_source_snapshot", forbidden)
+    monkeypatch.setattr("evaluations.native_superset_card_journey.run_native_preflight", forbidden)
+    monkeypatch.setattr("evaluations.native_superset_card_journey._run_episode", forbidden)
+    with pytest.raises(ValueError, match=message):
+        await _run_paired_recurring(
+            args=SimpleNamespace(paired_policy_modes=selected_modes),
+            local_home=Path("/private/unused/.signalweave"), native=object(),
+            audit=SimpleNamespace(events=[]), owner_context="Owner context",
+            skill="---\nname: signalweave\n---\n", card={"id": "card-1", "sources": []},
+            review={}, owner_notes="",
+        )
+    assert calls == []
+
+
+def test_cli_rejects_paired_policy_mode_outside_paired_phase(monkeypatch, capsys):
+    monkeypatch.setattr(
+        "sys.argv", ["native_superset_card_journey", "--paired-policy-mode", "original_policy"],
+    )
+    with pytest.raises(SystemExit) as error:
+        main()
+    assert error.value.code == 2
+    assert "--paired-policy-mode requires --phase paired-recurring" in capsys.readouterr().err
+
+
+def test_saved_parity_verification_uses_preregistered_policy_modes():
+    assert _saved_paired_policy_modes({
+        "policy_modes": ["skill_guided_deferred"], "repeats": [],
+    }) == ("skill_guided_deferred",)
+    assert _saved_paired_policy_modes({
+        "policy_modes": ["original_policy", "skill_guided_deferred"],
+        "repeats": [{"policy_mode": "original_policy"}],
+    }) == PAIRED_POLICY_MODES
 
 
 @pytest.mark.asyncio
