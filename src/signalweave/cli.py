@@ -210,6 +210,10 @@ def main() -> None:
     skills_install = skills_sub.add_parser("install", help="Install the skill in an explicit agent scope")
     skills_install.add_argument("--agent", choices=["codex", "claude"], required=True)
     skills_install.add_argument("--scope", choices=["project", "user"], default="project")
+    remove = commands.add_parser("uninstall", help="Remove the native executable; keep local data unless --purge")
+    remove.add_argument("--home", help="Local home (default: SIGNALWEAVE_HOME or ~/.signalweave)")
+    remove.add_argument("--purge", action="store_true", help="Permanently remove this private home's configuration, credentials, cards, and receipts")
+    remove.add_argument("--yes", action="store_true", help="Confirm the displayed uninstall plan without prompting")
     run = commands.add_parser(
         "run",
         help="Run an approved insight card once through the configured decision provider",
@@ -241,6 +245,11 @@ def main() -> None:
         sys.argv.append("status" if existing_home.is_file() else "setup")
     args = parser.parse_args()
     try:
+        if args.command == "uninstall":
+            from .uninstall import uninstall
+
+            uninstall(args.home, purge=args.purge, yes=args.yes)
+            return
         if args.command == "skills":
             from .skill_install import SkillInstallError, install_skill, skill_text
 
