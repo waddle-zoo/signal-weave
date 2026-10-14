@@ -12,16 +12,17 @@ published `v0.2.0rc1` predates them. See the [build instructions](local-install-
 
 Install and configure SignalWeave using the [laptop setup guide](local-install.md).
 Run `signalweave setup`, choose the decision provider and source connections,
-and connect Codex or Claude when setup offers. If you skipped registration,
+and connect Codex or Claude when setup offers. After registration, setup offers
+to install the bundled workflow skill for that client in your user scope. If you skipped registration,
 run `signalweave connect codex` or `signalweave connect claude`, then restart or
 reconnect the agent. Keep credentials in the private setup prompts or files;
 do not put them in an agent prompt. The skill install below does not register
 the MCP server.
 
-## 2. Install the skill in the project
+## 2. Use the bundled skill
 
-From the project directory where you want the instructions discovered, install
-for the client you use:
+If you accepted the setup offer, the skill is already installed for your client.
+You can also install it explicitly, or keep a project-local copy instead:
 
 ```sh
 signalweave skills install --agent codex --scope project
@@ -29,7 +30,8 @@ signalweave skills install --agent codex --scope project
 signalweave skills install --agent claude --scope project
 ```
 
-This installs only the project-local skill. `signalweave skills show` prints
+These commands install only the project-local skill. Add `--scope user` for a
+client-wide install. `signalweave skills show` prints
 the canonical content. If an existing project skill differs, installation
 refuses to replace it; inspect and resolve that conflict deliberately.
 

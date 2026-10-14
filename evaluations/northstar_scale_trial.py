@@ -46,6 +46,9 @@ from signalweave.evaluation import (
     CardEvaluationThresholds,
     CardWorkflowEvaluator,
     EvaluationDataset,
+    _case_input,
+    _case_labels,
+    _stable_digest,
 )
 from signalweave.models import (
     ContextFact,
@@ -214,6 +217,7 @@ def build_scale_fixtures(
     *,
     seeds: dict[str, int] | None = None,
     output_dir: str | Path | None = None,
+    frozen_dir: str | Path | None = None,
 ) -> tuple[dict[str, Any], dict[str, dict[str, Any]], list[dict[str, Any]]]:
     """Build disjoint-time Northstar fixtures from company config, not scenarios."""
     base = load_config(base_config_path)
@@ -226,12 +230,19 @@ def build_scale_fixtures(
     }
     fixtures: dict[str, dict[str, Any]] = {}
     for split, seed in seeds.items():
-        fixtures[split] = generate_fixture(
-            config,
-            output_path=(Path(output_dir) / f"fixture-{split}.json") if output_dir else None,
-            seed=seed,
-            namespace="northstar-scale",
-        )
+        if frozen_dir is not None:
+            fixture = json.loads((Path(frozen_dir) / f"fixture-{split}.json").read_text())
+            if (fixture.get("seed") != seed
+                    or fixture.get("company", {}).get("id") != config["company"]["id"]):
+                raise ValueError(f"frozen {split} fixture company/seed mismatch")
+            fixtures[split] = fixture
+        else:
+            fixtures[split] = generate_fixture(
+                config,
+                output_path=(Path(output_dir) / f"fixture-{split}.json") if output_dir else None,
+                seed=seed,
+                namespace="northstar-scale",
+            )
     corporation = load_corporation_config(DEFAULT_CORPORATION_CONFIG)
     roster = build_agent_roster(corporation, base)
     return config, fixtures, roster
@@ -824,8 +835,9 @@ def _load_reused_workflow_evidence(
     config: dict[str, Any],
     roster: list[dict[str, Any]],
     source_adapters: set[str],
+    allow_shadow: bool = False,
 ) -> dict[str, Any]:
-    """Load a previously approved live workflow report after strict identity checks.
+    """Load complete live workflow evidence without changing its gate status.
 
     Retrieval-only retries must not silently combine a new fixture population with
     old workflow evidence.  This check keeps the expensive workflow judgments
@@ -850,12 +862,17 @@ def _load_reused_workflow_evidence(
     if not isinstance(workflow, dict):
         failures.append("reused report has no workflow report")
         workflow = {}
-    if workflow.get("status") != "approved":
+    accepted_statuses = {"approved", "shadow"} if allow_shadow else {"approved"}
+    if workflow.get("status") not in accepted_statuses:
         failures.append("reused workflow report is not approved")
     if workflow.get("case_count") != len(workflow_cases):
         failures.append("reused workflow case count does not match this fixture")
     if workflow.get("error_rate") != 0.0:
         failures.append("reused workflow report contains evaluation errors")
+    if workflow.get("input_digest") != _stable_digest([_case_input(case) for case in workflow_cases]):
+        failures.append("reused workflow input content digest does not match this fixture")
+    if workflow.get("label_digest") != _stable_digest([_case_labels(case) for case in workflow_cases]):
+        failures.append("reused workflow label content digest does not match this fixture")
     if sorted(workflow.get("dataset_ids", [])) != expected_dataset_ids:
         failures.append("reused workflow dataset IDs do not match this fixture")
     if sorted(workflow.get("card_ids", [])) != expected_card_ids:
@@ -906,6 +923,8 @@ async def run_trial(
     max_concurrency: int = 12,
     retrieval_only: bool = False,
     reuse_workflow_report: str | Path | None = None,
+    allow_shadow_workflow_reuse: bool = False,
+    frozen_fixture_dir: str | Path | None = None,
 ) -> dict[str, Any]:
     if decoys_per_adapter < 0:
         raise ValueError("decoys_per_adapter must be non-negative")
@@ -917,10 +936,15 @@ async def run_trial(
         raise ValueError("retrieval_only requires reuse_workflow_report")
     if not retrieval_only and reuse_workflow_report is not None:
         raise ValueError("reuse_workflow_report requires retrieval_only")
+    if allow_shadow_workflow_reuse and not retrieval_only:
+        raise ValueError("allow_shadow_workflow_reuse requires retrieval_only")
+    if retrieval_only and frozen_fixture_dir is None:
+        raise ValueError("retrieval_only requires frozen_fixture_dir to preserve exact capture times")
 
     config, fixtures, roster = build_scale_fixtures(
         base_config_path,
         output_dir=fixture_dir,
+        frozen_dir=frozen_fixture_dir,
     )
     tenant_id = "northstar-outfitters"
     adapters, records, catalog_stats = _descriptors_and_records(
@@ -946,6 +970,19 @@ async def run_trial(
         authorization_source="northstar-scale-trial-gateway",
     )
     source_adapters = {source.adapter for case in workflow_cases for source in case.card.sources}
+    # Validate saved evidence before any source probes or paid provider calls.
+    # A shadow replay remains shadow; it is not promoted by being reused.
+    workflow_evidence: dict[str, Any] | None = None
+    if retrieval_only:
+        workflow_evidence = _load_reused_workflow_evidence(
+            reuse_workflow_report,
+            workflow_cases=workflow_cases,
+            cards=cards,
+            config=config,
+            roster=roster,
+            source_adapters=source_adapters,
+            allow_shadow=allow_shadow_workflow_reuse,
+        )
 
     bootstrap_started = time.perf_counter()
     adapters_by_name = {adapter.name: adapter for adapter in adapters}
@@ -1022,16 +1059,7 @@ async def run_trial(
             require_disjoint_time_splits=True,
         ),
     )
-    workflow_evidence: dict[str, Any] | None = None
     if retrieval_only:
-        workflow_evidence = _load_reused_workflow_evidence(
-            reuse_workflow_report,
-            workflow_cases=workflow_cases,
-            cards=cards,
-            config=config,
-            roster=roster,
-            source_adapters=source_adapters,
-        )
         workflow_report = workflow_evidence["workflow"]
     else:
         workflow_model = await CardWorkflowEvaluator(
@@ -1156,13 +1184,15 @@ async def run_trial(
             ),
             "retrieval": "live-jev",
             "workflow": (
-                "reused-approved-live-jev"
+                f"reused-{workflow_report['status']}-live-jev"
                 if retrieval_only
                 else "live-jev"
             ),
             "reused_workflow_report": (
                 workflow_evidence["source_path"] if workflow_evidence else None
             ),
+            "frozen_fixture_dir": str(frozen_fixture_dir) if frozen_fixture_dir else None,
+            "reuse_content_digests_verified": workflow_evidence is not None,
         },
         "adversarial_review_inputs": {
             "labels_sent_to_jev": bool(leaked_label_keys)
@@ -1251,6 +1281,8 @@ def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--base-config", type=Path, default=DEFAULT_BASE_CONFIG)
     parser.add_argument("--fixture-dir", type=Path)
+    parser.add_argument("--frozen-fixture-dir", type=Path,
+                        help="read exact saved fixture files; required for workflow reuse")
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--decoys-per-adapter", type=int, default=300)
     parser.add_argument("--virtual-catalog-size", type=int, default=100_000)
@@ -1265,6 +1297,10 @@ def _parser() -> argparse.ArgumentParser:
         type=Path,
         help="approved full-trial JSON to reuse with --retrieval-only",
     )
+    parser.add_argument(
+        "--allow-shadow-workflow-reuse", action="store_true",
+        help="reuse complete identity-matched shadow workflow results without promoting their status",
+    )
     return parser
 
 
@@ -1278,6 +1314,8 @@ async def _main(args: argparse.Namespace) -> None:
         max_concurrency=args.max_concurrency,
         retrieval_only=args.retrieval_only,
         reuse_workflow_report=args.reuse_workflow_report,
+        allow_shadow_workflow_reuse=args.allow_shadow_workflow_reuse,
+        frozen_fixture_dir=args.frozen_fixture_dir,
     )
     print(json.dumps(report, indent=2, sort_keys=True))
 

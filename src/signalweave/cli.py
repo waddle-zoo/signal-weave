@@ -317,7 +317,12 @@ def main() -> None:
                 # A missing agent CLI or a conflicting existing entry must not
                 # discard a successful local setup. The command remains in the
                 # output so the user can finish the handoff explicitly.
-                _connect_agent(home, agent, required=False)
+                connected = _connect_agent(home, agent, required=False)
+                if connected:
+                    _offer_user_skill(
+                        agent,
+                        interactive=not options.get("non_interactive") and sys.stdin.isatty(),
+                    )
             else:
                 print("To register with your agent, review and run this command:")
                 print(agent_registration(home, agent))
@@ -351,7 +356,8 @@ def main() -> None:
             agent = args.agent_name or args.agent_flag
             if agent is None:
                 raise SetupError("Choose an agent: signalweave connect codex or signalweave connect claude")
-            _connect_agent(home, agent)
+            if _connect_agent(home, agent):
+                _offer_user_skill(agent, interactive=sys.stdin.isatty())
             return
         if args.command == "init":
             home = initialize(args.home, key_file=args.key_file)
@@ -590,14 +596,14 @@ def _print_connections(report: dict[str, object]) -> None:
         print(f"  {item.get('label', item.get('type', 'source'))}: {item.get('status', 'unknown')} ({detail})")
 
 
-def _connect_agent(home: Path, agent: str, *, required: bool = True) -> None:
+def _connect_agent(home: Path, agent: str, *, required: bool = True) -> bool:
     from .client_setup import register_agent
 
     status = register_agent(home, agent)
     print(status.message)
     if status.outcome in {"registered", "already_configured"}:
         print("Restart or reconnect the agent, then call get_signalweave_guide.")
-        return
+        return True
     if status.command:
         if status.outcome == "conflict":
             print("An existing signalweave entry was preserved. Inspect it with your agent's MCP settings;")
@@ -606,11 +612,40 @@ def _connect_agent(home: Path, agent: str, *, required: bool = True) -> None:
         print(status.command)
     if status.outcome == "manual_required":
         print("The local setup is unchanged; run the command above, then reconnect the agent.")
-        return
+        return False
     if not required:
         print("The local setup is saved; finish the agent handoff with the command above.")
-        return
+        return False
     raise SystemExit(1)
+
+
+def _offer_user_skill(agent: str, *, interactive: bool) -> None:
+    from .skill_install import SkillInstallError, _target, install_skill
+
+    target = _target(agent, "user", None, Path.home())
+    command = f"signalweave skills install --agent {agent} --scope user"
+    if not interactive:
+        print(f"To install the SignalWeave skill for {agent.title()} at {target}, run `{command}`.")
+        return
+
+    prompt = (
+        f"\nInstall the bundled SignalWeave skill for {agent.title()} in your user scope "
+        f"at {target}? [Y/n]: "
+    )
+    if not _ask_yes_no(prompt, default=True):
+        print(f"Skipped skill installation. You can run `{command}` later.")
+        return
+
+    try:
+        status, installed_target = install_skill(agent, "user")
+    except (SkillInstallError, OSError) as error:
+        print(f"The agent connection is saved, but the skill was not installed: {error}")
+        print(
+            "Existing skill contents were not overwritten. Review the path above, "
+            f"resolve any conflict or permission issue, then run `{command}`."
+        )
+        return
+    print(f"SignalWeave skill {status.replace('_', ' ')}: {installed_target}")
 
 
 def _run_stdio(server) -> None:

@@ -365,94 +365,100 @@ class JevJudger:
             or estimate_json_tokens(payload) > self.max_input_tokens
         )
 
+    @classmethod
+    def _resource_ranking_questions(
+        cls, resources: list[ResourceDescriptor], state: dict[str, Any]
+    ) -> dict[str, Any]:
+        questions = cls._resource_questions(resources)
+        if "context" in state:
+            context_instruction = (
+                " If context is supplied, treat its versioned facts and provenance as "
+                "first-class evidence: a candidate connected to an approved context "
+                "endpoint may be relevant even when its wording does not match the goal."
+            )
+            for question in questions.values():
+                question.instructions += context_instruction
+        return questions
+
+    @staticmethod
+    def _resource_ranking_batch_state(
+        state: dict[str, Any], resources: list[ResourceDescriptor]
+    ) -> dict[str, Any]:
+        batch_state = dict(state)
+        batch_state["candidate_resources"] = JevJudger._resource_ranking_state(
+            str(state["goal"]), resources
+        )["candidate_resources"]
+        return batch_state
+
+    def _raise_resource_payload_error(
+        self, state: dict[str, Any], questions: dict[str, Any]
+    ) -> None:
+        payload = {"state": state, "questions": self._question_budget_payload(questions)}
+        encoded = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+        observed_tokens = estimate_json_tokens(payload)
+        raise JevPayloadError(
+            stage="onboarding",
+            observed_bytes=len(encoded),
+            budget_bytes=self.max_payload_bytes,
+            observed_tokens=observed_tokens,
+            budget_tokens=self.max_input_tokens,
+        )
+
     async def _rank_resource_state(
         self, state: dict[str, Any], resources: list[ResourceDescriptor]
     ) -> dict[str, float]:
         """Run one bounded Jev request over a prepared resource state."""
-        context_instruction = (
-            " If context is supplied, treat its versioned facts and provenance as "
-            "first-class evidence: a candidate connected to an approved context "
-            "endpoint may be relevant even when its wording does not match the goal."
-            if "context" in state
-            else ""
-        )
-        questions = self._resource_questions(resources)
-        if context_instruction:
-            for question in questions.values():
-                question.instructions += context_instruction
+        questions = self._resource_ranking_questions(resources, state)
         if not questions:
             return {}
-        if self._request_over_budget(state, questions) and len(resources) > 1:
+        if self._request_over_budget(state, questions):
             # Keep Jev as the semantic ranker, but never make one noisy catalog
             # page a single provider-context request.  The merge is by opaque
             # resource identity; no local relevance score is invented.
-            scores: dict[str, float] = {}
+            batches: list[list[ResourceDescriptor]] = []
             batch: list[ResourceDescriptor] = []
             for resource in resources:
                 candidate_batch = [*batch, resource]
-                candidate_state = {
-                    **state,
-                    "candidate_resources": [
-                        {
-                            "ref": f"item-{index}",
-                            "adapter": item.adapter,
-                            "resource": item.resource,
-                            "kind": item.kind,
-                            "title": item.title,
-                            "description": compact_json_value(item.description),
-                            "source_url": item.source_url,
-                            "metadata": compact_json_value(item.metadata),
-                            "contract": compact_json_value(item.contract.model_dump(mode="json")),
-                        }
-                        for index, item in enumerate(candidate_batch)
-                    ],
-                }
-                if batch and not self._request_over_budget(
-                    candidate_state, self._resource_questions(candidate_batch)
-                ):
+                candidate_state = self._resource_ranking_batch_state(state, candidate_batch)
+                candidate_questions = self._resource_ranking_questions(candidate_batch, state)
+                if not self._request_over_budget(candidate_state, candidate_questions):
                     batch.append(resource)
                     continue
                 if batch:
-                    batch_state = {
-                        **state,
-                        "candidate_resources": [
-                            {
-                                "ref": f"item-{index}",
-                                "adapter": item.adapter,
-                                "resource": item.resource,
-                                "kind": item.kind,
-                                "title": item.title,
-                                "description": compact_json_value(item.description),
-                                "source_url": item.source_url,
-                                "metadata": compact_json_value(item.metadata),
-                                "contract": compact_json_value(item.contract.model_dump(mode="json")),
-                            }
-                            for index, item in enumerate(batch)
-                        ],
-                    }
-                    batch_scores = await self._rank_resource_state(batch_state, batch)
-                    scores.update(batch_scores)
+                    batches.append(batch)
                     batch = []
+                single_state = self._resource_ranking_batch_state(state, [resource])
+                single_questions = self._resource_ranking_questions([resource], state)
+                if self._request_over_budget(single_state, single_questions):
+                    self._raise_resource_payload_error(single_state, single_questions)
                 batch.append(resource)
             if batch:
-                batch_state = {
-                    **state,
-                    "candidate_resources": [
-                        {
-                            "ref": f"item-{index}",
-                            "adapter": item.adapter,
-                            "resource": item.resource,
-                            "kind": item.kind,
-                            "title": item.title,
-                            "description": compact_json_value(item.description),
-                            "source_url": item.source_url,
-                            "metadata": compact_json_value(item.metadata),
-                            "contract": compact_json_value(item.contract.model_dump(mode="json")),
-                        }
-                        for index, item in enumerate(batch)
-                    ],
-                }
-                scores.update(await self._rank_resource_state(batch_state, batch))
+                batches.append(batch)
+
+            prepared_batches: list[
+                tuple[dict[str, Any], list[ResourceDescriptor], dict[str, Any]]
+            ] = []
+            for batch in batches:
+                batch_state = self._resource_ranking_batch_state(state, batch)
+                batch_questions = self._resource_ranking_questions(batch, state)
+                if self._request_over_budget(batch_state, batch_questions):
+                    self._raise_resource_payload_error(batch_state, batch_questions)
+                prepared_batches.append((batch_state, batch, batch_questions))
+
+            scores: dict[str, float] = {}
+            for batch_state, batch, batch_questions in prepared_batches:
+                response = await self._system_one_with_retry(
+                    state=batch_state, questions=batch_questions, stage="onboarding"
+                )
+                self.metrics.record(response)
+                scores.update(
+                    {
+                        f"{resource.adapter}|{resource.resource}": response.nouls[
+                            f"resource_{index}"
+                        ].noul
+                        for index, resource in enumerate(batch)
+                    }
+                )
             return scores
         response = await self._system_one_with_retry(
             state=state, questions=questions, stage="onboarding"

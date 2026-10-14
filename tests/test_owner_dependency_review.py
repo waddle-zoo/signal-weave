@@ -13,6 +13,21 @@ def _inputs():
             "glossary": {},
             "destinations": [{"key": "owner", "label": "Business owner",
                               "destination": "slack://owner"}],
+            "submission_contract": {
+                "numeric_definitions": {
+                    "collections.baseline": {
+                        "definition": (
+                            "Canonical collections require all expected bank partitions closed "
+                            "and the bank watermark at the reporting cutoff. Without independent "
+                            "historical closure attestation, partial or stale data cannot validate "
+                            "even the baseline. A printed amount alone is not a canonical total."
+                        ),
+                        "unit": "USD",
+                    },
+                },
+                "private_label": "PRIVATE_SUBMISSION_LABEL",
+                "future_periods": [{"expected_outcome": "PRIVATE_FUTURE_OUTCOME"}],
+            },
             "private_label": "PRIVATE_EXPECTED_NOTIFY",
         },
         "owner_answers": {
@@ -80,6 +95,81 @@ def test_review_payload_projects_required_flags_roles_and_no_private_labels():
     assert "PRIVATE_EXPECTED_NOTIFY" not in projected
     assert "PRIVATE_CARD_LABEL" not in projected
     assert "PRIVATE_CARD_DECISION" not in projected
+    assert "PRIVATE_SUBMISSION_LABEL" not in projected
+    assert "PRIVATE_FUTURE_OUTCOME" not in projected
+
+
+def test_public_measurement_definition_reaches_review_separate_from_owner_policy():
+    inputs = _inputs()
+    payload = reviewer.review_payload(
+        inputs["public"], inputs["owner_answers"], inputs["artifact"], inputs["source_context"]
+    )
+
+    definition = inputs["public"]["submission_contract"]["numeric_definitions"][
+        "collections.baseline"
+    ]
+    assert payload["measurement_definitions"]["definitions"] == {
+        "collections.baseline": definition,
+    }
+    assert "numeric_definitions" not in payload["owner_policy"]
+    assert payload["measurement_definitions"]["purpose"] == (
+        "Authoritative public measurement meaning and validity only; not observed results "
+        "or business action policy."
+    )
+    instructions = reviewer.REVIEW_INSTRUCTIONS
+    assert "Compare the artifact only with" not in instructions
+    assert "measurement_definitions only for declared metric meaning, units" in instructions
+    assert "owner thresholds and boundaries against the metric's declared meaning and unit" in instructions
+    assert "do not reject it merely because it is not repeated in owner_policy" in instructions
+    assert "those must come from owner_policy" in instructions
+    assert "not what action to take" in instructions
+    assert "request actual owner clarification instead of silently choosing" in instructions
+    assert "request clarification instead of inventing a branch" in instructions
+
+
+def test_missing_public_measurement_definitions_are_optional():
+    assert reviewer.project_measurement_definitions({}) == {}
+    assert reviewer.project_measurement_definitions({"submission_contract": {}}) == {}
+    assert reviewer.project_measurement_definitions({
+        "submission_contract": {"numeric_definitions": None},
+    }) == {}
+
+
+@pytest.mark.parametrize(
+    "invalid",
+    [
+        [],
+        "not-an-object",
+        {"metric": None},
+        {"metric": {}},
+        {"metric": {"unit": "USD"}},
+        {"metric": {"definition": ""}},
+        {"metric": {"definition": "   "}},
+        {"metric": {"definition": 7}},
+        {"metric": {"definition": "valid", "unit": ""}},
+        {"metric": {"definition": "valid", "unit": 7}},
+        {"metric": {"definition": "valid", "private_label": "hidden"}},
+        {"metric": {"definition": "x" * (reviewer.MAX_CONTEXT_TEXT + 1)}},
+        {" " * 3: {"definition": "valid"}},
+        {"m" * 201: {"definition": "valid"}},
+        {1: {"definition": "valid"}},
+        {f"metric-{index}": {"definition": "valid"}
+         for index in range(reviewer.MAX_NUMERIC_DEFINITIONS + 1)},
+    ],
+)
+def test_public_measurement_definition_projection_rejects_malformed_or_unbounded_entries(invalid):
+    with pytest.raises(ValueError):
+        reviewer.project_measurement_definitions({
+            "submission_contract": {"numeric_definitions": invalid},
+        })
+
+
+def test_measurement_definition_projection_allows_definition_without_optional_unit():
+    assert reviewer.project_measurement_definitions({
+        "submission_contract": {
+            "numeric_definitions": {"metric.current": {"definition": "Current value."}},
+        },
+    }) == {"metric.current": {"definition": "Current value."}}
 
 
 def test_required_source_default_stays_true_and_baseline_notes_need_no_card_bindings():

@@ -12,7 +12,9 @@ from evaluations.northstar_scale_trial import (
     _descriptors_and_records,
     _load_reused_workflow_evidence,
     build_scale_fixtures,
+    run_trial,
 )
+from signalweave.evaluation import _case_input, _case_labels, _stable_digest
 from signalweave.retrieval import build_candidate_pool
 from signalweave.sources import SourceRegistry
 
@@ -199,6 +201,8 @@ def test_northstar_scale_reused_workflow_requires_matching_fixture_identity(tmp_
         "card_ids": sorted(cards),
         "splits": ["adversarial", "holdout", "train", "validation"],
         "jev_requests": 336,
+        "input_digest": _stable_digest([_case_input(case) for case in workflow_cases]),
+        "label_digest": _stable_digest([_case_labels(case) for case in workflow_cases]),
     }
     payload = {
         "evaluator": "jev-latest",
@@ -234,6 +238,25 @@ def test_northstar_scale_reused_workflow_requires_matching_fixture_identity(tmp_
     )
     assert loaded["workflow"]["status"] == "approved"
 
+    payload["workflow"]["status"] = "shadow"
+    report_path.write_text(json.dumps(payload), encoding="utf-8")
+    arguments = dict(workflow_cases=workflow_cases, cards=cards, config=config,
+                     roster=roster, source_adapters=source_adapters)
+    with pytest.raises(ValueError, match="not approved"):
+        _load_reused_workflow_evidence(report_path, **arguments)
+    shadow = _load_reused_workflow_evidence(report_path, **arguments, allow_shadow=True)
+    assert shadow["workflow"]["status"] == "shadow"
+    payload["workflow"]["status"] = "approved"
+    workflow_cases[0].card.decision_guidance += " Changed meaning with the same ID."
+    with pytest.raises(ValueError, match="input content digest"):
+        _load_reused_workflow_evidence(report_path, **arguments, allow_shadow=True)
+    workflow_cases[0].card.decision_guidance = workflow_cases[0].card.decision_guidance.removesuffix(" Changed meaning with the same ID.")
+    original_label = workflow_cases[0].expected_delivery_method_keys
+    workflow_cases[0].expected_delivery_method_keys = ["changed-label-same-id"]
+    with pytest.raises(ValueError, match="label content digest"):
+        _load_reused_workflow_evidence(report_path, **arguments, allow_shadow=True)
+    workflow_cases[0].expected_delivery_method_keys = original_label
+
     payload["workflow"]["dataset_ids"][0] = "wrong-dataset"
     report_path.write_text(json.dumps(payload), encoding="utf-8")
     with pytest.raises(ValueError, match="dataset IDs"):
@@ -245,3 +268,35 @@ def test_northstar_scale_reused_workflow_requires_matching_fixture_identity(tmp_
             roster=roster,
             source_adapters=source_adapters,
         )
+
+
+@pytest.mark.asyncio
+async def test_reuse_validation_precedes_probes_and_provider_calls(tmp_path, monkeypatch):
+    import evaluations.northstar_scale_trial as trial
+
+    monkeypatch.setattr(trial, "load_api_key", lambda: "offline-test")
+
+    async def forbidden_probe(*args, **kwargs):
+        pytest.fail("invalid reuse must fail before source probes or provider calls")
+
+    monkeypatch.setattr(trial.BootstrapService, "assess", forbidden_probe)
+    monkeypatch.setattr(trial.JevJudger, "_system_one_with_retry", forbidden_probe)
+    invalid_report = tmp_path / "invalid.json"
+    invalid_report.write_text(json.dumps({"workflow": {"status": "shadow"}}))
+    fixture_dir = tmp_path / "fixtures"
+    build_scale_fixtures(output_dir=fixture_dir)
+    with pytest.raises(ValueError, match="refusing reused workflow evidence"):
+        await run_trial(output=tmp_path / "result.json", frozen_fixture_dir=fixture_dir,
+                        retrieval_only=True, reuse_workflow_report=invalid_report,
+                        decoys_per_adapter=0)
+
+
+def test_frozen_fixtures_preserve_exact_capture_content(tmp_path):
+    config, original, roster = build_scale_fixtures(output_dir=tmp_path)
+    loaded_config, loaded, loaded_roster = build_scale_fixtures(frozen_dir=tmp_path)
+    assert loaded_config == config and loaded_roster == roster
+    assert loaded == original
+    original_cases, _, _ = _build_cases(config, original, tenant_id="northstar-outfitters")
+    loaded_cases, _, _ = _build_cases(config, loaded, tenant_id="northstar-outfitters")
+    assert _stable_digest([_case_input(case) for case in loaded_cases]) == _stable_digest(
+        [_case_input(case) for case in original_cases])
