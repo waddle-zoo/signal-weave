@@ -81,7 +81,7 @@ requests.
 
 Archived evidence:
 
-- [Remaining run manifest](evidence/enterprise-onboarding-repair-v6-remaining-01/manifest.json): source and archive SHA-256 hashes for all 54 files, including compressed report, trace, 40 episodes, five card stores and five exporter outputs; config and protocol retained verbatim.
+- [Remaining run manifest](https://github.com/waddle-zoo/signal-weave/blob/ca8a10b69c08a81e793a4860538fa7a9e0b80bd0/docs/evidence/enterprise-onboarding-repair-v6-remaining-01/manifest.json): source and archive SHA-256 hashes for all 54 files, including compressed report, trace, 40 episodes, five card stores and five exporter outputs; config and protocol retained verbatim.
 - [Cohort export](evidence/enterprise-onboarding-repair-v6-cohort/cohort.json) and [archive audit](evidence/enterprise-onboarding-repair-v6-cohort/archive-audit.json): verified component hashes, configurations, invocation counts, disjoint company sets and the full denominator.
 - [Retail execution audit](evidence/enterprise-onboarding-repair-v6-probe-01/execution-audit.json) and [reviewer qualification](evidence/owner-review-qualification-v4-01/README.md) remain available alongside prior failures.
 
@@ -127,7 +127,7 @@ standalone and staged exports use those checks. Passing structured checks alone
 can produce only `unassessed`, never an automatic narrative/overall pass.
 
 An offline [trace-bound cohort re-audit](evidence/enterprise-onboarding-repair-v6-cohort/trace-bound-reaudit.json)
-and [standalone execution audit](evidence/enterprise-onboarding-repair-v6-remaining-01/trace-bound-execution-audit.json)
+and [standalone execution audit](https://github.com/waddle-zoo/signal-weave/blob/ca8a10b69c08a81e793a4860538fa7a9e0b80bd0/docs/evidence/enterprise-onboarding-repair-v6-remaining-01/trace-bound-execution-audit.json)
 passed those consistency checks without changing raw reports or traces. The
 counts remain 16/18 native and 17/18 strict treatment reports; acceptance is
 explicitly `not_passed`. The finance qualification still applies.

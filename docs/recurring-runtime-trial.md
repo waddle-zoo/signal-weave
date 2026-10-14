@@ -32,10 +32,10 @@ or model calls.
 
 Frozen runtime commit: `6c3c668`. Three new synthetic companies; two setup and
 four holdout snapshots each. Complete
-[manifest](evidence/recurring-runtime-live-01/manifest.json),
-[results](evidence/recurring-runtime-live-01/report.json),
-[authored artifacts](evidence/recurring-runtime-live-01/frozen-cards.json) and
-[raw journal](evidence/recurring-runtime-live-01/events.jsonl.gz) are retained.
+[manifest](https://github.com/waddle-zoo/signal-weave/blob/ca8a10b69c08a81e793a4860538fa7a9e0b80bd0/docs/evidence/recurring-runtime-live-01/manifest.json),
+[results](https://github.com/waddle-zoo/signal-weave/blob/ca8a10b69c08a81e793a4860538fa7a9e0b80bd0/docs/evidence/recurring-runtime-live-01/report.json),
+[authored artifacts](https://github.com/waddle-zoo/signal-weave/blob/ca8a10b69c08a81e793a4860538fa7a9e0b80bd0/docs/evidence/recurring-runtime-live-01/frozen-cards.json) and
+[raw journal](https://github.com/waddle-zoo/signal-weave/blob/ca8a10b69c08a81e793a4860538fa7a9e0b80bd0/docs/evidence/recurring-runtime-live-01/events.jsonl.gz) are retained.
 
 | Measure | Luna baseline | SignalWeave + Jev + Luna |
 | --- | ---: | ---: |
@@ -112,9 +112,9 @@ holdout contains an excluded segment with a large negative contribution.
 **All three agent-authored cards passed the numerical-policy audit and production
 approval.** The baseline submitted and strictly passed 12/12 reports. SignalWeave
 submitted and strictly passed 7/12; five were missing when the Jev budget ran out.
-Original [manifest](evidence/recurring-runtime-transfer-live-01/manifest.json),
-[report](evidence/recurring-runtime-transfer-live-01/report.json), and
-[journal](evidence/recurring-runtime-transfer-live-01/events.jsonl.gz) remain
+Original [manifest](https://github.com/waddle-zoo/signal-weave/blob/ca8a10b69c08a81e793a4860538fa7a9e0b80bd0/docs/evidence/recurring-runtime-transfer-live-01/manifest.json),
+[report](https://github.com/waddle-zoo/signal-weave/blob/ca8a10b69c08a81e793a4860538fa7a9e0b80bd0/docs/evidence/recurring-runtime-transfer-live-01/report.json), and
+[journal](https://github.com/waddle-zoo/signal-weave/blob/ca8a10b69c08a81e793a4860538fa7a9e0b80bd0/docs/evidence/recurring-runtime-transfer-live-01/events.jsonl.gz) remain
 unchanged. The trial used all 36 permitted Jev calls and nine Luna sessions.
 
 This exposed a measurement bug in the evaluation harness. The public MCP approval
@@ -156,10 +156,10 @@ is retained separately.
 
 These are proposed routes, not actual notifications. The treatment column mixes
 seven original reports and five completion reports. Original failed episodes are
-retained. See the [completion manifest](evidence/recurring-runtime-transfer-completion-live-01/manifest.json),
-[report](evidence/recurring-runtime-transfer-completion-live-01/report.json),
-[journal](evidence/recurring-runtime-transfer-completion-live-01/events.jsonl.gz),
-and [checksums](evidence/recurring-runtime-transfer-completion-live-01/SHA256SUMS).
+retained. See the [completion manifest](https://github.com/waddle-zoo/signal-weave/blob/ca8a10b69c08a81e793a4860538fa7a9e0b80bd0/docs/evidence/recurring-runtime-transfer-completion-live-01/manifest.json),
+[report](https://github.com/waddle-zoo/signal-weave/blob/ca8a10b69c08a81e793a4860538fa7a9e0b80bd0/docs/evidence/recurring-runtime-transfer-completion-live-01/report.json),
+[journal](https://github.com/waddle-zoo/signal-weave/blob/ca8a10b69c08a81e793a4860538fa7a9e0b80bd0/docs/evidence/recurring-runtime-transfer-completion-live-01/events.jsonl.gz),
+and [checksums](https://github.com/waddle-zoo/signal-weave/blob/ca8a10b69c08a81e793a4860538fa7a9e0b80bd0/docs/evidence/recurring-runtime-transfer-completion-live-01/SHA256SUMS).
 Its inherited `combined_coverage.episode_seconds` and tool counters are **not**
 combined performance totals; completion episodes are recorded separately. Do not
 compare those inherited counters with the baseline. The explicit

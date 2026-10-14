@@ -163,16 +163,16 @@ regression and prospective live test; it cannot rewrite this result.
 
 ## Evidence and review
 
-- [Frozen pre-call protocol](evidence/enterprise-onboarding-journeys-2026-10-02/frozen-protocol.json)
-- [All scored episode results](evidence/enterprise-onboarding-journeys-2026-10-02/results.json)
-- [Twelve onboarding stories: owner questions, reviews and errors](evidence/enterprise-onboarding-journeys-2026-10-02/onboarding-stories.json)
-- [Execution counts and integrity checks](evidence/enterprise-onboarding-journeys-2026-10-02/execution-audit.json)
-- [Compressed full report](evidence/enterprise-onboarding-journeys-2026-10-02/full-report.json.gz)
-- [Compressed redacted interaction trace](evidence/enterprise-onboarding-journeys-2026-10-02/trace.jsonl.gz)
-- [Compressed arm-masked review packet](evidence/enterprise-onboarding-journeys-2026-10-02/blind-review.json.gz)
-- [Methodology review and reviewer corrections](evidence/enterprise-onboarding-journeys-2026-10-02/methodology-review.md)
-- [Narrative review A, follow-up](evidence/enterprise-onboarding-journeys-2026-10-02/narrative-review-a-followup.json)
-- [Narrative review B, follow-up](evidence/enterprise-onboarding-journeys-2026-10-02/narrative-review-b-followup.json)
+- [Frozen pre-call protocol](https://github.com/waddle-zoo/signal-weave/blob/ca8a10b69c08a81e793a4860538fa7a9e0b80bd0/docs/evidence/enterprise-onboarding-journeys-2026-10-02/frozen-protocol.json)
+- [All scored episode results](https://github.com/waddle-zoo/signal-weave/blob/ca8a10b69c08a81e793a4860538fa7a9e0b80bd0/docs/evidence/enterprise-onboarding-journeys-2026-10-02/results.json)
+- [Twelve onboarding stories: owner questions, reviews and errors](https://github.com/waddle-zoo/signal-weave/blob/ca8a10b69c08a81e793a4860538fa7a9e0b80bd0/docs/evidence/enterprise-onboarding-journeys-2026-10-02/onboarding-stories.json)
+- [Execution counts and integrity checks](https://github.com/waddle-zoo/signal-weave/blob/ca8a10b69c08a81e793a4860538fa7a9e0b80bd0/docs/evidence/enterprise-onboarding-journeys-2026-10-02/execution-audit.json)
+- [Compressed full report](https://github.com/waddle-zoo/signal-weave/blob/ca8a10b69c08a81e793a4860538fa7a9e0b80bd0/docs/evidence/enterprise-onboarding-journeys-2026-10-02/full-report.json.gz)
+- [Compressed redacted interaction trace](https://github.com/waddle-zoo/signal-weave/blob/ca8a10b69c08a81e793a4860538fa7a9e0b80bd0/docs/evidence/enterprise-onboarding-journeys-2026-10-02/trace.jsonl.gz)
+- [Compressed arm-masked review packet](https://github.com/waddle-zoo/signal-weave/blob/ca8a10b69c08a81e793a4860538fa7a9e0b80bd0/docs/evidence/enterprise-onboarding-journeys-2026-10-02/blind-review.json.gz)
+- [Methodology review and reviewer corrections](https://github.com/waddle-zoo/signal-weave/blob/ca8a10b69c08a81e793a4860538fa7a9e0b80bd0/docs/evidence/enterprise-onboarding-journeys-2026-10-02/methodology-review.md)
+- [Narrative review A, follow-up](https://github.com/waddle-zoo/signal-weave/blob/ca8a10b69c08a81e793a4860538fa7a9e0b80bd0/docs/evidence/enterprise-onboarding-journeys-2026-10-02/narrative-review-a-followup.json)
+- [Narrative review B, follow-up](https://github.com/waddle-zoo/signal-weave/blob/ca8a10b69c08a81e793a4860538fa7a9e0b80bd0/docs/evidence/enterprise-onboarding-journeys-2026-10-02/narrative-review-b-followup.json)
 
 Frozen runtime/harness hashes and the wrapper hash were checked after execution;
 none changed. The exporter independently checks all 48 identities, request/terminal
