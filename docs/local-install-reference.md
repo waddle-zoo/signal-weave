@@ -303,14 +303,19 @@ SignalWeave sources; provide that normalization and read-only contract first.
 signalweave health --live
 ```
 
-This is an **offline configuration check**. (`signalweave doctor` is retained as
-an alias.) It reads key/configuration files,
-checks relevant credential/source settings, parses source manifests/catalogs,
-and reports onboarding-only mode when no adapter is configured. Exit status is
-zero for successful offline checks and one for invalid or missing configuration.
-It does not create a runtime/database, send a Jev request, validate a key with its
-issuer, or test source connectivity/access. A pass is not evidence of live
-readiness. Diagnostic output never includes credential values or config contents.
+`signalweave health` (also available as `signalweave doctor`) runs an offline
+configuration check: it reads key/configuration files, checks relevant
+credential/source settings, parses source manifests/catalogs, and reports
+onboarding-only mode when no adapter is configured. Without `--live`, it makes
+no source or decision-provider requests. With `--live`, it first runs the offline
+check, then performs a bounded, read-only catalog probe for each configured
+source. That probe checks catalog access only; it does not verify
+resource-level permissions or data freshness and does not request a
+decision-provider judgment. Neither mode creates a runtime/database or validates
+a key with its issuer. Exit status is zero when the applicable checks pass and
+one when offline configuration or a live source probe fails. A passing live
+check is not evidence of full source or decision readiness. Diagnostic output
+never includes credential values or config contents.
 
 ## Launch and configuration precedence
 
