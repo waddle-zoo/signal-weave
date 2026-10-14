@@ -15,8 +15,8 @@
 SignalWeave is an open-source **MCP service for recurring analytics**. It helps
 Codex, Claude, and other agents turn business questions into reusable cards:
 what to watch, which sources to read, what deserves attention, and who needs to
-know. Each run returns fresh evidence, a typed decision, and an inspectable
-receipt for your agent to work from.
+know. A successful card evaluation gives your agent fresh source evidence, a
+typed policy decision, and an inspectable receipt to investigate and explain.
 
 Run it **on your laptop or on a server**. Keep your dashboards, data tools, and
 agent; add a shared, repeatable brief for investigations, alerts, and reports.

@@ -47,6 +47,11 @@ That one guided command walks through setup in this order:
 3. Optional browser sign-in for ChatGPT-plan access
 4. Codex or Claude Code handoff, with confirmation before changing agent config
 
+Already connected Superset or Preset to your agent? SignalWeave does not import
+that connection. Connect the workspace directly in this setup, or use the
+reviewed, normalized [MCP source bridge](mcp-source-bridge.md) for a
+company-specific source. Keep the existing MCP for broader investigation.
+
 ## Choose a decision provider
 
 - **Jev** uses TypeSafe's typed decision API. Setup asks for a Jev key and keeps
@@ -146,12 +151,6 @@ signalweave setup --source preset --url https://workspace.app.preset.io \
   --preset-auth bearer --access-token-file /private/path/preset-access-token \
   --agent codex --register-agent
 ```
-
-Already use a Superset or Preset MCP in your agent? Keep it for broader
-investigation, and connect SignalWeave directly to the same BI workspace in
-setup. SignalWeave does not import your agent's MCP connections. An arbitrary
-company MCP needs a [compatible source bridge](mcp-source-bridge.md), not just
-an existing entry in Codex or Claude.
 
 Other company systems can be brought in through the reviewed MCP bridge without
 teaching the local CLI to store arbitrary provider secrets. To add or repair one
