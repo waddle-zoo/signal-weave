@@ -9,6 +9,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any
+from urllib.parse import urljoin, urlsplit
 
 import httpx
 
@@ -138,7 +139,7 @@ class SupersetClient:
             raise ValueError(
                 "Superset dashboard response did not match the requested dashboard ID"
             )
-        return result
+        return self._normalize_resource_metadata(result)
 
     async def get_chart_metadata(self, chart_id: int | str) -> dict[str, Any]:
         response = await self._request("GET", f"/api/v1/chart/{chart_id}", timeout=30)
@@ -148,7 +149,63 @@ class SupersetClient:
             raise ValueError(
                 "Superset chart response did not match the requested chart ID"
             )
-        return result
+        return self._normalize_resource_metadata(result)
+
+    def _normalize_resource_metadata(self, metadata: dict[str, Any]) -> dict[str, Any]:
+        """Resolve only provider-owned resource links against this public base URL."""
+        if "url" not in metadata:
+            return metadata
+        normalized = dict(metadata)
+        normalized["url"] = self._normalize_resource_url(metadata["url"])
+        return normalized
+
+    def _normalize_resource_url(self, value: Any) -> str | None:
+        """Return an absolute HTTP(S) resource link, or omit an unsafe/malformed one.
+
+        Relative paths are joined using RFC URL semantics. A configured mount
+        path is retained for path-relative links; root-relative links remain
+        rooted at the public origin, and an already-prefixed path is not joined
+        to the mount a second time. No route is inferred from a resource ID.
+        """
+        if (
+            not isinstance(value, str)
+            or not value
+            or value != value.strip()
+            or "\\" in value
+            or any(character.isspace() or ord(character) < 0x20 for character in value)
+            or re.search(r"%(?![0-9a-fA-F]{2})", value)
+        ):
+            return None
+        try:
+            reference = urlsplit(value)
+            if reference.scheme:
+                self._validate_http_url(reference)
+                return value
+            if reference.netloc or value.startswith("//"):
+                return None
+
+            base = urlsplit(self.base_url)
+            self._validate_http_url(base)
+            if base.query or base.fragment:
+                return None
+            base_url = self.base_url.rstrip("/") + "/"
+            resolved = urljoin(base_url, value)
+            self._validate_http_url(urlsplit(resolved))
+            return resolved
+        except ValueError:
+            return None
+
+    @staticmethod
+    def _validate_http_url(parsed: Any) -> None:
+        if (
+            parsed.scheme.lower() not in {"http", "https"}
+            or not parsed.hostname
+            or parsed.username is not None
+            or parsed.password is not None
+        ):
+            raise ValueError("resource URL must be an HTTP(S) URL without credentials")
+        # Accessing port validates malformed and out-of-range port values.
+        _ = parsed.port
 
     @staticmethod
     def comparison_windows_from_metadata(metadata: dict[str, Any]) -> list[str]:
@@ -239,7 +296,13 @@ class SupersetClient:
         result = response.json()
         batch = result.get("result", [])
         return (
-            [item for item in batch if isinstance(item, dict)] if isinstance(batch, list) else [],
+            [
+                self._normalize_resource_metadata(item)
+                for item in batch
+                if isinstance(item, dict)
+            ]
+            if isinstance(batch, list)
+            else [],
             result.get("count") if isinstance(result.get("count"), int) else None,
         )
 

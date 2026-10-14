@@ -5,6 +5,7 @@ import httpx
 import pytest
 
 from signalweave.models import SourceRef
+from signalweave.preset_adapter import PresetCloudClient
 from signalweave.superset_adapter import SupersetAdapter
 from signalweave.superset_client import (
     DEFAULT_MAX_CONCURRENT_CHART_REQUESTS,
@@ -475,6 +476,229 @@ async def test_metadata_endpoints_reject_substituted_resource_ids(
             await client.get_dashboard_metadata(requested_id)
         else:
             await client.get_chart_metadata(requested_id)
+
+
+@pytest.mark.parametrize(
+    ("base_url", "source_url", "expected"),
+    [
+        (
+            "https://bi.example/superset",
+            "explore/?slice_id=42",
+            "https://bi.example/superset/explore/?slice_id=42",
+        ),
+        (
+            "https://bi.example/superset/",
+            "/superset/explore/?slice_id=42",
+            "https://bi.example/superset/explore/?slice_id=42",
+        ),
+        (
+            "https://bi.example/superset",
+            "/explore/?slice_id=42",
+            "https://bi.example/explore/?slice_id=42",
+        ),
+        (
+            "https://bi.example/superset",
+            "https://public-bi.example/explore/42",
+            "https://public-bi.example/explore/42",
+        ),
+        (
+            "https://bi.example",
+            "dashboard/7",
+            "https://bi.example/dashboard/7",
+        ),
+    ],
+)
+def test_resource_url_resolution_uses_rfc_paths_and_preserves_mounts(
+    base_url, source_url, expected
+):
+    client = SupersetClient(base_url)
+
+    assert client._normalize_resource_url(source_url) == expected
+
+
+@pytest.mark.asyncio
+async def test_catalog_authorization_and_inspection_use_normalized_resource_urls():
+    data_result = [
+        {
+            "is_cached": True,
+            "data": [
+                {"period": "2026-10-01", "value": 10},
+                {"period": "2026-10-02", "value": 12},
+            ],
+        }
+    ]
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/superset/api/v1/dashboard/":
+            return httpx.Response(
+                200,
+                json={
+                    "result": [
+                        {"id": 7, "dashboard_title": "Growth", "url": "dashboards/7"},
+                        {
+                            "id": 8,
+                            "dashboard_title": "Retention",
+                            "url": "/superset/dashboard/8",
+                        },
+                    ],
+                    "count": 2,
+                },
+            )
+        if request.url.path == "/superset/api/v1/dashboard/7":
+            return httpx.Response(
+                200,
+                json={
+                    "result": {
+                        "id": 7,
+                        "dashboard_title": "Growth",
+                        "url": "/superset/dashboard/7",
+                        "position_json": {
+                            "chart-42": {"type": "CHART", "meta": {"chartId": 42}}
+                        },
+                        "json_metadata": "{}",
+                    }
+                },
+            )
+        if request.url.path == "/superset/api/v1/chart/42":
+            return httpx.Response(
+                200,
+                json={
+                    "result": {
+                        "id": 42,
+                        "slice_name": "Revenue",
+                        "url": "explore/?slice_id=42",
+                        "params": {
+                            "datasource": "1__table",
+                            "metrics": ["value"],
+                            "granularity_sqla": "period",
+                        },
+                    }
+                },
+            )
+        if request.url.path in {
+            "/superset/api/v1/chart/42/data/",
+            "/superset/api/v1/chart/data",
+        }:
+            return httpx.Response(200, json={"result": data_result})
+        raise AssertionError(f"unexpected Superset request: {request.method} {request.url}")
+
+    client = SupersetClient(
+        "https://bi.example/superset", transport=httpx.MockTransport(handler)
+    )
+    adapter = SupersetAdapter(client)
+
+    descriptors = await adapter.list_resources()
+    assert [descriptor.source_url for descriptor in descriptors] == [
+        "https://bi.example/superset/dashboards/7",
+        "https://bi.example/superset/dashboard/8",
+    ]
+
+    dashboard_source = SourceRef(
+        key="growth", adapter="superset", resource="dashboard:7", label="Growth"
+    )
+    chart_source = SourceRef(
+        key="revenue", adapter="superset", resource="chart:42", label="Revenue"
+    )
+    dashboard_descriptor = await adapter.authorize(dashboard_source)
+    chart_descriptor = await adapter.authorize(chart_source)
+    assert dashboard_descriptor is not None
+    assert dashboard_descriptor.source_url == "https://bi.example/superset/dashboard/7"
+    assert chart_descriptor is not None
+    assert chart_descriptor.source_url == (
+        "https://bi.example/superset/explore/?slice_id=42"
+    )
+
+    dashboard_snapshot = await adapter.inspect(dashboard_source)
+    assert dashboard_snapshot.source_url == "https://bi.example/superset/dashboard/7"
+    assert dashboard_snapshot.observations
+    assert dashboard_snapshot.observations[0].source_url == (
+        "https://bi.example/superset/explore/?slice_id=42"
+    )
+    assert dashboard_snapshot.evidence[0].source_url == dashboard_snapshot.source_url
+
+    chart_snapshot = await adapter.inspect(chart_source)
+    assert chart_snapshot.source_url == "https://bi.example/superset/explore/?slice_id=42"
+    assert chart_snapshot.observations
+    assert chart_snapshot.observations[0].source_url == chart_snapshot.source_url
+    assert chart_snapshot.evidence[0].source_url == chart_snapshot.source_url
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "source_url",
+    [
+        42,
+        "javascript:alert(1)",
+        "//untrusted.example/explore/42",
+        "https://bi.example:bad/explore/42",
+        "https://[malformed/explore/42",
+    ],
+)
+async def test_unsafe_chart_url_is_omitted_without_blocking_data(source_url):
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/superset/api/v1/chart/42":
+            return httpx.Response(
+                200,
+                json={
+                    "result": {
+                        "id": 42,
+                        "slice_name": "Revenue",
+                        "url": source_url,
+                        "params": {"datasource": "1__table", "metrics": ["value"]},
+                    }
+                },
+            )
+        if request.url.path == "/superset/api/v1/chart/data":
+            return httpx.Response(
+                200,
+                json={"result": [{"data": [{"value": 12}]}]},
+            )
+        raise AssertionError(f"unexpected Superset request: {request.method} {request.url}")
+
+    adapter = SupersetAdapter(
+        SupersetClient("https://bi.example/superset", transport=httpx.MockTransport(handler))
+    )
+
+    snapshot = await adapter.inspect(
+        SourceRef(key="revenue", adapter="superset", resource="chart:42", label="Revenue")
+    )
+
+    assert snapshot.error is None
+    assert snapshot.observations
+    assert snapshot.source_url is None
+    assert snapshot.observations[0].source_url is None
+    assert snapshot.evidence[0].source_url is None
+
+
+@pytest.mark.asyncio
+async def test_missing_chart_url_is_not_synthesized_and_preset_uses_workspace_base():
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.host == "workspace.preset.example"
+        return httpx.Response(
+            200,
+            json={"result": {"id": 42, "slice_name": "Revenue", "url": "explore/42"}},
+        )
+
+    client = PresetCloudClient(
+        "https://workspace.preset.example",
+        access_token="mock-token",
+        api_base_url="https://api.preset.example",
+        transport=httpx.MockTransport(handler),
+    )
+    metadata = await client.get_chart_metadata(42)
+    assert metadata["url"] == "https://workspace.preset.example/explore/42"
+
+    def missing_url_handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={"result": {"id": 42, "slice_name": "Revenue"}},
+        )
+
+    superset_client = SupersetClient(
+        "https://bi.example", transport=httpx.MockTransport(missing_url_handler)
+    )
+    metadata_without_url = await superset_client.get_chart_metadata(42)
+    assert "url" not in metadata_without_url
 
 
 @pytest.mark.asyncio
