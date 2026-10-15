@@ -166,6 +166,42 @@ def validate_owner_handoff_schemas(tools: list[dict], topic: str) -> None:
     raise ValueError("owner topics must remain bounded while other text stays free-form")
 
 
+def owner_handoff_author_instructions(stage: str, *, treatment: bool) -> str:
+    if stage == "first":
+        common = (
+            "This is the first charged setup turn. Discover and inspect the synthetic company sources, "
+            "and use read_company_glossary if useful. Ask the owner focused questions about unresolved policy. "
+            "ask_owner returns pending during this turn; it is not an answer or measurement. "
+            "Do not invent missing measurements, rows or policy. Record a concise current readout and "
+            "specific unresolved owner questions through finish_setup, then stop. "
+            "Do not approve, schedule, evaluate or send anything. "
+        )
+        return common + (
+            "Save working notes and one SignalWeave draft card; include its exact ID in finish_setup.card_ids."
+            if treatment else
+            "Save your source definitions and open policy questions with save_working_notes. "
+            "You have company tools and durable notes, not a card service; finish_setup.card_ids must be empty."
+        )
+    if stage != "second":
+        raise ValueError("owner-handoff author stage must be first or second")
+    common = (
+        "This is a fresh, separately charged author turn resuming your own saved setup. "
+        "Use the supplied public owner answers, saved notes and unresolved questions, and retrievable glossary. "
+        "Do not invent measurements or reconstruct missing rows. Finish with no unresolved material questions "
+        "and stop after finish_setup succeeds. Independent semantic review follows setup. "
+        "No evaluation, schedule or sending is authorized during setup. "
+    )
+    return common + (
+        "Revise the exact saved draft once with revise_insight_card, using its saved ID and current version. "
+        "Never create a replacement. Review it, show the resulting saved card through request_owner_approval "
+        "for synthetic consent, approve that card, and include its exact ID in finish_setup.card_ids."
+        if treatment else
+        "Your setup is stored in your own working notes. Apply the owner's answers with save_working_notes; "
+        "show those saved notes through request_owner_approval with kind=notes and id=working. "
+        "No card tools are available or needed. Keep finish_setup.card_ids empty; do not search for a card."
+    )
+
+
 def budget_stop(events: list[dict]) -> str | None:
     if any(event.get("provider") == "openai" and event.get("kind") == "api.error" for event in events):
         return "unknown_usage_or_agent_error"
@@ -887,29 +923,9 @@ async def run_owner_workflow(args):
                 "If consequential context stays unresolved, report it honestly rather than claiming automation is ready. "
             )
             prompt = public_brief(public)
-        elif handoff_stage == "first":
-            instructions = (
-                "This is the first charged setup turn. Discover and inspect the same synthetic company sources, "
-                "and use read_company_glossary if useful. Ask the owner focused questions about unresolved policy. "
-                "ask_owner deliberately returns pending during this turn; it is not an answer or measurement. "
-                "Save your working notes and, in SignalWeave, one draft card. Do not invent missing measurements, "
-                "rows or policy. Call finish_setup with the card ID if present, a concise current readout, and the "
-                "specific unresolved owner question(s). This is the intended human handoff: do not approve, "
-                "schedule, evaluate or send anything. Stop after finish_setup succeeds."
-            )
-            prompt = public_brief(public)
-        elif handoff_stage == "second":
-            instructions = (
-                "This is a fresh, separately charged author turn resuming your own saved setup. The owner-answer "
-                "packet below contains the same declared public answers supplied to both arms. Use those answers, "
-                "your exact saved notes and unresolved question, and the retrievable glossary. Do not invent "
-                "measurements or reconstruct missing rows. In SignalWeave, revise the exact saved draft card once "
-                "with revise_insight_card using its saved card ID and current version; never create a replacement. "
-                "Show the resulting saved setup for synthetic owner consent, then finish_setup with no unresolved "
-                "material questions. The independent semantic review happens after both arms finish. No evaluation, "
-                "schedule or sending during setup. Stop after finish_setup succeeds."
-            )
-            prompt = prompt_override
+        elif handoff_stage in {"first", "second"}:
+            instructions = owner_handoff_author_instructions(handoff_stage, treatment=native is not None)
+            prompt = public_brief(public) if handoff_stage == "first" else prompt_override
         else:
             raise ValueError("owner-handoff author stage is required")
         if native:

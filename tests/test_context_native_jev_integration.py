@@ -5,6 +5,7 @@ upstream attempts maximum, no frontier-agent invocation or notification. The
 old stopped onboarding cohort is neither resumed nor reclassified by this test.
 """
 
+import hashlib
 import json
 import os
 import tempfile
@@ -35,6 +36,7 @@ def check_period(packet, label, destinations):
 def check_deferred_evidence(packet, primary):
     result = packet["result"]
     assert result["outcome"] is None
+    assert result["delivery_methods"] == []
     assert result["judgment"]["reason"] == "context_review_required"
     snapshot = result["source_by_key"]["sales"]
     assert (snapshot["adapter"], snapshot["resource"]) == (primary["adapter"], primary["resource"])
@@ -61,11 +63,12 @@ def test_live_proof_checks_routing_not_only_outcome(fault):
             check_period(packet, {"outcome": "notify", "recipients": ["growth"]}, destinations)
 
 
-@pytest.mark.parametrize("fault", ["none", "empty-snapshot", "wrong-source", "no-provenance", "no-values"])
+@pytest.mark.parametrize("fault", ["none", "empty-snapshot", "wrong-source", "no-provenance", "no-values", "routed"])
 def test_live_proof_checks_deferred_content_and_provenance(fault):
     primary = {"adapter": "company_mcp", "resource": "sales-export"}
     snapshot = {**primary, "evidence": [{"values": {"current": 7}, "provenance": ["company_mcp|sales-export"]}]}
-    packet = {"result": {"outcome": None, "judgment": {"reason": "context_review_required"}, "source_by_key": {"sales": snapshot}}}
+    packet = {"result": {"outcome": None, "delivery_methods": [],
+                         "judgment": {"reason": "context_review_required"}, "source_by_key": {"sales": snapshot}}}
     if fault == "empty-snapshot":
         packet["result"]["source_by_key"]["sales"] = {}
     elif fault == "wrong-source":
@@ -74,6 +77,8 @@ def test_live_proof_checks_deferred_content_and_provenance(fault):
         snapshot["evidence"][0]["provenance"] = []
     elif fault == "no-values":
         snapshot["evidence"][0]["values"] = {}
+    elif fault == "routed":
+        packet["result"]["delivery_methods"] = [{"key": "unexpected", "destination": "slack://unexpected"}]
     if fault == "none":
         check_deferred_evidence(packet, primary)
     else:
@@ -88,6 +93,8 @@ def test_live_proof_checks_deferred_content_and_provenance(fault):
 async def test_native_approved_context_card_recurrence_with_live_jev(tmp_path, record_property):
     import asyncio
 
+    record_property("protocol", "approved-card-clarification-v1")
+    record_property("protocol_sha256", hashlib.sha256(Path(__file__).read_bytes()).hexdigest())
     audit = Audit(path=tmp_path / "trace.jsonl")
     audit.path.touch(mode=0o600)
     budget = RequestBudget(limit=3)
@@ -114,6 +121,7 @@ async def exercise_live_native(tmp_path, record_property, audit, budget):
     binary = Path(os.environ["SIGNALWEAVE_BINARY"]).resolve()
     identity = verify_binary(binary)
     scenario = _bridge_identity(build_scenarios(seed=20261001, connector_profile=True)[0])
+    record_property("scenario_sha256", hashlib.sha256(json.dumps(scenario, sort_keys=True).encode()).hexdigest())
     public = public_episode(scenario)
     for field in ("git_commit", "source_sha256", "binary_sha256"):
         record_property("native_" + field, identity[field])
@@ -127,18 +135,19 @@ async def exercise_live_native(tmp_path, record_property, audit, budget):
         binary, Path(os.environ["TYPESAFE_API_KEY_FILE"]).resolve(), public, adapter, audit, tmp_path,
         request_budget=budget,
     ) as (native, _skill):
+        routes = [{"outcome": "notify", **public["destinations"][0]},
+                  {"outcome": "insufficient_data", **public["destinations"][1]}]
         _, created = await native.call_tool("onboard_insight_card", {
             "title": "Synthetic recurring sales protocol check",
             "what_to_watch": public["glossary"][metric], "why_watch": public["brief"],
-            "decision_guidance": public["owner_answers"]["materiality"],
+            "decision_guidance": "",
             "follow_up_guidance": "Use the source's current periods; report arithmetic contributions, not causes.",
             "comparison_windows": ["previous_period"],
             "selected_sources": [{"ref": primary_ref, "key": "sales", "required": True,
                                   "required_comparison_keys": [metric]},
                                  {"ref": secondary["adapter"] + "|" + secondary["resource"],
                                   "key": "posting-policy", "required": True}],
-            "delivery_methods": [{"key": "business", "outcome": "notify", **public["destinations"][0]},
-                                 {"key": "data", "outcome": "insufficient_data", **public["destinations"][1]}],
+            "delivery_methods": [],
         })
         card_id = created["card"]["id"]
         note = {
@@ -154,11 +163,25 @@ async def exercise_live_native(tmp_path, record_property, audit, budget):
             "entry_id": saved["id"], "expected_revision": 1, "action": "approve",
             "reason": "Synthetic fixture review, not a real company sign-off.",
         })
-        await native.call_tool("bind_insight_context", {
+        _, bound = await native.call_tool("bind_insight_context", {
             "card_id": card_id, "expected_card_version": created["card"]["version"],
             "pins": [{"entry_id": saved["id"], "revision": reviewed["revision"], "required_for_action": True}],
             "reason": "Use the existing fixture definition as a prerequisite; no new semantics inferred.",
         })
+        _, revised = await native.call_tool("revise_insight_card", {
+            "card_id": card_id, "expected_card_version": bound["card"]["version"],
+            "changes": {"decision_guidance": public["owner_answers"]["materiality"],
+                        "questions": [], "delivery_methods": routes},
+            "reason": "Scripted fixture owner supplies the previously missing policy and routes, not a real human interaction.",
+        })
+        revised_card = revised["card"]
+        assert revised_card["id"] == card_id
+        assert revised_card["version"] == bound["card"]["version"] + 1
+        assert revised_card["status"] == "draft" and revised_card["approved_by"] is None
+        assert revised_card["context_bindings"] == bound["card"]["context_bindings"]
+        assert revised_card["sources"] == bound["card"]["sources"]
+        record_property("owner_clarification_applied", True)
+        record_property("revised_card_version", revised_card["version"])
         _, review = await native.call_tool("review_insight_card", {"card_id": card_id})
         approval = review["approval_handoff"]["arguments_after_owner_confirmation"]
         await native.call_tool("approve_insight_card", {
@@ -179,6 +202,8 @@ async def exercise_live_native(tmp_path, record_property, audit, budget):
             record_property("observed_period_" + str(len(outcomes)), json.dumps(outcomes[-1]))
             audit.emit("native.result", tool="evaluate_insight_card", packet=packet)
             check_period(packet, label, public["destinations"])
+            assert packet["receipt"]["card_id"] == card_id
+            assert packet["receipt"]["card_version"] == revised_card["version"]
         assert 0 < budget.used <= 3 and not budget.exhausted
         before_change = budget.used
         await native.call_tool("save_domain_context", {

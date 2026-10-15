@@ -159,6 +159,38 @@ have an independent reviewer check its exact hash. Preserve every attempt and
 all costs. Afterward independently read the current readouts and final reports;
 native receipt correctness alone still cannot establish business value.
 
+The v2 agent cohort is now terminal: both first authors produced correct source
+readouts and saved pending-owner work, but baseline's second author attempted
+`codex/list_mcp_resources` outside the allowed trial server. The guard terminated
+it before a result or final usage arrived. Its cost is unknown, not zero; known
+earlier usage and the invalid-v1 charge remain recorded separately. No treatment
+resumption, independent policy review, final report or Jev call followed. The
+shared second-turn prompt also exposed the baseline to card-specific instructions;
+that confirmed design flaw is being repaired without claiming it caused the
+metadata call. Keep the guard until that call's source/scope is established.
+Do not resume this cohort or treat its first handoffs as completed onboarding.
+
+### Native approved-card clarification check
+
+Separately preregister `approved-card-clarification-v1`: reuse the existing
+retail development fixture (seed `20261001`, company index `0`) and all three
+supplied periods in their existing order. No frontier agent, new company,
+relabeling, schedule or delivery. The scripted owner first saves a draft without
+action policy/routes, reviews and pins the supplied definition, then applies
+the existing fixture's policy/routes with `revise_insight_card`. Verify same
+identity, version increment, preserved source scope/pins and fresh draft status;
+review and approve through public native MCP before evaluating.
+
+Use at most three live Jev attempts, retries disabled. Verify each expected
+outcome, exact route key/destination, receipt card identity/version and delivery
+disabled. Then edit the required definition and verify no outcome/routes, no
+additional inference, and nonempty source evidence with provenance. Preserve
+actual native result packets, provider/source trace and JUnit in a new ignored
+artifact directory; stop any failure without a retry. The historical four-call
+series and both stopped agent cohorts remain closed with their original costs.
+This closes an explicit native/decision lifecycle gate, not conversational
+onboarding, comparative agent value, causal analysis or customer validation.
+
 ## User outcome
 
 An agent onboarding a second sales investigation should reuse the definitions,
