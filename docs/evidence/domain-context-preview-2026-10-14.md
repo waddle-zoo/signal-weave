@@ -28,21 +28,24 @@ is added to Git.
 | Context persistence and authorization | Contract coverage plus signed native HTTP review, reuse, role, tenant, read-only, and restart checks | Synthetic issuer; not customer SSO |
 | Card/context dependencies | Exact revisions, source/meaning checks, reapproval, stale-context deferral, and historical receipts | No semantic graph traversal or automatic reminder delivery |
 | Same-card clarification | Owner-scoped revision preserves anchors and pins, increments version, clears approval/plan, and uses exact-snapshot compare-and-swap | JSON locking is process-local; multi-process use requires SQLite |
-| Guidance-only snapshot native transports | 12 checks in 53.19 seconds: two native lifecycles and ten URL validators; zero inference | Local Superset metadata and synthetic signed issuer |
+| Current native transports | 12 checks in 81.00 seconds: two native lifecycles and ten URL validators; zero inference | Local Superset metadata and synthetic signed issuer; not native report-quality proof |
 | Full suite including presentation/timing tests | 3,454 passed, 11 skipped, in 224.53 seconds | Software checks, not companies or an accuracy estimate; final calendar wording also passed 17 focused checks |
 
-The native stdio lifecycle took 25.20 seconds: ten MCP calls and nine Superset
-metadata reads. Signed HTTP context reuse, roles, and restart took 27.53 seconds;
+The native stdio lifecycle took 49.23 seconds: ten MCP calls and nine Superset
+metadata reads. Signed HTTP context reuse, roles, and restart took 31.30 seconds;
 the ten URL validators and both lifecycles made zero provider requests.
-That clean native build, before the later presentation-source change, records Git commit
-d76de2147d002048a40436c8af23c28bbddf46de, source/skill fingerprint
-23d6142e687abe4939d7b2fdcb103d4ed32feb4be5cae1aedc00260be662eefa, and binary
-SHA-256 fe623f5a93404de16ce078ad1a7e361f0bc5cb085763c4611db5723bc6443506.
+This clean native build records Git commit
+633a7393ad9404465d2cfc658f74338696c84db0, source/skill fingerprint
+63a0208baeee74db8e28a18e371bb72ff8ed2c44f88cfff58b5fd903d43523ff, and binary
+SHA-256 20594f212402a29b51cacf2663ca36fd19528a7e67caf9555ccd2db98f7f3328.
 These checks do not exercise a real human wizard or customer deployment.
 
-The ignored local JUnit is artifacts/fact-judgment-native-transports-v1.xml
-(SHA-256 ba88a5466e1542e3b4a2156690f68bc3e0b030480bf365956a9595538c7b6a70).
-Its raw contents are not committed.
+The ignored local JUnit is artifacts/optional-judgment-native-transports-v1.xml
+(SHA-256 ccd25997f81593c081cd0e1e9770fd2d8555f11af6d10d086c342c0590e581ba).
+Its raw contents are not committed. The
+[preceding snapshot](https://github.com/waddle-zoo/signal-weave/blob/633a7393ad9404465d2cfc658f74338696c84db0/docs/evidence/domain-context-preview-2026-10-14.md)
+retains the older guidance-only build and its native checks. Neither build is
+the published rc3 download, despite the same package label.
 
 ## Owner setup and native decision lifecycle
 
@@ -109,7 +112,7 @@ was separate.
 handoff-interpretation-v1 reused the same three Pine Courier periods, with three
 SignalWeave reports and three live Jev calls. It had no baseline, used no retries,
 and made no provider, policy, or numeric-analysis code change; the change was
-instruction/skill guidance. All three policy outcomes and card receipts were
+instruction/skill guidance, built at d76de21 before the later relocation. All three policy outcomes and card receipts were
 correct, with delivery disabled. The raw report score remains 0/3.
 
 The reports contain factual positives: the quiet period correctly says 0.90
@@ -187,8 +190,9 @@ inputs. Raw traces, reports, credentials, and setup state remain outside Git.
 | Earlier paired report-only trace | 3387a21ce9ceccd432c9c63a267ba9030c6f44ca84fbd3e9083cacfe4eb368db |
 | Interpretation runner | ff157aaf5362abc2f0cacbe3026c339958104251c299a391a2d277dbdc014408 |
 | Interpretation scenario | ca90a3755be866c6ffd6645c2b7ba88edb7c946a187c6e96017ad96beaaef38a |
-| Native transport JUnit | ba88a5466e1542e3b4a2156690f68bc3e0b030480bf365956a9595538c7b6a70 |
+| Current native transport JUnit | ccd25997f81593c081cd0e1e9770fd2d8555f11af6d10d086c342c0590e581ba |
 | Frozen six-packet layout manifest | 2659c1d95d1be4c86f558d8360dd8bd06971652ddbce2e5055459c93415589bf |
+| Calendar zero-inference preflight report | 4d189da105310691b86677d970ec736681d0080c547116e9f9921d1b1a81d8f8 |
 
 ## Reproduction and remaining gates
 
@@ -206,7 +210,9 @@ RUN_CONTEXT_HTTP_INTEGRATION=1 SIGNALWEAVE_BINARY="$PWD/dist/signalweave" uv run
 ```
 
 No schedule or external notification is authorized. A future calendar-faithful
-paired mode is being tested offline; no live calendar cohort has started.
+paired mode passed its offline tests and actual native preflight: zero agents,
+zero Jev attempts, exact approved version-3 card restored, and distinct Monday
+measurement cutoffs with separate capture time. No live calendar cohort started.
 Next outcome gates are useful reports with correct scope and
 uncertainty, cross-card context reuse and changed-meaning behavior, varied
 connectors and held-out business cases with complete accounting. Interactive

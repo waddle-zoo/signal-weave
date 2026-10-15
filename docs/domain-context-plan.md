@@ -373,6 +373,14 @@ Keep the original paired six-agent/three-Jev limits; run only offline timing
 tests now. No paid calendar cohort has started or been approved for execution;
 freeze/review and a new zero-model native preflight must precede any live study.
 
+The reviewed calendar mode and 17 focused timing/runner checks passed. Its actual
+native preflight on clean build `633a739` completed with zero agent invocations
+and zero Jev attempts, verified the exact restored approved v3 card and preserved
+distinct Monday cutoffs through the source transport. This does not validate a
+new report or authorize paid expansion. Before any new live cohort, resolve its
+evaluation-only report-audience/citation ambiguity and count-versus-rate schema
+coverage; do not spend more merely to reproduce a known scoring defect.
+
 ### Native approved-card clarification check
 
 Separately preregister `approved-card-clarification-v1`: reuse the existing
