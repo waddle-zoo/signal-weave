@@ -105,3 +105,22 @@ agents use the new capability. This component canary omitted the full production
 guide and did not cover conversational onboarding, cross-session handoff, context
 updates or dependency invalidation. Do not attribute its lack of lift to Jev or
 declare enterprise value from successful tool execution.
+
+### Next vertical slice before a larger trial
+
+1. Bind a card to exact reviewed context revisions and connector-owned source
+   identity. Define what changes require review without treating ordinary data
+   movement or unknown metadata as a blanket reason to withhold supported facts.
+2. Surface changed/expired dependencies to the agent with the affected cards and
+   a concrete review request. Keep curation approval, executable workflow
+   certification, and permission to deliver distinct.
+3. Run the real guide/skill-driven onboarding path through current native and
+   hosted MCP. Test a second agent reusing the same reviewed domain and a later
+   owner clarification; do not substitute a precurated-note component harness.
+4. Preregister the equal-information business comparison only after that path
+   works. Preserve the baseline's source tools and persistent notes, distinguish
+   routine report audiences from alert recipients, and score final messages.
+
+See the [preview evidence](evidence/domain-context-preview-2026-10-14.md) for
+observed gates, retained failures and exact native identity. This milestone is
+not complete; the feature remains opt-in and the PR remains draft.
