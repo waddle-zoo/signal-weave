@@ -45,7 +45,8 @@ connect your BI sources, and register with Codex or Claude. Credentials stay in
 your private `~/.signalweave` directory. Then ask your agent:
 
 > Use SignalWeave to set up a daily online-sales check. Help me choose the
-> sources and alert criteria, show me a trial run, and ask about missing context.
+> sources and alert criteria, and ask about missing context. Show me the card
+> for review; after I approve it, run one check without sending a message.
 
 [Local setup guide](docs/local-install.md) · [Server deployment](docs/server-deployment.md)
 

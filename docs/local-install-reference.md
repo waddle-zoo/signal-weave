@@ -105,12 +105,13 @@ for SignalWeave itself. A separately configured company MCP may have its own
 runtime requirements. The native release workflow builds macOS ARM64/x64 and
 Linux x64 artifacts; a branch build is not a published release.
 
-The default `agent` profile uses Jev for the approved card's typed policy
+The default `agent` profile uses the configured provider for the approved card's typed policy
 decision and exposes only the onboarding, source inspection, card, and
 decision-receipt tools needed for that path. The `full` profile adds advanced
 metric-query, evaluation, certification, and webhook tools. Both profiles send
-configured decision evidence to TypeSafe. Local-first means configuration and
-durable receipts live on your machine; it does not make Jev calls offline.
+configured decision evidence to that provider: TypeSafe for Jev, or OpenAI for
+OpenAI Decisions and ChatGPT-plan Responses. Local-first means configuration and
+durable receipts live on your machine; it does not make provider calls offline.
 
 ## Release compatibility
 

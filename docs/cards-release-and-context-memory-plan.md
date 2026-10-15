@@ -45,11 +45,16 @@ delivery. No scheduler, agent framework, or mandatory graph database is added.
 6. **Merge through a PR.** Push the candidate, run protected-branch CI, attach
    the PR to this task, and merge only after required checks pass. Do not
    weaken branch protections. Verify the resulting `main` revision.
-7. **Publish the matching native prerelease.** Bump package/lock metadata to
-   `0.2.0rc3`, build all three platforms in GitHub Actions, and publish an
-   immutable tag from `main`. Verify checksums, asset presence, and a real
-   isolated installation downloaded from GitHub. Only then update README
-   download instructions to the verified release. Rerun installed MCP smoke.
+7. **Publish and verify the matching test prerelease.** Prepare package/lock
+   metadata for `0.2.0rc3` in the candidate, build all three platforms in GitHub
+   Actions, and publish an immutable test-candidate tag from `main`. Publication
+   follows the runner-side installed-binary gates; the post-publication GitHub
+   download is a separate gate for recommending this preview to users. Verify
+   checksums, asset presence, and a real isolated installation downloaded from
+   GitHub. Only then update README download instructions to the verified
+   release. Rerun installed MCP smoke; if this fails, leave the prior download
+   instructions intact and mark the candidate unsuitable rather than replacing
+   immutable assets.
 8. **Record concise evidence.** Keep full logs, artifacts, and trial payloads
    outside tracked documentation. Publish one short release evidence note
    with identities, commands, results, review disposition, and limitations.
