@@ -45,13 +45,18 @@ from evaluations.reviewed_setup_report_trial import (
     record_tool_inventory,
     summarize_usage,
 )
-from evaluations.source_expert_reference import SourceReferenceMixin, source_reference
+from evaluations.source_expert_reference import (
+    SourceReferenceMixin,
+    attach_steward_notes,
+    source_reference,
+)
 from scripts.binary_provenance import verify_binary
 from signalweave.models import SourceRef
 
 PROTOCOL = "public-owner-report-v1"
 HANDOFF_PROTOCOL = "public-owner-report-handoff-v2"
 REFERENCE_PROTOCOL = "public-owner-reference-v3"
+STEWARD_PROTOCOL = "public-steward-reference-v4"
 HANDOFF_MANIFEST = Path(__file__).with_name("data") / "public-owner-handoff-v1-manifest.json"
 LIMITS = {"agent_invocations": 6, "jev_attempts": 1,
           "between_invocation_input_stop": 1_200_000, "between_invocation_uncached_stop": 220_000}
@@ -158,6 +163,9 @@ def load_baseline_handoff(report_path, trace_path, scenario_hash, identity, code
 
 async def run(args):
     reference_mode = getattr(args, "expert_reference", False)
+    notes_path = getattr(args, "expert_notes_file", None)
+    if notes_path and not reference_mode:
+        raise ValueError("Explicit steward notes require --expert-reference")
     if reference_mode and getattr(args, "baseline_handoff_report", None):
         raise ValueError("A fresh reference cohort cannot resume or rescore the terminal handoff")
     reference_module = None
@@ -176,6 +184,13 @@ async def run(args):
     audit = Audit(path=output / "trace.jsonl", secrets=(key.read_text().strip(),))
     budget = RequestBudget(limit=LIMITS["jev_attempts"] if args.run else 0)
     fixture = scenario()
+    notes_identity = None
+    if notes_path:
+        notes_path = Path(notes_path).resolve()
+        fixture, notes_source, notes_hash = attach_steward_notes(fixture, notes_path)
+        notes_identity = {"sha256": notes_hash,
+                          "source_ref": notes_source,
+                          "provenance": "Explicit fictional data-steward declaration; not inferred facts, real human sign-off, policy or approval."}
     public = public_episode(fixture)
     (output / "public-onboarding-input.json").write_text(json.dumps(public, indent=2) + "\n")
     adapter = PublicSourceAdapter(public["catalog"], public["scenario_id"], audit)
@@ -193,6 +208,8 @@ async def run(args):
         report.update(protocol=REFERENCE_PROTOCOL, reference_only_not_expert_answer=True,
             reference_module_sha256=hashlib.sha256(reference_module.read_bytes()).hexdigest(),
             source_reference_sha256=hashlib.sha256(json.dumps(reference, sort_keys=True).encode()).hexdigest())
+        if notes_identity:
+            report.update(protocol=STEWARD_PROTOCOL, expert_notes=notes_identity)
     prior_entry, prior_events = None, []
     handoff_report = getattr(args, "baseline_handoff_report", None)
     if handoff_report:
@@ -227,6 +244,8 @@ async def run(args):
             raise RuntimeError("Frozen handoff manifest changed; stop without retry")
         if reference_module and hashlib.sha256(reference_module.read_bytes()).hexdigest() != report["reference_module_sha256"]:
             raise RuntimeError("Frozen expert reference code changed; stop without retry")
+        if notes_path and hashlib.sha256(notes_path.read_bytes()).hexdigest() != notes_identity["sha256"]:
+            raise RuntimeError("Frozen steward declaration changed; stop without retry")
 
     try:
         if reference_mode:
@@ -389,6 +408,7 @@ def main():
     parser.add_argument("--baseline-handoff-trace")
     parser.add_argument("--expert-reference", action="store_true",
                         help="Fresh development variant: cited source references for free-form questions; retain private state. Not an expert answer or trial resume.")
+    parser.add_argument("--expert-notes-file", help="Explicit fictional data-steward notes shared equally through the glossary; requires --expert-reference. Not inferred context or approval.")
     args = parser.parse_args()
     if args.run and not args.key_file:
         parser.error("--run requires --key-file; preflight uses its own dummy key")

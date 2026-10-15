@@ -142,6 +142,44 @@ before inference. V1/V2 results and costs remain terminal and unchanged.
 
 ## New owner-workflow development cohort
 
+### Preregistered public steward-reference V4
+
+`public-owner-reference-v3` remains zero-inference only. Independent review
+returned NO-GO for spending on it: repeating the generic population label does
+not establish whether the primary export has additional eligibility filters.
+
+Freeze a separate `public-steward-reference-v4` development pair, same known
+Juniper seed/company/report index as V1/V2. Attach the explicit fictional
+source-steward declaration in `evaluations/data/juniper-source-steward-v1.md`
+(SHA-256 `239f2e513eb490016f18fbb14b2f5fe4094f5b42c3bad190d2a59bb38334c094`)
+through the shared glossary. It confirms source-owned population and the existing
+window convention; it does not supply a card, measurements, future health,
+expected outcome, alert policy or approval. This is additional expert-provided
+simulation context, not successful autonomous discovery of missing facts.
+
+Both arms start fresh and receive that exact note through identical tools;
+both independent policy reviewers receive it too. Freeze its original bytes,
+runner/helper hashes, canonical skill, pinned Codex and fingerprint-verified
+native executable. Require zero-inference primary-evidence preflight and
+component method review before inference. No closed cohort is resumed/rescored.
+
+Retain the original six-call, one-Jev, 1.2M-input/220k-uncached limits, matched
+Luna-medium, 24 author tools/240 seconds, 2 review tools/90 seconds and 12 report
+tools/180 seconds. Stop on unknown usage, incomplete author/report, semantic
+rejection, missing exact consent, changed artifacts or limits; no retry,
+replacement company/period or budget expansion. These token stops operate only
+between calls, not as hard in-flight billing caps. No sending or schedule.
+
+After execution, independently inspect both actual human messages against each
+episode's source reads, measurement intervals, definitions and owner policy.
+Record useful breakdown, numeric accuracy, unsupported causes, limitations,
+destinations, missing/noisy alerts, source work and full known usage. Preserve
+partial/failing attempts. One known synthetic pair cannot establish comparative
+lift, cross-card reuse, held-out generalization, customer usability or enterprise
+readiness. Further live-Jev multi-period/multi-company gates remain separate.
+
+### Earlier owner-workflow V1
+
 Before live execution, freeze `owner-workflow-v1`: existing development fixture
 `split=dev`, seed `20261015`, company index `1` (Pine Courier), and monitoring
 period index `0`. The old fixtures, failed attempts and closed budgets stay

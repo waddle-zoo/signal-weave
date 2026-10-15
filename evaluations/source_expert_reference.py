@@ -5,8 +5,10 @@ matching, inferred eligibility, source payloads, approvals or future periods.
 Missing declarations remain missing; a real expert may still be required.
 """
 
+import hashlib
 import json
 from copy import deepcopy
+from pathlib import Path
 
 MAX_SOURCES = 64
 MAX_REFERENCE_BYTES = 32_000
@@ -15,6 +17,27 @@ CONTRACT_FIELDS = (
     "roles", "available_comparison_windows", "comparison_contracts",
     "required_comparison_keys",
 )
+
+
+def attach_steward_notes(fixture, path):
+    """Attach explicit fictional expert input, never infer it from raw values.
+
+    This validates size and fixture identity only, not semantic correctness.
+    Conflicts stay quoted for the author and independent policy reviewer.
+    """
+    payload = Path(path).read_bytes()
+    text = payload.decode("utf-8")
+    if not text.strip() or len(payload) > 16_000:
+        raise ValueError("Provide nonempty steward notes of at most 16000 UTF-8 bytes")
+    primary = [item for item in fixture["public"]["catalog"]
+               if item.get("contract", {}).get("roles") == ["primary"]]
+    if len(primary) != 1:
+        raise ValueError("This development fixture needs one unambiguous declared primary source")
+    result = deepcopy(fixture)
+    if "source_steward_notes" in result["public"]["glossary"]:
+        raise ValueError("Do not overwrite an existing steward declaration")
+    result["public"]["glossary"]["source_steward_notes"] = text
+    return result, primary[0]["adapter"] + "|" + primary[0]["resource"], hashlib.sha256(payload).hexdigest()
 
 
 def source_reference(public):
