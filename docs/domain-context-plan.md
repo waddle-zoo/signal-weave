@@ -16,6 +16,48 @@ Feature branch: `feat/domain-context-memory`, based on main `e8842ac`.
 These are separate gates. Passing storage, authentication or a scripted decision
 check cannot substitute for complete onboarding and useful final agent outcomes.
 
+## Fresh public owner-to-report development pair
+
+Freeze `public-owner-report-v1` before inference. Use published retail fixture
+seed `20261001`, default split `holdout`, company index `0`, with the public brief
+also requesting reusable definitions for later investigations. This is a known
+development fixture, not a new holdout despite the generator's split name.
+Authors see only the onboarding episode and common source/glossary/owner tools;
+the separately selected report is monitoring period index `2`. Neither opening
+prompts nor tool servers receive private labels or future-period payloads.
+Onboarding uses dated historical examples, not a claim about today's business;
+the later report uses its own current measurement windows and separate capture
+clock. Both arms receive this timing distinction explicitly.
+
+Start a blank native home and separate empty notes. Baseline author and fresh
+independent policy reviewer run first, then treatment author and reviewer; only
+accepted setups proceed to one fresh report per arm. Both have the same company
+source, glossary, owner, calculator and notes contracts. Consent and completion
+schemas differ only by actual artifact capability. Treatment adds the current
+native agent/context surface and installed canonical skill, and authors its own
+card; no scripted expert-card helper or archived approval import is used.
+
+Limits: six saved-login Codex CLI invocations, matched `gpt-6-luna` medium effort;
+authors 24 tools/240 seconds, reviews 2/90, reports 12/180. One live Jev attempt
+across the whole cohort, including failures. Stop before another invocation at
+1.2M input or 220k uncached tokens, unknown usage, incomplete authoring/review or
+report, rejected semantics, or changed binaries. These thresholds are not hard
+in-flight billing limits. Do not retry, select a replacement period/company, or
+expand the allowance after seeing results. No message or schedule is authorized.
+
+Run the default zero-inference preflight first: verify blank native state,
+canonical skill bytes, serialized schemas, shared tool hashes, and native bridge
+analytical-field/tenant fidelity. Freeze the runner, skill and binary identities
+before live execution. Save actual owner requests, authored artifacts, reviews,
+source reads, successful and rejected tool calls, reports and all model usage.
+Reports use the three-field `record_report` sink, not a numeric-claim registry.
+Independently inspect the actual messages against current source evidence and
+owner policy; exact outcomes and receipts alone are insufficient. Deferred
+native execution is a separate integration finding, not automatic proof that
+the frontier agent's report is useless. This small constrained-tool pair cannot
+establish broad accuracy, customer usability, cross-card reuse or total billed
+cost advantage. Later multi-company and real-connector gates remain open.
+
 ## New owner-workflow development cohort
 
 Before live execution, freeze `owner-workflow-v1`: existing development fixture
