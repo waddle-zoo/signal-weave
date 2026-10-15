@@ -208,8 +208,11 @@ search_catalog → inspect_resource → onboard_insight_card → owner approval
 You explain the intent in plain language. The agent finds and inspects candidate
 assets, drafts the card with exact source references, and asks you to resolve
 important ambiguity before approval. On later runs, the selected provider
-applies the approved policy to fresh evidence and SignalWeave returns the typed
-decision, evidence, probabilities, and durable receipt. OpenAI Decisions
+applies the approved policy to fetched evidence and, on success, SignalWeave
+returns the typed decision, evidence, probabilities, and durable receipt. Check
+measurement dates and coverage; a recent fetch does not prove fresh business
+data. Oversized judgments return a deferred evidence handoff with no policy
+decision, so the agent can continue from the saved evidence. OpenAI Decisions
 provides its typed distribution; ChatGPT-plan Responses provides model-estimated
 probabilities instead. The agent—not the decision provider—owns deeper source
 discovery, causal investigation, explanation, schedule, and delivery. New

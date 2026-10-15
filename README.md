@@ -120,6 +120,9 @@ SignalWeave gives the agent:
 - **Saved receipts:** inspect a past run and replay the same evaluation key
   without repeating completed source reads or inference.
 
+If a judgment exceeds its input budget, SignalWeave returns a deferred evidence
+handoff for your agent rather than inventing a policy decision.
+
 [TypeSafe Jev](https://docs.typesafe.ai/introduction) applies plain-English
 policy through typed judgments and probability distributions. That lets a
 workflow branch on a decision without parsing an essay. SignalWeave also
