@@ -4,4 +4,16 @@ __pycache__
 .pytest_cache
 .ruff_cache
 .env
+.env.*
+*.key
+secrets
+.agents
+.codex
+.claude
+artifacts
+build
+dist
+promo
+docs/evidence
+tests
 data

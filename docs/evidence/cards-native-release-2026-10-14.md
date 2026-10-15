@@ -101,3 +101,24 @@ Public journey report SHA-256:
 `33d061e1d136e3e2b886fd68959a1fc1698318d58fd5d20e7dd0fb9ea468dd58`.
 Captured public journey log SHA-256:
 `a9f99f7ba07da38bcabd74f3bd8cd46b4ed99f8f580c5782a0ad5ce958670768`.
+
+## Server image packaging follow-up
+
+A real Docker build exposed a missing package input: the Dockerfile did not
+copy the bundled skill required by `pip install .`. The corrected image copies
+the canonical skill and license, omits test files, and excludes local artifacts,
+standard credential paths/patterns, and agent configuration directories from the
+build context. Arbitrarily named secret files still require operator review.
+CI now builds the image and checks its installed CLI and skill as non-root.
+
+The locally built image passed an actual HTTP MCP check with synthetic
+credentials and a configured local Superset adapter: UID 10001, health HTTP 200,
+unauthenticated MCP HTTP 401, authenticated SDK initialization, the default 10
+tools, and a successful guide call. No evaluation, provider request, or delivery
+was invoked. Earlier harness attempts omitted the container bind setting or
+required source configuration; those failures are retained, not counted as
+successful deployment checks. The native rc3 archive is unchanged by this
+Docker-only packaging fix.
+
+Server HTTP proof report SHA-256:
+`0e773e91d2a3e6b6b94e5b11c10beca02bf4545af6f4eaf43bcff54d51fd2582`.

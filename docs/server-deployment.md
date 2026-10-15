@@ -54,6 +54,13 @@ persistent SQLite volume. The [Preset quickstart](preset-integration.md#self-hos
 covers workspace credentials and mounted-secret overlays. This connects to the
 customer's existing Preset workspace; it does not install Superset again.
 
+For a custom `docker run` deployment, set `MCP_HOST=0.0.0.0` inside the
+container and publish the port only to the host's loopback interface
+(`-p 127.0.0.1:8000:8000`) behind your TLS proxy. The supplied Compose files
+already set this bind address. Source configuration, provider credentials,
+tenant/principal, and authentication are still required; publishing a port
+alone is not a complete deployment.
+
 For other sources, configure the container's runtime environment and mount its
 credential and catalog files according to the [source adapter guide](source-adapters.md).
 The general `docker-compose.yml` includes a **local development Superset** and
