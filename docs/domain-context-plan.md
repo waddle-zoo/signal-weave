@@ -8,8 +8,8 @@ Feature branch: `feat/domain-context-memory`, based on main `e8842ac`.
 | --- | --- |
 | Local and hosted context lifecycle | Native stdio and signed HTTP checks cover review, reuse, restart and changed revisions; hosted issuer is synthetic |
 | Card-bound meaning and staleness | Contract tests cover exact pins, reapproval, deferred policy and historical receipts; no automatic notification service is claimed |
-| Approved cards with live decisions | One scripted retail integration matched three supplied periods; stronger route/content checks still need a live run |
-| Human-first, agent-led onboarding | Same-card clarification is implemented and native-tested. The latest live pair was invalidated by a research-schema bug, now fixed; completed conversational onboarding still needs valid live evidence |
+| Approved cards with live decisions | Current native clarification v2 matched three supplied retail periods with live Jev, exact routes and receipt versions; changed required meaning preserved facts without another model call. Scripted owner, not autonomous onboarding |
+| Human-first, agent-led onboarding | Both latest first authors produced correct readouts and saved pending work. The baseline's second turn was censored by a foreign-metadata attempt; cost unknown and no completed paired onboarding. Role prompts are now separated |
 | Useful recurring reports and investigations | Historical simulations remain evidence for their own versions; current cross-session final-agent outcomes, diverse connectors and meaningful changed-context cases remain unproven |
 | Comparative business value | No current context-layer advantage over an equal-information agent baseline has been established; report usefulness, noise/misses, source work and complete costs are still required |
 
@@ -205,6 +205,15 @@ after that current-test-hash preflight and independent review may the separate
 live attempt run in a new artifact directory. The zero-call v1 failure stays
 charged as zero, not as a passing result. There is no CLI agent invocation or
 attempt to assign a known total to the censored v2 agent cost.
+
+The corrected native v2 live run passed in 26.39 seconds with three upstream
+Jev attempts, 15,024 input and 163 output tokens, no provider errors and known
+usage. Outcomes matched `insufficient_data`, `ignore`, `notify`; exact routes
+and version-3 receipts matched. A new draft of required meaning then returned
+provenance-bearing source evidence, no outcome/routes and no fourth model call.
+The script exercised owner clarification and public approval, not a frontier
+agent's onboarding or final report. Independent result review is separate from
+the pre-run protocol GO; this check does not complete the full goal.
 
 ## User outcome
 

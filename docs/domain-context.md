@@ -96,6 +96,11 @@ only IDs, exact reviewed revisions and digests; the owner's reason is saved on
 the card. Because cards are tenant-visible, only tenant-shared context can be
 bound. A required pin cannot be a hypothesis.
 
+Binding returns a compact receipt with top-level `card_id`, `version` and
+`context_bindings`, not a nested full card. Use that returned `version` for the
+next card revision, or call `get_insight_card` to inspect the stored card.
+`revise_insight_card`, by contrast, returns its updated card under `card`.
+
 If an owner also changes the business rule, use `revise_insight_card` to update
 the card's ordinary policy fields. That operation preserves its source anchors
 and context pins, increments the version and requires renewed review/approval.

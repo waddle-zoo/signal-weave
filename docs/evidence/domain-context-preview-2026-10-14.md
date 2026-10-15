@@ -26,9 +26,9 @@ reproduction details. No raw research files were deleted by this consolidation.
 | Same-card clarification | Owner-scoped revision preserves anchors/pins, increments version and clears approval/plan; concurrent lifecycle writes use exact-snapshot CAS | Source scope cannot be silently changed; JSON locking is process-local, multi-process uses SQLite |
 | Current native/local Superset | Clean-build check: 1 passed in 25.42 seconds, 10 MCP calls, 9 metadata reads, zero inference | Scripted isolated setup, not a real human wizard or analytical report |
 | Current native HTTP/context | 11 checks passed in 28.01 seconds; zero inference | Local signed issuer and Superset metadata, not customer deployment |
-| Live recurring decision lifecycle | Earlier scripted retail check matched three periods; a separately capped owner-clarification check is pending below | Outcomes combine provider judgments and code guards; routes come from the card, not an invented model recipient |
+| Live recurring decision lifecycle | Current scripted same-card clarification/reapproval matched all three supplied periods and exact routes; changed required meaning returned facts without another model call | Outcomes combine provider judgments and code guards; routes come from the card, not an invented model recipient |
 
-The settled full suite passed **3,358 tests, 11 skipped, in 221.45 seconds**;
+The final settled full suite passed **3,358 tests, 11 skipped, in 220.21 seconds**;
 Ruff and diff checks passed. These are software checks, not companies, business
 trials or an accuracy estimate.
 
@@ -108,14 +108,39 @@ compact binding receipt as a full card; JUnit records zero provider attempts and
 errors. That is a harness failure, not a decision outcome. The corrected v2
 preflight then completed the entire clarification/review/approval path in 25.28
 seconds, with a synthetic key, hard zero-request budget, card version 3 and zero
-provider attempts/rejections. Paid v2 execution is still pending. This gate
-cannot establish conversational onboarding, comparative usefulness, causal
-analysis or customer acceptance.
+provider attempts/rejections.
+
+The separate live v2 run **passed in 26.39 seconds**. All three version-3
+receipts matched their expected outcomes: `insufficient_data` to Data operations,
+`ignore` with no route, and `notify` to the Business owner. Exact destination
+keys and URLs matched the saved policy; no messages were sent. After changing
+required meaning, the fourth packet had no outcome or routes but retained
+nonempty source evidence/provenance, without a fourth inference call.
+
+The three provider requests used **15,024 input and 163 output tokens**; usage
+was known and no provider error/rejection occurred. Cache usage and billed
+dollars were not reported. This is not comparative latency or cost evidence.
+
+The alert packet also contained source rows and a reconciled accounting
+decomposition: net sales were 10,000 → 7,000 USD; web contributed the entire
+3,000 USD decline and shop contributed zero. These are source/contract-derived
+calculations, not causal findings or calculations performed by Jev. No frontier
+agent consumed this packet in the check. This gate cannot establish
+conversational onboarding, comparative usefulness, causal analysis or customer
+acceptance.
 
 V2 preflight JUnit SHA-256:
 `4aba5f1de150e2b3064314b9e850748b307029964bda39e2d61207c4d3e39c2c`.
 Frozen v2 test SHA-256:
 `4abb8db656fcbc41bacd802f2a5230e28d8bd3a5757e3c0f201f5d4b78d8d685`.
+V2 live JUnit SHA-256:
+`52f36b24157d8962e676bf7e30f54e17eaad6a9715776ed709aa05fca0e30100`.
+V2 live trace SHA-256:
+`7868fe83089da81951b4384344c8ea24fdbf8227d4b6ad15052fae35e032b93b`.
+The four native result packets remain in the ignored live trace directory.
+Independent agent review reconciled the JUnit and retained packets and accepted
+this bounded lifecycle claim. It did not approve broader onboarding, accuracy,
+cost/speed superiority or enterprise-effectiveness claims.
 
 The older native/provider series remains separately charged: four attempts,
 18,760 input and 220 output tokens, including its initial response-shape
