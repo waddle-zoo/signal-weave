@@ -100,6 +100,9 @@ Binding returns a compact receipt with top-level `card_id`, `version` and
 `context_bindings`, not a nested full card. Use that returned `version` for the
 next card revision, or call `get_insight_card` to inspect the stored card.
 `revise_insight_card`, by contrast, returns its updated card under `card`.
+The agent profile omits audit history from that receipt, not active policy or
+context pins. Full history remains available through
+`get_insight_card(include_history=true, response_mode="full")`.
 
 If an owner also changes the business rule, use `revise_insight_card` to update
 the card's ordinary policy fields. That operation preserves its source anchors

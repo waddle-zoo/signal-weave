@@ -81,6 +81,12 @@ approval must happen again. Old receipts remain history. Revision does not
 approve the card or activate automation. Check your connected tool list on older
 builds; without this operation a replacement draft must be reviewed explicitly.
 
+Normal agent responses omit historical review/correction packets from the
+revision receipt while preserving active policy, exact source scope, version and
+context pins. For the audit, use
+`get_insight_card(include_history=true, response_mode="full")`. The full profile
+defaults to full revision responses; either profile accepts an explicit mode.
+
 An approval-ready onboarding response uses `next_action="confirm_then_approve"`.
 The default profile does not require a hidden simulation tool before approval;
 its first delivery-disabled evaluation follows explicit owner approval. That

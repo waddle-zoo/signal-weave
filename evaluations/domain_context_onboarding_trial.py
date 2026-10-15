@@ -523,6 +523,12 @@ class RecurringEpisode(Episode):
     """A fresh agent session reuses its own arm's setup, never future labels."""
 
     phase = "monitoring"
+    ANALYSIS_TOOLS = frozenset({
+        "list_company_assets", "read_company_asset", "read_company_glossary", "read_working_notes",
+        "get_signalweave_guide", "list_insight_cards", "get_insight_card", "search_catalog",
+        "inspect_resource", "retrieve_domain_context", "get_context_history", "inspect_insight_context",
+        "evaluate_insight_card", "get_decision_receipt",
+    })
 
     def __init__(self, public, adapter, native=None, *, notes="", approved_card_id=None,
                  approved_card_version=None, run_key=None):
@@ -535,8 +541,9 @@ class RecurringEpisode(Episode):
 
     async def specs(self):
         tools = await super().specs()
-        setup_tools = {"ask_owner", "save_working_notes", "request_owner_approval", "finish_setup"}
-        tools = [tool for tool in tools if tool["name"] not in setup_tools]
+        # Advertise exactly the capabilities this report-only role can dispatch.
+        # The production server/profile is unchanged; neither arm can edit setup.
+        tools = [tool for tool in tools if tool["name"] in self.ANALYSIS_TOOLS]
         tools.append(function("calculate", "Evaluate bounded arithmetic, available equally in both arms.",
                               {"expression": {"type": "string", "maxLength": 1000}}, ("expression",)))
         schema = _Submission.model_json_schema()
@@ -556,11 +563,7 @@ class RecurringEpisode(Episode):
                 raise ValueError("include the concise human-facing report")
             self.submission = parsed
             return {"recorded": True, "delivery_enabled": False}
-        allowed = {"list_company_assets", "read_company_asset", "read_company_glossary", "read_working_notes",
-                   "get_signalweave_guide", "list_insight_cards", "get_insight_card", "search_catalog",
-                   "inspect_resource", "retrieve_domain_context", "get_context_history", "inspect_insight_context",
-                   "evaluate_insight_card", "get_decision_receipt"}
-        if name not in allowed:
+        if name not in self.ANALYSIS_TOOLS:
             raise ValueError("this recurring episode permits analysis only, not owner clarification or policy changes")
         if name == "evaluate_insight_card" and self.native:
             if (not self.approved_card_id or not self.run_key

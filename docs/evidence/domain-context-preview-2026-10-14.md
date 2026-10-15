@@ -29,7 +29,7 @@ reproduction details. No raw research files were deleted by this consolidation.
 | Current native HTTP/context | 11 checks passed in 28.01 seconds; zero inference | Local signed issuer and Superset metadata, not customer deployment |
 | Live recurring decision lifecycle | Current scripted same-card clarification/reapproval matched all three supplied periods and exact routes; changed required meaning returned facts without another model call | Outcomes combine provider judgments and code guards; routes come from the card, not an invented model recipient |
 
-The final settled full suite passed **3,369 tests, 11 skipped, in 220.55 seconds**;
+The bounded-handoff full suite passed **3,390 tests, 11 skipped, in 225.80 seconds**;
 Ruff and diff checks passed. These are software checks, not companies, business
 trials or an accuracy estimate.
 
@@ -136,6 +136,22 @@ confirmed the artifact hashes, and required that threshold/destination policy
 remain described as recorded—not runtime-tested by this cohort. Synthetic
 notes approval and card approval are different artifacts, not a card-to-card
 comparison. This is not scientific peer review or customer validation.
+
+### Bounded card handoffs
+
+Card discovery now pages identity/status summaries instead of sending every
+stored card's history. Normal agent revision responses retain active policy,
+source scope, pins and version while omitting history. Full audit access remains.
+Nineteen focused cases cover paging, tenant/status filtering, strict bounds,
+profile defaults, retained policy/history and no source/model calls.
+
+Replaying the actual retained v4 card listing through the production MCP in an
+offline SQLite fixture reduced compact JSON from **16,033 to 365 bytes (97.72%)**
+with the same card ID. This is one serialization measurement, not token usage,
+billed savings, latency, database-scale performance or better agent outcomes.
+Independent code review found no blocker to this scoped change. Reports still
+need a separate paired trial; v4's costly explicit full-mode selections are not
+being relabeled as compact-default failures.
 
 The v2 safeguards have 17 offline cases: immutable prior-trace identity,
 prior-plus-current token stops, unchanged legacy defaults, no forwarding of

@@ -2471,6 +2471,7 @@ def create_mcp(
         expected_card_version: StrictInt,
         changes: dict[str, Any],
         reason: str,
+        response_mode: ResponseMode = default_card_response_mode,
         ctx: Context | None = None,
     ) -> dict[str, Any]:
         """Apply clarified business policy to the same card, returning it to draft.
@@ -2487,6 +2488,10 @@ def create_mcp(
         and current review, and needs fresh review/approval. No source reads,
         inference, scheduling or delivery occurs. Recent correction history is
         bounded to 100 entries; historical receipts remain unchanged.
+        Compact responses preserve active policy, source scope and context pins,
+        but omit historical review/correction packets. Full responses retain
+        the stored card; get_insight_card(include_history=true,response_mode="full")
+        also exposes the retained audit history.
         """
         principal = request_principal(ctx)
         card = get_scoped_card(card_id, principal)
@@ -2521,7 +2526,9 @@ def create_mcp(
         ]
         updated = InsightCard.model_validate(payload)
         runtime.card_store.save_card_if_version(updated, expected_card_version, expected_card=card)
-        return {"card": updated.model_dump(mode="json"), "approval_required": True,
+        payload = updated.model_dump(mode="json")
+        return {"card": _compact_card(payload) if response_mode == "compact" else payload,
+                "approval_required": True, "response_mode": response_mode, "details_available": True,
                 "delivery_enabled": False, "next_action": "review_insight_card"}
 
     @mcp.tool()
@@ -3515,20 +3522,46 @@ def create_mcp(
 
     @mcp.tool()
     def list_insight_cards(
-        status: str | None = None, ctx: Context | None = None
+        status: str | None = None,
+        response_mode: ResponseMode = default_card_response_mode,
+        offset: Annotated[StrictInt, Field(ge=0)] = 0,
+        limit: Annotated[StrictInt, Field(ge=1, le=100)] = 25,
+        ctx: Context | None = None,
     ) -> dict[str, Any]:
-        """List stored cards for a client-owned UI or agent."""
+        """Browse stored cards in bounded, ID-sorted pages.
+
+        Compact pages contain identity/status summaries, not execution policy.
+        Read a chosen card with get_insight_card before interpreting or revising
+        it. Full pages include stored audit fields. Follow next_offset for more;
+        count is the authorized, status-filtered total, not this page's length.
+        Offsets refer to the current listing; concurrent writes can change pages.
+        This bounds response size, not database scan cost. No source/model calls.
+        """
+        if type(offset) is not int or offset < 0:
+            raise ValueError("offset must be a nonnegative integer")
+        if type(limit) is not int or not 1 <= limit <= 100:
+            raise ValueError("limit must be between 1 and 100")
         principal = request_principal(ctx)
         selected_status = InsightCardStatus(status) if status else None
-        cards = [
+        cards = sorted((
             card
             for card in runtime.card_store.list_cards()
             if principal is None or card.principal_tenant == principal.tenant_id
             if selected_status is None or card.status == selected_status
-        ]
+        ), key=lambda card: card.id)
+        page = cards[offset:offset + limit]
+        has_more = offset + len(page) < len(cards)
+        summaries = [
+            {"id": card.id, "title": card.title, "owner": card.owner,
+             "status": card.status.value, "version": card.version,
+             "source_count": len(card.sources), "context_binding_count": len(card.context_bindings)}
+            for card in page
+        ] if response_mode == "compact" else [card.model_dump(mode="json") for card in page]
         return {
-            "cards": [card.model_dump(mode="json") for card in cards],
-            "count": len(cards),
+            "cards": summaries, "count": len(cards), "returned_count": len(page),
+            "offset": offset, "limit": limit, "has_more": has_more,
+            "next_offset": offset + len(page) if has_more else None,
+            "response_mode": response_mode, "details_available": True,
         }
 
     @mcp.tool()

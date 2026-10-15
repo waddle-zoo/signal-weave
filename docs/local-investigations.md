@@ -16,8 +16,16 @@ before saving or approving it. Keep the card human-readable and practical:
 - exact source resources and any required parameters;
 - context the agent should retain when interpreting results.
 
-First use `list_insight_cards` to avoid duplicating an existing brief. The agent
-uses `search_catalog` to recall source candidates and `inspect_resource` to
+First use `list_insight_cards` to avoid duplicating an existing brief. It returns
+ID-sorted pages (25 cards by default, at most 100) and a `next_offset` when more
+remain. The agent profile returns identity/status summaries, not policy or
+history; fetch a chosen card with `get_insight_card` before interpreting it.
+Use `response_mode="full"` for a full stored-card page when auditing. The
+`count` is the authorized, status-filtered total; `returned_count` is this page's
+length. Paging bounds the response, not database scan cost; concurrent card
+changes can shift offsets.
+
+The agent uses `search_catalog` to recall source candidates and `inspect_resource` to
 check them. Search results are not a relevance guarantee. Once exact references
 are agreed, `onboard_insight_card` saves a draft. Show the draft and source
 scope to the owner, use `review_insight_card` to surface setup issues, then

@@ -235,6 +235,22 @@ async def test_changed_saved_card_and_unresolved_second_turn_are_terminal_stops(
         await unresolved.call("save_working_notes", {"notes": "No retry."})
 
 
+@pytest.mark.parametrize("treatment", [False, True])
+async def test_report_only_advertises_dispatchable_capabilities_with_source_tools_intact(treatment):
+    public = public_episode(trial.clarified_development_scenario())
+    adapter = PublicSourceAdapter(public["catalog"], public["scenario_id"], Audit())
+    native = FakeRunnerNative() if treatment else None
+    session = trial.RecurringEpisode(public, adapter, native)
+    advertised = {item["name"] for item in await session.specs()}
+    assert advertised <= session.ANALYSIS_TOOLS | {"calculate", "submit_analysis"}
+    assert {"list_company_assets", "read_company_asset", "read_company_glossary",
+            "read_working_notes", "calculate", "submit_analysis"} <= advertised
+    assert not advertised & {"revise_insight_card", "bootstrap_insight_card", "approve_insight_card",
+                              "save_domain_context", "bind_insight_context", "review_domain_context"}
+    with pytest.raises(ValueError, match="permits analysis only"):
+        await session.call("revise_insight_card", {})
+
+
 def test_owner_handoff_limits_cover_all_charged_invocation_types():
     assert trial.OWNER_HANDOFF_PROTOCOL == "owner-handoff-v1"
     assert trial.OWNER_HANDOFF_LIMITS == {
