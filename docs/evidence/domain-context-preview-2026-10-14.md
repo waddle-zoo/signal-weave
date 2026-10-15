@@ -72,9 +72,10 @@ with your personal agent, and makes no decision-provider call. The credential
 is required for the normal server startup path, not used as evidence of Jev
 evaluation. Without explicit opt-in the test is skipped by the offline suite.
 
-Remaining: revision-bound card context, source-identity/meaning drift, dependency
-recertification, actual guide-driven onboarding and cross-agent handoff, and a
-preregistered equal-information business-outcome trial. Lexical/source-anchor
+Remaining after the initial substrate: revision-bound card context, source-identity/meaning
+drift, dependency recertification, actual guide-driven onboarding and cross-agent
+handoff, and a preregistered equal-information business-outcome trial. The
+revision-bound follow-up below addresses the first three contract gaps. Lexical/source-anchor
 retrieval is not semantic graph traversal. Review-due polling is not automatic
 notification delivery, and a review date is not data freshness.
 
@@ -83,3 +84,66 @@ Native executable SHA-256: `1b38a1dc65cac146e06c020e5afb1b6d73f6efed5404bb48839d
 Native proof report SHA-256: `1662d5f0ed8c68bf64336b2997a11c1b3d63989abc9b7a5087c542832963ae01`.
 Canary report SHA-256: `f7e779a978933e8a2698fcc04d606e12fdd5d81a299ee7ab4a6f4c16becf1504`.
 Canary trace SHA-256: `702be26c6378376d3220381937e29e5171e55906960cb4aabba0a42e04b34e3f`.
+
+## Revision-bound follow-up — 2026-10-15
+
+Implementation: `03b48ef2805c7b8f2b2b5965ed1ad1946e1e366b`. The opt-in extension
+now exposes six context tools (sixteen total in the agent profile). Cards can
+pin exact reviewed shared entries, distinguish advisory meaning from explicit
+policy prerequisites, and surface changed dependencies without copying note
+bodies into provider inputs or receipts.
+
+Independent engineering reviewers found and reproduced gaps before giving a
+scoped functional GO: preview bypass, mid-run dependency changes, unbinding while
+inference was running, provider-derived-context replay mismatch, and a
+claim-lost replay of a foreign legacy receipt. Regression tests now cover these
+paths. CLI artifact tests also cover actual production replay, not just a mock
+with unchanged receipt metadata. HTTP checks use signed synthetic identities and
+verify owner/scopes, tenant isolation and absence of note bodies in card results.
+
+Advisory changes preserve policy evaluation with warnings. A changed required
+dependency produces no policy outcome but retains anchor evidence for agent
+investigation. Historical receipts stay immutable; current action availability
+is checked separately. Connector namespaces cover the five shipped adapter
+families in contract tests, not live Hex/Looker/Trino deployments. Opaque company
+MCP routing needs an operator-maintained, nonsecret `context_namespace`; it is
+an assertion, not automatic discovery of hidden upstream identity.
+
+The first full follow-up run failed 29 tests, primarily synchronous internal
+receipt/readiness callers after those tools became async. Trial runners and
+tests were corrected without changing labels or weakening assertions. The
+subsequent suite passed; final settled-source and native results are recorded
+below. Earlier native builds are not evidence for the final claim-race fix.
+
+Final settled-source `make verify`: **3,186 passed, 9 skipped in 213.14 seconds**;
+Ruff and `git diff --check` passed. This is the repository's offline regression
+suite, not 3,186 independent business trials. The skipped native/live tests are
+separate explicit checks; their results do not come from this offline total.
+
+This remains contract and transport evidence. No additional frontier-agent
+benchmark ran, and the original canary's negative mechanism result still stands.
+The next required proof is actual guide/skill-driven owner onboarding and later
+agent reuse, followed by the equal-information business-outcome comparison.
+
+Final native checks: **2 passed in 56.79 seconds**, against a clean build from
+`03b48ef`. The card lifecycle made nine MCP calls and observed nine Superset
+metadata GETs and zero TypeSafe System One POSTs in process logs. It exercised
+noninteractive isolated CLI setup, real selected-chart authorization, draft
+onboarding, context review/binding, restart, supersession and rejection of draft
+evaluation. It did **not** approve a complete business card, execute a Jev policy
+evaluation, inspect analytical chart rows, or run an autonomous Codex session.
+The separate native context-retrieval check also passed. Neither check modifies
+the personal agent configuration or the existing Superset data.
+
+Reproduce the current card lifecycle with the same build and fixture environment
+above, setting `RUN_CONTEXT_CARD_INTEGRATION=1` and running
+`tests/test_context_native_card_integration.py`. The test caps calls at fifteen
+MCP tools and one observed provider POST. Normal offline runs skip it. Use
+`-o junit_family=legacy --junitxml=artifacts/context-native.xml` to retain the
+recorded build and request-count properties; raw logs and reports remain ignored.
+
+Final production fingerprint: `ec780b76546a3ef6cc47ef1eff44e11140e6e94ea603aeed3bd284e17ede22bb`.
+Final native SHA-256: `f3fe421610815b6f5d32f8a43025071548bd9d1dc82da513418c5ce155f3e6bc`.
+Final native JUnit SHA-256: `1670e615633cd7daf5743d8f70011576cd3733a5b2d8241d53ec2e765c446858`.
+This is an unreleased feature executable, not the published rc3 asset, despite
+sharing its package version string. Identify it by the commit and fingerprints.

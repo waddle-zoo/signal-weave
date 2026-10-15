@@ -135,6 +135,18 @@ declare enterprise value from successful tool execution.
    works. Preserve the baseline's source tools and persistent notes, distinguish
    routine report audiences from alert recipients, and score final messages.
 
+The next agent smoke must start with the installed guide, not precurated notes:
+an ambiguous sales definition, an owner clarification, two recurring cards that
+reuse that clarification, a process/session handoff, and a later definition
+change. Record the clarification and all setup effort in both arms. The baseline
+retains the same complete documents, source tools, card policy and permission to
+save notes or scripts. The treatment uses the actual native MCP and bundled
+workflow skill, not a renamed fixture tool. First establish that the mechanism
+is used and the final factual report is useful; do not expand a live trial after
+a failed smoke. Predeclare a fresh cost cap before any further paid invocation,
+and report onboarding plus recurring-run cost separately, including break-even.
+No more episodes may be charged to the exhausted original canary budget.
+
 See the [preview evidence](evidence/domain-context-preview-2026-10-14.md) for
 observed gates, retained failures and exact native identity. This milestone is
 not complete; the feature remains opt-in and the PR remains draft.
