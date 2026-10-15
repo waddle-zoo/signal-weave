@@ -106,7 +106,7 @@ See an [example card](examples/insight-card.json) and the
 ## Evidence + decisions + your agent
 
 ```text
-Your brief → reviewed card → fresh evidence → typed decision → agent investigation/report
+Your brief → reviewed card → source evidence → typed decision → agent investigation/report
 ```
 
 SignalWeave gives the agent:

@@ -7,10 +7,9 @@ system does not need to run on the same host.
 
 ## Native executable
 
-The commands below target a native build of the **current source candidate**;
-see the [build instructions](local-install-reference.md#install-this-checkout).
-The published `v0.2.0rc1` also supports HTTP serving, but has the older Jev-only
-wizard and `doctor` command instead of the newer setup and health options.
+Install the native executable using the [local installation guide](local-install.md),
+or use the container deployment below. See [release compatibility](local-install-reference.md#release-compatibility)
+before upgrading an older executable.
 Run these commands as the operating-system account that will own the service:
 
 ```sh
