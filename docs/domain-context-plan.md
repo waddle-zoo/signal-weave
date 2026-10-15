@@ -191,6 +191,21 @@ series and both stopped agent cohorts remain closed with their original costs.
 This closes an explicit native/decision lifecycle gate, not conversational
 onboarding, comparative agent value, causal analysis or customer validation.
 
+The first native attempt stopped before inference: the test incorrectly expected
+`bind_insight_context` to return a full `card`, rather than its documented compact
+receipt. JUnit records zero Jev attempts/errors and known zero provider usage;
+keep that failed attempt as a harness failure. It did not evaluate any period.
+
+Freeze corrected `approved-card-clarification-v2` with the same fixture, labels,
+three-period order and three-attempt maximum; v1 remains closed. First run the
+entire draft → pin → revise → review → approve path with a synthetic startup key
+and hard zero-request proxy budget (`CONTEXT_JEV_PREFLIGHT_ONLY=1`). It must
+report revision/approval complete and zero provider attempts/rejections. Only
+after that current-test-hash preflight and independent review may the separate
+live attempt run in a new artifact directory. The zero-call v1 failure stays
+charged as zero, not as a passing result. There is no CLI agent invocation or
+attempt to assign a known total to the censored v2 agent cost.
+
 ## User outcome
 
 An agent onboarding a second sales investigation should reuse the definitions,

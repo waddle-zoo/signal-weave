@@ -92,7 +92,7 @@ dispatch for wire-schema validity.
 
 ## Native owner-clarification check
 
-`approved-card-clarification-v1` is a separately preregistered product check,
+`approved-card-clarification-v2` is a separately preregistered product check,
 not a resumption of the agent cohorts. It uses the existing retail fixture
 (seed `20261001`, company index `0`), all three periods in order, and at most
 three upstream Jev attempts with retries disabled. No frontier agent or delivery.
@@ -103,8 +103,19 @@ and approves it, then checks outcomes, exact destination keys/URLs, receipt
 identity/version and delivery disabled. A changed required definition must
 defer policy without another inference call, preserving source facts/provenance.
 
-Status: not yet executed. This gate cannot establish conversational onboarding,
-comparative usefulness, causal analysis or customer acceptance.
+The v1 attempt failed before inference because the script incorrectly read the
+compact binding receipt as a full card; JUnit records zero provider attempts and
+errors. That is a harness failure, not a decision outcome. The corrected v2
+preflight then completed the entire clarification/review/approval path in 25.28
+seconds, with a synthetic key, hard zero-request budget, card version 3 and zero
+provider attempts/rejections. Paid v2 execution is still pending. This gate
+cannot establish conversational onboarding, comparative usefulness, causal
+analysis or customer acceptance.
+
+V2 preflight JUnit SHA-256:
+`4aba5f1de150e2b3064314b9e850748b307029964bda39e2d61207c4d3e39c2c`.
+Frozen v2 test SHA-256:
+`4abb8db656fcbc41bacd802f2a5230e28d8bd3a5757e3c0f201f5d4b78d8d685`.
 
 The older native/provider series remains separately charged: four attempts,
 18,760 input and 220 output tokens, including its initial response-shape

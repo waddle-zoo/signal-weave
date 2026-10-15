@@ -93,15 +93,24 @@ def test_live_proof_checks_deferred_content_and_provenance(fault):
 async def test_native_approved_context_card_recurrence_with_live_jev(tmp_path, record_property):
     import asyncio
 
-    record_property("protocol", "approved-card-clarification-v1")
+    preflight = os.getenv("CONTEXT_JEV_PREFLIGHT_ONLY") == "1"
+    record_property("protocol", "approved-card-clarification-v2")
     record_property("protocol_sha256", hashlib.sha256(Path(__file__).read_bytes()).hexdigest())
+    record_property("preflight_only", preflight)
+    if preflight:
+        key_file = tmp_path / "synthetic-startup-key"
+        key_file.write_text("synthetic-clarification-preflight-no-inference")
+        key_file.chmod(0o600)
+    else:
+        key_file = Path(os.environ["TYPESAFE_API_KEY_FILE"]).resolve()
     audit = Audit(path=tmp_path / "trace.jsonl")
     audit.path.touch(mode=0o600)
-    budget = RequestBudget(limit=3)
+    budget = RequestBudget(limit=0 if preflight else 3)
     try:
         with tempfile.TemporaryDirectory(prefix="native-state-", dir=tmp_path) as private:
             async with asyncio.timeout(240):
-                await exercise_live_native(Path(private), record_property, audit, budget)
+                await exercise_live_native(Path(private), record_property, audit, budget,
+                                           key_file=key_file, preflight=preflight)
     finally:
         record_property("provider_attempts", budget.used)
         usages = [
@@ -115,9 +124,11 @@ async def test_native_approved_context_card_recurrence_with_live_jev(tmp_path, r
                                            for key in ("input_tokens", "output_tokens"))
             for usage in usages
         ))
+        if preflight:
+            assert budget.used == 0 and not budget.exhausted and errors == 0
 
 
-async def exercise_live_native(tmp_path, record_property, audit, budget):
+async def exercise_live_native(tmp_path, record_property, audit, budget, *, key_file, preflight=False):
     binary = Path(os.environ["SIGNALWEAVE_BINARY"]).resolve()
     identity = verify_binary(binary)
     scenario = _bridge_identity(build_scenarios(seed=20261001, connector_profile=True)[0])
@@ -132,7 +143,7 @@ async def exercise_live_native(tmp_path, record_property, audit, budget):
     primary_ref = primary["adapter"] + "|" + primary["resource"]
     metric = primary["contract"]["metric_names"][0]
     async with native_context(
-        binary, Path(os.environ["TYPESAFE_API_KEY_FILE"]).resolve(), public, adapter, audit, tmp_path,
+        binary, key_file, public, adapter, audit, tmp_path,
         request_budget=budget,
     ) as (native, _skill):
         routes = [{"outcome": "notify", **public["destinations"][0]},
@@ -169,17 +180,17 @@ async def exercise_live_native(tmp_path, record_property, audit, budget):
             "reason": "Use the existing fixture definition as a prerequisite; no new semantics inferred.",
         })
         _, revised = await native.call_tool("revise_insight_card", {
-            "card_id": card_id, "expected_card_version": bound["card"]["version"],
+            "card_id": card_id, "expected_card_version": bound["version"],
             "changes": {"decision_guidance": public["owner_answers"]["materiality"],
                         "questions": [], "delivery_methods": routes},
             "reason": "Scripted fixture owner supplies the previously missing policy and routes, not a real human interaction.",
         })
         revised_card = revised["card"]
         assert revised_card["id"] == card_id
-        assert revised_card["version"] == bound["card"]["version"] + 1
+        assert revised_card["version"] == bound["version"] + 1
         assert revised_card["status"] == "draft" and revised_card["approved_by"] is None
-        assert revised_card["context_bindings"] == bound["card"]["context_bindings"]
-        assert revised_card["sources"] == bound["card"]["sources"]
+        assert revised_card["context_bindings"] == bound["context_bindings"]
+        assert revised_card["sources"] == created["card"]["sources"]
         record_property("owner_clarification_applied", True)
         record_property("revised_card_version", revised_card["version"])
         _, review = await native.call_tool("review_insight_card", {"card_id": card_id})
@@ -189,6 +200,9 @@ async def exercise_live_native(tmp_path, record_property, audit, budget):
             "source_selection_reason": "Scripted owner accepts the existing synthetic exporter scopes for this protocol check, not company-wide coverage.",
         })
         assert budget.used == 0, "explicit-source authoring must not invoke the provider"
+        if preflight:
+            record_property("approval_preflight_complete", True)
+            return
         outcomes = []
         for period in scenario["public"]["periods"]:
             adapter.set_period(period, datetime.now(timezone.utc))
