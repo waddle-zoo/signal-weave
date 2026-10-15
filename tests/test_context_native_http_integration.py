@@ -211,7 +211,12 @@ async def exercise_native_http(tmp_path, record_property):
             SIGNALWEAVE_OIDC_REQUIRED_SCOPES="insights:read",
             TYPESAFE_BASE_URL=issuer + "/forbidden-provider", TYPESAFE_MAX_RETRIES="0",
         )
-        curator = token(scopes="insights:read knowledge:write knowledge:share knowledge:review")
+        def curator():
+            # Mint at use, including after restart. Host suspension or slow
+            # native extraction must not turn a valid-identity protocol check
+            # into accidental use of an expired fixture token. Explicit expiry
+            # rejection remains covered by the invalid-credential cases below.
+            return token(scopes="insights:read knowledge:write knowledge:share knowledge:review")
         content = {
             "domain": "native-http-proof", "title": "Shared protocol context",
             "body": "SYNTHETIC_HTTP_CONTEXT: check measurement periods separately, not a metric definition.",
@@ -226,7 +231,7 @@ async def exercise_native_http(tmp_path, record_property):
                     response = await client.post(base + "/mcp", headers=headers, json={})
                     assert response.status_code == 401
                     assert content["body"] not in response.text
-            async with remote_session(base, curator) as session:
+            async with remote_session(base, curator()) as session:
                 tools = {tool.name for tool in (await session.list_tools()).tools}
                 assert "save_domain_context" in tools and len(tools) == 17
                 result, saved = await call(session, "save_domain_context", {"content": content})
@@ -253,7 +258,7 @@ async def exercise_native_http(tmp_path, record_property):
                 result, reopened = await call(session, "retrieve_domain_context", {"query": "protocol context"})
                 assert not result.isError and [entry["revision"] for entry in reopened["entries"]] == [2]
                 assert reopened["entries"][0]["id"] == saved["id"]
-            async with remote_session(base, curator) as session:
+            async with remote_session(base, curator()) as session:
                 edited_content = {
                     **content, "body": "SYNTHETIC_HTTP_REVISION: the owner must review this changed note.",
                     "review_after": (datetime.now(timezone.utc) - timedelta(days=1)).isoformat(),
