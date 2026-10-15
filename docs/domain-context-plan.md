@@ -419,6 +419,52 @@ plausible. Preserve reviewer disagreements and failed gates, not just a mean
 score. Include accepted onboarding and all new known usage; retain older unknown
 costs. No billed-cost, latency superiority or statistical claim follows.
 
+`grounded-reports-v2` is terminal after four reports and two live Jev requests.
+The fourth known response brought aggregate input to 600,341, crossing the
+600,000 between-invocation stop. Do not enlarge the budget, resume the unrun
+adverse pair or call the six-report gate passed. New agent usage was 141,589
+uncached input and 7,847 output tokens; provider usage was 12,109 input / 262
+output. All four observed policy outcomes/routes were correct, but that alone
+does not prove useful reports or comparative benefit.
+
+Both arms repeatedly failed the research-only submission schema: eleven rejected
+submissions among 26 tool results. The public definitions were present in all
+four actual prompts; this repair did not make the complex measurement-registry
+submission natural to use. Keep the failed arguments and usage. Do not attribute
+those output-format failures to production source access or to Jev analysis.
+
+Two arm-label-masked reviewers assessed the four available reports, with the
+unrun pair unassessed. Their original outputs remain unchanged. However, the
+coordinator's review packet omitted each report's actual assigned `as_of` and
+the successful submission-recording events. Both reviewers confused the global
+latest cohort cutoff with individual historical reporting cutoffs and treated
+capture-after-period as source staleness. Those timing-based findings cannot
+support pass rates: actual requested cutoffs were September 28 and October 5,
+whereas the common query/read clock and source capture were October 15. Snapshot
+capture lag relative to that read clock was zero; that is not proof of underlying
+data freshness. The engine's snapshot-age rule compares evaluation time with
+source capture, not capture with measurement-period end. One baseline report
+itself made the same unsupported freshness claim. Both reviewers treated the
+treatment's optional-volume wording as ambiguous rather than erased counts;
+preserve that disagreement with the coordinator's initial interpretation too.
+
+No new paid repair cohort is warranted yet. First make reviewer evidence packets
+preserve the actual per-report prompt and execution receipts for both arms.
+Then simplify research reporting toward a human-facing report sink instead of
+forcing a second nested numeric registry; preserve the same factual, routing,
+missingness, provenance and no-delivery review requirements. Investigate duplicate
+agent-facing evidence separately. Do not change business policy or rewrite old
+scores to obtain a passing result.
+
+The research packet builder now validates actual prompted cutoff/read clocks,
+successful submissions in both arms and current native receipt identities;
+agent proposals may disagree with native outcomes and remain reviewable. Planned
+counts are explicit, never inferred from a cap; unrun means planned minus observed,
+with incomplete observed episodes counted separately. Eleven focused checks and
+an actual four-case factual supplement verify that repair. No model re-review,
+new score or live trial was substituted. The data-quality audit distinguishes
+snapshot capture lag from measurement-window semantics and underlying freshness.
+
 ### Native approved-card clarification check
 
 Separately preregister `approved-card-clarification-v1`: reuse the existing

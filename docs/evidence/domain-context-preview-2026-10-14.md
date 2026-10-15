@@ -11,7 +11,9 @@ have engineering evidence. A paired report-only study completed six reports and
 three live Jev calls; a later treatment-only interpretation check completed
 three more reports and three Jev calls on the same supplied Pine Courier periods.
 Policy outcomes and native receipts were correct, but narrative and scorer defects
-remain. There is no demonstrated overall cost, quality, or business advantage.
+remain. A further contract-repair study stopped after four of six reports;
+its review packet also omitted necessary timing/execution context. No corrected
+pass rate is claimed. There is no demonstrated overall cost, quality, or business advantage.
 Comparative business benefit, customer SSO, interactive onboarding, and enterprise
 readiness remain unproved.
 
@@ -29,7 +31,7 @@ is added to Git.
 | Card/context dependencies | Exact revisions, source/meaning checks, reapproval, stale-context deferral, and historical receipts | No semantic graph traversal or automatic reminder delivery |
 | Same-card clarification | Owner-scoped revision preserves anchors and pins, increments version, clears approval/plan, and uses exact-snapshot compare-and-swap | JSON locking is process-local; multi-process use requires SQLite |
 | Current native transports | 12 checks in 81.00 seconds: two native lifecycles and ten URL validators; zero inference | Local Superset metadata and synthetic signed issuer; not native report-quality proof |
-| Full suite including presentation/timing tests | 3,454 passed, 11 skipped, in 224.53 seconds | Software checks, not companies or an accuracy estimate; final calendar wording also passed 17 focused checks |
+| Full suite including report-contract/packet fidelity tests | 3,478 passed, 11 skipped, in 224.74 seconds | Software checks, not companies or an accuracy estimate; 35 focused research checks also passed |
 
 The native stdio lifecycle took 49.23 seconds: ten MCP calls and nine Superset
 metadata reads. Signed HTTP context reuse, roles, and restart took 31.30 seconds;
@@ -179,6 +181,64 @@ scientific peer review.
 
 ## Retained artifact identities
 
+### Shared report-contract repair: stopped, not a new success rate
+
+`grounded-reports-v2` exposed the previously omitted public fact definitions to
+both arms, clarified policy routes versus routine audiences, and kept workflow
+receipts out of structured measurement citations. All four actual prompts
+contained the definitions. Production/skill fingerprints were unchanged.
+
+The registered 600k input stop ended this study after **four of six reports**
+and two live Jev calls. The adverse pair never ran; no retry or extension occurred.
+All four observed policy outcomes and routes were correct. Baseline's raw
+structured score was 2/2; treatment's was 1/2 because its quiet report omitted
+the required typed delta despite stating it correctly in prose.
+
+| Two completed periods | Baseline | SignalWeave |
+| --- | ---: | ---: |
+| Tools / primary source reads | 13 / 2 | 13 / 2 |
+| Input / uncached tokens | 195,701 / 63,093 | 404,640 / 78,496 |
+| Summed agent seconds | 56.68 | 61.27 |
+
+Eleven of the 26 tool results were rejected research-submission arguments
+(wrong field names, extra fields or missing fields). That formatting overhead
+confounds task-cost interpretation; it is not a production connectivity failure.
+The treatment's larger input is still an observed cost, not a win to discount.
+Its two live Jev calls used 12,109 input / 262 output tokens. Combined new-agent
+usage was 600,341 input / 458,752 cached / 141,589 uncached / 7,847 output;
+including accepted onboarding: 1,559,689 input / 330,889 uncached / 18,096 output.
+Reviewer/coordinator costs and older unknowns remain outside those runner totals.
+
+Both independent reviewers' original outputs are retained, but **their overall
+pass rates are unusable**. The review packet omitted per-case assigned cutoffs
+and successful draft-recording events. Both reviewers then treated the cohort's
+latest cutoff as every case's cutoff and confused source capture with measurement
+dates. Actual report prompts assigned September 28 and October 5, with a separate
+October 15 query clock; source capture matched that clock. The recorded snapshot
+capture lag was zero; capture-after-period does not establish snapshot staleness
+under the implemented age rule. Capture metadata does not prove metric/data freshness.
+One baseline report also made an unsupported staleness claim. Both reviewers
+treated treatment's volume wording as ambiguous, not absent measurements; the
+coordinator's initial stronger contradiction claim is not a consensus finding.
+The 5,800 and 11,600 denominators were also present in the actual Jev request;
+missing counts in its input are not the explanation for this case.
+No corrected review or comparative success is being substituted for these outputs.
+
+The new research-only [packet builder](../../evaluations/report_review_packet.py)
+checks the actual per-episode prompt, source-read clocks and successful report
+recording in both arms. It preserves agent/native disagreements for review,
+rather than requiring agreement to admit a case. Eleven focused checks cover
+timing, missing clocks, current receipts, recording evidence and planned versus
+unrun counts. Applying it to the retained trace produced a separately labeled
+factual supplement: four completed, zero incomplete and two unrun reports, with
+the assigned per-report cutoffs and zero recorded snapshot capture lag. The
+original reports and model reviews were not changed or rerun. This data-quality
+repair does not prove analytical correctness or underlying metric freshness.
+
+Next fix the evidence packet and simplify the evaluation's human-report handoff
+before more paid runs. Correct labels, strict schemas and reviewer agreement
+are not sufficient evidence of business value when their framing is wrong.
+
 These hashes identify local ignored files; they are not public reproduction
 inputs. Raw traces, reports, credentials, and setup state remain outside Git.
 
@@ -193,6 +253,10 @@ inputs. Raw traces, reports, credentials, and setup state remain outside Git.
 | Current native transport JUnit | ccd25997f81593c081cd0e1e9770fd2d8555f11af6d10d086c342c0590e581ba |
 | Frozen six-packet layout manifest | 2659c1d95d1be4c86f558d8360dd8bd06971652ddbce2e5055459c93415589bf |
 | Calendar zero-inference preflight report | 4d189da105310691b86677d970ec736681d0080c547116e9f9921d1b1a81d8f8 |
+| Shared-contract preflight report | bf74c55db27856754bfed77affe49ddc71366755a9fe541ebca3e60948363f56 |
+| Stopped shared-contract live report | 1ac0c478f80e937f4989811e71190d7ad3c009a39ab33cd1b754bdb55f4ee9ed |
+| Stopped shared-contract live trace | 46ad4937492974c76a5c7def2ee587ac2d0ca38acee0af20511b6e1fb5a56a6a |
+| Factual review-evidence supplement | 7dadaebd825b3a60205579bff7e990bb8c531e70313120a27a78199454fad057 |
 
 ## Reproduction and remaining gates
 
