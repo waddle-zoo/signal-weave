@@ -11,6 +11,7 @@ import copy
 import hashlib
 import json
 import tempfile
+from contextlib import nullcontext
 from datetime import datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
@@ -44,11 +45,13 @@ from evaluations.reviewed_setup_report_trial import (
     record_tool_inventory,
     summarize_usage,
 )
+from evaluations.source_expert_reference import SourceReferenceMixin, source_reference
 from scripts.binary_provenance import verify_binary
 from signalweave.models import SourceRef
 
 PROTOCOL = "public-owner-report-v1"
 HANDOFF_PROTOCOL = "public-owner-report-handoff-v2"
+REFERENCE_PROTOCOL = "public-owner-reference-v3"
 HANDOFF_MANIFEST = Path(__file__).with_name("data") / "public-owner-handoff-v1-manifest.json"
 LIMITS = {"agent_invocations": 6, "jev_attempts": 1,
           "between_invocation_input_stop": 1_200_000, "between_invocation_uncached_stop": 220_000}
@@ -84,6 +87,10 @@ class AuthorEpisode(Episode):
         if name == "calculate":
             return {"value": calculate(args["expression"])}
         return await super().call(name, args)
+
+
+class ReferenceAuthorEpisode(SourceReferenceMixin, AuthorEpisode):
+    """Same author tools plus non-authoritative free-form source references."""
 
 
 def scenario():
@@ -150,6 +157,14 @@ def load_baseline_handoff(report_path, trace_path, scenario_hash, identity, code
 
 
 async def run(args):
+    reference_mode = getattr(args, "expert_reference", False)
+    if reference_mode and getattr(args, "baseline_handoff_report", None):
+        raise ValueError("A fresh reference cohort cannot resume or rescore the terminal handoff")
+    reference_module = None
+    episode_type = AuthorEpisode
+    if reference_mode:
+        episode_type = ReferenceAuthorEpisode
+        reference_module = Path(__file__).with_name("source_expert_reference.py")
     binary = Path(args.binary).resolve()
     identity, codex = verify_binary(binary), await pinned_codex(args.codex_executable)
     output = Path(args.output).resolve()
@@ -173,6 +188,11 @@ async def run(args):
               "scope": "One known synthetic retail development case; historical onboarding examples followed by a later current-period report. Scripted owner facts, normalized company-MCP exports, isolated non-interactive native setup. No real human/vendor/enterprise claim. Both arms retain company tools and own notes; arbitrary scripts disabled. Whole-package comparison, not isolated Jev/context ablation. No schedule or delivery.",
               "read_clock": clock.isoformat(), "measurement_offset_seconds": offset.total_seconds()}
     zero = {"input_tokens": 0, "cached_input_tokens": 0, "uncached_input_tokens": 0, "output_tokens": 0, "responses": 0}
+    if reference_mode:
+        reference = source_reference(public)
+        report.update(protocol=REFERENCE_PROTOCOL, reference_only_not_expert_answer=True,
+            reference_module_sha256=hashlib.sha256(reference_module.read_bytes()).hexdigest(),
+            source_reference_sha256=hashlib.sha256(json.dumps(reference, sort_keys=True).encode()).hexdigest())
     prior_entry, prior_events = None, []
     handoff_report = getattr(args, "baseline_handoff_report", None)
     if handoff_report:
@@ -205,9 +225,18 @@ async def run(args):
             raise RuntimeError("Frozen runner or skill changed; stop without retry")
         if handoff_report and hashlib.sha256(HANDOFF_MANIFEST.read_bytes()).hexdigest() != report["charged_prior_author"]["manifest_sha256"]:
             raise RuntimeError("Frozen handoff manifest changed; stop without retry")
+        if reference_module and hashlib.sha256(reference_module.read_bytes()).hexdigest() != report["reference_module_sha256"]:
+            raise RuntimeError("Frozen expert reference code changed; stop without retry")
 
     try:
-        with tempfile.TemporaryDirectory(prefix="fresh-public-owner-", dir=output) as private:
+        if reference_mode:
+            private_root = output / "private-native-state"
+            private_root.mkdir(mode=0o700)
+            report["retained_state"] = "private-native-state; inspection only, synthetic bridge endpoints expire at exit. No trial resume or production setup."
+            workspace = nullcontext(private_root)
+        else:
+            workspace = tempfile.TemporaryDirectory(prefix="fresh-public-owner-", dir=output)
+        with workspace as private:
             root = Path(private)
             async with native_context(binary, key, public, adapter, audit, root, request_budget=budget) as (native, skill):
                 report["installed_skill_sha256"] = hashlib.sha256(skill.encode()).hexdigest()
@@ -223,7 +252,7 @@ async def run(args):
                     arm = "signalweave" if treatment else "baseline"
                     audit.episode = arm + ":setup"
                     adapter.set_period(public["period"], clock, measurement_offset=offset)
-                    session = AuthorEpisode(public, adapter, native if treatment else None)
+                    session = episode_type(public, adapter, native if treatment else None)
                     specs = await session.specs()
                     report.setdefault("author_tool_inventories", {})[arm] = pin_tools(specs)
                     if treatment:
@@ -234,6 +263,12 @@ async def run(args):
                     finish = next(t["parameters"] for t in specs if t["name"] == "finish_setup")
                     validate({"card_ids": ["probe"] if treatment else [], "message": "Schema probe", "unresolved": []}, finish)
                     if not args.run:
+                        if reference_mode:
+                            clarification = await session.call("ask_owner", {"topic": "Explain the declared source population and reporting convention; do not invent absent context."})
+                            if (clarification["known"] is not False or clarification["answer"] is not None
+                                    or hashlib.sha256(json.dumps(clarification["reference"], sort_keys=True).encode()).hexdigest() != report["source_reference_sha256"]):
+                                raise RuntimeError("Source reference differs from the shared public declarations")
+                            report.setdefault("reference_preflight_arms", []).append(arm)
                         asset = (await session.call("list_company_assets", {}))["assets"][0]
                         await session.call("read_company_asset", {"ref": asset["adapter"] + "|" + asset["resource"]})
                         if treatment:
@@ -268,7 +303,7 @@ async def run(args):
                     report["episodes"].append(entry)
                     save()
                     if (not report["usage_known"] or result["status"] != "complete" or not session.setup
-                            or (not handoff_report and session.setup["unresolved"])):
+                            or (not (handoff_report or reference_mode) and session.setup["unresolved"])):
                         raise RuntimeError("Author setup incomplete or unknown usage; no retry")
                     card = None
                     if treatment:
@@ -278,7 +313,7 @@ async def run(args):
                     source_context = {"catalog": public["catalog"], "inspected_sources": [
                         {**e["snapshot"], "ref": e["ref"]} for e in review_events if e["kind"] == "source.read"]}
                     review_notes = session.notes
-                    if handoff_report:
+                    if handoff_report or reference_mode:
                         review_notes += "\n\nAuthor's pending items (quoted, not proof of missing business context):\n" + json.dumps(session.setup["unresolved"])
                     check()
                     audit.episode = arm + ":policy-review"
@@ -288,6 +323,8 @@ async def run(args):
                     save()
                     if not report["usage_known"] or not entry["independent_review"]["approved"]:
                         raise RuntimeError("Independent policy review rejected setup or usage unknown; no retry")
+                    if reference_mode and not treatment and session.approvals.get(("notes", "working")) != approval_digest("notes", {"notes": session.notes}):
+                        raise RuntimeError("Baseline still needs synthetic owner consent for the exact saved notes; semantic review does not grant it")
                     if treatment and (card["status"] != "approved"
                             or session.approvals.get(("card", card["id"])) != approval_digest("card", card)):
                         raise RuntimeError("Treatment still needs owner-confirmed card approval; semantic review does not grant it")
@@ -343,6 +380,8 @@ def main():
     parser.add_argument("--run", action="store_true")
     parser.add_argument("--baseline-handoff-report")
     parser.add_argument("--baseline-handoff-trace")
+    parser.add_argument("--expert-reference", action="store_true",
+                        help="Fresh development variant: cited source references for free-form questions; retain private state. Not an expert answer or trial resume.")
     args = parser.parse_args()
     if args.run and not args.key_file:
         parser.error("--run requires --key-file; preflight uses its own dummy key")

@@ -9,7 +9,7 @@ Feature branch: `feat/domain-context-memory`, based on main `e8842ac`.
 | Local and hosted context lifecycle | Native stdio and signed HTTP checks cover review, reuse, restart and changed revisions; hosted issuer is synthetic |
 | Card-bound meaning and staleness | Contract tests cover exact pins, reapproval, deferred policy and historical receipts; no automatic notification service is claimed |
 | Approved cards with live decisions | Current native clarification v2 matched three supplied retail periods with live Jev, exact routes and receipt versions; changed required meaning preserved facts without another model call. Scripted owner, not autonomous onboarding |
-| Human-first, agent-led onboarding | V4 completed both pending-owner handoffs, both answer-application turns and both independent policy reviews. Treatment revised the same draft v2 → approved v3. One scripted-owner development case, not a real human wizard or varied-company success rate |
+| Human-first, agent-led onboarding | Earlier V4 completed a scripted-owner pair. Latest fresh public V1/V2 stopped before reports: source questions unanswered by fixed-topic fake owner, context still draft, plus a false numeric reviewer objection. No real-human wizard or varied-company success rate |
 | Useful recurring reports and investigations | Six paired reports and a three-report/live-Jev guidance check retained correct outcomes but showed narrative omission. Six cached layout reporters support a narrow presentation change, not an accuracy claim; multi-step investigations, diverse connectors and changed-context agent behavior remain unproven |
 | Comparative business value | No current context-layer advantage over an equal-information agent baseline has been established; report usefulness, noise/misses, source work and complete costs are still required |
 
@@ -105,6 +105,33 @@ that bounded reference, and keep a native home alive across the human handoff.
 Test both sufficient and genuinely missing expert context; do not infer missing
 source meaning from titles, relax approval, or ask Jev to supply it. Any new
 cohort needs its own frozen protocol and complete accounting.
+
+### Reference-only repair, not an expert-answer oracle
+
+The separate `--expert-reference` development variant starts both arms fresh;
+it cannot load the terminal V1 handoff. Free-form `ask_owner` questions return
+the same cited glossary and selected per-source contract fields to both authors,
+with `known=false`, `answer=null`, and `answer_status=reference_only`. No keyword
+matching, future measurements, fabricated eligibility, model-based expert,
+synthetic approval or semantic sufficiency claim is added. Listed owner policy
+topics retain their original answers. Missing or conflicting declarations still
+need actual clarification; this does not prove that the original ambiguity is
+resolved or that onboarding succeeds.
+
+Offline contracts cover the six published business fixtures, paraphrases,
+missing population/window/definition fields, conflicting conventions, optional
+population decoys, exact note-consent checks and unchanged card approval.
+These are reference-fidelity checks, not six enterprise trials. The zero-model
+native preflight checks both arms' reference hashes, common schemas and source
+bridge fidelity. It uses a dummy key and a zero-request provider budget.
+
+This variant retains `private-native-state` under its exclusive ignored output
+directory with mode 0700 for inspection after a stop. It is sensitive local
+state, not a public artifact. The temporary connector/proxy endpoints expire
+at exit; retaining files does not implement a resumable human onboarding trial
+or make that configuration production-ready. No paid V3 cohort is authorized by
+a successful preflight alone: freeze its protocol, accounting and review plan
+before inference. V1/V2 results and costs remain terminal and unchanged.
 
 ## New owner-workflow development cohort
 
