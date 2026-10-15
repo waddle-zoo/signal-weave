@@ -565,6 +565,30 @@ an accuracy estimate, connector test, fresh onboarding trial, or comparison of
 SignalWeave against an agent without it. No production promotion follows from
 one pair; additional missing-data and independent-domain checks remain required.
 
+The two-call pair is now closed: both reports completed with known usage and no
+new source, native or Jev calls. Independent reviews disagree: one passes both;
+the other fails the candidate's omitted eligibility detail and the current
+layout's denial of a volume claim. The candidate explicitly reports the known
+count doubling but still has an imprecise optional-watch caveat. Do not substitute
+a consensus pass or infer a layout advantage. Keep the prototype outside the
+production path and stop paid layout expansion. The next onboarding work should
+qualify an actual sample readout and its audience/scope expectations, rather than
+treating card approval alone as proof that the agent communicates usefully.
+
+For that next piece, use the existing card/context fields and normal agent tools,
+not a new mandatory schema or a prose-blocking policy gate. Agree the audience
+and material reporting expectations, obtain an actual delivery-disabled readout,
+and let the owner or designated data expert qualify it. Preserve that feedback as
+guidance, not fabricated current measurements or held-out expected answers.
+Both comparison arms must receive the same feedback and keep their source tools
+and durable notes. Then test later unseen periods and changed/missing context.
+An unclear formatting preference must not suppress a supported current analysis.
+Do not require full glossary boilerplate in every routine update: agree what the
+reader already knows, while keeping material scope changes and source gaps explicit.
+Audit whether frontier-owned discovery/analysis is being pushed into Jev before
+adding APIs; use existing capabilities wherever possible. The intended division
+remains frontier analysis and communication, with narrow repeatable policy decisions.
+
 ### Native approved-card clarification check
 
 Separately preregister `approved-card-clarification-v1`: reuse the existing

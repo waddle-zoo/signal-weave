@@ -15,7 +15,9 @@ remain. A further contract-repair study stopped after four of six reports;
 its review packet also omitted necessary timing/execution context. No corrected
 pass rate is claimed. A subsequent single-call human-readout canary fixed report
 recording, but repeated a factual interpretation error; independent review stopped
-the planned comparison before it began. There is no demonstrated overall cost,
+the planned comparison before it began. A separate two-reporter layout diagnostic
+then completed, but its reviewers disagree and establish no quality advantage.
+There is no demonstrated overall cost,
 quality, or business advantage.
 Comparative business benefit, customer SSO, interactive onboarding, and enterprise
 readiness remain unproved.
@@ -23,8 +25,10 @@ readiness remain unproved.
 The [acceptance ledger](../domain-context-plan.md#current-acceptance-ledger)
 keeps the full goal open. The [immutable full snapshot](https://github.com/waddle-zoo/signal-weave/blob/0be8ae61511d408175e261231d50f89a8e62c552/docs/evidence/domain-context-preview-2026-10-14.md)
 preserves the earlier chronology, negative results, costs, identities, and
-reproduction details. This note condenses that record; no raw research artifact
-is added to Git.
+reproduction details. This note condenses that record. A small
+[public audit excerpt](../../evaluations/data/evidence-first-layout-diagnostic.json)
+contains synthetic comparison values, exact readouts and reviewer opinions;
+raw runtime traces, credentials and setup state remain outside Git.
 
 ## Current engineering evidence
 
@@ -34,7 +38,7 @@ is added to Git.
 | Card/context dependencies | Exact revisions, source/meaning checks, reapproval, stale-context deferral, and historical receipts | No semantic graph traversal or automatic reminder delivery |
 | Same-card clarification | Owner-scoped revision preserves anchors and pins, increments version, clears approval/plan, and uses exact-snapshot compare-and-swap | JSON locking is process-local; multi-process use requires SQLite |
 | Current native transports | 12 checks in 81.00 seconds: two native lifecycles and ten URL validators; zero inference | Local Superset metadata and synthetic signed issuer; not native report-quality proof |
-| Full suite including report-contract/packet fidelity tests | 3,497 passed, 11 skipped, in 227.64 seconds | Exact frozen reporting commit; software checks, not companies or an accuracy estimate; 43 focused research checks also passed |
+| Full suite including report-contract/packet fidelity tests | 3,516 passed, 11 skipped, in 224.02 seconds | Includes the public excerpt's three integrity checks; software checks, not companies or an accuracy estimate; 84 focused handoff checks also passed |
 
 The native stdio lifecycle took 49.23 seconds: ten MCP calls and nine Superset
 metadata reads. Signed HTTP context reuse, roles, and restart took 31.30 seconds;
@@ -141,16 +145,11 @@ peer review; none of these checks demonstrates comparative usefulness.
 
 ### Shared report-contract repair: stopped, not a new success rate
 
-`grounded-reports-v2` exposed the previously omitted public fact definitions to
-both arms, clarified policy routes versus routine audiences, and kept workflow
-receipts out of structured measurement citations. All four actual prompts
-contained the definitions. Production/skill fingerprints were unchanged.
-
-The registered 600k input stop ended this study after **four of six reports**
-and two live Jev calls. The adverse pair never ran; no retry or extension occurred.
-All four observed policy outcomes and routes were correct. Baseline's raw
-structured score was 2/2; treatment's was 1/2 because its quiet report omitted
-the required typed delta despite stating it correctly in prose.
+`grounded-reports-v2` supplied the previously omitted public numeric definitions
+to both arms. Its 600k input stop ended the study after four of six reports and
+two live Jev calls; no adverse pair, retry or extension ran. All observed policy
+outcomes/routes matched. Raw structured scores remain baseline 2/2, treatment
+1/2; treatment omitted a typed delta that was correct in prose.
 
 | Two completed periods | Baseline | SignalWeave |
 | --- | ---: | ---: |
@@ -158,40 +157,19 @@ the required typed delta despite stating it correctly in prose.
 | Input / uncached tokens | 195,701 / 63,093 | 404,640 / 78,496 |
 | Summed agent seconds | 56.68 | 61.27 |
 
-Eleven of the 26 tool results were rejected research-submission arguments
-(wrong field names, extra fields or missing fields). That formatting overhead
-confounds task-cost interpretation; it is not a production connectivity failure.
-The treatment's larger input is still an observed cost, not a win to discount.
-Its two live Jev calls used 12,109 input / 262 output tokens. Combined new-agent
-usage was 600,341 input / 458,752 cached / 141,589 uncached / 7,847 output;
-including accepted onboarding: 1,559,689 input / 330,889 uncached / 18,096 output.
-Reviewer/coordinator costs and older unknowns remain outside those runner totals.
+Eleven of 26 tool results were rejected research submissions; formatting overhead
+confounds cost interpretation, not connectivity. Combined new-agent usage was
+600,341 input / 141,589 uncached / 7,847 output; Jev used 12,109 input / 262 output.
+Treatment's larger input remains an observed cost, not a discounted win.
 
-Both independent reviewers' original outputs are retained, but **their overall
-pass rates are unusable**. The review packet omitted per-case assigned cutoffs
-and successful draft-recording events. Both reviewers then treated the cohort's
-latest cutoff as every case's cutoff and confused source capture with measurement
-dates. Actual report prompts assigned September 28 and October 5, with a separate
-October 15 query clock; source capture matched that clock. The recorded snapshot
-capture lag was zero; capture-after-period does not establish snapshot staleness
-under the implemented age rule. Capture metadata does not prove metric/data freshness.
-One baseline report also made an unsupported staleness claim. Both reviewers
-treated treatment's volume wording as ambiguous, not absent measurements; the
-coordinator's initial stronger contradiction claim is not a consensus finding.
-The 5,800 and 11,600 denominators were also present in the actual Jev request;
-missing counts in its input are not the explanation for this case.
-No corrected review or comparative success is being substituted for these outputs.
-
-The new research-only [packet builder](../../evaluations/report_review_packet.py)
-checks the actual per-episode prompt, source-read clocks and successful report
-recording in both arms. It preserves agent/native disagreements for review,
-rather than requiring agreement to admit a case. Eleven focused checks cover
-timing, missing clocks, current receipts, recording evidence and planned versus
-unrun counts. Applying it to the retained trace produced a separately labeled
-factual supplement: four completed, zero incomplete and two unrun reports, with
-the assigned per-report cutoffs and zero recorded snapshot capture lag. The
-original reports and model reviews were not changed or rerun. This data-quality
-repair does not prove analytical correctness or underlying metric freshness.
+The original review packet omitted per-case measurement cutoffs and successful
+recording events. Reviewers confused capture with measurement dates; their
+overall pass rates are unusable, not silently rescored. The source capture lag
+was zero at the separate read clock, which does not establish metric freshness.
+A factual supplement repaired the packet but did not re-review or re-score it.
+Known due counts were already present in Jev's input. The
+[immutable detailed record](https://github.com/waddle-zoo/signal-weave/blob/4c45a5c4ab0c42430401b7d7de3beaa094d5d2d3/docs/evidence/domain-context-preview-2026-10-14.md#shared-report-contract-repair-stopped-not-a-new-success-rate)
+retains all findings, review disagreements, setup-inclusive totals and hashes.
 
 ### Human-readout canary: wiring fixed, interpretation not fixed
 
@@ -221,28 +199,60 @@ The next step is an offline generic handoff diagnosis, not another expensive
 cohort, policy relaxation, or a company-specific calculation rule. Correct labels
 and successful recording alone do not establish useful analysis.
 
+### Evidence-first projection: fidelity passes, no agreed report improvement
+
+The research-only projection separates the report audit from primary evidence,
+removes only exact JSON duplicates and pages explicitly optional assessments.
+Required/unmapped checks, report warnings, blockers, coverage, definitions and
+numeric safeguards remain. Review caught and repaired Python's `true == 1`
+deduplication trap. Sixteen new checks and a fresh five-packet replay validate
+type-sensitive reconstruction and unchanged primary fields. Those five packets
+are correlated, from one synthetic company; three retain older invalid calendar
+windows. Cached page-function checks are not native receipt-store fetches.
+
+A separately approved two-call layout pair used the same complete historical
+period, facts, policy, instructions and cached lookup tools. Both reports were
+recorded with `ignore`, no alert recipients, and no delivery. Combined usage:
+104,527 input / 70,144 cached / 34,383 uncached / 1,020 output tokens; no new
+source reads, native evaluations or Jev requests. Candidate took 12.28 seconds,
+current layout 10.51; both used one report call and no cached section reads.
+This fixed-order pair is not a latency/cost estimate or an agent-without-SignalWeave baseline.
+
+The candidate explicitly says the eligible count doubled, but retains an
+imprecise "separate volume finding" caveat. Reviewer A passes both reports;
+reviewer B fails the candidate's unstated eligibility details and the current
+layout's "no volume claim" wording. The definition is present in the input but
+not spelled out in the candidate message; A's acceptance does not prove that
+detail was communicated. Preserve these judgments and reader-context ambiguity,
+not a consensus pass. The validation pass distinguished message content from
+source metadata and independently recomputed the supplied ratios.
+
+No report-quality advantage is established. No further layout calls or production
+promotion follow. Next qualify an actual sample message during onboarding, including
+what its intended reader already knows and what scope must be explicit. Raw
+inputs, reports and reviews remain ignored; reviewer/coordinator costs are
+separate from the two reporter invocations above.
+
+The public excerpt is independently readable without API access. Run
+`uv run --extra dev pytest tests/test_layout_diagnostic_fixture.py -q` for its arithmetic,
+recording, disclosure and review-preservation checks. These validate the excerpt,
+not new company workflows; the raw-run reconstruction limits below still apply.
+
 These hashes identify local ignored files; they are not public reproduction
 inputs. Raw traces, reports, credentials, and setup state remain outside Git.
 
-| Artifact | SHA-256 |
+Earlier identities and setup-inclusive accounting remain in the
+[immutable preceding record](https://github.com/waddle-zoo/signal-weave/blob/4c45a5c4ab0c42430401b7d7de3beaa094d5d2d3/docs/evidence/domain-context-preview-2026-10-14.md#retained-artifact-identities).
+The public capsule also records its source report, trace and original review hashes.
+
+| Current artifact | SHA-256 |
 | --- | --- |
-| Accepted v4 onboarding report | e4f4cef42971fefb466ba0eb9df0c6d267dce05fc13544dae9fcb397354b5048 |
-| Accepted v4 onboarding trace | e534505dfc0eb8a6072d47de408be3308489ab18619db4a681c810208975a13b |
-| Earlier paired report-only report | cf0c148c5ff31c98352e8c375670045dfcdacfb3f0c2d3ff0df437c2079c275e |
-| Earlier paired report-only trace | 3387a21ce9ceccd432c9c63a267ba9030c6f44ca84fbd3e9083cacfe4eb368db |
-| Interpretation runner | ff157aaf5362abc2f0cacbe3026c339958104251c299a391a2d277dbdc014408 |
-| Interpretation scenario | ca90a3755be866c6ffd6645c2b7ba88edb7c946a187c6e96017ad96beaaef38a |
-| Current native transport JUnit | ccd25997f81593c081cd0e1e9770fd2d8555f11af6d10d086c342c0590e581ba |
-| Frozen six-packet layout manifest | 2659c1d95d1be4c86f558d8360dd8bd06971652ddbce2e5055459c93415589bf |
-| Calendar zero-inference preflight report | 4d189da105310691b86677d970ec736681d0080c547116e9f9921d1b1a81d8f8 |
-| Human-readout zero-inference preflight report | 7be83665a4a43f53e33fe8a1d49496896232e6cf571cdad0b37a6665b282aa81 |
-| Human-readout canary report | 486cde85a46ee0f86a72ccbe6edf8ac1df98c2c42518ccec3e2e1ede644e37af |
-| Human-readout canary trace | 0359f90e8b5e290447993ec3103d2c871e4ab565970cdd2509b60a493d96f5d1 |
-| Human-readout independent NO-GO | 643c1d6a61f4958139a69f863b62fdce0c7ca6fcd59b543cca421245ab61a411 |
-| Shared-contract preflight report | bf74c55db27856754bfed77affe49ddc71366755a9fe541ebca3e60948363f56 |
-| Stopped shared-contract live report | 1ac0c478f80e937f4989811e71190d7ad3c009a39ab33cd1b754bdb55f4ee9ed |
-| Stopped shared-contract live trace | 46ad4937492974c76a5c7def2ee587ac2d0ca38acee0af20511b6e1fb5a56a6a |
-| Factual review-evidence supplement | 7dadaebd825b3a60205579bff7e990bb8c531e70313120a27a78199454fad057 |
+| Corrected offline projection manifest | 66fe19483393f32b80add58a6814baf935b16b6f638fb77edfc51077e05f2937 |
+| Two-reporter layout report | 61306c9d53c292cb8d019bebb20dd5c37143dfde450c8d36af377b1e608fc8b8 |
+| Two-reporter layout trace | 9f08adbb3787986f1ec2cc82913d601dfe0f6b73442e79901656ef658d79bc19 |
+| Layout reviewer A | 86364e6a3105d7fa8dae2b953492920f8dc78b33b6233311b63bc41a34ab12ff |
+| Layout reviewer B | 4616c036c725afa6cb6b91ae303b453c06e933d7dd824d2f954236bf575deced |
+| Public audit excerpt | 44775de236801a5f3eafacb983311102a9d168fc7e9bc812b90d5ef59b49c119 |
 
 ## Reproduction and remaining gates
 
