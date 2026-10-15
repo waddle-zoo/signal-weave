@@ -16,6 +16,46 @@ Feature branch: `feat/domain-context-memory`, based on main `e8842ac`.
 These are separate gates. Passing storage, authentication or a scripted decision
 check cannot substitute for complete onboarding and useful final agent outcomes.
 
+## New owner-workflow development cohort
+
+Before live execution, freeze `owner-workflow-v1`: existing development fixture
+`split=dev`, seed `20261015`, company index `1` (Pine Courier), and monitoring
+period index `0`. The old fixtures, failed attempts and closed budgets stay
+unchanged. This variant adds coordinator-authored fictional owner clarification
+of the parcel population and source scope, available through the same owner and
+glossary tools in both arms. It does not add future values or expected outcomes
+to the agent's inputs. This is development feasibility, not a held-out benchmark.
+
+Use the current fingerprint-verified native executable and pinned Codex CLI
+`0.162.0-alpha.2`, `gpt-6-luna`, medium effort. Two author sessions create their
+own setup, each followed by a separate synthetic owner-policy reviewer. Only
+if both setups have no unresolved material context and both reviews approve may
+two fresh agent sessions produce one current-period report each. Setup and
+review work count; no automatic repair/retry or company/period replacement.
+
+Limits: six Codex invocations total, 24 author tool calls, two reviewer tool
+calls, twelve report tool calls; author/report time limits 240/180 seconds and
+reviewer limit 90 seconds. Live Jev has a shared two-attempt hard cap; failures
+count. Before another invocation, stop at 600,000 total input or 100,000 uncached
+input tokens, or missing/unknown usage. These token thresholds do not cap one
+in-flight turn. The opt-in accounting drain never authorizes extra tool work.
+
+Both arms retain current source tools, glossary, exact owner facts, durable
+notes and a bounded arithmetic calculator for reporting. Neither may run
+arbitrary scripts; this is not a comparison with an unconstrained Codex agent.
+SignalWeave's full native agent/context tool schemas are preserved; monitoring
+does not authorize policy edits. Project-installed skill bytes are explicitly
+supplied, not autodiscovered. CLI setup is isolated/non-interactive: this does
+not establish that the interactive human wizard is seamless.
+
+Keep setup artifacts, owner questions, independent reviews, native packets,
+agent reports, source reads and all usage in an exclusive ignored output folder.
+Score outcome, recipients, numeric claims and evidence against the existing
+private labels only after the report; independently read the human-facing text
+for omissions, unsupported causes, useful scope and next steps. A successful
+recording or exact outcome alone is not proof of a useful report or business
+lift. No schedule or external notification is authorized.
+
 ## User outcome
 
 An agent onboarding a second sales investigation should reuse the definitions,

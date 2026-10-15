@@ -12,6 +12,7 @@ import copy
 import hashlib
 import json
 import os
+import shutil
 import tempfile
 import time
 from contextlib import asynccontextmanager
@@ -22,8 +23,20 @@ from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
 from evaluations.agent_workflow_cohort import _bridge_identity
-from evaluations.bootstrap_agent_trial import Audit, PublicSourceAdapter, RequestBudget, function
-from evaluations.bootstrap_scenarios import ask_owner, build_scenarios, public_episode
+from evaluations.bootstrap_agent_trial import (
+    Audit,
+    PublicSourceAdapter,
+    RequestBudget,
+    calculate,
+    function,
+)
+from evaluations.bootstrap_scenarios import (
+    _Submission,
+    ask_owner,
+    build_scenarios,
+    public_episode,
+    score_submission,
+)
 from evaluations.codex_trial_transport import codex_episode
 from evaluations.installed_trial_transport import (
     InstalledServer,
@@ -197,6 +210,107 @@ class Episode:
         raise ValueError("tool unavailable")
 
 
+class RecurringEpisode(Episode):
+    """A fresh agent session reuses its own arm's setup, never future labels."""
+
+    phase = "monitoring"
+
+    def __init__(self, public, adapter, native=None, *, notes="", approved_card_id=None, run_key=None):
+        super().__init__(public, adapter, native)
+        self.notes = notes
+        self.submission = None
+        self.approved_card_id, self.run_key = approved_card_id, run_key
+        self.evaluation_verified = False
+
+    async def specs(self):
+        tools = await super().specs()
+        setup_tools = {"ask_owner", "save_working_notes", "request_owner_approval", "finish_setup"}
+        tools = [tool for tool in tools if tool["name"] not in setup_tools]
+        tools.append(function("calculate", "Evaluate bounded arithmetic, available equally in both arms.",
+                              {"expression": {"type": "string", "maxLength": 1000}}, ("expression",)))
+        schema = _Submission.model_json_schema()
+        schema["properties"]["recipients"]["items"]["enum"] = [item["key"] for item in self.public["destinations"]]
+        tools.append({"type": "function", "name": "submit_analysis", "strict": False,
+                      "description": "Record the concise current-period report and proposed recipients. Use business destination keys, not labels, card aliases or URIs. No message is sent.",
+                      "parameters": schema})
+        return tools
+
+    async def call(self, name, args):
+        if name == "calculate":
+            return {"value": calculate(args["expression"])}
+        if name == "submit_analysis":
+            json.dumps(args, allow_nan=False)
+            parsed = _Submission.model_validate(args).model_dump(mode="json")
+            if not parsed["summary"].strip():
+                raise ValueError("include the concise human-facing report")
+            self.submission = parsed
+            return {"recorded": True, "delivery_enabled": False}
+        allowed = {"list_company_assets", "read_company_asset", "read_company_glossary", "read_working_notes",
+                   "get_signalweave_guide", "list_insight_cards", "get_insight_card", "search_catalog",
+                   "inspect_resource", "retrieve_domain_context", "get_context_history", "inspect_insight_context",
+                   "evaluate_insight_card", "get_decision_receipt"}
+        if name not in allowed:
+            raise ValueError("this recurring episode permits analysis only, not owner clarification or policy changes")
+        if name == "evaluate_insight_card" and self.native:
+            if (not self.approved_card_id or not self.run_key
+                    or args.get("card_id") != self.approved_card_id
+                    or args.get("idempotency_key") != self.run_key):
+                raise ValueError("evaluate the exact reviewed card with this episode's fixed idempotency key")
+            _, result = await self.native.call_tool(name, args)
+            self.native_calls.append({"name": name, "arguments": copy.deepcopy(args), "result": copy.deepcopy(result)})
+            receipt = result.get("receipt", {})
+            self.evaluation_verified = (receipt.get("card_id") == self.approved_card_id
+                                        and receipt.get("idempotency_key") == self.run_key
+                                        and receipt.get("status") == "delivery_disabled"
+                                        and result.get("result", {}).get("card_id") == self.approved_card_id)
+            return result
+        return await super().call(name, args)
+
+
+def clarified_development_scenario():
+    """New expert-context development variant; old measured fixture is untouched.
+
+    These are declared fictional owner facts, not inferred measurements. The
+    fixed development company/seed/period index are chosen before running agents.
+    """
+    scenario = _bridge_identity(build_scenarios(seed=20261015, split="dev", connector_profile=True)[1])
+    public = scenario["public"]
+    public["owner_topics"] += ["source_scope", "context_review"]
+    public["owner_answers"]["source_scope"] = (
+        "For our recurring dispatch check, Delivery service is the metric-of-record export of all parcels due, "
+        "including overdue undelivered parcels and excluding cancellations, across the service tiers in the export. "
+        "That is the intended operating population, not just completed parcels. Dispatch handbook supplies "
+        "calendar/eligibility context, not extra parcel rows. Completed parcels excludes overdue undelivered "
+        "parcels and is not the metric of record. Driver activity is not service attainment. I confirm the "
+        "selected sources' declared scopes on that basis; do not join separate source populations."
+    )
+    public["owner_answers"]["context_review"] = (
+        "The agreed definition can be shared within this fictional tenant, with review due in 30 days. "
+        "Show the saved artifact before requesting consent. Hypotheses remain advisory."
+    )
+    public["glossary"]["population"] = public["owner_answers"]["source_scope"]
+    return scenario
+
+
+async def pinned_codex(path):
+    resolved = Path(shutil.which(path) or path).resolve(strict=True)
+    fingerprint = hashlib.sha256(resolved.read_bytes()).hexdigest()
+    process = await asyncio.create_subprocess_exec(str(resolved), "--version",
+                                                  stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.DEVNULL)
+    try:
+        stdout, _ = await asyncio.wait_for(process.communicate(), 20)
+    finally:
+        if process.returncode is None:
+            process.kill()
+            await process.wait()
+    version = stdout.decode().strip()
+    if process.returncode or version != "codex-cli 0.162.0-alpha.2":
+        raise ValueError("owner-workflow-v1 requires its preregistered Codex CLI 0.162.0-alpha.2")
+    if hashlib.sha256(resolved.read_bytes()).hexdigest() != fingerprint:
+        raise ValueError("Codex executable changed during identity verification")
+    return {"path": str(resolved), "version": version, "sha256": fingerprint}
+
+
 @asynccontextmanager
 async def native_context(binary, key_file, public, adapter, audit, root, *, request_budget=None):
     """Explicit private --home; never replace HOME or register a personal agent."""
@@ -360,6 +474,212 @@ async def run(args):
     return report
 
 
+async def run_owner_workflow(args):
+    """Separate development cohort: two setups, reviews, then fresh reports.
+
+    At most six Codex invocations and two live Jev attempts. Unknown accounting,
+    incomplete setup or a rejected review stops expansion without a free retry.
+    """
+    from evaluations.bootstrap_owner_review import review_owner_artifact
+
+    if args.prior_trace:
+        raise ValueError("the owner-workflow cohort cannot resume or recharge an earlier series")
+    identity = verify_binary(Path(args.binary).resolve())
+    codex_identity = await pinned_codex(args.codex_executable)
+    args.codex_executable = codex_identity["path"]
+    output = Path(args.output).resolve()
+    output.mkdir(mode=0o700, parents=True, exist_ok=False)
+    audit = Audit(path=output / "trace.jsonl")
+    scenario = clarified_development_scenario()
+    public = public_episode(scenario)
+    adapter = PublicSourceAdapter(public["catalog"], public["scenario_id"], audit)
+    budget = RequestBudget(limit=2 if args.run else 0)
+    report = {
+        "protocol": "owner-workflow-v1", "scope": "Development feasibility pair, not a held-out efficacy benchmark or real human trial.",
+        "build": identity, "codex": codex_identity, "episodes": [], "agent_invocations_started": 0, "preflight_only": not args.run,
+        "scenario_sha256": hashlib.sha256(json.dumps(scenario, sort_keys=True).encode()).hexdigest(),
+        "runner_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+        "limits": {"codex_invocations": 6, "author_tools": 24, "monitor_tools": 12,
+                   "review_tools": 2, "jev_attempts": budget.limit,
+                   "between_invocation_input_stop": 600_000, "between_invocation_uncached_stop": 100_000},
+        "limitations": ["Curated normalized fictional exports through actual company MCP; not a real BI connector.",
+                        "Scripted owner facts and synthetic independent review are not real human sign-off.",
+                        "Both agents keep source tools and notes; arbitrary scripts disabled in both arms.",
+                        "Installed skill bytes explicitly supplied, not automatic discovery.",
+                        "One fixed development company and period index 0; no population accuracy or latency claim.",
+                        "Token stops are between invocations, not hard in-flight limits; reviewers count too."],
+    }
+
+    def save():
+        report["usage"] = usage_totals(audit.events)
+        report["agent_invocations_started"] = sum(e["kind"] == "api.request" and e.get("provider") == "openai"
+                                                   for e in audit.events)
+        report["usage_known"] = (not any(e["kind"] == "api.error" and e.get("provider") == "openai" for e in audit.events)
+                                 and report["usage"]["responses"] == report["agent_invocations_started"])
+        (output / "report.json").write_text(json.dumps(audit.redact(report), indent=2))
+
+    def before_invocation():
+        if hashlib.sha256(Path(codex_identity["path"]).read_bytes()).hexdigest() != codex_identity["sha256"]:
+            raise RuntimeError("pinned Codex executable changed; cohort stopped")
+        if any(e["kind"] == "api.error" and e.get("provider") == "openai" for e in audit.events):
+            raise RuntimeError("unknown agent usage; cohort stopped")
+        totals = usage_totals(audit.events)
+        started = sum(e["kind"] == "api.request" and e.get("provider") == "openai" for e in audit.events)
+        if totals["responses"] != started:
+            raise RuntimeError("missing invocation usage; cohort stopped")
+        if totals["input_tokens"] >= 600_000 or totals["uncached_input_tokens"] >= 100_000:
+            raise RuntimeError("between-invocation token threshold reached")
+        if started >= 6:
+            raise RuntimeError("invocation cap reached")
+
+    async def author(session, native, skill):
+        instructions = (
+            "Help the owner set up this recurring BI question and give a concise current readout. "
+            "Discover and inspect plausible sources. Ask focused owner questions where meaning or policy matters. "
+            "The company glossary is retrievable; do not invent missing scope, units, rules or destinations. "
+            "Save a reusable policy with exact source scope/comparison and quiet/missing-data behavior. "
+            "Show the saved setup through request_owner_approval for synthetic consent. "
+            "No evaluation, schedule or sending is authorized during setup. finish_setup ends setup. "
+            "If consequential context stays unresolved, report it honestly rather than claiming automation is ready. "
+        )
+        if native:
+            instructions += "Use the installed SignalWeave skill and native MCP.\n" + native.instructions + "\n" + skill
+        before_invocation()
+        return await codex_episode(
+            session, key=None, effort="medium", budget=None, audit=audit, max_turns=24,
+            max_tool_calls=24, max_output_tokens=3000, timeout_seconds=240,
+            model="gpt-6-luna", codex_executable=args.codex_executable, accounting_drain=True,
+            instructions_override=instructions, prompt_override=public_brief(public),
+        )
+
+    try:
+        with tempfile.TemporaryDirectory(prefix="owner-workflow-", dir=output) as work:
+            root = Path(work).resolve()
+            async with native_context(Path(args.binary).resolve(), Path(args.key_file).resolve(), public,
+                                      adapter, audit, root, request_budget=budget) as (native, skill):
+                if not args.run:
+                    descriptor = adapter.catalog[0]
+                    adapter.set_period(public["period"], datetime.now(timezone.utc))
+                    _, probe = await native.call_tool("inspect_resource", {
+                        "adapter": descriptor.adapter, "resource": descriptor.resource,
+                    })
+                    expected = await adapter.inspect(SourceRef(
+                        key=probe["source_key"], adapter=descriptor.adapter, resource=descriptor.resource,
+                        label=descriptor.title,
+                    ))
+                    if probe.get("error") or probe["contract"]["tenant_id"] != public["scenario_id"]:
+                        raise ValueError("native bridge preflight failed")
+                    for field in ("observations", "evidence", "analytical_comparisons"):
+                        if probe[field] != expected.model_dump(mode="json")[field]:
+                            raise ValueError("native bridge preflight changed analytical source facts")
+                    report["preflight"] = {"native_tools": len(await native.list_tools()),
+                                           "scenario": scenario["scenario_id"], "period_index": 0,
+                                           "source_roundtrip": "exact analytical fields and tenant; not agent evidence"}
+                    return report
+                setups = []
+                setup_clock = datetime.now(timezone.utc)
+                for treatment in (False, True):
+                    adapter.set_period(public["period"], setup_clock)
+                    audit.episode = "signalweave-setup" if treatment else "baseline-setup"
+                    offset = len(audit.events)
+                    session = Episode(public, adapter, native if treatment else None)
+                    result = await author(session, native if treatment else None, skill)
+                    entry = {"arm": audit.episode, "agent": result, "setup": session.setup, "notes": session.notes,
+                             "owner_requests": session.owner_requests, "native_calls": session.native_calls}
+                    report["episodes"].append(entry)
+                    save()
+                    if result["status"] != "complete" or not session.setup or session.setup["unresolved"]:
+                        raise RuntimeError("onboarding incomplete; no monitoring invocation authorized")
+                    card = None
+                    if treatment:
+                        _, card = await native.call_tool("get_insight_card", {
+                            "card_id": session.setup["card_ids"][0], "response_mode": "full"})
+                    # A separate fresh reviewer sees only owner policy, saved artifact
+                    # and this author's inspected source descriptions—not future rows.
+                    source_context = {"catalog": public["catalog"], "inspected_sources": [
+                        {**event["snapshot"], "ref": event["ref"]}
+                        for event in audit.events[offset:] if event["kind"] == "source.read"
+                    ]}
+                    before_invocation()
+                    entry["independent_review"] = await review_owner_artifact(
+                        public=scenario["public"], owner_answers=public["owner_answers"],
+                        artifact={"notes": session.notes, **({"card": card} if card else {})},
+                        source_context=source_context, audit=audit, budget=None,
+                        model="gpt-6-luna", effort="medium", codex_executable=args.codex_executable,
+                    )
+                    save()
+                    if not entry["independent_review"]["approved"]:
+                        raise RuntimeError("independent policy review rejected setup; cohort stopped")
+                    setups.append(session)
+                # A fixed index selected before execution; never choose an episode
+                # because of its private label or change the company after failure.
+                period = scenario["public"]["periods"][0]
+                report_clock = datetime.now(timezone.utc)
+                for treatment, setup in zip((False, True), setups, strict=True):
+                    adapter.set_period(period, report_clock)
+                    adapter.inspections = 0
+                    adapter.inspected.clear()
+                    audit.episode = "signalweave-report" if treatment else "baseline-report"
+                    run_key = "owner-workflow-v1:" + period["period_id"]
+                    session = RecurringEpisode(public, adapter, native if treatment else None, notes=setup.notes,
+                                               approved_card_id=setup.setup["card_ids"][0] if treatment else None,
+                                               run_key=run_key)
+                    instructions = (
+                        "You are a fresh scheduled analytics agent. Reuse your arm's saved reviewed setup, "
+                        "but fetch this run's current evidence; old setup measurements are not current truth. "
+                        "Write a short useful report: what changed, whether the agreed rule matters, supported "
+                        "drivers/limitations, the appropriate proposed recipients and next step. No causal guesses. "
+                        "Keep source references beside claims. No owner, policy edits, schedule or sending. "
+                        "Use submit_analysis to record the report and proposed recipients; no external side effect. "
+                        "numeric_claims use the supplied vocabulary and units; no unsupported values. "
+                    )
+                    if treatment:
+                        instructions += "Use the approved card and SignalWeave skill; evaluate once with this run key.\n" + skill
+                    before_invocation()
+                    result = await codex_episode(
+                        session, key=None, effort="medium", budget=None, audit=audit, max_turns=12,
+                        max_tool_calls=12, max_output_tokens=3000, timeout_seconds=180,
+                        model="gpt-6-luna", codex_executable=args.codex_executable, accounting_drain=True,
+                        instructions_override=instructions,
+                        prompt_override={"business": public_brief(public), "saved_setup": setup.setup,
+                                         "saved_notes": setup.notes, "period": adapter.period_context,
+                                         "run_key": run_key,
+                                         "numeric_vocabulary": public["numeric_vocabulary"]},
+                    )
+                    entry = {"arm": audit.episode, "agent": result, "submission": session.submission,
+                             "native_calls": session.native_calls, "source_reads": adapter.inspections,
+                             "approved_card_execution_verified": session.evaluation_verified if treatment else None}
+                    if session.submission:
+                        entry["structured_score"] = score_submission(
+                            scenario, period["period_id"], session.submission,
+                            inspected_refs=adapter.inspected,
+                            asked_owner_topics=[item["topic"] for item in setup.owner_requests if "topic" in item],
+                        )
+                    report["episodes"].append(entry)
+                    save()
+                    if result["status"] != "complete":
+                        raise RuntimeError("recurring report incomplete; cohort stopped")
+                    if treatment and not session.evaluation_verified:
+                        raise RuntimeError("report recorded but exact approved-card execution was not verified")
+    except Exception as error:  # noqa: BLE001 - preserve every failed/partial episode
+        report["failure"] = audit.redact(f"{type(error).__name__}: {error}")
+    finally:
+        report["provider_attempts"] = budget.used
+        report["provider_exhausted"] = budget.exhausted
+        report["provider_usage"] = [e.get("usage") for e in audit.events
+                                    if e["kind"] == "api.response" and e.get("provider") == "jev"]
+        report["provider_usage_known"] = (
+            len(report["provider_usage"]) == budget.used
+            and not any(e["kind"] in {"api.error", "api.rejected"} and e.get("provider") == "jev" for e in audit.events)
+            and all(isinstance(usage, dict)
+                    and all(type(usage.get(key)) is int and usage[key] >= 0 for key in ("input_tokens", "output_tokens"))
+                    for usage in report["provider_usage"])
+        )
+        report["narrative_review"] = "pending independent review; structured scores are not prose entailment"
+        save()
+    return report
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--binary", required=True)
@@ -368,8 +688,9 @@ def main():
     parser.add_argument("--output", required=True)
     parser.add_argument("--prior-trace", help="Charge the one retained invalid harness attempt to protocol 2's cumulative token budget")
     parser.add_argument("--run", action="store_true", help="Explicitly authorize the bounded live-agent pair after preflight")
+    parser.add_argument("--owner-workflow", action="store_true", help="Separate expert-clarified development setup/review/report cohort")
     args = parser.parse_args()
-    report = asyncio.run(run(args))
+    report = asyncio.run(run_owner_workflow(args) if args.owner_workflow else run(args))
     print(json.dumps({"output": args.output, "failure": report.get("failure"), "stopped": report.get("stopped"),
                       "episodes": len(report["episodes"]), "preflight_only": report["preflight_only"]}))
 

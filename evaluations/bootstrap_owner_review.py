@@ -550,7 +550,8 @@ def review_payload(public: dict, owner_answers: dict, artifact: dict,
 
 async def review_owner_artifact(*, public: dict, owner_answers: dict, artifact: dict,
                               audit, budget, source_context: dict | None = None,
-                              model: str | None = None, effort: str = "high") -> dict:
+                              model: str | None = None, effort: str = "high",
+                              codex_executable: str = "codex") -> dict:
     # Lazy import keeps the runner free to opt in without a circular dependency.
     from evaluations.bootstrap_agent_trial import MODEL, canonical, digest
 
@@ -583,6 +584,7 @@ async def review_owner_artifact(*, public: dict, owner_answers: dict, artifact: 
                 session, key="", model=selected_model, effort=effort, budget=budget, audit=audit,
                 max_turns=1, max_tool_calls=2, max_output_tokens=1200, timeout_seconds=90,
                 instructions_override=REVIEW_INSTRUCTIONS, prompt_override=payload,
+                codex_executable=codex_executable,
             )
         except Exception as error:  # A failed research invocation must never grant approval.
             episode = {"status": "failed", "error": type(error).__name__,
