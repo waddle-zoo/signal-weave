@@ -99,8 +99,10 @@ def test_report_scoring_does_not_fabricate_owner_tool_calls():
 @pytest.mark.parametrize("live,cohort,expected_reports", [
     (False, "paired", 0), (True, "paired", 6),
     (False, "calendar-paired-v1", 0), (True, "calendar-paired-v1", 6),
+    (False, "grounded-reports-v2", 0), (True, "grounded-reports-v2", 6),
     (False, "interpretation-repair-v1", 0), (True, "interpretation-repair-v1", 3),
 ], ids=["paired-preflight", "paired-sequence", "calendar-preflight", "calendar-sequence",
+        "grounded-preflight", "grounded-sequence",
         "repair-preflight", "repair-sequence"])
 async def test_entire_runner_preserves_equal_context_and_uses_fresh_reports(monkeypatch, tmp_path, live, cohort, expected_reports):
     scenario = trial.clarified_development_scenario()
@@ -185,12 +187,12 @@ async def test_entire_runner_preserves_equal_context_and_uses_fresh_reports(monk
     if live:
         assert len(report["episodes"]) == expected_reports
         assert all(e["approved_card_execution_verified"] for e in report["episodes"] if e["arm"] == "signalweave")
-        if cohort in {"paired", "calendar-paired-v1"}:
+        if cohort in {"paired", "calendar-paired-v1", "grounded-reports-v2"}:
             assert all(captured[index]["prompt_override"]["accepted_context"] ==
                        captured[index + 1]["prompt_override"]["accepted_context"] for index in range(0, 6, 2))
             periods = report["episodes"][::2]
-            if cohort == "calendar-paired-v1":
-                assert report["protocol"] == "calendar-paired-v1"
+            if cohort in {"calendar-paired-v1", "grounded-reports-v2"}:
+                assert report["protocol"] == cohort
                 assert report["cohort_clock_semantics"]["measurement_rebase"] == "one shared whole-week UTC offset"
                 assert report["cohort_clock_semantics"]["source_capture_age"] == (
                     "preserved relative to each fixture period as_of"
@@ -204,6 +206,11 @@ async def test_entire_runner_preserves_equal_context_and_uses_fresh_reports(monk
                 assert all(datetime.fromisoformat(context["as_of"]).weekday() == 0
                            and datetime.fromisoformat(context["as_of"]).time() == datetime.min.time()
                            for context in period_contexts)
+                if cohort == "grounded-reports-v2":
+                    definitions = scenario["public"]["submission_contract"]
+                    assert all(item["prompt_override"]["submission_contract"] == definitions for item in captured)
+                else:
+                    assert all("submission_contract" not in item["prompt_override"] for item in captured)
             else:
                 assert "cohort_clock_semantics" not in report
         else:
@@ -214,7 +221,7 @@ async def test_entire_runner_preserves_equal_context_and_uses_fresh_reports(monk
             assert all("both arms" not in item["instructions_override"].lower() for item in captured)
             periods = report["episodes"]
         assert [entry["period_id"] for entry in periods] == [p["period_id"] for p in scenario["public"]["periods"]]
-    if cohort == "calendar-paired-v1":
+    if cohort in {"calendar-paired-v1", "grounded-reports-v2"}:
         assert report["cohort_clock_semantics"]["measurement_rebase"] == "one shared whole-week UTC offset"
     else:
         assert "cohort_clock_semantics" not in report

@@ -381,6 +381,44 @@ new report or authorize paid expansion. Before any new live cohort, resolve its
 evaluation-only report-audience/citation ambiguity and count-versus-rate schema
 coverage; do not spend more merely to reproduce a known scoring defect.
 
+### Public report-contract repair, before further live reporting
+
+The runner supplied numeric vocabulary IDs but omitted the existing public
+`submission_contract.numeric_definitions`. That is missing evaluation context,
+not evidence that SignalWeave cannot understand a source. Keep prior raw scores
+and outputs unchanged. In a separate opt-in `grounded-reports-v2` protocol,
+give both arms the same static public definitions/units and use the same
+submission schema. Define `recipients` as policy-triggered alert/review routes,
+not a routine report audience. Structured citations identify underlying sources;
+legitimate current workflow receipts may be cited in summary prose. Auxiliary
+counts without registered numeric IDs stay source-cited in prose rather than
+being coerced into rate fields. Do not add period availability, oracle values,
+expected outcomes or selected-source hints to that shared contract.
+
+Keep the calendar mode, exact accepted-card restore, three original development
+periods, common source tools, supplied owner context and existing paired limits:
+six fresh Luna-medium reports, three live Jev attempts, twelve tools/180 seconds
+per report, and 600k input/150k uncached between-invocation stops. No retry,
+card/policy edit, delivery or schedule. Freeze runner/code, pass offline schema
+and accounting checks, obtain independent review and run the zero-model native
+preflight before exactly one live attempt. This is a targeted repair study, not
+a holdout, fresh onboarding or proof of cross-card/general enterprise benefit.
+
+Retain original structured scores as diagnostics. The primary report gate is
+independent review of (1) correct policy/action route, (2) material known values
+and scope, (3) no unsupported missingness from optional judgments, (4) preserved
+missing-denominator limits, (5) no unsupported causal/significance claim,
+(6) truthful no-delivery/current-receipt statements, and (7) concise, useful
+explanation and next step with inspectable source references. Correct labels
+alone do not pass. Give two independent reviewers all six reports in opaque
+order without arm labels plus the same policy and current-source truth. Receipt
+or product wording can reveal treatment, so call this arm-label masking, not full
+blinding. Verify any prose receipt reference against that episode's actual
+native calls; never accept an invented or historical receipt because it looks
+plausible. Preserve reviewer disagreements and failed gates, not just a mean
+score. Include accepted onboarding and all new known usage; retain older unknown
+costs. No billed-cost, latency superiority or statistical claim follows.
+
 ### Native approved-card clarification check
 
 Separately preregister `approved-card-clarification-v1`: reuse the existing

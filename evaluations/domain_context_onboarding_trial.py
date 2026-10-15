@@ -531,13 +531,58 @@ class RecurringEpisode(Episode):
     })
 
     def __init__(self, public, adapter, native=None, *, notes="", approved_card_id=None,
-                 approved_card_version=None, run_key=None):
+                 approved_card_version=None, run_key=None, reporting_contract=False):
         super().__init__(public, adapter, native)
         self.notes = notes
         self.submission = None
         self.approved_card_id, self.approved_card_version = approved_card_id, approved_card_version
         self.run_key = run_key
         self.evaluation_verified = False
+        self.reporting_contract = reporting_contract
+
+    def submission_schema(self):
+        schema = _Submission.model_json_schema()
+        schema["properties"]["recipients"]["items"]["enum"] = [item["key"] for item in self.public["destinations"]]
+        if not self.reporting_contract:
+            return schema
+        definitions = self.public["submission_contract"]["numeric_definitions"]
+        if set(definitions) != set(self.public["numeric_vocabulary"]):
+            raise ValueError("public numeric definitions must match the declared vocabulary")
+        if any(not isinstance(item.get("unit"), str) or not item["unit"].strip()
+               for item in definitions.values()):
+            raise ValueError("every public numeric definition must declare its unit")
+        numeric = schema["$defs"]["_NumericClaim"]
+        if definitions:
+            numeric["properties"]["fact"]["enum"] = list(definitions)
+            numeric["allOf"] = [
+                {"if": {"properties": {"fact": {"const": fact}}, "required": ["fact"]},
+                 "then": {"properties": {"unit": {"const": definition["unit"]}}}}
+                for fact, definition in definitions.items()
+            ]
+        else:
+            schema["properties"]["numeric_claims"]["maxItems"] = 0
+        source_description = (
+            "Underlying source references only (adapter|resource). Cite workflow receipts in summary prose, "
+            "not as measurement evidence."
+        )
+        for field in (schema["properties"]["evidence_refs"],
+                      numeric["properties"]["evidence_refs"],
+                      schema["$defs"]["_Claim"]["properties"]["evidence_refs"]):
+            field["description"] = source_description
+            field["items"]["pattern"] = r"^[^|]+\|.+$"
+        schema["properties"]["recipients"]["description"] = (
+            "Policy-triggered alert or review destinations only, not a routine report audience. "
+            "Use an empty list for ignore; describe any routine report audience in summary prose."
+        )
+        schema["allOf"] = [{
+            "if": {"properties": {"outcome": {"const": "ignore"}}, "required": ["outcome"]},
+            "then": {"properties": {"recipients": {"maxItems": 0}}},
+        }]
+        schema["properties"]["numeric_claims"]["description"] = (
+            "Only declared numeric facts with their exact public definitions and units. "
+            "Other supported quantities may be source-cited in prose; do not put counts into rate fields."
+        )
+        return schema
 
     async def specs(self):
         tools = await super().specs()
@@ -546,8 +591,7 @@ class RecurringEpisode(Episode):
         tools = [tool for tool in tools if tool["name"] in self.ANALYSIS_TOOLS]
         tools.append(function("calculate", "Evaluate bounded arithmetic, available equally in both arms.",
                               {"expression": {"type": "string", "maxLength": 1000}}, ("expression",)))
-        schema = _Submission.model_json_schema()
-        schema["properties"]["recipients"]["items"]["enum"] = [item["key"] for item in self.public["destinations"]]
+        schema = self.submission_schema()
         tools.append({"type": "function", "name": "submit_analysis", "strict": False,
                       "description": "Record the concise current-period report and proposed recipients. Use business destination keys, not labels, card aliases or URIs. No message is sent.",
                       "parameters": schema})
@@ -558,6 +602,8 @@ class RecurringEpisode(Episode):
             return {"value": calculate(args["expression"])}
         if name == "submit_analysis":
             json.dumps(args, allow_nan=False)
+            if self.reporting_contract:
+                validate(args, self.submission_schema())
             parsed = _Submission.model_validate(args).model_dump(mode="json")
             if not parsed["summary"].strip():
                 raise ValueError("include the concise human-facing report")
