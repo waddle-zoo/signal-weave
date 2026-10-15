@@ -69,6 +69,13 @@ causation. If important evidence is absent or contradictory, state the gap and
 ask the owner or update the approved card instead of claiming the analysis is
 finished.
 
+Watch/question judgments describe policy interpretation, not which measurements
+exist. An `unknown` watch must not erase available counts or values. Read the
+source evidence and comparison totals; preserve supported facts from one period
+even if the other period or the full comparison is unavailable. This does not
+waive coverage, comparability or action requirements. Cite the source for a
+measurement and the receipt for a workflow outcome—not interchangeably.
+
 ## What is and is not tested
 
 Automated profile tests cover the MCP allowlist, approved-card execution,

@@ -42,7 +42,7 @@ INSTRUCTIONS = (
     "You are a fresh analytics reporting agent using an already accepted development setup. "
     "Use only the supplied trial-server tools; do not enumerate other MCP tools or resources. "
     "Fetch this period's evidence; previous measurements in notes are not current truth. "
-    "The same accepted policy, definitions and owner facts are available in both arms. "
+    "Use the supplied accepted policy, definitions and owner facts. "
     "Write a concise useful report: supported changes, significance under the owner's policy, "
     "limitations, proposed recipients and next step. Cite exact source references beside claims. "
     "Distinguish observation, accounting decomposition, association and hypothesis; do not infer causation. "
@@ -50,6 +50,17 @@ INSTRUCTIONS = (
     "Use calculate for arithmetic if needed, then submit_analysis to record your draft only. "
     "Use only keys in numeric_vocabulary for numeric_claims; values and units must follow evidence."
 )
+
+
+def cohort_settings(cohort):
+    if cohort == "paired":
+        return PROTOCOL, dict(LIMITS), (False, True)
+    if cohort == "interpretation-repair-v1":
+        return "handoff-interpretation-v1", {
+            **LIMITS, "agent_invocations": 3, "between_invocation_input_stop": 300_000,
+            "between_invocation_uncached_stop": 90_000,
+        }, (True,)
+    raise ValueError("unknown report cohort")
 
 
 def common_context(public, card):
@@ -103,6 +114,7 @@ def before_invocation(audit, limits, executable, expected_binary_hash):
 
 
 async def run(args):
+    protocol, limits, arms = cohort_settings(getattr(args, "cohort", "paired"))
     accepted, card = load_reviewed_setup(Path(args.accepted_report), Path(args.accepted_trace))
     scenario = clarified_development_scenario()
     scenario_hash = hashlib.sha256(json.dumps(scenario, sort_keys=True).encode()).hexdigest()
@@ -116,19 +128,27 @@ async def run(args):
     output.mkdir(mode=0o700, parents=True, exist_ok=False)
     audit = Audit(path=output / "trace.jsonl", secrets=(Path(args.key_file).read_text().strip(),))
     adapter = PublicSourceAdapter(public["catalog"], public["scenario_id"], audit)
-    budget = RequestBudget(limit=LIMITS["jev_attempts"] if args.run else 0)
-    report = {"protocol": PROTOCOL, "limits": LIMITS, "build": identity, "codex": codex,
+    budget = RequestBudget(limit=limits["jev_attempts"] if args.run else 0)
+    report = {"protocol": protocol, "limits": limits, "build": identity, "codex": codex,
+              "arms": ["signalweave" if treatment else "baseline" for treatment in arms],
               "runner_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
               "scenario_sha256": scenario_hash, "preflight_only": not args.run, "episodes": [],
               "accepted_onboarding_usage": accepted["usage"],
               "accepted_report_sha256": hashlib.sha256(Path(args.accepted_report).read_bytes()).hexdigest(),
               "restoration": "Exact accepted card in fresh SQLite fixture, not surviving native state or a new public approval.",
               "limitations": ["One development company, three supplied periods; not a holdout or customer trial.",
-                              "Whole SignalWeave installed skill/native analysis tools versus the control, not isolated card evaluation.",
-                              "Both arms have equal policy/owner context, generic source MCP and bounded arithmetic; arbitrary scripts disabled.",
+                              "Accepted policy/owner context, generic source MCP and bounded arithmetic are supplied; arbitrary scripts disabled.",
                               "Report-only role exposes only its dispatchable read/evaluation tools, not the whole production authoring profile.",
                               "No delivery, scheduling, context pins, restored context graph or cross-card reuse.",
                               "All older stopped cohorts and unknown costs remain separate; this is not project-total accounting."]}
+    if arms == (True,):
+        report["limitations"].append(
+            "Treatment-only interpretation repair on known development periods; no fresh baseline or superiority estimate."
+        )
+    else:
+        report["limitations"].append(
+            "Whole SignalWeave skill/native analysis tools versus the control with equal business information; not isolated card evaluation."
+        )
 
     def save():
         report.update(summarize_usage(audit, accepted["usage"]))
@@ -163,13 +183,13 @@ async def run(args):
                 notes = json.dumps(context, sort_keys=True)
                 clock = datetime.now(timezone.utc)
                 for period in scenario["public"]["periods"]:
-                    for treatment in (False, True):
+                    for treatment in arms:
                         adapter.set_period(period, clock)
                         adapter.inspections = 0
                         adapter.inspected.clear()
                         arm = "signalweave" if treatment else "baseline"
                         audit.episode = f"{arm}:{period['period_id']}"
-                        key = PROTOCOL + ":" + period["period_id"]
+                        key = protocol + ":" + period["period_id"]
                         session = RecurringEpisode(public, adapter, native if treatment else None,
                                                    notes=notes, approved_card_id=card.id if treatment else None,
                                                    approved_card_version=card.version if treatment else None, run_key=key)
@@ -190,7 +210,7 @@ async def run(args):
                             if any(snapshot[field] != expected.model_dump(mode="json")[field] for field in fields):
                                 raise RuntimeError("source roundtrip changed analytical facts")
                             continue
-                        before_invocation(audit, LIMITS, codex["path"], codex["sha256"])
+                        before_invocation(audit, limits, codex["path"], codex["sha256"])
                         if hashlib.sha256(binary.read_bytes()).hexdigest() != identity["binary_sha256"]:
                             raise RuntimeError("native binary changed")
                         instructions = INSTRUCTIONS
@@ -202,8 +222,8 @@ async def run(args):
                             )
                         result = await codex_episode(
                             session, key=None, effort="medium", budget=None, audit=audit,
-                            max_turns=12, max_tool_calls=LIMITS["tools_per_report"], max_output_tokens=3000,
-                            timeout_seconds=LIMITS["seconds_per_report"], model="gpt-6-luna",
+                            max_turns=12, max_tool_calls=limits["tools_per_report"], max_output_tokens=3000,
+                            timeout_seconds=limits["seconds_per_report"], model="gpt-6-luna",
                             codex_executable=codex["path"], accounting_drain=True,
                             instructions_override=instructions,
                             prompt_override={"business": public_brief(public), "accepted_context": context,
@@ -241,6 +261,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ("binary", "key-file", "codex-executable", "accepted-report", "accepted-trace", "output"):
         parser.add_argument("--" + name, required=True)
+    parser.add_argument("--cohort", choices=["paired", "interpretation-repair-v1"], default="paired",
+                        help="Paired study or separately preregistered treatment-only repair; never resumes a closed run")
     parser.add_argument("--run", action="store_true", help="Explicitly authorize the one bounded live report cohort")
     report = asyncio.run(run(parser.parse_args()))
     print(json.dumps({"completed": report.get("completed", False), "failure": report.get("failure"),

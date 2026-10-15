@@ -59,6 +59,21 @@ def test_invocation_checks_fingerprint_and_between_invocation_budget(tmp_path):
         trial.before_invocation(audit, trial.LIMITS, executable, expected)
 
 
+def test_interpretation_repair_is_separate_treatment_only_budget_without_changing_paired_limits():
+    original = dict(trial.LIMITS)
+    protocol, limits, arms = trial.cohort_settings("interpretation-repair-v1")
+    assert protocol == "handoff-interpretation-v1"
+    assert arms == (True,)
+    assert limits["agent_invocations"] == 3
+    assert limits["jev_attempts"] == 3
+    assert limits["between_invocation_input_stop"] == 300_000
+    assert limits["between_invocation_uncached_stop"] == 90_000
+    assert trial.LIMITS == original
+    assert trial.cohort_settings("paired") == (trial.PROTOCOL, original, (False, True))
+    with pytest.raises(ValueError):
+        trial.cohort_settings("resume-v1")
+
+
 def test_report_scoring_does_not_fabricate_owner_tool_calls():
     scenario = trial.clarified_development_scenario()
     period = scenario["public"]["periods"][0]
@@ -80,8 +95,11 @@ def test_report_scoring_does_not_fabricate_owner_tool_calls():
     assert not wrong["report_exact"]
 
 
-@pytest.mark.parametrize("live", [False, True], ids=["zero-model-preflight", "fake-live-sequence"])
-async def test_entire_runner_preserves_equal_context_and_uses_fresh_reports(monkeypatch, tmp_path, live):
+@pytest.mark.parametrize("live,cohort,expected_reports", [
+    (False, "paired", 0), (True, "paired", 6),
+    (False, "interpretation-repair-v1", 0), (True, "interpretation-repair-v1", 3),
+], ids=["paired-preflight", "paired-sequence", "repair-preflight", "repair-sequence"])
+async def test_entire_runner_preserves_equal_context_and_uses_fresh_reports(monkeypatch, tmp_path, live, cohort, expected_reports):
     scenario = trial.clarified_development_scenario()
     card = reviewed_card().model_copy(update={"principal_tenant": scenario["scenario_id"]})
     source_public = public_episode(scenario)["catalog"][0]
@@ -152,16 +170,25 @@ async def test_entire_runner_preserves_equal_context_and_uses_fresh_reports(monk
     monkeypatch.setattr(trial, "codex_episode", fake_episode)
     args = SimpleNamespace(binary=str(binary), codex_executable=str(codex), key_file=str(tmp_path / "unused-key"),
                            accepted_report=str(original_report), accepted_trace=str(original_trace),
-                           output=str(tmp_path / "output"), run=live)
+                           output=str(tmp_path / "output"), run=live, cohort=cohort)
     report = await trial.run(args)
     assert "failure" not in report
     assert report["completed"]
-    assert report["agent_invocations_started"] == (6 if live else 0)
+    assert report["agent_invocations_started"] == expected_reports
     assert report["provider_attempts"] == 0  # These are offline doubles, not live proof.
-    assert report["usage_including_accepted_onboarding"]["responses"] == (12 if live else 6)
+    assert report["usage_including_accepted_onboarding"]["responses"] == expected_reports + 6
     if live:
-        assert len(report["episodes"]) == 6
+        assert len(report["episodes"]) == expected_reports
         assert all(e["approved_card_execution_verified"] for e in report["episodes"] if e["arm"] == "signalweave")
-        assert all(captured[index]["prompt_override"]["accepted_context"] ==
-                   captured[index + 1]["prompt_override"]["accepted_context"] for index in range(0, 6, 2))
-        assert [entry["period_id"] for entry in report["episodes"][::2]] == [p["period_id"] for p in scenario["public"]["periods"]]
+        if cohort == "paired":
+            assert all(captured[index]["prompt_override"]["accepted_context"] ==
+                       captured[index + 1]["prompt_override"]["accepted_context"] for index in range(0, 6, 2))
+            periods = report["episodes"][::2]
+        else:
+            assert all(entry["arm"] == "signalweave" for entry in report["episodes"])
+            assert report["protocol"] == "handoff-interpretation-v1"
+            assert all("both arms" not in item.lower() and "versus the control" not in item.lower()
+                       for item in report["limitations"])
+            assert all("both arms" not in item["instructions_override"].lower() for item in captured)
+            periods = report["episodes"]
+        assert [entry["period_id"] for entry in periods] == [p["period_id"] for p in scenario["public"]["periods"]]

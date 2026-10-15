@@ -286,6 +286,37 @@ score flag nor a correct policy label substitutes for reading the final report.
 No overall advantage, warehouse-query saving, cross-card reuse or certification
 is established. See the current concise evidence for exact costs and identities.
 
+### Fact-versus-judgment repair check
+
+Preregister `handoff-interpretation-v1` separately from the closed paired report
+cohort. Reuse the exact accepted card, owner context and all three development
+periods, in order, with fresh native state. Do not repeat onboarding, change
+rules/labels or enlarge the source scope. This is a treatment-only repair check,
+not a fresh baseline comparison or evidence of enterprise accuracy/superiority.
+
+The only product change is interpretation guidance in the compact handoff,
+offline guides/MCP instructions and bundled skill. Source values, arithmetic,
+policy probabilities, admission requirements and archived receipts are unchanged.
+An unknown watch/question is not a declaration that measurements are absent.
+Supported single-period facts do not make an incomplete comparison valid.
+
+Use at most three new Luna-medium reporting invocations (12 tools/180s each) and
+three live Jev attempts, retries disabled. Stop before another invocation at
+300,000 new input or 90,000 new uncached tokens, unknown usage, changed binaries
+or incomplete exact-card execution. No retry, policy repair, delivery or schedule.
+Retain all previous costs and negative findings; onboarding costs remain shown.
+Require frozen-code review and current native zero-inference restore/source
+preflight before the one live attempt.
+
+Independently inspect the final explanations for retained counts, correct rates,
+separation of unknown policy predicates from missing data, preserved limitations,
+and source-versus-receipt citation roles. Keep raw structured scores unchanged;
+legitimate receipt citations and report/alert audiences need semantic review.
+Three additional blind reporter-only fixtures cover scalar, rate and additive
+measurements outside the delivery case. Their supplied typed outcomes are
+synthetic inputs, not live-Jev evidence or enterprise benchmarks; reporters get
+only public packets and the bundled skill, not private rubrics or expected prose.
+
 ### Native approved-card clarification check
 
 Separately preregister `approved-card-clarification-v1`: reuse the existing

@@ -26,7 +26,13 @@ from .evaluation import (
     card_acceptance_digest,
     has_current_evidence_admission_policy,
 )
-from .getting_started import GuideTask, agent_getting_started, getting_started, provider_label
+from .getting_started import (
+    EVIDENCE_INTERPRETATION,
+    GuideTask,
+    agent_getting_started,
+    getting_started,
+    provider_label,
+)
 from .knowledge_dependencies import ContextDependencies
 from .knowledge_mcp import KNOWLEDGE_TOOLS, register_knowledge_tools
 from .models import (
@@ -785,6 +791,7 @@ def _compact_evaluation_response(response: dict[str, Any]) -> dict[str, Any]:
         "result": result,
         "response_mode": "compact",
         "details_available": True,
+        "evidence_interpretation": EVIDENCE_INTERPRETATION,
     }
     for key in ("current_context_dependencies", "current_card_state", "policy_result_is_historical", "policy_action_available"):
         if key in response:
@@ -1165,7 +1172,7 @@ def create_mcp(
                 "and webhook capabilities are also exposed in this profile. A caller-owned scheduler "
                 "handles delivery."
             ) + CARD_AUTHORING_GUIDANCE
-        ).replace("Jev", provider_label(decision_provider)) + (
+        ).replace("Jev", provider_label(decision_provider)) + " " + EVIDENCE_INTERPRETATION + (
             " Optional domain context is enabled. Use retrieve_domain_context before broad discovery "
             "to reuse attributed definitions and findings. Save clarifications as draft context, then "
             "obtain owner-authorized review. Stale context and hypotheses are not current facts; "

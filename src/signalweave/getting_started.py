@@ -6,6 +6,13 @@ from typing import Literal
 
 GuideTask = Literal["start", "query", "report", "monitor"]
 
+EVIDENCE_INTERPRETATION = (
+    "Read measurements from observations/evidence and comparison totals when included in analyses. Watch and question results "
+    "are policy judgments, not an inventory of available data: unknown does not erase measured values. "
+    "Report supported facts even when a comparison is unavailable; preserve missing-value, coverage "
+    "and action limits. Cite source references for measurements and receipt IDs for workflow outcomes only."
+)
+
 
 def provider_label(provider: str) -> str:
     return {"openai-decisions": "OpenAI Decisions",
@@ -35,6 +42,7 @@ def agent_getting_started(task: str = "start", *, decision_provider: str = "jev-
         "jev_used": False,
         "inference_performed": False,
         "decision_provider": decision_provider,
+        "evidence_interpretation": EVIDENCE_INTERPRETATION,
         "agent_owns": ["source discovery", "deep investigation", "causal analysis", "explanation", "schedule", "delivery"],
         "signalweave_owns": ["card storage", "approved source scope", "authorized retrieval", "Jev policy judgment", "evidence bundle", "durable decision receipt"],
         "steps": [
@@ -107,6 +115,7 @@ def getting_started(task: GuideTask = "start", *, decision_provider: str = "jev-
     """Describe actual tool paths without probing sources or exposing configuration."""
     common = {
         "task": task,
+        "evidence_interpretation": EVIDENCE_INTERPRETATION,
         "purpose": "Turn an existing BI question into checked evidence and a reusable investigation.",
         "first_question": "What do you want to understand or keep an eye on, and which decision will it help you make?",
         "agent_role": (
