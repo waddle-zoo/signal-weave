@@ -13,6 +13,7 @@ release or enterprise-readiness approval. The published rc3 download is unchange
 | Hosted identity middleware | Actual MCP HTTP requests with signed JWTs from a synthetic issuer: missing curation scopes rejected, authorized review completed, tenant separation retained; not a customer IdP |
 | Native feature candidate | Clean build from `3cfd3b4`; fingerprint checked against the checkout before use |
 | Native/local Superset | Isolated scripted CLI setup, 14-tool stdio MCP, draft and review, reuse by two task queries, and recovery after process restart; 5 metadata reads, 0 observed Jev POSTs; no analytical evaluation or delivery |
+| Public opt-in native test | `tests/test_knowledge_superset_integration.py`: 1 passed in 26.41 seconds, with setup/server outside the checkout and automatic cleanup of generated private state |
 | Independent engineering review | Scoped GO after repairing authorization-cache, ownership/sharing and bounded-retrieval defects; not enterprise approval |
 | Independent docs/skill review | Accepted the opt-in boundary and distinction between review dates, source freshness, card approval and workflow certification |
 
@@ -50,6 +51,26 @@ Run `make verify` and the focused `tests/test_knowledge*` plus
 are `evaluations/domain_context_agent_pilot.py` and
 `evaluations/data/domain-context-pilot.json`. Live runs require explicit output
 directories and never overwrite an earlier result. Full traces stay ignored.
+
+To repeat the native/Superset protocol check, build the current checkout and
+point it at an explicitly configured local fixture and an inspected asset:
+
+```sh
+uv sync --extra dev --extra binary
+uv run python scripts/build_binary.py
+RUN_CONTEXT_SUPERSET_INTEGRATION=1 \
+SIGNALWEAVE_BINARY="$PWD/dist/signalweave" \
+TYPESAFE_API_KEY_FILE=/private/path/jev.key \
+SUPERSET_URL=http://127.0.0.1:18089 \
+SUPERSET_CONTEXT_RESOURCE=chart:1 \
+uv run pytest tests/test_knowledge_superset_integration.py -q
+```
+
+Set `SUPERSET_USERNAME`/`SUPERSET_PASSWORD` for the fixture if they differ from
+its demo defaults. This test uses a temporary private home, does not register
+with your personal agent, and makes no decision-provider call. The credential
+is required for the normal server startup path, not used as evidence of Jev
+evaluation. Without explicit opt-in the test is skipped by the offline suite.
 
 Remaining: revision-bound card context, source-identity/meaning drift, dependency
 recertification, actual guide-driven onboarding and cross-agent handoff, and a
