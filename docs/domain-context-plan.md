@@ -619,6 +619,15 @@ and exercise the actual default-profile guide plus isolated Codex/Claude skill
 installation. Those inference-free checks prove shipping/wire fidelity only.
 The full diverse-company/live-provider/agent-baseline goal remains open.
 
+This three-session check is now closed: three drafts recorded, 179,285 input /
+74,581 uncached / 6,222 output tokens; no sources, native evaluations or Jev calls.
+Independent review found no material issue and retained a minor overstatement
+about partial regional evidence. No retry or expansion ran. The frozen native
+build also passed fourteen packaging/transport checks with zero inference;
+the full suite passed 3,520 tests with eleven opt-in skips. See the current
+evidence note for exact identities and boundaries. Neither check establishes
+the outstanding end-to-end business-value gate.
+
 ### Native approved-card clarification check
 
 Separately preregister `approved-card-clarification-v1`: reuse the existing

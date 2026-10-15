@@ -17,6 +17,8 @@ pass rate is claimed. A subsequent single-call human-readout canary fixed report
 recording, but repeated a factual interpretation error; independent review stopped
 the planned comparison before it began. A separate two-reporter layout diagnostic
 then completed, but its reviewers disagree and establish no quality advantage.
+The subsequent first-readout guidance checks completed three supplied-input
+drafts; these are communication checks, not a repaired native business benchmark.
 There is no demonstrated overall cost,
 quality, or business advantage.
 Comparative business benefit, customer SSO, interactive onboarding, and enterprise
@@ -37,24 +39,62 @@ raw runtime traces, credentials and setup state remain outside Git.
 | Context persistence and authorization | Contract coverage plus signed native HTTP review, reuse, role, tenant, read-only, and restart checks | Synthetic issuer; not customer SSO |
 | Card/context dependencies | Exact revisions, source/meaning checks, reapproval, stale-context deferral, and historical receipts | No semantic graph traversal or automatic reminder delivery |
 | Same-card clarification | Owner-scoped revision preserves anchors and pins, increments version, clears approval/plan, and uses exact-snapshot compare-and-swap | JSON locking is process-local; multi-process use requires SQLite |
-| Current native transports | 12 checks in 81.00 seconds: two native lifecycles and ten URL validators; zero inference | Local Superset metadata and synthetic signed issuer; not native report-quality proof |
-| Full suite including report-contract/packet fidelity tests | 3,516 passed, 11 skipped, in 224.02 seconds | Includes the public excerpt's three integrity checks; software checks, not companies or an accuracy estimate; 84 focused handoff checks also passed |
+| Current native packaging and transports | 14 checks in 114.69 seconds: source/native skill journeys, two native lifecycles and ten URL validators; zero inference | Isolated Codex/Claude skill installation, local Superset metadata and synthetic signed issuer; not native report-quality proof |
+| Full suite including report-contract/packet fidelity tests | 3,520 passed, 11 skipped, in 235.01 seconds | Includes guide-provider isolation and persisted business-purpose revision checks; software checks, not companies or an accuracy estimate |
 
-The native stdio lifecycle took 49.23 seconds: ten MCP calls and nine Superset
-metadata reads. Signed HTTP context reuse, roles, and restart took 31.30 seconds;
+The native stdio lifecycle took 32.61 seconds: fourteen MCP calls and nine Superset
+metadata reads, including start/monitor guides with and without context tools.
+Signed HTTP context reuse, roles, and restart took 28.12 seconds;
 the ten URL validators and both lifecycles made zero provider requests.
 This clean native build records Git commit
-633a7393ad9404465d2cfc658f74338696c84db0, source/skill fingerprint
-63a0208baeee74db8e28a18e371bb72ff8ed2c44f88cfff58b5fd903d43523ff, and binary
-SHA-256 20594f212402a29b51cacf2663ca36fd19528a7e67caf9555ccd2db98f7f3328.
+287daa58cb933ee99b7b909b0daf3b4e7c1ed93d, source/skill fingerprint
+1fb77bb7ce86899d73e0361773711edba832641a95f49f399ea52e0ca154eb6c, and binary
+SHA-256 5691b185effb48ea6696c9577da0c2e479b1f3ec52591f180d050144e9a8e124.
 These checks do not exercise a real human wizard or customer deployment.
 
-The ignored local JUnit is artifacts/optional-judgment-native-transports-v1.xml
-(SHA-256 ccd25997f81593c081cd0e1e9770fd2d8555f11af6d10d086c342c0590e581ba).
+The ignored local JUnit is artifacts/first-readout-guidance-native-v1.xml
+(SHA-256 d05c31891812147f7867f26dfaa35120a24e4bdd2ec221575920be20aabc9f3a).
 Its raw contents are not committed. The
 [preceding snapshot](https://github.com/waddle-zoo/signal-weave/blob/633a7393ad9404465d2cfc658f74338696c84db0/docs/evidence/domain-context-preview-2026-10-14.md)
 retains the older guidance-only build and its native checks. Neither build is
 the published rc3 download, despite the same package label.
+
+### Qualifying the actual first message
+
+The start guide and bundled skill now ask the owner or designated data expert
+to review the actual proposed message after the first approved, delivery-disabled
+evaluation. Business purpose belongs in `why_watch`; presentation preferences
+belong in caller notes or available reviewed context. Revisions still clear
+approval. No new report schema, inference step or runtime gate was added.
+
+Three fresh Luna-xhigh CLI sessions used the same current guide/skill and the
+existing [public scalar, partial-rate and additive packets](../../evaluations/fact_handoff_cases.py).
+They had arithmetic and draft recording only. All three recorded drafts:
+
+| Reader | Actual message content | Proposed outcome / route |
+| --- | --- | --- |
+| Familiar operations leads | "fulfilled orders rose from 2,400 ... to 4,800 ... up 2,400 (+100%)"; requests a rate definition for future rate-based monitoring | ignore / none |
+| Growth | "36 signups from 400 eligible landing-page sessions: 9.0%"; retains 30 prior signups but explains the missing prior denominator | insufficient_data / data_quality_review |
+| New Finance lead | "refunds rose by USD 12, from USD 100 ... to USD 112"; separates the partial North breakdown and asks for cadence/delivery agreement | notify / finance |
+
+The drafts use the supplied consecutive seven-day periods beginning September
+28 and October 5, 2026, cite their fixture sources, and were not delivered.
+Combined reporter usage was 179,285 input / 104,704 cached / 74,581 uncached /
+6,222 output tokens. Each used two tool calls; summed agent time was 73.72 seconds.
+The exposed tools allowed no source read, native evaluation or Jev request.
+Reviewer/coordinator costs are separate and unknown, not zero.
+
+Independent review found all three usable for their stated requests, with no
+material finding. It retained one minor Finance caveat: "this does not explain
+the aggregate movement" is too categorical. Partial regional evidence can be
+a useful lead without explaining or reconciling the complete total. The recorded
+message was not rewritten or rerun. This review did not include a real owner.
+
+These are three known synthetic, nonnative, supplied-decision examples with no
+baseline or before/after control. They do not prove that guidance caused an
+improvement, that onboarding completed, that Jev chose correctly, or that the
+native product delivers better recurring reports. The earlier failed native
+reports and reviewer disagreement remain unchanged.
 
 ## Owner setup and native decision lifecycle
 
@@ -253,6 +293,9 @@ The public capsule also records its source report, trace and original review has
 | Layout reviewer A | 86364e6a3105d7fa8dae2b953492920f8dc78b33b6233311b63bc41a34ab12ff |
 | Layout reviewer B | 4616c036c725afa6cb6b91ae303b453c06e933d7dd824d2f954236bf575deced |
 | Public audit excerpt | 44775de236801a5f3eafacb983311102a9d168fc7e9bc812b90d5ef59b49c119 |
+| First-readout guidance report | 70eb7bcc15f5ab2aecef752cba781252d27c288444bbbf39927c6a2757184aab |
+| First-readout guidance trace | eda9fdde9c5d3ad39ce0fbcfb825f7e1edef366976f316cdabe1a47231273695 |
+| First-readout independent review | 54fa563073925a34f18c7b38d0258fea69896c63b02ccc9466245b6d8caa0fa3 |
 
 ## Reproduction and remaining gates
 
