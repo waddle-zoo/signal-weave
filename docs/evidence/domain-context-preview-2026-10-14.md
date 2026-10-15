@@ -39,23 +39,23 @@ raw runtime traces, credentials and setup state remain outside Git.
 | Context persistence and authorization | Contract coverage plus signed native HTTP review, reuse, role, tenant, read-only, and restart checks | Synthetic issuer; not customer SSO |
 | Card/context dependencies | Exact revisions, source/meaning checks, reapproval, stale-context deferral, and historical receipts | No semantic graph traversal or automatic reminder delivery |
 | Same-card clarification | Owner-scoped revision preserves anchors and pins, increments version, clears approval/plan, and uses exact-snapshot compare-and-swap | JSON locking is process-local; multi-process use requires SQLite |
-| Current native packaging and transports | 14 checks in 114.69 seconds: source/native skill journeys, two native lifecycles and ten URL validators; zero inference | Isolated Codex/Claude skill installation, local Superset metadata and synthetic signed issuer; not native report-quality proof |
-| Full suite including report-contract/packet fidelity tests | 3,520 passed, 11 skipped, in 235.01 seconds | Includes guide-provider isolation and persisted business-purpose revision checks; software checks, not companies or an accuracy estimate |
+| Current native packaging and transports | 14 checks in 132.18 seconds: source/native skill journeys, two native lifecycles and ten URL validators; zero inference | Isolated Codex/Claude skill installation, local Superset metadata and synthetic signed issuer; not native report-quality proof |
+| Full suite including report-contract/packet fidelity tests | 3,550 passed, 11 skipped, in 237.21 seconds | Includes false-green mutation checks for the public replay and explicit-selection provenance regression; software checks, not companies or an accuracy estimate |
 
-The native stdio lifecycle took 32.61 seconds: fourteen MCP calls and nine Superset
+The native stdio lifecycle took 42.22 seconds: fourteen MCP calls and nine Superset
 metadata reads, including start/monitor guides with and without context tools.
-Signed HTTP context reuse, roles, and restart took 28.12 seconds;
+Signed HTTP context reuse, roles, and restart took 28.63 seconds;
 the ten URL validators and both lifecycles made zero provider requests.
 This clean native build records Git commit
-287daa58cb933ee99b7b909b0daf3b4e7c1ed93d, source/skill fingerprint
-1fb77bb7ce86899d73e0361773711edba832641a95f49f399ea52e0ca154eb6c, and binary
-SHA-256 5691b185effb48ea6696c9577da0c2e479b1f3ec52591f180d050144e9a8e124.
+c7b33441b472cf8e43d2d7503ddeed44f89e82e0, source/skill fingerprint
+ddd374f52ebc10f1b7628f0eb74a1289394039f88fa17d8858610f7d0214756e, and binary
+SHA-256 1aa8b31fab16256275816625d0da3a7ea35a27e0de334d5d3f017d1f429a9649.
 These checks do not exercise a real human wizard or customer deployment.
 
-The ignored local JUnit is artifacts/first-readout-guidance-native-v1.xml
-(SHA-256 d05c31891812147f7867f26dfaa35120a24e4bdd2ec221575920be20aabc9f3a).
+The ignored local JUnit is artifacts/public-context-native-transports-v2.xml
+(SHA-256 b3ea806985da37c86992ace8def98cc571d5bedc5010d963f91f2431c63ee71c).
 Its raw contents are not committed. The
-[preceding snapshot](https://github.com/waddle-zoo/signal-weave/blob/633a7393ad9404465d2cfc658f74338696c84db0/docs/evidence/domain-context-preview-2026-10-14.md)
+[preceding snapshot](https://github.com/waddle-zoo/signal-weave/blob/05e4350b086e5b87c9adb299c6669b89225fcd12/docs/evidence/domain-context-preview-2026-10-14.md)
 retains the older guidance-only build and its native checks. Neither build is
 the published rc3 download, despite the same package label.
 
@@ -97,6 +97,50 @@ native product delivers better recurring reports. The earlier failed native
 reports and reviewer disagreement remain unchanged.
 
 ## Owner setup and native decision lifecycle
+
+### Public native setup, without archived approvals
+
+The [public walkthrough](../domain-context.md#reproduce-the-synthetic-native-walkthrough)
+creates a fresh native home and two reporting briefs for the published Juniper
+Trail Retail fixture. It uses public MCP save/review/bind/approve operations,
+not the ignored v4 artifact or a SQLite card import. Both briefs intentionally
+share one metric and the same two source anchors; this is not independent
+workflow or source discovery.
+
+The final native replay created two approved version-2 cards pinned to the same
+reviewed context revision 2. Editing its actual definition produced draft
+revision 3. Both evaluations returned no policy outcome or delivery routes,
+with evidence from both required sources and exact matching receipt versions.
+The monitored Jev proxy recorded zero attempts; the synthetic bridge recorded
+four source reads. Four earlier inference-free runs are retained separately
+(sixteen source reads total); their weaker verifiers are not independent
+business successes.
+
+Independent artifact review passed the final walkthrough with no remaining
+material finding in this scope, retaining its earlier NO-GO findings and their
+resolution. Reviewer/coordinator usage is separate and unaccounted here; this is
+not a zero-cost claim or an evaluation of the business-value gate.
+
+Review of the initial verifier rejected its limited primary-source check.
+The corrected verifier checks every required source's identity, error status,
+value-bearing evidence and provenance, saved brief intent/scope, exact card
+receipt versions, and the edited definition's actual content and draft revision.
+It also exposed a product defect: explicit caller-supplied sources were labeled
+as frontier-agent search/inspection. Current receipts correctly say caller
+selection and do not claim knowledge of prior search, inspection or caller type.
+
+This walkthrough uses scripted fictional owner choices, synthetic normalized
+company-MCP exports and a zero-request Jev proxy budget. It exercises no agent
+analysis or live Jev policy judgment. It is a reproducible public API prerequisite,
+not repaired onboarding or comparative business evidence. Earlier report cohorts
+still retain their own ignored-setup reproduction requirements.
+
+An intermediate native transport run rejected two checks as stale-binary errors
+after the coordinator edited a docstring during testing (twelve other checks
+passed). This invalid orchestration attempt is retained, not counted as a
+product regression or silently pooled into the final frozen-build run.
+
+### Earlier owner-handoff evidence
 
 The owner-handoff-v4 development pair completed both scripted handoffs and
 independent synthetic policy reviews. Treatment revised the same card from draft
@@ -296,14 +340,18 @@ The public capsule also records its source report, trace and original review has
 | First-readout guidance report | 70eb7bcc15f5ab2aecef752cba781252d27c288444bbbf39927c6a2757184aab |
 | First-readout guidance trace | eda9fdde9c5d3ad39ce0fbcfb825f7e1edef366976f316cdabe1a47231273695 |
 | First-readout independent review | 54fa563073925a34f18c7b38d0258fea69896c63b02ccc9466245b6d8caa0fa3 |
+| Public native walkthrough report | 85036690c8b39d1ed4a46133717e7a55c5e38a8c40725cf1c5cebc594e61fd34 |
+| Public native walkthrough trace | 33b1e77bb487f96326b658137160b88c4daa0081a1e8bcae75f0442e3f96b472 |
+| Public native walkthrough review | 5bc89cc699dd6411c52f5d4d4ab3d35a83e5dfc323fbcaa5a849f1508916c0cb |
 
 ## Reproduction and remaining gates
 
 Run make verify for the software suite. The zero-inference stdio and HTTP checks
 can be rerun against the explicitly selected local synthetic Superset fixture
 on port 18089 using the protocol in the plan. They do not reproduce the live
-report study. An exact public rerun still requires ignored v4 accepted artifacts;
-there is no public turnkey reproduction bundle.
+report study. An exact public rerun of the older report cohorts still requires
+ignored v4 accepted artifacts. The separate public native walkthrough above needs
+none of those artifacts; it does not reproduce the report cohorts.
 
 After building the current candidate, the native checks are:
 

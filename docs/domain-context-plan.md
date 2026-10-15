@@ -648,6 +648,15 @@ current native fingerprint before accepting the corrected walkthrough. This is
 a public reproduction prerequisite, not a replacement for the outstanding
 agent-led onboarding/live-decision/comparative-report experiment.
 
+The final v5 replay passed independent artifact review: both approved cards at
+version 2 pin reviewed context revision 2; its exact edited content becomes draft
+revision 3; both evaluations preserve all required source evidence and matching
+receipts while deferring policy. Zero Jev proxy attempts and four synthetic source
+reads. The current native packaging/local/HTTP checks passed fourteen tests;
+the full suite passed 3,550 with eleven opt-in skips. Earlier weaker preflights
+and a coordinator-induced stale-binary test rejection remain separately recorded.
+No frontier-agent onboarding or report comparison ran in this walkthrough.
+
 ### Native approved-card clarification check
 
 Separately preregister `approved-card-clarification-v1`: reuse the existing
