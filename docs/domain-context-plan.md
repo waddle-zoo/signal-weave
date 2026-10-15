@@ -58,6 +58,28 @@ the frontier agent's report is useless. This small constrained-tool pair cannot
 establish broad accuracy, customer usability, cross-card reuse or total billed
 cost advantage. Later multi-company and real-connector gates remain open.
 
+### Paused-author handoff repair, not a retried author
+
+V1 is terminal after one completed baseline author: 109,390 input / 31,310
+uncached / 2,178 output tokens, zero Jev. It had saved policy and synthetic owner
+consent, but listed independent semantic review as pending. The runner wrongly
+treated any pending item as missing business context and stopped before review.
+This is a harness finding, not a SignalWeave-versus-baseline outcome.
+
+Preregister separate `public-owner-report-handoff-v2`: reuse that exact agent's
+notes and source observations, not an expert card or imported approval. The
+public research manifest pins its report, trace, original runner and public input;
+the public input must also match the generated fixture. Native treatment state
+still starts blank. Charge the prior author against the unchanged six-call,
+1.2M-input/220k-uncached and one-Jev limits: at most five new CLI invocations.
+Do not rerun the baseline author or alter its pending items. A fresh independent
+semantic review sees those items verbatim and decides whether business context
+is materially missing; no regex or coordinator relabeling clears them. Rejection
+still stops. Treatment still needs its own exact owner-confirmed approved card;
+semantic review is not consent. Completed review is supplied separately to the
+fresh reporter, preserving the original handoff as history. The original V1
+failure and costs remain unchanged, not rescored as success.
+
 ## New owner-workflow development cohort
 
 Before live execution, freeze `owner-workflow-v1`: existing development fixture
