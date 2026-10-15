@@ -235,6 +235,45 @@ retain all onboarding costs, and not claim the original ephemeral native state
 survived cleanup. Fresh reports, live policy evaluation and cross-card reuse
 remain independent gates.
 
+### Report-only follow-up from accepted setup
+
+Preregister `reviewed-setup-reports-v1`, not a resumption or extension of v4's
+closed token allowance. Load the unchanged v4 report/trace by their recorded
+SHA-256 identities. Validate both accepted policies and the exact approved v3
+card, then seed that card into a fresh private SQLite fixture; refuse overwrite
+and verify the complete snapshot through the current native MCP. No production
+import API, reapproval, surviving-home durability or restored context graph is
+claimed. No card/policy/source repair is allowed.
+
+Use the same Pine Courier development fixture and all three supplied periods in
+their existing order: baseline then treatment per period. Both receive the same
+accepted card policy in plain context, owner answers, glossary, source tools and
+calculator. Treatment additionally evaluates its native card with a fixed key.
+This is an exploratory whole-package comparison: treatment also has the installed
+SignalWeave skill and native read/catalog/context tools. It does not isolate the
+effect of card evaluation alone. The common company-tool surface and underlying
+business information remain equal; the native tool surface is not identical.
+This tests guided usage of the package, not optional-tool discovery.
+The report-only role advertises only its existing dispatchable read/evaluation
+capabilities; it does not expose authoring tools that it would reject.
+
+Cap at six new Luna-medium invocations, twelve tools/180s each, three live Jev
+attempts with retries disabled. Stop before another invocation at 600,000 new
+input or 150,000 new uncached tokens, unknown usage, changed executables or an
+incomplete report/exact-card execution. Thresholds do not bound in-flight usage.
+No retry, replacement period, notifications or schedules. Retain v4's full
+959,348 input / 189,300 uncached setup cost alongside new and combined usage;
+older unknowns stay unknown separately. Keep the original lookup scorer result
+but score report-only correctness separately: owner context is supplied, not
+newly obtained through fabricated tool calls. Outcome/routing/numerical/evidence
+checks and labels remain unchanged. Independent prose review is still required.
+
+Require offline transport/accounting/provenance tests, current-source native
+build verification, zero-inference restore/source/schema preflight, frozen-runner
+review, and explicit live opt-in before the one attempt. This is one development
+company with three periods, not varied enterprises, a held-out benchmark,
+cross-card context reuse or proof of advantage.
+
 ### Native approved-card clarification check
 
 Separately preregister `approved-card-clarification-v1`: reuse the existing
