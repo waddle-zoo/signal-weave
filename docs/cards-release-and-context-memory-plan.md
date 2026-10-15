@@ -125,3 +125,9 @@ Start only after Milestone A is recorded as complete on `main`.
   packaging fix passed local build, non-root CLI/skill, and authenticated HTTP
   MCP checks; its independent review and protected-branch CI are a separate
   follow-up gate. Native rc3 remains unchanged.
+- That packaging follow-up merged through PR #18 at `e8842ac`, with all 15 CI
+  checks green, including both full suites (2,994 passed / 7 skipped each).
+- Milestone B began on `feat/domain-context-memory` from that main revision.
+  The [context plan](domain-context-plan.md) preregisters the first substrate and
+  later equal-information agent experiment. The opt-in implementation is not a
+  promotion of earlier graph-bundle policies or a business-value claim.

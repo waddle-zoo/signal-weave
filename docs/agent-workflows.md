@@ -98,3 +98,8 @@ causal analyst, or user-facing explanation. Do not silently add investigation
 sources to the recurring card; ask for an owner-reviewed card update if those
 sources should be read on future runs. Scheduling and external delivery belong
 to separately authorized caller tools, not SignalWeave.
+
+When the optional domain-context tools appear in the connected guide, agents can
+reuse reviewed definitions and dated findings across cards and poll for review
+reminders. See [shared domain context](domain-context.md). This does not replace
+current source evidence, card approval, or workflow certification.
