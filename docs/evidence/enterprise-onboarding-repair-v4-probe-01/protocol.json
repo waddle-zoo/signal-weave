@@ -1,0 +1,64 @@
+{
+  "version": "enterprise-onboarding-journeys-v1",
+  "seed": 20261003,
+  "dataset_sha256": "512d308d24bd5da0b85b8179ebee7c3560036edf08acc3d2d94d6e981ff27be4",
+  "execution_version": "enterprise-onboarding-repair-v4",
+  "subset_probe": true,
+  "interventions": [
+    "Owner review treats numeric conditions as optional and checks present bindings against inspected current comparison descriptors.",
+    "Stable source-selection confirmation and explicit authorized anchors.",
+    "Typed selected-source and workflow-case inputs; optional single current capture.",
+    "Separate owner action rules from unconditional evidence assessments in guide.",
+    "Both owner reviewers receive bounded current public source contracts, not measurements or labels.",
+    "Both report writers get identical inspected-citation validation and population caveats.",
+    "Exact within_effect/mix_effect numeric bindings; rendered checks expose executable selectors.",
+    "Owner reviewers distinguish code-owned execution contracts from business intent, and inspect typed numeric bindings.",
+    "Source-key and optional-watch schema guidance; both agents instructed to continue bounded correction after a draft/rejection."
+  ],
+  "companies": [
+    {
+      "name": "Juniper Trail Retail",
+      "family": "retail",
+      "brief": "Keep an eye on what we actually keep from sales. If it takes a hit, tell our commerce lead what changed, not just that a chart moved.",
+      "assets": 24,
+      "monitoring_periods": 3
+    }
+  ],
+  "primary_denominators": {
+    "onboarding_per_arm": 1,
+    "monitoring_per_arm": 3,
+    "author_and_monitor_episodes": 8
+  },
+  "budget": {
+    "jev_attempts": 32,
+    "sdk_retries": 0,
+    "tool_calls_per_episode": 45,
+    "owner_review_attempts_per_arm_company": 3,
+    "max_codex_invocations_including_owner_reviews": 14
+  },
+  "endpoints": [
+    "setup completion",
+    "owner questions and corrections",
+    "guide usage",
+    "time to first preview",
+    "native outcome and exact recipient",
+    "final outcome and exact recipient",
+    "numeric and provenance correctness",
+    "unnecessary and missed alerts",
+    "unsupported narrative claims",
+    "tool errors, reads, tokens and wall time"
+  ],
+  "success_gate": "Six completed treatment onboardings; all 18 later native and final outcomes/recipients correct; required numeric/provenance checks pass; no unsupported material narrative claims. Missing work remains failure, not a quiet success.",
+  "comparison_gate": "No correctness loss against the same Luna agent using the same source and owner tools; report setup and monitoring cost/time separately. No commercial savings or universal reliability claim from this regression.",
+  "limits": [
+    "Synthetic normalized MCP sources, not real provider accounts or installation.",
+    "Known business-family regression; new catalog distractors are not a new holdout.",
+    "Copied alternative data values test scope selection, not new statistical distributions.",
+    "Simulated owner answers and independent model review, not observed real-user usability.",
+    "One onboarding snapshot and three later periods per company, not months-long fleet scale.",
+    "No real scheduling, query billing, notifications, or causal ground truth.",
+    "The human still supplies business intent and policy; missing policy is not Jev's job.",
+    "No publication, runtime repair, label changes or retries during the frozen run."
+  ],
+  "wrapper_sha256": "624e747c2e6fb2871e21287f8a9b8ac5a21a84e8a123b61137382bff26e57b7a"
+}

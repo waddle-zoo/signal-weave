@@ -1,0 +1,52 @@
+{
+  "date": "2026-10-03",
+  "review_kind": "Internal Luna subagent code/methodology reviews plus main-agent raw-artifact audit; not external peer review",
+  "goal_complete": false,
+  "findings": [
+    {
+      "issue": "Omitted historical retrieval labels became explicit empty lists at the MCP boundary",
+      "resolution": "Preserve model field presence and reject missing acceptance labels before paid inference",
+      "regression": "tests/test_workflow_label_presence.py"
+    },
+    {
+      "issue": "Synthetic owner validator rejected legal card-local route aliases",
+      "resolution": "Validate exact authorized endpoints and prevent directory-key rebinding; retain initial failed pilots",
+      "regression": "tests/test_bootstrap_owner_gate.py"
+    },
+    {
+      "issue": "New native scorer incorrectly expected compiled_plan inside the serialized card",
+      "resolution": "Compare the authoritative output.plan against the saved card plan; test against the actual MCP serializer",
+      "regression": "tests/test_installed_workflow_trial.py",
+      "affected_run": "installed-workflow-northstar-live-03",
+      "qualification": "Six actual business cases correct; 36 intended cases not executed. Do not claim 42/42."
+    },
+    {
+      "issue": "Historical calibration used the present freshness clock",
+      "resolution": "Explicit per-case as_of; isolated snapshot-only engine; retain source ages and live freshness guards",
+      "regression": "tests/test_workflow_historical_clock.py",
+      "qualification": "Typed capture timestamps are checked; arbitrary nested source text is not independently certified temporally truthful. Dynamic historical follow-up fetching is not tested."
+    },
+    {
+      "issue": "Descriptive Northstar future period IDs exposed scenario-family hints in Jev source metadata",
+      "affected_run": "installed-workflow-northstar-live-02",
+      "judgment_requests_with_hint": 42,
+      "resolution": "Opaque future period IDs; descriptive register IDs remain evaluator-only",
+      "regression": "tests/test_installed_northstar_cases.py",
+      "qualification": "The retained 39/42 score is an observed execution result, not clean blinded generalization evidence. Raw expected action labels were not sent."
+    },
+    {
+      "issue": "One historical quiet label conflicts with a literal threshold boundary",
+      "case_id": "week-05-day-02-modest-movement",
+      "observed_net_sales_change_pct": -10.0,
+      "owner_quiet_rule": "absolute movement below 10 percent without a severe operational incident",
+      "retained_label": "ignore",
+      "resolution": "Flagged for owner/register review. Neither the label nor original score was silently changed."
+    }
+  ],
+  "claim_limits": [
+    "Owner policy and labeled historical examples are supplied; this is not zero-context or real-human usability evidence.",
+    "Live Jev and a real local binary/MCP were used; company sources were read-only synthetic MCP replays, not new warehouse reads.",
+    "Native routing and required-source presence do not prove numeric explanation quality, causal correctness, customer adoption or advantage over Luna.",
+    "The local binary is a development build, not a newly published release or managed-device installation certification."
+  ]
+}

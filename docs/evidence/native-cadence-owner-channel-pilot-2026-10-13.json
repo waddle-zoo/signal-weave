@@ -1,0 +1,720 @@
+{
+  "status": "completed",
+  "onboarding_complete": true,
+  "protocol": {
+    "version": "native-cadence-v2",
+    "code": "ad3c1ceaae360821ffbb0b2de84688daeb4c8d10",
+    "dataset_sha256": "22acb4816312a2918c156bcca08813edce94ce9f8b2533f2f946b9a3c55ba9a8",
+    "registration_pilot_indices": [
+      0,
+      3,
+      6,
+      9
+    ],
+    "selected_indices": [
+      0,
+      3,
+      6,
+      9
+    ],
+    "selected_period_ids": [
+      "period-99d58d0d74b7ad34",
+      "period-595014fd6b188fb1",
+      "period-ea5811be69f45506",
+      "period-94ab485e76c762c8"
+    ],
+    "company_count": 1,
+    "fixture_period_count": 12,
+    "cadence": "consecutive monthly closes",
+    "cold_onboarding": true,
+    "study_scope": "This is a retrospective monthly-close review of archived fixture measurements, not a current alert. Preserve each measurement cutoff; a replay gateway read now is not a warehouse freshness claim.",
+    "scheduler_claim": "No real scheduler, cadence execution, or current warehouse freshness is tested.",
+    "card_and_notes_frozen_after_onboarding": true,
+    "models": {
+      "onboarding": {
+        "model": "gpt-6-luna",
+        "effort": "xhigh"
+      },
+      "recurring_baseline": {
+        "model": "gpt-6-luna",
+        "effort": "xhigh"
+      },
+      "recurring_treatment": {
+        "model": "gpt-6-luna",
+        "effort": "xhigh"
+      },
+      "independent_owner_and_narrative_review": {
+        "model": "gpt-6-luna",
+        "effort": "xhigh"
+      }
+    },
+    "tool_limits_per_episode": {
+      "max_tool_calls": 100,
+      "timeout_seconds": 360
+    },
+    "onboarding_episode_limits": {
+      "max_tool_calls": 100,
+      "timeout_seconds": 900
+    },
+    "jev_attempt_limit": 20,
+    "replay_clock": {
+      "simulation_as_of": "Original historical monthly close; preserved verbatim.",
+      "query_capture_at": "One real UTC timestamp shared by both arms per case.",
+      "snapshot_mutation": "Only top-level captured_at/source_captured_at are stamped as a new synthetic gateway response; all measurement rows, business dates, cutoffs, and freshness annotations stay unchanged.",
+      "freshness_claim": "Gateway replay receipt is not a warehouse freshness assertion."
+    },
+    "comparison": "intention_to_treat_with_actual_native_use_reported_separately",
+    "native_measurement_semantics": {
+      "jev_successes": "Provider transport responses only; not policy correctness.",
+      "native_valid_current_results": "Returned receipt/result matched the current idempotency key, frozen card ID/version, and shadow-delivery contract; not judgment correctness.",
+      "native_judgment": "Post-run typed outcome and canonical routing scored against the private label; labels are not provided to either agent.",
+      "frontier_submission": "Scored separately as the caller-owned final outcome and routing after any evidence-based recovery."
+    },
+    "narrative_review_protocol": {
+      "max_tool_calls": 2,
+      "schema_correction_retries": 1,
+      "required_fields": [
+        "message_id",
+        "verdict",
+        "rationale"
+      ],
+      "issues_optional_default": [],
+      "missing_verdict_or_rationale_is_failure": true,
+      "positive_verdict_forced": false
+    },
+    "treatment_guidance": {
+      "mode": "production-guided",
+      "baseline_instructions": "production common goal",
+      "treatment_instructions": "production common goal + installed server.initialize.instructions verbatim",
+      "tool_definition_strategy": "installed default-profile Tool.description and inputSchema passed unchanged",
+      "runtime_capture": "onboarding.json records exact installed server instructions and native tool definitions",
+      "native_tools_available": [
+        "evaluate_insight_card",
+        "get_decision_receipt",
+        "get_insight_card",
+        "get_signalweave_guide",
+        "list_insight_cards"
+      ],
+      "profile_scope": "Restricted non-authoring default-profile monitoring subset: shared source tools plus guide, list/get card, evaluation, and receipt; card authoring/review/approval mutations are withheld.",
+      "excluded_default_profile_tools": [
+        "onboard_insight_card",
+        "review_insight_card",
+        "approve_insight_card"
+      ],
+      "mutation_tools_exposed": [],
+      "harness_auto_evaluation": false,
+      "native_tool_use_required_by_harness": false
+    },
+    "treatment_native_tools": [
+      "evaluate_insight_card",
+      "get_decision_receipt",
+      "get_insight_card",
+      "get_signalweave_guide",
+      "list_insight_cards"
+    ],
+    "precomputed_bundle": false,
+    "native_tool_use_required": false,
+    "delivery_enabled": false,
+    "sink": "caller_owned_agent_local_mock_outbox",
+    "source_data": "synthetic registered company MCP fixture; not customer or live BI data",
+    "shared_source_transport": "Both arms use the same local typed SourceRegistry/PublicSourceAdapter for catalog search and inspection; this is not a real third-party connector. Treatment card evaluation still runs through the installed SignalWeave server over the same fixture.",
+    "expansion": "No automatic expansion from the four-period stage gate.",
+    "binary_preflight": {
+      "dirty": true,
+      "format_version": 1,
+      "frozen": true,
+      "git_commit": "ad3c1ceaae360821ffbb0b2de84688daeb4c8d10",
+      "python": "3.12.10",
+      "source_sha256": "b643a49594dcee6d216001ad1d151e4d1619e4b477a1ff3a78c628789f4bd048",
+      "version": "0.2.0rc2",
+      "binary_sha256": "cc071487521f2b4e8aea4f6b74c446d9ca063ea4f400f434d42139a1639f3406"
+    },
+    "harness_sha256": {
+      "evaluations/native_cadence_trial.py": "82b30804f7b6dda46f3fa36288aa627b4af57637783da7a1229d06cb063ea581",
+      "evaluations/installed_workflow_trial.py": "aa9bacfcd20f28b945d309b28958dd71a77107c2e9484db4b7d9f1c89914fe41",
+      "evaluations/installed_trial_transport.py": "b73dc82391a99153ffd3c84000ac28fbecfa7e540a54d3f16e8de0cf5adf3055",
+      "evaluations/bootstrap_agent_trial.py": "3a56dc6d63667fbb341e88f1abe6997049e83ba8ed428b7d162645e7884e8759",
+      "evaluations/codex_trial_transport.py": "d1775c6e12f60e2856ae04298ca243e8faad0a8999a9aaaa28518e9084bbbc4f",
+      "scripts/binary_provenance.py": "a371e4c786bb3985c44125ab524726195bd0cd9ec4387496d965965091fb3240"
+    }
+  },
+  "summary": {
+    "intended_cases": 4,
+    "paired_cases": 4,
+    "treatment_assigned": 4,
+    "treatment_observed": 4,
+    "baseline_observed": 4,
+    "treatment_outcome_correct": 4,
+    "treatment_routing_correct": 4,
+    "baseline_outcome_correct": 4,
+    "baseline_routing_correct": 4,
+    "treatment_native_current_result_available": 4,
+    "treatment_native_judgments_observed": 4,
+    "treatment_native_judgment_outcome_correct": 4,
+    "treatment_native_judgment_outcome_incorrect": 0,
+    "treatment_native_judgment_routing_correct": 4,
+    "treatment_native_attempt_failed": 0,
+    "treatment_product_not_used": 0,
+    "treatment_native_attempts": 5,
+    "treatment_native_valid_current_results": 4,
+    "quiet_grade_ineligible": 0,
+    "outbox_message_count": 6,
+    "quiet_zero_message_workflows": 2
+  },
+  "jev_attempts": 4,
+  "jev_budget_censored": false,
+  "narrative_review": {
+    "status": "completed",
+    "episode": {
+      "status": "complete",
+      "error": null,
+      "final_message": "The structured review was accepted for all six messages.",
+      "tool_calls": 1,
+      "seconds": 41.49089195799752,
+      "response_timeout_seconds": 360,
+      "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+      "wall_time_overrun_seconds": 0,
+      "transport": "codex_cli",
+      "model": "gpt-6-luna",
+      "effort": "xhigh",
+      "exit_code": 0,
+      "foreign_tools": []
+    },
+    "reviews": [
+      {
+        "message_id": "M01",
+        "verdict": "supported",
+        "rationale": "The archived Executive Pulse evidence supports the May-versus-April 10.0% decline and the four-channel reconciliation; Web conversion and Finance revenue are separately flat. The summary preserves the 2025-06-05 cutoff and distinguishes the later replay time from freshness. It makes no causal claim, and the Analytics review step is clear.",
+        "issues": []
+      },
+      {
+        "message_id": "M02",
+        "verdict": "supported",
+        "rationale": "The cited May close evidence supports a 10.0% decline in the total and each declared channel, with a complete reconciled partition; the separate Web and Finance comparisons are flat. The historical comparison and cutoff are clear, no cause is asserted, and the Analytics review step is actionable.",
+        "issues": []
+      },
+      {
+        "message_id": "M03",
+        "verdict": "supported",
+        "rationale": "The archived July–August evidence supports the stated 15.0% total decline, Online and Store declines, flat Mobile and Marketplace, 1.01% Web conversion decline, and flat separate Finance revenue. The measurement cutoff and retrospective scope are explicit, with no causal attribution or freshness claim. Leadership review of the archived close is a clear next step.",
+        "issues": []
+      },
+      {
+        "message_id": "M04",
+        "verdict": "supported",
+        "rationale": "The cited close records support the total and channel figures, the separate Web and Finance comparisons, and the complete four-channel partition. The summary clearly dates the retrospective measurements and replay, avoids causal and whole-company claims, and gives a specific review step for the archived Online and Store entries.",
+        "issues": []
+      },
+      {
+        "message_id": "M05",
+        "verdict": "supported",
+        "rationale": "The Executive Pulse source is failed with no returned rows, so the Sales change and reconciliation cannot be assessed; the cited separate Web and Finance records support the flat comparisons. The summary preserves the archived period and replay-time limitation, does not imply causality, and clearly asks Data Trust to restore or verify the capture and rerun the review.",
+        "issues": []
+      },
+      {
+        "message_id": "M06",
+        "verdict": "supported",
+        "rationale": "The archived Executive Pulse evidence records a failed source and no rows, supporting the stated inability to assess Sales change or reconciliation; separate Web and Finance records support the flat comparisons. The historical cutoff and replay limitation are clear, no cause is asserted, and the recovery and rerun step is actionable.",
+        "issues": []
+      }
+    ]
+  },
+  "local_mock_outbox": [
+    {
+      "owner": "caller_owned_agent",
+      "sink": "local_mock_outbox",
+      "period_id": "period-595014fd6b188fb1",
+      "arm": "treatment",
+      "recipient_key": "analytics",
+      "destination": "slack://simulation-analytics",
+      "summary": "Retrospective archived close: May 2025 vs April 2025, measurement cutoff 2025-06-05 06:00 UTC. Executive Pulse generated monthly Sales channel ledger balances in USD fell 10.0%; the total reconciles to four declared channels, each down 10.0%. This is exactly the 10% boundary, outside the below-10% ignore band but below the 15% notification threshold, so investigate. Separate Web Funnel conversion and Finance Daily revenue were flat; these populations were not joined. Historical fixture measurements were replay-read on 2026-10-13 17:13 UTC, which does not establish warehouse freshness. Next: Analytics to review the Sales close comparison for measurement or business context; no cause is established.",
+      "evidence_refs": [
+        "company_mcp|resource-fd7ced0b3305cf92db4a",
+        "company_mcp|resource-bc5e054e60461fb10b8e",
+        "company_mcp|resource-2ecd7a55803804422a3e",
+        "receipt:northstar-outfitters-local/period-595014fd6b188fb1"
+      ],
+      "external_send_attempted": false
+    },
+    {
+      "owner": "caller_owned_agent",
+      "sink": "local_mock_outbox",
+      "period_id": "period-595014fd6b188fb1",
+      "arm": "baseline",
+      "recipient_key": "analytics",
+      "destination": "slack://simulation-analytics",
+      "summary": "For the archived May 2025 close versus April, Executive Pulse generated Sales ledger total and all four declared channels declined 10.0%; the total reconciles to Online, Store, Mobile, and Marketplace. This meets the 10% materiality floor but not the at-least-15% notify condition. Separate Web Funnel conversion and Finance revenue were flat; populations are not joined. Measurement cutoff: 2025-06-05. The gateway replay read on 2026-10-13 does not establish current conditions or warehouse freshness. Next step: analytics review the historical close under the investigate route.",
+      "evidence_refs": [
+        "company_mcp|resource-fd7ced0b3305cf92db4a",
+        "company_mcp|resource-bc5e054e60461fb10b8e",
+        "company_mcp|resource-2ecd7a55803804422a3e"
+      ],
+      "external_send_attempted": false
+    },
+    {
+      "owner": "caller_owned_agent",
+      "sink": "local_mock_outbox",
+      "period_id": "period-ea5811be69f45506",
+      "arm": "baseline",
+      "recipient_key": "leadership",
+      "destination": "slack://simulation-leadership",
+      "summary": "Retrospective review of Aug 2025 vs Jul 2025 (measurement cutoff 2025-09-05 06:00 UTC): generated Executive Pulse Sales ledger balances fell 15.0% ($7,855.65 to $6,677.30), reconciling to the complete four-channel partition; Online and Store declined 36.429%, while Mobile and Marketplace were flat. Separate Web Funnel conversion declined 1.01% (0.099 to 0.098); separate Finance booked revenue was flat. This meets the policy’s notification condition: at least a 15% total decline, two Sales channels down, and separate Web conversion down. These are archived fictional measurements, not current conditions; the replay gateway read at 2026-10-13 17:14:06 UTC does not assert warehouse freshness. Next step: leadership review the archived close; no cause is established.",
+      "evidence_refs": [
+        "company_mcp|resource-fd7ced0b3305cf92db4a",
+        "company_mcp|resource-bc5e054e60461fb10b8e",
+        "company_mcp|resource-2ecd7a55803804422a3e"
+      ],
+      "external_send_attempted": false
+    },
+    {
+      "owner": "caller_owned_agent",
+      "sink": "local_mock_outbox",
+      "period_id": "period-ea5811be69f45506",
+      "arm": "treatment",
+      "recipient_key": "leadership",
+      "destination": "slack://simulation-leadership",
+      "summary": "Archived 2025-08 close vs 2025-07, measured as of 2025-09-05 06:00 UTC. Executive Pulse’s generated monthly Sales ledger in USD reconciles across four channels and fell 15.0%, from $7,855.65 to $6,677.30: Online and Store fell 36.429%, while Mobile and Marketplace were flat. Separate Web Funnel conversion fell 1.01% (0.099 to 0.098); separate Finance Daily revenue stayed at $50,000. The decline meets the 15% threshold, has two declining channels, and has separate Web corroboration, supporting notify to leadership. This establishes neither cause nor whole-company sales. The replay gateway read was 2026-10-13 17:14 UTC and makes no warehouse freshness claim. Next: review the archived Online and Store close entries.",
+      "evidence_refs": [
+        "company_mcp|resource-fd7ced0b3305cf92db4a",
+        "company_mcp|resource-bc5e054e60461fb10b8e",
+        "company_mcp|resource-2ecd7a55803804422a3e",
+        "receipt:northstar-outfitters-local/period-ea5811be69f45506"
+      ],
+      "external_send_attempted": false
+    },
+    {
+      "owner": "caller_owned_agent",
+      "sink": "local_mock_outbox",
+      "period_id": "period-94ab485e76c762c8",
+      "arm": "treatment",
+      "recipient_key": "data-trust",
+      "destination": "slack://simulation-data-trust",
+      "summary": "Archived 2025-11 close vs 2025-10 (measurement cutoff 2025-12-05 06:00Z): Executive Pulse’s generated Sales ledger returned no rows, so the Sales change and total-to-channel reconciliation required by policy cannot be assessed. Separate generated Web conversion was unchanged at 0.098; separate Finance booked revenue was unchanged at USD 49,500. These optional populations do not fill the Sales gap. The 2026-10-13 replay gateway read time is not a freshness claim. Next step: Data Trust should verify or restore the archived Executive Pulse capture and complete channel partition, then rerun this close review.",
+      "evidence_refs": [
+        "company_mcp|resource-fd7ced0b3305cf92db4a",
+        "company_mcp|resource-bc5e054e60461fb10b8e",
+        "company_mcp|resource-2ecd7a55803804422a3e"
+      ],
+      "external_send_attempted": false
+    },
+    {
+      "owner": "caller_owned_agent",
+      "sink": "local_mock_outbox",
+      "period_id": "period-94ab485e76c762c8",
+      "arm": "baseline",
+      "recipient_key": "data-trust",
+      "destination": "slack://simulation-data-trust",
+      "summary": "Retrospective Nov 2025 close vs Oct 2025; measurements as of 2025-12-05. Executive Pulse, the generated monthly Sales channel ledger metric of record, failed and returned no rows, so its change and total-to-channel reconciliation cannot be assessed. Separate Web conversion and Finance revenue were flat; neither substitutes for Sales evidence. The replay gateway read occurred 2026-10-13 and does not establish warehouse freshness. Next step: restore or verify the archived Executive Pulse snapshot and complete channel partition, then rerun this close.",
+      "evidence_refs": [
+        "company_mcp|resource-fd7ced0b3305cf92db4a",
+        "company_mcp|resource-bc5e054e60461fb10b8e",
+        "company_mcp|resource-2ecd7a55803804422a3e"
+      ],
+      "external_send_attempted": false
+    }
+  ],
+  "binary_verifications": {
+    "preflight": {
+      "dirty": true,
+      "format_version": 1,
+      "frozen": true,
+      "git_commit": "ad3c1ceaae360821ffbb0b2de84688daeb4c8d10",
+      "python": "3.12.10",
+      "source_sha256": "b643a49594dcee6d216001ad1d151e4d1619e4b477a1ff3a78c628789f4bd048",
+      "version": "0.2.0rc2",
+      "binary_sha256": "cc071487521f2b4e8aea4f6b74c446d9ca063ea4f400f434d42139a1639f3406"
+    },
+    "postflight": {
+      "dirty": true,
+      "format_version": 1,
+      "frozen": true,
+      "git_commit": "ad3c1ceaae360821ffbb0b2de84688daeb4c8d10",
+      "python": "3.12.10",
+      "source_sha256": "b643a49594dcee6d216001ad1d151e4d1619e4b477a1ff3a78c628789f4bd048",
+      "version": "0.2.0rc2",
+      "binary_sha256": "cc071487521f2b4e8aea4f6b74c446d9ca063ea4f400f434d42139a1639f3406"
+    }
+  },
+  "limitations": [
+    "Synthetic source fixture and simulated owner/reviewers; not customer evidence or real human approval.",
+    "Retrospective monthly-close replay does not demonstrate a real 12-month scheduler or current warehouse freshness.",
+    "Shared catalog search and source inspection are a local typed fixture adapter, not a live third-party MCP connector.",
+    "Local mock outbox only; no Slack or other external delivery was attempted.",
+    "Narrative quality is an independent qualitative model review, not a keyword score."
+  ],
+  "periods": [
+    {
+      "period_id": "period-99d58d0d74b7ad34",
+      "baseline": {
+        "completed": true,
+        "score": {
+          "observed": true,
+          "category": "small_quiet",
+          "expected_outcome": "ignore",
+          "actual_outcome": "ignore",
+          "outcome_correct": true,
+          "expected_recipients": [],
+          "actual_recipients": [],
+          "routing_correct": true,
+          "expected_outbox_count": 0,
+          "actual_outbox_count": 0,
+          "outbox_count_correct": true,
+          "quiet_grade_eligible": true,
+          "evidence_mode": "primary_source_inspected_current_run",
+          "primary_current_proof": true,
+          "primary_current_proof_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ]
+        },
+        "episode_seconds": 57.507142292000935,
+        "submission": {
+          "outcome": "ignore",
+          "recipients": [],
+          "summary": "Retrospective 2025-02 vs 2025-01: Executive Pulse generated Sales ledger total fell from USD 10,400 to USD 9,984 (-4%); all four declared channels were -4% and reconcile to the total, within the policy's under-10% ignore band. Separate Web conversion and Finance revenue were flat. Measurements cover through 2025-02-28 (simulation as of 2025-03-05); gateway replay read at 2026-10-13 17:11:16 UTC does not establish warehouse freshness.",
+          "evidence_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-2ecd7a55803804422a3e"
+          ]
+        }
+      },
+      "treatment": {
+        "completed": true,
+        "score": {
+          "observed": true,
+          "category": "small_quiet",
+          "expected_outcome": "ignore",
+          "actual_outcome": "ignore",
+          "outcome_correct": true,
+          "expected_recipients": [],
+          "actual_recipients": [],
+          "routing_correct": true,
+          "expected_outbox_count": 0,
+          "actual_outbox_count": 0,
+          "outbox_count_correct": true,
+          "quiet_grade_eligible": true,
+          "evidence_mode": "primary_source_inspected_current_run",
+          "primary_current_proof": true,
+          "primary_current_proof_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ]
+        },
+        "native_judgment": {
+          "observed": true,
+          "receipt_count": 1,
+          "actual_outcome": "ignore",
+          "expected_outcome": "ignore",
+          "outcome_correct": true,
+          "actual_recipients": [],
+          "expected_recipients": [],
+          "routing_correct": true
+        },
+        "episode_seconds": 61.18335279099847,
+        "submission": {
+          "outcome": "ignore",
+          "recipients": [],
+          "summary": "Retrospective close review for 2025-02 vs 2025-01 (measurement cutoff 2025-03-05T06:00Z; replay read 2026-10-13T17:11Z). Executive Pulse generated Sales channel ledger totals fell 4%, from USD 10,400 to USD 9,984; the four declared channel balances reconcile to both totals. Separate Web conversion and Finance revenue were unchanged. The reviewed rule says to ignore changes below 10%. No action for this close; continue with the next archived monthly close.",
+          "evidence_refs": [
+            "receipt:northstar-outfitters-local/period-99d58d0d74b7ad34",
+            "company_mcp|resource-fd7ced0b3305cf92db4a",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-2ecd7a55803804422a3e"
+          ]
+        }
+      }
+    },
+    {
+      "period_id": "period-595014fd6b188fb1",
+      "baseline": {
+        "completed": true,
+        "score": {
+          "observed": true,
+          "category": "negative_material",
+          "expected_outcome": "investigate",
+          "actual_outcome": "investigate",
+          "outcome_correct": true,
+          "expected_recipients": [
+            "analytics"
+          ],
+          "actual_recipients": [
+            "analytics"
+          ],
+          "routing_correct": true,
+          "expected_outbox_count": 1,
+          "actual_outbox_count": 1,
+          "outbox_count_correct": true,
+          "quiet_grade_eligible": true,
+          "evidence_mode": "primary_source_inspected_current_run",
+          "primary_current_proof": true,
+          "primary_current_proof_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ]
+        },
+        "episode_seconds": 19.74554045900004,
+        "submission": {
+          "outcome": "investigate",
+          "recipients": [
+            "analytics"
+          ],
+          "summary": "For the archived May 2025 close versus April, Executive Pulse generated Sales ledger total and all four declared channels declined 10.0%; the total reconciles to Online, Store, Mobile, and Marketplace. This meets the 10% materiality floor but not the at-least-15% notify condition. Separate Web Funnel conversion and Finance revenue were flat; populations are not joined. Measurement cutoff: 2025-06-05. The gateway replay read on 2026-10-13 does not establish current conditions or warehouse freshness. Next step: analytics review the historical close under the investigate route.",
+          "evidence_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-2ecd7a55803804422a3e"
+          ]
+        }
+      },
+      "treatment": {
+        "completed": true,
+        "score": {
+          "observed": true,
+          "category": "negative_material",
+          "expected_outcome": "investigate",
+          "actual_outcome": "investigate",
+          "outcome_correct": true,
+          "expected_recipients": [
+            "analytics"
+          ],
+          "actual_recipients": [
+            "analytics"
+          ],
+          "routing_correct": true,
+          "expected_outbox_count": 1,
+          "actual_outbox_count": 1,
+          "outbox_count_correct": true,
+          "quiet_grade_eligible": true,
+          "evidence_mode": "primary_source_inspected_current_run",
+          "primary_current_proof": true,
+          "primary_current_proof_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ]
+        },
+        "native_judgment": {
+          "observed": true,
+          "receipt_count": 1,
+          "actual_outcome": "investigate",
+          "expected_outcome": "investigate",
+          "outcome_correct": true,
+          "actual_recipients": [
+            "analytics"
+          ],
+          "expected_recipients": [
+            "analytics"
+          ],
+          "routing_correct": true
+        },
+        "episode_seconds": 31.781112500000745,
+        "submission": {
+          "outcome": "investigate",
+          "recipients": [
+            "analytics"
+          ],
+          "summary": "Retrospective archived close: May 2025 vs April 2025, measurement cutoff 2025-06-05 06:00 UTC. Executive Pulse generated monthly Sales channel ledger balances in USD fell 10.0%; the total reconciles to four declared channels, each down 10.0%. This is exactly the 10% boundary, outside the below-10% ignore band but below the 15% notification threshold, so investigate. Separate Web Funnel conversion and Finance Daily revenue were flat; these populations were not joined. Historical fixture measurements were replay-read on 2026-10-13 17:13 UTC, which does not establish warehouse freshness. Next: Analytics to review the Sales close comparison for measurement or business context; no cause is established.",
+          "evidence_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "receipt:northstar-outfitters-local/period-595014fd6b188fb1"
+          ]
+        }
+      }
+    },
+    {
+      "period_id": "period-ea5811be69f45506",
+      "baseline": {
+        "completed": true,
+        "score": {
+          "observed": true,
+          "category": "corroborated_decline",
+          "expected_outcome": "notify",
+          "actual_outcome": "notify",
+          "outcome_correct": true,
+          "expected_recipients": [
+            "leadership"
+          ],
+          "actual_recipients": [
+            "leadership"
+          ],
+          "routing_correct": true,
+          "expected_outbox_count": 1,
+          "actual_outbox_count": 1,
+          "outbox_count_correct": true,
+          "quiet_grade_eligible": true,
+          "evidence_mode": "primary_source_inspected_current_run",
+          "primary_current_proof": true,
+          "primary_current_proof_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ]
+        },
+        "episode_seconds": 43.70151879199693,
+        "submission": {
+          "outcome": "notify",
+          "recipients": [
+            "leadership"
+          ],
+          "summary": "Retrospective review of Aug 2025 vs Jul 2025 (measurement cutoff 2025-09-05 06:00 UTC): generated Executive Pulse Sales ledger balances fell 15.0% ($7,855.65 to $6,677.30), reconciling to the complete four-channel partition; Online and Store declined 36.429%, while Mobile and Marketplace were flat. Separate Web Funnel conversion declined 1.01% (0.099 to 0.098); separate Finance booked revenue was flat. This meets the policy’s notification condition: at least a 15% total decline, two Sales channels down, and separate Web conversion down. These are archived fictional measurements, not current conditions; the replay gateway read at 2026-10-13 17:14:06 UTC does not assert warehouse freshness. Next step: leadership review the archived close; no cause is established.",
+          "evidence_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-2ecd7a55803804422a3e"
+          ]
+        }
+      },
+      "treatment": {
+        "completed": true,
+        "score": {
+          "observed": true,
+          "category": "corroborated_decline",
+          "expected_outcome": "notify",
+          "actual_outcome": "notify",
+          "outcome_correct": true,
+          "expected_recipients": [
+            "leadership"
+          ],
+          "actual_recipients": [
+            "leadership"
+          ],
+          "routing_correct": true,
+          "expected_outbox_count": 1,
+          "actual_outbox_count": 1,
+          "outbox_count_correct": true,
+          "quiet_grade_eligible": true,
+          "evidence_mode": "primary_source_inspected_current_run",
+          "primary_current_proof": true,
+          "primary_current_proof_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ]
+        },
+        "native_judgment": {
+          "observed": true,
+          "receipt_count": 1,
+          "actual_outcome": "notify",
+          "expected_outcome": "notify",
+          "outcome_correct": true,
+          "actual_recipients": [
+            "leadership"
+          ],
+          "expected_recipients": [
+            "leadership"
+          ],
+          "routing_correct": true
+        },
+        "episode_seconds": 126.70792908400472,
+        "submission": {
+          "outcome": "notify",
+          "recipients": [
+            "leadership"
+          ],
+          "summary": "Archived 2025-08 close vs 2025-07, measured as of 2025-09-05 06:00 UTC. Executive Pulse’s generated monthly Sales ledger in USD reconciles across four channels and fell 15.0%, from $7,855.65 to $6,677.30: Online and Store fell 36.429%, while Mobile and Marketplace were flat. Separate Web Funnel conversion fell 1.01% (0.099 to 0.098); separate Finance Daily revenue stayed at $50,000. The decline meets the 15% threshold, has two declining channels, and has separate Web corroboration, supporting notify to leadership. This establishes neither cause nor whole-company sales. The replay gateway read was 2026-10-13 17:14 UTC and makes no warehouse freshness claim. Next: review the archived Online and Store close entries.",
+          "evidence_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-2ecd7a55803804422a3e",
+            "receipt:northstar-outfitters-local/period-ea5811be69f45506"
+          ]
+        }
+      }
+    },
+    {
+      "period_id": "period-94ab485e76c762c8",
+      "baseline": {
+        "completed": true,
+        "score": {
+          "observed": true,
+          "category": "unavailable",
+          "expected_outcome": "insufficient_data",
+          "actual_outcome": "insufficient_data",
+          "outcome_correct": true,
+          "expected_recipients": [
+            "data-trust"
+          ],
+          "actual_recipients": [
+            "data-trust"
+          ],
+          "routing_correct": true,
+          "expected_outbox_count": 1,
+          "actual_outbox_count": 1,
+          "outbox_count_correct": true,
+          "quiet_grade_eligible": true,
+          "evidence_mode": "none",
+          "primary_current_proof": false,
+          "primary_current_proof_refs": []
+        },
+        "episode_seconds": 15.39451966600609,
+        "submission": {
+          "outcome": "insufficient_data",
+          "recipients": [
+            "data-trust"
+          ],
+          "summary": "Retrospective Nov 2025 close vs Oct 2025; measurements as of 2025-12-05. Executive Pulse, the generated monthly Sales channel ledger metric of record, failed and returned no rows, so its change and total-to-channel reconciliation cannot be assessed. Separate Web conversion and Finance revenue were flat; neither substitutes for Sales evidence. The replay gateway read occurred 2026-10-13 and does not establish warehouse freshness. Next step: restore or verify the archived Executive Pulse snapshot and complete channel partition, then rerun this close.",
+          "evidence_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-2ecd7a55803804422a3e"
+          ]
+        }
+      },
+      "treatment": {
+        "completed": true,
+        "score": {
+          "observed": true,
+          "category": "unavailable",
+          "expected_outcome": "insufficient_data",
+          "actual_outcome": "insufficient_data",
+          "outcome_correct": true,
+          "expected_recipients": [
+            "data-trust"
+          ],
+          "actual_recipients": [
+            "data-trust"
+          ],
+          "routing_correct": true,
+          "expected_outbox_count": 1,
+          "actual_outbox_count": 1,
+          "outbox_count_correct": true,
+          "quiet_grade_eligible": true,
+          "evidence_mode": "native_bundle_current_run",
+          "primary_current_proof": true,
+          "primary_current_proof_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a"
+          ]
+        },
+        "native_judgment": {
+          "observed": true,
+          "receipt_count": 1,
+          "actual_outcome": "insufficient_data",
+          "expected_outcome": "insufficient_data",
+          "outcome_correct": true,
+          "actual_recipients": [
+            "data-trust"
+          ],
+          "expected_recipients": [
+            "data-trust"
+          ],
+          "routing_correct": true
+        },
+        "episode_seconds": 111.24155258300016,
+        "submission": {
+          "outcome": "insufficient_data",
+          "recipients": [
+            "data-trust"
+          ],
+          "summary": "Archived 2025-11 close vs 2025-10 (measurement cutoff 2025-12-05 06:00Z): Executive Pulse’s generated Sales ledger returned no rows, so the Sales change and total-to-channel reconciliation required by policy cannot be assessed. Separate generated Web conversion was unchanged at 0.098; separate Finance booked revenue was unchanged at USD 49,500. These optional populations do not fill the Sales gap. The 2026-10-13 replay gateway read time is not a freshness claim. Next step: Data Trust should verify or restore the archived Executive Pulse capture and complete channel partition, then rerun this close review.",
+          "evidence_refs": [
+            "company_mcp|resource-fd7ced0b3305cf92db4a",
+            "company_mcp|resource-bc5e054e60461fb10b8e",
+            "company_mcp|resource-2ecd7a55803804422a3e"
+          ]
+        }
+      }
+    }
+  ],
+  "interpretation": "Four same-policy synthetic monthly closes; both final agent arms and four live native decisions matched policy. Not a superiority, enterprise, customer, scheduler or delivery claim. Latency includes native argument retries and a duplicate-citation harness retry.",
+  "raw_tool_failures": {
+    "evaluation_argument_validation_errors": 2,
+    "receipt_lookup_errors": 1,
+    "finish_run_alias_collision_errors": 1,
+    "source": "retained trace.jsonl; retained even when the case eventually completed",
+    "note": "summary.treatment_native_attempt_failed counts cases with no successful current native result, not all failed attempts."
+  }
+}

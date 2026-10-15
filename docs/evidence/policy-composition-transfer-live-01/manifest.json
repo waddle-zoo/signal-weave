@@ -1,0 +1,1364 @@
+{
+  "freeze": {
+    "git_revision": "93f23600be4499d26e79a6df2d0bbd1480817e00",
+    "git_status": "",
+    "source_sha256": {
+      "AGENTS.md": "2e3463c6ef2d5e3cb13cbc4ddcf2ac1de9729f3590e19d6272d09492f9f5912b",
+      "README.md": "42c56623941160e9e61471f5a2acf8ba799ab0fae175f1a3b619192c32f015fa",
+      "docs/adversarial-review.md": "efdf4c81453e55a7505db44d8e2abd0dc859b28dcd1363663d75ef6d15d0c1a3",
+      "docs/adversarial-v1-review-2026-09-25.md": "92eb9ecd6b918e44802b90616b2a9f4653ea8f326c7164d1accddedc64ecacaf",
+      "docs/architecture.md": "7fae17062f21a63cad24022066ad54566a16876d071b010a8b91ff55fb7fae0d",
+      "docs/benchmark.md": "4db77a324024771f7c32d4b77c7fb0d339e1eb9bd62596758a17421e630edd16",
+      "docs/bootstrap-and-certification.md": "161dd4e49b521778459cdd5b85ebb51d10c7ad1960d015483b55318a681c4021",
+      "docs/bootstrap-benchmark-protocol.md": "4a249143da0414dff7f0b0a6af292cce61eb227fd26b5de8286314e72c1f7263",
+      "docs/bootstrap-benchmark-v3.md": "20c23b7842d6195142347bffa2593634fb50d03250c1b740d0dd08fd0e753a01",
+      "docs/bootstrap-codex-holdout-v3-01.md": "ecd9bca76e21dd70ead47304b2566df765723b22b91cd68c019f7b6605262ecb",
+      "docs/bootstrap-codex-regression-v3-03.md": "fcb575f25e058eb24dbf3e3d09804d3436fb65fda619f589aded526e12cabe5a",
+      "docs/bootstrap-codex-regression-v3-04.md": "d43ee870c9199e17c492ad170745d9ec4ea802ade4630c15a66508af0788e203",
+      "docs/bootstrap-empirical-repair-v2-results.md": "5879b5ef52dbaed22f4b53927e99cad7b0fc8d80ee07dee9b4e2a49ba1ad4b9b",
+      "docs/bootstrap-empirical-repair-v2.md": "4838885dd8f8983f3905a14b8033830f8c025290729a74b9add0970c611b32cf",
+      "docs/bootstrap-empirical-trial-v1.md": "79b207af9772aeecc2cae4035ac5d7822ddcd85540ddfa343948c7622464cd24",
+      "docs/bootstrap-empirical-v1-results.md": "fd00e23deeb328e7d627f4d27eb1d9ee6303272bdc6e5ba4675812b79cd35ff6",
+      "docs/bootstrap-owner-reviewed-v4-01.md": "c8a6deee47f163ebfb71d815b412af11766aff44340a208e8ee6724319ae16a6",
+      "docs/bootstrap-owner-reviewed-v4.md": "4588a45cd104f1e9fdcfe24f37864e3ea77ff7c204b66f399c118fb6ca580677",
+      "docs/bootstrap-repair-ledger.md": "29cebf9631030b7d4be7818f6ed8f83f15fb4d4e39e17f47db5540744b8f2960",
+      "docs/business-outcome-trial.md": "5a07bd9413a89cd80deb5cde3d68f81638b22443ffb6e8a1fed32a2c40dfd027",
+      "docs/card-guided-owner-holdout-trial-2026-09-30.md": "4b4fad75227d24c2fc60328a2593ef605757b5476ddb4181fa3c064104ac6ac6",
+      "docs/card-guided-retrieval-benchmark.md": "84c1573c00ebe8ac039c4872e73eb28d1e24afb7cf40ddf576ab96457458f71d",
+      "docs/card-guided-retrieval-trial-2026-09-29.md": "da0735d7a8436bb2e2de3f58baccecd3629a9b42ddc9c17b18e27a8bd7462139",
+      "docs/codex-bootstrap-trial-2026-10-01.md": "8d4c129f9b30d0270c52e341c16ea189e4fe5c647338e13530b561f28af9a9a3",
+      "docs/demo.md": "f10f103a68716ae41668eca8a83e47907285cd4eb0008a327c7d8fc84d042184",
+      "docs/documentdb-performance-trial.md": "9dde97e5d6ea3c0c9e5b31b129099017d1862a3d357ad812a45bb826f1862c89",
+      "docs/enterprise-closure.md": "1f7b58c95caee1e8fab0390e2878743474bd80c28eef98f979896ea8c4c86cb6",
+      "docs/enterprise-experiment.md": "a43e347fa963c5bbe1e00c9960d00e2f2e032b1281e0bb62d773fdd6360a20b4",
+      "docs/enterprise-gap-analysis.md": "dfd50e982a3dd2e2e514241c95acd6de77969275f1a275424fa41fbbfaa0fcca",
+      "docs/enterprise-onboarding-expanded-replay.md": "5f0417aa8da5a8234241b3b45fd86dda9e00a32ee482bac3947cbb12d516c5fb",
+      "docs/enterprise-onboarding-exploration.md": "35c4b5aabfd43da0e6208aa71e5d7ea4b4e65ec270a9416758bec80fcd792fe2",
+      "docs/enterprise-onboarding-live-replay.md": "5e8284e5d56f76381dd9c46b5d1c7420e582c8c80384c2a1e0e9fc5cc84275e1",
+      "docs/enterprise-readiness-report-2026-09-25.md": "1fe48667da0f0a12ed41f10702a0ed73b35f90e17aa3bff99c8f8b41b6cd7ba2",
+      "docs/enterprise-v1-acceptance.md": "b0e8ba8080ee34fcf57cb68ccfb7f55098d591d8a73d8673a8ccc01b5a1019b8",
+      "docs/evaluation.md": "ae67ed7e2977f944cdd01a6a4023a83bcd24119591ffeee003ef6de5891de6af",
+      "docs/everything-tracking-llm-benchmark.md": "7d3e05163da35826de671686df3291e8c8f33b0dfc493486a544c02b1b1845c9",
+      "docs/everything-tracking-trial.md": "594fe7c79f74f290eee168fdacf2f7f27e03296460f4b2e5395becd41fe6f1e8",
+      "docs/evidence/bootstrap-codex-holdout-v2-01/reviews.md": "768054ceceafc14e2e1a808944184e828c80fc8b5707d4d4f1aaca89502119d7",
+      "docs/evidence/bootstrap-codex-holdout-v3-01/review-cloud-marketplace-finance.md": "6379b50af26d68b7d36d96b19bdb3f9173050ce2cfdf520bcc5f8d5000daafa4",
+      "docs/evidence/bootstrap-codex-holdout-v3-01/review-retail-workspace-helpdesk.md": "5df46049c05cab6a68b9648444c4e914b2cda2c2b2e7d329eecec954ed4514a7",
+      "docs/evidence/bootstrap-codex-regression-v3-01/reviews.md": "67657d760e1c05055c3c301a7f17751754b5e8c38d142c4dd26cbe9bc03a9238",
+      "docs/evidence/bootstrap-codex-regression-v3-02/reviews.md": "21c844c098c57c5a5aefaa72da9eb585c8c84708abba2e3ae641928b607b2bff",
+      "docs/evidence/bootstrap-codex-regression-v3-03/review.md": "aca5c57297d61cf8f4a3bbeda478d9d56b73b57920d158a70534f5f80aba1fd6",
+      "docs/evidence/bootstrap-codex-regression-v3-04/review.md": "938e91e3fc641fcf74d4ab710db5c3b76353654601937adda2595eb926faafbd",
+      "docs/evidence/bootstrap-owner-reviewed-v4-01/review.md": "0b154fc8e1ed28b2f054950e6f9412e9c55a80e68d89a7ff3388a55f59d8bafa",
+      "docs/evidence-admission-review.md": "d9cad2c270d4597ac256fd5f2f3d75bafb3d3e7e1d89ea7b9af02c560e4db471",
+      "docs/evidence-brief.md": "87cfb73cc39551ba8bdada82fb95db433e607f0418933840c2d89078bdc97cd5",
+      "docs/generalized-readiness-trial.md": "036bf0bcb309e6374459f2579a4e8f902f7e30fa699fea6bb0cb363d3139c280",
+      "docs/hosted-connector-trial.md": "359a162c2e10a6ecb9ae5e16aa6b86ef2fba51d72cc891de1f96a38fddfd4750",
+      "docs/hosted-connectors.md": "a24faf6ebc58abf1b9bd2b7c27b4d190294cf969b7062189e1cc42a0ff2da12b",
+      "docs/large-scale-trial.md": "4097fac781faafa39336fb40bb459212d6b5bd4fb37b487e4cdf5c7cc59de283",
+      "docs/live-jev-onboarding-2026-09-25.md": "ebfe44aab7f45079949af6d7adf7eb69e02bd8c34528a66cd1eda7e81248e084",
+      "docs/live-jev-proof-2026-09-27.md": "d60f784a35e011b5d9ee36d221b02a1183316cb88700a713a0a9ead287e66f5d",
+      "docs/local-install-reference.md": "c9d6592d36610db520878fea7d46c179f0ad0d78dab5fed45a91750135048f4e",
+      "docs/local-install.md": "aefc406057a5a87b3d20989065aab2a30626b16a3714b2a53d0e4aab9c8a6fe4",
+      "docs/local-investigation-proof.md": "f4850a950e1b20b7be0d3f799cbea8a158d9cbfced1b3e6f51eac6503c53b0e8",
+      "docs/local-investigations.md": "31453f74e2db55d0883dbb0c964a514a00f68c2ac734e6839a115167eb256b64",
+      "docs/mass-analytical-trial.md": "51aa677238733f454351401e00e040efd37039df74c9f3c1a27e1e3b64d2b3e5",
+      "docs/mcp-source-bridge.md": "ef1b84a9157a82c8ff9c64b186dad8779c22fc26b805603cd7397ec9f7d670e9",
+      "docs/metric-query-cards.md": "ca5cb0e03324fd0dd4348a5120c3150ddd8995933701458a647e10df3330de55",
+      "docs/multi-step-workflows.md": "08499150511d5f428a3e07f288b6421d7c6a0c55f651300138a5b48be993cf16",
+      "docs/northstar-blog-showcase.md": "0616f03b9f9b1856ade98b2ef7da81900b8e13972c21f5b1016199469cfe14f0",
+      "docs/northstar-corporation-trial.md": "8114d94a711de234e1a029be13b8d63afebcc165c1485f46ea26742e8fd6179e",
+      "docs/northstar-growth-history-trial.md": "af4886561222c2063569535a553cb0bd882d35bd96f263670d6ea81db70ffb49",
+      "docs/northstar-longitudinal-panel-trial.md": "c959cc0b3b58701ae30443a1f9d5a3c83fb70670b5cbd8f678062708f0fc0b0c",
+      "docs/northstar-outfitters-trial.md": "a5c09c610e4eff370f6c69238f537e76a1e435ff9fc38f6fad79fb1f7c3c4eee",
+      "docs/northstar-relationship-expansion-trial.md": "884744a66d3eb2f3117cb5c0259d4d8a65cf306dbf88739519bd5c081f14a7c4",
+      "docs/northstar-retrieval-ablation.md": "3eb669d6fc0a5ff660f4bc466bdcd9152a9c6a763264431e977e835acd08d864",
+      "docs/northstar-scale-trial.md": "8bc274deee401cbf0cd6d88829c62b619c623d371b26ce72eca1864e74ad2d4f",
+      "docs/northstar-shadow-trial.md": "3fa52f19308cdfa5308306c9dac2a97b1e601ac72996f44aeab8c1ca83227c9a",
+      "docs/onboarding-acceptance-regression.md": "16bb2f5b99f57cb37dc490c2751124cf87fcb3b903384835f9205a93b752a2d4",
+      "docs/paired-agent-trial-protocol.md": "4ea316d6c2e6c4156ec7d9d2da0ce0881916bbb15231b349cf48899d805f7968",
+      "docs/paired-agent-trial-results.md": "51d2ce93888b847be131e420f1272b63d1f8d39db1509c082e0ff33150eb6bb2",
+      "docs/policy-composition-investigation.md": "04f034c54dc130fa932823ab8e92fb2c6edb4187b12aa7f7746aa34adc226f9c",
+      "docs/postfix-agent-trial.md": "61576d7bcbcf13271d9f7ae778e3d4fa455d856e86860f55da9f7907ef6e918f",
+      "docs/preset-integration-trial.md": "0613dd062a59ac0afc97d3013766eeff98116477fb186c403efbe6eccbc26be3",
+      "docs/preset-integration.md": "02a797d432fccd6b49a696091e47ff6cded75b16a880883a4675dc034c5f2289",
+      "docs/question-answerability-probe-v1.md": "fc219fd2ab005e7a62274e8482ec35b4a1a3d5b57c42a38b73ed747cfa3f6ff4",
+      "docs/release-readiness-review-2026-09-27.md": "ba755a668d6e31e86e6d3d1db0e5a5814bc8373823a403b135f9fd59be89e057",
+      "docs/retrieval-explanation.md": "1b7637cd5f66eaa183bb6ff108e588c3279a195bef8bc658a8c48ea41eab0af2",
+      "docs/security.md": "1576fc02be1e2d5186c1444aee9ea238f0750bafba360473d70966dcdf11c3ad",
+      "docs/shadow-pilot-contract.md": "3654bd2e847b88eb63be04f7f305a704bb41ab476c5f152e3be6f6c991972e4a",
+      "docs/source-adapters.md": "267dcba6e50cf49efcdf9b512ebf0173359d1dcac7cd80f2a045520bb614db41",
+      "evaluations/__init__.py": "b0ee263224a1a3b6563c5ce69057d0d8c2b47a625400baa5d2324448beddeffe",
+      "evaluations/benchmark.py": "52c186a2944c7fb789e4292587622744389582521f717d52047249571d7a33f9",
+      "evaluations/bootstrap_agent_trial.py": "441c428e5306459fe8f9e25b379eaa56949489f9c97c9ef3d17f1d3594646859",
+      "evaluations/bootstrap_empirical_cases.py": "030161d6bed18a5dbc0b59a5548fcf01f588d6387134eb1c64c9d448dde6c670",
+      "evaluations/bootstrap_empirical_trial.py": "f48715b48707e922985a6193a08ede1d9da4cc593ea5e9c2e35c5babb7e9b3ef",
+      "evaluations/bootstrap_owner_review.py": "1f47b14cdd8e86c43351a08cc3e0a3917b888adcbd3c909fefd2472eb64addf2",
+      "evaluations/bootstrap_review_packet.py": "12866d3bae62e8787ff31753dd4432e3a4faff88472e78f9ff5fc28e4117c7f4",
+      "evaluations/bootstrap_scenarios.py": "73ad09c4042800c06688ea0ea57fe64dd2a7e1f0663f787f5024855606344c5a",
+      "evaluations/bundle_trial.py": "3720d9108fd595a12497b56698287c51cfd79e690e7ce7fdfd1530cb9edd9856",
+      "evaluations/business_outcome_cases.py": "5bb695a30a738193467225104b1132c30f1095e5892d05c5a062f9bc8b4a9752",
+      "evaluations/business_outcome_probe.py": "25cfdb3033f35466fd4af4dc2454f45501b4c0bf2e01aa6f8fd3a9cec48fa5e0",
+      "evaluations/business_outcome_trial.py": "27dc91d504ffef04e805949f20415fdd7f17171a4460be3988278ba06e66509f",
+      "evaluations/card_guided_owner_holdout.py": "1c2a749e9cb1d78a6a4148b04579bab5970422dfd43baac01afb3bdbab0c1e75",
+      "evaluations/card_guided_owner_holdout_adversarial_review.py": "1a8d49b330431b961b1156d11f5d847d2bb8495e852b83f9a53819e9a37acdf7",
+      "evaluations/card_guided_retrieval_adversarial_review.py": "d02aa0da3cb22331fd2d53c0e61bc140b7682795ba89f4fab722c3b1e6606ec7",
+      "evaluations/card_guided_retrieval_benchmark.py": "1c9bb1fe7b47410f1a76163387f8f3e54f8cd43f033de018280855316efd4ad5",
+      "evaluations/cases.py": "67b34bc55ff67a0b283964b3b3c3c49ac3f1605f19b5be95a9d2ad84113b3944",
+      "evaluations/cli.py": "28baa324c23bf7a06986ac82d765e327ae50b1e5663d14851f61f45612c92e9e",
+      "evaluations/codex_trial_transport.py": "002cb2e4d861959fb61395f30db22cbc2515875092e77057c8e6f217ddf57e6b",
+      "evaluations/daily_monitor_trial.py": "99d4e4bd7ceb53637c4443c91b34b5cf377d1c38e7d11519bc5a53b6593b9a47",
+      "evaluations/discovery_trial.py": "6927ecc2ec0d090fb2727ad03614c7236f8941f89663c08cd43517a76f30eb11",
+      "evaluations/documentdb_performance_trial.py": "dfff8a12cce90c6c2e7b3959b607972c6e7157342e947deeece703f87c3ef139",
+      "evaluations/embedding_baseline.py": "2902951b6a5de1cd4c7a77ab17e4708951d16a7a9f4d0a6f2b9eee18d4c8bb60",
+      "evaluations/enterprise_mcp_cli.py": "dfd9e6647824712eb0cbdef191205c74ed8b051e469f555e2f40990583ea89c1",
+      "evaluations/enterprise_runner.py": "9a7b16bab19e7fa7537639891cd0969c37e935503f02510f3724e916e8239fe7",
+      "evaluations/enterprise_trial.py": "6177b6d9bb21ca27a1900b05003e96edf9d75df764954e4a43b2f9f0e9123e4a",
+      "evaluations/everything_tracking_adversarial_review.py": "133aa702bd6761874e2add96469e5d1322c28d61748ef45455524126d5ff9df3",
+      "evaluations/everything_tracking_card_clarity_trial.py": "2f40976fb6c46e0f67deb52ccbb10f697d2a66bcba68fb085459f46158d6c0f8",
+      "evaluations/everything_tracking_llm_adversarial_review.py": "979275d364fa4f2d632c2f86948f3f71f9577e317f500a91f772810d399a4690",
+      "evaluations/everything_tracking_llm_benchmark.py": "a37e8bbeb4660d46568c8414887713c912f4f87038f7a8d3a807667e3591c60a",
+      "evaluations/everything_tracking_trial.py": "8de47c94798b6ed00823fdd63441f239762006d208981cf014c8057c3e5135a8",
+      "evaluations/evidence_plan_matrix.py": "b2e9b74b7d74ca56cadbfb7fa64de40319a3cba0c4a3c96f546a3b0913f0832f",
+      "evaluations/first_report_cases.py": "244308cf2c318720a2896d0b09f19c56d11016d2390f2b79de4e89c07202ba3d",
+      "evaluations/first_report_probes.py": "6bd776c04f2122a398c019a561e9bad5a8eca27d45625564670826232da67f8b",
+      "evaluations/first_report_trial.py": "e99059bc0e4897a548ae799b8fb2d7db7832e4de1fea6a2a231245f12df88252",
+      "evaluations/generalized_readiness_adversarial_review.py": "e20ebc284fe428e6c8d4c8831819fd6a1763caf29faa43bdf77b86f8213478c0",
+      "evaluations/generalized_readiness_trial.py": "5e97357edb8c5c0a0d75dbf694b30e766353dbbbee640d431adfb734dacd2771",
+      "evaluations/judgment_input_ablation.py": "2c86fe16b6a1b65e819b6f20702669c3fbbd60430b9f686dda2cad239de44bcc",
+      "evaluations/large_scale_trial.py": "0a971065dd929651fd66d9ccec3924f0b9b081ea849c5bb9bd9d02b0ba812bc7",
+      "evaluations/local_investigation_trial.py": "616b6ae113d4da8bbf19eb985a3f78a9ceea3e210ebabcae3c77aa1734170daa",
+      "evaluations/local_superset_runtime_shadow_review.py": "17347df261d68d27373b60ea7c855a79654907b697b964dc9f526d8ec99f12d8",
+      "evaluations/local_superset_runtime_shadow_trial.py": "d74bcf4a5b0b4a816a13627c5609a4027e26d04ac9ed1abbf4cad45f99b9253c",
+      "evaluations/mass_analytical_trial.py": "5c931b6e5090b088759a573d585c99d3529576ed662fbea6d653e6fd7ae0f103",
+      "evaluations/northstar_blog_showcase.py": "59bca4e597775be49f941115a41f34e34dd00e78759f9e256d18135332a7d874",
+      "evaluations/northstar_corporation_trial.py": "79a85ebe7372325a1af87b22801cfc2d95d3c29ef8acc462f0db5caa1c2786bd",
+      "evaluations/northstar_growth_history_adversarial_review.py": "6a14cd304655589c919518f22dad618d74da8263439c5e87e67fce78b290be52",
+      "evaluations/northstar_growth_history_trial.py": "3bf7efccc3b2d645446adb18d28cbaaf49d469d0cfb927540b6fc741eff73a4b",
+      "evaluations/northstar_longitudinal_panel_adversarial_review.py": "4895120eaf1e01328aa818e02ee62e76110a967092a4d748f57ee0b07dc4aa62",
+      "evaluations/northstar_longitudinal_panel_trial.py": "7f976ee989f1fa8ef579f3c1be4f2adc6a827221ed0bcd35e97a8329eb5dd7b4",
+      "evaluations/northstar_multistep_adversarial_review.py": "c766cca60433a2696cb2da26c88402f7fdd8df156aef30bf417c92badbddfa1b",
+      "evaluations/northstar_multistep_trial.py": "33c2c9042771d32f5387e21f83796bdb6fea91dc74742e2cba81cc023dccf4ce",
+      "evaluations/northstar_relationship_expansion_trial.py": "fc5b756be3802cab775a426ff384958b585afaab686f5f8d3a660947b8c3f51e",
+      "evaluations/northstar_retrieval_ablation.py": "28629b4e5d8b7908869b28ab05f6a256a463fd3b1515098f1ffb7498ec3386f3",
+      "evaluations/northstar_scale_adversarial_review.py": "6b010b8cd30e073f12cca30226c629aaaebd31257254f63ef198e287e9762c1b",
+      "evaluations/northstar_scale_trial.py": "a28ec927bcbebe81bcf7fccfc6841f6ccc471380b0c70976fe62a883ff499c15",
+      "evaluations/northstar_shadow_trial.py": "d681c4ba76bc8fc23596a05524245213b15542dca2c4391f109b95833b5d6195",
+      "evaluations/onboarding_acceptance_trial.py": "84006908449a87b6151818900f337e3e0185fcaae35d3139fa5d097be7a1f1a0",
+      "evaluations/onboarding_adversarial_review.py": "776b0a99dfe9d09b416e449e7aa9609d3a877ec8efefd5f271df92100b45aec3",
+      "evaluations/onboarding_contract_trial.py": "83c2d60e8ba850ac8f7938300351660f41f7efe0426b01f99beca37b480d12bd",
+      "evaluations/onboarding_readiness.py": "842a4da8514a0376938d6828976b9c0f76d47231eca5fc1ebcffb1ca0957e266",
+      "evaluations/owner_policy_review_trial.py": "42df7f4924d0103027499fa169ad1ff23591a25032ddf67e68258305e06e9418",
+      "evaluations/paired_agent_trial.py": "b381af869964f00dc0e7cae324b8fc2368ef3ef57b41f7b82ee0fb26501daf49",
+      "evaluations/policy_composition_cases.py": "60bb1eee28a90053d24896d70bfa776558318ebf25b725091376b9d1b0b609dd",
+      "evaluations/policy_composition_transfer.py": "91952fc8112f66b8b7f5a540a59ae16c821f8e0261b280cfe997f2c4e83ab0a6",
+      "evaluations/policy_composition_trial.py": "8e8256415f340fa5de171c5cdb0b889b5ba7f46ee9b96d1f07be8df3fc25c2b7",
+      "evaluations/postfix_agent_trial.py": "8f5a405bf5126572b2ee7cb88d8d1c3715d8bfba1cec4b45ba5cc90caffc097b",
+      "evaluations/preset_boundary_review.py": "149ae6a274572eaec0a8dd465c4a6fcf07dbe397e0eb06d536e1c3e76ed4405f",
+      "evaluations/preset_boundary_trial.py": "17c009be4f7d48dc85123e73933c85812fa2f4cd4ec5bcb0b51ac2fd9a515f73",
+      "evaluations/preset_enterprise_proof.py": "7fc9f7a87395d32fad8d2183bb4929c803946a420cd97c29d7975ce0f4d035cb",
+      "evaluations/preset_enterprise_proof_review.py": "cda7fc903cdbd9e39f31eda327acdae3bf7b6438e21db2e579b9263b6a32337e",
+      "evaluations/preset_generalization_review.py": "6df94b8b2b6eac3c4efc7818632c06b5f6c8f1b3163273ee80210d104a6f77d4",
+      "evaluations/preset_generalization_trial.py": "3262e3a377771a98cc12c889790a05d4d3ae3972d82af5934d8a586655aa633d",
+      "evaluations/preset_hosted_review.py": "ef72cf21615fdb919823221d7313002173c606fe5c70c438f0e904bdc22bb90f",
+      "evaluations/preset_hosted_trial.py": "a71c1da24601f8ff553bf7a5a6c60a458d68ea265bd3420635da559372afcd59",
+      "evaluations/preset_jev_contract_review.py": "a58744bae4efdd0f176c890c38f258e61ea960886ec6718fcb54b97214d2535f",
+      "evaluations/preset_jev_contract_trial.py": "b47b67c031149385c4756ccdba227ae81afbdf60684606c79499608ac2ff7c09",
+      "evaluations/preset_live_onboarding_review.py": "af4c0caf392e90acaadc0a1a00723c0b7ea762a17d2fe7e17ccd0d803c88b03c",
+      "evaluations/preset_live_onboarding_trial.py": "4fdcd93036aa31255196e42889df5d0aa803f36bfb61371aa4a5e9e881d08eed",
+      "evaluations/preset_live_semantic_review.py": "8f33b8a084fe4c415033d2f07be69a87ef6f57b28f43bd2a06702e9efc8cd38b",
+      "evaluations/preset_runtime_shadow_review.py": "686552ae40b000984420e4c6985aeec9bbc0bf347a7432f7559776aac7b31997",
+      "evaluations/preset_runtime_shadow_trial.py": "209ace4d97add33c8c0fed7346f1faa3871e5923d9269a1b8901002aba9bdab0",
+      "evaluations/proof.py": "23a9c71ae57239a53b295e3eefe113c55e0da69a1c9946ae3a50cd148c74b51d",
+      "evaluations/query_trial.py": "924667d7d2b9a4e0501eb22c4c77f95caa260a03b09a460ba1824fa2b75d8d72",
+      "evaluations/question_answerability_trial.py": "a2f47448d57a22d5b56a04ece95a761a4505c2b32786f76bd9c8d09a68a8a63e",
+      "evaluations/retrieval_explanation_trial.py": "52383e051353e8757e2aba81da1c9aa75174eae7b4b34dd0f01543308faf2d70",
+      "evaluations/watch_evidence_trial.py": "b0ee5a23156f41e9b60d2ab10094be6c740659077df393f7e4ac285d58a9d987",
+      "examples/investigation_agent/__init__.py": "8003e0f8592d9a39b17a1e82a19f15aba5676e94674d9184b69f3d270c3c6eb8",
+      "examples/investigation_agent/agent.py": "dc93ef6e46ccfb203e410ae394f9049f66d5a233cc71ab3a4a70c9030e46df9d",
+      "examples/investigation_agent/briefing.py": "21d195192c3de18d5fe04a4a6d5a76a165e196155e15dbc4055a1ddf0b4a1f28",
+      "examples/investigation_agent/cli.py": "6166d7a2f5c64b8e1197406d00461c3d75ebb2d1ff6d0265ca1f6f81a5d7107b",
+      "examples/investigation_agent/context_tools.py": "d1763daae16066d5d894999584370a4f46e09621d6df088e7d8443301573874c",
+      "examples/investigation_agent/delivery.py": "306a028ed8b44c27f3ad1feac86962c29b74a22715398f464a9e5b050852d809",
+      "examples/investigation_agent/mcp_gateway.py": "f21600c2a624a972d48f9b8c48e5bc92abf38be3d871074d396e13d343e6f655",
+      "examples/investigation_agent/onboarding.py": "047dc35320f6adacec26de6c7dec954dd2d528197010bb9e96cf20b6cbc76f22",
+      "examples/local-investigation/company_mcp.py": "0e23a36a8b15c65078ea24c7c363a26e889a93d77d8a9f226b4ffc29927ca3cd",
+      "pyproject.toml": "2cd825872313765b38b1bb96e3877e48790019e3682c6e10afeeb593e91aac3b",
+      "src/signalweave/__init__.py": "35d2415595adf1974bc11951a4a42e0cfbc6084912bfb7bd18f3e43316e434cc",
+      "src/signalweave/analysis.py": "88f5af5a664ddfa6ef09aa201954e9a4b003a4202e8dc23c1547af024f60bb11",
+      "src/signalweave/auth.py": "1d304affc1da115eddbc9571fa7e755255c342deaad5fbb9b8db74f7dfb8fb52",
+      "src/signalweave/bootstrap.py": "d9dbeea75a49c7b34d68fba620de8a9db7b765dfe0c4663ec34f8bde713971de",
+      "src/signalweave/cli.py": "750704a59f4a4cfa88755acebdad9e11eeefee8bfb05be212824772695003f49",
+      "src/signalweave/compiler.py": "7cee3d781781706af296a51afe825b0658b3a0ebc1d5196a2f18bba8b7be1b31",
+      "src/signalweave/config.py": "caec4f335c1d9cf3c447fe592118e4d9baf5fa4a8fd369a284e1a49b5d4ba3ea",
+      "src/signalweave/context.py": "8aec605b2d4deb952668480b9fc2390c4be7addbc899220fd004cf278ed7cacf",
+      "src/signalweave/diagnostics.py": "fb0f713fab70dd68a3beb13fc404338a7bd2d52a9d943ba4b04fae3a2835c5d7",
+      "src/signalweave/engine.py": "ac1b70d9224c7b659d705a62d6de1c5c301223ebf2bdac871324bcc067a4994b",
+      "src/signalweave/evaluation.py": "d11c15f34d6cfe67c7f3736e3bb9b19383bd9d27f82d23c9ac7e1d140b68c715",
+      "src/signalweave/hex_adapter.py": "81d745e84a40ef830e93ec54158ceceab2a077e98b61072e1108fd0ff0ca3e39",
+      "src/signalweave/hosted.py": "9f59908272fe8f148b364d4a317f9de1d8f1ab78407cd3e0c7524d7d8b45be60",
+      "src/signalweave/local_run.py": "63f2809f22661e5e50ccf0e6ec62756000f11fbd69ecc4eb546ace31049e11fa",
+      "src/signalweave/local_setup.py": "b8853677718b720695676486292ad283683eb68987c73bd616437fd9b92807ee",
+      "src/signalweave/looker_adapter.py": "f5ef5c3c997ee3659eb2b3d61176821a1bba8084bf4efb38ea8525615c8f3cfa",
+      "src/signalweave/mcp_server.py": "e297f78f8ea5bf985f1d569a49f52092830367b71b095c606fc3dc51875eaafb",
+      "src/signalweave/mcp_source.py": "f1d62349097317f3188cbe8d7574196daf7c56298bddf6a0cc22e597dd11321d",
+      "src/signalweave/models.py": "56b0e6928b6208bba1d41036db8f0359b867b0ed38b5e586fbccb191317135f2",
+      "src/signalweave/onboarding.py": "27e832cb4eb01cc6fae23c4ea9eb6d0e0885e9ac65ff57eab92625bab18f69a4",
+      "src/signalweave/preset_adapter.py": "c6c2730c8eedd2d3fbe539bd0c6272a87e1019dab8a824e3f58d20db6523b417",
+      "src/signalweave/preset_env.py": "590b7c2394daea05a1bdef8e676a6110878f8032cd322d2992bdaf516195d6e6",
+      "src/signalweave/query_planner.py": "63364552b14704ea6615297804b988d845cb1ca519fbdc53a93661101011f300",
+      "src/signalweave/reporting.py": "eb7dae589f40a67c648abe11826ff390a7960aef9636ab405cfe974f5803350c",
+      "src/signalweave/retrieval.py": "fda8c2f71eb4d6ed17d056a26a4ae87e5e958af5247e74ded0b2cf93af939317",
+      "src/signalweave/retrieval_quality.py": "5c0e918888cd68fbe91e21756565a802dd1edeedec80cd7db07f16148cbe6658",
+      "src/signalweave/runtime.py": "412679df1c973c3d579edac2c71de0a7d24a024f699f83f0b97f86c4fdcbc1c9",
+      "src/signalweave/sources.py": "ed14952af409580a830e58399f522dbcae7fbe55fd0061f7ef591ada159c1359",
+      "src/signalweave/store.py": "dc65753ffb1fe3e80f0b08fbcf5ee305fc34f8167ab4c5043ec01101c68da4b8",
+      "src/signalweave/superset_adapter.py": "a220195cda02ea0f7d084b5838949fa44d0588c29c563b859d11bf8d0388dfa8",
+      "src/signalweave/superset_client.py": "bf6587709752c38a096f0a92e597b5b0caf32780febdc38b0ff1915d78c30421",
+      "src/signalweave/superset_models.py": "b79b4e2e603950e96a466b791058b590b44b16e4c89149af78c760cd92aaf85c",
+      "src/signalweave/trino_adapter.py": "0f4d671a41d5070b3f693f787815b547470169d60ca0228cef12c9c61377ddef",
+      "src/signalweave/typesafe_adapter.py": "5831929fd15b48b1b1d93cb122e66e29f856e90a073be7cfd0e501b30b3a46e2",
+      "tests/test_auth.py": "07331673768a78602c416ed367970879b16f437b16d856e478f8ee43913d1c7a",
+      "tests/test_authoring_guidance.py": "56f45919ac061a7e283ad81c69047e79460d42aeb160ca7f3fad34849db3a76f",
+      "tests/test_baseline.py": "cc76b44ffc6b3a2a01012f103e95e66a4c9d99c09de11ef40755cfae4eb90246",
+      "tests/test_bootstrap.py": "1fd7c8574034118bbcb6f98c7b80604eabb380fe785e403fbafa1cc2eed60380",
+      "tests/test_bootstrap_agent_trial.py": "ef80d6df0b8c20877ebd62a464c3199c443749147278237f18fb103c5734904e",
+      "tests/test_bootstrap_empirical_cases.py": "4daf32b223d149a13d8e949a990bf9d5c487764f81e68a14c58598bf2333de89",
+      "tests/test_bootstrap_empirical_repair.py": "fcaad89abe56379de10bfc444df39c633a361fc857932aef37a99e8e48baa6f5",
+      "tests/test_bootstrap_empirical_trial.py": "63be9d546d82890287d41fd109725a1e447bd1ee89d0d2e645d16c8939d31e47",
+      "tests/test_bootstrap_owner_gate.py": "fdac2e78ba5e163a78247de09d036439ac626fbe5a4b8f05b4a5604b547975a9",
+      "tests/test_bootstrap_owner_review.py": "ab505796eae126ad4d0bd0e74b6f73d2a5105848303f0448491b4088b285cda3",
+      "tests/test_bootstrap_review_packet.py": "52b2525fb5cacd739889c7481707b90d081ef9fc8fe80e7add2cbec6860d494c",
+      "tests/test_bootstrap_scenarios.py": "6ff045b721d7e940caa0db6db004029ca3168a7d6cbabac0ae0e7f4d3a19c30c",
+      "tests/test_business_outcome_cases.py": "8f0b370a5ef2300b0f749f367ebc4e800308ed6efaf02c5397adc23438dc5117",
+      "tests/test_business_outcome_trial.py": "40366433c6f294431ad31594245040c51ccfe4c0e5875bcdb96c1a5e64457802",
+      "tests/test_card_guided_owner_holdout.py": "c94f10fd0effc5fad8c095c3f9e554f49f85a24e5cf595aa52737ff9f45e0ca9",
+      "tests/test_card_guided_retrieval_adversarial_review.py": "8397f00db68e45047b6d83e536c0568219f6d9593524b6d561b26ff017453e03",
+      "tests/test_card_guided_retrieval_benchmark.py": "644500c51ff4f89b3fa00639700dcfea63966296be1c9604d2e22d5e15b87578",
+      "tests/test_cli.py": "8de58c65adb74f1ee5c05af8190b2632726a50aeb22c09b30a5d2e4ca80f295e",
+      "tests/test_codex_trial_transport.py": "361c60a339b9cba23483b1e58f66039cfef300ff565f507a2d72467d8639a968",
+      "tests/test_deployment_secrets.py": "468ef5a2d9f5b0cb628b13d1ff1ce12d86d89ac59cb020d36f1995f0b812d7b4",
+      "tests/test_diagnostics.py": "6b6af85466372cfe7a387e7eb31b3612a98614235e0474620347cef3c6f85aed",
+      "tests/test_documentdb_performance_trial.py": "1f1d6123cf184702ae265181307bf0a7fda8eb3e1630757539747b4f85c2f03f",
+      "tests/test_engine.py": "47e5b4577472680c629985388490601aa616ad96f07e16c19e97ba00a1c798a5",
+      "tests/test_enterprise_trial.py": "5ddd2771c1fa4bb78b1e1b478b094f9d6667212866fdf1d48b1f8df362ed5fb7",
+      "tests/test_evaluation.py": "9049d11c28b2306aab98230b5cc1727298bada7d6ec27e507eaa3555b6c7904b",
+      "tests/test_evaluation_acceptance.py": "e49eec09ffcfb8a19ee73b95f574feb56957bbfb28d0a687ccc01f7e31bfc0ef",
+      "tests/test_evaluation_delivery_policy.py": "4010faa40f926085e1345ee447e9583cc93b3456e46ac23b1425060ad941378e",
+      "tests/test_evaluation_policy_version.py": "f1f99188c215f6b123f5416d9c5858e73e868f40ec5f09044b8e0685dd6d9221",
+      "tests/test_everything_tracking_card_clarity_trial.py": "892f9d9d366ae91aecbbf7c4687aa7f54851b4afafe1ce1df656bbe9f34391a5",
+      "tests/test_everything_tracking_llm_benchmark.py": "e8eca2a473d21214edee1df1266753aab6e4a69013f65444e350f15bb7a5e998",
+      "tests/test_everything_tracking_trial.py": "00d7b4097fd6e8032f1dbd6ad15f542091d5086543798f068332a52677ddff3b",
+      "tests/test_evidence_admission_policy.py": "d4b736100c06ff82f73703d15f0ce542346f3810f9c4efba0e9cb1c86a0945ec",
+      "tests/test_evidence_plan_matrix.py": "c830047f91e6d708e8ff9e9c25dcef567bca02aa9baaebae2156df8f3faa1de8",
+      "tests/test_first_report_cases.py": "f45e9bf4986daf94a88b6e4c89d27c40cc66b74b3892ed17a3680cadc1bc530e",
+      "tests/test_first_report_mcp.py": "a981d682d93aab4d24e025bdeaf7f33a7fa3125fce940c27a9271c2154e782b3",
+      "tests/test_first_report_probes.py": "3acca7535f8fc046bbc65059c3268ff13f37d290975f14c943c30cd7102cf227",
+      "tests/test_first_report_trial.py": "97df637552ccc8fa7df69b6165c1c8cb62392022600d2b62d0ae65c3995195cd",
+      "tests/test_heterogeneous_artifacts.py": "01ee9466bf4b8d55c24caef84cbcc659466b0b9b448c77df9165984d672b2a9b",
+      "tests/test_hosted_connections.py": "6fc6a966d3a1cc9874c0d6554919bd2285ad488e20d2ef2487b1031dbfbb6f2f",
+      "tests/test_install.py": "ff3eaa272b68c5a6d16e656c112b4d8e7be9683984b739cc4847ca47170fdcbd",
+      "tests/test_investigation_agent.py": "03ecb79c0ba9e0a680e9c81757e8e847cee425599262f6c72baa94a20a83ad7d",
+      "tests/test_investigation_agent_briefing.py": "cb7b9255054ba1ce5c61d50bdf4872a4f30de11bf31c2d874340987286ab48fa",
+      "tests/test_investigation_agent_onboarding.py": "ba86cc0912a4980dab174fd5b8baf8b81782c040df088e14cf97e331cd73933f",
+      "tests/test_judgment_input_ablation.py": "1da08bef5c7881885f4b364d22c5e528ebfd67cc384e5a5342a01c62b5c8a80d",
+      "tests/test_live_card_check.py": "25fe0870f5dc71e935d6e5b57c18938edd5b1bbb000107e060d496f54eb7b08f",
+      "tests/test_local_connect.py": "7ab2278ecd85bd1313c560cd51c6e621e4b1aaccc82ce0390e37d31c4434b366",
+      "tests/test_local_investigation.py": "ce0e6ad837a652e7461d682ddd9ff3abfb4d0ef302b632947c688a82c57f1d36",
+      "tests/test_local_setup.py": "6439422364f9b3499dc888db1f0e463fb575562affa41471bdf57b63bb86da6e",
+      "tests/test_local_superset_runtime_shadow_review.py": "c56ad6a8220d5e40873272aa79943b85d1fd023ab70a35adb437248d7c69b008",
+      "tests/test_mass_analytical_trial.py": "1cdfabaad2e216c983d7612f488889cb6be87719e1509c2709c2651f2f208510",
+      "tests/test_mcp.py": "6a81a09c4b330ceb054ace15d0621cd2f981124bd333bb2443f67bd86e56b841",
+      "tests/test_mcp_acceptance.py": "63b1197a115a7cd37e26d56db8516b70ebbea5d4bc237dcbbbf7e7dc29d39e06",
+      "tests/test_mcp_evaluation_payload.py": "3a7a17332332c5bdd2bb23bb54dfa4b9b4eb5a01b141f0ec09591f95f45bb129",
+      "tests/test_mcp_source.py": "6fc638976c8752465cd9f3b7f661c08f4e06b5b9d56631b09925abdbf928dbad",
+      "tests/test_metric_query_mcp.py": "70fd337099412782af7800b2f86759109ebe43e8d419eb8f68ee770c43ca6852",
+      "tests/test_northstar_corporation_trial.py": "96cb326a962cfb7cd0b5b810e1bb501458d9f1bd50678de8e87878b11bd0db77",
+      "tests/test_northstar_growth_history_trial.py": "51bafe0b844ed209c12e53f9e15c64f57b743b093e153cbdbd818067d4b69515",
+      "tests/test_northstar_retrieval_ablation.py": "2b428eddc0120819c22f2401fcceafb8265196cdf6ec5c594126bf4bfec32eb3",
+      "tests/test_northstar_scale_trial.py": "6b4e918218aaa21271f6c3a0a0a1358eb623dfbe99e67ed857e524f9b0f83ed1",
+      "tests/test_oidc_http_integration.py": "7457a183b63329f987ba5a1121945297e65674916d4cb3b1fab5498cb37cb28a",
+      "tests/test_onboarding.py": "f44f8fa06d2a6db0fe62b64a7e2e41a45175021087c0fa32595ebdc5577981ab",
+      "tests/test_onboarding_acceptance_trial.py": "6ad24a687a606913a3cf60dc0671dab6d3f6fedc6ceb4202b27ebd826e7faee5",
+      "tests/test_onboarding_comparisons.py": "65b384bc5183e31e86a2f324be97e30853279e5caeee9d2f845ec8c7b14c263e",
+      "tests/test_onboarding_contract_trial.py": "58088890fbe64719def1f07a25ffd0e4ba420d9918141ff9585cbc5e15c1ec46",
+      "tests/test_onboarding_windows.py": "e9a706de05880ec970f5c246b99ec6a1340eaca5ac991bcba8a97c3920e886e4",
+      "tests/test_owner_policy_review_trial.py": "ddff4d6db00210397278b9d430e5b2c8fce2cb3ffeeb09c6491185749f62ff14",
+      "tests/test_paired_agent_trial.py": "a47858f8b0192776c064af2e72c8ff3239dbf583469dfbe7a84525f746a2bb01",
+      "tests/test_policy_composition_cases.py": "dceb674bb62635ca299b178f5fedbed6864d5d02eca54f6c66754310b3cf344e",
+      "tests/test_policy_composition_reviewed_plans.py": "be5a1e6571b77bd01900bd89ec76214bb3ffa932209704201617918f186df32d",
+      "tests/test_policy_composition_transfer.py": "1aff9ddedf8f4d14df286f7a7c395bf514d9f87a08248ff6a59ef7c3251d3d82",
+      "tests/test_policy_composition_trial.py": "fc065ad88781a8ae9ab10b5c4763ca84edeb8fd1304d9140f82033eb204166fa",
+      "tests/test_preset_bootstrap_check.py": "ac97e3b28a87cf0c45e5a65a152ef09d0dd28d49b6a4599db23bfc2e346e05b7",
+      "tests/test_preset_boundary_trial.py": "723b8b3564a8465e1f6b2e27a9ec561bd266ec9345073a4893411306f4e66a2d",
+      "tests/test_preset_compose_check.py": "9817b1685466f7f62a9fdb4534809fd6ebc168fa14de6c6523986cb24d6c4340",
+      "tests/test_preset_config_check.py": "93a2d0439b24ab7a2c4e1926c56d21e1d6a627b4b32a6caa6b72e23512a0e6ce",
+      "tests/test_preset_enterprise_proof.py": "071226be2079b0e06abea25495481964673b756e80b52fc22abc3387ce3d75d4",
+      "tests/test_preset_enterprise_proof_review.py": "29f7604200f0404c87259a6f2ab186719cc73d68fbdf954ad0bf3eef6baa997c",
+      "tests/test_preset_generalization_review.py": "bc49fb69cc976bf63ff7ffca2553c27ec7c9d26e0ce3abc18293bc4f3d45c856",
+      "tests/test_preset_generalization_trial.py": "f54321c98a91d007dfd99c6e4eb5edf54796551b42213e777dcc9045c901bf59",
+      "tests/test_preset_hosted_review.py": "b03f6d7c0a6e9997baf714b751145ea7babbd920621b415f7d5a1fa8101ff82e",
+      "tests/test_preset_hosted_trial.py": "6915f037318708a25648937402b220f908b820219d2bae70ec2c80d0adadecc3",
+      "tests/test_preset_jev_contract_review.py": "ab68dec8ef108364d1746438ecdf59b0361f70f48ea53c4b2966c6e796705dc0",
+      "tests/test_preset_jev_contract_trial.py": "5ac8f963ad0cdccb65f280f911c453fdd17da17d844c8ffff82a6ac35ebad716",
+      "tests/test_preset_live_onboarding_review.py": "f9762a584c0531d7fe9c53ec51b93ce90e35ddc1e6273a337af8a7b22e7bc496",
+      "tests/test_preset_live_onboarding_trial.py": "e09b6a45943ac9ee90d5c7612567a56c592e809528782dc5c9efc39e30b01275",
+      "tests/test_preset_live_semantic_review.py": "c1d6adb4a9b1d25554e34d17388f1e8497a2ece553bceb0aed6852c706d5c792",
+      "tests/test_preset_runtime_shadow_review.py": "30e284a23bacc23d2bec200a0dd33dfeb694c334459630fa77f94bb1a0a4e1ef",
+      "tests/test_preset_runtime_shadow_trial.py": "683a1fb2e14fd8e2f4c264f401dbb84fb6af1fc257aa0625985ff21139246afb",
+      "tests/test_proof.py": "beb42d4d47676f7a84e58c4cca23cf5988be88832285f4ea2c3db143bce96db0",
+      "tests/test_query_planner.py": "2c599a668136e082eec6775a62dbf9291804f0d808a5c968214cf84dc8719ffe",
+      "tests/test_question_answerability_trial.py": "5cf79786ed7ade5ee596ce59b5181f20158fdaf11c699ffaa15c324d42475afb",
+      "tests/test_recorded_bootstrap_acceptance.py": "6beec43334f44bedff3368338b5ddf111150909e5a9e8f4207ccc844d4189c90",
+      "tests/test_recorded_bootstrap_empirical_repair.py": "fbd7d91acc3a3276add1c0aa903d841be7e14c316302ebc8fe073c7cb86797ce",
+      "tests/test_recorded_business_outcomes.py": "5371b8a7aac7f52db832fe4cacfdba3335fe155cbd8911b39ea8cbecf37dcef5",
+      "tests/test_recorded_first_report.py": "cb1534b67acb793bc7ac69f887b3562a6de613867de7cc164ac1397fde410fff",
+      "tests/test_recorded_question_handoff.py": "184d0f401ae6e42d4c861644c54fed603a52700558911ebde551819b9ada20ab",
+      "tests/test_related_expansion.py": "e555071e9d1143eaff7ecb0d833691d49a28a694abf550a96565d1b0209e1dc0",
+      "tests/test_reporting.py": "94c0b13972358b3c4db9ca38c8c947fa034da2d491acc46488cf5ba8a2a7ea82",
+      "tests/test_retrieval_investigation.py": "4db5108aa603ca8427fa530ae2ec8622cefa1f73eddcbc739eddf856de01e1fd",
+      "tests/test_retrieval_quality.py": "8d4bea1f7d6064b74a7b829400326d085ea710f364f62ef22354fe7a15e63e77",
+      "tests/test_runtime.py": "7e70300d56948a29126861c46f6611bc2ee689008f4744927f260137bc55cf8c",
+      "tests/test_semantic_insufficient_data.py": "bd021d3facd3d30ac4e190e9ce63215334d189a8d1236342a4af7acd77b31164",
+      "tests/test_source_selection_approval.py": "f1a54dab43da67f0f4b3a5a65b22db0f9b1746ca87d10573cd88f2cd6c6563e5",
+      "tests/test_sources.py": "1808d7aabc864a916df82fee1980ae6213f2dcbde5d85147156f5928b0d9c99b",
+      "tests/test_store.py": "0877ed23a3a43cf7b4976e37aaf7c68c5a5312f1fe90491463e52aa810f6b1c5",
+      "tests/test_superset_client.py": "4c49c5d3955897105a6a6d81c90344d01c5d35261ae340cf525c4d551f3fdf87",
+      "tests/test_superset_integration.py": "a32f48d850da23c6d6644a0ce263cad4d7e1f42930a29806be534ea520b7417c",
+      "tests/test_typesafe_adapter.py": "6cd4ed6f7751d939390557e33c2834bfc0cc659cae02603b0268015ba61f811f",
+      "tests/test_watch_evidence_states.py": "b4b400675faed02cef908d1a895cf232090fdbfb7b8020deb8c60685bfd45dc2",
+      "tests/test_watch_evidence_trial.py": "cd8e0782337aca80e99f2bb52d078c8a5a294a2d7cdaa9e6d792e12ea5144a87",
+      "tests/test_workflow_handoff.py": "12755e7fe0d148e365dadf70db4717ff432aa002fff631aee7f9ffc52072efea",
+      "uv.lock": "4340d3bc5b590d36e9204d94d4c32c2b6841059a89a78628cc72ec15757c9add"
+    },
+    "dependencies": {
+      "typesafe-sdk": "0.6.0",
+      "pydantic": "2.13.5"
+    }
+  },
+  "cases": [
+    {
+      "id": "cobalt-transfer-opposed-nonzero-total",
+      "company": "cobalt-market",
+      "policy": {
+        "text": "For comparable weekly orders, notify the primary owner when total orders decline by 10% or more OR any region declines by 15% or more. Both total and regional populations must be comparable. An approved migration-freeze exception overrides those triggers and means ignore. If comparability is not established, send insufficient_data to the data owner.",
+        "destinations": {
+          "notify": "primary-owner",
+          "investigate": "review-owner",
+          "insufficient_data": "data-owner"
+        }
+      },
+      "field_catalog": {
+        "total_decline_pct": {
+          "type": "number",
+          "description": "Percent decline in comparable total settled orders; positive means decline."
+        },
+        "max_region_decline_pct": {
+          "type": "number",
+          "description": "Largest percent decline among comparable regions; null when regional data is absent."
+        }
+      },
+      "measurements": {
+        "total_decline_pct": -2.0,
+        "max_region_decline_pct": 21.43
+      },
+      "facts": [
+        {
+          "id": "f1",
+          "statement": "Settled orders changed from 1,000 to 1,020 for the same weekly population."
+        },
+        {
+          "id": "f2",
+          "statement": "North-region orders changed from 700 to 550."
+        },
+        {
+          "id": "f3",
+          "statement": "South-region orders changed from 300 to 470."
+        },
+        {
+          "id": "f4",
+          "statement": "The total and regional populations use the same settled-order definition."
+        },
+        {
+          "id": "f5",
+          "statement": "No migration-freeze exception covers this week."
+        }
+      ],
+      "expected": {
+        "outcome": "notify",
+        "recipients": [
+          "primary-owner"
+        ],
+        "reason": "The north-region decline is at least 15%, so the regional OR branch applies even though the total increased."
+      },
+      "metadata": {
+        "label_source": "expert-supplied; frozen before model outputs; transfer fixture only",
+        "tags": [
+          "opposing_movements",
+          "unequal_nonzero_totals",
+          "or_branch"
+        ]
+      }
+    },
+    {
+      "id": "cobalt-transfer-exact-ten-fifteen",
+      "company": "cobalt-market",
+      "policy": {
+        "text": "For comparable weekly orders, notify the primary owner when total orders decline by 10% or more OR any region declines by 15% or more. Both total and regional populations must be comparable. An approved migration-freeze exception overrides those triggers and means ignore. If comparability is not established, send insufficient_data to the data owner.",
+        "destinations": {
+          "notify": "primary-owner",
+          "investigate": "review-owner",
+          "insufficient_data": "data-owner"
+        }
+      },
+      "field_catalog": {
+        "total_decline_pct": {
+          "type": "number",
+          "description": "Percent decline in comparable total settled orders; positive means decline."
+        },
+        "max_region_decline_pct": {
+          "type": "number",
+          "description": "Largest percent decline among comparable regions; null when regional data is absent."
+        }
+      },
+      "measurements": {
+        "total_decline_pct": 10.0,
+        "max_region_decline_pct": 15.0
+      },
+      "facts": [
+        {
+          "id": "f1",
+          "statement": "Settled orders changed from 1,000 to 900 for the same weekly population."
+        },
+        {
+          "id": "f2",
+          "statement": "North-region orders changed from 600 to 510."
+        },
+        {
+          "id": "f3",
+          "statement": "South-region orders changed from 400 to 390."
+        },
+        {
+          "id": "f4",
+          "statement": "The total and regional populations are comparable."
+        },
+        {
+          "id": "f5",
+          "statement": "No migration-freeze exception covers this week."
+        }
+      ],
+      "expected": {
+        "outcome": "notify",
+        "recipients": [
+          "primary-owner"
+        ],
+        "reason": "Both the total 10% boundary and the regional 15% boundary satisfy their inclusive policy thresholds."
+      },
+      "metadata": {
+        "label_source": "expert-supplied; frozen before model outputs; transfer fixture only",
+        "tags": [
+          "exact_boundary",
+          "inclusive_thresholds"
+        ]
+      }
+    },
+    {
+      "id": "cobalt-transfer-approved-freeze",
+      "company": "cobalt-market",
+      "policy": {
+        "text": "For comparable weekly orders, notify the primary owner when total orders decline by 10% or more OR any region declines by 15% or more. Both total and regional populations must be comparable. An approved migration-freeze exception overrides those triggers and means ignore. If comparability is not established, send insufficient_data to the data owner.",
+        "destinations": {
+          "notify": "primary-owner",
+          "investigate": "review-owner",
+          "insufficient_data": "data-owner"
+        }
+      },
+      "field_catalog": {
+        "total_decline_pct": {
+          "type": "number",
+          "description": "Percent decline in comparable total settled orders; positive means decline."
+        },
+        "max_region_decline_pct": {
+          "type": "number",
+          "description": "Largest percent decline among comparable regions; null when regional data is absent."
+        }
+      },
+      "measurements": {
+        "total_decline_pct": 25.0,
+        "max_region_decline_pct": 30.0
+      },
+      "facts": [
+        {
+          "id": "f1",
+          "statement": "Settled orders changed from 1,200 to 900 for the same weekly population."
+        },
+        {
+          "id": "f2",
+          "statement": "West-region orders changed from 800 to 560."
+        },
+        {
+          "id": "f3",
+          "statement": "The total and regional populations are comparable."
+        },
+        {
+          "id": "f4",
+          "statement": "A signed owner notice approves a migration freeze for this exact week."
+        }
+      ],
+      "expected": {
+        "outcome": "ignore",
+        "recipients": [],
+        "reason": "The explicitly approved migration-freeze exception overrides both notification triggers."
+      },
+      "metadata": {
+        "label_source": "expert-supplied; frozen before model outputs; transfer fixture only",
+        "tags": [
+          "approved_exception",
+          "exception_override"
+        ]
+      }
+    },
+    {
+      "id": "cobalt-transfer-missing-regions",
+      "company": "cobalt-market",
+      "policy": {
+        "text": "For comparable weekly orders, notify the primary owner when total orders decline by 10% or more OR any region declines by 15% or more. Both total and regional populations must be comparable. An approved migration-freeze exception overrides those triggers and means ignore. If comparability is not established, send insufficient_data to the data owner.",
+        "destinations": {
+          "notify": "primary-owner",
+          "investigate": "review-owner",
+          "insufficient_data": "data-owner"
+        }
+      },
+      "field_catalog": {
+        "total_decline_pct": {
+          "type": "number",
+          "description": "Percent decline in comparable total settled orders; positive means decline."
+        },
+        "max_region_decline_pct": {
+          "type": "number",
+          "description": "Largest percent decline among comparable regions; null when regional data is absent."
+        }
+      },
+      "measurements": {
+        "total_decline_pct": 12.0,
+        "max_region_decline_pct": null
+      },
+      "facts": [
+        {
+          "id": "f1",
+          "statement": "Settled orders changed from 1,000 to 880."
+        },
+        {
+          "id": "f2",
+          "statement": "The current regional export was not produced."
+        },
+        {
+          "id": "f3",
+          "statement": "The source does not establish comparability for the missing regional population."
+        },
+        {
+          "id": "f4",
+          "statement": "No migration-freeze exception covers this week."
+        }
+      ],
+      "expected": {
+        "outcome": "insufficient_data",
+        "recipients": [
+          "data-owner"
+        ],
+        "reason": "Regional comparability is required by the policy and is not established."
+      },
+      "metadata": {
+        "label_source": "expert-supplied; frozen before model outputs; transfer fixture only",
+        "tags": [
+          "absent_required_metric",
+          "missing_context"
+        ]
+      }
+    },
+    {
+      "id": "maple-transfer-both-triggers",
+      "company": "maple-mobility",
+      "policy": {
+        "text": "For the same weekly fleet, notify the primary owner only when on-time delivery falls below 92% AND the cancellation rate rises by at least 2 percentage points. A signed weather-closure exception covering the week overrides both triggers and means ignore. If an exception is claimed but its approval or scope conflicts, investigate. If either required metric is missing, send insufficient_data to the data owner. If only one trigger holds, ignore.",
+        "destinations": {
+          "notify": "primary-owner",
+          "investigate": "review-owner",
+          "insufficient_data": "data-owner"
+        }
+      },
+      "field_catalog": {
+        "on_time_pct": {
+          "type": "number",
+          "description": "Current weekly on-time delivery percentage for the comparable fleet."
+        },
+        "cancellation_delta_pp": {
+          "type": "number",
+          "description": "Current cancellation rate minus baseline rate, in percentage points; null when absent."
+        }
+      },
+      "measurements": {
+        "on_time_pct": 91.0,
+        "cancellation_delta_pp": 3.0
+      },
+      "facts": [
+        {
+          "id": "f1",
+          "statement": "On-time delivery fell from 96% to 91% for the same weekly fleet."
+        },
+        {
+          "id": "f2",
+          "statement": "The cancellation rate rose from 4% to 7% for that fleet."
+        },
+        {
+          "id": "f3",
+          "statement": "No weather-closure exception covers the comparison week."
+        }
+      ],
+      "expected": {
+        "outcome": "notify",
+        "recipients": [
+          "primary-owner"
+        ],
+        "reason": "Both conjunctive trigger conditions hold and no approved exception applies."
+      },
+      "metadata": {
+        "label_source": "expert-supplied; frozen before model outputs; transfer fixture only",
+        "tags": [
+          "and_branch",
+          "both_triggers"
+        ]
+      }
+    },
+    {
+      "id": "maple-transfer-one-trigger",
+      "company": "maple-mobility",
+      "policy": {
+        "text": "For the same weekly fleet, notify the primary owner only when on-time delivery falls below 92% AND the cancellation rate rises by at least 2 percentage points. A signed weather-closure exception covering the week overrides both triggers and means ignore. If an exception is claimed but its approval or scope conflicts, investigate. If either required metric is missing, send insufficient_data to the data owner. If only one trigger holds, ignore.",
+        "destinations": {
+          "notify": "primary-owner",
+          "investigate": "review-owner",
+          "insufficient_data": "data-owner"
+        }
+      },
+      "field_catalog": {
+        "on_time_pct": {
+          "type": "number",
+          "description": "Current weekly on-time delivery percentage for the comparable fleet."
+        },
+        "cancellation_delta_pp": {
+          "type": "number",
+          "description": "Current cancellation rate minus baseline rate, in percentage points; null when absent."
+        }
+      },
+      "measurements": {
+        "on_time_pct": 90.0,
+        "cancellation_delta_pp": 1.0
+      },
+      "facts": [
+        {
+          "id": "f1",
+          "statement": "On-time delivery fell from 96% to 90% for the same weekly fleet."
+        },
+        {
+          "id": "f2",
+          "statement": "The cancellation rate rose from 4% to 5%, one percentage point."
+        },
+        {
+          "id": "f3",
+          "statement": "No weather-closure exception covers the comparison week."
+        }
+      ],
+      "expected": {
+        "outcome": "ignore",
+        "recipients": [],
+        "reason": "Only the on-time condition holds; the policy requires both conditions."
+      },
+      "metadata": {
+        "label_source": "expert-supplied; frozen before model outputs; transfer fixture only",
+        "tags": [
+          "and_branch",
+          "one_false"
+        ]
+      }
+    },
+    {
+      "id": "maple-transfer-strict-boundary",
+      "company": "maple-mobility",
+      "policy": {
+        "text": "For the same weekly fleet, notify the primary owner only when on-time delivery falls below 92% AND the cancellation rate rises by at least 2 percentage points. A signed weather-closure exception covering the week overrides both triggers and means ignore. If an exception is claimed but its approval or scope conflicts, investigate. If either required metric is missing, send insufficient_data to the data owner. If only one trigger holds, ignore.",
+        "destinations": {
+          "notify": "primary-owner",
+          "investigate": "review-owner",
+          "insufficient_data": "data-owner"
+        }
+      },
+      "field_catalog": {
+        "on_time_pct": {
+          "type": "number",
+          "description": "Current weekly on-time delivery percentage for the comparable fleet."
+        },
+        "cancellation_delta_pp": {
+          "type": "number",
+          "description": "Current cancellation rate minus baseline rate, in percentage points; null when absent."
+        }
+      },
+      "measurements": {
+        "on_time_pct": 92.0,
+        "cancellation_delta_pp": 2.0
+      },
+      "facts": [
+        {
+          "id": "f1",
+          "statement": "On-time delivery changed from 94% to exactly 92% for the same weekly fleet."
+        },
+        {
+          "id": "f2",
+          "statement": "The cancellation rate rose from 4% to exactly 6%."
+        },
+        {
+          "id": "f3",
+          "statement": "No weather-closure exception covers the comparison week."
+        }
+      ],
+      "expected": {
+        "outcome": "ignore",
+        "recipients": [],
+        "reason": "The cancellation boundary is met, but on-time delivery is not below 92% as required."
+      },
+      "metadata": {
+        "label_source": "expert-supplied; frozen before model outputs; transfer fixture only",
+        "tags": [
+          "strict_boundary",
+          "one_false"
+        ]
+      }
+    },
+    {
+      "id": "maple-transfer-missing-cancellation",
+      "company": "maple-mobility",
+      "policy": {
+        "text": "For the same weekly fleet, notify the primary owner only when on-time delivery falls below 92% AND the cancellation rate rises by at least 2 percentage points. A signed weather-closure exception covering the week overrides both triggers and means ignore. If an exception is claimed but its approval or scope conflicts, investigate. If either required metric is missing, send insufficient_data to the data owner. If only one trigger holds, ignore.",
+        "destinations": {
+          "notify": "primary-owner",
+          "investigate": "review-owner",
+          "insufficient_data": "data-owner"
+        }
+      },
+      "field_catalog": {
+        "on_time_pct": {
+          "type": "number",
+          "description": "Current weekly on-time delivery percentage for the comparable fleet."
+        },
+        "cancellation_delta_pp": {
+          "type": "number",
+          "description": "Current cancellation rate minus baseline rate, in percentage points; null when absent."
+        }
+      },
+      "measurements": {
+        "on_time_pct": 90.0,
+        "cancellation_delta_pp": null
+      },
+      "facts": [
+        {
+          "id": "f1",
+          "statement": "On-time delivery fell from 95% to 90% for the same weekly fleet."
+        },
+        {
+          "id": "f2",
+          "statement": "The current cancellation-rate value is absent."
+        },
+        {
+          "id": "f3",
+          "statement": "No weather-closure exception covers the comparison week."
+        }
+      ],
+      "expected": {
+        "outcome": "insufficient_data",
+        "recipients": [
+          "data-owner"
+        ],
+        "reason": "The cancellation condition is required by the AND policy but its value is missing."
+      },
+      "metadata": {
+        "label_source": "expert-supplied; frozen before model outputs; transfer fixture only",
+        "tags": [
+          "absent_required_metric",
+          "and_branch"
+        ]
+      }
+    },
+    {
+      "id": "quartz-transfer-high-priority",
+      "company": "quartz-care",
+      "policy": {
+        "text": "Notify the primary owner when a high-priority contract release is missing signed reconciliation. Routine releases do not trigger. A signed release-manager reconciliation overrides a stale checklist. If the priority classification or reconciliation status is missing or conflicting, send insufficient_data to the data owner.",
+        "destinations": {
+          "notify": "primary-owner",
+          "investigate": "review-owner",
+          "insufficient_data": "data-owner"
+        }
+      },
+      "field_catalog": {
+        "release_priority": {
+          "type": "string",
+          "description": "Owner-defined priority class copied from the release record; semantic facts, not a threshold."
+        }
+      },
+      "measurements": {
+        "release_priority": "high"
+      },
+      "facts": [
+        {
+          "id": "f1",
+          "statement": "The release record classifies this contract release as high priority."
+        },
+        {
+          "id": "f2",
+          "statement": "The signed-reconciliation field is explicitly missing."
+        },
+        {
+          "id": "f3",
+          "statement": "No signed release-manager reconciliation is present."
+        }
+      ],
+      "expected": {
+        "outcome": "notify",
+        "recipients": [
+          "primary-owner"
+        ],
+        "reason": "A high-priority release is explicitly missing signed reconciliation."
+      },
+      "metadata": {
+        "label_source": "expert-supplied; frozen before model outputs; transfer fixture only",
+        "tags": [
+          "qualitative_trigger"
+        ]
+      }
+    },
+    {
+      "id": "quartz-transfer-routine-release",
+      "company": "quartz-care",
+      "policy": {
+        "text": "Notify the primary owner when a high-priority contract release is missing signed reconciliation. Routine releases do not trigger. A signed release-manager reconciliation overrides a stale checklist. If the priority classification or reconciliation status is missing or conflicting, send insufficient_data to the data owner.",
+        "destinations": {
+          "notify": "primary-owner",
+          "investigate": "review-owner",
+          "insufficient_data": "data-owner"
+        }
+      },
+      "field_catalog": {
+        "release_priority": {
+          "type": "string",
+          "description": "Owner-defined priority class copied from the release record; semantic facts, not a threshold."
+        }
+      },
+      "measurements": {
+        "release_priority": "routine"
+      },
+      "facts": [
+        {
+          "id": "f1",
+          "statement": "The release record classifies this contract release as routine priority."
+        },
+        {
+          "id": "f2",
+          "statement": "The signed-reconciliation field is explicitly missing."
+        },
+        {
+          "id": "f3",
+          "statement": "No signed release-manager reconciliation is present."
+        }
+      ],
+      "expected": {
+        "outcome": "ignore",
+        "recipients": [],
+        "reason": "Routine releases do not trigger even when signed reconciliation is missing."
+      },
+      "metadata": {
+        "label_source": "expert-supplied; frozen before model outputs; transfer fixture only",
+        "tags": [
+          "qualitative_exclusion"
+        ]
+      }
+    },
+    {
+      "id": "quartz-transfer-signed-override",
+      "company": "quartz-care",
+      "policy": {
+        "text": "Notify the primary owner when a high-priority contract release is missing signed reconciliation. Routine releases do not trigger. A signed release-manager reconciliation overrides a stale checklist. If the priority classification or reconciliation status is missing or conflicting, send insufficient_data to the data owner.",
+        "destinations": {
+          "notify": "primary-owner",
+          "investigate": "review-owner",
+          "insufficient_data": "data-owner"
+        }
+      },
+      "field_catalog": {
+        "release_priority": {
+          "type": "string",
+          "description": "Owner-defined priority class copied from the release record; semantic facts, not a threshold."
+        }
+      },
+      "measurements": {
+        "release_priority": "high"
+      },
+      "facts": [
+        {
+          "id": "f1",
+          "statement": "The release record classifies this contract release as high priority."
+        },
+        {
+          "id": "f2",
+          "statement": "A stale checklist says signed reconciliation is missing."
+        },
+        {
+          "id": "f3",
+          "statement": "A signed release-manager reconciliation explicitly covers this release and confirms completion."
+        }
+      ],
+      "expected": {
+        "outcome": "ignore",
+        "recipients": [],
+        "reason": "The signed release-manager reconciliation overrides the stale checklist."
+      },
+      "metadata": {
+        "label_source": "expert-supplied; frozen before model outputs; transfer fixture only",
+        "tags": [
+          "signed_reconciliation_override",
+          "approved_exception"
+        ]
+      }
+    },
+    {
+      "id": "quartz-transfer-priority-conflict",
+      "company": "quartz-care",
+      "policy": {
+        "text": "Notify the primary owner when a high-priority contract release is missing signed reconciliation. Routine releases do not trigger. A signed release-manager reconciliation overrides a stale checklist. If the priority classification or reconciliation status is missing or conflicting, send insufficient_data to the data owner.",
+        "destinations": {
+          "notify": "primary-owner",
+          "investigate": "review-owner",
+          "insufficient_data": "data-owner"
+        }
+      },
+      "field_catalog": {
+        "release_priority": {
+          "type": "string",
+          "description": "Owner-defined priority class copied from the release record; semantic facts, not a threshold."
+        }
+      },
+      "measurements": {
+        "release_priority": null
+      },
+      "facts": [
+        {
+          "id": "f1",
+          "statement": "The primary release record classifies this contract release as high priority."
+        },
+        {
+          "id": "f2",
+          "statement": "A second authoritative release record classifies the same release as routine priority."
+        },
+        {
+          "id": "f3",
+          "statement": "The signed-reconciliation field is explicitly missing."
+        },
+        {
+          "id": "f4",
+          "statement": "No signed release-manager reconciliation is present."
+        }
+      ],
+      "expected": {
+        "outcome": "insufficient_data",
+        "recipients": [
+          "data-owner"
+        ],
+        "reason": "Conflicting high and routine classifications prevent applying the policy safely."
+      },
+      "metadata": {
+        "label_source": "expert-supplied; frozen before model outputs; transfer fixture only",
+        "tags": [
+          "priority_conflict",
+          "high_vs_routine"
+        ]
+      }
+    }
+  ],
+  "support_floor": 0.7,
+  "budget": {
+    "jev": 12,
+    "luna": 6
+  },
+  "reviewed_plans": {
+    "source": "evaluations/data/policy-composition-reviewed-plans.json",
+    "sha256": "72f6c41b534ff9668035e36d9f742521a3c9fee908adff5551c35fbdf6acb31e",
+    "payload": {
+      "plans": {
+        "cobalt-market": {
+          "checks": [
+            {
+              "id": "freeze_approved",
+              "kind": "semantic",
+              "condition": "The source text establishes that the migration-freeze exception is approved for this week.",
+              "field": null,
+              "op": null,
+              "threshold": null
+            },
+            {
+              "id": "total_comparable",
+              "kind": "semantic",
+              "condition": "The source text establishes that the total-order population is comparable across the two weeks.",
+              "field": null,
+              "op": null,
+              "threshold": null
+            },
+            {
+              "id": "regional_comparable",
+              "kind": "semantic",
+              "condition": "The source text establishes that the regional population is comparable across the two weeks.",
+              "field": null,
+              "op": null,
+              "threshold": null
+            },
+            {
+              "id": "total_decline_ge_10",
+              "kind": "numeric",
+              "condition": "Total comparable settled orders declined by at least the policy threshold.",
+              "field": "total_decline_pct",
+              "op": "ge",
+              "threshold": 10.0
+            },
+            {
+              "id": "regional_decline_ge_15",
+              "kind": "numeric",
+              "condition": "A comparable region declined by at least the policy threshold.",
+              "field": "max_region_decline_pct",
+              "op": "ge",
+              "threshold": 15.0
+            }
+          ],
+          "rules": [
+            {
+              "when": [
+                {
+                  "total_comparable": "false"
+                },
+                {
+                  "total_comparable": "unknown"
+                },
+                {
+                  "regional_comparable": "false"
+                },
+                {
+                  "regional_comparable": "unknown"
+                }
+              ],
+              "outcome": "insufficient_data"
+            },
+            {
+              "when": [
+                {
+                  "freeze_approved": "unknown"
+                },
+                {
+                  "total_decline_ge_10": "unknown"
+                },
+                {
+                  "regional_decline_ge_15": "unknown"
+                }
+              ],
+              "outcome": "investigate"
+            },
+            {
+              "when": [
+                {
+                  "freeze_approved": "true"
+                }
+              ],
+              "outcome": "ignore"
+            },
+            {
+              "when": [
+                {
+                  "total_comparable": "true",
+                  "regional_comparable": "true",
+                  "total_decline_ge_10": "true"
+                },
+                {
+                  "total_comparable": "true",
+                  "regional_comparable": "true",
+                  "regional_decline_ge_15": "true"
+                }
+              ],
+              "outcome": "notify"
+            },
+            {
+              "when": [
+                {
+                  "total_comparable": "true",
+                  "regional_comparable": "true",
+                  "total_decline_ge_10": "false",
+                  "regional_decline_ge_15": "false"
+                }
+              ],
+              "outcome": "ignore"
+            }
+          ],
+          "default": "investigate"
+        },
+        "maple-mobility": {
+          "checks": [
+            {
+              "id": "exception_conflict",
+              "kind": "semantic",
+              "condition": "The claimed weather-closure exception has conflicting approval or scope.",
+              "field": null,
+              "op": null,
+              "threshold": null
+            },
+            {
+              "id": "exception_covers_week",
+              "kind": "semantic",
+              "condition": "A signed weather-closure exception covers the comparison week.",
+              "field": null,
+              "op": null,
+              "threshold": null
+            },
+            {
+              "id": "required_metrics_available",
+              "kind": "semantic",
+              "condition": "The source establishes that both required weekly metrics are present for the same fleet.",
+              "field": null,
+              "op": null,
+              "threshold": null
+            },
+            {
+              "id": "on_time_below",
+              "kind": "numeric",
+              "condition": "On-time delivery is below the policy threshold.",
+              "field": "on_time_pct",
+              "op": "lt",
+              "threshold": 92.0
+            },
+            {
+              "id": "cancellation_rise",
+              "kind": "numeric",
+              "condition": "The cancellation-rate rise meets the policy threshold.",
+              "field": "cancellation_delta_pp",
+              "op": "ge",
+              "threshold": 2.0
+            }
+          ],
+          "rules": [
+            {
+              "when": [
+                {
+                  "required_metrics_available": "false"
+                },
+                {
+                  "required_metrics_available": "unknown"
+                }
+              ],
+              "outcome": "insufficient_data"
+            },
+            {
+              "when": [
+                {
+                  "exception_conflict": "unknown"
+                },
+                {
+                  "exception_covers_week": "unknown"
+                },
+                {
+                  "on_time_below": "unknown"
+                },
+                {
+                  "cancellation_rise": "unknown"
+                }
+              ],
+              "outcome": "investigate"
+            },
+            {
+              "when": [
+                {
+                  "exception_conflict": "true"
+                }
+              ],
+              "outcome": "investigate"
+            },
+            {
+              "when": [
+                {
+                  "exception_covers_week": "true"
+                }
+              ],
+              "outcome": "ignore"
+            },
+            {
+              "when": [
+                {
+                  "exception_conflict": "false",
+                  "exception_covers_week": "false",
+                  "required_metrics_available": "true",
+                  "on_time_below": "true",
+                  "cancellation_rise": "true"
+                }
+              ],
+              "outcome": "notify"
+            },
+            {
+              "when": [
+                {
+                  "exception_conflict": "false",
+                  "exception_covers_week": "false",
+                  "required_metrics_available": "true",
+                  "on_time_below": "true",
+                  "cancellation_rise": "false"
+                },
+                {
+                  "exception_conflict": "false",
+                  "exception_covers_week": "false",
+                  "required_metrics_available": "true",
+                  "on_time_below": "false",
+                  "cancellation_rise": "true"
+                },
+                {
+                  "exception_conflict": "false",
+                  "exception_covers_week": "false",
+                  "required_metrics_available": "true",
+                  "on_time_below": "false",
+                  "cancellation_rise": "false"
+                }
+              ],
+              "outcome": "ignore"
+            }
+          ],
+          "default": "investigate"
+        },
+        "quartz-care": {
+          "checks": [
+            {
+              "id": "priority_known",
+              "kind": "semantic",
+              "condition": "The source establishes one non-conflicting priority classification: high or routine.",
+              "field": null,
+              "op": null,
+              "threshold": null
+            },
+            {
+              "id": "reconciliation_known",
+              "kind": "semantic",
+              "condition": "After applying the owner rule that a signed release-manager reconciliation overrides a stale checklist, the source establishes one reconciliation status: signed reconciliation present or missing; a stale checklist plus that signed reconciliation is not conflicting.",
+              "field": null,
+              "op": null,
+              "threshold": null
+            },
+            {
+              "id": "signed_reconciliation_present",
+              "kind": "semantic",
+              "condition": "The source states that a signed reconciliation from the release manager exists.",
+              "field": null,
+              "op": null,
+              "threshold": null
+            },
+            {
+              "id": "high_priority_release",
+              "kind": "semantic",
+              "condition": "The release is classified as high priority in the source text.",
+              "field": null,
+              "op": null,
+              "threshold": null
+            }
+          ],
+          "rules": [
+            {
+              "when": [
+                {
+                  "priority_known": "false"
+                },
+                {
+                  "priority_known": "unknown"
+                },
+                {
+                  "reconciliation_known": "false"
+                },
+                {
+                  "reconciliation_known": "unknown"
+                }
+              ],
+              "outcome": "insufficient_data"
+            },
+            {
+              "when": [
+                {
+                  "signed_reconciliation_present": "unknown"
+                },
+                {
+                  "high_priority_release": "unknown"
+                }
+              ],
+              "outcome": "investigate"
+            },
+            {
+              "when": [
+                {
+                  "signed_reconciliation_present": "true"
+                }
+              ],
+              "outcome": "ignore"
+            },
+            {
+              "when": [
+                {
+                  "priority_known": "true",
+                  "reconciliation_known": "true",
+                  "signed_reconciliation_present": "false",
+                  "high_priority_release": "true"
+                }
+              ],
+              "outcome": "notify"
+            },
+            {
+              "when": [
+                {
+                  "priority_known": "true",
+                  "reconciliation_known": "true",
+                  "signed_reconciliation_present": "false",
+                  "high_priority_release": "false"
+                }
+              ],
+              "outcome": "ignore"
+            }
+          ],
+          "default": "investigate"
+        }
+      },
+      "provenance": {
+        "scope": "internal Luna policy-only review/repair; not human approval",
+        "reviewer_notes": [
+          "Direct plan review and repair from the original owner policies and field catalogs; this is not raw unattended first-shot onboarding.",
+          "Schema and composition semantics are unchanged: conditions in one when object compose with AND, alternative when objects compose with OR, and rules are first-match in listed order.",
+          "Each plan starts with explicit owner data-gap guards where the policy requires insufficient_data; targeted unknown guards for unresolved non-data semantic conditions then stop to investigate before positive or quiet guards.",
+          "Cobalt keeps the policy's OR trigger and adds the explicit all-false quiet branch. Total or regional comparability missing is an OR condition, not an AND condition.",
+          "Maple treats missing required metrics as a distinct policy condition from uncertainty about a check. A claimed exception conflict is investigated before an approved exception can quiet the case.",
+          "Quartz compresses priority and reconciliation presence into explicit known-status checks, routes either missing or conflicting status to insufficient_data, and makes signed reconciliation an ignore override.",
+          "The policies do not state precedence for a valid approval/exception combined with missing required data. The repaired plans place the explicit missing-data guard before the override and record that ambiguity here rather than inventing a business rule.",
+          "The rejected provisional draft used a blanket unknown-first guard and is archived separately; this reviewed file replaces that ordering and is the experiment input.",
+          "No business-specific constants were added beyond the thresholds and field catalog supplied by the fixture policies. This file is experiment input, not a production default."
+        ]
+      }
+    },
+    "review_cost": "Internal subagent policy-only review/repair; token and time usage not measured in this runner"
+  },
+  "author_instructions": "Compile the supplied owner policy once, without seeing measurements. Use only submit_plan. Numeric comparisons MUST use catalog numeric checks, not semantic questions. Semantic checks ask one condition against source text, with true/false/unknown. Use concise standalone conditions. Rules are ordered first-match; when is an OR list of AND dictionaries mapping check IDs to true/false/unknown. Explicitly handle missing/conflicting required evidence and exception priority. An unresolved earlier rule defers to investigate; it never silently falls through. Numeric absent values and uncertain semantic answers become unknown. Never add business conditions. Destinations are bound by code to policy.destinations, not generated. Default must follow the policy. No executable code or case-specific constants beyond policy thresholds. Submit once valid.",
+  "report_instructions": "Run every recurring review sequentially using read_current then submit_report. Use the owner policy, current evidence and exact code-computed numeric checks. The compiled plan is available equally to both arms; owner policy is authoritative. Do not infer absent facts or causation. Write 30-70 words for an actionable report, shorter for quiet: significance, evidence, caveat and next step. Cite exact fact IDs. Stop only when all_periods_complete. Nothing is delivered. ",
+  "scope": "Research prototype, not shipped SignalWeave integration or production approval",
+  "gates": [
+    "All intended decisions correct; any failed episode counts against denominator",
+    "Independent plan and prose review; source and schema checks are not semantic approval",
+    "No superiority claim unless correct with lower whole-report resources"
+  ],
+  "limitations": [
+    "Synthetic facts and code-computed measurements; no retrieval/query benchmark",
+    "Route destinations bound by code equally; not a recipient-discovery test",
+    "Broad and narrow questions share one request; no separate model latency comparison",
+    "No human time saved or dollar invoices; one sample per case"
+  ]
+}

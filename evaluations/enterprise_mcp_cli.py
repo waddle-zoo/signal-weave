@@ -95,7 +95,7 @@ async def call_mcp(args: argparse.Namespace) -> None:
             session_id=args.session,
             evaluator=args.evaluator,
         )
-        server = create_mcp(runtime)
+        server = create_mcp(runtime, profile="full")
         _, structured = await server.call_tool(args.tool, payload)
         result = structured.get("result", structured) if isinstance(structured, dict) else structured
         result = _json_value(result)

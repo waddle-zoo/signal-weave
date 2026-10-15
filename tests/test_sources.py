@@ -6,10 +6,11 @@ from signalweave.models import (
     ResourceContract,
     ResourceDescriptor,
     ResourceSnapshot,
+    SourceComparisonContract,
     SourceRef,
 )
 from signalweave.preset_adapter import PresetAdapter
-from signalweave.sources import SourceRegistry
+from signalweave.sources import SourceRegistry, _inspection_contract
 from signalweave.superset_adapter import SupersetAdapter
 from signalweave.superset_models import SupersetChartSnapshot, SupersetDashboardSnapshot
 
@@ -27,6 +28,76 @@ class FakeAdapter:
             resource=source.resource,
             title=source.label,
         )
+
+
+def test_inspection_contract_preserves_catalog_definitions_and_snapshot_quality():
+    catalog = ResourceContract(
+        required_comparison_keys=["latency"],
+        comparison_contracts=[SourceComparisonContract(
+            key="latency", metric="p95", definition="catalog definition",
+            population="customers", unit="ms", comparison_window="previous_period",
+            coverage="unknown", comparable=False,
+        )],
+    )
+    snapshot = ResourceContract(
+        comparison_contracts=[SourceComparisonContract(
+            key="latency", metric="p95", definition="catalog definition",
+            population="customers", unit="ms", comparison_window="previous_period",
+            coverage="partial", comparable=False, detail="region omitted",
+        ), SourceComparisonContract(
+            key="lag", metric="replication_lag", definition="lag",
+            population="customers", unit="ms", comparison_window="previous_period",
+            coverage="complete", comparable=True,
+        )],
+    )
+    merged = _inspection_contract(catalog, snapshot)
+    assert merged.required_comparison_keys == ["latency"]
+    assert [item.key for item in merged.comparison_contracts] == ["latency", "lag"]
+    assert merged.comparison_contracts[0].definition == "catalog definition"
+    assert merged.comparison_contracts[0].detail == "region omitted"
+
+
+@pytest.mark.parametrize("field,value", [
+    ("metric", "p99"),
+    ("definition", "different calculation"),
+    ("population", "internal traffic"),
+    ("unit", "seconds"),
+    ("comparison_window", "previous_year"),
+])
+def test_inspection_comparison_key_cannot_replace_catalog_meaning(field, value):
+    original = SourceComparisonContract(
+        key="latency", metric="p95", definition="customer latency",
+        population="customers", unit="ms", comparison_window="previous_period",
+        coverage="unknown", comparable=False,
+    )
+    current = original.model_copy(update={
+        field: value, "coverage": "complete", "comparable": True,
+        "query_refs": ["query:new"],
+    })
+    merged = _inspection_contract(
+        ResourceContract(comparison_contracts=[original]),
+        ResourceContract(comparison_contracts=[current]),
+    ).comparison_contracts[0]
+    assert getattr(merged, field) == getattr(original, field)
+    assert merged.coverage == "unknown"
+    assert merged.comparable is False
+    assert field in merged.detail
+    assert merged.query_refs == []
+
+
+def test_inspection_quality_can_improve_when_comparison_meaning_matches():
+    original = SourceComparisonContract(
+        key="latency", metric="p95", definition="customer latency",
+        population="customers", unit="ms", comparison_window="previous_period",
+    )
+    current = original.model_copy(update={
+        "coverage": "complete", "comparable": True, "query_refs": ["query:current"],
+    })
+    merged = _inspection_contract(
+        ResourceContract(comparison_contracts=[original]),
+        ResourceContract(comparison_contracts=[current]),
+    ).comparison_contracts[0]
+    assert merged == current
 
 
 class BrokenCatalogAdapter:
@@ -428,6 +499,24 @@ async def test_source_registry_does_not_contact_foreign_tenant_adapters():
     assert harbor.list_calls == 0
     assert harbor.search_calls == 0
     assert harbor.inspect_calls == 0
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("query", ["", "   "])
+async def test_source_registry_browse_keeps_limits_and_tenant_filters(query):
+    class Adapter(TenantBoundAdapter):
+        async def search_resources(self, query, *, limit, cursor=None, authorized_tenants=None):
+            assert query == ""
+            assert limit == 1
+            assert authorized_tenants == ["northstar"]
+            return await super().search_resources(query, limit=limit, cursor=cursor,
+                                                  authorized_tenants=authorized_tenants)
+
+    adapter = Adapter("northstar")
+    registry = SourceRegistry([adapter])
+    page = await registry.search_resources(query, limit=1, authorized_tenants=["northstar"])
+    assert len(page.resources) == 1
+    assert page.resources[0].contract.tenant_id == "northstar"
 
 
 @pytest.mark.asyncio

@@ -1,0 +1,1970 @@
+{
+  "scope": "Synthetic development research only; no production promotion or readiness claim.",
+  "label_semantics": "Acceptance denotes answerability, not answer truth; explicit no/zero/absence are positive controls.",
+  "gate": "Candidate must classify all 20 cases correctly at the frozen thresholds with zero false support; unknown, invalid, errored, or incomplete cases fail. Old-arm results are descriptive only. Passing permits consideration of a production integration experiment, not production promotion.",
+  "git_revision": "f14012bfa589e94fa66ca2062310a18465ee7964",
+  "source_sha256": "a2f47448d57a22d5b56a04ece95a761a4505c2b32786f76bd9c8d09a68a8a63e",
+  "production_adapter_sha256": "3bb0df11d43a65778741a6bf5819cc6e198972892225c4c46670f06984ba0a32",
+  "dataset_sha256": "fd9f84ebb4802dcd5384e426508af0c26566a5cd4ffe7bf9f0f2098583a553ab",
+  "questions_sha256": "4b20fac52a8169249e872b0ca502043aaf11befad0aeac64b0466983f3ce80e2",
+  "thresholds": {
+    "supported_gte": 0.7,
+    "not_supported_lte": 0.3
+  },
+  "requested_model": "jev-latest",
+  "live_jev": true,
+  "external_delivery": false,
+  "planned_cases": 20,
+  "max_attempts": 20,
+  "max_retries": 0,
+  "attempts_reserved": 20,
+  "attempts": 20,
+  "status": "complete",
+  "passed": false,
+  "cases": [
+    {
+      "id": "support_denominator-answer_yes",
+      "domain": "support_denominator",
+      "variant": "answer_yes",
+      "reference_answer": "yes",
+      "expected_accept": true,
+      "expected_status": "supported",
+      "state": {
+        "insight_card": {
+          "what_to_watch": "The operational facts within the owner's stated scope.",
+          "why_watch": "Determine whether the supplied evidence answers the owner's question.",
+          "questions": [
+            "Were there any SLA-eligible customer tickets in the North support queue on September 30?"
+          ]
+        },
+        "observations": [],
+        "sources": [
+          {
+            "status": "healthy"
+          }
+        ],
+        "evidence": [
+          {
+            "statement": "SLA eligibility means customer tickets opened in the North support queue on September 30, excluding spam and internal tickets."
+          },
+          {
+            "statement": "The complete eligibility audit for that queue and day records 120 eligible customer tickets."
+          }
+        ],
+        "analyses": []
+      },
+      "status": "complete",
+      "questions": {
+        "old": {
+          "type": "noul",
+          "instructions": "Does the available evidence support a concrete answer to questions[0]? Use only the normalized observations, source evidence, and card context. Computed analyses contain verified arithmetic, not proof of causation or statistical significance; respect their limitations. A related metric may support an answer, but do not invent facts that are absent.",
+          "criteria": {
+            "true": "Were there any SLA-eligible customer tickets in the North support queue on September 30?",
+            "false": "The available evidence does not support a concrete answer to this question."
+          }
+        },
+        "candidate": {
+          "type": "noul",
+          "instructions": "Can the available evidence supply a concrete answer to the owner's question: 'Were there any SLA-eligible customer tickets in the North support queue on September 30?'? This is the question in `insight_card.questions[0]`. Judge whether an answer exists, including an explicit no, zero, or absence. Use only normalized observations, source evidence, card context, and computed analyses. Respect the requested population, period, definitions, and scope. Every requested part of a compound question needs an answer. Code owns arithmetic: use supplied computed results and respect their status and limitations. Arithmetic and temporal proximity do not establish causation or statistical significance. A healthy source or a list of observed entities does not establish complete coverage. Do not invent absent facts or resolve conflicting evidence without a supplied basis.",
+          "criteria": {
+            "true": "Applicable evidence supplies a concrete answer to the entire owner question. The answer may be yes, no, zero, an established absence, or a supplied numeric value.",
+            "false": "Missing, conflicting, inapplicable, or insufficient evidence prevents a concrete answer to at least one requested part of the owner question."
+          }
+        }
+      },
+      "response": {
+        "model": "jev-1.13.0",
+        "usage": {
+          "input_tokens": 802,
+          "output_tokens": 36
+        },
+        "answers": {
+          "old": {
+            "probability": 0.97,
+            "status": "supported",
+            "valid": true,
+            "accept": true,
+            "validation": "valid",
+            "raw": {
+              "noul": 0.97,
+              "answer_type": "NoulAnswer"
+            }
+          },
+          "candidate": {
+            "probability": 0.97,
+            "status": "supported",
+            "valid": true,
+            "accept": true,
+            "validation": "valid",
+            "raw": {
+              "noul": 0.97,
+              "answer_type": "NoulAnswer"
+            }
+          }
+        }
+      },
+      "comparison": {
+        "old": {
+          "exact": true,
+          "would_accept": true,
+          "acceptance_matches": true
+        },
+        "candidate": {
+          "exact": true,
+          "would_accept": true,
+          "acceptance_matches": true
+        }
+      },
+      "seconds": 0.3248518329928629
+    },
+    {
+      "id": "support_denominator-answer_no",
+      "domain": "support_denominator",
+      "variant": "answer_no",
+      "reference_answer": "no",
+      "expected_accept": true,
+      "expected_status": "supported",
+      "state": {
+        "insight_card": {
+          "what_to_watch": "The operational facts within the owner's stated scope.",
+          "why_watch": "Determine whether the supplied evidence answers the owner's question.",
+          "questions": [
+            "Were there any SLA-eligible customer tickets in the North support queue on September 30?"
+          ]
+        },
+        "observations": [],
+        "sources": [
+          {
+            "status": "healthy"
+          }
+        ],
+        "evidence": [
+          {
+            "statement": "SLA eligibility means customer tickets opened in the North support queue on September 30, excluding spam and internal tickets."
+          },
+          {
+            "statement": "The complete eligibility audit for that queue and day explicitly records zero eligible customer tickets; no tickets qualify."
+          }
+        ],
+        "analyses": []
+      },
+      "status": "complete",
+      "questions": {
+        "old": {
+          "type": "noul",
+          "instructions": "Does the available evidence support a concrete answer to questions[0]? Use only the normalized observations, source evidence, and card context. Computed analyses contain verified arithmetic, not proof of causation or statistical significance; respect their limitations. A related metric may support an answer, but do not invent facts that are absent.",
+          "criteria": {
+            "true": "Were there any SLA-eligible customer tickets in the North support queue on September 30?",
+            "false": "The available evidence does not support a concrete answer to this question."
+          }
+        },
+        "candidate": {
+          "type": "noul",
+          "instructions": "Can the available evidence supply a concrete answer to the owner's question: 'Were there any SLA-eligible customer tickets in the North support queue on September 30?'? This is the question in `insight_card.questions[0]`. Judge whether an answer exists, including an explicit no, zero, or absence. Use only normalized observations, source evidence, card context, and computed analyses. Respect the requested population, period, definitions, and scope. Every requested part of a compound question needs an answer. Code owns arithmetic: use supplied computed results and respect their status and limitations. Arithmetic and temporal proximity do not establish causation or statistical significance. A healthy source or a list of observed entities does not establish complete coverage. Do not invent absent facts or resolve conflicting evidence without a supplied basis.",
+          "criteria": {
+            "true": "Applicable evidence supplies a concrete answer to the entire owner question. The answer may be yes, no, zero, an established absence, or a supplied numeric value.",
+            "false": "Missing, conflicting, inapplicable, or insufficient evidence prevents a concrete answer to at least one requested part of the owner question."
+          }
+        }
+      },
+      "response": {
+        "model": "jev-1.13.0",
+        "usage": {
+          "input_tokens": 804,
+          "output_tokens": 36
+        },
+        "answers": {
+          "old": {
+            "probability": 0.94,
+            "status": "supported",
+            "valid": true,
+            "accept": true,
+            "validation": "valid",
+            "raw": {
+              "noul": 0.94,
+              "answer_type": "NoulAnswer"
+            }
+          },
+          "candidate": {
+            "probability": 0.96,
+            "status": "supported",
+            "valid": true,
+            "accept": true,
+            "validation": "valid",
+            "raw": {
+              "noul": 0.96,
+              "answer_type": "NoulAnswer"
+            }
+          }
+        }
+      },
+      "comparison": {
+        "old": {
+          "exact": true,
+          "would_accept": true,
+          "acceptance_matches": true
+        },
+        "candidate": {
+          "exact": true,
+          "would_accept": true,
+          "acceptance_matches": true
+        }
+      },
+      "seconds": 0.1916110419551842
+    },
+    {
+      "id": "support_denominator-missing",
+      "domain": "support_denominator",
+      "variant": "missing",
+      "reference_answer": null,
+      "expected_accept": false,
+      "expected_status": "not_supported",
+      "state": {
+        "insight_card": {
+          "what_to_watch": "The operational facts within the owner's stated scope.",
+          "why_watch": "Determine whether the supplied evidence answers the owner's question.",
+          "questions": [
+            "Were there any SLA-eligible customer tickets in the North support queue on September 30?"
+          ]
+        },
+        "observations": [],
+        "sources": [
+          {
+            "status": "healthy"
+          }
+        ],
+        "evidence": [
+          {
+            "statement": "SLA eligibility means customer tickets opened in the North support queue on September 30, excluding spam and internal tickets."
+          },
+          {
+            "statement": "The dashboard reports 150 total tickets, but has no eligibility classification or eligible denominator."
+          }
+        ],
+        "analyses": []
+      },
+      "status": "complete",
+      "questions": {
+        "old": {
+          "type": "noul",
+          "instructions": "Does the available evidence support a concrete answer to questions[0]? Use only the normalized observations, source evidence, and card context. Computed analyses contain verified arithmetic, not proof of causation or statistical significance; respect their limitations. A related metric may support an answer, but do not invent facts that are absent.",
+          "criteria": {
+            "true": "Were there any SLA-eligible customer tickets in the North support queue on September 30?",
+            "false": "The available evidence does not support a concrete answer to this question."
+          }
+        },
+        "candidate": {
+          "type": "noul",
+          "instructions": "Can the available evidence supply a concrete answer to the owner's question: 'Were there any SLA-eligible customer tickets in the North support queue on September 30?'? This is the question in `insight_card.questions[0]`. Judge whether an answer exists, including an explicit no, zero, or absence. Use only normalized observations, source evidence, card context, and computed analyses. Respect the requested population, period, definitions, and scope. Every requested part of a compound question needs an answer. Code owns arithmetic: use supplied computed results and respect their status and limitations. Arithmetic and temporal proximity do not establish causation or statistical significance. A healthy source or a list of observed entities does not establish complete coverage. Do not invent absent facts or resolve conflicting evidence without a supplied basis.",
+          "criteria": {
+            "true": "Applicable evidence supplies a concrete answer to the entire owner question. The answer may be yes, no, zero, an established absence, or a supplied numeric value.",
+            "false": "Missing, conflicting, inapplicable, or insufficient evidence prevents a concrete answer to at least one requested part of the owner question."
+          }
+        }
+      },
+      "response": {
+        "model": "jev-1.13.0",
+        "usage": {
+          "input_tokens": 803,
+          "output_tokens": 36
+        },
+        "answers": {
+          "old": {
+            "probability": 0.07,
+            "status": "not_supported",
+            "valid": true,
+            "accept": false,
+            "validation": "valid",
+            "raw": {
+              "noul": 0.07,
+              "answer_type": "NoulAnswer"
+            }
+          },
+          "candidate": {
+            "probability": 0.06,
+            "status": "not_supported",
+            "valid": true,
+            "accept": false,
+            "validation": "valid",
+            "raw": {
+              "noul": 0.06,
+              "answer_type": "NoulAnswer"
+            }
+          }
+        }
+      },
+      "comparison": {
+        "old": {
+          "exact": true,
+          "would_accept": false,
+          "acceptance_matches": true
+        },
+        "candidate": {
+          "exact": true,
+          "would_accept": false,
+          "acceptance_matches": true
+        }
+      },
+      "seconds": 0.22862354200333357
+    },
+    {
+      "id": "support_denominator-conflicting",
+      "domain": "support_denominator",
+      "variant": "conflicting",
+      "reference_answer": null,
+      "expected_accept": false,
+      "expected_status": "not_supported",
+      "state": {
+        "insight_card": {
+          "what_to_watch": "The operational facts within the owner's stated scope.",
+          "why_watch": "Determine whether the supplied evidence answers the owner's question.",
+          "questions": [
+            "Were there any SLA-eligible customer tickets in the North support queue on September 30?"
+          ]
+        },
+        "observations": [],
+        "sources": [
+          {
+            "status": "healthy"
+          }
+        ],
+        "evidence": [
+          {
+            "statement": "SLA eligibility means customer tickets opened in the North support queue on September 30, excluding spam and internal tickets."
+          },
+          {
+            "statement": "Two equally authoritative complete eligibility audits for that queue and day report 120 and zero eligible tickets. Neither supersedes the other."
+          }
+        ],
+        "analyses": []
+      },
+      "status": "complete",
+      "questions": {
+        "old": {
+          "type": "noul",
+          "instructions": "Does the available evidence support a concrete answer to questions[0]? Use only the normalized observations, source evidence, and card context. Computed analyses contain verified arithmetic, not proof of causation or statistical significance; respect their limitations. A related metric may support an answer, but do not invent facts that are absent.",
+          "criteria": {
+            "true": "Were there any SLA-eligible customer tickets in the North support queue on September 30?",
+            "false": "The available evidence does not support a concrete answer to this question."
+          }
+        },
+        "candidate": {
+          "type": "noul",
+          "instructions": "Can the available evidence supply a concrete answer to the owner's question: 'Were there any SLA-eligible customer tickets in the North support queue on September 30?'? This is the question in `insight_card.questions[0]`. Judge whether an answer exists, including an explicit no, zero, or absence. Use only normalized observations, source evidence, card context, and computed analyses. Respect the requested population, period, definitions, and scope. Every requested part of a compound question needs an answer. Code owns arithmetic: use supplied computed results and respect their status and limitations. Arithmetic and temporal proximity do not establish causation or statistical significance. A healthy source or a list of observed entities does not establish complete coverage. Do not invent absent facts or resolve conflicting evidence without a supplied basis.",
+          "criteria": {
+            "true": "Applicable evidence supplies a concrete answer to the entire owner question. The answer may be yes, no, zero, an established absence, or a supplied numeric value.",
+            "false": "Missing, conflicting, inapplicable, or insufficient evidence prevents a concrete answer to at least one requested part of the owner question."
+          }
+        }
+      },
+      "response": {
+        "model": "jev-1.13.0",
+        "usage": {
+          "input_tokens": 812,
+          "output_tokens": 36
+        },
+        "answers": {
+          "old": {
+            "probability": 0.09,
+            "status": "not_supported",
+            "valid": true,
+            "accept": false,
+            "validation": "valid",
+            "raw": {
+              "noul": 0.09,
+              "answer_type": "NoulAnswer"
+            }
+          },
+          "candidate": {
+            "probability": 0.09,
+            "status": "not_supported",
+            "valid": true,
+            "accept": false,
+            "validation": "valid",
+            "raw": {
+              "noul": 0.09,
+              "answer_type": "NoulAnswer"
+            }
+          }
+        }
+      },
+      "comparison": {
+        "old": {
+          "exact": true,
+          "would_accept": false,
+          "acceptance_matches": true
+        },
+        "candidate": {
+          "exact": true,
+          "would_accept": false,
+          "acceptance_matches": true
+        }
+      },
+      "seconds": 0.17389954201644287
+    },
+    {
+      "id": "release_rollback-answer_yes",
+      "domain": "release_rollback",
+      "variant": "answer_yes",
+      "reference_answer": "yes",
+      "expected_accept": true,
+      "expected_status": "supported",
+      "state": {
+        "insight_card": {
+          "what_to_watch": "The operational facts within the owner's stated scope.",
+          "why_watch": "Determine whether the supplied evidence answers the owner's question.",
+          "questions": [
+            "Was the September 30 production checkout release rolled back by 18:00 UTC that day?"
+          ]
+        },
+        "observations": [],
+        "sources": [
+          {
+            "status": "healthy"
+          }
+        ],
+        "evidence": [
+          {
+            "statement": "Only the production checkout release and rollback events through September 30 at 18:00 UTC are in scope."
+          },
+          {
+            "statement": "The complete release ledger records that this release was rolled back at 17:00 UTC."
+          }
+        ],
+        "analyses": []
+      },
+      "status": "complete",
+      "questions": {
+        "old": {
+          "type": "noul",
+          "instructions": "Does the available evidence support a concrete answer to questions[0]? Use only the normalized observations, source evidence, and card context. Computed analyses contain verified arithmetic, not proof of causation or statistical significance; respect their limitations. A related metric may support an answer, but do not invent facts that are absent.",
+          "criteria": {
+            "true": "Was the September 30 production checkout release rolled back by 18:00 UTC that day?",
+            "false": "The available evidence does not support a concrete answer to this question."
+          }
+        },
+        "candidate": {
+          "type": "noul",
+          "instructions": "Can the available evidence supply a concrete answer to the owner's question: 'Was the September 30 production checkout release rolled back by 18:00 UTC that day?'? This is the question in `insight_card.questions[0]`. Judge whether an answer exists, including an explicit no, zero, or absence. Use only normalized observations, source evidence, card context, and computed analyses. Respect the requested population, period, definitions, and scope. Every requested part of a compound question needs an answer. Code owns arithmetic: use supplied computed results and respect their status and limitations. Arithmetic and temporal proximity do not establish causation or statistical significance. A healthy source or a list of observed entities does not establish complete coverage. Do not invent absent facts or resolve conflicting evidence without a supplied basis.",
+          "criteria": {
+            "true": "Applicable evidence supplies a concrete answer to the entire owner question. The answer may be yes, no, zero, an established absence, or a supplied numeric value.",
+            "false": "Missing, conflicting, inapplicable, or insufficient evidence prevents a concrete answer to at least one requested part of the owner question."
+          }
+        }
+      },
+      "response": {
+        "model": "jev-1.13.0",
+        "usage": {
+          "input_tokens": 811,
+          "output_tokens": 36
+        },
+        "answers": {
+          "old": {
+            "probability": 0.95,
+            "status": "supported",
+            "valid": true,
+            "accept": true,
+            "validation": "valid",
+            "raw": {
+              "noul": 0.95,
+              "answer_type": "NoulAnswer"
+            }
+          },
+          "candidate": {
+            "probability": 0.95,
+            "status": "supported",
+            "valid": true,
+            "accept": true,
+            "validation": "valid",
+            "raw": {
+              "noul": 0.95,
+              "answer_type": "NoulAnswer"
+            }
+          }
+        }
+      },
+      "comparison": {
+        "old": {
+          "exact": true,
+          "would_accept": true,
+          "acceptance_matches": true
+        },
+        "candidate": {
+          "exact": true,
+          "would_accept": true,
+          "acceptance_matches": true
+        }
+      },
+      "seconds": 0.18147441698238254
+    },
+    {
+      "id": "release_rollback-answer_no",
+      "domain": "release_rollback",
+      "variant": "answer_no",
+      "reference_answer": "no",
+      "expected_accept": true,
+      "expected_status": "supported",
+      "state": {
+        "insight_card": {
+          "what_to_watch": "The operational facts within the owner's stated scope.",
+          "why_watch": "Determine whether the supplied evidence answers the owner's question.",
+          "questions": [
+            "Was the September 30 production checkout release rolled back by 18:00 UTC that day?"
+          ]
+        },
+        "observations": [],
+        "sources": [
+          {
+            "status": "healthy"
+          }
+        ],
+        "evidence": [
+          {
+            "statement": "Only the production checkout release and rollback events through September 30 at 18:00 UTC are in scope."
+          },
+          {
+            "statement": "The complete release ledger explicitly records no rollback for this release through 18:00 UTC; it remains deployed."
+          }
+        ],
+        "analyses": []
+      },
+      "status": "complete",
+      "questions": {
+        "old": {
+          "type": "noul",
+          "instructions": "Does the available evidence support a concrete answer to questions[0]? Use only the normalized observations, source evidence, and card context. Computed analyses contain verified arithmetic, not proof of causation or statistical significance; respect their limitations. A related metric may support an answer, but do not invent facts that are absent.",
+          "criteria": {
+            "true": "Was the September 30 production checkout release rolled back by 18:00 UTC that day?",
+            "false": "The available evidence does not support a concrete answer to this question."
+          }
+        },
+        "candidate": {
+          "type": "noul",
+          "instructions": "Can the available evidence supply a concrete answer to the owner's question: 'Was the September 30 production checkout release rolled back by 18:00 UTC that day?'? This is the question in `insight_card.questions[0]`. Judge whether an answer exists, including an explicit no, zero, or absence. Use only normalized observations, source evidence, card context, and computed analyses. Respect the requested population, period, definitions, and scope. Every requested part of a compound question needs an answer. Code owns arithmetic: use supplied computed results and respect their status and limitations. Arithmetic and temporal proximity do not establish causation or statistical significance. A healthy source or a list of observed entities does not establish complete coverage. Do not invent absent facts or resolve conflicting evidence without a supplied basis.",
+          "criteria": {
+            "true": "Applicable evidence supplies a concrete answer to the entire owner question. The answer may be yes, no, zero, an established absence, or a supplied numeric value.",
+            "false": "Missing, conflicting, inapplicable, or insufficient evidence prevents a concrete answer to at least one requested part of the owner question."
+          }
+        }
+      },
+      "response": {
+        "model": "jev-1.13.0",
+        "usage": {
+          "input_tokens": 815,
+          "output_tokens": 36
+        },
+        "answers": {
+          "old": {
+            "probability": 0.93,
+            "status": "supported",
+            "valid": true,
+            "accept": true,
+            "validation": "valid",
+            "raw": {
+              "noul": 0.93,
+              "answer_type": "NoulAnswer"
+            }
+          },
+          "candidate": {
+            "probability": 0.96,
+            "status": "supported",
+            "valid": true,
+            "accept": true,
+            "validation": "valid",
+            "raw": {
+              "noul": 0.96,
+              "answer_type": "NoulAnswer"
+            }
+          }
+        }
+      },
+      "comparison": {
+        "old": {
+          "exact": true,
+          "would_accept": true,
+          "acceptance_matches": true
+        },
+        "candidate": {
+          "exact": true,
+          "would_accept": true,
+          "acceptance_matches": true
+        }
+      },
+      "seconds": 0.1867362079792656
+    },
+    {
+      "id": "release_rollback-missing",
+      "domain": "release_rollback",
+      "variant": "missing",
+      "reference_answer": null,
+      "expected_accept": false,
+      "expected_status": "not_supported",
+      "state": {
+        "insight_card": {
+          "what_to_watch": "The operational facts within the owner's stated scope.",
+          "why_watch": "Determine whether the supplied evidence answers the owner's question.",
+          "questions": [
+            "Was the September 30 production checkout release rolled back by 18:00 UTC that day?"
+          ]
+        },
+        "observations": [],
+        "sources": [
+          {
+            "status": "healthy"
+          }
+        ],
+        "evidence": [
+          {
+            "statement": "Only the production checkout release and rollback events through September 30 at 18:00 UTC are in scope."
+          },
+          {
+            "statement": "The deployment log records the release at 16:00 UTC; rollback records and subsequent release state are unavailable."
+          }
+        ],
+        "analyses": []
+      },
+      "status": "complete",
+      "questions": {
+        "old": {
+          "type": "noul",
+          "instructions": "Does the available evidence support a concrete answer to questions[0]? Use only the normalized observations, source evidence, and card context. Computed analyses contain verified arithmetic, not proof of causation or statistical significance; respect their limitations. A related metric may support an answer, but do not invent facts that are absent.",
+          "criteria": {
+            "true": "Was the September 30 production checkout release rolled back by 18:00 UTC that day?",
+            "false": "The available evidence does not support a concrete answer to this question."
+          }
+        },
+        "candidate": {
+          "type": "noul",
+          "instructions": "Can the available evidence supply a concrete answer to the owner's question: 'Was the September 30 production checkout release rolled back by 18:00 UTC that day?'? This is the question in `insight_card.questions[0]`. Judge whether an answer exists, including an explicit no, zero, or absence. Use only normalized observations, source evidence, card context, and computed analyses. Respect the requested population, period, definitions, and scope. Every requested part of a compound question needs an answer. Code owns arithmetic: use supplied computed results and respect their status and limitations. Arithmetic and temporal proximity do not establish causation or statistical significance. A healthy source or a list of observed entities does not establish complete coverage. Do not invent absent facts or resolve conflicting evidence without a supplied basis.",
+          "criteria": {
+            "true": "Applicable evidence supplies a concrete answer to the entire owner question. The answer may be yes, no, zero, an established absence, or a supplied numeric value.",
+            "false": "Missing, conflicting, inapplicable, or insufficient evidence prevents a concrete answer to at least one requested part of the owner question."
+          }
+        }
+      },
+      "response": {
+        "model": "jev-1.13.0",
+        "usage": {
+          "input_tokens": 815,
+          "output_tokens": 36
+        },
+        "answers": {
+          "old": {
+            "probability": 0.06,
+            "status": "not_supported",
+            "valid": true,
+            "accept": false,
+            "validation": "valid",
+            "raw": {
+              "noul": 0.06,
+              "answer_type": "NoulAnswer"
+            }
+          },
+          "candidate": {
+            "probability": 0.12,
+            "status": "not_supported",
+            "valid": true,
+            "accept": false,
+            "validation": "valid",
+            "raw": {
+              "noul": 0.12,
+              "answer_type": "NoulAnswer"
+            }
+          }
+        }
+      },
+      "comparison": {
+        "old": {
+          "exact": true,
+          "would_accept": false,
+          "acceptance_matches": true
+        },
+        "candidate": {
+          "exact": true,
+          "would_accept": false,
+          "acceptance_matches": true
+        }
+      },
+      "seconds": 0.19125650002388284
+    },
+    {
+      "id": "release_rollback-conflicting",
+      "domain": "release_rollback",
+      "variant": "conflicting",
+      "reference_answer": null,
+      "expected_accept": false,
+      "expected_status": "not_supported",
+      "state": {
+        "insight_card": {
+          "what_to_watch": "The operational facts within the owner's stated scope.",
+          "why_watch": "Determine whether the supplied evidence answers the owner's question.",
+          "questions": [
+            "Was the September 30 production checkout release rolled back by 18:00 UTC that day?"
+          ]
+        },
+        "observations": [],
+        "sources": [
+          {
+            "status": "healthy"
+          }
+        ],
+        "evidence": [
+          {
+            "statement": "Only the production checkout release and rollback events through September 30 at 18:00 UTC are in scope."
+          },
+          {
+            "statement": "Two equally authoritative release ledgers at 18:00 UTC disagree: one records rollback at 17:00 UTC, the other explicitly records no rollback and the release still deployed. Neither supersedes the other."
+          }
+        ],
+        "analyses": []
+      },
+      "status": "complete",
+      "questions": {
+        "old": {
+          "type": "noul",
+          "instructions": "Does the available evidence support a concrete answer to questions[0]? Use only the normalized observations, source evidence, and card context. Computed analyses contain verified arithmetic, not proof of causation or statistical significance; respect their limitations. A related metric may support an answer, but do not invent facts that are absent.",
+          "criteria": {
+            "true": "Was the September 30 production checkout release rolled back by 18:00 UTC that day?",
+            "false": "The available evidence does not support a concrete answer to this question."
+          }
+        },
+        "candidate": {
+          "type": "noul",
+          "instructions": "Can the available evidence supply a concrete answer to the owner's question: 'Was the September 30 production checkout release rolled back by 18:00 UTC that day?'? This is the question in `insight_card.questions[0]`. Judge whether an answer exists, including an explicit no, zero, or absence. Use only normalized observations, source evidence, card context, and computed analyses. Respect the requested population, period, definitions, and scope. Every requested part of a compound question needs an answer. Code owns arithmetic: use supplied computed results and respect their status and limitations. Arithmetic and temporal proximity do not establish causation or statistical significance. A healthy source or a list of observed entities does not establish complete coverage. Do not invent absent facts or resolve conflicting evidence without a supplied basis.",
+          "criteria": {
+            "true": "Applicable evidence supplies a concrete answer to the entire owner question. The answer may be yes, no, zero, an established absence, or a supplied numeric value.",
+            "false": "Missing, conflicting, inapplicable, or insufficient evidence prevents a concrete answer to at least one requested part of the owner question."
+          }
+        }
+      },
+      "response": {
+        "model": "jev-1.13.0",
+        "usage": {
+          "input_tokens": 838,
+          "output_tokens": 36
+        },
+        "answers": {
+          "old": {
+            "probability": 0.07,
+            "status": "not_supported",
+            "valid": true,
+            "accept": false,
+            "validation": "valid",
+            "raw": {
+              "noul": 0.07,
+              "answer_type": "NoulAnswer"
+            }
+          },
+          "candidate": {
+            "probability": 0.06,
+            "status": "not_supported",
+            "valid": true,
+            "accept": false,
+            "validation": "valid",
+            "raw": {
+              "noul": 0.06,
+              "answer_type": "NoulAnswer"
+            }
+          }
+        }
+      },
+      "comparison": {
+        "old": {
+          "exact": true,
+          "would_accept": false,
+          "acceptance_matches": true
+        },
+        "candidate": {
+          "exact": true,
+          "would_accept": false,
+          "acceptance_matches": true
+        }
+      },
+      "seconds": 0.19657987501705065
+    },
+    {
+      "id": "finance_approval-answer_yes",
+      "domain": "finance_approval",
+      "variant": "answer_yes",
+      "reference_answer": "yes",
+      "expected_accept": true,
+      "expected_status": "supported",
+      "state": {
+        "insight_card": {
+          "what_to_watch": "The operational facts within the owner's stated scope.",
+          "why_watch": "Determine whether the supplied evidence answers the owner's question.",
+          "questions": [
+            "Had the finance owner approved the September 30 settled refund batch by 18:00 UTC?"
+          ]
+        },
+        "observations": [],
+        "sources": [
+          {
+            "status": "healthy"
+          }
+        ],
+        "evidence": [
+          {
+            "statement": "Approval must be recorded by the finance owner for the September 30 settled refund batch by 18:00 UTC."
+          },
+          {
+            "statement": "The complete approval register explicitly records this batch as approved by its finance owner at 17:00 UTC."
+          }
+        ],
+        "analyses": []
+      },
+      "status": "complete",
+      "questions": {
+        "old": {
+          "type": "noul",
+          "instructions": "Does the available evidence support a concrete answer to questions[0]? Use only the normalized observations, source evidence, and card context. Computed analyses contain verified arithmetic, not proof of causation or statistical significance; respect their limitations. A related metric may support an answer, but do not invent facts that are absent.",
+          "criteria": {
+            "true": "Had the finance owner approved the September 30 settled refund batch by 18:00 UTC?",
+            "false": "The available evidence does not support a concrete answer to this question."
+          }
+        },
+        "candidate": {
+          "type": "noul",
+          "instructions": "Can the available evidence supply a concrete answer to the owner's question: 'Had the finance owner approved the September 30 settled refund batch by 18:00 UTC?'? This is the question in `insight_card.questions[0]`. Judge whether an answer exists, including an explicit no, zero, or absence. Use only normalized observations, source evidence, card context, and computed analyses. Respect the requested population, period, definitions, and scope. Every requested part of a compound question needs an answer. Code owns arithmetic: use supplied computed results and respect their status and limitations. Arithmetic and temporal proximity do not establish causation or statistical significance. A healthy source or a list of observed entities does not establish complete coverage. Do not invent absent facts or resolve conflicting evidence without a supplied basis.",
+          "criteria": {
+            "true": "Applicable evidence supplies a concrete answer to the entire owner question. The answer may be yes, no, zero, an established absence, or a supplied numeric value.",
+            "false": "Missing, conflicting, inapplicable, or insufficient evidence prevents a concrete answer to at least one requested part of the owner question."
+          }
+        }
+      },
+      "response": {
+        "model": "jev-1.13.0",
+        "usage": {
+          "input_tokens": 815,
+          "output_tokens": 36
+        },
+        "answers": {
+          "old": {
+            "probability": 0.97,
+            "status": "supported",
+            "valid": true,
+            "accept": true,
+            "validation": "valid",
+            "raw": {
+              "noul": 0.97,
+              "answer_type": "NoulAnswer"
+            }
+          },
+          "candidate": {
+            "probability": 0.96,
+            "status": "supported",
+            "valid": true,
+            "accept": true,
+            "validation": "valid",
+            "raw": {
+              "noul": 0.96,
+              "answer_type": "NoulAnswer"
+            }
+          }
+        }
+      },
+      "comparison": {
+        "old": {
+          "exact": true,
+          "would_accept": true,
+          "acceptance_matches": true
+        },
+        "candidate": {
+          "exact": true,
+          "would_accept": true,
+          "acceptance_matches": true
+        }
+      },
+      "seconds": 0.18688329099677503
+    },
+    {
+      "id": "finance_approval-answer_no",
+      "domain": "finance_approval",
+      "variant": "answer_no",
+      "reference_answer": "no",
+      "expected_accept": true,
+      "expected_status": "supported",
+      "state": {
+        "insight_card": {
+          "what_to_watch": "The operational facts within the owner's stated scope.",
+          "why_watch": "Determine whether the supplied evidence answers the owner's question.",
+          "questions": [
+            "Had the finance owner approved the September 30 settled refund batch by 18:00 UTC?"
+          ]
+        },
+        "observations": [],
+        "sources": [
+          {
+            "status": "healthy"
+          }
+        ],
+        "evidence": [
+          {
+            "statement": "Approval must be recorded by the finance owner for the September 30 settled refund batch by 18:00 UTC."
+          },
+          {
+            "statement": "The complete approval register explicitly records this batch as not approved by its finance owner as of 18:00 UTC."
+          }
+        ],
+        "analyses": []
+      },
+      "status": "complete",
+      "questions": {
+        "old": {
+          "type": "noul",
+          "instructions": "Does the available evidence support a concrete answer to questions[0]? Use only the normalized observations, source evidence, and card context. Computed analyses contain verified arithmetic, not proof of causation or statistical significance; respect their limitations. A related metric may support an answer, but do not invent facts that are absent.",
+          "criteria": {
+            "true": "Had the finance owner approved the September 30 settled refund batch by 18:00 UTC?",
+            "false": "The available evidence does not support a concrete answer to this question."
+          }
+        },
+        "candidate": {
+          "type": "noul",
+          "instructions": "Can the available evidence supply a concrete answer to the owner's question: 'Had the finance owner approved the September 30 settled refund batch by 18:00 UTC?'? This is the question in `insight_card.questions[0]`. Judge whether an answer exists, including an explicit no, zero, or absence. Use only normalized observations, source evidence, card context, and computed analyses. Respect the requested population, period, definitions, and scope. Every requested part of a compound question needs an answer. Code owns arithmetic: use supplied computed results and respect their status and limitations. Arithmetic and temporal proximity do not establish causation or statistical significance. A healthy source or a list of observed entities does not establish complete coverage. Do not invent absent facts or resolve conflicting evidence without a supplied basis.",
+          "criteria": {
+            "true": "Applicable evidence supplies a concrete answer to the entire owner question. The answer may be yes, no, zero, an established absence, or a supplied numeric value.",
+            "false": "Missing, conflicting, inapplicable, or insufficient evidence prevents a concrete answer to at least one requested part of the owner question."
+          }
+        }
+      },
+      "response": {
+        "model": "jev-1.13.0",
+        "usage": {
+          "input_tokens": 817,
+          "output_tokens": 36
+        },
+        "answers": {
+          "old": {
+            "probability": 0.93,
+            "status": "supported",
+            "valid": true,
+            "accept": true,
+            "validation": "valid",
+            "raw": {
+              "noul": 0.93,
+              "answer_type": "NoulAnswer"
+            }
+          },
+          "candidate": {
+            "probability": 0.96,
+            "status": "supported",
+            "valid": true,
+            "accept": true,
+            "validation": "valid",
+            "raw": {
+              "noul": 0.96,
+              "answer_type": "NoulAnswer"
+            }
+          }
+        }
+      },
+      "comparison": {
+        "old": {
+          "exact": true,
+          "would_accept": true,
+          "acceptance_matches": true
+        },
+        "candidate": {
+          "exact": true,
+          "would_accept": true,
+          "acceptance_matches": true
+        }
+      },
+      "seconds": 0.2001102499780245
+    },
+    {
+      "id": "finance_approval-missing",
+      "domain": "finance_approval",
+      "variant": "missing",
+      "reference_answer": null,
+      "expected_accept": false,
+      "expected_status": "not_supported",
+      "state": {
+        "insight_card": {
+          "what_to_watch": "The operational facts within the owner's stated scope.",
+          "why_watch": "Determine whether the supplied evidence answers the owner's question.",
+          "questions": [
+            "Had the finance owner approved the September 30 settled refund batch by 18:00 UTC?"
+          ]
+        },
+        "observations": [],
+        "sources": [
+          {
+            "status": "healthy"
+          }
+        ],
+        "evidence": [
+          {
+            "statement": "Approval must be recorded by the finance owner for the September 30 settled refund batch by 18:00 UTC."
+          },
+          {
+            "statement": "The batch settlement is recorded, but its finance-owner approval record is unavailable."
+          }
+        ],
+        "analyses": []
+      },
+      "status": "complete",
+      "questions": {
+        "old": {
+          "type": "noul",
+          "instructions": "Does the available evidence support a concrete answer to questions[0]? Use only the normalized observations, source evidence, and card context. Computed analyses contain verified arithmetic, not proof of causation or statistical significance; respect their limitations. A related metric may support an answer, but do not invent facts that are absent.",
+          "criteria": {
+            "true": "Had the finance owner approved the September 30 settled refund batch by 18:00 UTC?",
+            "false": "The available evidence does not support a concrete answer to this question."
+          }
+        },
+        "candidate": {
+          "type": "noul",
+          "instructions": "Can the available evidence supply a concrete answer to the owner's question: 'Had the finance owner approved the September 30 settled refund batch by 18:00 UTC?'? This is the question in `insight_card.questions[0]`. Judge whether an answer exists, including an explicit no, zero, or absence. Use only normalized observations, source evidence, card context, and computed analyses. Respect the requested population, period, definitions, and scope. Every requested part of a compound question needs an answer. Code owns arithmetic: use supplied computed results and respect their status and limitations. Arithmetic and temporal proximity do not establish causation or statistical significance. A healthy source or a list of observed entities does not establish complete coverage. Do not invent absent facts or resolve conflicting evidence without a supplied basis.",
+          "criteria": {
+            "true": "Applicable evidence supplies a concrete answer to the entire owner question. The answer may be yes, no, zero, an established absence, or a supplied numeric value.",
+            "false": "Missing, conflicting, inapplicable, or insufficient evidence prevents a concrete answer to at least one requested part of the owner question."
+          }
+        }
+      },
+      "response": {
+        "model": "jev-1.13.0",
+        "usage": {
+          "input_tokens": 807,
+          "output_tokens": 36
+        },
+        "answers": {
+          "old": {
+            "probability": 0.06,
+            "status": "not_supported",
+            "valid": true,
+            "accept": false,
+            "validation": "valid",
+            "raw": {
+              "noul": 0.06,
+              "answer_type": "NoulAnswer"
+            }
+          },
+          "candidate": {
+            "probability": 0.12,
+            "status": "not_supported",
+            "valid": true,
+            "accept": false,
+            "validation": "valid",
+            "raw": {
+              "noul": 0.12,
+              "answer_type": "NoulAnswer"
+            }
+          }
+        }
+      },
+      "comparison": {
+        "old": {
+          "exact": true,
+          "would_accept": false,
+          "acceptance_matches": true
+        },
+        "candidate": {
+          "exact": true,
+          "would_accept": false,
+          "acceptance_matches": true
+        }
+      },
+      "seconds": 0.18604925001272932
+    },
+    {
+      "id": "finance_approval-conflicting",
+      "domain": "finance_approval",
+      "variant": "conflicting",
+      "reference_answer": null,
+      "expected_accept": false,
+      "expected_status": "not_supported",
+      "state": {
+        "insight_card": {
+          "what_to_watch": "The operational facts within the owner's stated scope.",
+          "why_watch": "Determine whether the supplied evidence answers the owner's question.",
+          "questions": [
+            "Had the finance owner approved the September 30 settled refund batch by 18:00 UTC?"
+          ]
+        },
+        "observations": [],
+        "sources": [
+          {
+            "status": "healthy"
+          }
+        ],
+        "evidence": [
+          {
+            "statement": "Approval must be recorded by the finance owner for the September 30 settled refund batch by 18:00 UTC."
+          },
+          {
+            "statement": "Two equally authoritative approval records for this batch at 18:00 UTC disagree: one says finance-owner approved, the other says finance-owner not approved. Neither supersedes the other."
+          }
+        ],
+        "analyses": []
+      },
+      "status": "complete",
+      "questions": {
+        "old": {
+          "type": "noul",
+          "instructions": "Does the available evidence support a concrete answer to questions[0]? Use only the normalized observations, source evidence, and card context. Computed analyses contain verified arithmetic, not proof of causation or statistical significance; respect their limitations. A related metric may support an answer, but do not invent facts that are absent.",
+          "criteria": {
+            "true": "Had the finance owner approved the September 30 settled refund batch by 18:00 UTC?",
+            "false": "The available evidence does not support a concrete answer to this question."
+          }
+        },
+        "candidate": {
+          "type": "noul",
+          "instructions": "Can the available evidence supply a concrete answer to the owner's question: 'Had the finance owner approved the September 30 settled refund batch by 18:00 UTC?'? This is the question in `insight_card.questions[0]`. Judge whether an answer exists, including an explicit no, zero, or absence. Use only normalized observations, source evidence, card context, and computed analyses. Respect the requested population, period, definitions, and scope. Every requested part of a compound question needs an answer. Code owns arithmetic: use supplied computed results and respect their status and limitations. Arithmetic and temporal proximity do not establish causation or statistical significance. A healthy source or a list of observed entities does not establish complete coverage. Do not invent absent facts or resolve conflicting evidence without a supplied basis.",
+          "criteria": {
+            "true": "Applicable evidence supplies a concrete answer to the entire owner question. The answer may be yes, no, zero, an established absence, or a supplied numeric value.",
+            "false": "Missing, conflicting, inapplicable, or insufficient evidence prevents a concrete answer to at least one requested part of the owner question."
+          }
+        }
+      },
+      "response": {
+        "model": "jev-1.13.0",
+        "usage": {
+          "input_tokens": 831,
+          "output_tokens": 36
+        },
+        "answers": {
+          "old": {
+            "probability": 0.07,
+            "status": "not_supported",
+            "valid": true,
+            "accept": false,
+            "validation": "valid",
+            "raw": {
+              "noul": 0.07,
+              "answer_type": "NoulAnswer"
+            }
+          },
+          "candidate": {
+            "probability": 0.06,
+            "status": "not_supported",
+            "valid": true,
+            "accept": false,
+            "validation": "valid",
+            "raw": {
+              "noul": 0.06,
+              "answer_type": "NoulAnswer"
+            }
+          }
+        }
+      },
+      "comparison": {
+        "old": {
+          "exact": true,
+          "would_accept": false,
+          "acceptance_matches": true
+        },
+        "candidate": {
+          "exact": true,
+          "would_accept": false,
+          "acceptance_matches": true
+        }
+      },
+      "seconds": 0.19244625000283122
+    },
+    {
+      "id": "cluster_coverage-answer_yes",
+      "domain": "cluster_coverage",
+      "variant": "answer_yes",
+      "reference_answer": "yes",
+      "expected_accept": true,
+      "expected_status": "supported",
+      "state": {
+        "insight_card": {
+          "what_to_watch": "The operational facts within the owner's stated scope.",
+          "why_watch": "Determine whether the supplied evidence answers the owner's question.",
+          "questions": [
+            "Does the 18:00 UTC September 30 telemetry snapshot cover every production database cluster?"
+          ]
+        },
+        "observations": [],
+        "sources": [
+          {
+            "status": "healthy"
+          }
+        ],
+        "evidence": [
+          {
+            "statement": "Coverage requires telemetry for every cluster in the authoritative production inventory at the same timestamp."
+          },
+          {
+            "statement": "The authoritative complete production inventory at 18:00 UTC is east, west, and central. The telemetry snapshot explicitly contains all three at that timestamp."
+          }
+        ],
+        "analyses": []
+      },
+      "status": "complete",
+      "questions": {
+        "old": {
+          "type": "noul",
+          "instructions": "Does the available evidence support a concrete answer to questions[0]? Use only the normalized observations, source evidence, and card context. Computed analyses contain verified arithmetic, not proof of causation or statistical significance; respect their limitations. A related metric may support an answer, but do not invent facts that are absent.",
+          "criteria": {
+            "true": "Does the 18:00 UTC September 30 telemetry snapshot cover every production database cluster?",
+            "false": "The available evidence does not support a concrete answer to this question."
+          }
+        },
+        "candidate": {
+          "type": "noul",
+          "instructions": "Can the available evidence supply a concrete answer to the owner's question: 'Does the 18:00 UTC September 30 telemetry snapshot cover every production database cluster?'? This is the question in `insight_card.questions[0]`. Judge whether an answer exists, including an explicit no, zero, or absence. Use only normalized observations, source evidence, card context, and computed analyses. Respect the requested population, period, definitions, and scope. Every requested part of a compound question needs an answer. Code owns arithmetic: use supplied computed results and respect their status and limitations. Arithmetic and temporal proximity do not establish causation or statistical significance. A healthy source or a list of observed entities does not establish complete coverage. Do not invent absent facts or resolve conflicting evidence without a supplied basis.",
+          "criteria": {
+            "true": "Applicable evidence supplies a concrete answer to the entire owner question. The answer may be yes, no, zero, an established absence, or a supplied numeric value.",
+            "false": "Missing, conflicting, inapplicable, or insufficient evidence prevents a concrete answer to at least one requested part of the owner question."
+          }
+        }
+      },
+      "response": {
+        "model": "jev-1.13.0",
+        "usage": {
+          "input_tokens": 811,
+          "output_tokens": 36
+        },
+        "answers": {
+          "old": {
+            "probability": 0.9,
+            "status": "supported",
+            "valid": true,
+            "accept": true,
+            "validation": "valid",
+            "raw": {
+              "noul": 0.9,
+              "answer_type": "NoulAnswer"
+            }
+          },
+          "candidate": {
+            "probability": 0.87,
+            "status": "supported",
+            "valid": true,
+            "accept": true,
+            "validation": "valid",
+            "raw": {
+              "noul": 0.87,
+              "answer_type": "NoulAnswer"
+            }
+          }
+        }
+      },
+      "comparison": {
+        "old": {
+          "exact": true,
+          "would_accept": true,
+          "acceptance_matches": true
+        },
+        "candidate": {
+          "exact": true,
+          "would_accept": true,
+          "acceptance_matches": true
+        }
+      },
+      "seconds": 0.21309645799919963
+    },
+    {
+      "id": "cluster_coverage-answer_no",
+      "domain": "cluster_coverage",
+      "variant": "answer_no",
+      "reference_answer": "no",
+      "expected_accept": true,
+      "expected_status": "supported",
+      "state": {
+        "insight_card": {
+          "what_to_watch": "The operational facts within the owner's stated scope.",
+          "why_watch": "Determine whether the supplied evidence answers the owner's question.",
+          "questions": [
+            "Does the 18:00 UTC September 30 telemetry snapshot cover every production database cluster?"
+          ]
+        },
+        "observations": [],
+        "sources": [
+          {
+            "status": "healthy"
+          }
+        ],
+        "evidence": [
+          {
+            "statement": "Coverage requires telemetry for every cluster in the authoritative production inventory at the same timestamp."
+          },
+          {
+            "statement": "The authoritative complete production inventory at 18:00 UTC is east, west, and central. The telemetry snapshot explicitly lacks central at that timestamp and contains only east and west."
+          }
+        ],
+        "analyses": []
+      },
+      "status": "complete",
+      "questions": {
+        "old": {
+          "type": "noul",
+          "instructions": "Does the available evidence support a concrete answer to questions[0]? Use only the normalized observations, source evidence, and card context. Computed analyses contain verified arithmetic, not proof of causation or statistical significance; respect their limitations. A related metric may support an answer, but do not invent facts that are absent.",
+          "criteria": {
+            "true": "Does the 18:00 UTC September 30 telemetry snapshot cover every production database cluster?",
+            "false": "The available evidence does not support a concrete answer to this question."
+          }
+        },
+        "candidate": {
+          "type": "noul",
+          "instructions": "Can the available evidence supply a concrete answer to the owner's question: 'Does the 18:00 UTC September 30 telemetry snapshot cover every production database cluster?'? This is the question in `insight_card.questions[0]`. Judge whether an answer exists, including an explicit no, zero, or absence. Use only normalized observations, source evidence, card context, and computed analyses. Respect the requested population, period, definitions, and scope. Every requested part of a compound question needs an answer. Code owns arithmetic: use supplied computed results and respect their status and limitations. Arithmetic and temporal proximity do not establish causation or statistical significance. A healthy source or a list of observed entities does not establish complete coverage. Do not invent absent facts or resolve conflicting evidence without a supplied basis.",
+          "criteria": {
+            "true": "Applicable evidence supplies a concrete answer to the entire owner question. The answer may be yes, no, zero, an established absence, or a supplied numeric value.",
+            "false": "Missing, conflicting, inapplicable, or insufficient evidence prevents a concrete answer to at least one requested part of the owner question."
+          }
+        }
+      },
+      "response": {
+        "model": "jev-1.13.0",
+        "usage": {
+          "input_tokens": 816,
+          "output_tokens": 36
+        },
+        "answers": {
+          "old": {
+            "probability": 0.91,
+            "status": "supported",
+            "valid": true,
+            "accept": true,
+            "validation": "valid",
+            "raw": {
+              "noul": 0.91,
+              "answer_type": "NoulAnswer"
+            }
+          },
+          "candidate": {
+            "probability": 0.95,
+            "status": "supported",
+            "valid": true,
+            "accept": true,
+            "validation": "valid",
+            "raw": {
+              "noul": 0.95,
+              "answer_type": "NoulAnswer"
+            }
+          }
+        }
+      },
+      "comparison": {
+        "old": {
+          "exact": true,
+          "would_accept": true,
+          "acceptance_matches": true
+        },
+        "candidate": {
+          "exact": true,
+          "would_accept": true,
+          "acceptance_matches": true
+        }
+      },
+      "seconds": 0.17914333404041827
+    },
+    {
+      "id": "cluster_coverage-missing",
+      "domain": "cluster_coverage",
+      "variant": "missing",
+      "reference_answer": null,
+      "expected_accept": false,
+      "expected_status": "not_supported",
+      "state": {
+        "insight_card": {
+          "what_to_watch": "The operational facts within the owner's stated scope.",
+          "why_watch": "Determine whether the supplied evidence answers the owner's question.",
+          "questions": [
+            "Does the 18:00 UTC September 30 telemetry snapshot cover every production database cluster?"
+          ]
+        },
+        "observations": [],
+        "sources": [
+          {
+            "status": "healthy"
+          }
+        ],
+        "evidence": [
+          {
+            "statement": "Coverage requires telemetry for every cluster in the authoritative production inventory at the same timestamp."
+          },
+          {
+            "statement": "The telemetry source is healthy and lists east and west at 18:00 UTC. No authoritative complete production inventory or coverage attestation is supplied."
+          }
+        ],
+        "analyses": []
+      },
+      "status": "complete",
+      "questions": {
+        "old": {
+          "type": "noul",
+          "instructions": "Does the available evidence support a concrete answer to questions[0]? Use only the normalized observations, source evidence, and card context. Computed analyses contain verified arithmetic, not proof of causation or statistical significance; respect their limitations. A related metric may support an answer, but do not invent facts that are absent.",
+          "criteria": {
+            "true": "Does the 18:00 UTC September 30 telemetry snapshot cover every production database cluster?",
+            "false": "The available evidence does not support a concrete answer to this question."
+          }
+        },
+        "candidate": {
+          "type": "noul",
+          "instructions": "Can the available evidence supply a concrete answer to the owner's question: 'Does the 18:00 UTC September 30 telemetry snapshot cover every production database cluster?'? This is the question in `insight_card.questions[0]`. Judge whether an answer exists, including an explicit no, zero, or absence. Use only normalized observations, source evidence, card context, and computed analyses. Respect the requested population, period, definitions, and scope. Every requested part of a compound question needs an answer. Code owns arithmetic: use supplied computed results and respect their status and limitations. Arithmetic and temporal proximity do not establish causation or statistical significance. A healthy source or a list of observed entities does not establish complete coverage. Do not invent absent facts or resolve conflicting evidence without a supplied basis.",
+          "criteria": {
+            "true": "Applicable evidence supplies a concrete answer to the entire owner question. The answer may be yes, no, zero, an established absence, or a supplied numeric value.",
+            "false": "Missing, conflicting, inapplicable, or insufficient evidence prevents a concrete answer to at least one requested part of the owner question."
+          }
+        }
+      },
+      "response": {
+        "model": "jev-1.13.0",
+        "usage": {
+          "input_tokens": 811,
+          "output_tokens": 36
+        },
+        "answers": {
+          "old": {
+            "probability": 0.09,
+            "status": "not_supported",
+            "valid": true,
+            "accept": false,
+            "validation": "valid",
+            "raw": {
+              "noul": 0.09,
+              "answer_type": "NoulAnswer"
+            }
+          },
+          "candidate": {
+            "probability": 0.17,
+            "status": "not_supported",
+            "valid": true,
+            "accept": false,
+            "validation": "valid",
+            "raw": {
+              "noul": 0.17,
+              "answer_type": "NoulAnswer"
+            }
+          }
+        }
+      },
+      "comparison": {
+        "old": {
+          "exact": true,
+          "would_accept": false,
+          "acceptance_matches": true
+        },
+        "candidate": {
+          "exact": true,
+          "would_accept": false,
+          "acceptance_matches": true
+        }
+      },
+      "seconds": 0.17522404197370633
+    },
+    {
+      "id": "cluster_coverage-conflicting",
+      "domain": "cluster_coverage",
+      "variant": "conflicting",
+      "reference_answer": null,
+      "expected_accept": false,
+      "expected_status": "not_supported",
+      "state": {
+        "insight_card": {
+          "what_to_watch": "The operational facts within the owner's stated scope.",
+          "why_watch": "Determine whether the supplied evidence answers the owner's question.",
+          "questions": [
+            "Does the 18:00 UTC September 30 telemetry snapshot cover every production database cluster?"
+          ]
+        },
+        "observations": [],
+        "sources": [
+          {
+            "status": "healthy"
+          }
+        ],
+        "evidence": [
+          {
+            "statement": "Coverage requires telemetry for every cluster in the authoritative production inventory at the same timestamp."
+          },
+          {
+            "statement": "The complete production inventory contains east, west, and central. Two equally authoritative reports of the same telemetry snapshot disagree: one includes all three; the other explicitly excludes central. Neither supersedes the other."
+          }
+        ],
+        "analyses": []
+      },
+      "status": "complete",
+      "questions": {
+        "old": {
+          "type": "noul",
+          "instructions": "Does the available evidence support a concrete answer to questions[0]? Use only the normalized observations, source evidence, and card context. Computed analyses contain verified arithmetic, not proof of causation or statistical significance; respect their limitations. A related metric may support an answer, but do not invent facts that are absent.",
+          "criteria": {
+            "true": "Does the 18:00 UTC September 30 telemetry snapshot cover every production database cluster?",
+            "false": "The available evidence does not support a concrete answer to this question."
+          }
+        },
+        "candidate": {
+          "type": "noul",
+          "instructions": "Can the available evidence supply a concrete answer to the owner's question: 'Does the 18:00 UTC September 30 telemetry snapshot cover every production database cluster?'? This is the question in `insight_card.questions[0]`. Judge whether an answer exists, including an explicit no, zero, or absence. Use only normalized observations, source evidence, card context, and computed analyses. Respect the requested population, period, definitions, and scope. Every requested part of a compound question needs an answer. Code owns arithmetic: use supplied computed results and respect their status and limitations. Arithmetic and temporal proximity do not establish causation or statistical significance. A healthy source or a list of observed entities does not establish complete coverage. Do not invent absent facts or resolve conflicting evidence without a supplied basis.",
+          "criteria": {
+            "true": "Applicable evidence supplies a concrete answer to the entire owner question. The answer may be yes, no, zero, an established absence, or a supplied numeric value.",
+            "false": "Missing, conflicting, inapplicable, or insufficient evidence prevents a concrete answer to at least one requested part of the owner question."
+          }
+        }
+      },
+      "response": {
+        "model": "jev-1.13.0",
+        "usage": {
+          "input_tokens": 820,
+          "output_tokens": 36
+        },
+        "answers": {
+          "old": {
+            "probability": 0.1,
+            "status": "not_supported",
+            "valid": true,
+            "accept": false,
+            "validation": "valid",
+            "raw": {
+              "noul": 0.1,
+              "answer_type": "NoulAnswer"
+            }
+          },
+          "candidate": {
+            "probability": 0.08,
+            "status": "not_supported",
+            "valid": true,
+            "accept": false,
+            "validation": "valid",
+            "raw": {
+              "noul": 0.08,
+              "answer_type": "NoulAnswer"
+            }
+          }
+        }
+      },
+      "comparison": {
+        "old": {
+          "exact": true,
+          "would_accept": false,
+          "acceptance_matches": true
+        },
+        "candidate": {
+          "exact": true,
+          "would_accept": false,
+          "acceptance_matches": true
+        }
+      },
+      "seconds": 0.16866266704164445
+    },
+    {
+      "id": "release_rollback-partial_compound_question",
+      "domain": "release_rollback",
+      "variant": "partial_compound_question",
+      "reference_answer": null,
+      "expected_accept": false,
+      "expected_status": "not_supported",
+      "state": {
+        "insight_card": {
+          "what_to_watch": "The operational facts within the owner's stated scope.",
+          "why_watch": "Determine whether the supplied evidence answers the owner's question.",
+          "questions": [
+            "Was the September 30 production checkout release rolled back by 18:00 UTC, and who authorized the rollback?"
+          ]
+        },
+        "observations": [],
+        "sources": [
+          {
+            "status": "healthy"
+          }
+        ],
+        "evidence": [
+          {
+            "statement": "The complete production release ledger records a rollback at 17:00 UTC that day. The authorizer field is absent, and no authorization record is supplied."
+          }
+        ],
+        "analyses": []
+      },
+      "status": "complete",
+      "questions": {
+        "old": {
+          "type": "noul",
+          "instructions": "Does the available evidence support a concrete answer to questions[0]? Use only the normalized observations, source evidence, and card context. Computed analyses contain verified arithmetic, not proof of causation or statistical significance; respect their limitations. A related metric may support an answer, but do not invent facts that are absent.",
+          "criteria": {
+            "true": "Was the September 30 production checkout release rolled back by 18:00 UTC, and who authorized the rollback?",
+            "false": "The available evidence does not support a concrete answer to this question."
+          }
+        },
+        "candidate": {
+          "type": "noul",
+          "instructions": "Can the available evidence supply a concrete answer to the owner's question: 'Was the September 30 production checkout release rolled back by 18:00 UTC, and who authorized the rollback?'? This is the question in `insight_card.questions[0]`. Judge whether an answer exists, including an explicit no, zero, or absence. Use only normalized observations, source evidence, card context, and computed analyses. Respect the requested population, period, definitions, and scope. Every requested part of a compound question needs an answer. Code owns arithmetic: use supplied computed results and respect their status and limitations. Arithmetic and temporal proximity do not establish causation or statistical significance. A healthy source or a list of observed entities does not establish complete coverage. Do not invent absent facts or resolve conflicting evidence without a supplied basis.",
+          "criteria": {
+            "true": "Applicable evidence supplies a concrete answer to the entire owner question. The answer may be yes, no, zero, an established absence, or a supplied numeric value.",
+            "false": "Missing, conflicting, inapplicable, or insufficient evidence prevents a concrete answer to at least one requested part of the owner question."
+          }
+        }
+      },
+      "response": {
+        "model": "jev-1.13.0",
+        "usage": {
+          "input_tokens": 803,
+          "output_tokens": 36
+        },
+        "answers": {
+          "old": {
+            "probability": 0.31,
+            "status": "unknown",
+            "valid": true,
+            "accept": false,
+            "validation": "valid",
+            "raw": {
+              "noul": 0.31,
+              "answer_type": "NoulAnswer"
+            }
+          },
+          "candidate": {
+            "probability": 0.36,
+            "status": "unknown",
+            "valid": true,
+            "accept": false,
+            "validation": "valid",
+            "raw": {
+              "noul": 0.36,
+              "answer_type": "NoulAnswer"
+            }
+          }
+        }
+      },
+      "comparison": {
+        "old": {
+          "exact": false,
+          "would_accept": false,
+          "acceptance_matches": true
+        },
+        "candidate": {
+          "exact": false,
+          "would_accept": false,
+          "acceptance_matches": true
+        }
+      },
+      "seconds": 0.1821466659894213
+    },
+    {
+      "id": "support_denominator-wrong_population",
+      "domain": "support_denominator",
+      "variant": "wrong_population",
+      "reference_answer": null,
+      "expected_accept": false,
+      "expected_status": "not_supported",
+      "state": {
+        "insight_card": {
+          "what_to_watch": "The operational facts within the owner's stated scope.",
+          "why_watch": "Determine whether the supplied evidence answers the owner's question.",
+          "questions": [
+            "Were there any SLA-eligible customer tickets in the North support queue on September 30?"
+          ]
+        },
+        "observations": [],
+        "sources": [
+          {
+            "status": "healthy"
+          }
+        ],
+        "evidence": [
+          {
+            "statement": "The complete September 30 eligibility audit covers internal employee IT tickets in the South queue only and reports 120 eligible tickets. No North customer-ticket audit is supplied."
+          }
+        ],
+        "analyses": []
+      },
+      "status": "complete",
+      "questions": {
+        "old": {
+          "type": "noul",
+          "instructions": "Does the available evidence support a concrete answer to questions[0]? Use only the normalized observations, source evidence, and card context. Computed analyses contain verified arithmetic, not proof of causation or statistical significance; respect their limitations. A related metric may support an answer, but do not invent facts that are absent.",
+          "criteria": {
+            "true": "Were there any SLA-eligible customer tickets in the North support queue on September 30?",
+            "false": "The available evidence does not support a concrete answer to this question."
+          }
+        },
+        "candidate": {
+          "type": "noul",
+          "instructions": "Can the available evidence supply a concrete answer to the owner's question: 'Were there any SLA-eligible customer tickets in the North support queue on September 30?'? This is the question in `insight_card.questions[0]`. Judge whether an answer exists, including an explicit no, zero, or absence. Use only normalized observations, source evidence, card context, and computed analyses. Respect the requested population, period, definitions, and scope. Every requested part of a compound question needs an answer. Code owns arithmetic: use supplied computed results and respect their status and limitations. Arithmetic and temporal proximity do not establish causation or statistical significance. A healthy source or a list of observed entities does not establish complete coverage. Do not invent absent facts or resolve conflicting evidence without a supplied basis.",
+          "criteria": {
+            "true": "Applicable evidence supplies a concrete answer to the entire owner question. The answer may be yes, no, zero, an established absence, or a supplied numeric value.",
+            "false": "Missing, conflicting, inapplicable, or insufficient evidence prevents a concrete answer to at least one requested part of the owner question."
+          }
+        }
+      },
+      "response": {
+        "model": "jev-1.13.0",
+        "usage": {
+          "input_tokens": 786,
+          "output_tokens": 36
+        },
+        "answers": {
+          "old": {
+            "probability": 0.06,
+            "status": "not_supported",
+            "valid": true,
+            "accept": false,
+            "validation": "valid",
+            "raw": {
+              "noul": 0.06,
+              "answer_type": "NoulAnswer"
+            }
+          },
+          "candidate": {
+            "probability": 0.05,
+            "status": "not_supported",
+            "valid": true,
+            "accept": false,
+            "validation": "valid",
+            "raw": {
+              "noul": 0.05,
+              "answer_type": "NoulAnswer"
+            }
+          }
+        }
+      },
+      "comparison": {
+        "old": {
+          "exact": true,
+          "would_accept": false,
+          "acceptance_matches": true
+        },
+        "candidate": {
+          "exact": true,
+          "would_accept": false,
+          "acceptance_matches": true
+        }
+      },
+      "seconds": 0.17240766697796062
+    },
+    {
+      "id": "support_denominator-open_numeric_answer",
+      "domain": "support_denominator",
+      "variant": "open_numeric_answer",
+      "reference_answer": 75,
+      "expected_accept": true,
+      "expected_status": "supported",
+      "state": {
+        "insight_card": {
+          "what_to_watch": "The operational facts within the owner's stated scope.",
+          "why_watch": "Determine whether the supplied evidence answers the owner's question.",
+          "questions": [
+            "What percentage of SLA-eligible North customer tickets met SLA on September 30?"
+          ]
+        },
+        "observations": [],
+        "sources": [
+          {
+            "status": "healthy"
+          }
+        ],
+        "evidence": [
+          {
+            "statement": "The complete North customer-ticket audit for September 30 records 120 SLA-eligible tickets, of which 90 met SLA. Spam and internal tickets are excluded."
+          }
+        ],
+        "analyses": [
+          {
+            "status": "complete",
+            "metric": "eligible_ticket_sla_percent",
+            "inputs": {
+              "met_sla": 90,
+              "eligible_tickets": 120
+            },
+            "formula": "100 * met_sla / eligible_tickets",
+            "value": 75,
+            "limitations": [
+              "Only North customer tickets on September 30; descriptive arithmetic, not a causal or statistical-significance finding."
+            ]
+          }
+        ]
+      },
+      "status": "complete",
+      "questions": {
+        "old": {
+          "type": "noul",
+          "instructions": "Does the available evidence support a concrete answer to questions[0]? Use only the normalized observations, source evidence, and card context. Computed analyses contain verified arithmetic, not proof of causation or statistical significance; respect their limitations. A related metric may support an answer, but do not invent facts that are absent.",
+          "criteria": {
+            "true": "What percentage of SLA-eligible North customer tickets met SLA on September 30?",
+            "false": "The available evidence does not support a concrete answer to this question."
+          }
+        },
+        "candidate": {
+          "type": "noul",
+          "instructions": "Can the available evidence supply a concrete answer to the owner's question: 'What percentage of SLA-eligible North customer tickets met SLA on September 30?'? This is the question in `insight_card.questions[0]`. Judge whether an answer exists, including an explicit no, zero, or absence. Use only normalized observations, source evidence, card context, and computed analyses. Respect the requested population, period, definitions, and scope. Every requested part of a compound question needs an answer. Code owns arithmetic: use supplied computed results and respect their status and limitations. Arithmetic and temporal proximity do not establish causation or statistical significance. A healthy source or a list of observed entities does not establish complete coverage. Do not invent absent facts or resolve conflicting evidence without a supplied basis.",
+          "criteria": {
+            "true": "Applicable evidence supplies a concrete answer to the entire owner question. The answer may be yes, no, zero, an established absence, or a supplied numeric value.",
+            "false": "Missing, conflicting, inapplicable, or insufficient evidence prevents a concrete answer to at least one requested part of the owner question."
+          }
+        }
+      },
+      "response": {
+        "model": "jev-1.13.0",
+        "usage": {
+          "input_tokens": 888,
+          "output_tokens": 36
+        },
+        "answers": {
+          "old": {
+            "probability": 0.98,
+            "status": "supported",
+            "valid": true,
+            "accept": true,
+            "validation": "valid",
+            "raw": {
+              "noul": 0.98,
+              "answer_type": "NoulAnswer"
+            }
+          },
+          "candidate": {
+            "probability": 0.97,
+            "status": "supported",
+            "valid": true,
+            "accept": true,
+            "validation": "valid",
+            "raw": {
+              "noul": 0.97,
+              "answer_type": "NoulAnswer"
+            }
+          }
+        }
+      },
+      "comparison": {
+        "old": {
+          "exact": true,
+          "would_accept": true,
+          "acceptance_matches": true
+        },
+        "candidate": {
+          "exact": true,
+          "would_accept": true,
+          "acceptance_matches": true
+        }
+      },
+      "seconds": 0.19273366598645225
+    },
+    {
+      "id": "release_rollback-causal_why_from_time",
+      "domain": "release_rollback",
+      "variant": "causal_why_from_time",
+      "reference_answer": null,
+      "expected_accept": false,
+      "expected_status": "not_supported",
+      "state": {
+        "insight_card": {
+          "what_to_watch": "The operational facts within the owner's stated scope.",
+          "why_watch": "Determine whether the supplied evidence answers the owner's question.",
+          "questions": [
+            "Why did production checkout latency rise on September 30?"
+          ]
+        },
+        "observations": [],
+        "sources": [
+          {
+            "status": "healthy"
+          }
+        ],
+        "evidence": [
+          {
+            "statement": "A release occurred at 16:00 UTC. Latency rose at 16:05 UTC. No mechanism, controlled comparison, or causal investigation is supplied."
+          }
+        ],
+        "analyses": [
+          {
+            "status": "complete",
+            "metric": "latency_change_percent",
+            "inputs": {
+              "baseline_ms": 100,
+              "current_ms": 120
+            },
+            "value": 20,
+            "limitations": [
+              "Descriptive arithmetic only. Temporal proximity cannot establish why latency rose."
+            ]
+          }
+        ]
+      },
+      "status": "complete",
+      "questions": {
+        "old": {
+          "type": "noul",
+          "instructions": "Does the available evidence support a concrete answer to questions[0]? Use only the normalized observations, source evidence, and card context. Computed analyses contain verified arithmetic, not proof of causation or statistical significance; respect their limitations. A related metric may support an answer, but do not invent facts that are absent.",
+          "criteria": {
+            "true": "Why did production checkout latency rise on September 30?",
+            "false": "The available evidence does not support a concrete answer to this question."
+          }
+        },
+        "candidate": {
+          "type": "noul",
+          "instructions": "Can the available evidence supply a concrete answer to the owner's question: 'Why did production checkout latency rise on September 30?'? This is the question in `insight_card.questions[0]`. Judge whether an answer exists, including an explicit no, zero, or absence. Use only normalized observations, source evidence, card context, and computed analyses. Respect the requested population, period, definitions, and scope. Every requested part of a compound question needs an answer. Code owns arithmetic: use supplied computed results and respect their status and limitations. Arithmetic and temporal proximity do not establish causation or statistical significance. A healthy source or a list of observed entities does not establish complete coverage. Do not invent absent facts or resolve conflicting evidence without a supplied basis.",
+          "criteria": {
+            "true": "Applicable evidence supplies a concrete answer to the entire owner question. The answer may be yes, no, zero, an established absence, or a supplied numeric value.",
+            "false": "Missing, conflicting, inapplicable, or insufficient evidence prevents a concrete answer to at least one requested part of the owner question."
+          }
+        }
+      },
+      "response": {
+        "model": "jev-1.13.0",
+        "usage": {
+          "input_tokens": 841,
+          "output_tokens": 36
+        },
+        "answers": {
+          "old": {
+            "probability": 0.05,
+            "status": "not_supported",
+            "valid": true,
+            "accept": false,
+            "validation": "valid",
+            "raw": {
+              "noul": 0.05,
+              "answer_type": "NoulAnswer"
+            }
+          },
+          "candidate": {
+            "probability": 0.19,
+            "status": "not_supported",
+            "valid": true,
+            "accept": false,
+            "validation": "valid",
+            "raw": {
+              "noul": 0.19,
+              "answer_type": "NoulAnswer"
+            }
+          }
+        }
+      },
+      "comparison": {
+        "old": {
+          "exact": true,
+          "would_accept": false,
+          "acceptance_matches": true
+        },
+        "candidate": {
+          "exact": true,
+          "would_accept": false,
+          "acceptance_matches": true
+        }
+      },
+      "seconds": 0.2003951250226237
+    }
+  ],
+  "input_tokens": 16346,
+  "output_tokens": 720,
+  "successful_requests": 20,
+  "summary": {
+    "old": {
+      "denominator": 20,
+      "exact": 19,
+      "accepted": 9,
+      "false_support": 0,
+      "false_refusal": 0,
+      "probability_unknown": 1,
+      "invalid_answers": 0,
+      "errors": 0,
+      "passed": false
+    },
+    "candidate": {
+      "denominator": 20,
+      "exact": 19,
+      "accepted": 9,
+      "false_support": 0,
+      "false_refusal": 0,
+      "probability_unknown": 1,
+      "invalid_answers": 0,
+      "errors": 0,
+      "passed": false
+    },
+    "candidate_only_correct": 0,
+    "old_only_correct": 0
+  }
+}

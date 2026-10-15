@@ -281,11 +281,19 @@ def build_cases(
                                 "chart_index": index,
                                 "operating_area": group,
                             },
-                            freshness=override.get("freshness"),
+                            freshness=override.get(
+                                "freshness", "fresh; complete; comparable"
+                            ),
                             attributes={
                                 "chart_id": chart_id,
                                 "related_chart_ids": related,
                                 "catalog_definition": descriptor.description,
+                                "quality_status": (
+                                    "stale"
+                                    if "stale" in str(override.get("freshness", "")).lower()
+                                    else "healthy"
+                                ),
+                                "comparability": "same reporting period and population",
                             },
                         )
                     ],
@@ -775,6 +783,7 @@ async def run_benchmark(args: argparse.Namespace) -> dict[str, Any]:
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "model": "jev-latest",
         "cases": len(cases),
+        "repeats": args.repeats,
         "charts_per_case": int(config["chart_count"]),
         "candidate_pool_limit": args.max_candidates,
         "retrieval_limit": args.retrieval_limit,

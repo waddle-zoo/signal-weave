@@ -1,0 +1,149 @@
+{
+  "scope": "Internal AI review, not external peer review",
+  "cases": [
+    {
+      "id": "period-e1e75f4e6b82",
+      "A": {
+        "usable": true,
+        "reasons": "The numeric values and data-owner route are internally faithful. This is a defensible literal reading if f1's same-week population plus f4's shared settled-order definition do not establish comparable regional populations. The fixture oracle appears to treat those facts as sufficient, so this case has an oracle/wording limitation rather than a conclusive prose defect; the intended comparability assumption should not be described as more explicit than supplied."
+      },
+      "B": {
+        "usable": true,
+        "reasons": "Correct under the fixture's intended reading and correct notify/primary-owner route. It accurately reports the 2.0% total increase, 21.43% regional maximum decline, and absent exception, and applies the regional OR branch. However, f4 states a shared settled-order definition rather than literally saying regional populations are comparable; the conclusion relies on combining f1 and f4. The North review is non-causal."
+      },
+      "preference": "tie"
+    },
+    {
+      "id": "period-06803fdee95a",
+      "A": {
+        "usable": true,
+        "reasons": "Correct notify route and primary-owner recipient. It reports both exact inclusive boundaries, cites the relevant facts, and preserves the OR policy. 'Investigate both thresholds' is a slightly imprecise next-step phrase after a notify decision, but it does not assert unsupported causality."
+      },
+      "B": {
+        "usable": true,
+        "reasons": "Correct outcome, recipient, and exact 10.0%/15.0% numeric fidelity. It correctly states comparability and no exception. Reviewing contributing regional or total factors is a reasonable next step, though 'drivers' should not be read as an established causal explanation."
+      },
+      "preference": "A"
+    },
+    {
+      "id": "period-f5095ada8a0f",
+      "A": {
+        "usable": true,
+        "reasons": "Correctly applies the signed migration-freeze override despite the 25.0% total and 30.0% regional triggers. The ignore outcome and empty recipient list are correct; the exception and comparable populations are cited, and the next step is limited to recording the authoritative exception without causal overreach."
+      },
+      "B": {
+        "usable": true,
+        "reasons": "Correctly reports the 25.0% and 30.0% declines, comparable populations, signed exception, ignore outcome, and empty recipient list. It clearly explains override precedence and does not claim causality."
+      },
+      "preference": "B"
+    },
+    {
+      "id": "period-3453d0f3d849",
+      "A": {
+        "usable": true,
+        "reasons": "Correct insufficient_data outcome and data-owner recipient. It accurately preserves the 12.0% total decline while treating the missing regional export and unestablished comparability as unresolved rather than converting the regional check to false. The requested data recovery is appropriate and non-causal."
+      },
+      "B": {
+        "usable": true,
+        "reasons": "Correct outcome, recipient, numeric total decline, missing regional evidence, and no-exception caveat. The next step explicitly separates producing the export from confirming comparability before escalation, which is precise and policy-faithful."
+      },
+      "preference": "B"
+    },
+    {
+      "id": "period-2a7dd353097c",
+      "A": {
+        "usable": true,
+        "reasons": "Correct notify outcome and primary-owner recipient. It accurately reports 91.0% on-time delivery, the 3.0-point cancellation increase, both thresholds, same-fleet scope, and no exception. The next step is consistent with the policy and contains no unsupported causal explanation."
+      },
+      "B": {
+        "usable": false,
+        "reasons": "The numeric fidelity is good, but it invents an unknown exception conflict even though f3 explicitly says no exception covers the week. That changes the route to investigate/review-owner and contradicts the evidence and policy; the caveat and next step are consequently unsupported."
+      },
+      "preference": "A"
+    },
+    {
+      "id": "period-5bbad5139d85",
+      "A": {
+        "usable": false,
+        "reasons": "The numbers and one-trigger observation are accurate, but it invents an unknown exception conflict despite f3 explicitly saying no exception covers the week. The resulting investigate outcome and review-owner recipient violate the policy's explicit one-trigger ignore branch."
+      },
+      "B": {
+        "usable": true,
+        "reasons": "Correct ignore outcome and empty recipient list. It accurately reports 90.0% on-time, a 1.0-point cancellation increase, the strict 2.0-point requirement, and no exception, then applies the one-trigger rule. No unsupported causal claim is made."
+      },
+      "preference": "B"
+    },
+    {
+      "id": "period-e7fa30b645e9",
+      "A": {
+        "usable": false,
+        "reasons": "It correctly reports the exact 92.0% and 2.0-point boundaries, but incorrectly invents an unknown exception conflict despite f3 explicitly ruling out an exception. The investigate outcome and review-owner recipient are therefore wrong; the proposed verification step is unsupported."
+      },
+      "B": {
+        "usable": true,
+        "reasons": "Correct ignore route and empty recipients. It accurately distinguishes the strict below-92% test from the inclusive 2.0-point cancellation threshold, cites the no-exception fact, and gives a policy-consistent quiet next step without causal claims."
+      },
+      "preference": "B"
+    },
+    {
+      "id": "period-c76ebb39889a",
+      "A": {
+        "usable": false,
+        "reasons": "The insufficient_data outcome and data-owner recipient are correct, and the missing cancellation metric and 90.0% on-time value are reported accurately. Separately, the narrative adds that exception conflict is unknown; the supplied facts say no exception covers the week and provide no conflicting exception record, so that caveat is unsupported. Requesting the missing metric is sound, but the exception-record request should not be justified by that unsupported caveat."
+      },
+      "B": {
+        "usable": true,
+        "reasons": "Correct insufficient_data outcome and data-owner recipient. It accurately distinguishes the known on-time threshold from the absent required cancellation metric, preserves the no-exception fact, and requests the missing measure without inferring cause."
+      },
+      "preference": "B"
+    },
+    {
+      "id": "period-6836fce053af",
+      "A": {
+        "usable": true,
+        "reasons": "Correct notify outcome and primary-owner recipient. It faithfully reports high priority, explicitly missing reconciliation, and no signed release-manager reconciliation, then proposes completing the reconciliation. The next step is operationally relevant and does not claim why the gap occurred."
+      },
+      "B": {
+        "usable": true,
+        "reasons": "Correct policy application, numbers are not applicable beyond the categorical facts, and the primary-owner route is right. It cites all relevant evidence, explicitly avoids causation, and gives a consistent notification next step."
+      },
+      "preference": "A"
+    },
+    {
+      "id": "period-efbb6ce980af",
+      "A": {
+        "usable": true,
+        "reasons": "Correct quiet outcome and empty recipients. It accurately distinguishes routine priority from missing reconciliation and does not turn the missing field into a notification. The conditional record-update next step is reasonable and non-causal."
+      },
+      "B": {
+        "usable": true,
+        "reasons": "Correct ignore route, recipient handling, and policy significance. It cites the routine classification and missing reconciliation, with a conditional update step that does not assert causality."
+      },
+      "preference": "B"
+    },
+    {
+      "id": "period-386ad576d71a",
+      "A": {
+        "usable": true,
+        "reasons": "Correctly applies the signed release-manager reconciliation override to produce ignore with no recipient. It accurately preserves the high-priority fact and stale-checklist conflict and recommends retaining the authoritative signed record, without causal claims."
+      },
+      "B": {
+        "usable": true,
+        "reasons": "Correct outcome and empty recipients, with accurate treatment of the high-priority release, stale checklist, and authoritative signed reconciliation. The caveat is relevant and explicitly non-causal; the next step is policy-consistent."
+      },
+      "preference": "A"
+    },
+    {
+      "id": "period-d0da26ec7da2",
+      "A": {
+        "usable": true,
+        "reasons": "Correct insufficient_data outcome and data-owner recipient. It accurately identifies the high-versus-routine conflict and missing reconciliation, cites all facts, and asks for resolution of the authoritative record without inferring cause."
+      },
+      "B": {
+        "usable": true,
+        "reasons": "Correct route and recipient, with faithful description of the conflicting priority records and missing reconciliation. It appropriately treats priority as unresolved and gives the data owner the policy-required next step without unsupported causality."
+      },
+      "preference": "B"
+    }
+  ]
+}

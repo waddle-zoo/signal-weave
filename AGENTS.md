@@ -13,8 +13,10 @@ unrelated repositories as part of work in this repository.
 
 ## Repository invariants
 
-- Jev is the production semantic decision path. There is no implicit heuristic
-  fallback in production.
+- The configured provider makes the recurring card's typed policy judgment:
+  Jev, OpenAI Decisions, or ChatGPT-plan Responses. There is no implicit
+  heuristic fallback. Responses probabilities are model estimates and must not
+  be presented as calibrated or native Decisions distributions.
 - `src/` contains reusable production code, not demos, trial scenarios, benchmark
   labels, company names, hard-coded dashboard IDs, or test-only metrics.
 - `evaluations/` and `examples/` stay outside the service import path.
@@ -22,7 +24,9 @@ unrelated repositories as part of work in this repository.
   sources, while Superset remains the first-class shipped integration.
 - Source adapters fetch bounded, typed evidence and never accept arbitrary code or
   unrestricted queries from an MCP caller.
-- Jev supplies narrow typed judgments. Code owns control flow, numeric and
+- The decision provider supplies narrow typed judgments. The calling frontier
+  agent owns discovery, deeper investigation, causal interpretation and the
+  user-facing explanation. Code owns control flow, numeric and
   freshness checks, permissions, safety gates, retries, idempotency receipts,
   and side-effect admission; caller-owned delivery sinks own the actual external
   side effect.
@@ -32,6 +36,8 @@ unrelated repositories as part of work in this repository.
   be downgraded or escalated according to code-owned policy.
 - Draft cards may be simulated for review, but MCP and webhook evaluation must
   reject them until an explicit approval transition occurs.
+- Test the normal `agent` MCP profile for first-use claims. Tools from `full`
+  must not appear in instructions for an agent that cannot call them.
 - Secrets and production data must not be committed, printed in tests, or sent to
   external services without explicit configuration and authorization.
 
@@ -42,6 +48,9 @@ unrelated repositories as part of work in this repository.
 3. Add or update representative tests, including failure and insufficient-data
    paths where relevant.
 4. Update examples and documentation when behavior or configuration changes.
+   Write capability descriptions for `main`, not a temporary branch or source
+   candidate. Keep published-binary compatibility in the installation reference;
+   only update download links to verified published assets.
 5. Run `make verify` and `git diff --check`.
 6. Inspect the final diff for accidental fixtures, credentials, generated files,
    unrelated formatting, and changes outside this repository.

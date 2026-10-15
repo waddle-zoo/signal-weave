@@ -1,0 +1,591 @@
+{
+  "protocol": "installed-first-report-trial-v2",
+  "scope": "scripted onboarding; not agent/human usability; not an LLM benchmark",
+  "offline_by_default": true,
+  "companies": [
+    "canyon-freight",
+    "helio-support",
+    "lattice-energy"
+  ],
+  "intended_denominator": 3,
+  "max_jev_attempts_per_company": 2,
+  "max_paid_attempts": 6,
+  "retry_policy": {
+    "TYPESAFE_MAX_RETRIES": 0,
+    "retrieval": "fixed",
+    "investigation": "none"
+  },
+  "route_intent": {
+    "canyon-freight": {
+      "notify": "fleet-operations",
+      "insufficient_data": "logistics-data"
+    },
+    "helio-support": {
+      "notify": "support-quality",
+      "insufficient_data": "support-data"
+    },
+    "lattice-energy": {
+      "notify": "commercial-operations",
+      "investigate": "commercial-data",
+      "insufficient_data": "commercial-data"
+    }
+  },
+  "approval": {
+    "seeded_approved_cards": false,
+    "external_messages": false
+  },
+  "frozen_inputs": [
+    {
+      "id": "canyon-freight",
+      "period": "p03",
+      "source_freeze_sha256": "274215430448243804368926ef8bca84aa416fb75b6f1f28f10f8ad4eca0b8ad",
+      "fixture_sha256": "8f19f2cc08749878e24be494180b25de1efa1b67971bd3c4376a5cb1ee27679c",
+      "oracle_sha256": "a364f80fe52c3f9ac1bf90876e9e864d3b767387710ccdd83d672a359663539e",
+      "captured_at": "2026-10-03T01:02:56.867088+00:00",
+      "sources": [
+        {
+          "key": "canyon-freight-reporting",
+          "adapter": "company_metrics",
+          "resource": "report:late-deliveries",
+          "label": "Late deliveries by service lane",
+          "parameters": {},
+          "required": true,
+          "required_comparison_keys": [
+            "late-deliveries"
+          ]
+        }
+      ],
+      "descriptors": [
+        {
+          "adapter": "company_metrics",
+          "resource": "report:late-deliveries",
+          "kind": "saved_query",
+          "title": "Late deliveries by service lane",
+          "description": "Shipments delivered late in the closed interval after duplicate removal.",
+          "source_url": null,
+          "metadata": {
+            "source_key": "canyon-freight-reporting",
+            "business_role": "reporting",
+            "required": true,
+            "read_only": true,
+            "period_contract": "closed UTC intervals compared with the immediately preceding closed interval",
+            "comparability_contract": {
+              "population_identity": "non-duplicate shipments with a delivery timestamp",
+              "period_alignment": "adjacent closed intervals with the same calendar grain",
+              "segment_partition": "declared disjoint segments; incomplete partitions are not comparable",
+              "definition_version": "synthetic-contract-v1"
+            }
+          },
+          "contract": {
+            "tenant_id": "local",
+            "domain": "canyon-freight-reporting",
+            "scope": "non-duplicate shipments with a delivery timestamp",
+            "metric_names": [
+              "late_delivery_count"
+            ],
+            "metric_definitions": [],
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "required_comparison_keys": [
+              "late-deliveries"
+            ],
+            "population": "non-duplicate shipments with a delivery timestamp",
+            "grain": "weekly delivery interval",
+            "freshness_sla_hours": 48.0,
+            "lineage": [],
+            "roles": [
+              "reporting"
+            ],
+            "source_status": "healthy",
+            "authorized": true
+          },
+          "source_key": "canyon-freight-reporting"
+        }
+      ],
+      "original_sources": [
+        {
+          "key": "canyon-freight-reporting",
+          "adapter": "company_mcp",
+          "resource": "report:late-deliveries",
+          "label": "Late deliveries by service lane",
+          "parameters": {
+            "business_role": "reporting",
+            "available_comparison_windows": [
+              "previous_period"
+            ]
+          },
+          "required": true,
+          "required_comparison_keys": [
+            "late-deliveries"
+          ]
+        }
+      ],
+      "original_descriptors": [
+        {
+          "adapter": "company_mcp",
+          "resource": "report:late-deliveries",
+          "kind": "saved_query",
+          "title": "Late deliveries by service lane",
+          "description": "Shipments delivered late in the closed interval after duplicate removal.",
+          "source_url": null,
+          "metadata": {
+            "source_key": "canyon-freight-reporting",
+            "business_role": "reporting",
+            "required": true,
+            "read_only": true,
+            "period_contract": "closed UTC intervals compared with the immediately preceding closed interval",
+            "comparability_contract": {
+              "population_identity": "non-duplicate shipments with a delivery timestamp",
+              "period_alignment": "adjacent closed intervals with the same calendar grain",
+              "segment_partition": "declared disjoint segments; incomplete partitions are not comparable",
+              "definition_version": "synthetic-contract-v1"
+            }
+          },
+          "contract": {
+            "tenant_id": "synthetic-recurring-runtime",
+            "domain": "canyon-freight-reporting",
+            "scope": "non-duplicate shipments with a delivery timestamp",
+            "metric_names": [
+              "late_delivery_count"
+            ],
+            "metric_definitions": [],
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "required_comparison_keys": [
+              "late-deliveries"
+            ],
+            "population": "non-duplicate shipments with a delivery timestamp",
+            "grain": "weekly delivery interval",
+            "freshness_sla_hours": 48.0,
+            "lineage": [],
+            "roles": [
+              "reporting"
+            ],
+            "source_status": "healthy",
+            "authorized": true
+          },
+          "source_key": "canyon-freight-reporting"
+        }
+      ],
+      "original_snapshot_identities": [
+        {
+          "adapter": "company_mcp",
+          "resource": "report:late-deliveries",
+          "source_key": "canyon-freight-reporting",
+          "tenant_id": "synthetic-recurring-runtime"
+        }
+      ]
+    },
+    {
+      "id": "helio-support",
+      "period": "p03",
+      "source_freeze_sha256": "0a9f9a637cbe3abef49fe229869aab6155810ebfc1423266e87431ca7b8c57d3",
+      "fixture_sha256": "5eae82ed2a9a444531dab45c776f50a23b8ae65573e42e01fa21202c0d79df71",
+      "oracle_sha256": "f3896d89e157151b35d8107821519077e346bb3ebd8946a468f026c752fe675c",
+      "captured_at": "2026-10-03T01:02:56.868142+00:00",
+      "sources": [
+        {
+          "key": "helio-support-reporting",
+          "adapter": "company_metrics",
+          "resource": "report:recontact-quality-rate",
+          "label": "Weighted recontact quality rate by support channel",
+          "parameters": {},
+          "required": true,
+          "required_comparison_keys": [
+            "recontact-quality-rate"
+          ]
+        }
+      ],
+      "descriptors": [
+        {
+          "adapter": "company_metrics",
+          "resource": "report:recontact-quality-rate",
+          "kind": "saved_query",
+          "title": "Weighted recontact quality rate by support channel",
+          "description": "Eligible support conversations followed by a customer recontact within the quality window, divided by eligible conversations.",
+          "source_url": null,
+          "metadata": {
+            "source_key": "helio-support-reporting",
+            "business_role": "reporting",
+            "required": true,
+            "read_only": true,
+            "period_contract": "closed UTC intervals compared with the immediately preceding closed interval",
+            "comparability_contract": {
+              "population_identity": "eligible support conversations with a channel and quality outcome",
+              "period_alignment": "adjacent closed intervals with the same calendar grain",
+              "segment_partition": "declared disjoint segments; incomplete partitions are not comparable",
+              "definition_version": "synthetic-contract-v1"
+            }
+          },
+          "contract": {
+            "tenant_id": "local",
+            "domain": "helio-support-reporting",
+            "scope": "eligible support conversations with a channel and quality outcome",
+            "metric_names": [
+              "customer_recontact_rate"
+            ],
+            "metric_definitions": [],
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "required_comparison_keys": [
+              "recontact-quality-rate"
+            ],
+            "population": "eligible support conversations with a channel and quality outcome",
+            "grain": "weekly support interval",
+            "freshness_sla_hours": 48.0,
+            "lineage": [],
+            "roles": [
+              "reporting"
+            ],
+            "source_status": "healthy",
+            "authorized": true
+          },
+          "source_key": "helio-support-reporting"
+        }
+      ],
+      "original_sources": [
+        {
+          "key": "helio-support-reporting",
+          "adapter": "company_mcp",
+          "resource": "report:recontact-quality-rate",
+          "label": "Weighted recontact quality rate by support channel",
+          "parameters": {
+            "business_role": "reporting",
+            "available_comparison_windows": [
+              "previous_period"
+            ]
+          },
+          "required": true,
+          "required_comparison_keys": [
+            "recontact-quality-rate"
+          ]
+        }
+      ],
+      "original_descriptors": [
+        {
+          "adapter": "company_mcp",
+          "resource": "report:recontact-quality-rate",
+          "kind": "saved_query",
+          "title": "Weighted recontact quality rate by support channel",
+          "description": "Eligible support conversations followed by a customer recontact within the quality window, divided by eligible conversations.",
+          "source_url": null,
+          "metadata": {
+            "source_key": "helio-support-reporting",
+            "business_role": "reporting",
+            "required": true,
+            "read_only": true,
+            "period_contract": "closed UTC intervals compared with the immediately preceding closed interval",
+            "comparability_contract": {
+              "population_identity": "eligible support conversations with a channel and quality outcome",
+              "period_alignment": "adjacent closed intervals with the same calendar grain",
+              "segment_partition": "declared disjoint segments; incomplete partitions are not comparable",
+              "definition_version": "synthetic-contract-v1"
+            }
+          },
+          "contract": {
+            "tenant_id": "synthetic-recurring-runtime",
+            "domain": "helio-support-reporting",
+            "scope": "eligible support conversations with a channel and quality outcome",
+            "metric_names": [
+              "customer_recontact_rate"
+            ],
+            "metric_definitions": [],
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "required_comparison_keys": [
+              "recontact-quality-rate"
+            ],
+            "population": "eligible support conversations with a channel and quality outcome",
+            "grain": "weekly support interval",
+            "freshness_sla_hours": 48.0,
+            "lineage": [],
+            "roles": [
+              "reporting"
+            ],
+            "source_status": "healthy",
+            "authorized": true
+          },
+          "source_key": "helio-support-reporting"
+        }
+      ],
+      "original_snapshot_identities": [
+        {
+          "adapter": "company_mcp",
+          "resource": "report:recontact-quality-rate",
+          "source_key": "helio-support-reporting",
+          "tenant_id": "synthetic-recurring-runtime"
+        }
+      ]
+    },
+    {
+      "id": "lattice-energy",
+      "period": "p03",
+      "source_freeze_sha256": "23765493226308e31bf03b1686ecd4cfabf3444fab74173b4982294849cecfd2",
+      "fixture_sha256": "cf51efe8ff41b55de1a608d2592f65e0fdb838287c68b115437ba53a6aea8f02",
+      "oracle_sha256": "d7a780e18cec659efcaa7d4bc73d69e156f72dae203ec7f4be00fbd4b9d947d6",
+      "captured_at": "2026-10-03T01:02:56.868539+00:00",
+      "sources": [
+        {
+          "key": "lattice-energy-reporting",
+          "adapter": "company_metrics",
+          "resource": "report:signed-contract-movement",
+          "label": "Signed monthly contract-value movement by change type",
+          "parameters": {},
+          "required": true,
+          "required_comparison_keys": [
+            "signed-contract-movement"
+          ]
+        },
+        {
+          "key": "lattice-energy-context",
+          "adapter": "company_metrics",
+          "resource": "record:service-credit-register",
+          "label": "Service-credit exception register",
+          "parameters": {},
+          "required": true,
+          "required_comparison_keys": []
+        }
+      ],
+      "descriptors": [
+        {
+          "adapter": "company_metrics",
+          "resource": "report:signed-contract-movement",
+          "kind": "saved_query",
+          "title": "Signed monthly contract-value movement by change type",
+          "description": "Signed contract-value movement from effective account changes; contraction and churn are negative.",
+          "source_url": null,
+          "metadata": {
+            "source_key": "lattice-energy-reporting",
+            "business_role": "reporting",
+            "required": true,
+            "read_only": true,
+            "period_contract": "closed UTC intervals compared with the immediately preceding closed interval",
+            "comparability_contract": {
+              "population_identity": "billed accounts with an effective contract-change record",
+              "period_alignment": "adjacent closed intervals with the same calendar grain",
+              "segment_partition": "declared disjoint segments; incomplete partitions are not comparable",
+              "definition_version": "synthetic-contract-v1"
+            }
+          },
+          "contract": {
+            "tenant_id": "local",
+            "domain": "lattice-energy-reporting",
+            "scope": "billed accounts with an effective contract-change record",
+            "metric_names": [
+              "signed_contract_value_movement"
+            ],
+            "metric_definitions": [],
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "required_comparison_keys": [
+              "signed-contract-movement"
+            ],
+            "population": "billed accounts with an effective contract-change record",
+            "grain": "monthly contract interval",
+            "freshness_sla_hours": 48.0,
+            "lineage": [],
+            "roles": [
+              "reporting"
+            ],
+            "source_status": "healthy",
+            "authorized": true
+          },
+          "source_key": "lattice-energy-reporting"
+        },
+        {
+          "adapter": "company_metrics",
+          "resource": "record:service-credit-register",
+          "kind": "context_record",
+          "title": "Service-credit exception register",
+          "description": "Owner context stating whether an approved exception covers the exact closed period.",
+          "source_url": null,
+          "metadata": {
+            "source_key": "lattice-energy-context",
+            "business_role": "owner_context",
+            "required": true,
+            "read_only": true,
+            "period_contract": "closed UTC intervals compared with the immediately preceding closed interval",
+            "comparability_contract": {
+              "population_identity": "owner-approved exceptions keyed to a closed period",
+              "period_alignment": "adjacent closed intervals with the same calendar grain",
+              "segment_partition": "declared disjoint segments; incomplete partitions are not comparable",
+              "definition_version": "synthetic-contract-v1"
+            },
+            "semantic_contract": "Status is approved, none, or unresolved; this source has no analytical comparison."
+          },
+          "contract": {
+            "tenant_id": "local",
+            "domain": "lattice-energy-context",
+            "scope": "owner-approved exceptions keyed to a closed period",
+            "metric_names": [
+              "owner_exception"
+            ],
+            "metric_definitions": [],
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "required_comparison_keys": [],
+            "population": "owner-approved exceptions keyed to a closed period",
+            "grain": "monthly contract interval",
+            "freshness_sla_hours": 48.0,
+            "lineage": [],
+            "roles": [
+              "owner_context"
+            ],
+            "source_status": "healthy",
+            "authorized": true
+          },
+          "source_key": "lattice-energy-context"
+        }
+      ],
+      "original_sources": [
+        {
+          "key": "lattice-energy-reporting",
+          "adapter": "company_mcp",
+          "resource": "report:signed-contract-movement",
+          "label": "Signed monthly contract-value movement by change type",
+          "parameters": {
+            "business_role": "reporting",
+            "available_comparison_windows": [
+              "previous_period"
+            ]
+          },
+          "required": true,
+          "required_comparison_keys": [
+            "signed-contract-movement"
+          ]
+        },
+        {
+          "key": "lattice-energy-context",
+          "adapter": "company_mcp",
+          "resource": "record:service-credit-register",
+          "label": "Service-credit exception register",
+          "parameters": {
+            "business_role": "owner_context",
+            "available_comparison_windows": [
+              "previous_period"
+            ]
+          },
+          "required": true,
+          "required_comparison_keys": []
+        }
+      ],
+      "original_descriptors": [
+        {
+          "adapter": "company_mcp",
+          "resource": "report:signed-contract-movement",
+          "kind": "saved_query",
+          "title": "Signed monthly contract-value movement by change type",
+          "description": "Signed contract-value movement from effective account changes; contraction and churn are negative.",
+          "source_url": null,
+          "metadata": {
+            "source_key": "lattice-energy-reporting",
+            "business_role": "reporting",
+            "required": true,
+            "read_only": true,
+            "period_contract": "closed UTC intervals compared with the immediately preceding closed interval",
+            "comparability_contract": {
+              "population_identity": "billed accounts with an effective contract-change record",
+              "period_alignment": "adjacent closed intervals with the same calendar grain",
+              "segment_partition": "declared disjoint segments; incomplete partitions are not comparable",
+              "definition_version": "synthetic-contract-v1"
+            }
+          },
+          "contract": {
+            "tenant_id": "synthetic-recurring-runtime",
+            "domain": "lattice-energy-reporting",
+            "scope": "billed accounts with an effective contract-change record",
+            "metric_names": [
+              "signed_contract_value_movement"
+            ],
+            "metric_definitions": [],
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "required_comparison_keys": [
+              "signed-contract-movement"
+            ],
+            "population": "billed accounts with an effective contract-change record",
+            "grain": "monthly contract interval",
+            "freshness_sla_hours": 48.0,
+            "lineage": [],
+            "roles": [
+              "reporting"
+            ],
+            "source_status": "healthy",
+            "authorized": true
+          },
+          "source_key": "lattice-energy-reporting"
+        },
+        {
+          "adapter": "company_mcp",
+          "resource": "record:service-credit-register",
+          "kind": "context_record",
+          "title": "Service-credit exception register",
+          "description": "Owner context stating whether an approved exception covers the exact closed period.",
+          "source_url": null,
+          "metadata": {
+            "source_key": "lattice-energy-context",
+            "business_role": "owner_context",
+            "required": true,
+            "read_only": true,
+            "period_contract": "closed UTC intervals compared with the immediately preceding closed interval",
+            "comparability_contract": {
+              "population_identity": "owner-approved exceptions keyed to a closed period",
+              "period_alignment": "adjacent closed intervals with the same calendar grain",
+              "segment_partition": "declared disjoint segments; incomplete partitions are not comparable",
+              "definition_version": "synthetic-contract-v1"
+            },
+            "semantic_contract": "Status is approved, none, or unresolved; this source has no analytical comparison."
+          },
+          "contract": {
+            "tenant_id": "synthetic-recurring-runtime",
+            "domain": "lattice-energy-context",
+            "scope": "owner-approved exceptions keyed to a closed period",
+            "metric_names": [
+              "owner_exception"
+            ],
+            "metric_definitions": [],
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "required_comparison_keys": [],
+            "population": "owner-approved exceptions keyed to a closed period",
+            "grain": "monthly contract interval",
+            "freshness_sla_hours": 48.0,
+            "lineage": [],
+            "roles": [
+              "owner_context"
+            ],
+            "source_status": "healthy",
+            "authorized": true
+          },
+          "source_key": "lattice-energy-context"
+        }
+      ],
+      "original_snapshot_identities": [
+        {
+          "adapter": "company_mcp",
+          "resource": "report:signed-contract-movement",
+          "source_key": "lattice-energy-reporting",
+          "tenant_id": "synthetic-recurring-runtime"
+        },
+        {
+          "adapter": "company_mcp",
+          "resource": "record:service-credit-register",
+          "source_key": "lattice-energy-context",
+          "tenant_id": "synthetic-recurring-runtime"
+        }
+      ]
+    }
+  ],
+  "created_at": "2026-10-03T01:02:56.869079+00:00",
+  "git_sha": "4d856a4132e4fa3d94b5662d324857e40e2ed785",
+  "harness_sha256": "2be7d50e423d39a0170745c985c5af80a0b2a7037f1e836a0be68dd8ac6a4933",
+  "binary_sha256": "e6563b79bbc8948d81e93b777a4148a0df4dd97e2854b8f890497217e7b8f96e"
+}

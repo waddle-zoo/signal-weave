@@ -1,0 +1,207 @@
+{
+  "artifact": "first-report-live-02",
+  "review_type": "read_only_adversarial_code_review",
+  "reviewed_at": "2026-10-02T15:24:20Z",
+  "baseline": {
+    "commit": "d9c5945906fce387768d10cb5135768a19041565",
+    "worktree_dirty": true,
+    "comparison": "d9c5945 production-frozen commit versus current worktree",
+    "source_hashes_sha256": {
+      "src/signalweave/reporting.py": "eb7dae589f40a67c648abe11826ff390a7960aef9636ab405cfe974f5803350c",
+      "src/signalweave/mcp_server.py": "e297f78f8ea5bf985f1d569a49f52092830367b71b095c606fc3dc51875eaafb",
+      "src/signalweave/local_run.py": "63f2809f22661e5e50ccf0e6ec62756000f11fbd69ecc4eb546ace31049e11fa",
+      "tests/test_reporting.py": "94c0b13972358b3c4db9ca38c8c947fa034da2d491acc46488cf5ba8a2a7ea82",
+      "tests/test_first_report_mcp.py": "a981d682d93aab4d24e025bdeaf7f33a7fa3125fce940c27a9271c2154e782b3",
+      "tests/test_local_investigation.py": "ce0e6ad837a652e7461d682ddd9ff3abfb4d0ef302b632947c688a82c57f1d36"
+    }
+  },
+  "scope": {
+    "reviewed_files": [
+      "src/signalweave/reporting.py",
+      "src/signalweave/mcp_server.py",
+      "src/signalweave/local_run.py",
+      "tests/test_reporting.py",
+      "tests/test_first_report_mcp.py",
+      "tests/test_local_investigation.py"
+    ],
+    "concerns": [
+      "complete/partial/blocked status",
+      "source and route admission",
+      "receipt replay consistency",
+      "probability labels and semantics",
+      "renderer auditability"
+    ],
+    "external_peer_review": false,
+    "paid_calls": false,
+    "edits_made_by_reviewer": false
+  },
+  "findings": [
+    {
+      "id": "RPT-001",
+      "severity": "P1",
+      "title": "Analysis claims are now bound to approved or bounded-selected source snapshots",
+      "state": "resolved",
+      "prior_failure": "The old builder recomputed self-consistent result analyses without requiring the source/comparison to exist in the returned ResourceSnapshot.",
+      "current_evidence": [
+        "reporting.py:415-464 rejects unapproved analysis sources, missing or duplicate snapshots, identity mismatches, missing comparisons, duplicate comparisons, and comparison payload mismatches.",
+        "reporting.py:518-524 rejects foreign resource snapshots.",
+        "reporting.py:467-489 admits an additional source only when it is recorded in a bounded investigation selection; an existing selected key with a different adapter/resource is blocked."
+      ],
+      "checks": [
+        {
+          "name": "foreign_analysis_source",
+          "observed": "blocked with analysis_source_not_approved; only the approved sales claim remained",
+          "passed": true
+        },
+        {
+          "name": "contradictory_snapshot_comparison",
+          "observed": "blocked with analysis_snapshot_comparison_mismatch and no numeric claim",
+          "passed": true
+        },
+        {
+          "name": "bounded_expanded_source",
+          "observed": "a source recorded in InvestigationTrace.selected was accepted as a valid bounded addition and produced a complete report",
+          "passed": true
+        },
+        {
+          "name": "foreign_resource_without_selection",
+          "observed": "blocked with foreign_resource and analysis_source_not_approved",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "RPT-002",
+      "severity": "P1",
+      "title": "Requiredness is now derived from the approved source contract",
+      "state": "resolved",
+      "prior_failure": "A returned AnalysisReport could set required=false and downgrade an incomplete required comparison to a warning/partial report.",
+      "current_evidence": [
+        "reporting.py:398-412 derives requiredness from the approved SourceRef and comparison identity rather than trusting the returned required flag.",
+        "reporting.py:606-620 blocks insufficient required analyses."
+      ],
+      "checks": [
+        {
+          "name": "required_flag_downgrade",
+          "observed": "with a matching partial source snapshot, an analysis mutated to required=false still returned blocked with required_analysis_insufficient_data",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "RPT-003",
+      "severity": "P1",
+      "title": "Actionable routes are now required and duplicate selections are blocked",
+      "state": "resolved",
+      "prior_failure": "A notify result on a card with no configured route could be reported complete; duplicate route selections were also accepted.",
+      "current_evidence": [
+        "reporting.py:333-365 rejects duplicate selections and result/configured-outcome mismatches.",
+        "reporting.py:380-388 adds route_not_configured for notify or escalate without an approved route.",
+        "reporting.py:645-651 derives blocked status from blockers."
+      ],
+      "checks": [
+        {
+          "name": "notify_without_route",
+          "observed": "blocked with route_not_configured",
+          "passed": true
+        },
+        {
+          "name": "duplicate_route_selection",
+          "observed": "blocked with duplicate_route_selection",
+          "passed": true
+        },
+        {
+          "name": "foreign_route_and_changed_endpoint",
+          "observed": "focused reporting tests pass and retain unauthorized_route/route_endpoint_mismatch blockers",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "RPT-004",
+      "severity": "P2",
+      "title": "Renderer retains exact intended route audit records",
+      "state": "resolved",
+      "prior_failure": "The simplified renderer exposed only a combined audience/destination line and omitted route key and not-sent reason.",
+      "current_evidence": [
+        "Current rendered appendix includes 'Intended routes not delivered' with route key, destination, label, and caller-owned delivery reason.",
+        "reporting.py:698-708 still provides compact front-matter audience context; the detailed route record is retained in the appendix."
+      ],
+      "checks": [
+        {
+          "name": "renderer_route_audit",
+          "observed": "rendered report contains `owner`, slack://owner|weekly, and 'Caller owns delivery; not sent.'",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "id": "RPT-005",
+      "severity": "P2",
+      "title": "Legacy receipt replay no longer fabricates a historical report",
+      "state": "resolved",
+      "current_evidence": [
+        "mcp_server.py:522-533 now copies an archived report only when the receipt result contains one; otherwise it returns the original result unchanged and adds report_unavailable_reason.",
+        "The no-archived-report branch does not call the report builder or fetch current resources, so an older receipt cannot acquire a present-day status, coverage view, or fabricated report."
+      ],
+      "checks": [
+        {
+          "name": "new_receipt_replay",
+          "observed": "22 MCP/local replay tests pass; current receipts replay the embedded report without refetching or rebuilding",
+          "passed": true
+        },
+        {
+          "name": "older_receipt_no_fabricated_report",
+          "observed": "1 passed; the builder was monkeypatched to fail, replay returned the original result unchanged, added report_unavailable_reason, and made no source or judger calls",
+          "passed": true
+        },
+        {
+          "name": "checkpoint_hash_probe",
+          "observed": "1 passed; the offline fake-provider probe now records the approved-card hash at the checkpoint before hashing",
+          "passed": true
+        }
+      ]
+    }
+  ],
+  "probability_review": {
+    "state": "resolved",
+    "evidence": [
+      "WatchResult probability is rendered as P(present), including absent judgments.",
+      "QuestionResult probability is rendered as P(supported), not as probability of a yes answer or generic confidence.",
+      "Focused semantic probability tests passed."
+    ]
+  },
+  "test_summary": {
+    "focused_mcp_and_local": {
+      "command": ".venv/bin/pytest -q tests/test_first_report_mcp.py tests/test_local_investigation.py",
+      "passed": 22,
+      "failed": 0
+    },
+    "focused_report_and_trial": {
+      "command": ".venv/bin/pytest -q tests/test_reporting.py tests/test_first_report_mcp.py tests/test_local_investigation.py tests/test_first_report_trial.py tests/test_first_report_probes.py tests/test_recorded_first_report.py",
+      "passed": 94,
+      "failed": 0
+    },
+    "original_adversarial_probes": {
+      "command": "read-only inline probes for foreign analysis, contradictory snapshot, required-flag downgrade, missing route, duplicate route, bounded expanded source, foreign source rejection, and renderer route audit",
+      "observed": "all_adversarial_review_probes_passed",
+      "passed": true
+    },
+    "full_suite": {
+      "command": ".venv/bin/pytest -q",
+      "passed": 1786,
+      "failed": 0,
+      "skipped": 3,
+      "verified_at_commit": "d9c5945906fce387768d10cb5135768a19041565",
+      "rerun_in_final_review": false
+    },
+    "retained_probe_audit": {
+      "observed": "six focused retained-probe audit checks passed on d9c5945; no new finding was introduced",
+      "passed": 6,
+      "failed": 0,
+      "verified_at_commit": "d9c5945906fce387768d10cb5135768a19041565"
+    },
+    "overall_green": true,
+    "failure_attribution": null
+  }
+}

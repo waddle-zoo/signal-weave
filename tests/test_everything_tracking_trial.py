@@ -30,6 +30,14 @@ def test_everything_tracking_fixture_is_messy_and_cross_enterprise():
     }
     assert min(len(case.resources) for case in cases) >= 7
     assert all(
+        any(resource.metadata.get("evidence_role") == "quality" for resource in case.resources)
+        for case in cases
+    )
+    assert all(
+        any(resource.metadata.get("evidence_role") == "owner" for resource in case.resources)
+        for case in cases
+    )
+    assert all(
         any(resource.metadata.get("required") is False for resource in case.resources)
         for case in cases
     )
@@ -59,6 +67,72 @@ def test_every_trust_failure_has_a_required_failed_trust_source():
             resource.source_key in required_keys and resource.error
             for resource in case.resources
         )
+
+
+def test_healthy_sources_publish_machine_readable_freshness_and_comparability():
+    cases = build_cases(load_config(DEFAULT_CONFIG))
+
+    case = next(case for case in cases if case.variant == "material_action")
+    healthy_required = [
+        resource
+        for resource in case.resources
+        if resource.metadata.get("required") is not False and resource.error is None
+    ]
+
+    assert healthy_required
+    assert all("fresh" in resource.observations[0].freshness for resource in healthy_required)
+    assert all(
+        "comparable" in resource.observations[0].freshness
+        for resource in healthy_required
+    )
+
+
+def test_trial_cards_separate_advisory_detail_from_gating_evidence():
+    cases = build_cases(load_config(DEFAULT_CONFIG))
+
+    case = next(case for case in cases if case.variant == "material_action")
+    assert case.card.evidence_requirements == {
+        "question:1": False,
+        "question:2": False,
+        "watch:1": False,
+        "watch:2": False,
+        "watch:3": False,
+    }
+    assert "risk_change_pct of 20 or more" in case.card.decision_guidance
+    assert "35 or more as severe" in case.card.decision_guidance
+    assert all(
+        resource.observations[0].attributes.get("risk_direction") in {"up", "down"}
+        for resource in case.resources
+        if resource.metadata.get("evidence_role") in {"primary", "corroborates", "diagnostic"}
+    )
+    quality = next(
+        resource for resource in case.resources
+        if resource.metadata.get("evidence_role") == "quality"
+    )
+    assert quality.observations[0].attributes["quality_status"] == "healthy"
+    assert quality.observations[0].attributes["comparability"] == "same reporting period and population"
+
+
+def test_trial_owner_context_distinguishes_expected_and_unplanned_movement():
+    cases = build_cases(load_config(DEFAULT_CONFIG))
+
+    expected = next(case for case in cases if case.variant == "expected_change")
+    material = next(case for case in cases if case.variant == "material_action")
+    expected_owner = next(
+        resource for resource in expected.resources
+        if resource.metadata.get("evidence_role") == "owner"
+    )
+    material_owner = next(
+        resource for resource in material.resources
+        if resource.metadata.get("evidence_role") == "owner"
+    )
+
+    assert "planned or expected" in expected_owner.evidence[0].statement
+    assert "no planned change" in material_owner.evidence[0].statement
+    assert material_owner.observations[0].attributes["owner_change_status"] == "unplanned"
+    assert material_owner.observations[0].attributes["planned_change"] is False
+    assert expected_owner.observations[0].attributes["owner_change_status"] == "planned"
+    assert expected_owner.observations[0].attributes["planned_change"] is True
 
 
 def test_movement_only_baseline_is_noisy_on_everything_tracking():

@@ -1,0 +1,19 @@
+{
+  "version": "live-contract-onboarding-v1",
+  "cases": [
+    {
+      "adapter": "trino",
+      "resource": "query:revenue-per-user",
+      "title": "Revenue per user query",
+      "metric": "net_revenue_per_user",
+      "key": "revenue-per-user-previous-period",
+      "unit": "USD",
+      "population": "active customers"
+    }
+  ],
+  "quality_arms": [
+    "complete"
+  ],
+  "repeats": 1,
+  "delivery_enabled": false
+}

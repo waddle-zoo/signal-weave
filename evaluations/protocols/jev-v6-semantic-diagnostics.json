@@ -1,0 +1,142 @@
+{
+  "seed": 20261004,
+  "repetitions": 3,
+  "cases": [
+    {
+      "request_id": 38,
+      "variants": [
+        {
+          "name": "original"
+        },
+        {
+          "name": "state_semantics",
+          "edits": [
+            {
+              "op": "add",
+              "path": [
+                "state_semantics"
+              ],
+              "value": "Interpretation of this execution state: card.decision_guidance defines the reviewed business policy and agreed meanings, not observed facts. Sources and evidence contain the measurements to which that policy applies. Empty optional catalog annotations such as contract.population and contract.scope mean undeclared metadata, not an observed empty population and not proof that required measurements are missing. Use explicit source values, descriptions, and agreed definitions to judge applicability; do not infer whole-company completeness from source health. A measured 0 or false is an available observation, distinct from an absent field or null. For an availability question distinguish availability of a count from whether that count is positive. Missing evidence required to apply the policy stays unknown; never fabricate it. Optional unrelated annotation gaps do not create additional business prerequisites."
+            }
+          ]
+        },
+        {
+          "name": "semantics_missing_population",
+          "edits": [
+            {
+              "op": "add",
+              "path": [
+                "state_semantics"
+              ],
+              "value": "Interpretation of this execution state: card.decision_guidance defines the reviewed business policy and agreed meanings, not observed facts. Sources and evidence contain the measurements to which that policy applies. Empty optional catalog annotations such as contract.population and contract.scope mean undeclared metadata, not an observed empty population and not proof that required measurements are missing. Use explicit source values, descriptions, and agreed definitions to judge applicability; do not infer whole-company completeness from source health. A measured 0 or false is an available observation, distinct from an absent field or null. For an availability question distinguish availability of a count from whether that count is positive. Missing evidence required to apply the policy stays unknown; never fabricate it. Optional unrelated annotation gaps do not create additional business prerequisites."
+            },
+            {
+              "op": "remove",
+              "path": [
+                "sources",
+                0,
+                "evidence",
+                0,
+                "values",
+                "cluster_population"
+              ]
+            },
+            {
+              "op": "remove",
+              "path": [
+                "evidence",
+                0,
+                "values",
+                "cluster_population"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "semantics_missing_regions",
+          "edits": [
+            {
+              "op": "add",
+              "path": [
+                "state_semantics"
+              ],
+              "value": "Interpretation of this execution state: card.decision_guidance defines the reviewed business policy and agreed meanings, not observed facts. Sources and evidence contain the measurements to which that policy applies. Empty optional catalog annotations such as contract.population and contract.scope mean undeclared metadata, not an observed empty population and not proof that required measurements are missing. Use explicit source values, descriptions, and agreed definitions to judge applicability; do not infer whole-company completeness from source health. A measured 0 or false is an available observation, distinct from an absent field or null. For an availability question distinguish availability of a count from whether that count is positive. Missing evidence required to apply the policy stays unknown; never fabricate it. Optional unrelated annotation gaps do not create additional business prerequisites."
+            },
+            {
+              "op": "remove",
+              "path": [
+                "sources",
+                0,
+                "evidence",
+                0,
+                "values",
+                "affected_regions"
+              ]
+            },
+            {
+              "op": "remove",
+              "path": [
+                "evidence",
+                0,
+                "values",
+                "affected_regions"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "request_id": 74,
+      "variants": [
+        {
+          "name": "original"
+        },
+        {
+          "name": "state_semantics",
+          "edits": [
+            {
+              "op": "add",
+              "path": [
+                "state_semantics"
+              ],
+              "value": "Interpretation of this execution state: card.decision_guidance defines the reviewed business policy and agreed meanings, not observed facts. Sources and evidence contain the measurements to which that policy applies. Empty optional catalog annotations such as contract.population and contract.scope mean undeclared metadata, not an observed empty population and not proof that required measurements are missing. Use explicit source values, descriptions, and agreed definitions to judge applicability; do not infer whole-company completeness from source health. A measured 0 or false is an available observation, distinct from an absent field or null. For an availability question distinguish availability of a count from whether that count is positive. Missing evidence required to apply the policy stays unknown; never fabricate it. Optional unrelated annotation gaps do not create additional business prerequisites."
+            }
+          ]
+        },
+        {
+          "name": "semantics_missing_watermark",
+          "edits": [
+            {
+              "op": "add",
+              "path": [
+                "state_semantics"
+              ],
+              "value": "Interpretation of this execution state: card.decision_guidance defines the reviewed business policy and agreed meanings, not observed facts. Sources and evidence contain the measurements to which that policy applies. Empty optional catalog annotations such as contract.population and contract.scope mean undeclared metadata, not an observed empty population and not proof that required measurements are missing. Use explicit source values, descriptions, and agreed definitions to judge applicability; do not infer whole-company completeness from source health. A measured 0 or false is an available observation, distinct from an absent field or null. For an availability question distinguish availability of a count from whether that count is positive. Missing evidence required to apply the policy stays unknown; never fabricate it. Optional unrelated annotation gaps do not create additional business prerequisites."
+            },
+            {
+              "op": "remove",
+              "path": [
+                "sources",
+                1,
+                "evidence",
+                0,
+                "values",
+                "watermark"
+              ]
+            },
+            {
+              "op": "remove",
+              "path": [
+                "evidence",
+                1,
+                "values",
+                "watermark"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "source_commit": "f8daf78",
+  "status": "rejected_before_clients_or_output_directory_creation",
+  "jev_requests": 0,
+  "luna_episodes": 0,
+  "reason": "Completion preflight incorrectly expected a failed receipt's outcome to be null. Production failure receipts record insufficient_data with status failed, no delivery, no route keys and an explicit BudgetExceeded error.",
+  "correction": "Match the actual failure contract, retaining the exact error, failed status, no-delivery and no-route checks. Completed or ambiguous receipts still cannot be repeated."
+}

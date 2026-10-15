@@ -1,0 +1,1908 @@
+{
+  "config": {
+    "model": "gpt-5.6-luna",
+    "effort": "low",
+    "seed": 20261002,
+    "split": "holdout",
+    "dataset_digest": "bb559f8f482911af51d8649ea096fae08bc4244d9088f92f183751be917969b2",
+    "selected_companies": 2,
+    "selected_scenario_ids": [
+      "company-4468fde576db47408a2e",
+      "company-9e23313593edcc9dbcae"
+    ],
+    "public_context_digest": "d355501bd7c685f988e15c2c37cf9f7a2001e12e7ba74016de250ee9ad0c0116",
+    "max_api_requests": 60,
+    "max_turns": null,
+    "max_tool_calls": 45,
+    "max_output_tokens": null,
+    "prices": {
+      "assumption_date": "2026-09-30",
+      "currency": "USD",
+      "per_million_tokens": {
+        "luna_input": 0.2,
+        "luna_cached_input": 0.02,
+        "luna_output": 1.2,
+        "jev_input": 0.042,
+        "jev_output": 0.0
+      },
+      "sources": [
+        "https://developers.openai.com/api/docs/models/gpt-5.6-luna",
+        "https://docs.typesafe.ai/models"
+      ],
+      "scope": "Small-context standard pricing; estimated token charges, not billed invoices. Failed requests with missing usage have unknown cost, never assumed free."
+    },
+    "clock_rebased_to": "2026-10-01T17:00:57.966699+00:00",
+    "source_fingerprint": {
+      "git_revision": "3940da2ec6107a3d10a19f5a347fadccf9a9feeb",
+      "sha256": {
+        "evaluations/bootstrap_agent_trial.py": "4a586480e05c1186414964f8feeeb7db749f7e8e590a74351db965aafec65b9a",
+        "evaluations/bootstrap_scenarios.py": "73ad09c4042800c06688ea0ea57fe64dd2a7e1f0663f787f5024855606344c5a",
+        "evaluations/codex_trial_transport.py": "8f4be8fbb897683da5e1a6f479ce850a1130f42d398c8541fbc4f5c0be0da2ea",
+        "docs/bootstrap-benchmark-protocol.md": "4a249143da0414dff7f0b0a6af292cce61eb227fd26b5de8286314e72c1f7263",
+        "docs/bootstrap-benchmark-v3.md": "20c23b7842d6195142347bffa2593634fb50d03250c1b740d0dd08fd0e753a01",
+        "uv.lock": "4340d3bc5b590d36e9204d94d4c32c2b6841059a89a78628cc72ec15757c9add",
+        "src/signalweave/engine.py": "8ee9fbb7ae98e6bed9d6a6881f2bce4cf9ec32978873e456687afb5b158ec07d",
+        "src/signalweave/models.py": "763bad44a08d3a9ba49ec90f23065034654bba60bece13d724c78cbbb2a7ad31",
+        "src/signalweave/onboarding.py": "27e832cb4eb01cc6fae23c4ea9eb6d0e0885e9ac65ff57eab92625bab18f69a4",
+        "src/signalweave/diagnostics.py": "fb0f713fab70dd68a3beb13fc404338a7bd2d52a9d943ba4b04fae3a2835c5d7",
+        "src/signalweave/mcp_server.py": "ed5aa10b872c0b7c4c42f11a429caf470e56ecb03d749840063e52890822fb3e",
+        "src/signalweave/typesafe_adapter.py": "3bb0df11d43a65778741a6bf5819cc6e198972892225c4c46670f06984ba0a32"
+      },
+      "note": "Content hashes include uncommitted working files; revision alone is insufficient."
+    },
+    "live": true,
+    "real_external_notifications": false,
+    "limits": [
+      "Synthetic sources with normalized adapter contracts, not real BI connectors.",
+      "Human approval is procedural and simulated, not actual human validation.",
+      "No autonomous causal inference or enterprise reliability claim.",
+      "Baseline has notes and calculators but not persistent code generation.",
+      "Comparator: notes-persistent, LLM-per-run baseline, not all agent strategies.",
+      "Scorer checks structured fields, not narrative entailment; prose needs independent review.",
+      "Every warm run wakes Luna in both arms; no claimed wakeup savings.",
+      "Codex uses saved ChatGPT login; reported OpenAI attempts mean agent invocations, not API requests.",
+      "Codex wall time includes CLI/MCP startup; max tool calls and 360-second episode timeout apply.",
+      "Codex token prices are illustrative API-equivalent estimates, NOT subscription charges; cost advantage gate cannot be established.",
+      "Codex internal request/retry count and per-response token cap are not observable or enforced by this harness."
+    ],
+    "agent_transport": "codex_cli",
+    "episode_timeout_seconds": 360,
+    "api_request_budget_scope": "Jev only",
+    "codex_version": "codex-cli 0.153.4",
+    "codex_command_template": [
+      "codex",
+      "exec",
+      "--ignore-user-config",
+      "--ephemeral",
+      "--json",
+      "--skip-git-repo-check",
+      "--sandbox",
+      "read-only",
+      "--cd",
+      "<empty-temporary-directory>",
+      "--model",
+      "gpt-5.6-luna",
+      "-c",
+      "model_reasoning_effort=\"low\"",
+      "-c",
+      "web_search=\"disabled\"",
+      "-c",
+      "project_doc_max_bytes=0",
+      "-c",
+      "features.skip_host_skill_discovery=true",
+      "-c",
+      "features.code_mode_host=true",
+      "-c",
+      "memories.use_memories=false",
+      "-c",
+      "memories.generate_memories=false",
+      "-c",
+      "mcp_servers={}",
+      "-c",
+      "mcp_servers.trial.url=\"<exclusive-loopback-mcp>\"",
+      "-c",
+      "mcp_servers.trial.required=true",
+      "-c",
+      "mcp_servers.trial.default_tools_approval_mode=\"approve\"",
+      "-c",
+      "mcp_servers.trial.tool_timeout_sec=120",
+      "-c",
+      "approval_policy=\"never\"",
+      "--disable",
+      "shell_tool",
+      "--disable",
+      "unified_exec",
+      "--disable",
+      "apps",
+      "--disable",
+      "plugins",
+      "--disable",
+      "hooks",
+      "--disable",
+      "multi_agent",
+      "--disable",
+      "browser_use",
+      "--disable",
+      "computer_use",
+      "--disable",
+      "image_generation",
+      "--disable",
+      "view_image",
+      "--disable",
+      "memories",
+      "--disable",
+      "skill_search",
+      "--disable",
+      "workspace_dependencies",
+      "--disable",
+      "shell_snapshot",
+      "--disable",
+      "code_mode",
+      "--disable",
+      "sleep_tool",
+      "--disable",
+      "goals",
+      "-"
+    ]
+  },
+  "status": "complete",
+  "summary": {
+    "luna_bi": {
+      "onboarding_attempts": 2,
+      "onboarding_complete": 2,
+      "monitoring_denominator": 6,
+      "complete_monitoring_runs": 6,
+      "exact_count": 5,
+      "outcome_correct_count": 6,
+      "cold_seconds": 64.93390291801188,
+      "warm_seconds": 165.92577758309199,
+      "source_reads": 23,
+      "tool_calls": 51,
+      "jev_api_attempts": 0,
+      "warm_completed_median_seconds": 27.282643145503243,
+      "cold_known_usage_usd": 0.012409920000000001,
+      "warm_known_usage_usd": 0.03097412,
+      "observed_cold_plus_warm_known_usage_usd": 0.04338404,
+      "setup_amortized_known_usage_usd_per_scheduled_run": 0.007230673333333333,
+      "unknown_usage_attempts": 0,
+      "valid_monitoring_submissions": 6,
+      "safety_unassessed_runs": 0,
+      "runtime_failures": 0,
+      "recipients_correct_count": 6,
+      "wrong_recipient_count": 0,
+      "false_alert_count": 0,
+      "missed_event_count": 0,
+      "unsafe_suppression_count": 0,
+      "provenance_complete_count": 6,
+      "all_structured_cases_pass": false,
+      "raw_system_decision_runs": 0,
+      "raw_system_outcome_correct_count": 0,
+      "raw_system_recipients_correct_count": 0,
+      "raw_system_agent_changed_outcome_count": 0,
+      "codex_invocations": 8,
+      "usage_complete": true,
+      "cost_basis": "illustrative_api_equivalent_not_measured_subscription_cost"
+    },
+    "luna_signalweave_jev": {
+      "onboarding_attempts": 2,
+      "onboarding_complete": 2,
+      "monitoring_denominator": 6,
+      "complete_monitoring_runs": 6,
+      "exact_count": 4,
+      "outcome_correct_count": 5,
+      "cold_seconds": 166.84337287500966,
+      "warm_seconds": 155.19867174798856,
+      "source_reads": 27,
+      "tool_calls": 59,
+      "jev_api_attempts": 29,
+      "warm_completed_median_seconds": 23.660227416519774,
+      "cold_known_usage_usd": 0.05812578200000001,
+      "warm_known_usage_usd": 0.038616462000000004,
+      "observed_cold_plus_warm_known_usage_usd": 0.096742244,
+      "setup_amortized_known_usage_usd_per_scheduled_run": 0.016123707333333334,
+      "unknown_usage_attempts": 0,
+      "valid_monitoring_submissions": 6,
+      "safety_unassessed_runs": 0,
+      "runtime_failures": 0,
+      "recipients_correct_count": 6,
+      "wrong_recipient_count": 0,
+      "false_alert_count": 0,
+      "missed_event_count": 0,
+      "unsafe_suppression_count": 0,
+      "provenance_complete_count": 6,
+      "all_structured_cases_pass": false,
+      "raw_system_decision_runs": 6,
+      "raw_system_outcome_correct_count": 5,
+      "raw_system_recipients_correct_count": 5,
+      "raw_system_agent_changed_outcome_count": 2,
+      "codex_invocations": 8,
+      "usage_complete": true,
+      "cost_basis": "illustrative_api_equivalent_not_measured_subscription_cost"
+    }
+  },
+  "usage": {
+    "openai": {
+      "attempts": 16,
+      "failed_attempts": 0,
+      "input_tokens": 2099177,
+      "cached_input_tokens": 1699840,
+      "output_tokens": 17531,
+      "unknown_usage_attempts": 0,
+      "estimated_known_usage_usd": 0.13490140000000003
+    },
+    "jev": {
+      "attempts": 29,
+      "failed_attempts": 0,
+      "input_tokens": 124402,
+      "cached_input_tokens": 0,
+      "output_tokens": 5730,
+      "unknown_usage_attempts": 0,
+      "estimated_known_usage_usd": 0.005224884
+    }
+  },
+  "budget_censored": false,
+  "comparative_eligible": true,
+  "cases": [
+    {
+      "scenario_id": "company-4468fde576db47408a2e",
+      "period_id": "period-7970421eec34a4e00f8d",
+      "arm": "luna_bi",
+      "phase": "onboarding",
+      "status": "complete",
+      "error": null,
+      "seconds": 37.47687570902053,
+      "agent_seconds": 37.475161875016056,
+      "system_seconds": 0.0,
+      "tool_calls": 10,
+      "source_reads": 3,
+      "usage": {
+        "openai": {
+          "attempts": 1,
+          "failed_attempts": 0,
+          "input_tokens": 81241,
+          "cached_input_tokens": 59904,
+          "output_tokens": 767,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.00638588
+        },
+        "jev": {
+          "attempts": 0,
+          "failed_attempts": 0,
+          "input_tokens": 0,
+          "cached_input_tokens": 0,
+          "output_tokens": 0,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.0
+        }
+      },
+      "score": null,
+      "raw_system_decision": null,
+      "submission": null,
+      "foreign_tools": []
+    },
+    {
+      "scenario_id": "company-4468fde576db47408a2e",
+      "period_id": "period-7970421eec34a4e00f8d",
+      "arm": "luna_signalweave_jev",
+      "phase": "onboarding",
+      "status": "complete",
+      "error": null,
+      "seconds": 103.37951291701756,
+      "agent_seconds": 103.37706691597123,
+      "system_seconds": 0.0,
+      "tool_calls": 21,
+      "source_reads": 8,
+      "usage": {
+        "openai": {
+          "attempts": 1,
+          "failed_attempts": 0,
+          "input_tokens": 705597,
+          "cached_input_tokens": 616448,
+          "output_tokens": 3802,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.03472116
+        },
+        "jev": {
+          "attempts": 14,
+          "failed_attempts": 0,
+          "input_tokens": 55590,
+          "cached_input_tokens": 0,
+          "output_tokens": 2659,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.0023347800000000003
+        }
+      },
+      "score": null,
+      "raw_system_decision": null,
+      "submission": null,
+      "foreign_tools": []
+    },
+    {
+      "scenario_id": "company-4468fde576db47408a2e",
+      "period_id": "period-9932972e8b83de26d788",
+      "arm": "luna_signalweave_jev",
+      "phase": "monitoring",
+      "status": "complete",
+      "error": null,
+      "seconds": 23.897243999992497,
+      "agent_seconds": 23.594634333974682,
+      "system_seconds": 0.2989291670382954,
+      "tool_calls": 6,
+      "source_reads": 5,
+      "usage": {
+        "openai": {
+          "attempts": 1,
+          "failed_attempts": 0,
+          "input_tokens": 91253,
+          "cached_input_tokens": 67584,
+          "output_tokens": 921,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.0071906800000000005
+        },
+        "jev": {
+          "attempts": 1,
+          "failed_attempts": 0,
+          "input_tokens": 8718,
+          "cached_input_tokens": 0,
+          "output_tokens": 203,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.000366156
+        }
+      },
+      "score": {
+        "scorer_version": 3,
+        "scenario_id": "company-4468fde576db47408a2e",
+        "period_id": "period-9932972e8b83de26d788",
+        "valid_submission": true,
+        "safety_unassessed": false,
+        "exact": true,
+        "outcome_correct": true,
+        "recipients_correct": true,
+        "wrong_recipient": false,
+        "unsafe_route": false,
+        "false_alert": false,
+        "missed_event": false,
+        "unsafe_suppression": false,
+        "evidence_recall": 1.0,
+        "provenance_complete": true,
+        "numeric_precision": 1.0,
+        "numeric_recall": 1.0,
+        "unsupported_numeric_facts": [],
+        "unsupported_claim_types": [],
+        "numeric_diagnostics": [],
+        "citation_diagnostics": [],
+        "missing_numeric_facts": [],
+        "owner_policy_complete": true,
+        "errors": [],
+        "scoring_scope": "structured_fields_only",
+        "narrative_review_required": true
+      },
+      "raw_system_decision": {
+        "outcome": "notify",
+        "recipients": [
+          "team-df48ceaf14a579d7d907"
+        ],
+        "destinations": [
+          "slack://team-df48ceaf14a579d7d907"
+        ],
+        "outcome_correct": true,
+        "recipients_correct": true,
+        "agent_changed_outcome": false,
+        "scope": "raw system routing only; not numerical or narrative correctness"
+      },
+      "submission": {
+        "outcome": "notify",
+        "recipients": [
+          "team-df48ceaf14a579d7d907"
+        ],
+        "evidence_refs": [
+          "company_mcp|resource-cd2e0e36f156148773cf",
+          "company_mcp|resource-30652812e13cefb915b1"
+        ],
+        "numeric_claims": [
+          {
+            "fact": "sla_attainment.baseline",
+            "value": 0.9,
+            "unit": "ratio",
+            "evidence_refs": [
+              "company_mcp|resource-cd2e0e36f156148773cf"
+            ]
+          },
+          {
+            "fact": "sla_attainment.current",
+            "value": 0.75,
+            "unit": "ratio",
+            "evidence_refs": [
+              "company_mcp|resource-cd2e0e36f156148773cf"
+            ]
+          },
+          {
+            "fact": "sla_attainment.delta",
+            "value": -0.15,
+            "unit": "ratio",
+            "evidence_refs": [
+              "company_mcp|resource-cd2e0e36f156148773cf"
+            ]
+          },
+          {
+            "fact": "sla_attainment.mix_effect",
+            "value": 0,
+            "unit": "ratio",
+            "evidence_refs": [
+              "company_mcp|resource-cd2e0e36f156148773cf"
+            ]
+          },
+          {
+            "fact": "sla_attainment.within_effect",
+            "value": -0.15,
+            "unit": "ratio",
+            "evidence_refs": [
+              "company_mcp|resource-cd2e0e36f156148773cf"
+            ]
+          }
+        ],
+        "claims": [
+          {
+            "claim_type": "observation",
+            "evidence_refs": [
+              "company_mcp|resource-30652812e13cefb915b1"
+            ],
+            "statement": "The current-period evidence uses handbook definition v3: first responses within one business day divided by all eligible inbound customer tickets, including still-open tickets whose deadline elapsed; bot and spam tickets are excluded."
+          },
+          {
+            "claim_type": "observation",
+            "evidence_refs": [
+              "company_mcp|resource-cd2e0e36f156148773cf"
+            ],
+            "statement": "The eligible denominator is complete for both comparable UTC reporting weeks."
+          },
+          {
+            "claim_type": "accounting_decomposition",
+            "evidence_refs": [
+              "company_mcp|resource-cd2e0e36f156148773cf"
+            ],
+            "statement": "The 0.15 ratio-unit decline is entirely within-segment in the supported priority and standard decomposition; mix effect is 0.00 ratio units. This explains the measured difference, not its causal mechanism."
+          }
+        ],
+        "summary": "Notify the business owner: SLA attainment declined materially from 0.90 to 0.75 ratio (delta -0.15), exceeding the -0.05 ratio threshold. Eligible denominators are complete; within effect is -0.15 ratio and mix effect is 0.00 ratio. No causal explanation is established."
+      },
+      "foreign_tools": []
+    },
+    {
+      "scenario_id": "company-4468fde576db47408a2e",
+      "period_id": "period-9932972e8b83de26d788",
+      "arm": "luna_bi",
+      "phase": "monitoring",
+      "status": "complete",
+      "error": null,
+      "seconds": 23.907725125027355,
+      "agent_seconds": 23.906183790997602,
+      "system_seconds": 0.0,
+      "tool_calls": 5,
+      "source_reads": 3,
+      "usage": {
+        "openai": {
+          "attempts": 1,
+          "failed_attempts": 0,
+          "input_tokens": 57315,
+          "cached_input_tokens": 40704,
+          "output_tokens": 792,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.0050866800000000005
+        },
+        "jev": {
+          "attempts": 0,
+          "failed_attempts": 0,
+          "input_tokens": 0,
+          "cached_input_tokens": 0,
+          "output_tokens": 0,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.0
+        }
+      },
+      "score": {
+        "scorer_version": 3,
+        "scenario_id": "company-4468fde576db47408a2e",
+        "period_id": "period-9932972e8b83de26d788",
+        "valid_submission": true,
+        "safety_unassessed": false,
+        "exact": true,
+        "outcome_correct": true,
+        "recipients_correct": true,
+        "wrong_recipient": false,
+        "unsafe_route": false,
+        "false_alert": false,
+        "missed_event": false,
+        "unsafe_suppression": false,
+        "evidence_recall": 1.0,
+        "provenance_complete": true,
+        "numeric_precision": 1.0,
+        "numeric_recall": 1.0,
+        "unsupported_numeric_facts": [],
+        "unsupported_claim_types": [],
+        "numeric_diagnostics": [],
+        "citation_diagnostics": [],
+        "missing_numeric_facts": [],
+        "owner_policy_complete": true,
+        "errors": [],
+        "scoring_scope": "structured_fields_only",
+        "narrative_review_required": true
+      },
+      "raw_system_decision": null,
+      "submission": {
+        "outcome": "notify",
+        "recipients": [
+          "team-df48ceaf14a579d7d907"
+        ],
+        "evidence_refs": [
+          "company_mcp|resource-cd2e0e36f156148773cf",
+          "company_mcp|resource-30652812e13cefb915b1"
+        ],
+        "numeric_claims": [
+          {
+            "fact": "sla_attainment.baseline",
+            "value": 0.9,
+            "unit": "ratio",
+            "evidence_refs": [
+              "company_mcp|resource-cd2e0e36f156148773cf"
+            ]
+          },
+          {
+            "fact": "sla_attainment.current",
+            "value": 0.75,
+            "unit": "ratio",
+            "evidence_refs": [
+              "company_mcp|resource-cd2e0e36f156148773cf"
+            ]
+          },
+          {
+            "fact": "sla_attainment.delta",
+            "value": -0.15,
+            "unit": "ratio",
+            "evidence_refs": [
+              "company_mcp|resource-cd2e0e36f156148773cf"
+            ]
+          },
+          {
+            "fact": "sla_attainment.mix_effect",
+            "value": 0,
+            "unit": "ratio",
+            "evidence_refs": [
+              "company_mcp|resource-cd2e0e36f156148773cf"
+            ]
+          },
+          {
+            "fact": "sla_attainment.within_effect",
+            "value": -0.15,
+            "unit": "ratio",
+            "evidence_refs": [
+              "company_mcp|resource-cd2e0e36f156148773cf"
+            ]
+          }
+        ],
+        "claims": [
+          {
+            "claim_type": "observation",
+            "evidence_refs": [
+              "company_mcp|resource-30652812e13cefb915b1",
+              "company_mcp|resource-cd2e0e36f156148773cf"
+            ],
+            "statement": "Under the handbook definition, SLA attainment was 0.90 in the baseline week and 0.75 in the current week; the current eligible coverage is complete."
+          },
+          {
+            "claim_type": "accounting_decomposition",
+            "evidence_refs": [
+              "company_mcp|resource-cd2e0e36f156148773cf"
+            ],
+            "statement": "The -0.15 ratio-unit change decomposes into -0.15 within-segment effect and 0.00 mix effect; both priority and standard segments declined from 0.90 to 0.75."
+          },
+          {
+            "claim_type": "hypothesis",
+            "evidence_refs": [
+              "company_mcp|resource-cd2e0e36f156148773cf"
+            ],
+            "statement": "The evidence supports investigating a broad within-segment service change; it does not establish a causal mechanism."
+          }
+        ],
+        "summary": "SLA attainment fell from 0.90 to 0.75 ratio units versus the previous complete reporting week, a -0.15 ratio-unit delta, exceeding the saved 0.05 notification threshold. Eligible coverage is complete under definition v3. The symmetric decomposition attributes -0.15 to within-segment rate change and 0.00 to mix; this explains the accounting difference, not its cause."
+      },
+      "foreign_tools": []
+    },
+    {
+      "scenario_id": "company-4468fde576db47408a2e",
+      "period_id": "period-e3981f68213f03ea190b",
+      "arm": "luna_bi",
+      "phase": "monitoring",
+      "status": "complete",
+      "error": null,
+      "seconds": 27.580919249972794,
+      "agent_seconds": 27.577146833995357,
+      "system_seconds": 0.0,
+      "tool_calls": 5,
+      "source_reads": 3,
+      "usage": {
+        "openai": {
+          "attempts": 1,
+          "failed_attempts": 0,
+          "input_tokens": 66989,
+          "cached_input_tokens": 47872,
+          "output_tokens": 740,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.0056688400000000005
+        },
+        "jev": {
+          "attempts": 0,
+          "failed_attempts": 0,
+          "input_tokens": 0,
+          "cached_input_tokens": 0,
+          "output_tokens": 0,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.0
+        }
+      },
+      "score": {
+        "scorer_version": 3,
+        "scenario_id": "company-4468fde576db47408a2e",
+        "period_id": "period-e3981f68213f03ea190b",
+        "valid_submission": true,
+        "safety_unassessed": false,
+        "exact": true,
+        "outcome_correct": true,
+        "recipients_correct": true,
+        "wrong_recipient": false,
+        "unsafe_route": false,
+        "false_alert": false,
+        "missed_event": false,
+        "unsafe_suppression": false,
+        "evidence_recall": 1.0,
+        "provenance_complete": true,
+        "numeric_precision": 1.0,
+        "numeric_recall": 1.0,
+        "unsupported_numeric_facts": [],
+        "unsupported_claim_types": [],
+        "numeric_diagnostics": [],
+        "citation_diagnostics": [],
+        "missing_numeric_facts": [],
+        "owner_policy_complete": true,
+        "errors": [],
+        "scoring_scope": "structured_fields_only",
+        "narrative_review_required": true
+      },
+      "raw_system_decision": null,
+      "submission": {
+        "outcome": "insufficient_data",
+        "recipients": [
+          "team-9a2d45a98644ae6225a4"
+        ],
+        "evidence_refs": [
+          "company_mcp|resource-30652812e13cefb915b1",
+          "company_mcp|resource-cd2e0e36f156148773cf"
+        ],
+        "numeric_claims": [],
+        "claims": [
+          {
+            "claim_type": "observation",
+            "evidence_refs": [
+              "company_mcp|resource-cd2e0e36f156148773cf"
+            ],
+            "statement": "The previous complete UTC reporting week has 900 first responses within SLA out of 1,000 eligible tickets, while the current week has 1,800 first responses but no eligible denominator overall; the priority segment's current denominator is also missing."
+          },
+          {
+            "claim_type": "accounting_decomposition",
+            "evidence_refs": [
+              "company_mcp|resource-cd2e0e36f156148773cf"
+            ],
+            "statement": "The symmetric SLA rate decomposition is insufficient_data because the current denominator is missing; absent denominators are not treated as zero."
+          },
+          {
+            "claim_type": "observation",
+            "evidence_refs": [
+              "company_mcp|resource-30652812e13cefb915b1"
+            ],
+            "statement": "The handbook export states that the open overdue population is missing and cannot be reconstructed."
+          }
+        ],
+        "summary": "Insufficient data to assess whether customers are being let down. Request a corrected/versioned current export containing all eligible inbound tickets, including still-open tickets whose deadline elapsed, with bot and spam excluded."
+      },
+      "foreign_tools": []
+    },
+    {
+      "scenario_id": "company-4468fde576db47408a2e",
+      "period_id": "period-e3981f68213f03ea190b",
+      "arm": "luna_signalweave_jev",
+      "phase": "monitoring",
+      "status": "complete",
+      "error": null,
+      "seconds": 25.61717016599141,
+      "agent_seconds": 25.349696875025984,
+      "system_seconds": 0.263271874981001,
+      "tool_calls": 4,
+      "source_reads": 4,
+      "usage": {
+        "openai": {
+          "attempts": 1,
+          "failed_attempts": 0,
+          "input_tokens": 74857,
+          "cached_input_tokens": 53248,
+          "output_tokens": 665,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.00618476
+        },
+        "jev": {
+          "attempts": 1,
+          "failed_attempts": 0,
+          "input_tokens": 8608,
+          "cached_input_tokens": 0,
+          "output_tokens": 209,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.000361536
+        }
+      },
+      "score": {
+        "scorer_version": 3,
+        "scenario_id": "company-4468fde576db47408a2e",
+        "period_id": "period-e3981f68213f03ea190b",
+        "valid_submission": true,
+        "safety_unassessed": false,
+        "exact": true,
+        "outcome_correct": true,
+        "recipients_correct": true,
+        "wrong_recipient": false,
+        "unsafe_route": false,
+        "false_alert": false,
+        "missed_event": false,
+        "unsafe_suppression": false,
+        "evidence_recall": 1.0,
+        "provenance_complete": true,
+        "numeric_precision": 1.0,
+        "numeric_recall": 1.0,
+        "unsupported_numeric_facts": [],
+        "unsupported_claim_types": [],
+        "numeric_diagnostics": [],
+        "citation_diagnostics": [],
+        "missing_numeric_facts": [],
+        "owner_policy_complete": true,
+        "errors": [],
+        "scoring_scope": "structured_fields_only",
+        "narrative_review_required": true
+      },
+      "raw_system_decision": {
+        "outcome": "insufficient_data",
+        "recipients": [
+          "team-9a2d45a98644ae6225a4"
+        ],
+        "destinations": [
+          "slack://team-9a2d45a98644ae6225a4"
+        ],
+        "outcome_correct": true,
+        "recipients_correct": true,
+        "agent_changed_outcome": false,
+        "scope": "raw system routing only; not numerical or narrative correctness"
+      },
+      "submission": {
+        "outcome": "insufficient_data",
+        "recipients": [
+          "team-9a2d45a98644ae6225a4"
+        ],
+        "evidence_refs": [
+          "company_mcp|resource-cd2e0e36f156148773cf",
+          "company_mcp|resource-30652812e13cefb915b1"
+        ],
+        "numeric_claims": [],
+        "claims": [
+          {
+            "claim_type": "observation",
+            "evidence_refs": [
+              "company_mcp|resource-cd2e0e36f156148773cf"
+            ],
+            "statement": "Current-period queue export reports baseline numerator 900 and denominator 1000, while the current denominator is missing; therefore current sla_attainment and the signed delta cannot be measured."
+          },
+          {
+            "claim_type": "observation",
+            "evidence_refs": [
+              "company_mcp|resource-30652812e13cefb915b1"
+            ],
+            "statement": "The current-period handbook evidence says the open overdue population export is missing and cannot be reconstructed."
+          },
+          {
+            "claim_type": "accounting_decomposition",
+            "evidence_refs": [
+              "company_mcp|resource-cd2e0e36f156148773cf"
+            ],
+            "statement": "Mix and within effects are unavailable because the current eligible denominator is incomplete; absent segments are not treated as zero."
+          }
+        ],
+        "summary": "Insufficient current-period data to assess SLA attainment or a material drop versus the previous complete week. Current eligible denominator/open overdue population is incomplete, so sla_attainment.delta, mix_effect, and within_effect cannot be computed without a corrected export or versioned definition. Route to data operations."
+      },
+      "foreign_tools": []
+    },
+    {
+      "scenario_id": "company-4468fde576db47408a2e",
+      "period_id": "period-3492985677a94690cb09",
+      "arm": "luna_signalweave_jev",
+      "phase": "monitoring",
+      "status": "complete",
+      "error": null,
+      "seconds": 18.1870596659719,
+      "agent_seconds": 17.935872374975588,
+      "system_seconds": 0.24742066697217524,
+      "tool_calls": 1,
+      "source_reads": 2,
+      "usage": {
+        "openai": {
+          "attempts": 1,
+          "failed_attempts": 0,
+          "input_tokens": 50424,
+          "cached_input_tokens": 38144,
+          "output_tokens": 665,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.0040168800000000005
+        },
+        "jev": {
+          "attempts": 1,
+          "failed_attempts": 0,
+          "input_tokens": 8674,
+          "cached_input_tokens": 0,
+          "output_tokens": 204,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.00036430800000000004
+        }
+      },
+      "score": {
+        "scorer_version": 3,
+        "scenario_id": "company-4468fde576db47408a2e",
+        "period_id": "period-3492985677a94690cb09",
+        "valid_submission": true,
+        "safety_unassessed": false,
+        "exact": true,
+        "outcome_correct": true,
+        "recipients_correct": true,
+        "wrong_recipient": false,
+        "unsafe_route": false,
+        "false_alert": false,
+        "missed_event": false,
+        "unsafe_suppression": false,
+        "evidence_recall": 1.0,
+        "provenance_complete": true,
+        "numeric_precision": 1.0,
+        "numeric_recall": 1.0,
+        "unsupported_numeric_facts": [],
+        "unsupported_claim_types": [],
+        "numeric_diagnostics": [],
+        "citation_diagnostics": [],
+        "missing_numeric_facts": [],
+        "owner_policy_complete": true,
+        "errors": [],
+        "scoring_scope": "structured_fields_only",
+        "narrative_review_required": true
+      },
+      "raw_system_decision": {
+        "outcome": "ignore",
+        "recipients": [],
+        "destinations": [],
+        "outcome_correct": true,
+        "recipients_correct": true,
+        "agent_changed_outcome": false,
+        "scope": "raw system routing only; not numerical or narrative correctness"
+      },
+      "submission": {
+        "outcome": "ignore",
+        "recipients": [],
+        "evidence_refs": [
+          "company_mcp|resource-cd2e0e36f156148773cf",
+          "company_mcp|resource-30652812e13cefb915b1"
+        ],
+        "numeric_claims": [
+          {
+            "fact": "sla_attainment.baseline",
+            "value": 0.9,
+            "unit": "ratio",
+            "evidence_refs": [
+              "company_mcp|resource-cd2e0e36f156148773cf"
+            ]
+          },
+          {
+            "fact": "sla_attainment.current",
+            "value": 0.9,
+            "unit": "ratio",
+            "evidence_refs": [
+              "company_mcp|resource-cd2e0e36f156148773cf"
+            ]
+          },
+          {
+            "fact": "sla_attainment.delta",
+            "value": 0,
+            "unit": "ratio",
+            "evidence_refs": [
+              "company_mcp|resource-cd2e0e36f156148773cf"
+            ]
+          },
+          {
+            "fact": "sla_attainment.mix_effect",
+            "value": 0,
+            "unit": "ratio",
+            "evidence_refs": [
+              "company_mcp|resource-cd2e0e36f156148773cf"
+            ]
+          },
+          {
+            "fact": "sla_attainment.within_effect",
+            "value": 0,
+            "unit": "ratio",
+            "evidence_refs": [
+              "company_mcp|resource-cd2e0e36f156148773cf"
+            ]
+          }
+        ],
+        "claims": [
+          {
+            "claim_type": "observation",
+            "evidence_refs": [
+              "company_mcp|resource-cd2e0e36f156148773cf",
+              "company_mcp|resource-30652812e13cefb915b1"
+            ],
+            "statement": "For the current complete reporting week versus the previous complete reporting week, SLA attainment was unchanged at 0.9 ratio; eligible denominators were complete (2,000 current versus 1,000 baseline)."
+          },
+          {
+            "claim_type": "accounting_decomposition",
+            "evidence_refs": [
+              "company_mcp|resource-cd2e0e36f156148773cf"
+            ],
+            "statement": "The 0.0 ratio change decomposes into a 0.0 ratio mix effect and a 0.0 ratio within-segment effect across priority and standard cohorts; this is an accounting decomposition, not a causal explanation."
+          }
+        ],
+        "summary": "Ignore: SLA attainment did not materially decline; the eligible denominator is complete. Volume increased, but policy says to ignore volume-only increases."
+      },
+      "foreign_tools": []
+    },
+    {
+      "scenario_id": "company-4468fde576db47408a2e",
+      "period_id": "period-3492985677a94690cb09",
+      "arm": "luna_bi",
+      "phase": "monitoring",
+      "status": "complete",
+      "error": null,
+      "seconds": 29.9377408750006,
+      "agent_seconds": 29.93612500000745,
+      "system_seconds": 0.0,
+      "tool_calls": 5,
+      "source_reads": 3,
+      "usage": {
+        "openai": {
+          "attempts": 1,
+          "failed_attempts": 0,
+          "input_tokens": 55906,
+          "cached_input_tokens": 39936,
+          "output_tokens": 797,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.0049491199999999996
+        },
+        "jev": {
+          "attempts": 0,
+          "failed_attempts": 0,
+          "input_tokens": 0,
+          "cached_input_tokens": 0,
+          "output_tokens": 0,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.0
+        }
+      },
+      "score": {
+        "scorer_version": 3,
+        "scenario_id": "company-4468fde576db47408a2e",
+        "period_id": "period-3492985677a94690cb09",
+        "valid_submission": true,
+        "safety_unassessed": false,
+        "exact": true,
+        "outcome_correct": true,
+        "recipients_correct": true,
+        "wrong_recipient": false,
+        "unsafe_route": false,
+        "false_alert": false,
+        "missed_event": false,
+        "unsafe_suppression": false,
+        "evidence_recall": 1.0,
+        "provenance_complete": true,
+        "numeric_precision": 1.0,
+        "numeric_recall": 1.0,
+        "unsupported_numeric_facts": [],
+        "unsupported_claim_types": [],
+        "numeric_diagnostics": [],
+        "citation_diagnostics": [],
+        "missing_numeric_facts": [],
+        "owner_policy_complete": true,
+        "errors": [],
+        "scoring_scope": "structured_fields_only",
+        "narrative_review_required": true
+      },
+      "raw_system_decision": null,
+      "submission": {
+        "outcome": "ignore",
+        "recipients": [],
+        "evidence_refs": [
+          "company_mcp|resource-30652812e13cefb915b1",
+          "company_mcp|resource-cd2e0e36f156148773cf"
+        ],
+        "numeric_claims": [
+          {
+            "fact": "sla_attainment.baseline",
+            "value": 0.9,
+            "unit": "ratio",
+            "evidence_refs": [
+              "company_mcp|resource-cd2e0e36f156148773cf"
+            ]
+          },
+          {
+            "fact": "sla_attainment.current",
+            "value": 0.9,
+            "unit": "ratio",
+            "evidence_refs": [
+              "company_mcp|resource-cd2e0e36f156148773cf"
+            ]
+          },
+          {
+            "fact": "sla_attainment.delta",
+            "value": 0,
+            "unit": "ratio",
+            "evidence_refs": [
+              "company_mcp|resource-cd2e0e36f156148773cf"
+            ]
+          },
+          {
+            "fact": "sla_attainment.mix_effect",
+            "value": 0,
+            "unit": "ratio",
+            "evidence_refs": [
+              "company_mcp|resource-cd2e0e36f156148773cf"
+            ]
+          },
+          {
+            "fact": "sla_attainment.within_effect",
+            "value": 0,
+            "unit": "ratio",
+            "evidence_refs": [
+              "company_mcp|resource-cd2e0e36f156148773cf"
+            ]
+          }
+        ],
+        "claims": [
+          {
+            "claim_type": "observation",
+            "evidence_refs": [
+              "company_mcp|resource-30652812e13cefb915b1",
+              "company_mcp|resource-cd2e0e36f156148773cf"
+            ],
+            "statement": "SLA attainment was 0.9 ratio in both the previous complete reporting week and the current week, so the delta was 0 ratio units; eligible volume doubled from 1000 to 2000 tickets, but volume alone is not a notification condition."
+          },
+          {
+            "claim_type": "accounting_decomposition",
+            "evidence_refs": [
+              "company_mcp|resource-cd2e0e36f156148773cf"
+            ],
+            "statement": "The measured 0 ratio-unit change decomposes into a 0 ratio-unit mix effect and a 0 ratio-unit within-segment effect; priority and standard each remained at 0.9 ratio with equal segment weights in both periods."
+          }
+        ],
+        "summary": "Ignore: SLA attainment is unchanged at 0.9 ratio despite higher eligible volume; no routing is required."
+      },
+      "foreign_tools": []
+    },
+    {
+      "scenario_id": "company-9e23313593edcc9dbcae",
+      "period_id": "period-c5001604d2d3edca3b5c",
+      "arm": "luna_bi",
+      "phase": "onboarding",
+      "status": "complete",
+      "error": null,
+      "seconds": 27.45702720899135,
+      "agent_seconds": 27.456498500017915,
+      "system_seconds": 0.0,
+      "tool_calls": 9,
+      "source_reads": 2,
+      "usage": {
+        "openai": {
+          "attempts": 1,
+          "failed_attempts": 0,
+          "input_tokens": 74789,
+          "cached_input_tokens": 55552,
+          "output_tokens": 888,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.0060240400000000005
+        },
+        "jev": {
+          "attempts": 0,
+          "failed_attempts": 0,
+          "input_tokens": 0,
+          "cached_input_tokens": 0,
+          "output_tokens": 0,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.0
+        }
+      },
+      "score": null,
+      "raw_system_decision": null,
+      "submission": null,
+      "foreign_tools": []
+    },
+    {
+      "scenario_id": "company-9e23313593edcc9dbcae",
+      "period_id": "period-c5001604d2d3edca3b5c",
+      "arm": "luna_signalweave_jev",
+      "phase": "onboarding",
+      "status": "complete",
+      "error": null,
+      "seconds": 63.4638599579921,
+      "agent_seconds": 63.461726834008005,
+      "system_seconds": 0.0,
+      "tool_calls": 14,
+      "source_reads": 1,
+      "usage": {
+        "openai": {
+          "attempts": 1,
+          "failed_attempts": 0,
+          "input_tokens": 408817,
+          "cached_input_tokens": 359424,
+          "output_tokens": 2427,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.019979480000000004
+        },
+        "jev": {
+          "attempts": 9,
+          "failed_attempts": 0,
+          "input_tokens": 25961,
+          "cached_input_tokens": 0,
+          "output_tokens": 1723,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.001090362
+        }
+      },
+      "score": null,
+      "raw_system_decision": null,
+      "submission": null,
+      "foreign_tools": []
+    },
+    {
+      "scenario_id": "company-9e23313593edcc9dbcae",
+      "period_id": "period-4b8c926e47494c3df4bd",
+      "arm": "luna_signalweave_jev",
+      "phase": "monitoring",
+      "status": "complete",
+      "error": null,
+      "seconds": 41.27475883299485,
+      "agent_seconds": 41.015122707991395,
+      "system_seconds": 0.2557749169645831,
+      "tool_calls": 5,
+      "source_reads": 3,
+      "usage": {
+        "openai": {
+          "attempts": 1,
+          "failed_attempts": 0,
+          "input_tokens": 85332,
+          "cached_input_tokens": 70400,
+          "output_tokens": 791,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.0053435999999999996
+        },
+        "jev": {
+          "attempts": 1,
+          "failed_attempts": 0,
+          "input_tokens": 5595,
+          "cached_input_tokens": 0,
+          "output_tokens": 245,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.00023499
+        }
+      },
+      "score": {
+        "scorer_version": 3,
+        "scenario_id": "company-9e23313593edcc9dbcae",
+        "period_id": "period-4b8c926e47494c3df4bd",
+        "valid_submission": true,
+        "safety_unassessed": false,
+        "exact": false,
+        "outcome_correct": true,
+        "recipients_correct": true,
+        "wrong_recipient": false,
+        "unsafe_route": false,
+        "false_alert": false,
+        "missed_event": false,
+        "unsafe_suppression": false,
+        "evidence_recall": 1.0,
+        "provenance_complete": true,
+        "numeric_precision": 0.0,
+        "numeric_recall": 1.0,
+        "unsupported_numeric_facts": [
+          "latency.delta"
+        ],
+        "unsupported_claim_types": [],
+        "numeric_diagnostics": [
+          {
+            "claim_index": 0,
+            "fact": "latency.delta",
+            "reasons": [
+              "unavailable_scope"
+            ]
+          }
+        ],
+        "citation_diagnostics": [],
+        "missing_numeric_facts": [],
+        "owner_policy_complete": true,
+        "errors": [],
+        "scoring_scope": "structured_fields_only",
+        "narrative_review_required": true
+      },
+      "raw_system_decision": {
+        "outcome": "insufficient_data",
+        "recipients": [
+          "team-d9b0b08268525cabb39c"
+        ],
+        "destinations": [
+          "slack://team-d9b0b08268525cabb39c"
+        ],
+        "outcome_correct": true,
+        "recipients_correct": true,
+        "agent_changed_outcome": false,
+        "scope": "raw system routing only; not numerical or narrative correctness"
+      },
+      "submission": {
+        "outcome": "insufficient_data",
+        "recipients": [
+          "team-d9b0b08268525cabb39c"
+        ],
+        "evidence_refs": [
+          "company_mcp|resource-ee271f169093125e61d0"
+        ],
+        "numeric_claims": [
+          {
+            "fact": "latency.delta",
+            "value": 0,
+            "unit": "ms",
+            "evidence_refs": [
+              "company_mcp|resource-ee271f169093125e61d0"
+            ]
+          }
+        ],
+        "claims": [
+          {
+            "claim_type": "observation",
+            "evidence_refs": [
+              "company_mcp|resource-ee271f169093125e61d0"
+            ],
+            "statement": "Current query p95 latency is 100 ms versus a previous-complete-week baseline of 100 ms, a latency delta of 0 ms; replication lag is 10 ms currently versus 10 ms baseline."
+          },
+          {
+            "claim_type": "observation",
+            "evidence_refs": [
+              "company_mcp|resource-ee271f169093125e61d0"
+            ],
+            "statement": "Affected-region count and cluster population are unavailable, so the required regional breadth and same-population validation cannot be established."
+          },
+          {
+            "claim_type": "observation",
+            "evidence_refs": [
+              "company_mcp|resource-ee271f169093125e61d0"
+            ],
+            "statement": "A single-node CPU reading of 95% is present, but CPU alone is not a trigger under the approved policy."
+          }
+        ],
+        "summary": "Insufficient data for customer-facing slowdown determination. Latency delta is 0 ms and replication lag is unchanged at 10 ms versus 10 ms baseline, but affected regions and cluster population are missing. Request a corrected export or versioned definition; do not reconstruct rows or infer causality."
+      },
+      "foreign_tools": []
+    },
+    {
+      "scenario_id": "company-9e23313593edcc9dbcae",
+      "period_id": "period-4b8c926e47494c3df4bd",
+      "arm": "luna_bi",
+      "phase": "monitoring",
+      "status": "complete",
+      "error": null,
+      "seconds": 26.984367041033693,
+      "agent_seconds": 26.982440209016204,
+      "system_seconds": 0.0,
+      "tool_calls": 7,
+      "source_reads": 3,
+      "usage": {
+        "openai": {
+          "attempts": 1,
+          "failed_attempts": 0,
+          "input_tokens": 74243,
+          "cached_input_tokens": 56576,
+          "output_tokens": 826,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.00565612
+        },
+        "jev": {
+          "attempts": 0,
+          "failed_attempts": 0,
+          "input_tokens": 0,
+          "cached_input_tokens": 0,
+          "output_tokens": 0,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.0
+        }
+      },
+      "score": {
+        "scorer_version": 3,
+        "scenario_id": "company-9e23313593edcc9dbcae",
+        "period_id": "period-4b8c926e47494c3df4bd",
+        "valid_submission": true,
+        "safety_unassessed": false,
+        "exact": false,
+        "outcome_correct": true,
+        "recipients_correct": true,
+        "wrong_recipient": false,
+        "unsafe_route": false,
+        "false_alert": false,
+        "missed_event": false,
+        "unsafe_suppression": false,
+        "evidence_recall": 1.0,
+        "provenance_complete": true,
+        "numeric_precision": 0.0,
+        "numeric_recall": 1.0,
+        "unsupported_numeric_facts": [
+          "latency.delta"
+        ],
+        "unsupported_claim_types": [],
+        "numeric_diagnostics": [
+          {
+            "claim_index": 0,
+            "fact": "latency.delta",
+            "reasons": [
+              "unavailable_scope"
+            ]
+          }
+        ],
+        "citation_diagnostics": [],
+        "missing_numeric_facts": [],
+        "owner_policy_complete": true,
+        "errors": [],
+        "scoring_scope": "structured_fields_only",
+        "narrative_review_required": true
+      },
+      "raw_system_decision": null,
+      "submission": {
+        "outcome": "insufficient_data",
+        "recipients": [
+          "team-d9b0b08268525cabb39c"
+        ],
+        "evidence_refs": [
+          "company_mcp|resource-ee271f169093125e61d0",
+          "company_mcp|resource-e92083b287448edc785c"
+        ],
+        "numeric_claims": [
+          {
+            "fact": "latency.delta",
+            "value": 0,
+            "unit": "ms",
+            "evidence_refs": [
+              "company_mcp|resource-ee271f169093125e61d0"
+            ]
+          }
+        ],
+        "claims": [
+          {
+            "claim_type": "observation",
+            "evidence_refs": [
+              "company_mcp|resource-ee271f169093125e61d0"
+            ],
+            "statement": "Current query p95 latency is 100 ms versus a 100 ms baseline, and replication lag is 10 ms versus a 10 ms baseline; the source does not provide cluster population or affected-region coverage."
+          },
+          {
+            "claim_type": "observation",
+            "evidence_refs": [
+              "company_mcp|resource-ee271f169093125e61d0"
+            ],
+            "statement": "A single-node CPU value of 95% is present, but CPU alone is not customer-impact evidence under the monitoring policy."
+          },
+          {
+            "claim_type": "observation",
+            "evidence_refs": [
+              "company_mcp|resource-e92083b287448edc785c"
+            ],
+            "statement": "The change calendar lists rollout targets eu-1, us-1, and ap-1, but latency-change timing is unavailable, so rollout timing is corroboration only and cannot establish cause."
+          }
+        ],
+        "summary": "Insufficient data: latency and lag show no current-vs-baseline increase, but the required customer-cluster population and affected-region coverage are missing, so the policy trigger cannot be evaluated. Route to Data operations for coverage remediation; do not page on the isolated CPU signal."
+      },
+      "foreign_tools": []
+    },
+    {
+      "scenario_id": "company-9e23313593edcc9dbcae",
+      "period_id": "period-e56fd0dafbceab07f247",
+      "arm": "luna_bi",
+      "phase": "monitoring",
+      "status": "complete",
+      "error": null,
+      "seconds": 34.31524879200151,
+      "agent_seconds": 34.3134528749506,
+      "system_seconds": 0.0,
+      "tool_calls": 5,
+      "source_reads": 3,
+      "usage": {
+        "openai": {
+          "attempts": 1,
+          "failed_attempts": 0,
+          "input_tokens": 63607,
+          "cached_input_tokens": 44800,
+          "output_tokens": 1130,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.0060133999999999995
+        },
+        "jev": {
+          "attempts": 0,
+          "failed_attempts": 0,
+          "input_tokens": 0,
+          "cached_input_tokens": 0,
+          "output_tokens": 0,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.0
+        }
+      },
+      "score": {
+        "scorer_version": 3,
+        "scenario_id": "company-9e23313593edcc9dbcae",
+        "period_id": "period-e56fd0dafbceab07f247",
+        "valid_submission": true,
+        "safety_unassessed": false,
+        "exact": true,
+        "outcome_correct": true,
+        "recipients_correct": true,
+        "wrong_recipient": false,
+        "unsafe_route": false,
+        "false_alert": false,
+        "missed_event": false,
+        "unsafe_suppression": false,
+        "evidence_recall": 1.0,
+        "provenance_complete": true,
+        "numeric_precision": 1.0,
+        "numeric_recall": 1.0,
+        "unsupported_numeric_facts": [],
+        "unsupported_claim_types": [],
+        "numeric_diagnostics": [],
+        "citation_diagnostics": [],
+        "missing_numeric_facts": [],
+        "owner_policy_complete": true,
+        "errors": [],
+        "scoring_scope": "structured_fields_only",
+        "narrative_review_required": true
+      },
+      "raw_system_decision": null,
+      "submission": {
+        "outcome": "investigate",
+        "recipients": [
+          "team-b38c29bd3701bb1cdceb"
+        ],
+        "evidence_refs": [
+          "company_mcp|resource-ee271f169093125e61d0",
+          "company_mcp|resource-e92083b287448edc785c"
+        ],
+        "numeric_claims": [
+          {
+            "fact": "latency.delta",
+            "value": 40,
+            "unit": "ms",
+            "evidence_refs": [
+              "company_mcp|resource-ee271f169093125e61d0"
+            ]
+          },
+          {
+            "fact": "latency.affected_regions",
+            "value": 3,
+            "unit": "regions",
+            "evidence_refs": [
+              "company_mcp|resource-ee271f169093125e61d0"
+            ]
+          },
+          {
+            "fact": "latency.rollout_lead_minutes",
+            "value": 12,
+            "unit": "minutes",
+            "evidence_refs": [
+              "company_mcp|resource-e92083b287448edc785c"
+            ]
+          }
+        ],
+        "claims": [
+          {
+            "claim_type": "observation",
+            "evidence_refs": [
+              "company_mcp|resource-ee271f169093125e61d0"
+            ],
+            "statement": "Customer-cluster query p95 latency increased from 100 ms to 140 ms, while replication lag increased from 10 ms to 80 ms; the source covers eu-1, us-1, and ap-1, with 3 affected regions."
+          },
+          {
+            "claim_type": "accounting_decomposition",
+            "evidence_refs": [
+              "company_mcp|resource-ee271f169093125e61d0"
+            ],
+            "statement": "The latency change is a 40 ms increase from the stated baseline; the source provides no regional mix/within decomposition."
+          },
+          {
+            "claim_type": "association",
+            "evidence_refs": [
+              "company_mcp|resource-e92083b287448edc785c"
+            ],
+            "statement": "The change calendar places rollout start 12 minutes before the recorded latency change in the same target population."
+          },
+          {
+            "claim_type": "hypothesis",
+            "evidence_refs": [
+              "company_mcp|resource-e92083b287448edc785c",
+              "company_mcp|resource-ee271f169093125e61d0"
+            ],
+            "statement": "The rollout is a candidate investigation lead given the timing and matching target population, but the evidence does not establish causation."
+          }
+        ],
+        "summary": "Investigate customer-facing database degradation: query p95 latency rose 40 ms (100 to 140 ms), replication lag rose 8× (10 to 80 ms), and 3 regions are affected across the fully covered eu-1/us-1/ap-1 population. Saved policy thresholds are met. Route the investigation to the business owner; rollout timing is corroboration, not proof of cause."
+      },
+      "foreign_tools": []
+    },
+    {
+      "scenario_id": "company-9e23313593edcc9dbcae",
+      "period_id": "period-e56fd0dafbceab07f247",
+      "arm": "luna_signalweave_jev",
+      "phase": "monitoring",
+      "status": "complete",
+      "error": null,
+      "seconds": 23.42321083304705,
+      "agent_seconds": 23.188729457964655,
+      "system_seconds": 0.23124583304161206,
+      "tool_calls": 5,
+      "source_reads": 3,
+      "usage": {
+        "openai": {
+          "attempts": 1,
+          "failed_attempts": 0,
+          "input_tokens": 74721,
+          "cached_input_tokens": 57344,
+          "output_tokens": 783,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.005561880000000001
+        },
+        "jev": {
+          "attempts": 1,
+          "failed_attempts": 0,
+          "input_tokens": 5627,
+          "cached_input_tokens": 0,
+          "output_tokens": 241,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.000236334
+        }
+      },
+      "score": {
+        "scorer_version": 3,
+        "scenario_id": "company-9e23313593edcc9dbcae",
+        "period_id": "period-e56fd0dafbceab07f247",
+        "valid_submission": true,
+        "safety_unassessed": false,
+        "exact": false,
+        "outcome_correct": false,
+        "recipients_correct": true,
+        "wrong_recipient": false,
+        "unsafe_route": false,
+        "false_alert": false,
+        "missed_event": false,
+        "unsafe_suppression": false,
+        "evidence_recall": 0.5,
+        "provenance_complete": true,
+        "numeric_precision": 1.0,
+        "numeric_recall": 0.6666666666666666,
+        "unsupported_numeric_facts": [],
+        "unsupported_claim_types": [],
+        "numeric_diagnostics": [],
+        "citation_diagnostics": [
+          {
+            "location": "evidence_refs",
+            "unknown_refs": [],
+            "uninspected_refs": [],
+            "unlisted_refs": [],
+            "missing_required_refs": [
+              "company_mcp|resource-e92083b287448edc785c"
+            ]
+          }
+        ],
+        "missing_numeric_facts": [
+          "latency.rollout_lead_minutes"
+        ],
+        "owner_policy_complete": true,
+        "errors": [
+          "missing_explanation_claim_type"
+        ],
+        "scoring_scope": "structured_fields_only",
+        "narrative_review_required": true
+      },
+      "raw_system_decision": {
+        "outcome": "investigate",
+        "recipients": [],
+        "destinations": [],
+        "outcome_correct": true,
+        "recipients_correct": false,
+        "agent_changed_outcome": true,
+        "scope": "raw system routing only; not numerical or narrative correctness"
+      },
+      "submission": {
+        "outcome": "notify",
+        "recipients": [
+          "team-b38c29bd3701bb1cdceb"
+        ],
+        "evidence_refs": [
+          "company_mcp|resource-ee271f169093125e61d0"
+        ],
+        "numeric_claims": [
+          {
+            "fact": "latency.delta",
+            "value": 40,
+            "unit": "ms",
+            "evidence_refs": [
+              "company_mcp|resource-ee271f169093125e61d0"
+            ]
+          },
+          {
+            "fact": "latency.affected_regions",
+            "value": 3,
+            "unit": "regions",
+            "evidence_refs": [
+              "company_mcp|resource-ee271f169093125e61d0"
+            ]
+          }
+        ],
+        "claims": [
+          {
+            "claim_type": "observation",
+            "evidence_refs": [
+              "company_mcp|resource-ee271f169093125e61d0"
+            ],
+            "statement": "Current query p95 latency is 140 ms versus the previous complete reporting week baseline of 100 ms, a 40 ms increase (40%). Replication lag is 80 ms versus 10 ms baseline (8x), and 3 affected regions are listed for the same cluster population: eu-1, us-1, and ap-1."
+          },
+          {
+            "claim_type": "observation",
+            "evidence_refs": [
+              "company_mcp|resource-ee271f169093125e61d0"
+            ],
+            "statement": "The source is current-period, authorized, healthy, and covers the listed three-cluster population; the 95% single-node CPU reading is corroborating context only, not a standalone trigger."
+          }
+        ],
+        "summary": "Material customer-facing database slowdown detected: latency rose 40% (40 ms) from 100 to 140 ms, replication lag rose from 10 to 80 ms (8x), and 3 regions are affected. All policy thresholds are met; notify the business owner. No causal claim is made from CPU or timing."
+      },
+      "foreign_tools": []
+    },
+    {
+      "scenario_id": "company-9e23313593edcc9dbcae",
+      "period_id": "period-5acc399d4b7b37f7dbdb",
+      "arm": "luna_signalweave_jev",
+      "phase": "monitoring",
+      "status": "complete",
+      "error": null,
+      "seconds": 22.799228249990847,
+      "agent_seconds": 22.581476583029144,
+      "system_seconds": 0.21433983300812542,
+      "tool_calls": 3,
+      "source_reads": 1,
+      "usage": {
+        "openai": {
+          "attempts": 1,
+          "failed_attempts": 0,
+          "input_tokens": 70983,
+          "cached_input_tokens": 36096,
+          "output_tokens": 683,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.00851892
+        },
+        "jev": {
+          "attempts": 1,
+          "failed_attempts": 0,
+          "input_tokens": 5629,
+          "cached_input_tokens": 0,
+          "output_tokens": 246,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.000236418
+        }
+      },
+      "score": {
+        "scorer_version": 3,
+        "scenario_id": "company-9e23313593edcc9dbcae",
+        "period_id": "period-5acc399d4b7b37f7dbdb",
+        "valid_submission": true,
+        "safety_unassessed": false,
+        "exact": true,
+        "outcome_correct": true,
+        "recipients_correct": true,
+        "wrong_recipient": false,
+        "unsafe_route": false,
+        "false_alert": false,
+        "missed_event": false,
+        "unsafe_suppression": false,
+        "evidence_recall": 1.0,
+        "provenance_complete": true,
+        "numeric_precision": 1.0,
+        "numeric_recall": 1.0,
+        "unsupported_numeric_facts": [],
+        "unsupported_claim_types": [],
+        "numeric_diagnostics": [],
+        "citation_diagnostics": [],
+        "missing_numeric_facts": [],
+        "owner_policy_complete": true,
+        "errors": [],
+        "scoring_scope": "structured_fields_only",
+        "narrative_review_required": true
+      },
+      "raw_system_decision": {
+        "outcome": "investigate",
+        "recipients": [],
+        "destinations": [],
+        "outcome_correct": false,
+        "recipients_correct": true,
+        "agent_changed_outcome": true,
+        "scope": "raw system routing only; not numerical or narrative correctness"
+      },
+      "submission": {
+        "outcome": "ignore",
+        "recipients": [],
+        "evidence_refs": [
+          "company_mcp|resource-ee271f169093125e61d0"
+        ],
+        "numeric_claims": [
+          {
+            "fact": "latency.delta",
+            "value": 0,
+            "unit": "ms",
+            "evidence_refs": [
+              "company_mcp|resource-ee271f169093125e61d0"
+            ]
+          },
+          {
+            "fact": "latency.affected_regions",
+            "value": 0,
+            "unit": "regions",
+            "evidence_refs": [
+              "company_mcp|resource-ee271f169093125e61d0"
+            ]
+          }
+        ],
+        "claims": [
+          {
+            "claim_type": "observation",
+            "evidence_refs": [
+              "company_mcp|resource-ee271f169093125e61d0"
+            ],
+            "statement": "Current query p95 latency is 100 ms versus the previous complete reporting week baseline of 100 ms, so the delta is 0 ms; replication lag is 10 ms versus 10 ms baseline. No affected regions are reported. The source reports the defined customer-cluster population and is healthy; the isolated 95% single-node CPU reading is not a standalone trigger."
+          },
+          {
+            "claim_type": "accounting_decomposition",
+            "evidence_refs": [
+              "company_mcp|resource-ee271f169093125e61d0"
+            ],
+            "statement": "The material-impact rule is not met: latency did not rise by at least 20%, replication lag did not double, and affected-region breadth is 0 regions rather than at least 2."
+          }
+        ],
+        "summary": "Ignore: current-period evidence shows no customer-facing slowdown under the approved policy. Latency and replication lag are unchanged from baseline, with 0 affected regions. The isolated CPU spike does not qualify on its own."
+      },
+      "foreign_tools": []
+    },
+    {
+      "scenario_id": "company-9e23313593edcc9dbcae",
+      "period_id": "period-5acc399d4b7b37f7dbdb",
+      "arm": "luna_bi",
+      "phase": "monitoring",
+      "status": "complete",
+      "error": null,
+      "seconds": 23.199776500056032,
+      "agent_seconds": 23.198003375029657,
+      "system_seconds": 0.0,
+      "tool_calls": 5,
+      "source_reads": 3,
+      "usage": {
+        "openai": {
+          "attempts": 1,
+          "failed_attempts": 0,
+          "input_tokens": 63103,
+          "cached_input_tokens": 55808,
+          "output_tokens": 854,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.00359996
+        },
+        "jev": {
+          "attempts": 0,
+          "failed_attempts": 0,
+          "input_tokens": 0,
+          "cached_input_tokens": 0,
+          "output_tokens": 0,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.0
+        }
+      },
+      "score": {
+        "scorer_version": 3,
+        "scenario_id": "company-9e23313593edcc9dbcae",
+        "period_id": "period-5acc399d4b7b37f7dbdb",
+        "valid_submission": true,
+        "safety_unassessed": false,
+        "exact": true,
+        "outcome_correct": true,
+        "recipients_correct": true,
+        "wrong_recipient": false,
+        "unsafe_route": false,
+        "false_alert": false,
+        "missed_event": false,
+        "unsafe_suppression": false,
+        "evidence_recall": 1.0,
+        "provenance_complete": true,
+        "numeric_precision": 1.0,
+        "numeric_recall": 1.0,
+        "unsupported_numeric_facts": [],
+        "unsupported_claim_types": [],
+        "numeric_diagnostics": [],
+        "citation_diagnostics": [],
+        "missing_numeric_facts": [],
+        "owner_policy_complete": true,
+        "errors": [],
+        "scoring_scope": "structured_fields_only",
+        "narrative_review_required": true
+      },
+      "raw_system_decision": null,
+      "submission": {
+        "outcome": "ignore",
+        "recipients": [],
+        "evidence_refs": [
+          "company_mcp|resource-ee271f169093125e61d0",
+          "company_mcp|resource-e92083b287448edc785c"
+        ],
+        "numeric_claims": [
+          {
+            "fact": "latency.delta",
+            "value": 0,
+            "unit": "ms",
+            "evidence_refs": [
+              "company_mcp|resource-ee271f169093125e61d0"
+            ]
+          },
+          {
+            "fact": "latency.affected_regions",
+            "value": 0,
+            "unit": "regions",
+            "evidence_refs": [
+              "company_mcp|resource-ee271f169093125e61d0"
+            ]
+          }
+        ],
+        "claims": [
+          {
+            "claim_type": "observation",
+            "evidence_refs": [
+              "company_mcp|resource-ee271f169093125e61d0"
+            ],
+            "statement": "Customer-cluster query p95 latency is 100 ms currently versus 100 ms baseline, and replication lag is 10 ms currently versus 10 ms baseline; affected-region count is 0."
+          },
+          {
+            "claim_type": "accounting_decomposition",
+            "evidence_refs": [
+              "company_mcp|resource-ee271f169093125e61d0"
+            ],
+            "statement": "The latency change is 0 ms, so there is no measured latency increase to decompose into regional or within-population effects."
+          },
+          {
+            "claim_type": "observation",
+            "evidence_refs": [
+              "company_mcp|resource-ee271f169093125e61d0"
+            ],
+            "statement": "A single-node CPU reading is 95%, but the customer-impact source shows no latency or replication-lag deterioration and no affected regions; this is an isolated CPU signal."
+          },
+          {
+            "claim_type": "observation",
+            "evidence_refs": [
+              "company_mcp|resource-e92083b287448edc785c"
+            ],
+            "statement": "The change calendar records no latency-change timestamp, so rollout timing does not provide a latency-change lead measurement."
+          }
+        ],
+        "summary": "Ignore: customer-facing slowdown criteria are not met. Current customer-cluster latency and replication lag match baseline, with 0 affected regions. The 95% single-node CPU reading is isolated and is not sufficient for paging."
+      },
+      "foreign_tools": []
+    }
+  ],
+  "dollar_cost_scope": "Illustrative API-equivalent token estimates, not subscription charges.",
+  "resolved_jev_models": [
+    "jev-1.13.0"
+  ],
+  "narrative_review_status": "Pending separate internal blind review; not external peer review.",
+  "full_report_sha256": "87ae591db621bfba0789b36be021dede58d89efdd7259641fa00300ce8e396f4"
+}

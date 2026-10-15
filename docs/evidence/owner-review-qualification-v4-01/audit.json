@@ -1,0 +1,70 @@
+{
+  "status": "qualified_for_bounded_retail_probe",
+  "scope": "Owner-review control validity only; not generalized reviewer quality.",
+  "recorded_summary": {
+    "path": "artifacts/owner-review-qualification-v4-01/summary.json",
+    "all_passed": true,
+    "attempt_limit": 5,
+    "attempts_used": 0,
+    "counter_note": "The runner did not claim the shared RequestBudget for Codex CLI reviewer launches. Preserve this recorded value; reconcile actual calls from traces instead of rewriting the output."
+  },
+  "trace_reconciliation": {
+    "model": "gpt-5.6-luna",
+    "api_request_records": 4,
+    "api_response_records": 4,
+    "api_error_records": 0,
+    "retry_records": 0,
+    "paid_control_cases": 4,
+    "preflight_only_cases": 1,
+    "request_ids": [-1, -1, -1, -1],
+    "request_ids_are_case_local": true
+  },
+  "cases": [
+    {
+      "case_id": "plain_numeric_policy_without_bindings",
+      "request": "gpt-5.6-luna case-local request -1",
+      "response": "complete, exit_code=0, foreign_tools=[]",
+      "decision": "approved",
+      "passed": true,
+      "pass_reason": "Accepted a faithful plain-language numeric rule without requiring an optional numeric_conditions binding; preserved notify, ignore, insufficient_data, and recipient semantics."
+    },
+    {
+      "case_id": "valid_within_effect_binding",
+      "request": "gpt-5.6-luna case-local request -1",
+      "response": "complete, exit_code=0, foreign_tools=[]",
+      "decision": "approved",
+      "passed": true,
+      "pass_reason": "Accepted the inspected conversion comparison with the typed within_effect binding, rate unit, threshold, comparator, and null segment."
+    },
+    {
+      "case_id": "wrong_recipient",
+      "request": "gpt-5.6-luna case-local request -1",
+      "response": "complete, exit_code=0, foreign_tools=[]",
+      "decision": "rejected",
+      "passed": true,
+      "pass_reason": "Rejected routing to Analytics when the owner policy required Operations."
+    },
+    {
+      "case_id": "extra_gate",
+      "request": "gpt-5.6-luna case-local request -1",
+      "response": "complete, exit_code=0, foreign_tools=[]",
+      "decision": "rejected",
+      "passed": true,
+      "pass_reason": "Rejected an unauthorized revenue prerequisite that could suppress a required conversion notification."
+    },
+    {
+      "case_id": "fabricated_comparison_binding",
+      "request": "none",
+      "response": "none",
+      "decision": "invalid_review_input",
+      "passed": true,
+      "pass_reason": "Rejected before transport because future_conversion_comparison was absent from the inspected source; zero model/tool calls."
+    }
+  ],
+  "limits": [
+    "Four completed model calls are a bounded control result, not a generalized reviewer-quality claim.",
+    "The cases are synthetic and hand-authored, with one source context and one model/configuration.",
+    "Pass logic checks disposition, clean transport completion, strict review shape, and preflight rejection; it does not independently score the prose quality of reasons.",
+    "This qualifies the review boundary before the retail probe; it does not qualify onboarding, Jev execution, source retrieval, or product correctness."
+  ]
+}

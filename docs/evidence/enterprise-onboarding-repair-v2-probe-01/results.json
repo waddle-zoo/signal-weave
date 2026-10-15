@@ -1,0 +1,1708 @@
+{
+  "config": {
+    "model": "gpt-5.6-luna",
+    "effort": "low",
+    "seed": 20261003,
+    "split": "holdout",
+    "fixtures": "explicit_versioned_scenarios",
+    "dataset_digest": "55bccc65ae15bdeeee5ecb6169205d54ddbc104a0daf208ac7b2dad1ce26654e",
+    "selected_companies": 2,
+    "selected_scenario_ids": [
+      "company-80529fa10aa0f418949b",
+      "company-b06fc32e549ebf0def71"
+    ],
+    "public_context_digest": "22e04171274a888ea15c1be6e493583fe518a57bb3398b81b378fc0e1f102e41",
+    "max_api_requests": 64,
+    "max_turns": null,
+    "max_tool_calls": 45,
+    "max_output_tokens": null,
+    "prices": {
+      "assumption_date": "2026-09-30",
+      "currency": "USD",
+      "per_million_tokens": {
+        "luna_input": 0.2,
+        "luna_cached_input": 0.02,
+        "luna_output": 1.2,
+        "jev_input": 0.042,
+        "jev_output": 0.0
+      },
+      "sources": [
+        "https://developers.openai.com/api/docs/models/gpt-5.6-luna",
+        "https://docs.typesafe.ai/models"
+      ],
+      "scope": "Small-context standard pricing; estimated token charges, not billed invoices. Failed requests with missing usage have unknown cost, never assumed free."
+    },
+    "clock_rebased_to": "2026-10-03T04:32:07.801171+00:00",
+    "source_fingerprint": {
+      "git_revision": "4440c19fd02dd772dec58cd28206e5d3dcba5d9c",
+      "sha256": {
+        "evaluations/bootstrap_agent_trial.py": "8faecf2760e8cd1a9146ecac5a5bb7cc9c864c985762d7f4ff946fc7f3ccec87",
+        "evaluations/bootstrap_scenarios.py": "73ad09c4042800c06688ea0ea57fe64dd2a7e1f0663f787f5024855606344c5a",
+        "evaluations/codex_trial_transport.py": "9dcd5fa840f54c084a370b7a3582c8ae6f040c6558f872b86adeb0532b5d4690",
+        "evaluations/bootstrap_owner_review.py": "a428fa5a0bf4724e618e498eeb1f15662dd303fa2cad2f71c3e52769ac8b5538",
+        "docs/bootstrap-benchmark-protocol.md": "4a249143da0414dff7f0b0a6af292cce61eb227fd26b5de8286314e72c1f7263",
+        "docs/bootstrap-benchmark-v3.md": "20c23b7842d6195142347bffa2593634fb50d03250c1b740d0dd08fd0e753a01",
+        "docs/bootstrap-owner-reviewed-v4.md": "4588a45cd104f1e9fdcfe24f37864e3ea77ff7c204b66f399c118fb6ca580677",
+        "uv.lock": "d0e6f90275cf16603d66989ab79a074527150f6df81e50beaed376c2c3dc755f",
+        "src/signalweave/engine.py": "bd5ebf870dffc719102a959686e22b6732fbc5341d65a52deff135ec2d83c77b",
+        "src/signalweave/models.py": "8a83cd9d008fcc3ac55ee733caf16ba549a94b04c6b8d631e03fa608559293f5",
+        "src/signalweave/onboarding.py": "497b6f4ec27954f9eddd25790d05a6fd9db2af0ff79572d4c08e92f36289fb5c",
+        "src/signalweave/diagnostics.py": "fb0f713fab70dd68a3beb13fc404338a7bd2d52a9d943ba4b04fae3a2835c5d7",
+        "src/signalweave/mcp_server.py": "360909e3970eb30ca811cbcafeaacddbc7958887bf0b0729e7edd708bb79f1ce",
+        "src/signalweave/getting_started.py": "9bfd6251469667895f4be24147663ded8c93ec8c166708727669014552fdcdfe",
+        "src/signalweave/evaluation.py": "eb3fb4405f2c4b9bc2c62eb34d61dc75aac35e56f8c624a3034e377947c68721",
+        "src/signalweave/typesafe_adapter.py": "49638524d3f79f3953f048d4ab67a1e5eeb34ee972ae58563835fb2a162540f4"
+      },
+      "note": "Content hashes include uncommitted working files; revision alone is insufficient."
+    },
+    "live": true,
+    "real_external_notifications": false,
+    "limits": [
+      "Synthetic sources with normalized adapter contracts, not real BI connectors.",
+      "Approval uses an independent simulated owner model, not actual human validation. Both arms use the same reviewer and capped correction opportunities.",
+      "No autonomous causal inference or enterprise reliability claim.",
+      "Baseline has notes and calculators but not persistent code generation.",
+      "Comparator: notes-persistent, LLM-per-run baseline, not all agent strategies.",
+      "Scorer checks structured fields, not narrative entailment; prose needs independent review.",
+      "Every warm run wakes Luna in both arms; no claimed wakeup savings.",
+      "Codex uses saved ChatGPT login; reported OpenAI attempts mean agent invocations, not API requests.",
+      "Codex wall time includes CLI/MCP startup and cleanup; the 360-second active-response timeout excludes them. Wall overrun is reported.",
+      "Codex token prices are illustrative API-equivalent estimates, NOT subscription charges; cost advantage gate cannot be established.",
+      "Codex internal request/retry count and per-response token cap are not observable or enforced by this harness."
+    ],
+    "protocol": "bootstrap-owner-reviewed-v4",
+    "owner_review": "independent_synthetic",
+    "owner_review_model": "gpt-5.6-luna",
+    "owner_review_effort": "high",
+    "owner_review_attempts_per_arm_company": 3,
+    "owner_review_timeout_seconds": 90,
+    "agent_transport": "codex_cli",
+    "episode_timeout_seconds": 360,
+    "api_request_budget_scope": "Jev only",
+    "codex_version": "codex-cli 0.153.4",
+    "codex_command_template": [
+      "codex",
+      "exec",
+      "--ignore-user-config",
+      "--ephemeral",
+      "--json",
+      "--skip-git-repo-check",
+      "--sandbox",
+      "read-only",
+      "--cd",
+      "<empty-temporary-directory>",
+      "--model",
+      "gpt-5.6-luna",
+      "-c",
+      "model_reasoning_effort=\"low\"",
+      "-c",
+      "web_search=\"disabled\"",
+      "-c",
+      "project_doc_max_bytes=0",
+      "-c",
+      "features.skip_host_skill_discovery=true",
+      "-c",
+      "features.code_mode_host=true",
+      "-c",
+      "memories.use_memories=false",
+      "-c",
+      "memories.generate_memories=false",
+      "-c",
+      "mcp_servers={}",
+      "-c",
+      "mcp_servers.trial.url=\"<exclusive-loopback-mcp>\"",
+      "-c",
+      "mcp_servers.trial.required=true",
+      "-c",
+      "mcp_servers.trial.default_tools_approval_mode=\"approve\"",
+      "-c",
+      "mcp_servers.trial.tool_timeout_sec=120",
+      "-c",
+      "approval_policy=\"never\"",
+      "--disable",
+      "shell_tool",
+      "--disable",
+      "unified_exec",
+      "--disable",
+      "apps",
+      "--disable",
+      "plugins",
+      "--disable",
+      "hooks",
+      "--disable",
+      "multi_agent",
+      "--disable",
+      "browser_use",
+      "--disable",
+      "computer_use",
+      "--disable",
+      "image_generation",
+      "--disable",
+      "view_image",
+      "--disable",
+      "memories",
+      "--disable",
+      "skill_search",
+      "--disable",
+      "workspace_dependencies",
+      "--disable",
+      "shell_snapshot",
+      "--disable",
+      "code_mode",
+      "--disable",
+      "sleep_tool",
+      "--disable",
+      "goals",
+      "-"
+    ]
+  },
+  "status": "partial_or_failed",
+  "summary": {
+    "luna_bi": {
+      "onboarding_attempts": 2,
+      "onboarding_complete": 2,
+      "monitoring_denominator": 6,
+      "complete_monitoring_runs": 6,
+      "exact_count": 6,
+      "outcome_correct_count": 6,
+      "cold_seconds": 149.96939516597195,
+      "warm_seconds": 132.87348774791462,
+      "source_reads": 22,
+      "tool_calls": 58,
+      "jev_api_attempts": 0,
+      "warm_completed_median_seconds": 21.82561464549508,
+      "cold_known_usage_usd": 0.028799400000000003,
+      "warm_known_usage_usd": 0.035694000000000004,
+      "observed_cold_plus_warm_known_usage_usd": 0.0644934,
+      "setup_amortized_known_usage_usd_per_scheduled_run": 0.0107489,
+      "unknown_usage_attempts": 0,
+      "valid_monitoring_submissions": 6,
+      "safety_unassessed_runs": 0,
+      "runtime_failures": 0,
+      "recipients_correct_count": 6,
+      "wrong_recipient_count": 0,
+      "false_alert_count": 0,
+      "missed_event_count": 0,
+      "unsafe_suppression_count": 0,
+      "provenance_complete_count": 6,
+      "all_structured_cases_pass": true,
+      "raw_system_decision_runs": 0,
+      "owner_review_attempts": 4,
+      "owner_review_tool_calls": 4,
+      "raw_system_outcome_correct_count": 0,
+      "raw_system_recipients_correct_count": 0,
+      "raw_system_agent_changed_outcome_count": 0,
+      "codex_invocations": 12,
+      "usage_complete": true,
+      "cost_basis": "illustrative_api_equivalent_not_measured_subscription_cost"
+    },
+    "luna_signalweave_jev": {
+      "onboarding_attempts": 2,
+      "onboarding_complete": 1,
+      "monitoring_denominator": 6,
+      "complete_monitoring_runs": 3,
+      "exact_count": 3,
+      "outcome_correct_count": 3,
+      "cold_seconds": 356.6203401250532,
+      "warm_seconds": 65.46261958300602,
+      "source_reads": 32,
+      "tool_calls": 69,
+      "jev_api_attempts": 34,
+      "warm_completed_median_seconds": 27.501549915992655,
+      "cold_known_usage_usd": 0.108295612,
+      "warm_known_usage_usd": 0.028263500000000004,
+      "observed_cold_plus_warm_known_usage_usd": 0.136559112,
+      "setup_amortized_known_usage_usd_per_scheduled_run": 0.022759852,
+      "unknown_usage_attempts": 0,
+      "valid_monitoring_submissions": 3,
+      "safety_unassessed_runs": 3,
+      "runtime_failures": 4,
+      "recipients_correct_count": 3,
+      "wrong_recipient_count": 0,
+      "false_alert_count": 0,
+      "missed_event_count": 0,
+      "unsafe_suppression_count": 0,
+      "provenance_complete_count": 3,
+      "all_structured_cases_pass": false,
+      "raw_system_decision_runs": 3,
+      "owner_review_attempts": 3,
+      "owner_review_tool_calls": 3,
+      "raw_system_outcome_correct_count": 2,
+      "raw_system_recipients_correct_count": 3,
+      "raw_system_agent_changed_outcome_count": 1,
+      "codex_invocations": 8,
+      "usage_complete": true,
+      "cost_basis": "illustrative_api_equivalent_not_measured_subscription_cost"
+    }
+  },
+  "usage": {
+    "openai": {
+      "attempts": 20,
+      "failed_attempts": 0,
+      "input_tokens": 3259749,
+      "cached_input_tokens": 2777856,
+      "output_tokens": 28979,
+      "unknown_usage_attempts": 0,
+      "estimated_known_usage_usd": 0.18671052
+    },
+    "jev": {
+      "attempts": 34,
+      "failed_attempts": 0,
+      "input_tokens": 341476,
+      "cached_input_tokens": 0,
+      "output_tokens": 20385,
+      "unknown_usage_attempts": 0,
+      "estimated_known_usage_usd": 0.014341992
+    }
+  },
+  "budget_censored": false,
+  "comparative_eligible": true,
+  "cases": [
+    {
+      "scenario_id": "company-80529fa10aa0f418949b",
+      "period_id": "period-f7f0796ead10c6417487",
+      "arm": "luna_bi",
+      "phase": "onboarding",
+      "status": "complete",
+      "error": null,
+      "seconds": 72.22087816597195,
+      "agent_seconds": 72.22034608398098,
+      "system_seconds": 0.0,
+      "tool_calls": 14,
+      "source_reads": 2,
+      "usage": {
+        "openai": {
+          "attempts": 3,
+          "failed_attempts": 0,
+          "input_tokens": 213446,
+          "cached_input_tokens": 182528,
+          "output_tokens": 2560,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.01290616
+        },
+        "jev": {
+          "attempts": 0,
+          "failed_attempts": 0,
+          "input_tokens": 0,
+          "cached_input_tokens": 0,
+          "output_tokens": 0,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.0
+        }
+      },
+      "score": null,
+      "raw_system_decision": null,
+      "submission": null,
+      "foreign_tools": []
+    },
+    {
+      "scenario_id": "company-80529fa10aa0f418949b",
+      "period_id": "period-f7f0796ead10c6417487",
+      "arm": "luna_signalweave_jev",
+      "phase": "onboarding",
+      "status": "complete",
+      "error": null,
+      "seconds": 200.5678133330075,
+      "agent_seconds": 200.56430654099677,
+      "system_seconds": 0.0,
+      "tool_calls": 33,
+      "source_reads": 15,
+      "usage": {
+        "openai": {
+          "attempts": 3,
+          "failed_attempts": 0,
+          "input_tokens": 1324332,
+          "cached_input_tokens": 1196800,
+          "output_tokens": 8993,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.060234
+        },
+        "jev": {
+          "attempts": 21,
+          "failed_attempts": 0,
+          "input_tokens": 214185,
+          "cached_input_tokens": 0,
+          "output_tokens": 13115,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.00899577
+        }
+      },
+      "score": null,
+      "raw_system_decision": null,
+      "submission": null,
+      "foreign_tools": []
+    },
+    {
+      "scenario_id": "company-80529fa10aa0f418949b",
+      "period_id": "period-fa93a3f8ce69dfe02cb4",
+      "arm": "luna_signalweave_jev",
+      "phase": "monitoring",
+      "status": "complete",
+      "error": null,
+      "seconds": 27.501549915992655,
+      "agent_seconds": 27.248830208030995,
+      "system_seconds": 0.24554129200987518,
+      "tool_calls": 5,
+      "source_reads": 5,
+      "usage": {
+        "openai": {
+          "attempts": 1,
+          "failed_attempts": 0,
+          "input_tokens": 136628,
+          "cached_input_tokens": 109312,
+          "output_tokens": 901,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.008730640000000001
+        },
+        "jev": {
+          "attempts": 1,
+          "failed_attempts": 0,
+          "input_tokens": 8525,
+          "cached_input_tokens": 0,
+          "output_tokens": 91,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.00035805
+        }
+      },
+      "score": {
+        "scorer_version": 3,
+        "scenario_id": "company-80529fa10aa0f418949b",
+        "period_id": "period-fa93a3f8ce69dfe02cb4",
+        "valid_submission": true,
+        "safety_unassessed": false,
+        "exact": true,
+        "outcome_correct": true,
+        "recipients_correct": true,
+        "wrong_recipient": false,
+        "unsafe_route": false,
+        "false_alert": false,
+        "missed_event": false,
+        "unsafe_suppression": false,
+        "evidence_recall": 1.0,
+        "provenance_complete": true,
+        "numeric_precision": 1.0,
+        "numeric_recall": 1.0,
+        "unsupported_numeric_facts": [],
+        "unsupported_claim_types": [],
+        "numeric_diagnostics": [],
+        "citation_diagnostics": [],
+        "missing_numeric_facts": [],
+        "owner_policy_complete": true,
+        "errors": [],
+        "scoring_scope": "structured_fields_only",
+        "narrative_review_required": true
+      },
+      "raw_system_decision": {
+        "outcome": "notify",
+        "recipients": [
+          "team-9b9aad22a09fe443f335"
+        ],
+        "destinations": [
+          "slack://team-9b9aad22a09fe443f335"
+        ],
+        "outcome_correct": true,
+        "recipients_correct": true,
+        "agent_changed_outcome": false,
+        "scope": "raw system routing only; not numerical or narrative correctness"
+      },
+      "submission": {
+        "outcome": "notify",
+        "recipients": [
+          "team-9b9aad22a09fe443f335"
+        ],
+        "evidence_refs": [
+          "company_mcp|resource-ab6a5d5969c67c01fa68",
+          "company_mcp|resource-f2565899b79da2c7dcaf"
+        ],
+        "numeric_claims": [
+          {
+            "fact": "retention.baseline",
+            "value": 0.55,
+            "unit": "ratio",
+            "evidence_refs": [
+              "company_mcp|resource-ab6a5d5969c67c01fa68"
+            ]
+          },
+          {
+            "fact": "retention.current",
+            "value": 0.275,
+            "unit": "ratio",
+            "evidence_refs": [
+              "company_mcp|resource-ab6a5d5969c67c01fa68"
+            ]
+          },
+          {
+            "fact": "retention.delta",
+            "value": -0.275,
+            "unit": "ratio",
+            "evidence_refs": [
+              "company_mcp|resource-ab6a5d5969c67c01fa68"
+            ]
+          },
+          {
+            "fact": "retention.mix_effect",
+            "value": -0.175,
+            "unit": "ratio",
+            "evidence_refs": [
+              "company_mcp|resource-ab6a5d5969c67c01fa68"
+            ]
+          },
+          {
+            "fact": "retention.within_effect",
+            "value": -0.1,
+            "unit": "ratio",
+            "evidence_refs": [
+              "company_mcp|resource-ab6a5d5969c67c01fa68"
+            ]
+          }
+        ],
+        "claims": [
+          {
+            "claim_type": "observation",
+            "evidence_refs": [
+              "company_mcp|resource-ab6a5d5969c67c01fa68"
+            ],
+            "statement": "Current-period retention is 0.275 ratio versus 0.55 ratio in the previous complete UTC week; signed delta is -0.275 ratio, with complete comparable coverage."
+          },
+          {
+            "claim_type": "accounting_decomposition",
+            "evidence_refs": [
+              "company_mcp|resource-ab6a5d5969c67c01fa68"
+            ],
+            "statement": "The symmetric decomposition attributes -0.175 ratio to population mix and -0.1 ratio to within-plan rate change; this describes the measured difference and does not establish causality."
+          },
+          {
+            "claim_type": "observation",
+            "evidence_refs": [
+              "company_mcp|resource-f2565899b79da2c7dcaf"
+            ],
+            "statement": "Billing supplies renewal eligibility definition version v3 matching the retained policy: renewed accounts divided by accounts due for renewal, grouped by mutually exclusive plan at eligibility, excluding trials."
+          }
+        ],
+        "summary": "Complete comparable current-period retention comparison for 2026-10-03 through 2026-10-10 UTC versus the previous complete week. Retention fell from 0.55 to 0.275 (delta -0.275 ratio). Symmetric decomposition: mix effect -0.175 ratio and within-plan effect -0.1 ratio; within-plan deterioration exceeds the notify threshold of -0.05 ratio. This is an accounting decomposition, not causal evidence. Eligibility definition v3 is present; no insufficient-data condition is observed."
+      },
+      "foreign_tools": []
+    },
+    {
+      "scenario_id": "company-80529fa10aa0f418949b",
+      "period_id": "period-fa93a3f8ce69dfe02cb4",
+      "arm": "luna_bi",
+      "phase": "monitoring",
+      "status": "complete",
+      "error": null,
+      "seconds": 26.101133165997453,
+      "agent_seconds": 26.098869125009514,
+      "system_seconds": 0.0,
+      "tool_calls": 5,
+      "source_reads": 3,
+      "usage": {
+        "openai": {
+          "attempts": 1,
+          "failed_attempts": 0,
+          "input_tokens": 95048,
+          "cached_input_tokens": 65024,
+          "output_tokens": 992,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.00849568
+        },
+        "jev": {
+          "attempts": 0,
+          "failed_attempts": 0,
+          "input_tokens": 0,
+          "cached_input_tokens": 0,
+          "output_tokens": 0,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.0
+        }
+      },
+      "score": {
+        "scorer_version": 3,
+        "scenario_id": "company-80529fa10aa0f418949b",
+        "period_id": "period-fa93a3f8ce69dfe02cb4",
+        "valid_submission": true,
+        "safety_unassessed": false,
+        "exact": true,
+        "outcome_correct": true,
+        "recipients_correct": true,
+        "wrong_recipient": false,
+        "unsafe_route": false,
+        "false_alert": false,
+        "missed_event": false,
+        "unsafe_suppression": false,
+        "evidence_recall": 1.0,
+        "provenance_complete": true,
+        "numeric_precision": 1.0,
+        "numeric_recall": 1.0,
+        "unsupported_numeric_facts": [],
+        "unsupported_claim_types": [],
+        "numeric_diagnostics": [],
+        "citation_diagnostics": [],
+        "missing_numeric_facts": [],
+        "owner_policy_complete": true,
+        "errors": [],
+        "scoring_scope": "structured_fields_only",
+        "narrative_review_required": true
+      },
+      "raw_system_decision": null,
+      "submission": {
+        "outcome": "notify",
+        "recipients": [
+          "team-9b9aad22a09fe443f335"
+        ],
+        "evidence_refs": [
+          "company_mcp|resource-ab6a5d5969c67c01fa68",
+          "company_mcp|resource-f2565899b79da2c7dcaf"
+        ],
+        "numeric_claims": [
+          {
+            "fact": "retention.baseline",
+            "value": 0.55,
+            "unit": "ratio",
+            "evidence_refs": [
+              "company_mcp|resource-ab6a5d5969c67c01fa68"
+            ]
+          },
+          {
+            "fact": "retention.current",
+            "value": 0.275,
+            "unit": "ratio",
+            "evidence_refs": [
+              "company_mcp|resource-ab6a5d5969c67c01fa68"
+            ]
+          },
+          {
+            "fact": "retention.delta",
+            "value": -0.275,
+            "unit": "ratio",
+            "evidence_refs": [
+              "company_mcp|resource-ab6a5d5969c67c01fa68"
+            ]
+          },
+          {
+            "fact": "retention.mix_effect",
+            "value": -0.175,
+            "unit": "ratio",
+            "evidence_refs": [
+              "company_mcp|resource-ab6a5d5969c67c01fa68"
+            ]
+          },
+          {
+            "fact": "retention.within_effect",
+            "value": -0.1,
+            "unit": "ratio",
+            "evidence_refs": [
+              "company_mcp|resource-ab6a5d5969c67c01fa68"
+            ]
+          }
+        ],
+        "claims": [
+          {
+            "claim_type": "observation",
+            "evidence_refs": [
+              "company_mcp|resource-ab6a5d5969c67c01fa68",
+              "company_mcp|resource-f2565899b79da2c7dcaf"
+            ],
+            "statement": "Under the validated definition—renewed accounts divided by accounts due for renewal, grouped by mutually exclusive plan and excluding trial signups—retention decreased from 0.55 to 0.275, a delta of -0.275 ratio units; the source reports complete coverage for the comparable UTC weeks."
+          },
+          {
+            "claim_type": "accounting_decomposition",
+            "evidence_refs": [
+              "company_mcp|resource-ab6a5d5969c67c01fa68"
+            ],
+            "statement": "The -0.275 ratio-unit change decomposes into a -0.175 mix effect and a -0.1 within-plan effect. Team retention changed from 0.9 to 0.8 and self-serve from 0.2 to 0.1; the measured deterioration therefore exceeds the saved policy's -0.05 within-plan notification threshold, while mix also contributed materially. This decomposition describes the difference, not its cause."
+          }
+        ],
+        "summary": "Notify the business owner: current complete retention evidence shows a -0.275 ratio-unit decline, with -0.1 ratio units from within-plan changes and -0.175 from plan mix. The within-plan deterioration crosses the configured materiality threshold."
+      },
+      "foreign_tools": []
+    },
+    {
+      "scenario_id": "company-80529fa10aa0f418949b",
+      "period_id": "period-8a30a02d621bb1efa06f",
+      "arm": "luna_bi",
+      "phase": "monitoring",
+      "status": "complete",
+      "error": null,
+      "seconds": 21.812302125035785,
+      "agent_seconds": 21.809870125027373,
+      "system_seconds": 0.0,
+      "tool_calls": 5,
+      "source_reads": 3,
+      "usage": {
+        "openai": {
+          "attempts": 1,
+          "failed_attempts": 0,
+          "input_tokens": 70709,
+          "cached_input_tokens": 57088,
+          "output_tokens": 789,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.00481276
+        },
+        "jev": {
+          "attempts": 0,
+          "failed_attempts": 0,
+          "input_tokens": 0,
+          "cached_input_tokens": 0,
+          "output_tokens": 0,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.0
+        }
+      },
+      "score": {
+        "scorer_version": 3,
+        "scenario_id": "company-80529fa10aa0f418949b",
+        "period_id": "period-8a30a02d621bb1efa06f",
+        "valid_submission": true,
+        "safety_unassessed": false,
+        "exact": true,
+        "outcome_correct": true,
+        "recipients_correct": true,
+        "wrong_recipient": false,
+        "unsafe_route": false,
+        "false_alert": false,
+        "missed_event": false,
+        "unsafe_suppression": false,
+        "evidence_recall": 1.0,
+        "provenance_complete": true,
+        "numeric_precision": 1.0,
+        "numeric_recall": 1.0,
+        "unsupported_numeric_facts": [],
+        "unsupported_claim_types": [],
+        "numeric_diagnostics": [],
+        "citation_diagnostics": [],
+        "missing_numeric_facts": [],
+        "owner_policy_complete": true,
+        "errors": [],
+        "scoring_scope": "structured_fields_only",
+        "narrative_review_required": true
+      },
+      "raw_system_decision": null,
+      "submission": {
+        "outcome": "ignore",
+        "recipients": [],
+        "evidence_refs": [
+          "company_mcp|resource-ab6a5d5969c67c01fa68",
+          "company_mcp|resource-f2565899b79da2c7dcaf"
+        ],
+        "numeric_claims": [
+          {
+            "fact": "retention.baseline",
+            "value": 0.55,
+            "unit": "ratio",
+            "evidence_refs": [
+              "company_mcp|resource-ab6a5d5969c67c01fa68"
+            ]
+          },
+          {
+            "fact": "retention.current",
+            "value": 0.375,
+            "unit": "ratio",
+            "evidence_refs": [
+              "company_mcp|resource-ab6a5d5969c67c01fa68"
+            ]
+          },
+          {
+            "fact": "retention.delta",
+            "value": -0.175,
+            "unit": "ratio",
+            "evidence_refs": [
+              "company_mcp|resource-ab6a5d5969c67c01fa68"
+            ]
+          },
+          {
+            "fact": "retention.mix_effect",
+            "value": -0.175,
+            "unit": "ratio",
+            "evidence_refs": [
+              "company_mcp|resource-ab6a5d5969c67c01fa68"
+            ]
+          },
+          {
+            "fact": "retention.within_effect",
+            "value": 0,
+            "unit": "ratio",
+            "evidence_refs": [
+              "company_mcp|resource-ab6a5d5969c67c01fa68"
+            ]
+          }
+        ],
+        "claims": [
+          {
+            "claim_type": "observation",
+            "evidence_refs": [
+              "company_mcp|resource-ab6a5d5969c67c01fa68",
+              "company_mcp|resource-f2565899b79da2c7dcaf"
+            ],
+            "statement": "Observation: complete current and baseline eligible populations are comparable under billing definition v3; aggregate retention is 0.375 current versus 0.55 baseline."
+          },
+          {
+            "claim_type": "accounting_decomposition",
+            "evidence_refs": [
+              "company_mcp|resource-ab6a5d5969c67c01fa68"
+            ],
+            "statement": "Accounting decomposition: delta -0.175 consists of mix effect -0.175 and within-plan effect 0.0; team and self-serve rates did not change."
+          },
+          {
+            "claim_type": "observation",
+            "evidence_refs": [
+              "company_mcp|resource-ab6a5d5969c67c01fa68"
+            ],
+            "statement": "Observation: eligible denominator mix shifted from 50% team / 50% self-serve to 25% team / 75% self-serve."
+          }
+        ],
+        "summary": "Retention measured 0.375 in the current week versus 0.55 in the previous complete week, a -0.175 ratio-unit change. The full decline is explained by plan mix: mix effect -0.175 and within-plan effect 0.0. Team retention stayed 0.9 and self-serve stayed 0.2; the eligible mix shifted from 50%/50% to 25%/75%. Per policy, pure mix shift is ignored and no notification is routed."
+      },
+      "foreign_tools": []
+    },
+    {
+      "scenario_id": "company-80529fa10aa0f418949b",
+      "period_id": "period-8a30a02d621bb1efa06f",
+      "arm": "luna_signalweave_jev",
+      "phase": "monitoring",
+      "status": "complete",
+      "error": null,
+      "seconds": 28.01362666604109,
+      "agent_seconds": 27.747035708045587,
+      "system_seconds": 0.2590804579667747,
+      "tool_calls": 6,
+      "source_reads": 5,
+      "usage": {
+        "openai": {
+          "attempts": 1,
+          "failed_attempts": 0,
+          "input_tokens": 175495,
+          "cached_input_tokens": 142848,
+          "output_tokens": 1056,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.010653560000000001
+        },
+        "jev": {
+          "attempts": 1,
+          "failed_attempts": 0,
+          "input_tokens": 8499,
+          "cached_input_tokens": 0,
+          "output_tokens": 91,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.00035695800000000005
+        }
+      },
+      "score": {
+        "scorer_version": 3,
+        "scenario_id": "company-80529fa10aa0f418949b",
+        "period_id": "period-8a30a02d621bb1efa06f",
+        "valid_submission": true,
+        "safety_unassessed": false,
+        "exact": true,
+        "outcome_correct": true,
+        "recipients_correct": true,
+        "wrong_recipient": false,
+        "unsafe_route": false,
+        "false_alert": false,
+        "missed_event": false,
+        "unsafe_suppression": false,
+        "evidence_recall": 1.0,
+        "provenance_complete": true,
+        "numeric_precision": 1.0,
+        "numeric_recall": 1.0,
+        "unsupported_numeric_facts": [],
+        "unsupported_claim_types": [],
+        "numeric_diagnostics": [],
+        "citation_diagnostics": [],
+        "missing_numeric_facts": [],
+        "owner_policy_complete": true,
+        "errors": [],
+        "scoring_scope": "structured_fields_only",
+        "narrative_review_required": true
+      },
+      "raw_system_decision": {
+        "outcome": "investigate",
+        "recipients": [],
+        "destinations": [],
+        "outcome_correct": false,
+        "recipients_correct": true,
+        "agent_changed_outcome": true,
+        "scope": "raw system routing only; not numerical or narrative correctness"
+      },
+      "submission": {
+        "outcome": "ignore",
+        "recipients": [],
+        "evidence_refs": [
+          "company_mcp|resource-ab6a5d5969c67c01fa68",
+          "company_mcp|resource-f2565899b79da2c7dcaf"
+        ],
+        "numeric_claims": [
+          {
+            "fact": "retention.baseline",
+            "value": 0.55,
+            "unit": "ratio",
+            "evidence_refs": [
+              "company_mcp|resource-ab6a5d5969c67c01fa68"
+            ]
+          },
+          {
+            "fact": "retention.current",
+            "value": 0.375,
+            "unit": "ratio",
+            "evidence_refs": [
+              "company_mcp|resource-ab6a5d5969c67c01fa68"
+            ]
+          },
+          {
+            "fact": "retention.delta",
+            "value": -0.175,
+            "unit": "ratio",
+            "evidence_refs": [
+              "company_mcp|resource-ab6a5d5969c67c01fa68"
+            ]
+          },
+          {
+            "fact": "retention.mix_effect",
+            "value": -0.175,
+            "unit": "ratio",
+            "evidence_refs": [
+              "company_mcp|resource-ab6a5d5969c67c01fa68"
+            ]
+          },
+          {
+            "fact": "retention.within_effect",
+            "value": 0,
+            "unit": "ratio",
+            "evidence_refs": [
+              "company_mcp|resource-ab6a5d5969c67c01fa68"
+            ]
+          }
+        ],
+        "claims": [
+          {
+            "claim_type": "observation",
+            "evidence_refs": [
+              "company_mcp|resource-ab6a5d5969c67c01fa68"
+            ],
+            "statement": "Current retention is 0.375 ratio versus 0.55 ratio in the previous complete UTC reporting week; signed delta is -0.175 ratio."
+          },
+          {
+            "claim_type": "accounting_decomposition",
+            "evidence_refs": [
+              "company_mcp|resource-ab6a5d5969c67c01fa68"
+            ],
+            "statement": "The -0.175 ratio delta decomposes into -0.175 ratio mix effect and 0.0 ratio within-plan effect; team is 0.90 to 0.90 and self_serve is 0.20 to 0.20."
+          },
+          {
+            "claim_type": "observation",
+            "evidence_refs": [
+              "company_mcp|resource-ab6a5d5969c67c01fa68",
+              "company_mcp|resource-f2565899b79da2c7dcaf"
+            ],
+            "statement": "The comparison is complete and comparable, and the versioned renewal-eligibility definition is v3."
+          }
+        ],
+        "summary": "Observation: Current-period retention is 0.375 versus 0.55 in the previous complete UTC week, a signed delta of -0.175 ratio. Accounting decomposition attributes -0.175 to population mix and 0.0 to within-plan change; both plans' rates are unchanged (team 0.90 to 0.90, self_serve 0.20 to 0.20). Coverage is complete and comparable, and Billing eligibility definition v3 is present. Under policy, this is a pure mix shift, so ignore. The decomposition is not causal evidence."
+      },
+      "foreign_tools": []
+    },
+    {
+      "scenario_id": "company-80529fa10aa0f418949b",
+      "period_id": "period-0272bd26596c49f1529d",
+      "arm": "luna_signalweave_jev",
+      "phase": "monitoring",
+      "status": "complete",
+      "error": null,
+      "seconds": 9.947041292034555,
+      "agent_seconds": 9.693944833008572,
+      "system_seconds": 0.2450334170134738,
+      "tool_calls": 6,
+      "source_reads": 6,
+      "usage": {
+        "openai": {
+          "attempts": 1,
+          "failed_attempts": 0,
+          "input_tokens": 108328,
+          "cached_input_tokens": 80896,
+          "output_tokens": 594,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.00781712
+        },
+        "jev": {
+          "attempts": 1,
+          "failed_attempts": 0,
+          "input_tokens": 8266,
+          "cached_input_tokens": 0,
+          "output_tokens": 96,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.00034717200000000003
+        }
+      },
+      "score": {
+        "scorer_version": 3,
+        "scenario_id": "company-80529fa10aa0f418949b",
+        "period_id": "period-0272bd26596c49f1529d",
+        "valid_submission": true,
+        "safety_unassessed": false,
+        "exact": true,
+        "outcome_correct": true,
+        "recipients_correct": true,
+        "wrong_recipient": false,
+        "unsafe_route": false,
+        "false_alert": false,
+        "missed_event": false,
+        "unsafe_suppression": false,
+        "evidence_recall": 1.0,
+        "provenance_complete": true,
+        "numeric_precision": 1.0,
+        "numeric_recall": 1.0,
+        "unsupported_numeric_facts": [],
+        "unsupported_claim_types": [],
+        "numeric_diagnostics": [],
+        "citation_diagnostics": [],
+        "missing_numeric_facts": [],
+        "owner_policy_complete": true,
+        "errors": [],
+        "scoring_scope": "structured_fields_only",
+        "narrative_review_required": true
+      },
+      "raw_system_decision": {
+        "outcome": "insufficient_data",
+        "recipients": [
+          "team-d40b5d95d78af4b2d96c"
+        ],
+        "destinations": [
+          "slack://team-d40b5d95d78af4b2d96c"
+        ],
+        "outcome_correct": true,
+        "recipients_correct": true,
+        "agent_changed_outcome": false,
+        "scope": "raw system routing only; not numerical or narrative correctness"
+      },
+      "submission": {
+        "outcome": "insufficient_data",
+        "recipients": [
+          "team-d40b5d95d78af4b2d96c"
+        ],
+        "evidence_refs": [
+          "company_mcp|resource-ab6a5d5969c67c01fa68",
+          "company_mcp|resource-f2565899b79da2c7dcaf"
+        ],
+        "numeric_claims": [],
+        "claims": [
+          {
+            "claim_type": "observation",
+            "evidence_refs": [
+              "company_mcp|resource-ab6a5d5969c67c01fa68",
+              "company_mcp|resource-f2565899b79da2c7dcaf"
+            ],
+            "statement": "The current-period renewal source contains a previous-period comparison with complete row coverage, but marks the comparison non-comparable under the required retention definition; the Billing source has no eligibility version and states that historical membership mapping is unavailable."
+          }
+        ],
+        "summary": "Insufficient data for Harbor Workspace weekly retention monitoring. Current and prior renewal counts are present, but the required comparison is non-comparable and the versioned renewal-eligibility definition is missing. Retention baseline, current, delta, mix effect, and within effect are not asserted. Route to Data Operations only."
+      },
+      "foreign_tools": []
+    },
+    {
+      "scenario_id": "company-80529fa10aa0f418949b",
+      "period_id": "period-0272bd26596c49f1529d",
+      "arm": "luna_bi",
+      "phase": "monitoring",
+      "status": "complete",
+      "error": null,
+      "seconds": 17.741853832965717,
+      "agent_seconds": 17.73975604196312,
+      "system_seconds": 0.0,
+      "tool_calls": 4,
+      "source_reads": 2,
+      "usage": {
+        "openai": {
+          "attempts": 1,
+          "failed_attempts": 0,
+          "input_tokens": 56328,
+          "cached_input_tokens": 34048,
+          "output_tokens": 577,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.00582936
+        },
+        "jev": {
+          "attempts": 0,
+          "failed_attempts": 0,
+          "input_tokens": 0,
+          "cached_input_tokens": 0,
+          "output_tokens": 0,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.0
+        }
+      },
+      "score": {
+        "scorer_version": 3,
+        "scenario_id": "company-80529fa10aa0f418949b",
+        "period_id": "period-0272bd26596c49f1529d",
+        "valid_submission": true,
+        "safety_unassessed": false,
+        "exact": true,
+        "outcome_correct": true,
+        "recipients_correct": true,
+        "wrong_recipient": false,
+        "unsafe_route": false,
+        "false_alert": false,
+        "missed_event": false,
+        "unsafe_suppression": false,
+        "evidence_recall": 1.0,
+        "provenance_complete": true,
+        "numeric_precision": 1.0,
+        "numeric_recall": 1.0,
+        "unsupported_numeric_facts": [],
+        "unsupported_claim_types": [],
+        "numeric_diagnostics": [],
+        "citation_diagnostics": [],
+        "missing_numeric_facts": [],
+        "owner_policy_complete": true,
+        "errors": [],
+        "scoring_scope": "structured_fields_only",
+        "narrative_review_required": true
+      },
+      "raw_system_decision": null,
+      "submission": {
+        "outcome": "insufficient_data",
+        "recipients": [
+          "team-d40b5d95d78af4b2d96c"
+        ],
+        "evidence_refs": [
+          "company_mcp|resource-ab6a5d5969c67c01fa68",
+          "company_mcp|resource-f2565899b79da2c7dcaf"
+        ],
+        "numeric_claims": [],
+        "claims": [
+          {
+            "claim_type": "observation",
+            "evidence_refs": [
+              "company_mcp|resource-ab6a5d5969c67c01fa68",
+              "company_mcp|resource-f2565899b79da2c7dcaf"
+            ],
+            "statement": "The current account-health export contains complete current and prior weekly renewal comparison inputs, but the comparison is marked non-comparable because Billing reports that historical membership mapping is unavailable after the plan-eligibility migration. Retention deterioration versus the previous complete reporting week therefore cannot be validated under the saved policy."
+          }
+        ],
+        "summary": "Insufficient data: request a corrected export or versioned eligibility definition/membership mapping before evaluating retention or routing a deterioration alert."
+      },
+      "foreign_tools": []
+    },
+    {
+      "scenario_id": "company-b06fc32e549ebf0def71",
+      "period_id": "period-5d5e27bdc55171377121",
+      "arm": "luna_bi",
+      "phase": "onboarding",
+      "status": "complete",
+      "error": null,
+      "seconds": 77.74851699999999,
+      "agent_seconds": 77.7478833750356,
+      "system_seconds": 0.0,
+      "tool_calls": 14,
+      "source_reads": 2,
+      "usage": {
+        "openai": {
+          "attempts": 3,
+          "failed_attempts": 0,
+          "input_tokens": 218041,
+          "cached_input_tokens": 173312,
+          "output_tokens": 2901,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.015893240000000003
+        },
+        "jev": {
+          "attempts": 0,
+          "failed_attempts": 0,
+          "input_tokens": 0,
+          "cached_input_tokens": 0,
+          "output_tokens": 0,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.0
+        }
+      },
+      "score": null,
+      "raw_system_decision": null,
+      "submission": null,
+      "foreign_tools": []
+    },
+    {
+      "scenario_id": "company-b06fc32e549ebf0def71",
+      "period_id": "period-5d5e27bdc55171377121",
+      "arm": "luna_signalweave_jev",
+      "phase": "onboarding",
+      "status": "failed",
+      "error": "no_structured_submission",
+      "seconds": 156.05252679204568,
+      "agent_seconds": 156.04747879202478,
+      "system_seconds": 0.0,
+      "tool_calls": 19,
+      "source_reads": 1,
+      "usage": {
+        "openai": {
+          "attempts": 2,
+          "failed_attempts": 0,
+          "input_tokens": 627347,
+          "cached_input_tokens": 551680,
+          "output_tokens": 7179,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.0347818
+        },
+        "jev": {
+          "attempts": 10,
+          "failed_attempts": 0,
+          "input_tokens": 102001,
+          "cached_input_tokens": 0,
+          "output_tokens": 6992,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.004284042
+        }
+      },
+      "score": null,
+      "raw_system_decision": null,
+      "submission": null,
+      "foreign_tools": []
+    },
+    {
+      "scenario_id": "company-b06fc32e549ebf0def71",
+      "period_id": "period-2c1a7a0c2bb49acae7b7",
+      "arm": "luna_signalweave_jev",
+      "phase": "monitoring",
+      "status": "failed",
+      "error": "RuntimeError",
+      "seconds": 0.00014304200885817409,
+      "agent_seconds": 0.0,
+      "system_seconds": 0.0,
+      "tool_calls": 0,
+      "source_reads": 0,
+      "usage": {
+        "openai": {
+          "attempts": 0,
+          "failed_attempts": 0,
+          "input_tokens": 0,
+          "cached_input_tokens": 0,
+          "output_tokens": 0,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.0
+        },
+        "jev": {
+          "attempts": 0,
+          "failed_attempts": 0,
+          "input_tokens": 0,
+          "cached_input_tokens": 0,
+          "output_tokens": 0,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.0
+        }
+      },
+      "score": {
+        "scorer_version": 3,
+        "scenario_id": "company-b06fc32e549ebf0def71",
+        "period_id": "period-2c1a7a0c2bb49acae7b7",
+        "valid_submission": false,
+        "safety_unassessed": true,
+        "exact": false,
+        "outcome_correct": false,
+        "recipients_correct": false,
+        "wrong_recipient": false,
+        "unsafe_route": false,
+        "false_alert": false,
+        "missed_event": false,
+        "unsafe_suppression": false,
+        "evidence_recall": 0.0,
+        "provenance_complete": false,
+        "numeric_precision": 0.0,
+        "numeric_recall": 0.0,
+        "unsupported_numeric_facts": [],
+        "unsupported_claim_types": [],
+        "numeric_diagnostics": [],
+        "citation_diagnostics": [],
+        "missing_numeric_facts": [],
+        "owner_policy_complete": false,
+        "errors": [
+          "invalid_submission_schema"
+        ],
+        "scoring_scope": "structured_fields_only",
+        "narrative_review_required": true
+      },
+      "raw_system_decision": null,
+      "submission": null,
+      "foreign_tools": null
+    },
+    {
+      "scenario_id": "company-b06fc32e549ebf0def71",
+      "period_id": "period-2c1a7a0c2bb49acae7b7",
+      "arm": "luna_bi",
+      "phase": "monitoring",
+      "status": "complete",
+      "error": null,
+      "seconds": 20.804165832989383,
+      "agent_seconds": 20.801309291971847,
+      "system_seconds": 0.0,
+      "tool_calls": 5,
+      "source_reads": 3,
+      "usage": {
+        "openai": {
+          "attempts": 1,
+          "failed_attempts": 0,
+          "input_tokens": 91622,
+          "cached_input_tokens": 76288,
+          "output_tokens": 811,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.00556576
+        },
+        "jev": {
+          "attempts": 0,
+          "failed_attempts": 0,
+          "input_tokens": 0,
+          "cached_input_tokens": 0,
+          "output_tokens": 0,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.0
+        }
+      },
+      "score": {
+        "scorer_version": 3,
+        "scenario_id": "company-b06fc32e549ebf0def71",
+        "period_id": "period-2c1a7a0c2bb49acae7b7",
+        "valid_submission": true,
+        "safety_unassessed": false,
+        "exact": true,
+        "outcome_correct": true,
+        "recipients_correct": true,
+        "wrong_recipient": false,
+        "unsafe_route": false,
+        "false_alert": false,
+        "missed_event": false,
+        "unsafe_suppression": false,
+        "evidence_recall": 1.0,
+        "provenance_complete": true,
+        "numeric_precision": 1.0,
+        "numeric_recall": 1.0,
+        "unsupported_numeric_facts": [],
+        "unsupported_claim_types": [],
+        "numeric_diagnostics": [],
+        "citation_diagnostics": [],
+        "missing_numeric_facts": [],
+        "owner_policy_complete": true,
+        "errors": [],
+        "scoring_scope": "structured_fields_only",
+        "narrative_review_required": true
+      },
+      "raw_system_decision": null,
+      "submission": {
+        "outcome": "investigate",
+        "recipients": [
+          "team-a9701ad653c41de9a095"
+        ],
+        "evidence_refs": [
+          "company_mcp|resource-6dfa76e81a9d86bcbc86",
+          "company_mcp|resource-a42da6d8d97166482a33"
+        ],
+        "numeric_claims": [
+          {
+            "fact": "latency.delta",
+            "value": 40,
+            "unit": "ms",
+            "evidence_refs": [
+              "company_mcp|resource-6dfa76e81a9d86bcbc86"
+            ]
+          },
+          {
+            "fact": "latency.affected_regions",
+            "value": 3,
+            "unit": "regions",
+            "evidence_refs": [
+              "company_mcp|resource-6dfa76e81a9d86bcbc86"
+            ]
+          },
+          {
+            "fact": "latency.rollout_lead_minutes",
+            "value": 12,
+            "unit": "minutes",
+            "evidence_refs": [
+              "company_mcp|resource-a42da6d8d97166482a33"
+            ]
+          }
+        ],
+        "claims": [
+          {
+            "claim_type": "observation",
+            "evidence_refs": [
+              "company_mcp|resource-6dfa76e81a9d86bcbc86"
+            ],
+            "statement": "Current query p95 latency is 140 ms versus 100 ms baseline, a 40 ms increase (40%); replication lag is 80 ms versus 10 ms baseline, an 8x increase; 3 regions are affected."
+          },
+          {
+            "claim_type": "accounting_decomposition",
+            "evidence_refs": [
+              "company_mcp|resource-6dfa76e81a9d86bcbc86"
+            ],
+            "statement": "The latency change is a 40 ms level increase from the defined customer-cluster population; regional breadth is 3 affected regions. No within-region or mix decomposition is available in the inspected export."
+          },
+          {
+            "claim_type": "association",
+            "evidence_refs": [
+              "company_mcp|resource-a42da6d8d97166482a33",
+              "company_mcp|resource-6dfa76e81a9d86bcbc86"
+            ],
+            "statement": "The rollout preceded the latency change by 12 minutes in the same three-cluster target population; this is temporal association only, not proof of causation."
+          },
+          {
+            "claim_type": "hypothesis",
+            "evidence_refs": [
+              "company_mcp|resource-a42da6d8d97166482a33",
+              "company_mcp|resource-6dfa76e81a9d86bcbc86"
+            ],
+            "statement": "The coincident rollout is a candidate investigation lead alongside the observed latency and replication-lag deterioration; the evidence does not establish cause."
+          }
+        ],
+        "summary": "Investigate: customer-facing query p95 latency rose 40 ms (40%) and replication lag rose 8x, meeting the validated thresholds, with 3 affected regions. Rollout timing is corroborating association only; isolated CPU is not used for paging."
+      },
+      "foreign_tools": []
+    },
+    {
+      "scenario_id": "company-b06fc32e549ebf0def71",
+      "period_id": "period-adecbae7a36e9ba67103",
+      "arm": "luna_bi",
+      "phase": "monitoring",
+      "status": "complete",
+      "error": null,
+      "seconds": 24.57510562497191,
+      "agent_seconds": 24.57282950001536,
+      "system_seconds": 0.0,
+      "tool_calls": 6,
+      "source_reads": 4,
+      "usage": {
+        "openai": {
+          "attempts": 1,
+          "failed_attempts": 0,
+          "input_tokens": 68812,
+          "cached_input_tokens": 48896,
+          "output_tokens": 838,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.005966720000000001
+        },
+        "jev": {
+          "attempts": 0,
+          "failed_attempts": 0,
+          "input_tokens": 0,
+          "cached_input_tokens": 0,
+          "output_tokens": 0,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.0
+        }
+      },
+      "score": {
+        "scorer_version": 3,
+        "scenario_id": "company-b06fc32e549ebf0def71",
+        "period_id": "period-adecbae7a36e9ba67103",
+        "valid_submission": true,
+        "safety_unassessed": false,
+        "exact": true,
+        "outcome_correct": true,
+        "recipients_correct": true,
+        "wrong_recipient": false,
+        "unsafe_route": false,
+        "false_alert": false,
+        "missed_event": false,
+        "unsafe_suppression": false,
+        "evidence_recall": 1.0,
+        "provenance_complete": true,
+        "numeric_precision": 1.0,
+        "numeric_recall": 1.0,
+        "unsupported_numeric_facts": [],
+        "unsupported_claim_types": [],
+        "numeric_diagnostics": [],
+        "citation_diagnostics": [],
+        "missing_numeric_facts": [],
+        "owner_policy_complete": true,
+        "errors": [],
+        "scoring_scope": "structured_fields_only",
+        "narrative_review_required": true
+      },
+      "raw_system_decision": null,
+      "submission": {
+        "outcome": "insufficient_data",
+        "recipients": [
+          "team-f8f76f00c083192dd0ae"
+        ],
+        "evidence_refs": [
+          "company_mcp|resource-6dfa76e81a9d86bcbc86",
+          "company_mcp|resource-a42da6d8d97166482a33"
+        ],
+        "numeric_claims": [],
+        "claims": [
+          {
+            "claim_type": "observation",
+            "evidence_refs": [
+              "company_mcp|resource-6dfa76e81a9d86bcbc86",
+              "company_mcp|resource-a42da6d8d97166482a33"
+            ],
+            "statement": "The current source export reports 100 ms current and 100 ms baseline query p95 latency, and 10 ms current and 10 ms baseline replication lag; the applicable customer-cluster population and affected-region count are missing."
+          },
+          {
+            "claim_type": "accounting_decomposition",
+            "evidence_refs": [
+              "company_mcp|resource-6dfa76e81a9d86bcbc86"
+            ],
+            "statement": "The displayed latency difference is 0 ms (100 ms minus 100 ms), but it remains provisional because population coverage is unspecified; mix and within effects cannot be computed."
+          },
+          {
+            "claim_type": "association",
+            "evidence_refs": [
+              "company_mcp|resource-a42da6d8d97166482a33"
+            ],
+            "statement": "A rollout started at 2026-10-17T02:32:07.801171Z for three listed targets, but no latency-change timestamp is available, so no timing association can be established for this period."
+          }
+        ],
+        "summary": "Insufficient data for a customer-impact determination: the current-period export shows p95 latency 100 ms versus the previous complete reporting week at 100 ms and replication lag 10 ms versus 10 ms, but it does not identify the applicable customer-cluster population or affected-region count. The displayed latency delta is therefore provisional (0 ms) and not asserted as a business-population fact. No rate comparison is supportable, so mix/within decomposition is unavailable. A single-node CPU value of 95% is present but is outside policy scope and is not a paging signal. The change calendar records rollout start at 2026-10-17T02:32:07.801171Z for eu-1, us-1, and ap-1, but latency-change time is null; timing cannot establish causality."
+      },
+      "foreign_tools": []
+    },
+    {
+      "scenario_id": "company-b06fc32e549ebf0def71",
+      "period_id": "period-adecbae7a36e9ba67103",
+      "arm": "luna_signalweave_jev",
+      "phase": "monitoring",
+      "status": "failed",
+      "error": "RuntimeError",
+      "seconds": 0.00015104195335879922,
+      "agent_seconds": 0.0,
+      "system_seconds": 0.0,
+      "tool_calls": 0,
+      "source_reads": 0,
+      "usage": {
+        "openai": {
+          "attempts": 0,
+          "failed_attempts": 0,
+          "input_tokens": 0,
+          "cached_input_tokens": 0,
+          "output_tokens": 0,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.0
+        },
+        "jev": {
+          "attempts": 0,
+          "failed_attempts": 0,
+          "input_tokens": 0,
+          "cached_input_tokens": 0,
+          "output_tokens": 0,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.0
+        }
+      },
+      "score": {
+        "scorer_version": 3,
+        "scenario_id": "company-b06fc32e549ebf0def71",
+        "period_id": "period-adecbae7a36e9ba67103",
+        "valid_submission": false,
+        "safety_unassessed": true,
+        "exact": false,
+        "outcome_correct": false,
+        "recipients_correct": false,
+        "wrong_recipient": false,
+        "unsafe_route": false,
+        "false_alert": false,
+        "missed_event": false,
+        "unsafe_suppression": false,
+        "evidence_recall": 0.0,
+        "provenance_complete": false,
+        "numeric_precision": 0.0,
+        "numeric_recall": 0.0,
+        "unsupported_numeric_facts": [],
+        "unsupported_claim_types": [],
+        "numeric_diagnostics": [],
+        "citation_diagnostics": [],
+        "missing_numeric_facts": [],
+        "owner_policy_complete": false,
+        "errors": [
+          "invalid_submission_schema"
+        ],
+        "scoring_scope": "structured_fields_only",
+        "narrative_review_required": true
+      },
+      "raw_system_decision": null,
+      "submission": null,
+      "foreign_tools": null
+    },
+    {
+      "scenario_id": "company-b06fc32e549ebf0def71",
+      "period_id": "period-baf6f19a4f2be5acba8c",
+      "arm": "luna_signalweave_jev",
+      "phase": "monitoring",
+      "status": "failed",
+      "error": "RuntimeError",
+      "seconds": 0.00010762497549876571,
+      "agent_seconds": 0.0,
+      "system_seconds": 0.0,
+      "tool_calls": 0,
+      "source_reads": 0,
+      "usage": {
+        "openai": {
+          "attempts": 0,
+          "failed_attempts": 0,
+          "input_tokens": 0,
+          "cached_input_tokens": 0,
+          "output_tokens": 0,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.0
+        },
+        "jev": {
+          "attempts": 0,
+          "failed_attempts": 0,
+          "input_tokens": 0,
+          "cached_input_tokens": 0,
+          "output_tokens": 0,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.0
+        }
+      },
+      "score": {
+        "scorer_version": 3,
+        "scenario_id": "company-b06fc32e549ebf0def71",
+        "period_id": "period-baf6f19a4f2be5acba8c",
+        "valid_submission": false,
+        "safety_unassessed": true,
+        "exact": false,
+        "outcome_correct": false,
+        "recipients_correct": false,
+        "wrong_recipient": false,
+        "unsafe_route": false,
+        "false_alert": false,
+        "missed_event": false,
+        "unsafe_suppression": false,
+        "evidence_recall": 0.0,
+        "provenance_complete": false,
+        "numeric_precision": 0.0,
+        "numeric_recall": 0.0,
+        "unsupported_numeric_facts": [],
+        "unsupported_claim_types": [],
+        "numeric_diagnostics": [],
+        "citation_diagnostics": [],
+        "missing_numeric_facts": [],
+        "owner_policy_complete": false,
+        "errors": [
+          "invalid_submission_schema"
+        ],
+        "scoring_scope": "structured_fields_only",
+        "narrative_review_required": true
+      },
+      "raw_system_decision": null,
+      "submission": null,
+      "foreign_tools": null
+    },
+    {
+      "scenario_id": "company-b06fc32e549ebf0def71",
+      "period_id": "period-baf6f19a4f2be5acba8c",
+      "arm": "luna_bi",
+      "phase": "monitoring",
+      "status": "complete",
+      "error": null,
+      "seconds": 21.838927165954374,
+      "agent_seconds": 21.835799292020965,
+      "system_seconds": 0.0,
+      "tool_calls": 5,
+      "source_reads": 3,
+      "usage": {
+        "openai": {
+          "attempts": 1,
+          "failed_attempts": 0,
+          "input_tokens": 73613,
+          "cached_input_tokens": 59136,
+          "output_tokens": 788,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.00502372
+        },
+        "jev": {
+          "attempts": 0,
+          "failed_attempts": 0,
+          "input_tokens": 0,
+          "cached_input_tokens": 0,
+          "output_tokens": 0,
+          "unknown_usage_attempts": 0,
+          "estimated_known_usage_usd": 0.0
+        }
+      },
+      "score": {
+        "scorer_version": 3,
+        "scenario_id": "company-b06fc32e549ebf0def71",
+        "period_id": "period-baf6f19a4f2be5acba8c",
+        "valid_submission": true,
+        "safety_unassessed": false,
+        "exact": true,
+        "outcome_correct": true,
+        "recipients_correct": true,
+        "wrong_recipient": false,
+        "unsafe_route": false,
+        "false_alert": false,
+        "missed_event": false,
+        "unsafe_suppression": false,
+        "evidence_recall": 1.0,
+        "provenance_complete": true,
+        "numeric_precision": 1.0,
+        "numeric_recall": 1.0,
+        "unsupported_numeric_facts": [],
+        "unsupported_claim_types": [],
+        "numeric_diagnostics": [],
+        "citation_diagnostics": [],
+        "missing_numeric_facts": [],
+        "owner_policy_complete": true,
+        "errors": [],
+        "scoring_scope": "structured_fields_only",
+        "narrative_review_required": true
+      },
+      "raw_system_decision": null,
+      "submission": {
+        "outcome": "ignore",
+        "recipients": [],
+        "evidence_refs": [
+          "company_mcp|resource-6dfa76e81a9d86bcbc86",
+          "company_mcp|resource-a42da6d8d97166482a33"
+        ],
+        "numeric_claims": [
+          {
+            "fact": "latency.delta",
+            "value": 0,
+            "unit": "ms",
+            "evidence_refs": [
+              "company_mcp|resource-6dfa76e81a9d86bcbc86"
+            ]
+          },
+          {
+            "fact": "latency.affected_regions",
+            "value": 0,
+            "unit": "regions",
+            "evidence_refs": [
+              "company_mcp|resource-6dfa76e81a9d86bcbc86"
+            ]
+          }
+        ],
+        "claims": [
+          {
+            "claim_type": "observation",
+            "evidence_refs": [
+              "company_mcp|resource-6dfa76e81a9d86bcbc86"
+            ],
+            "statement": "Current query p95 latency is unchanged from the previous complete reporting week (100 ms to 100 ms; delta 0 ms), replication lag is unchanged (10 ms to 10 ms), and 0 affected regions are recorded across eu-1, us-1, and ap-1."
+          },
+          {
+            "claim_type": "accounting_decomposition",
+            "evidence_refs": [
+              "company_mcp|resource-6dfa76e81a9d86bcbc86"
+            ],
+            "statement": "The defined materiality conditions are not met: latency has not risen, replication lag has not doubled, and regional breadth is 0."
+          },
+          {
+            "claim_type": "association",
+            "evidence_refs": [
+              "company_mcp|resource-a42da6d8d97166482a33"
+            ],
+            "statement": "A rollout started at 2026-10-24T02:32:07.801171+00:00, but no latency-change timestamp is recorded; the incident note says no controlled causal test was performed."
+          }
+        ],
+        "summary": "Ignore: no customer-facing slowdown signal meets the validated investigation threshold. CPU is not used as a trigger."
+      },
+      "foreign_tools": []
+    }
+  ],
+  "dollar_cost_scope": "Illustrative API-equivalent token estimates, not subscription charges.",
+  "resolved_jev_models": [
+    "jev-1.13.0"
+  ],
+  "narrative_review_status": "Pending separate internal blind review; not external peer review.",
+  "full_report_sha256": "026f76fac0426a412163b4a78466d906c5aa583fd96aa57b04f24315e9d48169"
+}

@@ -1,0 +1,113 @@
+{
+  "status": "functional_first_report_path_verified; recurring_enterprise_benefit_unproven",
+  "date": "2026-10-13",
+  "branch": "feat/local-investigation-runtime",
+  "production_source_sha256": "722070fc3ca5997b1cd7beb9023e609827b270a8b5a00988ce6764978d58f74b",
+  "native_binary_sha256": "b5bb7388c7f143eb33e20285dcfd47e78e31f0570865eeb2b5f02011cb8b720c",
+  "version": "0.2.0rc2",
+  "published_release": false,
+  "company": "fictional Northstar Outfitters",
+  "source": "existing local Superset 4.1.3 with synthetic warehouse data; real authenticated HTTP requests",
+  "fresh_install": {
+    "archive_origin": "locally built candidate; earlier runs used a GitHub Actions artifact",
+    "curl_installer_exercised_in_this_company_run": false,
+    "isolated_home": true,
+    "actual_terminal_wizard": true,
+    "scripted_wizard_observed_seconds": 10.315,
+    "wizard_duration_is_not_a_real_human_usability_measure": true,
+    "actual_codex_registration_verified": true,
+    "private_credential_files": true,
+    "live_source_health": true,
+    "visible_dashboards": 48,
+    "native_identity_unchanged_before_after": true
+  },
+  "reports": {
+    "model": "gpt-6-luna",
+    "reasoning_effort": "xhigh",
+    "completed_baseline_reports": 1,
+    "completed_signalweave_reports": 1,
+    "shared_context": "same business request, owner-named dashboards and source helpers; both arms could read actual saved-chart rows",
+    "signalweave_addition": "default-profile native MCP tools",
+    "jev_decisions_in_first_report_comparison": 0,
+    "baseline_observed_seconds": 100.23516437500075,
+    "signalweave_observed_seconds": 156.93999637499837,
+    "comparative_speed_or_cost_claim": false,
+    "cost_accounting_complete": false,
+    "recurring_card_approved": false,
+    "external_delivery": false
+  },
+  "report_review": {
+    "headline_arithmetic_supported": true,
+    "historical_bucket_dates_supported": true,
+    "signalweave_report_asks_owner_to_confirm_currency": true,
+    "not_an_enterprise_quality_estimate": true,
+    "headline_coverage_caveat_present_in_both_reports": true,
+    "independent_review": "Latest SignalWeave facts and arithmetic match the returned observations. The report explicitly distinguishes bucket deltas from complete, comparable business periods and does not invent a currency. The coverage flag is supplied by the connector, not a dashboard-certified source contract.",
+    "remaining_issue": "Minor report wording should distinguish a connector-supplied coverage warning from a dashboard assertion and call an unspecified-currency net-sales value an amount, not physical units. One pair cannot establish a comparative quality or speed improvement.",
+    "reviewer_independent_agent": true,
+    "real_human_panel": false
+  },
+  "latest_native_live_smoke": {
+    "live_jev_outcome": "notify",
+    "measured_delta": -20,
+    "process_restart_replay": true,
+    "scope": "Standalone smoke fixture, not the enterprise report trial."
+  },
+  "local_ui": {
+    "production_source_sha256": "722070fc3ca5997b1cd7beb9023e609827b270a8b5a00988ce6764978d58f74b",
+    "status_http": 200,
+    "live_source_health": true,
+    "visible_dashboards": 48,
+    "test_server_stopped_after_verification": true
+  },
+  "product_repairs": [
+    "Installer detects an older command shadowing the installed binary; README prepends the install directory in the current shell.",
+    "Agent registration scrubs OpenAI provider keys and key-file environment variables.",
+    "Skipped-source setup recommends adding a connection rather than a failing health check.",
+    "Superset pagination is encoded in the provider's query envelope; real five-item pages are distinct.",
+    "Temporal provenance preserves raw buckets and normalizes provider-declared temporal milliseconds to readable UTC ISO values.",
+    "Grouped non-additive or unknown metrics preserve separate series; duplicate non-additive buckets are not summed.",
+    "Bounded catalog browsing works without knowing dashboard titles; health rejects adapter-error pages.",
+    "Grouped additive metrics retain both the pooled total and per-dimension series, so compensating changes cannot hide a channel decline.",
+    "Raw bucket comparisons explicitly mark coverage unverified; the agent guide asks for the caveat beside the headline and warns against inventing currency.",
+    "Health output separates offline configuration checks from live catalog access without implying resource permissions or decision quality were validated.",
+    "PyJWT upgraded to 2.15.1; malformed nested-token parsing is regression-tested before network access."
+  ],
+  "test_suite": {
+    "passed": 2679,
+    "skipped": 6,
+    "scope": "full local checkout suite with required controlling-terminal permissions; includes local untracked historical evaluation tests",
+    "claim": "software regression coverage, not enterprise business accuracy"
+  },
+  "clean_committed_clone_test_suite": {
+    "commit": "786ef1889bad13bda63b31b1607d1637dc2bfa13",
+    "passed": 2652,
+    "skipped": 6,
+    "private_untracked_trials_required": false,
+    "environment": "Clean Git clone; shared locked dependency environment; PYTHONPATH points to clone source. A Git archive was not a valid substitute because research provenance checks require Git metadata."
+  },
+  "invalid_or_incomplete_runs_kept_separate": [
+    "The first isolated registration attempt used a nonexistent CODEX_HOME; this was a harness error.",
+    "A first-report agent misconverted epoch dates before readable date provenance was added.",
+    "One candidate health run exposed an empty-query registry regression; the completed-onboarding claim was withheld.",
+    "A synthetic recurring cohort had totals inconsistent with its declared channel partition and incorrect legacy response-shape scoring.",
+    "A later recurring cohort blocked on synthetic channel-allocation provenance; it produced no future reports and is not business accuracy evidence.",
+    "One pilot had baseline tool-limit/timeout failures and a native transport error; its failure-inclusive utility difference is not a product improvement estimate.",
+    "Two later cohorts were stopped during onboarding because old fixture provenance remained in nested fields; their artifacts were preserved and no success was claimed."
+  ],
+  "native_ci": {
+    "commit": "f198531fc3c2b83885fc97a8e110bc068d1d39f3",
+    "run": "https://github.com/waddle-zoo/signal-weave/actions/runs/38357601989",
+    "darwin_arm64": "passed",
+    "darwin_x86_64": "passed",
+    "linux_x86_64": "passed",
+    "published": false
+  },
+  "remaining_proof": [
+    "Improve consistency of historical-data disclosure in agent reports; the separate live-Jev recurring pilot completed four pairs, not an enterprise-quality pass.",
+    "Real human review of report usefulness beyond independent model review and rule-based proxies.",
+    "More independent business scenarios before a comparative improvement claim.",
+    "Publish a reviewed new preview before the improved source flow can become a one-line public download.",
+    "Actual human usability and customer validation; these scripted simulations are not either."
+  ]
+}

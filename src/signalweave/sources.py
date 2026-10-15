@@ -5,6 +5,7 @@ import base64
 import inspect
 import json
 import re
+from collections import Counter
 from collections.abc import Iterable
 from typing import Protocol
 
@@ -15,6 +16,50 @@ from .models import (
     ResourceSnapshot,
     SourceRef,
 )
+
+
+def _inspection_contract(catalog: ResourceContract, snapshot: ResourceContract) -> ResourceContract:
+    """Catalog owns authorization/meaning; either source can downgrade health."""
+    severity = {"healthy": 0, "ambiguous": 1, "stale": 2, "unknown": 3, "failed": 4}
+    status = max((catalog.source_status, snapshot.source_status), key=severity.__getitem__)
+    catalog_comparisons = {item.key: item for item in catalog.comparison_contracts}
+    snapshot_comparisons = {item.key: item for item in snapshot.comparison_contracts}
+    counts = Counter(item.key for item in [*catalog.comparison_contracts, *snapshot.comparison_contracts])
+    catalog_counts = Counter(item.key for item in catalog.comparison_contracts)
+    snapshot_counts = Counter(item.key for item in snapshot.comparison_contracts)
+    for key in counts:
+        if catalog_counts[key] > 1 or snapshot_counts[key] > 1:
+            item = catalog_comparisons.get(key) or snapshot_comparisons[key]
+            snapshot_comparisons[key] = item.model_copy(deep=True, update={
+                "coverage": "unknown",
+                "comparable": False,
+                "detail": "Comparison keys are not unique; current quality cannot be established.",
+                "query_refs": [],
+            })
+    # Current quality may change, but a reused key cannot silently replace the
+    # catalog's measurement meaning. Period dates are not in this contract:
+    # the comparison-window definition is stable while individual runs advance.
+    meaning_fields = ("metric", "definition", "population", "unit", "comparison_window")
+    comparisons = []
+    for key, item in catalog_comparisons.items():
+        current = snapshot_comparisons.get(key)
+        if current is None:
+            comparisons.append(item)
+            continue
+        changed = [field for field in meaning_fields if getattr(item, field) != getattr(current, field)]
+        if changed:
+            comparisons.append(item.model_copy(deep=True, update={
+                "coverage": "unknown",
+                "comparable": False,
+                "detail": "Inspection comparison meaning differs from catalog: " + ", ".join(changed),
+                "query_refs": [],
+            }))
+        else:
+            comparisons.append(current)
+    comparisons.extend(
+        item for key, item in snapshot_comparisons.items() if key not in catalog_comparisons
+    )
+    return catalog.model_copy(update={"source_status": status, "comparison_contracts": comparisons})
 
 
 def _catalog_terms(resource: ResourceDescriptor) -> set[str]:
@@ -238,8 +283,9 @@ class SourceRegistry:
         and are explicitly marked as ``local-scan-fallback`` so the caller can
         measure and replace that path before claiming enterprise scale.
         """
-        if not query.strip():
-            raise ValueError("catalog search query must not be empty")
+        # An empty query browses the same bounded, permission-filtered page.
+        # This lets an agent find assets without already knowing their titles.
+        query = query.strip()
         if not 1 <= limit <= 500:
             raise ValueError("catalog search limit must be between 1 and 500")
         multi_cursor: tuple[dict[str, str], dict[str, int]] | None = None
@@ -535,7 +581,7 @@ class SourceRegistry:
         if self._enforce_catalog and descriptor is not None:
             snapshot = snapshot.model_copy(
                 update={
-                    "contract": descriptor.contract,
+                    "contract": _inspection_contract(descriptor.contract, snapshot.contract),
                     "source_url": snapshot.source_url or descriptor.source_url,
                 }
             )
@@ -577,6 +623,7 @@ class SourceRegistry:
         return snapshot.model_copy(
             update={
                 "observations": [],
+                "analytical_comparisons": [],
                 "evidence": [],
                 "metadata": {
                     "signalweave_budget": {
@@ -701,7 +748,7 @@ class SourceRegistry:
                 }
                 snapshot = snapshot.model_copy(
                     update={
-                        "contract": descriptor.contract,
+                        "contract": _inspection_contract(descriptor.contract, snapshot.contract),
                         "source_url": snapshot.source_url or descriptor.source_url,
                         "metadata": metadata,
                     }

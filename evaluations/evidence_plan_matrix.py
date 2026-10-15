@@ -11,7 +11,7 @@ Superset coupling.  Each scenario checks a different boundary:
 * cross-source, cross-vendor evidence;
 * optional versus required source failure;
 * empty or stale source snapshots;
-* missing, fulfilled, conflicting, and unknown evidence slots;
+* missing, fulfilled, unanswerable, and unknown evidence slots;
 * trusted versus unverified caller context; and
 * single-step versus multi-step handoffs.
 """
@@ -306,6 +306,14 @@ def _case_definitions() -> list[tuple[InsightCard, list[ResourceSnapshot], Conte
         watch_for=["A material movement requiring investigation."],
         follow_up="Gather the missing diagnostic evidence, then re-evaluate this same card.",
     )
+    # This scenario represents a human-authored multi-step workflow whose
+    # diagnostic answers must exist before delivery; ordinary questions and
+    # watch prompts remain advisory by default.
+    multistep_card.evidence_requirements = {
+        "question:1": True,
+        "question:2": True,
+        "watch:1": True,
+    }
     cases.append(
         (
             multistep_card,
@@ -328,17 +336,18 @@ def _case_definitions() -> list[tuple[InsightCard, list[ResourceSnapshot], Conte
             _facts("question:1", "question:2", "watch:1"),
             JudgmentFixture(
                 Outcome.NOTIFY,
-                (QuestionStatus.UNKNOWN, QuestionStatus.UNKNOWN),
-                (WatchStatus.UNKNOWN,),
+                # Context association alone no longer asserts semantic completion.
+                (QuestionStatus.SUPPORTED, QuestionStatus.SUPPORTED),
+                (WatchStatus.PRESENT,),
             ),
             {"plan": "complete", "outcome": "notify", "workflow": "deliver"},
         )
     )
 
-    conflict_card = multistep_card.model_copy(update={"id": "multistep-conflict"})
+    unanswered_card = multistep_card.model_copy(update={"id": "multistep-unanswered"})
     cases.append(
         (
-            conflict_card,
+            unanswered_card,
             [_resource(source) for source in multistep_sources],
             None,
             JudgmentFixture(
@@ -348,7 +357,7 @@ def _case_definitions() -> list[tuple[InsightCard, list[ResourceSnapshot], Conte
             ),
             {
                 "plan": "incomplete",
-                "conflict": "question:1",
+                "unanswered": "question:1",
                 "outcome": "investigate",
                 "workflow": "retrieve_evidence",
             },
@@ -384,7 +393,7 @@ def _case_definitions() -> list[tuple[InsightCard, list[ResourceSnapshot], Conte
             unverified_card,
             [_resource(unverified_card.sources[0])],
             _facts("question:1", "watch:1", trust="unverified"),
-            JudgmentFixture(Outcome.NOTIFY, (QuestionStatus.UNKNOWN,), (WatchStatus.UNKNOWN,)),
+            JudgmentFixture(Outcome.NOTIFY, (QuestionStatus.SUPPORTED,), (WatchStatus.PRESENT,)),
             {"plan": "complete", "outcome": "investigate", "workflow": "retrieve_evidence"},
         )
     )
@@ -399,7 +408,7 @@ def _case_definitions() -> list[tuple[InsightCard, list[ResourceSnapshot], Conte
             unknown_slot_card,
             [_resource(unknown_slot_card.sources[0])],
             _facts("question:1", "question:99"),
-            JudgmentFixture(Outcome.NOTIFY, (QuestionStatus.UNKNOWN,)),
+            JudgmentFixture(Outcome.NOTIFY, (QuestionStatus.SUPPORTED,)),
             {
                 "plan": "complete",
                 "outcome": "notify",
@@ -459,7 +468,7 @@ def _case_definitions() -> list[tuple[InsightCard, list[ResourceSnapshot], Conte
             [_resource(empty_source, populated=False)],
             None,
             JudgmentFixture(Outcome.NOTIFY, (QuestionStatus.UNKNOWN,)),
-            {"plan": "incomplete", "outcome": "insufficient_data", "workflow": "repair_source"},
+            {"plan": "blocked", "outcome": "insufficient_data", "workflow": "repair_source"},
         )
     )
 
@@ -483,8 +492,11 @@ async def run_matrix() -> dict[str, Any]:
         }
         if "optional_slot" in expected:
             checks["optional_slot"] = slots.get("source:deployments") is not None and slots["source:deployments"].status == expected["optional_slot"]
-        if "conflict" in expected:
-            checks["conflict"] = expected["conflict"] in (plan.conflicting_slot_keys if plan else [])
+        if "unanswered" in expected:
+            checks["unanswered"] = (
+                plan is not None and expected["unanswered"] in plan.missing_slot_keys
+                and expected["unanswered"] not in plan.conflicting_slot_keys
+            )
         if "warning" in expected:
             checks["warning"] = any("unknown evidence slots" in warning for warning in (plan.warnings if plan else []))
         rows.append(

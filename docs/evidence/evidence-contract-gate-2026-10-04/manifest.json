@@ -1,0 +1,30 @@
+{
+  "artifacts": {
+    "inputs.json.gz": {
+      "source_sha256": "552d6867ea47a049f9138e59dd27d166707da8ed6e4ad44b13a46fb13a2bba1e",
+      "archive_sha256": "60892a2c18b856e522a8b2a4af2f33b3865e9aa953c3c3b3655ad78a1f2e9490",
+      "source_bytes": 1070701
+    },
+    "protocol.json": {
+      "source_sha256": "d368f90029dd4b5e2724d07e838ef456df2e51a544a7a34557e95b649f6524d3",
+      "archive_sha256": "d368f90029dd4b5e2724d07e838ef456df2e51a544a7a34557e95b649f6524d3",
+      "source_bytes": 5597
+    },
+    "report.json.gz": {
+      "source_sha256": "7cbd67d75337dcfce22a5b0583f79c472363fa8b340f33e5356efafa991f8272",
+      "archive_sha256": "4834a30ec644ece9d3a49356343693eb52896cc35c2ade6e9953db6bf5305d2d",
+      "source_bytes": 185786
+    },
+    "trace.jsonl.gz": {
+      "source_sha256": "3a9ee80931d4da58632727acd063816f17a30f81b95bb0f1b4ba7aea73885076",
+      "archive_sha256": "e74e3b240470345cd0eefc3d9e80dc263762edd05416d5b16e1a7f7a5cd273b8",
+      "source_bytes": 238539
+    }
+  },
+  "contains_every_attempt": true,
+  "attempts": 12,
+  "resolved_model": "jev-1.13.0",
+  "credential_value_absence_checked": true,
+  "report_rebuilt_after_runner_exception": true,
+  "real_deliveries": 0
+}

@@ -1,0 +1,96 @@
+{
+  "review_type": "independent_adversarial_method_review",
+  "review_status": "complete",
+  "review_mode": "read_only",
+  "scope": "bounded synthetic first-report feasibility; not enterprise certification",
+  "frozen_revision": "cee8d0df8f2398ec5ee7793a703edd8ac5f550e6",
+  "source_edits_made": false,
+  "paid_calls_made": false,
+  "primary_scores_preserved": true,
+  "trial_accounting": {
+    "additional_jev_attempts": 26,
+    "cumulative_jev_attempts": 46,
+    "jev_ceiling": 48,
+    "cumulative_luna_episodes": 13,
+    "luna_ceiling": 16,
+    "paired_periods": 8,
+    "episode_count_is_not_request_count": true
+  },
+  "preregistered_counts": {
+    "native": {"passed": 7, "total": 8},
+    "baseline": {"passed": 5, "total": 8}
+  },
+  "diagnostic_counts_not_replacements": {
+    "oracle_corrected_strict": {
+      "native": {"passed": 8, "total": 8},
+      "baseline": {"passed": 6, "total": 8},
+      "correction": "Harbor p03 expected support-data-steward recipient was absent from the frozen oracle."
+    },
+    "posthoc_semantic_audit": {
+      "native": {"semantically_aligned": 8, "total": 8},
+      "baseline": {"semantically_aligned": 7, "total": 8},
+      "alias_policy": "Treat no_action as a semantic quiet/no-alert alias for audit only; do not alter the preregistered strict score."
+    }
+  },
+  "independent_oracle_audit": {
+    "summary": {
+      "periods_audited": 12,
+      "numeric_oracle_errors": 0,
+      "owner_policy_oracle_mismatches": 1,
+      "valid_redwood_definition_conflicts": 1,
+      "oracle_route_bug": "harbor-help:p03"
+    },
+    "periods": [
+      {"company": "northstar-cart", "period": "p01", "oracle": {"status": "complete", "outcome": "notify", "recipients": ["commerce-owner"]}, "independent_verdict": "correct"},
+      {"company": "northstar-cart", "period": "p02", "oracle": {"status": "complete", "outcome": "notify", "recipients": ["commerce-owner"]}, "independent_verdict": "correct"},
+      {"company": "northstar-cart", "period": "p03", "oracle": {"status": "complete", "outcome": "ignore", "recipients": []}, "independent_verdict": "correct"},
+      {"company": "harbor-help", "period": "p01", "oracle": {"status": "complete", "outcome": "notify", "recipients": ["support-operations"]}, "independent_verdict": "correct"},
+      {"company": "harbor-help", "period": "p02", "oracle": {"status": "complete", "outcome": "notify", "recipients": ["support-operations"]}, "independent_verdict": "correct"},
+      {"company": "harbor-help", "period": "p03", "oracle": {"status": "blocked", "outcome": "insufficient_data", "recipients": []}, "independent_verdict": "oracle_bug", "corrected_recipients": ["support-data-steward"], "reason": "Owner policy explicitly routes missing eligible-tier coverage to the Data Steward."},
+      {"company": "redwood-fulfillment", "period": "p01", "oracle": {"status": "complete", "outcome": "notify", "recipients": ["fulfillment-owner"]}, "independent_verdict": "correct"},
+      {"company": "redwood-fulfillment", "period": "p02", "oracle": {"status": "complete", "outcome": "notify", "recipients": ["fulfillment-owner"]}, "independent_verdict": "correct"},
+      {"company": "redwood-fulfillment", "period": "p03", "oracle": {"status": "blocked", "outcome": "investigate", "recipients": ["fulfillment-data"]}, "independent_verdict": "correct", "reason": "Same-export, same-metric conflicting definition evidence supports investigation; this is not a merely different nearby metric."},
+      {"company": "orbit-subscriptions", "period": "p01", "oracle": {"status": "complete", "outcome": "notify", "recipients": ["subscription-operations"]}, "independent_verdict": "correct"},
+      {"company": "orbit-subscriptions", "period": "p02", "oracle": {"status": "complete", "outcome": "ignore", "recipients": []}, "independent_verdict": "correct", "reason": "Net change and segment changes are below the declared contribution thresholds; current segment levels are not changes."},
+      {"company": "orbit-subscriptions", "period": "p03", "oracle": {"status": "complete", "outcome": "notify", "recipients": ["subscription-operations"]}, "independent_verdict": "correct"}
+    ],
+    "numeric_checks": [
+      "Additive totals reconcile to segment sums for every complete additive period.",
+      "Rate numerators and denominators produce the declared weighted rates; rate contribution sums and within/mix decomposition reconcile where complete.",
+      "No independent numeric oracle correction was found."
+    ]
+  },
+  "submission_findings": {
+    "native": [
+      {"company": "harbor-help", "period": "p03", "preregistered_error": "recipients", "classification": "oracle_bug_not_model_error", "corrected_result": "pass"}
+    ],
+    "baseline": [
+      {"company": "northstar-cart", "period": "p03", "preregistered_error": "outcome", "submission": "no_action", "oracle": "ignore", "classification": "label_schema_mismatch_with_semantic_quiet_equivalence", "corrected_result": "audit_equivalent_only"},
+      {"company": "harbor-help", "period": "p03", "preregistered_error": "recipients", "classification": "oracle_bug_not_model_error", "corrected_result": "pass"},
+      {"company": "orbit-subscriptions", "period": "p02", "preregistered_error": ["outcome", "recipients"], "submission": "notify subscription-operations", "oracle": "ignore []", "classification": "likely_model_policy-interpretation_error", "reason": "The narrative applies the threshold to current expansion/contraction levels (+210 and -95), while the fixture's contribution threshold concerns changes (+10 and -15). This is not the no_action alias case."}
+    ]
+  },
+  "report_utility_audit": {
+    "status": "independent_review_required",
+    "harbor_help_p03_baseline": {
+      "finding": "The blocked narrative states enterprise 15/100 versus 22/220 and arithmetic +5 percentage points, then correctly says the aggregate rate must not be estimated.",
+      "risk": "Those figures compare an observed segment across periods while the required population is incomplete; the caveat may not prevent a reader from treating +5pp as a supported aggregate comparison.",
+      "classification": "utility_warning_not_primary_oracle_correction",
+      "required_headline_treatment": "Do not present the +5pp figure as a validated population-level claim."
+    },
+    "other_narratives": "Leave to the independent report-quality/semantic reviewer; no comparative headline is authorized by this audit."
+  },
+  "final_verdict": {
+    "bounded_trial_result": "complete_with_recorded_oracle_and_label_confounds",
+    "comparative_headline": "not_authorized",
+    "jev_quality_win_claim": "not_authorized",
+    "interpretation": "The frozen preregistered scores remain 7/8 native and 5/8 baseline. A separate audit identifies one oracle route omission, one quiet-label alias, and one likely baseline over-alert; these are not silently folded into the primary scores."
+  },
+  "evidence": [
+    "artifacts/first-report-live-02/manifest.json",
+    "artifacts/first-report-live-02/report.json",
+    "artifacts/first-report-live-02/progress.json",
+    "evaluations/first_report_cases.py",
+    "tests/test_first_report_cases.py"
+  ]
+}

@@ -14,6 +14,7 @@
       "period_id": "week-01",
       "expected_initial": "ignore",
       "expected_final": "ignore",
+      "required_final_evidence": ["superset|dashboard:1", "northstar|fct_web_session"],
       "diagnostic_facts": []
     },
     {
@@ -22,6 +23,7 @@
       "period_id": "week-02",
       "expected_initial": "ignore",
       "expected_final": "ignore",
+      "required_final_evidence": ["superset|dashboard:1", "northstar|fct_web_session"],
       "diagnostic_facts": []
     },
     {
@@ -30,6 +32,12 @@
       "period_id": "week-05",
       "expected_initial": "investigate",
       "expected_final": "notify",
+      "required_final_evidence": [
+        "superset|dashboard:1",
+        "northstar|fct_web_session",
+        "checkout-failures-after-payment-rollout",
+        "payment-deployment-timing"
+      ],
       "diagnostic_facts": [
         {
           "fact_id": "checkout-failures-after-payment-rollout",
@@ -81,6 +89,18 @@
       "period_id": "week-06",
       "expected_initial": "notify",
       "expected_final": "notify",
+      "required_final_evidence": [
+        "superset|dashboard:1",
+        "northstar|fct_web_session",
+        "northstar|fct_finance_daily"
+      ],
+      "coverage_requirements": [
+        {
+          "source_key": "superset|dashboard:1",
+          "subject_type": "channel",
+          "minimum_count": 2
+        }
+      ],
       "diagnostic_facts": []
     },
     {
@@ -89,6 +109,13 @@
       "period_id": "week-07",
       "expected_initial": "investigate",
       "expected_final": "investigate",
+      "required_final_evidence": [
+        "superset|dashboard:1",
+        "northstar|fct_web_session",
+        "northstar|fct_finance_daily",
+        "finance-definition-lag",
+        "analytics-review-required"
+      ],
       "diagnostic_facts": [
         {
           "fact_id": "finance-definition-lag",
@@ -114,6 +141,7 @@
       "period_id": "week-08",
       "expected_initial": "insufficient_data",
       "expected_final": "insufficient_data",
+      "required_final_evidence": ["superset|dashboard:1"],
       "diagnostic_facts": []
     }
   ]

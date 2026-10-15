@@ -1,0 +1,54 @@
+{
+  "scope": "Offline archive verification of known-family component sensitivity diagnostics; not acceptance.",
+  "planned_attempts": 42,
+  "recorded_requests": 42,
+  "recorded_responses": 42,
+  "complete_rows": 42,
+  "configurations": 14,
+  "repetitions_per_configuration": 3,
+  "event_counts": {
+    "api.request": 42,
+    "api.response": 42
+  },
+  "failed_rows": 0,
+  "usage": {
+    "input_tokens": 198891,
+    "output_tokens": 4578
+  },
+  "resolved_models": [
+    "jev-1.13.0"
+  ],
+  "source_trace_sha256": "1160c910a37ec1936b4aa09d09fb0f06f6b75dd4a8ee53a12d04390913424ebb",
+  "runner_sha256": "339352e18c7ab9d529f8c2b71f8e45b1da1105ec3825990e411842eb1371a05e",
+  "verified": [
+    "Archive content equals raw artifacts after decompression.",
+    "Trace request/response IDs and episodes match; results match responses.",
+    "Every planned configuration/repetition is retained once."
+  ],
+  "files": [
+    {
+      "source_path": "artifacts/jev-v6-state-diagnostics-01/config.json",
+      "archive_path": "config.json",
+      "source_sha256": "efb6c8ec0f9f14ddf8fe12f5b6e4ce7b1b585a9eab18ac21f2eb2c1e35accbac",
+      "archive_sha256": "efb6c8ec0f9f14ddf8fe12f5b6e4ce7b1b585a9eab18ac21f2eb2c1e35accbac"
+    },
+    {
+      "source_path": "artifacts/jev-v6-state-diagnostics-01/results.json",
+      "archive_path": "results.json",
+      "source_sha256": "5dec512109a036ab1b6aa87d7b48e397ec1d63ae79db4a0c7d7b794c8789bd49",
+      "archive_sha256": "5dec512109a036ab1b6aa87d7b48e397ec1d63ae79db4a0c7d7b794c8789bd49"
+    },
+    {
+      "source_path": "artifacts/jev-v6-state-diagnostics-01/trace.jsonl",
+      "archive_path": "trace.jsonl.gz",
+      "source_sha256": "de6cf36ef21da27e3f4057d560e98edf8c75aa34c6be31c8fa96b3dcb12f0654",
+      "archive_sha256": "f70add52b86c0af18646bee9f6f3df2a33e064a5ba7ee7318d0415f74de448ad"
+    }
+  ],
+  "limits": [
+    "Observed selected-answer probability is distinct from the raw confidence field.",
+    "Outcome selections do not establish required-watch completion or final engine decisions.",
+    "Three repeats per configuration; raw distribution variation retained.",
+    "No production prompt/clock repair or threshold lowering is supported by these runs."
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "artifacts": {
+    "protocol.json": {
+      "source_sha256": "86f98412528467fdf831b613c3677e1effbc494231bee5288998357e7894fefe",
+      "archive_sha256": "86f98412528467fdf831b613c3677e1effbc494231bee5288998357e7894fefe",
+      "source_bytes": 6836
+    },
+    "inputs.json.gz": {
+      "source_sha256": "dd2ed35692f219b68efab34235dda3282e8b2804032baa1a6e71af1466441a79",
+      "archive_sha256": "a72e9e9e1ae9499f4e5c5368a45bbd0b93c7189e809b4a485ec392cadabfc0df",
+      "source_bytes": 285538
+    },
+    "report.json.gz": {
+      "source_sha256": "cb5fe6eccd8307940ee4d789445fa21ae9a3a43a76de240c682a968f75491f02",
+      "archive_sha256": "7a38c558463272d211ea2a51d0ca96d904c5957e4f5223dc69a178598f98dc7c",
+      "source_bytes": 532265
+    },
+    "trace.jsonl.gz": {
+      "source_sha256": "1333e467742809a41fb24ee31def23a9ecd0056a3a5297ac22a9332ea2e773ab",
+      "archive_sha256": "cb630cbea07eb8ea88f68a81a9bd61175337dbc1dc474b63af15145cb781b002",
+      "source_bytes": 747872
+    }
+  },
+  "contains_every_attempt": true,
+  "attempts": 36,
+  "credential_value_absence_checked": true
+}

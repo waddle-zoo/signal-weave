@@ -2,9 +2,58 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from enum import StrEnum
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import (
+    BaseModel,
+    Field,
+    StrictBool,
+    StringConstraints,
+    field_validator,
+    model_validator,
+)
+
+from .diagnostics import AnalysisReport, AnalyticalComparison
+from .numeric_conditions import NumericCondition
+
+EvidenceRequirementKey = Annotated[
+    str, StringConstraints(pattern=r"^(question|watch):[1-9][0-9]*$"),
+]
+
+ComparisonWindows = Annotated[list[str], Field(
+    min_length=1, max_length=20,
+    description=(
+        "Exact source-declared comparison identifiers from discovery's "
+        "contract.available_comparison_windows, not translated labels. "
+        "These are not required_comparison_keys: those must be exact analytical_comparisons[].key "
+        "or reviewed catalog required_comparison_keys. Inspect the source; do not invent keys. "
+        "Omit to resolve defaults from required sources; an explicit empty list is invalid."
+    ),
+)]
+
+WatchConditions = Annotated[list[str], Field(
+    max_length=100,
+    description=(
+        "Optional independent semantic assessments against fresh evidence on each run; leave empty "
+        "when decision_guidance and numeric_conditions already express the owner's rules. "
+        "Do not duplicate source availability, comparison validity or action rules as watch items. "
+        "Use the card's scope and rules, not bare topic names or a generic analysis checklist. "
+        "Items are advisory by default; mark a question or watch item required only when "
+        "the owner says every run must answer it before an automatic route. Do not invent "
+        "materiality rules."
+    ),
+)]
+
+InvestigationQuestions = Annotated[list[str], Field(
+    max_length=100,
+    description=(
+        "Optional additional analytical questions the investigation must answer on each run. "
+        "Leave empty unless the owner requires a separate answer beyond the action policy. "
+        "Do not copy unanswered one-time setup questions here. Ask the owner first; preserve "
+        "resolved definitions and policy in decision_guidance and source contracts. "
+        "Questions about changing ownership or other non-numeric evidence remain supported."
+    ),
+)]
 
 
 class Outcome(StrEnum):
@@ -59,7 +108,21 @@ class SourceRef(BaseModel):
     resource: str = Field(min_length=1, max_length=500)
     label: str = Field(min_length=1, max_length=240)
     parameters: dict[str, Any] = Field(default_factory=dict, max_length=50)
-    required: bool = True
+    required: bool = Field(
+        default=True,
+        description=(
+            "A required source is a prerequisite for every card decision: its absence forces insufficient_data. "
+            "Set false for optional context or branch-specific corroboration when the owner's policy "
+            "can still decide without it. Authorization to read a source does not make it required."
+        ),
+    )
+    required_comparison_keys: list[str] = Field(
+        default_factory=list, max_length=20,
+        description=(
+            "Exact analytical_comparisons[].key or reviewed catalog required_comparison_keys, "
+            "NOT comparison_window or time-window labels. Inspect the source; do not invent keys."
+        ),
+    )
 
 
 class MetricDefinition(BaseModel):
@@ -101,6 +164,28 @@ class MetricDefinition(BaseModel):
         return self
 
 
+class SourceComparisonContract(BaseModel):
+    """Adapter-owned comparability contract for one recurring measurement.
+
+    This is intentionally smaller than :class:`AnalyticalComparison`. It is
+    useful for scalar dashboard/chart metrics that have a current and baseline
+    value but are not decomposable segment tables (for example p95 latency).
+    Adapters calculate coverage and comparability from their provider data;
+    Jev must not infer either property from prose or from a populated value.
+    """
+
+    key: str = Field(min_length=1, max_length=160)
+    metric: str = Field(min_length=1, max_length=240)
+    definition: str = Field(min_length=1, max_length=4000)
+    population: str = Field(min_length=1, max_length=1000)
+    unit: str = Field(min_length=1, max_length=80)
+    comparison_window: str = Field(min_length=1, max_length=160)
+    coverage: Literal["complete", "partial", "unknown"] = "unknown"
+    comparable: bool = False
+    detail: str = Field(default="", max_length=2000)
+    query_refs: list[str] = Field(default_factory=list, max_length=20)
+
+
 class ResourceContract(BaseModel):
     """Typed identity and trust metadata used during discovery and evaluation."""
 
@@ -109,6 +194,32 @@ class ResourceContract(BaseModel):
     scope: str = Field(default="", max_length=1000)
     metric_names: list[str] = Field(default_factory=list, max_length=100)
     metric_definitions: list[MetricDefinition] = Field(default_factory=list, max_length=100)
+    comparison_contracts: list[SourceComparisonContract] = Field(
+        default_factory=list,
+        max_length=200,
+        exclude_if=lambda values: not values,
+        description=(
+            "Adapter-owned recurring measurement contracts. A card must bind a "
+            "required_comparison_keys entry before a comparison can gate a workflow. "
+            "Coverage and comparability are provider assertions validated by code; "
+            "they are never inferred from prose or a non-null observation."
+        ),
+    )
+    available_comparison_windows: list[str] = Field(
+        default_factory=list, max_length=20,
+        description=(
+            "Exact adapter-owned identifiers compatible with this resource's required comparisons. "
+            "Empty means undeclared, not support for every window."
+        ),
+    )
+    required_comparison_keys: list[str] = Field(
+        default_factory=list,
+        max_length=20,
+        description=(
+            "Reviewed catalog requirements copied onto proposed source references; "
+            "never inferred from returned snapshots."
+        ),
+    )
     population: str = Field(default="", max_length=1000)
     grain: str = Field(default="", max_length=1000)
     freshness_sla_hours: float | None = Field(default=None, ge=0.0, le=876000.0)
@@ -116,6 +227,13 @@ class ResourceContract(BaseModel):
     roles: list[str] = Field(default_factory=list, max_length=30)
     source_status: Literal["healthy", "stale", "failed", "ambiguous", "unknown"] = "healthy"
     authorized: bool = True
+
+    @field_validator("available_comparison_windows")
+    @classmethod
+    def validate_available_windows(cls, values: list[str]) -> list[str]:
+        if any(not value.strip() for value in values):
+            raise ValueError("available_comparison_windows entries must not be empty")
+        return values
 
 
 class PrincipalContext(BaseModel):
@@ -166,6 +284,7 @@ class ReceiptStatus(StrEnum):
     REPLAYED = "replayed"
     DELIVERED = "delivered"
     DELIVERY_DISABLED = "delivery_disabled"
+    DECISION_DEFERRED = "decision_deferred"
     FAILED = "failed"
 
 
@@ -327,6 +446,7 @@ class ResourceMatch(BaseModel):
     role_probability: float = Field(default=0.0, ge=0.0, le=1.0)
     retrieval_signals: list[str] = Field(default_factory=list, max_length=20)
     contract: ResourceContract = Field(default_factory=ResourceContract)
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class ContextFact(BaseModel):
@@ -336,7 +456,7 @@ class ContextFact(BaseModel):
     slot_key: str | None = Field(
         default=None,
         max_length=160,
-        description="Optional evidence-plan slot this fact fulfills.",
+        description="Optional evidence-plan slot this fact addresses; a tag alone does not fulfill a semantic watch or question.",
     )
     subject_ref: str = Field(min_length=1, max_length=500)
     relation: str = Field(min_length=1, max_length=160)
@@ -376,7 +496,17 @@ class EvidenceBundle(BaseModel):
 
 
 class ResourceDiscovery(BaseModel):
-    """The inspectable result of goal-to-resource discovery."""
+    """The inspectable result of source recall or caller-selected scope.
+
+    ``evaluator`` and ``catalog_strategy`` identify whether this came from the
+    optional Jev-ranked convenience path or from an agent-selected authorized
+    source set. Do not treat a caller-selected relevance marker as a semantic
+    ranking score.
+    """
+
+    catalog_fingerprint: str = Field(
+        default="", description="Digest of the authorized bounded catalog definitions, independent of semantic ranking.",
+    )
 
     goal: str
     matches: list[ResourceMatch] = Field(default_factory=list)
@@ -384,8 +514,8 @@ class ResourceDiscovery(BaseModel):
         default_factory=list,
         max_length=200,
         description=(
-            "The bounded adapter-owned candidate pool that Jev ranked. This is "
-            "diagnostic retrieval evidence, not a relevance judgment."
+            "The bounded adapter-owned candidate pool used for recall or explicit "
+            "selection. Ranking and selection provenance are identified separately."
         ),
     )
     candidate_count: int = Field(ge=0)
@@ -414,6 +544,7 @@ class OnboardingSourceReview(BaseModel):
     domain: str = "unknown"
     tenant_id: str = "default"
     source_status: str = "unknown"
+    available_comparison_windows: list[str] = Field(default_factory=list, max_length=20)
     metadata: dict[str, Any] = Field(default_factory=dict)
     selected: bool = False
     recommended: bool = False
@@ -453,7 +584,11 @@ class OnboardingBlockerCode(StrEnum):
     DEFINITION_CONFLICT = "definition-conflict"
     INTENT_DETAIL_REQUIRED = "intent-detail-required"
     DECISION_GUIDANCE_REQUIRED = "decision-guidance-required"
+    DECISION_ROUTE_MISMATCH = "decision-route-mismatch"
     DELIVERY_POLICY_MISSING = "delivery-policy-missing"
+    COMPARISON_WINDOW_MISMATCH = "comparison-window-mismatch"
+    SOURCE_CONTRACT_REQUIRED = "source-contract-required"
+    SOURCE_SCOPE_REVIEW = "source-scope-review"
 
 
 class OnboardingBlocker(BaseModel):
@@ -507,6 +642,14 @@ class OnboardingCorrection(BaseModel):
     recorded_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
+class EvidenceRequirement(BaseModel):
+    """An owner-reviewable semantic prerequisite, not an execution result."""
+
+    key: str
+    question: str
+    required: StrictBool
+
+
 class InsightCardOnboardingReview(BaseModel):
     """The confirmation boundary between an agent-drafted card and approval."""
 
@@ -516,6 +659,10 @@ class InsightCardOnboardingReview(BaseModel):
         "ready_for_approval"
     )
     blockers: list[OnboardingBlocker] = Field(default_factory=list, max_length=50)
+    source_selection_fingerprint: str = Field(default="", max_length=64)
+    source_selection_confirmation: str | None = Field(default=None, max_length=4000)
+    source_scope_confirmations: dict[str, str] = Field(default_factory=dict, max_length=200)
+    confirmed_blocker_codes: list[OnboardingBlockerCode] = Field(default_factory=list)
     principal_id: str | None = Field(default=None, max_length=240)
     principal_tenant: str | None = Field(default=None, max_length=160)
     authorization_evidence: str = Field(default="not-provided", max_length=240)
@@ -534,6 +681,7 @@ class InsightCardOnboardingReview(BaseModel):
     )
     questions: list[str] = Field(default_factory=list, max_length=50)
     warnings: list[str] = Field(default_factory=list, max_length=50)
+    evidence_requirements: list[EvidenceRequirement] = Field(default_factory=list, max_length=200)
 
 
 class Observation(BaseModel):
@@ -584,6 +732,7 @@ class ResourceSnapshot(BaseModel):
     title: str
     description: str = ""
     observations: list[Observation] = Field(default_factory=list)
+    analytical_comparisons: list[AnalyticalComparison] = Field(default_factory=list, max_length=20)
     evidence: list[Evidence] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
     error: str | None = None
@@ -594,7 +743,14 @@ class ResourceSnapshot(BaseModel):
 
 
 class DeliveryMethod(BaseModel):
-    """A configured way to deliver one outcome to a caller-owned destination."""
+    """A configured way to deliver one outcome to a caller-owned destination.
+
+    ``key`` is the stable caller-owned route identifier used by the delivery
+    adapter. It is not a human label or an instruction for the downstream
+    agent. ``destination`` is the exact endpoint/URI bound to that identifier;
+    callers should resolve delivery through the pair rather than guessing from
+    ``label``.
+    """
 
     key: str = Field(min_length=1, max_length=120)
     outcome: Outcome
@@ -637,17 +793,29 @@ class InsightPlan(BaseModel):
     card_id: str
     card_version: int = Field(default=1, ge=1)
     selected_source_keys: list[str]
-    comparison_windows: list[str]
+    comparison_windows: ComparisonWindows
     capabilities: list[str]
     watch_for: list[str] = Field(default_factory=list)
     questions: list[str] = Field(default_factory=list)
     delivery_method_keys: list[str] = Field(default_factory=list)
-    compiled_by: str = "jev-latest"
+    compiled_by: str = "deterministic-card-plan"
     card_scope: str
     metric_query_plans: list[MetricQueryPlan] = Field(default_factory=list, max_length=50)
     investigation_mode: InvestigationMode = InvestigationMode.NONE
     max_investigation_sources: int = Field(default=0, ge=0, le=10)
     evidence_slots: list[EvidenceSlot] = Field(default_factory=list, max_length=200)
+
+
+CardDeliveryMethods = Annotated[list[DeliveryMethod], Field(
+    max_length=100,
+    description=(
+        "Exact owner-approved outcome-to-destination mappings. Match decision_guidance: "
+        "investigate and notify are different outcomes and need separate entries when both "
+        "should be routed. Policy prose does not create a route. Do not invent recipients "
+        "or change an investigation into a notification. Empty means no configured routes; "
+        "notify and escalate are unavailable. Actual delivery execution is always caller-owned."
+    ),
+)]
 
 
 class InsightCard(BaseModel):
@@ -657,8 +825,28 @@ class InsightCard(BaseModel):
     title: str = Field(min_length=1, max_length=200)
     what_to_watch: str = Field(min_length=1, max_length=8000)
     why_watch: str = Field(min_length=1, max_length=4000)
-    watch_for: list[str] = Field(default_factory=list, max_length=100)
-    questions: list[str] = Field(default_factory=list, max_length=100)
+    watch_for: WatchConditions = Field(default_factory=list)
+    questions: InvestigationQuestions = Field(default_factory=list)
+    numeric_conditions: list[NumericCondition] = Field(
+        default_factory=list,
+        max_length=100,
+        description=(
+            "Optional approved numeric projections bound to an inspected card source and "
+            "an existing analytical comparison. Leave empty when no applicable comparison "
+            "exists; never invent a comparison key. Plain-English policy belongs in decision_guidance. "
+            "They are evidence checks only; action selection remains owner/Jev state."
+        ),
+    )
+    evidence_requirements: dict[EvidenceRequirementKey, StrictBool] = Field(
+        default_factory=dict,
+        max_length=200,
+        description=(
+            "Optional strict requirements for existing one-based question:N or watch:N slots. "
+            "Unspecified slots are advisory. Set true only when the owner explicitly requires "
+            "this answer before automatic notification/escalation; false is equivalent to "
+            "omitting the slot and never waives a required source or comparison."
+        ),
+    )
     decision_guidance: str = Field(
         default="",
         max_length=8000,
@@ -676,17 +864,37 @@ class InsightCard(BaseModel):
         ),
     )
     sources: list[SourceRef] = Field(default_factory=list, max_length=200)
-    comparison_windows: list[str] = Field(
+    comparison_windows: ComparisonWindows = Field(
         default_factory=lambda: ["previous_period", "trailing_4_period_average"],
-        max_length=20,
     )
-    action_confidence_threshold: float = Field(default=0.70, ge=0.0, le=1.0)
+    action_confidence_threshold: float = Field(
+        default=0.70,
+        ge=0.0,
+        le=1.0,
+        description=(
+            "Model-support floor for automatic action, not an accuracy guarantee. "
+            "The normal default is 0.70; 1.0 is an advanced override that may prevent automation."
+        ),
+    )
     owner: str | None = Field(default=None, max_length=240)
     version: int = Field(default=1, ge=1)
     max_source_age_hours: float | None = Field(default=24.0, ge=0.0, le=876000.0)
-    delivery_methods: list[DeliveryMethod] = Field(default_factory=list, max_length=100)
-    retrieval_mode: RetrievalMode = RetrievalMode.FIXED
-    investigation_mode: InvestigationMode = InvestigationMode.NONE
+    delivery_methods: CardDeliveryMethods = Field(default_factory=list)
+    retrieval_mode: RetrievalMode = Field(
+        default=RetrievalMode.FIXED,
+        description=(
+            "Retrieval scope: fixed uses the selected source references as provided; expand "
+            "allows additional authorized sources when the adapter registry supports bounded "
+            "related-source retrieval."
+        ),
+    )
+    investigation_mode: InvestigationMode = Field(
+        default=InvestigationMode.NONE,
+        description=(
+            "Investigation scope: none disables follow-up; bounded enables bounded follow-up "
+            "investigation and requires a live SourceRegistry."
+        ),
+    )
     max_investigation_sources: int = Field(default=3, ge=0, le=10)
     investigation_threshold: float = Field(default=0.60, ge=0.0, le=1.0)
     principal_id: str | None = Field(default=None, max_length=240)
@@ -715,7 +923,32 @@ class InsightCard(BaseModel):
             values = getattr(self, field_name)
             if any(not value.strip() for value in values):
                 raise ValueError(f"{field_name} entries must not be empty")
+        source_by_key = {source.key: source for source in self.sources}
+        for condition in self.numeric_conditions:
+            source = source_by_key.get(condition.source_key)
+            if source is None:
+                raise ValueError(
+                    f"numeric condition source_key must reference a card source: {condition.source_key}"
+                )
+            if condition.comparison_key not in source.required_comparison_keys:
+                raise ValueError(
+                    "numeric condition comparison_key must be listed in the bound source's "
+                    f"required_comparison_keys: {condition.comparison_key}"
+                )
+        requirement_keys = {
+            *(f"question:{i + 1}" for i in range(len(self.questions))),
+            *(f"watch:{i + 1}" for i in range(len(self.watch_for))),
+        }
+        if unknown := set(self.evidence_requirements) - requirement_keys:
+            raise ValueError(
+                "evidence_requirements must identify existing question:N or watch:N slots: "
+                + ", ".join(sorted(unknown))
+            )
         if self.compiled_plan:
+            if not self.compiled_plan.comparison_windows or not set(
+                self.compiled_plan.comparison_windows
+            ).issubset(self.comparison_windows):
+                raise ValueError("compiled_plan comparison windows must be a nonempty subset of card windows")
             if self.compiled_plan.card_id != self.id:
                 raise ValueError("compiled_plan must belong to its insight card")
             if self.compiled_plan.card_version != self.version:
@@ -775,14 +1008,21 @@ class WatchResult(BaseModel):
     key: str
     watch_for: str
     status: WatchStatus
-    probability: float = Field(ge=0.0, le=1.0)
+    probability: float = Field(ge=0.0, le=1.0, description="Probability of present, not confidence in the final status; 0.5 if no valid answer.")
+    probabilities: dict[WatchStatus, float] = Field(
+        default_factory=dict,
+        description="Jev present/absent/unknown distribution; empty for legacy or invalid answers. Code may override status for source failures.",
+    )
 
 
 class QuestionResult(BaseModel):
     key: str
     question: str
     status: QuestionStatus
-    probability: float = Field(ge=0.0, le=1.0)
+    probability: float = Field(
+        ge=0.0, le=1.0,
+        description="Probability the evidence supports a concrete answer, not probability the answer is yes. Low support does not establish contradictory evidence.",
+    )
 
 
 class EvidenceFinding(BaseModel):
@@ -906,6 +1146,7 @@ class InsightResult(BaseModel):
     evidence_findings: list[EvidenceFinding] = Field(default_factory=list, max_length=500)
     evidence: list[Evidence] = Field(default_factory=list)
     observations: list[Observation] = Field(default_factory=list)
+    analyses: list[AnalysisReport] = Field(default_factory=list, max_length=4000)
     source_keys: list[str] = Field(default_factory=list)
     retrieval: EvidenceBundle | None = None
     context: ContextSnapshot | None = None

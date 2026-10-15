@@ -1,0 +1,474 @@
+{
+  "plans": {
+    "cobalt-market": {
+      "checks": [
+        {
+          "id": "freeze_approved",
+          "kind": "semantic",
+          "condition": "The source text establishes that the migration-freeze exception is approved.",
+          "field": null,
+          "op": null,
+          "threshold": null
+        },
+        {
+          "id": "total_comparable",
+          "kind": "semantic",
+          "condition": "The source text establishes that the total-order population is comparable.",
+          "field": null,
+          "op": null,
+          "threshold": null
+        },
+        {
+          "id": "regional_comparable",
+          "kind": "semantic",
+          "condition": "The source text establishes that the regional population is comparable.",
+          "field": null,
+          "op": null,
+          "threshold": null
+        },
+        {
+          "id": "freeze_unresolved",
+          "kind": "semantic",
+          "condition": "The source text leaves the migration-freeze exception missing or conflicting.",
+          "field": null,
+          "op": null,
+          "threshold": null
+        },
+        {
+          "id": "total_comp_unresolved",
+          "kind": "semantic",
+          "condition": "The source text leaves total-order comparability missing or conflicting.",
+          "field": null,
+          "op": null,
+          "threshold": null
+        },
+        {
+          "id": "regional_comp_unresolved",
+          "kind": "semantic",
+          "condition": "The source text leaves regional comparability missing or conflicting.",
+          "field": null,
+          "op": null,
+          "threshold": null
+        },
+        {
+          "id": "total_decline_ge_10",
+          "kind": "numeric",
+          "condition": "Total comparable settled orders declined by at least the policy threshold.",
+          "field": "total_decline_pct",
+          "op": "ge",
+          "threshold": 10.0
+        },
+        {
+          "id": "regional_decline_ge_15",
+          "kind": "numeric",
+          "condition": "A comparable region declined by at least the policy threshold.",
+          "field": "max_region_decline_pct",
+          "op": "ge",
+          "threshold": 15.0
+        }
+      ],
+      "rules": [
+        {
+          "when": [
+            {
+              "freeze_approved": "true"
+            }
+          ],
+          "outcome": "ignore"
+        },
+        {
+          "when": [
+            {
+              "freeze_unresolved": "true"
+            }
+          ],
+          "outcome": "investigate"
+        },
+        {
+          "when": [
+            {
+              "freeze_approved": "false",
+              "total_comp_unresolved": "true"
+            }
+          ],
+          "outcome": "investigate"
+        },
+        {
+          "when": [
+            {
+              "freeze_approved": "false",
+              "regional_comp_unresolved": "true"
+            }
+          ],
+          "outcome": "investigate"
+        },
+        {
+          "when": [
+            {
+              "freeze_approved": "false",
+              "total_comparable": "false"
+            }
+          ],
+          "outcome": "insufficient_data"
+        },
+        {
+          "when": [
+            {
+              "freeze_approved": "false",
+              "regional_comparable": "false"
+            }
+          ],
+          "outcome": "insufficient_data"
+        },
+        {
+          "when": [
+            {
+              "freeze_approved": "false",
+              "total_comparable": "true",
+              "regional_comparable": "true",
+              "total_decline_ge_10": "true"
+            },
+            {
+              "freeze_approved": "false",
+              "total_comparable": "true",
+              "regional_comparable": "true",
+              "regional_decline_ge_15": "true"
+            }
+          ],
+          "outcome": "notify"
+        },
+        {
+          "when": [
+            {
+              "freeze_approved": "false",
+              "total_comparable": "true",
+              "regional_comparable": "true",
+              "total_decline_ge_10": "unknown"
+            },
+            {
+              "freeze_approved": "false",
+              "total_comparable": "true",
+              "regional_comparable": "true",
+              "regional_decline_ge_15": "unknown"
+            }
+          ],
+          "outcome": "investigate"
+        }
+      ],
+      "default": "investigate"
+    },
+    "maple-mobility": {
+      "checks": [
+        {
+          "id": "exception_conflict",
+          "kind": "semantic",
+          "condition": "The claimed weather-closure exception has conflicting approval or scope.",
+          "field": null,
+          "op": null,
+          "threshold": null
+        },
+        {
+          "id": "exception_covers_week",
+          "kind": "semantic",
+          "condition": "A signed weather-closure exception covers the week.",
+          "field": null,
+          "op": null,
+          "threshold": null
+        },
+        {
+          "id": "on_time_below",
+          "kind": "numeric",
+          "condition": "On-time delivery is below the policy threshold.",
+          "field": "on_time_pct",
+          "op": "lt",
+          "threshold": 92.0
+        },
+        {
+          "id": "cancellation_rise",
+          "kind": "numeric",
+          "condition": "The cancellation rate rise meets the policy threshold.",
+          "field": "cancellation_delta_pp",
+          "op": "ge",
+          "threshold": 2.0
+        }
+      ],
+      "rules": [
+        {
+          "when": [
+            {
+              "exception_conflict": "true"
+            }
+          ],
+          "outcome": "investigate"
+        },
+        {
+          "when": [
+            {
+              "exception_conflict": "unknown"
+            }
+          ],
+          "outcome": "investigate"
+        },
+        {
+          "when": [
+            {
+              "exception_covers_week": "true"
+            }
+          ],
+          "outcome": "ignore"
+        },
+        {
+          "when": [
+            {
+              "exception_covers_week": "unknown"
+            }
+          ],
+          "outcome": "investigate"
+        },
+        {
+          "when": [
+            {
+              "on_time_below": "unknown"
+            }
+          ],
+          "outcome": "insufficient_data"
+        },
+        {
+          "when": [
+            {
+              "cancellation_rise": "unknown"
+            }
+          ],
+          "outcome": "insufficient_data"
+        },
+        {
+          "when": [
+            {
+              "on_time_below": "true",
+              "cancellation_rise": "true"
+            }
+          ],
+          "outcome": "notify"
+        },
+        {
+          "when": [
+            {
+              "on_time_below": "true",
+              "cancellation_rise": "false"
+            }
+          ],
+          "outcome": "ignore"
+        },
+        {
+          "when": [
+            {
+              "on_time_below": "false",
+              "cancellation_rise": "true"
+            }
+          ],
+          "outcome": "ignore"
+        },
+        {
+          "when": [
+            {
+              "on_time_below": "false",
+              "cancellation_rise": "false"
+            }
+          ],
+          "outcome": "ignore"
+        }
+      ],
+      "default": "investigate"
+    },
+    "quartz-care": {
+      "checks": [
+        {
+          "id": "priority_missing_or_conflicting",
+          "kind": "semantic",
+          "condition": "The release priority classification is missing or conflicting in the source text.",
+          "field": null,
+          "op": null,
+          "threshold": null
+        },
+        {
+          "id": "reconciliation_missing_or_conflicting",
+          "kind": "semantic",
+          "condition": "The reconciliation status is missing or conflicting in the source text.",
+          "field": null,
+          "op": null,
+          "threshold": null
+        },
+        {
+          "id": "signed_release_manager_reconciliation",
+          "kind": "semantic",
+          "condition": "The source text states that a signed reconciliation from the release manager exists.",
+          "field": null,
+          "op": null,
+          "threshold": null
+        },
+        {
+          "id": "high_priority_release",
+          "kind": "semantic",
+          "condition": "The release is classified as high priority in the source text.",
+          "field": null,
+          "op": null,
+          "threshold": null
+        },
+        {
+          "id": "missing_signed_reconciliation",
+          "kind": "semantic",
+          "condition": "The source text states that the contract release is missing signed reconciliation.",
+          "field": null,
+          "op": null,
+          "threshold": null
+        },
+        {
+          "id": "routine_release",
+          "kind": "semantic",
+          "condition": "The release is classified as routine in the source text.",
+          "field": null,
+          "op": null,
+          "threshold": null
+        }
+      ],
+      "rules": [
+        {
+          "when": [
+            {
+              "priority_missing_or_conflicting": "true"
+            },
+            {
+              "reconciliation_missing_or_conflicting": "true"
+            }
+          ],
+          "outcome": "insufficient_data"
+        },
+        {
+          "when": [
+            {
+              "priority_missing_or_conflicting": "unknown"
+            },
+            {
+              "reconciliation_missing_or_conflicting": "unknown"
+            }
+          ],
+          "outcome": "investigate"
+        },
+        {
+          "when": [
+            {
+              "priority_missing_or_conflicting": "false",
+              "reconciliation_missing_or_conflicting": "false",
+              "signed_release_manager_reconciliation": "unknown"
+            }
+          ],
+          "outcome": "investigate"
+        },
+        {
+          "when": [
+            {
+              "priority_missing_or_conflicting": "false",
+              "reconciliation_missing_or_conflicting": "false",
+              "signed_release_manager_reconciliation": "false",
+              "high_priority_release": "true",
+              "missing_signed_reconciliation": "true"
+            }
+          ],
+          "outcome": "notify"
+        },
+        {
+          "when": [
+            {
+              "priority_missing_or_conflicting": "false",
+              "reconciliation_missing_or_conflicting": "false",
+              "signed_release_manager_reconciliation": "false",
+              "high_priority_release": "false",
+              "routine_release": "true"
+            }
+          ],
+          "outcome": "ignore"
+        },
+        {
+          "when": [
+            {
+              "priority_missing_or_conflicting": "false",
+              "reconciliation_missing_or_conflicting": "false",
+              "signed_release_manager_reconciliation": "false",
+              "high_priority_release": "unknown"
+            }
+          ],
+          "outcome": "investigate"
+        },
+        {
+          "when": [
+            {
+              "priority_missing_or_conflicting": "false",
+              "reconciliation_missing_or_conflicting": "false",
+              "signed_release_manager_reconciliation": "false",
+              "high_priority_release": "true",
+              "missing_signed_reconciliation": "unknown"
+            }
+          ],
+          "outcome": "investigate"
+        },
+        {
+          "when": [
+            {
+              "priority_missing_or_conflicting": "false",
+              "reconciliation_missing_or_conflicting": "false",
+              "signed_release_manager_reconciliation": "false",
+              "high_priority_release": "false",
+              "routine_release": "unknown"
+            }
+          ],
+          "outcome": "investigate"
+        }
+      ],
+      "default": "notify"
+    }
+  },
+  "episodes": [
+    {
+      "company": "cobalt-market",
+      "phase": "author",
+      "status": "complete",
+      "error": null,
+      "tool_calls": 1,
+      "seconds": 28.13353712501703,
+      "response_timeout_seconds": 180,
+      "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+      "wall_time_overrun_seconds": 0.0,
+      "transport": "codex_cli",
+      "exit_code": 0,
+      "foreign_tools": []
+    },
+    {
+      "company": "maple-mobility",
+      "phase": "author",
+      "status": "complete",
+      "error": null,
+      "tool_calls": 1,
+      "seconds": 29.292948250018526,
+      "response_timeout_seconds": 180,
+      "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+      "wall_time_overrun_seconds": 0.0,
+      "transport": "codex_cli",
+      "exit_code": 0,
+      "foreign_tools": []
+    },
+    {
+      "company": "quartz-care",
+      "phase": "author",
+      "status": "complete",
+      "error": null,
+      "tool_calls": 2,
+      "seconds": 39.67278762499336,
+      "response_timeout_seconds": 180,
+      "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+      "wall_time_overrun_seconds": 0.0,
+      "transport": "codex_cli",
+      "exit_code": 0,
+      "foreign_tools": []
+    }
+  ]
+}

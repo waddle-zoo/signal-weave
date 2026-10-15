@@ -1,0 +1,23 @@
+{
+  "scope": "Earlier native macOS ARM64 candidate: isolated noninteractive setup, MCP handshake, one approved synthetic card using live Jev, and process-restart receipt replay. This is runtime smoke evidence, not human onboarding, comparative agent analysis, or enterprise adoption proof.",
+  "superseded_by": "release-rc2-2026-10-12-native-01293548.json",
+  "version": "0.2.0rc2",
+  "git_commit": "114614ae0ab080e77023ad175bad05d977ea0d4c",
+  "dirty_source": true,
+  "source_sha256": "0745d7ed7475ee54d1c1e7b5483bbb1aba5e2fdc9ab2b70f696e51c1166ac497",
+  "binary_sha256": "ed913b3851fa1fdba6c9d68f2b5ceb7db940c37dff3f490f4125908423d025ef",
+  "standalone_startup": true,
+  "private_setup": true,
+  "default_home_serve": true,
+  "persisted_source_config": true,
+  "offline_doctor": true,
+  "health_alias": true,
+  "agent_config": true,
+  "stdio_tools": 10,
+  "different_cwd": true,
+  "live_jev": true,
+  "live_outcome": "notify",
+  "measured_delta": -20,
+  "process_restart_replay": true,
+  "provider_setup_checks_offline_only": ["jev", "openai-decisions", "chatgpt-plan"]
+}

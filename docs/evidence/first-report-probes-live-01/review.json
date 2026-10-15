@@ -1,0 +1,97 @@
+{
+  "review_type": "independent_counterexample_probe_review",
+  "review_version": "v1",
+  "review_status": "complete",
+  "review_mode": "read_only",
+  "paid_calls_made": false,
+  "additional_model_calls_by_reviewer": 0,
+  "production_files_changed": false,
+  "scope": "Two frozen development counterexample probes only: harbor-help:p04 and northstar-cart:p04.",
+  "generalization_boundary": "This is not a new enterprise holdout and does not change the original eight-case denominator or prior scores.",
+  "frozen_evidence": {
+    "source_freeze_git_revision": "d9c5945906fce387768d10cb5135768a19041565",
+    "manifest_sha256": "01b49ef5607c74135a9bcfb968c247e109eb33bb6d3bdb62f35170860d1696c6",
+    "inputs_sha256": "bd47ab9de14fb4a218bb1dde3787228f89b9377e28963319bda96d384b676ff8",
+    "expected_sha256": "b81f77042f4cc68786be684ccd74dbf6d6d11e13640f6d7bb8f0ed1ab8e0391c",
+    "report_sha256": "b7d63c8b23fe9aa30206c02e091af45d66450d31d3335d3de39c9028201cb924",
+    "events_sha256": "4334c40298e253c6e275eeffa40b34439a3a285fc3cc7fbacdfa44f9b32c2a8"
+  },
+  "budget_and_protocol": {
+    "manifest_protocol": "first-report-counterexample-probes-v1",
+    "probe_ids": [
+      "harbor-help:p04",
+      "northstar-cart:p04"
+    ],
+    "jev_calls": 2,
+    "jev_prior_plus_probe_total": 48,
+    "jev_ceiling": 48,
+    "luna_episodes": 2,
+    "luna_prior_plus_probe_total": 15,
+    "luna_ceiling_recorded": 16,
+    "within_recorded_budget": true,
+    "retries": 0,
+    "primary_scores_replaced": false
+  },
+  "oracle_and_fairness": {
+    "expected_labels_exposed_to_agents": false,
+    "manifest_labels_exposed_to_agent": false,
+    "expected_scope": "parent-only expected labels; excluded from agent inputs",
+    "expected_is_meaningful": "Yes for this synthetic probe: it contains policy basis, source/comparison identity, metric definition, population, periods, numeric totals, contributions, and query references. It is still a fixture-derived parent oracle, not an independent external business source.",
+    "inputs_are_meaningful": "Yes: inputs include the owner-authored policies, p04 source contracts and analytical comparisons, distractor sources with different metric/population definitions, destinations, and the same card/notes for both arms.",
+    "baseline_contract": "compact analysis_refs plus typed Outcome; no Jev result or expected labels",
+    "baseline_fairness": "The compact baseline is judged on factual, policy-complete prose and the supplied compact contract. It is not penalized for lacking the native arm's structured audit appendix; that is a scope difference, not an error.",
+    "event_trace_check": "The 43-event trace contains two Jev probe episodes and two Luna probe episodes, with catalog/inspect_source/submit_report activity for Luna. The only generic use of the word expected in Jev payloads is owner-policy guidance about an expected movement; no expected outcome labels or oracle records appear in agent event payloads."
+  },
+  "independent_recomputation": [
+    {
+      "case": "harbor-help:p04",
+      "source_fact_check": "26 missed tickets / 200 eligible resolved tickets = 0.13 in both closed weekly periods; enterprise and self_serve are both present; absolute change is 0.00.",
+      "policy_application": "The current weighted rate meets the 12% threshold, the 4 percentage-point change threshold does not, and coverage is complete; notify Support Operations.",
+      "expected_match": "Status, outcome, recipient, metric fields, periods, totals, and both zero contributions match the parent expected record.",
+      "baseline_match": "Exact numeric and policy result match.",
+      "native_match": "Exact numeric and policy result match; selected route is support-operations to agent://support-operations.",
+      "causal_check": "The descriptive rate/mix decomposition is not presented as causal."
+    },
+    {
+      "case": "northstar-cart:p04",
+      "source_fact_check": "Completed net sales are $1,000 in both closed weekly periods; total change is $0 and marketplace, store, and web contributions are all $0; population and period coverage are complete.",
+      "policy_application": "Neither the $100 total-change threshold nor the $80 absolute channel-contribution threshold is met; the stated zero-change high-level case is ignore with no recipient.",
+      "expected_match": "Status, outcome, no recipients, metric fields, periods, totals, and all three zero contributions match the parent expected record.",
+      "baseline_match": "Exact numeric and policy result match.",
+      "native_match": "Exact numeric and policy result match; no delivery route is selected.",
+      "causal_check": "No causal mechanism is claimed."
+    }
+  ],
+  "prose_and_readability": {
+    "harbor_help": {
+      "baseline_length_chars": 425,
+      "native_visible_lead_length_chars": 698,
+      "native_full_report_length_chars": 4166,
+      "baseline_assessment": "Strong compact owner prose: it gives 13.0% with numerator/denominator, prior value, absolute change, complete tier coverage, both threshold results, descriptive decomposition, and recipient.",
+      "native_assessment": "Factually bounded and auditable, with route, policy checks, coverage, limitations, and provenance. The visible lead is less decision-complete: it renders 0.13 as a raw ratio, does not state that the current-rate threshold fired while the change threshold did not, and moves the useful policy explanation into a long appendix.",
+      "supported_native_advantage": "Structured auditability and explicit provenance; not a prose or compact-owner-read advantage."
+    },
+    "northstar_cart": {
+      "baseline_length_chars": 220,
+      "native_visible_lead_length_chars": 562,
+      "native_full_report_length_chars": 3333,
+      "baseline_assessment": "Strong compact owner prose: it states zero change, no channel reached $80, complete population/period coverage, and that movement is below notification thresholds.",
+      "native_assessment": "Factually bounded and auditable, with route semantics, policy checks, coverage, limitations, and provenance. The visible lead says $0 movement and shows zero contributors, but does not explicitly state the threshold or coverage conclusion; the appendix carries the checks.",
+      "supported_native_advantage": "Structured auditability and visible quiet-route semantics; no demonstrated arithmetic or prose advantage over the compact baseline."
+    }
+  },
+  "fair_comparison_conclusion": {
+    "supported_advantages": [
+      "The native arm preserves exact source-bound calculations and adds structured policy/evidence/provenance audit detail.",
+      "The native arm selects the correct reporting source despite distractor sources with different metric or population definitions; this is also reflected in the same deterministic analysis supplied to the compact baseline."
+    ],
+    "where_no_advantage_is_proven": [
+      "No native advantage is proven for numeric correctness: both arms match the parent expected records on both probes.",
+      "No native advantage is proven for compact owner prose: the baseline is shorter and states the governing threshold result more directly in both cases.",
+      "No causal conclusion is supported by either decomposition; both remain descriptive accounting.",
+      "These two probes do not establish broader generalization."
+    ],
+    "remaining_quality_note": "The native report is facts-bound and safer than an unsupported narrative, but its owner lead is less useful than the compact baseline unless the reader opens the appendix. The key repair is lead-level policy synthesis, not adding more technical coverage."
+  },
+  "final_conclusion": "Within the frozen two-probe scope, both arms are numerically and policy correct. The compact baseline is fair and materially better as owner-facing prose on these cases; the native arm's supported advantage is structured auditability and route/provenance detail. The probe is a development counterexample check only, with no changed original score and no new holdout evidence."
+}

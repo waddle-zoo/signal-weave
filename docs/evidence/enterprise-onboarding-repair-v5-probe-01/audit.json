@@ -1,0 +1,61 @@
+{
+  "status": "partial_or_failed_probe",
+  "run": "enterprise-onboarding-repair-v5-probe-01",
+  "company": "Juniper Trail Retail",
+  "intended_records": 8,
+  "observed_records": 8,
+  "comparative_eligible": true,
+  "source_revision": "5f908aa52861b43a05518dfa02cd9b424d8dec8c",
+  "dataset_digest": "512d308d24bd5da0b85b8179ebee7c3560036edf08acc3d2d94d6e981ff27be4",
+  "clock_rebased_to": "2026-10-03T05:35:07.995082+00:00",
+  "arms": {
+    "luna_bi": {
+      "onboarding": "1/1",
+      "monitoring_complete": "3/3",
+      "final_outcome": "3/3",
+      "final_recipients": "3/3",
+      "final_provenance": "3/3",
+      "final_exact": "3/3",
+      "native_outcome": "not applicable",
+      "native_recipients": "not applicable",
+      "cold_seconds": 32.085012,
+      "warm_median_seconds": 28.775486,
+      "warm_seconds": 79.447195
+    },
+    "luna_signalweave_jev": {
+      "onboarding": "0/1",
+      "monitoring_complete": "0/3",
+      "final_outcome": "0/3; unassessed",
+      "final_recipients": "0/3; unassessed",
+      "final_provenance": "0/3; unassessed",
+      "final_exact": "0/3; unassessed",
+      "native_outcome": "not reached",
+      "native_recipients": "not reached",
+      "runtime_failures": 4,
+      "safety_unassessed_runs": 3,
+      "cold_seconds": 88.640819,
+      "warm_median_seconds": null,
+      "warm_seconds": 0.000449
+    }
+  },
+  "observed_invocations": {
+    "total_model_invocations": 18,
+    "luna_invocations": 7,
+    "jev_invocations": 11,
+    "owner_review_invocations": 2,
+    "jev_failed_attempts": 1,
+    "unknown_usage_attempts": 1
+  },
+  "archive_sha256": {
+    "report.json.gz": "6fb5c15625c459fde979b855f0508b6c2a8469c24284b2261b51a2171acabd09",
+    "config.json": "cdbfc1320670f423401da0360e2e597a1f7b4f97fc58f9c6fbbc1ba71ada634e",
+    "protocol.json": "1110449be1bd614768c0ba38be9681a38fd680af08e529f2b363dab246ed9b41",
+    "trace.jsonl.gz": "e5f645010da3e03126f043e3e583c04194e9e300b2dba05f82cdf336d5fae8ce"
+  },
+  "limitations": [
+    "Synthetic single-company known-family regression; not a customer study or generalized reliability claim.",
+    "Treatment onboarding did not complete, so treatment monitoring and native/final outcomes are unassessed, not failures of those decisions.",
+    "The preview correctly represented the quiet-period ignore result, but preview is not certification evidence.",
+    "Delivery was disabled shadow execution; no external messages were sent."
+  ]
+}

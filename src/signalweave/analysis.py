@@ -43,13 +43,25 @@ def evidence_statements(observations: Iterable[Observation]) -> list[str]:
         if observation.freshness and "stale" in observation.freshness.lower():
             statements.append(f"{label} is {observation.freshness}.")
             continue
-        if observation.change_pct is None:
-            statements.append(f"{label} has no current comparable value.")
-            continue
-        direction = "increased" if observation.change_pct > 0 else "declined"
-        statement = (
-            f"{label} {direction} {abs(observation.change_pct):.1f}% versus baseline."
-        )
+        unit = f" {observation.unit}" if observation.unit not in {"", "number"} else ""
+        if observation.current is None:
+            statement = f"No current value is available for {label}."
+        elif observation.change_pct is None:
+            statement = f"{label} is currently {observation.current:g}{unit}."
+            if observation.baseline is None:
+                statement += " No comparable baseline is available."
+            else:
+                statement += (
+                    f" The baseline is {observation.baseline:g}{unit}, but relative change "
+                    "is unavailable."
+                )
+        elif observation.change_pct == 0:
+            statement = f"{label} is unchanged versus baseline (0.0%)."
+        else:
+            direction = "increased" if observation.change_pct > 0 else "declined"
+            statement = (
+                f"{label} {direction} {abs(observation.change_pct):.1f}% versus baseline."
+            )
         if observation.dimensions:
             detail = ", ".join(
                 f"{key}={value}" for key, value in observation.dimensions.items()

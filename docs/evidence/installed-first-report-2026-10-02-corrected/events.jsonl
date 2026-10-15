@@ -1,0 +1,12 @@
+{"kind": "paid_attempt", "company": "canyon-freight", "operation": "draft_insight_card", "attempt": 1}
+{"kind": "paid_success", "company": "canyon-freight", "operation": "draft_insight_card"}
+{"kind": "paid_attempt", "company": "canyon-freight", "operation": "preview_investigation_report", "attempt": 2}
+{"kind": "paid_success", "company": "canyon-freight", "operation": "preview_investigation_report"}
+{"kind": "paid_attempt", "company": "helio-support", "operation": "draft_insight_card", "attempt": 3}
+{"kind": "paid_success", "company": "helio-support", "operation": "draft_insight_card"}
+{"kind": "paid_attempt", "company": "helio-support", "operation": "preview_investigation_report", "attempt": 4}
+{"kind": "paid_success", "company": "helio-support", "operation": "preview_investigation_report"}
+{"kind": "paid_attempt", "company": "lattice-energy", "operation": "draft_insight_card", "attempt": 5}
+{"kind": "paid_success", "company": "lattice-energy", "operation": "draft_insight_card"}
+{"kind": "paid_attempt", "company": "lattice-energy", "operation": "preview_investigation_report", "attempt": 6}
+{"kind": "paid_success", "company": "lattice-energy", "operation": "preview_investigation_report"}

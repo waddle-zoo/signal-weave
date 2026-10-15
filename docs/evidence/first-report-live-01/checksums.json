@@ -1,0 +1,17 @@
+{
+  "manifest.json": {
+    "sha256": "4705ae890a083a88c4ba813517242b027cc64d08542dcaa84e9c305f339e3af0",
+    "uncompressed_sha256": "4705ae890a083a88c4ba813517242b027cc64d08542dcaa84e9c305f339e3af0",
+    "bytes": 200461
+  },
+  "report.json": {
+    "sha256": "adb24b0d25d37ab33312e1c7366639c0d4440cb710fae1376f1dbf42451a6b66",
+    "uncompressed_sha256": "adb24b0d25d37ab33312e1c7366639c0d4440cb710fae1376f1dbf42451a6b66",
+    "bytes": 301873
+  },
+  "events.jsonl.gz": {
+    "sha256": "165bb58da54e0c46f40f756d3b314dfdb93ebc4cd4fddfba946c297b5e95228a",
+    "uncompressed_sha256": "bbc772f654ad7ee7182d4cface7516aa2e8ea80adedc2eed5a1a38c955d16b33",
+    "bytes": 78792
+  }
+}

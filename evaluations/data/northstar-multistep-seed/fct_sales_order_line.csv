@@ -1,0 +1,13 @@
+order_date,channel,net_sales
+2026-01-01,Online,100
+2026-01-01,Store,100
+2026-01-01,Mobile,100
+2026-01-01,Marketplace,100
+2026-02-01,Online,102
+2026-02-01,Store,98
+2026-02-01,Mobile,101
+2026-02-01,Marketplace,99
+2026-03-01,Online,104
+2026-03-01,Store,100
+2026-03-01,Mobile,102
+2026-03-01,Marketplace,101

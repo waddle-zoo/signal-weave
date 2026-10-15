@@ -198,6 +198,9 @@ class SupersetAdapter:
                         if isinstance(metric_names, list)
                         else []
                     ),
+                    available_comparison_windows=SupersetClient.comparison_windows_from_metadata(
+                        metadata
+                    ),
                     population=str(metadata.get("population") or ""),
                     grain=str(metadata.get("grain") or ""),
                     lineage=[str(value) for value in metadata.get("lineage", [])]
@@ -232,6 +235,9 @@ class SupersetAdapter:
                     tenant_id=str(item.get("tenant_id") or self.tenant_id or "default"),
                     domain=str(item.get("domain") or "bi"),
                     metric_names=[str(metric) for metric in item.get("metric_names", [])],
+                    available_comparison_windows=SupersetClient.comparison_windows_from_metadata(
+                        item
+                    ),
                     population=str(item.get("population") or ""),
                     grain=str(item.get("grain") or ""),
                     freshness_sla_hours=item.get("freshness_sla_hours"),
@@ -354,6 +360,12 @@ class SupersetAdapter:
             observations=observations,
             evidence=evidence,
             metadata=metadata,
+            contract=ResourceContract(
+                tenant_id=str(self.tenant_id or "default"),
+                domain="bi",
+                available_comparison_windows=list(dashboard.available_comparison_windows),
+                roles=["primary"],
+            ),
             error=("All Superset charts were unavailable: " + "; ".join(chart_errors))
             if chart_errors and not charts_with_observations
             else None,
@@ -413,6 +425,14 @@ class SupersetAdapter:
                 "result_columns": extraction.columns or [],
                 "parameters": source.parameters,
             },
+            contract=ResourceContract(
+                tenant_id=str(chart.get("tenant_id") or self.tenant_id or "default"),
+                domain=str(chart.get("domain") or "bi"),
+                available_comparison_windows=SupersetClient.comparison_windows_from_metadata(
+                    chart
+                ),
+                roles=["primary"],
+            ),
             error=(
                 "; ".join(extraction.notes)
                 if extraction.semantic_status in {"unsupported", "no_data"}

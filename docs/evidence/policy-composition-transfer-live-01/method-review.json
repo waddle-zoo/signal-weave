@@ -1,0 +1,66 @@
+{
+  "scope": "Internal method review of the completed policy-composition transfer trial; reviewed report, manifest, reviewed plans, event journal, trial code, tests, and internal prose review. This review is authored by the plan-repair author and is not a fully independent external review.",
+  "verdict": "FAIL: the composed workflow did not meet the all-cases policy-correctness gate, although the transfer result isolates a confidence-gating failure mode rather than establishing four model-semantic top-1 errors.",
+  "findings": [
+    {
+      "id": "telemetry-integrity",
+      "status": "PASS",
+      "detail": "The frozen transfer contained 12 cases across cobalt-market, maple-mobility, and quartz-care with three reviewed plans. All 6 Luna episodes completed. The journal contains 12 Jev responses and 6 OpenAI responses with zero api.error events. Report and raw-event totals agree: Jev 22,177 input and 2,184 output tokens; OpenAI 545,951 input, 5,706 output, 440,576 cached input, and 758 reasoning-output tokens. Baseline episode time was 111.229564 seconds with 25 tool calls and 12 source reads; composed episode time was 116.104778 seconds with 24 tool calls and 12 source reads. Jev workflow time summed to 2.493407 seconds."
+    },
+    {
+      "id": "structured-results",
+      "status": "FAIL",
+      "detail": "The report summary is baseline 12/12, broad same-response outcome 12/12, and composed gated outcome 8/12. Composed had 2 missed required notifications and 0 false business notifications; the other 2 failures were unnecessary investigations on quiet cases. This is a fresh transfer result, not the prior legacy 12/12 fixture result."
+    },
+    {
+      "id": "confidence-gating-cause",
+      "status": "CONFIRMED-DIAGNOSTIC",
+      "detail": "In the four composed deviations, the selected atomic top-1 answers were aligned with the transfer evidence but fell below the SUPPORT_FLOOR of 0.70. Cobalt regional_comparable selected true with probability 0.63 and was mapped to unknown, producing insufficient_data under the frozen label instead of the regional OR notification; the corrected prose review finds that case's comparability evidence ambiguous, so this is not a definite Cobalt business error. Maple exception_conflict selected false with probabilities 0.57, 0.62, and 0.59 on three no-claim cases; each was mapped to unknown, producing investigate instead of the applicable notify/ignore route. Those three Maple errors remain clear. The missing-cancellation case remained correct because required_metrics_available=false was handled by the earlier explicit data-gap rule."
+    },
+    {
+      "id": "confidence-is-not-truth",
+      "status": "LIMITATION",
+      "detail": "The 0.70 floor is a valid safety-gating policy that turns low-support answers into abstention; it is not evidence that the underlying model answer is false. Lowering or ignoring the threshold post hoc would not repair semantic correctness and would change the safety policy. The transfer establishes a calibration/abstention interaction requiring a separately designed policy experiment, not a threshold-based success claim."
+    },
+    {
+      "id": "broad-narrow-independence",
+      "status": "LIMITATION",
+      "detail": "Each composed case sends the semantic checks and overall_outcome question in one Jev request with the same policy, evidence, compiled plan, and code-computed numeric checks. broad_outcome is another choice from that same response, not an independent Jev call or independent model. Therefore broad 12/12 cannot be interpreted as an independent replication of narrow composition."
+    },
+    {
+      "id": "oracle-ambiguity-sensitivity",
+      "status": "SENSITIVITY",
+      "detail": "The corrected independent prose review found the first Cobalt case ambiguous: f1 states the same weekly total population and f4 states the same settled-order definition, but those facts may not literally establish comparable regional populations. The corrected review accepts both candidate readings and ties. Frozen primary labels remain 12/12 baseline, 12/12 broad, and 8/12 composed; excluding that disputed case yields 11/11 baseline, 11/11 broad, and 8/11 composed. This is a research transparency sensitivity, not a primary-label rescore, and the Cobalt case must not be presented as a definite false data-gap judgment."
+    },
+    {
+      "id": "numeric-and-plan-context",
+      "status": "PASS-WITH-LIMITATION",
+      "detail": "Both baseline and composed writers received the new transfer policy, compiled plan, public facts, and exact code-computed numeric checks. Only the composed writer received the authoritative workflow result. The trial therefore tests plan-mediated composition and writer adherence, but not a separate latency or error comparison between independently executed broad and narrow Jev calls."
+    },
+    {
+      "id": "prose-boundary",
+      "status": "LIMITATION",
+      "detail": "The corrected independent prose review assessed baseline versus composed narratives only; it marked all 12 baseline narratives usable and 8/12 composed narratives usable. The first Cobalt case was accepted for both candidates with a tie because its regional-comparability evidence is ambiguous. A fourth composed prose failure, on the missing-cancellation case, had the correct structured insufficient_data/data-owner result but added an unsupported exception caveat. There was no separate broad-Jev writer arm: broad_outcome was not passed to the writer. The prose review is internal AI review, not human preference measurement or external peer review; the initial review is archived separately."
+    },
+    {
+      "id": "process-and-scope",
+      "status": "LIMITATION",
+      "detail": "The reviewed plans were directly repaired before this transfer and validated with abstract truth-vector tests. This was not raw unattended first-shot onboarding. The transfer uses synthetic facts, code-computed metrics, one sample per case, bounded local transport, and no production side effects; it does not prove production reliability, human toil savings, or enterprise generalization."
+    }
+  ],
+  "admissible_claims": [
+    "On this frozen 12-case transfer, baseline Luna and the same-response broad Jev outcome both scored 12/12, while the composed confidence-gated workflow scored 8/12.",
+    "Under the frozen labels, the composed workflow had two missed required notifications and unnecessarily investigated two quiet cases, with no false business notifications in this sample; one of the two frozen missed-notification labels is the disputed first Cobalt case and is not a definite business error.",
+    "The observed composed deviations are consistent with confidence gating: four selected atomic top-1 answers were below the 0.70 support floor and became unknown; the three Maple deviations are clear, while the first Cobalt label is semantically ambiguous.",
+    "Excluding the disputed first Cobalt case as a sensitivity analysis leaves baseline and broad at 11/11 and composed at 8/11; this does not replace the frozen primary result.",
+    "The reviewed plans and exact numeric checks were frozen before runtime case processing, and all 12 Jev calls completed without provider errors."
+  ],
+  "rejected_claims": [
+    "Do not claim composed semantic correctness, Jev semantic reliability, or a repaired benchmark from the 8/12 result.",
+    "Do not claim broad 12/12 is an independent control or independent Jev replication; broad and narrow judgments shared one Jev request.",
+    "Do not claim that lowering, removing, or post-hoc ignoring the 0.70 confidence floor fixes the workflow.",
+    "Do not claim the first Cobalt transfer case proves a definite regional-comparability data gap or definite missed business alert; the corrected prose review accepts both readings and ties.",
+    "Do not compare this transfer 12/12 baseline to the prior legacy 12/12 result as if they were the same fixture or a production control.",
+    "Do not claim end-to-end broad-Jev prose quality, human preference, human hours saved, cost savings, or production readiness from this artifact."
+  ]
+}

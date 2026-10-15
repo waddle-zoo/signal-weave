@@ -4,11 +4,13 @@ from types import SimpleNamespace
 import pytest
 
 from evaluations.cases import load_evaluation_cases
+from signalweave.compiler import base_plan
 from signalweave.engine import EvaluationPayloadError, InsightEngine
 from signalweave.models import (
     ContextFact,
     ContextSnapshot,
     DeliveryMethod,
+    Evidence,
     InsightCard,
     InsightPlan,
     InsightResult,
@@ -88,6 +90,16 @@ class JevTestDouble:
             rationale="Test double result from the checked-in labeled case.",
             confidence=0.99,
             probabilities={case.expected_outcome: 0.99, "other": 0.01},
+            # These labeled-case routing tests assume answered semantic checks.
+            # Missing/unknown answers are exercised in test_evidence_admission_policy.
+            question_results=[
+                {"key": f"question_{i}", "question": question, "status": "supported", "probability": 0.99}
+                for i, question in enumerate(card.questions)
+            ],
+            watch_results=[
+                {"key": f"watch_{i}", "watch_for": watch, "status": "present", "probability": 0.99}
+                for i, watch in enumerate(card.watch_for)
+            ],
             delivery_methods=[
                 method
                 for method in card.delivery_methods
@@ -173,6 +185,55 @@ async def test_seasonal_movement_is_ignored():
     assert run.result.delivery_methods == []
 
 
+async def test_quiet_outcome_suppresses_stored_quiet_route():
+    class IgnoreJudger(SafetyTestDouble):
+        async def judge(self, state, card, plan, observations):
+            result = await super().judge(state, card, plan, observations)
+            return result.model_copy(update={"outcome": Outcome.IGNORE, "confidence": 0.99})
+
+    source = SourceRef(
+        key="quiet-source",
+        adapter="sql",
+        resource="query:metric",
+        label="Quiet metric",
+    )
+    card = card_for(
+        card_id="card-quiet-route",
+        title="Quiet route",
+        source=source,
+        delivery_methods=[
+            DeliveryMethod(
+                key="audit",
+                outcome=Outcome.IGNORE,
+                label="Audit log",
+                destination="audit://quiet",
+            )
+        ],
+    )
+    resource = ResourceSnapshot(
+        source_key=source.key,
+        adapter=source.adapter,
+        resource=source.resource,
+        title=source.label,
+        observations=[
+            Observation(
+                source_key=source.key,
+                subject_id="metric",
+                subject_label="Metric",
+                metric="metric",
+                current=100,
+                baseline=100,
+                change_pct=0,
+            )
+        ],
+    )
+
+    run = await InsightEngine(IgnoreJudger()).evaluate(card, [resource])
+
+    assert run.result.outcome == Outcome.IGNORE
+    assert run.result.delivery_methods == []
+
+
 async def test_evaluation_emits_shadow_telemetry_for_jev_and_source_work():
     class MeteredJev(SafetyTestDouble):
         def __init__(self):
@@ -236,6 +297,8 @@ async def test_evaluation_emits_shadow_telemetry_for_jev_and_source_work():
     assert telemetry.source_count == 1
     assert telemetry.observation_count == 1
     assert telemetry.evidence_count >= 1
+    # This is an alternate test judger, not the production Jev adapter; its
+    # explicit compile hook remains part of the generic InsightJudger protocol.
     assert telemetry.jev_requests == 2
     assert telemetry.jev_input_tokens == 360
     assert telemetry.jev_output_tokens == 24
@@ -429,6 +492,119 @@ async def test_context_cannot_substitute_for_a_missing_required_source():
     assert any("could not be retrieved" in item.statement for item in run.result.evidence)
 
 
+@pytest.mark.parametrize(
+    ("status_key", "status_value"),
+    [
+        ("exception_status", "unresolved"),
+        ("resolution_status", "unknown"),
+        ("status", "ambiguous"),
+    ],
+)
+async def test_unresolved_required_context_cannot_authorize_automatic_action(
+    status_key, status_value
+):
+    class NotifyJudger(SafetyTestDouble):
+        async def judge(self, state, card, plan, observations):
+            result = await super().judge(state, card, plan, observations)
+            return result.model_copy(update={"outcome": Outcome.NOTIFY, "confidence": 0.99})
+
+    source = SourceRef(
+        key="owner-context",
+        adapter="company-mcp",
+        resource="record:exceptions",
+        label="Owner context",
+        required=True,
+    )
+    card = card_for(
+        card_id=f"card-unresolved-{status_key}",
+        title="Context-sensitive route",
+        source=source,
+        delivery_methods=[
+            DeliveryMethod(
+                key="ops",
+                outcome=Outcome.NOTIFY,
+                label="Operations",
+                destination="slack://ops",
+            ),
+            DeliveryMethod(
+                key="data",
+                outcome=Outcome.INVESTIGATE,
+                label="Data review",
+                destination="slack://data",
+            ),
+        ],
+    )
+    resource = ResourceSnapshot(
+        source_key=source.key,
+        adapter=source.adapter,
+        resource=source.resource,
+        title=source.label,
+        evidence=[
+            Evidence(
+                source_key=source.key,
+                subject_id="closed-period",
+                subject_label="Closed period context",
+                statement="The source is reachable but the required context is unresolved.",
+                values={status_key: status_value},
+            )
+        ],
+    )
+
+    run = await InsightEngine(NotifyJudger()).evaluate(card, [resource])
+
+    assert run.result.outcome == Outcome.INVESTIGATE
+    assert [method.key for method in run.result.delivery_methods] == ["data"]
+    assert "unresolved semantic context" in run.result.rationale
+
+
+async def test_resolved_required_context_does_not_block_automatic_action():
+    class NotifyJudger(SafetyTestDouble):
+        async def judge(self, state, card, plan, observations):
+            result = await super().judge(state, card, plan, observations)
+            return result.model_copy(update={"outcome": Outcome.NOTIFY, "confidence": 0.99})
+
+    source = SourceRef(
+        key="owner-context-resolved",
+        adapter="company-mcp",
+        resource="record:exceptions",
+        label="Owner context",
+        required=True,
+    )
+    card = card_for(
+        card_id="card-resolved-context",
+        title="Resolved context route",
+        source=source,
+        delivery_methods=[
+            DeliveryMethod(
+                key="ops",
+                outcome=Outcome.NOTIFY,
+                label="Operations",
+                destination="slack://ops",
+            )
+        ],
+    )
+    resource = ResourceSnapshot(
+        source_key=source.key,
+        adapter=source.adapter,
+        resource=source.resource,
+        title=source.label,
+        evidence=[
+            Evidence(
+                source_key=source.key,
+                subject_id="closed-period",
+                subject_label="Closed period context",
+                statement="No approved exception covers the exact closed period.",
+                values={"exception_status": "none"},
+            )
+        ],
+    )
+
+    run = await InsightEngine(NotifyJudger()).evaluate(card, [resource])
+
+    assert run.result.outcome == Outcome.NOTIFY
+    assert [method.key for method in run.result.delivery_methods] == ["ops"]
+
+
 async def test_ambiguous_source_cannot_take_an_automatic_route():
     class AmbiguousNotifyJudger(SafetyTestDouble):
         async def judge(self, state, card, plan, observations):
@@ -492,7 +668,7 @@ async def test_low_confidence_notify_is_safely_downgraded():
     assert run.result.delivery_methods == []
 
 
-async def test_missing_baseline_is_not_treated_as_ignore():
+async def test_missing_baseline_preserves_investigation_instead_of_forcing_insufficient_data():
     source = SourceRef(
         key="current-source",
         adapter="sql",
@@ -521,7 +697,91 @@ async def test_missing_baseline_is_not_treated_as_ignore():
         ],
     )
     run = await InsightEngine(SafetyTestDouble()).evaluate(card, [resource])
-    assert run.result.outcome == Outcome.INSUFFICIENT_DATA
+    assert run.result.outcome == Outcome.INVESTIGATE
+    assert run.result.observations[0].baseline is None
+
+
+async def test_current_level_policy_can_notify_without_an_implicit_trend_requirement():
+    source = SourceRef(
+        key="current-source",
+        adapter="sql",
+        resource="query:current",
+        label="Current value query",
+    )
+    card = card_for(
+        card_id="card-current-level",
+        title="Current level threshold",
+        source=source,
+        decision_guidance="Notify Operations when the current backlog exceeds 90.",
+        delivery_methods=[DeliveryMethod(
+            key="operations",
+            outcome=Outcome.NOTIFY,
+            label="Operations",
+            destination="slack://operations",
+        )],
+    )
+    resource = ResourceSnapshot(
+        source_key=source.key,
+        adapter=source.adapter,
+        resource=source.resource,
+        title=source.label,
+        observations=[Observation(
+            source_key=source.key,
+            subject_id="backlog",
+            subject_label="Current backlog",
+            metric="backlog",
+            current=100,
+        )],
+    )
+
+    class NotifyCurrentLevel(SafetyTestDouble):
+        async def judge(self, state, card, plan, observations):
+            result = await super().judge(state, card, plan, observations)
+            return result.model_copy(update={"outcome": Outcome.NOTIFY, "confidence": 0.99})
+
+    result = (await InsightEngine(NotifyCurrentLevel()).evaluate(card, [resource])).result
+    assert result.outcome == Outcome.NOTIFY
+    assert [method.key for method in result.delivery_methods] == ["operations"]
+    assert result.observations[0].baseline is None
+
+
+async def test_explicit_required_comparison_still_blocks_without_that_comparison():
+    source = SourceRef(
+        key="current-source",
+        adapter="sql",
+        resource="query:current",
+        label="Current value query",
+        required_comparison_keys=["month-over-month"],
+    )
+    card = card_for(
+        card_id="card-required-comparison",
+        title="Required monthly comparison",
+        source=source,
+        delivery_methods=[DeliveryMethod(
+            key="operations",
+            outcome=Outcome.NOTIFY,
+            label="Operations",
+            destination="slack://operations",
+        )],
+    )
+    resource = ResourceSnapshot(
+        source_key=source.key,
+        adapter=source.adapter,
+        resource=source.resource,
+        title=source.label,
+        observations=[Observation(
+            source_key=source.key,
+            subject_id="backlog",
+            subject_label="Current backlog",
+            metric="backlog",
+            current=100,
+        )],
+    )
+
+    result = (await InsightEngine(SafetyTestDouble()).evaluate(card, [resource])).result
+    assert result.outcome == Outcome.INSUFFICIENT_DATA
+    assert result.delivery_methods == []
+    assert "unavailable" in result.rationale
 
 
 async def test_unavailable_comparison_window_preserves_adapter_baseline():
@@ -562,9 +822,11 @@ async def test_unavailable_comparison_window_preserves_adapter_baseline():
         ],
     )
     run = await InsightEngine(TrailingWindowJudger()).evaluate(card, [resource])
+    # Without an adapter comparison contract, a raw previous-period baseline
+    # is not enough to claim that the requested trailing window was evaluated.
     assert run.result.outcome == Outcome.INVESTIGATE
-    assert run.result.observations[0].baseline == 100
-    assert run.result.observations[0].change_pct == 10
+    assert run.result.observations[0].baseline is None
+    assert run.result.observations[0].change_pct is None
 
 
 async def test_source_failure_is_not_treated_as_ignore():
@@ -887,7 +1149,7 @@ async def test_partial_quality_blocks_before_incomplete_follow_up_plan():
     run = await InsightEngine(NotifyFollowUp()).evaluate(card, [resource])
 
     assert run.result.evidence_plan is not None
-    assert run.result.evidence_plan.status == "incomplete"
+    assert run.result.evidence_plan.status == "blocked"
     assert run.result.outcome == Outcome.INSUFFICIENT_DATA
     assert run.result.delivery_methods == []
     assert any("1 quality issue(s)" in item.statement for item in run.result.evidence)
@@ -1278,7 +1540,9 @@ async def test_stored_compiled_plan_is_used_without_recompiling():
         ],
     )
     run = await InsightEngine(CompileMustNotRun()).evaluate(card, [resource])
-    assert run.plan == plan
+    current = base_plan(card)
+    assert run.plan == current
+    assert plan.evidence_slots == []  # Stored cache is not mutated or trusted for admission.
 
 
 def test_card_rejects_compiled_plan_from_another_version():
@@ -1374,7 +1638,11 @@ async def test_unfamiliar_metric_flows_through_without_metric_specific_logic():
         ],
     )
     run = await InsightEngine(SafetyTestDouble()).evaluate(card, [resource])
-    assert run.plan.capabilities == ["percent_change", "baseline_comparison", "freshness_check"]
+    assert run.plan.capabilities == [
+        "percent_change",
+        "baseline_comparison",
+        "freshness_check",
+    ]
     assert run.result.observations[0].metric == "p95_api_latency"
     assert run.result.evidence[0].values["change_pct"] == 80
 

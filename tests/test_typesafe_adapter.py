@@ -17,7 +17,12 @@ from signalweave.models import (
     ResourceDescriptor,
     SourceRef,
 )
-from signalweave.typesafe_adapter import JevJudger, JevPayloadError, load_api_key
+from signalweave.typesafe_adapter import (
+    JevJudger,
+    JevPayloadError,
+    estimate_json_tokens,
+    load_api_key,
+)
 
 
 class FakeNoul:
@@ -79,12 +84,15 @@ class FakeResponse:
                     probabilities={"driver": 0.91, "unknown": 0.04},
                 )
                 continue
+            if key.startswith("watch_"):
+                self.choices[key] = SimpleNamespace(
+                    choice="present", probabilities={"present": .91, "absent": .04, "unknown": .05},
+                )
+                continue
             if key == "resource_0":
                 probability = 0.91
             elif key.startswith("resource_"):
                 probability = 0.08
-            elif key.startswith("watch_"):
-                probability = 0.91
             elif key.startswith("question_"):
                 probability = 0.83
             elif key.startswith("use_"):
@@ -115,6 +123,53 @@ class FakeClient:
     async def system_one(self, *, state, questions):
         self.calls.append({"state": state, "questions": questions})
         return FakeResponse(questions)
+
+
+async def test_low_confidence_rationale_separates_jev_selection_from_code_fallback(monkeypatch):
+    async def transport(self, **kwargs):
+        return SimpleNamespace(
+            choices={"outcome": SimpleNamespace(choice="insufficient_data", probabilities={
+                "ignore": .31, "investigate": .0, "insufficient_data": .69,
+            })}, nouls={}, usage=None,
+        )
+
+    monkeypatch.setattr(JevJudger, "_system_one_with_retry", transport)
+    card = InsightCard(id="uncertain", title="Uncertain evidence", what_to_watch="Supplied context",
+                       why_watch="Review before action", sources=[], action_confidence_threshold=.7)
+    result = await JevJudger(api_key="offline-test").judge({"evidence": []}, card, base_plan(card), [])
+    assert result.outcome == Outcome.INVESTIGATE
+    assert result.probabilities["investigate"] == 0
+    assert result.confidence == .69
+    assert "selected=insufficient_data, support=0.69" in result.rationale
+    assert "routed=investigate" in result.rationale
+    assert "confidence threshold" in result.rationale
+
+
+async def test_computed_contribution_contract_and_action_criteria_are_policy_bound(monkeypatch):
+    FakeClient.calls = []
+    monkeypatch.setattr(typesafe_sdk, "AsyncTypeSafeClient", FakeClient)
+    card = InsightCard(
+        id="generic", title="Capacity review", what_to_watch="Capacity by segment",
+        why_watch="Apply the configured policy", sources=[],
+        decision_guidance="Only notify when the total changes; segment changes alone are advisory.",
+        delivery_methods=[DeliveryMethod(key="team", label="Capacity team", outcome=Outcome.NOTIFY,
+                                         destination="agent://team")])
+    original = {"analyses": [{"delta": 0, "contributions": []}], "card": card.model_dump(mode="json"), "evidence": []}
+    await JevJudger(api_key="offline-test").judge(original, card, base_plan(card), [])
+    call = FakeClient.calls[0]
+    assert "computed_analysis_semantics" not in original
+    meanings = call["state"]["computed_analysis_semantics"]
+    assert "not a percentage share" in meanings["contribution"]
+    assert "not any single segment" in meanings["within_effect"]
+    assert "change in group weights" in meanings["mix_effect"]
+    assert "not automatically an action trigger" in meanings["policy"]
+    criterion = call["questions"]["outcome"].criteria["notify"]
+    assert "card.decision_guidance" in call["questions"]["outcome"].instructions
+    assert "thresholds, exceptions, and fallback exactly" in criterion
+    assert "a configured route is not a trigger" in criterion
+    assert call["state"]["card"]["decision_guidance"] == card.decision_guidance
+    assert call["state"]["card"]["delivery_methods"][0]["label"] == "Capacity team"
+    assert card.action_confidence_threshold == .7
 
 
 @pytest.mark.parametrize("value", ["replace-me", "placeholder", "your-typesafe-key"])
@@ -235,6 +290,7 @@ async def test_jev_always_pins_the_production_model(monkeypatch):
     )
 
     assert CapturingClient.init_kwargs[-1]["model"] == "jev-latest"
+    assert CapturingClient.init_kwargs[-1]["retry"].max_retries == 0
 
 
 @pytest.mark.asyncio
@@ -353,11 +409,53 @@ async def test_jev_classifies_bounded_resource_roles_with_probabilities(monkeypa
 
 
 @pytest.mark.asyncio
+async def test_jev_role_batch_preflight_uses_the_real_question_shape(monkeypatch):
+    """Role classification cannot bypass the token guard with short probe text."""
+    FakeClient.calls = []
+    monkeypatch.setattr(typesafe_sdk, "AsyncTypeSafeClient", FakeClient)
+    monkeypatch.setattr(typesafe_sdk, "Choice", FakeScore)
+    judger = JevJudger(
+        api_key="synthetic-test-key",
+        timeout=3,
+        max_retries=0,
+        max_input_tokens=3_000,
+    )
+    resources = [
+        ResourceDescriptor(
+            adapter="preset",
+            resource=f"dashboard:{index}",
+            kind="dashboard",
+            title=f"Dashboard {index}",
+            description="dashboard context " * 20,
+            metadata={"catalog_note": "n" * 700, "scope": f"scope-{index}"},
+        )
+        for index in range(40)
+    ]
+
+    roles = await judger.classify_resource_roles("Understand business risk", resources)
+
+    assert len(roles) == len(resources)
+    request_tokens = [
+        estimate_json_tokens(
+            {
+                "state": call["state"],
+                "questions": judger._question_budget_payload(call["questions"]),
+            }
+        )
+        for call in FakeClient.calls
+    ]
+    assert len(FakeClient.calls) > 1
+    assert max(request_tokens) <= judger.max_input_tokens
+
+
+@pytest.mark.asyncio
 async def test_jev_compiles_and_judges_free_form_card_items(monkeypatch):
     FakeClient.calls = []
     monkeypatch.setattr(typesafe_sdk, "AsyncTypeSafeClient", FakeClient)
     monkeypatch.setattr(typesafe_sdk, "Noul", FakeNoul)
-    judger = JevJudger(api_key="synthetic-test-key", timeout=3)
+    judger = JevJudger(
+        api_key="synthetic-test-key", timeout=3, evidence_role_classification=True
+    )
     source = SourceRef(
         key="sales-signals",
         adapter="superset",
@@ -433,6 +531,9 @@ async def test_jev_compiles_and_judges_free_form_card_items(monkeypatch):
     assert result.watch_results[0].status.value == "present"
     assert result.question_results[0].status.value == "supported"
     assert result.observations == [observation]
+    # Explicit role classification is an opt-in diagnostic path. The normal
+    # product path sends Jev the frontier agent's evidence for one final policy
+    # judgment instead of asking it to analyze each observation.
     assert len(FakeClient.calls) == 2
     judge_call = FakeClient.calls[1]
     assert set(judge_call["questions"]) == {
@@ -442,8 +543,8 @@ async def test_jev_compiles_and_judges_free_form_card_items(monkeypatch):
         "outcome",
     }
     assert result.evidence_findings[0].role == "driver"
-    assert judge_call["state"]["insight_card"]["what_to_watch"] == card.what_to_watch
-    assert judge_call["state"]["insight_card"]["questions"] == card.questions
+    assert judge_call["state"]["card"]["what_to_watch"] == card.what_to_watch
+    assert "insight_card" not in judge_call["state"]
     assert "owner-authored card guidance" in judge_call["questions"]["outcome"].criteria["ignore"]
 
 
@@ -505,7 +606,9 @@ async def test_jev_bounded_judgment_returns_typed_evidence_findings(monkeypatch)
     FakeClient.calls = []
     monkeypatch.setattr(typesafe_sdk, "AsyncTypeSafeClient", FakeClient)
     monkeypatch.setattr(typesafe_sdk, "Noul", FakeNoul)
-    judger = JevJudger(api_key="synthetic-test-key", timeout=3)
+    judger = JevJudger(
+        api_key="synthetic-test-key", timeout=3, evidence_role_classification=True
+    )
     source = SourceRef(
         key="anchor", adapter="superset", resource="dashboard:exec", label="Executive"
     )
@@ -544,3 +647,108 @@ async def test_jev_bounded_judgment_returns_typed_evidence_findings(monkeypatch)
     assert result.evidence_findings[0].role == "driver"
     assert result.evidence_findings[0].probability == 0.91
     assert "evidence_0" in FakeClient.calls[0]["questions"]
+
+
+@pytest.mark.asyncio
+async def test_jev_wide_dashboard_chunks_input_and_keeps_all_evidence_findings(monkeypatch):
+    """A wide connector snapshot must not become one provider-context request."""
+    FakeClient.calls = []
+    monkeypatch.setattr(typesafe_sdk, "AsyncTypeSafeClient", FakeClient)
+    judger = JevJudger(
+        api_key="synthetic-test-key",
+        timeout=3,
+        max_retries=0,
+        max_input_tokens=3_000,
+        evidence_role_classification=True,
+    )
+    source = SourceRef(
+        key="wide-dashboard",
+        adapter="preset",
+        resource="dashboard:wide",
+        label="Wide dashboard",
+    )
+    card = InsightCard(
+        id="wide-dashboard-card",
+        title="Wide dashboard review",
+        what_to_watch="Material business movement and the evidence that explains it.",
+        why_watch="Notify the owner when trustworthy evidence warrants action.",
+        watch_for=["A material condition is present."],
+        questions=["What changed and what explains it?"],
+        decision_guidance="Notify when evidence is material and trustworthy; investigate otherwise.",
+        sources=[source],
+        delivery_methods=[
+            DeliveryMethod(
+                key="owner",
+                outcome=Outcome.NOTIFY,
+                label="Owner",
+                destination="agent://owner",
+            )
+        ],
+    )
+    observations = [
+        Observation(
+            source_key=source.key,
+            subject_id=f"chart-{index}",
+            subject_label=f"Chart {index}",
+            metric=f"metric-{index % 12}",
+            current=100 + index,
+            baseline=90 + index,
+            change_pct=10.0,
+            dimensions={"region": f"region-{index % 6}"},
+            attributes={"connector_payload": "x" * 1_500},
+        )
+        for index in range(48)
+    ]
+    state = {
+        "card": card.execution_payload(),
+        "insight_card": card.execution_payload(),
+        "insight_plan": base_plan(card).model_dump(mode="json"),
+        "sources": [
+            {
+                "source_key": source.key,
+                "adapter": source.adapter,
+                "resource": source.resource,
+                "title": source.label,
+                "metadata": {"raw_connector_error": "e" * 100_000},
+            }
+        ],
+        "observations": [item.model_dump(mode="json") for item in observations],
+        "evidence": [
+            {
+                "source_key": source.key,
+                "subject_id": item.subject_id,
+                "subject_label": item.subject_label,
+                "statement": "detail " * 100,
+                "values": {"metric": item.metric},
+                "source_url": "https://provider.example/" + "u" * 500,
+            }
+            for item in observations
+        ],
+        "analyses": [
+            {"source_key": source.key, "metric": f"metric-{index}", "delta": index}
+            for index in range(24)
+        ],
+        "source_errors": [],
+        "context": None,
+        "numeric_conditions": [],
+    }
+
+    result = await judger.judge(state, card, base_plan(card), observations)
+
+    request_tokens = [
+        estimate_json_tokens(
+            {
+                "state": call["state"],
+                "questions": judger._question_budget_payload(call["questions"]),
+            }
+        )
+        for call in FakeClient.calls
+    ]
+    final_call = FakeClient.calls[-1]
+    assert len(FakeClient.calls) > 2
+    assert max(request_tokens) <= judger.max_input_tokens
+    assert len(result.evidence_findings) == len(observations)
+    assert "evidence_rollup" in final_call["state"]
+    assert "observations" not in final_call["state"]
+    assert "evidence" not in final_call["state"]
+    assert final_call["state"]["evidence_rollup"]["classified_count"] == len(observations)

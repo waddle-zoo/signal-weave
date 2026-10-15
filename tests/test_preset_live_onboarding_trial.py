@@ -169,7 +169,7 @@ async def test_live_trial_requires_explicit_approval_before_shadow(monkeypatch, 
     monkeypatch.setattr(
         trial,
         "create_mcp",
-        lambda runtime: FakeServer(
+        lambda runtime, profile="full": FakeServer(
             {
                 "onboard_insight_card": onboard,
                 "approve_insight_card": approve,
@@ -257,7 +257,7 @@ async def test_live_trial_accepts_only_jev_delivery_disabled_shadow(monkeypatch,
     async def evaluate(*args, **kwargs):
         metrics.requests += 1
         provider_client.requests_made += 1
-        provider_client.request_path_counts["/api/v1/chart/1/data"] = 1
+        provider_client.request_path_counts["/api/v1/chart/1/data/"] = 1
         return {
             "result": {
                 "outcome": "notify",
@@ -319,7 +319,7 @@ async def test_live_trial_accepts_only_jev_delivery_disabled_shadow(monkeypatch,
     monkeypatch.setattr(
         trial,
         "create_mcp",
-        lambda runtime: FakeServer(
+        lambda runtime, profile="full": FakeServer(
             {
                 "approve_insight_card": approve,
                 "evaluate_insight_card": replay_evaluate,
@@ -387,7 +387,7 @@ async def test_live_trial_auto_detects_custom_sole_preset_adapter(monkeypatch):
     monkeypatch.setattr(
         trial,
         "create_mcp",
-        lambda runtime: FakeServer({"onboard_insight_card": onboard}),
+        lambda runtime, profile="full": FakeServer({"onboard_insight_card": onboard}),
     )
 
     await trial.run_trial(

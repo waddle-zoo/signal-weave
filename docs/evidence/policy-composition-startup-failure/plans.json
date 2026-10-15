@@ -1,0 +1,47 @@
+{
+  "plans": {},
+  "episodes": [
+    {
+      "company": "cobalt-market",
+      "phase": "author",
+      "status": "failed",
+      "error": "codex_exit",
+      "tool_calls": 0,
+      "seconds": 0.43644779204623774,
+      "response_timeout_seconds": 180,
+      "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+      "wall_time_overrun_seconds": 0.0,
+      "transport": "codex_cli",
+      "exit_code": 1,
+      "foreign_tools": []
+    },
+    {
+      "company": "maple-mobility",
+      "phase": "author",
+      "status": "failed",
+      "error": "codex_exit",
+      "tool_calls": 0,
+      "seconds": 0.3273888339754194,
+      "response_timeout_seconds": 180,
+      "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+      "wall_time_overrun_seconds": 0.0,
+      "transport": "codex_cli",
+      "exit_code": 1,
+      "foreign_tools": []
+    },
+    {
+      "company": "quartz-care",
+      "phase": "author",
+      "status": "failed",
+      "error": "codex_exit",
+      "tool_calls": 0,
+      "seconds": 0.40876879199640825,
+      "response_timeout_seconds": 180,
+      "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+      "wall_time_overrun_seconds": 0.0,
+      "transport": "codex_cli",
+      "exit_code": 1,
+      "foreign_tools": []
+    }
+  ]
+}

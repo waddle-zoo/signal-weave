@@ -14,7 +14,8 @@ deployment must establish a data policy before using company data.
 ## Defenses in the repository
 
 - Set `SIGNALWEAVE_API_TOKEN` outside the repository to protect MCP HTTP traffic;
-  `/healthz` remains public for liveness. The CLI refuses unauthenticated
+  `/healthz` and the non-secret `/readyz` remain public for container
+  orchestration. The CLI refuses unauthenticated
   streamable HTTP unless `SIGNALWEAVE_ALLOW_INSECURE_HTTP=1` is explicitly set
   for an isolated test.
 - For a shared deployment, set `SIGNALWEAVE_AUTH_MODE=oidc` and configure

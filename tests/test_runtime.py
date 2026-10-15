@@ -22,14 +22,14 @@ def test_runtime_requires_jev_credentials_by_default(monkeypatch):
 
 
 def test_runtime_rejects_non_jev_mode():
-    with pytest.raises(ValueError, match="only supports TYPESAFE_MODE=jev"):
+    with pytest.raises(ValueError, match="decision provider must be jev, openai-decisions, chatgpt-plan, or agent"):
         build_runtime(mode="other")
 
 
 def test_runtime_rejects_non_jev_environment_mode(monkeypatch):
     monkeypatch.setenv("TYPESAFE_MODE", "heuristic")
 
-    with pytest.raises(ValueError, match="only supports TYPESAFE_MODE=jev"):
+    with pytest.raises(ValueError, match="decision provider must be jev, openai-decisions, chatgpt-plan, or agent"):
         build_runtime()
 
 

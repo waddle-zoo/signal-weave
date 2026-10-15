@@ -78,13 +78,22 @@ def audit_report(report: dict[str, Any], fixture: dict[str, Any]) -> dict[str, A
             findings.append(_finding("error", "initial stage exposed leadership delivery before the required next step", scenario_id=scenario_id))
         if final_expected in {"investigate", "insufficient_data"} and "leadership" in final.get("delivery_method_keys", []):
             findings.append(_finding("error", "unresolved final stage exposed leadership delivery", scenario_id=scenario_id))
-        fact_count = len(scenario.get("diagnostic_facts", []))
+        fact_count = len(scenario.get("diagnostic_facts", [])) + len(
+            scenario.get("additional_diagnostic_facts") or []
+        )
         if fact_count and final.get("context_evidence_count") != fact_count:
             findings.append(_finding("error", "final result did not return every supplied diagnostic fact as context evidence", scenario_id=scenario_id))
         if not fact_count and final != initial:
             findings.append(_finding("error", "terminal single-step result changed between initial and final views", scenario_id=scenario_id))
         if not row.get("initial_safe") or not row.get("context_returned"):
             findings.append(_finding("error", "report safety/integrity flag is false", scenario_id=scenario_id))
+        for check in row.get("observation_coverage", []):
+            if not check.get("passed"):
+                findings.append(_finding(
+                    "error",
+                    "report used a source snapshot that failed its declared shape prerequisite",
+                    scenario_id=scenario_id,
+                ))
 
     overall = report.get("overall", {})
     for metric in (

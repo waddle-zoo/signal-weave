@@ -4,8 +4,10 @@ from typing import Any
 
 from .models import EvidenceSlot, InsightCard, InsightPlan
 
-# This is deliberately a small capability vocabulary. Jev can select which
-# capabilities fit a card, but it cannot invent executable operations.
+# This is deliberately a small capability vocabulary. The default runtime
+# derives it from the typed card; Jev is not needed to choose executable
+# operations. ``compile_with_typesafe`` remains an explicit opt-in for callers
+# experimenting with semantic plan suggestions.
 SUPPORTED_CAPABILITIES: dict[str, str] = {
     "percent_change": "Compare current and baseline values for numeric observations.",
     "baseline_comparison": "Compare the card's selected comparison windows.",
@@ -51,8 +53,9 @@ def _evidence_slots(card: InsightCard) -> list[EvidenceSlot]:
             source_refs=[source],
             required=source.required,
             completion_criteria=(
-                "Return a bounded observation or evidence statement with its source and "
-                "comparison window."
+                ("Return complete, reconciled analytical comparisons: " + ", ".join(source.required_comparison_keys))
+                if source.required_comparison_keys else
+                "Return a bounded observation or evidence statement with its source and comparison window."
             ),
         )
         for source in card.sources
@@ -63,8 +66,8 @@ def _evidence_slots(card: InsightCard) -> list[EvidenceSlot]:
             role="question",
             question=question,
             source_keys=[source.key for source in card.sources],
-            required=True,
-            completion_criteria="Return evidence that supports, contradicts, or leaves the question unknown.",
+            required=card.evidence_requirements.get(f"question:{index + 1}", False),
+            completion_criteria="Return applicable evidence for a concrete answer, including a known no or zero; missing or unresolved evidence does not complete this question.",
         )
         for index, question in enumerate(card.questions)
     )
@@ -74,7 +77,7 @@ def _evidence_slots(card: InsightCard) -> list[EvidenceSlot]:
             role="watch",
             question=watch_item,
             source_keys=[source.key for source in card.sources],
-            required=True,
+            required=card.evidence_requirements.get(f"watch:{index + 1}", False),
             completion_criteria="Return evidence that shows whether this watch item is present or absent.",
         )
         for index, watch_item in enumerate(card.watch_for)
@@ -93,7 +96,7 @@ def base_plan(card: InsightCard) -> InsightPlan:
         watch_for=card.watch_for,
         questions=card.questions,
         delivery_method_keys=[method.key for method in card.delivery_methods],
-        compiled_by="jev-latest",
+        compiled_by="deterministic-card-plan",
         card_scope=f"{card.what_to_watch}\nWhy: {card.why_watch}",
         investigation_mode=card.investigation_mode,
         max_investigation_sources=card.max_investigation_sources,

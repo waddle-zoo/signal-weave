@@ -43,6 +43,8 @@ The adapter should:
 - resolve only approved/read-only resources;
 - bound result size and execution time;
 - return numeric facts as `Observation` values;
+- supply `analytical_comparisons` when a reviewed source can provide complete
+  partitions and controlling totals for [quantitative investigation](local-investigations.md);
 - include supported comparison baselines in `Observation.comparison_baselines`
   when the source can calculate them;
 - return non-numeric facts, relationships, and run metadata as `Evidence` or `metadata`;
@@ -60,10 +62,16 @@ runtime evaluation still calls `inspect` and applies freshness, health, and
 payload-budget gates.
 
 The registry also enforces a serialized snapshot byte budget (1 MiB by default).
-An oversized adapter result is stripped of observations, evidence, and metadata
+An oversized adapter result is stripped of observations, comparisons, evidence, and metadata
 and returned as a typed source error. Required sources therefore route to
 `insufficient_data` instead of silently sending an unbounded payload to Jev.
 Deployments can lower the budget with `SourceRegistry(max_snapshot_bytes=...)`.
+
+For an operator-reviewed external MCP read tool, use the
+[configured MCP source bridge](mcp-source-bridge.md) instead of writing an in-process
+adapter. It supports stdio and Streamable HTTP with fixed tool/argument bindings,
+explicit normalized snapshots, and authorization before execution. It is not an
+automatic adapter for every MCP response shape.
 
 ### Shadow telemetry
 
@@ -108,6 +116,50 @@ For production catalogs, populate the typed `ResourceContract` as well:
 - `roles` describes whether the resource is a primary metric, context, quality, or
   other approved evidence role; and
 - `metric_definitions` describes approved queryable metrics without exposing raw SQL.
+- `comparison_contracts` describes recurring scalar measurements when a source can
+  state their definition, population, unit, comparison window, coverage and
+  comparability. Bind a card's `SourceRef.required_comparison_keys` to the exact
+  contract keys when those properties are required for routing. A non-null metric
+  value is not evidence of complete coverage.
+
+For Superset-compatible providers, `available_comparison_windows` may be a
+first-class catalog field. A dashboard can also publish the same source-owned
+declaration in its JSON metadata as `signalweave_comparison_windows` (or
+`signalweave.comparison_windows`). SignalWeave only reads these declarations;
+it never infers approval from populated rows. An absent declaration remains a
+warning for investigation-only cards and a blocker for unattended notify or
+escalate routes.
+
+For a scalar metric such as p95 latency, an adapter may return:
+
+```python
+from signalweave.models import ResourceContract, SourceComparisonContract
+
+contract = ResourceContract(comparison_contracts=[SourceComparisonContract(
+    key="latency-p95-previous-period",
+    metric="query_latency_p95",
+    definition="95th percentile query latency over customer clusters",
+    population="customer clusters",
+    unit="ms",
+    comparison_window="previous_period",
+    coverage="complete",       # adapter-owned assertion for this snapshot
+    comparable=True,
+    query_refs=["saved-query:latency-p95"],
+)])
+```
+
+If the export contains only one region, changes population between periods, or
+omits a required baseline, return `coverage="partial"` or `"unknown"` and
+`comparable=False`, with a short `detail`. SignalWeave converts a required
+contract failure into `insufficient_data` before any business route is admitted;
+Jev may still explain the supplied evidence, but it cannot turn that gap into a
+business investigation handoff. This applies to dashboard, notebook, SQL, lake,
+and operational adapters alike.
+
+An adapter that cannot declare compatible comparison windows is also prevented
+from approving a card with an automatic `notify` or `escalate` route. The card
+may still be used for caller-owned investigation, but the onboarding review
+must surface the missing contract before an unattended push path is enabled.
 
 The engine does not parse the resource locator or execute source languages. This
 keeps a SQL adapter from turning the MCP surface into an arbitrary SQL console,
@@ -176,6 +228,14 @@ This prevents a tenant-scoped MCP principal from seeing the adapter's implicit
 tenant deployment. A deployment can add any connector at construction time;
 Superset is not a required runtime dependency.
 
+Chart time-series deltas compare the last two returned buckets. Their
+`attributes.period_coverage` is unverified: a bucket label does not establish
+complete periods or a like-for-like comparison. Keep the arithmetic, but verify
+coverage before interpreting it as a business change. Additive grouped metrics
+retain both the pooled total and dimension-specific series; do not sum those
+representations together. Non-additive metrics retain separate series instead
+of pooling averages or rates.
+
 Dashboard snapshots expose `metadata.dashboard_scope` telemetry. A successful
 dashboard-filtered chart request increments `dashboard_scoped_requests`. The
 hosted Preset adapter also retains the provider's normalized dashboard filter
@@ -195,8 +255,9 @@ saved-chart-query fallback. Static defaults and `defaultToFirstItem` continue
 to fail closed because reconstructing the query could change the result. The
 fallback increments `chart_query_fallbacks` and must remain visible to the
 caller; it is not evidence that dashboard-native filters were applied. Hosted
-Preset uses its provider-specific dashboard endpoint and fails closed instead
-of taking this fallback.
+Preset uses its provider-specific dashboard endpoint first, then uses this
+bounded fallback only when its response says the query context is missing and
+the dashboard metadata proves no native filter can alter the initial result.
 Hosted connections should be created through the
 credential-reference-only factory:
 

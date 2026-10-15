@@ -398,7 +398,7 @@ def review_report(report: dict[str, Any]) -> dict[str, Any]:
             ):
                 findings.append("first-evaluation provider request count disagrees with path telemetry")
             data_requests = sum(
-                count for path, count in evaluation_delta.items() if path.endswith("/data")
+                count for path, count in evaluation_delta.items() if path.rstrip("/").endswith("/data")
             )
             if data_requests != checks.get("provider_data_requests_for_first_evaluation"):
                 findings.append("first-evaluation chart-data count disagrees with path telemetry")

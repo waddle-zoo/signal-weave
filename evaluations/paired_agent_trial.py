@@ -87,6 +87,7 @@ def _load_cases(path: str | Path = DEFAULT_CASES) -> list[dict[str, Any]]:
                     "sources": sources,
                     "query": template["query"],
                     "label": template["label"],
+                    "evidence_equivalents": template.get("evidence_equivalents", {}),
                 }
             )
     if len(cases) != len(payload["templates"]) * int(payload.get("replicates", 1)):
@@ -175,13 +176,27 @@ class JevRetriever:
         self.output_tokens = 0
 
     async def retrieve(self, case: dict[str, Any], executor: QueryExecutor) -> dict[str, Any]:
-        from typesafe_sdk import Choice
+        from typesafe_sdk import Choice, Noul
 
         shared = case["shared_input"]
+        source_context = [
+            {
+                "ref": source["ref"],
+                "adapter": source["adapter"],
+                "resource": source["resource"],
+                "kind": source["kind"],
+                "title": source["title"],
+                "description": source["description"],
+                "contract": source["contract"],
+                "evidence": source["evidence"],
+            }
+            for source in case["sources"]
+        ]
         state = {
             "card": shared["card"],
             "cached_charts": shared["cached_charts"],
             "authorized_source_catalog": shared["authorized_source_catalog"],
+            "source_context": source_context,
             "tenant": shared["tenant"],
             "snapshot_version": shared["snapshot_version"],
             "available_action": "return cached evidence, run one bounded diagnostic query, or escalate source trust",
@@ -200,8 +215,23 @@ class JevRetriever:
                 "escalate": "Freshness, failure, or definition trust is insufficient for safe interpretation.",
             },
         )
+        questions: dict[str, Any] = {"path": question}
+        for index, _source in enumerate(source_context):
+            questions[f"source_{index}"] = Noul(
+                instructions=(
+                    f"Should source_context[{index}] be surfaced as related evidence for "
+                    "this card's stated questions and decision guidance? Use its contract, "
+                    "description, and curated evidence. Select it only when it can answer, "
+                    "qualify, corroborate, or explain the workflow; authorization alone is "
+                    "not relevance, and selection does not establish causality."
+                ),
+                criteria={
+                    "true": "The curated source context is materially useful for this workflow.",
+                    "false": "The source is unrelated, merely a delivery target, or not useful for this workflow.",
+                },
+            )
         async with self.client_type(api_key=self.api_key, timeout=self.timeout) as client:
-            response = await client.system_one(state=state, questions={"path": question})
+            response = await client.system_one(state=state, questions=questions)
         self.requests += 1
         usage = getattr(response, "usage", None)
         self.input_tokens += int(getattr(usage, "input_tokens", 0) or 0)
@@ -211,10 +241,21 @@ class JevRetriever:
         probabilities = {
             str(key): float(value) for key, value in getattr(answer, "probabilities", {}).items()
         }
+        source_selection: list[dict[str, Any]] = []
+        selected_source_refs: set[str] = set()
+        for index, source in enumerate(source_context):
+            source_answer = getattr(response, "nouls", {}).get(f"source_{index}")
+            if source_answer is None:
+                continue
+            probability = max(0.0, min(1.0, float(getattr(source_answer, "noul", 0.0))))
+            source_selection.append({"ref": source["ref"], "probability": probability})
+            if probability >= 0.60:
+                selected_source_refs.add(source["ref"])
         bundle: dict[str, Any] = {
             "path": path,
             "probabilities": probabilities,
             "confidence": max(probabilities.values()) if probabilities else None,
+            "source_selection": source_selection,
             "evidence": [
                 {
                     "source_ref": chart["id"],
@@ -225,15 +266,28 @@ class JevRetriever:
             ],
             "query": None,
         }
+        bundle["evidence"].extend(
+            {
+                "source_ref": source["ref"],
+                "statement": source["evidence"],
+                "origin": "curated-source-context",
+            }
+            for source in source_context
+            if source["ref"] in selected_source_refs
+        )
         bundle["decision_guardrail"] = {
-            "reuse": "Cached evidence is sufficient for the workflow's next decision; do not create extra analytical work unless a card question remains unanswered.",
-            "query": "A material question remains unresolved; use the returned evidence to investigate before taking an automatic business action.",
-            "escalate": "Do not interpret the business movement as trustworthy; route the source-contract or freshness issue to its owner.",
+            "reuse": "Cached evidence is sufficient for retrieval; apply the human-authored card policy and do not create extra analytical work unless a card question remains unanswered.",
+            "query": "A bounded diagnostic was selected to answer an unresolved card question. Use its evidence with the cached observations, then apply the human-authored card policy; retrieval path is not an outcome.",
+            "escalate": "Source trust or freshness is insufficient for interpretation. Preserve the source-contract evidence and apply the card's configured trust and routing policy.",
         }.get(path, "Treat this retrieval result as evidence, not as a hidden label or causal conclusion.")
         if path == "query":
             bundle["query"] = await executor.execute(reason="typed Jev retrieval path")
-            bundle["evidence"].extend(bundle["query"]["evidence"])
+            existing_refs = {item["source_ref"] for item in bundle["evidence"]}
+            bundle["evidence"].extend(
+                item for item in bundle["query"]["evidence"] if item["source_ref"] not in existing_refs
+            )
         elif path == "escalate":
+            existing_refs = {item["source_ref"] for item in bundle["evidence"]}
             bundle["evidence"].extend(
                 {
                     "source_ref": source["ref"],
@@ -242,6 +296,7 @@ class JevRetriever:
                 }
                 for source in case["sources"]
                 if source["contract"].get("freshness") in {"stale", "failed"}
+                and source["ref"] not in existing_refs
             )
         return bundle
 
@@ -291,7 +346,10 @@ def _tool_specs(_treatment: bool) -> list[dict[str, Any]]:
             "submit_analysis",
             "Submit the final evidence-backed decision. This must be called exactly once.",
             {
-                "outcome": {"type": "string", "enum": ["ignore", "notify", "investigate", "escalate"]},
+                "outcome": {
+                    "type": "string",
+                    "enum": ["ignore", "notify", "investigate", "insufficient_data", "escalate"],
+                },
                 "delivery": {"type": "string"},
                 "reason": {"type": "string"},
                 "evidence_refs": {"type": "array", "items": {"type": "string"}},
@@ -322,7 +380,8 @@ unanswered question. If the source is stale, failed, or definitions conflict,
 prefer investigation or escalation over an unsupported notification.
 
 The same final schema is used for every case. You must call submit_analysis once
-with one of ignore, notify, investigate, or escalate; delivery must be a literal
+with one of ignore, notify, investigate, insufficient_data, or escalate; delivery
+must be a literal
 recipient key or 'none'; evidence_refs must name sources or chart ids you used;
 query_justified must reflect whether you actually needed a diagnostic query.
 
@@ -334,9 +393,50 @@ Shared workflow input:
             "\n\nSignalWeave preflight bundle (produced before this agent woke up):\n"
             f"{json.dumps(retrieval_bundle, sort_keys=True)}\n"
             "Use its path, probabilities, evidence, and guardrail as typed context. "
-            "Verify any source you cite; the bundle is not a replacement for provenance."
+            "Verify any source you cite; the bundle is not a replacement for provenance. "
+            "The retrieval path is not the workflow outcome: the human-authored card "
+            "policy remains authoritative after the evidence is verified."
         )
+        if retrieval_bundle.get("query") is not None:
+            prompt += (
+                " A bounded diagnostic query has already run during preflight and its "
+                "result is included above. Do not call run_diagnostic_query again for "
+                "the same question; use that result and set query_justified to true. "
+                "Only request another query if a distinct unresolved question remains."
+            )
+        else:
+            prompt += (
+                " No diagnostic query ran during preflight. Set query_justified to true "
+                "only if you actually run one yourself."
+            )
     return prompt
+
+
+def _preflight_summary(bundle: dict[str, Any] | None) -> dict[str, Any] | None:
+    if bundle is None:
+        return None
+    return {
+        "path": bundle.get("path"),
+        "probabilities": bundle.get("probabilities", {}),
+        "source_selection": bundle.get("source_selection", []),
+        "evidence_refs": sorted(
+            {
+                str(item.get("source_ref"))
+                for item in bundle.get("evidence", [])
+                if item.get("source_ref")
+            }
+        ),
+        "query_evidence_refs": sorted(
+            {
+                str(item.get("source_ref"))
+                for item in (bundle.get("query") or {}).get("evidence", [])
+                if item.get("source_ref")
+            }
+        ),
+        "query_cache_hit": (bundle.get("query") or {}).get("cache_hit")
+        if isinstance(bundle.get("query"), dict)
+        else None,
+    }
 
 
 class ResponsesAgent:
@@ -443,6 +543,13 @@ class ResponsesAgent:
                         result_summary = {
                             "path": result.get("path"),
                             "probabilities": result.get("probabilities"),
+                            "evidence_refs": sorted(
+                                {
+                                    str(item.get("source_ref"))
+                                    for item in result.get("evidence", [])
+                                    if item.get("source_ref")
+                                }
+                            ),
                             "query_cache_hit": (result.get("query") or {}).get("cache_hit")
                             if isinstance(result.get("query"), dict)
                             else None,
@@ -503,7 +610,21 @@ def score_run(case: dict[str, Any], run: dict[str, Any]) -> dict[str, Any]:
     actual_delivery = submission.get("delivery")
     evidence = {str(ref) for ref in submission.get("evidence_refs", [])}
     required = set(label["required_evidence"])
-    evidence_recall = len(evidence & required) / len(required) if required else 1.0
+    equivalents = {
+        str(source_ref): {str(alias) for alias in aliases}
+        for source_ref, aliases in case.get("evidence_equivalents", {}).items()
+    }
+    covered_required = {
+        source_ref
+        for source_ref in required
+        if source_ref in evidence or bool(evidence & equivalents.get(source_ref, set()))
+    }
+    equivalent_matches = {
+        source_ref: sorted(evidence & aliases)
+        for source_ref, aliases in equivalents.items()
+        if evidence & aliases
+    }
+    evidence_recall = len(covered_required) / len(required) if required else 1.0
     query_calls = run.get("query_calls", [])
     allowed_refs = {
         *{chart["id"] for chart in case["shared_input"]["cached_charts"]},
@@ -516,23 +637,31 @@ def score_run(case: dict[str, Any], run: dict[str, Any]) -> dict[str, Any]:
         for event in run.get("events", [])
         if event.get("successful_source_ref")
     }
+    preflight_evidence = {
+        str(ref)
+        for event in run.get("events", [])
+        for ref in (event.get("result_summary") or {}).get("evidence_refs", [])
+    }
+    preflight_evidence.update(str(ref) for ref in (run.get("preflight") or {}).get("evidence_refs", []))
     provenance = bool(evidence) and all(
         ref in inspected
+        or ref in preflight_evidence
         or ref in {chart["id"] for chart in case["shared_input"]["cached_charts"]}
         or any(ref in call.get("evidence_refs", []) for call in query_calls)
+        or any(ref in aliases and source_ref in covered_required for source_ref, aliases in equivalents.items())
         for ref in evidence
     )
     exact = bool(
         actual_outcome == label["outcome"]
         and actual_delivery == label["delivery"]
-        and required <= evidence
+        and covered_required == required
         and not unknown_evidence_refs
         and bool(submission)
         and provenance
         and query_justified == bool(query_calls)
         and (not label["query_required"] or bool(query_calls))
     )
-    automatic = actual_outcome in {"ignore", "notify", "escalate"}
+    automatic = actual_outcome in {"ignore", "notify", "insufficient_data", "escalate"}
     unsafe = automatic and not exact
     return {
         "case_id": case["case_id"],
@@ -545,6 +674,8 @@ def score_run(case: dict[str, Any], run: dict[str, Any]) -> dict[str, Any]:
         "exact": exact,
         "unsafe_automatic_action": unsafe,
         "evidence_recall": round(evidence_recall, 4),
+        "covered_required_evidence": sorted(covered_required),
+        "equivalent_evidence_matches": equivalent_matches,
         "provenance_complete": provenance,
         "query_calls": len(query_calls),
         "physical_query_executions": sum(not call["cache_hit"] for call in query_calls),
@@ -596,6 +727,21 @@ def summarize(rows: list[dict[str, Any]], arm: str) -> dict[str, Any]:
         "p95_elapsed_ms": round(sorted(latencies)[max(0, int(len(latencies) * 0.95) - 1)], 2)
         if latencies
         else None,
+        "median_agent_elapsed_ms": round(
+            statistics.median(row["agent_elapsed_ms"] for row in selected), 2
+        )
+        if selected
+        else None,
+        "p95_agent_elapsed_ms": round(
+            sorted(row["agent_elapsed_ms"] for row in selected)[max(0, int(len(selected) * 0.95) - 1)], 2
+        )
+        if selected
+        else None,
+        "mean_preflight_elapsed_ms": round(
+            statistics.mean(row["preflight_elapsed_ms"] for row in selected), 2
+        )
+        if selected
+        else 0.0,
         "mean_tool_calls": round(statistics.mean(row["tool_calls"] for row in selected), 2)
         if selected
         else 0.0,
@@ -618,6 +764,20 @@ def summarize(rows: list[dict[str, Any]], arm: str) -> dict[str, Any]:
 
 async def run_trial(args: argparse.Namespace) -> dict[str, Any]:
     cases = _load_cases(args.cases)
+    if args.case_id:
+        requested = set(args.case_id)
+        available = {str(case["case_id"]) for case in cases}
+        unknown = requested - available
+        if unknown:
+            raise ValueError("unknown paired-trial case IDs: " + ", ".join(sorted(unknown)))
+        cases = [case for case in cases if case["case_id"] in requested]
+    if args.scenario:
+        requested = set(args.scenario)
+        available = {str(case["scenario"]) for case in cases}
+        unknown = requested - available
+        if unknown:
+            raise ValueError("unknown paired-trial scenarios: " + ", ".join(sorted(unknown)))
+        cases = [case for case in cases if case["scenario"] in requested]
     if args.limit is not None:
         cases = cases[: args.limit]
     if not cases:
@@ -653,6 +813,7 @@ async def run_trial(args: argparse.Namespace) -> dict[str, Any]:
                     retrieval_bundle=retrieval_bundle,
                 )
                 result["preflight_elapsed_ms"] = preflight_elapsed_ms
+                result["preflight"] = _preflight_summary(retrieval_bundle)
                 result["end_to_end_elapsed_ms"] = round(
                     preflight_elapsed_ms + result["elapsed_ms"], 2
                 )
@@ -677,6 +838,7 @@ async def run_trial(args: argparse.Namespace) -> dict[str, Any]:
                     "preflight_elapsed_ms": preflight_elapsed_ms,
                     "end_to_end_elapsed_ms": preflight_elapsed_ms,
                     "query_calls": executor.calls,
+                    "preflight": _preflight_summary(retrieval_bundle),
                     "jev": {
                         "requests": retriever.requests if retriever else 0,
                         "input_tokens": retriever.input_tokens if retriever else 0,
@@ -789,6 +951,9 @@ def render_report(report: dict[str, Any]) -> str:
         ("Mean evidence recall", "mean_required_evidence_recall", ""),
         ("Median end-to-end latency", "median_elapsed_ms", " ms"),
         ("P95 end-to-end latency", "p95_elapsed_ms", " ms"),
+        ("Median agent-only latency", "median_agent_elapsed_ms", " ms"),
+        ("P95 agent-only latency", "p95_agent_elapsed_ms", " ms"),
+        ("Mean Jev preflight latency", "mean_preflight_elapsed_ms", " ms"),
         ("Mean model/API tool calls", "mean_tool_calls", ""),
         ("Diagnostic query calls", "diagnostic_query_calls", ""),
         ("Physical query executions", "physical_query_executions", ""),
@@ -826,6 +991,19 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--model", default="gpt-5.6-luna")
     parser.add_argument("--prefer-dotenv", action="store_true")
     parser.add_argument("--seed", type=int, default=20260921)
+    parser.add_argument(
+        "--scenario",
+        action="append",
+        help=(
+            "Select one or more workload-family IDs from the case fixture. "
+            "Repeat for a stratified subset; selection happens before --limit."
+        ),
+    )
+    parser.add_argument(
+        "--case-id",
+        action="append",
+        help="Select one or more exact opaque case IDs from the fixture before --limit.",
+    )
     parser.add_argument("--limit", type=int)
     parser.add_argument("--concurrency", type=int, default=2)
     parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)

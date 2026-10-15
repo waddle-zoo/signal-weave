@@ -1,0 +1,450 @@
+{
+  "schema_version": 1,
+  "name": "helio-support-connected-preset-mcp-paired-trial",
+  "tenant": "helio-support",
+  "principal": "support-monitoring-agent",
+  "authorization_scope": "helio-support:analytics",
+  "snapshot_version": "helio-preset-mcp-2026-10-04",
+  "delivery_methods": [
+    {
+      "key": "support-quality",
+      "outcome": "notify",
+      "destination": "slack|channel:support-quality"
+    },
+    {
+      "key": "support-data",
+      "outcome": "insufficient_data",
+      "destination": "slack|channel:support-data"
+    }
+  ],
+  "replicates": 1,
+  "shared_context": [
+    "human-authored-monitoring-card",
+    "cached-preset-chart-observations",
+    "connected-preset-mcp-source-catalog",
+    "preset-source-contracts",
+    "tenant-and-permission-scope",
+    "snapshot-version"
+  ],
+  "templates": [
+    {
+      "id": "helio_quiet_below_threshold",
+      "card": {
+        "title": "Helio support quality",
+        "what_to_watch": "Weighted customer recontact quality across chat, email, and voice support.",
+        "why_watch": "Suppress noise while surfacing a broad quality regression that support leadership should act on.",
+        "decision_guidance": "Use the weighted rate across eligible conversations, not an unweighted average of channel percentages. Notify Support Quality when the weighted current rate is at least 9% or current minus the adjacent closed-week baseline is at least 2.5 percentage points. Ignore otherwise. If the Preset result is incomplete or not comparable, route insufficient_data to Support Data.",
+        "watch_for": [
+          "A weighted current rate at or above 9%.",
+          "An increase of at least 2.5 percentage points versus the adjacent closed week.",
+          "An incomplete channel partition or unreconciled denominator."
+        ],
+        "questions": [
+          "Is the weighted rate above the owner-defined threshold?",
+          "Is the comparison complete and comparable?",
+          "Who should receive the result?"
+        ]
+      },
+      "charts": [
+        {
+          "id": "helio-weighted-recontact-rate",
+          "title": "Weighted recontact quality rate",
+          "metric": "customer_recontact_rate",
+          "current": 0.06,
+          "baseline": 0.046,
+          "change_pct": 30.4348,
+          "note": "The weighted current rate is 6.0%; it is below the 9.0% notification threshold and the change is 1.4 percentage points."
+        },
+        {
+          "id": "helio-recontact-channel-breakdown",
+          "title": "Recontact quality by support channel",
+          "metric": "customer_recontact_rate",
+          "current": {
+            "chat": 0.08,
+            "email": 0.065,
+            "voice": 0.033333
+          },
+          "baseline": {
+            "chat": 0.06,
+            "email": 0.05,
+            "voice": 0.026667
+          },
+          "note": "All three channels are present and the weighted denominator reconciles."
+        }
+      ],
+      "evidence_equivalents": {
+        "preset_mcp|dashboard:helio-support-quality": [
+          "helio-weighted-recontact-rate"
+        ],
+        "preset_mcp|chart:helio-recontact-channel-breakdown": [
+          "helio-recontact-channel-breakdown"
+        ]
+      },
+      "sources": [
+        {
+          "ref": "preset_mcp|dashboard:helio-support-quality",
+          "adapter": "preset_mcp",
+          "resource": "dashboard:helio-support-quality",
+          "kind": "dashboard",
+          "title": "Helio Support Quality Overview",
+          "description": "Preset dashboard with the weighted recontact rate and its support-channel breakdown.",
+          "contract": {
+            "grain": "weekly support interval",
+            "population": "eligible support conversations with a channel and quality outcome",
+            "metric_names": [
+              "customer_recontact_rate"
+            ],
+            "required_comparison_keys": [
+              "recontact-quality-rate"
+            ],
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "freshness": "fresh",
+            "source_status": "healthy",
+            "partition_status": "complete",
+            "owner": "support-analytics"
+          },
+          "evidence": "The connected Preset MCP returned a fresh, complete dashboard snapshot. Weighted current rate is 6.0% versus 4.6% in the adjacent closed week."
+        },
+        {
+          "ref": "preset_mcp|chart:helio-recontact-channel-breakdown",
+          "adapter": "preset_mcp",
+          "resource": "chart:helio-recontact-channel-breakdown",
+          "kind": "chart",
+          "title": "Recontact quality by channel",
+          "description": "Preset chart with channel-level numerators and eligible conversation counts.",
+          "contract": {
+            "grain": "support-channel-week",
+            "population": "eligible support conversations with a channel and quality outcome",
+            "metric_names": [
+              "customer_recontact_rate"
+            ],
+            "freshness": "fresh",
+            "source_status": "healthy",
+            "partition_status": "complete",
+            "owner": "support-analytics"
+          },
+          "evidence": "Chat, email, and voice are present and the weighted denominator reconciles; channel effects describe accounting movement, not causes."
+        },
+        {
+          "ref": "preset_mcp|dashboard:helio-voice-queue",
+          "adapter": "preset_mcp",
+          "resource": "dashboard:helio-voice-queue",
+          "kind": "dashboard",
+          "title": "Voice queue operations",
+          "description": "A related operations dashboard about queue volume, not recontact quality.",
+          "contract": {
+            "grain": "hourly queue interval",
+            "population": "voice queue contacts",
+            "metric_names": [
+              "queue_wait_seconds"
+            ],
+            "freshness": "fresh",
+            "source_status": "healthy",
+            "owner": "workforce-operations"
+          },
+          "evidence": "This source is authorized but does not define the recontact-quality metric."
+        }
+      ],
+      "query": {
+        "group": "helio-preset-mcp-quiet",
+        "bytes_scanned": 0,
+        "cpu_seconds": 0,
+        "evidence_refs": [
+          "preset_mcp|dashboard:helio-support-quality",
+          "preset_mcp|chart:helio-recontact-channel-breakdown"
+        ],
+        "finding": "No additional query is needed; the complete cached Preset evidence is below both notification thresholds."
+      },
+      "label": {
+        "outcome": "ignore",
+        "delivery": "none",
+        "required_evidence": [
+          "preset_mcp|dashboard:helio-support-quality",
+          "preset_mcp|chart:helio-recontact-channel-breakdown"
+        ],
+        "query_required": false
+      }
+    },
+    {
+      "id": "helio_notify_quality",
+      "card": {
+        "title": "Helio support quality",
+        "what_to_watch": "Weighted customer recontact quality across chat, email, and voice support.",
+        "why_watch": "Suppress noise while surfacing a broad quality regression that support leadership should act on.",
+        "decision_guidance": "Use the weighted rate across eligible conversations, not an unweighted average of channel percentages. Notify Support Quality when the weighted current rate is at least 9% or current minus the adjacent closed-week baseline is at least 2.5 percentage points. Ignore otherwise. If the Preset result is incomplete or not comparable, route insufficient_data to Support Data.",
+        "watch_for": [
+          "A weighted current rate at or above 9%.",
+          "An increase of at least 2.5 percentage points versus the adjacent closed week.",
+          "An incomplete channel partition or unreconciled denominator."
+        ],
+        "questions": [
+          "Is the weighted rate above the owner-defined threshold?",
+          "Is the comparison complete and comparable?",
+          "Who should receive the result?"
+        ]
+      },
+      "charts": [
+        {
+          "id": "helio-weighted-recontact-rate",
+          "title": "Weighted recontact quality rate",
+          "metric": "customer_recontact_rate",
+          "current": 0.118056,
+          "baseline": 0.1,
+          "change_pct": 18.0556,
+          "note": "The weighted current rate is 11.8056%, above the 9.0% notification threshold."
+        },
+        {
+          "id": "helio-recontact-channel-breakdown",
+          "title": "Recontact quality by support channel",
+          "metric": "customer_recontact_rate",
+          "current": {
+            "chat": 0.116667,
+            "email": 0.116667,
+            "voice": 0.125
+          },
+          "baseline": {
+            "chat": 0.125,
+            "email": 0.083333,
+            "voice": 0.083333
+          },
+          "note": "All three channels are present and the weighted denominator reconciles; do not treat channel contributions as causal."
+        }
+      ],
+      "evidence_equivalents": {
+        "preset_mcp|dashboard:helio-support-quality": [
+          "helio-weighted-recontact-rate"
+        ],
+        "preset_mcp|chart:helio-recontact-channel-breakdown": [
+          "helio-recontact-channel-breakdown"
+        ]
+      },
+      "sources": [
+        {
+          "ref": "preset_mcp|dashboard:helio-support-quality",
+          "adapter": "preset_mcp",
+          "resource": "dashboard:helio-support-quality",
+          "kind": "dashboard",
+          "title": "Helio Support Quality Overview",
+          "description": "Preset dashboard with the weighted recontact rate and its support-channel breakdown.",
+          "contract": {
+            "grain": "weekly support interval",
+            "population": "eligible support conversations with a channel and quality outcome",
+            "metric_names": [
+              "customer_recontact_rate"
+            ],
+            "required_comparison_keys": [
+              "recontact-quality-rate"
+            ],
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "freshness": "fresh",
+            "source_status": "healthy",
+            "partition_status": "complete",
+            "owner": "support-analytics"
+          },
+          "evidence": "The connected Preset MCP returned a fresh, complete dashboard snapshot. Weighted current rate is 11.8056% versus 10.0% in the adjacent closed week, so the current-rate threshold is met."
+        },
+        {
+          "ref": "preset_mcp|chart:helio-recontact-channel-breakdown",
+          "adapter": "preset_mcp",
+          "resource": "chart:helio-recontact-channel-breakdown",
+          "kind": "chart",
+          "title": "Recontact quality by channel",
+          "description": "Preset chart with channel-level numerators and eligible conversation counts.",
+          "contract": {
+            "grain": "support-channel-week",
+            "population": "eligible support conversations with a channel and quality outcome",
+            "metric_names": [
+              "customer_recontact_rate"
+            ],
+            "freshness": "fresh",
+            "source_status": "healthy",
+            "partition_status": "complete",
+            "owner": "support-analytics"
+          },
+          "evidence": "Chat, email, and voice are present and the weighted denominator reconciles. Channel accounting effects are evidence of measured movement, not a causal explanation."
+        },
+        {
+          "ref": "preset_mcp|dashboard:helio-voice-queue",
+          "adapter": "preset_mcp",
+          "resource": "dashboard:helio-voice-queue",
+          "kind": "dashboard",
+          "title": "Voice queue operations",
+          "description": "A related operations dashboard about queue volume, not recontact quality.",
+          "contract": {
+            "grain": "hourly queue interval",
+            "population": "voice queue contacts",
+            "metric_names": [
+              "queue_wait_seconds"
+            ],
+            "freshness": "fresh",
+            "source_status": "healthy",
+            "owner": "workforce-operations"
+          },
+          "evidence": "This source is authorized but does not define the recontact-quality metric."
+        }
+      ],
+      "query": {
+        "group": "helio-preset-mcp-notify",
+        "bytes_scanned": 0,
+        "cpu_seconds": 0,
+        "evidence_refs": [
+          "preset_mcp|dashboard:helio-support-quality",
+          "preset_mcp|chart:helio-recontact-channel-breakdown"
+        ],
+        "finding": "The complete cached Preset evidence is sufficient to apply the owner-authored notification policy."
+      },
+      "label": {
+        "outcome": "notify",
+        "delivery": "support-quality",
+        "required_evidence": [
+          "preset_mcp|dashboard:helio-support-quality",
+          "preset_mcp|chart:helio-recontact-channel-breakdown"
+        ],
+        "query_required": false
+      }
+    },
+    {
+      "id": "helio_partial_partition",
+      "card": {
+        "title": "Helio support quality",
+        "what_to_watch": "Weighted customer recontact quality across chat, email, and voice support.",
+        "why_watch": "Suppress noise while surfacing a broad quality regression that support leadership should act on.",
+        "decision_guidance": "Use the weighted rate across eligible conversations, not an unweighted average of channel percentages. Notify Support Quality when the weighted current rate is at least 9% or current minus the adjacent closed-week baseline is at least 2.5 percentage points. Ignore otherwise. If the Preset result is incomplete or not comparable, route insufficient_data to Support Data.",
+        "watch_for": [
+          "A weighted current rate at or above 9%.",
+          "An increase of at least 2.5 percentage points versus the adjacent closed week.",
+          "An incomplete channel partition or unreconciled denominator."
+        ],
+        "questions": [
+          "Is the weighted rate above the owner-defined threshold?",
+          "Is the comparison complete and comparable?",
+          "Who should receive the result?"
+        ]
+      },
+      "charts": [
+        {
+          "id": "helio-weighted-recontact-rate",
+          "title": "Weighted recontact quality rate",
+          "metric": "customer_recontact_rate",
+          "current": null,
+          "baseline": 0.046,
+          "change_pct": null,
+          "note": "The current Preset result is missing the voice channel; no comparable weighted rate is available."
+        },
+        {
+          "id": "helio-recontact-channel-breakdown",
+          "title": "Recontact quality by support channel",
+          "metric": "customer_recontact_rate",
+          "current": {
+            "chat": 0.078125,
+            "email": 0.08
+          },
+          "baseline": {
+            "chat": 0.0625,
+            "email": 0.06,
+            "voice": 0.026667
+          },
+          "note": "Voice is absent from the current result. The visible denominator is incomplete and must not drive a notification."
+        }
+      ],
+      "evidence_equivalents": {
+        "preset_mcp|dashboard:helio-support-quality": [
+          "helio-weighted-recontact-rate"
+        ],
+        "preset_mcp|chart:helio-recontact-channel-breakdown": [
+          "helio-recontact-channel-breakdown"
+        ]
+      },
+      "sources": [
+        {
+          "ref": "preset_mcp|dashboard:helio-support-quality",
+          "adapter": "preset_mcp",
+          "resource": "dashboard:helio-support-quality",
+          "kind": "dashboard",
+          "title": "Helio Support Quality Overview",
+          "description": "Preset dashboard with a partial current channel result.",
+          "contract": {
+            "grain": "weekly support interval",
+            "population": "eligible support conversations with a channel and quality outcome",
+            "metric_names": [
+              "customer_recontact_rate"
+            ],
+            "required_comparison_keys": [
+              "recontact-quality-rate"
+            ],
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "freshness": "fresh",
+            "source_status": "partial",
+            "partition_status": "incomplete",
+            "owner": "support-analytics"
+          },
+          "evidence": "The connected Preset MCP returned a healthy transport response, but the current voice partition is missing and the weighted denominator cannot be reconciled."
+        },
+        {
+          "ref": "preset_mcp|chart:helio-recontact-channel-breakdown",
+          "adapter": "preset_mcp",
+          "resource": "chart:helio-recontact-channel-breakdown",
+          "kind": "chart",
+          "title": "Recontact quality by channel",
+          "description": "Preset chart with an incomplete channel result.",
+          "contract": {
+            "grain": "support-channel-week",
+            "population": "eligible support conversations with a channel and quality outcome",
+            "metric_names": [
+              "customer_recontact_rate"
+            ],
+            "freshness": "fresh",
+            "source_status": "partial",
+            "partition_status": "incomplete",
+            "owner": "support-analytics"
+          },
+          "evidence": "The current chart contains chat and email but no voice rows, so its visible rate is not comparable to the complete baseline."
+        },
+        {
+          "ref": "preset_mcp|dashboard:helio-voice-queue",
+          "adapter": "preset_mcp",
+          "resource": "dashboard:helio-voice-queue",
+          "kind": "dashboard",
+          "title": "Voice queue operations",
+          "description": "A related operations dashboard that cannot repair a missing recontact-quality partition.",
+          "contract": {
+            "grain": "hourly queue interval",
+            "population": "voice queue contacts",
+            "metric_names": [
+              "queue_wait_seconds"
+            ],
+            "freshness": "fresh",
+            "source_status": "healthy",
+            "owner": "workforce-operations"
+          },
+          "evidence": "Voice queue volume is available, but it is not the missing recontact-quality outcome."
+        }
+      ],
+      "query": {
+        "group": "helio-preset-mcp-partial",
+        "bytes_scanned": 0,
+        "cpu_seconds": 0,
+        "evidence_refs": [
+          "preset_mcp|dashboard:helio-support-quality",
+          "preset_mcp|chart:helio-recontact-channel-breakdown"
+        ],
+        "finding": "Do not infer a weighted rate from the partial Preset result; route the data-quality issue to Support Data."
+      },
+      "label": {
+        "outcome": "insufficient_data",
+        "delivery": "support-data",
+        "required_evidence": [
+          "preset_mcp|dashboard:helio-support-quality",
+          "preset_mcp|chart:helio-recontact-channel-breakdown"
+        ],
+        "query_required": false
+      }
+    }
+  ]
+}

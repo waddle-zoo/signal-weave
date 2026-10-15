@@ -230,6 +230,7 @@ def _workspaces(*, seed: int, workspace_count: int, charts_per_workspace: int) -
                 "tenant_id": f"tenant-{workspace_index}-{suffix}",
                 "dashboard_id": dashboard_id,
                 "dashboard_title": f"Generated dashboard {workspace_index} {suffix}",
+                "available_comparison_windows": ["previous_period"],
                 "charts": charts,
             }
         )
@@ -259,6 +260,9 @@ class GeneratedWorkspaceTransport:
                         {
                             "id": self.workspace["dashboard_id"],
                             "dashboard_title": self.workspace["dashboard_title"],
+                            "available_comparison_windows": self.workspace.get(
+                                "available_comparison_windows", []
+                            ),
                         }
                     ],
                     "count": 1,
@@ -271,6 +275,9 @@ class GeneratedWorkspaceTransport:
                     "result": {
                         "id": self.workspace["dashboard_id"],
                         "dashboard_title": self.workspace["dashboard_title"],
+                        "available_comparison_windows": self.workspace.get(
+                            "available_comparison_windows", []
+                        ),
                         "position_json": {
                             chart["id"]: {
                                 "type": "CHART",
@@ -282,8 +289,12 @@ class GeneratedWorkspaceTransport:
                 },
             )
         chart_prefix = "/api/v1/chart/"
-        if request.url.path.startswith(chart_prefix) and request.url.path.endswith("/data"):
-            chart_id = request.url.path.removeprefix(chart_prefix).removesuffix("/data")
+        if request.url.path.startswith(chart_prefix) and request.url.path.rstrip("/").endswith("/data"):
+            chart_id = (
+                request.url.path.removeprefix(chart_prefix)
+                .rstrip("/")
+                .removesuffix("/data")
+            )
             chart = next(chart for chart in self.workspace["charts"] if chart["id"] == chart_id)
             if request.url.params.get("filter_dashboard_id") != str(self.workspace["dashboard_id"]):
                 return httpx.Response(400, json={"message": "dashboard context required"})
@@ -348,7 +359,9 @@ def _check_workspace(workspace: dict[str, Any]) -> dict[str, Any]:
                 failures.append(f"{chart_id}: unusable generated metric became an observation")
             if expected["case"] == "ambiguous_numeric" and actual["semantic_status"] != "partial":
                 failures.append(f"{chart_id}: ambiguous numeric result was not review-marked")
-        data_requests = [item for item in transport.requests if item["path"].endswith("/data")]
+        data_requests = [
+            item for item in transport.requests if item["path"].rstrip("/").endswith("/data")
+        ]
         if not data_requests or not all(
             item["params"].get("filter_dashboard_id") == str(workspace["dashboard_id"])
             and item["params"].get("force") == "false"

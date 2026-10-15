@@ -66,9 +66,11 @@ TYPESAFE_API_KEY_FILE=/absolute/path/to/apikey_typesafe \
 ```
 
 Jev uses one typed planning request and one typed judgment request per evaluation.
-The judgment contains independent `Noul` support values for each `watch_for`
-item, each question, and each configured outcome; SignalWeave composes them in
-code and applies the card threshold. The report records request count, reported
+The current judgment contains a present/absent/unknown `Choice` for each
+`watch_for` item, a `Noul` for each question's answerability, and a `Choice` over
+allowed outcomes. SignalWeave composes them in code and applies the card threshold.
+This describes the current implementation, not the historical run above.
+The report records request count, reported
 input/output tokens, latency, outcome accuracy, exact outcome-plus-delivery-method
 accuracy, and errors. Repeating the cases exposes instability rather than hiding
 it behind one best-looking run.

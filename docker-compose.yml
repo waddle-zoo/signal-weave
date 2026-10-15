@@ -57,7 +57,8 @@ services:
       superset:
         condition: service_healthy
     environment:
-      TYPESAFE_MODE: ${TYPESAFE_MODE:-jev}
+      SIGNALWEAVE_MCP_PROFILE: agent
+      TYPESAFE_MODE: jev
       TYPESAFE_TIMEOUT_SECONDS: ${TYPESAFE_TIMEOUT_SECONDS:-30}
       TYPESAFE_API_KEY_FILE: /run/secrets/typesafe_api_key
       SUPERSET_URL: http://superset:8088
@@ -70,7 +71,6 @@ services:
       MCP_HOST: 0.0.0.0
       MCP_PORT: 8000
       SIGNALWEAVE_API_TOKEN: ${SIGNALWEAVE_API_TOKEN:-local-dev-token}
-      PUSH_WEBHOOK_TOKEN: ${PUSH_WEBHOOK_TOKEN:-local-dev-token}
     volumes:
       - ${TYPESAFE_API_KEY_FILE:-./secrets/typesafe_api_key}:/run/secrets/typesafe_api_key:ro
       - insight_card_data:/app/data
@@ -78,7 +78,7 @@ services:
       - "127.0.0.1:${SIGNALWEAVE_PORT_HOST:-18000}:8000"
     command: ["python", "-m", "signalweave.cli", "serve", "--transport", "streamable-http"]
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz', timeout=3)"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/readyz', timeout=3)"]
       interval: 10s
       timeout: 5s
       retries: 10

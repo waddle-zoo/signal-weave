@@ -1,0 +1,506 @@
+{
+  "status": "complete",
+  "review_status": "complete",
+  "case_count": 12,
+  "completed_case_count": 12,
+  "episodes": [
+    {
+      "episode": 1,
+      "case_ids": [
+        "canyon-freight:p03",
+        "canyon-freight:p05",
+        "helio-support:p03",
+        "helio-support:p05",
+        "lattice-energy:p03",
+        "lattice-energy:p05"
+      ],
+      "input_digest": "4cd3b900d2e53f088ddcb70dd5fb652178a32fc13da261aa6f50d2417a13795c",
+      "instructions_digest": "f877e3d93667d54a2647a9c2969c2ee082bbfe314da3ccdb3cdbed2873052d36",
+      "episode_result": {
+        "status": "complete",
+        "error": null,
+        "tool_calls": 6,
+        "seconds": 67.22029754100367,
+        "response_timeout_seconds": 240,
+        "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+        "wall_time_overrun_seconds": 0.0,
+        "transport": "codex_cli",
+        "exit_code": 0,
+        "foreign_tools": []
+      },
+      "session": {
+        "case_ids": [
+          "canyon-freight:p03",
+          "canyon-freight:p05",
+          "helio-support:p03",
+          "helio-support:p05",
+          "lattice-energy:p03",
+          "lattice-energy:p05"
+        ],
+        "reviews": [
+          {
+            "case_id": "canyon-freight:p03",
+            "a_usable": true,
+            "b_usable": true,
+            "winner": "B",
+            "reasons": [
+              "Both candidates faithfully report 220 to 233 (+13), with air +12, ground +2, and ocean -1; the +12 air lane meets the +11 lane threshold while the total does not meet +17.",
+              "Both correctly describe accounting contributions rather than causes, confirm comparability/completeness, and route to the authorized fleet-operations key.",
+              "B is more useful because it exposes the source comparison fields, reconciled partition, and explicit aggregate-uncertainty/measurement limitations; A is still sufficient for the policy decision."
+            ]
+          },
+          {
+            "case_id": "canyon-freight:p05",
+            "a_usable": true,
+            "b_usable": true,
+            "winner": "B",
+            "reasons": [
+              "Both correctly block the comparison because the current ocean lane and current total are missing, coverage is partial, population comparability is not confirmed, and totals cannot be reconciled.",
+              "Both avoid threshold claims, state that visible air/ground values are not a valid complete comparison, and route insufficient_data to the authorized logistics-data key.",
+              "B is more useful because its analysis explicitly records null totals, insufficient_data status, and the source issues/limitations; A is still clear and policy-compliant."
+            ]
+          },
+          {
+            "case_id": "helio-support:p03",
+            "a_usable": true,
+            "b_usable": true,
+            "winner": "A",
+            "reasons": [
+              "Both correctly use weighted counts: 60/600 = 10.0% and 85/720 = 11.81%, for +1.81 percentage points, so the 9% current-rate threshold triggers notification.",
+              "Both give faithful channel contributions and mix/within decomposition, label them descriptive rather than causal, confirm the complete reconciled partition, and use the authorized support-quality key.",
+              "A is more useful because it explicitly preserves the aggregate numerators and denominators (60/600 and 85/720), making the weighted-rate calculation directly auditable."
+            ]
+          },
+          {
+            "case_id": "helio-support:p05",
+            "a_usable": true,
+            "b_usable": true,
+            "winner": "B",
+            "reasons": [
+              "Both correctly calculate 46/1000 = 4.6% and 60/1000 = 6.0%, a +1.4-point change below both policy thresholds, and correctly ignore with no recipients.",
+              "Both report the channel contributions as descriptive, not causal, and state that adjacent weeks, the population/definition, complete partition, and reconciled totals support comparison.",
+              "B is more useful because it includes the aggregate and per-channel numerator/denominator evidence, making the weighted calculation and reconciliation directly checkable."
+            ]
+          },
+          {
+            "case_id": "lattice-energy:p03",
+            "a_usable": true,
+            "b_usable": true,
+            "winner": "A",
+            "reasons": [
+              "Both preserve signs and correctly calculate 90 to 15, a -75 USD delta; churn changes -20 to -70 for -50, meeting the exact churn trigger, while contraction is -5.",
+              "Both correctly find no approved exact-period exception, distinguish measured contributions from causes, and notify the authorized commercial-operations key.",
+              "A is more useful because its comparison explicitly includes signed totals, all segment baseline/current values, complete partition and reconciliation fields; B remains usable but leaves more source comparability detail implicit."
+            ]
+          },
+          {
+            "case_id": "lattice-energy:p05",
+            "a_usable": true,
+            "b_usable": true,
+            "winner": "B",
+            "reasons": [
+              "Both correctly preserve signs and calculate 115 to -60, a -175 USD delta, with contraction -60 and churn -45; all numeric triggers are present.",
+              "Both correctly apply the exact-period approved service-credit exception as an override, ignore the case with no recipients, and make no causal claim.",
+              "B is more useful because it exposes the complete signed comparison, segment totals, reconciled/comparable status, and explicit limitations; A is still sufficient for the policy outcome."
+            ]
+          }
+        ],
+        "submission": {
+          "reviews": [
+            {
+              "case_id": "canyon-freight:p03",
+              "a_usable": true,
+              "b_usable": true,
+              "winner": "B",
+              "reasons": [
+                "Both candidates faithfully report 220 to 233 (+13), with air +12, ground +2, and ocean -1; the +12 air lane meets the +11 lane threshold while the total does not meet +17.",
+                "Both correctly describe accounting contributions rather than causes, confirm comparability/completeness, and route to the authorized fleet-operations key.",
+                "B is more useful because it exposes the source comparison fields, reconciled partition, and explicit aggregate-uncertainty/measurement limitations; A is still sufficient for the policy decision."
+              ]
+            },
+            {
+              "case_id": "canyon-freight:p05",
+              "a_usable": true,
+              "b_usable": true,
+              "winner": "B",
+              "reasons": [
+                "Both correctly block the comparison because the current ocean lane and current total are missing, coverage is partial, population comparability is not confirmed, and totals cannot be reconciled.",
+                "Both avoid threshold claims, state that visible air/ground values are not a valid complete comparison, and route insufficient_data to the authorized logistics-data key.",
+                "B is more useful because its analysis explicitly records null totals, insufficient_data status, and the source issues/limitations; A is still clear and policy-compliant."
+              ]
+            },
+            {
+              "case_id": "helio-support:p03",
+              "a_usable": true,
+              "b_usable": true,
+              "winner": "A",
+              "reasons": [
+                "Both correctly use weighted counts: 60/600 = 10.0% and 85/720 = 11.81%, for +1.81 percentage points, so the 9% current-rate threshold triggers notification.",
+                "Both give faithful channel contributions and mix/within decomposition, label them descriptive rather than causal, confirm the complete reconciled partition, and use the authorized support-quality key.",
+                "A is more useful because it explicitly preserves the aggregate numerators and denominators (60/600 and 85/720), making the weighted-rate calculation directly auditable."
+              ]
+            },
+            {
+              "case_id": "helio-support:p05",
+              "a_usable": true,
+              "b_usable": true,
+              "winner": "B",
+              "reasons": [
+                "Both correctly calculate 46/1000 = 4.6% and 60/1000 = 6.0%, a +1.4-point change below both policy thresholds, and correctly ignore with no recipients.",
+                "Both report the channel contributions as descriptive, not causal, and state that adjacent weeks, the population/definition, complete partition, and reconciled totals support comparison.",
+                "B is more useful because it includes the aggregate and per-channel numerator/denominator evidence, making the weighted calculation and reconciliation directly checkable."
+              ]
+            },
+            {
+              "case_id": "lattice-energy:p03",
+              "a_usable": true,
+              "b_usable": true,
+              "winner": "A",
+              "reasons": [
+                "Both preserve signs and correctly calculate 90 to 15, a -75 USD delta; churn changes -20 to -70 for -50, meeting the exact churn trigger, while contraction is -5.",
+                "Both correctly find no approved exact-period exception, distinguish measured contributions from causes, and notify the authorized commercial-operations key.",
+                "A is more useful because its comparison explicitly includes signed totals, all segment baseline/current values, complete partition and reconciliation fields; B remains usable but leaves more source comparability detail implicit."
+              ]
+            },
+            {
+              "case_id": "lattice-energy:p05",
+              "a_usable": true,
+              "b_usable": true,
+              "winner": "B",
+              "reasons": [
+                "Both correctly preserve signs and calculate 115 to -60, a -175 USD delta, with contraction -60 and churn -45; all numeric triggers are present.",
+                "Both correctly apply the exact-period approved service-credit exception as an override, ignore the case with no recipients, and make no causal claim.",
+                "B is more useful because it exposes the complete signed comparison, segment totals, reconciled/comparable status, and explicit limitations; A is still sufficient for the policy outcome."
+              ]
+            }
+          ],
+          "case_count": 6,
+          "all_cases_complete": true
+        }
+      },
+      "output_digest": "f062c70805cedc578830c80952b7c2c30fd6ff83900d93a53efc0457ec7f1fe8",
+      "event_digest": "529239b0805901690427c67e1a3bb0cd75b9abafafe7b9d9d650c3379367b7c4",
+      "submission_complete": true
+    },
+    {
+      "episode": 2,
+      "case_ids": [
+        "canyon-freight:p04",
+        "canyon-freight:p06",
+        "helio-support:p04",
+        "helio-support:p06",
+        "lattice-energy:p04",
+        "lattice-energy:p06"
+      ],
+      "input_digest": "9c5320336d638823f1c422b9def37ccdea7838a02af92386cbb7c992c85ea92b",
+      "instructions_digest": "f877e3d93667d54a2647a9c2969c2ee082bbfe314da3ccdb3cdbed2873052d36",
+      "episode_result": {
+        "status": "complete",
+        "error": null,
+        "tool_calls": 6,
+        "seconds": 33.23606679198565,
+        "response_timeout_seconds": 240,
+        "timeout_scope": "stdin_stdout_and_process_wait_excluding_startup_and_cleanup",
+        "wall_time_overrun_seconds": 0.0,
+        "transport": "codex_cli",
+        "exit_code": 0,
+        "foreign_tools": []
+      },
+      "session": {
+        "case_ids": [
+          "canyon-freight:p04",
+          "canyon-freight:p06",
+          "helio-support:p04",
+          "helio-support:p06",
+          "lattice-energy:p04",
+          "lattice-energy:p06"
+        ],
+        "reviews": [
+          {
+            "case_id": "canyon-freight:p04",
+            "a_usable": true,
+            "b_usable": true,
+            "winner": "tie",
+            "reasons": [
+              "Both candidates preserve the signed counts (300 to 283, delta -17), reconcile lane contributions (-20, -2, +5), state that no threshold is met, avoid causal claims, and correctly use ignore with no recipients.",
+              "Both reflect the required complete comparable source conditions and use the authorized destination keys when no routing is required."
+            ]
+          },
+          {
+            "case_id": "canyon-freight:p06",
+            "a_usable": true,
+            "b_usable": true,
+            "winner": "tie",
+            "reasons": [
+              "Both preserve 340 to 367 (delta +27) and lane contributions of +5 air, +10 ground, and +12 ocean, correctly identify both policy triggers, and route notify to fleet-operations.",
+              "Both clearly label contributions as accounting decomposition rather than causes and cite the complete, comparable, reconciled adjacent-week evidence."
+            ]
+          },
+          {
+            "case_id": "helio-support:p04",
+            "a_usable": true,
+            "b_usable": true,
+            "winner": "tie",
+            "reasons": [
+              "Both compute the weighted rate from counts (40/800 = 5.0% and 64/800 = 8.0%), preserve the +3.0 percentage-point change, and correctly show channel contributions totaling +3.0 points.",
+              "Both identify the 2.5-point trigger, notify the authorized support-quality key, state the comparison is complete and comparable, and avoid causal claims."
+            ]
+          },
+          {
+            "case_id": "helio-support:p06",
+            "a_usable": true,
+            "b_usable": true,
+            "winner": "tie",
+            "reasons": [
+              "Both correctly treat the missing current voice data, partial coverage, false population match, and unreconciled totals as blocking the comparison; neither invents a rate or threshold result.",
+              "Both route insufficient_data to the authorized support-data key and give an evidence-bound restoration/reconciliation next step without claiming causes."
+            ]
+          },
+          {
+            "case_id": "lattice-energy:p04",
+            "a_usable": true,
+            "b_usable": true,
+            "winner": "tie",
+            "reasons": [
+              "Both preserve signed totals (50 to 55, delta +5) and signed segment contributions: new_contract +75, expansion -60, churn -5, contraction -5; no policy trigger is falsely asserted.",
+              "Both correctly use ignore with no recipients, reflect the complete comparable reconciled report, and state that the exact-month exception context indicates no approved exception."
+            ]
+          },
+          {
+            "case_id": "lattice-energy:p06",
+            "a_usable": true,
+            "b_usable": true,
+            "winner": "tie",
+            "reasons": [
+              "Both preserve signed totals (75 to 5, delta -70) and identify contraction's -55 change as the exact segment trigger while correctly noting the net -75 threshold is not met.",
+              "Both recognize the exact-month exception status is unresolved, choose investigate, route only to commercial-data, and avoid inferring causes from accounting contributions."
+            ]
+          }
+        ],
+        "submission": {
+          "reviews": [
+            {
+              "case_id": "canyon-freight:p04",
+              "a_usable": true,
+              "b_usable": true,
+              "winner": "tie",
+              "reasons": [
+                "Both candidates preserve the signed counts (300 to 283, delta -17), reconcile lane contributions (-20, -2, +5), state that no threshold is met, avoid causal claims, and correctly use ignore with no recipients.",
+                "Both reflect the required complete comparable source conditions and use the authorized destination keys when no routing is required."
+              ]
+            },
+            {
+              "case_id": "canyon-freight:p06",
+              "a_usable": true,
+              "b_usable": true,
+              "winner": "tie",
+              "reasons": [
+                "Both preserve 340 to 367 (delta +27) and lane contributions of +5 air, +10 ground, and +12 ocean, correctly identify both policy triggers, and route notify to fleet-operations.",
+                "Both clearly label contributions as accounting decomposition rather than causes and cite the complete, comparable, reconciled adjacent-week evidence."
+              ]
+            },
+            {
+              "case_id": "helio-support:p04",
+              "a_usable": true,
+              "b_usable": true,
+              "winner": "tie",
+              "reasons": [
+                "Both compute the weighted rate from counts (40/800 = 5.0% and 64/800 = 8.0%), preserve the +3.0 percentage-point change, and correctly show channel contributions totaling +3.0 points.",
+                "Both identify the 2.5-point trigger, notify the authorized support-quality key, state the comparison is complete and comparable, and avoid causal claims."
+              ]
+            },
+            {
+              "case_id": "helio-support:p06",
+              "a_usable": true,
+              "b_usable": true,
+              "winner": "tie",
+              "reasons": [
+                "Both correctly treat the missing current voice data, partial coverage, false population match, and unreconciled totals as blocking the comparison; neither invents a rate or threshold result.",
+                "Both route insufficient_data to the authorized support-data key and give an evidence-bound restoration/reconciliation next step without claiming causes."
+              ]
+            },
+            {
+              "case_id": "lattice-energy:p04",
+              "a_usable": true,
+              "b_usable": true,
+              "winner": "tie",
+              "reasons": [
+                "Both preserve signed totals (50 to 55, delta +5) and signed segment contributions: new_contract +75, expansion -60, churn -5, contraction -5; no policy trigger is falsely asserted.",
+                "Both correctly use ignore with no recipients, reflect the complete comparable reconciled report, and state that the exact-month exception context indicates no approved exception."
+              ]
+            },
+            {
+              "case_id": "lattice-energy:p06",
+              "a_usable": true,
+              "b_usable": true,
+              "winner": "tie",
+              "reasons": [
+                "Both preserve signed totals (75 to 5, delta -70) and identify contraction's -55 change as the exact segment trigger while correctly noting the net -75 threshold is not met.",
+                "Both recognize the exact-month exception status is unresolved, choose investigate, route only to commercial-data, and avoid inferring causes from accounting contributions."
+              ]
+            }
+          ],
+          "case_count": 6,
+          "all_cases_complete": true
+        }
+      },
+      "output_digest": "551dabf5d6cf53e85295be3f22e380a2bf35cf4d21f51a4a63704c8717d395ce",
+      "event_digest": "22dbe043c7272601d40fabe3f5fe747e2857a972ffd83c8ce543aab1bdcf21ab",
+      "submission_complete": true
+    }
+  ],
+  "reviews": [
+    {
+      "case_id": "canyon-freight:p03",
+      "a_usable": true,
+      "b_usable": true,
+      "winner": "B",
+      "reasons": [
+        "Both candidates faithfully report 220 to 233 (+13), with air +12, ground +2, and ocean -1; the +12 air lane meets the +11 lane threshold while the total does not meet +17.",
+        "Both correctly describe accounting contributions rather than causes, confirm comparability/completeness, and route to the authorized fleet-operations key.",
+        "B is more useful because it exposes the source comparison fields, reconciled partition, and explicit aggregate-uncertainty/measurement limitations; A is still sufficient for the policy decision."
+      ]
+    },
+    {
+      "case_id": "canyon-freight:p05",
+      "a_usable": true,
+      "b_usable": true,
+      "winner": "B",
+      "reasons": [
+        "Both correctly block the comparison because the current ocean lane and current total are missing, coverage is partial, population comparability is not confirmed, and totals cannot be reconciled.",
+        "Both avoid threshold claims, state that visible air/ground values are not a valid complete comparison, and route insufficient_data to the authorized logistics-data key.",
+        "B is more useful because its analysis explicitly records null totals, insufficient_data status, and the source issues/limitations; A is still clear and policy-compliant."
+      ]
+    },
+    {
+      "case_id": "helio-support:p03",
+      "a_usable": true,
+      "b_usable": true,
+      "winner": "A",
+      "reasons": [
+        "Both correctly use weighted counts: 60/600 = 10.0% and 85/720 = 11.81%, for +1.81 percentage points, so the 9% current-rate threshold triggers notification.",
+        "Both give faithful channel contributions and mix/within decomposition, label them descriptive rather than causal, confirm the complete reconciled partition, and use the authorized support-quality key.",
+        "A is more useful because it explicitly preserves the aggregate numerators and denominators (60/600 and 85/720), making the weighted-rate calculation directly auditable."
+      ]
+    },
+    {
+      "case_id": "helio-support:p05",
+      "a_usable": true,
+      "b_usable": true,
+      "winner": "B",
+      "reasons": [
+        "Both correctly calculate 46/1000 = 4.6% and 60/1000 = 6.0%, a +1.4-point change below both policy thresholds, and correctly ignore with no recipients.",
+        "Both report the channel contributions as descriptive, not causal, and state that adjacent weeks, the population/definition, complete partition, and reconciled totals support comparison.",
+        "B is more useful because it includes the aggregate and per-channel numerator/denominator evidence, making the weighted calculation and reconciliation directly checkable."
+      ]
+    },
+    {
+      "case_id": "lattice-energy:p03",
+      "a_usable": true,
+      "b_usable": true,
+      "winner": "A",
+      "reasons": [
+        "Both preserve signs and correctly calculate 90 to 15, a -75 USD delta; churn changes -20 to -70 for -50, meeting the exact churn trigger, while contraction is -5.",
+        "Both correctly find no approved exact-period exception, distinguish measured contributions from causes, and notify the authorized commercial-operations key.",
+        "A is more useful because its comparison explicitly includes signed totals, all segment baseline/current values, complete partition and reconciliation fields; B remains usable but leaves more source comparability detail implicit."
+      ]
+    },
+    {
+      "case_id": "lattice-energy:p05",
+      "a_usable": true,
+      "b_usable": true,
+      "winner": "B",
+      "reasons": [
+        "Both correctly preserve signs and calculate 115 to -60, a -175 USD delta, with contraction -60 and churn -45; all numeric triggers are present.",
+        "Both correctly apply the exact-period approved service-credit exception as an override, ignore the case with no recipients, and make no causal claim.",
+        "B is more useful because it exposes the complete signed comparison, segment totals, reconciled/comparable status, and explicit limitations; A is still sufficient for the policy outcome."
+      ]
+    },
+    {
+      "case_id": "canyon-freight:p04",
+      "a_usable": true,
+      "b_usable": true,
+      "winner": "tie",
+      "reasons": [
+        "Both candidates preserve the signed counts (300 to 283, delta -17), reconcile lane contributions (-20, -2, +5), state that no threshold is met, avoid causal claims, and correctly use ignore with no recipients.",
+        "Both reflect the required complete comparable source conditions and use the authorized destination keys when no routing is required."
+      ]
+    },
+    {
+      "case_id": "canyon-freight:p06",
+      "a_usable": true,
+      "b_usable": true,
+      "winner": "tie",
+      "reasons": [
+        "Both preserve 340 to 367 (delta +27) and lane contributions of +5 air, +10 ground, and +12 ocean, correctly identify both policy triggers, and route notify to fleet-operations.",
+        "Both clearly label contributions as accounting decomposition rather than causes and cite the complete, comparable, reconciled adjacent-week evidence."
+      ]
+    },
+    {
+      "case_id": "helio-support:p04",
+      "a_usable": true,
+      "b_usable": true,
+      "winner": "tie",
+      "reasons": [
+        "Both compute the weighted rate from counts (40/800 = 5.0% and 64/800 = 8.0%), preserve the +3.0 percentage-point change, and correctly show channel contributions totaling +3.0 points.",
+        "Both identify the 2.5-point trigger, notify the authorized support-quality key, state the comparison is complete and comparable, and avoid causal claims."
+      ]
+    },
+    {
+      "case_id": "helio-support:p06",
+      "a_usable": true,
+      "b_usable": true,
+      "winner": "tie",
+      "reasons": [
+        "Both correctly treat the missing current voice data, partial coverage, false population match, and unreconciled totals as blocking the comparison; neither invents a rate or threshold result.",
+        "Both route insufficient_data to the authorized support-data key and give an evidence-bound restoration/reconciliation next step without claiming causes."
+      ]
+    },
+    {
+      "case_id": "lattice-energy:p04",
+      "a_usable": true,
+      "b_usable": true,
+      "winner": "tie",
+      "reasons": [
+        "Both preserve signed totals (50 to 55, delta +5) and signed segment contributions: new_contract +75, expansion -60, churn -5, contraction -5; no policy trigger is falsely asserted.",
+        "Both correctly use ignore with no recipients, reflect the complete comparable reconciled report, and state that the exact-month exception context indicates no approved exception."
+      ]
+    },
+    {
+      "case_id": "lattice-energy:p06",
+      "a_usable": true,
+      "b_usable": true,
+      "winner": "tie",
+      "reasons": [
+        "Both preserve signed totals (75 to 5, delta -70) and identify contraction's -55 change as the exact segment trigger while correctly noting the net -75 threshold is not met.",
+        "Both recognize the exact-month exception status is unresolved, choose investigate, route only to commercial-data, and avoid inferring causes from accounting contributions."
+      ]
+    }
+  ],
+  "failures": [],
+  "usage": {
+    "by_episode": {
+      "review:1": {
+        "requests": 1,
+        "responses": 1,
+        "input_tokens": 70816,
+        "output_tokens": 3343,
+        "cached_input_tokens": 43520
+      },
+      "review:2": {
+        "requests": 1,
+        "responses": 1,
+        "input_tokens": 68271,
+        "output_tokens": 1483,
+        "cached_input_tokens": 47360
+      }
+    },
+    "unknown_usage": [],
+    "usage_status": "complete"
+  },
+  "input_digest": "5a84f34d229d71870d3c4869c98cf9bfba5274e1c7afb324fefbf8b2727cb344",
+  "instructions_digest": "f877e3d93667d54a2647a9c2969c2ee082bbfe314da3ccdb3cdbed2873052d36",
+  "correctness_claim": false,
+  "human_usability_claim": false,
+  "events_file": "events.jsonl"
+}

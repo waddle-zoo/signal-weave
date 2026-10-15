@@ -1,0 +1,91 @@
+{
+  "runs": {
+    "looker": {
+      "artifacts": {
+        "inputs.json": {
+          "source_sha256": "44d7c2fe34fc795a195bbfe78ea6f5899b94bf87769a9f5579aa3efa0dd7af55",
+          "archive_sha256": "44d7c2fe34fc795a195bbfe78ea6f5899b94bf87769a9f5579aa3efa0dd7af55",
+          "source_bytes": 456
+        },
+        "protocol.json": {
+          "source_sha256": "a27f469c37a245f89a6d97b9f0d1aa9fab485b5dbb4450de2c4eac7bde873e9b",
+          "archive_sha256": "a27f469c37a245f89a6d97b9f0d1aa9fab485b5dbb4450de2c4eac7bde873e9b",
+          "source_bytes": 433
+        },
+        "report.json": {
+          "source_sha256": "1c23ee07ed951255ee6abf331c82e0ee8c8106fce330d4df21e96dff03eb5769",
+          "archive_sha256": "1c23ee07ed951255ee6abf331c82e0ee8c8106fce330d4df21e96dff03eb5769",
+          "source_bytes": 1613
+        },
+        "trace.jsonl.gz": {
+          "source_sha256": "d485943954511b9e06d818bde45147b02c16649e4a15f0894aad162caf159f72",
+          "archive_sha256": "4e2deb35f32756a32ac38a280a9607f01f26289b0c8669514787d6c315dd1b60",
+          "source_bytes": 58583
+        }
+      },
+      "summary": {
+        "attempts": 8,
+        "exact": 2,
+        "total": 2,
+        "resolved_models": ["jev-1.13.0"],
+        "budget_censored": false
+      }
+    },
+    "trino": {
+      "artifacts": {
+        "inputs.json": {
+          "source_sha256": "ae10e9d1d4ae1e8a1e6ac8afed0a7e1fa6b653f22ac47a1b4d0041041dda8357",
+          "archive_sha256": "ae10e9d1d4ae1e8a1e6ac8afed0a7e1fa6b653f22ac47a1b4d0041041dda8357",
+          "source_bytes": 422
+        },
+        "protocol.json": {
+          "source_sha256": "7cf290e117e189cc4a9b8aea981b699976918b39f30b9c3b77bfe75d6975959b",
+          "archive_sha256": "7cf290e117e189cc4a9b8aea981b699976918b39f30b9c3b77bfe75d6975959b",
+          "source_bytes": 433
+        },
+        "report.json": {
+          "source_sha256": "df4f079e7445ed1bad03aebce425591175df7441e4e939595b2faaa70949b390",
+          "archive_sha256": "df4f079e7445ed1bad03aebce425591175df7441e4e939595b2faaa70949b390",
+          "source_bytes": 926
+        },
+        "trace.jsonl.gz": {
+          "source_sha256": "7571f729e2a0f55760f05a4f370614113c842b1a42b15309e49a213a09b6d2e8",
+          "archive_sha256": "5d97b3f560f5339663d127e5867c1287b166d98f760d119cb926c896d28563c7",
+          "source_bytes": 28713
+        }
+      },
+      "summary": {
+        "attempts": 4,
+        "exact": 1,
+        "total": 1,
+        "resolved_models": ["jev-1.13.0"],
+        "budget_censored": false
+      }
+    },
+    "failed-budget-probe": {
+      "artifacts": {
+        "inputs.json": {
+          "source_sha256": "80602d97bbd3f64e7d5774c1fcf5c011b69bb5f66d6326fac01e6cf335a7ecfe",
+          "archive_sha256": "80602d97bbd3f64e7d5774c1fcf5c011b69bb5f66d6326fac01e6cf335a7ecfe",
+          "source_bytes": 1028
+        },
+        "protocol.json": {
+          "source_sha256": "73384762fc8cad09ebc26a6bda2f9c1165f1b04e9b27629c82059c71cadf0a63",
+          "archive_sha256": "73384762fc8cad09ebc26a6bda2f9c1165f1b04e9b27629c82059c71cadf0a63",
+          "source_bytes": 433
+        },
+        "trace.jsonl.gz": {
+          "source_sha256": "ad2efc6cd5356afef3516f38c73dff2eaf03184ff2ff2d503b6d2fcf7f9b664a",
+          "archive_sha256": "98605a432b093bd6767a388f5a8a99827a7be76c6d8e1f337d6fb226d8d649eb",
+          "source_bytes": 33844
+        }
+      },
+      "summary": {
+        "attempts": 6,
+        "completed_report": false
+      }
+    }
+  },
+  "real_deliveries": 0,
+  "credential_value_absence_checked": true
+}

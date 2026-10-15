@@ -1,0 +1,62 @@
+{
+  "version": "live-contract-onboarding-v1",
+  "attempts": 8,
+  "errors": 0,
+  "resolved_models": [
+    "jev-1.13.0"
+  ],
+  "exact": 2,
+  "total": 2,
+  "budget_censored": false,
+  "zero_real_deliveries": true,
+  "results": [
+    {
+      "adapter": "looker",
+      "resource": "explore:checkout",
+      "complete_contract": true,
+      "onboarding_status": "ready_for_approval",
+      "contract_visible": true,
+      "card_key_bound": true,
+      "delivery_disabled": true,
+      "expected_outcome": "investigate",
+      "outcome": "investigate",
+      "workflow_action": "retrieve_evidence",
+      "workflow_status": "pending",
+      "expected_action": "retrieve_evidence",
+      "expected_workflow_status": "pending",
+      "delivery_method_keys": [
+        "owner"
+      ],
+      "expected_delivery_method_keys": [
+        "owner"
+      ],
+      "confidence": 0.9,
+      "exact": true,
+      "attempt": 0
+    },
+    {
+      "adapter": "looker",
+      "resource": "explore:checkout",
+      "complete_contract": false,
+      "onboarding_status": "ready_for_approval",
+      "contract_visible": true,
+      "card_key_bound": true,
+      "delivery_disabled": true,
+      "expected_outcome": "insufficient_data",
+      "outcome": "insufficient_data",
+      "workflow_action": "repair_source",
+      "workflow_status": "blocked",
+      "expected_action": "repair_source",
+      "expected_workflow_status": "blocked",
+      "delivery_method_keys": [
+        "data"
+      ],
+      "expected_delivery_method_keys": [
+        "data"
+      ],
+      "confidence": 0.98,
+      "exact": true,
+      "attempt": 1
+    }
+  ]
+}

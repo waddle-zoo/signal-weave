@@ -1,0 +1,31 @@
+{
+  "scope": "Local macOS ARM64 candidate after bounded MCP evidence paging. Runtime and installer validation only; not comparative business-quality or enterprise-onboarding proof.",
+  "version": "0.2.0rc2",
+  "source_sha256": "9460d2e8e08a3e06de7309cf6c8d554b17043074d8fa9fe7fbdcee972c1298e2",
+  "binary_sha256": "6abe5f0e292a688a30c139f917e98cd6635bb4b6bb974597f23e3edfcda9d7b5",
+  "git_commit_at_build": "114614ae0ab080e77023ad175bad05d977ea0d4c",
+  "dirty_source_at_build": true,
+  "native_install_pty": {"passed": 1, "deselected": 3},
+  "native_smoke": {
+    "private_setup": true,
+    "default_home_serve": true,
+    "stdio_tools": 10,
+    "live_jev": true,
+    "live_outcome": "notify",
+    "measured_delta": -20,
+    "delivery_enabled": false,
+    "process_restart_replay": true
+  },
+  "provider_setup_checks_offline_only": ["jev", "openai-decisions", "chatgpt-plan"],
+  "receipt_page_source_tests": {
+    "lossless_400_item_recovery": true,
+    "tail_item_preserved": true,
+    "cross_tenant_access_rejected": true,
+    "directory_overflow_counterexample_repaired": true,
+    "no_new_inference_during_paging": true,
+    "oversized_scalar_limit": "Explicit full-audit read required; no silent truncation."
+  },
+  "wide_chart_native_post_fix_measurement": "not completed",
+  "comparative_business_trial": "not completed",
+  "release_status": "Locally built candidate; not a published GitHub release."
+}

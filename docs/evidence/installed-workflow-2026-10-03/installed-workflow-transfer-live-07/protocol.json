@@ -1,0 +1,32 @@
+{
+  "version": "installed-workflow-v6",
+  "code": "3be22c525cb293a662acb4ec5fa43348aa4f9abf",
+  "binary_sha256": "f6c60674afe37c88b7433a9bd49d3b7df641ef0123a4c20b15a7fd15de993095",
+  "harness_sha256": {
+    "installed_workflow_trial.py": "6935365a4de60563816062c6559370db68db96016ad7397757f7f16128d1aedd",
+    "installed_trial_transport.py": "7ef166eb901c1a2f17485aeb6150d8b8de7a4c5af01d82f767ac219f3df1968c",
+    "installed_northstar_cases.py": "56bc8a831208a431f29dc47e3b8080d10250d934f214fc2e0a6b8f36377391b9",
+    "installed_transfer_cases.py": "d274ed3c10771ccf95554ce3d87a7ba14f8546fc4b701ca5a84a7faa93d7ed64",
+    "bootstrap_agent_trial.py": "f3b267422c6cab78289133c0975fce7ad1b7f676f7e935708c7ebc08110552d2",
+    "bootstrap_owner_review.py": "cf05e57676ca37f7d5cc245899dae25e6226c8f8b13bd4dffd4f900cbaa28ef7",
+    "codex_trial_transport.py": "882932692b1eef73d9db5e18c5d0a2803cd55d726fa1d53dedd5d765f677bc61"
+  },
+  "dataset_sha256": "515cc8c205737809620a289f4c4e61bc76ff6b1311f746ee3b22a58a5c337c2a",
+  "jev_attempt_limit": 65,
+  "stop_expansion_after_first_cases": 6,
+  "author_model": "gpt-5.6-luna",
+  "owner_review_model": "gpt-5.6-luna",
+  "companies": 2,
+  "monitoring_cases": 6,
+  "expert_cards_seeded": false,
+  "historical_examples_supplied": true,
+  "live": true,
+  "delivery_enabled": false,
+  "limits": [
+    "Known synthetic families, not new customer evidence.",
+    "Agent authors card; recurring runs below test native MCP outcomes without a report-writing LLM.",
+    "No measured comparative cost/latency advantage or real user usability claim.",
+    "Read-only synthetic MCP source; not a fresh Superset extraction or arbitrary MCP auto-normalization.",
+    "Metadata mappings and owner-labeled history are supplied, not auto-discovered from raw enterprise data."
+  ]
+}

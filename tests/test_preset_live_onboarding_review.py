@@ -101,9 +101,9 @@ def _passing_report() -> dict:
             "provider_request_paths_before_first_evaluation": {"/api/v1/dashboard/": 1},
             "provider_request_paths_after_first_evaluation": {
                 "/api/v1/dashboard/": 1,
-                "/api/v1/chart/1/data": 1,
+                "/api/v1/chart/1/data/": 1,
             },
-            "provider_request_paths_for_first_evaluation": {"/api/v1/chart/1/data": 1},
+            "provider_request_paths_for_first_evaluation": {"/api/v1/chart/1/data/": 1},
             "provider_requests_for_first_evaluation": 1,
             "provider_data_requests_for_first_evaluation": 1,
             "replay_made_no_jev_call": True,

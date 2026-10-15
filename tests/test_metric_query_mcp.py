@@ -92,7 +92,8 @@ async def test_metric_query_card_is_plain_language_then_deterministic_sql(tmp_pa
             metric_query_store=JsonMetricQueryCardStore(tmp_path / "metric-cards.json"),
             sources=registry,
             engine=InsightEngine(QuerySelector(), registry=registry),
-        )
+        ),
+        profile="full",
     )
 
     proposed = await tool(server, "propose_metric_query_card")(
@@ -169,6 +170,7 @@ def test_metric_query_cards_are_scoped_for_list_lookup_compile_and_approval(tmp_
             sources=registry,
             engine=InsightEngine(QuerySelector(), registry=registry),
         ),
+        profile="full",
         principal_resolver=lambda ctx: PrincipalContext(
             principal_id=ctx.principal_id,
             tenant_id=ctx.tenant_id,

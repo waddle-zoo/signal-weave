@@ -1,0 +1,227 @@
+{
+  "review_type": "offline_presentation_review",
+  "review_version": "v2",
+  "review_status": "complete",
+  "review_mode": "read_only",
+  "paid_calls_made": false,
+  "production_files_changed": false,
+  "original_artifacts_changed": false,
+  "v1_review_preserved": "artifacts/first-report-live-02/presentation-review.json",
+  "generated_file": "artifacts/first-report-live-02/presentation-review-v2.json",
+  "renderer_api_used": [
+    "signalweave.reporting.build_investigation_report",
+    "signalweave.reporting.render_investigation_report"
+  ],
+  "verification": {
+    "command": ".venv/bin/python -B -m pytest tests/test_reporting.py -q",
+    "result": "44 passed",
+    "note": "The -B flag avoids stale bytecode after the final source rewrite; no production files were modified by this review."
+  },
+  "rerender_method": "Offline reconstruction of each archived native card, InsightResult, and ResourceSnapshot from first-report-live-02/report.json, followed by the frozen working-tree reporting.py API. No model, source adapter, database, or network call was used.",
+  "source_hashes": {
+    "artifacts/first-report-live-02/manifest.json": "bd18b98b9ac284f2c40fde2e424024ac38d0d2b6301b57cd9707d3bd20bc3680",
+    "artifacts/first-report-live-02/report.json": "4f89f7305a3c171f743f6c3cbfd1a0a4f5ca8ab14de382df0c6402af8bc9c1ee",
+    "source_bundle_manifest_then_report": "59448e00c1928f4f3dfdc79298abde09b06d20c2a93da84464bee1a8fd8ae581",
+    "src/signalweave/reporting.py": "eb7dae589f40a67c648abe11826ff390a7960aef9636ab405cfe974f5803350c"
+  },
+  "semantic_preservation_check": {
+    "cases_rerendered": 8,
+    "render_failures": 0,
+    "status_unchanged": "8/8",
+    "outcome_unchanged": "8/8",
+    "numeric_claims_unchanged": "8/8",
+    "routes_unchanged": "8/8",
+    "normalized_provenance_unchanged": "8/8",
+    "probability_labels": {
+      "question": "P(supported)",
+      "watch": "P(present)",
+      "mismatched_labels_found": false
+    },
+    "interpretation": "The renderer changed presentation only. Archived decisions, recomputed numeric claims, route destinations, and provenance facts were preserved."
+  },
+  "visible_lead_vs_appendix": {
+    "split_rule": "Visible lead is all Markdown before the first <details> tag. Appendix is the remaining Markdown including the details wrapper.",
+    "before_reference": "Archived native.report_markdown full artifact",
+    "after_full_artifact_characters": 32375,
+    "after_visible_lead_characters_total": 6108,
+    "after_appendix_characters_total": 26267,
+    "after_visible_lead_mean_characters": 763.5,
+    "after_visible_lead_median_characters": 661.5,
+    "after_full_artifact_mean_characters": 4046.9,
+    "after_full_artifact_median_characters": 3685.0,
+    "old_full_artifact_characters": 19211,
+    "full_artifact_ratio_to_old": 1.69,
+    "plain_markdown_visibility": "A plain Markdown renderer that does not implement HTML details disclosure exposes all 32,375 characters. The visible owner lead is concise, but the delivered plain-text artifact is not.",
+    "html_visibility": "A details-aware HTML renderer exposes only the 6,108-character aggregate lead initially; the appendix remains available on demand.",
+    "critical_read": "The lead is materially shorter than each old full report and much more owner-oriented, but the improvement depends on HTML details support. Plain Markdown consumers still receive an artifact 1.69 times larger than the archived native report set."
+  },
+  "case_comparisons": [
+    {
+      "case": "northstar-cart:p02",
+      "old_full_characters": 2045,
+      "new_full_characters": 3522,
+      "new_visible_lead_characters": 619,
+      "new_appendix_characters": 2903,
+      "route_audience_rendered": "Commerce owner (agent://commerce-owner)",
+      "blocked": false,
+      "provisional": false,
+      "owner_clarity": "good_but_threshold_reason_implicit",
+      "critical_conclusion": "The lead clearly says notify and names the Commerce route. It shows +60 total and marketplace +100, so the owner can infer why the channel rule fires, but it never states that the total threshold failed while the channel threshold passed. Technical detail is in the appendix.",
+      "minimal_fix": "Add one grounded sentence: notify because marketplace contributed +100, even though total change was +60 below the $100 threshold."
+    },
+    {
+      "case": "northstar-cart:p03",
+      "old_full_characters": 1875,
+      "new_full_characters": 3338,
+      "new_visible_lead_characters": 563,
+      "new_appendix_characters": 2766,
+      "route_audience_rendered": "No notification intended (quiet outcome)",
+      "blocked": false,
+      "provisional": false,
+      "owner_clarity": "good",
+      "critical_conclusion": "The quiet decision, no-notification audience, zero change, and next step are clear. The lead is substantially shorter than the old full report; the appendix is unnecessary for a routine quiet read but remains auditable.",
+      "minimal_fix": "Optional: suppress the appendix by default for quiet outcomes in interfaces that support progressive disclosure."
+    },
+    {
+      "case": "harbor-help:p02",
+      "old_full_characters": 2326,
+      "new_full_characters": 4176,
+      "new_visible_lead_characters": 707,
+      "new_appendix_characters": 3469,
+      "route_audience_rendered": "Support Operations (agent://support-operations)",
+      "blocked": false,
+      "provisional": false,
+      "owner_clarity": "improved_but_metric_format_weak",
+      "critical_conclusion": "The route and notify decision are clear, and the lead is short. The metric remains raw ratio 0.1 to 0.14 with delta 0.04 rather than 10.0% to 14.0% and +4.0 percentage points; the lead also does not state that the current-rate and change thresholds both fire. This is a real owner-clarity gap, not mere artifact length.",
+      "minimal_fix": "Format ratio metrics as percentages and include the grounded threshold result in the lead."
+    },
+    {
+      "case": "harbor-help:p03",
+      "old_full_characters": 4130,
+      "new_full_characters": 5905,
+      "new_visible_lead_characters": 1025,
+      "new_appendix_characters": 4880,
+      "route_audience_rendered": "Support Data Steward (agent://support-data-steward)",
+      "blocked": true,
+      "provisional": false,
+      "owner_clarity": "safe_but_technical",
+      "critical_conclusion": "The lead correctly gives no quantitative claim, says no complete conclusion is available, and routes to the Support Data Steward. However, its capped gap lead still exposes technical messages such as 'required typed evidence slot' and 'insufficient_data' before the appendix. The owner action is clear, but the language is not owner-facing.",
+      "minimal_fix": "Replace technical gap messages in the visible lead with one grounded sentence: self-serve current data is missing, so no population-level rate or delta can be reported; restore complete tier data and re-evaluate."
+    },
+    {
+      "case": "redwood-fulfillment:p02",
+      "old_full_characters": 1977,
+      "new_full_characters": 3450,
+      "new_visible_lead_characters": 604,
+      "new_appendix_characters": 2846,
+      "route_audience_rendered": "Fulfillment owner (agent://fulfillment-owner)",
+      "blocked": false,
+      "provisional": false,
+      "owner_clarity": "good_but_quality_reason_implicit",
+      "critical_conclusion": "The lead gives the exact Fulfillment audience and +15 result with north +15. It does not state in the lead that the selected export was complete, reconciled, and fresh, nor explicitly say the boundary threshold fired. Those facts are available in the appendix/source record but are useful for the owner decision.",
+      "minimal_fix": "Add a concise, source-grounded threshold and quality sentence to the lead."
+    },
+    {
+      "case": "redwood-fulfillment:p03",
+      "old_full_characters": 2681,
+      "new_full_characters": 4456,
+      "new_visible_lead_characters": 1267,
+      "new_appendix_characters": 3189,
+      "route_audience_rendered": "Fulfillment data review (agent://fulfillment-data)",
+      "blocked": true,
+      "provisional": true,
+      "owner_clarity": "improved_warning_but_not_sufficient",
+      "critical_conclusion": "The provisional warning and exact data-review audience are strong improvements. The lead still exposes technical blocker text ('source contract status is ambiguous', 'evidence slot question:2') and the next step still says 'use fixed retrieval' rather than telling the owner to resolve the conflicting same-export definitions and issue no business alert. The +8 provisional math is therefore safer but not fully intelligible.",
+      "minimal_fix": "Use the visible lead for the actual owner action: resolve whether the export means completed shipments delivered late or all orders with elapsed promises; do not issue a business alert until resolved."
+    },
+    {
+      "case": "orbit-subscriptions:p02",
+      "old_full_characters": 1995,
+      "new_full_characters": 3648,
+      "new_visible_lead_characters": 625,
+      "new_appendix_characters": 3014,
+      "route_audience_rendered": "No notification intended (quiet outcome)",
+      "blocked": false,
+      "provisional": false,
+      "owner_clarity": "semantically_underdefined",
+      "critical_conclusion": "The lead preserves the native delta interpretation and quiet outcome, but still does not disclose that the original owner policy is ambiguous between current segment level and period-over-period contribution. It also displays only three of four contributions and says 'plus 1 smaller', without restoring the omitted value in the appendix.",
+      "minimal_fix": "Surface the policy clarification requirement and either show all four contributions or list omitted labels and values."
+    },
+    {
+      "case": "orbit-subscriptions:p03",
+      "old_full_characters": 2182,
+      "new_full_characters": 3880,
+      "new_visible_lead_characters": 698,
+      "new_appendix_characters": 3182,
+      "route_audience_rendered": "Subscription Operations (agent://subscription-operations)",
+      "blocked": false,
+      "provisional": false,
+      "owner_clarity": "action_clear_policy_caveat_missing",
+      "critical_conclusion": "The notify action is robust under either Orbit p02 interpretation and the route is clear. The same unresolved policy meaning is not carried forward, so this report can appear more settled than the owner wording supports. The four-way contribution breakdown is still truncated in the lead.",
+      "minimal_fix": "Carry a short policy note that segment thresholds are currently interpreted as changes between closed intervals pending owner confirmation."
+    }
+  ],
+  "remaining_shortcomings": [
+    {
+      "id": "P1-visible-technical-gap-leakage",
+      "severity": "owner_clarity",
+      "finding": "Harbor p03 and Redwood p03 still put technical blocker messages in the visible lead because the capped gap list uses raw ReportIssue messages. The lead is capped, but not fully owner-facing.",
+      "impact": "Blocked reports communicate internal evidence mechanics instead of the concrete business/data action.",
+      "minimal_fix": "Map root blockers to short owner-language messages in the lead; retain raw codes and slot details only in the appendix."
+    },
+    {
+      "id": "P1-next-step-not-owner-action",
+      "severity": "business_usefulness",
+      "finding": "Redwood p03 still exposes 'Use fixed retrieval only; do not initiate follow-up investigation or engine actions' as the next step. That is an implementation instruction, not the owner's required resolution of the conflicting source definitions.",
+      "impact": "The report can be technically safe while failing to tell the accountable audience what to do.",
+      "minimal_fix": "Render an owner-facing next step when the card supplies one; otherwise derive only a bounded, source-grounded remediation statement from the blocker."
+    },
+    {
+      "id": "P1-report-model-audience-mismatch",
+      "severity": "api_semantics",
+      "finding": "The Markdown uses the real route audience, but InvestigationReport.intended_audience is still populated as 'Card owner and caller-owned delivery workflow' when card.owner is null. Consumers of the report model or JSON can therefore receive a different audience than the rendered report.",
+      "impact": "Presentation and structured report consumers disagree about the intended audience.",
+      "minimal_fix": "Populate intended_audience from the outcome-specific configured route before rendering, not only inside _route_audience."
+    },
+    {
+      "id": "P2-plain-markdown-disclosure",
+      "severity": "delivery_usability",
+      "finding": "The HTML details wrapper reduces initial visual load only in details-aware renderers. Plain Markdown consumers expose the entire 31,510-character artifact, including technical blocks and all policy checks.",
+      "impact": "The claimed concise owner experience is renderer-dependent.",
+      "minimal_fix": "Provide a separate lead-only field/artifact for plain-text delivery, or explicitly treat the appendix as a separate audit payload rather than relying on HTML disclosure."
+    },
+    {
+      "id": "P2-threshold-and-unit-synthesis",
+      "severity": "owner_clarity",
+      "finding": "Several complete leads show arithmetic but not the grounded policy conclusion. Harbor p02 retains raw ratio notation, and Northstar/Redwood leads require the owner to infer which threshold fired from top contributors.",
+      "impact": "The lead is short but not always decision-complete.",
+      "minimal_fix": "Add one sentence per report stating the applicable threshold result, using only thresholds already present in the card policy."
+    },
+    {
+      "id": "P2-provisional-reason",
+      "severity": "owner_clarity",
+      "finding": "Redwood p03 has a visible provisional warning, but it does not name the source-definition conflict that makes 50 to 58 provisional. The warning is structurally correct but semantically generic.",
+      "impact": "Readers may understand that the number is provisional without understanding what must be resolved before use.",
+      "minimal_fix": "Include the competing definitions and no-alert consequence in the visible provisional lead."
+    },
+    {
+      "id": "P2-contribution-truncation",
+      "severity": "analytical_readability",
+      "finding": "Orbit leads show top three contributors and 'plus 1 smaller'. The omitted fourth contribution is zero in these frozen cases, but no appendix line restores the omitted label/value, so the decomposition is not fully inspectable from the rendered report.",
+      "impact": "Future material tail segments could be hidden, and current readers cannot verify all categories from the artifact.",
+      "minimal_fix": "Show all contributions for small segment sets or list omitted segment labels and values in the appendix."
+    }
+  ],
+  "grounding_checks": {
+    "unsupported_thresholds_introduced": false,
+    "unsupported_causal_claims_introduced": false,
+    "provisional_math_is_labeled": "redwood-fulfillment:p03 only, where source status is ambiguous",
+    "blocked_reports_have_no_complete_conclusion_warning": "2/2 blocked cases",
+    "route_audience_is_real_in_rendered_lead": "8/8",
+    "technical_gap_text_still_in_visible_lead": [
+      "harbor-help:p03",
+      "redwood-fulfillment:p03"
+    ]
+  },
+  "final_conclusion": "The final renderer is a meaningful improvement for owner-facing presentation: the visible lead is short, route audiences are concrete, blocked cases warn clearly, and Redwood p03 labels its math provisional. The eight archived decisions, math, routes, and normalized provenance are preserved. It is not fully finished for all delivery surfaces: plain Markdown still exposes the full appendix, two blocked leads still leak technical blocker language, Redwood p03 still gives an engine-facing next step, the structured audience field disagrees with the rendered audience, threshold/unit synthesis is incomplete, Orbit's policy ambiguity remains hidden, and contribution truncation is not fully auditable."
+}

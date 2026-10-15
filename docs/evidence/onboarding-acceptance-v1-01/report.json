@@ -1,0 +1,2342 @@
+{
+  "scope": "end-to-end empirical acceptance regression of expert-supplied reviewed synthetic cards",
+  "live_jev": true,
+  "external_delivery": false,
+  "novice_bootstrap_proof": false,
+  "luna_advantage_established": false,
+  "planned_cases": 12,
+  "max_requests": 12,
+  "retries": 0,
+  "status": "complete",
+  "passed": true,
+  "attempts": 12,
+  "companies": {
+    "commerce": {
+      "evidence_admission_policy_version": 4,
+      "card_ids": [
+        "commerce-operating-check"
+      ],
+      "card_versions": {
+        "commerce-operating-check": 1
+      },
+      "acceptance_outcomes": [
+        "ignore",
+        "insufficient_data",
+        "notify"
+      ],
+      "card_execution_digests": {
+        "commerce-operating-check": "cdd01096841dcff578ca1ebb6aabaed5bff4e5c6c8eacca0f1e1e209d0c647b6"
+      },
+      "acceptance_passed": true,
+      "acceptance_scope": "supplied_snapshot_replay",
+      "case_count": 4,
+      "successful_case_count": 4,
+      "error_count": 0,
+      "outcome_accuracy": 1.0,
+      "evidence_recall": 1.0,
+      "retrieval_precision": 1.0,
+      "retrieval_recall": 1.0,
+      "unsafe_action_rate": 0.0,
+      "error_rate": 0.0,
+      "median_latency_ms": 215.80810399609618,
+      "status": "approved",
+      "thresholds": {
+        "min_outcome_accuracy": 1.0,
+        "min_evidence_recall": 1.0,
+        "min_retrieval_recall": 1.0,
+        "max_unsafe_action_rate": 0.0,
+        "max_error_rate": 0.0,
+        "min_cases": 4,
+        "require_dataset_provenance": false,
+        "required_splits": [],
+        "require_disjoint_time_splits": false
+      },
+      "preflight_blockers": [],
+      "cases": [
+        {
+          "case_id": "commerce-affirmative",
+          "card_id": "commerce-operating-check",
+          "card_version": 1,
+          "expected_outcome": "notify",
+          "outcome": "notify",
+          "exact_outcome": true,
+          "safe_action": true,
+          "unsafe_action": false,
+          "delivery_exact": true,
+          "delivery_destinations_exact": true,
+          "evidence_recall": 1.0,
+          "retrieval_precision": 1.0,
+          "retrieval_recall": 1.0,
+          "actual_delivery_method_keys": [
+            "owner"
+          ],
+          "actual_delivery_destinations": {
+            "owner": "agent://operating-owner"
+          },
+          "actual_evidence_source_keys": [
+            "record"
+          ],
+          "actual_retrieval_refs": [
+            "fixture|record"
+          ],
+          "confidence": 0.97,
+          "probabilities": {
+            "ignore": 0.01,
+            "investigate": 0.0,
+            "insufficient_data": 0.02,
+            "notify": 0.97
+          },
+          "summary": "Evaluated 0 observations and 0 computed analyses across 1 sources; 1 watch items and 0 questions were checked.",
+          "rationale": "Jev evaluated the card's typed watch, question, and outcome judgments; selected=notify, support=0.97; routed=notify.",
+          "missing_evidence_source_keys": [],
+          "missing_retrieval_refs": [],
+          "unexpected_retrieval_refs": [],
+          "latency_ms": 307.0629579597153,
+          "evaluator": "jev-latest",
+          "error": null,
+          "tags": [],
+          "dataset_id": "reviewed-operating-records-commerce",
+          "split": "validation",
+          "evidence_plan": {
+            "objective": "Route an evidenced exception to the operating owner.",
+            "slots": [
+              {
+                "key": "source:record",
+                "role": "primary",
+                "question": "What changed in Current operating record that is relevant to the card's stated purpose and comparison window?",
+                "source_keys": [
+                  "record"
+                ],
+                "source_refs": [
+                  {
+                    "key": "record",
+                    "adapter": "fixture",
+                    "resource": "record",
+                    "label": "Current operating record",
+                    "parameters": {},
+                    "required": true,
+                    "required_comparison_keys": []
+                  }
+                ],
+                "required": true,
+                "completion_criteria": "Return a bounded observation or evidence statement with its source and comparison window.",
+                "status": "fulfilled",
+                "evidence_fact_ids": [],
+                "evidence_source_keys": [
+                  "record"
+                ]
+              },
+              {
+                "key": "watch:1",
+                "role": "watch",
+                "question": "The settled refund batch is missing approval from its finance owner.",
+                "source_keys": [
+                  "record"
+                ],
+                "source_refs": [],
+                "required": true,
+                "completion_criteria": "Return evidence that shows whether this watch item is present or absent.",
+                "status": "fulfilled",
+                "evidence_fact_ids": [],
+                "evidence_source_keys": []
+              }
+            ],
+            "status": "complete",
+            "missing_slot_keys": [],
+            "conflicting_slot_keys": [],
+            "warnings": [],
+            "generated_by": "signalweave",
+            "context_version": null
+          },
+          "workflow": {
+            "status": "ready",
+            "step_key": "deliver",
+            "action": "deliver",
+            "objective": "Route an evidenced exception to the operating owner.",
+            "instructions": "Deliver the evidence bundle to the configured destination. Do not invent a destination or change the outcome.",
+            "required_source_keys": [
+              "record"
+            ],
+            "completion_criteria": "The caller-owned delivery adapter accepted the evidence bundle.",
+            "delivery_method_keys": [
+              "owner"
+            ],
+            "evidence_plan": {
+              "objective": "Route an evidenced exception to the operating owner.",
+              "slots": [
+                {
+                  "key": "source:record",
+                  "role": "primary",
+                  "question": "What changed in Current operating record that is relevant to the card's stated purpose and comparison window?",
+                  "source_keys": [
+                    "record"
+                  ],
+                  "source_refs": [
+                    {
+                      "key": "record",
+                      "adapter": "fixture",
+                      "resource": "record",
+                      "label": "Current operating record",
+                      "parameters": {},
+                      "required": true,
+                      "required_comparison_keys": []
+                    }
+                  ],
+                  "required": true,
+                  "completion_criteria": "Return a bounded observation or evidence statement with its source and comparison window.",
+                  "status": "fulfilled",
+                  "evidence_fact_ids": [],
+                  "evidence_source_keys": [
+                    "record"
+                  ]
+                },
+                {
+                  "key": "watch:1",
+                  "role": "watch",
+                  "question": "The settled refund batch is missing approval from its finance owner.",
+                  "source_keys": [
+                    "record"
+                  ],
+                  "source_refs": [],
+                  "required": true,
+                  "completion_criteria": "Return evidence that shows whether this watch item is present or absent.",
+                  "status": "fulfilled",
+                  "evidence_fact_ids": [],
+                  "evidence_source_keys": []
+                }
+              ],
+              "status": "complete",
+              "missing_slot_keys": [],
+              "conflicting_slot_keys": [],
+              "warnings": [],
+              "generated_by": "signalweave",
+              "context_version": null
+            }
+          },
+          "watch_results": [
+            {
+              "key": "watch_0",
+              "watch_for": "The settled refund batch is missing approval from its finance owner.",
+              "status": "present",
+              "probability": 0.96,
+              "probabilities": {
+                "absent": 0.03,
+                "present": 0.96,
+                "unknown": 0.01
+              }
+            }
+          ],
+          "question_results": [],
+          "failure_reasons": []
+        },
+        {
+          "case_id": "commerce-negative",
+          "card_id": "commerce-operating-check",
+          "card_version": 1,
+          "expected_outcome": "ignore",
+          "outcome": "ignore",
+          "exact_outcome": true,
+          "safe_action": true,
+          "unsafe_action": false,
+          "delivery_exact": true,
+          "delivery_destinations_exact": true,
+          "evidence_recall": 1.0,
+          "retrieval_precision": 1.0,
+          "retrieval_recall": 1.0,
+          "actual_delivery_method_keys": [],
+          "actual_delivery_destinations": {},
+          "actual_evidence_source_keys": [
+            "record"
+          ],
+          "actual_retrieval_refs": [
+            "fixture|record"
+          ],
+          "confidence": 0.99,
+          "probabilities": {
+            "ignore": 0.99,
+            "investigate": 0.0,
+            "insufficient_data": 0.01,
+            "notify": 0.0
+          },
+          "summary": "Evaluated 0 observations and 0 computed analyses across 1 sources; 1 watch items and 0 questions were checked.",
+          "rationale": "Jev evaluated the card's typed watch, question, and outcome judgments; selected=ignore, support=0.99; routed=ignore.",
+          "missing_evidence_source_keys": [],
+          "missing_retrieval_refs": [],
+          "unexpected_retrieval_refs": [],
+          "latency_ms": 218.539374996908,
+          "evaluator": "jev-latest",
+          "error": null,
+          "tags": [],
+          "dataset_id": "reviewed-operating-records-commerce",
+          "split": "validation",
+          "evidence_plan": {
+            "objective": "Route an evidenced exception to the operating owner.",
+            "slots": [
+              {
+                "key": "source:record",
+                "role": "primary",
+                "question": "What changed in Current operating record that is relevant to the card's stated purpose and comparison window?",
+                "source_keys": [
+                  "record"
+                ],
+                "source_refs": [
+                  {
+                    "key": "record",
+                    "adapter": "fixture",
+                    "resource": "record",
+                    "label": "Current operating record",
+                    "parameters": {},
+                    "required": true,
+                    "required_comparison_keys": []
+                  }
+                ],
+                "required": true,
+                "completion_criteria": "Return a bounded observation or evidence statement with its source and comparison window.",
+                "status": "fulfilled",
+                "evidence_fact_ids": [],
+                "evidence_source_keys": [
+                  "record"
+                ]
+              },
+              {
+                "key": "watch:1",
+                "role": "watch",
+                "question": "The settled refund batch is missing approval from its finance owner.",
+                "source_keys": [
+                  "record"
+                ],
+                "source_refs": [],
+                "required": true,
+                "completion_criteria": "Return evidence that shows whether this watch item is present or absent.",
+                "status": "fulfilled",
+                "evidence_fact_ids": [],
+                "evidence_source_keys": []
+              }
+            ],
+            "status": "complete",
+            "missing_slot_keys": [],
+            "conflicting_slot_keys": [],
+            "warnings": [],
+            "generated_by": "signalweave",
+            "context_version": null
+          },
+          "workflow": {
+            "status": "complete",
+            "step_key": "suppress",
+            "action": "suppress",
+            "objective": "Route an evidenced exception to the operating owner.",
+            "instructions": "Record the result and suppress delivery for this run.",
+            "required_source_keys": [],
+            "completion_criteria": "No further workflow step is required unless new evidence arrives.",
+            "delivery_method_keys": [],
+            "evidence_plan": {
+              "objective": "Route an evidenced exception to the operating owner.",
+              "slots": [
+                {
+                  "key": "source:record",
+                  "role": "primary",
+                  "question": "What changed in Current operating record that is relevant to the card's stated purpose and comparison window?",
+                  "source_keys": [
+                    "record"
+                  ],
+                  "source_refs": [
+                    {
+                      "key": "record",
+                      "adapter": "fixture",
+                      "resource": "record",
+                      "label": "Current operating record",
+                      "parameters": {},
+                      "required": true,
+                      "required_comparison_keys": []
+                    }
+                  ],
+                  "required": true,
+                  "completion_criteria": "Return a bounded observation or evidence statement with its source and comparison window.",
+                  "status": "fulfilled",
+                  "evidence_fact_ids": [],
+                  "evidence_source_keys": [
+                    "record"
+                  ]
+                },
+                {
+                  "key": "watch:1",
+                  "role": "watch",
+                  "question": "The settled refund batch is missing approval from its finance owner.",
+                  "source_keys": [
+                    "record"
+                  ],
+                  "source_refs": [],
+                  "required": true,
+                  "completion_criteria": "Return evidence that shows whether this watch item is present or absent.",
+                  "status": "fulfilled",
+                  "evidence_fact_ids": [],
+                  "evidence_source_keys": []
+                }
+              ],
+              "status": "complete",
+              "missing_slot_keys": [],
+              "conflicting_slot_keys": [],
+              "warnings": [],
+              "generated_by": "signalweave",
+              "context_version": null
+            }
+          },
+          "watch_results": [
+            {
+              "key": "watch_0",
+              "watch_for": "The settled refund batch is missing approval from its finance owner.",
+              "status": "absent",
+              "probability": 0.0,
+              "probabilities": {
+                "present": 0.0,
+                "unknown": 0.0,
+                "absent": 1.0
+              }
+            }
+          ],
+          "question_results": [],
+          "failure_reasons": []
+        },
+        {
+          "case_id": "commerce-missing",
+          "card_id": "commerce-operating-check",
+          "card_version": 1,
+          "expected_outcome": "insufficient_data",
+          "outcome": "insufficient_data",
+          "exact_outcome": true,
+          "safe_action": true,
+          "unsafe_action": false,
+          "delivery_exact": true,
+          "delivery_destinations_exact": true,
+          "evidence_recall": 1.0,
+          "retrieval_precision": 1.0,
+          "retrieval_recall": 1.0,
+          "actual_delivery_method_keys": [
+            "data"
+          ],
+          "actual_delivery_destinations": {
+            "data": "agent://data-owner"
+          },
+          "actual_evidence_source_keys": [
+            "record"
+          ],
+          "actual_retrieval_refs": [
+            "fixture|record"
+          ],
+          "confidence": 0.99,
+          "probabilities": {
+            "ignore": 0.0,
+            "investigate": 0.01,
+            "insufficient_data": 0.99,
+            "notify": 0.0
+          },
+          "summary": "Evaluated 0 observations and 0 computed analyses across 1 sources; 1 watch items and 0 questions were checked.",
+          "rationale": "Jev evaluated the card's typed watch, question, and outcome judgments; selected=insufficient_data, support=0.99; routed=insufficient_data.",
+          "missing_evidence_source_keys": [],
+          "missing_retrieval_refs": [],
+          "unexpected_retrieval_refs": [],
+          "latency_ms": 193.24220897397026,
+          "evaluator": "jev-latest",
+          "error": null,
+          "tags": [],
+          "dataset_id": "reviewed-operating-records-commerce",
+          "split": "validation",
+          "evidence_plan": {
+            "objective": "Route an evidenced exception to the operating owner.",
+            "slots": [
+              {
+                "key": "source:record",
+                "role": "primary",
+                "question": "What changed in Current operating record that is relevant to the card's stated purpose and comparison window?",
+                "source_keys": [
+                  "record"
+                ],
+                "source_refs": [
+                  {
+                    "key": "record",
+                    "adapter": "fixture",
+                    "resource": "record",
+                    "label": "Current operating record",
+                    "parameters": {},
+                    "required": true,
+                    "required_comparison_keys": []
+                  }
+                ],
+                "required": true,
+                "completion_criteria": "Return a bounded observation or evidence statement with its source and comparison window.",
+                "status": "fulfilled",
+                "evidence_fact_ids": [],
+                "evidence_source_keys": [
+                  "record"
+                ]
+              },
+              {
+                "key": "watch:1",
+                "role": "watch",
+                "question": "The settled refund batch is missing approval from its finance owner.",
+                "source_keys": [
+                  "record"
+                ],
+                "source_refs": [],
+                "required": true,
+                "completion_criteria": "Return evidence that shows whether this watch item is present or absent.",
+                "status": "pending",
+                "evidence_fact_ids": [],
+                "evidence_source_keys": []
+              }
+            ],
+            "status": "incomplete",
+            "missing_slot_keys": [
+              "watch:1"
+            ],
+            "conflicting_slot_keys": [],
+            "warnings": [],
+            "generated_by": "signalweave",
+            "context_version": null
+          },
+          "workflow": {
+            "status": "blocked",
+            "step_key": "repair-source",
+            "action": "repair_source",
+            "objective": "Route an evidenced exception to the operating owner.",
+            "instructions": "Repair or validate the required source, then re-evaluate the same card.",
+            "required_source_keys": [
+              "record"
+            ],
+            "completion_criteria": "Required sources are healthy and a new evaluation is submitted.",
+            "delivery_method_keys": [
+              "data"
+            ],
+            "evidence_plan": {
+              "objective": "Route an evidenced exception to the operating owner.",
+              "slots": [
+                {
+                  "key": "source:record",
+                  "role": "primary",
+                  "question": "What changed in Current operating record that is relevant to the card's stated purpose and comparison window?",
+                  "source_keys": [
+                    "record"
+                  ],
+                  "source_refs": [
+                    {
+                      "key": "record",
+                      "adapter": "fixture",
+                      "resource": "record",
+                      "label": "Current operating record",
+                      "parameters": {},
+                      "required": true,
+                      "required_comparison_keys": []
+                    }
+                  ],
+                  "required": true,
+                  "completion_criteria": "Return a bounded observation or evidence statement with its source and comparison window.",
+                  "status": "fulfilled",
+                  "evidence_fact_ids": [],
+                  "evidence_source_keys": [
+                    "record"
+                  ]
+                },
+                {
+                  "key": "watch:1",
+                  "role": "watch",
+                  "question": "The settled refund batch is missing approval from its finance owner.",
+                  "source_keys": [
+                    "record"
+                  ],
+                  "source_refs": [],
+                  "required": true,
+                  "completion_criteria": "Return evidence that shows whether this watch item is present or absent.",
+                  "status": "pending",
+                  "evidence_fact_ids": [],
+                  "evidence_source_keys": []
+                }
+              ],
+              "status": "incomplete",
+              "missing_slot_keys": [
+                "watch:1"
+              ],
+              "conflicting_slot_keys": [],
+              "warnings": [],
+              "generated_by": "signalweave",
+              "context_version": null
+            }
+          },
+          "watch_results": [
+            {
+              "key": "watch_0",
+              "watch_for": "The settled refund batch is missing approval from its finance owner.",
+              "status": "unknown",
+              "probability": 0.02,
+              "probabilities": {
+                "absent": 0.0,
+                "present": 0.02,
+                "unknown": 0.98
+              }
+            }
+          ],
+          "question_results": [],
+          "failure_reasons": []
+        },
+        {
+          "case_id": "commerce-conflicting",
+          "card_id": "commerce-operating-check",
+          "card_version": 1,
+          "expected_outcome": "insufficient_data",
+          "outcome": "insufficient_data",
+          "exact_outcome": true,
+          "safe_action": true,
+          "unsafe_action": false,
+          "delivery_exact": true,
+          "delivery_destinations_exact": true,
+          "evidence_recall": 1.0,
+          "retrieval_precision": 1.0,
+          "retrieval_recall": 1.0,
+          "actual_delivery_method_keys": [
+            "data"
+          ],
+          "actual_delivery_destinations": {
+            "data": "agent://data-owner"
+          },
+          "actual_evidence_source_keys": [
+            "record"
+          ],
+          "actual_retrieval_refs": [
+            "fixture|record"
+          ],
+          "confidence": 0.98,
+          "probabilities": {
+            "ignore": 0.0,
+            "investigate": 0.02,
+            "insufficient_data": 0.98,
+            "notify": 0.0
+          },
+          "summary": "Evaluated 0 observations and 0 computed analyses across 1 sources; 1 watch items and 0 questions were checked.",
+          "rationale": "Jev evaluated the card's typed watch, question, and outcome judgments; selected=insufficient_data, support=0.98; routed=insufficient_data.",
+          "missing_evidence_source_keys": [],
+          "missing_retrieval_refs": [],
+          "unexpected_retrieval_refs": [],
+          "latency_ms": 213.07683299528435,
+          "evaluator": "jev-latest",
+          "error": null,
+          "tags": [],
+          "dataset_id": "reviewed-operating-records-commerce",
+          "split": "validation",
+          "evidence_plan": {
+            "objective": "Route an evidenced exception to the operating owner.",
+            "slots": [
+              {
+                "key": "source:record",
+                "role": "primary",
+                "question": "What changed in Current operating record that is relevant to the card's stated purpose and comparison window?",
+                "source_keys": [
+                  "record"
+                ],
+                "source_refs": [
+                  {
+                    "key": "record",
+                    "adapter": "fixture",
+                    "resource": "record",
+                    "label": "Current operating record",
+                    "parameters": {},
+                    "required": true,
+                    "required_comparison_keys": []
+                  }
+                ],
+                "required": true,
+                "completion_criteria": "Return a bounded observation or evidence statement with its source and comparison window.",
+                "status": "fulfilled",
+                "evidence_fact_ids": [],
+                "evidence_source_keys": [
+                  "record"
+                ]
+              },
+              {
+                "key": "watch:1",
+                "role": "watch",
+                "question": "The settled refund batch is missing approval from its finance owner.",
+                "source_keys": [
+                  "record"
+                ],
+                "source_refs": [],
+                "required": true,
+                "completion_criteria": "Return evidence that shows whether this watch item is present or absent.",
+                "status": "pending",
+                "evidence_fact_ids": [],
+                "evidence_source_keys": []
+              }
+            ],
+            "status": "incomplete",
+            "missing_slot_keys": [
+              "watch:1"
+            ],
+            "conflicting_slot_keys": [],
+            "warnings": [],
+            "generated_by": "signalweave",
+            "context_version": null
+          },
+          "workflow": {
+            "status": "blocked",
+            "step_key": "repair-source",
+            "action": "repair_source",
+            "objective": "Route an evidenced exception to the operating owner.",
+            "instructions": "Repair or validate the required source, then re-evaluate the same card.",
+            "required_source_keys": [
+              "record"
+            ],
+            "completion_criteria": "Required sources are healthy and a new evaluation is submitted.",
+            "delivery_method_keys": [
+              "data"
+            ],
+            "evidence_plan": {
+              "objective": "Route an evidenced exception to the operating owner.",
+              "slots": [
+                {
+                  "key": "source:record",
+                  "role": "primary",
+                  "question": "What changed in Current operating record that is relevant to the card's stated purpose and comparison window?",
+                  "source_keys": [
+                    "record"
+                  ],
+                  "source_refs": [
+                    {
+                      "key": "record",
+                      "adapter": "fixture",
+                      "resource": "record",
+                      "label": "Current operating record",
+                      "parameters": {},
+                      "required": true,
+                      "required_comparison_keys": []
+                    }
+                  ],
+                  "required": true,
+                  "completion_criteria": "Return a bounded observation or evidence statement with its source and comparison window.",
+                  "status": "fulfilled",
+                  "evidence_fact_ids": [],
+                  "evidence_source_keys": [
+                    "record"
+                  ]
+                },
+                {
+                  "key": "watch:1",
+                  "role": "watch",
+                  "question": "The settled refund batch is missing approval from its finance owner.",
+                  "source_keys": [
+                    "record"
+                  ],
+                  "source_refs": [],
+                  "required": true,
+                  "completion_criteria": "Return evidence that shows whether this watch item is present or absent.",
+                  "status": "pending",
+                  "evidence_fact_ids": [],
+                  "evidence_source_keys": []
+                }
+              ],
+              "status": "incomplete",
+              "missing_slot_keys": [
+                "watch:1"
+              ],
+              "conflicting_slot_keys": [],
+              "warnings": [],
+              "generated_by": "signalweave",
+              "context_version": null
+            }
+          },
+          "watch_results": [
+            {
+              "key": "watch_0",
+              "watch_for": "The settled refund batch is missing approval from its finance owner.",
+              "status": "unknown",
+              "probability": 0.0,
+              "probabilities": {
+                "present": 0.0,
+                "absent": 0.0,
+                "unknown": 1.0
+              }
+            }
+          ],
+          "question_results": [],
+          "failure_reasons": []
+        }
+      ],
+      "evaluation_id": "9d6fefacdd2d5034330b0861",
+      "input_digest": "9d6fefacdd2d5034330b0861d8552cfbb34da884ca642f5ab935378bbe915024",
+      "label_digest": "33a82562485487f63d12324685651e223193a0ea4e6d1e6d6b62bdfd4a0a5ee6",
+      "dataset_ids": [
+        "reviewed-operating-records-commerce"
+      ],
+      "splits": [
+        "validation"
+      ],
+      "time_split_disjoint": true,
+      "jev_requests": 4,
+      "jev_input_tokens": 10594,
+      "jev_output_tokens": 373
+    },
+    "operations": {
+      "evidence_admission_policy_version": 4,
+      "card_ids": [
+        "operations-operating-check"
+      ],
+      "card_versions": {
+        "operations-operating-check": 1
+      },
+      "acceptance_outcomes": [
+        "ignore",
+        "insufficient_data",
+        "notify"
+      ],
+      "card_execution_digests": {
+        "operations-operating-check": "d162dab510c3ae54562101516eb94ffd5848d28aceea388aaff6e11fda03ee17"
+      },
+      "acceptance_passed": true,
+      "acceptance_scope": "supplied_snapshot_replay",
+      "case_count": 4,
+      "successful_case_count": 4,
+      "error_count": 0,
+      "outcome_accuracy": 1.0,
+      "evidence_recall": 1.0,
+      "retrieval_precision": 1.0,
+      "retrieval_recall": 1.0,
+      "unsafe_action_rate": 0.0,
+      "error_rate": 0.0,
+      "median_latency_ms": 216.76654199836776,
+      "status": "approved",
+      "thresholds": {
+        "min_outcome_accuracy": 1.0,
+        "min_evidence_recall": 1.0,
+        "min_retrieval_recall": 1.0,
+        "max_unsafe_action_rate": 0.0,
+        "max_error_rate": 0.0,
+        "min_cases": 4,
+        "require_dataset_provenance": false,
+        "required_splits": [],
+        "require_disjoint_time_splits": false
+      },
+      "preflight_blockers": [],
+      "cases": [
+        {
+          "case_id": "operations-affirmative",
+          "card_id": "operations-operating-check",
+          "card_version": 1,
+          "expected_outcome": "notify",
+          "outcome": "notify",
+          "exact_outcome": true,
+          "safe_action": true,
+          "unsafe_action": false,
+          "delivery_exact": true,
+          "delivery_destinations_exact": true,
+          "evidence_recall": 1.0,
+          "retrieval_precision": 1.0,
+          "retrieval_recall": 1.0,
+          "actual_delivery_method_keys": [
+            "owner"
+          ],
+          "actual_delivery_destinations": {
+            "owner": "agent://operating-owner"
+          },
+          "actual_evidence_source_keys": [
+            "record"
+          ],
+          "actual_retrieval_refs": [
+            "fixture|record"
+          ],
+          "confidence": 0.91,
+          "probabilities": {
+            "ignore": 0.0,
+            "investigate": 0.0,
+            "insufficient_data": 0.09,
+            "notify": 0.91
+          },
+          "summary": "Evaluated 0 observations and 0 computed analyses across 1 sources; 1 watch items and 0 questions were checked.",
+          "rationale": "Jev evaluated the card's typed watch, question, and outcome judgments; selected=notify, support=0.91; routed=notify.",
+          "missing_evidence_source_keys": [],
+          "missing_retrieval_refs": [],
+          "unexpected_retrieval_refs": [],
+          "latency_ms": 200.21287497365847,
+          "evaluator": "jev-latest",
+          "error": null,
+          "tags": [],
+          "dataset_id": "reviewed-operating-records-operations",
+          "split": "validation",
+          "evidence_plan": {
+            "objective": "Route an evidenced exception to the operating owner.",
+            "slots": [
+              {
+                "key": "source:record",
+                "role": "primary",
+                "question": "What changed in Current operating record that is relevant to the card's stated purpose and comparison window?",
+                "source_keys": [
+                  "record"
+                ],
+                "source_refs": [
+                  {
+                    "key": "record",
+                    "adapter": "fixture",
+                    "resource": "record",
+                    "label": "Current operating record",
+                    "parameters": {},
+                    "required": true,
+                    "required_comparison_keys": []
+                  }
+                ],
+                "required": true,
+                "completion_criteria": "Return a bounded observation or evidence statement with its source and comparison window.",
+                "status": "fulfilled",
+                "evidence_fact_ids": [],
+                "evidence_source_keys": [
+                  "record"
+                ]
+              },
+              {
+                "key": "watch:1",
+                "role": "watch",
+                "question": "The current deployment violates the approved maintenance window.",
+                "source_keys": [
+                  "record"
+                ],
+                "source_refs": [],
+                "required": true,
+                "completion_criteria": "Return evidence that shows whether this watch item is present or absent.",
+                "status": "fulfilled",
+                "evidence_fact_ids": [],
+                "evidence_source_keys": []
+              }
+            ],
+            "status": "complete",
+            "missing_slot_keys": [],
+            "conflicting_slot_keys": [],
+            "warnings": [],
+            "generated_by": "signalweave",
+            "context_version": null
+          },
+          "workflow": {
+            "status": "ready",
+            "step_key": "deliver",
+            "action": "deliver",
+            "objective": "Route an evidenced exception to the operating owner.",
+            "instructions": "Deliver the evidence bundle to the configured destination. Do not invent a destination or change the outcome.",
+            "required_source_keys": [
+              "record"
+            ],
+            "completion_criteria": "The caller-owned delivery adapter accepted the evidence bundle.",
+            "delivery_method_keys": [
+              "owner"
+            ],
+            "evidence_plan": {
+              "objective": "Route an evidenced exception to the operating owner.",
+              "slots": [
+                {
+                  "key": "source:record",
+                  "role": "primary",
+                  "question": "What changed in Current operating record that is relevant to the card's stated purpose and comparison window?",
+                  "source_keys": [
+                    "record"
+                  ],
+                  "source_refs": [
+                    {
+                      "key": "record",
+                      "adapter": "fixture",
+                      "resource": "record",
+                      "label": "Current operating record",
+                      "parameters": {},
+                      "required": true,
+                      "required_comparison_keys": []
+                    }
+                  ],
+                  "required": true,
+                  "completion_criteria": "Return a bounded observation or evidence statement with its source and comparison window.",
+                  "status": "fulfilled",
+                  "evidence_fact_ids": [],
+                  "evidence_source_keys": [
+                    "record"
+                  ]
+                },
+                {
+                  "key": "watch:1",
+                  "role": "watch",
+                  "question": "The current deployment violates the approved maintenance window.",
+                  "source_keys": [
+                    "record"
+                  ],
+                  "source_refs": [],
+                  "required": true,
+                  "completion_criteria": "Return evidence that shows whether this watch item is present or absent.",
+                  "status": "fulfilled",
+                  "evidence_fact_ids": [],
+                  "evidence_source_keys": []
+                }
+              ],
+              "status": "complete",
+              "missing_slot_keys": [],
+              "conflicting_slot_keys": [],
+              "warnings": [],
+              "generated_by": "signalweave",
+              "context_version": null
+            }
+          },
+          "watch_results": [
+            {
+              "key": "watch_0",
+              "watch_for": "The current deployment violates the approved maintenance window.",
+              "status": "present",
+              "probability": 0.99,
+              "probabilities": {
+                "absent": 0.0,
+                "present": 0.99,
+                "unknown": 0.01
+              }
+            }
+          ],
+          "question_results": [],
+          "failure_reasons": []
+        },
+        {
+          "case_id": "operations-negative",
+          "card_id": "operations-operating-check",
+          "card_version": 1,
+          "expected_outcome": "ignore",
+          "outcome": "ignore",
+          "exact_outcome": true,
+          "safe_action": true,
+          "unsafe_action": false,
+          "delivery_exact": true,
+          "delivery_destinations_exact": true,
+          "evidence_recall": 1.0,
+          "retrieval_precision": 1.0,
+          "retrieval_recall": 1.0,
+          "actual_delivery_method_keys": [],
+          "actual_delivery_destinations": {},
+          "actual_evidence_source_keys": [
+            "record"
+          ],
+          "actual_retrieval_refs": [
+            "fixture|record"
+          ],
+          "confidence": 0.98,
+          "probabilities": {
+            "ignore": 0.98,
+            "investigate": 0.0,
+            "insufficient_data": 0.02,
+            "notify": 0.0
+          },
+          "summary": "Evaluated 0 observations and 0 computed analyses across 1 sources; 1 watch items and 0 questions were checked.",
+          "rationale": "Jev evaluated the card's typed watch, question, and outcome judgments; selected=ignore, support=0.98; routed=ignore.",
+          "missing_evidence_source_keys": [],
+          "missing_retrieval_refs": [],
+          "unexpected_retrieval_refs": [],
+          "latency_ms": 263.18024995271116,
+          "evaluator": "jev-latest",
+          "error": null,
+          "tags": [],
+          "dataset_id": "reviewed-operating-records-operations",
+          "split": "validation",
+          "evidence_plan": {
+            "objective": "Route an evidenced exception to the operating owner.",
+            "slots": [
+              {
+                "key": "source:record",
+                "role": "primary",
+                "question": "What changed in Current operating record that is relevant to the card's stated purpose and comparison window?",
+                "source_keys": [
+                  "record"
+                ],
+                "source_refs": [
+                  {
+                    "key": "record",
+                    "adapter": "fixture",
+                    "resource": "record",
+                    "label": "Current operating record",
+                    "parameters": {},
+                    "required": true,
+                    "required_comparison_keys": []
+                  }
+                ],
+                "required": true,
+                "completion_criteria": "Return a bounded observation or evidence statement with its source and comparison window.",
+                "status": "fulfilled",
+                "evidence_fact_ids": [],
+                "evidence_source_keys": [
+                  "record"
+                ]
+              },
+              {
+                "key": "watch:1",
+                "role": "watch",
+                "question": "The current deployment violates the approved maintenance window.",
+                "source_keys": [
+                  "record"
+                ],
+                "source_refs": [],
+                "required": true,
+                "completion_criteria": "Return evidence that shows whether this watch item is present or absent.",
+                "status": "fulfilled",
+                "evidence_fact_ids": [],
+                "evidence_source_keys": []
+              }
+            ],
+            "status": "complete",
+            "missing_slot_keys": [],
+            "conflicting_slot_keys": [],
+            "warnings": [],
+            "generated_by": "signalweave",
+            "context_version": null
+          },
+          "workflow": {
+            "status": "complete",
+            "step_key": "suppress",
+            "action": "suppress",
+            "objective": "Route an evidenced exception to the operating owner.",
+            "instructions": "Record the result and suppress delivery for this run.",
+            "required_source_keys": [],
+            "completion_criteria": "No further workflow step is required unless new evidence arrives.",
+            "delivery_method_keys": [],
+            "evidence_plan": {
+              "objective": "Route an evidenced exception to the operating owner.",
+              "slots": [
+                {
+                  "key": "source:record",
+                  "role": "primary",
+                  "question": "What changed in Current operating record that is relevant to the card's stated purpose and comparison window?",
+                  "source_keys": [
+                    "record"
+                  ],
+                  "source_refs": [
+                    {
+                      "key": "record",
+                      "adapter": "fixture",
+                      "resource": "record",
+                      "label": "Current operating record",
+                      "parameters": {},
+                      "required": true,
+                      "required_comparison_keys": []
+                    }
+                  ],
+                  "required": true,
+                  "completion_criteria": "Return a bounded observation or evidence statement with its source and comparison window.",
+                  "status": "fulfilled",
+                  "evidence_fact_ids": [],
+                  "evidence_source_keys": [
+                    "record"
+                  ]
+                },
+                {
+                  "key": "watch:1",
+                  "role": "watch",
+                  "question": "The current deployment violates the approved maintenance window.",
+                  "source_keys": [
+                    "record"
+                  ],
+                  "source_refs": [],
+                  "required": true,
+                  "completion_criteria": "Return evidence that shows whether this watch item is present or absent.",
+                  "status": "fulfilled",
+                  "evidence_fact_ids": [],
+                  "evidence_source_keys": []
+                }
+              ],
+              "status": "complete",
+              "missing_slot_keys": [],
+              "conflicting_slot_keys": [],
+              "warnings": [],
+              "generated_by": "signalweave",
+              "context_version": null
+            }
+          },
+          "watch_results": [
+            {
+              "key": "watch_0",
+              "watch_for": "The current deployment violates the approved maintenance window.",
+              "status": "absent",
+              "probability": 0.0,
+              "probabilities": {
+                "unknown": 0.0,
+                "absent": 1.0,
+                "present": 0.0
+              }
+            }
+          ],
+          "question_results": [],
+          "failure_reasons": []
+        },
+        {
+          "case_id": "operations-missing",
+          "card_id": "operations-operating-check",
+          "card_version": 1,
+          "expected_outcome": "insufficient_data",
+          "outcome": "insufficient_data",
+          "exact_outcome": true,
+          "safe_action": true,
+          "unsafe_action": false,
+          "delivery_exact": true,
+          "delivery_destinations_exact": true,
+          "evidence_recall": 1.0,
+          "retrieval_precision": 1.0,
+          "retrieval_recall": 1.0,
+          "actual_delivery_method_keys": [
+            "data"
+          ],
+          "actual_delivery_destinations": {
+            "data": "agent://data-owner"
+          },
+          "actual_evidence_source_keys": [
+            "record"
+          ],
+          "actual_retrieval_refs": [
+            "fixture|record"
+          ],
+          "confidence": 0.99,
+          "probabilities": {
+            "ignore": 0.0,
+            "investigate": 0.01,
+            "insufficient_data": 0.99,
+            "notify": 0.0
+          },
+          "summary": "Evaluated 0 observations and 0 computed analyses across 1 sources; 1 watch items and 0 questions were checked.",
+          "rationale": "Jev evaluated the card's typed watch, question, and outcome judgments; selected=insufficient_data, support=0.99; routed=insufficient_data.",
+          "missing_evidence_source_keys": [],
+          "missing_retrieval_refs": [],
+          "unexpected_retrieval_refs": [],
+          "latency_ms": 200.98641701042652,
+          "evaluator": "jev-latest",
+          "error": null,
+          "tags": [],
+          "dataset_id": "reviewed-operating-records-operations",
+          "split": "validation",
+          "evidence_plan": {
+            "objective": "Route an evidenced exception to the operating owner.",
+            "slots": [
+              {
+                "key": "source:record",
+                "role": "primary",
+                "question": "What changed in Current operating record that is relevant to the card's stated purpose and comparison window?",
+                "source_keys": [
+                  "record"
+                ],
+                "source_refs": [
+                  {
+                    "key": "record",
+                    "adapter": "fixture",
+                    "resource": "record",
+                    "label": "Current operating record",
+                    "parameters": {},
+                    "required": true,
+                    "required_comparison_keys": []
+                  }
+                ],
+                "required": true,
+                "completion_criteria": "Return a bounded observation or evidence statement with its source and comparison window.",
+                "status": "fulfilled",
+                "evidence_fact_ids": [],
+                "evidence_source_keys": [
+                  "record"
+                ]
+              },
+              {
+                "key": "watch:1",
+                "role": "watch",
+                "question": "The current deployment violates the approved maintenance window.",
+                "source_keys": [
+                  "record"
+                ],
+                "source_refs": [],
+                "required": true,
+                "completion_criteria": "Return evidence that shows whether this watch item is present or absent.",
+                "status": "pending",
+                "evidence_fact_ids": [],
+                "evidence_source_keys": []
+              }
+            ],
+            "status": "incomplete",
+            "missing_slot_keys": [
+              "watch:1"
+            ],
+            "conflicting_slot_keys": [],
+            "warnings": [],
+            "generated_by": "signalweave",
+            "context_version": null
+          },
+          "workflow": {
+            "status": "blocked",
+            "step_key": "repair-source",
+            "action": "repair_source",
+            "objective": "Route an evidenced exception to the operating owner.",
+            "instructions": "Repair or validate the required source, then re-evaluate the same card.",
+            "required_source_keys": [
+              "record"
+            ],
+            "completion_criteria": "Required sources are healthy and a new evaluation is submitted.",
+            "delivery_method_keys": [
+              "data"
+            ],
+            "evidence_plan": {
+              "objective": "Route an evidenced exception to the operating owner.",
+              "slots": [
+                {
+                  "key": "source:record",
+                  "role": "primary",
+                  "question": "What changed in Current operating record that is relevant to the card's stated purpose and comparison window?",
+                  "source_keys": [
+                    "record"
+                  ],
+                  "source_refs": [
+                    {
+                      "key": "record",
+                      "adapter": "fixture",
+                      "resource": "record",
+                      "label": "Current operating record",
+                      "parameters": {},
+                      "required": true,
+                      "required_comparison_keys": []
+                    }
+                  ],
+                  "required": true,
+                  "completion_criteria": "Return a bounded observation or evidence statement with its source and comparison window.",
+                  "status": "fulfilled",
+                  "evidence_fact_ids": [],
+                  "evidence_source_keys": [
+                    "record"
+                  ]
+                },
+                {
+                  "key": "watch:1",
+                  "role": "watch",
+                  "question": "The current deployment violates the approved maintenance window.",
+                  "source_keys": [
+                    "record"
+                  ],
+                  "source_refs": [],
+                  "required": true,
+                  "completion_criteria": "Return evidence that shows whether this watch item is present or absent.",
+                  "status": "pending",
+                  "evidence_fact_ids": [],
+                  "evidence_source_keys": []
+                }
+              ],
+              "status": "incomplete",
+              "missing_slot_keys": [
+                "watch:1"
+              ],
+              "conflicting_slot_keys": [],
+              "warnings": [],
+              "generated_by": "signalweave",
+              "context_version": null
+            }
+          },
+          "watch_results": [
+            {
+              "key": "watch_0",
+              "watch_for": "The current deployment violates the approved maintenance window.",
+              "status": "unknown",
+              "probability": 0.0,
+              "probabilities": {
+                "absent": 0.0,
+                "present": 0.0,
+                "unknown": 1.0
+              }
+            }
+          ],
+          "question_results": [],
+          "failure_reasons": []
+        },
+        {
+          "case_id": "operations-conflicting",
+          "card_id": "operations-operating-check",
+          "card_version": 1,
+          "expected_outcome": "insufficient_data",
+          "outcome": "insufficient_data",
+          "exact_outcome": true,
+          "safe_action": true,
+          "unsafe_action": false,
+          "delivery_exact": true,
+          "delivery_destinations_exact": true,
+          "evidence_recall": 1.0,
+          "retrieval_precision": 1.0,
+          "retrieval_recall": 1.0,
+          "actual_delivery_method_keys": [
+            "data"
+          ],
+          "actual_delivery_destinations": {
+            "data": "agent://data-owner"
+          },
+          "actual_evidence_source_keys": [
+            "record"
+          ],
+          "actual_retrieval_refs": [
+            "fixture|record"
+          ],
+          "confidence": 0.96,
+          "probabilities": {
+            "ignore": 0.0,
+            "investigate": 0.04,
+            "insufficient_data": 0.96,
+            "notify": 0.0
+          },
+          "summary": "Evaluated 0 observations and 0 computed analyses across 1 sources; 1 watch items and 0 questions were checked.",
+          "rationale": "Jev evaluated the card's typed watch, question, and outcome judgments; selected=insufficient_data, support=0.96; routed=insufficient_data.",
+          "missing_evidence_source_keys": [],
+          "missing_retrieval_refs": [],
+          "unexpected_retrieval_refs": [],
+          "latency_ms": 232.546666986309,
+          "evaluator": "jev-latest",
+          "error": null,
+          "tags": [],
+          "dataset_id": "reviewed-operating-records-operations",
+          "split": "validation",
+          "evidence_plan": {
+            "objective": "Route an evidenced exception to the operating owner.",
+            "slots": [
+              {
+                "key": "source:record",
+                "role": "primary",
+                "question": "What changed in Current operating record that is relevant to the card's stated purpose and comparison window?",
+                "source_keys": [
+                  "record"
+                ],
+                "source_refs": [
+                  {
+                    "key": "record",
+                    "adapter": "fixture",
+                    "resource": "record",
+                    "label": "Current operating record",
+                    "parameters": {},
+                    "required": true,
+                    "required_comparison_keys": []
+                  }
+                ],
+                "required": true,
+                "completion_criteria": "Return a bounded observation or evidence statement with its source and comparison window.",
+                "status": "fulfilled",
+                "evidence_fact_ids": [],
+                "evidence_source_keys": [
+                  "record"
+                ]
+              },
+              {
+                "key": "watch:1",
+                "role": "watch",
+                "question": "The current deployment violates the approved maintenance window.",
+                "source_keys": [
+                  "record"
+                ],
+                "source_refs": [],
+                "required": true,
+                "completion_criteria": "Return evidence that shows whether this watch item is present or absent.",
+                "status": "pending",
+                "evidence_fact_ids": [],
+                "evidence_source_keys": []
+              }
+            ],
+            "status": "incomplete",
+            "missing_slot_keys": [
+              "watch:1"
+            ],
+            "conflicting_slot_keys": [],
+            "warnings": [],
+            "generated_by": "signalweave",
+            "context_version": null
+          },
+          "workflow": {
+            "status": "blocked",
+            "step_key": "repair-source",
+            "action": "repair_source",
+            "objective": "Route an evidenced exception to the operating owner.",
+            "instructions": "Repair or validate the required source, then re-evaluate the same card.",
+            "required_source_keys": [
+              "record"
+            ],
+            "completion_criteria": "Required sources are healthy and a new evaluation is submitted.",
+            "delivery_method_keys": [
+              "data"
+            ],
+            "evidence_plan": {
+              "objective": "Route an evidenced exception to the operating owner.",
+              "slots": [
+                {
+                  "key": "source:record",
+                  "role": "primary",
+                  "question": "What changed in Current operating record that is relevant to the card's stated purpose and comparison window?",
+                  "source_keys": [
+                    "record"
+                  ],
+                  "source_refs": [
+                    {
+                      "key": "record",
+                      "adapter": "fixture",
+                      "resource": "record",
+                      "label": "Current operating record",
+                      "parameters": {},
+                      "required": true,
+                      "required_comparison_keys": []
+                    }
+                  ],
+                  "required": true,
+                  "completion_criteria": "Return a bounded observation or evidence statement with its source and comparison window.",
+                  "status": "fulfilled",
+                  "evidence_fact_ids": [],
+                  "evidence_source_keys": [
+                    "record"
+                  ]
+                },
+                {
+                  "key": "watch:1",
+                  "role": "watch",
+                  "question": "The current deployment violates the approved maintenance window.",
+                  "source_keys": [
+                    "record"
+                  ],
+                  "source_refs": [],
+                  "required": true,
+                  "completion_criteria": "Return evidence that shows whether this watch item is present or absent.",
+                  "status": "pending",
+                  "evidence_fact_ids": [],
+                  "evidence_source_keys": []
+                }
+              ],
+              "status": "incomplete",
+              "missing_slot_keys": [
+                "watch:1"
+              ],
+              "conflicting_slot_keys": [],
+              "warnings": [],
+              "generated_by": "signalweave",
+              "context_version": null
+            }
+          },
+          "watch_results": [
+            {
+              "key": "watch_0",
+              "watch_for": "The current deployment violates the approved maintenance window.",
+              "status": "unknown",
+              "probability": 0.0,
+              "probabilities": {
+                "present": 0.0,
+                "unknown": 1.0,
+                "absent": 0.0
+              }
+            }
+          ],
+          "question_results": [],
+          "failure_reasons": []
+        }
+      ],
+      "evaluation_id": "de23e4e2b1ee745c06824f8c",
+      "input_digest": "de23e4e2b1ee745c06824f8cef5a95b1236358496be83f6ed52221bb20263cee",
+      "label_digest": "c66f50cb95689a4e17cd0dee9a314c78f5a57247b80fb893047703f8801273b9",
+      "dataset_ids": [
+        "reviewed-operating-records-operations"
+      ],
+      "splits": [
+        "validation"
+      ],
+      "time_split_disjoint": true,
+      "jev_requests": 4,
+      "jev_input_tokens": 10502,
+      "jev_output_tokens": 373
+    },
+    "customer-success": {
+      "evidence_admission_policy_version": 4,
+      "card_ids": [
+        "customer-success-operating-check"
+      ],
+      "card_versions": {
+        "customer-success-operating-check": 1
+      },
+      "acceptance_outcomes": [
+        "ignore",
+        "insufficient_data",
+        "notify"
+      ],
+      "card_execution_digests": {
+        "customer-success-operating-check": "af993a1870480b96228442a92667045a9b2eab8fa058c2f41bd1d75844d2dbe5"
+      },
+      "acceptance_passed": true,
+      "acceptance_scope": "supplied_snapshot_replay",
+      "case_count": 4,
+      "successful_case_count": 4,
+      "error_count": 0,
+      "outcome_accuracy": 1.0,
+      "evidence_recall": 1.0,
+      "retrieval_precision": 1.0,
+      "retrieval_recall": 1.0,
+      "unsafe_action_rate": 0.0,
+      "error_rate": 0.0,
+      "median_latency_ms": 186.85456199455075,
+      "status": "approved",
+      "thresholds": {
+        "min_outcome_accuracy": 1.0,
+        "min_evidence_recall": 1.0,
+        "min_retrieval_recall": 1.0,
+        "max_unsafe_action_rate": 0.0,
+        "max_error_rate": 0.0,
+        "min_cases": 4,
+        "require_dataset_provenance": false,
+        "required_splits": [],
+        "require_disjoint_time_splits": false
+      },
+      "preflight_blockers": [],
+      "cases": [
+        {
+          "case_id": "customer-success-affirmative",
+          "card_id": "customer-success-operating-check",
+          "card_version": 1,
+          "expected_outcome": "notify",
+          "outcome": "notify",
+          "exact_outcome": true,
+          "safe_action": true,
+          "unsafe_action": false,
+          "delivery_exact": true,
+          "delivery_destinations_exact": true,
+          "evidence_recall": 1.0,
+          "retrieval_precision": 1.0,
+          "retrieval_recall": 1.0,
+          "actual_delivery_method_keys": [
+            "owner"
+          ],
+          "actual_delivery_destinations": {
+            "owner": "agent://operating-owner"
+          },
+          "actual_evidence_source_keys": [
+            "record"
+          ],
+          "actual_retrieval_refs": [
+            "fixture|record"
+          ],
+          "confidence": 0.94,
+          "probabilities": {
+            "ignore": 0.0,
+            "investigate": 0.0,
+            "insufficient_data": 0.06,
+            "notify": 0.94
+          },
+          "summary": "Evaluated 0 observations and 0 computed analyses across 1 sources; 1 watch items and 0 questions were checked.",
+          "rationale": "Jev evaluated the card's typed watch, question, and outcome judgments; selected=notify, support=0.94; routed=notify.",
+          "missing_evidence_source_keys": [],
+          "missing_retrieval_refs": [],
+          "unexpected_retrieval_refs": [],
+          "latency_ms": 186.4238329580985,
+          "evaluator": "jev-latest",
+          "error": null,
+          "tags": [],
+          "dataset_id": "reviewed-operating-records-customer-success",
+          "split": "validation",
+          "evidence_plan": {
+            "objective": "Route an evidenced exception to the operating owner.",
+            "slots": [
+              {
+                "key": "source:record",
+                "role": "primary",
+                "question": "What changed in Current operating record that is relevant to the card's stated purpose and comparison window?",
+                "source_keys": [
+                  "record"
+                ],
+                "source_refs": [
+                  {
+                    "key": "record",
+                    "adapter": "fixture",
+                    "resource": "record",
+                    "label": "Current operating record",
+                    "parameters": {},
+                    "required": true,
+                    "required_comparison_keys": []
+                  }
+                ],
+                "required": true,
+                "completion_criteria": "Return a bounded observation or evidence statement with its source and comparison window.",
+                "status": "fulfilled",
+                "evidence_fact_ids": [],
+                "evidence_source_keys": [
+                  "record"
+                ]
+              },
+              {
+                "key": "watch:1",
+                "role": "watch",
+                "question": "A renewal account has no assigned account owner.",
+                "source_keys": [
+                  "record"
+                ],
+                "source_refs": [],
+                "required": true,
+                "completion_criteria": "Return evidence that shows whether this watch item is present or absent.",
+                "status": "fulfilled",
+                "evidence_fact_ids": [],
+                "evidence_source_keys": []
+              }
+            ],
+            "status": "complete",
+            "missing_slot_keys": [],
+            "conflicting_slot_keys": [],
+            "warnings": [],
+            "generated_by": "signalweave",
+            "context_version": null
+          },
+          "workflow": {
+            "status": "ready",
+            "step_key": "deliver",
+            "action": "deliver",
+            "objective": "Route an evidenced exception to the operating owner.",
+            "instructions": "Deliver the evidence bundle to the configured destination. Do not invent a destination or change the outcome.",
+            "required_source_keys": [
+              "record"
+            ],
+            "completion_criteria": "The caller-owned delivery adapter accepted the evidence bundle.",
+            "delivery_method_keys": [
+              "owner"
+            ],
+            "evidence_plan": {
+              "objective": "Route an evidenced exception to the operating owner.",
+              "slots": [
+                {
+                  "key": "source:record",
+                  "role": "primary",
+                  "question": "What changed in Current operating record that is relevant to the card's stated purpose and comparison window?",
+                  "source_keys": [
+                    "record"
+                  ],
+                  "source_refs": [
+                    {
+                      "key": "record",
+                      "adapter": "fixture",
+                      "resource": "record",
+                      "label": "Current operating record",
+                      "parameters": {},
+                      "required": true,
+                      "required_comparison_keys": []
+                    }
+                  ],
+                  "required": true,
+                  "completion_criteria": "Return a bounded observation or evidence statement with its source and comparison window.",
+                  "status": "fulfilled",
+                  "evidence_fact_ids": [],
+                  "evidence_source_keys": [
+                    "record"
+                  ]
+                },
+                {
+                  "key": "watch:1",
+                  "role": "watch",
+                  "question": "A renewal account has no assigned account owner.",
+                  "source_keys": [
+                    "record"
+                  ],
+                  "source_refs": [],
+                  "required": true,
+                  "completion_criteria": "Return evidence that shows whether this watch item is present or absent.",
+                  "status": "fulfilled",
+                  "evidence_fact_ids": [],
+                  "evidence_source_keys": []
+                }
+              ],
+              "status": "complete",
+              "missing_slot_keys": [],
+              "conflicting_slot_keys": [],
+              "warnings": [],
+              "generated_by": "signalweave",
+              "context_version": null
+            }
+          },
+          "watch_results": [
+            {
+              "key": "watch_0",
+              "watch_for": "A renewal account has no assigned account owner.",
+              "status": "present",
+              "probability": 1.0,
+              "probabilities": {
+                "unknown": 0.0,
+                "absent": 0.0,
+                "present": 1.0
+              }
+            }
+          ],
+          "question_results": [],
+          "failure_reasons": []
+        },
+        {
+          "case_id": "customer-success-negative",
+          "card_id": "customer-success-operating-check",
+          "card_version": 1,
+          "expected_outcome": "ignore",
+          "outcome": "ignore",
+          "exact_outcome": true,
+          "safe_action": true,
+          "unsafe_action": false,
+          "delivery_exact": true,
+          "delivery_destinations_exact": true,
+          "evidence_recall": 1.0,
+          "retrieval_precision": 1.0,
+          "retrieval_recall": 1.0,
+          "actual_delivery_method_keys": [],
+          "actual_delivery_destinations": {},
+          "actual_evidence_source_keys": [
+            "record"
+          ],
+          "actual_retrieval_refs": [
+            "fixture|record"
+          ],
+          "confidence": 0.94,
+          "probabilities": {
+            "ignore": 0.94,
+            "investigate": 0.0,
+            "insufficient_data": 0.05,
+            "notify": 0.01
+          },
+          "summary": "Evaluated 0 observations and 0 computed analyses across 1 sources; 1 watch items and 0 questions were checked.",
+          "rationale": "Jev evaluated the card's typed watch, question, and outcome judgments; selected=ignore, support=0.94; routed=ignore.",
+          "missing_evidence_source_keys": [],
+          "missing_retrieval_refs": [],
+          "unexpected_retrieval_refs": [],
+          "latency_ms": 188.2226670277305,
+          "evaluator": "jev-latest",
+          "error": null,
+          "tags": [],
+          "dataset_id": "reviewed-operating-records-customer-success",
+          "split": "validation",
+          "evidence_plan": {
+            "objective": "Route an evidenced exception to the operating owner.",
+            "slots": [
+              {
+                "key": "source:record",
+                "role": "primary",
+                "question": "What changed in Current operating record that is relevant to the card's stated purpose and comparison window?",
+                "source_keys": [
+                  "record"
+                ],
+                "source_refs": [
+                  {
+                    "key": "record",
+                    "adapter": "fixture",
+                    "resource": "record",
+                    "label": "Current operating record",
+                    "parameters": {},
+                    "required": true,
+                    "required_comparison_keys": []
+                  }
+                ],
+                "required": true,
+                "completion_criteria": "Return a bounded observation or evidence statement with its source and comparison window.",
+                "status": "fulfilled",
+                "evidence_fact_ids": [],
+                "evidence_source_keys": [
+                  "record"
+                ]
+              },
+              {
+                "key": "watch:1",
+                "role": "watch",
+                "question": "A renewal account has no assigned account owner.",
+                "source_keys": [
+                  "record"
+                ],
+                "source_refs": [],
+                "required": true,
+                "completion_criteria": "Return evidence that shows whether this watch item is present or absent.",
+                "status": "fulfilled",
+                "evidence_fact_ids": [],
+                "evidence_source_keys": []
+              }
+            ],
+            "status": "complete",
+            "missing_slot_keys": [],
+            "conflicting_slot_keys": [],
+            "warnings": [],
+            "generated_by": "signalweave",
+            "context_version": null
+          },
+          "workflow": {
+            "status": "complete",
+            "step_key": "suppress",
+            "action": "suppress",
+            "objective": "Route an evidenced exception to the operating owner.",
+            "instructions": "Record the result and suppress delivery for this run.",
+            "required_source_keys": [],
+            "completion_criteria": "No further workflow step is required unless new evidence arrives.",
+            "delivery_method_keys": [],
+            "evidence_plan": {
+              "objective": "Route an evidenced exception to the operating owner.",
+              "slots": [
+                {
+                  "key": "source:record",
+                  "role": "primary",
+                  "question": "What changed in Current operating record that is relevant to the card's stated purpose and comparison window?",
+                  "source_keys": [
+                    "record"
+                  ],
+                  "source_refs": [
+                    {
+                      "key": "record",
+                      "adapter": "fixture",
+                      "resource": "record",
+                      "label": "Current operating record",
+                      "parameters": {},
+                      "required": true,
+                      "required_comparison_keys": []
+                    }
+                  ],
+                  "required": true,
+                  "completion_criteria": "Return a bounded observation or evidence statement with its source and comparison window.",
+                  "status": "fulfilled",
+                  "evidence_fact_ids": [],
+                  "evidence_source_keys": [
+                    "record"
+                  ]
+                },
+                {
+                  "key": "watch:1",
+                  "role": "watch",
+                  "question": "A renewal account has no assigned account owner.",
+                  "source_keys": [
+                    "record"
+                  ],
+                  "source_refs": [],
+                  "required": true,
+                  "completion_criteria": "Return evidence that shows whether this watch item is present or absent.",
+                  "status": "fulfilled",
+                  "evidence_fact_ids": [],
+                  "evidence_source_keys": []
+                }
+              ],
+              "status": "complete",
+              "missing_slot_keys": [],
+              "conflicting_slot_keys": [],
+              "warnings": [],
+              "generated_by": "signalweave",
+              "context_version": null
+            }
+          },
+          "watch_results": [
+            {
+              "key": "watch_0",
+              "watch_for": "A renewal account has no assigned account owner.",
+              "status": "absent",
+              "probability": 0.0,
+              "probabilities": {
+                "unknown": 0.01,
+                "absent": 0.99,
+                "present": 0.0
+              }
+            }
+          ],
+          "question_results": [],
+          "failure_reasons": []
+        },
+        {
+          "case_id": "customer-success-missing",
+          "card_id": "customer-success-operating-check",
+          "card_version": 1,
+          "expected_outcome": "insufficient_data",
+          "outcome": "insufficient_data",
+          "exact_outcome": true,
+          "safe_action": true,
+          "unsafe_action": false,
+          "delivery_exact": true,
+          "delivery_destinations_exact": true,
+          "evidence_recall": 1.0,
+          "retrieval_precision": 1.0,
+          "retrieval_recall": 1.0,
+          "actual_delivery_method_keys": [
+            "data"
+          ],
+          "actual_delivery_destinations": {
+            "data": "agent://data-owner"
+          },
+          "actual_evidence_source_keys": [
+            "record"
+          ],
+          "actual_retrieval_refs": [
+            "fixture|record"
+          ],
+          "confidence": 0.95,
+          "probabilities": {
+            "ignore": 0.0,
+            "investigate": 0.01,
+            "insufficient_data": 0.95,
+            "notify": 0.04
+          },
+          "summary": "Evaluated 0 observations and 0 computed analyses across 1 sources; 1 watch items and 0 questions were checked.",
+          "rationale": "Jev evaluated the card's typed watch, question, and outcome judgments; selected=insufficient_data, support=0.95; routed=insufficient_data.",
+          "missing_evidence_source_keys": [],
+          "missing_retrieval_refs": [],
+          "unexpected_retrieval_refs": [],
+          "latency_ms": 175.28358398703858,
+          "evaluator": "jev-latest",
+          "error": null,
+          "tags": [],
+          "dataset_id": "reviewed-operating-records-customer-success",
+          "split": "validation",
+          "evidence_plan": {
+            "objective": "Route an evidenced exception to the operating owner.",
+            "slots": [
+              {
+                "key": "source:record",
+                "role": "primary",
+                "question": "What changed in Current operating record that is relevant to the card's stated purpose and comparison window?",
+                "source_keys": [
+                  "record"
+                ],
+                "source_refs": [
+                  {
+                    "key": "record",
+                    "adapter": "fixture",
+                    "resource": "record",
+                    "label": "Current operating record",
+                    "parameters": {},
+                    "required": true,
+                    "required_comparison_keys": []
+                  }
+                ],
+                "required": true,
+                "completion_criteria": "Return a bounded observation or evidence statement with its source and comparison window.",
+                "status": "fulfilled",
+                "evidence_fact_ids": [],
+                "evidence_source_keys": [
+                  "record"
+                ]
+              },
+              {
+                "key": "watch:1",
+                "role": "watch",
+                "question": "A renewal account has no assigned account owner.",
+                "source_keys": [
+                  "record"
+                ],
+                "source_refs": [],
+                "required": true,
+                "completion_criteria": "Return evidence that shows whether this watch item is present or absent.",
+                "status": "pending",
+                "evidence_fact_ids": [],
+                "evidence_source_keys": []
+              }
+            ],
+            "status": "incomplete",
+            "missing_slot_keys": [
+              "watch:1"
+            ],
+            "conflicting_slot_keys": [],
+            "warnings": [],
+            "generated_by": "signalweave",
+            "context_version": null
+          },
+          "workflow": {
+            "status": "blocked",
+            "step_key": "repair-source",
+            "action": "repair_source",
+            "objective": "Route an evidenced exception to the operating owner.",
+            "instructions": "Repair or validate the required source, then re-evaluate the same card.",
+            "required_source_keys": [
+              "record"
+            ],
+            "completion_criteria": "Required sources are healthy and a new evaluation is submitted.",
+            "delivery_method_keys": [
+              "data"
+            ],
+            "evidence_plan": {
+              "objective": "Route an evidenced exception to the operating owner.",
+              "slots": [
+                {
+                  "key": "source:record",
+                  "role": "primary",
+                  "question": "What changed in Current operating record that is relevant to the card's stated purpose and comparison window?",
+                  "source_keys": [
+                    "record"
+                  ],
+                  "source_refs": [
+                    {
+                      "key": "record",
+                      "adapter": "fixture",
+                      "resource": "record",
+                      "label": "Current operating record",
+                      "parameters": {},
+                      "required": true,
+                      "required_comparison_keys": []
+                    }
+                  ],
+                  "required": true,
+                  "completion_criteria": "Return a bounded observation or evidence statement with its source and comparison window.",
+                  "status": "fulfilled",
+                  "evidence_fact_ids": [],
+                  "evidence_source_keys": [
+                    "record"
+                  ]
+                },
+                {
+                  "key": "watch:1",
+                  "role": "watch",
+                  "question": "A renewal account has no assigned account owner.",
+                  "source_keys": [
+                    "record"
+                  ],
+                  "source_refs": [],
+                  "required": true,
+                  "completion_criteria": "Return evidence that shows whether this watch item is present or absent.",
+                  "status": "pending",
+                  "evidence_fact_ids": [],
+                  "evidence_source_keys": []
+                }
+              ],
+              "status": "incomplete",
+              "missing_slot_keys": [
+                "watch:1"
+              ],
+              "conflicting_slot_keys": [],
+              "warnings": [],
+              "generated_by": "signalweave",
+              "context_version": null
+            }
+          },
+          "watch_results": [
+            {
+              "key": "watch_0",
+              "watch_for": "A renewal account has no assigned account owner.",
+              "status": "unknown",
+              "probability": 0.08,
+              "probabilities": {
+                "absent": 0.0,
+                "present": 0.08,
+                "unknown": 0.92
+              }
+            }
+          ],
+          "question_results": [],
+          "failure_reasons": []
+        },
+        {
+          "case_id": "customer-success-conflicting",
+          "card_id": "customer-success-operating-check",
+          "card_version": 1,
+          "expected_outcome": "insufficient_data",
+          "outcome": "insufficient_data",
+          "exact_outcome": true,
+          "safe_action": true,
+          "unsafe_action": false,
+          "delivery_exact": true,
+          "delivery_destinations_exact": true,
+          "evidence_recall": 1.0,
+          "retrieval_precision": 1.0,
+          "retrieval_recall": 1.0,
+          "actual_delivery_method_keys": [
+            "data"
+          ],
+          "actual_delivery_destinations": {
+            "data": "agent://data-owner"
+          },
+          "actual_evidence_source_keys": [
+            "record"
+          ],
+          "actual_retrieval_refs": [
+            "fixture|record"
+          ],
+          "confidence": 0.97,
+          "probabilities": {
+            "ignore": 0.0,
+            "investigate": 0.03,
+            "insufficient_data": 0.97,
+            "notify": 0.0
+          },
+          "summary": "Evaluated 0 observations and 0 computed analyses across 1 sources; 1 watch items and 0 questions were checked.",
+          "rationale": "Jev evaluated the card's typed watch, question, and outcome judgments; selected=insufficient_data, support=0.97; routed=insufficient_data.",
+          "missing_evidence_source_keys": [],
+          "missing_retrieval_refs": [],
+          "unexpected_retrieval_refs": [],
+          "latency_ms": 187.285291031003,
+          "evaluator": "jev-latest",
+          "error": null,
+          "tags": [],
+          "dataset_id": "reviewed-operating-records-customer-success",
+          "split": "validation",
+          "evidence_plan": {
+            "objective": "Route an evidenced exception to the operating owner.",
+            "slots": [
+              {
+                "key": "source:record",
+                "role": "primary",
+                "question": "What changed in Current operating record that is relevant to the card's stated purpose and comparison window?",
+                "source_keys": [
+                  "record"
+                ],
+                "source_refs": [
+                  {
+                    "key": "record",
+                    "adapter": "fixture",
+                    "resource": "record",
+                    "label": "Current operating record",
+                    "parameters": {},
+                    "required": true,
+                    "required_comparison_keys": []
+                  }
+                ],
+                "required": true,
+                "completion_criteria": "Return a bounded observation or evidence statement with its source and comparison window.",
+                "status": "fulfilled",
+                "evidence_fact_ids": [],
+                "evidence_source_keys": [
+                  "record"
+                ]
+              },
+              {
+                "key": "watch:1",
+                "role": "watch",
+                "question": "A renewal account has no assigned account owner.",
+                "source_keys": [
+                  "record"
+                ],
+                "source_refs": [],
+                "required": true,
+                "completion_criteria": "Return evidence that shows whether this watch item is present or absent.",
+                "status": "pending",
+                "evidence_fact_ids": [],
+                "evidence_source_keys": []
+              }
+            ],
+            "status": "incomplete",
+            "missing_slot_keys": [
+              "watch:1"
+            ],
+            "conflicting_slot_keys": [],
+            "warnings": [],
+            "generated_by": "signalweave",
+            "context_version": null
+          },
+          "workflow": {
+            "status": "blocked",
+            "step_key": "repair-source",
+            "action": "repair_source",
+            "objective": "Route an evidenced exception to the operating owner.",
+            "instructions": "Repair or validate the required source, then re-evaluate the same card.",
+            "required_source_keys": [
+              "record"
+            ],
+            "completion_criteria": "Required sources are healthy and a new evaluation is submitted.",
+            "delivery_method_keys": [
+              "data"
+            ],
+            "evidence_plan": {
+              "objective": "Route an evidenced exception to the operating owner.",
+              "slots": [
+                {
+                  "key": "source:record",
+                  "role": "primary",
+                  "question": "What changed in Current operating record that is relevant to the card's stated purpose and comparison window?",
+                  "source_keys": [
+                    "record"
+                  ],
+                  "source_refs": [
+                    {
+                      "key": "record",
+                      "adapter": "fixture",
+                      "resource": "record",
+                      "label": "Current operating record",
+                      "parameters": {},
+                      "required": true,
+                      "required_comparison_keys": []
+                    }
+                  ],
+                  "required": true,
+                  "completion_criteria": "Return a bounded observation or evidence statement with its source and comparison window.",
+                  "status": "fulfilled",
+                  "evidence_fact_ids": [],
+                  "evidence_source_keys": [
+                    "record"
+                  ]
+                },
+                {
+                  "key": "watch:1",
+                  "role": "watch",
+                  "question": "A renewal account has no assigned account owner.",
+                  "source_keys": [
+                    "record"
+                  ],
+                  "source_refs": [],
+                  "required": true,
+                  "completion_criteria": "Return evidence that shows whether this watch item is present or absent.",
+                  "status": "pending",
+                  "evidence_fact_ids": [],
+                  "evidence_source_keys": []
+                }
+              ],
+              "status": "incomplete",
+              "missing_slot_keys": [
+                "watch:1"
+              ],
+              "conflicting_slot_keys": [],
+              "warnings": [],
+              "generated_by": "signalweave",
+              "context_version": null
+            }
+          },
+          "watch_results": [
+            {
+              "key": "watch_0",
+              "watch_for": "A renewal account has no assigned account owner.",
+              "status": "unknown",
+              "probability": 0.0,
+              "probabilities": {
+                "present": 0.0,
+                "absent": 0.0,
+                "unknown": 1.0
+              }
+            }
+          ],
+          "question_results": [],
+          "failure_reasons": []
+        }
+      ],
+      "evaluation_id": "37994a5f2defebf9babca0c3",
+      "input_digest": "37994a5f2defebf9babca0c39e8153896332c16ca30a6fce7e56c6ff2a4e3469",
+      "label_digest": "7bc6378e5041e8c3a1fdc57e6c923693df5a9c7ecdee16d0ceea3032af3d231d",
+      "dataset_ids": [
+        "reviewed-operating-records-customer-success"
+      ],
+      "splits": [
+        "validation"
+      ],
+      "time_split_disjoint": true,
+      "jev_requests": 4,
+      "jev_input_tokens": 10530,
+      "jev_output_tokens": 373
+    }
+  },
+  "manifest_digest": "ba91dc943a37bfa374430e155cbab6f256d6e95aed9e8dc54d5eb2fd73fbbad1",
+  "sources_unchanged": true,
+  "checks": {
+    "complete": true,
+    "manifest_unchanged": true,
+    "bounded_requests": true,
+    "request_ids": true,
+    "no_errors": true,
+    "sources_unchanged": true,
+    "companies": true,
+    "commerce:report": true,
+    "commerce:acceptance": true,
+    "commerce:card_digest": true,
+    "commerce-affirmative:trace": true,
+    "commerce-affirmative:watch": true,
+    "commerce-negative:trace": true,
+    "commerce-negative:watch": true,
+    "commerce-missing:trace": true,
+    "commerce-missing:watch": true,
+    "commerce-conflicting:trace": true,
+    "commerce-conflicting:watch": true,
+    "operations:report": true,
+    "operations:acceptance": true,
+    "operations:card_digest": true,
+    "operations-affirmative:trace": true,
+    "operations-affirmative:watch": true,
+    "operations-negative:trace": true,
+    "operations-negative:watch": true,
+    "operations-missing:trace": true,
+    "operations-missing:watch": true,
+    "operations-conflicting:trace": true,
+    "operations-conflicting:watch": true,
+    "customer-success:report": true,
+    "customer-success:acceptance": true,
+    "customer-success:card_digest": true,
+    "customer-success-affirmative:trace": true,
+    "customer-success-affirmative:watch": true,
+    "customer-success-negative:trace": true,
+    "customer-success-negative:watch": true,
+    "customer-success-missing:trace": true,
+    "customer-success-missing:watch": true,
+    "customer-success-conflicting:trace": true,
+    "customer-success-conflicting:watch": true
+  }
+}

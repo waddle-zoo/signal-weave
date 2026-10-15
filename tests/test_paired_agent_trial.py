@@ -2,6 +2,7 @@ from evaluations.paired_agent_trial import (
     DEFAULT_CASES,
     QueryExecutor,
     QueryLedger,
+    _agent_prompt,
     _load_cases,
     _tool_specs,
     score_run,
@@ -37,6 +38,7 @@ def test_both_arms_use_the_same_shared_input_shape():
     }
     assert "human-authored-card" in shared["context_fields"]
     assert "tenant-and-permission-scope" in shared["context_fields"]
+    assert shared["card"]["decision_guidance"]
 
 
 def test_query_executor_records_expensive_work_without_sleeping():
@@ -125,9 +127,75 @@ def test_scoring_rejects_unsafe_notification_and_missing_evidence():
     assert scored["evidence_recall"] < 1.0
 
 
+def test_explicit_cached_chart_provenance_can_satisfy_dashboard_evidence():
+    case = next(case for case in _load_cases(DEFAULT_CASES) if case["scenario"] == "stable_cache")
+    run = {
+        "case_id": case["case_id"],
+        "arm": "treatment",
+        "submission": {
+            "outcome": "ignore",
+            "delivery": "none",
+            "reason": "The cached charts are within the approved range.",
+            "evidence_refs": ["growth-summary", "growth-rate"],
+            "query_justified": False,
+            "confidence": 0.9,
+        },
+        "events": [],
+        "query_calls": [],
+        "tool_calls": 1,
+        "api_requests": 1,
+        "elapsed_ms": 100,
+    }
+
+    scored = score_run(case, run)
+
+    assert scored["exact"] is True
+    assert scored["unsafe_automatic_action"] is False
+    assert scored["evidence_recall"] == 1.0
+    assert scored["covered_required_evidence"] == ["superset|dashboard:growth"]
+    assert scored["equivalent_evidence_matches"]["superset|dashboard:growth"] == [
+        "growth-rate",
+        "growth-summary",
+    ]
+
+
+def test_treatment_prompt_does_not_duplicate_a_preflight_query():
+    case = next(case for case in _load_cases(DEFAULT_CASES) if case["scenario"] == "actionable_change")
+    prompt = _agent_prompt(
+        case,
+        True,
+        {"path": "query", "query": {"finding": "bounded result"}},
+    )
+
+    assert "Do not call run_diagnostic_query again for the same question" in prompt
+    assert "set query_justified to true" in prompt
+    assert "human-authored card policy remains authoritative" in prompt
+
+
 def test_both_arms_share_raw_tool_contract_and_final_submission_schema():
     baseline = {tool["name"] for tool in _tool_specs(False)}
     treatment = {tool["name"] for tool in _tool_specs(True)}
 
     assert treatment == baseline
     assert "submit_analysis" in baseline & treatment
+
+
+def test_helio_connected_preset_mcp_fixture_covers_decision_and_safe_abstention():
+    cases = _load_cases("evaluations/data/helio-preset-mcp-cases.json")
+
+    assert len(cases) == 3
+    assert {case["label"]["outcome"] for case in cases} == {
+        "ignore",
+        "notify",
+        "insufficient_data",
+    }
+    assert all(
+        "connected-preset-mcp-source-catalog" in case["shared_input"]["context_fields"]
+        and {source["adapter"] for source in case["sources"]} == {"preset_mcp"}
+        for case in cases
+    )
+    assert all(
+        "preset_mcp|dashboard:helio-support-quality"
+        in {source["ref"] for source in case["sources"]}
+        for case in cases
+    )

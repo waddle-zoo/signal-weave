@@ -1,0 +1,8 @@
+{
+  "version": "policy-placement-probe-v1",
+  "live": true,
+  "input_digest": "1a9e833e38e6d035352b86123052b9a2eade35916ba3cfc3edb6b77dfd81872f",
+  "attempt_cap": 6,
+  "scope": "In-process historical diagnostic, not binary onboarding or an unseen test",
+  "mutation": "Repeat existing watch_for verbatim in decision_guidance; bump card/plan version only"
+}

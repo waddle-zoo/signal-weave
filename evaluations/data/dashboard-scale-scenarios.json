@@ -19,6 +19,13 @@
           "Which charts show the meaningful change?",
           "What related evidence best explains why it matters?"
         ],
+        "evidence_requirements": {
+          "question:1": false,
+          "question:2": false,
+          "watch:1": false,
+          "watch:2": false,
+          "watch:3": false
+        },
       "decision_guidance": "Notify when qualified growth and activation rate are each down at least 10% versus the previous period and the campaign calendar is unchanged. For the evidence bundle, treat qualified growth as the focal driver, activation rate as corroboration, paid traffic as diagnostic context, and campaign calendar as a quality or policy check. Treat paid traffic as diagnostic context, not a veto. Investigate when the movement is material but those conditions are incomplete or ambiguous. Ignore normal or isolated movement.",
         "expected_outcome": "notify"
       },
@@ -45,6 +52,13 @@
           "Is the delivery problem broad enough to act on?",
           "Which connected operational signal should be investigated first?"
         ],
+        "evidence_requirements": {
+          "question:1": false,
+          "question:2": false,
+          "watch:1": false,
+          "watch:2": false,
+          "watch:3": false
+        },
       "decision_guidance": "Notify when on-time delivery is down at least 10% and either carrier service is down at least 5% or warehouse backlog is up at least 20%. For the evidence bundle, treat on-time delivery as the focal driver, carrier service as corroboration, warehouse backlog as diagnostic context, and stable inventory availability as contradicting an inventory-driven cause. Treat stable inventory availability as evidence against an inventory-driven cause. Investigate when the movement is material but the corroboration is incomplete.",
         "expected_outcome": "notify"
       },
@@ -71,6 +85,13 @@
           "Is the movement an adoption problem or an expected rollout effect?",
           "What evidence should product inspect next?"
         ],
+        "evidence_requirements": {
+          "question:1": false,
+          "question:2": false,
+          "watch:1": false,
+          "watch:2": false,
+          "watch:3": false
+        },
       "decision_guidance": "Ignore feature-adoption movement when release cohort coverage is down with the rollout and experiment control remains stable. For the evidence bundle, treat feature adoption as the focal driver being evaluated, release cohort coverage as contradicting an incident because it explains the expected rollout effect, experiment control as corroboration that the movement is benign, and event pipeline freshness as a quality check. Investigate only when adoption is off the rollout path or the control also moves materially. Do not notify on the expected cohort effect alone.",
         "expected_outcome": "ignore"
       },
@@ -97,6 +118,13 @@
           "Is this a payment problem or a data trust problem?",
           "Which connected evidence should the payments team inspect?"
         ],
+        "evidence_requirements": {
+          "question:1": false,
+          "question:2": false,
+          "watch:1": false,
+          "watch:2": false,
+          "watch:3": false
+        },
       "decision_guidance": "If payment data freshness is stale, investigate and send no automatic notification, regardless of the payment movement. For the evidence bundle, treat payment completion as the focal driver, issuer declines as corroboration, fraud pressure as diagnostic context, and payment data freshness as a quality gate. Otherwise escalate a severe payment trust failure and use issuer and fraud signals as supporting context.",
         "expected_outcome": "investigate"
       },
@@ -123,6 +151,13 @@
           "Is there a customer-impacting incident?",
           "Which operational evidence best explains the change?"
         ],
+        "evidence_requirements": {
+          "question:1": false,
+          "question:2": false,
+          "watch:1": false,
+          "watch:2": false,
+          "watch:3": false
+        },
       "decision_guidance": "Escalate only when customer impact is corroborated by operational evidence. For the evidence bundle, treat customer error rate as the focal driver, incident timeline as corroboration, recent deploys and capacity pressure as diagnostic context, and isolated host noise as contradicting a broad incident. Ignore isolated host noise.",
         "expected_outcome": "escalate"
       },
@@ -148,7 +183,13 @@
         "Did anything meaningful change?",
         "If not, should this run produce no delivery?"
       ],
-      "decision_guidance": "Ignore ordinary variation, small movements, and isolated charts. For the evidence bundle, treat normal orders and normal support volume as contradicting a material incident. Notify only when a material movement is corroborated by related evidence.",
+      "evidence_requirements": {
+        "question:1": false,
+        "question:2": false,
+        "watch:1": false,
+        "watch:2": false
+      },
+      "decision_guidance": "Ignore ordinary variation, including absolute movements below 5%, and isolated charts. For the evidence bundle, treat normal orders and normal support volume as contradicting a material incident. Notify only when a material movement is corroborated by related evidence.",
       "expected_outcome": "ignore"
       },
       "overrides": [

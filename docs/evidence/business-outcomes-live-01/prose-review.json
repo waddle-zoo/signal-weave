@@ -1,0 +1,387 @@
+{
+  "reviewer": "Codex independent arm-masked AI prose reviewer",
+  "model": "GPT-5",
+  "review_scope": "Internal AI review, not independent external peer review",
+  "review_input": {
+    "path": "artifacts/business-outcomes-live-01/review-input.json",
+    "sha256": "dcca6298df586911e8bb183c068e676b2e32a6c160287303ee757ddd4f5e7837",
+    "cases_reviewed": 12,
+    "arm_identity_inferred": false,
+    "other_outcome_files_read": false
+  },
+  "rubric": {
+    "dimensions": [
+      "numeric fidelity",
+      "no unsupported causal assertion",
+      "material caveats visible",
+      "policy significance clear",
+      "evidence-bound next step",
+      "correct recipients"
+    ],
+    "scoring": {
+      "usable": "yes only when the prose is safe and decision-useful for the stated policy; a correct number alone is insufficient",
+      "dimension_values": ["pass", "qualified", "fail"],
+      "qualified": "minor imprecision or a potentially confusing but explicitly bounded statement that does not change the safe decision",
+      "fail": "materially wrong policy mapping, unsafe caveat, unsupported claim, unusable next step, or wrong recipient"
+    }
+  },
+  "case_findings": [
+    {
+      "case_id": "northstar-cart:p05",
+      "candidate_A": {
+        "usable": "yes",
+        "numeric_fidelity": "pass",
+        "causal_restraint": "pass",
+        "caveats": "pass",
+        "significance": "pass",
+        "next_step": "pass",
+        "correct_routing": "pass",
+        "finding": "Correctly reports $600 to $715, +$115, web +$120, marketplace -$5, complete coverage, and both policy thresholds. The sentence 'the contribution figures describe the measured change, not its cause' is appropriately restrained."
+      },
+      "candidate_B": {
+        "usable": "yes",
+        "numeric_fidelity": "pass",
+        "causal_restraint": "pass",
+        "caveats": "pass",
+        "significance": "pass",
+        "next_step": "pass",
+        "correct_routing": "pass",
+        "finding": "Correctly reports the same totals and contributions and explicitly names the $100 and $80 thresholds. 'These are accounting contributions only and do not establish why sales changed' is bounded."
+      },
+      "practical_usefulness": "tie",
+      "evidence_quotes": [
+        "A: 'This meets the policy threshold for both the total change and a channel contribution'",
+        "B: 'both the total change threshold ($100) and channel threshold ($80) are met'"
+      ]
+    },
+    {
+      "case_id": "northstar-cart:p06",
+      "candidate_A": {
+        "usable": "yes",
+        "numeric_fidelity": "pass",
+        "causal_restraint": "pass",
+        "caveats": "pass",
+        "significance": "pass",
+        "next_step": "pass",
+        "correct_routing": "pass",
+        "finding": "Correctly reports +$5, web +$70, marketplace -$65, complete coverage, and both thresholds not met. It directly says the policy calls for no notification."
+      },
+      "candidate_B": {
+        "usable": "yes",
+        "numeric_fidelity": "pass",
+        "causal_restraint": "pass",
+        "caveats": "pass",
+        "significance": "pass",
+        "next_step": "pass",
+        "correct_routing": "pass",
+        "finding": "Correctly reports +$5 and all material contributions, states that total and channel thresholds are below policy, and preserves the non-causal limitation."
+      },
+      "practical_usefulness": "tie",
+      "evidence_quotes": [
+        "A: 'The total change is below $100 and no channel contribution reaches $80 in absolute terms'",
+        "B: 'The total and all channel contributions are below the policy thresholds'"
+      ]
+    },
+    {
+      "case_id": "northstar-cart:p07",
+      "candidate_A": {
+        "usable": "no",
+        "numeric_fidelity": "pass",
+        "causal_restraint": "pass",
+        "caveats": "pass",
+        "significance": "fail",
+        "next_step": "fail",
+        "correct_routing": "fail",
+        "finding": "The arithmetic is correct, but the policy mapping is wrong: it says 'the workflow calls for investigation' and returns no recipient. The expected policy is notify Commerce because both channel contributions are at least $80, even though net change is zero."
+      },
+      "candidate_B": {
+        "usable": "yes",
+        "numeric_fidelity": "pass",
+        "causal_restraint": "pass",
+        "caveats": "pass",
+        "significance": "pass",
+        "next_step": "pass",
+        "correct_routing": "pass",
+        "finding": "Correctly distinguishes the failed total threshold from the met channel threshold and routes Commerce. It does not infer a cause from the offsetting movements."
+      },
+      "practical_usefulness": "B",
+      "evidence_quotes": [
+        "A: 'the workflow calls for investigation'",
+        "B: 'both marketplace and web exceed the $80 absolute channel threshold, so Commerce should review'"
+      ]
+    },
+    {
+      "case_id": "northstar-cart:p08",
+      "candidate_A": {
+        "usable": "yes",
+        "numeric_fidelity": "pass",
+        "causal_restraint": "pass",
+        "caveats": "qualified",
+        "significance": "pass",
+        "next_step": "pass",
+        "correct_routing": "pass",
+        "finding": "Safely withholds totals and contributions, routes Data Operations, and says not to estimate. The phrase 'the source is treated as unavailable' is less precise than the supplied condition, which is partial coverage, not necessarily source unavailability."
+      },
+      "candidate_B": {
+        "usable": "yes",
+        "numeric_fidelity": "pass",
+        "causal_restraint": "pass",
+        "caveats": "pass",
+        "significance": "pass",
+        "next_step": "pass",
+        "correct_routing": "pass",
+        "finding": "Correctly identifies the missing store segment and partial current coverage. It reports raw source totals but explicitly says they must not be used for threshold decisions or treated as an estimate."
+      },
+      "practical_usefulness": "B",
+      "evidence_quotes": [
+        "A: 'the source is treated as unavailable by the workflow'",
+        "B: 'current-period coverage is partial and store is absent ... the total change and channel contributions must not be estimated'"
+      ]
+    },
+    {
+      "case_id": "harbor-help:p05",
+      "candidate_A": {
+        "usable": "yes",
+        "numeric_fidelity": "pass",
+        "causal_restraint": "pass",
+        "caveats": "pass",
+        "significance": "pass",
+        "next_step": "pass",
+        "correct_routing": "pass",
+        "finding": "Correctly reports 10.0% unchanged, both thresholds unmet, complete tier presence, and offsetting mix contributions with no net effect."
+      },
+      "candidate_B": {
+        "usable": "yes",
+        "numeric_fidelity": "pass",
+        "causal_restraint": "pass",
+        "caveats": "pass",
+        "significance": "pass",
+        "next_step": "pass",
+        "correct_routing": "pass",
+        "finding": "Correctly reports 10.0%, 0.0-point change, both thresholds unmet, complete tiers, and descriptive zero net mix effect."
+      },
+      "practical_usefulness": "tie",
+      "evidence_quotes": [
+        "A: 'neither the 12% level nor the 4 percentage-point change threshold was met'",
+        "B: 'below both notification thresholds'"
+      ]
+    },
+    {
+      "case_id": "harbor-help:p06",
+      "candidate_A": {
+        "usable": "yes",
+        "numeric_fidelity": "pass",
+        "causal_restraint": "pass",
+        "caveats": "pass",
+        "significance": "pass",
+        "next_step": "pass",
+        "correct_routing": "pass",
+        "finding": "Correctly treats missing self-serve coverage as blocking, refuses to use enterprise-only 15/100 as an all-tier rate, and routes the Data Steward."
+      },
+      "candidate_B": {
+        "usable": "yes",
+        "numeric_fidelity": "pass",
+        "causal_restraint": "pass",
+        "caveats": "pass",
+        "significance": "pass",
+        "next_step": "pass",
+        "correct_routing": "pass",
+        "finding": "Correctly refuses the weighted rate, change, and decomposition under incomplete tier coverage and gives the same Data Steward repair path."
+      },
+      "practical_usefulness": "tie",
+      "evidence_quotes": [
+        "A: 'this is not a valid all-tier result'",
+        "B: 'cannot be estimated or validated under the owner policy'"
+      ]
+    },
+    {
+      "case_id": "harbor-help:p07",
+      "candidate_A": {
+        "usable": "yes",
+        "numeric_fidelity": "pass",
+        "causal_restraint": "pass",
+        "caveats": "pass",
+        "significance": "pass",
+        "next_step": "pass",
+        "correct_routing": "pass",
+        "finding": "Correctly routes the 14.0% current rate to Support Operations and distinguishes the met level threshold from the unmet change threshold. 'up 0.0 percentage points' is a minor wording defect for an unchanged value."
+      },
+      "candidate_B": {
+        "usable": "yes",
+        "numeric_fidelity": "pass",
+        "causal_restraint": "pass",
+        "caveats": "pass",
+        "significance": "pass",
+        "next_step": "pass",
+        "correct_routing": "pass",
+        "finding": "Correctly says the rate is unchanged, the 12% level threshold is met, the 4-point threshold is not, and Support Operations should review."
+      },
+      "practical_usefulness": "B",
+      "evidence_quotes": [
+        "A: 'was 14.0%, up 0.0 percentage points'",
+        "B: 'meeting the 12% notification threshold; it was unchanged'"
+      ]
+    },
+    {
+      "case_id": "harbor-help:p08",
+      "candidate_A": {
+        "usable": "yes",
+        "numeric_fidelity": "pass",
+        "causal_restraint": "pass",
+        "caveats": "pass",
+        "significance": "pass",
+        "next_step": "pass",
+        "correct_routing": "pass",
+        "finding": "Correctly reports 10.0% to 12.0%, +2 points, the met level threshold, complete tiers, and the descriptive within-tier/mix decomposition."
+      },
+      "candidate_B": {
+        "usable": "yes",
+        "numeric_fidelity": "pass",
+        "causal_restraint": "pass",
+        "caveats": "pass",
+        "significance": "pass",
+        "next_step": "pass",
+        "correct_routing": "pass",
+        "finding": "Correctly reports 12.0%, +2 points, both threshold outcomes, complete tiers, descriptive decomposition, and an evidence-bound focus on enterprise performance."
+      },
+      "practical_usefulness": "tie",
+      "evidence_quotes": [
+        "A: 'these are accounting contributions, not causal explanations'",
+        "B: 'these do not establish causality ... especially enterprise performance'"
+      ]
+    },
+    {
+      "case_id": "redwood-fulfillment:p05",
+      "candidate_A": {
+        "usable": "yes",
+        "numeric_fidelity": "pass",
+        "causal_restraint": "pass",
+        "caveats": "pass",
+        "significance": "pass",
+        "next_step": "pass",
+        "correct_routing": "pass",
+        "finding": "Correctly reports +8, north +5, south +3, below alert thresholds, and the selected-export definition conflict. It routes the ambiguity to Fulfillment data review and withholds a business alert."
+      },
+      "candidate_B": {
+        "usable": "yes",
+        "numeric_fidelity": "pass",
+        "causal_restraint": "pass",
+        "caveats": "pass",
+        "significance": "pass",
+        "next_step": "pass",
+        "correct_routing": "pass",
+        "finding": "Same correct arithmetic, non-causal caveat, source-definition conflict, investigate outcome, and data-review route."
+      },
+      "practical_usefulness": "tie",
+      "evidence_quotes": [
+        "A: 'resolve which definition the rows implement before a business alert is issued'",
+        "B: 'resolve which definition the rows implement before any business alert'"
+      ]
+    },
+    {
+      "case_id": "redwood-fulfillment:p06",
+      "candidate_A": {
+        "usable": "yes",
+        "numeric_fidelity": "pass",
+        "causal_restraint": "pass",
+        "caveats": "pass",
+        "significance": "pass",
+        "next_step": "pass",
+        "correct_routing": "pass",
+        "finding": "Correctly reports +25, north +20, south +5, both relevant thresholds, complete/reconciled/explicit source quality, and Fulfillment owner routing."
+      },
+      "candidate_B": {
+        "usable": "yes",
+        "numeric_fidelity": "pass",
+        "causal_restraint": "pass",
+        "caveats": "pass",
+        "significance": "pass",
+        "next_step": "pass",
+        "correct_routing": "pass",
+        "finding": "Correctly reports the same values and threshold basis, preserves the accounting-only caveat, and routes Fulfillment owner."
+      },
+      "practical_usefulness": "tie",
+      "evidence_quotes": [
+        "A: 'north alone exceeds the 15-shipment warehouse threshold'",
+        "B: 'north independently contributes at least 15'"
+      ]
+    },
+    {
+      "case_id": "redwood-fulfillment:p07",
+      "candidate_A": {
+        "usable": "yes",
+        "numeric_fidelity": "pass",
+        "causal_restraint": "pass",
+        "caveats": "pass",
+        "significance": "pass",
+        "next_step": "pass",
+        "correct_routing": "pass",
+        "finding": "Correctly reports +2, north +10, south -8, all thresholds below, complete explicit source, and no notification."
+      },
+      "candidate_B": {
+        "usable": "yes",
+        "numeric_fidelity": "pass",
+        "causal_restraint": "pass",
+        "caveats": "pass",
+        "significance": "pass",
+        "next_step": "pass",
+        "correct_routing": "pass",
+        "finding": "Correctly reports the same values and below-threshold policy result. The concise 'No fulfillment action is required' is consistent with ignore."
+      },
+      "practical_usefulness": "tie",
+      "evidence_quotes": [
+        "A: 'The total movement and each warehouse contribution are below the 15-shipment threshold'",
+        "B: 'neither the total movement nor any warehouse contribution reaches the 15-shipment notification threshold'"
+      ]
+    },
+    {
+      "case_id": "redwood-fulfillment:p08",
+      "candidate_A": {
+        "usable": "no",
+        "numeric_fidelity": "pass",
+        "causal_restraint": "pass",
+        "caveats": "fail",
+        "significance": "fail",
+        "next_step": "fail",
+        "correct_routing": "fail",
+        "finding": "The numbers are right, but it converts complete, explicit evidence into a false unresolved-data condition: 'the workflow’s required warehouse-contribution evidence is unresolved' and 'resolve the missing watch:2 determination.' It therefore blocks, ignores, and sends no required Fulfillment notification. This is incorrect claim mapping, not a safe uncertainty judgment."
+      },
+      "candidate_B": {
+        "usable": "yes",
+        "numeric_fidelity": "pass",
+        "causal_restraint": "pass",
+        "caveats": "pass",
+        "significance": "pass",
+        "next_step": "pass",
+        "correct_routing": "pass",
+        "finding": "Correctly recognizes zero net change but +20 and -20 warehouse contributions, applies the 15 threshold, and routes Fulfillment owner without causal overreach."
+      },
+      "practical_usefulness": "B",
+      "evidence_quotes": [
+        "A: 'the workflow’s required warehouse-contribution evidence is unresolved'",
+        "B: 'warehouse contributions crossed the policy threshold ... Notify Fulfillment'"
+      ]
+    }
+  ],
+  "summary": {
+    "usable_counts": {
+      "A": {"yes": 10, "no": 2},
+      "B": {"yes": 12, "no": 0}
+    },
+    "practical_usefulness_counts": {
+      "A_wins": 0,
+      "B_wins": 4,
+      "ties": 8
+    },
+    "numeric_fidelity": "Both candidates preserve the supplied arithmetic in all 12 cases where a numeric analysis is presented. The two A failures are policy/status/routing failures rather than arithmetic transcription failures.",
+    "causal_restraint": "Both candidates avoid unsupported causal explanations across the reviewed narratives; accounting contributions are explicitly described as descriptive or non-causal.",
+    "primary_findings": [
+      "northstar-cart:p07 A correctly sees the offsetting +90/-90 contributions but maps the policy to investigate with no recipient instead of notify Commerce.",
+      "redwood-fulfillment:p08 A incorrectly maps complete evidence to missing/unresolved evidence, producing a blocked ignore with no Fulfillment recipient.",
+      "northstar-cart:p08 B is more precise about the missing store segment; its raw totals are acceptable only because it explicitly says not to use them for estimation or thresholds.",
+      "harbor-help:p07 A has a minor 'up 0.0 percentage points' wording defect; it does not alter the correct notify decision."
+    ],
+    "usefulness_choice": "B",
+    "usefulness_conclusion": "Candidate B is more practically useful on this 12-case set: it is usable on all 12 cases and resolves the two material policy-mapping failures seen in A. This is an arm-masked prose comparison, not an attribution of B to either runtime arm."
+  }
+}

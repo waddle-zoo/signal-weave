@@ -1,0 +1,362 @@
+import asyncio
+import json
+import sys
+from pathlib import Path
+from types import SimpleNamespace
+
+import httpx
+import pytest
+
+import signalweave.cli as cli
+from signalweave.local_health import live_source_report
+from signalweave.local_setup import SetupError, initialize, read_config, set_credential, setup_local
+from signalweave.local_status import local_status
+from signalweave.local_ui import create_local_ui
+
+
+def _private(path: Path, value: str) -> Path:
+    path.write_text(value, encoding="utf-8")
+    path.chmod(0o600)
+    return path
+
+
+@pytest.fixture
+def local_home(tmp_path, monkeypatch):
+    monkeypatch.setattr("signalweave.local_setup.getpass.getpass", lambda _: "test-typesafe-key")
+    return initialize(tmp_path / ".signalweave")
+
+
+def test_human_can_rotate_credentials_without_exposing_them(local_home):
+    destination = set_credential(local_home, "typesafe", value="rotated-typesafe-key")
+    assert destination.read_text() == "rotated-typesafe-key\n"
+    assert "rotated-typesafe-key" not in (local_home / "config.toml").read_text()
+    assert local_status(local_home)["credentials"]["TYPESAFE_API_KEY"] == "configured"
+
+
+def test_one_command_interactive_setup_walkthrough_is_human_first(tmp_path, monkeypatch, capsys):
+    """The documented first-run path works without TOML editing or agent config writes."""
+    home = tmp_path / "human home"
+    secrets = iter(["test-typesafe-key", "test-superset-password"])
+    answers = iter([
+        "1",                         # Jev decision provider
+        "1",                         # Superset
+        "http://localhost:8088",     # source URL
+        "admin",                     # username
+        "1",                         # Codex
+        "n",                         # do not add another source
+        "n",                         # do not register the agent in this test
+    ])
+    monkeypatch.setattr("signalweave.local_setup.getpass.getpass", lambda _: next(secrets))
+    monkeypatch.setattr("builtins.input", lambda _: next(answers))
+    monkeypatch.setattr(sys, "argv", ["signalweave", "setup", "--home", str(home)])
+
+    cli.main()
+
+    output = capsys.readouterr().out
+    assert "Local configuration saved" in output
+    assert "test-superset-password" not in output
+    report = local_status(home)
+    assert report["status"] == "ready_for_agent"
+    assert report["agents"]["selected"] == "codex"
+    assert report["jev"]["status"] == "configured"
+    assert next(item for item in report["connections"] if item["type"] == "superset")["status"] == "configured"
+    config = (home / "config.toml").read_text()
+    assert "SIGNALWEAVE_MCP_PROFILE = \"agent\"" in config
+    assert "SIGNALWEAVE_DECISION_PROVIDER = \"jev\"" in config
+    assert "TYPESAFE_API_KEY_FILE = \"typesafe.key\"" in config
+    assert (home / "typesafe.key").read_text() == "test-typesafe-key\n"
+    assert (home / "typesafe.key").stat().st_mode & 0o777 == 0o600
+    assert "SUPERSET_PASSWORD_FILE = \"superset-password.key\"" in config
+    assert "test-typesafe-key" not in config
+    assert "test-superset-password" not in config
+
+
+def test_setup_update_replaces_a_source_secret_transactionally(local_home, tmp_path):
+    first = _private(tmp_path / "first-password", "first-password")
+    second = _private(tmp_path / "second-password", "second-password")
+    setup_local(
+        local_home,
+        source="superset",
+        url="http://localhost:8088",
+        username="admin",
+        secret_file=first,
+        non_interactive=True,
+        agent="codex",
+    )
+    setup_local(
+        local_home,
+        source="superset",
+        url="http://localhost:8088",
+        username="admin",
+        secret_file=second,
+        non_interactive=True,
+        agent="codex",
+        update=True,
+    )
+    assert (local_home / "superset-password.key").read_text() == "second-password\n"
+
+
+def test_skipped_source_setup_gives_a_useful_next_step(tmp_path, monkeypatch, capsys):
+    answers = iter(["1", "5", "1", "n", "n"])
+    monkeypatch.setattr("builtins.input", lambda _: next(answers))
+    monkeypatch.setattr("signalweave.local_setup.getpass.getpass", lambda _: "local-test-key")
+    monkeypatch.setattr(sys, "argv", ["signalweave", "setup", "--home", str(tmp_path / "private")])
+    cli.main()
+    output = capsys.readouterr().out
+    assert "No BI source is connected yet. Next: `signalweave connections add`." in output
+    assert "`signalweave health --live`" not in output
+    assert "Start with a report" in output
+
+
+def test_registration_conflict_explains_recovery_without_replacing_entry(tmp_path, monkeypatch, capsys):
+    from signalweave.client_setup import AgentRegistrationStatus
+
+    monkeypatch.setattr("signalweave.client_setup.register_agent", lambda *_: AgentRegistrationStatus(
+        "codex", "conflict", "Existing entry differs", "codex mcp add signalweave -- new-binary serve"))
+    cli._connect_agent(tmp_path, "codex", required=False)
+    output = capsys.readouterr().out
+    assert "An existing signalweave entry was preserved" in output
+    assert "remove or rename it only if you intend to replace it" in output
+    assert "retry `signalweave connect codex`" in output
+
+
+def test_human_can_add_a_trino_catalog_connection(local_home, tmp_path):
+    catalog = _private(
+        tmp_path / "trino-catalog.json",
+        json.dumps([{
+            "adapter": "trino",
+            "resource": "analytics.orders",
+            "kind": "table",
+            "title": "Orders",
+        }]),
+    )
+    setup_local(
+        local_home,
+        source="trino",
+        url="https://trino.example.com",
+        catalog_file=catalog,
+        trino_user="analyst",
+        trino_catalog="lakehouse",
+        trino_schema="analytics",
+        trino_max_rows=250,
+        non_interactive=True,
+        agent="codex",
+    )
+    report = local_status(local_home)
+    trino = next(item for item in report["connections"] if item["type"] == "trino")
+    assert trino["status"] == "configured"
+    assert trino["detail"] == "catalog configured"
+
+
+def test_human_can_configure_preset_bearer_credentials(local_home, tmp_path):
+    access = _private(tmp_path / "preset-access", "test-preset-access")
+    root, _ = setup_local(
+        local_home,
+        source="preset",
+        url="https://workspace.app.preset.io",
+        access_token_file=access,
+        preset_auth="bearer",
+        non_interactive=True,
+        agent="codex",
+    )
+    _, configured = read_config(root)
+    assert configured["PRESET_ACCESS_TOKEN_FILE"] == "preset-access-token.key"
+    assert "PRESET_API_TOKEN_NAME_FILE" not in configured
+    assert "test-preset-access" not in (root / "config.toml").read_text()
+    assert local_status(root)["credentials"]["PRESET_ACCESS_TOKEN"] == "configured"
+
+
+def test_credential_rotation_does_not_create_mixed_preset_auth_modes(local_home, tmp_path):
+    name = _private(tmp_path / "preset-name", "test-preset-name")
+    secret = _private(tmp_path / "preset-secret", "test-preset-secret")
+    setup_local(
+        local_home,
+        source="preset",
+        url="https://workspace.app.preset.io",
+        token_name_file=name,
+        secret_file=secret,
+        non_interactive=True,
+        agent="codex",
+    )
+    with pytest.raises(SetupError, match="switch credential modes"):
+        set_credential(local_home, "preset-access-token", value="not-mixed")
+
+
+def test_status_and_ui_are_secret_free_and_show_next_steps(local_home):
+    report = local_status(local_home)
+    assert report["status"] == "onboarding_only"
+    assert report["next_steps"]
+    assert "test-typesafe-key" not in json.dumps(report)
+
+    async def exercise():
+        transport = httpx.ASGITransport(app=create_local_ui(local_home))
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            page = await client.get("/")
+            status = await client.get("/api/status")
+            health = await client.get("/healthz")
+        return page, status, health
+
+    page, status, health = asyncio.run(exercise())
+    assert page.status_code == 200
+    assert "Is SignalWeave ready?" in page.text
+    assert "Decision provider" in page.text
+    assert status.status_code == 200
+    assert status.json()["status"] == "onboarding_only"
+    assert "test-typesafe-key" not in status.text
+    assert health.json() == {"status": "ok"}
+
+
+def test_ui_can_run_a_live_source_check_without_calling_jev(local_home, monkeypatch):
+    async def fake_live_health_report():
+        return {
+            "healthy": True,
+            "messages": [
+                "superset: live catalog search succeeded; catalog entries reported: 4.",
+                "Catalog access only: resource-level permissions and data freshness are not "
+                "checked. No decision-provider judgment was requested.",
+            ],
+        }
+
+    monkeypatch.setattr("signalweave.local_ui.live_health_report", fake_live_health_report)
+
+    async def exercise():
+        transport = httpx.ASGITransport(app=create_local_ui(local_home))
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.get("/api/status?live=true")
+        return response
+
+    response = asyncio.run(exercise())
+    assert response.status_code == 200
+    assert response.json()["live_health"]["healthy"] is True
+    assert "catalog entries reported: 4" in response.text
+    assert "No decision-provider judgment was requested." in response.text
+
+
+def test_cli_live_health_scopes_offline_and_live_results(local_home, monkeypatch, capsys):
+    async def fake_live_health_report():
+        return {
+            "healthy": True,
+            "messages": [
+                "superset: live catalog search succeeded; catalog entries reported: 48.",
+                "Catalog access only: resource-level permissions and data freshness are not "
+                "checked. No decision-provider judgment was requested.",
+            ],
+        }
+
+    monkeypatch.setattr("signalweave.local_health.live_health_report", fake_live_health_report)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["signalweave", "health", "--live", "--home", str(local_home)],
+    )
+    cli.main()
+
+    output = capsys.readouterr().out
+    assert (
+        "Offline configuration checks passed; this offline check made no source or "
+        "decision-provider requests."
+    ) in output
+    assert "live catalog search succeeded; catalog entries reported: 48" in output
+    assert (
+        "Catalog access only: resource-level permissions and data freshness are not checked. "
+        "No decision-provider judgment was requested."
+    ) in output
+    assert "Live source access and permissions remain unverified." not in output
+
+
+@pytest.mark.asyncio
+async def test_live_source_check_is_bounded_and_does_not_call_jev(monkeypatch):
+    class Sources:
+        def adapter_names(self):
+            return ["superset", "trino"]
+
+        async def search_resources(self, query, *, adapter_name, limit):
+            assert query == ""  # Count the visible catalog, not hits for a made-up title.
+            assert limit == 1
+            return SimpleNamespace(total_count=3)
+
+    monkeypatch.setattr(
+        "signalweave.local_health.build_runtime",
+        lambda **_kwargs: SimpleNamespace(sources=Sources()),
+    )
+    healthy, messages = await live_source_report(timeout_seconds=1)
+    assert healthy
+    assert messages == [
+        "superset: live catalog search succeeded; catalog entries reported: 3.",
+        "trino: live catalog search succeeded; catalog entries reported: 3.",
+        "Catalog access only: resource-level permissions and data freshness are not checked. "
+        "No decision-provider judgment was requested.",
+    ]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("fails", [False, True])
+async def test_live_health_uses_the_real_registry_browse_and_failure_contract(monkeypatch, fails):
+    from signalweave.models import CatalogSearchPage
+    from signalweave.sources import SourceRegistry
+
+    class Adapter:
+        name = "company"
+
+        async def list_resources(self):
+            raise AssertionError("Bounded browsing must not scan the full catalog")
+
+        async def search_resources(self, query, *, limit, cursor=None):
+            assert query == ""
+            assert limit == 1
+            if fails:
+                raise PermissionError("private-credential-marker")
+            return CatalogSearchPage(total_count=48, provider=self.name, strategy="server-search")
+
+    registry = SourceRegistry([Adapter()])
+    monkeypatch.setattr("signalweave.local_health.build_runtime",
+                        lambda **_: SimpleNamespace(sources=registry))
+    healthy, messages = await live_source_report()
+    assert healthy is not fails
+    assert "private-credential-marker" not in " ".join(messages)
+    if fails:
+        assert "request failed" in messages[0]
+    else:
+        assert "catalog entries reported: 48" in messages[0]
+    assert messages[-1] == (
+        "Catalog access only: resource-level permissions and data freshness are not checked. "
+        "No decision-provider judgment was requested."
+    )
+
+
+def test_cli_status_and_credential_list_are_human_readable(local_home, monkeypatch, capsys):
+    monkeypatch.setattr(sys, "argv", ["signalweave", "status", "--home", str(local_home)])
+    cli.main()
+    output = capsys.readouterr().out
+    assert "SignalWeave: onboarding only" in output
+    assert "Credentials (values hidden)" in output
+    assert "test-typesafe-key" not in output
+
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["signalweave", "credentials", "list", "--home", str(local_home), "--json"],
+    )
+    cli.main()
+    assert json.loads(capsys.readouterr().out)["TYPESAFE_API_KEY"] == "configured"
+
+
+def test_cli_can_open_the_local_ui_without_changing_bind_address(local_home, monkeypatch, capsys):
+    import uvicorn
+
+    opened = []
+    started = []
+    monkeypatch.setattr("webbrowser.open", lambda address: opened.append(address))
+    monkeypatch.setattr(uvicorn, "run", lambda app, **kwargs: started.append(kwargs))
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["signalweave", "ui", "--open", "--home", str(local_home), "--port", "9876"],
+    )
+
+    cli.main()
+
+    assert opened == ["http://127.0.0.1:9876/"]
+    assert started[0]["host"] == "127.0.0.1"
+    assert started[0]["port"] == 9876
+    assert "http://127.0.0.1:9876/" in capsys.readouterr().out

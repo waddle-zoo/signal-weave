@@ -1,6 +1,6 @@
 [project]
 name = "signal-weave"
-version = "0.1.0"
+version = "0.2.0rc3"
 description = "A semantic decision layer that turns author guidance and existing data signals into typed, explainable actions."
 readme = "README.md"
 license = "Apache-2.0"
@@ -9,7 +9,7 @@ requires-python = ">=3.11"
 dependencies = [
   "fastapi>=0.115,<1",
   "httpx>=0.27,<1",
-  "PyJWT[crypto]>=2.8,<3",
+  "PyJWT[crypto]>=2.15,<3",
   "mcp>=1.13,<2",
   "pydantic>=2.8,<3",
   "pydantic-settings>=2.4,<3",
@@ -35,8 +35,13 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.data-files]
+"share/signalweave/skills/signalweave" = ["skills/signalweave/SKILL.md"]
+
 [project.optional-dependencies]
+binary = ["pyinstaller==6.22.3"]
 dev = [
+  "jsonschema>=4.20,<5",
   "pytest>=9.0.3,<10",
   "pytest-asyncio>=1.3,<2",
   "ruff>=0.6,<1",

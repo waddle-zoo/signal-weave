@@ -5,6 +5,7 @@
       "tenant_id": "northstar",
       "dashboard_id": "7",
       "dashboard_title": "Northstar executive pulse",
+      "available_comparison_windows": ["previous_period"],
       "charts": [
         {
           "id": "101",
@@ -102,6 +103,7 @@
       "tenant_id": "harbor-bank",
       "dashboard_id": "12",
       "dashboard_title": "Risk operations",
+      "available_comparison_windows": ["previous_period"],
       "charts": [
         {
           "id": "201",
@@ -139,6 +141,7 @@
       "tenant_id": "orbitworks",
       "dashboard_id": "19",
       "dashboard_title": "Product telemetry",
+      "available_comparison_windows": ["previous_period"],
       "charts": [
         {
           "id": "301",

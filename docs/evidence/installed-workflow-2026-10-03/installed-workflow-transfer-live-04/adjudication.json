@@ -1,0 +1,347 @@
+{
+  "adjudicator": "installed_workflow_review-v1",
+  "run_dir_name": "installed-workflow-transfer-live-04",
+  "original_report_preserved": true,
+  "offline_only": true,
+  "checks": {
+    "trace_integrity": {
+      "passed": true
+    },
+    "recorded_hashes": {
+      "passed": true
+    },
+    "raw_jev_budget": {
+      "passed": true,
+      "detail": {
+        "paid_attempts": 76,
+        "rejected_attempts": 0,
+        "limit": 100
+      }
+    }
+  },
+  "companies": [
+    {
+      "scenario_id": "company-8d459664ee96ec88562a",
+      "checks": {
+        "card_recorded": {
+          "passed": true
+        },
+        "owner_review_approved": {
+          "passed": true,
+          "detail": {
+            "prior_reviews": 1
+          }
+        },
+        "calibration_independent": {
+          "passed": true,
+          "detail": {
+            "passed": true,
+            "status": "approved",
+            "case_count": 3,
+            "failures": [],
+            "certification_report_id": "card_workflow:card-weekly-customer-retention-deterioration-9b1d3303b1d7:bdc2c99d3cb70526f6b84ebf:fa2e96ebe62d"
+          }
+        },
+        "future_period_set": {
+          "passed": true,
+          "detail": {
+            "count": 3
+          }
+        },
+        "future_intent_not_leaked_onboarding": {
+          "passed": true
+        },
+        "native_periods_independent": {
+          "passed": true,
+          "detail": {
+            "count": 3
+          }
+        },
+        "compiled_plan_stability": {
+          "passed": true,
+          "detail": {
+            "observations": 3,
+            "source": "native_period_outputs"
+          }
+        }
+      },
+      "calibration": {
+        "passed": true,
+        "status": "approved",
+        "case_count": 3,
+        "failures": [],
+        "certification_report_id": "card_workflow:card-weekly-customer-retention-deterioration-9b1d3303b1d7:bdc2c99d3cb70526f6b84ebf:fa2e96ebe62d"
+      },
+      "periods": [
+        {
+          "period_id": "period-a2f3abfc0f076b252b1b",
+          "passed": true,
+          "reasons": [],
+          "expected_outcome": "ignore",
+          "actual_outcome": "ignore",
+          "expected_recipients": [],
+          "actual_recipients": [],
+          "expected_recipient_destinations": [],
+          "actual_recipient_destinations": [],
+          "required_evidence_refs": [
+            "company_mcp|resource-f6089307fdf24496f17a"
+          ],
+          "actual_evidence_refs": [
+            "company_mcp|resource-58356c382c21382c822c",
+            "company_mcp|resource-f6089307fdf24496f17a"
+          ],
+          "report_status": "complete"
+        },
+        {
+          "period_id": "period-e8f603f5fd5b3ccd0db3",
+          "passed": true,
+          "reasons": [],
+          "expected_outcome": "notify",
+          "actual_outcome": "notify",
+          "expected_recipients": [
+            "team-e598adc0718239ee748e"
+          ],
+          "actual_recipients": [
+            "business"
+          ],
+          "expected_recipient_destinations": [
+            "slack://team-e598adc0718239ee748e"
+          ],
+          "actual_recipient_destinations": [
+            "slack://team-e598adc0718239ee748e"
+          ],
+          "required_evidence_refs": [
+            "company_mcp|resource-f6089307fdf24496f17a"
+          ],
+          "actual_evidence_refs": [
+            "company_mcp|resource-58356c382c21382c822c",
+            "company_mcp|resource-f6089307fdf24496f17a"
+          ],
+          "report_status": "complete"
+        },
+        {
+          "period_id": "period-a3fe32654b203c33373c",
+          "passed": true,
+          "reasons": [],
+          "expected_outcome": "insufficient_data",
+          "actual_outcome": "insufficient_data",
+          "expected_recipients": [
+            "team-079ee1110286b61b1626"
+          ],
+          "actual_recipients": [
+            "data"
+          ],
+          "expected_recipient_destinations": [
+            "slack://team-079ee1110286b61b1626"
+          ],
+          "actual_recipient_destinations": [
+            "slack://team-079ee1110286b61b1626"
+          ],
+          "required_evidence_refs": [
+            "company_mcp|resource-f6089307fdf24496f17a"
+          ],
+          "actual_evidence_refs": [
+            "company_mcp|resource-58356c382c21382c822c",
+            "company_mcp|resource-f6089307fdf24496f17a"
+          ],
+          "report_status": "blocked"
+        }
+      ],
+      "qualitative_scope": {
+        "report_statuses": {
+          "complete": 2,
+          "blocked": 1
+        },
+        "note": "Native adjudication does not certify report prose, causal claims, numeric-claim quality, usability, or customer outcomes."
+      },
+      "passed": true
+    },
+    {
+      "scenario_id": "company-a3b65b0a797c96eb1967",
+      "checks": {
+        "card_recorded": {
+          "passed": false,
+          "detail": "onboarding card missing"
+        },
+        "owner_review_approved": {
+          "passed": false,
+          "detail": "final card/notes approval fingerprint is not matched and approved"
+        },
+        "calibration_independent": {
+          "passed": false,
+          "detail": {
+            "passed": false,
+            "status": "shadow",
+            "case_count": 3,
+            "failures": [
+              "calibration status is not approved",
+              "calibration acceptance_passed is not true",
+              "calibration-55149ce75020fccdd8e3: outcome",
+              "calibration-55149ce75020fccdd8e3: destinations",
+              "calibration-55149ce75020fccdd8e3: evidence refs",
+              "calibration-6f851afa68261474dfdb: outcome",
+              "calibration-6f851afa68261474dfdb: destinations",
+              "calibration-6f851afa68261474dfdb: evidence refs",
+              "calibration-0c683bb6e2013738ff42: evidence refs"
+            ],
+            "certification_report_id": "card_workflow:card-weekly-support-sla-deterioration-58fe89713bc1:cb81e30782727cc21af1bdc3:b39af25d7bfe"
+          }
+        },
+        "future_period_set": {
+          "passed": false,
+          "detail": {
+            "missing": [
+              "period-3cf33bd00d00cc189bac",
+              "period-4a9fc86cda68dba28487",
+              "period-5de1aa16bdcc48810783"
+            ],
+            "extra": []
+          }
+        },
+        "future_intent_not_leaked_onboarding": {
+          "passed": true
+        },
+        "native_periods_independent": {
+          "passed": false,
+          "detail": {
+            "completed": 0,
+            "expected": 3,
+            "failed": []
+          }
+        },
+        "compiled_plan_stability": {
+          "passed": false,
+          "detail": {
+            "status": "unassessed",
+            "reason": "raw monitoring output is missing compiled_plan",
+            "missing_periods": [
+              "period-3cf33bd00d00cc189bac",
+              "period-4a9fc86cda68dba28487",
+              "period-5de1aa16bdcc48810783"
+            ],
+            "observations": 0
+          }
+        }
+      },
+      "calibration": {
+        "passed": false,
+        "status": "shadow",
+        "case_count": 3,
+        "failures": [
+          "calibration status is not approved",
+          "calibration acceptance_passed is not true",
+          "calibration-55149ce75020fccdd8e3: outcome",
+          "calibration-55149ce75020fccdd8e3: destinations",
+          "calibration-55149ce75020fccdd8e3: evidence refs",
+          "calibration-6f851afa68261474dfdb: outcome",
+          "calibration-6f851afa68261474dfdb: destinations",
+          "calibration-6f851afa68261474dfdb: evidence refs",
+          "calibration-0c683bb6e2013738ff42: evidence refs"
+        ],
+        "certification_report_id": "card_workflow:card-weekly-support-sla-deterioration-58fe89713bc1:cb81e30782727cc21af1bdc3:b39af25d7bfe"
+      },
+      "periods": [],
+      "qualitative_scope": {
+        "report_statuses": {},
+        "note": "Native adjudication does not certify report prose, causal claims, numeric-claim quality, usability, or customer outcomes."
+      },
+      "passed": false
+    },
+    {
+      "scenario_id": "company-df6292aa427ef745aa87",
+      "checks": {
+        "card_recorded": {
+          "passed": false,
+          "detail": "onboarding card missing"
+        },
+        "owner_review_approved": {
+          "passed": true,
+          "detail": {
+            "prior_reviews": 0
+          }
+        },
+        "calibration_independent": {
+          "passed": false,
+          "detail": {
+            "passed": false,
+            "status": "shadow",
+            "case_count": 3,
+            "failures": [
+              "calibration status is not approved",
+              "calibration acceptance_passed is not true",
+              "calibration-b02106a359b1c8b2794f: outcome",
+              "calibration-b02106a359b1c8b2794f: destinations",
+              "calibration-b02106a359b1c8b2794f: evidence refs",
+              "calibration-2df912f706b1142b2471: evidence refs",
+              "calibration-c4f3ac58302003bfc343: evidence refs"
+            ],
+            "certification_report_id": "card_workflow:card-customer-facing-database-slowdowns-11fa760e8f62:2c6b318cbdf9434cc637b233:16744018b849"
+          }
+        },
+        "future_period_set": {
+          "passed": false,
+          "detail": {
+            "missing": [
+              "period-a46c200444cb93b4d633",
+              "period-b77f020258e01b439422",
+              "period-cdde32573ad76438d3df"
+            ],
+            "extra": []
+          }
+        },
+        "future_intent_not_leaked_onboarding": {
+          "passed": true
+        },
+        "native_periods_independent": {
+          "passed": false,
+          "detail": {
+            "completed": 0,
+            "expected": 3,
+            "failed": []
+          }
+        },
+        "compiled_plan_stability": {
+          "passed": false,
+          "detail": {
+            "status": "unassessed",
+            "reason": "raw monitoring output is missing compiled_plan",
+            "missing_periods": [
+              "period-a46c200444cb93b4d633",
+              "period-b77f020258e01b439422",
+              "period-cdde32573ad76438d3df"
+            ],
+            "observations": 0
+          }
+        }
+      },
+      "calibration": {
+        "passed": false,
+        "status": "shadow",
+        "case_count": 3,
+        "failures": [
+          "calibration status is not approved",
+          "calibration acceptance_passed is not true",
+          "calibration-b02106a359b1c8b2794f: outcome",
+          "calibration-b02106a359b1c8b2794f: destinations",
+          "calibration-b02106a359b1c8b2794f: evidence refs",
+          "calibration-2df912f706b1142b2471: evidence refs",
+          "calibration-c4f3ac58302003bfc343: evidence refs"
+        ],
+        "certification_report_id": "card_workflow:card-customer-facing-database-slowdowns-11fa760e8f62:2c6b318cbdf9434cc637b233:16744018b849"
+      },
+      "periods": [],
+      "qualitative_scope": {
+        "report_statuses": {},
+        "note": "Native adjudication does not certify report prose, causal claims, numeric-claim quality, usability, or customer outcomes."
+      },
+      "passed": false
+    }
+  ],
+  "summary": {
+    "passed": false,
+    "companies": 3,
+    "periods": 3,
+    "raw_jev_paid_attempts": 76,
+    "raw_jev_rejected_attempts": 0
+  }
+}

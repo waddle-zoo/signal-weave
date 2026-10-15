@@ -1,0 +1,310 @@
+{
+  "plans": {
+    "cobalt-market": {
+      "checks": [
+        {
+          "id": "freeze_approved",
+          "kind": "semantic",
+          "condition": "The source text establishes that the migration-freeze exception is approved for this week.",
+          "field": null,
+          "op": null,
+          "threshold": null
+        },
+        {
+          "id": "total_comparable",
+          "kind": "semantic",
+          "condition": "The source text establishes that the total-order population is comparable across the two weeks.",
+          "field": null,
+          "op": null,
+          "threshold": null
+        },
+        {
+          "id": "regional_comparable",
+          "kind": "semantic",
+          "condition": "The source text establishes that the regional population is comparable across the two weeks.",
+          "field": null,
+          "op": null,
+          "threshold": null
+        },
+        {
+          "id": "total_decline_ge_10",
+          "kind": "numeric",
+          "condition": "Total comparable settled orders declined by at least the policy threshold.",
+          "field": "total_decline_pct",
+          "op": "ge",
+          "threshold": 10.0
+        },
+        {
+          "id": "regional_decline_ge_15",
+          "kind": "numeric",
+          "condition": "A comparable region declined by at least the policy threshold.",
+          "field": "max_region_decline_pct",
+          "op": "ge",
+          "threshold": 15.0
+        }
+      ],
+      "rules": [
+        {
+          "when": [
+            {"total_comparable": "false"},
+            {"total_comparable": "unknown"},
+            {"regional_comparable": "false"},
+            {"regional_comparable": "unknown"}
+          ],
+          "outcome": "insufficient_data"
+        },
+        {
+          "when": [
+            {"freeze_approved": "unknown"},
+            {"total_decline_ge_10": "unknown"},
+            {"regional_decline_ge_15": "unknown"}
+          ],
+          "outcome": "investigate"
+        },
+        {
+          "when": [
+            {"freeze_approved": "true"}
+          ],
+          "outcome": "ignore"
+        },
+        {
+          "when": [
+            {
+              "total_comparable": "true",
+              "regional_comparable": "true",
+              "total_decline_ge_10": "true"
+            },
+            {
+              "total_comparable": "true",
+              "regional_comparable": "true",
+              "regional_decline_ge_15": "true"
+            }
+          ],
+          "outcome": "notify"
+        },
+        {
+          "when": [
+            {
+              "total_comparable": "true",
+              "regional_comparable": "true",
+              "total_decline_ge_10": "false",
+              "regional_decline_ge_15": "false"
+            }
+          ],
+          "outcome": "ignore"
+        }
+      ],
+      "default": "investigate"
+    },
+    "maple-mobility": {
+      "checks": [
+        {
+          "id": "exception_conflict",
+          "kind": "semantic",
+          "condition": "The claimed weather-closure exception has conflicting approval or scope.",
+          "field": null,
+          "op": null,
+          "threshold": null
+        },
+        {
+          "id": "exception_covers_week",
+          "kind": "semantic",
+          "condition": "A signed weather-closure exception covers the comparison week.",
+          "field": null,
+          "op": null,
+          "threshold": null
+        },
+        {
+          "id": "required_metrics_available",
+          "kind": "semantic",
+          "condition": "The source establishes that both required weekly metrics are present for the same fleet.",
+          "field": null,
+          "op": null,
+          "threshold": null
+        },
+        {
+          "id": "on_time_below",
+          "kind": "numeric",
+          "condition": "On-time delivery is below the policy threshold.",
+          "field": "on_time_pct",
+          "op": "lt",
+          "threshold": 92.0
+        },
+        {
+          "id": "cancellation_rise",
+          "kind": "numeric",
+          "condition": "The cancellation-rate rise meets the policy threshold.",
+          "field": "cancellation_delta_pp",
+          "op": "ge",
+          "threshold": 2.0
+        }
+      ],
+      "rules": [
+        {
+          "when": [
+            {"required_metrics_available": "false"},
+            {"required_metrics_available": "unknown"}
+          ],
+          "outcome": "insufficient_data"
+        },
+        {
+          "when": [
+            {"exception_conflict": "unknown"},
+            {"exception_covers_week": "unknown"},
+            {"on_time_below": "unknown"},
+            {"cancellation_rise": "unknown"}
+          ],
+          "outcome": "investigate"
+        },
+        {
+          "when": [
+            {"exception_conflict": "true"}
+          ],
+          "outcome": "investigate"
+        },
+        {
+          "when": [
+            {"exception_covers_week": "true"}
+          ],
+          "outcome": "ignore"
+        },
+        {
+          "when": [
+            {
+              "exception_conflict": "false",
+              "exception_covers_week": "false",
+              "required_metrics_available": "true",
+              "on_time_below": "true",
+              "cancellation_rise": "true"
+            }
+          ],
+          "outcome": "notify"
+        },
+        {
+          "when": [
+            {
+              "exception_conflict": "false",
+              "exception_covers_week": "false",
+              "required_metrics_available": "true",
+              "on_time_below": "true",
+              "cancellation_rise": "false"
+            },
+            {
+              "exception_conflict": "false",
+              "exception_covers_week": "false",
+              "required_metrics_available": "true",
+              "on_time_below": "false",
+              "cancellation_rise": "true"
+            },
+            {
+              "exception_conflict": "false",
+              "exception_covers_week": "false",
+              "required_metrics_available": "true",
+              "on_time_below": "false",
+              "cancellation_rise": "false"
+            }
+          ],
+          "outcome": "ignore"
+        }
+      ],
+      "default": "investigate"
+    },
+    "quartz-care": {
+      "checks": [
+        {
+          "id": "priority_known",
+          "kind": "semantic",
+          "condition": "The source establishes one non-conflicting priority classification: high or routine.",
+          "field": null,
+          "op": null,
+          "threshold": null
+        },
+        {
+          "id": "reconciliation_known",
+          "kind": "semantic",
+          "condition": "After applying the owner rule that a signed release-manager reconciliation overrides a stale checklist, the source establishes one reconciliation status: signed reconciliation present or missing; a stale checklist plus that signed reconciliation is not conflicting.",
+          "field": null,
+          "op": null,
+          "threshold": null
+        },
+        {
+          "id": "signed_reconciliation_present",
+          "kind": "semantic",
+          "condition": "The source states that a signed reconciliation from the release manager exists.",
+          "field": null,
+          "op": null,
+          "threshold": null
+        },
+        {
+          "id": "high_priority_release",
+          "kind": "semantic",
+          "condition": "The release is classified as high priority in the source text.",
+          "field": null,
+          "op": null,
+          "threshold": null
+        }
+      ],
+      "rules": [
+        {
+          "when": [
+            {"priority_known": "false"},
+            {"priority_known": "unknown"},
+            {"reconciliation_known": "false"},
+            {"reconciliation_known": "unknown"}
+          ],
+          "outcome": "insufficient_data"
+        },
+        {
+          "when": [
+            {"signed_reconciliation_present": "unknown"},
+            {"high_priority_release": "unknown"}
+          ],
+          "outcome": "investigate"
+        },
+        {
+          "when": [
+            {"signed_reconciliation_present": "true"}
+          ],
+          "outcome": "ignore"
+        },
+        {
+          "when": [
+            {
+              "priority_known": "true",
+              "reconciliation_known": "true",
+              "signed_reconciliation_present": "false",
+              "high_priority_release": "true"
+            }
+          ],
+          "outcome": "notify"
+        },
+        {
+          "when": [
+            {
+              "priority_known": "true",
+              "reconciliation_known": "true",
+              "signed_reconciliation_present": "false",
+              "high_priority_release": "false"
+            }
+          ],
+          "outcome": "ignore"
+        }
+      ],
+      "default": "investigate"
+    }
+  },
+  "provenance": {
+    "scope": "internal Luna policy-only review/repair; not human approval",
+    "reviewer_notes": [
+      "Direct plan review and repair from the original owner policies and field catalogs; this is not raw unattended first-shot onboarding.",
+      "Schema and composition semantics are unchanged: conditions in one when object compose with AND, alternative when objects compose with OR, and rules are first-match in listed order.",
+      "Each plan starts with explicit owner data-gap guards where the policy requires insufficient_data; targeted unknown guards for unresolved non-data semantic conditions then stop to investigate before positive or quiet guards.",
+      "Cobalt keeps the policy's OR trigger and adds the explicit all-false quiet branch. Total or regional comparability missing is an OR condition, not an AND condition.",
+      "Maple treats missing required metrics as a distinct policy condition from uncertainty about a check. A claimed exception conflict is investigated before an approved exception can quiet the case.",
+      "Quartz compresses priority and reconciliation presence into explicit known-status checks, routes either missing or conflicting status to insufficient_data, and makes signed reconciliation an ignore override.",
+      "The policies do not state precedence for a valid approval/exception combined with missing required data. The repaired plans place the explicit missing-data guard before the override and record that ambiguity here rather than inventing a business rule.",
+      "The rejected provisional draft used a blanket unknown-first guard and is archived separately; this reviewed file replaces that ordering and is the experiment input.",
+      "No business-specific constants were added beyond the thresholds and field catalog supplied by the fixture policies. This file is experiment input, not a production default."
+    ]
+  }
+}

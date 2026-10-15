@@ -1,0 +1,11 @@
+{
+  "passed": true,
+  "checked_runs": 24,
+  "expected_runs": 24,
+  "errors": [],
+  "treatment_errors": [],
+  "baseline_reference_errors": [
+    "recipients:('helio-support', 'baseline', 'p05'):['support-quality']!= []"
+  ],
+  "independent_of_trial_score": true
+}

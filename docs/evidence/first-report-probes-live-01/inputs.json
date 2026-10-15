@@ -1,0 +1,846 @@
+{
+  "scope": "development counterexample probes; not an enterprise holdout",
+  "companies": [
+    {
+      "id": "harbor-help",
+      "company": "Harbor Help",
+      "brief": "Monitor weighted resolution-SLA miss rate by support tier.",
+      "owner_policy": "Use eligible resolved tickets and weight the SLA miss rate by ticket count, not by averaging tier percentages. Notify Support Operations when the weighted current miss rate is at least 12% or its absolute change is at least 4 percentage points. If any eligible tier is missing, do not estimate a rate; route to the Data Steward. Keep rate and mix effects descriptive, not causal.",
+      "descriptors": [
+        {
+          "adapter": "company_mcp",
+          "resource": "report:resolution-sla",
+          "kind": "saved_query",
+          "title": "Resolution SLA by support tier",
+          "description": "Weighted resolution-SLA measurement over eligible resolved tickets.",
+          "source_url": null,
+          "metadata": {
+            "source_key": "harbor-help-reporting",
+            "business_role": "reporting",
+            "required": true,
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "required_comparison_keys": [
+              "resolution-sla-rate"
+            ],
+            "read_only": true
+          },
+          "contract": {
+            "tenant_id": "synthetic-first-report",
+            "domain": "harbor-help-reporting",
+            "scope": "resolved priority tickets with an eligible resolution clock",
+            "metric_names": [
+              "sla_miss_rate"
+            ],
+            "metric_definitions": [],
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "required_comparison_keys": [
+              "resolution-sla-rate"
+            ],
+            "population": "resolved priority tickets with an eligible resolution clock",
+            "grain": "weekly support interval",
+            "freshness_sla_hours": 48.0,
+            "lineage": [],
+            "roles": [
+              "reporting"
+            ],
+            "source_status": "healthy",
+            "authorized": true
+          },
+          "source_key": "harbor-help-reporting"
+        },
+        {
+          "adapter": "company_mcp",
+          "resource": "report:first-response-sla",
+          "kind": "saved_query",
+          "title": "First-response SLA by support tier",
+          "description": "A support export with a similar label but a different service clock.",
+          "source_url": null,
+          "metadata": {
+            "source_key": "harbor-help-operations",
+            "business_role": "operations",
+            "required": true,
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "required_comparison_keys": [
+              "first_response_miss_rate-by-support_tier"
+            ],
+            "read_only": true
+          },
+          "contract": {
+            "tenant_id": "synthetic-first-report",
+            "domain": "harbor-help-operations",
+            "scope": "tickets with a first-response clock",
+            "metric_names": [
+              "first_response_miss_rate"
+            ],
+            "metric_definitions": [],
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "required_comparison_keys": [
+              "first_response_miss_rate-by-support_tier"
+            ],
+            "population": "tickets with a first-response clock",
+            "grain": "weekly support interval",
+            "freshness_sla_hours": 48.0,
+            "lineage": [],
+            "roles": [
+              "operations"
+            ],
+            "source_status": "healthy",
+            "authorized": true
+          },
+          "source_key": "harbor-help-operations"
+        }
+      ],
+      "sources": [
+        {
+          "key": "harbor-help-reporting",
+          "adapter": "company_mcp",
+          "resource": "report:resolution-sla",
+          "label": "Resolution SLA by support tier",
+          "parameters": {
+            "business_role": "reporting",
+            "available_comparison_windows": [
+              "previous_period"
+            ]
+          },
+          "required": true,
+          "required_comparison_keys": [
+            "resolution-sla-rate"
+          ]
+        },
+        {
+          "key": "harbor-help-operations",
+          "adapter": "company_mcp",
+          "resource": "report:first-response-sla",
+          "label": "First-response SLA by support tier",
+          "parameters": {
+            "business_role": "operations",
+            "available_comparison_windows": [
+              "previous_period"
+            ]
+          },
+          "required": true,
+          "required_comparison_keys": [
+            "first_response_miss_rate-by-support_tier"
+          ]
+        }
+      ],
+      "destinations": [
+        {
+          "key": "support-operations",
+          "label": "Support Operations",
+          "destination": "agent://support-operations"
+        },
+        {
+          "key": "support-data-steward",
+          "label": "Support Data Steward",
+          "destination": "agent://support-data-steward"
+        }
+      ],
+      "periods": [
+        {
+          "id": "p04",
+          "split": "probe",
+          "as_of": "2026-09-26T02:00:00+00:00",
+          "resources": [
+            {
+              "source_key": "harbor-help-reporting",
+              "adapter": "company_mcp",
+              "resource": "report:resolution-sla",
+              "title": "Resolution SLA by support tier",
+              "description": "Weighted resolution-SLA measurement over eligible resolved tickets.",
+              "observations": [],
+              "analytical_comparisons": [
+                {
+                  "key": "resolution-sla-rate",
+                  "metric": "sla_miss_rate",
+                  "definition": "Missed resolution-SLA tickets divided by eligible resolved tickets.",
+                  "population": "resolved priority tickets with an eligible resolution clock",
+                  "unit": "ratio",
+                  "dimension": "support_tier",
+                  "kind": "rate",
+                  "baseline_start": "2026-09-12T00:00:00Z",
+                  "baseline_end": "2026-09-19T00:00:00Z",
+                  "current_start": "2026-09-19T00:00:00Z",
+                  "current_end": "2026-09-26T00:00:00Z",
+                  "comparison_window": "previous_period",
+                  "coverage": "complete",
+                  "disjoint_segments": true,
+                  "comparable": true,
+                  "require_equal_duration": false,
+                  "required": true,
+                  "query_refs": [
+                    "query:harbor-help:reporting:p04"
+                  ],
+                  "baseline_total": {
+                    "value": null,
+                    "numerator": 26.0,
+                    "denominator": 200.0
+                  },
+                  "current_total": {
+                    "value": null,
+                    "numerator": 26.0,
+                    "denominator": 200.0
+                  },
+                  "segments": [
+                    {
+                      "segment": "enterprise",
+                      "baseline": {
+                        "value": null,
+                        "numerator": 10.0,
+                        "denominator": 80.0
+                      },
+                      "current": {
+                        "value": null,
+                        "numerator": 10.0,
+                        "denominator": 80.0
+                      }
+                    },
+                    {
+                      "segment": "self_serve",
+                      "baseline": {
+                        "value": null,
+                        "numerator": 16.0,
+                        "denominator": 120.0
+                      },
+                      "current": {
+                        "value": null,
+                        "numerator": 16.0,
+                        "denominator": 120.0
+                      }
+                    }
+                  ]
+                }
+              ],
+              "evidence": [
+                {
+                  "source_key": "harbor-help-reporting",
+                  "subject_id": "harbor-help-p04-harbor-help-reporting",
+                  "subject_label": "Resolution SLA by support tier",
+                  "statement": "Bounded source result; interpret the comparison using the directory definition.",
+                  "values": {
+                    "row_count": 400
+                  },
+                  "source_url": null,
+                  "origin": "source",
+                  "provenance": [
+                    "source:harbor-help-reporting:p04"
+                  ]
+                }
+              ],
+              "metadata": {
+                "company_id": "harbor-help",
+                "period_id": "p04",
+                "as_of": "2026-09-26T02:00:00+00:00",
+                "period_contract": "closed UTC intervals compared to the immediately previous interval",
+                "replay_clock": "2026-09-26T02:00:00+00:00"
+              },
+              "error": null,
+              "source_url": null,
+              "captured_at": "2026-09-26T02:00:00Z",
+              "source_captured_at": "2026-09-26T01:00:00Z",
+              "contract": {
+                "tenant_id": "synthetic-first-report",
+                "domain": "harbor-help-reporting",
+                "scope": "resolved priority tickets with an eligible resolution clock",
+                "metric_names": [
+                  "sla_miss_rate"
+                ],
+                "metric_definitions": [],
+                "available_comparison_windows": [
+                  "previous_period"
+                ],
+                "required_comparison_keys": [
+                  "resolution-sla-rate"
+                ],
+                "population": "resolved priority tickets with an eligible resolution clock",
+                "grain": "weekly support interval",
+                "freshness_sla_hours": 48.0,
+                "lineage": [],
+                "roles": [
+                  "reporting"
+                ],
+                "source_status": "healthy",
+                "authorized": true
+              }
+            },
+            {
+              "source_key": "harbor-help-operations",
+              "adapter": "company_mcp",
+              "resource": "report:first-response-sla",
+              "title": "First-response SLA by support tier",
+              "description": "A support export with a similar label but a different service clock.",
+              "observations": [],
+              "analytical_comparisons": [
+                {
+                  "key": "first_response_miss_rate-by-support_tier",
+                  "metric": "first_response_miss_rate",
+                  "definition": "Missed first-response SLA divided by tickets with a response clock.",
+                  "population": "tickets with a first-response clock",
+                  "unit": "ratio",
+                  "dimension": "support_tier",
+                  "kind": "rate",
+                  "baseline_start": "2026-09-12T00:00:00Z",
+                  "baseline_end": "2026-09-19T00:00:00Z",
+                  "current_start": "2026-09-19T00:00:00Z",
+                  "current_end": "2026-09-26T00:00:00Z",
+                  "comparison_window": "previous_period",
+                  "coverage": "complete",
+                  "disjoint_segments": true,
+                  "comparable": true,
+                  "require_equal_duration": false,
+                  "required": true,
+                  "query_refs": [
+                    "query:harbor-help:operations:p04"
+                  ],
+                  "baseline_total": {
+                    "value": null,
+                    "numerator": 26.0,
+                    "denominator": 200.0
+                  },
+                  "current_total": {
+                    "value": null,
+                    "numerator": 26.0,
+                    "denominator": 200.0
+                  },
+                  "segments": [
+                    {
+                      "segment": "enterprise",
+                      "baseline": {
+                        "value": null,
+                        "numerator": 8.0,
+                        "denominator": 80.0
+                      },
+                      "current": {
+                        "value": null,
+                        "numerator": 8.0,
+                        "denominator": 80.0
+                      }
+                    },
+                    {
+                      "segment": "self_serve",
+                      "baseline": {
+                        "value": null,
+                        "numerator": 18.0,
+                        "denominator": 120.0
+                      },
+                      "current": {
+                        "value": null,
+                        "numerator": 18.0,
+                        "denominator": 120.0
+                      }
+                    }
+                  ]
+                }
+              ],
+              "evidence": [
+                {
+                  "source_key": "harbor-help-operations",
+                  "subject_id": "harbor-help-p04-harbor-help-operations",
+                  "subject_label": "First-response SLA by support tier",
+                  "statement": "Bounded source result; interpret the comparison using the directory definition.",
+                  "values": {
+                    "row_count": 400
+                  },
+                  "source_url": null,
+                  "origin": "source",
+                  "provenance": [
+                    "source:harbor-help-operations:p04"
+                  ]
+                }
+              ],
+              "metadata": {
+                "company_id": "harbor-help",
+                "period_id": "p04",
+                "as_of": "2026-09-26T02:00:00+00:00",
+                "period_contract": "closed UTC intervals compared to the immediately previous interval",
+                "replay_clock": "2026-09-26T02:00:00+00:00"
+              },
+              "error": null,
+              "source_url": null,
+              "captured_at": "2026-09-26T02:00:00Z",
+              "source_captured_at": "2026-09-26T01:00:00Z",
+              "contract": {
+                "tenant_id": "synthetic-first-report",
+                "domain": "harbor-help-operations",
+                "scope": "tickets with a first-response clock",
+                "metric_names": [
+                  "first_response_miss_rate"
+                ],
+                "metric_definitions": [],
+                "available_comparison_windows": [
+                  "previous_period"
+                ],
+                "required_comparison_keys": [
+                  "first_response_miss_rate-by-support_tier"
+                ],
+                "population": "tickets with a first-response clock",
+                "grain": "weekly support interval",
+                "freshness_sla_hours": 48.0,
+                "lineage": [],
+                "roles": [
+                  "operations"
+                ],
+                "source_status": "healthy",
+                "authorized": true
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "northstar-cart",
+      "company": "Northstar Cart",
+      "brief": "Monitor completed net sales across web, marketplace, and store channels.",
+      "owner_policy": "Use completed orders after refunds, excluding tax and shipping. Notify Commerce when the total changes by at least $100 or any channel contributes at least $80 in absolute terms. Ignore smaller complete movements. If the population or period coverage is incomplete, do not estimate the total; route the gap to Data Operations.",
+      "descriptors": [
+        {
+          "adapter": "company_mcp",
+          "resource": "report:completed-net-sales",
+          "kind": "saved_query",
+          "title": "Completed net sales by channel",
+          "description": "Completed-order net sales export.",
+          "source_url": null,
+          "metadata": {
+            "source_key": "northstar-cart-reporting",
+            "business_role": "reporting",
+            "required": true,
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "required_comparison_keys": [
+              "completed-net-sales"
+            ],
+            "read_only": true
+          },
+          "contract": {
+            "tenant_id": "synthetic-first-report",
+            "domain": "northstar-cart-reporting",
+            "scope": "completed orders in the reporting channels",
+            "metric_names": [
+              "net_sales"
+            ],
+            "metric_definitions": [],
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "required_comparison_keys": [
+              "completed-net-sales"
+            ],
+            "population": "completed orders in the reporting channels",
+            "grain": "weekly channel interval",
+            "freshness_sla_hours": 48.0,
+            "lineage": [],
+            "roles": [
+              "reporting"
+            ],
+            "source_status": "healthy",
+            "authorized": true
+          },
+          "source_key": "northstar-cart-reporting"
+        },
+        {
+          "adapter": "company_mcp",
+          "resource": "report:booked-gross-sales",
+          "kind": "saved_query",
+          "title": "Booked gross sales by channel",
+          "description": "A plausible sales export with a different population and metric definition.",
+          "source_url": null,
+          "metadata": {
+            "source_key": "northstar-cart-operations",
+            "business_role": "operations",
+            "required": true,
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "required_comparison_keys": [
+              "gross_sales-by-channel"
+            ],
+            "read_only": true
+          },
+          "contract": {
+            "tenant_id": "synthetic-first-report",
+            "domain": "northstar-cart-operations",
+            "scope": "booked orders including canceled and refunded orders",
+            "metric_names": [
+              "gross_sales"
+            ],
+            "metric_definitions": [],
+            "available_comparison_windows": [
+              "previous_period"
+            ],
+            "required_comparison_keys": [
+              "gross_sales-by-channel"
+            ],
+            "population": "booked orders including canceled and refunded orders",
+            "grain": "weekly channel interval",
+            "freshness_sla_hours": 48.0,
+            "lineage": [],
+            "roles": [
+              "operations"
+            ],
+            "source_status": "healthy",
+            "authorized": true
+          },
+          "source_key": "northstar-cart-operations"
+        }
+      ],
+      "sources": [
+        {
+          "key": "northstar-cart-reporting",
+          "adapter": "company_mcp",
+          "resource": "report:completed-net-sales",
+          "label": "Completed net sales by channel",
+          "parameters": {
+            "business_role": "reporting",
+            "available_comparison_windows": [
+              "previous_period"
+            ]
+          },
+          "required": true,
+          "required_comparison_keys": [
+            "completed-net-sales"
+          ]
+        },
+        {
+          "key": "northstar-cart-operations",
+          "adapter": "company_mcp",
+          "resource": "report:booked-gross-sales",
+          "label": "Booked gross sales by channel",
+          "parameters": {
+            "business_role": "operations",
+            "available_comparison_windows": [
+              "previous_period"
+            ]
+          },
+          "required": true,
+          "required_comparison_keys": [
+            "gross_sales-by-channel"
+          ]
+        }
+      ],
+      "destinations": [
+        {
+          "key": "commerce-owner",
+          "label": "Commerce owner",
+          "destination": "agent://commerce-owner"
+        },
+        {
+          "key": "data-operations",
+          "label": "Data Operations",
+          "destination": "agent://data-operations"
+        }
+      ],
+      "periods": [
+        {
+          "id": "p04",
+          "split": "probe",
+          "as_of": "2026-09-26T02:00:00+00:00",
+          "resources": [
+            {
+              "source_key": "northstar-cart-reporting",
+              "adapter": "company_mcp",
+              "resource": "report:completed-net-sales",
+              "title": "Completed net sales by channel",
+              "description": "Completed-order net sales export.",
+              "observations": [],
+              "analytical_comparisons": [
+                {
+                  "key": "completed-net-sales",
+                  "metric": "net_sales",
+                  "definition": "Completed order value after refunds, excluding tax and shipping.",
+                  "population": "completed orders in the reporting channels",
+                  "unit": "USD",
+                  "dimension": "channel",
+                  "kind": "additive",
+                  "baseline_start": "2026-09-12T00:00:00Z",
+                  "baseline_end": "2026-09-19T00:00:00Z",
+                  "current_start": "2026-09-19T00:00:00Z",
+                  "current_end": "2026-09-26T00:00:00Z",
+                  "comparison_window": "previous_period",
+                  "coverage": "complete",
+                  "disjoint_segments": true,
+                  "comparable": true,
+                  "require_equal_duration": false,
+                  "required": true,
+                  "query_refs": [
+                    "query:northstar-cart:reporting:p04"
+                  ],
+                  "baseline_total": {
+                    "value": 1000.0,
+                    "numerator": null,
+                    "denominator": null
+                  },
+                  "current_total": {
+                    "value": 1000.0,
+                    "numerator": null,
+                    "denominator": null
+                  },
+                  "segments": [
+                    {
+                      "segment": "marketplace",
+                      "baseline": {
+                        "value": 250.0,
+                        "numerator": null,
+                        "denominator": null
+                      },
+                      "current": {
+                        "value": 250.0,
+                        "numerator": null,
+                        "denominator": null
+                      }
+                    },
+                    {
+                      "segment": "store",
+                      "baseline": {
+                        "value": 150.0,
+                        "numerator": null,
+                        "denominator": null
+                      },
+                      "current": {
+                        "value": 150.0,
+                        "numerator": null,
+                        "denominator": null
+                      }
+                    },
+                    {
+                      "segment": "web",
+                      "baseline": {
+                        "value": 600.0,
+                        "numerator": null,
+                        "denominator": null
+                      },
+                      "current": {
+                        "value": 600.0,
+                        "numerator": null,
+                        "denominator": null
+                      }
+                    }
+                  ]
+                }
+              ],
+              "evidence": [
+                {
+                  "source_key": "northstar-cart-reporting",
+                  "subject_id": "northstar-cart-p04-northstar-cart-reporting",
+                  "subject_label": "Completed net sales by channel",
+                  "statement": "Bounded source result; interpret the comparison using the directory definition.",
+                  "values": {
+                    "row_count": 6
+                  },
+                  "source_url": null,
+                  "origin": "source",
+                  "provenance": [
+                    "source:northstar-cart-reporting:p04"
+                  ]
+                }
+              ],
+              "metadata": {
+                "company_id": "northstar-cart",
+                "period_id": "p04",
+                "as_of": "2026-09-26T02:00:00+00:00",
+                "period_contract": "closed UTC intervals compared to the immediately previous interval",
+                "replay_clock": "2026-09-26T02:00:00+00:00"
+              },
+              "error": null,
+              "source_url": null,
+              "captured_at": "2026-09-26T02:00:00Z",
+              "source_captured_at": "2026-09-26T01:00:00Z",
+              "contract": {
+                "tenant_id": "synthetic-first-report",
+                "domain": "northstar-cart-reporting",
+                "scope": "completed orders in the reporting channels",
+                "metric_names": [
+                  "net_sales"
+                ],
+                "metric_definitions": [],
+                "available_comparison_windows": [
+                  "previous_period"
+                ],
+                "required_comparison_keys": [
+                  "completed-net-sales"
+                ],
+                "population": "completed orders in the reporting channels",
+                "grain": "weekly channel interval",
+                "freshness_sla_hours": 48.0,
+                "lineage": [],
+                "roles": [
+                  "reporting"
+                ],
+                "source_status": "healthy",
+                "authorized": true
+              }
+            },
+            {
+              "source_key": "northstar-cart-operations",
+              "adapter": "company_mcp",
+              "resource": "report:booked-gross-sales",
+              "title": "Booked gross sales by channel",
+              "description": "A plausible sales export with a different population and metric definition.",
+              "observations": [],
+              "analytical_comparisons": [
+                {
+                  "key": "gross_sales-by-channel",
+                  "metric": "gross_sales",
+                  "definition": "Booked order value before refunds, tax, and shipping.",
+                  "population": "booked orders including canceled and refunded orders",
+                  "unit": "USD",
+                  "dimension": "channel",
+                  "kind": "additive",
+                  "baseline_start": "2026-09-12T00:00:00Z",
+                  "baseline_end": "2026-09-19T00:00:00Z",
+                  "current_start": "2026-09-19T00:00:00Z",
+                  "current_end": "2026-09-26T00:00:00Z",
+                  "comparison_window": "previous_period",
+                  "coverage": "complete",
+                  "disjoint_segments": true,
+                  "comparable": true,
+                  "require_equal_duration": false,
+                  "required": true,
+                  "query_refs": [
+                    "query:northstar-cart:operations:p04"
+                  ],
+                  "baseline_total": {
+                    "value": 1175.0,
+                    "numerator": null,
+                    "denominator": null
+                  },
+                  "current_total": {
+                    "value": 1175.0,
+                    "numerator": null,
+                    "denominator": null
+                  },
+                  "segments": [
+                    {
+                      "segment": "marketplace",
+                      "baseline": {
+                        "value": 305.0,
+                        "numerator": null,
+                        "denominator": null
+                      },
+                      "current": {
+                        "value": 305.0,
+                        "numerator": null,
+                        "denominator": null
+                      }
+                    },
+                    {
+                      "segment": "store",
+                      "baseline": {
+                        "value": 195.0,
+                        "numerator": null,
+                        "denominator": null
+                      },
+                      "current": {
+                        "value": 195.0,
+                        "numerator": null,
+                        "denominator": null
+                      }
+                    },
+                    {
+                      "segment": "web",
+                      "baseline": {
+                        "value": 675.0,
+                        "numerator": null,
+                        "denominator": null
+                      },
+                      "current": {
+                        "value": 675.0,
+                        "numerator": null,
+                        "denominator": null
+                      }
+                    }
+                  ]
+                }
+              ],
+              "evidence": [
+                {
+                  "source_key": "northstar-cart-operations",
+                  "subject_id": "northstar-cart-p04-northstar-cart-operations",
+                  "subject_label": "Booked gross sales by channel",
+                  "statement": "Bounded source result; interpret the comparison using the directory definition.",
+                  "values": {
+                    "row_count": 6
+                  },
+                  "source_url": null,
+                  "origin": "source",
+                  "provenance": [
+                    "source:northstar-cart-operations:p04"
+                  ]
+                }
+              ],
+              "metadata": {
+                "company_id": "northstar-cart",
+                "period_id": "p04",
+                "as_of": "2026-09-26T02:00:00+00:00",
+                "period_contract": "closed UTC intervals compared to the immediately previous interval",
+                "replay_clock": "2026-09-26T02:00:00+00:00"
+              },
+              "error": null,
+              "source_url": null,
+              "captured_at": "2026-09-26T02:00:00Z",
+              "source_captured_at": "2026-09-26T01:00:00Z",
+              "contract": {
+                "tenant_id": "synthetic-first-report",
+                "domain": "northstar-cart-operations",
+                "scope": "booked orders including canceled and refunded orders",
+                "metric_names": [
+                  "gross_sales"
+                ],
+                "metric_definitions": [],
+                "available_comparison_windows": [
+                  "previous_period"
+                ],
+                "required_comparison_keys": [
+                  "gross_sales-by-channel"
+                ],
+                "population": "booked orders including canceled and refunded orders",
+                "grain": "weekly channel interval",
+                "freshness_sla_hours": 48.0,
+                "lineage": [],
+                "roles": [
+                  "operations"
+                ],
+                "source_status": "healthy",
+                "authorized": true
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "approved_card_refs": {
+    "harbor-help": {
+      "source": "artifacts/first-report-live-02/harbor-help.db",
+      "source_sha256": "85c3f6039383c00c274f137cd19a0d4f5cb04de1e4d7345b28bf0ab0b8f04bb2",
+      "provenance_kind": "sqlite_backup",
+      "backup": "artifacts/first-report-probes-live-01/approved_cards/harbor-help.db",
+      "backup_sha256": "238a9ab3ebbe26923f57e273e4e39a309cedd03da8052938bea2e404d373d082",
+      "card_id": "card-weighted-resolution-sla-miss-rate-by-support-tier-eb23790c69a0",
+      "card_digest": "3d33cd6947c37fa3ad7139cad122d45e187b11440e69aa598e1f8752391e777b",
+      "notes_digest": "11607f056b28f23e6202673a514b1f14a0cdc29091599ef3d632c3eda20fff6f"
+    },
+    "northstar-cart": {
+      "source": "artifacts/first-report-live-02/northstar-cart.db",
+      "source_sha256": "5f6f510caf4e1657132ecd85b3254e4233ff8cf783f6993a073c7d3bd313e94f",
+      "provenance_kind": "sqlite_backup",
+      "backup": "artifacts/first-report-probes-live-01/approved_cards/northstar-cart.db",
+      "backup_sha256": "ef8828c92011cb1256c756cd6574f86d7a89d1e593fbbe44a754f77d3a06301f",
+      "card_id": "card-monitor-completed-net-sales-across-channels-842749db4416",
+      "card_digest": "e48f3f57f3ec13bcc4abaecd7e0ae795a81b8598bb1480d34f3b25cebc3bafff",
+      "notes_digest": "c1b86f4d074f372ff32f099ca07c624a609f2ecd2d1ca7f2d369bddaa84493f7"
+    }
+  },
+  "same_card_and_notes": true,
+  "no_approval_calls": true,
+  "baseline_contract": "compact analysis_refs plus typed Outcome; no Jev result or expected labels"
+}

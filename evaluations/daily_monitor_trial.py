@@ -140,7 +140,7 @@ async def run_trial(output: Path) -> dict[str, Any]:
         engine=InsightEngine(judger=judger, registry=registry),
         decision_receipts=InMemoryDecisionReceiptStore(),
     )
-    server = create_mcp(runtime)
+    server = create_mcp(runtime, profile="full")
 
     source = trial_card.sources[0]
     started = time.perf_counter()

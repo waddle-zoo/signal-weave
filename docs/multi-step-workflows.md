@@ -53,6 +53,13 @@ missing or conflicting slots into the next handoff. A source adapter still owns
 the actual query and permission boundary; SignalWeave does not generate
 arbitrary SQL or grant access to a source.
 
+Question judgments measure **answerability**, not whether the answer is yes.
+A known no or zero can be a supported answer. `not_supported` means the evidence
+does not supply a concrete answer; it does not identify a contradiction. Both
+low support and uncertainty therefore leave the question `pending` and listed
+under `missing_slot_keys`. Required source failures still make it `unavailable`.
+An unresolved required question continues to block automatic notify/escalate.
+
 Each evaluated observation also receives an `evidence_finding` when the Jev
 provider returns one. Its typed role is `driver`, `corroborates`, `diagnostic`,
 `contradicts`, `quality`, `unrelated`, or `unknown`, with a probability and optional
@@ -88,11 +95,30 @@ The intended sequence is:
 
 The caller should use `workflow.evidence_plan.missing_slot_keys` to decide
 which authorized tools to run. A fact can set `slot_key` to the corresponding
-plan key so SignalWeave can show exactly which request it fulfilled.
+plan key so SignalWeave can associate it with the request. For watch/question
+slots, that tag is provenance, not a completion override: Jev must still judge
+whether the combined evidence answers the question or establishes presence or
+absence. A trusted fact may truthfully describe missing or conflicting evidence.
 
 If the second result is still `retrieve_evidence`, the agent can continue the
 bounded loop. If it is `repair_source` or `request_review`, no leadership
 delivery is implied. A parent receipt mismatch is rejected before evaluation.
+
+## Deferred judgment handoff
+
+If `evaluate_insight_card` returns `result.judgment.status="deferred"`, no
+policy outcome was produced. This is a local judgment-payload limit after the
+approved sources were read; it is not `insufficient_data`, `ignore`, or a
+business decision. If the compact response includes `result.observation_facts`,
+start there: it indexes all normalized observations and links each row to its
+untouched receipt value. Complete row indexing does not establish source
+coverage or comparability. Use `evidence_access.source_directory` to page only
+relevant attributes, metadata, definitions, analytical comparisons, or source
+contracts; avoid rereading duplicate evidence wrappers by default. Reuse the
+receipt rather than fetching the card or guide again when they are already in
+the packet. Reusing the same idempotency key reads the receipt without repeating
+source or provider calls. Do not carry a prior typed result forward when current
+evidence contradicts it.
 
 ## Northstar example
 
@@ -125,14 +151,64 @@ SignalWeave does not manufacture certainty.
 
 ## Compatibility and boundaries
 
-Cards without `follow_up_guidance` retain the existing single-evaluation
-outcome and delivery behavior. They receive only the additive workflow
-metadata. This is intentional: a multi-step handoff is opt-in through the
-human-authored card, while source retrieval and action execution remain outside
-SignalWeave.
+Evidence admission policy version **1** is a breaking change. Required semantic
+slots always gate automatic `notify` and `escalate`, whether or not the card has
+`follow_up_guidance`. That prose describes follow-up after an inconclusive result;
+adding or removing it must not change evidence admission. Multi-step handoff
+instructions remain opt-in, and source retrieval and action execution remain
+outside SignalWeave.
 
-The live proof for this contract is in
+Cards declare `evidence_requirements: dict[str, StrictBool]`, defaulting to `{}`.
+Only exact keys for existing, one-based `question:N` and `watch:N` slots are
+accepted. Unspecified slots are advisory. Set an entry to `true` only when the
+owner explicitly requires that answer before automatic notification or
+escalation. Values must be JSON booleans, not strings or numbers. An unresolved
+advisory remains visible in the evidence plan and missing-slot list but does not
+block admission. `false` is equivalent to omitting the slot; it is not
+"required when applicable" or a conditional policy. Neither prose such as
+"when supported" nor a model judgment silently waives an explicit requirement.
+Required-source and comparison checks cannot be waived through this map; other
+safety and confidence gates still apply.
+
+Review which slots are core decision evidence and which are advisory when
+authoring a recurring card. Policy-map changes and question/watch edits or
+reordering require a new card version, fresh owner review/approval, and
+recertification over owner-labeled snapshots. The positional keys belong to that
+reviewed card version; do not carry a requirement onto a different question
+merely because its index matches.
+
+New `CardEvaluationReport` objects emitted by `CardWorkflowEvaluator` record
+`evidence_admission_policy_version=6`. Reports lacking the field load as legacy
+version `0`; they remain readable audit evidence, not current certification.
+Readiness must require the current policy version in addition to the existing
+card-version, approval, and certification gates. Re-run certification rather than
+relabeling an old green report. Retain old reports, receipts, and reviews unchanged;
+the policy version is compatibility metadata, not proof of semantic correctness.
+
+Version **2** separates watch evidence into present, absent, and unknown using a
+Jev Choice instead of interpreting a binary lack of support as absence. Existing
+version-1 reports remain audit records, but do not certify this changed judgment
+contract. Re-run owner-labeled evaluations before promotion; do not edit old
+reports to upgrade their version. Watch distributions remain visible even when
+code overrides their status for a required source failure.
+
+Version **3** also requires exact delivery-method keys on every successful case
+where the owner supplied delivery labels. Earlier reports could record a delivery
+mismatch and still promote; they must be replayed. Unlabeled delivery remains
+unassessed, not proof of correct recipients. This fixes certification promotion;
+it does not add a route, change a live outcome or grant delivery authorization.
+
+Version **4** stops labeling low question-answerability as conflicting evidence.
+Question handoffs now ask for missing answers without asserting an unmeasured
+contradiction. Confidence-fallback rationales also distinguish Jev's selected
+outcome/probability from code's final route. Thresholds and automatic-action
+gates are unchanged; serialized completion-criteria text changes, so prior live
+measurements are not silently upgraded to this version. Replay labeled evidence
+before promotion. This is a handoff-correctness repair, not a measured increase
+in Jev accuracy or bootstrap success.
+
+The historical live trial for the earlier handoff contract is in
 `evaluations/northstar_multistep_trial.py` and
 `examples/northstar-multistep-trial.json`. It uses live Jev over the same local
 Northstar rows as the single-step historical replay; expected dispositions stay
-outside the Jev state.
+outside the Jev state. Those retained results do not certify the current version 4.

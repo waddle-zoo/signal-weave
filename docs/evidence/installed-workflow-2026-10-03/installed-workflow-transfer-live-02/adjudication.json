@@ -1,0 +1,503 @@
+{
+  "adjudicator": "installed_workflow_review-v1",
+  "run_dir_name": "installed-workflow-transfer-live-02",
+  "original_report_preserved": true,
+  "offline_only": true,
+  "checks": {
+    "trace_integrity": {
+      "passed": true
+    },
+    "recorded_hashes": {
+      "passed": true
+    },
+    "raw_jev_budget": {
+      "passed": true,
+      "detail": {
+        "paid_attempts": 84,
+        "rejected_attempts": 0,
+        "limit": 160
+      }
+    }
+  },
+  "companies": [
+    {
+      "scenario_id": "company-10f7dba56861439aabca",
+      "checks": {
+        "card_recorded": {
+          "passed": false,
+          "detail": "onboarding card missing"
+        },
+        "owner_review_approved": {
+          "passed": false,
+          "detail": "final card/notes approval fingerprint is not matched and approved"
+        },
+        "calibration_independent": {
+          "passed": false,
+          "detail": {
+            "passed": false,
+            "status": "shadow",
+            "case_count": 3,
+            "failures": [
+              "calibration status is not approved",
+              "calibration acceptance_passed is not true",
+              "calibration-dcaf18edc3cdbfb95f1a: outcome",
+              "calibration-dcaf18edc3cdbfb95f1a: destinations",
+              "calibration-dcaf18edc3cdbfb95f1a: evidence refs",
+              "calibration-7c88c5c6feb9115cb6ae: evidence refs",
+              "calibration-cbea131633b5e39e5890: evidence refs"
+            ],
+            "certification_report_id": "card_workflow:card-weekly-net-sales-decline-0b8bba15:d3e0100743387dcc2c46ad70:bafff5ba390e"
+          }
+        },
+        "future_period_set": {
+          "passed": false,
+          "detail": {
+            "missing": [
+              "period-16843db82cd33e3cefcd",
+              "period-728fcc7f2f882c95738b",
+              "period-807f72037c82b250d232"
+            ],
+            "extra": []
+          }
+        },
+        "future_intent_not_leaked_onboarding": {
+          "passed": true
+        },
+        "native_periods_independent": {
+          "passed": false,
+          "detail": {
+            "completed": 0,
+            "expected": 3,
+            "failed": []
+          }
+        },
+        "compiled_plan_stability": {
+          "passed": false,
+          "detail": {
+            "status": "unassessed",
+            "reason": "raw monitoring output is missing compiled_plan",
+            "missing_periods": [
+              "period-16843db82cd33e3cefcd",
+              "period-728fcc7f2f882c95738b",
+              "period-807f72037c82b250d232"
+            ],
+            "observations": 0
+          }
+        }
+      },
+      "calibration": {
+        "passed": false,
+        "status": "shadow",
+        "case_count": 3,
+        "failures": [
+          "calibration status is not approved",
+          "calibration acceptance_passed is not true",
+          "calibration-dcaf18edc3cdbfb95f1a: outcome",
+          "calibration-dcaf18edc3cdbfb95f1a: destinations",
+          "calibration-dcaf18edc3cdbfb95f1a: evidence refs",
+          "calibration-7c88c5c6feb9115cb6ae: evidence refs",
+          "calibration-cbea131633b5e39e5890: evidence refs"
+        ],
+        "certification_report_id": "card_workflow:card-weekly-net-sales-decline-0b8bba15:d3e0100743387dcc2c46ad70:bafff5ba390e"
+      },
+      "periods": [],
+      "qualitative_scope": {
+        "report_statuses": {},
+        "note": "Native adjudication does not certify report prose, causal claims, numeric-claim quality, usability, or customer outcomes."
+      },
+      "passed": false
+    },
+    {
+      "scenario_id": "company-8d459664ee96ec88562a",
+      "checks": {
+        "card_recorded": {
+          "passed": false,
+          "detail": "onboarding card missing"
+        },
+        "owner_review_approved": {
+          "passed": true,
+          "detail": {
+            "prior_reviews": 0
+          }
+        },
+        "calibration_independent": {
+          "passed": false,
+          "detail": {
+            "passed": false,
+            "status": "shadow",
+            "case_count": 3,
+            "failures": [
+              "calibration status is not approved",
+              "calibration acceptance_passed is not true",
+              "calibration-3b24d2b0444e82605082: outcome",
+              "calibration-3b24d2b0444e82605082: destinations",
+              "calibration-3b24d2b0444e82605082: evidence refs",
+              "calibration-c4000bdce55cffc01b93: outcome",
+              "calibration-c4000bdce55cffc01b93: destinations",
+              "calibration-c4000bdce55cffc01b93: evidence refs",
+              "calibration-33545954d69c997362b5: evidence refs"
+            ],
+            "certification_report_id": "card_workflow:card-weekly-customer-retention-deterioration-b5261862:f85ba8085dccc4d33c86493e:a93d2cca975c"
+          }
+        },
+        "future_period_set": {
+          "passed": false,
+          "detail": {
+            "missing": [
+              "period-a2f3abfc0f076b252b1b",
+              "period-a3fe32654b203c33373c",
+              "period-e8f603f5fd5b3ccd0db3"
+            ],
+            "extra": []
+          }
+        },
+        "future_intent_not_leaked_onboarding": {
+          "passed": true
+        },
+        "native_periods_independent": {
+          "passed": false,
+          "detail": {
+            "completed": 0,
+            "expected": 3,
+            "failed": []
+          }
+        },
+        "compiled_plan_stability": {
+          "passed": false,
+          "detail": {
+            "status": "unassessed",
+            "reason": "raw monitoring output is missing compiled_plan",
+            "missing_periods": [
+              "period-a2f3abfc0f076b252b1b",
+              "period-a3fe32654b203c33373c",
+              "period-e8f603f5fd5b3ccd0db3"
+            ],
+            "observations": 0
+          }
+        }
+      },
+      "calibration": {
+        "passed": false,
+        "status": "shadow",
+        "case_count": 3,
+        "failures": [
+          "calibration status is not approved",
+          "calibration acceptance_passed is not true",
+          "calibration-3b24d2b0444e82605082: outcome",
+          "calibration-3b24d2b0444e82605082: destinations",
+          "calibration-3b24d2b0444e82605082: evidence refs",
+          "calibration-c4000bdce55cffc01b93: outcome",
+          "calibration-c4000bdce55cffc01b93: destinations",
+          "calibration-c4000bdce55cffc01b93: evidence refs",
+          "calibration-33545954d69c997362b5: evidence refs"
+        ],
+        "certification_report_id": "card_workflow:card-weekly-customer-retention-deterioration-b5261862:f85ba8085dccc4d33c86493e:a93d2cca975c"
+      },
+      "periods": [],
+      "qualitative_scope": {
+        "report_statuses": {},
+        "note": "Native adjudication does not certify report prose, causal claims, numeric-claim quality, usability, or customer outcomes."
+      },
+      "passed": false
+    },
+    {
+      "scenario_id": "company-a3b65b0a797c96eb1967",
+      "checks": {
+        "card_recorded": {
+          "passed": false,
+          "detail": "onboarding card missing"
+        },
+        "owner_review_approved": {
+          "passed": false,
+          "detail": "final card/notes approval fingerprint is not matched and approved"
+        },
+        "calibration_independent": {
+          "passed": false,
+          "detail": {
+            "passed": false,
+            "status": "missing",
+            "case_count": 0,
+            "failures": [
+              "no traced calibration result"
+            ]
+          }
+        },
+        "future_period_set": {
+          "passed": false,
+          "detail": {
+            "missing": [
+              "period-3cf33bd00d00cc189bac",
+              "period-4a9fc86cda68dba28487",
+              "period-5de1aa16bdcc48810783"
+            ],
+            "extra": []
+          }
+        },
+        "future_intent_not_leaked_onboarding": {
+          "passed": true
+        },
+        "native_periods_independent": {
+          "passed": false,
+          "detail": {
+            "completed": 0,
+            "expected": 3,
+            "failed": []
+          }
+        },
+        "compiled_plan_stability": {
+          "passed": false,
+          "detail": {
+            "status": "unassessed",
+            "reason": "raw monitoring output is missing compiled_plan",
+            "missing_periods": [
+              "period-3cf33bd00d00cc189bac",
+              "period-4a9fc86cda68dba28487",
+              "period-5de1aa16bdcc48810783"
+            ],
+            "observations": 0
+          }
+        }
+      },
+      "calibration": {
+        "passed": false,
+        "status": "missing",
+        "case_count": 0,
+        "failures": [
+          "no traced calibration result"
+        ]
+      },
+      "periods": [],
+      "qualitative_scope": {
+        "report_statuses": {},
+        "note": "Native adjudication does not certify report prose, causal claims, numeric-claim quality, usability, or customer outcomes."
+      },
+      "passed": false
+    },
+    {
+      "scenario_id": "company-df6292aa427ef745aa87",
+      "checks": {
+        "card_recorded": {
+          "passed": false,
+          "detail": "onboarding card missing"
+        },
+        "owner_review_approved": {
+          "passed": false,
+          "detail": "final card/notes approval fingerprint is not matched and approved"
+        },
+        "calibration_independent": {
+          "passed": false,
+          "detail": {
+            "passed": false,
+            "status": "missing",
+            "case_count": 0,
+            "failures": [
+              "no traced calibration result"
+            ]
+          }
+        },
+        "future_period_set": {
+          "passed": false,
+          "detail": {
+            "missing": [
+              "period-a46c200444cb93b4d633",
+              "period-b77f020258e01b439422",
+              "period-cdde32573ad76438d3df"
+            ],
+            "extra": []
+          }
+        },
+        "future_intent_not_leaked_onboarding": {
+          "passed": true
+        },
+        "native_periods_independent": {
+          "passed": false,
+          "detail": {
+            "completed": 0,
+            "expected": 3,
+            "failed": []
+          }
+        },
+        "compiled_plan_stability": {
+          "passed": false,
+          "detail": {
+            "status": "unassessed",
+            "reason": "raw monitoring output is missing compiled_plan",
+            "missing_periods": [
+              "period-a46c200444cb93b4d633",
+              "period-b77f020258e01b439422",
+              "period-cdde32573ad76438d3df"
+            ],
+            "observations": 0
+          }
+        }
+      },
+      "calibration": {
+        "passed": false,
+        "status": "missing",
+        "case_count": 0,
+        "failures": [
+          "no traced calibration result"
+        ]
+      },
+      "periods": [],
+      "qualitative_scope": {
+        "report_statuses": {},
+        "note": "Native adjudication does not certify report prose, causal claims, numeric-claim quality, usability, or customer outcomes."
+      },
+      "passed": false
+    },
+    {
+      "scenario_id": "company-59f63defc7194b5ec90f",
+      "checks": {
+        "card_recorded": {
+          "passed": false,
+          "detail": "onboarding card missing"
+        },
+        "owner_review_approved": {
+          "passed": false,
+          "detail": "final card/notes approval fingerprint is not matched and approved"
+        },
+        "calibration_independent": {
+          "passed": false,
+          "detail": {
+            "passed": false,
+            "status": "missing",
+            "case_count": 0,
+            "failures": [
+              "no traced calibration result"
+            ]
+          }
+        },
+        "future_period_set": {
+          "passed": false,
+          "detail": {
+            "missing": [
+              "period-099565ac43484ffa8235",
+              "period-4e4e58f53a872b0441f0",
+              "period-d74dea2e644c8f49a6fa"
+            ],
+            "extra": []
+          }
+        },
+        "future_intent_not_leaked_onboarding": {
+          "passed": true
+        },
+        "native_periods_independent": {
+          "passed": false,
+          "detail": {
+            "completed": 0,
+            "expected": 3,
+            "failed": []
+          }
+        },
+        "compiled_plan_stability": {
+          "passed": false,
+          "detail": {
+            "status": "unassessed",
+            "reason": "raw monitoring output is missing compiled_plan",
+            "missing_periods": [
+              "period-099565ac43484ffa8235",
+              "period-4e4e58f53a872b0441f0",
+              "period-d74dea2e644c8f49a6fa"
+            ],
+            "observations": 0
+          }
+        }
+      },
+      "calibration": {
+        "passed": false,
+        "status": "missing",
+        "case_count": 0,
+        "failures": [
+          "no traced calibration result"
+        ]
+      },
+      "periods": [],
+      "qualitative_scope": {
+        "report_statuses": {},
+        "note": "Native adjudication does not certify report prose, causal claims, numeric-claim quality, usability, or customer outcomes."
+      },
+      "passed": false
+    },
+    {
+      "scenario_id": "company-78218d87208c7c02b99b",
+      "checks": {
+        "card_recorded": {
+          "passed": false,
+          "detail": "onboarding card missing"
+        },
+        "owner_review_approved": {
+          "passed": false,
+          "detail": "final card/notes approval fingerprint is not matched and approved"
+        },
+        "calibration_independent": {
+          "passed": false,
+          "detail": {
+            "passed": false,
+            "status": "missing",
+            "case_count": 0,
+            "failures": [
+              "no traced calibration result"
+            ]
+          }
+        },
+        "future_period_set": {
+          "passed": false,
+          "detail": {
+            "missing": [
+              "period-121cf3756582ae04e397",
+              "period-5b2d005bada7399ff25f",
+              "period-c67c468824f2379fc3a0"
+            ],
+            "extra": []
+          }
+        },
+        "future_intent_not_leaked_onboarding": {
+          "passed": true
+        },
+        "native_periods_independent": {
+          "passed": false,
+          "detail": {
+            "completed": 0,
+            "expected": 3,
+            "failed": []
+          }
+        },
+        "compiled_plan_stability": {
+          "passed": false,
+          "detail": {
+            "status": "unassessed",
+            "reason": "raw monitoring output is missing compiled_plan",
+            "missing_periods": [
+              "period-121cf3756582ae04e397",
+              "period-5b2d005bada7399ff25f",
+              "period-c67c468824f2379fc3a0"
+            ],
+            "observations": 0
+          }
+        }
+      },
+      "calibration": {
+        "passed": false,
+        "status": "missing",
+        "case_count": 0,
+        "failures": [
+          "no traced calibration result"
+        ]
+      },
+      "periods": [],
+      "qualitative_scope": {
+        "report_statuses": {},
+        "note": "Native adjudication does not certify report prose, causal claims, numeric-claim quality, usability, or customer outcomes."
+      },
+      "passed": false
+    }
+  ],
+  "summary": {
+    "passed": false,
+    "companies": 6,
+    "periods": 0,
+    "raw_jev_paid_attempts": 84,
+    "raw_jev_rejected_attempts": 0
+  }
+}
