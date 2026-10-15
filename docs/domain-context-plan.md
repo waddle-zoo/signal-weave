@@ -589,6 +589,36 @@ Audit whether frontier-owned discovery/analysis is being pushed into Jev before
 adding APIs; use existing capabilities wherever possible. The intended division
 remains frontier analysis and communication, with narrow repeatable policy decisions.
 
+### First-readout onboarding guidance check
+
+Update the normal start guide and bundled skill to qualify an actual proposed
+message with the owner or designated expert. This is onboarding feedback, not a
+new runtime approval/schema gate; recurring runs must not repeat onboarding.
+Keep supported analysis useful while a style preference is unclear, and retain
+existing card revision, source scope and side-effect permissions.
+
+Before claiming behavioral usefulness, freeze the changed guide/skill and run
+exactly three independent Luna-xhigh Codex CLI forward checks using the existing public
+scalar, partial-rate and additive reporter packets. Supply only public inputs,
+the current guide/skill and a realistic reader request; no private rubric,
+suspected error, prior result or intended wording. These are known synthetic,
+nonnative, supplied-judgment fixtures, not fresh onboarding or live Jev evidence.
+Provide the skill, guide and public packet to fresh isolated sessions with only
+bounded arithmetic and draft-recording tools. No BI source, native evaluation,
+Jev, policy, schedule or delivery operations. Permit at most five tools and 90
+seconds per session; stop before another session at 300k new input or 100k
+uncached tokens, unknown usage or incomplete recording, with no retries.
+Record actual reporter usage; worker/reviewer costs remain separate and unknown,
+not zero or comparable billing. These are not two comparison arms.
+One independent review checks actual quotes, quantities, scope, optional versus
+required uncertainty and permission claims. Preserve failures/disagreements; no
+new paid API cohort or broad enterprise claim follows from these checks.
+
+Separately build the frozen native source, verify its source/skill fingerprint,
+and exercise the actual default-profile guide plus isolated Codex/Claude skill
+installation. Those inference-free checks prove shipping/wire fidelity only.
+The full diverse-company/live-provider/agent-baseline goal remains open.
+
 ### Native approved-card clarification check
 
 Separately preregister `approved-card-clarification-v1`: reuse the existing

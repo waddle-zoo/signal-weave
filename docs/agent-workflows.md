@@ -112,6 +112,16 @@ After reviewing the draft, give explicit approval only if it is correct:
 > delivery-disabled evaluation and show me the result and receipt; do not
 > schedule a recurrence or send a message.
 
+Review the proposed message as well as the decision. Does it answer your question,
+fit its intended reader, and make the important scope and data gaps clear? You or
+your designated data expert can give that feedback. A team that knows the metric
+may prefer a short update; a new audience may need its definition spelled out.
+Keep business purpose in the card's `why_watch` and presentation preferences in
+the agent's notes; reviewed domain context is another option when those tools are enabled.
+These expectations are not fresh measurements or permission to change policy, send a
+message, or start a schedule. Card changes still need the normal review and approval.
+This example helps qualify onboarding; it does not prove every future run.
+
 ## 5. Repeat and investigate
 
 For a later run, ask the agent to evaluate the approved card for the current

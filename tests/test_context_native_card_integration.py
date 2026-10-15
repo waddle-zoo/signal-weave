@@ -15,6 +15,7 @@ from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
 from scripts.binary_provenance import verify_binary
+from signalweave.knowledge_mcp import KNOWLEDGE_TOOLS
 
 pytestmark = pytest.mark.skipif(
     os.getenv("RUN_CONTEXT_CARD_INTEGRATION") != "1",
@@ -142,6 +143,22 @@ async def test_native_agent_context_binding_lifecycle(
 
         with log_path.open("w", encoding="utf-8") as log:
             log_path.chmod(0o600)
+            plain_params = StdioServerParameters(
+                command=str(binary), args=["serve", "--home", str(private_home)],
+                env={**env, "SIGNALWEAVE_KNOWLEDGE_ENABLED": "0"}, cwd=str(isolated_workspace),
+            )
+            async with stdio_client(plain_params, errlog=log) as streams:
+                async with ClientSession(*streams) as session:
+                    await session.initialize()
+                    plain_tools = {tool.name for tool in (await session.list_tools()).tools}
+                    assert "get_signalweave_guide" in plain_tools
+                    assert not KNOWLEDGE_TOOLS & plain_tools
+                    plain_start = _payload(await call(session, "get_signalweave_guide", {"task": "start"}), "get_signalweave_guide")
+                    plain_monitor = _payload(await call(session, "get_signalweave_guide", {"task": "monitor"}), "get_signalweave_guide")
+                    assert isinstance(plain_start["first_readout"], str) and plain_start["first_readout"].strip()
+                    assert "first_readout" not in plain_monitor
+                    assert plain_start["inference_performed"] is plain_monitor["inference_performed"] is False
+
             async with stdio_client(server_params, errlog=log) as streams:
                 async with ClientSession(*streams) as session:
                     await session.initialize()
@@ -159,6 +176,12 @@ async def test_native_agent_context_binding_lifecycle(
                     approval_tool = next(tool for tool in (await session.list_tools()).tools
                                          if tool.name == "approve_insight_card")
                     assert "does not expose draft simulation" in approval_tool.description
+
+                    start_guide = _payload(await call(session, "get_signalweave_guide", {"task": "start"}), "get_signalweave_guide")
+                    monitor_guide = _payload(await call(session, "get_signalweave_guide", {"task": "monitor"}), "get_signalweave_guide")
+                    assert isinstance(start_guide["first_readout"], str) and start_guide["first_readout"].strip()
+                    assert "first_readout" not in monitor_guide
+                    assert start_guide["inference_performed"] is monitor_guide["inference_performed"] is False
 
                     onboarded = _payload(
                         await call(

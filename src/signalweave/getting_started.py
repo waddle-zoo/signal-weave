@@ -70,6 +70,19 @@ def agent_getting_started(task: str = "start", *, decision_provider: str = "jev-
         ],
         "next": "Start with what the person wants to understand, inspect the relevant evidence and give one useful current report. Preserve distinct source scopes and uncertainty. Then review the reusable card and ask only for the missing context needed for recurring decisions or delivery.",
     }
+    if task == "start":
+        response["first_readout"] = (
+            "During onboarding, show the proposed human message from the first owner-approved, "
+            "delivery-disabled evaluation, not just its decision or receipt. Check with the owner "
+            "or their designated data expert that it answers the question and fits the intended reader. "
+            "Reuse what that reader already knows; explain material scope differences, changed definitions "
+            "and real data gaps without copying the whole glossary into every update. Keep business "
+            "purpose in why_watch and presentation preferences in caller-owned notes; use reviewed domain context only "
+            "when its tools are available. These expectations are not current measurements. "
+            "Ask only about consequential uncertainty; an unclear style preference must not suppress a "
+            "supported analysis. Feedback is not new approval, scheduling or delivery permission, and a "
+            "useful example is not proof of unattended reliability."
+        )
     if task == "monitor":
         response.pop("next", None)
         response["steps"] = [
