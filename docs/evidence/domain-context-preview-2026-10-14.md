@@ -330,3 +330,101 @@ were assertions against the changed draft-error wording. They were updated to
 check explicit owner approval, with the same draft rejection and concurrency
 guards retained; the passing rerun, not the earlier mixed result, is the full
 verification. This count is contract/regression coverage, not business trials.
+
+## Expert-context onboarding cohort — 2026-10-15
+
+`owner-workflow-v1` is **stopped, not passed**. The preregistered development
+pair used one fictional delivery company, Pine Courier, via the native
+company-MCP bridge. Both arms could retrieve the same glossary, ask the same
+scripted owner questions, inspect sources and save reusable work. SignalWeave
+also received its project-installed skill explicitly. This was not automatic
+skill discovery, an interactive human install, a real warehouse, or a held-out
+enterprise benchmark. The executable was the `d64c8fd` build above.
+
+Three Codex invocations completed before the stop:
+
+| Invocation | Observed result | Input / cached / output tokens |
+| --- | --- | --- |
+| Baseline setup | Saved reusable notes and a correct current readout | 136,831 / 102,912 / 1,789 |
+| Independent synthetic policy reviewer | Accepted the baseline setup | 41,821 / 14,848 / 194 |
+| SignalWeave setup | Saved a draft and correct readout, but handed off unresolved policy questions | 248,507 / 211,456 / 2,808 |
+
+Both readouts correctly identified unchanged service attainment: 5,220/5,800
+and 10,440/11,600 are both 90%, despite doubled volume. The treatment did not
+call the available owner-question or glossary tools. Its draft had no delivery
+methods and still asked about thresholds, routing, population and comparison
+window. Native onboarding/source review returned `needs_human_review`, but no
+independent semantic policy review, approval or recurring report followed; no
+Jev request was made. Total known usage was **427,159 input tokens, including 329,216 cached
+(97,943 uncached), and 4,791 output tokens**. These are usage counts, not billed
+cost or evidence of comparative speed. The stop was incomplete onboarding, not
+an exhausted tool or token allowance. Only 2,057 uncached tokens remained below
+the 100,000 between-invocation threshold, so this budget also left little room
+for the unexecuted review/report work.
+
+Independent review identified two distinct issues. The agent missed available
+clarification tools in this run; that does not show that the guide caused the
+miss. Separately, the default MCP profile had no operation to revise the saved
+draft after a human answered. Creating another card was the only supported
+policy-edit path. The latter is a concrete product gap addressed by the
+owner-scoped revision work; it did not cause a revision failure in this cohort,
+because no answer/resumption turn took place.
+
+The experiment measured one-shot completion, **not** ask → human answer → resume.
+A focused pending-owner handoff can be appropriate, but it does not prove
+finished onboarding. This cohort remains terminal: no retroactive success,
+monitoring result, or free retry is attributed to it. A separately specified
+two-turn trial is needed to assess the repair and final-agent usefulness.
+
+The original report wrapped the explicit stop reason in an MCP task-group
+exception. Future reports retain bounded nested causes; the original artifacts
+are unchanged. Report SHA-256:
+`1891b0a8c95aec20ca5e10bca5d98e606059d8ddf664ef9a38ab098b9e77ef0e`.
+Trace SHA-256:
+`843e25b423a9451136b3785af5d7ce3b9dbf2d573900c13f26af87ad195ae8d4`.
+Raw files remain ignored under `artifacts/owner-workflow-v1-live/`.
+
+## Same-card clarification repair
+
+The default profile now exposes `revise_insight_card`: the authenticated owner
+can replace specified business-policy fields on the current card version. It
+preserves source anchors/parameters and context pins, increments the version,
+and clears approval, compiled plan and current onboarding review. Numeric
+conditions can add their declared comparison requirements, not invent a source
+or weaken existing bindings. No source read, inference or delivery occurs.
+
+Review and approval now persist against the exact card snapshot; approval saves
+status and metadata in one transaction. A concurrent revision is rejected
+rather than overwritten. Targeted tests cover this interleaving in both JSON
+and SQLite. JSON locking is process-local; multi-process deployment uses SQLite.
+Independent code review gave this narrow lifecycle change a scoped GO, not an
+enterprise or business-efficacy sign-off.
+
+The rebuilt native executable passed the local Superset/card lifecycle in
+**27.26 seconds**: ten MCP calls, nine metadata reads and zero inference POSTs.
+The check exercised actual same-ID revision and preservation of context pins.
+It used a synthetic startup key and disabled provider endpoint. It is a native
+API/lifecycle check, not agent onboarding or a useful-report comparison.
+
+This unreleased build records parent commit `e8e18b4` and `dirty=true`; the
+uncommitted production/skill changes are identified by source fingerprint
+`60d7e67c5f11ceaf56518a323cf20909aabd28c317bf6f905ff47157cbdf0ac5`.
+Binary SHA-256:
+`2ea5cab3c2fb623499ed6c7202fa4d1f7640d9688b53a08d96bebe02c5cdfdab`.
+JUnit SHA-256:
+`c0831312d8cb71d217f20a643d33bd3a46eb5421ebad9aedca3ac4b2006c91c5`.
+It is not the published `v0.2.0rc3` executable despite sharing its package label.
+
+The same executable also passed **11 local HTTP checks in 28.01 seconds**,
+including the signed-client context lifecycle/restart check and loopback URL
+guards. This rechecks the current tool profile and existing hosted context
+boundaries; it does not validate customer SSO or live analysis. Inference was
+disabled. HTTP JUnit SHA-256:
+`f19f2eb6c587c87563e5944ec1b5eb546fc2a0aa3ec31dd4879505311fb3f149`.
+
+The settled regression run passed **3,325 tests, with 11 opt-in checks skipped,
+in 221.48 seconds**; Ruff passed. An earlier run loaded race-test assertions
+while they were being edited and failed four error-message assertions (3,321
+passed); the fresh run above includes the settled assertions. The separate
+two-turn trial runner/tests were still being authored and are not included in
+this regression count. These are software checks, not simulated companies.

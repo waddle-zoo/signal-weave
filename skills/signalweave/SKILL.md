@@ -5,7 +5,7 @@ description: Help agents onboard business-intelligence questions into reviewed S
 
 # SignalWeave
 
-Use this skill for BI question setup, recurring monitoring cards, and interpreting a SignalWeave card run. The active MCP tool schemas are authoritative: use only tools exposed by the connected profile. The default agent workflow works over local stdio and Streamable HTTP; transport does not grant additional identity, source access, or side-effect authority.
+Use this skill for BI question setup, recurring monitoring cards, and interpreting a SignalWeave card run. For SignalWeave operations, use only tools exposed by its connected profile. This is not an exclusive tool policy: keep the agent's other authorized BI, glossary, knowledge and owner-clarification tools available during onboarding and investigation. Transport does not grant additional identity, source access, or side-effect authority.
 
 ## Start from the owner's question
 
@@ -18,6 +18,8 @@ Treat search matches and titles as candidate recall, not source selection: compa
 Copy catalog identities exactly: `selected_sources[].ref` uses `adapter|resource`, while `inspect_resource` takes `adapter` and `resource` separately. Pass only source-declared parameters. A reporting cutoff in the evidence is not permission to invent an `as_of` query parameter or rewrite the source's time window.
 
 Understand enough business context to interpret the evidence and routing: relevant definitions, population and grain, units, comparison basis and period, current coverage/freshness, action and quiet rules, and intended destinations. Reuse source-declared definitions and contracts. Ask the owner only about missing or conflicting details that could materially change the conclusion or route; do not impose an exhaustive questionnaire. Treat dates in examples as illustrative and use relative recurring periods unless the owner explicitly requests a fixed window. Never invent thresholds, recipients, definitions, or source references.
+
+Before declaring a material question unresolved, use relevant available company context and an authorized clarification channel when one is provided. If a human answer is still needed, ask and leave the card in draft. Approval is not an answer to an undefined policy question.
 
 Keep source-owned quality checks distinct from business action policy. Do not duplicate or invent low-level gates, or turn an operator field into a new routing rule, unless its consequence is defined by the source contract or owner; if that consequence is material but unclear, ask a focused question rather than guessing.
 
@@ -75,6 +77,8 @@ while the owner resolves the meaning; do not make every advisory note a blocker.
 Use `onboard_insight_card` to save the owner's intent and exact selected source references as a draft. Preserve the owner's ordered rules, exceptions, fallback and quiet behavior in `decision_guidance`; keep outcome-to-destination mappings faithful. `watch_for` and `questions` are optional analysis prompts, not a place to duplicate action rules or manufacture requirements. The tool saves a draft; it does not approve it or enable delivery.
 
 Keep the recurring business questions answerable from current evidence. Unresolved owner-only definition or policy choices belong in the onboarding conversation, not the card's recurring `questions`. Preserve confirmed answers in the reusable context; keep unresolved choices visible as follow-up without inventing an answer or withholding supported findings. Tool-supplied comparison windows and confidence defaults are not owner-confirmed business policy.
+
+When the owner answers or corrects a saved brief, use `revise_insight_card` if exposed: pass the current card ID/version, only the changed policy fields, and the reason. Lists/maps replace their field; clear obsolete setup-only questions explicitly. Revision preserves source anchors and context pins, returns the same card to draft, and clears its prior approval/plan. Review and obtain authorization again. Do not claim an in-place update on an older profile without this tool; it needs a deliberately reviewed replacement card instead.
 
 Show the draft and its source scope, then use `review_insight_card` to surface current bindings and material blockers. Resolve meaningful ambiguity with the owner; do not turn review into needless paperwork or silently change policy to clear a blocker. The default agent profile does not expose draft simulation. Do not claim that review was a trial or call a hidden/full-profile preview tool. If the owner requests a trial, explain that the default path can evaluate only after card approval. Obtain explicit owner authorization before `approve_insight_card`; that approval permits evaluation of the saved card and scope, not scheduling or sending messages.
 

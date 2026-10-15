@@ -148,6 +148,7 @@ async def test_native_agent_context_binding_lifecycle(
                     tool_names = {tool.name for tool in (await session.list_tools()).tools}
                     expected_tools = {
                         "onboard_insight_card",
+                        "revise_insight_card",
                         "save_domain_context",
                         "review_domain_context",
                         "bind_insight_context",
@@ -269,6 +270,18 @@ async def test_native_agent_context_binding_lifecycle(
                     )
                     assert bound["status"] == "draft"
                     assert bound["context_bindings"][0]["revision"] == reviewed["revision"]
+
+                    revised = _payload(await call(session, "revise_insight_card", {
+                        "card_id": card_id, "expected_card_version": bound["version"],
+                        "changes": {"decision_guidance": "Report only supported fixture observations; policy remains under owner review.",
+                                    "questions": []},
+                        "reason": "Apply a synthetic owner clarification to the same card.",
+                    }), "revise_insight_card")
+                    assert revised["card"]["id"] == card_id
+                    assert revised["card"]["version"] == bound["version"] + 1
+                    assert revised["card"]["status"] == "draft"
+                    assert revised["card"]["context_bindings"] == bound["context_bindings"]
+                    assert revised["card"]["sources"][0]["resource"] == "chart:1"
 
                     inspected = _payload(
                         await call(

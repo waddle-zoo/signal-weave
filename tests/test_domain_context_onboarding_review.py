@@ -132,7 +132,7 @@ async def test_both_arms_keep_the_same_source_owner_and_notes_tools_and_data():
     treatment_specs = {tool["name"]: tool for tool in await treatment.specs()}
     assert set(baseline_specs) == COMMON_TOOL_NAMES
     assert set(treatment_specs) == COMMON_TOOL_NAMES | NATIVE_TOOL_NAMES
-    assert len(NATIVE_TOOL_NAMES) == 16
+    assert len(NATIVE_TOOL_NAMES) == 17
     assert {name: treatment_specs[name] for name in COMMON_TOOL_NAMES} == baseline_specs
 
     # The ordinary source interface and owner answer service are equal; answers

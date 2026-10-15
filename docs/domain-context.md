@@ -96,6 +96,12 @@ only IDs, exact reviewed revisions and digests; the owner's reason is saved on
 the card. Because cards are tenant-visible, only tenant-shared context can be
 bound. A required pin cannot be a hypothesis.
 
+If an owner also changes the business rule, use `revise_insight_card` to update
+the card's ordinary policy fields. That operation preserves its source anchors
+and context pins, increments the version and requires renewed review/approval.
+A changed note does not automatically rewrite a card, and revising a card does
+not refresh its pins; confirm both when meaning changes.
+
 `inspect_insight_context` checks the current revision, review deadline, optional
 effective date, linked-source authorization, connector identity and declared
 source semantics. Changed definitions, newer drafts, retirement, private context,

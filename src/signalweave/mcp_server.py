@@ -12,7 +12,7 @@ from typing import Annotated, Any, Literal
 from uuid import uuid4
 
 from mcp.server.fastmcp import Context, FastMCP
-from pydantic import Field, StrictBool
+from pydantic import Field, StrictBool, StrictInt
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
@@ -132,6 +132,7 @@ AGENT_PROFILE_TOOLS = frozenset({
     "search_catalog",
     "inspect_resource",
     "onboard_insight_card",
+    "revise_insight_card",
     "review_insight_card",
     "approve_insight_card",
     "list_insight_cards",
@@ -1136,6 +1137,9 @@ def create_mcp(
             "fetches only its approved source scope, and calls Jev for the card's typed policy judgment. "
             "Use search_catalog and inspect_resource to discover and verify sources, onboard_insight_card "
             "to save the owner's intent and exact source references, then review and obtain explicit approval. "
+            "Keep other authorized BI, glossary, knowledge and owner-clarification tools available during "
+            "onboarding and investigation; this profile limits SignalWeave operations, not the whole agent. "
+            "Use revise_insight_card to apply an owner's answers to an existing card, then review it again. "
             "Give the person a useful current analysis from inspected evidence, with each source's scope and "
             "period. Pending alert criteria require confirmation before automation; they do not prevent "
             "reporting supported facts. Honor an owner's explicit fallback rather than demanding an "
@@ -2462,6 +2466,65 @@ def create_mcp(
         }
 
     @mcp.tool()
+    def revise_insight_card(
+        card_id: str,
+        expected_card_version: StrictInt,
+        changes: dict[str, Any],
+        reason: str,
+        ctx: Context | None = None,
+    ) -> dict[str, Any]:
+        """Apply clarified business policy to the same card, returning it to draft.
+
+        Only the authenticated card owner may revise it. Get the current card,
+        then provide only changed fields; lists/maps replace the whole field.
+        Allowed: title, what_to_watch, why_watch, watch_for, questions,
+        numeric_conditions, evidence_requirements, decision_guidance,
+        follow_up_guidance, comparison_windows, delivery_methods, owner.
+        Empty lists/maps can clear optional fields. Source identities/parameters,
+        execution settings and context pins cannot be changed here. Existing
+        source requirements may gain exact keys needed by new numeric conditions.
+        Every revision increments the version, clears approval, compiled plan
+        and current review, and needs fresh review/approval. No source reads,
+        inference, scheduling or delivery occurs. Recent correction history is
+        bounded to 100 entries; historical receipts remain unchanged.
+        """
+        principal = request_principal(ctx)
+        card = get_scoped_card(card_id, principal)
+        if principal is None or card.principal_id != principal.principal_id:
+            raise ValueError("only the authenticated card owner may revise its policy")
+        if type(expected_card_version) is not int or card.version != expected_card_version:
+            raise ValueError("card version changed; get and review the current card before revising")
+        allowed = {"title", "what_to_watch", "why_watch", "watch_for", "questions", "numeric_conditions",
+                   "evidence_requirements", "decision_guidance", "follow_up_guidance", "comparison_windows",
+                   "delivery_methods", "owner"}
+        if not changes or set(changes) - allowed:
+            raise ValueError("provide only nonempty changes to the documented business-policy fields")
+        if (len(json.dumps(changes, ensure_ascii=False, allow_nan=False).encode()) > 32_000
+                or not reason.strip() or len(reason) > 2000):
+            raise ValueError("provide bounded changes and a nonempty revision reason up to 2000 characters")
+        payload = {**card.model_dump(mode="json"), **changes,
+                   "version": card.version + 1, "status": "draft", "approved_by": None,
+                   "approved_at": None, "compiled_plan": None, "onboarding_review": None}
+        if "numeric_conditions" in changes:
+            conditions = [NumericCondition.model_validate(item) for item in payload["numeric_conditions"]]
+            payload["sources"] = [source.model_dump(mode="json") for source in bind_numeric_condition_requirements(
+                card.sources, conditions,
+            )]
+        correction = OnboardingCorrection(
+            correction_id=f"correction-{uuid4().hex}", card_id=card.id, card_version=card.version + 1,
+            kind=OnboardingCorrectionKind.INTENT_CLARIFIED, note=reason.strip(),
+            principal_id=principal.principal_id, principal_tenant=principal.tenant_id,
+        )
+        payload["onboarding_corrections"] = [
+            *[item.model_dump(mode="json") for item in card.onboarding_corrections[-99:]],
+            correction.model_dump(mode="json"),
+        ]
+        updated = InsightCard.model_validate(payload)
+        runtime.card_store.save_card_if_version(updated, expected_card_version, expected_card=card)
+        return {"card": updated.model_dump(mode="json"), "approval_required": True,
+                "delivery_enabled": False, "next_action": "review_insight_card"}
+
+    @mcp.tool()
     async def bootstrap_insight_card(
         goal: Annotated[str, Field(description="In plain English, what should be monitored or answered?")],
         purpose: Annotated[str, Field(description="Why does this matter, and who needs the result?")],
@@ -2977,8 +3040,9 @@ def create_mcp(
         )
         if get_scoped_card(card_id, principal).model_dump(mode="json") != original:
             raise ValueError("Card changed during review; review the current card before approval.")
-        card = append_onboarding_review(card, review)
-        runtime.card_store.save_card(card)
+        reviewed = append_onboarding_review(card, review)
+        runtime.card_store.save_card_if_unchanged(reviewed, expected_card=card)
+        card = reviewed
         review_payload = review.model_dump(mode="json")
         return {
             # The stored card carries the complete latest review for auditability.
@@ -3300,6 +3364,7 @@ def create_mcp(
         """
         principal = request_principal(ctx)
         card = get_scoped_card(card_id, principal)
+        original_card = card
         assert_dynamic_review_scope(card, adapter)
         if use_current_source_selection_review:
             if source_selection_fingerprint is not None:
@@ -3427,15 +3492,16 @@ def create_mcp(
         if get_scoped_card(card_id, principal).model_dump(mode="json") != original:
             raise ValueError("Card changed during approval; review the current card "
                              "and obtain its owner's approval again.")
-        runtime.card_store.save_card(card)
-        approved = runtime.card_store.set_card_status(card_id, InsightCardStatus.APPROVED)
-        approved = approved.model_copy(
-            update={
+        approved_payload = card.model_dump(mode="json")
+        approved_payload.update(
+            {
+                "status": InsightCardStatus.APPROVED.value,
                 "approved_by": principal.principal_id if principal else actor,
-                "approved_at": datetime.now(timezone.utc),
+                "approved_at": datetime.now(timezone.utc).isoformat(),
             }
         )
-        runtime.card_store.save_card(approved)
+        approved = InsightCard.model_validate(approved_payload)
+        runtime.card_store.save_card_if_unchanged(approved, expected_card=original_card)
         return {
             "status": approved.status.value,
             "card": _evaluation_card(approved),

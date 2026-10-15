@@ -5,6 +5,10 @@ typed policy decision with evidence. Your agent does the deeper analysis and
 writes the explanation. This guide uses the normal `agent` profile over local
 stdio or a deployed HTTP service.
 
+That profile limits SignalWeave's tools, not the whole agent. Keep your other
+authorized BI, glossary, company-knowledge and owner-clarification tools connected
+for onboarding as well as investigation.
+
 For supported builds and upgrades, see
 [release compatibility](local-install-reference.md#release-compatibility).
 
@@ -69,6 +73,13 @@ required versus optional sources, quiet behavior, and outcome-to-recipient
 rules. Have it show the exact source scope and run the available review. Fix
 mistakes before approval. In the normal profile, a draft is not a trial: approve
 only after you have reviewed it and explicitly authorize the saved card.
+
+If you answer a question after a draft was saved, the agent can use
+`revise_insight_card` to apply your clarification to the same card. It keeps the
+source anchors, increments the version and returns it to draft; review and
+approval must happen again. Old receipts remain history. Revision does not
+approve the card or activate automation. Check your connected tool list on older
+builds; without this operation a replacement draft must be reviewed explicitly.
 
 An approval-ready onboarding response uses `next_action="confirm_then_approve"`.
 The default profile does not require a hidden simulation tool before approval;

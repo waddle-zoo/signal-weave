@@ -228,7 +228,7 @@ async def exercise_native_http(tmp_path, record_property):
                     assert content["body"] not in response.text
             async with remote_session(base, curator) as session:
                 tools = {tool.name for tool in (await session.list_tools()).tools}
-                assert "save_domain_context" in tools and len(tools) == 16
+                assert "save_domain_context" in tools and len(tools) == 17
                 result, saved = await call(session, "save_domain_context", {"content": content})
                 assert not result.isError
                 assert saved["actor"] == saved["owner_id"] == "curator"

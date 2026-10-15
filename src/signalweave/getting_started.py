@@ -42,6 +42,7 @@ def agent_getting_started(task: str = "start", *, decision_provider: str = "jev-
             {"tool": "search_catalog", "purpose": "Recall source candidates; titles and lexical matches are not semantic proof."},
             {"tool": "inspect_resource", "purpose": "Inspect likely sources, report the useful current findings with their periods and source-specific scopes, and clarify material missing context with the owner."},
             {"tool": "onboard_insight_card", "purpose": "Save the owner's intent and exact selected_sources as a draft."},
+            {"tool": "revise_insight_card", "purpose": "Apply the owner's answers to the same saved card using its current version. Source anchors stay fixed; review and approval must happen again."},
             {"tool": "review_insight_card", "purpose": "Check current source bindings and unresolved setup questions; ask the owner about material ambiguity."},
             {"tool": "approve_insight_card", "purpose": "Request explicit owner approval after showing the saved card and source scope."},
             {"tool": "evaluate_insight_card", "purpose": "On each recurring run, fetch approved sources and use Jev to apply the card's typed outcome policy; returns evidence and a durable receipt without delivering."},
