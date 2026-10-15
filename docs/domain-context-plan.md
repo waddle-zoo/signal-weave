@@ -505,6 +505,24 @@ registry, or require a SignalWeave receipt to prove a baseline draft was recorde
 Do not claim business benefit from right policy labels alone, or from fewer schema
 errors. No further paid run is authorized by an incomplete or negative result.
 
+This canary is now terminal. Its one report was recorded on the first call,
+with known usage and no source or Jev calls, but it still described the volume
+change as unsupported after citing the available 5,800 and 11,600 due counts.
+Independent review agreed this is an interpretation error and rejected the
+six-report expansion. That study never started. The exact frozen suite passed
+3,497 checks with 11 skips; this does not repair the negative analytical result.
+
+Next diagnose the compact handoff offline: the same optional unknown is repeated
+in the report, coverage, plan and judgment diagnostics beside known measurements.
+Duplication is observed, not proved causal. Test a minimal, generic evidence-first,
+receipt-backed audit projection without changing policy, source facts, required
+checks, actual missingness or stored receipts. Preserve report-only blockers,
+limitations and accessible provenance; do not silently omit unique evidence.
+Check rate, additive and scalar shapes and malformed/missing inputs before a
+separate frozen reporter experiment is proposed for independent review.
+Do not alter this accepted card or invent a metric-specific Python rule to make
+the old report pass. No further inference belongs to the closed canary or study.
+
 ### Native approved-card clarification check
 
 Separately preregister `approved-card-clarification-v1`: reuse the existing

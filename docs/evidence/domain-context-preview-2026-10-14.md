@@ -13,7 +13,10 @@ three more reports and three Jev calls on the same supplied Pine Courier periods
 Policy outcomes and native receipts were correct, but narrative and scorer defects
 remain. A further contract-repair study stopped after four of six reports;
 its review packet also omitted necessary timing/execution context. No corrected
-pass rate is claimed. There is no demonstrated overall cost, quality, or business advantage.
+pass rate is claimed. A subsequent single-call human-readout canary fixed report
+recording, but repeated a factual interpretation error; independent review stopped
+the planned comparison before it began. There is no demonstrated overall cost,
+quality, or business advantage.
 Comparative business benefit, customer SSO, interactive onboarding, and enterprise
 readiness remain unproved.
 
@@ -31,7 +34,7 @@ is added to Git.
 | Card/context dependencies | Exact revisions, source/meaning checks, reapproval, stale-context deferral, and historical receipts | No semantic graph traversal or automatic reminder delivery |
 | Same-card clarification | Owner-scoped revision preserves anchors and pins, increments version, clears approval/plan, and uses exact-snapshot compare-and-swap | JSON locking is process-local; multi-process use requires SQLite |
 | Current native transports | 12 checks in 81.00 seconds: two native lifecycles and ten URL validators; zero inference | Local Superset metadata and synthetic signed issuer; not native report-quality proof |
-| Full suite including report-contract/packet fidelity tests | 3,478 passed, 11 skipped, in 224.74 seconds | Software checks, not companies or an accuracy estimate; 35 focused research checks also passed |
+| Full suite including report-contract/packet fidelity tests | 3,497 passed, 11 skipped, in 227.64 seconds | Exact frozen reporting commit; software checks, not companies or an accuracy estimate; 43 focused research checks also passed |
 
 The native stdio lifecycle took 49.23 seconds: ten MCP calls and nine Superset
 metadata reads. Signed HTTP context reuse, roles, and restart took 31.30 seconds;
@@ -111,73 +114,28 @@ was separate.
 
 ### Treatment-only interpretation check
 
-handoff-interpretation-v1 reused the same three Pine Courier periods, with three
-SignalWeave reports and three live Jev calls. It had no baseline, used no retries,
-and made no provider, policy, or numeric-analysis code change; the change was
-instruction/skill guidance, built at d76de21 before the later relocation. All three policy outcomes and card receipts were
-correct, with delivery disabled. The raw report score remains 0/3.
+`handoff-interpretation-v1` completed three fresh reports and three live Jev calls
+on the same supplied Pine Courier periods, with no baseline or retry. All policy
+outcomes/receipts were correct; raw report scoring remains **0/3**, not rescored.
+The prose retained the rates and missing-denominator counts, but complete-period
+volume remained wrongly unresolved. Structured count values were also assigned
+rate-only fact IDs. Recipient/audience and source/receipt citation ambiguities
+confounded the scorer; they do not excuse the typed mapping or prose defects.
 
-The reports contain factual positives: the quiet period correctly says 0.90
-attainment was unchanged and below the notify threshold; the missing-denominator
-period correctly says the prior total was 5,220/5,800 and the current numerator
-was 10,440 with denominator null; and the event period correctly reports 0.90
-to 0.75, a 0.15 decline, and the notify outcome. These positives do not erase
-the reporting limitations below.
+Calendar rebasing initially produced non-calendar-week windows. The later
+whole-week UTC correction passed an inference-free preflight, not a live rerun.
+Three supplied non-native scalar/rate/additive reporter checks and six cached
+layout reporters are separate diagnostics, not repaired business scores. The
+layout comparison favored a separated optional-judgment presentation in one
+quiet-period pair; another report cited a wrong workflow field path. Production
+relocation retained every result field and added 134 JSON bytes, not a cost win.
 
-A review of reporter p26 found that PublicSourceAdapter.set_period shifts the
-fixture's original Monday 00:00 calendar-week data to arbitrary seven-day
-windows beginning Thursday at 08:45 UTC. The supplied period labels therefore
-do not prove compliance with the owner's complete UTC calendar-week definition;
-this harness limitation remains under investigation.
-
-The report-specific defects are:
-
-- In the quiet period, the source denominators doubled, but the prose calls
-  volume unverified and says no volume change is claimed.
-- The event-period report also leaves volume unresolved.
-- In the missing-denominator period, prose preserves the counts and null
-  denominator, while structured numeric claims label 5,800 and 10,440 as
-  on_time_delivery rate fields with unit parcels. This is a typed mapping error;
-  the raw counts were not invented.
-- The raw score flags the quiet report's proposed business-owner recipient as
-  wrong for an ignore outcome. The prompt's proposed-recipient field is
-  ambiguous between report audience and alert recipient. Accepted owner context
-  was supplied, so this is not a missing-owner-lookup failure. Receipt citations
-  are valid workflow evidence, but source-only citation checks mark receipt IDs
-  unknown. Preserve the raw score of 0/3 rather than silently rescoring.
-
-Three separate blind, supplied synthetic non-native scalar, rate, and additive
-reporter fixtures passed private factual rubrics. They had no old-guidance
-control, no live Jev call, and no business benchmark; they do not repair or
-replace the 0/3 live report score.
-
-Six cached-packet reporters then compared the same three live-Jev handoffs
-with optional result arrays inline versus separately labeled. Independent
-review found the quiet-period contradiction in the current layout but not the
-separated layout; both layouts preserved the missing-denominator limits and
-adverse-period outcome. One separated report gave a wrong workflow field path.
-No native, source or provider calls occurred; a single pair per period does not
-prove a reliable quality gain. The corresponding compact presentation change
-retains all values and required checks; stored reports still repeat optional
-judgments, so this is not complete isolation or a proved narrative fix.
-For example, the current-layout quiet report gives both parcel totals and then
-says "no volume figure is available in this packet"; the separated-layout
-report instead preserves the counts and qualifies only the optional watch.
-The actual production transform was replayed offline against all three current
-packets: every result field round-tripped, including report warnings and
-measurements. It adds 134 JSON bytes per packet, not a payload-saving claim.
-
-The new report records 233,787 agent input tokens (159,232 cached; 74,555
-uncached) and 3,307 output tokens. Three Jev calls used 18,446 input and 391
-output tokens. Including accepted v4 setup, the nine agent responses used
-1,193,135 input, 929,280 cached, 263,855 uncached, and 13,556 output tokens;
-Jev usage is separate. This treatment-only run has no comparative cost result.
-
-The ignored local report is
-artifacts/handoff-interpretation-v1-live/report.json (SHA-256
-7e4f62a999b9dcb36824baa8f7db08692668205f44c342427285f31cff32d725).
-Its associated trace remains ignored. An independent agent review is not
-scientific peer review.
+New agent usage was 233,787 input / 74,555 uncached / 3,307 output; Jev used
+18,446 input / 391 output. Including accepted setup: 1,193,135 agent input /
+263,855 uncached / 13,556 output across nine responses, Jev separate. The
+[immutable detailed record](https://github.com/waddle-zoo/signal-weave/blob/6238555b1fe371aa89e3f73c1fa62cca92d1eb7f/docs/evidence/domain-context-preview-2026-10-14.md#treatment-only-interpretation-check)
+retains all findings, old identities and costs. Agent review is not scientific
+peer review; none of these checks demonstrates comparative usefulness.
 
 ## Retained artifact identities
 
@@ -235,9 +193,33 @@ the assigned per-report cutoffs and zero recorded snapshot capture lag. The
 original reports and model reviews were not changed or rerun. This data-quality
 repair does not prove analytical correctness or underlying metric freshness.
 
-Next fix the evidence packet and simplify the evaluation's human-report handoff
-before more paid runs. Correct labels, strict schemas and reviewer agreement
-are not sufficient evidence of business value when their framing is wrong.
+### Human-readout canary: wiring fixed, interpretation not fixed
+
+Commit 6238555 adds an opt-in research sink with only `outcome`, triggered
+`recipients`, and source-cited `summary`; no second nested numeric registry.
+Both arms keep identical company-source, glossary, notes and calculator tools.
+The zero-model native preflight verified all six arm-period round-trips with
+12 source reads, zero agents and zero Jev requests. It pinned six baseline tool
+contracts and the same six plus ten native tools in treatment; this remains a
+whole-package comparison, not an isolated Jev or report-format test.
+
+An independently approved, cached-evidence canary then used one Luna-medium
+invocation: one successful report call, 10.33 seconds, 52,884 input / 35,072 cached /
+17,812 uncached / 624 output tokens, zero source reads and zero Jev calls.
+It correctly recorded an undelivered `ignore` report and the two known due counts,
+but then said no conclusion about volume change was supported. The counts were
+5,800 and 11,600 over complete comparable weeks; optional policy uncertainty does
+not make that measured change unknown. Independent review agreed this was an
+error and returned **NO-GO** for the six-report study. No such study or retry ran.
+This is one known development case, not a success/failure rate or an efficacy estimate.
+
+In minified UTF-8 JSON, the cached handoff measures 26,240 bytes, including a
+9,032-byte report whose evidence exactly duplicates normalized evidence. Optional uncertainty
+also appeared in several report/plan/diagnostic fields. These are observed
+duplications, not proof of the cause of the prose error or a token-cost saving.
+The next step is an offline generic handoff diagnosis, not another expensive
+cohort, policy relaxation, or a company-specific calculation rule. Correct labels
+and successful recording alone do not establish useful analysis.
 
 These hashes identify local ignored files; they are not public reproduction
 inputs. Raw traces, reports, credentials, and setup state remain outside Git.
@@ -253,6 +235,10 @@ inputs. Raw traces, reports, credentials, and setup state remain outside Git.
 | Current native transport JUnit | ccd25997f81593c081cd0e1e9770fd2d8555f11af6d10d086c342c0590e581ba |
 | Frozen six-packet layout manifest | 2659c1d95d1be4c86f558d8360dd8bd06971652ddbce2e5055459c93415589bf |
 | Calendar zero-inference preflight report | 4d189da105310691b86677d970ec736681d0080c547116e9f9921d1b1a81d8f8 |
+| Human-readout zero-inference preflight report | 7be83665a4a43f53e33fe8a1d49496896232e6cf571cdad0b37a6665b282aa81 |
+| Human-readout canary report | 486cde85a46ee0f86a72ccbe6edf8ac1df98c2c42518ccec3e2e1ede644e37af |
+| Human-readout canary trace | 0359f90e8b5e290447993ec3103d2c871e4ab565970cdd2509b60a493d96f5d1 |
+| Human-readout independent NO-GO | 643c1d6a61f4958139a69f863b62fdce0c7ca6fcd59b543cca421245ab61a411 |
 | Shared-contract preflight report | bf74c55db27856754bfed77affe49ddc71366755a9fe541ebca3e60948363f56 |
 | Stopped shared-contract live report | 1ac0c478f80e937f4989811e71190d7ad3c009a39ab33cd1b754bdb55f4ee9ed |
 | Stopped shared-contract live trace | 46ad4937492974c76a5c7def2ee587ac2d0ca38acee0af20511b6e1fb5a56a6a |
