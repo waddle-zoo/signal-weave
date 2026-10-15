@@ -88,6 +88,50 @@ def test_order_is_deterministic_and_inputs_are_not_mutated():
     assert (report, events) == originals
 
 
+def test_human_reports_preserve_inline_citations_and_actual_recording_without_invented_refs():
+    report, events = fixture_data()
+    report["report_sink"] = "record_report"
+    for episode in report["episodes"]:
+        if "submission" in episode:
+            episode["submission"].pop("evidence_refs")
+            episode["submission"].pop("diagnostic")
+    for event in events:
+        if event.get("name") == "submit_analysis":
+            event["name"] = "record_report"
+            event["arguments"].pop("evidence_refs")
+            event["arguments"].pop("diagnostic")
+    packet, _ = build(report, events)
+    assert len(packet["cases"]) == 4
+    for case in packet["cases"]:
+        assert case["source_citation_format"] == "inline_in_summary"
+        assert "declared_source_refs" not in case
+        assert "evidence_refs" not in case["recorded_report"]
+        assert "successful_submit_analysis" not in case
+        assert case["successful_record_report"]["result"]["recorded"] is True
+        assert case["source_truth"][0]["source_ref"] == "adapter|resource"
+    submit = next(event for event in events if event.get("name") == "record_report")
+    # Even matching mutations cannot reintroduce the removed numeric registry.
+    episode = next(item for item in report["episodes"] if
+                   f"{item['arm']}:{item['period_id']}" == submit["episode"])
+    episode["submission"]["numeric_claims"] = []
+    submit["arguments"]["numeric_claims"] = []
+    with pytest.raises(ValueError, match="differs from its recorded report"):
+        build(report, events)
+    episode["submission"].pop("numeric_claims")
+    submit["arguments"].pop("numeric_claims")
+    submit["arguments"]["summary"] = "a different message"
+    with pytest.raises(ValueError, match="differs from its recorded report"):
+        build(report, events)
+
+
+@pytest.mark.parametrize("sink", ["unknown", None, {}])
+def test_unknown_report_sink_is_rejected(sink):
+    report, events = fixture_data()
+    report["report_sink"] = sink
+    with pytest.raises(ValueError, match="unsupported report sink"):
+        build(report, events)
+
+
 def test_agent_and_native_judgments_may_disagree_and_are_both_preserved():
     report, events = fixture_data()
     episode = report["episodes"][1]

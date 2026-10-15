@@ -465,6 +465,46 @@ an actual four-case factual supplement verify that repair. No model re-review,
 new score or live trial was substituted. The data-quality audit distinguishes
 snapshot capture lag from measurement-window semantics and underlying freshness.
 
+### Human-readout handoff, without a second numeric registry
+
+Freeze the opt-in `human-readout-v1` repair protocol before another paid run.
+Both arms record only `outcome`, policy-triggered `recipients`, and a human-facing
+`summary` with inline source citations. There is no numeric-claim serialization
+task or exact-match numeric score. This does not waive quantitative correctness:
+the same seven factual, policy, missingness, provenance, no-delivery and usefulness
+gates remain primary, using actual observed source truth and per-case prompt clocks.
+Routing diagnostics are explicitly not a narrative or usefulness score.
+
+Keep all existing common source/glossary/calculator tools; treatment uses the same
+verified native executable, installed skill and exact accepted card. Supply the
+same public metric meanings to both arms. Keep the three known development
+periods, calendar semantics, no delivery/scheduling, six-agent/three-Jev cap and
+600k input/150k uncached between-invocation stops. This is a targeted whole-package
+repair study, not a held-out benchmark or fresh onboarding/generalization proof.
+No old cohort is resumed, relabeled or rescored.
+Pin the actual advertised per-arm tool names and contract digests in preflight,
+verify that all baseline tools have identical treatment contracts, and expose
+the additional native read/evaluation tools. Those extra tools remain part of
+the whole-package comparison, not evidence isolating the effect of the sink.
+The sink accepts one successful report only; later calls cannot replace it.
+
+First pass offline wire/role, report-sink and evidence-packet checks, independent
+code review, and a new zero-model native preflight. Before the six-report study,
+allow one separately identified reporter-only canary through the pinned Codex CLI:
+one Luna-medium invocation, three tool calls/60 seconds, no source or Jev calls,
+and a supplied cached development handoff. Expose only the real `record_report`
+contract; do not supply an expected answer. This tests handoff wiring only. Retain
+known usage or report unknown; no retry. A failed canary prevents paid expansion.
+
+Only after the preflight/canary and independent approval may one live study run.
+Capture successful `record_report` events, source reads, actual period/read clocks
+and native receipts. Two fresh arm-label-masked reviewers assess the frozen seven
+gates against the complete packet; include stopped/unrun counts and preserve
+disagreements. Reviewers must not infer missing numerical facts from a missing
+registry, or require a SignalWeave receipt to prove a baseline draft was recorded.
+Do not claim business benefit from right policy labels alone, or from fewer schema
+errors. No further paid run is authorized by an incomplete or negative result.
+
 ### Native approved-card clarification check
 
 Separately preregister `approved-card-clarification-v1`: reuse the existing

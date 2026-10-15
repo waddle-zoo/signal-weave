@@ -96,13 +96,34 @@ def test_report_scoring_does_not_fabricate_owner_tool_calls():
     assert not wrong["report_exact"]
 
 
+def test_actual_tool_inventory_pins_shared_contracts_and_exposes_package_difference():
+    common = {"name": "read_company_asset", "parameters": {"type": "object"}}
+    native = {"name": "inspect_resource", "parameters": {"type": "object"}}
+    report = {}
+    trial.record_tool_inventory(report, "baseline", [common])
+    trial.record_tool_inventory(report, "signalweave", [common, native])
+    trial.record_tool_inventory(report, "signalweave", [native, common])
+    assert report["treatment_additional_tools"] == ["inspect_resource"]
+    with pytest.raises(ValueError, match="changed between periods"):
+        trial.record_tool_inventory(report, "signalweave", [common])
+    with pytest.raises(ValueError, match="differ between arms"):
+        trial.record_tool_inventory(
+            {"report_tool_inventories": {"baseline": report["report_tool_inventories"]["baseline"]}},
+            "signalweave", [native],
+        )
+    with pytest.raises(ValueError, match="duplicate"):
+        trial.record_tool_inventory({}, "baseline", [common, common])
+
+
 @pytest.mark.parametrize("live,cohort,expected_reports", [
     (False, "paired", 0), (True, "paired", 6),
     (False, "calendar-paired-v1", 0), (True, "calendar-paired-v1", 6),
     (False, "grounded-reports-v2", 0), (True, "grounded-reports-v2", 6),
+    (False, "human-readout-v1", 0), (True, "human-readout-v1", 6),
     (False, "interpretation-repair-v1", 0), (True, "interpretation-repair-v1", 3),
 ], ids=["paired-preflight", "paired-sequence", "calendar-preflight", "calendar-sequence",
         "grounded-preflight", "grounded-sequence",
+        "human-preflight", "human-sequence",
         "repair-preflight", "repair-sequence"])
 async def test_entire_runner_preserves_equal_context_and_uses_fresh_reports(monkeypatch, tmp_path, live, cohort, expected_reports):
     scenario = trial.clarified_development_scenario()
@@ -165,8 +186,14 @@ async def test_entire_runner_preserves_equal_context_and_uses_fresh_reports(monk
             await session.adapter.inspect(card.sources[0])
         period_id = session.adapter.period_context["period_id"]
         label = scenario["private"]["periods"][period_id]
-        await session.call("submit_analysis", {"outcome": label["outcome"], "recipients": label["recipients"],
-                                               "evidence_refs": label["required_evidence_refs"], "summary": "Offline harness fixture only."})
+        submission = {"outcome": label["outcome"], "recipients": label["recipients"],
+                      "summary": "Offline harness fixture only."}
+        if cohort == "human-readout-v1":
+            schema = session.submission_schema()
+            assert set(schema["properties"]) == {"outcome", "recipients", "summary"}
+            await session.call("record_report", submission)
+        else:
+            await session.call("submit_analysis", {**submission, "evidence_refs": label["required_evidence_refs"]})
         return {"status": "complete"}
 
     monkeypatch.setattr(trial, "load_reviewed_setup", lambda *args: (accepted, card))
@@ -184,14 +211,17 @@ async def test_entire_runner_preserves_equal_context_and_uses_fresh_reports(monk
     assert report["agent_invocations_started"] == expected_reports
     assert report["provider_attempts"] == 0  # These are offline doubles, not live proof.
     assert report["usage_including_accepted_onboarding"]["responses"] == expected_reports + 6
+    if cohort == "human-readout-v1":
+        assert report["treatment_additional_tools"] == ["evaluate_insight_card", "get_insight_card"]
+        assert set(report["report_tool_inventories"]) == {"baseline", "signalweave"}
     if live:
         assert len(report["episodes"]) == expected_reports
         assert all(e["approved_card_execution_verified"] for e in report["episodes"] if e["arm"] == "signalweave")
-        if cohort in {"paired", "calendar-paired-v1", "grounded-reports-v2"}:
+        if cohort in {"paired", "calendar-paired-v1", "grounded-reports-v2", "human-readout-v1"}:
             assert all(captured[index]["prompt_override"]["accepted_context"] ==
                        captured[index + 1]["prompt_override"]["accepted_context"] for index in range(0, 6, 2))
             periods = report["episodes"][::2]
-            if cohort in {"calendar-paired-v1", "grounded-reports-v2"}:
+            if cohort in {"calendar-paired-v1", "grounded-reports-v2", "human-readout-v1"}:
                 assert report["protocol"] == cohort
                 assert report["cohort_clock_semantics"]["measurement_rebase"] == "one shared whole-week UTC offset"
                 assert report["cohort_clock_semantics"]["source_capture_age"] == (
@@ -209,6 +239,14 @@ async def test_entire_runner_preserves_equal_context_and_uses_fresh_reports(monk
                 if cohort == "grounded-reports-v2":
                     definitions = scenario["public"]["submission_contract"]
                     assert all(item["prompt_override"]["submission_contract"] == definitions for item in captured)
+                elif cohort == "human-readout-v1":
+                    assert report["planned_episode_count"] == 6
+                    assert report["report_sink"] == "record_report"
+                    assert all("structured_score" not in entry for entry in report["episodes"])
+                    assert all(entry["routing_diagnostics"]["outcome_correct"] for entry in report["episodes"])
+                    assert all("numeric_vocabulary" not in item["prompt_override"]
+                               and "measurement_definitions" in item["prompt_override"] for item in captured)
+                    assert all("submit_analysis" not in item["instructions_override"] for item in captured)
                 else:
                     assert all("submission_contract" not in item["prompt_override"] for item in captured)
             else:
@@ -221,7 +259,7 @@ async def test_entire_runner_preserves_equal_context_and_uses_fresh_reports(monk
             assert all("both arms" not in item["instructions_override"].lower() for item in captured)
             periods = report["episodes"]
         assert [entry["period_id"] for entry in periods] == [p["period_id"] for p in scenario["public"]["periods"]]
-    if cohort in {"calendar-paired-v1", "grounded-reports-v2"}:
+    if cohort in {"calendar-paired-v1", "grounded-reports-v2", "human-readout-v1"}:
         assert report["cohort_clock_semantics"]["measurement_rebase"] == "one shared whole-week UTC offset"
     else:
         assert "cohort_clock_semantics" not in report

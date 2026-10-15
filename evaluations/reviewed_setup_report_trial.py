@@ -32,6 +32,7 @@ from evaluations.domain_context_onboarding_trial import (
     public_brief,
     usage_totals,
 )
+from evaluations.human_report_episode import HumanReportEpisode
 from evaluations.reviewed_setup import load_reviewed_setup, restore_reviewed_card
 from scripts.binary_provenance import verify_binary
 from signalweave.models import SourceRef
@@ -39,6 +40,7 @@ from signalweave.models import SourceRef
 PROTOCOL = "reviewed-setup-reports-v1"
 CALENDAR_PAIRED = "calendar-paired-v1"
 GROUNDED_REPORTS = "grounded-reports-v2"
+HUMAN_READOUT = "human-readout-v1"
 LIMITS = {"agent_invocations": 6, "jev_attempts": 3, "tools_per_report": 12,
           "seconds_per_report": 180, "between_invocation_input_stop": 600_000,
           "between_invocation_uncached_stop": 150_000}
@@ -54,6 +56,17 @@ INSTRUCTIONS = (
     "Use calculate for arithmetic if needed, then submit_analysis to record your draft only. "
     "Use only keys in numeric_vocabulary for numeric_claims; values and units must follow evidence."
 )
+HUMAN_INSTRUCTIONS = (
+    "You are a fresh analytics reporting agent using an already accepted development setup. "
+    "Use only the supplied trial-server tools and current source evidence; old measurements are not current truth. "
+    "Prepare the concise message a business reader should receive: what matters, why under the owner's policy, "
+    "material known values, limits, intended policy-triggered routes and useful next step. "
+    "Cite actual source references beside measurements; workflow receipts support workflow facts only. "
+    "Distinguish accounting, association and hypothesis from causation; do not invent significance or missingness. "
+    "Do not edit setup, ask the owner, schedule or send. Use calculate if needed. "
+    "Finish with record_report using only outcome, recipients and summary. Ignore has no triggered routes; "
+    "a routine report audience may be named in the message. No numeric-claim registry is required. Stop after success."
+)
 
 
 def cohort_settings(cohort):
@@ -63,6 +76,8 @@ def cohort_settings(cohort):
         return CALENDAR_PAIRED, dict(LIMITS), (False, True)
     if cohort == GROUNDED_REPORTS:
         return GROUNDED_REPORTS, dict(LIMITS), (False, True)
+    if cohort == HUMAN_READOUT:
+        return HUMAN_READOUT, dict(LIMITS), (False, True)
     if cohort == "interpretation-repair-v1":
         return "handoff-interpretation-v1", {
             **LIMITS, "agent_invocations": 3, "between_invocation_input_stop": 300_000,
@@ -107,6 +122,23 @@ def common_context(public, card):
     """Equal information, including the treatment card's policy, for the control."""
     return {"accepted_policy": card.execution_payload(), "owner_answers": public["owner_answers"],
             "glossary": public["glossary"]}
+
+
+def record_tool_inventory(report, arm, specs):
+    """Pin actual advertised contracts, including the treatment-only surface."""
+    inventory = {item["name"]: hashlib.sha256(json.dumps(item, sort_keys=True).encode()).hexdigest()
+                 for item in specs}
+    if len(inventory) != len(specs):
+        raise ValueError("duplicate advertised tool name")
+    inventories = report.setdefault("report_tool_inventories", {})
+    if arm in inventories and inventories[arm] != inventory:
+        raise ValueError("advertised report tools changed between periods")
+    inventories[arm] = inventory
+    if {"baseline", "signalweave"} <= inventories.keys():
+        baseline, treatment = inventories["baseline"], inventories["signalweave"]
+        if any(treatment.get(name) != digest for name, digest in baseline.items()):
+            raise ValueError("common company/report tools differ between arms")
+        report["treatment_additional_tools"] = sorted(set(treatment) - set(baseline))
 
 
 def summarize_usage(audit, onboarding):
@@ -182,6 +214,10 @@ async def run(args):
                               "Report-only role exposes only its dispatchable read/evaluation tools, not the whole production authoring profile.",
                               "No delivery, scheduling, context pins, restored context graph or cross-card reuse.",
                               "All older stopped cohorts and unknown costs remain separate; this is not project-total accounting."]}
+    if cohort == HUMAN_READOUT:
+        report["planned_episode_count"] = len(arms) * len(scenario["public"]["periods"])
+        report["report_review_required"] = True
+        report["report_sink"] = "record_report"
     if arms == (True,):
         report["limitations"].append(
             "Treatment-only interpretation repair on known development periods; no fresh baseline or superiority estimate."
@@ -224,7 +260,7 @@ async def run(args):
                 notes = json.dumps(context, sort_keys=True)
                 clock = datetime.now(timezone.utc)
                 measurement_offset = None
-                if cohort in {CALENDAR_PAIRED, GROUNDED_REPORTS}:
+                if cohort in {CALENDAR_PAIRED, GROUNDED_REPORTS, HUMAN_READOUT}:
                     measurement_offset, latest_cutoff = calendar_measurement_rebase(
                         scenario["public"]["periods"], clock,
                     )
@@ -238,7 +274,7 @@ async def run(args):
                     }
                 for period in scenario["public"]["periods"]:
                     for treatment in arms:
-                        if cohort in {CALENDAR_PAIRED, GROUNDED_REPORTS}:
+                        if cohort in {CALENDAR_PAIRED, GROUNDED_REPORTS, HUMAN_READOUT}:
                             adapter.set_period(period, clock, measurement_offset=measurement_offset)
                         else:
                             adapter.set_period(period, clock)
@@ -247,26 +283,34 @@ async def run(args):
                         arm = "signalweave" if treatment else "baseline"
                         audit.episode = f"{arm}:{period['period_id']}"
                         key = protocol + ":" + period["period_id"]
-                        session = RecurringEpisode(public, adapter, native if treatment else None,
+                        episode_class = HumanReportEpisode if cohort == HUMAN_READOUT else RecurringEpisode
+                        session = episode_class(public, adapter, native if treatment else None,
                                                    notes=notes, approved_card_id=card.id if treatment else None,
                                                    approved_card_version=card.version if treatment else None, run_key=key,
                                                    reporting_contract=cohort == GROUNDED_REPORTS)
                         specs = await session.specs()
-                        if any(item["name"] not in session.ANALYSIS_TOOLS | {"calculate", "submit_analysis"}
+                        sink_name = "record_report" if cohort == HUMAN_READOUT else "submit_analysis"
+                        if any(item["name"] not in session.ANALYSIS_TOOLS | {"calculate", sink_name}
                                for item in specs):
                             raise RuntimeError("report tools do not match dispatch scope")
-                        if cohort == GROUNDED_REPORTS:
+                        if cohort == HUMAN_READOUT:
+                            record_tool_inventory(report, arm, specs)
+                        if cohort in {GROUNDED_REPORTS, HUMAN_READOUT}:
                             schema = json.loads(json.dumps(next(
-                                item["parameters"] for item in specs if item["name"] == "submit_analysis"
+                                item["parameters"] for item in specs if item["name"] == sink_name
                             )))
-                            definitions = public["submission_contract"]["numeric_definitions"]
-                            validate({"outcome": "investigate", "recipients": [],
+                            probe = {"outcome": "investigate", "recipients": [],
+                                     "summary": "Offline schema probe, not a business result."}
+                            if cohort == GROUNDED_REPORTS:
+                                definitions = public["submission_contract"]["numeric_definitions"]
+                                probe.update({
                                       "evidence_refs": ["schema-probe|source"],
                                       "numeric_claims": [
                                           {"fact": fact, "value": 0, "unit": definition["unit"],
                                            "evidence_refs": ["schema-probe|source"]}
                                           for fact, definition in definitions.items()
-                                      ], "summary": "Offline schema probe, not a business result."}, schema)
+                                      ]})
+                            validate(probe, schema)
                             digest = hashlib.sha256(json.dumps(schema, sort_keys=True).encode()).hexdigest()
                             previous = report.setdefault("report_contract_schema_sha256", digest)
                             if previous != digest:
@@ -287,8 +331,8 @@ async def run(args):
                         before_invocation(audit, limits, codex["path"], codex["sha256"])
                         if hashlib.sha256(binary.read_bytes()).hexdigest() != identity["binary_sha256"]:
                             raise RuntimeError("native binary changed")
-                        instructions = INSTRUCTIONS
-                        if cohort in {CALENDAR_PAIRED, GROUNDED_REPORTS}:
+                        instructions = HUMAN_INSTRUCTIONS if cohort == HUMAN_READOUT else INSTRUCTIONS
+                        if cohort in {CALENDAR_PAIRED, GROUNDED_REPORTS, HUMAN_READOUT}:
                             instructions += (
                                 " In the supplied period, as_of is the measurement cutoff, while captured_at "
                                 "is the separate simulated source-read clock. Use the source's actual interval "
@@ -316,6 +360,9 @@ async def run(args):
                                   "numeric_vocabulary": public["numeric_vocabulary"]}
                         if cohort == GROUNDED_REPORTS:
                             prompt["submission_contract"] = public["submission_contract"]
+                        if cohort == HUMAN_READOUT:
+                            prompt.pop("numeric_vocabulary")
+                            prompt["measurement_definitions"] = public["submission_contract"]["numeric_definitions"]
                         result = await codex_episode(
                             session, key=None, effort="medium", budget=None, audit=audit,
                             max_turns=12, max_tool_calls=limits["tools_per_report"], max_output_tokens=3000,
@@ -329,9 +376,17 @@ async def run(args):
                                  "native_calls": session.native_calls,
                                  "approved_card_execution_verified": session.evaluation_verified if treatment else None}
                         if session.submission:
-                            entry["structured_score"] = score_report(
-                                scenario, period["period_id"], session.submission, adapter.inspected,
-                            )
+                            if cohort == HUMAN_READOUT:
+                                label = scenario["private"]["periods"][period["period_id"]]
+                                entry["routing_diagnostics"] = {
+                                    "outcome_correct": session.submission["outcome"] == label["outcome"],
+                                    "recipients_correct": set(session.submission["recipients"]) == set(label["recipients"]),
+                                    "scope": "Policy fields only; factual/provenance/narrative review still required.",
+                                }
+                            else:
+                                entry["structured_score"] = score_report(
+                                    scenario, period["period_id"], session.submission, adapter.inspected,
+                                )
                         report["episodes"].append(entry)
                         save()
                         if not report["usage_known"] or not report["provider_usage_known"]:
@@ -353,7 +408,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ("binary", "key-file", "codex-executable", "accepted-report", "accepted-trace", "output"):
         parser.add_argument("--" + name, required=True)
-    parser.add_argument("--cohort", choices=["paired", "interpretation-repair-v1", CALENDAR_PAIRED, GROUNDED_REPORTS], default="paired",
+    parser.add_argument("--cohort", choices=["paired", "interpretation-repair-v1", CALENDAR_PAIRED, GROUNDED_REPORTS, HUMAN_READOUT], default="paired",
                         help="Paired study, treatment-only repair, or calendar-aligned paired report cohort")
     parser.add_argument("--run", action="store_true", help="Explicitly authorize the one bounded live report cohort")
     report = asyncio.run(run(parser.parse_args()))

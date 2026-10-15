@@ -32,6 +32,9 @@ def build_report_review_packet(report: dict, audit_events: list[dict], owner_con
     protocol = report.get("protocol")
     if not isinstance(protocol, str) or not protocol:
         raise ValueError("report protocol is required")
+    sink_name = report.get("report_sink", "submit_analysis")
+    if not isinstance(sink_name, str) or sink_name not in {"submit_analysis", "record_report"}:
+        raise ValueError("unsupported report sink")
 
     entries = report.get("episodes", [])
     completed = [episode for episode in entries if episode.get("agent", {}).get("status") == "complete"]
@@ -62,7 +65,7 @@ def build_report_review_packet(report: dict, audit_events: list[dict], owner_con
         if not isinstance(final_reply, str):
             raise ValueError(f"completed episode {episode_id} has no final reply")
         submit_events = [event for event in episode_events
-                         if event.get("kind") == "tool.result" and event.get("name") == "submit_analysis"
+                         if event.get("kind") == "tool.result" and event.get("name") == sink_name
                          and isinstance(event.get("result"), dict) and event["result"].get("recorded") is True]
         if len(submit_events) != 1:
             raise ValueError(f"completed episode {episode_id} requires exactly one successful submission")
@@ -70,10 +73,14 @@ def build_report_review_packet(report: dict, audit_events: list[dict], owner_con
         if submit_event["result"].get("delivery_enabled") is not False:
             raise ValueError(f"completed episode {episode_id} has an invalid submission result")
         arguments = submit_event.get("arguments")
-        fields = ("outcome", "recipients", "evidence_refs", "summary")
+        fields = ("outcome", "recipients", "summary")
+        if sink_name == "submit_analysis":
+            fields = (*fields, "evidence_refs")
         if (not isinstance(arguments, dict) or any(field not in submission or field not in arguments for field in fields)
                 or any(arguments[field] != submission[field] for field in fields)
-                or not isinstance(submission["recipients"], list) or not isinstance(submission["evidence_refs"], list)
+                or (sink_name == "record_report" and (set(arguments) != set(fields) or set(submission) != set(fields)))
+                or not isinstance(submission["recipients"], list)
+                or (sink_name == "submit_analysis" and not isinstance(submission["evidence_refs"], list))
                 or not isinstance(submission["summary"], str)):
             raise ValueError(f"completed episode {episode_id} submission differs from its recorded report")
 
@@ -142,12 +149,16 @@ def build_report_review_packet(report: dict, audit_events: list[dict], owner_con
             "source_truth": source_truth,
             "recorded_report": copy.deepcopy(submission), "agent_final_reply": final_reply,
             "proposed_outcome": submission["outcome"], "policy_triggered_routes": copy.deepcopy(submission["recipients"]),
-            "declared_source_refs": copy.deepcopy(submission["evidence_refs"]),
+            "declared_source_refs": copy.deepcopy(submission.get("evidence_refs", [])),
             "successful_submit_analysis": {
                 "arguments": copy.deepcopy(submit_event["arguments"]), "result": copy.deepcopy(submit_event["result"]),
             },
             "verified_workflow_receipts": receipts,
         })
+        if sink_name == "record_report":
+            cases[-1].pop("declared_source_refs")
+            cases[-1]["source_citation_format"] = "inline_in_summary"
+            cases[-1]["successful_record_report"] = cases[-1].pop("successful_submit_analysis")
     cases.sort(key=lambda case: case["id"])
     ordered_coordinates = {case["id"]: coordinates[case["id"]] for case in cases}
     planned = report.get("planned_episode_count")
