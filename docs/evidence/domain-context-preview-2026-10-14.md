@@ -25,7 +25,7 @@ limits. Runtime traces, credentials and native state stay outside Git.
 Retail development fixture, seed 20261001; its generator's split name
 `holdout` does not make it unseen data. Both arms retained the same company
 sources, glossary, owner questions, calculator and notes. Treatment additionally
-had the current native agent/context tools and installed canonical skill.
+had the then-current native agent/context tools and installed canonical skill.
 No archived expert card or approval was imported. These are normalized synthetic
 company-MCP exports, not live vendor queries or real human participants.
 
@@ -34,6 +34,11 @@ attempt, and between-invocation stops at 1.2M input / 220k uncached tokens.
 Thresholds do not cap an in-flight turn. Onboarding snapshots were explicitly
 historical; reports would have fetched a later period. No sending or scheduling
 was authorized.
+
+Both paid attempts froze native build `c7b3344` with source fingerprint
+`ddd374f52ebc10f1b7628f0eb74a1289394039f88fa17d8858610f7d0214756e`.
+They were not rerun on the later numeric/review fixes. Current-build native
+verification below is separate evidence, not a repaired paid result.
 
 1. **V1 stopped after the baseline author.** It saved correct free-form
    definitions, policy and synthetic owner consent, but noted that independent
@@ -76,6 +81,33 @@ pins local audit artifacts; it is not a public replay bundle. The original
 studies remain terminal. Their temporary homes were not retained, so another
 study cannot claim continuity by importing an approval.
 
+### Reference-only repair: native preflight passed, no paid cohort
+
+The new `--expert-reference` variant accepts free-form questions without a
+question-to-answer lookup. Both authors receive identical cited glossary and
+selected contract fields, explicitly marked `known=false`, `answer=null`,
+`reference_only`. It neither invents a definition nor confirms that a question
+is answered. Conflicting and missing declarations stay visible; source tools
+retain omitted contract details. Approval rules remain unchanged, and exact
+baseline note consent is checked separately from semantic review.
+
+Twenty-six new offline checks cover six public business fixtures, paraphrases,
+missing fields, conflicting periods, optional-source population decoys, bounded
+references, consent mutations and preflight control flow. These are software
+checks, not six enterprise trials or evidence of correct agent interpretation.
+
+The frozen native preflight passed from zero saved cards: identical references
+in both arms, one nonempty primary numerical comparison faithfully round-tripped,
+four source reads, zero agent invocations and zero provider requests. A preceding
+preflight only checked the first catalog item, corroborating metadata; that
+limited pass is retained, not credited as numeric-primary coverage. A regression
+now rejects an empty-comparison pass for this numeric fixture.
+
+Private native state is retained under mode 0700 for inspection, not public
+distribution. Its temporary source/proxy endpoints expire at exit; retained
+files do not implement resumable onboarding. No V3 paid cohort has run. The
+original missing semantics and business-outcome gates are not declared solved.
+
 ## Verified engineering changes
 
 - Relative percent-change conditions now honor `absolute=true`. Eight
@@ -93,10 +125,11 @@ study cannot claim continuity by importing an approval.
 
 | Verification on current production code | Result | What it does not prove |
 | --- | --- | --- |
-| Full software suite and lint | 3,577 passed, 11 skipped; 409.72 seconds | Not companies or an efficacy estimate |
+| Full software suite and lint on frozen code cd9c0e1 | 3,603 passed, 11 skipped; 227.68 seconds | Not companies or an efficacy estimate |
 | Native stdio context lifecycle | Passed on the current binary | No agent report or provider call |
 | Serial source/native skill and signed HTTP checks | 13 passed; 189.89 seconds | Synthetic issuer, not customer SSO |
 | Public two-brief context walkthrough | Passed; four source reads, zero provider attempts | Scripted owner, not autonomous onboarding |
+| New reference-mode primary preflight | Passed; both reference hashes matched, one primary comparison, four source reads | Zero agents/Jev; not semantic sufficiency or completed onboarding |
 
 **Retained failures:** the first combined native run had 12 passes and two
 failures: a 30-second skill-install timeout and a 401 when reusing the old curator
@@ -152,6 +185,17 @@ be reproduced from public Git alone. The public layout excerpt has separate
 arithmetic/disclosure checks in `tests/test_layout_diagnostic_fixture.py`;
 these do not reproduce an agent study.
 
+The new reference preflight needs the built executable and the runner's pinned
+Codex CLI, but no live key or paid request. Use an unused output directory:
+
+```sh
+uv run python -m evaluations.public_owner_report_trial --expert-reference \
+  --binary dist/signalweave --codex-executable /path/to/pinned/codex \
+  --output artifacts/my-source-reference-preflight
+```
+
+Do not add `--run` without freezing a separate paid protocol and review plan.
+
 These SHA-256 identities identify local ignored files, not public inputs:
 
 | Artifact | SHA-256 |
@@ -161,6 +205,7 @@ These SHA-256 identities identify local ignored files, not public inputs:
 | Independent V2 diagnosis | cd1c0e7b37404ff0cd70493a3de953a013e190f68b0a8aef709e828712f9d54d |
 | Serial native JUnit | 0d9d095ae7b5264c48f1c0f972ed4404f952e0f26b5a2e93104ebf9ecd9cd247 |
 | Serial public walkthrough report | 634b7be2ffda1486d4e1487a18066b10842a5911d45b1a32c6906465386f5876 |
+| Reference-mode primary preflight report | 5e0c3ba15bda5ae3d4acdcd7f5da7a7b372d39faa6f700568292927f979be897 |
 
 ## Next acceptance gates
 

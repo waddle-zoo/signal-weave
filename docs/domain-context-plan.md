@@ -124,6 +124,13 @@ population decoys, exact note-consent checks and unchanged card approval.
 These are reference-fidelity checks, not six enterprise trials. The zero-model
 native preflight checks both arms' reference hashes, common schemas and source
 bridge fidelity. It uses a dummy key and a zero-request provider budget.
+The current frozen preflight passed on the declared primary source with one
+nonempty analytical comparison, four source reads and zero agent/provider
+requests. The earlier first-catalog-item metadata-only pass remains retained;
+it is not credited as primary numerical coverage. No paid V3 cohort has run.
+Final verification of frozen code `cd9c0e1`: lint passed; 3,603 tests passed,
+11 skipped, in 227.68 seconds. The focused reference/onboarding contracts passed
+45 checks. These totals are software verification, not business outcomes.
 
 This variant retains `private-native-state` under its exclusive ignored output
 directory with mode 0700 for inspection after a stop. It is sensitive local
