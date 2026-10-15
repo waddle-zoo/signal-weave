@@ -10,7 +10,7 @@ from tests.test_public_context_setup import FakeNative
 
 
 @pytest.mark.parametrize("fault", [None, "old-revision", "draft-context", "routed", "wrong-source", "no-values", "no-provenance",
-                                   "secondary-error", "secondary-missing", "packet-errors", "wrong-card", "wrong-result-card", "wrong-version", "unchanged-context"])
+                                   "secondary-error", "secondary-missing", "packet-errors", "wrong-card", "wrong-result-card", "wrong-version", "unchanged-context", "unchanged-content"])
 async def test_public_runner_keeps_zero_budget_and_rejects_false_green_packets(tmp_path, monkeypatch, fault):
     class Native(FakeNative):
         content = None
@@ -19,11 +19,13 @@ async def test_public_runner_keeps_zero_budget_and_rejects_false_green_packets(t
             if name == "onboard_insight_card":
                 self.selected = args["selected_sources"]
             if name == "save_domain_context":
+                previous_content = self.content
                 self.content = KnowledgeContent.model_validate(args["content"]).model_dump(mode="json")
                 if self.context:
                     if fault == "unchanged-context":
                         return None, dict(self.context)
-                    self.context = {**self.context, "revision": 3, "status": "draft"}
+                    self.context = {**self.context, "revision": 3, "status": "draft",
+                                    "content": previous_content if fault == "unchanged-content" else self.content}
                     return None, dict(self.context)
             if name == "retrieve_domain_context":
                 return None, {"entries": [{**self.context, "content": self.content,

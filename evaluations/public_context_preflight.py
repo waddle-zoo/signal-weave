@@ -72,13 +72,15 @@ async def run(binary, output):
                         raise RuntimeError("Shared reviewed definition was not retrievable")
                     report["retrieved_context"] = retrieved
                     # A new DRAFT meaning must not silently reuse an old approval.
+                    changed_content = {**spec["context"], "body": spec["context"]["body"] + " The owner is reviewing whether partner sales should enter this definition; this change is not approved."}
                     _, changed = await native.call_tool("save_domain_context", {
                         "entry_id": entry["id"], "expected_revision": entry["revision"],
-                        "content": {**spec["context"], "body": spec["context"]["body"] + " The owner is reviewing whether partner sales should enter this definition; this change is not approved."},
+                        "content": changed_content,
                     })
                     report["changed_context"] = changed
                     if (changed["id"] != entry["id"] or changed["revision"] != entry["revision"] + 1
-                            or changed["status"] != "draft"):
+                            or changed["status"] != "draft"
+                            or changed["content"] != KnowledgeContent.model_validate(changed_content).model_dump(mode="json")):
                         raise RuntimeError("Meaning edit did not create the next draft revision")
                     report["deferred_runs"] = []
                     for card, draft in zip(setup["cards"], spec["cards"], strict=True):

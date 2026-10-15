@@ -587,8 +587,8 @@ class InsightAuthoringService:
     ) -> ResourceDiscovery:
         """Build an inspectable discovery receipt from caller-selected sources.
 
-        This is intentionally not a semantic ranking operation. The caller's
-        agent owns asset discovery and analytical interpretation; SignalWeave
+        This is intentionally not a semantic ranking operation. The caller
+        owns asset discovery and analytical interpretation; SignalWeave
         only re-authorizes the exact refs and records the contracts that were
         used to build the card. A selected source gets a relevance of ``1`` as
         an identity marker, not as a Jev score.
