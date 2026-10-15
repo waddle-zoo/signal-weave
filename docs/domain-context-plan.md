@@ -233,3 +233,11 @@ as permission to start further invocations.
 See the [preview evidence](evidence/domain-context-preview-2026-10-14.md) for
 observed gates, retained failures and exact native identity. This milestone is
 not complete; the feature remains opt-in and the PR remains draft.
+
+The native hosted path now has an inference-free opt-in protocol check:
+`tests/test_context_native_http_integration.py`. Distinct signed client subjects
+reuse reviewed context through actual HTTP MCP, including after server restart;
+scope/tenant boundaries and overdue-draft review polling are exercised against
+local Superset metadata authorization. The synthetic issuer and protocol note
+do not establish customer SSO or analytical usefulness. This closes a transport
+test gap, not the owner-confirmed onboarding/recurring-run business-value gate.

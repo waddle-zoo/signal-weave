@@ -222,3 +222,38 @@ survived the company-MCP round trip, with zero agent invocations and zero
 provider attempts. Its baseline/treatment tool schemas serialized to
 2,601/35,401 bytes. This is setup integrity and schema size, not token usage,
 onboarding success, or a measured business benefit.
+
+## Native hosted-context check — 2026-10-15
+
+`tests/test_context_native_http_integration.py` passed **11 checks in 27.92
+seconds**: ten local-fixture URL boundary cases and one actual native HTTP
+lifecycle. It uses the repair binary/fingerprint above, a private temporary
+home, a synthetic signed loopback issuer, and the existing local Superset
+fixture. No personal agent registration or inference is involved; the startup
+provider key is synthetic and the provider endpoint rejects every call.
+
+The HTTP lifecycle verified missing/invalid/expired/wrong-audience token
+rejection, curator identity from the JWT rather than the local setup identity,
+reviewed context reuse by a second client subject, read-only write rejection,
+foreign-tenant exclusion, and persistence after server restart. After the
+curator changed the note into an overdue draft, default retrieval did not fall
+back to its older reviewed revision; review-due polling returned the new draft.
+Superset metadata authorization was observed; analytical chart data was not read.
+
+An independent reviewer identified a remote-URL override risk in the test.
+The corrected check validates loopback-only fixture URLs before setup and no
+longer reads a real provider key. The reviewer gave a scoped GO after those
+repairs. This is not customer SSO validation, reminder delivery, an autonomous
+agent trial, or evidence of better reports/alerts.
+
+Reproduce against a deliberately selected local synthetic Superset fixture:
+
+```sh
+RUN_CONTEXT_HTTP_INTEGRATION=1 SIGNALWEAVE_BINARY="$PWD/dist/signalweave" \
+  uv run pytest tests/test_context_native_http_integration.py -q \
+  -o junit_family=legacy --junitxml=artifacts/context-native-http.xml
+```
+
+The executable must match the current production fingerprint. The HTTP test
+requires no real provider key. Native HTTP JUnit SHA-256:
+`455b7d5166ac450757009366bc338f0a8eb146e67280e9de4be05bc9213bedc2`.
