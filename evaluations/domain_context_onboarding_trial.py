@@ -260,7 +260,7 @@ class HandoffEpisode(Episode):
         self.owner_answers = copy.deepcopy(owner_answers)
         self.first_setup_entry = copy.deepcopy(first_setup_entry)
         self.first_card = copy.deepcopy(first_card)
-        self.owner_answers_delivered = list(self.owner_answers or {})
+        self.owner_answer_topics_delivered: list[str] = []
         self.revision_attempted = False
         self.revision_verified = False
         self.finished_stages: set[str] = set()
@@ -297,8 +297,6 @@ class HandoffEpisode(Episode):
                 self.stop("declared owner answer is missing; do not infer or retry")
             answer = self.owner_answers[topic]
             self.owner_requests.append({"topic": topic, "stage": "second", "answer_status": "answered"})
-            if topic not in self.owner_answers_delivered:
-                self.owner_answers_delivered.append(topic)
             return {"topic": topic, "answer_status": "answered", "answer": answer}
 
         if name == "finish_setup":
@@ -339,14 +337,19 @@ class HandoffEpisode(Episode):
                 self.stop("the same-card revision already succeeded; do not revise it again")
             card_id = self.first_card.get("id")
             first_version = self.first_card.get("version")
-            if args.get("card_id") != card_id or type(first_version) is not int:
-                self.stop("revising a different card is outside this cohort")
+            if not isinstance(card_id, str) or not card_id or type(first_version) is not int:
+                self.stop("saved first-turn card identity is invalid")
             _, before = await self.native.call_tool("get_insight_card", {
                 "card_id": card_id, "response_mode": "full",
             })
             if (not isinstance(before, dict) or before.get("id") != card_id
                     or before.get("version") != first_version or before.get("status") != "draft"):
                 self.stop("saved card changed outside the expected owner revision")
+            if args.get("card_id") != card_id:
+                raise ValueError("revise the exact saved card ID from the first author turn")
+            if (type(args.get("expected_card_version")) is not int
+                    or args["expected_card_version"] != first_version):
+                raise ValueError("expected_card_version must match the saved card's current version")
             result = await super().call(name, args)
             self.revision_attempted = True
             revised = result.get("card") if isinstance(result, dict) else None
@@ -721,9 +724,34 @@ async def run_owner_workflow(args):
             scope="Two-turn owner-handoff development feasibility pair; a first-turn pending answer is the intended handoff, not completed setup or a failure.",
             limits=dict(OWNER_HANDOFF_LIMITS),
             pair_status="incomplete",
+            common_glossary_context={
+                "population_source_scope": copy.deepcopy(public["glossary"]["population"]),
+                "available_to_both_first_turns": True,
+                "classification": "Shared glossary context, not an answered ask_owner request.",
+                "response_channel_unavailable_first": True,
+                "owner_response_topics_supplied_on_second_turn": list(public["owner_topics"]),
+                "policy_decisions_withheld_until_second_turn": [
+                    "action threshold", "owner-route confirmation",
+                ],
+            },
+            owner_answer_topics_delivered={},
+            scoring_semantics={
+                "owner_question_topic_coverage_complete": (
+                    "Renamed from the global scorer's owner_policy_complete; it measures observed "
+                    "ask_owner topic coverage, not delivered-answer coverage or policy approval."
+                ),
+                "legacy_exact_including_question_coverage": (
+                    "This preserves the global scorer's exact value and error diagnostics, including "
+                    "asked-topic coverage; it is not business correctness when owner answers were supplied. "
+                    "Review outcome, numeric and provenance fields individually; independent review gates reports."
+                ),
+                "semantic_completion_gate": "Both independent semantic reviews must approve before reports.",
+            },
             limitations=[
                 "Same clarified Pine Courier development fixture and fixed monitoring period index 0; not a holdout or accuracy estimate.",
                 "First-turn ask_owner calls return pending; both fresh second authors receive the same complete declared public owner-answer packet.",
+                "The population/source_scope definition is common glossary context available to both first turns. The first-turn owner-response channel is pending; all declared owner responses are supplied in turn two, though some facts may overlap with brief/glossary context. Only the action threshold and owner-route confirmation are designated as withheld until turn two.",
+                "Structured-score owner topic coverage is based on observed ask_owner calls, not the full answer packet; it is not a semantic-completion or product-failure signal. Independent semantic review gates completion.",
                 "Both arms retain source discovery, glossary access, own durable notes and their first-turn handoff; arbitrary scripts are disabled.",
                 "SignalWeave uses the explicitly supplied project-installed skill and must revise the same draft card by one version.",
                 "Synthetic owner answers and independent semantic reviews are not real human approval; no delivery or schedule is authorized.",
@@ -886,7 +914,8 @@ async def run_owner_workflow(args):
             handoff_packets[arm] = copy.deepcopy(packet["owner_answers"])
             session.stage = "second"
             session.owner_answers = copy.deepcopy(packet["owner_answers"])
-            session.owner_answers_delivered = list(packet["owner_answers"])
+            session.owner_answer_topics_delivered = list(packet["owner_answers"])
+            report["owner_answer_topics_delivered"][arm] = list(session.owner_answer_topics_delivered)
             session.setup = None
             session.setup_complete = False
             session.first_setup_entry = copy.deepcopy(first_entries[arm])
@@ -907,7 +936,7 @@ async def run_owner_workflow(args):
                     "questions": copy.deepcopy(packet["owner_questions"]),
                     "saved_card": copy.deepcopy(packet.get("saved_card")),
                 },
-                "owner_answer_topics_delivered": list(packet["owner_answers"]),
+                "owner_answer_topics_delivered": list(session.owner_answer_topics_delivered),
                 "setup": copy.deepcopy(session.setup), "notes": session.notes,
                 "owner_requests": copy.deepcopy(session.owner_requests),
                 "native_calls": copy.deepcopy(session.native_calls), "source_reads": len(reads),
@@ -1006,13 +1035,24 @@ async def run_owner_workflow(args):
             entry = {"arm": arm, "stage": "fresh_report", "agent": result,
                      "submission": session.submission, "native_calls": session.native_calls,
                      "source_reads": adapter.inspections,
-                     "approved_card_execution_verified": session.evaluation_verified if treatment else None}
+                     "approved_card_execution_verified": session.evaluation_verified if treatment else None,
+                     "owner_answer_topics_delivered": list(report["owner_answer_topics_delivered"].get(arm, []))}
             if session.submission:
-                entry["structured_score"] = score_submission(
+                asked_topics = [item["topic"] for item in setup.owner_requests
+                                if isinstance(item.get("topic"), str)]
+                entry["owner_topics_asked"] = copy.deepcopy(asked_topics)
+                structured_score = score_submission(
                     scenario, period["period_id"], session.submission,
                     inspected_refs=adapter.inspected,
-                    asked_owner_topics=setup.owner_answers_delivered,
+                    asked_owner_topics=asked_topics,
                 )
+                if "owner_policy_complete" in structured_score:
+                    structured_score["owner_question_topic_coverage_complete"] = structured_score.pop(
+                        "owner_policy_complete"
+                    )
+                if "exact" in structured_score:
+                    structured_score["legacy_exact_including_question_coverage"] = structured_score.pop("exact")
+                entry["structured_score"] = structured_score
             report["episodes"].append(entry)
             require_known_invocation_usage()
             if result.get("status") != "complete":

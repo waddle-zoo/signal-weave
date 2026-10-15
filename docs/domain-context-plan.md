@@ -80,7 +80,10 @@ earlier attempts and costs reported separately, with no automatic rerun.
 
 Each arm first inspects sources and saves its working draft/notes, then pauses
 with a focused policy question. The scripted owner is unavailable for answers
-during this turn. In a second charged, fresh session the owner supplies the
+during this turn, but the common glossary already supplies the population and
+source-scope definition in both arms. These definitions are available pre-turn
+context, not withheld answers. Materiality, routing and the other declared owner
+policies are supplied in a second charged, fresh session; the owner supplies the
 same declared policy answers to both arms. Each agent resumes its saved work;
 SignalWeave must revise the same card rather than silently create a replacement.
 Both keep their source tools and retrievable glossary. The test supplies the
@@ -93,6 +96,13 @@ period's report. Treatment must evaluate its exact approved card with the fixed
 run key. Compare final human-facing claims, recipients, source evidence and
 usefulness; a correct API receipt alone is not a successful report. No message
 is sent and no schedule is created.
+
+Record actual asked topics separately from answer topics delivered in the
+second-turn packet. The legacy scorer's `owner_policy_complete` field measures
+asked-topic coverage; it cannot prove policy understanding or replace independent
+semantic review. A malformed tool argument may be corrected inside the charged
+turn's tool cap. A changed saved-card state, a replacement card, incomplete
+resumption or another author invocation is not such an argument correction.
 
 Caps: eight Codex invocations total, 24 tools/240 seconds per author turn, two
 tools/90 seconds per reviewer, twelve tools/180 seconds per report, and two live

@@ -104,6 +104,8 @@ class FakeNative:
         if name == "get_insight_card":
             return [], deepcopy(self.card)
         if name == "revise_insight_card":
+            if not isinstance(args.get("changes"), dict) or not args.get("reason"):
+                raise ValueError("revise_insight_card requires changes and reason")
             if (type(args.get("expected_card_version")) is not int
                     or args["expected_card_version"] != self.card["version"]):
                 raise ValueError("card version changed; get and review the current card before revising")
@@ -118,10 +120,25 @@ async def test_revision_allows_argument_correction_but_requires_same_card_versio
     session = episode(stage="second", owner_answers={"materiality": "Declared policy."},
                       native=native, first_card=first_card)
 
-    with pytest.raises(ValueError, match="card version changed"):
+    with pytest.raises(ValueError, match="exact saved card ID"):
+        await session.call("revise_insight_card", {
+            "card_id": "mistyped-card-id", "expected_card_version": 7,
+            "changes": {"decision_guidance": "Clarified policy."}, "reason": "Owner answer",
+        })
+    assert session.terminal_stop is None
+    assert not session.revision_attempted
+
+    with pytest.raises(ValueError, match="expected_card_version"):
         await session.call("revise_insight_card", {
             "card_id": "saved-card", "expected_card_version": 6,
             "changes": {"decision_guidance": "Clarified policy."}, "reason": "Owner answer",
+        })
+    assert session.terminal_stop is None
+    assert not session.revision_attempted
+
+    with pytest.raises(ValueError, match="requires changes and reason"):
+        await session.call("revise_insight_card", {
+            "card_id": "saved-card", "expected_card_version": 7, "reason": "Owner answer",
         })
     assert session.terminal_stop is None
     assert not session.revision_attempted
@@ -136,17 +153,19 @@ async def test_revision_allows_argument_correction_but_requires_same_card_versio
     assert session.revision_verified
 
 
-async def test_different_card_and_unresolved_second_turn_are_terminal_stops():
+async def test_changed_saved_card_and_unresolved_second_turn_are_terminal_stops():
     first_card = {"id": "saved-card", "version": 2, "status": "draft"}
     native = FakeNative(first_card)
     session = episode(stage="second", owner_answers={"materiality": "Declared policy."},
                       native=native, first_card=first_card)
-    with pytest.raises(ValueError, match="different card"):
+    native.card["version"] = 3
+    with pytest.raises(ValueError, match="saved card changed outside"):
         await session.call("revise_insight_card", {
-            "card_id": "replacement-card", "expected_card_version": 2,
+            "card_id": "saved-card", "expected_card_version": 2,
             "changes": {"decision_guidance": "Policy."}, "reason": "Owner answer",
         })
-    assert native.calls == []
+    assert session.terminal_stop is not None
+    assert [name for name, _ in native.calls] == ["get_insight_card"]
 
     unresolved = episode(stage="second", owner_answers={"materiality": "Declared policy."})
     with pytest.raises(ValueError, match="second author turn remains unresolved"):
@@ -296,14 +315,13 @@ def install_owner_handoff_runner_fakes(monkeypatch, tmp_path, *, review_decision
         is_treatment = session.native is not None
         if label.endswith("-first"):
             author_source_refs.append((label, await read_same_source(session)))
-            if label.startswith("baseline-"):
-                glossary = await session.call("read_company_glossary", {})
-                assert glossary["definitions"]["population"]
-            pending = await session.call("ask_owner", {"topic": "materiality"})
+            glossary = await session.call("read_company_glossary", {})
+            assert glossary["definitions"]["population"]
+            pending = await session.call("ask_owner", {"topic": "routing"})
             assert pending["answer_status"] == "pending_owner_answer"
             assert pending["answer"] is None
             await session.call("save_working_notes", {
-                "notes": "Same source notes in both arms; a materiality policy answer is pending.",
+                "notes": "Same source notes in both arms; routing policy answer is pending.",
             })
             card_ids = []
             if is_treatment:
@@ -314,25 +332,25 @@ def install_owner_handoff_runner_fakes(monkeypatch, tmp_path, *, review_decision
             await session.call("finish_setup", {
                 "card_ids": card_ids,
                 "message": "The declared source is available; owner policy remains pending.",
-                "unresolved": ["Which materiality policy should govern the recurring action?"],
+                "unresolved": ["Which authorized destination should receive the recurring action?"],
             })
         elif label.endswith("-second"):
             packet = deepcopy(kwargs["prompt_override"])
             handoff_packets.append((label, packet))
             assert packet["owner_answers"]
-            assert packet["saved_notes"] == "Same source notes in both arms; a materiality policy answer is pending."
+            assert packet["saved_notes"] == "Same source notes in both arms; routing policy answer is pending."
             author_source_refs.append((label, await read_same_source(session)))
-            answer = await session.call("ask_owner", {"topic": "materiality"})
+            answer = await session.call("ask_owner", {"topic": "routing"})
             assert answer["answer_status"] == "answered" and answer["answer"]
             await session.call("save_working_notes", {
-                "notes": "Same source notes in both arms; apply the declared owner policy.",
+                "notes": "Same source notes in both arms; apply the declared routing policy.",
             })
             card_ids = []
             if is_treatment:
                 first = session.first_card
                 revised = await session.call("revise_insight_card", {
                     "card_id": first["id"], "expected_card_version": first["version"],
-                    "changes": {"decision_guidance": "Apply the declared materiality policy."},
+                    "changes": {"decision_guidance": "Apply the declared routing policy."},
                     "reason": "Apply the supplied owner answer.",
                 })
                 assert revised["card"]["id"] == first["id"]
@@ -428,6 +446,8 @@ async def test_runner_executes_full_eight_invocation_handoff_and_receipt_gate(mo
     assert all(entry["setup"]["unresolved"] for entry in first_entries)
     assert all(any(item["answer_status"] == "pending" for item in entry["owner_requests"])
                for entry in first_entries)
+    assert all(not any(item.get("topic") == "source_scope" for item in entry["owner_requests"])
+               for entry in first_entries)
     assert first_entries[1]["first_card"]["version"] == 1
 
     second_entries = report["episodes"][2:4]
@@ -454,6 +474,17 @@ async def test_runner_executes_full_eight_invocation_handoff_and_receipt_gate(mo
         for item in state.review_inputs
     ]
     assert review_source_refs[0] == review_source_refs[1]
+    assert report["common_glossary_context"]["available_to_both_first_turns"] is True
+    assert report["common_glossary_context"]["response_channel_unavailable_first"] is True
+    assert report["common_glossary_context"]["population_source_scope"] == expected_public["glossary"]["population"]
+    assert set(report["common_glossary_context"]["owner_response_topics_supplied_on_second_turn"]) == set(expected_public["owner_topics"])
+    assert set(report["owner_answer_topics_delivered"]["baseline"]) == set(expected_public["owner_topics"])
+    assert set(report["owner_answer_topics_delivered"]["signalweave"]) == set(expected_public["owner_topics"])
+    assert report["common_glossary_context"]["policy_decisions_withheld_until_second_turn"] == [
+        "action threshold", "owner-route confirmation",
+    ]
+    assert "owner_policy_complete" in report["scoring_semantics"]["owner_question_topic_coverage_complete"]
+    assert "independent semantic reviews" in report["scoring_semantics"]["semantic_completion_gate"].lower()
     assert state.native.revisions[0]["card_id"] == "handoff-card-1"
     assert state.native.revisions[0]["expected_card_version"] == 1
     assert state.native.card["version"] == 2 and state.native.card["status"] == "approved"
@@ -466,6 +497,15 @@ async def test_runner_executes_full_eight_invocation_handoff_and_receipt_gate(mo
                for option in state.codex_options if "-handoff-first" in option["label"]
                or "-handoff-second" in option["label"])
     assert all(entry["source_reads"] == 1 for entry in report["episodes"][-2:])
+    for report_entry in report["episodes"][-2:]:
+        assert report_entry["owner_topics_asked"] == ["routing", "routing"]
+        assert set(report_entry["owner_answer_topics_delivered"]) == set(expected_public["owner_topics"])
+        score = report_entry["structured_score"]
+        assert score["owner_question_topic_coverage_complete"] is False
+        assert "owner_policy_complete" not in score
+        assert type(score["legacy_exact_including_question_coverage"]) is bool
+        assert "exact" not in score
+        assert "missing_owner_policy_lookup" in score["errors"]
 
 
 async def test_first_rejected_review_stops_before_second_review_and_reports(monkeypatch, tmp_path):
