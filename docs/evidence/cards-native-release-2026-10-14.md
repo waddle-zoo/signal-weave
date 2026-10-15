@@ -107,7 +107,8 @@ Captured public journey log SHA-256:
 A real Docker build exposed a missing package input: the Dockerfile did not
 copy the bundled skill required by `pip install .`. The corrected image copies
 the canonical skill and license, omits test files, and excludes local artifacts,
-credential files, and agent configuration directories from the build context.
+standard credential paths/patterns, and agent configuration directories from the
+build context. Arbitrarily named secret files still require operator review.
 CI now builds the image and checks its installed CLI and skill as non-root.
 
 The locally built image passed an actual HTTP MCP check with synthetic
