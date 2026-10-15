@@ -523,6 +523,48 @@ separate frozen reporter experiment is proposed for independent review.
 Do not alter this accepted card or invent a metric-specific Python rule to make
 the old report pass. No further inference belongs to the closed canary or study.
 
+### Evidence-first handoff diagnostic
+
+The next candidate is research-only (`evaluations/evidence_first_handoff.py`),
+not another provider, a policy change, or a production response-mode change.
+Keep the primary result, card and receipt unchanged except for moving the
+structured report into a separately labeled audit view. Remove report evidence
+only when its JSON representation exactly duplicates primary evidence; Boolean,
+integer and floating-point values must not be conflated by Python equality.
+Page only unambiguously mapped, explicitly optional semantic assessments.
+Retain every required/unmapped assessment and every audit blocker, warning,
+coverage row, boundary, limitation, numeric check and validated claim. Original
+receipt section paths remain explicit. Missing, malformed, paged and deferred
+handoffs conservatively retain their existing presentation.
+
+First establish field/type preservation, exact reconstruction through the cached
+page function, and rate/additive/scalar/null regression coverage. The first offline
+probe covered five correlated cached packets from two earlier cohorts, including
+the older calendar-invalid windows; it measures serialization fidelity, not
+business correctness. Independent review then caught the Boolean/integer equality
+bug. Preserve that artifact as evidence for its recorded source hash only; a new
+exclusive artifact must validate the corrected code. No source/provider/agent
+calls belong to these probes. A later reporter experiment requires a separately
+frozen protocol and independent approval; neither a smaller packet nor green
+software tests establish improved reports or authorize the stopped six-report run.
+
+If corrected-code verification and independent review pass, separately freeze
+`evidence-first-pair-v1`: exactly two fresh Luna-medium reporter invocations over
+the same cached complete-period handoff used by the closed canary, one existing
+layout and one candidate layout, candidate first. Both receive identical owner
+context, source facts, historical clocks, instructions and tools. Only the
+handoff projection differs. Expose `record_report` plus read-only paging of the
+same captured sections to both; explicitly label those pages as cached, not new
+native execution. Six tools/90 seconds per invocation, no retries, no new source,
+native or Jev calls. Stop before another invocation at 150k cumulative input or
+50k uncached tokens, unknown usage or incomplete reporting. Preserve all costs.
+Two fresh label-masked reviewers use the existing seven gates and actual input
+facts; count preservation and no false volume-unknown claim are primary. A
+non-improvement or new defect stops expansion. This is a paired diagnostic, not
+an accuracy estimate, connector test, fresh onboarding trial, or comparison of
+SignalWeave against an agent without it. No production promotion follows from
+one pair; additional missing-data and independent-domain checks remain required.
+
 ### Native approved-card clarification check
 
 Separately preregister `approved-card-clarification-v1`: reuse the existing
