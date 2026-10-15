@@ -269,7 +269,9 @@ async def run(args):
                                     or hashlib.sha256(json.dumps(clarification["reference"], sort_keys=True).encode()).hexdigest() != report["source_reference_sha256"]):
                                 raise RuntimeError("Source reference differs from the shared public declarations")
                             report.setdefault("reference_preflight_arms", []).append(arm)
-                        asset = (await session.call("list_company_assets", {}))["assets"][0]
+                        assets = (await session.call("list_company_assets", {}))["assets"]
+                        asset = (next(item for item in assets if item.get("contract", {}).get("roles") == ["primary"])
+                                 if reference_mode else assets[0])
                         await session.call("read_company_asset", {"ref": asset["adapter"] + "|" + asset["resource"]})
                         if treatment:
                             _, snapshot = await native.call_tool("inspect_resource", {
@@ -280,6 +282,11 @@ async def run(args):
                             if (snapshot["contract"]["tenant_id"] != public["scenario_id"]
                                     or any(snapshot[field] != expected[field] for field in ("observations", "evidence", "analytical_comparisons"))):
                                 raise RuntimeError("Native bridge altered current analytical facts or tenant")
+                            if reference_mode:
+                                if not expected["analytical_comparisons"]:
+                                    raise RuntimeError("This numeric public fixture must exercise a nonempty primary comparison")
+                                report["preflight_verified_source_ref"] = asset["adapter"] + "|" + asset["resource"]
+                                report["preflight_primary_comparisons"] = len(expected["analytical_comparisons"])
                             report["preflight_bridge_fidelity_verified"] = True
                         report_specs = await HumanReportEpisode(public, adapter, native if treatment else None).specs()
                         pin_tools(report_specs)

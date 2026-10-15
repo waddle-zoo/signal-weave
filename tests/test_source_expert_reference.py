@@ -173,6 +173,10 @@ async def test_reference_preflight_checks_both_arms_without_inference(tmp_path, 
     result = await trial.run(args)
     assert result["completed"]
     assert result["reference_preflight_arms"] == ["baseline", "signalweave"]
+    primary = next(item for item in trial.scenario()["public"]["catalog"]
+                   if item["contract"].get("roles") == ["primary"])
+    assert result["preflight_verified_source_ref"] == primary["adapter"] + "|" + primary["resource"]
+    assert result["preflight_primary_comparisons"] > 0
     assert result["provider_attempts"] == 0 and result["agent_invocations_started"] == 0
     assert state["sequence"] == []
 
@@ -185,6 +189,25 @@ async def test_reference_does_not_bypass_rejected_semantic_review(tmp_path, monk
     assert state["model_calls"] == [("author", "baseline")]
     assert result["provider_attempts"] == 0
     assert (tmp_path / "trial-output/private-native-state/native-home").is_dir()
+
+
+async def test_reference_preflight_does_not_pass_on_only_empty_comparisons(tmp_path, monkeypatch):
+    args, state, _, _ = _patch_offline(monkeypatch, tmp_path, live=False)
+    args.expert_reference = True
+    original = trial.scenario
+
+    def empty_primary():
+        fixture = original()
+        for snapshot in fixture["public"]["onboarding"]["snapshots"].values():
+            snapshot["analytical_comparisons"] = []
+        return fixture
+
+    monkeypatch.setattr(trial, "scenario", empty_primary)
+    result = await trial.run(args)
+    assert not result.get("completed", False)
+    assert not result.get("preflight_bridge_fidelity_verified", False)
+    assert "nonempty primary comparison" in json.dumps(result["failure"])
+    assert state["sequence"] == [] and result["provider_attempts"] == 0
 
 
 @pytest.mark.parametrize("fault", ["missing", "changed-after-consent"])
