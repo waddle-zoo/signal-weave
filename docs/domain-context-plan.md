@@ -10,7 +10,7 @@ Feature branch: `feat/domain-context-memory`, based on main `e8842ac`.
 | Card-bound meaning and staleness | Contract tests cover exact pins, reapproval, deferred policy and historical receipts; no automatic notification service is claimed |
 | Approved cards with live decisions | Current native clarification v2 matched three supplied retail periods with live Jev, exact routes and receipt versions; changed required meaning preserved facts without another model call. Scripted owner, not autonomous onboarding |
 | Human-first, agent-led onboarding | V4 completed both pending-owner handoffs, both answer-application turns and both independent policy reviews. Treatment revised the same draft v2 → approved v3. One scripted-owner development case, not a real human wizard or varied-company success rate |
-| Useful recurring reports and investigations | Historical simulations remain evidence for their own versions; current cross-session final-agent outcomes, diverse connectors and meaningful changed-context cases remain unproven |
+| Useful recurring reports and investigations | Report-only follow-up completed all six fresh agents and three live Jev calls with correct policy outcomes. Narrative omission and scorer/recipient ambiguity remain; diverse connectors, cross-card reuse and changed-context agent behavior are unproven |
 | Comparative business value | No current context-layer advantage over an equal-information agent baseline has been established; report usefulness, noise/misses, source work and complete costs are still required |
 
 These are separate gates. Passing storage, authentication or a scripted decision
@@ -273,6 +273,18 @@ build verification, zero-inference restore/source/schema preflight, frozen-runne
 review, and explicit live opt-in before the one attempt. This is one development
 company with three periods, not varied enterprises, a held-out benchmark,
 cross-card context reuse or proof of advantage.
+
+This cohort is closed after all six reports and three live Jev calls, with known
+usage and no retry. Both arms got all three policy outcomes correct. Treatment
+used fewer tool calls but more agent input tokens and mischaracterized available
+denominator counts as unresolved volume. Do not confuse an optional predicate's
+`unknown` judgment with missing measurements. Next inspect the fact-versus-policy
+handoff and partial-analysis facts, then test any repair without rewriting the
+closed scores. Also distinguish actual receipt citations from source-backed
+measurement citations and report audiences from alert recipients; neither a raw
+score flag nor a correct policy label substitutes for reading the final report.
+No overall advantage, warehouse-query saving, cross-card reuse or certification
+is established. See the current concise evidence for exact costs and identities.
 
 ### Native approved-card clarification check
 

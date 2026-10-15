@@ -7,10 +7,12 @@ Main and the published rc3 download are unchanged.
 ## Current conclusion
 
 The context/card API and native transports have engineering evidence. One
-two-turn, scripted-owner onboarding pair now completed with independent policy
-reviews. Useful recurring agent reports and comparative business benefit are
-**not yet proved** on this feature branch. Do not interpret unit-test counts,
-synthetic approvals or a correct initial readout as that broader proof.
+two-turn, scripted-owner onboarding pair completed with independent policy
+reviews. Its report-only follow-up completed six fresh reports and three live
+Jev calls, with correct policy outcomes but mixed narrative quality and no
+overall cost/quality win. Comparative business benefit and enterprise readiness
+are **not yet proved**. Do not interpret unit-test counts, synthetic approvals or
+correct outcome labels as that broader proof.
 
 The [acceptance ledger](../domain-context-plan.md#current-acceptance-ledger)
 keeps the full goal open. This report is a current summary; the
@@ -25,11 +27,11 @@ reproduction details. No raw research files were deleted by this consolidation.
 | Context persistence and authorization | Contract tests; signed native HTTP checks, review/reuse, tenant/read-only rejection and restart | Synthetic issuer, not customer SSO |
 | Card/context dependency lifecycle | Exact revisions, source/meaning checks, reapproval, stale-context deferral and historical receipts | Not semantic graph traversal or automatic reminder delivery |
 | Same-card clarification | Owner-scoped revision preserves anchors/pins, increments version and clears approval/plan; concurrent lifecycle writes use exact-snapshot CAS | Source scope cannot be silently changed; JSON locking is process-local, multi-process uses SQLite |
-| Current native/local Superset | Clean-build check: 1 passed in 25.42 seconds, 10 MCP calls, 9 metadata reads, zero inference | Scripted isolated setup, not a real human wizard or analytical report |
-| Current native HTTP/context | 11 checks passed in 28.01 seconds; zero inference | Local signed issuer and Superset metadata, not customer deployment |
+| Current native/local Superset | Rebuilt-candidate stdio lifecycle: 1 passed in 26.18 seconds, 10 MCP calls, 9 metadata reads, zero inference | Scripted isolated setup, not a real human wizard or analytical report |
+| Current native HTTP/context | Signed HTTP reuse/roles/restart passed in 28.11 seconds; zero inference; 10 additional URL validators passed | Local signed issuer and Superset metadata, not customer deployment |
 | Live recurring decision lifecycle | Current scripted same-card clarification/reapproval matched all three supplied periods and exact routes; changed required meaning returned facts without another model call | Outcomes combine provider judgments and code guards; routes come from the card, not an invented model recipient |
 
-The bounded-handoff full suite passed **3,390 tests, 11 skipped, in 225.80 seconds**;
+The latest full suite passed **3,406 tests, 11 skipped, in 226.38 seconds**;
 Ruff and diff checks passed. These are software checks, not companies, business
 trials or an accuracy estimate.
 
@@ -137,6 +139,65 @@ remain described as recorded—not runtime-tested by this cohort. Synthetic
 notes approval and card approval are different artifacts, not a card-to-card
 comparison. This is not scientific peer review or customer validation.
 
+### Fresh reports after accepted onboarding
+
+`reviewed-setup-reports-v1` completed once, without retries or repairs, across
+the same three Pine Courier development periods. Both arms received the same
+accepted policy, owner answers, glossary and generic company tools. Treatment
+added the installed SignalWeave skill/native analysis tools: this is a whole-
+package comparison, not an isolated Jev ablation. The exact accepted card was
+restored into fresh SQLite and verified through the rebuilt native MCP; the
+original temporary home did not survive. No public import/reapproval or context
+reuse is claimed.
+
+| Check | Baseline | SignalWeave |
+| --- | --- | --- |
+| Final policy outcomes | `ignore`, `insufficient_data`, `notify`—all correct | Same, all correct |
+| Agent tool calls | 15 | 7 |
+| Source reads | 5 | 3 |
+| Agent episode seconds, summed | 62.36 | 51.81 |
+| Agent aggregate / uncached input tokens | 227,025 / 59,345 | 252,379 / 75,483 |
+
+All three native receipts used the accepted card/version 3 and correct fixed
+keys/routes with delivery disabled. Three real Jev requests used **18,434 input
+and 391 output tokens**, with known usage. Agent output tokens were 3,322 versus
+3,014. The combined new-agent usage plus both accepted onboardings is 1,438,752
+input / 324,128 uncached / 16,585 output tokens across twelve invocations; Jev
+usage is separate. All older failed/unknown cohorts remain separately recorded.
+
+These numbers do not establish a win: the two avoided reads were handbook
+context, not warehouse metric queries. Both arms made three primary metric
+reads. Treatment was slower in two periods; its smaller summed time came from
+the quiet period. It also used more input tokens, plus Jev, and had higher setup
+cost. No billed-dollar or statistically reliable speed claim follows.
+
+The raw structured report score was 2/3 in each arm, retained unchanged. The
+baseline's quiet report proposed the business owner despite `ignore`; report
+audience versus alert-recipient wording needs independent interpretation. The
+treatment's missing-data report cited its actual receipt as well as its source;
+the source-only scorer rejected the receipt reference. A legitimate workflow
+receipt is not automatically an unsupported measurement citation.
+
+More importantly, treatment said parcel volume was unresolved in both complete
+periods despite the same compact packet containing denominator counts of
+5,800 → 11,600. It followed an optional watch's `unknown` judgment instead of
+the available measurements. Correct policy/math did not guarantee a complete
+business explanation. Preserve this narrative defect; do not claim perfect
+reports or rerun the closed cohort to hide it.
+
+Retained `artifacts/reviewed-setup-reports-v1-live/report.json` SHA-256:
+`cf0c148c5ff31c98352e8c375670045dfcdacfb3f0c2d3ff0df437c2079c275e`;
+trace SHA-256:
+`3387a21ce9ceccd432c9c63a267ba9030c6f44ca84fbd3e9083cacfe4eb368db`.
+Runner SHA-256: `c3bc675a7f96117a042a1808d86fb19f74a2117ca0c20cf9663d19ef555fdf05`.
+Native source SHA-256: `bd1677659bb97626906514dc9cab21684882ad564bcbe56907b26e4ae5bcde5d`;
+binary SHA-256: `6f4e249d5196c80b4de2e1ba572cb8f17411ae3fd95b636ee0a18d24dea4ab78`.
+Build Git `7d9822e`, dirty flag true for the research-only checkout changes;
+source fingerprint matched current production. This is not a published rc3 asset.
+Independent agent review accepted this mixed evidence for publication, confirmed
+the volume-description defect and legitimate receipt citation, and rejected
+claims of advantage or warehouse-query savings. The broader goal remains open.
+
 ### Bounded card handoffs
 
 Card discovery now pages identity/status summaries instead of sending every
@@ -219,13 +280,21 @@ validated in that old series; they must not be backdated into its result.
 
 ## Identities and retained artifacts
 
-Current production/skill fingerprint:
+The rebuilt candidate's combined local-stdio/signed-HTTP check passed 12 tests
+(two actual native lifecycles and ten URL validators) in 54.79 seconds, with no
+provider inference. Local Superset metadata remained on loopback port 18089.
+Retained `artifacts/bounded-card-native-transports-v1.xml` SHA-256:
+`6db05641bd70d056ce8c0ccdb50c2c87b1334885e8f91bcfcd5675cdec723570`.
+Its recorded source/binary identities match the current report trial above.
+
+Earlier native lifecycle production/skill fingerprint:
 `60d7e67c5f11ceaf56518a323cf20909aabd28c317bf6f905ff47157cbdf0ac5`.
 Clean native build: `87f518c6f65ebb38ee1c2da842170236dd78e420`;
 binary SHA-256:
 `ca473d181de034c9e3b868376cf538d72275e4080027c37e0241911bdd34267a`.
-The executable matches current production source, despite later research-only
-commits. It is not the published rc3 binary, even though the package label matches.
+This executable matches the source used by those earlier lifecycle checks, not
+the later bounded-handoff change. Current report-trial binary/source identities
+are recorded above. Neither is the published rc3 binary, despite matching labels.
 The HTTP JUnit below records an earlier executable
 (`2ea5cab3c2fb623499ed6c7202fa4d1f7640d9688b53a08d96bebe02c5cdfdab`)
 with that same production fingerprint, not the clean binary's identity.
@@ -265,8 +334,8 @@ automatically rerun a stopped series or present these commands as business proof
 
 ## Remaining outcome gates
 
-Complete owner-answer resumption and approval with real agent use; obtain useful
-fresh recurring reports and investigations; demonstrate cross-card context reuse
+Expand the single scripted-owner onboarding result; improve and validate final
+report completeness and investigations; demonstrate cross-card context reuse
 and changed-meaning behavior; expand to diverse real connector paths and held-out
 business cases with equal information and full accounting. Customer SSO,
 interactive human onboarding, actual scheduling/delivery and enterprise efficacy
