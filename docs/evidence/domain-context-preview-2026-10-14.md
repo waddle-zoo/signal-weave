@@ -4,7 +4,19 @@ Scope: `feat/domain-context-memory`, based on main `e8842ac`.
 [Draft PR #19](https://github.com/waddle-zoo/signal-weave/pull/19) is not a
 release or enterprise-readiness approval. The published rc3 download is unchanged.
 
-## What ran
+## Current checkpoint
+
+Owner clarification can now revise the same card, with renewed review/approval
+and snapshot-safe lifecycle writes. Native local Superset and hosted-context
+checks passed. The latest live two-turn attempt is **invalid as a comparison**:
+a research-tool schema bug blocked both arms. That bug is fixed with serialized
+schema tests, but the repaired agent flow has not been live validated. Useful
+recurring reports and a context-layer advantage remain open gates. See the
+[repair](#same-card-clarification-repair),
+[latest attempt](#two-turn-handoff-attempt-invalid-research-schema-not-a-product-comparison),
+and [acceptance ledger](../domain-context-plan.md#current-acceptance-ledger).
+
+## Initial substrate checks
 
 | Gate | Observed result |
 | --- | --- |
@@ -428,3 +440,53 @@ while they were being edited and failed four error-message assertions (3,321
 passed); the fresh run above includes the settled assertions. The separate
 two-turn trial runner/tests were still being authored and are not included in
 this regression count. These are software checks, not simulated companies.
+
+## Two-turn handoff attempt: invalid research schema, not a product comparison
+
+`owner-handoff-v1` used the separately committed protocol and actual clean
+native build `87f518c`, with the same production fingerprint as the repair above.
+Its runner was independently approved for bounded development execution after
+three protocol corrections: disclose shared glossary definitions, allow ordinary
+argument correction, and distinguish asked topics from delivered answers.
+
+The cohort stopped after **two first-author invocations, zero Jev requests**.
+It exposed a research-only bug missed by the offline orchestration tests and
+review: adding the owner-topic enum mutated a shared string-schema object.
+Consequently source references, working notes, readout text and card IDs were
+also restricted to topic names. The retained `api.request` records contain
+these malformed schemas. The real research MCP validator rejected useful text
+that the Python-only fake orchestration had accepted.
+
+Baseline used 23 tools and could save only a topic token, not its intended
+working notes or factual readout. SignalWeave used 19 tools, inspected source
+facts, saved a real draft and correctly described unchanged 90% attainment, but
+could not submit its valid card ID to `finish_setup`. The harness then stopped.
+There was no second author turn, independent policy review, approval, recurring
+report, alert, or actual delivery. **Neither arm counts as complete onboarding;
+this run cannot establish superiority or infer a SignalWeave/Jev defect.**
+
+Both invocations have known usage: **377,916 input tokens, including 304,896
+cached (73,020 uncached), and 4,305 output tokens**. Costs are not discarded
+because the harness was invalid. This closed attempt is not a retry budget.
+The fix replaces only the owner-topic schema slot. New first/second-stage tests
+serialize the schemas and use the actual transport's JSON Schema validator to
+check arbitrary source references, note text, card IDs and messages. The related
+offline suite passed 151 checks; that does not live validate the repaired flow.
+
+Native binary SHA-256: `ca473d181de034c9e3b868376cf538d72275e4080027c37e0241911bdd34267a`.
+The clean binary's inference-disabled Superset/card check also passed in 25.42
+seconds; JUnit SHA-256:
+`d60c505b33394f22fd37af88fce422b951cc247ffeb960b9c1fc70b16b8df322`.
+Frozen live runner SHA-256:
+`f2994862a3cc52cfa11fe2e09f92ad2ea66e9dd5215735a85ba38f044cd70311`.
+Report SHA-256: `b2a0aaf747c65cd44c9c629422a74696ed1645487ea59374f642a1980cb6878a`.
+Trace SHA-256: `532070437a6f9ced1e6f5e0668fba1d0b5d7f4c9012ce9512916dc0bb61d173d`.
+Raw files remain ignored under `artifacts/owner-handoff-v1-live/`.
+
+After the schema repair, final `make verify` passed **3,337 tests, 11 skipped,
+in 220.58 seconds**; Ruff and `git diff --check` passed. Independent review
+accepted the engineering fix and evidence classification, and independently
+ran both serialized-schema cases (2 passed). Fixed runner SHA-256:
+`cfb6c4b56f5d058e1ddb82efa3198eaab6a33ef4b4ba59c46e1369ed568f2cbe`.
+This does not convert the invalid live attempt into a pass. The PR remains
+draft, main and the published release are unchanged, and the goal remains open.

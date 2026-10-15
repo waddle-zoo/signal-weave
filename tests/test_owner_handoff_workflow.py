@@ -9,6 +9,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from jsonschema import ValidationError, validate
 
 from evaluations import domain_context_onboarding_trial as trial
 from evaluations.bootstrap_agent_trial import Audit, PublicSourceAdapter
@@ -31,6 +32,34 @@ def first_entry(public, *, card_ids=None, topic="materiality"):
         "notes": "Saved source notes and initial policy draft.",
         "owner_requests": [{"topic": topic, "stage": "first", "answer_status": "pending"}],
     }
+
+
+@pytest.mark.parametrize("stage", ["first", "second"])
+async def test_serialized_handoff_schemas_do_not_restrict_unrelated_text(stage):
+    public = public_episode(trial.clarified_development_scenario())
+    session = episode(stage=stage, owner_answers=public["owner_answers"] if stage == "second" else None)
+    # Validate the serialized schemas with the same validator as the actual
+    # research MCP transport, not just the episode's Python call methods.
+    specs = json.loads(json.dumps(await session.specs()))
+    schemas = {tool["name"]: tool["parameters"] for tool in specs}
+    validate({"topic": "materiality"}, schemas["ask_owner"])
+    with pytest.raises(ValidationError):
+        validate({"topic": "not-a-declared-topic"}, schemas["ask_owner"])
+    examples = {
+        "read_company_asset": {"ref": "company_mcp|asset:an-arbitrary-source"},
+        "save_working_notes": {"notes": "All parcels due; compare complete weeks. Ask about the action threshold."},
+        "finish_setup": {"card_ids": ["card-arbitrary-123"], "message": "Attainment is unchanged at 90%.",
+                         "unresolved": ["Which change warrants notifying dispatch?"]},
+    }
+    if stage == "second":
+        examples["request_owner_approval"] = {
+            "kind": "card", "id": "card-arbitrary-123", "summary": "Show this saved policy for owner consent.",
+        }
+    for name, arguments in examples.items():
+        validate(arguments, schemas[name])
+    assert schemas["read_company_asset"]["properties"]["ref"] == {"type": "string"}
+    assert schemas["save_working_notes"]["properties"]["notes"] == {"type": "string"}
+    assert schemas["finish_setup"]["properties"]["card_ids"]["items"] == {"type": "string"}
 
 
 async def test_first_turn_owner_question_is_pending_and_glossary_stays_available():

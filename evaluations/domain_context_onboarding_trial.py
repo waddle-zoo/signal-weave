@@ -276,7 +276,11 @@ class HandoffEpisode(Episode):
                           else list(self.public["owner_topics"]))
         for tool in tools:
             if tool["name"] == "ask_owner":
-                tool["parameters"]["properties"]["topic"]["enum"] = allowed_topics
+                # Episode deliberately reuses its plain-string schema. Replace
+                # this slot: mutating it also constrains refs, notes and IDs.
+                tool["parameters"]["properties"]["topic"] = {
+                    "type": "string", "enum": allowed_topics,
+                }
         if self.stage == "first":
             blocked = {"request_owner_approval", "request_synthetic_owner_approval", "approve_insight_card"}
             tools = [tool for tool in tools if tool["name"] not in blocked]

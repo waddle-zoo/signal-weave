@@ -9,7 +9,7 @@ Feature branch: `feat/domain-context-memory`, based on main `e8842ac`.
 | Local and hosted context lifecycle | Native stdio and signed HTTP checks cover review, reuse, restart and changed revisions; hosted issuer is synthetic |
 | Card-bound meaning and staleness | Contract tests cover exact pins, reapproval, deferred policy and historical receipts; no automatic notification service is claimed |
 | Approved cards with live decisions | One scripted retail integration matched three supplied periods; stronger route/content checks still need a live run |
-| Human-first, agent-led onboarding | CLI/protocol checks pass, but the last live authoring pair did not complete equivalent reviewed automation; a new cohort must demonstrate the corrected path |
+| Human-first, agent-led onboarding | Same-card clarification is implemented and native-tested. The latest live pair was invalidated by a research-schema bug, now fixed; completed conversational onboarding still needs valid live evidence |
 | Useful recurring reports and investigations | Historical simulations remain evidence for their own versions; current cross-session final-agent outcomes, diverse connectors and meaningful changed-context cases remain unproven |
 | Comparative business value | No current context-layer advantage over an equal-information agent baseline has been established; report usefulness, noise/misses, source work and complete costs are still required |
 
@@ -114,6 +114,17 @@ both first turns, answers, review work, failed requests and all reports. Do not
 interpret deliberately awaiting-human first turns as product failures or as
 completed onboarding. Stop incomplete second turns; do not repair within this
 series. The earlier failed series remains in the evidence ledger.
+
+This cohort is terminal after two first-author invocations. A research-only
+schema aliasing bug restricted ordinary source references, note text and card
+IDs to owner-topic names. The recorded artifacts confirm this malformed schema
+was actually supplied to both agents. Baseline could record only a topic token;
+SignalWeave saved a real draft and useful readout but could not submit its card
+ID. Neither is valid completed onboarding. No owner-answer resumption, semantic
+review, recurring report or Jev request occurred. Do not compare these arms or
+attribute this failure to the product. Both invocations and all known usage stay
+in the ledger. The schema fix has serialized-validator regression coverage, but
+the repaired two-turn flow has not been live validated. Do not resume this run.
 
 ## User outcome
 
