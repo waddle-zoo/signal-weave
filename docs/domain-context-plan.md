@@ -126,6 +126,39 @@ attribute this failure to the product. Both invocations and all known usage stay
 in the ledger. The schema fix has serialized-validator regression coverage, but
 the repaired two-turn flow has not been live validated. Do not resume this run.
 
+### Corrected handoff cohort v2
+
+Preregister `owner-handoff-v2` as a fresh run of the corrected protocol, not a
+resumption or relabeling of v1. Use the identical Pine Courier development
+fixture, seed, period index `0`, prompts, model/effort, source access and semantic
+review rubric. Start new private native state and both authors from scratch.
+The only research changes are the repaired common-tool schemas, serialized
+schema preflight, a new cohort/run-key identity and explicit prior-cost charging.
+This is feasibility evidence, not an independent holdout or significance test.
+
+Require the unchanged invalid-v1 trace SHA-256
+`532070437a6f9ced1e6f5e0668fba1d0b5d7f4c9012ce9512916dc0bb61d173d`.
+Its two invocations used 377,916 input (73,020 uncached) and 4,305 output
+tokens, with zero Jev attempts. Those counts enter the cumulative token stops;
+the trace's source content, conversations and failed artifacts never enter the
+new agents' prompts. Keep all older cohorts separately reported, including
+unknown costs; this accounting is not a total for the project's research.
+
+Allow at most eight new Codex invocations, ten including invalid v1, and two
+live Jev attempts in total. Keep the previous per-role tool/time caps. Stop
+before another invocation at 1,600,000 cumulative input or 250,000 cumulative
+uncached input tokens, unknown usage, failed semantic review, incomplete second
+author turn or changed executable. Thresholds do not bound an in-flight turn.
+No replacement company, period, policy, automatic retry, delivery or schedule.
+
+Before paid calls, validate both stages' serialized common schemas with the
+actual transport's JSON Schema validator: free-form source references, notes,
+card IDs, summaries and readouts must remain usable while owner topics remain
+bounded. Run the zero-inference native/source preflight, freeze the runner and
+have an independent reviewer check its exact hash. Preserve every attempt and
+all costs. Afterward independently read the current readouts and final reports;
+native receipt correctness alone still cannot establish business value.
+
 ## User outcome
 
 An agent onboarding a second sales investigation should reuse the definitions,

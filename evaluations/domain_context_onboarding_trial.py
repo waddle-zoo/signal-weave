@@ -24,6 +24,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 
+from jsonschema import ValidationError, validate
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
@@ -69,6 +70,12 @@ OWNER_HANDOFF_LIMITS = {
     "between_invocation_input_stop": 1_200_000,
     "between_invocation_uncached_stop": 180_000,
 }
+HANDOFF_REPAIR_PRIOR_SHA256 = "532070437a6f9ced1e6f5e0668fba1d0b5d7f4c9012ce9512916dc0bb61d173d"
+HANDOFF_REPAIR_LIMITS = {
+    **OWNER_HANDOFF_LIMITS,
+    "between_invocation_input_stop": 1_600_000,
+    "between_invocation_uncached_stop": 250_000,
+}
 
 
 def approval_digest(kind: str, artifact: dict) -> str:
@@ -106,6 +113,57 @@ def usage_totals(events: list[dict]) -> dict:
         responses += 1
     return {"input_tokens": total, "cached_input_tokens": cached,
             "uncached_input_tokens": total - cached, "output_tokens": output, "responses": responses}
+
+
+def load_handoff_charge(path) -> dict:
+    """Charge the immutable invalid v1 attempt; its contents never enter prompts."""
+    payload = Path(path).read_bytes()
+    digest = hashlib.sha256(payload).hexdigest()
+    if digest != HANDOFF_REPAIR_PRIOR_SHA256:
+        raise ValueError("repair cohort requires the retained invalid v1 trace, unchanged")
+    events = [json.loads(line) for line in payload.splitlines()]
+    if any(e.get("provider") == "openai" and e.get("kind") == "api.error" for e in events):
+        raise ValueError("cannot charge unknown prior usage")
+    invocations = sum(e.get("provider") == "openai" and e.get("kind") == "api.request" for e in events)
+    provider_attempts = sum(e.get("provider") == "jev" and e.get("kind") == "api.request" for e in events)
+    usage = usage_totals(events)
+    if invocations != 2 or usage["responses"] != invocations or provider_attempts:
+        raise ValueError("repair requires exactly two known prior invocations and zero Jev attempts")
+    return {"trace_sha256": digest, "usage": usage, "invocations": invocations,
+            "provider_attempts": provider_attempts, "classification": "invalid shared-schema harness; not a product comparison"}
+
+
+def owner_workflow_settings(args) -> tuple[str, dict, dict | None]:
+    cohort = getattr(args, "cohort_id", None)
+    charge_path = getattr(args, "charge_trace", None)
+    if cohort is None:
+        if charge_path:
+            raise ValueError("charge-trace requires owner-handoff-v2")
+        return OWNER_HANDOFF_PROTOCOL, dict(OWNER_HANDOFF_LIMITS), None
+    if cohort != "owner-handoff-v2" or not getattr(args, "owner_handoff", False) or not charge_path:
+        raise ValueError("owner-handoff-v2 requires --owner-handoff and --charge-trace")
+    return cohort, dict(HANDOFF_REPAIR_LIMITS), load_handoff_charge(charge_path)
+
+
+def validate_owner_handoff_schemas(tools: list[dict], topic: str) -> None:
+    """Preflight the serialized common schemas used by the actual MCP validator."""
+    schemas = {tool["name"]: tool["parameters"] for tool in json.loads(json.dumps(tools))}
+    examples = {
+        "ask_owner": {"topic": topic},
+        "read_company_asset": {"ref": "company_mcp|asset:preflight"},
+        "save_working_notes": {"notes": "An ordinary free-form business definition and question."},
+        "finish_setup": {"card_ids": ["card-preflight"], "message": "A supported current readout.",
+                         "unresolved": ["Which change warrants an alert?"]},
+    }
+    if "request_owner_approval" in schemas:
+        examples["request_owner_approval"] = {"kind": "notes", "id": "working", "summary": "Review this saved policy."}
+    for name, arguments in examples.items():
+        validate(arguments, schemas[name])
+    try:
+        validate({"topic": "not-a-declared-owner-topic"}, schemas["ask_owner"])
+    except ValidationError:
+        return
+    raise ValueError("owner topics must remain bounded while other text stays free-form")
 
 
 def budget_stop(events: list[dict]) -> str | None:
@@ -693,6 +751,7 @@ async def run_owner_workflow(args):
     from evaluations.bootstrap_owner_review import review_owner_artifact
 
     owner_handoff = bool(getattr(args, "owner_handoff", False))
+    cohort_id, handoff_limits, prior_charge = owner_workflow_settings(args)
     if args.prior_trace:
         protocol = "owner-handoff" if owner_handoff else "owner-workflow"
         raise ValueError(f"the {protocol} cohort cannot resume or recharge an earlier series")
@@ -724,9 +783,9 @@ async def run_owner_workflow(args):
     }
     if owner_handoff:
         report.update(
-            protocol="owner-handoff-v1",
+            protocol=cohort_id,
             scope="Two-turn owner-handoff development feasibility pair; a first-turn pending answer is the intended handoff, not completed setup or a failure.",
-            limits=dict(OWNER_HANDOFF_LIMITS),
+            limits=dict(handoff_limits),
             pair_status="incomplete",
             common_glossary_context={
                 "population_source_scope": copy.deepcopy(public["glossary"]["population"]),
@@ -763,6 +822,12 @@ async def run_owner_workflow(args):
             ],
             preflight_live_calls={"codex": 0, "jev": 0},
         )
+        if prior_charge is not None:
+            report["charged_prior_attempt"] = prior_charge
+            report["limits"]["combined_invocation_cap"] = handoff_limits["codex_invocations"] + prior_charge["invocations"]
+            report["limitations"].append(
+                "Fresh corrected cohort, not resumption of v1. Prior invalid v1 usage counts toward cumulative token stops; eight new invocations maximum."
+            )
 
     def save():
         try:
@@ -775,12 +840,20 @@ async def run_owner_workflow(args):
                                                    for e in audit.events)
         report["usage_known"] = (not any(e["kind"] == "api.error" and e.get("provider") == "openai" for e in audit.events)
                                  and report["usage"].get("responses") == report["agent_invocations_started"])
+        if prior_charge is not None:
+            if not report["usage_known"]:
+                report["known_partial_usage"] = report["usage"]
+                report["usage"] = {"status": "unknown"}
+            report["cumulative_usage_including_invalid_attempt"] = (
+                {key: value + prior_charge["usage"][key] for key, value in report["usage"].items()}
+                if report["usage_known"] else {"status": "unknown"}
+            )
         (output / "report.json").write_text(json.dumps(audit.redact(report), indent=2))
 
     def before_invocation():
-        invocation_cap = OWNER_HANDOFF_LIMITS["codex_invocations"] if owner_handoff else 6
-        input_stop = OWNER_HANDOFF_LIMITS["between_invocation_input_stop"] if owner_handoff else 600_000
-        uncached_stop = OWNER_HANDOFF_LIMITS["between_invocation_uncached_stop"] if owner_handoff else 100_000
+        invocation_cap = handoff_limits["codex_invocations"] if owner_handoff else 6
+        input_stop = handoff_limits["between_invocation_input_stop"] if owner_handoff else 600_000
+        uncached_stop = handoff_limits["between_invocation_uncached_stop"] if owner_handoff else 100_000
         if hashlib.sha256(Path(codex_identity["path"]).read_bytes()).hexdigest() != codex_identity["sha256"]:
             raise RuntimeError("pinned Codex executable changed; cohort stopped")
         if (owner_handoff
@@ -795,6 +868,8 @@ async def run_owner_workflow(args):
         started = sum(e["kind"] == "api.request" and e.get("provider") == "openai" for e in audit.events)
         if totals["responses"] != started:
             raise RuntimeError("missing invocation usage; cohort stopped")
+        if prior_charge is not None:
+            totals = {key: value + prior_charge["usage"][key] for key, value in totals.items()}
         if totals["input_tokens"] >= input_stop or totals["uncached_input_tokens"] >= uncached_stop:
             raise RuntimeError("between-invocation token threshold reached")
         if started >= invocation_cap:
@@ -842,9 +917,9 @@ async def run_owner_workflow(args):
         before_invocation()
         return await codex_episode(
             session, key=None, effort="medium", budget=None, audit=audit, max_turns=24,
-            max_tool_calls=(OWNER_HANDOFF_LIMITS["author_tools_per_turn"] if owner_handoff else 24),
+            max_tool_calls=(handoff_limits["author_tools_per_turn"] if owner_handoff else 24),
             max_output_tokens=3000,
-            timeout_seconds=(OWNER_HANDOFF_LIMITS["author_seconds_per_turn"] if owner_handoff else 240),
+            timeout_seconds=(handoff_limits["author_seconds_per_turn"] if owner_handoff else 240),
             model="gpt-6-luna", codex_executable=args.codex_executable, accounting_drain=True,
             instructions_override=instructions, prompt_override=prompt,
         )
@@ -990,7 +1065,7 @@ async def run_owner_workflow(args):
 
         period = scenario["public"]["periods"][0]
         report_clock = datetime.now(timezone.utc)
-        run_key = OWNER_HANDOFF_PROTOCOL + ":" + period["period_id"]
+        run_key = cohort_id + ":" + period["period_id"]
         for treatment in (False, True):
             arm = "signalweave" if treatment else "baseline"
             setup = sessions[arm]
@@ -1028,8 +1103,8 @@ async def run_owner_workflow(args):
             before_invocation()
             result = await codex_episode(
                 session, key=None, effort="medium", budget=None, audit=audit, max_turns=12,
-                max_tool_calls=OWNER_HANDOFF_LIMITS["report_tools"], max_output_tokens=3000,
-                timeout_seconds=OWNER_HANDOFF_LIMITS["report_seconds"], model="gpt-6-luna",
+                max_tool_calls=handoff_limits["report_tools"], max_output_tokens=3000,
+                timeout_seconds=handoff_limits["report_seconds"], model="gpt-6-luna",
                 codex_executable=args.codex_executable, accounting_drain=True,
                 instructions_override=instructions,
                 prompt_override={"business": public_brief(public), "saved_setup": final_entry["setup"],
@@ -1071,6 +1146,11 @@ async def run_owner_workflow(args):
             async with native_context(Path(args.binary).resolve(), Path(args.key_file).resolve(), public,
                                       adapter, audit, root, request_budget=budget) as (native, skill):
                 if not args.run:
+                    if owner_handoff:
+                        for stage in ("first", "second"):
+                            episode = HandoffEpisode(public, adapter, native, stage=stage,
+                                                     owner_answers=public["owner_answers"] if stage == "second" else None)
+                            validate_owner_handoff_schemas(await episode.specs(), public["owner_topics"][0])
                     descriptor = adapter.catalog[0]
                     adapter.set_period(public["period"], datetime.now(timezone.utc))
                     _, probe = await native.call_tool("inspect_resource", {
@@ -1088,6 +1168,8 @@ async def run_owner_workflow(args):
                     report["preflight"] = {"native_tools": len(await native.list_tools()),
                                            "scenario": scenario["scenario_id"], "period_index": 0,
                                            "source_roundtrip": "exact analytical fields and tenant; not agent evidence"}
+                    if owner_handoff:
+                        report["preflight"]["serialized_common_schemas"] = "both stages validated; no source writes or model calls"
                     return report
                 if owner_handoff:
                     await run_owner_handoff(native, skill)
@@ -1207,9 +1289,13 @@ def main():
     parser.add_argument("--run", action="store_true", help="Explicitly authorize the bounded live-agent pair after preflight")
     parser.add_argument("--owner-workflow", action="store_true", help="Separate expert-clarified development setup/review/report cohort")
     parser.add_argument("--owner-handoff", action="store_true", help="Two-turn pending-owner/resume development cohort")
+    parser.add_argument("--cohort-id", choices=["owner-handoff-v2"], help="Fresh corrected cohort; does not resume v1")
+    parser.add_argument("--charge-trace", help="Retained invalid v1 trace, charged to the v2 cumulative budget")
     args = parser.parse_args()
     if args.owner_workflow and args.owner_handoff:
         parser.error("--owner-workflow and --owner-handoff select separate terminal protocols")
+    if (args.cohort_id or args.charge_trace) and not args.owner_handoff:
+        parser.error("cohort-id and charge-trace require --owner-handoff")
     report = asyncio.run(run_owner_workflow(args) if args.owner_workflow or args.owner_handoff else run(args))
     print(json.dumps({"output": args.output, "failure": report.get("failure"), "stopped": report.get("stopped"),
                       "episodes": len(report["episodes"]), "preflight_only": report["preflight_only"]}))
