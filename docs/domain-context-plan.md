@@ -10,7 +10,7 @@ Feature branch: `feat/domain-context-memory`, based on main `e8842ac`.
 | Card-bound meaning and staleness | Contract tests cover exact pins, reapproval, deferred policy and historical receipts; no automatic notification service is claimed |
 | Approved cards with live decisions | Current native clarification v2 matched three supplied retail periods with live Jev, exact routes and receipt versions; changed required meaning preserved facts without another model call. Scripted owner, not autonomous onboarding |
 | Human-first, agent-led onboarding | V4 completed both pending-owner handoffs, both answer-application turns and both independent policy reviews. Treatment revised the same draft v2 → approved v3. One scripted-owner development case, not a real human wizard or varied-company success rate |
-| Useful recurring reports and investigations | Report-only follow-up completed all six fresh agents and three live Jev calls with correct policy outcomes. Narrative omission and scorer/recipient ambiguity remain; diverse connectors, cross-card reuse and changed-context agent behavior are unproven |
+| Useful recurring reports and investigations | Six paired reports and a three-report/live-Jev guidance check retained correct outcomes but showed narrative omission. Six cached layout reporters support a narrow presentation change, not an accuracy claim; multi-step investigations, diverse connectors and changed-context agent behavior remain unproven |
 | Comparative business value | No current context-layer advantage over an equal-information agent baseline has been established; report usefulness, noise/misses, source work and complete costs are still required |
 
 These are separate gates. Passing storage, authentication or a scripted decision
@@ -316,6 +316,62 @@ Three additional blind reporter-only fixtures cover scalar, rate and additive
 measurements outside the delivery case. Their supplied typed outcomes are
 synthetic inputs, not live-Jev evidence or enterprise benchmarks; reporters get
 only public packets and the bundled skill, not private rubrics or expected prose.
+
+The instruction-only live check completed all three reports/receipts with known
+usage, but is not a clean narrative pass: known counts survived in more prose,
+yet the complete-period reports still treated parcel-volume context as unknown.
+Preserve that negative. The missing-data report also put supported count values
+under rate-only structured fact IDs; this is a typed-field mapping error, not
+evidence that the raw counts were invented. No live repair rerun is authorized.
+
+Preregister `handoff-layout-probe-v1` as a separate reporter-only diagnostic over
+the three frozen live packets, not another provider/native benchmark. Six fresh
+Luna-xhigh reporters receive one supplied packet plus the bundled skill; keep
+decisions, sources, measurements, owner context, required gates and guidance
+identical. In one view only, move explicitly optional watch/question results
+into a clearly labeled diagnostic section. Reject the transformation unless
+the source card marks every moved criterion optional; retain the original fields
+and provenance unchanged inside that section. Do not implement this view in
+production before observing whether it helps. Use opaque packet filenames and
+withhold view mapping, suspected defect and private review criteria from reporters.
+No network, company reads, Jev requests, delivery, repeated output or follow-up
+repair. Independently compare quantitative grounding, unsupported missingness,
+scope/uncertainty and typed-outcome fidelity. No cost, speed, statistical or
+enterprise advantage claim follows from this small cached-packet diagnostic.
+
+This diagnostic is closed after its six fresh reporters, with no new native,
+source or Jev calls. Independent review found that the current-layout quiet
+report contradicted its known counts, while the separated-layout report retained
+them and distinguished the optional unresolved judgment. Both layouts preserved
+missing-denominator limits and the adverse-period policy outcome. One separated
+report cited `handoff.workflow` rather than `handoff.result.workflow`; keep that
+reference defect. A single pair is not a causal or reliable accuracy estimate.
+
+The production change is only a conservative compact-response relocation:
+explicitly optional, fully mapped groups receive the label; mixed required,
+legacy, unfamiliar and near-byte-limit groups retain their original shape.
+Stored receipts, reports, warnings, quality gates, measurements and outcomes
+are unchanged. Empty arrays stay inline, unlike the experimental grouping of
+an empty question array. Optional assessments still appear in the deterministic
+report too: this is not complete presentation isolation or a proved narrative fix.
+
+### Calendar-faithful future report check
+
+Review of the cached outputs exposed a harness limitation: ordinary timestamp
+rebasing shifted Monday-midnight fixture weeks to arbitrary run-time windows,
+and reused the cutoff for different simulated periods. Preserve all completed
+cohorts and labels; their supplied seven-day arithmetic does not prove calendar-
+week compliance. Do not silently repair their dates or rescore their outputs.
+
+The research-only `calendar-paired-v1` mode must preserve fixture/default
+digests and the old paired/repair protocols. Use one whole-week UTC shift for
+all measurement timestamps, mapping the latest fixture cutoff to the most
+recent Monday midnight at trial start; retain week spacing and identical
+measurement windows in both arms. Actual capture time and source freshness age
+are separate from measurement cutoffs. Reject ambiguous naive datetimes.
+Keep the original paired six-agent/three-Jev limits; run only offline timing
+tests now. No paid calendar cohort has started or been approved for execution;
+freeze/review and a new zero-model native preflight must precede any live study.
 
 ### Native approved-card clarification check
 

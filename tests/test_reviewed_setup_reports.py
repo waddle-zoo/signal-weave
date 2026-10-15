@@ -3,6 +3,7 @@
 import hashlib
 import json
 from contextlib import asynccontextmanager
+from datetime import datetime
 from types import SimpleNamespace
 
 import pytest
@@ -97,8 +98,10 @@ def test_report_scoring_does_not_fabricate_owner_tool_calls():
 
 @pytest.mark.parametrize("live,cohort,expected_reports", [
     (False, "paired", 0), (True, "paired", 6),
+    (False, "calendar-paired-v1", 0), (True, "calendar-paired-v1", 6),
     (False, "interpretation-repair-v1", 0), (True, "interpretation-repair-v1", 3),
-], ids=["paired-preflight", "paired-sequence", "repair-preflight", "repair-sequence"])
+], ids=["paired-preflight", "paired-sequence", "calendar-preflight", "calendar-sequence",
+        "repair-preflight", "repair-sequence"])
 async def test_entire_runner_preserves_equal_context_and_uses_fresh_reports(monkeypatch, tmp_path, live, cohort, expected_reports):
     scenario = trial.clarified_development_scenario()
     card = reviewed_card().model_copy(update={"principal_tenant": scenario["scenario_id"]})
@@ -118,6 +121,7 @@ async def test_entire_runner_preserves_equal_context_and_uses_fresh_reports(monk
     original_report.write_text("immutable original fixture checked by loader tests")
     original_trace.write_text("immutable trace checked by loader tests")
     captured = []
+    period_contexts = []
 
     class Native:
         async def list_tools(self):
@@ -148,6 +152,7 @@ async def test_entire_runner_preserves_equal_context_and_uses_fresh_reports(monk
     async def fake_episode(session, **kwargs):
         assert live, "preflight must never start an agent"
         captured.append(kwargs)
+        period_contexts.append(dict(session.adapter.period_context))
         audit = kwargs["audit"]
         audit.emit("api.request", provider="openai")
         audit.events.append(_response())
@@ -180,10 +185,27 @@ async def test_entire_runner_preserves_equal_context_and_uses_fresh_reports(monk
     if live:
         assert len(report["episodes"]) == expected_reports
         assert all(e["approved_card_execution_verified"] for e in report["episodes"] if e["arm"] == "signalweave")
-        if cohort == "paired":
+        if cohort in {"paired", "calendar-paired-v1"}:
             assert all(captured[index]["prompt_override"]["accepted_context"] ==
                        captured[index + 1]["prompt_override"]["accepted_context"] for index in range(0, 6, 2))
             periods = report["episodes"][::2]
+            if cohort == "calendar-paired-v1":
+                assert report["protocol"] == "calendar-paired-v1"
+                assert report["cohort_clock_semantics"]["measurement_rebase"] == "one shared whole-week UTC offset"
+                assert report["cohort_clock_semantics"]["source_capture_age"] == (
+                    "preserved relative to each fixture period as_of"
+                )
+                assert all(period_contexts[index] == period_contexts[index + 1]
+                           for index in range(0, 6, 2))
+                assert all(datetime.fromisoformat(context["as_of"]) <=
+                           datetime.fromisoformat(context["captured_at"]) for context in period_contexts)
+                assert all("as_of is the measurement cutoff" in item["instructions_override"]
+                           and "captured_at" in item["instructions_override"] for item in captured)
+                assert all(datetime.fromisoformat(context["as_of"]).weekday() == 0
+                           and datetime.fromisoformat(context["as_of"]).time() == datetime.min.time()
+                           for context in period_contexts)
+            else:
+                assert "cohort_clock_semantics" not in report
         else:
             assert all(entry["arm"] == "signalweave" for entry in report["episodes"])
             assert report["protocol"] == "handoff-interpretation-v1"
@@ -192,3 +214,7 @@ async def test_entire_runner_preserves_equal_context_and_uses_fresh_reports(monk
             assert all("both arms" not in item["instructions_override"].lower() for item in captured)
             periods = report["episodes"]
         assert [entry["period_id"] for entry in periods] == [p["period_id"] for p in scenario["public"]["periods"]]
+    if cohort == "calendar-paired-v1":
+        assert report["cohort_clock_semantics"]["measurement_rebase"] == "one shared whole-week UTC offset"
+    else:
+        assert "cohort_clock_semantics" not in report

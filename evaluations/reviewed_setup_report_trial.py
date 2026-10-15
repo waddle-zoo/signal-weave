@@ -15,7 +15,7 @@ import asyncio
 import hashlib
 import json
 import tempfile
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from evaluations.bootstrap_agent_trial import Audit, PublicSourceAdapter, RequestBudget
@@ -35,6 +35,7 @@ from scripts.binary_provenance import verify_binary
 from signalweave.models import SourceRef
 
 PROTOCOL = "reviewed-setup-reports-v1"
+CALENDAR_PAIRED = "calendar-paired-v1"
 LIMITS = {"agent_invocations": 6, "jev_attempts": 3, "tools_per_report": 12,
           "seconds_per_report": 180, "between_invocation_input_stop": 600_000,
           "between_invocation_uncached_stop": 150_000}
@@ -55,12 +56,46 @@ INSTRUCTIONS = (
 def cohort_settings(cohort):
     if cohort == "paired":
         return PROTOCOL, dict(LIMITS), (False, True)
+    if cohort == CALENDAR_PAIRED:
+        return CALENDAR_PAIRED, dict(LIMITS), (False, True)
     if cohort == "interpretation-repair-v1":
         return "handoff-interpretation-v1", {
             **LIMITS, "agent_invocations": 3, "between_invocation_input_stop": 300_000,
             "between_invocation_uncached_stop": 90_000,
         }, (True,)
     raise ValueError("unknown report cohort")
+
+
+def _utc_datetime(value, field):
+    if isinstance(value, datetime):
+        parsed = value
+    elif isinstance(value, str):
+        try:
+            parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError as exc:
+            raise ValueError(f"{field} must be an ISO datetime") from exc
+    else:
+        raise ValueError(f"{field} must be an aware datetime")
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise ValueError(f"{field} must include a timezone")
+    return parsed.astimezone(timezone.utc)
+
+
+def calendar_measurement_rebase(periods, clock):
+    """Map weekly fixture cutoffs to current UTC Monday while preserving spacing."""
+    capture_at = _utc_datetime(clock, "clock")
+    if not periods:
+        raise ValueError("calendar-paired-v1 requires monitoring periods")
+    cutoffs = [_utc_datetime(period["as_of"], f"periods[{index}].as_of")
+               for index, period in enumerate(periods)]
+    if any(cutoff.weekday() != 0 or cutoff.time() != datetime.min.time() for cutoff in cutoffs):
+        raise ValueError("calendar-paired-v1 requires Monday 00:00 UTC fixture cutoffs")
+    latest_original = max(cutoffs)
+    if any((latest_original - cutoff).total_seconds() % (7 * 24 * 60 * 60) for cutoff in cutoffs):
+        raise ValueError("calendar-paired-v1 fixture cutoffs must be whole weeks apart")
+    latest_monday = capture_at.replace(hour=0, minute=0, second=0, microsecond=0)
+    latest_monday -= timedelta(days=latest_monday.weekday())
+    return latest_monday - latest_original, latest_monday
 
 
 def common_context(public, card):
@@ -114,7 +149,8 @@ def before_invocation(audit, limits, executable, expected_binary_hash):
 
 
 async def run(args):
-    protocol, limits, arms = cohort_settings(getattr(args, "cohort", "paired"))
+    cohort = getattr(args, "cohort", "paired")
+    protocol, limits, arms = cohort_settings(cohort)
     accepted, card = load_reviewed_setup(Path(args.accepted_report), Path(args.accepted_trace))
     scenario = clarified_development_scenario()
     scenario_hash = hashlib.sha256(json.dumps(scenario, sort_keys=True).encode()).hexdigest()
@@ -182,9 +218,25 @@ async def run(args):
                 context = common_context(public, card)
                 notes = json.dumps(context, sort_keys=True)
                 clock = datetime.now(timezone.utc)
+                measurement_offset = None
+                if cohort == CALENDAR_PAIRED:
+                    measurement_offset, latest_cutoff = calendar_measurement_rebase(
+                        scenario["public"]["periods"], clock,
+                    )
+                    report["cohort_clock_semantics"] = {
+                        "measurement_rebase": "one shared whole-week UTC offset",
+                        "latest_measurement_cutoff": latest_cutoff.isoformat(),
+                        "measurement_offset_seconds": int(measurement_offset.total_seconds()),
+                        "query_capture_at": clock.isoformat(),
+                        "source_capture_age": "preserved relative to each fixture period as_of",
+                        "source_data": "synthetic fixture; not warehouse freshness evidence",
+                    }
                 for period in scenario["public"]["periods"]:
                     for treatment in arms:
-                        adapter.set_period(period, clock)
+                        if cohort == CALENDAR_PAIRED:
+                            adapter.set_period(period, clock, measurement_offset=measurement_offset)
+                        else:
+                            adapter.set_period(period, clock)
                         adapter.inspections = 0
                         adapter.inspected.clear()
                         arm = "signalweave" if treatment else "baseline"
@@ -214,6 +266,12 @@ async def run(args):
                         if hashlib.sha256(binary.read_bytes()).hexdigest() != identity["binary_sha256"]:
                             raise RuntimeError("native binary changed")
                         instructions = INSTRUCTIONS
+                        if cohort == CALENDAR_PAIRED:
+                            instructions += (
+                                " In the supplied period, as_of is the measurement cutoff, while captured_at "
+                                "is the separate simulated source-read clock. Use the source's actual interval "
+                                "bounds and coverage, not capture time, to interpret a reporting week."
+                            )
                         if treatment:
                             instructions += (
                                 " Evaluate the exact approved card once using supplied card_id and idempotency_key. "
@@ -261,8 +319,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ("binary", "key-file", "codex-executable", "accepted-report", "accepted-trace", "output"):
         parser.add_argument("--" + name, required=True)
-    parser.add_argument("--cohort", choices=["paired", "interpretation-repair-v1"], default="paired",
-                        help="Paired study or separately preregistered treatment-only repair; never resumes a closed run")
+    parser.add_argument("--cohort", choices=["paired", "interpretation-repair-v1", CALENDAR_PAIRED], default="paired",
+                        help="Paired study, treatment-only repair, or calendar-aligned paired report cohort")
     parser.add_argument("--run", action="store_true", help="Explicitly authorize the one bounded live report cohort")
     report = asyncio.run(run(parser.parse_args()))
     print(json.dumps({"completed": report.get("completed", False), "failure": report.get("failure"),
