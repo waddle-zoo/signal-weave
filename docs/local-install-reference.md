@@ -125,9 +125,17 @@ native release.
 - **[`v0.2.0rc2`](https://github.com/waddle-zoo/signal-weave/releases/tag/v0.2.0rc2):**
   published native preview with guided registration, bundled workflow skills,
   all three provider choices, connection and credential management, local health
-  UI, and native `uninstall` with optional `--purge`. This is the version pinned
-  in the installation guides. All three platform builds passed actual installed
+  UI, and native `uninstall` with optional `--purge`. All three platform builds passed actual installed
   setup, MCP startup, reinstall, and uninstall checks.
+- **[`v0.2.0rc3`](https://github.com/waddle-zoo/signal-weave/releases/tag/v0.2.0rc3):**
+  published from `main`, with bounded deferred evidence handoffs, corrected
+  receipt paths, absolute BI citations, comparison-meaning checks, and the
+  configured decision runtime for the default MCP factory. This is the version
+  pinned in the installation guides. All three native runners passed. The
+  downloaded Apple Silicon executable also passed the actual GitHub installer,
+  guided setup, isolated Codex registration, canonical skill installation,
+  credential update, live local Superset/Jev card, replay, and uninstall checks.
+  See the [scoped release evidence](evidence/cards-native-release-2026-10-14.md).
 
 Release maintainers must update the pinned install commands in `README.md` and
 `docs/local-install.md`, and this compatibility section, when a new native

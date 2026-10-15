@@ -110,3 +110,14 @@ Start only after Milestone A is recorded as complete on `main`.
   handoff fixes. Independent engineering and product reviewers dispatched.
 - Integrated the primary branch's current documentation into the clean
   payload-fix worktree. No domain-memory changes have been made.
+- Milestone A implementation merged through PR #15 at `d84cc41`: final source
+  suite 2,993 passed / 7 skipped, all 14 PR checks green, all three native
+  runners green, independent scoped engineering/product review GO.
+- Published `v0.2.0rc3` from that main revision. The actual downloaded Apple
+  Silicon executable passed isolated one-line install/setup, real Codex
+  registration, canonical skill, credential update, live Superset/Jev card,
+  receipt replay, and uninstall. See the [release evidence](evidence/cards-native-release-2026-10-14.md)
+  for fingerprints, retained failures, and claim limits.
+- Milestone A's verified cards release is complete, with rc3 recommended in
+  the installation guides. Milestone B remains separate and unstarted; no
+  graph-bundle promotion or domain-memory code was included in this release.
