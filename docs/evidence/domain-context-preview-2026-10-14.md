@@ -257,3 +257,42 @@ RUN_CONTEXT_HTTP_INTEGRATION=1 SIGNALWEAVE_BINARY="$PWD/dist/signalweave" \
 The executable must match the current production fingerprint. The HTTP test
 requires no real provider key. Native HTTP JUnit SHA-256:
 `455b7d5166ac450757009366bc338f0a8eb146e67280e9de4be05bc9213bedc2`.
+
+## Scripted approved-card/live-Jev check — 2026-10-15
+
+The existing six-company fixture supplied one retail company's three periods,
+transported through the actual native company-MCP bridge. The script saved a
+card, reviewed and pinned its definition, and used the public review/approval
+calls. A fixture-owner reason authorized only the supplied synthetic scopes;
+this was not conversational onboarding, real BI data, or human sign-off.
+
+The first attempt received the expected first outcome but failed because the
+test assumed completed results have the deferred-only `judgment` field. It used
+one Jev request: 3,740 input/57 output tokens. The corrected invocation passed in
+26.07 seconds, matching `insufficient_data`, `ignore`, and `notify` across the
+three periods, using three requests: 15,020 input/163 output tokens. A subsequent
+required-context draft caused a no-outcome handoff without another Jev request.
+Explicit-source authoring used no inference, and pins were absent from provider
+states. Final outcomes include local execution guards; they are not solely raw
+Jev choices. Routes are resolved from the saved card, not invented by Jev.
+
+The **four-request total includes the failed attempt**: 18,760 input and 220
+output tokens, no provider errors/rejections and no frontier-agent invocation.
+These are observed provider counts, not billed cost or comparative speed.
+No additional live request was made after that cap.
+
+Adversarial review found two missing assertions: exact destination correctness
+and nonempty, provenance-bearing deferred source content. The test now checks
+both, has nine offline mutation cases, and retains native result packets.
+Those stronger assertions **were not live revalidated in this series**; the
+original trace retained provider/source calls but not the returned native
+packets, so it cannot retrospectively prove them. Copied credentials now live
+inside an automatically cleaned private temporary directory. This lifecycle
+check does not complete the onboarding or final-agent outcome gates.
+
+The observed executable is the `12a9558` repair build identified above; it
+predates the subsequent default-profile onboarding-instruction correction.
+First trace SHA-256: `1515ab09f073c516c1a15293b070f8f185e95fc223369016d9300955d5fedc49`.
+Corrected trace SHA-256: `aab5bfbc64ca6336b9ef86e99006195891594e45811f78c9a449b65fc700e60f`.
+Corrected JUnit SHA-256: `c1ca1d603d9f7d3d1567f63fe7c73d741f599581f2a8fc994c9bba5b7ba0c78e`.
+Raw files remain ignored under `artifacts/context-native-jev-*`.

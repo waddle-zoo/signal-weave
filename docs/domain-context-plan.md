@@ -2,6 +2,20 @@
 
 Feature branch: `feat/domain-context-memory`, based on main `e8842ac`.
 
+## Current acceptance ledger
+
+| Requirement | Evidence and remaining work |
+| --- | --- |
+| Local and hosted context lifecycle | Native stdio and signed HTTP checks cover review, reuse, restart and changed revisions; hosted issuer is synthetic |
+| Card-bound meaning and staleness | Contract tests cover exact pins, reapproval, deferred policy and historical receipts; no automatic notification service is claimed |
+| Approved cards with live decisions | One scripted retail integration matched three supplied periods; stronger route/content checks still need a live run |
+| Human-first, agent-led onboarding | CLI/protocol checks pass, but the last live authoring pair did not complete equivalent reviewed automation; a new cohort must demonstrate the corrected path |
+| Useful recurring reports and investigations | Historical simulations remain evidence for their own versions; current cross-session final-agent outcomes, diverse connectors and meaningful changed-context cases remain unproven |
+| Comparative business value | No current context-layer advantage over an equal-information agent baseline has been established; report usefulness, noise/misses, source work and complete costs are still required |
+
+These are separate gates. Passing storage, authentication or a scripted decision
+check cannot substitute for complete onboarding and useful final agent outcomes.
+
 ## User outcome
 
 An agent onboarding a second sales investigation should reuse the definitions,
@@ -241,3 +255,32 @@ scope/tenant boundaries and overdue-draft review polling are exercised against
 local Superset metadata authorization. The synthetic issuer and protocol note
 do not establish customer SSO or analytical usefulness. This closes a transport
 test gap, not the owner-confirmed onboarding/recurring-run business-value gate.
+
+### Approved-card/live-provider integration before another agent cohort
+
+A separately bounded native check exercised scripted fixture-owner approval,
+reviewed context binding and three supplied retail periods through live Jev.
+Its first attempt stopped on a test-only response-shape error after one request;
+one corrected attempt used three more requests and matched the three expected
+outcomes. Changed required context then deferred policy without another request.
+This four-attempt series is closed, not permission to rerun until it passes more
+assertions. The prior stopped Codex onboarding cohort remains stopped too.
+
+Adversarial review found that the initial check did not verify exact routes or
+nonempty provenance-bearing deferred evidence. Those are now explicit assertions
+with offline mutation coverage; they were not live revalidated in this series.
+Future checks retain native result packets as well as provider wire traces and
+clean up copied credentials. These are still synthetic exports and scripted
+approval, not independent human onboarding or frontier-agent business lift.
+
+The default MCP path also had contradictory onboarding instructions: it told
+agents to simulate before approval despite not exposing draft simulation. Its
+ready next action is now `confirm_then_approve`; owner authorization still
+precedes the first delivery-disabled evaluation. No approval, source, confidence
+or certification guard is weakened by this instruction correction.
+
+New research cohorts may opt into the evaluation transport's bounded accounting
+drain: no tool work executes after its cap, and capped episodes still fail, but
+the process can return final usage before termination. This does not recover
+the earlier missing usage or establish a successful onboarding. The old default
+hard-stop behavior and original results remain unchanged.

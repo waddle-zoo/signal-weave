@@ -1361,7 +1361,8 @@ def create_mcp(
         assert_card_scope(card, principal)
         if card.status != InsightCardStatus.APPROVED:
             raise ValueError(
-                f"Insight card {card_id} is a draft; simulate it, then approve it before evaluation"
+                f"Insight card {card_id} is a draft; review it and obtain explicit owner approval "
+                "before a delivery-disabled evaluation"
             )
         key = (idempotency_key or f"manual:{card_id}:{uuid4().hex}").strip()
         if not key:
@@ -2441,7 +2442,7 @@ def create_mcp(
         elif review["readiness_status"] == "needs_human_review":
             next_action = "review_candidate_sources"
         else:
-            next_action = "simulate_then_approve"
+            next_action = "confirm_then_approve"
         return {
             "status": review["readiness_status"],
             "next_action": next_action,
@@ -3258,7 +3259,14 @@ def create_mcp(
         workflow_report_id: str | None = None,
         ctx: Context | None = None,
     ) -> dict[str, Any]:
-        """Approve only after explicit owner review and a delivery-disabled simulation.
+        """Approve the reviewed card only after explicit owner authorization.
+
+        The default agent profile does not expose draft simulation. After
+        approval, evaluate_insight_card can run a delivery-disabled shadow check.
+        Approval alone is not workflow certification, scheduling, or permission
+        to deliver a message. A full-profile acceptance report remains optional
+        proof through workflow_report_id, not a prerequisite for the first
+        owner-authorized shadow run.
 
         For a fixed card with no dynamic investigation, an owner may confirm its
         exact selected sources despite duplicate titles or omitted recommendations. A
@@ -3417,7 +3425,7 @@ def create_mcp(
         if dependency_state is not None and not dependency_state["all_current"]:
             raise ValueError("context dependencies changed during approval; review and rebind before approval")
         if get_scoped_card(card_id, principal).model_dump(mode="json") != original:
-            raise ValueError("Card changed during approval; review and simulate the current card "
+            raise ValueError("Card changed during approval; review the current card "
                              "and obtain its owner's approval again.")
         runtime.card_store.save_card(card)
         approved = runtime.card_store.set_card_status(card_id, InsightCardStatus.APPROVED)

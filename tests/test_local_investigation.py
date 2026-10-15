@@ -99,7 +99,7 @@ async def test_failed_decomposition_blocks_automatic_notification(tmp_path):
 
 async def test_draft_cannot_be_run_locally(tmp_path):
     runtime, source, _ = make_runtime(tmp_path, approved=False)
-    with pytest.raises(Exception, match="approve"):
+    with pytest.raises(Exception, match="explicit owner approval"):
         await run_card("repeat", "draft", runtime=runtime)
     assert source.calls == 0
 

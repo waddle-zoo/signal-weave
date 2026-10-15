@@ -29,6 +29,24 @@ DISABLED_FEATURES = (
     "memories", "skill_search", "workspace_dependencies", "shell_snapshot",
     "code_mode", "sleep_tool", "goals",
 )
+# Opt-in accounting uses a bounded window; the third rejection requests termination.
+ACCOUNTING_DRAIN_SECONDS = 5.0
+ACCOUNTING_DRAIN_ABORT_AFTER_REJECTIONS = 3
+
+
+def normalized_codex_usage(usage: object) -> dict | None:
+    if not isinstance(usage, dict):
+        return None
+    counts = (usage.get("input_tokens"), usage.get("output_tokens"),
+              usage.get("cached_input_tokens"))
+    if any(type(count) is not int or count < 0 for count in counts):
+        return None
+    input_tokens, _, cached_input_tokens = counts
+    if cached_input_tokens > input_tokens:
+        return None
+    normalized = dict(usage)
+    normalized["input_tokens_details"] = {"cached_tokens": cached_input_tokens}
+    return normalized
 
 
 def codex_command(cwd: str, url: str, *, model: str, effort: str) -> list[str]:
@@ -58,12 +76,18 @@ def child_environment() -> dict[str, str]:
 
 
 class TrialMCP:
-    def __init__(self, session, audit, specs: list[dict], max_calls: int):
+    def __init__(self, session, audit, specs: list[dict], max_calls: int, *,
+                 accounting_drain: bool = False):
         self.session, self.audit = session, audit
         self.specs = {spec["name"]: spec for spec in specs}
         self.max_calls = max_calls
+        self.accounting_drain = accounting_drain
         self.calls = 0
+        self.ingress_calls = 0
         self.exhausted = False
+        self.rejected_calls = 0
+        self.exhaustion_event = asyncio.Event()
+        self.rejection_limit_event = asyncio.Event()
         self.lock = asyncio.Lock()
         self.server = Server("signalweave-trial")
 
@@ -77,40 +101,75 @@ class TrialMCP:
             return await self.call(name, arguments)
 
     async def call(self, name: str, arguments: dict):
+        ingress_call = None
+        if self.accounting_drain:
+            # This records bridge-handler entry, not network packet completion.
+            self.ingress_calls += 1
+            ingress_call = self.ingress_calls
+            self.audit.emit("tool.ingress", name=name, ingress_call=ingress_call,
+                            stage="bridge_handler_entered")
+        try:
+            await self.lock.acquire()
+        except asyncio.CancelledError:
+            if self.accounting_drain:
+                self.audit.emit("tool.cancelled", name=name, ingress_call=ingress_call,
+                                stage="waiting_for_bridge_lock",
+                                reason="cancelled_before_dispatch")
+            raise
+        try:
+            return await self._call_locked(name, arguments)
+        finally:
+            self.lock.release()
+
+    async def _call_locked(self, name: str, arguments: dict):
         # Serialize state mutations/approval, equally for both arms.
-        async with self.lock:
-            if self.calls >= self.max_calls:
-                self.exhausted = True
-                self.audit.emit("tool.rejected", name=name, reason="tool_call_budget_exhausted")
-                raise ValueError("tool_call_budget_exhausted; stop now")
-            self.calls += 1
-            started = time.perf_counter()
-            failed = False
-            audited_arguments = arguments
+        if self.calls >= self.max_calls:
+            self.exhausted = True
+            if self.accounting_drain:
+                self.exhaustion_event.set()
+                self.rejected_calls += 1
+                if self.rejected_calls == ACCOUNTING_DRAIN_ABORT_AFTER_REJECTIONS:
+                    self.rejection_limit_event.set()
+                self.audit.emit("tool.rejected", name=name,
+                                reason="tool_call_budget_exhausted")
+                return types.CallToolResult(
+                    content=[types.TextContent(
+                        type="text",
+                        text=json.dumps({"error": "ValueError",
+                                         "message": "tool_call_budget_exhausted; stop now"}),
+                    )],
+                    isError=True,
+                )
+            self.audit.emit("tool.rejected", name=name, reason="tool_call_budget_exhausted")
+            raise ValueError("tool_call_budget_exhausted; stop now")
+        self.calls += 1
+        started = time.perf_counter()
+        failed = False
+        audited_arguments = arguments
+        try:
             try:
-                try:
-                    json.dumps(arguments, allow_nan=False)
-                except (ValueError, TypeError):
-                    audited_arguments = {"invalid_json_value": True}
-                    raise ValueError("Arguments must contain only finite JSON values") from None
-                if name not in self.specs:
-                    raise ValueError("tool not available")
-                validate(arguments, self.specs[name]["parameters"])
-                if self.session.submission is not None or (
-                    self.session.phase == "onboarding" and self.session.setup_complete
-                ):
-                    raise ValueError("episode already submitted; stop now")
-                result = await self.session.call(name, arguments)
-            except Exception as error:
-                failed = True
-                result = {"error": type(error).__name__,
-                          "message": self.audit.redact(str(error)[:2000])}
-            self.audit.emit("tool.result", name=name, arguments=audited_arguments, result=result,
-                            actor_role=getattr(self.session, "audit_role", "author"),
-                            seconds=time.perf_counter() - started)
-            return types.CallToolResult(
-                content=[types.TextContent(type="text", text=json.dumps(result))],
-                isError=failed)
+                json.dumps(arguments, allow_nan=False)
+            except (ValueError, TypeError):
+                audited_arguments = {"invalid_json_value": True}
+                raise ValueError("Arguments must contain only finite JSON values") from None
+            if name not in self.specs:
+                raise ValueError("tool not available")
+            validate(arguments, self.specs[name]["parameters"])
+            if self.session.submission is not None or (
+                self.session.phase == "onboarding" and self.session.setup_complete
+            ):
+                raise ValueError("episode already submitted; stop now")
+            result = await self.session.call(name, arguments)
+        except Exception as error:
+            failed = True
+            result = {"error": type(error).__name__,
+                      "message": self.audit.redact(str(error)[:2000])}
+        self.audit.emit("tool.result", name=name, arguments=audited_arguments, result=result,
+                        actor_role=getattr(self.session, "audit_role", "author"),
+                        seconds=time.perf_counter() - started)
+        return types.CallToolResult(
+            content=[types.TextContent(type="text", text=json.dumps(result))],
+            isError=failed)
 
 
 @asynccontextmanager
@@ -153,7 +212,8 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
                         max_tool_calls, max_output_tokens, bundle=None,
                         timeout_seconds=360, instructions_override=None,
                         prompt_override=None, model: str | None = None,
-                        codex_executable: str = "codex") -> dict:
+                        codex_executable: str = "codex",
+                        accounting_drain: bool = False) -> dict:
     from evaluations.bootstrap_agent_trial import (
         COMMON_SYSTEM,
         MODEL,
@@ -244,7 +304,8 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
             "business": session.public, "saved_notes": session.notes,
             "shared_card": shared_card,
             "signalweave_evaluation": bundle})
-    bridge = TrialMCP(session, audit, await session.specs(), max_tool_calls)
+    bridge = TrialMCP(session, audit, await session.specs(), max_tool_calls,
+                      accounting_drain=accounting_drain)
     # Distinct IDs from positive Jev request IDs. A Codex invocation is NOT an API request.
     request_id = -(1 + sum(e["kind"] == "api.request" and e.get("provider") == "openai"
                           for e in audit.events))
@@ -272,36 +333,91 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
                 while line := await process.stderr.readline():
                     audit.emit("codex.stderr", text=line.decode(errors="replace")[:8000])
 
+            def record_event(line):
+                nonlocal usage, error, final_message
+                event = json.loads(line)
+                audit.emit("codex.event", event=event)
+                if event.get("type") == "turn.completed":
+                    usage = event.get("usage")
+                if event.get("type") in {"turn.failed", "error"}:
+                    error = "codex_error"
+                item = event.get("item", {})
+                if item.get("type") in {"command_execution", "web_search", "file_change"}:
+                    foreign_tools.append(item["type"])
+                if item.get("type") == "agent_message" and isinstance(item.get("text"), str):
+                    final_message = item["text"]
+                if item.get("type") == "mcp_tool_call" and item.get("server") != "trial":
+                    foreign_tools.append(str(item.get("server")))
+                return event
+
             errors_task = asyncio.create_task(read_errors())
+            output_task = None
+            signal_tasks = []
             try:
                 async with asyncio.timeout(timeout_seconds):
                     process.stdin.write(prompt.encode())
                     await process.stdin.drain()
                     process.stdin.close()
-                    while line := await process.stdout.readline():
-                        event = json.loads(line)
-                        audit.emit("codex.event", event=event)
-                        if event.get("type") == "turn.completed":
-                            usage = event.get("usage")
-                        if event.get("type") in {"turn.failed", "error"}:
-                            error = "codex_error"
-                        item = event.get("item", {})
-                        if item.get("type") in {"command_execution", "web_search", "file_change"}:
-                            foreign_tools.append(item["type"])
-                        if item.get("type") == "agent_message" and isinstance(item.get("text"), str):
-                            final_message = item["text"]
-                        if item.get("type") == "mcp_tool_call" and item.get("server") != "trial":
-                            foreign_tools.append(str(item.get("server")))
-                        # In the local-MCP comparison this budget limits live Jev
-                        # requests, not the Codex subscription-backed agent. A
-                        # depleted Jev budget must be recorded as treatment
-                        # censoring; it must not kill the baseline agent (or a
-                        # reviewer) and bias the paired cohort by run order.
-                        if foreign_tools or bridge.exhausted:
-                            error = "foreign_tool_used" if foreign_tools else "tool_call_budget_exhausted"
-                            break
-                    if error:
-                        process.terminate()
+                    if not accounting_drain:
+                        while line := await process.stdout.readline():
+                            record_event(line)
+                            # In the local-MCP comparison this budget limits live Jev
+                            # requests, not the Codex subscription-backed agent. A
+                            # depleted Jev budget must be recorded as treatment
+                            # censoring; it must not kill the baseline agent (or a
+                            # reviewer) and bias the paired cohort by run order.
+                            if foreign_tools or bridge.exhausted:
+                                error = "foreign_tool_used" if foreign_tools else "tool_call_budget_exhausted"
+                                break
+                        if error:
+                            process.terminate()
+                    else:
+                        loop = asyncio.get_running_loop()
+                        output_task = asyncio.create_task(process.stdout.readline())
+                        exhausted_task = asyncio.create_task(bridge.exhaustion_event.wait())
+                        rejection_task = asyncio.create_task(bridge.rejection_limit_event.wait())
+                        signal_tasks.extend((exhausted_task, rejection_task))
+                        drain_deadline = None
+                        while True:
+                            waiters = {output_task, rejection_task}
+                            if drain_deadline is None:
+                                waiters.add(exhausted_task)
+                            remaining = (None if drain_deadline is None else
+                                         max(0.0, drain_deadline - loop.time()))
+                            ready, _ = await asyncio.wait(
+                                waiters, timeout=remaining,
+                                return_when=asyncio.FIRST_COMPLETED)
+                            if not ready:
+                                error = "tool_call_budget_exhausted"
+                                process.terminate()
+                                break
+                            if output_task in ready:
+                                line = output_task.result()
+                                if not line:
+                                    if bridge.exhausted:
+                                        error = "tool_call_budget_exhausted"
+                                    break
+                                record_event(line)
+                                if foreign_tools:
+                                    error = "foreign_tool_used"
+                                    process.terminate()
+                                    break
+                                if bridge.exhausted:
+                                    error = "tool_call_budget_exhausted"
+                                    if drain_deadline is None:
+                                        drain_deadline = loop.time() + ACCOUNTING_DRAIN_SECONDS
+                                elif error == "codex_error":
+                                    process.terminate()
+                                    break
+                                output_task = asyncio.create_task(process.stdout.readline())
+                            if rejection_task in ready:
+                                error = "tool_call_budget_exhausted"
+                                process.terminate()
+                                break
+                            if exhausted_task in ready:
+                                error = "tool_call_budget_exhausted"
+                                if drain_deadline is None:
+                                    drain_deadline = loop.time() + ACCOUNTING_DRAIN_SECONDS
                     await process.wait()
             except TimeoutError:
                 error = "episode_timeout"
@@ -317,18 +433,25 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
                 if process.returncode is None:
                     process.kill()
                     await process.wait()
+                for task in [output_task, *signal_tasks]:
+                    if task is not None and not task.done():
+                        task.cancel()
+                pending_tasks = [task for task in [output_task, *signal_tasks]
+                                 if task is not None]
+                if pending_tasks:
+                    await asyncio.gather(*pending_tasks, return_exceptions=True)
                 await errors_task
                 exit_code = process.returncode
-    if isinstance(usage, dict):
-        normalized = dict(usage)
-        normalized["input_tokens_details"] = {"cached_tokens": usage.get("cached_input_tokens", 0)}
+    normalized_usage = normalized_codex_usage(usage)
+    if normalized_usage is not None:
         audit.emit("api.response", provider="openai", request_id=request_id,
                    transport="codex_cli", model=selected_model, effort=effort,
-                   usage=normalized, seconds=time.perf_counter() - started)
+                   usage=normalized_usage, seconds=time.perf_counter() - started)
     else:
         audit.emit("api.error", provider="openai", request_id=request_id,
                    model=selected_model, effort=effort,
-                   error_type=error or "missing_usage", usage_known=False)
+                   error_type=error or ("missing_usage" if usage is None else "invalid_usage"),
+                   usage_known=False)
     done = session.setup_complete if session.phase == "onboarding" else session.submission is not None
     success = done and not error and exit_code == 0
     elapsed = time.perf_counter() - started

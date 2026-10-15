@@ -84,3 +84,23 @@ def test_stored_insight_card_defaults_remain_conservative():
     assert fields["action_confidence_threshold"].default == 0.70
     assert fields["retrieval_mode"].default is RetrievalMode.FIXED
     assert fields["investigation_mode"].default is InvestigationMode.NONE
+
+
+async def test_default_profile_does_not_require_a_hidden_preapproval_simulation(tmp_path):
+    from signalweave.mcp_server import create_mcp
+
+    original = make_server(tmp_path)
+    server = create_mcp(original._test_runtime, profile="agent")
+    specs = {item.name: item for item in await server.list_tools()}
+    assert "simulate_insight_card" not in specs
+    approval_text = " ".join(specs["approve_insight_card"].description.split())
+    assert "does not expose draft simulation" in approval_text
+    assert "After approval" in approval_text
+    assert "not workflow certification" in approval_text
+    payload = await dispatch(server, "onboard_insight_card", arguments(
+        "onboard_insight_card", decision_guidance="Investigate a material decline; otherwise ignore.",
+    ))
+    assert payload["card"]["status"] == "draft"
+    assert payload["next_action"] == "confirm_then_approve"
+    with pytest.raises(Exception, match="review it and obtain explicit owner approval"):
+        await server.call_tool("evaluate_insight_card", {"card_id": payload["card"]["id"]})

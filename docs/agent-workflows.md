@@ -70,6 +70,11 @@ rules. Have it show the exact source scope and run the available review. Fix
 mistakes before approval. In the normal profile, a draft is not a trial: approve
 only after you have reviewed it and explicitly authorize the saved card.
 
+An approval-ready onboarding response uses `next_action="confirm_then_approve"`.
+The default profile does not require a hidden simulation tool before approval;
+its first delivery-disabled evaluation follows explicit owner approval. That
+single check is not certification for unattended operation.
+
 For example:
 
 > Use my answers to prepare the recurring card. Show me its exact sources,

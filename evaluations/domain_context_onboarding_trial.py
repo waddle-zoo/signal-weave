@@ -198,13 +198,15 @@ class Episode:
 
 
 @asynccontextmanager
-async def native_context(binary, key_file, public, adapter, audit, root):
+async def native_context(binary, key_file, public, adapter, audit, root, *, request_budget=None):
     """Explicit private --home; never replace HOME or register a personal agent."""
     private_home = root / "native-home"
     env = {key: value for key, value in os.environ.items() if key in {"PATH", "TMPDIR", "LANG", "LC_ALL"}}
     env.update(SIGNALWEAVE_KNOWLEDGE_ENABLED="1", TYPESAFE_MAX_RETRIES="0")
     source_session = _SourceSession(adapter, audit, public["scenario_id"])
-    budget = RequestBudget(limit=0)  # No provider inference is authorized in this onboarding smoke.
+    # The cold-onboarding cohort never authorizes provider inference. A separate
+    # explicitly opted-in integration check may supply its own bounded budget.
+    budget = request_budget if request_budget is not None else RequestBudget(limit=0)
     async with _source_server(source_session) as url, _jev_proxy(audit, budget) as jev_url:
         manifest = _manifest(public, url)
         for connection in manifest["connections"]:

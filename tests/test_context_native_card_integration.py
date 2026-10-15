@@ -150,6 +150,9 @@ async def test_native_agent_context_binding_lifecycle(
                         "evaluate_insight_card",
                     }
                     assert expected_tools <= tool_names
+                    approval_tool = next(tool for tool in (await session.list_tools()).tools
+                                         if tool.name == "approve_insight_card")
+                    assert "does not expose draft simulation" in approval_tool.description
 
                     onboarded = _payload(
                         await call(
@@ -180,6 +183,7 @@ async def test_native_agent_context_binding_lifecycle(
                     )
                     assert onboarded["approval_required"] is True
                     assert onboarded["delivery_enabled"] is False
+                    assert onboarded["next_action"] != "simulate_then_approve"
                     assert onboarded["card"]["status"] == "draft"
                     card_id = onboarded["card"]["id"]
                     approval = onboarded["approval_handoff"]

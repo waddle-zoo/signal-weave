@@ -778,8 +778,10 @@ async def test_review_and_compile_awaits_preserve_concurrent_card_changes(
         assert changed["version"] == before["version"]
         assert changed["onboarding_review"] == before["onboarding_review"]
         resume.set()
-        with pytest.raises(ValueError, match=error):
+        with pytest.raises(ValueError, match=error) as raised:
             await asyncio.wait_for(pending, timeout=5)
+        if stage == "approval-compile":
+            assert "simulate" not in str(raised.value)
         assert stored(server, card_id) == changed
         assert changed["status"] == "draft"
         restarted = make_server(tmp_path, sqlite=sqlite)
