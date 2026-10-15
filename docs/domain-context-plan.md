@@ -80,6 +80,32 @@ semantic review is not consent. Completed review is supplied separately to the
 fresh reporter, preserving the original handoff as history. The original V1
 failure and costs remain unchanged, not rescored as success.
 
+V2 is now terminal too. The baseline's saved setup passed independent policy
+review. Treatment authored a policy-faithful draft and a dated initial readout,
+but asked legitimate questions about the primary source's eligible population
+and the durable meaning of `previous_period`. The simulated owner's fixed-topic
+lookup could not answer those free-form questions. The context entry also stayed
+draft. No card approval, Jev request or recurring report followed.
+
+The treatment reviewer separately rejected `change_pct` for lacking its own
+reporting-registry definition. Offline execution of the actual saved condition
+over the supplied adverse period gives -30 percent and `true`; independent
+diagnosis agrees the rejection was false. The review now receives the runtime
+projection formula/unit/preconditions, but the stopped review is not rerun or
+rescored. A separate production bug discovered during this check ignored
+`absolute=true` for percent change; eight cross-unit/direction regressions now
+cover its fix. That bug did not affect this draft's `absolute=false` condition.
+
+Cumulative V1+V2 use: four CLI invocations, 631,420 input / 107,132 uncached /
+6,358 output tokens; V2 adds three calls, not four. Zero Jev and zero recurring
+reports. Do not infer comparative business value or an onboarding success rate.
+Before another paid cohort, give the simulated data expert explicit source-owned
+population and reporting-window facts, allow free-form clarification against
+that bounded reference, and keep a native home alive across the human handoff.
+Test both sufficient and genuinely missing expert context; do not infer missing
+source meaning from titles, relax approval, or ask Jev to supply it. Any new
+cohort needs its own frozen protocol and complete accounting.
+
 ## New owner-workflow development cohort
 
 Before live execution, freeze `owner-workflow-v1`: existing development fixture
