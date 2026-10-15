@@ -137,8 +137,9 @@ the personal agent configuration or the existing Superset data.
 
 Reproduce the current card lifecycle with the same build and fixture environment
 above, setting `RUN_CONTEXT_CARD_INTEGRATION=1` and running
-`tests/test_context_native_card_integration.py`. The test caps calls at fifteen
-MCP tools and one observed provider POST. Normal offline runs skip it. Use
+`tests/test_context_native_card_integration.py`. The current test caps calls at fifteen
+MCP tools and zero provider POSTs, using a synthetic startup key and disabled
+loopback provider endpoint. No real provider key is needed. Normal offline runs skip it. Use
 `-o junit_family=legacy --junitxml=artifacts/context-native.xml` to retain the
 recorded build and request-count properties; raw logs and reports remain ignored.
 
@@ -296,3 +297,36 @@ First trace SHA-256: `1515ab09f073c516c1a15293b070f8f185e95fc223369016d9300955d5
 Corrected trace SHA-256: `aab5bfbc64ca6336b9ef86e99006195891594e45811f78c9a449b65fc700e60f`.
 Corrected JUnit SHA-256: `c1ca1d603d9f7d3d1567f63fe7c73d741f599581f2a8fc994c9bba5b7ba0c78e`.
 Raw files remain ignored under `artifacts/context-native-jev-*`.
+
+## Default-profile instruction repair and accounting safeguards
+
+The MCP's ready next action and draft/approval instructions no longer demand a
+simulation tool unavailable in the default profile. Owner approval is still
+required before a shadow run; certification and delivery authority are unchanged.
+The clean native build of `d64c8fdd461e05226a57f278794afc666c705104` passed the
+updated Superset/card lifecycle check in **25.94 seconds**: nine MCP calls, nine
+metadata reads and zero Jev POSTs. It used a synthetic startup key and a disabled
+loopback provider endpoint, not inference credits. This validates the native
+guidance/schema and lifecycle, not a new live-agent onboarding success.
+
+The research transport now offers an opt-in five-second accounting drain after
+tool exhaustion. It denies further tool work, terminates after observing three
+rejections (concurrent rejections can increase the count), and still fails the
+episode. Bridge-handler entry and queued cancellation are audited; this is not
+network-packet completeness. Only valid input/output/cache integer counts become
+known usage. Empty or incomplete usage remains unknown rather than zero. Its
+**58 offline tests** passed and independent code review gave a scoped GO after
+the missing-usage and queued-call fixes. No new live Codex trial validated this
+mode, and it cannot recover the earlier censored costs. The implementation was
+checked against the [official Codex JSONL event documentation](https://learn.chatgpt.com/docs/non-interactive-mode#make-output-machine-readable).
+
+New production fingerprint: `40a9df20fbc8115b2d5bac9854ecce8f3dd3703a60caa34ecb31457c9d83f1f8`.
+New native SHA-256: `de019ad0e8a6428fe5797e6bc423b35b9300dcf1f32cc0ccf98f0acb73caf935`.
+Final native JUnit SHA-256: `4391b5534f1ed7eb5b75f6346cd2839630a140d68eba2ba79cd88d3ab40011a9`.
+
+The settled full regression run passed **3,254 tests, with 11 opt-in checks
+skipped, in 213.19 seconds**; Ruff passed. The preceding run's three failures
+were assertions against the changed draft-error wording. They were updated to
+check explicit owner approval, with the same draft rejection and concurrency
+guards retained; the passing rerun, not the earlier mixed result, is the full
+verification. This count is contract/regression coverage, not business trials.

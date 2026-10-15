@@ -19,13 +19,13 @@ from scripts.binary_provenance import verify_binary
 pytestmark = pytest.mark.skipif(
     os.getenv("RUN_CONTEXT_CARD_INTEGRATION") != "1",
     reason=(
-        "requires an explicitly verified native binary, provider startup key file, "
+        "requires an explicitly verified native binary "
         "and local synthetic Superset fixture on port 18089"
     ),
 )
 
 MAX_TOOL_CALLS = 15
-MAX_PROVIDER_POSTS = 1
+MAX_PROVIDER_POSTS = 0
 PROVIDER_ENDPOINT = re.compile(
     r"POST https://api\.typesafe\.ai/v1/systemone(?:\s|$)"
 )
@@ -56,8 +56,9 @@ async def test_native_agent_context_binding_lifecycle(
     assert provenance["frozen"] is True
     binary = binary_input.resolve()
 
-    credential = Path(os.environ["TYPESAFE_API_KEY_FILE"]).expanduser().resolve()
-    assert credential.is_file(), "configured private provider key file is unavailable"
+    credential = isolated_workspace / "synthetic-startup-key"
+    credential.write_text("synthetic-context-card-no-inference")
+    credential.chmod(0o600)
 
     # Only pass process basics to the native CLI. Provider and Superset secrets
     # are referenced by private files, never copied into arguments or logs.
@@ -67,6 +68,10 @@ async def test_native_agent_context_binding_lifecycle(
         if name in {"PATH", "TMPDIR", "LANG", "LC_ALL"}
     }
     env["SIGNALWEAVE_KNOWLEDGE_ENABLED"] = "1"
+    # No process can listen on TCP port zero: a bind to zero receives a different
+    # assigned port. Accidental inference must fail locally, never reach TypeSafe.
+    env["TYPESAFE_BASE_URL"] = "http://127.0.0.1:0"
+    env["TYPESAFE_MAX_RETRIES"] = "0"
 
     private_home = isolated_workspace / "native-home"
     password_file = isolated_workspace / "superset-password"
