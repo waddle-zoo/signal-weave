@@ -10,6 +10,20 @@ permissions:
   contents: read
 
 jobs:
+  server-image:
+    name: server image packaging
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the actual server package
+        run: docker build --tag signalweave-server-proof .
+      - name: Verify installed CLI and canonical skill as non-root
+        run: |
+          docker run --rm --entrypoint signalweave signalweave-server-proof --help
+          docker run --rm --entrypoint signalweave signalweave-server-proof skills show
+          test "$(docker run --rm --entrypoint id signalweave-server-proof -u)" != 0
+
   test:
     name: test (${{ matrix.python-version }})
     runs-on: ubuntu-latest

@@ -121,3 +121,7 @@ Start only after Milestone A is recorded as complete on `main`.
 - Milestone A's verified cards release is complete, with rc3 recommended in
   the installation guides. Milestone B remains separate and unstarted; no
   graph-bundle promotion or domain-memory code was included in this release.
+- A subsequent real server-image build found a missing bundled skill. The
+  packaging fix passed local build, non-root CLI/skill, and authenticated HTTP
+  MCP checks; its independent review and protected-branch CI are a separate
+  follow-up gate. Native rc3 remains unchanged.
