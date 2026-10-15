@@ -765,6 +765,50 @@ def _receipt_result_page(result: dict[str, Any], path: list[str], offset: int, l
     return page
 
 
+def _separate_optional_judgments(compact: dict[str, Any]) -> dict[str, Any]:
+    """Label advisory assessments without changing facts or the durable result.
+
+    Only move a complete, unambiguously mapped optional criterion group. Legacy
+    receipts, mixed required groups and unfamiliar keys retain their shape.
+    Required checks, policy outcomes and report warnings always remain inline.
+    """
+    result = compact["result"]
+    plan = result.get("evidence_plan")
+    slots = plan.get("slots") if isinstance(plan, dict) else None
+    if not isinstance(slots, list):
+        return compact
+    moved = {}
+    for field, role in (("watch_results", "watch"), ("question_results", "question")):
+        values = result.get(field)
+        criteria = [slot for slot in slots if isinstance(slot, dict) and slot.get("role") == role]
+        if not isinstance(values, list) or not values or len(criteria) != len(values):
+            continue
+        by_key = {slot.get("key"): slot for slot in criteria if isinstance(slot.get("key"), str)}
+        if len(by_key) != len(values):
+            continue
+        if all(
+            isinstance(item, dict)
+            and isinstance(item.get("key"), str)
+            and item.get("key") in {f"{role}_{index}", f"{role}:{index + 1}", str(index)}
+            and by_key.get(f"{role}:{index + 1}", {}).get("required") is False
+            for index, item in enumerate(values)
+        ):
+            moved[field] = values
+    if not moved:
+        return compact
+    candidate = {
+        **compact,
+        "result": {key: value for key, value in result.items() if key not in moved},
+        "optional_policy_diagnostics": {
+            "scope": "Optional card-criterion judgments; not measurements or measurement availability.",
+            "values": moved,
+        },
+    }
+    # Presentation is optional too: do not displace facts or introduce another
+    # truncation/paging path just to add this label near the byte boundary.
+    return candidate if _json_bytes(candidate) <= AGENT_HANDOFF_BYTES else compact
+
+
 def _compact_evaluation_response(response: dict[str, Any]) -> dict[str, Any]:
     """Return one evidence bundle without repeating the same payload three times.
 
@@ -1015,7 +1059,7 @@ def _compact_evaluation_response(response: dict[str, Any]) -> dict[str, Any]:
             compact["card_details_available"] = True
         if _json_bytes(compact) > AGENT_HANDOFF_BYTES:
             raise ValueError("Compact receipt metadata exceeds the handoff bound; explicitly request the full audit")
-    return compact
+    return _separate_optional_judgments(compact)
 
 
 CARD_AUTHORING_GUIDANCE = (

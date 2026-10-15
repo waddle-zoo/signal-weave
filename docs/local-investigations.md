@@ -76,6 +76,13 @@ even if the other period or the full comparison is unavailable. This does not
 waive coverage, comparability or action requirements. Cite the source for a
 measurement and the receipt for a workflow outcome—not interchangeably.
 
+Compact results label a whole explicitly optional watch/question group in
+`optional_policy_diagnostics.values`. Required or ambiguously mapped groups
+stay in `result`; no judgment is discarded. The saved report, quality checks,
+evidence plan and action are unchanged. Full receipts keep the original
+`result.watch_results` and `result.question_results` paths, including paged reads.
+Near the handoff byte limit, the label is omitted rather than displacing evidence.
+
 ## What is and is not tested
 
 Automated profile tests cover the MCP allowlist, approved-card execution,

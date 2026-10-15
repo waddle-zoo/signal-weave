@@ -519,8 +519,13 @@ def _evaluation_diagnostics(response: dict[str, Any]) -> dict[str, Any]:
         if isinstance(result.get("evidence_findings"), list)
         else []
     )
-    watches = result.get("watch_results") if isinstance(result.get("watch_results"), list) else []
-    questions = result.get("question_results") if isinstance(result.get("question_results"), list) else []
+    diagnostics = response.get("optional_policy_diagnostics")
+    optional = diagnostics.get("values", {}) if isinstance(diagnostics, dict) else {}
+    optional = optional if isinstance(optional, dict) else {}
+    watches = result.get("watch_results", optional.get("watch_results", []))
+    questions = result.get("question_results", optional.get("question_results", []))
+    watches = watches if isinstance(watches, list) else []
+    questions = questions if isinstance(questions, list) else []
     selected_sources = (
         retrieval.get("selected_sources")
         if isinstance(retrieval.get("selected_sources"), list)

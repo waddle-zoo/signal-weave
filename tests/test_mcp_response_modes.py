@@ -123,7 +123,10 @@ async def test_compact_evaluation_preserves_evidence_but_avoids_duplicate_handof
     expected = dict(durable["result"])
     expected.pop("report_markdown", None)
     assert compact["response_mode"] == "compact"
-    assert compact["result"] == expected
+    assert compact["optional_policy_diagnostics"]["values"] == {
+        field: expected[field] for field in ("watch_results", "question_results")
+    }
+    assert {**compact["result"], **compact["optional_policy_diagnostics"]["values"]} == expected
     assert compact["result"]["evidence"]
     assert compact["result"]["report"]
     assert "report_markdown" not in compact["result"]
