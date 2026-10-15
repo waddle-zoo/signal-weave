@@ -9,7 +9,7 @@ Feature branch: `feat/domain-context-memory`, based on main `e8842ac`.
 | Local and hosted context lifecycle | Native stdio and signed HTTP checks cover review, reuse, restart and changed revisions; hosted issuer is synthetic |
 | Card-bound meaning and staleness | Contract tests cover exact pins, reapproval, deferred policy and historical receipts; no automatic notification service is claimed |
 | Approved cards with live decisions | Current native clarification v2 matched three supplied retail periods with live Jev, exact routes and receipt versions; changed required meaning preserved facts without another model call. Scripted owner, not autonomous onboarding |
-| Human-first, agent-led onboarding | Both latest first authors produced correct readouts and saved pending work. The baseline's second turn was censored by a foreign-metadata attempt; cost unknown and no completed paired onboarding. Role prompts are now separated |
+| Human-first, agent-led onboarding | V4 completed both pending-owner handoffs, both answer-application turns and both independent policy reviews. Treatment revised the same draft v2 → approved v3. One scripted-owner development case, not a real human wizard or varied-company success rate |
 | Useful recurring reports and investigations | Historical simulations remain evidence for their own versions; current cross-session final-agent outcomes, diverse connectors and meaningful changed-context cases remain unproven |
 | Comparative business value | No current context-layer advantage over an equal-information agent baseline has been established; report usefulness, noise/misses, source work and complete costs are still required |
 
@@ -169,6 +169,71 @@ shared second-turn prompt also exposed the baseline to card-specific instruction
 that confirmed design flaw is being repaired without claiming it caused the
 metadata call. Keep the guard until that call's source/scope is established.
 Do not resume this cohort or treat its first handoffs as completed onboarding.
+
+### Role-corrected handoff cohort v3
+
+Preregister `owner-handoff-v3` as development repair validation, not a holdout or
+a retry inside either closed series. Same Pine Courier fixture, seed, period 0,
+source access, owner facts, model/effort and semantic rubric. Both arms now have
+role-specific prompts and advertised tools: baseline stores/approves notes only;
+treatment revises/reviews/approves its same saved card. Both are explicitly
+scoped to the supplied trial server. The foreign-tool guard remains unchanged.
+Preflight validates serialized schemas for both arms and both stages.
+
+Use the original eight-invocation, two-Jev-attempt limits: 24 author tools/240s,
+2 review tools/90s, 12 report tools/180s; stop between invocations at 1,200,000
+input or 180,000 uncached input tokens, any unknown usage, failed semantic
+review, incomplete handoff or changed executable. No automatic retry, changed
+fixture, delivery or schedule. Freeze the runner and independently review before
+paid execution. Prior v1 costs and v2 known partial/unknown total remain in the
+separate ledger; this cohort does not convert unknown prior spend to zero.
+
+An adjacent zero-model app-server diagnostic stopped at initialization because
+an inherited `canadacensus` MCP transport configuration was invalid even with
+that entry disabled for the process. No model turn/Jev request occurred; no
+personal configuration was changed. App-server lacks the runner's separate
+`exec --ignore-user-config` path. This does not resolve the historical metadata
+call's origin or justify allowing it. The one-off probe was not added as another
+maintained agent transport.
+
+V3 is terminal after both first authors: treatment used the advertised draft
+revision tool before owner answers. The harness rejected this normal draft edit
+and poisoned later notes/handoff calls. This is a capability/dispatch mismatch,
+not failed product analysis. Both readouts were supported; no second author,
+semantic review, final report or Jev call occurred. Known usage: 366,151 input,
+292,608 cached, 73,543 uncached, 5,155 output across two invocations. Preserve it.
+
+Preregister `owner-handoff-v4` with the same fixture, roles, labels, model,
+information and limits as v3, in new state. Only the harness's first-author
+draft-edit restriction changes: advertised revisions use normal native draft
+semantics and recoverable validation errors; they do not approve/evaluate.
+Capture the final first-turn draft's actual version for the unchanged turn-two
+same-card/version+1 verification. No other failed-run repair/resumption, source
+change, automatic retry or delivery. First-turn revision and subsequent pending
+handoff require offline regression coverage before frozen-runner review,
+zero-inference preflight and exactly one paid attempt.
+
+V4 is terminal at its preregistered token stop after six known invocations.
+Both onboardings and independent policy reviews completed; the same-card
+revision/approval is verified. No final recurring report or Jev request started.
+Usage was 959,348 input / 770,048 cached / 189,300 uncached / 10,249 output;
+189,300 exceeded the 180,000 between-invocation uncached stop. Do not enlarge
+the allowance or restart onboarding to obtain a passing final report. Retain
+these accepted artifacts and costs for a separately reviewed follow-up design.
+The card has no context pins, despite a reviewed context entry being saved;
+cross-card reuse and dependency behavior were not exercised by this cohort.
+
+Next, inspect the observed setup overhead before spending on another onboarding
+run. V4 explicitly requested full onboard/get/review packets; do not mislabel
+those as default-mode defects. Separately, the current card listing returns
+every full card, including stored review/history, and revision returns the full
+card. Test bounded agent-facing listing/revision receipts against full audit
+access, retaining policy/version/source visibility needed for correct review.
+Do not add another agent framework or manufacture a passing rerun. Any later
+report-only study must disclose how accepted setup artifacts were restored,
+retain all onboarding costs, and not claim the original ephemeral native state
+survived cleanup. Fresh reports, live policy evaluation and cross-card reuse
+remain independent gates.
 
 ### Native approved-card clarification check
 

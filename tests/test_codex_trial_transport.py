@@ -678,6 +678,8 @@ async def test_treatment_bundle_prompt_requires_full_numeric_provenance(fake_epi
     *[({"type": "item.completed", "item": {"type": kind}}, "foreign_tool_used")
       for kind in ("command_execution", "web_search", "file_change")],
     ({"type": "item.completed", "item": {"type": "mcp_tool_call", "server": "other"}}, "foreign_tool_used"),
+    ({"type": "item.started", "item": {"type": "mcp_tool_call", "server": "codex",
+                                         "tool": "list_mcp_resources", "arguments": {}}}, "foreign_tool_used"),
 ])
 async def test_episode_rejects_failure_and_foreign_tools_even_after_submission(fake_episode, event, expected):
     fake = fake_episode

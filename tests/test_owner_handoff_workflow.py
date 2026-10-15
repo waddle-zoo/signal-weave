@@ -48,12 +48,12 @@ async def test_serialized_handoff_schemas_do_not_restrict_unrelated_text(stage):
     examples = {
         "read_company_asset": {"ref": "company_mcp|asset:an-arbitrary-source"},
         "save_working_notes": {"notes": "All parcels due; compare complete weeks. Ask about the action threshold."},
-        "finish_setup": {"card_ids": ["card-arbitrary-123"], "message": "Attainment is unchanged at 90%.",
+        "finish_setup": {"card_ids": [], "message": "Attainment is unchanged at 90%.",
                          "unresolved": ["Which change warrants notifying dispatch?"]},
     }
     if stage == "second":
         examples["request_owner_approval"] = {
-            "kind": "card", "id": "card-arbitrary-123", "summary": "Show this saved policy for owner consent.",
+            "kind": "notes", "id": "working", "summary": "Show this saved policy for owner consent.",
         }
     for name, arguments in examples.items():
         validate(arguments, schemas[name])
@@ -141,6 +141,34 @@ class FakeNative:
             self.card["version"] += 1
             return [], {"card": deepcopy(self.card), "approval_required": True}
         raise AssertionError(f"unexpected native call: {name}")
+
+
+@pytest.mark.parametrize("invalid_first", [False, True])
+async def test_first_author_can_edit_draft_without_poisoning_pending_owner_handoff(invalid_first):
+    native = FakeNative({"id": "saved-card", "version": 1, "status": "draft"})
+    session = episode(native=native)
+    arguments = {"card_id": "saved-card", "expected_card_version": 1,
+                 "changes": {"questions": ["Which service tiers changed?"]}, "reason": "Refine the draft."}
+    if invalid_first:
+        with pytest.raises(ValueError, match="requires changes and reason"):
+            await session.call("revise_insight_card", {**arguments, "reason": ""})
+        assert session.terminal_stop is None
+        assert native.card["version"] == 1
+    result = await session.call("revise_insight_card", arguments)
+    assert result["card"]["version"] == 2
+    assert result["card"]["status"] == "draft"
+    assert session.terminal_stop is None
+    assert not session.revision_attempted
+    assert not session.revision_verified  # Owner-answer revision has not occurred.
+    await session.call("save_working_notes", {"notes": "Draft refined; still awaiting the owner threshold."})
+    await session.call("ask_owner", {"topic": "materiality"})
+    handoff = await session.call("finish_setup", {
+        "card_ids": ["saved-card"], "message": "Attainment is unchanged; need the owner's alert policy.",
+        "unresolved": ["Which decline should notify dispatch?"],
+    })
+    assert handoff["recorded"] is True
+    assert handoff["handoff_state"] == "awaiting_owner_context"
+    assert native.card["status"] == "draft"
 
 
 async def test_revision_allows_argument_correction_but_requires_same_card_version_plus_one():

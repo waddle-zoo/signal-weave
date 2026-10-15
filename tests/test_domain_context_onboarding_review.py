@@ -133,7 +133,16 @@ async def test_both_arms_keep_the_same_source_owner_and_notes_tools_and_data():
     assert set(baseline_specs) == COMMON_TOOL_NAMES
     assert set(treatment_specs) == COMMON_TOOL_NAMES | NATIVE_TOOL_NAMES
     assert len(NATIVE_TOOL_NAMES) == 17
-    assert {name: treatment_specs[name] for name in COMMON_TOOL_NAMES} == baseline_specs
+    # Source access, clarification and durable notes remain identical. The
+    # completion/consent interfaces must reflect each arm's actual artifacts.
+    shared = COMMON_TOOL_NAMES - {"request_owner_approval", "finish_setup"}
+    assert {name: treatment_specs[name] for name in shared} == {
+        name: baseline_specs[name] for name in shared
+    }
+    for specs, kinds, max_cards in ((baseline_specs, ["notes"], 0),
+                                   (treatment_specs, ["card", "context", "notes"], 1)):
+        assert specs["request_owner_approval"]["parameters"]["properties"]["kind"]["enum"] == kinds
+        assert specs["finish_setup"]["parameters"]["properties"]["card_ids"]["maxItems"] == max_cards
 
     # The ordinary source interface and owner answer service are equal; answers
     # are returned only after an explicit ask, and notes remain arm-local.

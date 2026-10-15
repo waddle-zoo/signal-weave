@@ -140,25 +140,64 @@ def owner_workflow_settings(args) -> tuple[str, dict, dict | None]:
         if charge_path:
             raise ValueError("charge-trace requires owner-handoff-v2")
         return OWNER_HANDOFF_PROTOCOL, dict(OWNER_HANDOFF_LIMITS), None
+    if cohort in {"owner-handoff-v3", "owner-handoff-v4"} and getattr(args, "owner_handoff", False) and not charge_path:
+        return cohort, dict(OWNER_HANDOFF_LIMITS), None
     if cohort != "owner-handoff-v2" or not getattr(args, "owner_handoff", False) or not charge_path:
         raise ValueError("owner-handoff-v2 requires --owner-handoff and --charge-trace")
     return cohort, dict(HANDOFF_REPAIR_LIMITS), load_handoff_charge(charge_path)
 
 
-def validate_owner_handoff_schemas(tools: list[dict], topic: str) -> None:
+def validate_owner_handoff_schemas(
+    tools: list[dict], topic: str, *, treatment: bool | None = None,
+) -> None:
     """Preflight the serialized common schemas used by the actual MCP validator."""
     schemas = {tool["name"]: tool["parameters"] for tool in json.loads(json.dumps(tools))}
+    card_ids_schema = schemas["finish_setup"]["properties"]["card_ids"]
+    if treatment is None:
+        # Preserve direct callers while deriving the arm from the presented schema.
+        treatment = card_ids_schema.get("maxItems") != 0
+    expected_max_items = 1 if treatment else 0
+    if card_ids_schema.get("maxItems") != expected_max_items:
+        raise ValueError("finish_setup.card_ids must match the arm's card capability")
+
     examples = {
         "ask_owner": {"topic": topic},
         "read_company_asset": {"ref": "company_mcp|asset:preflight"},
         "save_working_notes": {"notes": "An ordinary free-form business definition and question."},
-        "finish_setup": {"card_ids": ["card-preflight"], "message": "A supported current readout.",
+        "finish_setup": {"card_ids": ["card-preflight"] if treatment else [],
+                         "message": "A supported current readout.",
                          "unresolved": ["Which change warrants an alert?"]},
     }
     if "request_owner_approval" in schemas:
-        examples["request_owner_approval"] = {"kind": "notes", "id": "working", "summary": "Review this saved policy."}
+        approval_schema = schemas["request_owner_approval"]
+        expected_kinds = ["card", "context", "notes"] if treatment else ["notes"]
+        if approval_schema["properties"]["kind"].get("enum") != expected_kinds:
+            raise ValueError("request_owner_approval kinds must match the arm's available artifacts")
+        examples["request_owner_approval"] = {
+            "kind": "notes", "id": "working", "summary": "Review these saved baseline notes.",
+        }
     for name, arguments in examples.items():
         validate(arguments, schemas[name])
+    if not treatment:
+        try:
+            validate({**examples["finish_setup"], "card_ids": ["unsupported-baseline-card"]},
+                     schemas["finish_setup"])
+        except ValidationError:
+            pass
+        else:
+            raise ValueError("baseline finish_setup must reject nonempty card IDs")
+        if "request_owner_approval" in schemas:
+            for kind in ("card", "context"):
+                try:
+                    validate({"kind": kind, "id": "unsupported", "summary": "Unsupported artifact."},
+                             schemas["request_owner_approval"])
+                except ValidationError:
+                    continue
+                raise ValueError("baseline request_owner_approval must be notes-only")
+    elif "request_owner_approval" in schemas:
+        for kind in ("card", "context"):
+            validate({"kind": kind, "id": "treatment-artifact", "summary": "Review this saved artifact."},
+                     schemas["request_owner_approval"])
     try:
         validate({"topic": "not-a-declared-owner-topic"}, schemas["ask_owner"])
     except ValidationError:
@@ -167,6 +206,7 @@ def validate_owner_handoff_schemas(tools: list[dict], topic: str) -> None:
 
 
 def owner_handoff_author_instructions(stage: str, *, treatment: bool) -> str:
+    scope = "Use only the supplied trial-server tools; do not enumerate other MCP tools or resources. "
     if stage == "first":
         common = (
             "This is the first charged setup turn. Discover and inspect the synthetic company sources, "
@@ -176,7 +216,7 @@ def owner_handoff_author_instructions(stage: str, *, treatment: bool) -> str:
             "specific unresolved owner questions through finish_setup, then stop. "
             "Do not approve, schedule, evaluate or send anything. "
         )
-        return common + (
+        return scope + common + (
             "Save working notes and one SignalWeave draft card; include its exact ID in finish_setup.card_ids."
             if treatment else
             "Save your source definitions and open policy questions with save_working_notes. "
@@ -191,7 +231,7 @@ def owner_handoff_author_instructions(stage: str, *, treatment: bool) -> str:
         "and stop after finish_setup succeeds. Independent semantic review follows setup. "
         "No evaluation, schedule or sending is authorized during setup. "
     )
-    return common + (
+    return scope + common + (
         "Revise the exact saved draft once with revise_insight_card, using its saved ID and current version. "
         "Never create a replacement. Review it, show the resulting saved card through request_owner_approval "
         "for synthetic consent, approve that card, and include its exact ID in finish_setup.card_ids."
@@ -249,6 +289,17 @@ class Episode:
         self.setup = None
 
     async def specs(self):
+        approval_kind = {"enum": ["card", "context", "notes"], "type": "string"}
+        approval_description = (
+            "Show a saved card/context or baseline notes for synthetic owner consent. "
+            "This is NOT semantic validation or real human sign-off."
+        )
+        if not self.treatment:
+            approval_kind = {"enum": ["notes"], "type": "string"}
+            approval_description = (
+                "Show the saved baseline notes for synthetic owner consent. "
+                "This is NOT semantic validation or real human sign-off."
+            )
         text = {"type": "string"}
         tools = [
             function("list_company_assets", "Browse the same source catalog in both arms.", {}),
@@ -257,10 +308,11 @@ class Episode:
             function("ask_owner", "Ask the scripted business owner about a listed topic. Cannot supply missing rows or a period's answer.", {"topic": text}, ("topic",)),
             function("save_working_notes", "Persist your own definitions, policy and methods for later use; not approval.", {"notes": text}, ("notes",)),
             function("read_working_notes", "Read this arm's own persistent notes.", {}),
-            function("request_owner_approval", "Show a saved card/context or baseline notes for synthetic owner consent. This is NOT semantic validation or real human sign-off.",
-                     {"kind": {"enum": ["card", "context", "notes"], "type": "string"}, "id": text, "summary": text}, ("kind", "id", "summary")),
+            function("request_owner_approval", approval_description,
+                     {"kind": approval_kind, "id": text, "summary": text}, ("kind", "id", "summary")),
             function("finish_setup", "Record the human-facing readout and setup handoff. No notification or schedule. Stop after success.",
-                     {"card_ids": {"type": "array", "items": text, "maxItems": 1}, "message": text,
+                     {"card_ids": {"type": "array", "items": text,
+                                   "maxItems": 1 if self.treatment else 0}, "message": text,
                       "unresolved": {"type": "array", "items": text}}, ("card_ids", "message", "unresolved")),
         ]
         if self.native:
@@ -306,6 +358,8 @@ class Episode:
             return {"consent": "synthetic_owner", "kind": kind, "id": target,
                     "scope": "This saved setup only, no delivery or scheduling; semantic correctness awaits independent review."}
         if name == "finish_setup":
+            if not self.treatment and args.get("card_ids"):
+                raise ValueError("baseline setup cannot include card IDs")
             if not args["message"].strip():
                 raise ValueError("provide a useful current readout or focused clarification first")
             pending = bool(args["unresolved"])
@@ -428,8 +482,8 @@ class HandoffEpisode(Episode):
             "bootstrap_insight_card", "onboard_insight_card", "propose_insight_card",
         }:
             self.stop("resume the saved card with revise_insight_card; do not create a replacement")
-        if name == "revise_insight_card":
-            if self.stage != "second" or not self.native or not self.first_card:
+        if name == "revise_insight_card" and self.stage == "second":
+            if not self.native or not self.first_card:
                 self.stop("card revision is allowed only in the second treatment author turn")
             if self.revision_attempted:
                 self.stop("the same-card revision already succeeded; do not revise it again")
@@ -1163,10 +1217,15 @@ async def run_owner_workflow(args):
                                       adapter, audit, root, request_budget=budget) as (native, skill):
                 if not args.run:
                     if owner_handoff:
-                        for stage in ("first", "second"):
-                            episode = HandoffEpisode(public, adapter, native, stage=stage,
-                                                     owner_answers=public["owner_answers"] if stage == "second" else None)
-                            validate_owner_handoff_schemas(await episode.specs(), public["owner_topics"][0])
+                        for treatment in (False, True):
+                            for stage in ("first", "second"):
+                                episode = HandoffEpisode(
+                                    public, adapter, native if treatment else None, stage=stage,
+                                    owner_answers=public["owner_answers"] if stage == "second" else None,
+                                )
+                                validate_owner_handoff_schemas(
+                                    await episode.specs(), public["owner_topics"][0], treatment=treatment,
+                                )
                     descriptor = adapter.catalog[0]
                     adapter.set_period(public["period"], datetime.now(timezone.utc))
                     _, probe = await native.call_tool("inspect_resource", {
@@ -1185,7 +1244,9 @@ async def run_owner_workflow(args):
                                            "scenario": scenario["scenario_id"], "period_index": 0,
                                            "source_roundtrip": "exact analytical fields and tenant; not agent evidence"}
                     if owner_handoff:
-                        report["preflight"]["serialized_common_schemas"] = "both stages validated; no source writes or model calls"
+                        report["preflight"]["serialized_common_schemas"] = (
+                            "both arms and stages validated; no source writes or model calls"
+                        )
                     return report
                 if owner_handoff:
                     await run_owner_handoff(native, skill)
@@ -1305,7 +1366,7 @@ def main():
     parser.add_argument("--run", action="store_true", help="Explicitly authorize the bounded live-agent pair after preflight")
     parser.add_argument("--owner-workflow", action="store_true", help="Separate expert-clarified development setup/review/report cohort")
     parser.add_argument("--owner-handoff", action="store_true", help="Two-turn pending-owner/resume development cohort")
-    parser.add_argument("--cohort-id", choices=["owner-handoff-v2"], help="Fresh corrected cohort; does not resume v1")
+    parser.add_argument("--cohort-id", choices=["owner-handoff-v2", "owner-handoff-v3", "owner-handoff-v4"], help="Fresh corrected cohort; never resumes a closed run")
     parser.add_argument("--charge-trace", help="Retained invalid v1 trace, charged to the v2 cumulative budget")
     args = parser.parse_args()
     if args.owner_workflow and args.owner_handoff:

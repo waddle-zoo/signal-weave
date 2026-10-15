@@ -6,10 +6,11 @@ Main and the published rc3 download are unchanged.
 
 ## Current conclusion
 
-The context/card API and native transports have engineering evidence. Completed
-conversational onboarding, useful recurring agent reports and comparative
-business benefit are **not yet proved** on this feature branch. Do not interpret
-unit-test counts, scripted approvals or a correct first readout as that proof.
+The context/card API and native transports have engineering evidence. One
+two-turn, scripted-owner onboarding pair now completed with independent policy
+reviews. Useful recurring agent reports and comparative business benefit are
+**not yet proved** on this feature branch. Do not interpret unit-test counts,
+synthetic approvals or a correct initial readout as that broader proof.
 
 The [acceptance ledger](../domain-context-plan.md#current-acceptance-ledger)
 keeps the full goal open. This report is a current summary; the
@@ -28,7 +29,7 @@ reproduction details. No raw research files were deleted by this consolidation.
 | Current native HTTP/context | 11 checks passed in 28.01 seconds; zero inference | Local signed issuer and Superset metadata, not customer deployment |
 | Live recurring decision lifecycle | Current scripted same-card clarification/reapproval matched all three supplied periods and exact routes; changed required meaning returned facts without another model call | Outcomes combine provider judgments and code guards; routes come from the card, not an invented model recipient |
 
-The final settled full suite passed **3,358 tests, 11 skipped, in 220.21 seconds**;
+The final settled full suite passed **3,369 tests, 11 skipped, in 220.55 seconds**;
 Ruff and diff checks passed. These are software checks, not companies, business
 trials or an accuracy estimate.
 
@@ -47,6 +48,8 @@ not comparisons with an unconstrained BI agent.
 | `owner-workflow-v1` | Baseline setup accepted by a synthetic reviewer; treatment gave a correct first readout but left policy unresolved without using available clarification tools | No treatment approval or recurring report; guide wording is not a proved cause |
 | `owner-handoff-v1` | Invalid shared-schema enum restricted refs/notes/readouts/card IDs. Baseline saved only a topic token; treatment read sources and drafted a card but could not finish | Neither completed onboarding; this is a harness failure, not product underperformance |
 | `owner-handoff-v2` | Both first authors read sources, saved work and correctly reported unchanged 90% attainment. Baseline's second turn attempted `codex/list_mcp_resources`; the foreign-tool guard terminated it before a result/final usage | No completed resumption, independent policy review, final report, Jev call or valid product comparison |
+| `owner-handoff-v3` | Baseline saved a valid pending-owner handoff. Treatment computed the same supported readout, but the harness rejected its advertised draft-edit tool and poisoned subsequent notes/handoff calls | Another harness capability/dispatch mismatch; no completed treatment handoff, second author, review, report or Jev call |
+| `owner-handoff-v4` | Both arms saved pending-owner work, applied the same owner answers, and passed independent policy reviews; treatment revised the same draft v2 → approved v3 | Stopped at the original token limit before either fresh report; no Jev call, changed-period analysis, context reuse or advantage estimate |
 
 In v2 the two complete weeks were 5,220/5,800 and 10,440/11,600: both 90%,
 despite doubled volume. That supports the first readouts, not an alerting result.
@@ -55,7 +58,9 @@ The shared second-turn prompt exposed baseline to SignalWeave-specific card
 instructions; the agent then announced a card-search plan. This is a confirmed
 prompt-design flaw, but its causal link to the metadata call is unproved.
 Future instructions now separate notes-backed baseline from card-backed
-treatment, with tests on the actual supplied prompts.
+treatment, with tests on the actual supplied prompts. The advertised baseline
+consent/completion schemas now match its notes-only capability; source tools,
+glossary, owner answers and durable notes remain equal between arms.
 
 The metadata namespace/source remains unresolved. The
 [official MCP configuration guide](https://learn.chatgpt.com/docs/extend/mcp)
@@ -64,6 +69,23 @@ scope. A read-only global CLI probe showed that an empty `mcp_servers` override
 did not clear user server entries; this is **not** proof about the separate exec
 path, which uses `--ignore-user-config`. The guard has not been weakened or
 allowlisted based on a tool name. No result established access to outside data.
+
+A zero-model app-server probe also stopped before initialization on an inherited
+invalid MCP transport, despite process-only disables. Personal configuration
+was not edited. The [app-server status protocol](https://learn.chatgpt.com/docs/app-server)
+is adjacent to, not proof of isolation for, the separate exec runner.
+
+The role-corrected `owner-handoff-v3` was preregistered and independently approved
+for one development attempt, not efficacy estimation. Its zero-inference native
+preflight passed: 17 tools, exact source analytical fields/tenant, serialized
+schemas in both arms/stages, zero Codex invocations and zero Jev requests.
+Runner SHA-256: `c14bdf4b6bdefb3699cc4f4efe60e0253f90ab9952a75092f0fcf366ee0d1736`.
+Preflight report: `artifacts/owner-handoff-v3-preflight/report.json`, SHA-256
+`85b150f04e969d843c76cf36b008693f3a67ed5316b837f993b020cb16bc3794`.
+Its later failed live attempt is retained, not resumed. Normal first-turn draft
+edits now reach the native service; a validation error must not poison notes and
+handoff. This does not permit first-turn approval or evaluation. Turn-two
+same-card/version+1 verification remains unchanged.
 
 All stopped cohorts remain terminal. In particular, unknown v2 cost is not a
 fresh retry allowance or a zero-cost attempt.
@@ -78,10 +100,42 @@ Counts are observed tokens, not billed dollars or a speed-benefit claim.
 | `owner-workflow-v1` | 427,159 / 329,216 / 97,943 / 4,791 | 3 invocations; zero Jev attempts |
 | Invalid `owner-handoff-v1` | 377,916 / 304,896 / 73,020 / 4,305 | 2 invocations; zero Jev attempts |
 | `owner-handoff-v2`, known first turns only | 302,307 / 244,736 / 57,571 / 4,427 | 2 known responses out of 3 attempted invocations; third cost unknown, zero Jev attempts |
+| `owner-handoff-v3` | 366,151 / 292,608 / 73,543 / 5,155 | 2 known responses; stopped on first-author draft-edit mismatch, zero Jev attempts |
+| `owner-handoff-v4` | 959,348 / 770,048 / 189,300 / 10,249 | 6 known responses; stopped before reports at the 180,000 uncached-token threshold; zero Jev attempts |
 
 V2 charged the invalid v1 trace against cumulative stops. Its **total**, including
 the censored third invocation, remains unknown. No project-wide total is claimed;
 earlier unknown costs remain unknown. The full older accounting is in the archive.
+
+### What the completed v4 onboarding establishes
+
+Both first readouts correctly calculated 5,220/5,800 and 10,440/11,600 as 90%:
+volume doubled without worse attainment. Both completed setups preserve the
+all-parcels-due population, complete UTC weeks, owner-defined 0.05-ratio-unit
+decline threshold, volume-only ignore rule, and missing-denominator route to
+data operations. Independent synthetic reviewers accepted both policies.
+Treatment's same saved card reached approved version 3 from draft version 2.
+No delivery or scheduling occurred.
+
+Setup was more expensive with SignalWeave in this single development pair:
+the two authors plus policy reviewer used 755,509 aggregate input / 133,429
+uncached tokens versus baseline's 203,839 / 55,871. This is observed setup
+overhead, not a billed-dollar estimate or a recurring-run cost comparison.
+No final reports started, so there is no amortization, quality or speed win to
+claim. Shared context was saved/reviewed, but the card had no context pins;
+neither cross-card reuse nor changed-context behavior was tested here.
+
+Frozen runner: `574a26bf5d430bd19fa331758e681d8728edda6807b9c3934989a33642f30f5e`.
+Retained local `artifacts/owner-handoff-v4-live/report.json` SHA-256:
+`e4f4cef42971fefb466ba0eb9df0c6d267dce05fc13544dae9fcb397354b5048`;
+trace SHA-256:
+`e534505dfc0eb8a6072d47de408be3308489ab18619db4a681c810208975a13b`.
+The separate zero-model native preflight passed before the reviewed live attempt.
+Independent agent review accepted the code/evidence diff for this narrow claim,
+confirmed the artifact hashes, and required that threshold/destination policy
+remain described as recorded—not runtime-tested by this cohort. Synthetic
+notes approval and card approval are different artifacts, not a card-to-card
+comparison. This is not scientific peer review or customer validation.
 
 The v2 safeguards have 17 offline cases: immutable prior-trace identity,
 prior-plus-current token stops, unchanged legacy defaults, no forwarding of
