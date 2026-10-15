@@ -31,9 +31,10 @@ def keys_below(value):
 class FakeNative:
     """Small stateful fake for the helper's native MCP calls; no provider path."""
 
-    def __init__(self, *, collision=False, dependency_mismatch=None, fail_at=None, mutate_inputs=False):
+    def __init__(self, *, collision=False, dependency_mismatch=None, brief_mismatch=None, fail_at=None, mutate_inputs=False):
         self.collision = collision
         self.dependency_mismatch = dependency_mismatch
+        self.brief_mismatch = brief_mismatch
         self.fail_at = fail_at
         self.mutate_inputs = mutate_inputs
         self.calls = []
@@ -66,6 +67,11 @@ class FakeNative:
                 "version": 1,
                 "status": "draft",
                 "title": captured["title"],
+                "what_to_watch": captured["what_to_watch"], "why_watch": captured["why_watch"],
+                "sources": [{"key": source["key"], "adapter": source["ref"].split("|", 1)[0],
+                             "resource": source["ref"].split("|", 1)[1], "required": source["required"],
+                             "required_comparison_keys": source.get("required_comparison_keys", [])}
+                            for source in captured["selected_sources"]],
                 "selected_sources": deepcopy(captured["selected_sources"]),
                 "context_bindings": [],
             }
@@ -86,6 +92,10 @@ class FakeNative:
             return None, {"card": deepcopy(card)}
         if name == "get_insight_card":
             card = deepcopy(self.cards[captured["card_id"]])
+            if self.brief_mismatch in {"title", "what_to_watch"}:
+                card[self.brief_mismatch] = "Altered brief"
+            elif self.brief_mismatch == "sources":
+                card["sources"][0]["resource"] = "different-source"
             if self.dependency_mismatch == "entry_id":
                 card["context_bindings"][0]["entry_id"] = "different-context"
             elif self.dependency_mismatch == "revision":
@@ -225,3 +235,10 @@ async def test_same_card_id_collision_stops_before_binding_second_card():
         "approve_insight_card", "get_insight_card", "onboard_insight_card",
     ]
     assert native.cards["shared-card"]["status"] == "draft"
+
+
+@pytest.mark.parametrize("fault", ["title", "what_to_watch", "sources"])
+async def test_setup_rejects_changed_saved_brief_or_source_scope(fault):
+    _, public = public_retail_fixture()
+    with pytest.raises(RuntimeError, match="Stored reporting"):
+        await create_public_context_setup(FakeNative(brief_mismatch=fault), retail_setup_spec(public, FIXED_CLOCK))

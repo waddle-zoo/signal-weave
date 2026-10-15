@@ -73,6 +73,14 @@ async def create_public_context_setup(native, spec):
         approval = review["approval_handoff"]["arguments_after_owner_confirmation"]
         await native.call_tool("approve_insight_card", {**approval, "source_selection_reason": reason})
         _, card = await native.call_tool("get_insight_card", {"card_id": card_id, "response_mode": "full"})
+        if any(card[field] != draft[field] for field in ("title", "what_to_watch", "why_watch")):
+            raise RuntimeError("Stored reporting brief differs from the submitted purpose")
+        requested = [(source["key"], source["ref"], source["required"], source.get("required_comparison_keys", []))
+                     for source in draft["selected_sources"]]
+        stored = [(source["key"], source["adapter"] + "|" + source["resource"], source["required"], source["required_comparison_keys"])
+                  for source in card["sources"]]
+        if stored != requested:
+            raise RuntimeError("Stored reporting sources differ from the submitted scope")
         pins = card.get("context_bindings", [])
         if (card["status"] != "approved" or len(pins) != 1
                 or pins[0]["entry_id"] != reviewed["id"]
