@@ -70,7 +70,7 @@ from .retrieval_quality import (
     RetrievalQualityEvaluator,
     RetrievalQualityThresholds,
 )
-from .runtime import Runtime, build_runtime, load_deployment_secret
+from .runtime import AgentOwnedJudger, Runtime, build_runtime, load_deployment_secret
 from .store import (
     InMemoryCertificationReportStore,
     InMemoryDecisionFeedbackStore,
@@ -1057,7 +1057,14 @@ def create_mcp(
     if profile not in {"agent", "full"}:
         raise ValueError("MCP profile must be 'agent' or 'full'")
     default_card_response_mode: ResponseMode = "compact" if profile == "agent" else "full"
-    runtime = runtime or build_runtime(mode="agent" if profile == "agent" else "jev")
+    # A tool profile limits capabilities; it must not replace the configured
+    # provider with the keyless source-health runtime.
+    runtime = runtime or build_runtime()
+    if isinstance(runtime.engine.judger, AgentOwnedJudger):
+        raise RuntimeError(
+            "A source-health runtime cannot serve card decisions; configure a decision provider "
+            "and build its runtime before serving MCP"
+        )
     if require_principal and runtime.principal is None and principal_resolver is None:
         raise RuntimeError(
             "the HTTP MCP server requires a deployment or request principal; "

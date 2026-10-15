@@ -346,9 +346,9 @@ remains absolute.
 
 For existing HTTP deployments, `--transport streamable-http` keeps its bearer/OIDC
 and trusted-principal requirements. Local setup does not disable HTTP security.
-See [security](security.md). Local storage does not make Jev evaluation offline:
-evaluation sends the configured evidence to TypeSafe and can access configured
-source services.
+See [security](security.md). Local storage does not make evaluation offline:
+evaluation sends configured evidence to the selected provider (TypeSafe or
+OpenAI) and can access configured source services.
 
 ## Connect Codex or Claude Code
 

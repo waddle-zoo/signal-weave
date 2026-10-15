@@ -61,9 +61,10 @@ into the four-case functional pass.
 - A company-MCP simulation, mocked provider/transport, simulated outbox, or
   `simulation://` destination is not a third-party connector or external
   delivery. No linked trial establishes real Slack delivery.
-- The published native preview is **v0.2.0rc1**. The newer source/native
-  candidate described in the October 13 report has not been published; see the
-  version distinction in the [README](../README.md).
+- Historical reports name the executable actually tested. See
+  [release compatibility](local-install-reference.md#release-compatibility)
+  for the current published preview; newer source fixes are not evidence about
+  an older downloaded executable.
 - Do not convert small known-case cohorts into a general accuracy, adoption,
   enterprise, cost, or speed claim. Keep failed, censored, non-use, and mixed
   runs in their own denominators; the linked synthesis does so.

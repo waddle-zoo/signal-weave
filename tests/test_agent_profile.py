@@ -5,11 +5,33 @@ import typesafe_sdk
 
 from signalweave.mcp_server import AGENT_PROFILE_TOOLS, CARD_AUTHORING_GUIDANCE, create_mcp
 from signalweave.models import InsightCardStatus, InvestigationMode, PrincipalContext, RetrievalMode
-from signalweave.runtime import build_runtime
+from signalweave.runtime import AgentOwnedJudger, build_runtime
 from signalweave.typesafe_adapter import JevJudger
 from tests.test_diagnostics import comparison
 from tests.test_local_investigation import make_runtime
 from tests.test_typesafe_adapter import FakeClient, FakeNoul, FakeScore
+
+
+def test_default_factory_uses_configured_runtime_without_keyless_mode(monkeypatch, tmp_path):
+    runtime, _, _ = make_runtime(tmp_path)
+    calls = []
+
+    def configured_runtime(*args, **kwargs):
+        calls.append((args, kwargs))
+        return runtime
+
+    monkeypatch.setattr("signalweave.mcp_server.build_runtime", configured_runtime)
+    server = create_mcp()
+    assert calls == [((), {})]
+    assert "calls Jev for the card's typed policy judgment" in server.instructions
+
+
+@pytest.mark.parametrize("profile", ["agent", "full"])
+def test_source_health_runtime_is_rejected_before_serving_card_tools(tmp_path, profile):
+    runtime, _, _ = make_runtime(tmp_path)
+    runtime.engine.judger = AgentOwnedJudger()
+    with pytest.raises(RuntimeError, match="source-health runtime cannot serve card decisions"):
+        create_mcp(runtime, profile=profile)
 
 
 def test_authoring_distinguishes_coverage_bindings_from_numeric_analysis_and_example_dates():

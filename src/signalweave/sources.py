@@ -36,13 +36,26 @@ def _inspection_contract(catalog: ResourceContract, snapshot: ResourceContract) 
                 "detail": "Comparison keys are not unique; current quality cannot be established.",
                 "query_refs": [],
             })
-    # Catalog metadata supplies the stable definition; the inspection snapshot
-    # may replace it with current coverage/comparability for this run. Keep
-    # catalog-only contracts too so a later required-key check remains explicit.
-    comparisons = [
-        snapshot_comparisons.get(key, item)
-        for key, item in catalog_comparisons.items()
-    ]
+    # Current quality may change, but a reused key cannot silently replace the
+    # catalog's measurement meaning. Period dates are not in this contract:
+    # the comparison-window definition is stable while individual runs advance.
+    meaning_fields = ("metric", "definition", "population", "unit", "comparison_window")
+    comparisons = []
+    for key, item in catalog_comparisons.items():
+        current = snapshot_comparisons.get(key)
+        if current is None:
+            comparisons.append(item)
+            continue
+        changed = [field for field in meaning_fields if getattr(item, field) != getattr(current, field)]
+        if changed:
+            comparisons.append(item.model_copy(deep=True, update={
+                "coverage": "unknown",
+                "comparable": False,
+                "detail": "Inspection comparison meaning differs from catalog: " + ", ".join(changed),
+                "query_refs": [],
+            }))
+        else:
+            comparisons.append(current)
     comparisons.extend(
         item for key, item in snapshot_comparisons.items() if key not in catalog_comparisons
     )

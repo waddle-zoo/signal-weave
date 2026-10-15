@@ -41,7 +41,7 @@ def test_inspection_contract_preserves_catalog_definitions_and_snapshot_quality(
     )
     snapshot = ResourceContract(
         comparison_contracts=[SourceComparisonContract(
-            key="latency", metric="p95", definition="snapshot definition",
+            key="latency", metric="p95", definition="catalog definition",
             population="customers", unit="ms", comparison_window="previous_period",
             coverage="partial", comparable=False, detail="region omitted",
         ), SourceComparisonContract(
@@ -53,8 +53,51 @@ def test_inspection_contract_preserves_catalog_definitions_and_snapshot_quality(
     merged = _inspection_contract(catalog, snapshot)
     assert merged.required_comparison_keys == ["latency"]
     assert [item.key for item in merged.comparison_contracts] == ["latency", "lag"]
-    assert merged.comparison_contracts[0].definition == "snapshot definition"
+    assert merged.comparison_contracts[0].definition == "catalog definition"
     assert merged.comparison_contracts[0].detail == "region omitted"
+
+
+@pytest.mark.parametrize("field,value", [
+    ("metric", "p99"),
+    ("definition", "different calculation"),
+    ("population", "internal traffic"),
+    ("unit", "seconds"),
+    ("comparison_window", "previous_year"),
+])
+def test_inspection_comparison_key_cannot_replace_catalog_meaning(field, value):
+    original = SourceComparisonContract(
+        key="latency", metric="p95", definition="customer latency",
+        population="customers", unit="ms", comparison_window="previous_period",
+        coverage="unknown", comparable=False,
+    )
+    current = original.model_copy(update={
+        field: value, "coverage": "complete", "comparable": True,
+        "query_refs": ["query:new"],
+    })
+    merged = _inspection_contract(
+        ResourceContract(comparison_contracts=[original]),
+        ResourceContract(comparison_contracts=[current]),
+    ).comparison_contracts[0]
+    assert getattr(merged, field) == getattr(original, field)
+    assert merged.coverage == "unknown"
+    assert merged.comparable is False
+    assert field in merged.detail
+    assert merged.query_refs == []
+
+
+def test_inspection_quality_can_improve_when_comparison_meaning_matches():
+    original = SourceComparisonContract(
+        key="latency", metric="p95", definition="customer latency",
+        population="customers", unit="ms", comparison_window="previous_period",
+    )
+    current = original.model_copy(update={
+        "coverage": "complete", "comparable": True, "query_refs": ["query:current"],
+    })
+    merged = _inspection_contract(
+        ResourceContract(comparison_contracts=[original]),
+        ResourceContract(comparison_contracts=[current]),
+    ).comparison_contracts[0]
+    assert merged == current
 
 
 class BrokenCatalogAdapter:
