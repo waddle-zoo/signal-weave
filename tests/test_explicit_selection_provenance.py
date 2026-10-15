@@ -28,3 +28,4 @@ async def test_direct_caller_selection_records_catalog_validation_not_agent_insp
     assert "prior inspection is not verified" in selected["reason"]
     assert "caller-selected" in selected["retrieval_signals"]
     assert "Exact source references were supplied by the caller; prior search, inspection and caller type are not verified." in result["discovery"]["warnings"]
+    assert "Confirm the selected comparison window: previous_period." in result["setup_questions"]

@@ -2080,7 +2080,7 @@ class InsightAuthoringService:
         setup_questions: list[str] = list(onboarding_review.questions)
         if plan.comparison_windows:
             setup_questions.append(
-                f"Confirm the comparison window proposed by Jev: {plan.comparison_windows[0]}."
+                f"Confirm the selected comparison window: {plan.comparison_windows[0]}."
             )
         if discovery.truncated:
             setup_questions.append(
