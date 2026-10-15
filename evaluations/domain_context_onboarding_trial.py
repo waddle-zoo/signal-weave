@@ -1,7 +1,11 @@
-"""Opt-in cold-onboarding smoke: actual native MCP, scripted owner, live Codex.
+"""Opt-in onboarding and owner-handoff trials over the actual native MCP.
 
-Not an efficacy benchmark, human trial, arbitrary-script baseline, or recurring run.
-Run preflight before --run. Outputs are exclusive; partial attempts are retained.
+The default cold-onboarding smoke, terminal one-turn ``--owner-workflow``
+cohort, and two-turn ``--owner-handoff`` cohort use scripted owner facts and
+live Codex only after explicit ``--run``. The handoff cohort ends with bounded
+fresh reports; it does not schedule or deliver them. These are development
+feasibility checks, not human trials or efficacy benchmarks. Preflight first.
+Outputs are exclusive and partial attempts are retained.
 """
 
 from __future__ import annotations
@@ -15,6 +19,7 @@ import os
 import shutil
 import tempfile
 import time
+from builtins import BaseExceptionGroup
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
@@ -51,6 +56,19 @@ from signalweave.models import InsightCard, SourceRef
 
 MAX_INPUT = 500_000
 MAX_UNCACHED = 75_000
+OWNER_HANDOFF_PROTOCOL = "owner-handoff-v1"
+OWNER_HANDOFF_LIMITS = {
+    "codex_invocations": 8,
+    "author_tools_per_turn": 24,
+    "author_seconds_per_turn": 240,
+    "review_tools": 2,
+    "review_seconds": 90,
+    "report_tools": 12,
+    "report_seconds": 180,
+    "jev_attempts": 2,
+    "between_invocation_input_stop": 1_200_000,
+    "between_invocation_uncached_stop": 180_000,
+}
 
 
 def approval_digest(kind: str, artifact: dict) -> str:
@@ -100,6 +118,26 @@ def budget_stop(events: list[dict]) -> str | None:
     if totals["input_tokens"] >= MAX_INPUT or totals["uncached_input_tokens"] >= MAX_UNCACHED:
         return "between_episode_token_threshold"
     return None
+
+
+def failure_detail(error: BaseException) -> dict:
+    """Retain a bounded root cause when MCP task groups wrap the stop reason."""
+    remaining = 16
+
+    def describe(current):
+        nonlocal remaining
+        remaining -= 1
+        result = {"type": type(current).__name__, "message": str(current)[:2000]}
+        if isinstance(current, BaseExceptionGroup):
+            result["causes"] = []
+            for child in current.exceptions:
+                if remaining == 0:
+                    result["truncated"] = True
+                    break
+                result["causes"].append(describe(child))
+        return result
+
+    return describe(error)
 
 
 class Episode:
@@ -210,16 +248,134 @@ class Episode:
         raise ValueError("tool unavailable")
 
 
+class HandoffEpisode(Episode):
+    """One arm's persistent tools/state across two separately charged authors."""
+
+    def __init__(self, public, adapter, native=None, *, stage="first", owner_answers=None,
+                 first_setup_entry=None, first_card=None):
+        if stage not in {"first", "second"}:
+            raise ValueError("owner-handoff stage must be first or second")
+        super().__init__(public, adapter, native)
+        self.stage = stage
+        self.owner_answers = copy.deepcopy(owner_answers)
+        self.first_setup_entry = copy.deepcopy(first_setup_entry)
+        self.first_card = copy.deepcopy(first_card)
+        self.owner_answers_delivered = list(self.owner_answers or {})
+        self.revision_attempted = False
+        self.revision_verified = False
+        self.finished_stages: set[str] = set()
+        self.terminal_stop: str | None = None
+
+    def stop(self, message):
+        self.terminal_stop = message
+        raise ValueError(message)
+
+    async def specs(self):
+        tools = await super().specs()
+        allowed_topics = (list(self.owner_answers) if self.stage == "second" and self.owner_answers
+                          else list(self.public["owner_topics"]))
+        for tool in tools:
+            if tool["name"] == "ask_owner":
+                tool["parameters"]["properties"]["topic"]["enum"] = allowed_topics
+        if self.stage == "first":
+            blocked = {"request_owner_approval", "request_synthetic_owner_approval", "approve_insight_card"}
+            tools = [tool for tool in tools if tool["name"] not in blocked]
+        return tools
+
+    async def call(self, name, args):
+        if self.terminal_stop:
+            raise ValueError(f"owner-handoff cohort stopped: {self.terminal_stop}")
+        if name == "ask_owner":
+            topic = args.get("topic")
+            if topic not in self.public["owner_topics"]:
+                raise ValueError("ask_owner topic is not in the declared owner-topic list")
+            if self.stage == "first":
+                self.owner_requests.append({"topic": topic, "stage": "first", "answer_status": "pending"})
+                return {"topic": topic, "answer_status": "pending_owner_answer", "answer": None,
+                        "message": "The owner will answer after this setup is saved and handed off."}
+            if not isinstance(self.owner_answers, dict) or topic not in self.owner_answers:
+                self.stop("declared owner answer is missing; do not infer or retry")
+            answer = self.owner_answers[topic]
+            self.owner_requests.append({"topic": topic, "stage": "second", "answer_status": "answered"})
+            if topic not in self.owner_answers_delivered:
+                self.owner_answers_delivered.append(topic)
+            return {"topic": topic, "answer_status": "answered", "answer": answer}
+
+        if name == "finish_setup":
+            if self.stage in self.finished_stages:
+                self.stop("setup handoff was already recorded for this author turn")
+            unresolved = args.get("unresolved", [])
+            if self.stage == "first":
+                if not any(item.get("stage") == "first" for item in self.owner_requests):
+                    raise ValueError("ask the owner and record the pending answer before pausing setup")
+                if not unresolved or any(not isinstance(item, str) or not item.strip() for item in unresolved):
+                    raise ValueError("first author turn must finish with an explicit unresolved owner question")
+            else:
+                if unresolved:
+                    self.stop("second author turn remains unresolved; stop this cohort without repair")
+                if not isinstance(self.owner_answers, dict) or not self.owner_answers:
+                    self.stop("second author turn has no declared owner-answer packet")
+                if self.native:
+                    first_id = (self.first_card or {}).get("id")
+                    if (not first_id or args.get("card_ids") != [first_id]
+                            or not self.revision_verified):
+                        raise ValueError("resume and revise the same saved card before finishing setup")
+            result = await super().call(name, args)
+            self.finished_stages.add(self.stage)
+            return result
+
+        if self.native and self.stage == "first" and name in {
+            "request_synthetic_owner_approval", "approve_insight_card",
+        }:
+            self.stop("the first turn is awaiting owner answers and cannot approve a draft")
+        if self.native and self.stage == "second" and name in {
+            "bootstrap_insight_card", "onboard_insight_card", "propose_insight_card",
+        }:
+            self.stop("resume the saved card with revise_insight_card; do not create a replacement")
+        if name == "revise_insight_card":
+            if self.stage != "second" or not self.native or not self.first_card:
+                self.stop("card revision is allowed only in the second treatment author turn")
+            if self.revision_attempted:
+                self.stop("the same-card revision already succeeded; do not revise it again")
+            card_id = self.first_card.get("id")
+            first_version = self.first_card.get("version")
+            if args.get("card_id") != card_id or type(first_version) is not int:
+                self.stop("revising a different card is outside this cohort")
+            _, before = await self.native.call_tool("get_insight_card", {
+                "card_id": card_id, "response_mode": "full",
+            })
+            if (not isinstance(before, dict) or before.get("id") != card_id
+                    or before.get("version") != first_version or before.get("status") != "draft"):
+                self.stop("saved card changed outside the expected owner revision")
+            result = await super().call(name, args)
+            self.revision_attempted = True
+            revised = result.get("card") if isinstance(result, dict) else None
+            _, current = await self.native.call_tool("get_insight_card", {
+                "card_id": card_id, "response_mode": "full",
+            })
+            if (not isinstance(revised, dict) or revised.get("id") != card_id
+                    or revised.get("version") != first_version + 1
+                    or not isinstance(current, dict) or current.get("id") != card_id
+                    or current.get("version") != first_version + 1
+                    or current.get("status") != "draft"):
+                self.stop("same-card revision did not produce exactly version+1 as a draft")
+            self.revision_verified = True
+            return result
+        return await super().call(name, args)
+
+
 class RecurringEpisode(Episode):
     """A fresh agent session reuses its own arm's setup, never future labels."""
 
     phase = "monitoring"
 
-    def __init__(self, public, adapter, native=None, *, notes="", approved_card_id=None, run_key=None):
+    def __init__(self, public, adapter, native=None, *, notes="", approved_card_id=None,
+                 approved_card_version=None, run_key=None):
         super().__init__(public, adapter, native)
         self.notes = notes
         self.submission = None
-        self.approved_card_id, self.run_key = approved_card_id, run_key
+        self.approved_card_id, self.approved_card_version = approved_card_id, approved_card_version
+        self.run_key = run_key
         self.evaluation_verified = False
 
     async def specs(self):
@@ -262,7 +418,9 @@ class RecurringEpisode(Episode):
             self.evaluation_verified = (receipt.get("card_id") == self.approved_card_id
                                         and receipt.get("idempotency_key") == self.run_key
                                         and receipt.get("status") == "delivery_disabled"
-                                        and result.get("result", {}).get("card_id") == self.approved_card_id)
+                                        and result.get("result", {}).get("card_id") == self.approved_card_id
+                                        and (self.approved_card_version is None
+                                             or receipt.get("card_version") == self.approved_card_version))
             return result
         return await super().call(name, args)
 
@@ -290,6 +448,51 @@ def clarified_development_scenario():
     )
     public["glossary"]["population"] = public["owner_answers"]["source_scope"]
     return scenario
+
+
+def owner_handoff_prompt(public: dict, first_setup_entry: dict, first_card: dict | None = None) -> dict:
+    """Build turn two only from the first setup and declared public owner answers."""
+    setup = first_setup_entry.get("setup")
+    notes = first_setup_entry.get("notes")
+    requests = first_setup_entry.get("owner_requests")
+    if not isinstance(setup, dict) or not isinstance(notes, str) or not isinstance(requests, list):
+        raise ValueError("first-turn setup, notes and owner requests are required for handoff")
+    questions = setup.get("unresolved")
+    if not isinstance(questions, list) or not questions or any(
+        not isinstance(question, str) or not question.strip() for question in questions
+    ):
+        raise ValueError("first author must pause with a concrete unresolved owner question")
+    requested_topics = [item.get("topic") for item in requests
+                        if item.get("stage") == "first" and item.get("answer_status") == "pending"]
+    if not requested_topics:
+        raise ValueError("first author must explicitly request a pending owner answer")
+    owner_answers = public.get("owner_answers")
+    owner_topics = public.get("owner_topics")
+    if (not isinstance(owner_answers, dict) or not isinstance(owner_topics, list)
+            or any(topic not in owner_answers for topic in owner_topics)
+            or any(not isinstance(topic, str) or not isinstance(answer, str) or not answer.strip()
+                   for topic, answer in owner_answers.items())):
+        raise ValueError("the complete declared public owner-answer packet is unavailable")
+    if any(not isinstance(topic, str) or topic not in owner_topics for topic in requested_topics):
+        raise ValueError("first-turn owner request is outside the declared public topic list")
+    missing = sorted(set(requested_topics) - owner_answers.keys())
+    if missing:
+        raise ValueError("declared owner answer missing for first-turn topic: " + ", ".join(missing))
+    if first_card is not None and (
+        not isinstance(first_card.get("id"), str) or type(first_card.get("version")) is not int
+    ):
+        raise ValueError("saved first-turn card identity and version are required")
+    payload = {
+        "business": public_brief(public),
+        "saved_setup": copy.deepcopy(setup),
+        "saved_notes": notes,
+        "owner_questions": copy.deepcopy(questions),
+        "owner_request_topics": copy.deepcopy(requested_topics),
+        "owner_answers": copy.deepcopy(owner_answers),
+    }
+    if first_card is not None:
+        payload["saved_card"] = {"card_id": first_card["id"], "version": first_card["version"]}
+    return payload
 
 
 async def pinned_codex(path):
@@ -475,16 +678,19 @@ async def run(args):
 
 
 async def run_owner_workflow(args):
-    """Separate development cohort: two setups, reviews, then fresh reports.
+    """Run the terminal one-turn cohort or its separately opted-in two-turn successor.
 
-    At most six Codex invocations and two live Jev attempts. Unknown accounting,
-    incomplete setup or a rejected review stops expansion without a free retry.
+    The legacy mode keeps its six-invocation protocol. Owner-handoff uses eight
+    invocations and never resumes an earlier output directory or protocol run.
     """
     from evaluations.bootstrap_owner_review import review_owner_artifact
 
+    owner_handoff = bool(getattr(args, "owner_handoff", False))
     if args.prior_trace:
-        raise ValueError("the owner-workflow cohort cannot resume or recharge an earlier series")
-    identity = verify_binary(Path(args.binary).resolve())
+        protocol = "owner-handoff" if owner_handoff else "owner-workflow"
+        raise ValueError(f"the {protocol} cohort cannot resume or recharge an earlier series")
+    binary_path = Path(args.binary).resolve()
+    identity = verify_binary(binary_path)
     codex_identity = await pinned_codex(args.codex_executable)
     args.codex_executable = codex_identity["path"]
     output = Path(args.output).resolve()
@@ -509,48 +715,311 @@ async def run_owner_workflow(args):
                         "One fixed development company and period index 0; no population accuracy or latency claim.",
                         "Token stops are between invocations, not hard in-flight limits; reviewers count too."],
     }
+    if owner_handoff:
+        report.update(
+            protocol="owner-handoff-v1",
+            scope="Two-turn owner-handoff development feasibility pair; a first-turn pending answer is the intended handoff, not completed setup or a failure.",
+            limits=dict(OWNER_HANDOFF_LIMITS),
+            pair_status="incomplete",
+            limitations=[
+                "Same clarified Pine Courier development fixture and fixed monitoring period index 0; not a holdout or accuracy estimate.",
+                "First-turn ask_owner calls return pending; both fresh second authors receive the same complete declared public owner-answer packet.",
+                "Both arms retain source discovery, glossary access, own durable notes and their first-turn handoff; arbitrary scripts are disabled.",
+                "SignalWeave uses the explicitly supplied project-installed skill and must revise the same draft card by one version.",
+                "Synthetic owner answers and independent semantic reviews are not real human approval; no delivery or schedule is authorized.",
+                "All eight invocations and failures are charged; token thresholds apply between invocations, not in flight.",
+            ],
+            preflight_live_calls={"codex": 0, "jev": 0},
+        )
 
     def save():
-        report["usage"] = usage_totals(audit.events)
+        try:
+            report["usage"] = usage_totals(audit.events)
+        except ValueError:
+            if not owner_handoff:
+                raise
+            report["usage"] = {"status": "unknown"}
         report["agent_invocations_started"] = sum(e["kind"] == "api.request" and e.get("provider") == "openai"
                                                    for e in audit.events)
         report["usage_known"] = (not any(e["kind"] == "api.error" and e.get("provider") == "openai" for e in audit.events)
-                                 and report["usage"]["responses"] == report["agent_invocations_started"])
+                                 and report["usage"].get("responses") == report["agent_invocations_started"])
         (output / "report.json").write_text(json.dumps(audit.redact(report), indent=2))
 
     def before_invocation():
+        invocation_cap = OWNER_HANDOFF_LIMITS["codex_invocations"] if owner_handoff else 6
+        input_stop = OWNER_HANDOFF_LIMITS["between_invocation_input_stop"] if owner_handoff else 600_000
+        uncached_stop = OWNER_HANDOFF_LIMITS["between_invocation_uncached_stop"] if owner_handoff else 100_000
         if hashlib.sha256(Path(codex_identity["path"]).read_bytes()).hexdigest() != codex_identity["sha256"]:
             raise RuntimeError("pinned Codex executable changed; cohort stopped")
+        if (owner_handoff
+                and hashlib.sha256(binary_path.read_bytes()).hexdigest() != identity["binary_sha256"]):
+            raise RuntimeError("current native binary fingerprint changed; cohort stopped")
         if any(e["kind"] == "api.error" and e.get("provider") == "openai" for e in audit.events):
             raise RuntimeError("unknown agent usage; cohort stopped")
-        totals = usage_totals(audit.events)
+        try:
+            totals = usage_totals(audit.events)
+        except ValueError as error:
+            raise RuntimeError("unknown agent usage; cohort stopped") from error
         started = sum(e["kind"] == "api.request" and e.get("provider") == "openai" for e in audit.events)
         if totals["responses"] != started:
             raise RuntimeError("missing invocation usage; cohort stopped")
-        if totals["input_tokens"] >= 600_000 or totals["uncached_input_tokens"] >= 100_000:
+        if totals["input_tokens"] >= input_stop or totals["uncached_input_tokens"] >= uncached_stop:
             raise RuntimeError("between-invocation token threshold reached")
-        if started >= 6:
+        if started >= invocation_cap:
             raise RuntimeError("invocation cap reached")
 
-    async def author(session, native, skill):
-        instructions = (
-            "Help the owner set up this recurring BI question and give a concise current readout. "
-            "Discover and inspect plausible sources. Ask focused owner questions where meaning or policy matters. "
-            "The company glossary is retrievable; do not invent missing scope, units, rules or destinations. "
-            "Save a reusable policy with exact source scope/comparison and quiet/missing-data behavior. "
-            "Show the saved setup through request_owner_approval for synthetic consent. "
-            "No evaluation, schedule or sending is authorized during setup. finish_setup ends setup. "
-            "If consequential context stays unresolved, report it honestly rather than claiming automation is ready. "
-        )
+    async def author(session, native, skill, *, handoff_stage=None, prompt_override=None):
+        if not owner_handoff:
+            instructions = (
+                "Help the owner set up this recurring BI question and give a concise current readout. "
+                "Discover and inspect plausible sources. Ask focused owner questions where meaning or policy matters. "
+                "The company glossary is retrievable; do not invent missing scope, units, rules or destinations. "
+                "Save a reusable policy with exact source scope/comparison and quiet/missing-data behavior. "
+                "Show the saved setup through request_owner_approval for synthetic consent. "
+                "No evaluation, schedule or sending is authorized during setup. finish_setup ends setup. "
+                "If consequential context stays unresolved, report it honestly rather than claiming automation is ready. "
+            )
+            prompt = public_brief(public)
+        elif handoff_stage == "first":
+            instructions = (
+                "This is the first charged setup turn. Discover and inspect the same synthetic company sources, "
+                "and use read_company_glossary if useful. Ask the owner focused questions about unresolved policy. "
+                "ask_owner deliberately returns pending during this turn; it is not an answer or measurement. "
+                "Save your working notes and, in SignalWeave, one draft card. Do not invent missing measurements, "
+                "rows or policy. Call finish_setup with the card ID if present, a concise current readout, and the "
+                "specific unresolved owner question(s). This is the intended human handoff: do not approve, "
+                "schedule, evaluate or send anything. Stop after finish_setup succeeds."
+            )
+            prompt = public_brief(public)
+        elif handoff_stage == "second":
+            instructions = (
+                "This is a fresh, separately charged author turn resuming your own saved setup. The owner-answer "
+                "packet below contains the same declared public answers supplied to both arms. Use those answers, "
+                "your exact saved notes and unresolved question, and the retrievable glossary. Do not invent "
+                "measurements or reconstruct missing rows. In SignalWeave, revise the exact saved draft card once "
+                "with revise_insight_card using its saved card ID and current version; never create a replacement. "
+                "Show the resulting saved setup for synthetic owner consent, then finish_setup with no unresolved "
+                "material questions. The independent semantic review happens after both arms finish. No evaluation, "
+                "schedule or sending during setup. Stop after finish_setup succeeds."
+            )
+            prompt = prompt_override
+        else:
+            raise ValueError("owner-handoff author stage is required")
         if native:
             instructions += "Use the installed SignalWeave skill and native MCP.\n" + native.instructions + "\n" + skill
         before_invocation()
         return await codex_episode(
             session, key=None, effort="medium", budget=None, audit=audit, max_turns=24,
-            max_tool_calls=24, max_output_tokens=3000, timeout_seconds=240,
+            max_tool_calls=(OWNER_HANDOFF_LIMITS["author_tools_per_turn"] if owner_handoff else 24),
+            max_output_tokens=3000,
+            timeout_seconds=(OWNER_HANDOFF_LIMITS["author_seconds_per_turn"] if owner_handoff else 240),
             model="gpt-6-luna", codex_executable=args.codex_executable, accounting_drain=True,
-            instructions_override=instructions, prompt_override=public_brief(public),
+            instructions_override=instructions, prompt_override=prompt,
         )
+
+    def require_known_invocation_usage():
+        save()
+        if not report["usage_known"]:
+            raise RuntimeError("unknown invocation usage; owner-handoff cohort stopped")
+
+    async def run_owner_handoff(native, skill):
+        sessions = {}
+        first_entries = {}
+        second_entries = {}
+        source_contexts = {"baseline": [], "signalweave": []}
+        handoff_packets = {}
+        setup_clock = datetime.now(timezone.utc)
+
+        # Both first turns see the same scenario and tools; pending is an
+        # intentional handoff state and is retained as such in the report.
+        for treatment in (False, True):
+            arm = "signalweave" if treatment else "baseline"
+            audit.episode = f"{arm}-owner-handoff-first"
+            adapter.set_period(public["period"], setup_clock)
+            session = HandoffEpisode(public, adapter, native if treatment else None, stage="first")
+            sessions[arm] = session
+            offset = len(audit.events)
+            result = await author(session, native if treatment else None, skill, handoff_stage="first")
+            reads = [{**event["snapshot"], "ref": event["ref"]}
+                     for event in audit.events[offset:] if event.get("kind") == "source.read"]
+            source_contexts[arm].extend(copy.deepcopy(reads))
+            entry = {
+                "arm": arm, "stage": "first_author", "agent": result,
+                "setup": copy.deepcopy(session.setup), "notes": session.notes,
+                "owner_requests": copy.deepcopy(session.owner_requests),
+                "native_calls": copy.deepcopy(session.native_calls), "source_reads": len(reads),
+                "handoff_state": ("awaiting_owner_answers"
+                                  if session.setup and session.setup["unresolved"] else "incomplete_first_turn"),
+            }
+            report["episodes"].append(entry)
+            require_known_invocation_usage()
+            if (result.get("status") != "complete" or not session.setup
+                    or not session.setup["unresolved"]):
+                raise RuntimeError("first author turn did not record the required pending-owner handoff")
+            if not any(request.get("stage") == "first"
+                       and request.get("answer_status") == "pending" for request in session.owner_requests):
+                raise RuntimeError("first author turn did not receive a pending owner answer")
+            if treatment:
+                card_ids = session.setup.get("card_ids", [])
+                if len(card_ids) != 1:
+                    raise RuntimeError("first SignalWeave turn must save exactly one draft card")
+                _, card = await native.call_tool("get_insight_card", {
+                    "card_id": card_ids[0], "response_mode": "full",
+                })
+                if (not isinstance(card, dict) or card.get("id") != card_ids[0]
+                        or card.get("status") != "draft" or type(card.get("version")) is not int):
+                    raise RuntimeError("first SignalWeave card is not the saved draft revision")
+                session.first_card = copy.deepcopy(card)
+                entry["first_card"] = copy.deepcopy(card)
+            session.first_setup_entry = copy.deepcopy(entry)
+            first_entries[arm] = copy.deepcopy(entry)
+            save()
+
+        # A fresh Codex invocation resumes each same in-memory episode/native
+        # history, while the answer packet comes solely from the public fixture.
+        for treatment in (False, True):
+            arm = "signalweave" if treatment else "baseline"
+            session = sessions[arm]
+            packet = owner_handoff_prompt(public, first_entries[arm], session.first_card)
+            if handoff_packets and packet["owner_answers"] != next(iter(handoff_packets.values())):
+                raise RuntimeError("owner answer packets differ across arms")
+            handoff_packets[arm] = copy.deepcopy(packet["owner_answers"])
+            session.stage = "second"
+            session.owner_answers = copy.deepcopy(packet["owner_answers"])
+            session.owner_answers_delivered = list(packet["owner_answers"])
+            session.setup = None
+            session.setup_complete = False
+            session.first_setup_entry = copy.deepcopy(first_entries[arm])
+            session.first_card = copy.deepcopy(session.first_card)
+            audit.episode = f"{arm}-owner-handoff-second"
+            adapter.set_period(public["period"], setup_clock)
+            offset = len(audit.events)
+            result = await author(session, native if treatment else None, skill,
+                                  handoff_stage="second", prompt_override=packet)
+            reads = [{**event["snapshot"], "ref": event["ref"]}
+                     for event in audit.events[offset:] if event.get("kind") == "source.read"]
+            source_contexts[arm].extend(copy.deepcopy(reads))
+            entry = {
+                "arm": arm, "stage": "second_author", "agent": result,
+                "first_turn_handoff": {
+                    "setup": copy.deepcopy(first_entries[arm]["setup"]),
+                    "notes": first_entries[arm]["notes"],
+                    "questions": copy.deepcopy(packet["owner_questions"]),
+                    "saved_card": copy.deepcopy(packet.get("saved_card")),
+                },
+                "owner_answer_topics_delivered": list(packet["owner_answers"]),
+                "setup": copy.deepcopy(session.setup), "notes": session.notes,
+                "owner_requests": copy.deepcopy(session.owner_requests),
+                "native_calls": copy.deepcopy(session.native_calls), "source_reads": len(reads),
+            }
+            report["episodes"].append(entry)
+            require_known_invocation_usage()
+            if (result.get("status") != "complete" or not session.setup
+                    or session.setup["unresolved"]):
+                raise RuntimeError("second author turn incomplete; owner-handoff cohort stopped")
+            if treatment:
+                first_card = session.first_card or {}
+                if (not session.revision_verified
+                        or session.setup.get("card_ids") != [first_card.get("id")]):
+                    raise RuntimeError("second SignalWeave turn did not resume the same card")
+                _, card = await native.call_tool("get_insight_card", {
+                    "card_id": first_card["id"], "response_mode": "full",
+                })
+                if (not isinstance(card, dict) or card.get("id") != first_card.get("id")
+                        or card.get("version") != first_card.get("version") + 1
+                        or card.get("status") != "approved"):
+                    raise RuntimeError("revised same card is not the exact approved version")
+                entry["card"] = copy.deepcopy(card)
+            second_entries[arm] = entry
+            save()
+
+        # Review baseline first. A rejection is a terminal cohort failure, so
+        # do not spend the treatment review or either report after it.
+        for treatment in (False, True):
+            arm = "signalweave" if treatment else "baseline"
+            entry = second_entries[arm]
+            audit.episode = f"{arm}-owner-handoff-policy-review"
+            before_invocation()
+            entry["independent_review"] = await review_owner_artifact(
+                public=scenario["public"], owner_answers=public["owner_answers"],
+                artifact={"notes": sessions[arm].notes,
+                          **({"card": entry["card"]} if treatment else {})},
+                source_context={"catalog": public["catalog"],
+                                "inspected_sources": source_contexts[arm]},
+                audit=audit, budget=None, model="gpt-6-luna", effort="medium",
+                codex_executable=args.codex_executable,
+            )
+            require_known_invocation_usage()
+            save()
+            if not entry["independent_review"]["approved"]:
+                raise RuntimeError(f"{arm} independent policy review rejected setup; cohort stopped")
+        report["pair_status"] = "setups_reviewed"
+
+        period = scenario["public"]["periods"][0]
+        report_clock = datetime.now(timezone.utc)
+        run_key = OWNER_HANDOFF_PROTOCOL + ":" + period["period_id"]
+        for treatment in (False, True):
+            arm = "signalweave" if treatment else "baseline"
+            setup = sessions[arm]
+            final_entry = second_entries[arm]
+            adapter.set_period(period, report_clock)
+            adapter.inspections = 0
+            adapter.inspected.clear()
+            audit.episode = f"{arm}-owner-handoff-report"
+            approved_card_id = None
+            approved_card_version = None
+            if treatment:
+                card = final_entry["card"]
+                _, current = await native.call_tool("get_insight_card", {
+                    "card_id": card["id"], "response_mode": "full",
+                })
+                if (current.get("id") != card["id"] or current.get("version") != card["version"]
+                        or current.get("status") != "approved"):
+                    raise RuntimeError("approved card changed before its fixed-key report")
+                approved_card_id, approved_card_version = card["id"], card["version"]
+            session = RecurringEpisode(
+                public, adapter, native if treatment else None, notes=setup.notes,
+                approved_card_id=approved_card_id, approved_card_version=approved_card_version,
+                run_key=run_key,
+            )
+            instructions = (
+                "You are a fresh reporting agent. Reuse your arm's completed, independently reviewed setup, "
+                "but fetch this period's evidence; onboarding measurements are not current truth. Write a useful "
+                "short report with supported changes, policy implications, limitations, proposed recipients and "
+                "next step. Do not infer causation. Keep exact source references beside evidence claims. No owner "
+                "questions, policy edits, scheduling or sending. Use submit_analysis; it records a draft report only. "
+                "Do not invent missing measurements."
+            )
+            if treatment:
+                instructions += " Evaluate the exact approved card once with the supplied fixed idempotency key; use the installed skill.\n" + skill
+            before_invocation()
+            result = await codex_episode(
+                session, key=None, effort="medium", budget=None, audit=audit, max_turns=12,
+                max_tool_calls=OWNER_HANDOFF_LIMITS["report_tools"], max_output_tokens=3000,
+                timeout_seconds=OWNER_HANDOFF_LIMITS["report_seconds"], model="gpt-6-luna",
+                codex_executable=args.codex_executable, accounting_drain=True,
+                instructions_override=instructions,
+                prompt_override={"business": public_brief(public), "saved_setup": final_entry["setup"],
+                                 "saved_notes": setup.notes, "period": adapter.period_context,
+                                 "run_key": run_key, "numeric_vocabulary": public["numeric_vocabulary"]},
+            )
+            entry = {"arm": arm, "stage": "fresh_report", "agent": result,
+                     "submission": session.submission, "native_calls": session.native_calls,
+                     "source_reads": adapter.inspections,
+                     "approved_card_execution_verified": session.evaluation_verified if treatment else None}
+            if session.submission:
+                entry["structured_score"] = score_submission(
+                    scenario, period["period_id"], session.submission,
+                    inspected_refs=adapter.inspected,
+                    asked_owner_topics=setup.owner_answers_delivered,
+                )
+            report["episodes"].append(entry)
+            require_known_invocation_usage()
+            if result.get("status") != "complete":
+                raise RuntimeError("fresh report incomplete; owner-handoff cohort stopped")
+            if treatment and not session.evaluation_verified:
+                raise RuntimeError("report did not verify exact approved-card ID, version and idempotency receipt")
+        report["pair_status"] = "both_reports_complete"
 
     try:
         with tempfile.TemporaryDirectory(prefix="owner-workflow-", dir=output) as work:
@@ -575,6 +1044,9 @@ async def run_owner_workflow(args):
                     report["preflight"] = {"native_tools": len(await native.list_tools()),
                                            "scenario": scenario["scenario_id"], "period_index": 0,
                                            "source_roundtrip": "exact analytical fields and tenant; not agent evidence"}
+                    return report
+                if owner_handoff:
+                    await run_owner_handoff(native, skill)
                     return report
                 setups = []
                 setup_clock = datetime.now(timezone.utc)
@@ -663,6 +1135,7 @@ async def run_owner_workflow(args):
                         raise RuntimeError("report recorded but exact approved-card execution was not verified")
     except Exception as error:  # noqa: BLE001 - preserve every failed/partial episode
         report["failure"] = audit.redact(f"{type(error).__name__}: {error}")
+        report["failure_detail"] = audit.redact(failure_detail(error))
     finally:
         report["provider_attempts"] = budget.used
         report["provider_exhausted"] = budget.exhausted
@@ -689,8 +1162,11 @@ def main():
     parser.add_argument("--prior-trace", help="Charge the one retained invalid harness attempt to protocol 2's cumulative token budget")
     parser.add_argument("--run", action="store_true", help="Explicitly authorize the bounded live-agent pair after preflight")
     parser.add_argument("--owner-workflow", action="store_true", help="Separate expert-clarified development setup/review/report cohort")
+    parser.add_argument("--owner-handoff", action="store_true", help="Two-turn pending-owner/resume development cohort")
     args = parser.parse_args()
-    report = asyncio.run(run_owner_workflow(args) if args.owner_workflow else run(args))
+    if args.owner_workflow and args.owner_handoff:
+        parser.error("--owner-workflow and --owner-handoff select separate terminal protocols")
+    report = asyncio.run(run_owner_workflow(args) if args.owner_workflow or args.owner_handoff else run(args))
     print(json.dumps({"output": args.output, "failure": report.get("failure"), "stopped": report.get("stopped"),
                       "episodes": len(report["episodes"]), "preflight_only": report["preflight_only"]}))
 

@@ -56,6 +56,55 @@ for omissions, unsupported causes, useful scope and next steps. A successful
 recording or exact outcome alone is not proof of a useful report or business
 lift. No schedule or external notification is authorized.
 
+This cohort is now stopped after three invocations: baseline setup and its
+synthetic policy review completed; treatment saved a draft and a correct initial
+readout but left context unresolved without using the available clarification
+tools. No policy review of that draft, recurring report or Jev call followed.
+It does not test post-answer completion. Do not restart or silently enlarge it.
+
+Independent review confirmed a separate product gap: the default profile could
+not apply a later human answer to the same draft. The new
+`revise_insight_card` operation closes that API gap without changing source
+anchors or granting approval. Policy revisions are owner-scoped, versioned and
+snapshot-checked; they clear prior approval, plan and current review. The skill
+also explicitly preserves other authorized context/clarification tools. These
+repairs still need a new, budgeted ask → answer → revise → review → report trial;
+they do not turn the stopped one-shot attempt into successful onboarding.
+
+### Separate two-turn owner-handoff cohort
+
+Freeze `owner-handoff-v1` before paid execution. Keep the same Pine Courier
+development scenario/seed and period index `0`; this is a repair feasibility
+check, not a fresh holdout or a new estimate of enterprise accuracy. Keep all
+earlier attempts and costs reported separately, with no automatic rerun.
+
+Each arm first inspects sources and saves its working draft/notes, then pauses
+with a focused policy question. The scripted owner is unavailable for answers
+during this turn. In a second charged, fresh session the owner supplies the
+same declared policy answers to both arms. Each agent resumes its saved work;
+SignalWeave must revise the same card rather than silently create a replacement.
+Both keep their source tools and retrievable glossary. The test supplies the
+installed skill explicitly and uses non-interactive isolated native setup; it
+does not establish automatic discovery or a real person's wizard experience.
+
+After both resumed setups have no material unresolved questions and independent
+synthetic reviewers accept their semantics, fresh agents prepare the fixed
+period's report. Treatment must evaluate its exact approved card with the fixed
+run key. Compare final human-facing claims, recipients, source evidence and
+usefulness; a correct API receipt alone is not a successful report. No message
+is sent and no schedule is created.
+
+Caps: eight Codex invocations total, 24 tools/240 seconds per author turn, two
+tools/90 seconds per reviewer, twelve tools/180 seconds per report, and two live
+Jev attempts shared across the cohort. Before another invocation stop at
+1,200,000 aggregate input or 180,000 uncached input tokens, unknown usage,
+incomplete resumption, failed semantic review, or a changed pinned CLI/native
+fingerprint. Token thresholds do not bound an in-flight invocation. Account for
+both first turns, answers, review work, failed requests and all reports. Do not
+interpret deliberately awaiting-human first turns as product failures or as
+completed onboarding. Stop incomplete second turns; do not repair within this
+series. The earlier failed series remains in the evidence ledger.
+
 ## User outcome
 
 An agent onboarding a second sales investigation should reuse the definitions,

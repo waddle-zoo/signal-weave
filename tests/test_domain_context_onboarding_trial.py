@@ -1,5 +1,6 @@
 """Offline setup-smoke integrity checks; no provider or native processes."""
 
+from builtins import ExceptionGroup
 from copy import deepcopy
 from datetime import datetime, timezone
 
@@ -11,6 +12,7 @@ from evaluations.domain_context_onboarding_trial import (
     Episode,
     approval_digest,
     budget_stop,
+    failure_detail,
     public_brief,
     usage_totals,
 )
@@ -49,6 +51,12 @@ def test_usage_distinguishes_cache_and_missing_usage_is_not_free():
     assert budget_stop([{"kind": "api.error", "provider": "openai"}]) == "unknown_usage_or_agent_error"
     assert budget_stop([usage(500_000, 450_000)]) == "between_episode_token_threshold"
     assert budget_stop([usage(100_000, 25_000)]) == "between_episode_token_threshold"
+
+
+def test_wrapped_stop_reason_is_retained_not_just_task_group_error():
+    error = ExceptionGroup("outer", [ExceptionGroup("inner", [RuntimeError("onboarding incomplete")])])
+    report = failure_detail(error)
+    assert report["causes"][0]["causes"][0] == {"type": "RuntimeError", "message": "onboarding incomplete"}
 
 
 async def test_baseline_can_discover_read_ask_persist_and_review_without_product():
