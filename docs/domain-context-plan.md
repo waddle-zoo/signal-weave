@@ -180,6 +180,43 @@ readiness. Further live-Jev multi-period/multi-company gates remain separate.
 
 ### Earlier owner-workflow V1
 
+### Expert-assisted retained-state follow-up
+
+V4 stopped after four invocations (545,504 input / 85,216 uncached / 6,825
+output), zero Jev and no reports. Baseline semantics passed; treatment saved a
+policy-faithful draft but did not perform source/context approval. Its reviewer
+again rejected relative percent change despite the supplied code-defined
+projection. Offline execution of the actual condition gives unknown without a
+comparison, false at 0%, true at -30%, with primary-source provenance. These
+diagnostics do not rescore V4 or select an outcome for a live run.
+
+Preregister `steward-expert-followup-v1`: the exact terminal V4 report, trace and
+input are pinned in `evaluations/data/steward-followup-manifest.json`. Keep all
+four prior calls charged; allow only two fresh reporters and one total Jev
+attempt under the original six-call/1.2M-input/220k-uncached stops. No new author,
+judge retry, policy regeneration or imported approval. No sending or scheduling.
+
+The synthetic data expert/coordinator explicitly reviews the stored definition,
+reviews it through the native API, binds its exact revision to the original
+card, and approves the card with its exact displayed scopes and reason. Policy,
+sources, conditions and destinations must remain unchanged; only the reviewed
+context pin and approval/version state change. This is an expert-assisted
+intervention with separately unaccounted coordinator/reviewer costs, not proof
+that unattended onboarding completed. The adverse complete-period report is the
+same previously fixed index 2; the incomplete-postings branch is not qualified.
+
+Before paid reporting, the actual retained native home must reopen and return
+the exact original draft and context; missing state may not be reconstructed.
+The zero-model reconnect preflight passed: zero new model calls, zero Jev,
+unchanged drafts. It refreshed only this synthetic trial's private manifest at
+the same path; temporary endpoints remain expired after exit. Six new control
+tests passed. Both fresh reporters get the same expert-confirmed definitions
+and source access; treatment gets the approved card/context and canonical skill.
+Inspect actual messages and period-specific source traces independently before
+claiming usefulness. Original V4 failure and opinions remain unchanged.
+
+### Earlier owner-workflow V1 (continued)
+
 Before live execution, freeze `owner-workflow-v1`: existing development fixture
 `split=dev`, seed `20261015`, company index `1` (Pine Courier), and monitoring
 period index `0`. The old fixtures, failed attempts and closed budgets stay
