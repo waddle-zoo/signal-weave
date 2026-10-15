@@ -82,3 +82,26 @@ negative result and change the design, not the expected answers.
 This follows the earlier negative retrieval results: an approved anchor helps,
 but ranking cannot invent missing cross-domain relationships. Explicit source
 links and bounded context are inputs to investigation, not proof of causation.
+
+## First live canary: retained negative mechanism result
+
+The first paired support case completed through live `gpt-6-luna` at medium
+effort. Both arms had identical searchable full notes and cached source tools;
+both produced the expected quiet outcome and read two sources in five calls.
+The treatment did **not** call SignalWeave context retrieval. Consequently this
+does not measure its usefulness, retrieval correctness, or performance advantage.
+The three-case fixture is not three completed paired trials: only one was run.
+
+The treatment's `recipients` field named the requested report audience, whereas
+the scorer interpreted it as alert recipients. Protocol 2 separates
+`alert_recipients` from `report_audience`; the original result is retained and
+not retroactively relabeled. Content review is separate from either label.
+The two invocations used 102,767 aggregate input tokens (76,544 cached) and
+1,410 output tokens. No further invocation was started after reaching the
+predeclared 100,000-input-token stop threshold. No Jev call or delivery occurred.
+
+Before expansion, test the actual guide/skill-driven product path and whether
+agents use the new capability. This component canary omitted the full production
+guide and did not cover conversational onboarding, cross-session handoff, context
+updates or dependency invalidation. Do not attribute its lack of lift to Jev or
+declare enterprise value from successful tool execution.

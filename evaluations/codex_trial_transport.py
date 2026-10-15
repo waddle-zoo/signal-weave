@@ -152,7 +152,8 @@ async def serve_trial(bridge: TrialMCP):
 async def codex_episode(session, *, key, effort, budget, audit, max_turns,
                         max_tool_calls, max_output_tokens, bundle=None,
                         timeout_seconds=360, instructions_override=None,
-                        prompt_override=None, model: str | None = None) -> dict:
+                        prompt_override=None, model: str | None = None,
+                        codex_executable: str = "codex") -> dict:
     from evaluations.bootstrap_agent_trial import (
         COMMON_SYSTEM,
         MODEL,
@@ -259,8 +260,10 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
     exit_code = None
     with tempfile.TemporaryDirectory(prefix="signalweave-agent-") as cwd:
         async with serve_trial(bridge) as url:
+            command = codex_command(cwd, url, model=selected_model, effort=effort)
+            command[0] = codex_executable
             process = await asyncio.create_subprocess_exec(
-                *codex_command(cwd, url, model=selected_model, effort=effort),
+                *command,
                 env=child_environment(), stdin=asyncio.subprocess.PIPE,
                 stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
                 limit=8 * 1024 * 1024)

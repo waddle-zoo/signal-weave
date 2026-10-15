@@ -1,0 +1,399 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "support-sla-quiet-readout",
+      "tenant": "synthetic-support-east",
+      "task": "Summarize the latest complete support week for the Support Operations lead. Say whether it meets the response target, mention any useful workload context, and keep this report-only. Do not send a message.",
+      "policy": "For complete weekly data, notify Support Operations only when the one-business-day first-response SLA is below 90%. A higher backlog is useful context but is not by itself an alert trigger. If coverage or the comparison basis is unknown, investigate rather than claim the target was met or missed. Do not send messages.",
+      "sources": [
+        {
+          "ref": "superset|chart:support-first-response-sla",
+          "title": "First response within one business day",
+          "snapshot": {
+            "period": "2026-10-05 through 2026-10-11; compared with 2026-09-28 through 2026-10-04",
+            "evidence": {
+              "metric": "eligible customer tickets answered within one business day",
+              "current": { "eligible_tickets": 500, "met_target": 462, "rate_percent": 92.4 },
+              "previous": { "eligible_tickets": 480, "met_target": 446, "rate_percent": 92.9 },
+              "change_percentage_points": -0.5,
+              "coverage": "complete",
+              "periods_comparable": true
+            }
+          }
+        },
+        {
+          "ref": "superset|chart:support-open-backlog",
+          "title": "Open support backlog at week end",
+          "snapshot": {
+            "period": "2026-10-11 end of day; compared with 2026-10-04 end of day",
+            "evidence": {
+              "metric": "open eligible customer tickets",
+              "current": 62,
+              "previous": 54,
+              "change": 8,
+              "coverage": "complete"
+            }
+          }
+        }
+      ],
+      "notes": [
+        {
+          "id": "support-sla-definition",
+          "domain": "customer-support",
+          "title": "First-response SLA definition",
+          "body": "The weekly first-response SLA is the share of eligible new customer tickets that receive a first human response within one support business day. The clock follows the support business calendar, not elapsed 24-hour time.",
+          "kind": "definition",
+          "status": "reviewed",
+          "review_after": "future",
+          "valid_from": "past",
+          "source_refs": ["superset|chart:support-first-response-sla"],
+          "provenance": ["Owner-confirmed support metric glossary", "Support calendar definition"]
+        },
+        {
+          "id": "support-sla-denominator",
+          "domain": "customer-support",
+          "title": "Eligible ticket population",
+          "body": "The denominator includes new customer tickets assigned to Support. Spam and reopened tickets are excluded. Use the eligible count returned with the SLA rate.",
+          "kind": "definition",
+          "status": "reviewed",
+          "review_after": "future",
+          "valid_from": "past",
+          "source_refs": ["superset|chart:support-first-response-sla"],
+          "provenance": ["Owner-confirmed support metric glossary", "Chart population contract"]
+        },
+        {
+          "id": "support-alert-destination",
+          "domain": "customer-support",
+          "title": "Support review destination",
+          "body": "A policy-triggered weekly support review is for Support Operations. The weekly readout is report-only unless a person separately authorizes delivery.",
+          "kind": "definition",
+          "status": "reviewed",
+          "review_after": "future",
+          "valid_from": "past",
+          "source_refs": ["superset|chart:support-first-response-sla"],
+          "provenance": ["Owner-confirmed support operating notes"]
+        },
+        {
+          "id": "support-backlog-interpretation",
+          "domain": "customer-support",
+          "title": "Backlog is workload context",
+          "body": "Open-ticket backlog helps describe workload, but its count alone is not the first-response SLA and does not trigger the SLA review route.",
+          "kind": "definition",
+          "status": "reviewed",
+          "review_after": "future",
+          "valid_from": "past",
+          "source_refs": ["superset|chart:support-open-backlog", "superset|chart:support-first-response-sla"],
+          "provenance": ["Owner-confirmed support operating notes"]
+        },
+        {
+          "id": "support-intake-form-observation",
+          "domain": "customer-support",
+          "title": "Intake form rollout note",
+          "body": "A revised intake form began rolling out during October. The support team has not checked whether it changed ticket mix or response time.",
+          "kind": "observation",
+          "status": "draft",
+          "review_after": "future",
+          "valid_from": "past",
+          "source_refs": ["superset|chart:support-first-response-sla"],
+          "provenance": ["Unreviewed setup note"]
+        },
+        {
+          "id": "support-backlog-snapshot-definition",
+          "domain": "customer-support",
+          "title": "Backlog snapshot timing",
+          "body": "The open-ticket backlog is a point-in-time count of unresolved eligible tickets at the stated end-of-day snapshot. It is not a cumulative count of tickets received during the week.",
+          "kind": "definition",
+          "status": "reviewed",
+          "review_after": "future",
+          "valid_from": "past",
+          "source_refs": ["superset|chart:support-open-backlog"],
+          "provenance": ["Owner-confirmed support metric glossary"]
+        }
+      ],
+      "expected": {
+        "outcome": "ignore",
+        "recipients": [],
+        "required_claims": [
+          { "key": "current_first_response_sla", "value": 92.4, "unit": "percent", "evidence_refs": ["superset|chart:support-first-response-sla"], "tolerance": 0.05 },
+          { "key": "first_response_sla_target", "value": 90, "unit": "percent", "evidence_refs": ["superset|chart:support-first-response-sla"] },
+          { "key": "current_open_backlog", "value": 62, "unit": "tickets", "evidence_refs": ["superset|chart:support-open-backlog"] },
+          { "key": "backlog_is_not_the_sla_alert_trigger", "value": true, "unit": "boolean", "evidence_refs": ["superset|chart:support-open-backlog", "superset|chart:support-first-response-sla"] }
+        ],
+        "forbidden_claims": [
+          { "key": "sla_below_target", "value": true, "unit": "boolean" },
+          { "key": "backlog_alone_requires_sla_alert", "value": true, "unit": "boolean" },
+          { "key": "intake_form_caused_sla_or_backlog_change", "value": true, "unit": "causal attribution" }
+        ],
+        "required_note_ids": ["support-sla-definition", "support-sla-denominator", "support-backlog-interpretation"]
+      }
+    },
+    {
+      "id": "growth-same-title-population",
+      "tenant": "synthetic-growth-west",
+      "task": "For the weekly qualified-demo funnel check, tell Growth whether the latest complete week warrants review. Summarize the like-for-like qualified conversion movement and say whether the available evidence explains why. Keep it report-only; do not send.",
+      "policy": "Qualified conversion means paid accounts divided by sales-accepted demo requests. Notify Growth when this rate falls by at least 4 percentage points versus the prior comparable full week. The website-session conversion rate is a different measure. If no direct evidence establishes a cause, say so rather than attributing the change. Do not send messages.",
+      "sources": [
+        {
+          "ref": "superset|chart:conversion-rate-web",
+          "title": "Conversion rate",
+          "snapshot": {
+            "period": "2026-10-05 through 2026-10-11; compared with 2026-09-28 through 2026-10-04",
+            "evidence": {
+              "metric": "completed website signups divided by non-bot public website sessions",
+              "population": "all non-bot public website sessions",
+              "current": { "signups": 420, "sessions": 10000, "rate_percent": 4.2 },
+              "previous": { "signups": 400, "sessions": 10000, "rate_percent": 4.0 },
+              "change_percentage_points": 0.2,
+              "coverage": "complete",
+              "periods_comparable": true
+            }
+          }
+        },
+        {
+          "ref": "superset|chart:conversion-rate-qualified-demo",
+          "title": "Conversion rate",
+          "snapshot": {
+            "period": "2026-10-05 through 2026-10-11; compared with 2026-09-28 through 2026-10-04",
+            "evidence": {
+              "metric": "paid accounts divided by sales-accepted demo requests",
+              "population": "sales-accepted demo requests",
+              "current": { "paid_accounts": 58, "accepted_demo_requests": 200, "rate_percent": 29.0 },
+              "previous": { "paid_accounts": 68, "accepted_demo_requests": 200, "rate_percent": 34.0 },
+              "change_percentage_points": -5.0,
+              "coverage": "complete",
+              "periods_comparable": true
+            }
+          }
+        }
+      ],
+      "notes": [
+        {
+          "id": "growth-qualified-conversion-definition",
+          "domain": "growth-operations",
+          "title": "Qualified demo conversion",
+          "body": "For the qualified-demo funnel, conversion is paid accounts divided by sales-accepted demo requests. Do not substitute the website-session signup rate, even when both charts have the same display title.",
+          "kind": "definition",
+          "status": "reviewed",
+          "review_after": "future",
+          "valid_from": "past",
+          "source_refs": ["superset|chart:conversion-rate-qualified-demo", "superset|chart:conversion-rate-web"],
+          "provenance": ["Owner-confirmed Growth metric glossary"]
+        },
+        {
+          "id": "growth-qualified-population",
+          "domain": "growth-operations",
+          "title": "Sales-accepted demo population",
+          "body": "The qualified-demo denominator is demo requests accepted by Sales. Webinar registrations, test accounts, and unqualified web signups are not in this population.",
+          "kind": "definition",
+          "status": "reviewed",
+          "review_after": "future",
+          "valid_from": "past",
+          "source_refs": ["superset|chart:conversion-rate-qualified-demo"],
+          "provenance": ["Owner-confirmed Growth metric glossary", "Chart population contract"]
+        },
+        {
+          "id": "growth-web-signup-definition",
+          "domain": "growth-operations",
+          "title": "Website signup conversion",
+          "body": "Website signup conversion is completed signups divided by non-bot public website sessions. It is not the qualified-demo-to-paid rate.",
+          "kind": "definition",
+          "status": "reviewed",
+          "review_after": "future",
+          "valid_from": "past",
+          "source_refs": ["superset|chart:conversion-rate-web"],
+          "provenance": ["Owner-confirmed Growth metric glossary"]
+        },
+        {
+          "id": "growth-review-destination",
+          "domain": "growth-operations",
+          "title": "Qualified funnel review destination",
+          "body": "The owner-designated group for a qualified-demo conversion review is Growth. The agent prepares a report; this note does not authorize sending it.",
+          "kind": "definition",
+          "status": "reviewed",
+          "review_after": "future",
+          "valid_from": "past",
+          "source_refs": ["superset|chart:conversion-rate-qualified-demo"],
+          "provenance": ["Owner-confirmed Growth operating notes"]
+        },
+        {
+          "id": "growth-campaign-mix-hypothesis",
+          "domain": "growth-operations",
+          "title": "Campaign mix may affect the funnel",
+          "body": "A campaign owner wonders whether the recent channel mix contributed to qualified-demo conversion movement. No channel-level comparison has been reviewed for this period.",
+          "kind": "hypothesis",
+          "status": "draft",
+          "review_after": "future",
+          "valid_from": "past",
+          "source_refs": ["superset|chart:conversion-rate-qualified-demo", "superset|chart:conversion-rate-web"],
+          "provenance": ["Unreviewed owner hypothesis"]
+        },
+        {
+          "id": "growth-sales-cycle-note",
+          "domain": "growth-operations",
+          "title": "Qualified funnel timing",
+          "body": "The weekly qualified-demo chart compares period totals. It does not identify whether each paid account came from a demo request in the same week.",
+          "kind": "observation",
+          "status": "reviewed",
+          "review_after": "future",
+          "valid_from": "past",
+          "source_refs": ["superset|chart:conversion-rate-qualified-demo"],
+          "provenance": ["Owner-confirmed Growth metric glossary"]
+        }
+      ],
+      "expected": {
+        "outcome": "notify",
+        "recipients": ["Growth"],
+        "required_claims": [
+          { "key": "qualified_demo_paid_conversion_current", "value": 29.0, "unit": "percent", "evidence_refs": ["superset|chart:conversion-rate-qualified-demo"], "tolerance": 0.05 },
+          { "key": "qualified_demo_paid_conversion_previous", "value": 34.0, "unit": "percent", "evidence_refs": ["superset|chart:conversion-rate-qualified-demo"], "tolerance": 0.05 },
+          { "key": "qualified_demo_conversion_change", "value": -5.0, "unit": "percentage_points", "evidence_refs": ["superset|chart:conversion-rate-qualified-demo"], "tolerance": 0.05 },
+          { "key": "qualified_conversion_population", "value": "sales-accepted demo requests", "unit": "population", "evidence_refs": ["superset|chart:conversion-rate-qualified-demo"] },
+          { "key": "cause_supported_by_evidence", "value": false, "unit": "boolean", "evidence_refs": ["superset|chart:conversion-rate-qualified-demo"] }
+        ],
+        "forbidden_claims": [
+          { "key": "website_signup_conversion_declined", "value": true, "unit": "boolean" },
+          { "key": "campaign_mix_caused_qualified_conversion_change", "value": true, "unit": "causal attribution" }
+        ],
+        "required_note_ids": ["growth-qualified-conversion-definition", "growth-qualified-population"]
+      }
+    },
+    {
+      "id": "finance-refund-definition-transition",
+      "tenant": "synthetic-finance-north",
+      "task": "Review the latest full week of refunds for Finance. Say what the current and prior displayed rates are, whether the change supports the usual alert, and whether the checkout retry release explains it. Keep the report concise and do not send a message.",
+      "policy": "The Finance alert is based on a like-for-like increase of at least 1 percentage point in the weekly refund rate. If the definition changed and the prior week was not recomputed under the current definition, report the displayed values as non-comparable and investigate instead of issuing a threshold alert. A release occurring before a movement is not causal evidence. Do not send messages.",
+      "sources": [
+        {
+          "ref": "superset|chart:weekly-refund-rate",
+          "title": "Weekly refund rate",
+          "snapshot": {
+            "period": "2026-10-05 through 2026-10-11; compared with 2026-09-28 through 2026-10-04",
+            "evidence": {
+              "current": { "refunds_issued": 84, "completed_orders": 1200, "rate_percent": 7.0, "definition_id": "refund-definition-v2" },
+              "previous": { "refund_requests": 60, "orders_placed": 1200, "rate_percent": 5.0, "definition_id": "refund-definition-v1" },
+              "displayed_arithmetic_change_percentage_points": 2.0,
+              "periods_comparable": false,
+              "comparability_reason": "The two displayed periods use different refund definitions; the prior period has not been recomputed under v2."
+            }
+          }
+        },
+        {
+          "ref": "superset|chart:checkout-releases",
+          "title": "Checkout retry releases",
+          "snapshot": {
+            "period": "2026-10-05 through 2026-10-11",
+            "evidence": {
+              "release": "checkout retry v3",
+              "deployed_on": "2026-10-07",
+              "measured_link_to_refunds": false
+            }
+          }
+        }
+      ],
+      "notes": [
+        {
+          "id": "refund-definition-v1-stale",
+          "domain": "finance-returns",
+          "title": "Prior refund-rate definition",
+          "body": "Through 2026-10-04, the displayed refund rate used refund requests divided by orders placed. This definition was replaced on 2026-10-05; historical values using it are not directly comparable with the current definition unless recomputed.",
+          "kind": "definition",
+          "status": "reviewed",
+          "review_after": "past",
+          "valid_from": "past",
+          "source_refs": ["superset|chart:weekly-refund-rate"],
+          "provenance": ["Owner-confirmed Finance metric glossary, prior revision"]
+        },
+        {
+          "id": "refund-definition-v2-current",
+          "domain": "finance-returns",
+          "title": "Current refund-rate definition",
+          "body": "Effective 2026-10-05, refund rate means refunds issued divided by completed orders. It replaced the request-based definition. The weekly chart has not recomputed its displayed prior-week comparison under v2.",
+          "kind": "definition",
+          "status": "reviewed",
+          "review_after": "future",
+          "valid_from": "past",
+          "source_refs": ["superset|chart:weekly-refund-rate"],
+          "provenance": ["Owner-confirmed Finance metric glossary, current revision", "Chart calculation note"]
+        },
+        {
+          "id": "refund-definition-v3-proposed",
+          "domain": "finance-returns",
+          "title": "Proposed 30-day refund window",
+          "body": "A proposed definition would count refunds issued within 30 days of purchase. It is not approved and is intended to take effect no earlier than 2026-10-20.",
+          "kind": "definition",
+          "status": "draft",
+          "review_after": "future",
+          "valid_from": "future",
+          "source_refs": ["superset|chart:weekly-refund-rate"],
+          "provenance": ["Draft Finance glossary change"]
+        },
+        {
+          "id": "refund-alert-policy",
+          "domain": "finance-returns",
+          "title": "Finance refund review policy",
+          "body": "A like-for-like increase of at least one percentage point is the Finance review threshold. If the comparison is not like-for-like, request or investigate a comparable calculation rather than applying the threshold to raw arithmetic.",
+          "kind": "definition",
+          "status": "reviewed",
+          "review_after": "future",
+          "valid_from": "past",
+          "source_refs": ["superset|chart:weekly-refund-rate"],
+          "provenance": ["Owner-confirmed Finance operating policy"]
+        },
+        {
+          "id": "checkout-retry-hypothesis",
+          "domain": "finance-returns",
+          "title": "Possible checkout retry contribution",
+          "body": "One analyst suspects checkout retry v3 may have contributed to refunds after its October 7 deployment. This has not been tested against refund-level or cohort evidence.",
+          "kind": "hypothesis",
+          "status": "reviewed",
+          "review_after": "future",
+          "valid_from": "past",
+          "source_refs": ["superset|chart:weekly-refund-rate", "superset|chart:checkout-releases"],
+          "provenance": ["Analyst hypothesis reviewed for attribution, not confirmed as a cause"]
+        },
+        {
+          "id": "checkout-release-observation",
+          "domain": "finance-returns",
+          "title": "Checkout retry v3 deployment date",
+          "body": "The release record shows checkout retry v3 deployed on 2026-10-07. The release record contains no measured refund outcome or causal test.",
+          "kind": "observation",
+          "status": "reviewed",
+          "review_after": "future",
+          "valid_from": "past",
+          "source_refs": ["superset|chart:checkout-releases"],
+          "provenance": ["Release record"]
+        },
+        {
+          "id": "refund-processing-lag-draft",
+          "domain": "finance-returns",
+          "title": "Possible refund processing lag",
+          "body": "A draft note suggests processing delays could affect the issue date. No approved analysis currently quantifies that effect.",
+          "kind": "hypothesis",
+          "status": "draft",
+          "review_after": "future",
+          "valid_from": null,
+          "source_refs": ["superset|chart:weekly-refund-rate"],
+          "provenance": ["Unreviewed analyst note"]
+        }
+      ],
+      "expected": {
+        "outcome": "investigate",
+        "recipients": ["Finance"],
+        "required_claims": [
+          { "key": "current_refund_rate", "value": 7.0, "unit": "percent", "evidence_refs": ["superset|chart:weekly-refund-rate"], "tolerance": 0.05 },
+          { "key": "previous_displayed_refund_rate", "value": 5.0, "unit": "percent", "evidence_refs": ["superset|chart:weekly-refund-rate"], "tolerance": 0.05 },
+          { "key": "displayed_arithmetic_change", "value": 2.0, "unit": "percentage_points", "evidence_refs": ["superset|chart:weekly-refund-rate"], "tolerance": 0.05 },
+          { "key": "periods_comparable", "value": false, "unit": "boolean", "evidence_refs": ["superset|chart:weekly-refund-rate"] },
+          { "key": "cause_supported_by_evidence", "value": false, "unit": "boolean", "evidence_refs": ["superset|chart:checkout-releases", "superset|chart:weekly-refund-rate"] }
+        ],
+        "forbidden_claims": [
+          { "key": "like_for_like_refund_rate_increase", "value": true, "unit": "boolean" },
+          { "key": "checkout_retry_v3_caused_refund_increase", "value": true, "unit": "causal attribution" },
+          { "key": "refund_definition_v3_applies_to_current_period", "value": true, "unit": "boolean" }
+        ],
+        "required_note_ids": ["refund-definition-v1-stale", "refund-definition-v2-current", "checkout-retry-hypothesis", "refund-alert-policy"]
+      }
+    }
+  ]
+}
