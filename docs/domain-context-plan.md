@@ -628,6 +628,26 @@ the full suite passed 3,520 tests with eleven opt-in skips. See the current
 evidence note for exact identities and boundaries. Neither check establishes
 the outstanding end-to-end business-value gate.
 
+### Public native setup walkthrough
+
+The reproducible `evaluations.public_context_preflight` path starts from blank
+native state using published retail fixture seed `20261001`, company index `0`.
+A scripted fictional owner creates two distinct reporting briefs sharing one
+definition and the same source anchors, using only public MCP tools. No archived
+approval imports, agents, real vendor queries, scheduling or delivery. An edited
+definition must become the next draft revision; both pinned cards must then
+defer policy and retain all required source evidence with exact provenance.
+The whole operation has a 180-second timeout and a zero-request Jev proxy budget.
+
+Early inference-free walkthroughs had weaker evidence assertions. Independent
+review required all required sources/errors and exact receipt identities to be
+checked, and found a real onboarding-provenance defect: direct caller selection
+was labeled as frontier-agent search/inspection. Correct that metadata without
+claiming knowledge of the caller's type or prior work. Rebuild and verify the
+current native fingerprint before accepting the corrected walkthrough. This is
+a public reproduction prerequisite, not a replacement for the outstanding
+agent-led onboarding/live-decision/comparative-report experiment.
+
 ### Native approved-card clarification check
 
 Separately preregister `approved-card-clarification-v1`: reuse the existing

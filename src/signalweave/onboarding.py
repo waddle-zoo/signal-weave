@@ -480,9 +480,9 @@ class InsightAuthoringService:
     def _source_reason(match: ResourceMatch) -> str:
         """Explain a candidate without pretending ranking proves ownership."""
         reasons: list[str] = []
-        if "frontier-selected" in match.retrieval_signals:
+        if "caller-selected" in match.retrieval_signals:
             reasons.append(
-                "the calling agent selected and inspected this exact authorized source"
+                "the caller explicitly selected this exact authorized source; prior inspection is not verified"
             )
         elif match.recommended:
             reasons.append("Jev judged it materially relevant to the stated goal")
@@ -501,7 +501,7 @@ class InsightAuthoringService:
         if match.contract.domain and match.contract.domain != "unknown":
             reasons.append(f"its catalog domain is {match.contract.domain}")
         if match.suggested_role != "unknown":
-            if "frontier-selected" in match.retrieval_signals:
+            if "caller-selected" in match.retrieval_signals:
                 reasons.append(
                     f"its adapter contract identifies it as {match.suggested_role}"
                 )
@@ -614,7 +614,7 @@ class InsightAuthoringService:
                     suggested_role=role["role"],
                     role_probability=role["probability"],
                     retrieval_signals=[
-                        "frontier-selected",
+                        "caller-selected",
                         "explicit-card-anchor",
                         "authorized-revalidation",
                     ],
@@ -640,14 +640,14 @@ class InsightAuthoringService:
             candidate_limit=max(1, len(matches)),
             truncated=False,
             no_match=False,
-            candidate_strategy="frontier-agent-selected",
-            evaluator="frontier-agent-selection",
+            candidate_strategy="caller-selected",
+            evaluator="caller-source-selection",
             authorized_tenant=authorized_tenant,
             catalog_provider="authorized-adapter-catalog",
             catalog_strategy="explicit-authorized",
             catalog_fingerprint=catalog_fingerprint,
             warnings=[
-                "Source selection was supplied by the caller/agent after its own catalog search and inspection.",
+                "Exact source references were supplied by the caller; prior search, inspection and caller type are not verified.",
                 "SignalWeave did not use Jev to discover, rank, or classify these sources.",
             ],
         )

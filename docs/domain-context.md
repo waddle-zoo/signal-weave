@@ -148,6 +148,29 @@ in card guidance or binding reasons. The source fingerprint covers **declared**
 connector and contract semantics; it cannot detect undocumented changes or prove
 that the underlying data is correct. Agents own review reminders and delivery.
 
+## Reproduce the synthetic native walkthrough
+
+From a development checkout, build the current native executable and run:
+
+```sh
+uv sync --extra dev --extra binary
+uv run python scripts/build_binary.py
+uv run python -m evaluations.public_context_preflight --binary dist/signalweave --output artifacts/my-context-walkthrough
+```
+
+This needs no API key, Docker, prior trial files or personal agent configuration.
+It starts a test-owned local company-MCP source bridge and an isolated native
+home. Two reporting briefs share a reviewed sales definition; changing that
+definition to a draft defers both cards' policy decisions while retaining source
+evidence. The provider-request budget is zero. Results and synthetic inputs stay
+in the exclusive output directory; choose a new directory for another run.
+
+The fictional owner choices and source selection are scripted. Both briefs use
+the same metric and source anchors. This demonstrates public API setup and
+dependency behavior, not agent-led onboarding, live Jev decisions, independent
+investigation discovery or improved reports. The executable must match the
+checkout's source/skill fingerprint; this is not a test of an older release.
+
 ## Evidence boundary
 
 Contract tests cover persistence, isolation, review lifecycle and bounded
