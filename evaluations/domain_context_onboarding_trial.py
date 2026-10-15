@@ -108,6 +108,7 @@ class Episode:
         tools = [
             function("list_company_assets", "Browse the same source catalog in both arms.", {}),
             function("read_company_asset", "Read one current source snapshot by exact adapter|resource.", {"ref": text}, ("ref",)),
+            function("read_company_glossary", "Read the company's declared metric definitions, units and comparison convention. Not current measurements or action policy.", {}),
             function("ask_owner", "Ask the scripted business owner about a listed topic. Cannot supply missing rows or a period's answer.", {"topic": text}, ("topic",)),
             function("save_working_notes", "Persist your own definitions, policy and methods for later use; not approval.", {"notes": text}, ("notes",)),
             function("read_working_notes", "Read this arm's own persistent notes.", {}),
@@ -128,6 +129,8 @@ class Episode:
         if name == "read_company_asset":
             adapter, resource = args["ref"].split("|", 1)
             return (await self.adapter.inspect(SourceRef(key=resource, adapter=adapter, resource=resource, label=resource))).model_dump(mode="json")
+        if name == "read_company_glossary":
+            return {"id": "company-metric-glossary", "definitions": copy.deepcopy(self.public["glossary"])}
         if name == "ask_owner":
             self.owner_requests.append(copy.deepcopy(args))
             if args["topic"] == "context_review":
@@ -265,7 +268,7 @@ async def run(args):
     public["owner_topics"] = [*public["owner_topics"], "context_review"]
     adapter = PublicSourceAdapter(public["catalog"], public["scenario_id"], audit)
     adapter.set_period(public["period"], datetime.now(timezone.utc))
-    report = {"protocol": 2, "scope": "One scripted-owner cold-onboarding pair, not business benefit or human sign-off.",
+    report = {"protocol": 3, "scope": "Cold-onboarding handoff smoke; owner-context-pending is not completed automation or business benefit.",
               "build": identity, "episodes": [], "agent_invocations_started": 0, "preflight_only": not args.run,
               "runner_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
               "scenario_sha256": hashlib.sha256(json.dumps(scenario, sort_keys=True).encode()).hexdigest(),

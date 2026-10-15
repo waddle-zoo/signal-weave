@@ -27,6 +27,7 @@ NATIVE_TOOL_NAMES = AGENT_PROFILE_TOOLS | KNOWLEDGE_TOOLS
 COMMON_TOOL_NAMES = {
     "list_company_assets",
     "read_company_asset",
+    "read_company_glossary",
     "ask_owner",
     "save_working_notes",
     "read_working_notes",

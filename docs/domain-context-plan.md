@@ -220,6 +220,16 @@ and an agent's useful message; a pending draft does not satisfy it. Record full
 usage or treat costs as unknown. No further invocation belongs to this stopped
 budget series.
 
+The current runner is protocol 3 (offline repairs, not live revalidated). It
+allows both arms to hand off a useful readout and a focused unresolved question
+without claiming automation is ready. Card-backed work need not duplicate its
+saved context in the harness's separate notes tool. The existing company metric
+glossary, previously withheld from the opening but accidentally unreachable,
+is now available through the same on-demand tool in both arms. This makes the
+document retrievable; it does not fabricate a population answer or retroactively
+change either recorded run. Do not use this stopped series's unknown-usage trace
+as permission to start further invocations.
+
 See the [preview evidence](evidence/domain-context-preview-2026-10-14.md) for
 observed gates, retained failures and exact native identity. This milestone is
 not complete; the feature remains opt-in and the PR remains draft.

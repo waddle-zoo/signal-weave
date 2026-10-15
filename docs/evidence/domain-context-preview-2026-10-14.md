@@ -182,11 +182,14 @@ Known usage across the first invalid invocation and the corrected baseline:
 Treatment usage is **unknown**, not zero and not included in those totals. No
 further live invocation was started after the missing-usage stop.
 
-Repairs after these runs: notes tools return their approval ID; the harness can
+Repairs after these runs (runner protocol 3): notes tools return their approval ID; the harness can
 record an awaiting-owner-context handoff without requiring duplicate persistence
 or pretending automation is ready. Production reviews now name both source scope
 and population, and provide bounded existing approval arguments after owner
 confirmation. They do not waive missing context, source checks or consent.
+The existing metric glossary is also retrievable on demand in both arms; it was
+withheld from the opening but accidentally unavailable through any source tool.
+Retrievability does not establish that the glossary resolves every population question.
 These repairs have offline regression coverage; **they were not live revalidated
 in this cohort**. Full cross-session reuse, complete onboarding and business lift
 remain open gates. Later trials need an accessible source glossary/expert and
@@ -199,3 +202,23 @@ fingerprint was verified before use. It predates the approval-handoff repairs.
 Protocol 1 report SHA-256: `3016e4adf62bdd31cb51a336de53d6da9b2a4f3ef1fc61a0a6f1f5ea54f4bac7`.
 Protocol 2 report SHA-256: `381a8bdff78dc6a785645e065be5e1b04ac539f3346391c817562ebb445708a8`.
 Raw reports and traces stay ignored under `artifacts/context-onboarding-live-*`.
+
+The post-trial production repair has a separate native check: **2 passed in
+54.73 seconds** on a clean build of `12a95585cb1366b22fde86abde63e1e3f76a70f4`.
+It verifies the new approval arguments are present on actual native onboarding,
+without an owner reason filled in, alongside context binding/restart behavior.
+The card lifecycle recorded nine calls, nine observed Superset metadata reads
+and zero Jev POSTs. This is protocol verification, **not another live-agent
+onboarding or a test that the owner can resolve population ambiguity**.
+
+Repair source fingerprint: `fba93c9f0b329e271793b24f867dea2989c8a58ab75c7c772e5a9f60ea0c68f5`.
+Repair native SHA-256: `222ec11ea35e4f73d609aa664429987c29914ee6046889ac3900bf523a0544a4`.
+Repair native JUnit SHA-256: `2f0b2fb57e8e941770712efc58f18faeeda519353a5e3e845508d29c344b1dd0`.
+
+After the glossary repair, `make verify` passed **3,208 tests, with 9 opt-in
+checks skipped, in 211.27 seconds**, and Ruff passed. Protocol 3's native
+preflight also completed on the repair binary: identical analytical fields
+survived the company-MCP round trip, with zero agent invocations and zero
+provider attempts. Its baseline/treatment tool schemas serialized to
+2,601/35,401 bytes. This is setup integrity and schema size, not token usage,
+onboarding success, or a measured business benefit.

@@ -78,6 +78,15 @@ async def test_a_later_notes_edit_invalidates_scripted_consent():
         await session.call("finish_setup", {"card_ids": [], "message": "Readout.", "unresolved": []})
 
 
+async def test_withheld_glossary_is_retrievable_not_removed_from_the_company():
+    session = episode()
+    assert "glossary" not in public_brief(session.public)
+    document = await session.call("read_company_glossary", {})
+    assert document["definitions"] == session.public["glossary"]
+    document["definitions"].clear()
+    assert session.public["glossary"]
+
+
 def test_card_consent_covers_policy_and_routes_not_mutable_review_audit():
     card = InsightCard(id="one", title="Sales", what_to_watch="Net sales", why_watch="Avoid loss")
     original = card.model_dump(mode="json")
