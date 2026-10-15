@@ -41,6 +41,7 @@ from .models import (
     EvidenceBundle,
     EvidenceRequirementKey,
     InsightCard,
+    InsightCardOnboardingReview,
     InsightCardStatus,
     InvestigationMode,
     InvestigationQuestions,
@@ -452,6 +453,46 @@ def _compact_card(card: Any) -> dict[str, Any]:
     if result.get("compiled_plan"):
         result["compiled_plan"] = _compact_plan(result["compiled_plan"])
     return result
+
+
+def _approval_handoff(card: InsightCard, review: InsightCardOnboardingReview, adapter: str | None) -> dict:
+    """Exact existing API arguments for an owner-reviewed handoff, never consent."""
+    if card.status == InsightCardStatus.APPROVED:
+        return {"approval_arguments_included": False, "instruction": "This card is already approved. Review findings may still need attention; this response does not reapprove or certify it."}
+    arguments: dict[str, Any] = {
+        "card_id": card.id, "use_current_source_selection_review": True,
+        "source_scope_confirmations": expected_source_scope_confirmations(review),
+    }
+    if adapter is not None:
+        arguments["adapter"] = adapter
+    populations = {candidate.ref: candidate.metadata.get("population", "")
+                   for candidate in review.source_candidates if candidate.selected}
+    if _json_bytes({"arguments": arguments, "populations": populations}) > 8192:
+        return {
+            "tool": "get_insight_card", "arguments": {"card_id": card.id, "response_mode": "full"},
+            "approval_arguments_included": False, "readiness_status": review.readiness_status,
+            "instruction": "The exact scope map exceeds this handoff's size budget. Review the full saved source scopes; no partial map or approval is implied.",
+        }
+    return {
+        "tool": "approve_insight_card", "arguments_after_owner_confirmation": arguments,
+        "declared_populations": populations,
+        "owner_input_required": ["source_selection_reason", *(
+            ["dynamic_scope_acknowledged"]
+            if card.retrieval_mode != RetrievalMode.FIXED or card.investigation_mode != InvestigationMode.NONE else []
+        )],
+        "dynamic_scope_requires_separate_acknowledgment": (
+            card.retrieval_mode != RetrievalMode.FIXED or card.investigation_mode != InvestigationMode.NONE
+        ),
+        "readiness_status": review.readiness_status,
+        "instruction": (
+            "Show these exact declared source scopes and the saved policy to the owner. "
+            "After confirmation, add the owner's source_selection_reason and use these arguments. "
+            "Do not invent a different population from a generic label or infer consent. "
+            "Set dynamic_scope_acknowledged=true only after separate owner acknowledgment when required. "
+            "Unresolved material ambiguity still needs clarification; all approval checks remain active. "
+            "This handoff is not approval, certification, scheduling or delivery permission."
+        ),
+    }
 
 
 def _compact_summary(summary: Any) -> dict[str, Any]:
@@ -2410,6 +2451,9 @@ def create_mcp(
             "plan": proposal["plan"],
             "discovery": proposal["discovery"],
             "review": review,
+            "approval_handoff": _approval_handoff(
+                InsightCard.model_validate(proposal["card"]), InsightCardOnboardingReview.model_validate(review), adapter,
+            ),
             "setup_questions": proposal["setup_questions"],
             "summary": result["summary"],
             "response_mode": response_mode,
@@ -2947,6 +2991,7 @@ def create_mcp(
             "review": _compact_review(review_payload)
             if response_mode == "compact"
             else review_payload,
+            "approval_handoff": _approval_handoff(card, review, adapter),
             "response_mode": response_mode,
             "details_available": True,
         }

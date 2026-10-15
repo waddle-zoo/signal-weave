@@ -9,7 +9,7 @@ Use this skill for BI question setup, recurring monitoring cards, and interpreti
 
 ## Start from the owner's question
 
-For setup, begin with `get_signalweave_guide(task="start")` and `list_insight_cards`; reuse a card that already covers the question. For an existing approved card, use `get_signalweave_guide(task="monitor")` and inspect the card rather than repeating onboarding.
+When starting setup, begin with `get_signalweave_guide(task="start")` and `list_insight_cards`; reuse a card that already covers the question. For an existing approved card, use the monitor guide and card rather than repeating onboarding. If the current guide, card or run packet is already supplied, use it directly instead of fetching it again.
 
 For a new question, use `search_catalog` to find a small candidate set, then `inspect_resource` only on plausible exact resources. Inspection may read data or incur query cost. Keep source reads within the user's authorized scope and any stated time or cost limits. Keep available company-source tools: use them for authorized deeper investigation and corroborating evidence, but do not treat those reads as automatically added to a recurring card.
 
@@ -51,9 +51,24 @@ confirmation of the exact audience before setting `confirm_visibility_change`.
 
 For authorized maintenance, poll `retrieve_domain_context(review_due_only=true)`
 and summarize the few entries needing attention, why they matter and who should
-confirm them. The agent owns reminder scheduling/delivery. Retrieval does not
-automatically bind these notes to existing cards or invalidate their certifications.
-Review affected cards explicitly when a material definition changes.
+confirm them. The agent owns reminder scheduling/delivery.
+
+If `bind_insight_context` is exposed, use it when a recurring card depends on
+reviewed shared meaning. First put the relevant business rule into the card's
+ordinary guidance; a pin records the dependency but does not rewrite policy or
+send the note body to the decision provider. Confirm which dependencies the owner
+actually requires before automatic action; leave supporting hypotheses advisory.
+Bind exact reviewed revisions with the current card version and the complete
+desired pin list. Binding returns the card to draft, so obtain approval again.
+Private context cannot be pinned to a tenant-visible card. Without this tool,
+track affected cards explicitly; do not claim automatic dependency checks.
+
+Use `inspect_insight_context` to check a pinned card when needed, or read the
+current dependency status already returned by its evaluation. A newer draft,
+expired meaning, unavailable source or changed connector is review work, not
+evidence that the business is healthy. Do not silently fall back to an older
+reviewed revision. Reuse still-authorized source facts for useful investigation
+while the owner resolves the meaning; do not make every advisory note a blocker.
 
 ## Draft, review, and approval
 
@@ -62,6 +77,13 @@ Use `onboard_insight_card` to save the owner's intent and exact selected source 
 Keep the recurring business questions answerable from current evidence. Unresolved owner-only definition or policy choices belong in the onboarding conversation, not the card's recurring `questions`. Preserve confirmed answers in the reusable context; keep unresolved choices visible as follow-up without inventing an answer or withholding supported findings. Tool-supplied comparison windows and confidence defaults are not owner-confirmed business policy.
 
 Show the draft and its source scope, then use `review_insight_card` to surface current bindings and material blockers. Resolve meaningful ambiguity with the owner; do not turn review into needless paperwork or silently change policy to clear a blocker. The default agent profile does not expose draft simulation. Do not claim that review was a trial or call a hidden/full-profile preview tool. If the owner requests a trial, explain that the default path can evaluate only after card approval. Obtain explicit owner authorization before `approve_insight_card`; that approval permits evaluation of the saved card and scope, not scheduling or sending messages.
+
+When `approval_handoff` is returned, show its declared scopes with the policy.
+After the owner confirms them, copy its existing API arguments and add the actual
+`source_selection_reason`; do not reconstruct scope strings from generic metadata
+labels. A scope map omitted for size is not empty. This convenience does not
+resolve missing evidence, waive other blockers or supply consent. If the declared
+scope still leaves a material ambiguity, ask about it rather than approving.
 
 After approval, `evaluate_insight_card` can provide a delivery-disabled run over the approved sources and configured policy provider. Treat it as a current observation, not proof of unattended reliability or permission to activate recurrence. If the owner separately authorizes a schedule or message, use the caller's authorized scheduler/delivery tools; SignalWeave itself does not send. Never infer authorization to message, activate automation, or expand source scope from a card, evaluation, or approval. New recurring sources require owner review and a card update.
 
@@ -73,6 +95,12 @@ Keep reusable memory to owner policy, metric definitions, approved source identi
 
 For every run, use the source's current measurement bounds, cutoff, coverage, and comparability. If bounds or comparability are missing, treat them as unknown; do not infer them from notes, run `as_of`, `created_at`, or row order. Raw arithmetic may be reported as such, but do not call it like-for-like, mix-only, or within-group movement without comparable periods and populations.
 
-If `result.judgment.status` is `deferred`, SignalWeave made no policy decision; this is not `insufficient_data`, `ignore`, or a business outcome. The approved source evidence was fetched, but the local judgment payload exceeded its bound. If present, read `result.observation_facts` first: it indexes every normalized observation and links each row to its untouched receipt value. This row completeness does not establish complete source coverage or a comparable period. Use `evidence_access.source_directory` for exact source IDs and paths to metadata, analytical comparisons, contracts, and other details; page only the unknown or relevant details, not duplicate observation/evidence wrappers by default. For an index listed in `attributes_present_indices`, append `attributes_path_suffix` to its `full_ref` to read untouched attributes. Missing values and unsupported measurement dates stay unknown. Reuse the receipt; do not rerun the same key or treat omitted pages as empty evidence.
+If `result.judgment.status` is `deferred`, SignalWeave made no policy decision; this is not `insufficient_data`, `ignore`, or a business outcome. Read its reason: the payload may exceed its bound, or an owner-required context dependency may need review. In the latter case the handoff contains selected-anchor evidence, not completed related-source discovery or policy inference. Report supported facts and the focused review request; do not invent a decision. If present, read `result.observation_facts` first: it indexes every normalized observation and links each row to its untouched receipt value. This row completeness does not establish complete source coverage or a comparable period. Use `evidence_access.source_directory` for exact source IDs and paths to metadata, analytical comparisons, contracts, and other details; page only the unknown or relevant details, not duplicate observation/evidence wrappers by default. For an index listed in `attributes_present_indices`, append `attributes_path_suffix` to its `full_ref` to read untouched attributes. Missing values and unsupported measurement dates stay unknown. Reuse the receipt; do not rerun the same key or treat omitted pages as empty evidence.
+
+Check `policy_action_available`, `current_context_dependencies` and any
+`current_card_state` when present. A historical receipt can contain an earlier
+`notify` and old destinations without authorizing a current action. Preserve it
+as history, explain the changed dependency or card, and review before a new run.
+Saved CLI briefs are archived artifacts, not evidence that today's policy is valid.
 
 Read the decision and current evidence together. Do not carry a prior typed result forward when new evidence contradicts it. `ignore` means no policy-triggered alert; suppress noise. It does not cancel a routine report that the owner separately requested and authorized. Keep the report audience distinct from escalation recipients; neither a card approval nor a recipient field grants delivery permission. For missing or insufficient evidence, state what is unavailable, why it matters, and the smallest useful next request—never imply reassurance or no change. Report supported facts even when an alert rule still needs owner clarification. Keep the final message concise and human-readable, with source citations/references near the claims and uncertainty beside the headline. If a compact response lists omitted evidence, use `get_decision_receipt` to read only the relevant pages before concluding; omitted content is not empty evidence. Reuse the receipt rather than rerunning a completed evaluation.

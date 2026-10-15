@@ -147,6 +147,79 @@ a failed smoke. Predeclare a fresh cost cap before any further paid invocation,
 and report onboarding plus recurring-run cost separately, including break-even.
 No more episodes may be charged to the exhausted original canary budget.
 
+### Onboarding smoke protocol 1
+
+Before expanding to the two-card/reuse/change gates, test one cold-onboarding
+pair using the existing holdout retail scenario (seed `20261001`, four assets).
+Both arms start from the same business brief with the glossary withheld; source
+facts and owner definitions/materiality/routes remain available through the same
+tools. Each arm keeps its own notes. The treatment uses the verified native MCP
+agent profile and the exact project-installed skill bytes, explicitly supplied
+as instructions because the isolated Codex transport disables skill discovery.
+This does not test automatic skill discovery or an interactive human wizard.
+
+Use `gpt-6-luna`, medium effort, pinned Codex executable, baseline then treatment.
+Allow at most two invocations, 24 tools per invocation and 240 seconds per
+episode. Stop before starting another episode at 500,000 aggregate input tokens
+or 75,000 uncached input tokens; missing usage also stops expansion. These are
+between-episode stop thresholds, not hard in-flight token ceilings. Do not retry
+an incomplete arm or reclassify its work as a free setup run. No scheduling or
+delivery is authorized. Save unsuccessful traces as well as successes.
+
+Inspect whether the setup preserves the intended definition, comparisons,
+policy, destinations and relevant sources; whether the owner questions are
+material; and whether the person gets a concise useful readout. Independent
+content review is required: successful tool calls and synthetic approval are
+not semantic sign-off. The baseline keeps the source tools and note persistence,
+but this isolated transport cannot execute arbitrary scripts, so this first
+smoke cannot establish superiority over an unconstrained BI agent. Report schema,
+prompt and tool-result sizes alongside cached/uncached token usage, without
+attributing all input volume to schema overhead. Later cross-session reuse,
+definition changes, real Superset agent runs, other connectors and business
+benefit remain separate gates even if both onboarding arms succeed.
+
+Protocol 1 stopped after its baseline invocation because the owner-consent tool
+required `id="working"` but the notes tools never returned that ID. It is an
+invalid harness attempt, not evidence about either product arm. The agent
+honestly reported the blocker. Recorded usage: 173,288 input tokens, including
+149,504 cached (23,784 uncached), and 2,800 output tokens; 18 tools, 36.80 seconds.
+The attempted treatment never ran. The neutral source fixture also lacked
+comparison bounds/completeness, so caution about its current readout was correct.
+Independent review nevertheless found an arithmetic error in that draft:
+web net was $7,000 and shop net $3,000, totaling $10,000, not the reported
+$14,000. The unchanged raw-field percentage was correct. Retain this factual
+failure too; an invalid consent interface does not make the agent's math correct.
+
+Protocol 2 returns the notes ID and approval target explicitly. Use the existing
+connector-profile source fixture with declared analytical comparison bounds and
+coverage, mapped to the generic company MCP transport rather than masquerading
+as live BI connectors. This is a curated-source development smoke, not an untouched
+holdout or proof of automatic semantic onboarding from arbitrary raw data. Retain
+the sparse-fixture limitation as a separate coverage case; do not relabel its
+unknown periods as complete. Charge protocol 1's known usage to the same
+500k-input/75k-uncached between-invocation thresholds via `--prior-trace`.
+At most two corrected invocations may follow (three charged invocations total).
+Do not score the invalid baseline against the corrected treatment or claim a
+speed benefit. Further incomplete arms still stop expansion without a free retry.
+
+Protocol 2 is now terminal: baseline saved a correct factual readout with unresolved
+population details; treatment saved useful context/card work but hit its tool
+limit before a valid handoff. Treatment token usage is unknown, so expansion
+stopped. The results do not establish comparative onboarding quality or cost.
+Post-trial changes distinguish pending-owner-context handoffs from approved
+automation and remove duplicate-notes requirements for card-backed work. They
+must not retroactively convert the recorded attempt into a successful onboarding.
+
+Before another live cohort, make the source glossary accessible and ensure a
+domain expert can answer population questions, or deliberately expect an
+awaiting-context handoff in **both** arms. Apply the same independent semantic
+completion criteria to notes and cards. Source preconditions are explicit test
+inputs, not facts inferred from a fixture label. The next outcome gate remains
+owner-confirmed, complete onboarding followed by actual recurring Jev evaluation
+and an agent's useful message; a pending draft does not satisfy it. Record full
+usage or treat costs as unknown. No further invocation belongs to this stopped
+budget series.
+
 See the [preview evidence](evidence/domain-context-preview-2026-10-14.md) for
 observed gates, retained failures and exact native identity. This milestone is
 not complete; the feature remains opt-in and the PR remains draft.

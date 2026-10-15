@@ -76,6 +76,14 @@ For example:
 > required evidence, optional context, comparison period, decision rules and
 > recipients, then review it. Do not approve or send anything until I confirm.
 
+When a review returns `approval_handoff`, the agent can show the exact declared
+scopes and populations, then reuse the supplied approval arguments after you
+confirm them. It adds your reason; the handoff does not supply consent or waive
+checks. A vague population label still needs clarification, even if the metric
+definition looks right. The agent should give you supported findings while that
+question remains open, keeping the recurring card in draft rather than treating
+the initial readout as approved automation.
+
 After reviewing the draft, give explicit approval only if it is correct:
 
 > I approve card `<card-id>` with the displayed source scope and policy. Run one

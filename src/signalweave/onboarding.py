@@ -1178,8 +1178,10 @@ class InsightAuthoringService:
             if match.ref in selected_refs and declared_source_scope(match)
         }
         if scoped_selected:
+            populations = {match.ref: match.contract.population.strip() for match in discovery.matches}
             details = "; ".join(
-                f"{ref}: {scope}" for ref, scope in sorted(scoped_selected.items())
+                f"{ref}: scope={scope}; declared population={populations.get(ref) or 'not supplied'}"
+                for ref, scope in sorted(scoped_selected.items())
             )
             question = (
                 "Confirm the declared population/scope for every selected source before approval. "

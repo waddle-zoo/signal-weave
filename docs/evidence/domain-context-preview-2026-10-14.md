@@ -147,3 +147,55 @@ Final native SHA-256: `f3fe421610815b6f5d32f8a43025071548bd9d1dc82da513418c5ce15
 Final native JUnit SHA-256: `1670e615633cd7daf5743d8f70011576cd3733a5b2d8241d53ec2e765c446858`.
 This is an unreleased feature executable, not the published rc3 asset, despite
 sharing its package version string. Identify it by the commit and fingerprints.
+
+## Live cold-onboarding smoke — 2026-10-15
+
+Three actual `gpt-6-luna`/medium Codex invocations ran, using CLI
+`0.162.0-alpha.2`. The treatment used the actual native MCP, project-installed
+skill bytes explicitly supplied as instructions, and a company-MCP source bridge.
+Both arms retained source tools, scripted owner answers and independent notes.
+This was not automatic skill discovery, a real human wizard, or live BI data.
+
+| Attempt | Observed result |
+| --- | --- |
+| Protocol 1 baseline only | 18 tools, 36.80 s; invalid harness: the consent tool required an undocumented notes ID. It stopped honestly. The draft also had a real arithmetic error: $14k instead of $10k. The source lacked period/coverage declarations, so its caution about comparisons was correct. No treatment ran. |
+| Protocol 2 baseline | 13 tools, 23.05 s; saved notes and a correct $10k/0% readout, with population details still unresolved. This was a handoff, not certified automation. |
+| Protocol 2 SignalWeave | 24 tools, 79.09 s; used native context/source/card tools and saved a correct factual readout, but the card remained draft. The tool cap terminated the agent before complete usage was returned. No completed handoff or policy evaluation. |
+
+Protocol 2 used the existing comparison-capable fixture, equally available to
+both arms, rather than inventing dates or treating the sparse first export as
+complete. Both artifacts preserve the net-sales definition, exclude bookings and
+test stores, and avoid causal claims. Independent content review confirmed the
+$10k comparison in the second attempt but found that the source's generic
+population label referred to an unavailable glossary. The scripted owner could
+not answer that question. Keeping the card draft was appropriate.
+
+The attempted comparison is **not scoreable as an advantage**. Besides censored
+treatment usage, the harness required an approved card plus duplicate working
+notes from treatment while accepting baseline notes with unresolved population.
+That is not an equivalent semantic-completion gate. The time/call counts above
+describe the attempts, not a speed comparison or an accuracy rate. No Jev request,
+notification or schedule occurred. Do not attribute these results to Jev quality.
+
+Known usage across the first invalid invocation and the corrected baseline:
+265,585 input tokens, including 211,200 cached (54,385 uncached), and 4,645 output.
+Treatment usage is **unknown**, not zero and not included in those totals. No
+further live invocation was started after the missing-usage stop.
+
+Repairs after these runs: notes tools return their approval ID; the harness can
+record an awaiting-owner-context handoff without requiring duplicate persistence
+or pretending automation is ready. Production reviews now name both source scope
+and population, and provide bounded existing approval arguments after owner
+confirmation. They do not waive missing context, source checks or consent.
+These repairs have offline regression coverage; **they were not live revalidated
+in this cohort**. Full cross-session reuse, complete onboarding and business lift
+remain open gates. Later trials need an accessible source glossary/expert and
+equivalent semantic review of both arms, not just a more permissive finish tool.
+
+Trial production fingerprint: `9511def1418e4d7d4b06d58a072b8db60ebd84912bfd41472d572d3b4406e8fa`.
+Trial native SHA-256: `57f5fb85240bd0aaa1a476cf7036450941f2bcc01cda9560af47cf8ec3d1e31e`.
+This candidate was built from a dirty checkout with updated skill content; the
+fingerprint was verified before use. It predates the approval-handoff repairs.
+Protocol 1 report SHA-256: `3016e4adf62bdd31cb51a336de53d6da9b2a4f3ef1fc61a0a6f1f5ea54f4bac7`.
+Protocol 2 report SHA-256: `381a8bdff78dc6a785645e065be5e1b04ac539f3346391c817562ebb445708a8`.
+Raw reports and traces stay ignored under `artifacts/context-onboarding-live-*`.
