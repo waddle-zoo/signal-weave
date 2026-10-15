@@ -63,7 +63,7 @@ async def test_acceptance_report_binds_tested_card_before_owner_approval(tmp_pat
         "human_authorization_required": True,
     }
     assert accepted["status"] == "approved"
-    readiness = tool(server, "get_enterprise_readiness")()
+    readiness = await tool(server, "get_enterprise_readiness")()
     assert readiness["cards"][0]["workflow_certification"]["acceptance_current"] is True
     assert "workflow-acceptance-missing-or-stale" not in {gate["code"] for gate in readiness["gates"]}
 
@@ -106,7 +106,7 @@ async def test_preview_and_partial_replay_are_not_acceptance(tmp_path):
     # Low-level owner authorization remains available, but cannot claim testing.
     approved = await tool(server, "approve_insight_card")(card_id)
     assert approved["workflow_acceptance"]["status"] == "unassessed"
-    ready = tool(server, "get_enterprise_readiness")()
+    ready = await tool(server, "get_enterprise_readiness")()
     assert "workflow-acceptance-missing-or-stale" in {gate["code"] for gate in ready["gates"]}
 
 

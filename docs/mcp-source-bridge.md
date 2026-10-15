@@ -183,6 +183,33 @@ The descriptor owns the returned title, description, and contract. Remote
 non-healthy source status is retained conservatively, and a healthy response
 cannot erase a configured non-healthy status.
 
+### Connector binding namespace
+
+The adapter exposes an opaque `binding_namespace` for checking whether saved
+context still refers to the same configured source. For a literal HTTP URL with
+no query and no environment-backed headers, it is derived from the normalized
+origin and path. Routing that cannot be established from those non-secret
+parts fails closed: stdio always needs an explicit namespace, as do HTTP
+connections whose URL comes from an environment reference, has a query string,
+or uses environment-backed headers. In those cases `binding_namespace` is
+`None` until the operator supplies `context_namespace` on the connection:
+
+Add this field to the connection object:
+
+```json
+"context_namespace": "production/finance"
+```
+
+Use a stable, non-secret identifier for the upstream workspace or tenant, not a
+token, password, or URL containing credentials. The bridge does not resolve or
+hash environment-variable values to derive this identity. The explicit value
+is an operator-reviewed assertion, not an independently verified guarantee:
+the operator must update it when hidden routing changes. Credential rotation
+alone need not change it; if a credential also selects a workspace, update the
+namespace when that routing changes. `None` means identity continuity cannot be
+proven for context binding; it does not disable otherwise authorized source
+reads.
+
 `SourceRef.parameters` must be empty. Even apparently harmless limits are
 rejected, since this version declares no caller argument bounds. The caller
 cannot override tools, arguments, commands, headers, URLs, or JSON pointers.

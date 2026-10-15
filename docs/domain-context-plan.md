@@ -83,6 +83,20 @@ This follows the earlier negative retrieval results: an approved anchor helps,
 but ranking cannot invent missing cross-domain relationships. Explicit source
 links and bounded context are inputs to investigation, not proof of causation.
 
+## Revision binding implementation
+
+The next slice adds exact shared-context pins, card-owner versioned rebinding,
+connector/declared-semantic identity checks, and dependency status on recurring
+runs. Notes stay outside provider inputs and receipts. Advisory dependencies warn;
+owner-designated prerequisites defer policy while returning approved-anchor
+evidence for investigation. Preview, approval, certification and historical
+receipt reads must preserve this distinction. Polling remains caller-owned.
+
+Proof must cover source reconfiguration, concurrent card edits, current and
+historical ACLs, late context changes during inference, and native/HTTP transport
+paths. Passing these contracts is not proof of an improvement in final agent
+analysis. The equal-information business-value experiment remains required.
+
 ## First live canary: retained negative mechanism result
 
 The first paired support case completed through live `gpt-6-luna` at medium

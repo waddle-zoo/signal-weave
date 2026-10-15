@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import inspect
 import json
 import os
 import re
@@ -36,6 +37,11 @@ from signalweave.superset_adapter import SupersetAdapter
 
 def _tool(server: Any, name: str) -> Any:
     return server._tool_manager.get_tool(name).fn
+
+
+async def _call_tool(tool: Any, *args: Any, **kwargs: Any) -> Any:
+    result = tool(*args, **kwargs)
+    return await result if inspect.isawaitable(result) else result
 
 
 class LocalShadowClient(ContractClient):
@@ -323,7 +329,7 @@ async def run_trial(
                 )
                 jev_after_replay = len(ContractClient.calls)
                 provider_after_replay = provider_client.requests_made
-                receipt = get_receipt(idempotency_key=idempotency_key)
+                receipt = await _call_tool(get_receipt, idempotency_key=idempotency_key)
                 exposed_tools = {
                     tool.name for tool in server._tool_manager.list_tools()
                 }

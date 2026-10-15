@@ -5,9 +5,24 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Literal
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
+from pydantic import (
+    AwareDatetime,
+    BaseModel,
+    ConfigDict,
+    Field,
+    StrictBool,
+    StrictInt,
+    model_validator,
+)
 
 from .models import SourceRef
+
+
+class ContextPinRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    entry_id: str = Field(min_length=1, max_length=160)
+    revision: StrictInt = Field(ge=1)
+    required_for_action: StrictBool = False
 
 
 class KnowledgeContent(BaseModel):

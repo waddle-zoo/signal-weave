@@ -37,7 +37,7 @@ async def test_compact_evaluation_preserves_evidence_and_durable_audit(tmp_path,
     assert result["resources"] and result["result"]["evidence"]
     assert "result" not in result["receipt"]
     assert result["plan"] and result["retrieval"]
-    full = tool(server, "get_decision_receipt")(idempotency_key="repeatable")
+    full = await tool(server, "get_decision_receipt")(idempotency_key="repeatable")
     assert full["receipt"]["result"] == result["result"] == full["result"]
     assert result["receipt"] == {k: v for k, v in full["receipt"].items() if k != "result"}
     assert tool(server, "get_insight_card")(card_id, include_history=True) == stored

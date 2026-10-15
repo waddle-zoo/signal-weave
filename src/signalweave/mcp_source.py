@@ -24,6 +24,7 @@ from mcp.client.streamable_http import streamable_http_client
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .models import ResourceContract, ResourceDescriptor, ResourceSnapshot, SourceRef
+from .source_identity import namespace_fingerprint, namespace_uri
 
 _MAX_MANIFEST_BYTES = 1_000_000
 _bridge_io = ContextVar("signalweave_mcp_source_io", default=False)
@@ -109,6 +110,7 @@ class MCPResource(_Config):
 class MCPConnection(_Config):
     name: str = Field(min_length=1, max_length=80, pattern=r"^[a-z][a-z0-9_-]*$")
     tenant_id: str = Field(min_length=1, max_length=160)
+    context_namespace: str | None = Field(default=None, min_length=1, max_length=200)
     read_only: Literal[True]
     transport: Annotated[StdioTransport | HTTPTransport, Field(discriminator="type", repr=False)]
     resources: list[MCPResource] = Field(min_length=1, max_length=500)
@@ -117,6 +119,11 @@ class MCPConnection(_Config):
 
     @model_validator(mode="after")
     def validate_bindings(self) -> MCPConnection:
+        if self.context_namespace is not None and (
+            self.context_namespace != self.context_namespace.strip()
+            or any(ord(char) < 32 for char in self.context_namespace)
+        ):
+            raise ValueError("invalid MCP context namespace")
         resources: set[str] = set()
         for entry in self.resources:
             descriptor = entry.descriptor
@@ -234,6 +241,48 @@ class MCPSourceAdapter:
         self.tenant_id = connection.tenant_id
         self._resources = {entry.descriptor.resource: entry for entry in self._connection.resources}
         self._transport_factory = transport_factory
+
+    @property
+    def binding_namespace(self) -> str | None:
+        transport = self._connection.transport
+        if isinstance(transport, StdioTransport):
+            # Stdio's upstream routing may be hidden in environment values or
+            # executable behavior. Only an operator-reviewed assertion can
+            # establish its namespace; never resolve or hash secret values.
+            if not self._connection.context_namespace:
+                return None
+            return namespace_fingerprint({
+                "transport": transport.type,
+                "tenant": self.tenant_id,
+                "context_namespace": self._connection.context_namespace,
+            })
+
+        # A URL env reference, query string, or header reference can route to
+        # a workspace/tenant. Such values are opaque and may be credentials;
+        # do not resolve or hash them to manufacture a namespace.
+        url_parts = None
+        if isinstance(transport.url, str):
+            try:
+                url_parts = urlsplit(transport.url)
+            except ValueError:
+                return None
+        has_opaque_routing = (
+            isinstance(transport.url, EnvReference)
+            or bool(transport.headers)
+            or bool(url_parts and url_parts.query)
+        )
+        if has_opaque_routing and not self._connection.context_namespace:
+            return None
+        try:
+            endpoint = namespace_uri(transport.url) if isinstance(transport.url, str) else None
+        except (TypeError, ValueError):
+            return None
+        identity: dict[str, str] = {"transport": transport.type, "tenant": self.tenant_id}
+        if endpoint:
+            identity["endpoint"] = endpoint
+        if self._connection.context_namespace:
+            identity["context_namespace"] = self._connection.context_namespace
+        return namespace_fingerprint(identity)
 
     async def list_resources(self) -> list[ResourceDescriptor]:
         return [entry.descriptor.model_copy(deep=True) for entry in self._resources.values()

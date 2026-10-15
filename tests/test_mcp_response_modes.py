@@ -116,7 +116,7 @@ async def test_compact_evaluation_preserves_evidence_but_avoids_duplicate_handof
     compact = await tool(server, "evaluate_insight_card")(
         card_id, idempotency_key="compact-handoff", response_mode="compact"
     )
-    durable = tool(server, "get_decision_receipt")(
+    durable = await tool(server, "get_decision_receipt")(
         idempotency_key="compact-handoff"
     )
 

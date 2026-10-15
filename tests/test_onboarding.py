@@ -400,7 +400,7 @@ async def test_mcp_can_use_trusted_request_principal_for_shared_catalog(tmp_path
             ctx=SimpleNamespace(principal_id="b-user", tenant_id="tenant-b"),
         )
 
-    readiness = tool(server, "get_enterprise_readiness")(
+    readiness = await tool(server, "get_enterprise_readiness")(
         ctx=SimpleNamespace(principal_id="b-user", tenant_id="tenant-b")
     )
     assert readiness["tenant_id"] == "tenant-b"
@@ -1299,7 +1299,7 @@ async def test_payload_budget_failure_is_persisted_as_structured_receipt(tmp_pat
             "oversized-card", idempotency_key="daily:oversized-card"
         )
 
-    receipt = tool(server, "get_decision_receipt")(
+    receipt = await tool(server, "get_decision_receipt")(
         idempotency_key="daily:oversized-card"
     )
     assert receipt["receipt"]["status"] == "failed"
@@ -1341,7 +1341,7 @@ async def test_question_budget_failure_is_persisted_as_deferred_receipt(tmp_path
         "question-budget-card", idempotency_key="daily:question-budget-card"
     )
 
-    receipt = tool(server, "get_decision_receipt")(
+    receipt = await tool(server, "get_decision_receipt")(
         idempotency_key="daily:question-budget-card"
     )
     assert response["receipt"]["status"] == "decision_deferred"
@@ -1396,7 +1396,7 @@ async def test_decision_feedback_is_scoped_and_survives_restart(tmp_path):
         drafted["card"]["id"], idempotency_key="daily:feedback-card"
     )
 
-    recovered = tool(server, "get_decision_receipt")(
+    recovered = await tool(server, "get_decision_receipt")(
         receipt_id=evaluated["receipt"]["receipt_id"]
     )
     assert recovered["receipt"]["delivery_mode"] == "shadow"
@@ -1431,7 +1431,7 @@ async def test_decision_feedback_is_scoped_and_survives_restart(tmp_path):
     listed = tool(restarted, "list_decision_feedback")(idempotency_key="daily:feedback-card")
     assert listed["count"] == 1
     assert listed["feedback"][0]["note"] == "The movement was expected seasonality."
-    restarted_receipt = tool(restarted, "get_decision_receipt")(
+    restarted_receipt = await tool(restarted, "get_decision_receipt")(
         idempotency_key="daily:feedback-card"
     )
     assert restarted_receipt["receipt"]["delivery_mode"] == "shadow"
@@ -1492,10 +1492,10 @@ async def test_feedback_keeps_the_receipt_card_version_after_a_card_revision(tmp
     assert feedback["feedback"]["card_version"] == 1
 
 
-def test_enterprise_readiness_reports_open_gates(tmp_path):
+async def test_enterprise_readiness_reports_open_gates(tmp_path):
     server = make_server(tmp_path)
 
-    report = tool(server, "get_enterprise_readiness")()
+    report = await tool(server, "get_enterprise_readiness")()
 
     assert report["status"] == "blocked"
     assert report["tenant_id"] == "default"
@@ -1507,7 +1507,7 @@ def test_enterprise_readiness_reports_open_gates(tmp_path):
     }
 
 
-def test_enterprise_readiness_blocks_stale_workflow_certification(tmp_path):
+async def test_enterprise_readiness_blocks_stale_workflow_certification(tmp_path):
     registry = SourceRegistry([SupersetCatalogDouble()], authorized_tenants=["default"])
     reports = InMemoryCertificationReportStore()
     runtime = Runtime(
@@ -1541,7 +1541,7 @@ def test_enterprise_readiness_blocks_stale_workflow_certification(tmp_path):
         )
     )
 
-    report = tool(server, "get_enterprise_readiness")()
+    report = await tool(server, "get_enterprise_readiness")()
 
     assert report["status"] == "blocked"
     assert "workflow-certification-stale" in {gate["code"] for gate in report["gates"]}

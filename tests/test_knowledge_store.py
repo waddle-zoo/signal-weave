@@ -98,6 +98,83 @@ def test_owner_id_is_immutable_across_revisions(tmp_path):
     ]
 
 
+def test_get_revision_is_durable_for_revisions_older_than_history_window(tmp_path):
+    path = tmp_path / "knowledge.db"
+    store = SQLiteKnowledgeStore(path)
+    entry = make_entry()
+    for revision in range(1, 61):
+        version = entry.model_copy(
+            update={
+                "revision": revision,
+                "content": entry.content.model_copy(update={"body": f"Revision {revision}."}),
+            }
+        )
+        store.append(version, expected_revision=revision - 1)
+
+    other_tenant = make_entry(tenant_id="tenant-b", body="Other tenant revision.")
+    store.append(other_tenant, expected_revision=0)
+    reopened = SQLiteKnowledgeStore(path)
+
+    assert [item.revision for item in reopened.history("tenant-a", entry.id, "alice")] == list(
+        range(11, 61)
+    )
+    assert reopened.get_revision("tenant-a", entry.id, 1, "alice").content.body == "Revision 1."
+    assert reopened.get_revision("tenant-b", entry.id, 1, "alice").content.body == (
+        "Other tenant revision."
+    )
+
+
+def test_get_revision_requires_current_and_historical_visibility(tmp_path):
+    store = SQLiteKnowledgeStore(tmp_path / "knowledge.db")
+    shared = make_entry()
+    store.append(shared, expected_revision=0)
+    private = shared.model_copy(
+        update={
+            "revision": 2,
+            "content": shared.content.model_copy(
+                update={"body": "Private history.", "reader_principal_ids": ["alice"]}
+            ),
+        }
+    )
+    store.append(private, expected_revision=1)
+    shared_again = private.model_copy(
+        update={
+            "revision": 3,
+            "content": private.content.model_copy(
+                update={"body": "Shared current.", "reader_principal_ids": []}
+            ),
+        }
+    )
+    store.append(shared_again, expected_revision=2)
+
+    assert store.get_revision("tenant-a", shared.id, 1, "bob").revision == 1
+    with pytest.raises(KeyError) as private_revision:
+        store.get_revision("tenant-a", shared.id, 2, "bob")
+    assert store.get_revision("tenant-a", shared.id, 2, "alice").content.body == "Private history."
+
+    current_private = shared_again.model_copy(
+        update={
+            "revision": 4,
+            "content": shared_again.content.model_copy(
+                update={"body": "Current ACL changed.", "reader_principal_ids": ["alice"]}
+            ),
+        }
+    )
+    store.append(current_private, expected_revision=3)
+    with pytest.raises(KeyError) as revoked_principal:
+        store.get_revision("tenant-a", shared.id, 1, "bob")
+    with pytest.raises(KeyError) as missing_revision:
+        store.get_revision("tenant-a", shared.id, 99, "alice")
+    assert private_revision.value.args == revoked_principal.value.args == missing_revision.value.args
+
+
+@pytest.mark.parametrize("revision", [0, -1, True, "1"])
+def test_get_revision_requires_a_strict_positive_integer(tmp_path, revision):
+    store = SQLiteKnowledgeStore(tmp_path / "knowledge.db")
+    with pytest.raises(ValueError, match="integer greater than or equal to 1"):
+        store.get_revision("tenant-a", "context-1", revision, "alice")
+
+
 def test_begin_immediate_allows_only_one_concurrent_revision_writer(tmp_path):
     path = tmp_path / "knowledge.db"
     first = SQLiteKnowledgeStore(path)

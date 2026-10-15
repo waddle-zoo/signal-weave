@@ -9,11 +9,14 @@ from mcp.server.fastmcp import Context, FastMCP
 from pydantic import StrictInt
 
 from .knowledge import KnowledgeService
-from .knowledge_models import KnowledgeContent
-from .models import PrincipalContext
+from .knowledge_dependencies import ContextDependencies
+from .knowledge_models import ContextPinRequest, KnowledgeContent
+from .models import InsightCardStatus, PrincipalContext
+from .store import InsightCardStore
 
 KNOWLEDGE_TOOLS = frozenset({
     "save_domain_context", "review_domain_context", "retrieve_domain_context", "get_context_history",
+    "bind_insight_context", "inspect_insight_context",
 })
 
 
@@ -21,7 +24,10 @@ def register_knowledge_tools(
     mcp: FastMCP, service: KnowledgeService,
     resolve_principal: Callable[[Context | None], PrincipalContext | None],
     *, require_scopes: bool = False,
+    card_store: InsightCardStore | None = None,
 ) -> None:
+    dependencies = ContextDependencies(service)
+
     def require_permission(identity, permission):
         if require_scopes and permission and permission not in identity.scopes:
             raise ValueError(f"permission denied: {permission} is required")
@@ -32,6 +38,64 @@ def register_knowledge_tools(
             raise ValueError("domain context requires a configured or authenticated tenant/principal")
         require_permission(identity, permission)
         return identity
+
+    def scoped_card(card_id, identity):
+        if card_store is None:
+            raise ValueError("card binding is unavailable")
+        card = card_store.get_card(card_id)
+        if card.principal_tenant != identity.tenant_id:
+            raise ValueError("card is not available in the current tenant")
+        return card
+
+    @mcp.tool(annotations={"readOnlyHint": False, "destructiveHint": False, "openWorldHint": False})
+    async def bind_insight_context(
+        card_id: str, expected_card_version: StrictInt, pins: list[ContextPinRequest], reason: str,
+        ctx: Context | None = None,
+    ) -> dict[str, Any]:
+        """Replace the card's context pins after owner review, returning it to draft.
+
+        Use exact current reviewed tenant-shared entries. Mark required_for_action
+        only when the owner requires that meaning before policy automation. Confirm
+        relevant meaning is already written into card guidance: pins do not rewrite
+        policy or send note bodies to the decision provider. Empty pins removes all
+        dependencies. Every change needs renewed card approval and testing.
+        """
+        identity = principal(ctx, "knowledge:write")
+        card = scoped_card(card_id, identity)
+        if card.principal_id != identity.principal_id:
+            raise ValueError("only the card owner may change context dependencies")
+        if (card.version != expected_card_version or len(pins) > 12
+                or len({pin.entry_id for pin in pins}) != len(pins)
+                or not reason.strip() or len(reason) > 2000):
+            raise ValueError("provide the current card version, distinct bounded pins and review reason")
+        resolved = [await dependencies.pin(
+            pin.entry_id, pin.revision, identity, required_for_action=pin.required_for_action,
+        ) for pin in pins]
+        if not (await dependencies.inspect(resolved, identity))["all_current"]:
+            raise ValueError("context changed during binding; review the current entries again")
+        updated = card.model_copy(update={
+            "context_bindings": resolved, "version": card.version + 1,
+            "context_binding_reason": reason,
+            "status": InsightCardStatus.DRAFT, "compiled_plan": None,
+            "onboarding_review": None, "approved_by": None, "approved_at": None,
+        })
+        # The existing card history is preserved; no note text is copied into it.
+        card_store.save_card_if_version(updated, expected_card_version)
+        return {"card_id": updated.id, "version": updated.version, "status": updated.status.value,
+                "context_bindings": [pin.model_dump(mode="json") for pin in resolved],
+                "next_step": "Review the card's explicit policy and approve the new version; context binding is not approval.",
+                "reason": reason}
+
+    @mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False, "openWorldHint": False})
+    async def inspect_insight_context(card_id: str, ctx: Context | None = None) -> dict[str, Any]:
+        """Check exact reviewed dependencies, without revealing note text or running queries.
+
+        Poll on recurring runs for review reminders. Fetch authorized context separately
+        for interpretation. Pins never grant access or expand a card's data scope.
+        """
+        identity = principal(ctx)
+        card = scoped_card(card_id, identity)
+        return await dependencies.inspect(card.context_bindings, identity)
 
     @mcp.tool(annotations={"readOnlyHint": False, "destructiveHint": False, "openWorldHint": False})
     async def save_domain_context(

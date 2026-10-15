@@ -99,6 +99,26 @@ class SQLiteKnowledgeStore:
             raise KeyError("knowledge entry not found")
         return KnowledgeEntry.model_validate_json(row["payload"])
 
+    def get_revision(
+        self, tenant_id: str, entry_id: str, revision: int, principal_id: str
+    ) -> KnowledgeEntry:
+        if not isinstance(revision, int) or isinstance(revision, bool) or revision < 1:
+            raise ValueError("revision must be an integer greater than or equal to 1")
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT e.payload FROM knowledge_current c "
+                "JOIN knowledge_revisions e ON e.tenant_id = c.tenant_id "
+                "AND e.entry_id = c.entry_id AND e.revision = ? "
+                "WHERE c.tenant_id = ? AND c.entry_id = ? AND "
+                + self._visible_sql("c")
+                + " AND "
+                + self._visible_sql("e"),
+                (revision, tenant_id, entry_id, principal_id, principal_id),
+            ).fetchone()
+        if row is None:
+            raise KeyError("knowledge entry not found")
+        return KnowledgeEntry.model_validate_json(row["payload"])
+
     def append(self, entry: KnowledgeEntry, expected_revision: int) -> KnowledgeEntry:
         """Append the next revision iff the tenant-scoped revision still matches."""
         if (

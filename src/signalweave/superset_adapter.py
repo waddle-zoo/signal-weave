@@ -12,6 +12,7 @@ from .models import (
     ResourceSnapshot,
     SourceRef,
 )
+from .source_identity import namespace_fingerprint, namespace_uri
 from .superset_client import SupersetClient
 
 
@@ -42,6 +43,19 @@ class SupersetAdapter:
         self.tenant_id = tenant_id
         self.provider_name = provider_name or adapter_name
         self.max_search_fallback_terms = max_search_fallback_terms
+
+    @property
+    def binding_namespace(self) -> str | None:
+        base_url = getattr(self.client, "base_url", None)
+        if not isinstance(base_url, str) or not base_url.strip():
+            return None
+        try:
+            endpoint = namespace_uri(base_url)
+        except (TypeError, ValueError):
+            return None
+        if not endpoint:
+            return None
+        return namespace_fingerprint({"provider": self.provider_name, "endpoint": endpoint})
 
     async def list_resources(self) -> list[ResourceDescriptor]:
         dashboards = await self.client.list_dashboards()

@@ -110,6 +110,14 @@ class EvaluationPayloadError(ValueError):
         )
 
 
+class ContextReviewRequired(ValueError):
+    """Evidence is usable for investigation but required policy meaning needs review."""
+
+    def __init__(self, handoff: dict) -> None:
+        super().__init__("required card context needs review; policy judgment deferred")
+        self.prepared_handoff = handoff
+
+
 class InsightEngine:
     """Evaluate a user-authored insight card over adapter-provided snapshots."""
 
@@ -307,6 +315,19 @@ class InsightEngine:
                 return await compile_with_typesafe(card, self.judger, state=state)
         del resources
         return base_plan(card)
+
+    async def prepare_evidence(
+        self, card: InsightCard, principal: PrincipalContext | None = None,
+    ) -> dict:
+        """Fetch approved anchors only, without model compilation or related-source expansion."""
+        if self.registry is None:
+            raise ValueError("evidence preparation requires a SourceRegistry")
+        resources = await self.registry.resolve(
+            card.sources, authorized_tenants=[principal.tenant_id] if principal else None,
+        )
+        plan = base_plan(card)
+        return {"card": card, "resources": resources, "plan": plan,
+                "materials": self._evaluation_materials(card, plan, resources, None, None)}
 
     async def evaluate(
         self,

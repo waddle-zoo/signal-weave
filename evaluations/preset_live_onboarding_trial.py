@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import hashlib
+import inspect
 import json
 from pathlib import Path
 from typing import Any
@@ -26,6 +27,11 @@ def _tool(server: Any, name: str) -> Any:
     """Use the same registered MCP tool functions as the deployment test suite."""
 
     return server._tool_manager.get_tool(name).fn
+
+
+async def _call_tool(tool: Any, *args: Any, **kwargs: Any) -> Any:
+    result = tool(*args, **kwargs)
+    return await result if inspect.isawaitable(result) else result
 
 
 def _summary(payload: dict[str, Any]) -> dict[str, Any]:
@@ -679,8 +685,8 @@ async def _run_trial_loaded(
                 isinstance(provider_paths_after_replay, dict)
                 and provider_paths_after_replay == provider_paths_before_replay
             )
-            receipt_lookup = _tool(server, "get_decision_receipt")(
-                idempotency_key=idempotency_key
+            receipt_lookup = await _call_tool(
+                _tool(server, "get_decision_receipt"), idempotency_key=idempotency_key
             )
             summary = _summary(evaluation)
             resources = evaluation.get("resources") or []
