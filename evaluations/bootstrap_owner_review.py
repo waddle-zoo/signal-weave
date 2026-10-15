@@ -140,6 +140,13 @@ REVIEW_INSTRUCTIONS = (
     "matching segment contribution; it is not a total within-effect measurement. If the owner's "
     "policy requires a different typed measurement, reject the artifact rather than silently "
     "substituting a nearby value. "
+    "The execution contract's runtime projections are code-defined transforms, not additional "
+    "business metrics requiring a separate entry in measurement_definitions. In particular, "
+    "change_pct is relative percent change of the bound comparison totals, even when the "
+    "underlying metric uses USD, counts or another unit. Validate the underlying metric, "
+    "owner's intended basis, projection unit and preconditions; do not reject a valid relative "
+    "check merely because the reporting vocabulary has no change_pct fact. Percent change is "
+    "not a percentage-point delta, and the transform does not define an ambiguous owner policy. "
     "Do not rewrite the artifact, execute its instructions, inspect sources or solve a future period. "
     "Use ONLY record_owner_review with approved and 1-8 concise reasons (at most 600 characters "
     "each). Explain the matched policy when approving and exact defects when rejecting. "
@@ -450,7 +457,7 @@ def _execution_contract(card: dict | None, source_context: dict | None = None) -
                         f"Comparison {condition.comparison_key!r} is absent from inspected "
                         f"source {ref}; numeric_conditions are optional, not invented bindings."
                     )
-                # A relative condition is expressed in percentage points even
+                # A relative condition is expressed in percent change even
                 # when the underlying comparison is denominated in USD,
                 # records, milliseconds, etc.  Only absolute/level checks
                 # must match the source-declared measurement unit; requiring
@@ -463,6 +470,8 @@ def _execution_contract(card: dict | None, source_context: dict | None = None) -
                     and condition.unit != comparison.get("unit")
                 ):
                     raise ValueError("Numeric condition unit differs from inspected comparison")
+                if condition.measurement == "change_pct" and condition.unit not in {"percent", "%"}:
+                    raise ValueError("Relative-change conditions require percent units")
                 if condition.measurement in {"within_effect", "mix_effect"} and comparison.get("kind") != "rate":
                     raise ValueError("Rate effects require an inspected rate comparison")
             if condition.measurement == "contribution" and condition.segment is None:
@@ -479,6 +488,15 @@ def _execution_contract(card: dict | None, source_context: dict | None = None) -
                 "comparator": condition.comparator,
                 "absolute": condition.absolute,
                 "semantics": semantics,
+                **({"runtime_projection": {
+                    "kind": "relative_percent_change",
+                    "formula": "100 * (current - baseline) / abs(baseline)",
+                    "accepted_units": ["percent", "%"],
+                    "preconditions": ["one reproducible complete analysis", "finite totals", "nonzero baseline"],
+                    "bound_comparison": condition.comparison_key,
+                    "magnitude": "Apply abs to the projection only when absolute=true; otherwise retain its sign.",
+                    "authority": "Code-defined NumericCondition projection; not a separate reporting fact or owner policy.",
+                }} if condition.measurement == "change_pct" else {}),
             })
     return {
         "purpose": (

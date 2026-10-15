@@ -424,6 +424,14 @@ def test_relative_numeric_binding_uses_percent_not_the_metric_unit(inputs):
     }]}
     payload = reviewer.review_payload(**inputs, source_context=context)
     assert payload["execution_contract"]["numeric_bindings"][0]["unit"] == "percent"
+    projection = payload["execution_contract"]["numeric_bindings"][0]["runtime_projection"]
+    assert projection["kind"] == "relative_percent_change"
+    assert projection["formula"] == "100 * (current - baseline) / abs(baseline)"
+    assert projection["accepted_units"] == ["percent", "%"]
+    assert projection["bound_comparison"] == "comparison-a"
+    inputs["artifact"]["card"]["numeric_conditions"][0]["unit"] = "USD"
+    with pytest.raises(ValueError, match="require percent"):
+        reviewer.review_payload(**inputs, source_context=context)
 
 
 def test_uninspected_numeric_source_is_not_verified_by_card(inputs):
