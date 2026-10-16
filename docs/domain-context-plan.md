@@ -8,9 +8,9 @@ Feature branch: `feat/domain-context-memory`, based on main `e8842ac`.
 | --- | --- |
 | Local and hosted context lifecycle | Native stdio/signed HTTP checks cover review/reuse/restart/change; latest read-only native restart recovered the actual approved v2 card, definition history and saved Jev receipt. Hosted issuer remains synthetic |
 | Card-bound meaning and staleness | Contract tests cover exact pins, reapproval, deferred policy and historical receipts; no automatic notification service is claimed |
-| Approved cards with live decisions | Fresh V5 agent discovered sources, authored/approved its card and evaluated it with live Jev. Both fresh reporters correctly found the decline and business route. The earlier expert-assisted required-context-pin run remains separate |
-| Human-first, agent-led onboarding | One fresh V5 scripted-owner onboarding/report pair completed; no imported cards/approvals. It is not a real-human installer/usability result or varied-company success rate. V4 stays failed. Plain replies and snapshot-bound approval are separately covered |
-| Useful recurring reports and investigations | Both V5 messages usable; independent A/B reader slightly preferred baseline. Same later-period evidence. Treatment saved reviewed context but did not bind/retrieve it for reporting, so memory value is unproven. Earlier parcel-volume errors and multi-step/diverse-connector/changed-context gaps remain |
+| Approved cards with live decisions | V5 authored/approved its own card and evaluated the adverse case with live Jev. A separate retained series reused it for missing-data and quiet observations: both native and final routes matched policy, card unchanged. Not a continuous company history |
+| Human-first, agent-led onboarding | One V5 scripted-owner pair completed; no imported cards. Fresh courier study stopped at baseline policy review before treatment, with mixed genuine future-gap and unnecessary tier questions. No courier success/inferiority or real-human installer/usability rate. V4 stays failed |
+| Useful recurring reports and investigations | Both arms' two retained-period report pairs usable; reader preferences split. Four reports cover two observations of one workflow, not four companies. Reviewed context still not bound/retrieved for reporting. Parcel-volume errors and multi-step/diverse-connector/changed-context gaps remain |
 | Comparative business value | No overall lift established: V5 used fewer reporter tools but the same source reads and more total time/tokens. The two single-pair reader preferences differ and are not pooled. Noise/recall, repeated-use savings, memory reuse and complete costs remain open |
 
 These are separate gates. Passing storage, authentication or a scripted decision
@@ -234,6 +234,31 @@ installation, hosted SSO, delivered alerts or shared-memory benefit by themselve
 Both record valid exact-card deferral separately from live policy exercise;
 unusable inputs need not consume a Jev request. Execution completion never
 implies correct routing, numerical claims or message quality.
+
+Retained series terminal: four Luna calls, two Jev requests; both arms correctly
+proposed Data Operations for the unknown-timing/incomparable observation and no
+recipients for the flat, comparable observation. Native outcomes matched too.
+Actual card unchanged, both source packets equal per observation. A/B reader
+found all four usable with split preferences. Its initial approval-wording
+objection came from omitted current-state context; an addendum withdrew it.
+Public excerpt preserves the unchanged messages and source facts. Total agent
+usage 329,903 input / 96,303 uncached / 2,709 output; Jev 11,143 / 222. No retry.
+
+Courier series terminal after two calls, zero Jev: baseline first readout
+correctly quantified doubled volume and stable 90% attainment, then policy
+review stopped before treatment on unresolved questions. Independent diagnosis:
+tier-only alarms were not requested, but incomplete-prior-week disposition
+still needs clarification for unattended delivery. Do not count this as a
+SignalWeave failure, successful courier onboarding or an actual data inability.
+Both raw stopped artifacts remain; no old budget is reopened. Total 181,076
+input / 39,252 uncached / 2,630 output. Its copied key was replaced with a dummy.
+
+Full software verification passed 3,662 / 11 skipped in 234.32s; 68 targeted
+orchestration checks passed. The new public excerpt was mechanically checked
+against captured messages, source fields and usage. Next separate current
+shadow analysis from qualification for unattended delivery; obtain only material
+owner/delegate choices and let each arm complete or pause independently. This
+must be tested in a new frozen study, not used to rescore this stopped one.
 
 ## Fresh public owner-to-report development pair
 

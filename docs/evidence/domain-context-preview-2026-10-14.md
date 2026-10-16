@@ -8,6 +8,34 @@ One fresh native **discovery → agent-authored card → explicit scripted owner
 
 This establishes feasibility for one known fictional company, not general accuracy, customer usability, shared-memory value or a cost advantage. SignalWeave took more total agent time and tokens. The [acceptance ledger](../domain-context-plan.md#current-acceptance-ledger) keeps the full goal open.
 
+## New recurring checks and a cross-domain pause
+
+`retained-owner-periods-v1` reused that actual authored card and each arm's original notes, without new approval, imported cards or policy edits. Four fresh reporters covered two previously unreported historical observations. This is current-policy retrospective testing authorized for research, not a continuous company history, historical approval or activated production recurrence.
+
+| Observation | Equal-information agent | Agent + SignalWeave/live Jev |
+| --- | --- | --- |
+| Undocumented refund timing; no comparable week bounds | `insufficient_data` → Data Operations; no business alert | Same route; native outcome also `insufficient_data` |
+| Complete/comparable flat sales | `ignore`, no recipients | Same route; native outcome also `ignore` |
+
+Both arms read the same two source snapshots per observation; exported fields matched exactly. A separate reader found all four messages usable, slightly preferring treatment for the data gap and baseline for the quiet wording. One initial objection to “approved rule” arose because the review packet omitted current approval state; an addendum withdrew that objection after verification. Neither review establishes historical approval or customer validation.
+
+The [public excerpt](../../evaluations/data/retained-owner-periods-summary.json) retains actual source fields, all four unchanged messages, native outcomes, estimates, usage and raw-artifact hashes. Model confidence is not an accuracy rate. The two observations are not four independent companies or a general precision estimate.
+
+| New report-only series | Equal-information agent | Agent + SignalWeave |
+| --- | ---: | ---: |
+| Agent tools per report | 6, 6 | 2, 2 |
+| Source reads per report | 2, 2 | 2, 2 |
+| Total agent input / uncached | 164,362 / 43,658 | 165,541 / 52,645 |
+| Additional Jev input / output | — | 11,143 / 222 |
+
+All four calls completed within the fixed cap: 329,903 agent input / 96,303 uncached / 2,709 output, plus two Jev requests. The saved card was unchanged and the copied live key replaced with a dummy. Initial preflight stopped on a test's export-stub versus normalized-contract assumption; the corrected preflight passed before inference. Fewer agent tools did not reduce source fetches or establish avoided warehouse work or a billing/speed win. Original onboarding costs remain recorded below, not erased by reuse.
+
+**Courier onboarding did not complete.** Separate `development-explicit-owner-v6` stopped after its baseline author and policy reviewer, before any SignalWeave author, later report or Jev request. Its correct historical first readout included 90% SLA (5,220/5,800 then 10,440/11,600): doubled parcel volume, unchanged attainment. The author left questions about tier-only alerts, incomplete comparison weeks and general freshness. Independent diagnosis found tier-only alerts outside the requested overall workflow; incomplete/non-comparable prior-week handling still needs a focused owner decision before unattended delivery. A bounded shadow readout could proceed, so the reviewer was not proof the product could not analyze the data. No courier treatment outcome is claimed or imputed.
+
+That stopped study remains terminal: two agent calls, 181,076 input / 39,252 uncached / 2,630 output, zero Jev. Report/trace SHA-256: `b0047231c1825dbe9fdb01a64a90f7ec876401000d4599ddc09f2883b0a0ec7d` / `192d2c795eb2c4b5a4426053e7d9fb66713d3e23fce460795f9a360c3f38e9b3`. Its copied live key was subsequently replaced with the preflight dummy through the native CLI. This is incomplete onboarding/context-and-rubric evidence, not SignalWeave inferiority or a new-company success.
+
+Current full offline verification: 3,662 passed / 11 skipped in 234.32s. These are software checks, not business trials. No production source changed in this expansion; both studies used the verified `ae97380` native build described below. The next gate is a real owner/delegate clarification flow, independent arm completion, and cross-domain/multi-step usefulness—not inventing more unrelated policy requirements to block a first readout.
+
 ## Latest trial: public-explicit-owner-v5
 
 Runner frozen at `94cf8fa`. Juniper Trail Retail, public seed 20261001, later period index 2. The generator's `holdout` label does not make this unseen data. Sources are synthetic company-MCP exports—not live vendor queries.
