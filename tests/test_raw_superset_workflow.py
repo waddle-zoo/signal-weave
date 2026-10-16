@@ -207,10 +207,11 @@ def test_review_policy_projection_keeps_active_semantics_not_repeated_catalog_hi
     assert trial.review_policy_view(None) is None
 
 
-async def test_closed_protocol_cannot_be_reopened_with_a_copied_manifest(monkeypatch, tmp_path):
+@pytest.mark.parametrize("protocol", ["raw-northstar-workflow-v1", "raw-northstar-workflow-v2"])
+async def test_closed_protocol_cannot_be_reopened_with_a_copied_manifest(monkeypatch, tmp_path, protocol):
     args, state, _ = patch_runtime(monkeypatch, tmp_path)
     original = json.loads(trial.MANIFEST.read_text())
-    original["protocol"] = "raw-northstar-workflow-v1"
+    original["protocol"] = protocol
     original["execution_status"] = "planned"
     copied = tmp_path / "copied-manifest.json"
     copied.write_text(json.dumps(original))

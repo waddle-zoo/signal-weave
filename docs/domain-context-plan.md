@@ -9,9 +9,9 @@ Feature branch: `feat/domain-context-memory`, based on main `e8842ac`.
 | Local and hosted context lifecycle | Native stdio/signed HTTP checks cover review/reuse/restart/change; latest read-only native restart recovered the actual approved v2 card, definition history and saved Jev receipt. Hosted issuer remains synthetic |
 | Card-bound meaning and staleness | Contract tests cover exact pins, reapproval, deferred policy and historical receipts; no automatic notification service is claimed |
 | Approved cards with live decisions | V5 authored/approved its own card and evaluated the adverse case with live Jev. A separate retained series reused it for missing-data and quiet observations: both native and final routes matched policy, card unchanged. Not a continuous company history |
-| Human-first, agent-led onboarding | One V5 scripted-owner pair completed; no imported cards. V6 courier stopped before treatment. Clarified v7 authored both setups but both model reviews rejected. Raw Northstar later produced two correct first readouts, but treatment chose an unsuitable recurring source and skipped review; the review-packet harness then overflowed. No completed raw-source recurring workflow or real-human usability success. Earlier failures remain |
+| Human-first, agent-led onboarding | Raw Northstar workflow v2 completed actual discovery, author-created card, separate evidence-reading experts, synthetic owner consent and native approval, then fresh reports/live Jev. One known fixture with noninteractive private CLI setup, not downloaded-binary/real-human usability success. Baseline first-answer currency error escaped its reviewer. Earlier failed/censored cohorts remain |
 | Useful recurring reports and investigations | Retail retained reports remain supported. Two later courier observations now exercised actual retrieval of the saved reviewed definition plus live Jev; both arms' final routes/math checked out. Baseline gave better repair context; treatment's decline breakdown was correct but denser. No card pins or general multi-step/causal investigation claim |
-| Comparative business value | No overall lift established. Latest courier treatment used fewer tools, more input/uncached tokens, and repeated a source read whose facts were already in the bundle. Reader preferred baseline repair detail. Shared-context use is observed, not its causal benefit; scaled noise/recall, amortized setup value and realistic query costs remain open |
+| Comparative business value | No overall lift established. Raw workflow v2 completed both useful final reports but treatment used 948,040 vs 451,681 frontier input tokens (205,512 vs 134,497 uncached), plus one Jev call. Receipt/source-contract rereads were redundant. Courier findings also remain mixed. Scaled noise/recall, amortized setup value, stronger SQL-capable baselines and realistic query costs remain open |
 
 These are separate gates. Passing storage, authentication or a scripted decision
 check cannot substitute for complete onboarding and useful final agent outcomes.
@@ -232,6 +232,25 @@ useful final message is not success. Source captures are read-only live queries,
 not an atomic warehouse snapshot. No sends, scheduling, real-human-install
 claim, statistical generalization or enterprise-completion claim follow from
 one completed pair. Broader companies, connectors and histories remain gates.
+
+### V2 terminal result and next work
+
+V2 is closed after all six episodes and one live Jev request. Both proposals
+qualified, the actual authored card was approved and unchanged, and both fresh
+reports correctly separated the partial-month reporting gap from the supported
+closed-month increase. [Results and method limits](evidence/domain-context-preview-2026-10-14.md#completed-raw-source-workflow-raw-northstar-workflow-v2)
+retain original messages, usage and post-run review findings; no superiority or
+enterprise-completion claim. Native builds on all three platforms passed at
+`39b4f78`; no release was published.
+
+Next, repair the research companion's inability to compute a bounded matched-day
+aggregate without 36 raw pages. Keep that tool identical in both future arms;
+do not blame the product for this harness limit. Audit repeated evidence in the
+compact handoff and unnecessary rereads. Separately prove that an agent's
+source-backed follow-up can contribute to the next policy step without treating
+unverified caller assertions as provider guarantees. Missing closed-month
+comparisons must stay distinct from an actual decline. None of these changes
+may reopen or rescore a terminal cohort.
 
 ## Exact reference retrieval and exploratory courier readouts
 

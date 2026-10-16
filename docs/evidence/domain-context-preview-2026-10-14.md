@@ -4,9 +4,88 @@ Updated 2026-10-16. Feature branch: `feat/domain-context-memory`; [draft PR #19]
 
 ## Current result
 
-**Actual shared-context retrieval and live card decisions worked in two retained courier readouts. A comparative business advantage is not established.** Both equal-information arms produced supported outcomes and proposed recipients. The independent reader preferred the baseline's data-repair explanation; treatment added a useful numerical breakdown to the decline but was denser and used more tokens.
+**Raw-source onboarding now completed through a saved, reviewed card, real native approval, live Jev and fresh agent reports. A comparative business advantage is not established.** Both arms produced supported reports in this one known-company observation; SignalWeave used more tokens overall. The separate retained-context courier results below remain mixed and unchanged.
 
 The [public excerpt](../../evaluations/data/retained-context-courier-summary.json) preserves the four unchanged prepared messages, final chat acknowledgements, source facts, actual retrieved definition, native results, usage, review findings and artifact hashes. These are two observations of one known fictional company—not four companies, a precision estimate, customer validation or a repaired onboarding result.
+
+## Completed raw-source workflow: raw-northstar-workflow-v2
+
+The [retained record](../../evaluations/data/raw-northstar-workflow-v2-summary.json)
+contains unchanged submissions, actual card policy, source excerpts, per-phase
+usage, native judgment and post-run findings. This is a **new formative study**
+after the repairs below, not a retry or rescore of either closed v1.
+
+Both fresh authors discovered the running local Superset catalog, inspected
+saved queries, wrote a first answer and saved their own reusable context.
+Treatment authored its actual two-chart card: monthly Executive sales plus
+reporting cutoff. Separate fresh same-model reviewers accessed source evidence
+and qualified both proposals. Scripted owner consent applied to that exact card;
+native approval then revalidated it. Two fresh reporters used the identical
+approved policy and destinations, their own notes and the same companion BI
+tools. Treatment additionally evaluated the unchanged card with live Jev.
+
+**Both final reports were useful and numerically supported:** August net sales
+were 2,292,267.50 versus July's 2,158,994.74 (**+6.17%**). Online contributed
+61,949.94, or **46.48%** of the increase. September ends on the 19th, so neither
+treated its raw full-August difference as a comparable sales collapse. Both
+proposed `insufficient_data` to Data Trust and a matched-day follow-up. Currency
+is undeclared. Completeness of earlier days depends on the fictional owner's
+declaration, not a provider guarantee. Contributions are not causal findings.
+
+| Observed work | Company tools + agent | Plus native SignalWeave/skill |
+| --- | ---: | ---: |
+| Author tools / seconds | 31 / 171.5 | 26 / 208.3 |
+| Expert-review tools / seconds | 6 / 60.7 | 7 / 49.6 |
+| Fresh-report tools / seconds | 15 / 115.7 | 19 / 85.3 |
+| All-phase input / uncached tokens | 451,681 / 134,497 | 948,040 / 205,512 |
+
+These are six agent episodes, not six underlying model HTTP requests. Jev adds
+one request with 10,032 input and 152 output tokens, about 1.05s wall time. Its
+typed result was `insufficient_data`, Data Trust, with uncalibrated support 0.97.
+It supplied no analytical comparisons: frontier agents calculated the supported
+closed-month readout from chart rows. The shorter observed treatment reporting
+time does **not** establish speed or cost savings; it used more tools and tokens.
+
+What remains unproven or failed:
+
+- The baseline's first answer invented dollar units, and its qualifying reviewer
+  missed that error. Its final report removed them. Preserve the original review
+  result; this post-run finding is not a rescore or proof that reviewer approval
+  alone establishes correctness.
+- Neither arm completed the matched-day follow-up. The research companion tools
+  expose at most 250 rows per page; 8,937 detail rows need 36 pages, beyond the
+  24-call reporting cap. Both attempted an invalid oversized read. This is a
+  harness capability gap, not evidence that SignalWeave cannot investigate.
+- Treatment fetched a receipt and source contracts already present in its
+  roughly 50k-byte evaluation response. Duplicate evidence and handoff size are
+  concrete efficiency work, not measured benefits.
+- Only proposed role destinations were recorded. No Slack endpoint was resolved,
+  message sent or schedule activated. Approval remains delivery-disabled with
+  acceptance unassessed; missing metric contracts remain visibly unverified.
+
+The arms had phase-specific tools, fixed order and separate caches; neither had
+arbitrary SQL or shell. Source reads were not an atomic snapshot. Native query
+telemetry reports zero but does not measure warehouse cost; companion counts
+exclude native reads. This one known fixture is neither a holdout nor the
+strongest production baseline. No accuracy estimate, amortized cost advantage,
+real-human installation result or enterprise-readiness claim follows.
+
+Exact executed method: `39b4f78b70f85241062562f13bd7051839b47229`;
+[closed manifest](../../evaluations/data/raw-northstar-workflow-v2.json).
+The source/skill SHA-256 is
+`5a96678d8a00bdea06086c7539bda2f375fd8dd5ce012647f7aeb89b5bad3479`,
+binary SHA-256
+`705067faef93c2bcb88aed55ddd9d4b36e6fe71b21fd6ce6b7d514ac37ab699a`.
+Report/trace hashes are in the retained record. The cohort is closed: no rerun,
+rescore or transfer of its unused allowance. The existing Northstar Superset
+installation is a reproduction prerequisite, not a bundled warehouse fixture.
+
+Production-repair checks passed **3,854 tests / 11 skipped**; additional method
+checks and scoped independent code/method reviews passed before execution.
+[All three native CI builds passed](https://github.com/waddle-zoo/signal-weave/actions/runs/38879568741)
+at the exact method commit; publishing was skipped. Those install/MCP checks use
+fixture transport and dummy credentials, not analytical judgments or real-human
+usability evidence. No new release or main merge is implied.
 
 ## Raw Northstar onboarding attempt: censored, not product evidence
 
@@ -39,7 +118,7 @@ existing bounded accounting drain, and represent missing/duplicate invocation
 receipts as unknown usage rather than zero. They do not raise this cohort's
 cap, complete its missing reports or demonstrate improved agent behavior.
 
-Current native/source identity remains `e5ae9ca` as recorded below. Both
+At that earlier attempt, native/source identity was `e5ae9ca` as recorded below. Both
 zero-model preflights passed; the full suite passed **3,751 / 11 skipped in
 287.63s** before the attempt. No approvals, Jev requests, schedules or sends
 occurred. Only dummy provider credentials were used; personal settings and

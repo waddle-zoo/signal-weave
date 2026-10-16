@@ -1,6 +1,12 @@
 {
   "protocol": "raw-northstar-workflow-v2",
-  "execution_status": "planned",
+  "execution_status": "closed",
+  "closed_attempt": {
+    "method_commit": "39b4f78b70f85241062562f13bd7051839b47229",
+    "report_sha256": "2a4c0b4ebbfd09b23fe97b6be3ed89c8857ef347aaaae0fe841e8003a3d712e4",
+    "trace_sha256": "d759fdb5f2e2d73f2742409cc0be97fe1eb5ca83f90996c93ee13580906c5c28",
+    "result": "Both self-authored setups qualified, actual native approval succeeded, and both fresh reports completed. Six frontier invocations and one live Jev attempt; known usage, unchanged card policy/binary and scrubbed credential. Independent post-run outcome review remains separate. No retry, rescore or transfer of unused allowance."
+  },
   "review_mode": "indexed",
   "artifact_qualification": "The submitted card must be the actual saved draft fetched by its ID. Superseded drafts or a missing redundant formal-review call are recorded diagnostics, not semantic failure: onboarding can already return a review packet. Independent reviewers assess the exact saved policy and evidence; actual native approval subsequently revalidates current source bindings. This does not waive a real native approval blocker.",
   "scope": "New formative complete workflow cohort after source-definition and shadow-onboarding repairs on the known local Northstar fixture. Not a retry or continuation of either closed v1, not a holdout, real-human install study, production customer or enterprise-readiness estimate.",
