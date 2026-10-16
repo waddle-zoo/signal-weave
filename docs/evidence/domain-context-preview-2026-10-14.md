@@ -95,6 +95,28 @@ forward usability test; green software checks do not establish that agents
 will choose an executable recurring source. The expert-review harness also
 needs selective evidence access rather than a larger raw-page prompt.
 
+Source-repair validation at `f017d2f`: **3,821 tests passed, 11 skipped**;
+internal adversarial code review accepted the bounded projection after fixes
+for recursive parameters and peak-allocation guards. The clean native build
+then inspected the real monthly chart (5 observations), coverage chart (1),
+and Executive dashboard (44), preserving all ten saved query definitions.
+No source errors or provider requests occurred; only dummy decision credentials
+were configured. This proves the source plumbing, **not completed onboarding**:
+the proposed routed card still failed review with `comparison-window-mismatch`
+and `source-contract-required`. Integrated offline tests reproduce that
+distinction without erasing destinations or inventing business contracts.
+
+Native source fingerprint:
+`a408064158580dad2fcecdc7efb04888a5c8e17eb79349a662c4f20a630e671c`.
+Binary SHA-256:
+`6d9de48991ffe76b2a8035084af1b92899d26dba7bc48646c309d3f75429c377`.
+Private `raw-source-readiness-post-review-v2` report/trace SHA-256:
+`022a124a322d2c812c21aa4342cbcf2732058727be5972e416042e0f830b059e` /
+`d28d04901edc2c972fac4eefe94ee26a3dd579354ef77609f31e2d46b9ea219f`.
+The [plan](../domain-context-plan.md#raw-source-readiness-is-a-separate-unresolved-gate)
+includes the reproduction command and operator-selected input. This local
+artifact is not a published release or a human installation trial.
+
 ## Completed readout study: retained-context-courier-v1
 
 The study reused the **actual** agent-authored notes, saved approved card and separately reviewed definition from v7. Nothing was imported, reconstructed, manually completed or reapproved. The definition remained unbound; this tests standalone retrieval, not automatic card dependency use. Both original onboarding reviews remain rejected and unattended readiness remains unqualified.
