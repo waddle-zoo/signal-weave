@@ -2982,7 +2982,9 @@ def create_mcp(
         indexes for a byte-bounded page. Objects return key/value entries;
         lists retain exact items. offset and limit count collection items, not
         tokens or bytes. Follow next_offset until has_more is false.
-        Pages do not rerun sources or models. Omit result_path for the full audit.
+        Pages do not rerun sources or models. Omit result_path for the full audit:
+        receipt contains metadata and result contains the complete stored result
+        once, rather than duplicating it inside the receipt envelope.
         """
         principal = request_principal(ctx)
         key = idempotency_key.strip() if idempotency_key else None
@@ -3022,7 +3024,7 @@ def create_mcp(
         return {
             **dependency_warning,
             "status": "found",
-            "receipt": receipt.model_dump(mode="json"),
+            "receipt": receipt.model_dump(mode="json", exclude={"result"}),
             "result": receipt.result,
             "feedback": [item.model_dump(mode="json") for item in feedback],
         }

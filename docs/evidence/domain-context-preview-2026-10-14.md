@@ -1,316 +1,114 @@
 # Domain-context preview evidence
 
-Updated 2026-10-15. Feature branch: feat/domain-context-memory;
-[draft PR #19](https://github.com/waddle-zoo/signal-weave/pull/19).
-Main and the published native download are unchanged.
+Updated 2026-10-15. Feature branch: `feat/domain-context-memory`; [draft PR #19](https://github.com/waddle-zoo/signal-weave/pull/19). Main and the published download are unchanged.
 
-## Conclusion
+## What is now proven
 
-**One expert-assisted, native reporting path now completed with live Jev.**
-Both fresh agents correctly reported a 30% sales decline and selected the
-commerce owner. One independent message reviewer preferred SignalWeave's report,
-while retaining its malformed repeated citation. The baseline added an
-unauthorized routine audience in its prose.
+One fresh native **discovery → agent-authored card → explicit scripted owner approval → live Jev → useful report** path completed. No expert card or approval was imported. Both equal-information arms reported the correct sales decline and business recipient. An independent A/B message reviewer found both usable and slightly preferred the baseline.
 
-This is one known synthetic case—not autonomous onboarding, an accuracy
-estimate, a customer success story, or evidence of lower cost/latency.
-SignalWeave used fewer agent tools but the same source reads, more tokens and
-slightly more reporter time. The original onboarding run still failed.
-The [acceptance ledger](../domain-context-plan.md#current-acceptance-ledger)
-keeps the full goal open.
+This establishes feasibility for one known fictional company, not general accuracy, customer usability, shared-memory value or a cost advantage. SignalWeave took more total agent time and tokens. The [acceptance ledger](../domain-context-plan.md#current-acceptance-ledger) keeps the full goal open.
 
-The [public audit excerpt](../../evaluations/data/steward-expert-followup-summary.json)
-contains the actual source values, both untouched messages, typed Jev outcome,
-review and usage. Raw runtime traces, credentials and native state are not in
-Git. The [preceding evidence](https://github.com/waddle-zoo/signal-weave/blob/327e4ec/docs/evidence/domain-context-preview-2026-10-14.md)
-preserves the earlier chronology, negatives, costs and identities.
+## Latest trial: public-explicit-owner-v5
 
-## Latest owner-confirmation continuation
+Runner frozen at `94cf8fa`. Juniper Trail Retail, public seed 20261001, later period index 2. The generator's `holdout` label does not make this unseen data. Sources are synthetic company-MCP exports—not live vendor queries.
 
-The handoff now separates the owner's plain-language confirmation from the
-agent-recorded `source_selection_reason`. The following closed trials used the
-prior latest-review arguments; a subsequent snapshot-binding correction is
-recorded below. Source/health/dynamic-scope checks remain active; metadata does
-not grant consent.
-The bundled skill and guide explain how to continue after actual confirmation.
+Both arms kept the same catalog, source, glossary, owner-answer, calculator and notes tools. Treatment added the actual native `agent` profile and installed canonical skill. Setup was isolated and non-interactive, not a test of a human using the installer. Both agents discovered sources, authored their own artifacts and passed separate model policy reviews. Future reporting evidence was hidden during onboarding.
 
-`owner-confirmation-canary-v1` used four fresh native homes and four Luna-medium
-turns on the rebuilt executable. Each began with a prepared public-MCP draft,
-its displayed source scopes and one fixed ordinary-language owner reply. This
-tests continuation, not source discovery or model-authored onboarding. No
-synthetic consent interceptor prevented unwanted calls: actual calls and stored
-state determined the result.
+The fictional owner received the actual saved artifact and agent summary, then returned ordinary-language approval bound to its digest/card version. This is scripted authorization, not expert validation or evidence a real person saw a UI. The shared [steward note](../../evaluations/data/juniper-source-steward-v1.md) supplied population and UTC-week meaning; missing semantics were not magically inferred.
 
-| Owner reply | Observed native actions and state |
-| --- | --- |
-| Explicitly approve and run one delivery-disabled check | One approval and one evaluation; same card/version approved; live Jev; shadow receipt |
-| Definition is right, but do not approve/evaluate yet | No approval/evaluation attempt; unchanged draft |
-| Looks interesting; will review later | No approval/evaluation attempt; unchanged draft; asked for confirmation |
-| Change 10% to 15%, then show the draft before approval | One revision; actual guidance changed to 15%, other policy preserved; draft v2; no approval/evaluation |
+All six Luna-medium calls and the one-Jev limit completed; no retries, sending or scheduling. An invalid timezone-naive context review date was corrected inside the same author episode. Treatment saved a reviewed shared definition, but **did not bind or retrieve it during reporting** (`context_bindings=[]`, receipt context version null). This is not evidence of cross-card memory reuse.
 
-All four mechanical authority checks passed. Independent raw-trace review also
-confirmed the actual 15% revision was shown to the owner and found no rejected,
-post-response or unauthorized action attempts: seven tool ingresses/results,
-no error/rejection events. It retained two message issues: the positive reply
-had a receipt but no inline underlying source reference; clarification wording
-claimed the definition was “recorded” although no card/context write occurred.
-Neither is evidence of durable new context. Those messages were not rewritten
-or rerun, and authority success is not an overall readout-quality pass.
+Baseline's initial handoff label said `awaiting_owner_context`, but its sole pending item was independent semantic review, which subsequently passed. That is a misleading harness annotation, not a genuine unanswered business question or baseline failure.
 
-Usage: four agent calls, 342,570 input / 243,200 cached / 99,370 uncached /
-1,435 output tokens; one Jev call, 5,534 input / 53 output. The fixed four-call,
-600k-input/120k-uncached and one-Jev caps were respected. No retries, scheduling
-or sending occurred. The study is terminal. No baseline or before/after control
-was run, so this does not establish that wording caused improvement.
+### Source facts checked
 
-This newer native build is commit `9336068d240f5ea98ca8c29ef62a36c5688dc7c1`,
-source/skill fingerprint
-`17abbf6af1fee3a9b3c2700b1930fdb78ad7d53f22de94744a70b4391ada7d4f`,
-binary SHA-256
-`8693842ed3ec72d03097b137a1b0872cd5715c2ac1bf2d5c1d6973863f3669c5`.
-The local report/trace SHA-256 values are respectively
-`c9f5a9452e8d5396b0ff6d917d9e7a6357b926f16f6b6b51bb647802a5cce93e`
-and `1c2c1e89967a657595e877c53526000a546f5f48515d15c04068490c5b5235d3`.
-These identify ignored artifacts, not public raw replay inputs. Unlike the older
-retained-state follow-up, the canary starts from public fixtures without archived
-approvals; see `evaluations/confirmation_canary.py` for opt-in reproduction.
+Complete, comparable UTC weeks: September 28–October 5 versus October 5–12, 2026. Both arms' reporting contracts, observations, evidence and analytical comparisons matched exactly.
 
-Full offline verification on this source passed 3,628 tests, 11 skipped, in
-229.30 seconds; the skill validator and 132 targeted approval/source/skill checks
-also passed. These are software checks, not enterprise trials or an accuracy rate.
+| USD | Previous | Current | Change |
+| --- | ---: | ---: | ---: |
+| Completed-order gross | 12,000 | 10,500 | −1,500 |
+| Same-week posted refunds | 2,000 | 3,500 | +1,500 |
+| Net sales | 10,000 | 7,000 | −3,000 / −30% |
+| Web net sales | 7,000 | 4,000 | −3,000 / −42.9% |
+| Shop net sales | 3,000 | 3,000 | 0 |
 
-## What ran
+Commerce weekly: `company_mcp|resource-949a4c0c44fb188d1658`. Returns operations: `company_mcp|resource-00dc1bfdfad5f5f05554`, posting corroboration only, not another ledger. The policy was notify the business owner for a decline of at least 10%; missing definitions/incomplete postings go to Data Operations. This period tested the complete-data decline branch, not quiet/missing-data reliability or causal discovery.
 
-### Short owner confirmation and later snapshot correction
+### Untouched messages
 
-Separate `owner-short-confirmation-v1` completed on the same `9336068` native
-build: one prepared draft, the exact native confirmation question supplied as
-prior context, then “Yes, go ahead with that one delivery-disabled check. Don't
-send or schedule anything.” One Luna turn approved and evaluated the card; one
-live Jev request produced a shadow receipt. Independent trace review accepted
-the scope/reason, correct 30% decline and web contribution, and both underlying
-source references. No additional source-rationale question, send or schedule.
-This does not establish that a real human saw the supplied question, complete
-onboarding, broader reliability or comparative benefit. The study is closed.
+**SignalWeave + agent**
 
-Agent usage: 128,102 input / 94,976 cached / 33,126 uncached / 671 output;
-Jev: 5,532 input / 53 output. Report SHA-256:
-`72c3772ccdcec3cfdb2d7552d36d82020e407b3dea363e50b8bd32d581d07b11`;
-trace SHA-256:
-`af07fdf1635d9ebb56ef594e18f55ade66e3dff9adc6207d010b2d5994420182`.
-These identify local ignored artifacts, not public raw replay inputs.
+> Commerce weekly net_sales fell 30% ($10,000 to $7,000) from the complete UTC week Sep 28–Oct 5 to Oct 5–12, 2026, meeting the agreed notify rule of a decline of at least 10%. Definition: completed-order gross less same-week posted refunds, excluding tax and shipping. [company_mcp|resource-949a4c0c44fb188d1658]
+>
+> Web net_sales fell $3,000 ($7,000 to $4,000); shop was unchanged at $3,000. These are accounting contributions to the measured change, not causes. [company_mcp|resource-949a4c0c44fb188d1658] Returns operations says posting week matches the transaction feed and refunds are already included; it is posting metadata, not another sales ledger. [company_mcp|resource-00dc1bfdfad5f5f05554]
+>
+> Coverage is complete and periods are comparable for the eligible source population; the aggregates do not establish a causal mechanism or statistical significance. Proposed policy-triggered recipient: Business owner / commerce lead (team-f88d053536cba66bc88e). Next step: review the web decrease and investigate its drivers; this shadow run did not send a message.
 
-Later, an offline regression reproduced a stale-confirmation flaw: old handoff
-arguments could approve a revised, freshly reviewed policy because they resolved
-the latest review. Commit `f5f17f1` returns the existing snapshot fingerprint
-instead. A stale handoff now fails without changing the stored card; a fresh
-one approves. Independent code review accepted this targeted repair. The paid
-trials above predate it and are not claimed to validate its changed arguments.
+**Equal-information agent**
 
-Before that repair, full offline verification passed 3,630 tests / 11 skipped
-after two short-confirmation harness tests were added to the earlier 3,628-test
-suite. These are separate runs of growing suites, not pooled trial outcomes.
-Native transports separately had 11 HTTP passes and one stdio assertion failure
-due to an outdated test expecting the owner to supply an API field. After fixing
-that assertion, the same native stdio test passed (37.73s, 14 calls, nine local
-Superset metadata reads, zero Jev requests). This was not a single clean 12-test
-run. Software/transport checks are not enterprise success rates.
+> Juniper Trail Retail: Net sales fell 30% week over week, from $10,000 to $7,000, exceeding the agreed ≥10% decline threshold. Measurement uses complete, comparable UTC reporting weeks: 2026-09-28–2026-10-05 vs 2026-10-05–2026-10-12. By channel, web fell from $7,000 to $4,000 (−42.9%), while shop was unchanged at $3,000. These source totals use completed-order gross less refunds posted in the same week, excluding tax and shipping; channel values sum to total. The evidence supports the measured changes but does not establish why web sales declined. Returns operations confirms refunds are already included in the transaction feed and is corroboration only; no separate ledger adjustment was made. Proposed policy-triggered recipient: Commerce lead/business owner (team-f88d053536cba66bc88e). Next step: review the web channel change with commerce and validate operational context. Sources: Commerce weekly, company_mcp|resource-949a4c0c44fb188d1658 (intervals, totals, segments, complete/comparable status, and gross/refund rows); Returns operations, company_mcp|resource-00dc1bfdfad5f5f05554 (posting-week confirmation).
 
-The rebuilt `f5f17f15c67d7d5311067fcc16c468d7cf51f85a` executable then passed
-all 12 native stdio/HTTP checks in one run (64.63s). Stdio exercised actual old
-handoff rejection after a policy revision and fresh review, then verified the
-card remained draft at the revised version. It made 17 MCP calls and 12 local
-Superset metadata reads. No decision-provider requests occurred. HTTP used the
-local synthetic issuer, not customer SSO. Source/skill fingerprint:
-`f86f49f8a941249406de7e548606265b11866e41600bea81a18c08034268d3ce`;
-binary SHA-256:
-`9cd55dfe8773cb3ff61b0d1fc92ebd029427d94f49aa17fa72779a36a56824d2`;
-native JUnit artifact SHA-256:
-`c33b4edd367704207d16a3c90fcaee4b84b4048fe6aeb844c1e3fffbac7a885b`.
-This is a local source build, not a newly published release.
-Final `make verify` on the snapshot correction passed 3,631 tests / 11 skipped
-in 252.92s; the added stale-handoff regression accounts for the extra test.
-The current binary's isolated confirmation preflight also completed with zero
-agent/provider calls. It checks setup and argument shape, not live continuation
-on the changed handoff. The skill validator and 141 targeted tests passed.
+The separate A/B reviewer saw current sources/policy, not arm names or an expected winner. It verified both calculations and routes, found no material defect, and slightly preferred baseline for company naming and the web percentage. Treatment's “eligible source population” and statistical-significance caveat were less useful. This is one internal agent review, not external peer review or a human panel.
 
-### Earlier reporting pair
+### Observed work
 
-Known Juniper Trail Retail development fixture, seed 20261001; the generator's
-`holdout` split name does not make it unseen data. Sources were normalized
-synthetic company-MCP exports, not live Superset/Looker vendor queries.
-Both arms retained the same source, glossary, owner, calculator and notes tools.
-Treatment added the native card/context tools and canonical installed skill.
-
-The new [fictional data-steward note](../../evaluations/data/juniper-source-steward-v1.md)
-explicitly confirms the primary population and existing UTC weekly convention.
-It is additional expert-provided input, not successful inference of missing
-context. Both arms and their independent policy reviewers received it.
-Historical onboarding examples were distinguished from current measurements.
-
-### V4 onboarding: stopped, not repaired by relabeling
-
-The baseline saved its notes and passed semantic review. Treatment authored a
-policy-faithful card and definition but left them draft pending explicit scope
-confirmation/review. Its synthetic consent response did not complete the native
-approval handoff. Four agent calls consumed 545,504 input / 85,216 uncached /
-6,825 output tokens. No report or Jev call occurred.
-
-The treatment reviewer again rejected relative percent change because the base
-metric used USD, despite receiving the executable projection formula and units.
-Offline execution of the actual saved condition gives unknown without a
-comparison, false at 0%, and true at -30%. Independent diagnosis agrees that
-numerical objection was false. The incomplete-postings criterion was also
-challenged in treatment although matching baseline policy had passed; this
-branch has not been qualified by the subsequent complete-period follow-up.
-
-V4 remains terminal with its original failure and reviewer opinions. No author
-or judge was retried, and the failed draft was not rescored as autonomous success.
-
-### Separate expert-assisted follow-up
-
-The [follow-up runner](../../evaluations/steward_expert_followup.py) and
-[manifest](../../evaluations/data/steward-followup-manifest.json) pin V4's report,
-trace and public input. Its four calls remain charged. The original six-call,
-one-Jev and between-call 1.2M-input/220k-uncached caps were not increased.
-
-A zero-model preflight reopened the actual retained home and verified the
-original draft and context; missing state could not be reconstructed.
-The synthetic expert/coordinator then used public MCP review/bind/approve
-operations on that same state:
-
-- Original definition body retained; draft revision 1 became reviewed revision 2.
-- Same card, unchanged policy/sources/conditions/destinations, became approved v2.
-- Required context pin points to that reviewed revision.
-- Two fresh reporters fetched their period's evidence; treatment evaluated the
-  approved card with one live Jev request.
-- No message or schedule was created.
-
-This required explicit coordinator assistance. Its work is not evidence of
-seamless first-use onboarding or real human authorization, and coordinator/reviewer
-costs remain unaccounted. Baseline received equivalent expert-confirmed context;
-treatment was not given additional business facts.
-
-After both reports, a separate read-only native restart recovered the v2 card,
-unchanged definition history at revisions 1/2, required pin and saved v2 decision
-receipt. It made zero provider requests.
-
-## Actual business messages
-
-Both reported these source-supported values for consecutive complete UTC weeks
-September 28–October 5 and October 5–12, 2026:
-
-- Net sales: USD 10,000 → 7,000, down 30%.
-- Web: USD 7,000 → 4,000, accounting for the USD 3,000 decline.
-- Shop: unchanged at USD 3,000.
-- Same-week refunds were already included; no causal explanation was established.
-- Structured notification route: commerce/business owner only.
-
-The live `jev-latest` judgment was `notify`; its returned probability was 1.0.
-That is a model output, **not calibrated certainty** or an observed accuracy rate.
-The saved receipt remained delivery-disabled.
-
-The independent reader review found SignalWeave usable, with one minor defect:
-a repeated source citation contains an extra `0c`. Earlier citations to the
-same source are correct; the exact typo remains in the public excerpt.
-It found the baseline unusable as written because its prose also names Data
-Operations as a routine audience despite no gap, contradicting the business-only
-recipient list. Its figures and literal source IDs were correct.
-These are internal agent judgments, not external peer review or a usability panel.
-
-### Observed work, not a performance estimate
-
-| Fresh report only | Equal-information agent | Agent + SignalWeave/Jev |
+| Stage | Equal-information agent | Agent + SignalWeave |
 | --- | ---: | ---: |
-| Agent tools | 5 | 3 |
-| Analytical source reads | 2 | 2 |
-| Agent seconds | 14.62 | 16.20 |
-| Agent input tokens | 76,123 | 124,625 |
-| Agent uncached input tokens | 15,195 | 29,649 |
-| Agent output tokens | 794 | 801 |
-| Additional Jev input/output | — | 7,014 / 109 |
+| Author tools / seconds | 14 / 30.66 | 23 / 47.96 |
+| Policy-review seconds | 6.53 | 7.16 |
+| Fresh-report tools / seconds | 6 / 13.56 | 4 / 11.75 |
+| Fresh-report source reads | 2 | 2 |
+| Fresh-report input / uncached | 94,069 / 11,893 | 108,367 / 26,703 |
+| Total agent input / uncached | 249,140 / 46,644 | 685,791 / 120,543 |
+| Total agent output | 3,061 | 5,508 |
+| Additional Jev input / output | — | 6,497 / 109 |
 
-The avoided tool calls were not avoided warehouse queries. Reporter timing
-excludes startup/cleanup, is affected by provider prefix caching, and is not
-human end-to-end latency. Prices and billing are unknown; there is no cost win.
+Totals include author, policy review and reporter; not installation, cleanup or separate research/method/message-review overhead. Six measured agent calls: 934,931 input, 767,744 cached, 167,187 uncached, 8,569 output. Jev is separate. Provider billing is unknown. Fewer tools did not avoid warehouse queries. One timing sample, synthetic fast sources and cache effects do not establish speed or savings.
 
-Including the original four onboarding/review calls: six agent calls,
-746,252 input / 616,192 cached / 130,060 uncached / 8,420 output tokens.
-Jev usage is separate. Both studies are terminal at the six-call/one-Jev caps.
-One pair cannot establish general superiority, reliable recall, noise reduction,
-cross-card reuse or amortized setup savings.
+## Concrete engineering finding
 
-## Audit and engineering verification
+Treatment fetched the receipt after evaluation already supplied usable analyses. Its compact evaluation serialized to 32,404 bytes; the full receipt response was 73,234 bytes because it included the same full result at root and inside receipt metadata. That duplication is a product defect, not a business-policy failure. A separate wire-only correction removes the nested copy; stored evidence, root result, pagination and replay remain intact. The closed paid trial is not rerun or rescored after that repair.
 
-The paid follow-up froze evaluation runner commit `2389175`. Its original trace
-did not individually record the expert signoff tool arguments/results.
-Matched runner code and reported final state support the sequence, but the trace
-alone cannot reconstruct it. The later native restart verifies persistence,
-not that missing event history. Subsequent runner changes now record every
-expert native operation; no paid rerun was used to repair the old trace.
+## Identity and reproduction
 
-The [public excerpt](../../evaluations/data/steward-expert-followup-summary.json)
-pins the original report/trace, exact message-review packet, independent review,
-and both persistence-check report and trace hashes. These identify ignored local
-files; they are not public raw replay inputs. Its three tests independently
-reconcile raw channel rows with totals and periods, preserve both readout defects
-and keep the larger treatment time/token observations visible.
+The paid trial used native production commit `f5f17f15c67d7d5311067fcc16c468d7cf51f85a`, source/skill fingerprint `f86f49f8a941249406de7e548606265b11866e41600bea81a18c08034268d3ce`, binary SHA-256 `9cd55dfe8773cb3ff61b0d1fc92ebd029427d94f49aa17fa72779a36a56824d2`. This was a local build, not a new published rc3 asset.
 
-The native executable used production commit
-`5a9e0e2f69740dad88ec05853129e049ed95ad39`, source/skill fingerprint
-`55013815a667dd4d893c5da4b95eaac00be33835a2c04fae6e50d8bb9e43a7a3`,
-binary SHA-256
-`822a3b8a22037dfa91a1ab0fb4e5707d3ca91ba093980206b327cae0ce8debbf`.
-It is not the published rc3 download despite sharing the package label.
+Local report SHA-256: `a1f036455b1f4a9afb1f1ee07c21934a2646d711169bfa1d936b3960cc23f354`.
+Local trace SHA-256: `2dc4dbdb37dda90aedb4dc8f8f558fe74bc2d76adabad185365c462f5b5d07ba`.
+A/B review-input SHA-256: `ed75c2eef170951f56292e9077b3d2b92876bfe609a237bf59aafcaa2d83086b`.
 
-The focused current reference/follow-up/excerpt suite passes 64 checks.
-Full verification of frozen code `ed2e54a`: lint passed; 3,622 tests passed,
-11 skipped, in 226.31 seconds.
-These are software checks, not companies or business accuracy estimates.
+These identify ignored local artifacts, not public raw replay inputs. Public fixtures, source facts, messages, protocol and tests remain in Git. The trial's copied Jev credential was removed afterward; the original key was untouched. Retained state is inspection-only, not a resumable live deployment.
 
-Earlier checks on the same production code separately passed the native stdio
-lifecycle, 13 serial CLI/skill/HTTP checks, and public primary-evidence/reference
-preflights. The initial skill-install timeout, restarted-token 401 and concurrent
-walkthrough timeout remain in the preceding evidence. Serial reruns do not prove
-startup reliability, and synthetic signed HTTP auth does not prove customer SSO.
-
-## Retained earlier findings
-
-See the [immutable preceding record](https://github.com/waddle-zoo/signal-weave/blob/327e4ec/docs/evidence/domain-context-preview-2026-10-14.md)
-for detailed accounting and the earlier archive chain.
-
-| Study | Finding retained |
-| --- | --- |
-| Public owner V1/V2 | Harness false stop before baseline review; later unresolved source scope and false percent-change review. Four cumulative calls, zero Jev/reports. Not a treatment outcome or success rate. |
-| Owner-handoff v4 | Two scripted-owner setups accepted, but 189,300 uncached tokens stopped reporting. Deleted original home was later restored, not original-home durability. |
-| Scripted card clarification | Three live Jev outcomes matched supplied insufficient_data/ignore/notify periods; changed required meaning deferred policy and preserved facts. Not conversational onboarding. |
-| Paired reports / interpretation check | Correct policy outcomes did not prevent wrongly unresolved parcel volume despite 5,800 → 11,600 counts. Raw structured scores and citation/routing ambiguities remain unchanged; no comparative win. |
-| Grounded reports / human canary | Four-of-six reporting stop and missing review context; separate canary repeated the volume error and received NO-GO. No corrected pass rate. |
-| Layout and first-message checks | Layout reviewers disagreed; three supplied-input drafts passed with a minor Finance caveat. Neither establishes native comparative efficacy. |
-| Public context walkthrough | Two scripted briefs share one metric and anchors; changed definition defers both while preserving facts. Zero models, not independent discovery or autonomous onboarding. |
-
-Invalid schemas, incomplete handoffs, stopped foreign-tool attempts, stale-build
-checks and unknown usage remain archived. Nothing here converts them into passes.
-
-## Reproduction and next gates
-
-Run `make verify` for offline contracts and:
+For a **new, separately budgeted run**, build the current source and preflight first:
 
 ```sh
-uv run pytest tests/test_steward_followup_summary.py -q
+uv run python scripts/build_binary.py
+uv run python -m evaluations.public_owner_report_trial \
+  --explicit-owner-confirmation --expert-reference \
+  --expert-notes-file evaluations/data/juniper-source-steward-v1.md \
+  --binary dist/signalweave --codex-executable /path/to/pinned/codex \
+  --output artifacts/new-owner-preflight
 ```
 
-The excerpt is readable without keys. The
-[public native walkthrough](../domain-context.md#reproduce-the-synthetic-native-walkthrough)
-needs no archived approval or live key. Exact paid follow-up replay still needs
-the ignored V4 artifacts and its retained native home; it is not turnkey from
-public Git alone. Do not restart closed cohorts or increase their caps.
+Live inference additionally requires `--run --key-file /path/to/private/jev.key` and a new output directory. The runner pins Codex CLI 0.162.0-alpha.2 and checks the current native/skill fingerprints. Caps: six calls, one Jev; between-call stops 1.2M input/220k uncached or unknown usage; no retry. Later source fixes do not recreate the exact older executable or change its recorded outcome.
 
-Next: make the actual owner/delegate confirmation and agent continuation clear,
-without relaxing source authorization or substituting a model's false review
-for code-defined math. Qualify the first human-facing message—including audiences
-and citations—before activating recurrence. Then test multiple workflows and
-periods, genuine ambiguity, quiet/missing-data branches, changed definitions,
-multi-step investigations and varied real connectors with complete accounting.
-Interactive first-use onboarding, customer SSO, real delivery/scheduling,
-cross-card business lift and enterprise efficacy remain open.
+Before the receipt correction, `make verify` passed 3,644 tests / 11 skipped in 247.19s. The 151 targeted conversation/source/reviewer checks are software contracts, not trial cases. Earlier current-native stdio/HTTP checks passed 12/12 with synthetic auth/local Superset metadata, not customer SSO.
+
+## Earlier evidence retained, not pooled
+
+[Full preceding report and archive chain](https://github.com/waddle-zoo/signal-weave/blob/abec315/docs/evidence/domain-context-preview-2026-10-14.md) preserve exact usage, failures, identities and prior messages. The [assisted public excerpt](../../evaluations/data/steward-expert-followup-summary.json) preserves its separate source facts and readout defects.
+
+| Earlier series | Finding retained |
+| --- | --- |
+| Public owner V1/V2 and V4 | Incomplete onboarding, false percent-change review and inconsistent treatment of posting requirements. V4: four calls, zero Jev/reports; no repaired pass rate. |
+| Expert-assisted follow-up | Same retained card/context manually completed; both correct reports, one reviewer preferred treatment but retained citation typo and baseline extra audience. Treatment took more time/tokens. Not autonomous onboarding. |
+| Four permission replies + short yes | Prepared-draft continuation worked with live Jev; clarification wording and receipt-only citations retained. Not discovery/card authoring or customer UX. |
+| Snapshot correction | Old review-pointer arguments could approve changed policy. Exact-fingerprint handoffs repaired it; separate native regression passed. Earlier paid probes predated that fix. |
+| Owner-handoff v4 | Two scripted-owner setups accepted, but 189,300 uncached tokens stopped reports. Restored state is not original-home durability. |
+| Scripted clarification/context walkthroughs | Supplied Jev outcomes and staleness deferral worked; not conversational onboarding, independent discovery or shared-memory business lift. |
+| Parcel-volume and grounded-report studies | Correct routing did not prevent missing known 5,800 → 11,600 counts; four-of-six reporting stop and separate NO-GO remain. |
+| Layout/first-message and transport checks | Mixed layout judgments and supplied-input drafts are not comparative efficacy; startup timeout, 401 and concurrent-timeout findings remain archived. |
+
+## Still unproven
+
+Varied companies and connectors, quiet/missing-data recall and noise, shared-context reuse improving answers, changed definitions, multi-step investigations, realistic expensive queries, amortized setup value and real human ease. Customer SSO, actual scheduling/delivery and enterprise efficacy are not established. The next work is those business outcomes—not another permission-only canary.

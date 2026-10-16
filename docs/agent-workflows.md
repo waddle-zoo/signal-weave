@@ -135,6 +135,10 @@ replays its saved receipt rather than refreshing evidence. Read the typed
 decision together with the evidence, including source coverage, dates and
 comparability. Missing or omitted evidence is not an all-clear.
 
+Use the evidence already returned by evaluation. Fetch `get_decision_receipt`
+only to recover a saved run, page omitted evidence or inspect the full audit.
+Its `receipt` contains metadata; `result` contains the stored evidence once.
+
 If the result calls for investigation, the agent should use its own authorized
 BI or company tools to check the relevant segments, calculations and competing
 explanations, then write a concise, source-linked account of what is known and

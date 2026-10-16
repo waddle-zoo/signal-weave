@@ -38,8 +38,18 @@ async def test_compact_evaluation_preserves_evidence_and_durable_audit(tmp_path,
     assert "result" not in result["receipt"]
     assert result["plan"] and result["retrieval"]
     full = await tool(server, "get_decision_receipt")(idempotency_key="repeatable")
-    assert full["receipt"]["result"] == result["result"] == full["result"]
-    assert result["receipt"] == {k: v for k, v in full["receipt"].items() if k != "result"}
+    assert "result" not in full["receipt"]
+    assert result["result"] == full["result"]
+    assert result["receipt"] == full["receipt"]
+    _, wire_receipt = await server.call_tool("get_decision_receipt", {"receipt_id": full["receipt"]["receipt_id"]})
+    assert wire_receipt == full
+    # Only wire duplication is removed; stored evidence and replay stay intact.
+    if sqlite:
+        durable = server._test_runtime.decision_receipts.get_by_idempotency_key("repeatable")
+        assert durable.result == full["result"]
+        assert durable.model_dump(mode="json")["result"] == full["result"]
+    duplicated_wire = {**full, "receipt": {**full["receipt"], "result": full["result"]}}
+    assert len(json.dumps(full).encode()) < len(json.dumps(duplicated_wire).encode())
     assert tool(server, "get_insight_card")(card_id, include_history=True) == stored
     assert stored["onboarding_review_history"] and stored["onboarding_corrections"]
     compact = tool(server, "get_insight_card")(card_id)

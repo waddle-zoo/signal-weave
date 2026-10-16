@@ -8,10 +8,10 @@ Feature branch: `feat/domain-context-memory`, based on main `e8842ac`.
 | --- | --- |
 | Local and hosted context lifecycle | Native stdio/signed HTTP checks cover review/reuse/restart/change; latest read-only native restart recovered the actual approved v2 card, definition history and saved Jev receipt. Hosted issuer remains synthetic |
 | Card-bound meaning and staleness | Contract tests cover exact pins, reapproval, deferred policy and historical receipts; no automatic notification service is claimed |
-| Approved cards with live decisions | Latest expert-assisted follow-up used the actual model-authored retained card v2, required context revision 2 and one live Jev request. Both reporters correctly found the complete-period decline and route. Earlier scripted three-period check remains separate |
-| Human-first, agent-led onboarding | Public V4 still failed complete onboarding. Later prepared-draft continuation passed four permission cases and one short yes with live Jev; these do not test discovery, card authoring or actual human UI visibility. Snapshot-bound handoffs now reject a reply to a changed policy. No varied-company success rate |
-| Useful recurring reports and investigations | One assisted pair has correct quantities and outcomes; independent message review preferred treatment with a retained citation typo and flagged baseline's extra audience. Earlier parcel-volume errors remain. Multi-step/diverse-connector/changed-context outcomes still need proof |
-| Comparative business value | One reader preference is not overall lift: both read two sources; treatment used more time/tokens. Broader quality/noise/recall, repeated-use savings and complete costs remain open |
+| Approved cards with live decisions | Fresh V5 agent discovered sources, authored/approved its card and evaluated it with live Jev. Both fresh reporters correctly found the decline and business route. The earlier expert-assisted required-context-pin run remains separate |
+| Human-first, agent-led onboarding | One fresh V5 scripted-owner onboarding/report pair completed; no imported cards/approvals. It is not a real-human installer/usability result or varied-company success rate. V4 stays failed. Plain replies and snapshot-bound approval are separately covered |
+| Useful recurring reports and investigations | Both V5 messages usable; independent A/B reader slightly preferred baseline. Same later-period evidence. Treatment saved reviewed context but did not bind/retrieve it for reporting, so memory value is unproven. Earlier parcel-volume errors and multi-step/diverse-connector/changed-context gaps remain |
+| Comparative business value | No overall lift established: V5 used fewer reporter tools but the same source reads and more total time/tokens. The two single-pair reader preferences differ and are not pooled. Noise/recall, repeated-use savings, memory reuse and complete costs remain open |
 
 These are separate gates. Passing storage, authentication or a scripted decision
 check cannot substitute for complete onboarding and useful final agent outcomes.
@@ -164,6 +164,21 @@ native calls too. Run zero-model preflight before live. Prior cohorts stay
 closed; retain new failures and messages without rewriting them. At most this
 one pair is permitted in this series. No scheduling, sending, real vendor,
 human usability, causal improvement, broad accuracy or comparative savings claim.
+
+Terminal: all six calls and one Jev request completed. Both authored setups
+passed model policy review; both later reports were correct and usable. An
+independent A/B reader slightly preferred baseline. Total agent usage 934,931
+input / 167,187 uncached / 8,569 output; Jev 6,497 input / 109 output. No retry.
+One date-format error was corrected inside the treatment author episode.
+Baseline's initial pending-review label was not a missing owner answer.
+Reviewed context was saved but not bound/retrieved during the report. These
+limits and untouched messages are in the consolidated evidence note.
+
+The trace exposed duplicated full results in receipt retrieval, adding one
+unnecessary copy of all evidence. A separate wire-only correction removes the
+nested copy without changing the stored receipt or root result. Verify it with
+offline round trips and a zero-inference current-native retrieval of the actual
+retained receipt, not a paid rerun or a claim of improved business accuracy.
 
 ## Fresh public owner-to-report development pair
 
