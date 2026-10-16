@@ -16,6 +16,36 @@ Feature branch: `feat/domain-context-memory`, based on main `e8842ac`.
 These are separate gates. Passing storage, authentication or a scripted decision
 check cannot substitute for complete onboarding and useful final agent outcomes.
 
+### Next business-evidence gate
+
+The next diverse fixture should use **Harbor Help's ticket SLA** business shape
+from `evaluations/first_report_cases.py`, but expose discoverable, period-varying
+raw company assets rather than hand the agent its existing prepared snapshot.
+That older study used generated rows, a full-profile in-process adapter and
+scripted owner approval; it is not evidence of clean installed-MCP onboarding.
+The cached Helio case file is likewise not a local raw warehouse seed.
+
+Before new paid expansion:
+
+- Prove the normal binary's local setup, optional context enablement, reconnect
+  and source access without research-only environment injection.
+- Materialize the separate support fixture, including denominator weighting,
+  a similarly named but different metric, and incomplete reporting. Keep owner
+  policy separate from data generation and independently recompute the answers.
+- Start onboarding from a human question. Let the data-expert agent inspect the
+  assets, ask focused owner questions, save definitions and the actual card,
+  show a proposed report, and obtain explicit approval. Do not supply a gold card.
+- Then change real source periods and compare useful final reports and proposed
+  routes. Both arms keep the same BI/context access, approved rules and tool
+  capabilities. Retain setup cost, queries, tokens, failures and actual messages;
+  an internal decision score is not the primary outcome.
+
+Keep frontier analysis in the connected tools: [Hex's MCP](https://learn.hex.tech/docs/api-integrations/mcp-server)
+already supports analytical Threads, while [dbt's MCP](https://docs.getdbt.com/docs/dbt-ai/about-mcp)
+exposes metadata and Semantic Layer data. These official interfaces reinforce the
+companion-tool boundary; they do not establish SignalWeave's comparative value.
+No new scheduler, agent owner or general analysis engine is required for this gate.
+
 ### Same-conversation report handoff
 
 The next bounded study is

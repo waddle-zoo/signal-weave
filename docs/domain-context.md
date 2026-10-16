@@ -18,11 +18,29 @@ repeating that onboarding conversation. They still fetch current measurements.
 
 ## Enable the optional tools
 
-Set `SIGNALWEAVE_KNOWLEDGE_ENABLED=1` in the SignalWeave server environment, using
-the default SQLite store. Restart the MCP process. A local stdio process and a
-hosted HTTP service use the same storage and service contracts. A configured or
-authenticated tenant/principal is required; clients cannot supply their identity
-as a tool argument. Existing card approval and evaluation work independently.
+After local setup, enable shared context without editing configuration:
+
+```sh
+signalweave context enable
+signalweave context status
+```
+
+Reconnect your agent's MCP process to apply the change. The setting persists in
+the private home used by the registered agent. `signalweave status` also reports
+context configuration. These are configuration checks, not proof of the state
+of an already running process or of analytical quality.
+
+For a deployed service, set `SIGNALWEAVE_KNOWLEDGE_ENABLED=1` in its environment
+and restart it. Both paths require the SQLite store and a configured local or
+authenticated request-scoped tenant/principal. Clients cannot supply their
+identity as a tool argument. Existing card approval and evaluation work
+independently. Process environment settings override local configuration; the
+context status command makes that override visible.
+
+`signalweave context disable` removes the tools on the next reconnect; it does
+not delete stored context, cards or revision history. A card that pins context
+can still require those dependencies: disabling the extension is not approval
+to ignore them or to act on an old receipt.
 
 The connected guide includes `domain_context` only when the extension is enabled.
 Older binaries, including the published rc3 preview, do not contain this feature;

@@ -2,11 +2,42 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
 from .local_setup import SetupError, credential_status, read_config, resolve_home
+
+
+def _context_status(configured: dict[str, str]) -> dict[str, Any]:
+    """Configuration intent, never a claim about an already running process."""
+    name = "SIGNALWEAVE_KNOWLEDGE_ENABLED"
+    saved = configured.get(name, "0").strip().lower()
+    effective = os.environ.get(name, saved).strip().lower()
+    truthy, falsey = {"1", "true", "yes", "on"}, {"0", "false", "no", "off"}
+    enabled = effective in truthy
+    status, reason = ("enabled" if enabled else "disabled"), None
+    if saved not in truthy | falsey or effective not in truthy | falsey:
+        status, reason = "invalid", "SIGNALWEAVE_KNOWLEDGE_ENABLED must be a boolean value"
+    elif enabled:
+        backend = os.environ.get("SIGNALWEAVE_STORE_BACKEND", configured.get("SIGNALWEAVE_STORE_BACKEND", "sqlite"))
+        tenant = os.environ.get("SIGNALWEAVE_TENANT_ID", configured.get("SIGNALWEAVE_TENANT_ID", ""))
+        principal = os.environ.get("SIGNALWEAVE_PRINCIPAL_ID", configured.get("SIGNALWEAVE_PRINCIPAL_ID", ""))
+        auth = os.environ.get("SIGNALWEAVE_AUTH_MODE", configured.get("SIGNALWEAVE_AUTH_MODE", "token"))
+        if backend.strip().lower() != "sqlite":
+            status, reason = "blocked", "Domain context requires the SQLite store"
+        elif auth.strip().lower() != "oidc" and not (tenant.strip() and principal.strip()):
+            status, reason = "blocked", "Run signalweave setup to configure the local tenant and principal"
+    return {"configured": saved in truthy, "enabled": enabled, "status": status,
+            "environment_override": name in os.environ, "reason": reason,
+            "scope": "Saved configuration and current environment; reconnect the MCP to apply changes"}
+
+
+def context_status(home: str | Path | None = None) -> dict[str, Any]:
+    """Return bounded context configuration without opening sources or storage."""
+    _, configured = read_config(home)
+    return _context_status(configured)
 
 
 def _origin(value: str) -> str:
@@ -143,6 +174,7 @@ def local_status(home: str | Path | None = None) -> dict[str, Any]:
             "live_check": "not_run",
         },
         "credentials": credentials,
+        "domain_context": _context_status(configured),
         "connections": connections,
         "state": {
             "backend": configured.get("SIGNALWEAVE_STORE_BACKEND", "sqlite"),
@@ -157,4 +189,4 @@ def local_status(home: str | Path | None = None) -> dict[str, Any]:
     }
 
 
-__all__ = ["local_status"]
+__all__ = ["context_status", "local_status"]

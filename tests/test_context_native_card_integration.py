@@ -25,7 +25,7 @@ pytestmark = pytest.mark.skipif(
     ),
 )
 
-MAX_TOOL_CALLS = 18
+MAX_TOOL_CALLS = 22
 MAX_PROVIDER_POSTS = 0
 PROVIDER_ENDPOINT = re.compile(
     r"POST https://api\.typesafe\.ai/v1/systemone(?:\s|$)"
@@ -68,7 +68,6 @@ async def test_native_agent_context_binding_lifecycle(
         for name, value in os.environ.items()
         if name in {"PATH", "TMPDIR", "LANG", "LC_ALL"}
     }
-    env["SIGNALWEAVE_KNOWLEDGE_ENABLED"] = "1"
     # No process can listen on TCP port zero: a bind to zero receives a different
     # assigned port. Accidental inference must fail locally, never reach TypeSafe.
     env["TYPESAFE_BASE_URL"] = "http://127.0.0.1:0"
@@ -125,7 +124,24 @@ async def test_native_agent_context_binding_lifecycle(
     card_id = None
     log_path = isolated_workspace / "native-context-card.log"
 
-    async with asyncio.timeout(180):
+    async def context_cli(action):
+        process = await asyncio.create_subprocess_exec(
+            str(binary), "context", action, "--home", str(private_home),
+            *( ["--json"] if action == "status" else [] ),
+            env=env, cwd=str(isolated_workspace), stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        try:
+            stdout, _ = await asyncio.wait_for(process.communicate(), 45)
+        finally:
+            if process.returncode is None:
+                process.kill()
+                await process.wait()
+        assert process.returncode == 0, f"native context {action} failed"
+        assert b"synthetic-context-card-no-inference" not in stdout
+        return stdout.decode()
+
+    async with asyncio.timeout(300):
         setup = await asyncio.create_subprocess_exec(
             *setup_args,
             env=env,
@@ -145,7 +161,7 @@ async def test_native_agent_context_binding_lifecycle(
             log_path.chmod(0o600)
             plain_params = StdioServerParameters(
                 command=str(binary), args=["serve", "--home", str(private_home)],
-                env={**env, "SIGNALWEAVE_KNOWLEDGE_ENABLED": "0"}, cwd=str(isolated_workspace),
+                env=env, cwd=str(isolated_workspace),
             )
             async with stdio_client(plain_params, errlog=log) as streams:
                 async with ClientSession(*streams) as session:
@@ -158,11 +174,20 @@ async def test_native_agent_context_binding_lifecycle(
                     assert isinstance(plain_start["first_readout"], str) and plain_start["first_readout"].strip()
                     assert "first_readout" not in plain_monitor
                     assert plain_start["inference_performed"] is plain_monitor["inference_performed"] is False
+                    assert "domain_context" not in plain_start
+
+            assert json.loads(await context_cli("status"))["enabled"] is False
+            await context_cli("enable")
+            enabled_config = json.loads(await context_cli("status"))
+            assert enabled_config["configured"] is enabled_config["enabled"] is True
+            assert enabled_config["environment_override"] is False
 
             async with stdio_client(server_params, errlog=log) as streams:
                 async with ClientSession(*streams) as session:
                     await session.initialize()
                     tool_names = {tool.name for tool in (await session.list_tools()).tools}
+                    enabled_guide = _payload(await call(session, "get_signalweave_guide", {"task": "start"}), "get_signalweave_guide")
+                    assert "domain_context" in enabled_guide
                     expected_tools = {
                         "onboard_insight_card",
                         "revise_insight_card",
@@ -401,6 +426,26 @@ async def test_native_agent_context_binding_lifecycle(
                     )
                     assert "draft" in error_text.lower()
 
+            # Disable/re-enable changes the next process's tools, not its data.
+            await context_cli("disable")
+            assert json.loads(await context_cli("status"))["enabled"] is False
+            async with stdio_client(server_params, errlog=log) as streams:
+                async with ClientSession(*streams) as session:
+                    await session.initialize()
+                    assert not KNOWLEDGE_TOOLS & {tool.name for tool in (await session.list_tools()).tools}
+                    retained_card = _payload(await call(session, "get_insight_card", {"card_id": card_id}), "get_insight_card")
+                    assert retained_card["context_bindings"][0]["entry_id"] == entry_id
+
+            await context_cli("enable")
+            async with stdio_client(server_params, errlog=log) as streams:
+                async with ClientSession(*streams) as session:
+                    await session.initialize()
+                    assert KNOWLEDGE_TOOLS <= {tool.name for tool in (await session.list_tools()).tools}
+                    history = _payload(await call(session, "get_context_history", {"entry_id": entry_id}), "get_context_history")
+                    assert {revision["revision"] for revision in history["revisions"]} == {1, 2, 3}
+                    retained = _payload(await call(session, "inspect_insight_context", {"card_id": card_id}), "inspect_insight_context")
+                    assert retained["entries"][0]["status"] == "superseded"
+
         logs = log_path.read_text(encoding="utf-8")
         provider_posts = len(PROVIDER_ENDPOINT.findall(logs))
         superset_metadata_reads = logs.count(f"GET {superset_url}/api/v1/")
@@ -412,6 +457,9 @@ async def test_native_agent_context_binding_lifecycle(
         assert len(call_names) <= MAX_TOOL_CALLS
 
     record_property("native_mcp_tool_calls", len(call_names))
+    record_property("context_enabled_via_persistent_cli", True)
+    record_property("context_disable_preserved_card_and_history", True)
+    record_property("context_enablement_environment_override", False)
     record_property("native_binary_sha256", provenance["binary_sha256"])
     record_property("native_source_sha256", provenance["source_sha256"])
     record_property("native_git_commit", provenance["git_commit"])

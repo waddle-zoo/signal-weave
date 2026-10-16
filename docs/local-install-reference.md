@@ -137,7 +137,8 @@ native release.
   credential update, live local Superset/Jev card, replay, and uninstall checks.
   See the [scoped release evidence](evidence/cards-native-release-2026-10-14.md).
 - **Current source after `rc3` (not a published native release):** adds the
-  domain-context preview, bounded saved-query definitions, and owner-reviewed
+  domain-context preview (including persistent `context enable/disable/status`
+  controls), bounded saved-query definitions, and owner-reviewed
   shadow evaluation without requiring custom BI metric contracts. Missing
   declarations stay unverified and recipient mappings do not certify delivery.
   Use an explicitly identified source build for these capabilities and verify

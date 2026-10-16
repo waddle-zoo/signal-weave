@@ -74,6 +74,23 @@ async def test_binding_is_revisioned_not_approval_and_never_provider_context(tmp
     assert checked["entries"] == [{"entry_id": entry, "revision": 2, "required_for_action": True, "status": "current"}]
 
 
+async def test_disabled_context_tools_cannot_bypass_an_existing_required_pin(tmp_path):
+    _, runtime, assets, _, judger, entry = await prepared(tmp_path)
+    authorize_for_runtime_test(runtime)
+    runtime.knowledge = None
+    server = create_mcp(runtime, profile="agent")
+    assert "retrieve_domain_context" not in {tool.name for tool in await server.list_tools()}
+    _, packet = await server.call_tool("evaluate_insight_card", {
+        "card_id": "repeat", "idempotency_key": "disabled-context-check",
+    })
+    assert packet["result"]["judgment"]["status"] == "deferred"
+    assert packet["current_context_dependencies"]["required_current"] is False
+    assert packet["current_context_dependencies"]["entries"][0]["entry_id"] == entry
+    assert packet["current_context_dependencies"]["entries"][0]["status"] == "unavailable"
+    assert not judger.states
+    assert assets.reads == 1  # Still offers supported anchor evidence to the agent.
+
+
 @pytest.mark.parametrize("change", ["draft", "due", "workspace", "private", "revoked"])
 async def test_required_context_change_defers_policy_but_preserves_source_evidence(tmp_path, change):
     server, runtime, assets, _, judger, entry = await prepared(tmp_path)
