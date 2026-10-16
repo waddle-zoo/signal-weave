@@ -33,12 +33,14 @@ async def test_reply_is_bound_to_actual_saved_artifact_and_does_not_approve_it(k
     request = episode.owner_requests[-1]
     assert request["summary"] == "Actual owner-facing summary"
     assert request["owner_reply"] == result
+    assert "consent" not in result and result["owner_type"] == "scripted_fixture"
     assert result["confirmation_target"]["id"] == target
     assert result["confirmation_target"]["artifact_digest"] == episode.approvals[kind, target]
     assert "Do not schedule anything or send a message" in result["answer"]
     if native:
         assert request["saved_artifact"] == before
         assert result["confirmation_target"]["card_version"] == before["version"]
+        assert f"{target}, version {before['version']}" in result["answer"]
         assert native.card == before and native.card["status"] == "draft"
         assert not any(name == "approve_insight_card" for name, _ in native.calls)
         assert "source_selection_reason" not in result and "approval_handoff" not in result

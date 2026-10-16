@@ -16,25 +16,26 @@ class ExplicitOwnerMixin:
         artifact = self.owner_requests[-1]["saved_artifact"]
         kind = args["kind"]
         if kind == "card":
+            version = artifact["version"]
             answer = (
-                "Yes. I approve this saved card's policy and its displayed selected source scopes "
+                f"Yes. I approve saved card {args['id']}, version {version}, its policy and its displayed selected source scopes "
                 "for evaluation. You may approve this saved version, then run one delivery-disabled "
                 "check after setup. Do not schedule anything or send a message."
             )
-            version = artifact["version"]
         elif kind == "context":
             answer = (
-                "Yes. I approve this saved definition and its displayed audience and review date. "
+                f"Yes. I approve the saved definition {args['id']} and its displayed audience and review date. "
                 "This does not approve a card, schedule a run or authorize sending messages."
             )
             version = None
         else:
             answer = (
-                "Yes. I approve these saved notes as the reusable brief for one later check. "
+                f"Yes. I approve the saved notes {args['id']} as the reusable brief for one later check. "
                 "Do not schedule anything or send a message."
             )
             version = None
-        response = {**result, "answer": answer,
+        response = {**{key: value for key, value in result.items() if key != "consent"},
+                    "owner_type": "scripted_fixture", "answer": answer,
                     "confirmation_target": {"kind": kind, "id": args["id"], "card_version": version,
                                             "artifact_digest": self.approvals[kind, args["id"]]},
                     "semantic_review": "Still required separately; this scripted yes is not expert validation."}
