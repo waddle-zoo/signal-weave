@@ -28,8 +28,10 @@ preserves the earlier chronology, negatives, costs and identities.
 ## Latest owner-confirmation continuation
 
 The handoff now separates the owner's plain-language confirmation from the
-agent-recorded `source_selection_reason`. The exact approval arguments and
-source/health/dynamic-scope checks are unchanged; metadata does not grant consent.
+agent-recorded `source_selection_reason`. The following closed trials used the
+prior latest-review arguments; a subsequent snapshot-binding correction is
+recorded below. Source/health/dynamic-scope checks remain active; metadata does
+not grant consent.
 The bundled skill and guide explain how to continue after actual confirmation.
 
 `owner-confirmation-canary-v1` used four fresh native homes and four Luna-medium
@@ -78,6 +80,61 @@ Full offline verification on this source passed 3,628 tests, 11 skipped, in
 also passed. These are software checks, not enterprise trials or an accuracy rate.
 
 ## What ran
+
+### Short owner confirmation and later snapshot correction
+
+Separate `owner-short-confirmation-v1` completed on the same `9336068` native
+build: one prepared draft, the exact native confirmation question supplied as
+prior context, then “Yes, go ahead with that one delivery-disabled check. Don't
+send or schedule anything.” One Luna turn approved and evaluated the card; one
+live Jev request produced a shadow receipt. Independent trace review accepted
+the scope/reason, correct 30% decline and web contribution, and both underlying
+source references. No additional source-rationale question, send or schedule.
+This does not establish that a real human saw the supplied question, complete
+onboarding, broader reliability or comparative benefit. The study is closed.
+
+Agent usage: 128,102 input / 94,976 cached / 33,126 uncached / 671 output;
+Jev: 5,532 input / 53 output. Report SHA-256:
+`72c3772ccdcec3cfdb2d7552d36d82020e407b3dea363e50b8bd32d581d07b11`;
+trace SHA-256:
+`af07fdf1635d9ebb56ef594e18f55ade66e3dff9adc6207d010b2d5994420182`.
+These identify local ignored artifacts, not public raw replay inputs.
+
+Later, an offline regression reproduced a stale-confirmation flaw: old handoff
+arguments could approve a revised, freshly reviewed policy because they resolved
+the latest review. Commit `f5f17f1` returns the existing snapshot fingerprint
+instead. A stale handoff now fails without changing the stored card; a fresh
+one approves. Independent code review accepted this targeted repair. The paid
+trials above predate it and are not claimed to validate its changed arguments.
+
+Before that repair, full offline verification passed 3,630 tests / 11 skipped
+after two short-confirmation harness tests were added to the earlier 3,628-test
+suite. These are separate runs of growing suites, not pooled trial outcomes.
+Native transports separately had 11 HTTP passes and one stdio assertion failure
+due to an outdated test expecting the owner to supply an API field. After fixing
+that assertion, the same native stdio test passed (37.73s, 14 calls, nine local
+Superset metadata reads, zero Jev requests). This was not a single clean 12-test
+run. Software/transport checks are not enterprise success rates.
+
+The rebuilt `f5f17f15c67d7d5311067fcc16c468d7cf51f85a` executable then passed
+all 12 native stdio/HTTP checks in one run (64.63s). Stdio exercised actual old
+handoff rejection after a policy revision and fresh review, then verified the
+card remained draft at the revised version. It made 17 MCP calls and 12 local
+Superset metadata reads. No decision-provider requests occurred. HTTP used the
+local synthetic issuer, not customer SSO. Source/skill fingerprint:
+`f86f49f8a941249406de7e548606265b11866e41600bea81a18c08034268d3ce`;
+binary SHA-256:
+`9cd55dfe8773cb3ff61b0d1fc92ebd029427d94f49aa17fa72779a36a56824d2`;
+native JUnit artifact SHA-256:
+`c33b4edd367704207d16a3c90fcaee4b84b4048fe6aeb844c1e3fffbac7a885b`.
+This is a local source build, not a newly published release.
+Final `make verify` on the snapshot correction passed 3,631 tests / 11 skipped
+in 252.92s; the added stale-handoff regression accounts for the extra test.
+The current binary's isolated confirmation preflight also completed with zero
+agent/provider calls. It checks setup and argument shape, not live continuation
+on the changed handoff. The skill validator and 141 targeted tests passed.
+
+### Earlier reporting pair
 
 Known Juniper Trail Retail development fixture, seed 20261001; the generator's
 `holdout` split name does not make it unseen data. Sources were normalized

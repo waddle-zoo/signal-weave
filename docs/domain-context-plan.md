@@ -9,7 +9,7 @@ Feature branch: `feat/domain-context-memory`, based on main `e8842ac`.
 | Local and hosted context lifecycle | Native stdio/signed HTTP checks cover review/reuse/restart/change; latest read-only native restart recovered the actual approved v2 card, definition history and saved Jev receipt. Hosted issuer remains synthetic |
 | Card-bound meaning and staleness | Contract tests cover exact pins, reapproval, deferred policy and historical receipts; no automatic notification service is claimed |
 | Approved cards with live decisions | Latest expert-assisted follow-up used the actual model-authored retained card v2, required context revision 2 and one live Jev request. Both reporters correctly found the complete-period decline and route. Earlier scripted three-period check remains separate |
-| Human-first, agent-led onboarding | Public V4 supplied equal explicit expert notes but still left treatment draft awaiting scope/context approval; semantic review also made a false numeric objection. Expert-assisted reporting did not repair or rescore that onboarding failure. No real-human wizard or varied-company success rate |
+| Human-first, agent-led onboarding | Public V4 still failed complete onboarding. Later prepared-draft continuation passed four permission cases and one short yes with live Jev; these do not test discovery, card authoring or actual human UI visibility. Snapshot-bound handoffs now reject a reply to a changed policy. No varied-company success rate |
 | Useful recurring reports and investigations | One assisted pair has correct quantities and outcomes; independent message review preferred treatment with a retained citation typo and flagged baseline's extra audience. Earlier parcel-volume errors remain. Multi-step/diverse-connector/changed-context outcomes still need proof |
 | Comparative business value | One reader preference is not overall lift: both read two sources; treatment used more time/tokens. Broader quality/noise/recall, repeated-use savings and complete costs remain open |
 
@@ -91,6 +91,55 @@ actual approval/evaluation calls, persisted state, receipt and recorded reason;
 do not infer success from the final reply. Method review permits preflight and
 holds live inference until it passes. This is a new permission-language case,
 not a retry of a failed result or an extension of the old four-call budget.
+
+Terminal: one agent call and one Jev request; the agent approved the displayed
+card and ran one shadow check without asking for another source rationale.
+Independent raw-trace review accepted the stored approval, scope/reason and
+receipt, and the concise message's 30% decline, web contribution and two source
+references. The supplied prior question does not prove an actual human saw it.
+Usage: 128,102 agent input / 94,976 cached / 33,126 uncached / 671 output;
+Jev 5,532 input / 53 output. No repeat, schedule or send. See the evidence note
+for exact identities. Both permission cohorts are closed.
+
+### Approval snapshot regression
+
+A separate offline regression reproduced old handoff arguments approving a newer
+policy after another session revised and reviewed it. The former latest-review
+pointer did not bind the owner's delayed reply. Handoffs now copy the existing
+review fingerprint; the owner still answers normally, and the agent carries it.
+Tests reject stale arguments without changing the stored card, then approve with
+a fresh handoff. Independent code review accepted the targeted fix. This is a
+correctness repair, not evidence that the earlier paid cohorts exercised it.
+The rebuilt native stdio/HTTP run passed all 12 checks, including stale-handoff
+rejection without changing the revised draft; no provider requests. Final
+offline verification passed 3,631 tests / 11 skipped. These are regression and
+transport checks, not comparative business outcomes.
+
+### Next full-onboarding gate
+
+Independent method review recommends a fresh paired feasibility run, not another
+prepared-card permission probe. Start blank, retain identical company tools and
+context in both arms, capture the actual question/artifact shown and the owner's
+reply, then resume each author from its own saved state. Do not import expert
+cards or count synthetic consent as a human usability result. A simulated data
+expert can exercise this conversation, but real-human ease still needs a real
+participant. Future-period evidence stays hidden until reporting.
+
+Before spending more calls, validate the conversation transport and calibrate
+the setup rubric against valid USD-relative-percent comparisons and invalid
+baselines, units and causes. A model reviewer's opinion is not numerical ground
+truth. Review policy in a common notes/card rubric and retain disagreements.
+Record the actual final human-facing messages, owner effort and complete usage;
+an approved artifact alone is not success. Predetermine all charged author,
+reviewer and reporting calls and stops before starting; the suggested six-call
+author/report budget must not silently exclude additional model reviewers.
+
+Classify transport/preflight defects separately from observed product failures,
+without erasing either. Unresolved material ambiguity is incomplete onboarding,
+not an all-clear or autonomous success. One complete pair would establish
+feasibility only; varied businesses, recurring noise/recall, investigations and
+comparative value remain later gates. No new live cohort is authorized by a
+closed cohort's leftover allowance.
 
 ## Fresh public owner-to-report development pair
 
