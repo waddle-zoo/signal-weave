@@ -131,6 +131,24 @@ aggregation after the request-size fix. Final verification passed **3,914 tests 
 receipt reconstruction and invalid aggregate requests rejected before I/O.
 These are software checks, not more enterprise trial observations.
 
+Fresh local native build `a771be96c85e33a0d138d3789b58bd5615c00ead`
+also passed isolated offline setup, bare `serve` outside the checkout, health,
+agent configuration and Jev/OpenAI Decisions/ChatGPT-plan configuration checks.
+Through the normal agent profile, it recovered the actual approved v2 card and
+replayed its saved run: reference reconstruction matched the earlier compact
+facts, full stored result and card policy stayed unchanged, delivery stayed
+disabled and a zero-budget proxy observed no Jev attempt. Its packaged skill
+matched the canonical file. This is compatibility proof, not fresh analysis,
+a real-person usability test or a newly published download.
+
+Source/skill SHA-256:
+`32c57528b654ab433008b796bf584f95004dbef85652a06c3bec8062c106cef7`;
+binary SHA-256:
+`ee2115c2e0d25653973a7e372a23d29cefb905b596d5bc37064d62c2cebdbef4`.
+Private replay/offline-smoke record SHA-256:
+`24af4fe877c60d58ee8b45581d930609370a52b01a7d94fae5e9fdeab5cbfb30` /
+`8a8f7aef5eb6247eb205495e73b653cff0640b3d3ee43f68bea20e036c5b9f94`.
+
 ## Raw Northstar onboarding attempt: censored, not product evidence
 
 The new `raw-northstar-onboarding-v1` attempted discovery over the running local
