@@ -288,6 +288,13 @@ zero-model preflight before live inference. v6 remains terminal after its two
 calls; no unused allowance is transferred. Separate actual message/numerical
 review must assess whatever reports are produced. No scheduling or sending.
 
+Follow-up investigation gate: the optional `examples/investigation_agent`
+currently demonstrates a bounded Jev-handoff/evidence-tool loop, not a general
+frontier-led analyst. Its README and planner boundaries must not substitute for
+proving a Codex/Claude caller discovering hypotheses and gathering additional
+evidence. Audit that path against the current agent-owned analysis boundary
+before making a general multi-step or causal-explanation claim.
+
 ## Fresh public owner-to-report development pair
 
 Freeze `public-owner-report-v1` before inference. Use published retail fixture

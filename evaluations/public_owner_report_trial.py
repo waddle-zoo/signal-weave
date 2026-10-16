@@ -305,7 +305,8 @@ async def run(args):
                       development_memory_request="Remember the agreed definition for future investigations.")
     if clarification_identity:
         report.update(protocol=CLARIFIED_OWNER_PROTOCOL, owner_clarification=clarification_identity,
-                      qualified_arms=[], onboarding_status={}, independent_arms=True)
+                      qualified_arms=[], onboarding_status={}, independent_arms=True,
+                      paired_reporting_complete=False)
     prior_entry, prior_events = None, []
     handoff_report = getattr(args, "baseline_handoff_report", None)
     if handoff_report:

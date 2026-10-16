@@ -126,4 +126,5 @@ async def test_unknown_usage_still_stops_globally_without_an_extra_arm(tmp_path,
     args, state = selected(tmp_path, monkeypatch, live=True, failure="unknown_usage")
     result = await trial.run(args)
     assert not result.get("completed") and result["usage_known"] is False
+    assert result["paired_reporting_complete"] is False
     assert state["sequence"] == [("author", "baseline")]

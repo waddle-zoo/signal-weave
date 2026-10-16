@@ -74,6 +74,17 @@ rules. Have it show the exact source scope and run the available review. Fix
 mistakes before approval. In the normal profile, a draft is not a trial: approve
 only after you have reviewed it and explicitly authorize the saved card.
 
+Keep the clarification focused on the workflow you want. For example:
+
+> Watch the overall service SLA. Tier breakdowns help explain it; they are not
+> separate alerts. If either week isn't comparable, tell Data Operations rather
+> than claiming the business got worse.
+
+The agent should preserve that scope, not expand it into unrequested alert
+rules. It can show supported current findings while noting what still needs
+clarification before unattended delivery. That does not approve a card, make
+an invalid comparison usable, or authorize a message.
+
 If you answer a question after a draft was saved, the agent can use
 `revise_insight_card` to apply your clarification to the same card. It keeps the
 source anchors, increments the version and returns it to draft; review and
