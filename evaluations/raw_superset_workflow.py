@@ -32,7 +32,7 @@ from signalweave.superset_client import SupersetClient
 
 MANIFEST = Path(__file__).with_name("data") / "raw-northstar-workflow-v1.json"
 CLOSED_PROTOCOLS = frozenset({"raw-northstar-workflow-v1", "raw-northstar-workflow-v2"})
-HELPERS = ("raw_superset_onboarding.py", "raw_superset_tools.py", "raw_workflow_review.py",
+HELPERS = ("raw_superset_onboarding.py", "raw_superset_tools.py", "raw_chart_aggregate.py", "raw_workflow_review.py",
            "declared_owner_reference.py", "codex_trial_transport.py", "installed_trial_transport.py",
            "domain_context_onboarding_trial.py", "retained_owner_periods.py", "native_superset_card_journey.py",
            "bootstrap_agent_trial.py", "explicit_owner_conversation.py")

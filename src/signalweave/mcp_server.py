@@ -840,6 +840,29 @@ def _compact_evaluation_response(response: dict[str, Any]) -> dict[str, Any]:
         ]
     if isinstance(result.get("retrieval"), dict):
         result["retrieval"] = _compact_bundle(result["retrieval"])
+    # Structured reports and workflow handoffs repeat these same sections.
+    # Keep one canonical copy; only coalesce exact matches so report-specific
+    # evidence or a different follow-up plan cannot disappear. Receipt paths
+    # still resolve against the untouched durable result, including when the
+    # canonical section itself later needs paging.
+    for parent_key, field in (("report", "evidence"), ("workflow", "evidence_plan")):
+        parent = result.get(parent_key)
+        canonical = result.get(field)
+        if (
+            isinstance(parent, dict)
+            and isinstance(canonical, (dict, list))
+            and field in parent
+            and parent[field] == canonical
+            and f"{field}_ref" not in parent
+            # Python equality alone equates True with 1 and 1.0 with 1.
+            # Coalescing must preserve the actual serialized facts/types.
+            and json.dumps(parent[field], sort_keys=True, ensure_ascii=False)
+            == json.dumps(canonical, sort_keys=True, ensure_ascii=False)
+        ):
+            parent = dict(parent)
+            parent.pop(field)
+            parent[f"{field}_ref"] = {"result_path": [field]}
+            result[parent_key] = parent
     compact: dict[str, Any] = {
         "receipt": response.get("receipt"),
         "replayed": bool(response.get("replayed", False)),

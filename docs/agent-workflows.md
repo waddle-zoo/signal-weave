@@ -154,6 +154,12 @@ This example helps qualify onboarding; it does not prove every future run.
 
 ## 5. Repeat and investigate
 
+Compact results keep one copy of identical evidence and plans. A report's
+`evidence_ref` or workflow's `evidence_plan_ref` identifies that canonical
+`result_path`. Use the inline section when available; page that path through
+`get_decision_receipt` only for omitted detail. Full responses and saved receipts
+retain the original report and workflow structure.
+
 For a later run, ask the agent to evaluate the approved card for the current
 period. Each distinct run needs a new stable idempotency key; reusing a key
 replays its saved receipt rather than refreshing evidence. Read the typed

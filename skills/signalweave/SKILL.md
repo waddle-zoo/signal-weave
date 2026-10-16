@@ -125,6 +125,12 @@ quality/freshness. Check these before rereading the same asset. Page omitted
 receipt details first; query again for genuinely new evidence or an authorized
 refresh, not to recover facts already returned.
 
+Compact reports may use `evidence_ref`, and workflow handoffs
+`evidence_plan_ref`, instead of repeating identical sections. Their `result_path`
+points to the canonical section in the result; read it inline when present.
+Only use that path with `get_decision_receipt` if the section was omitted or
+the relevant detail is unavailable. The receipt retains the full original.
+
 For an investigation or data gap, relevant linked sources may contain current
 diagnostic context that makes the next step more specific. A stored definition
 is not a current operational diagnosis. Lead the business message with the

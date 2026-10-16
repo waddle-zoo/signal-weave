@@ -282,7 +282,13 @@ async def test_legacy_receipt_without_source_quality_does_not_invent_today_catal
     assert replay["replayed"] is True
     compact_legacy_result = deepcopy(legacy_result)
     had_markdown = isinstance(compact_legacy_result.pop("report_markdown", None), str)
-    assert replay["result"] == compact_legacy_result
+    restored = deepcopy(replay["result"])
+    for parent, field in (("report", "evidence"), ("workflow", "evidence_plan")):
+        reference = restored[parent].pop(f"{field}_ref", None)
+        if reference is not None:
+            assert reference == {"result_path": [field]}
+            restored[parent][field] = deepcopy(restored[field])
+    assert restored == compact_legacy_result
     assert replay["report_markdown_available"] is had_markdown
     assert "source_contracts" not in replay["result"]
     full_receipt = await tool(server, "get_decision_receipt")(

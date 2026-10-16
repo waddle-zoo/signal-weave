@@ -243,14 +243,23 @@ retain original messages, usage and post-run review findings; no superiority or
 enterprise-completion claim. Native builds on all three platforms passed at
 `39b4f78`; no release was published.
 
-Next, repair the research companion's inability to compute a bounded matched-day
-aggregate without 36 raw pages. Keep that tool identical in both future arms;
-do not blame the product for this harness limit. Audit repeated evidence in the
-compact handoff and unnecessary rereads. Separately prove that an agent's
+The research companion now has opt-in bounded aggregation, checked against the
+live saved query and a separate Decimal loop; a captured-response replay removes
+exact duplicate evidence and plans. These are engineering checks, not new agent
+outcomes. Next, forward-test their use with identical companion tools in both
+arms and a stronger query-capable baseline. Separately prove that an agent's
 source-backed follow-up can contribute to the next policy step without treating
 unverified caller assertions as provider guarantees. Missing closed-month
 comparisons must stay distinct from an actual decline. None of these changes
 may reopen or rescore a terminal cohort.
+
+Two scoped product gaps remain: the Superset normalizer selects the last two
+returned buckets, not an owner-requested latest-closed-month comparison; and
+caller-submitted context cannot authorize `notify`/`escalate`. The latter is a
+trust boundary, not a guarantee that versioned agent findings become trusted.
+Correct the existing follow-up handoff's contrary implication, then test the
+owner-approved source/provider route for subsequent policy evaluations. Do not
+silently infer completeness or remove the context boundary to produce a win.
 
 ## Exact reference retrieval and exploratory courier readouts
 

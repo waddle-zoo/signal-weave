@@ -13,6 +13,7 @@ import re
 from collections.abc import Mapping
 from typing import Any
 
+from evaluations.raw_chart_aggregate import aggregate_saved_chart_rows, validate_aggregation_request
 from signalweave.superset_client import SupersetClient
 
 MAX_CHART_ROWS = 20_000
@@ -29,8 +30,9 @@ def _finite_number(value: Any) -> bool:
 class RawSupersetTools:
     """Fetch each chart once; isolate cached provider envelopes and deliveries."""
 
-    def __init__(self, client: SupersetClient) -> None:
+    def __init__(self, client: SupersetClient, *, enable_aggregation: bool = False) -> None:
         self.client = client
+        self.enable_aggregation = enable_aggregation
         self.logical_tool_calls = 0
         self.chart_query_http_requests = 0
         self._chart_cache: dict[str, dict[str, Any]] = {}
@@ -47,7 +49,7 @@ class RawSupersetTools:
                 "required": list(required), "additionalProperties": False}}
 
         identifier = {"type": "string", "pattern": "^[1-9][0-9]*$"}
-        return [
+        specs = [
             spec("find_dashboards",
                  "Search Superset dashboard titles; returns at most 10 matches.",
                  {"query": {"type": "string", "maxLength": MAX_QUERY_LENGTH}}, ("query",)),
@@ -67,6 +69,33 @@ class RawSupersetTools:
                  "raw date ranges only; no sums, means, or inferred metric meanings.",
                  {"id": identifier}),
         ]
+        if self.enable_aggregation:
+            specs.append(spec(
+                "aggregate_chart_rows",
+                "Filter and aggregate rows returned by a saved chart query, without raw paging. "
+                "AND raw eq/numeric filters; group by up to 3 raw columns; sum/count only. "
+                "Numeric epoch dates must use their source units. No date parsing or new SQL. "
+                "Duplicates count separately; SUM skips and reports nulls. Sums are decimal strings. "
+                "Definitions are limited to 16 KiB before source I/O. Coverage is only the "
+                "returned saved-query rows, never assumed complete query/warehouse coverage.",
+                {"id": identifier,
+                 "filters": {"type": "array", "maxItems": 12, "items": {
+                     "type": "object", "properties": {
+                         "column": {"type": "string", "minLength": 1, "maxLength": 256},
+                         "op": {"type": "string", "enum": ["eq", "gt", "gte", "lt", "lte"]},
+                         "value": {"type": ["string", "number", "boolean", "null"], "maxLength": 2048}},
+                     "required": ["column", "op", "value"], "additionalProperties": False}},
+                 "group_by": {"type": "array", "maxItems": 3, "uniqueItems": True,
+                              "items": {"type": "string", "minLength": 1, "maxLength": 256}},
+                 "aggregations": {"type": "array", "minItems": 1, "maxItems": 8, "items": {
+                     "type": "object", "properties": {
+                         "op": {"type": "string", "enum": ["sum", "count"]},
+                         "column": {"type": "string", "minLength": 1, "maxLength": 256}},
+                     "required": ["op"], "additionalProperties": False}},
+                 "max_groups": {"type": "integer", "minimum": 1, "maximum": 1000, "default": 100}},
+                ("id", "filters", "group_by", "aggregations"),
+            ))
+        return specs
 
     async def call(self, name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         self.logical_tool_calls += 1
@@ -78,6 +107,20 @@ class RawSupersetTools:
             if not isinstance(query, str) or len(query) > MAX_QUERY_LENGTH:
                 raise ValueError("query must be a string of at most 2000 characters")
             return await self._find_dashboards(query)
+        if name == "aggregate_chart_rows" and self.enable_aggregation:
+            self._validate_keys(arguments, {"id", "filters", "group_by", "aggregations"}, {"max_groups"})
+            identifier = self._resource_id(arguments["id"], "chart")
+            request = validate_aggregation_request(
+                arguments["filters"], arguments["group_by"], arguments["aggregations"],
+                max_groups=arguments.get("max_groups", 100),
+            )
+            entry, cache_hit = await self._load_chart(identifier)
+            result = aggregate_saved_chart_rows(
+                entry["rows"], entry["columns"], filters=request["filters"], group_by=request["group_by"],
+                aggregations=request["aggregations"], max_groups=request["max_groups"],
+                query_provenance=self._chart_result(identifier, entry, cache_hit),
+            )
+            return {"chart_id": identifier, **result}
         if name not in {"list_dashboard_charts", "read_chart_rows", "profile_saved_chart"}:
             raise ValueError("Unknown raw Superset tool")
         optional = {"offset", "limit"} if name == "read_chart_rows" else set()

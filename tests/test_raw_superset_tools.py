@@ -143,6 +143,53 @@ async def test_tool_specs_are_shared_bounded_and_do_not_accept_sql():
 
 
 @pytest.mark.asyncio
+async def test_aggregation_is_opt_in_and_reuses_actual_saved_query_cache():
+    metadata = {"id": 42, "params": {"all_columns": ["day", "channel", "amount"]}}
+    envelopes = [{"data": [{"day": day, "channel": channel, "amount": amount}
+                           for day, channel, amount in [(1, "web", 1.1), (2, "web", 2.2),
+                                                        (3, "web", 90), (2, "shop", 5)]]}]
+    client = FakeSupersetClient(metadata, envelopes)
+    arguments = {"id": "42", "filters": [{"column": "day", "op": "lte", "value": 2}],
+                 "group_by": ["channel"], "aggregations": [{"op": "sum", "column": "amount"}, {"op": "count"}]}
+    disabled = RawSupersetTools(client)
+    with pytest.raises(ValueError, match="Unknown"):
+        await disabled.call("aggregate_chart_rows", arguments)
+    assert client.requests_made == 0
+    enabled = RawSupersetTools(client, enable_aggregation=True)
+    assert (await enabled.specs())[-1]["name"] == "aggregate_chart_rows"
+    first = await enabled.call("aggregate_chart_rows", arguments)
+    again = await enabled.call("aggregate_chart_rows", arguments)
+    assert first["chart_id"] == "42"
+    assert first["matched_row_count"] == 3
+    assert first["groups"][0]["aggregations"][0]["sum"] == "3.3"
+    assert first["groups"][1]["aggregations"][0]["sum"] == "5"
+    assert first["source_provenance"]["query_scope"]["warehouse_completeness"] == "unknown"
+    assert again["source_provenance"]["telemetry"]["chart_query_cache_hit"] is True
+    assert client.chart_data_calls == 1
+    assert first["groups"] == again["groups"]
+
+
+@pytest.mark.parametrize("change", [
+    {"filters": [{"column": "day", "op": "sql", "value": 2}]},
+    {"filters": [{"column": "day", "op": "lte", "value": "yesterday"}]},
+    {"filters": [{"column": "day", "op": "lte", "value": math.inf}]},
+    {"aggregations": [{"op": "sum"}]}, {"aggregations": [{"op": "count", "column": "amount"}]},
+    {"group_by": ["day"] * 4}, {"max_groups": True}, {"sql": "select * from unapproved"},
+    {"filters": [{"column": "day", "op": "eq", "value": "x" * 2049}]},
+    {"filters": [{"column": "day", "op": "eq", "value": "x" * 2000}] * 12},
+    {"group_by": ["column" * 50]},
+])
+@pytest.mark.asyncio
+async def test_invalid_aggregate_arguments_fail_before_saved_query_io(change):
+    client = FakeSupersetClient()
+    tools = RawSupersetTools(client, enable_aggregation=True)
+    arguments = {"id": "42", "filters": [], "group_by": [], "aggregations": [{"op": "count"}]}
+    with pytest.raises(ValueError):
+        await tools.call("aggregate_chart_rows", {**arguments, **change})
+    assert client.requests_made == 0
+
+
+@pytest.mark.asyncio
 async def test_dashboard_search_and_chart_listing_return_only_requested_metadata():
     client = FakeSupersetClient()
     client.dashboard_response = {

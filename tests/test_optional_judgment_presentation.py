@@ -279,7 +279,11 @@ def test_typed_result_and_report_fields_and_receipt_pages_are_unchanged():
         for key, value in original.items()
         if key not in {"watch_results", "question_results"}
     }
-    assert compact["result"] == expected_inline
+    restored_inline = copy.deepcopy(compact["result"])
+    for parent, field in (("report", "evidence"), ("workflow", "evidence_plan")):
+        assert restored_inline[parent].pop(f"{field}_ref") == {"result_path": [field]}
+        restored_inline[parent][field] = copy.deepcopy(restored_inline[field])
+    assert restored_inline == expected_inline
     assert compact["optional_policy_diagnostics"]["values"] == {
         "watch_results": watch_values,
         "question_results": question_values,
@@ -287,12 +291,12 @@ def test_typed_result_and_report_fields_and_receipt_pages_are_unchanged():
     assert compact["result"]["outcome"] == original["outcome"]
     assert compact["result"]["probabilities"] == original["probabilities"]
     assert compact["result"]["analyses"] == original["analyses"]
-    assert compact["result"]["workflow"] == original["workflow"]
+    assert restored_inline["workflow"] == original["workflow"]
     assert compact["result"]["evidence_plan"] == original["evidence_plan"]
     assert compact["result"]["report"]["blockers"] == original["report"]["blockers"]
     assert compact["result"]["report"]["warnings"] == original["report"]["warnings"]
     restored = {
-        **compact["result"],
+        **restored_inline,
         **compact["optional_policy_diagnostics"]["values"],
     }
     assert restored == original

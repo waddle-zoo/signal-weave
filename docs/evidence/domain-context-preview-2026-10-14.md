@@ -87,6 +87,50 @@ at the exact method commit; publishing was skipped. Those install/MCP checks use
 fixture transport and dummy credentials, not analytical judgments or real-human
 usability evidence. No new release or main merge is implied.
 
+### Post-study engineering checks (not additional agent trials)
+
+An inference-free replay of the recorded evaluation response removed exact
+duplicate report evidence and workflow plans: **48,673 → 38,419 UTF-8 bytes**
+using compact JSON serialization, with other top-level fields and canonical
+evidence unchanged. Full receipts retain both original structures. This is a
+21.1% serialized payload reduction, not a measured token, cost or agent-time
+improvement. Agent behavior with the changed packet still needs a forward test.
+
+The research companion now has an **explicitly opt-in** `aggregate_chart_rows`
+tool shared equally by future arms. It filters raw saved-query rows and groups
+SUM/count without new SQL, date inference or warehouse-completeness claims.
+Invalid request definitions fail before source I/O; source-column checks follow
+the actual read. Definitions have a 16 KiB pre-I/O limit. Decimal accumulation
+uses the parsed values; it cannot recover precision already lost in the
+provider's JSON-to-float conversion. The source client can cap a saved query:
+retained row counts and declared limits do not certify complete query output.
+It does not change the closed v2 tool set or results.
+
+A read-only check against the same running detail chart used a profile and two
+aggregations: one saved-chart query, 8,937 returned rows, both aggregates served
+from that local helper cache. Each selected 171 rows and four channel groups.
+UTC epoch-millisecond predicates were `>= 1785542400000, < 1787184000000`
+(August 1–19) and `>= 1788220800000, < 1789862400000` (September 1–19).
+An independent direct Decimal loop over the original returned rows agreed:
+
+| Matched-day source result | August 1–19 | September 1–19 |
+| --- | ---: | ---: |
+| Total net sales | 1,406,132.46 | 1,371,704.27 |
+| Online net sales | 512,288.35 | 484,648.16 |
+
+That is **−2.45% total / −5.40% Online**, not the raw −40% full-month difference.
+This demonstrates the repaired companion capability, **not** an autonomous
+agent investigation, a causal explanation or a SignalWeave advantage. It does
+not substitute matched-day policy for the card's approved calendar-month policy.
+No model or Jev requests, notifications or source writes occurred. Warehouse
+coverage and query cost remain unverified; this is not a new cohort score.
+
+Scoped internal reviews accepted the compact projection and returned-row
+aggregation after the request-size fix. Final verification passed **3,914 tests /
+11 skipped in 290.03s**, including default-agent compact evaluation, lossless
+receipt reconstruction and invalid aggregate requests rejected before I/O.
+These are software checks, not more enterprise trial observations.
+
 ## Raw Northstar onboarding attempt: censored, not product evidence
 
 The new `raw-northstar-onboarding-v1` attempted discovery over the running local
@@ -192,7 +236,7 @@ Binary SHA-256:
 Private `raw-source-readiness-post-review-v2` report/trace SHA-256:
 `022a124a322d2c812c21aa4342cbcf2732058727be5972e416042e0f830b059e` /
 `d28d04901edc2c972fac4eefe94ee26a3dd579354ef77609f31e2d46b9ea219f`.
-The [plan](../domain-context-plan.md#raw-source-readiness-is-a-separate-unresolved-gate)
+The [plan](../domain-context-plan.md#raw-source-readiness-initial-failure-and-forward-repair)
 includes the reproduction command and operator-selected input. This local
 artifact is not a published release or a human installation trial.
 
