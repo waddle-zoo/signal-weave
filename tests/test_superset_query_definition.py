@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import json
 from typing import Any
 
 import pytest
@@ -312,6 +313,39 @@ def test_query_definition_input_guards_omit_without_escaping(kind):
     assert definition["reason"] in {"input_size_limit_exceeded", "invalid_params", "structure_limit_exceeded"}
 
 
+def test_recursive_params_failure_is_local_to_metadata_parsing(monkeypatch):
+    def recursive_decoder(value):
+        raise RecursionError("synthetic decoder recursion limit")
+    monkeypatch.setattr("signalweave.superset_client.json.loads", recursive_decoder)
+    assert SupersetClient._params({"params": "{}"}) == {}
+
+
+def test_large_valid_params_keep_query_filters_even_when_agent_projection_is_omitted():
+    from signalweave.superset_client import _saved_query_definition
+    params = {"metrics": ["score"], "all_columns": ["score"],
+              "time_range": "Last week", "adhoc_filters": [{"col": "region", "op": "==", "val": "west"}],
+              "visualization_configuration": "x" * 70_000}
+    encoded = json.dumps(params)
+    assert SupersetClient._params({"params": encoded}) == params
+    assert _saved_query_definition("42", encoded)["status"] == "omitted"
+
+
+@pytest.mark.parametrize("params", [None, [], ["unsupported"], 42])
+def test_non_mapping_params_do_not_raise_or_become_query_parameters(params):
+    assert SupersetClient._params({"params": params}) == {}
+
+
+def test_generic_params_depth_scanner_ignores_brackets_inside_strings():
+    from signalweave.superset_client import SupersetClient
+
+    params = json.dumps({"metrics": ["score"], "description": "[" * 2000 + "]" * 2000})
+
+    assert SupersetClient._params({"params": params}) == {
+        "metrics": ["score"],
+        "description": "[" * 2000 + "]" * 2000,
+    }
+
+
 @pytest.mark.parametrize("kind", ["raw", "value", "key", "integer", "cumulative"])
 def test_large_scalars_rejected_before_copying_or_full_encoding(kind):
     from signalweave.superset_client import _saved_query_definition
@@ -357,5 +391,6 @@ async def test_recursive_params_do_not_fail_dashboard_or_discard_other_chart_fac
     assert snapshot.error is None
     assert len(snapshot.observations) == 2
     assert snapshot.metadata["charts"][0]["saved_query_definition"]["status"] == "omitted"
+    assert snapshot.metadata["charts"][0]["error"] is None
     assert snapshot.metadata["charts"][1]["saved_query_definition"]["status"] == "available"
-    assert all(observation.current == 8.5 for observation in snapshot.observations)
+    assert [observation.current for observation in snapshot.observations] == [8.5, 8.5]

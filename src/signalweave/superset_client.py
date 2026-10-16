@@ -426,9 +426,11 @@ class SupersetClient:
         if isinstance(params, str):
             try:
                 params = json.loads(params)
-            except json.JSONDecodeError:
+            except (ValueError, RecursionError):
+                # Invalid saved metadata must not discard independently returned
+                # chart rows when later helpers (e.g. viz type) parse it again.
                 params = {}
-        return dict(params)
+        return dict(params) if isinstance(params, Mapping) else {}
 
     @staticmethod
     def _chart_filters(params: dict[str, Any]) -> list[dict[str, Any]]:
