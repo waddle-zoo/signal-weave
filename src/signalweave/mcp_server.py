@@ -483,17 +483,23 @@ def _approval_handoff(card: InsightCard, review: InsightCardOnboardingReview, ad
     return {
         "tool": "approve_insight_card", "arguments_after_owner_confirmation": arguments,
         "declared_populations": populations,
-        "owner_input_required": ["source_selection_reason", *(
+        "owner_confirmation": {
+            "card_id": card.id, "card_version": card.version,
+            "question": "Approve this saved policy and the displayed source scopes for evaluation? This does not authorize scheduling or sending messages.",
+        },
+        "owner_input_required": ["confirm_saved_policy_and_source_scopes", *(
             ["dynamic_scope_acknowledged"]
             if card.retrieval_mode != RetrievalMode.FIXED or card.investigation_mode != InvestigationMode.NONE else []
         )],
+        "agent_input_after_confirmation": ["source_selection_reason"],
         "dynamic_scope_requires_separate_acknowledgment": (
             card.retrieval_mode != RetrievalMode.FIXED or card.investigation_mode != InvestigationMode.NONE
         ),
         "readiness_status": review.readiness_status,
         "instruction": (
-            "Show these exact declared source scopes and the saved policy to the owner. "
-            "After confirmation, add the owner's source_selection_reason and use these arguments. "
+            "Show these exact declared source scopes and the saved policy to the owner or explicitly authorized delegate. "
+            "After actual confirmation, use these arguments and record the confirmed source/definition choice "
+            "in source_selection_reason. The agent may summarize that confirmation; the owner need not write an API field. "
             "Do not invent a different population from a generic label or infer consent. "
             "Set dynamic_scope_acknowledged=true only after separate owner acknowledgment when required. "
             "Unresolved material ambiguity still needs clarification; all approval checks remain active. "
@@ -3401,12 +3407,12 @@ def create_mcp(
         override a source that declares an incompatible window, source health, permissions,
         or runtime evidence-quality gates.
         Pass the same optional adapter scope used by review_insight_card, plus its
-        source_selection_fingerprint and the owner's
-        source_selection_reason explaining which definitions/populations were chosen
+        source_selection_fingerprint and a
+        source_selection_reason recording the owner-confirmed definitions/populations
         and why. Changed policy/catalog invalidates that confirmation. This cannot
         override source health, permissions, missing policy or other blockers.
         Clients that have just reviewed the current card may set
-        use_current_source_selection_review=true and provide the owner reason
+        use_current_source_selection_review=true and record the owner's actual confirmation
         instead of copying the opaque fingerprint. The server binds approval to
         the current stored review and still revalidates its fingerprint against
         the current catalog; this is a convenience for agents and does not waive

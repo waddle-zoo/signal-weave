@@ -44,6 +44,10 @@ async def test_review_handoff_preserves_adapter_and_exact_scopes_without_approvi
                     "source_scope_confirmations": {"superset|dashboard:7": "completed customer sessions"}}
     assert stored(server, card_id)["status"] == "draft"
     assert "source_selection_reason" not in args
+    assert handoff["owner_confirmation"]["card_id"] == card_id
+    assert handoff["owner_confirmation"]["card_version"] == stored(server, card_id)["version"]
+    assert handoff["owner_input_required"] == ["confirm_saved_policy_and_source_scopes"]
+    assert handoff["agent_input_after_confirmation"] == ["source_selection_reason"]
     # The handoff supplies no consent or reason on behalf of a human.
     with pytest.raises(ValueError, match="source_selection_reason"):
         await tool(server, "approve_insight_card")(**args)
@@ -65,6 +69,7 @@ async def test_dynamic_handoff_never_asserts_owner_acknowledgment(tmp_path):
     server, card_id, _, _, _ = await reviewed_case(tmp_path, catalog=ScopedSupersetCatalogDouble())
     handoff = (await tool(server, "review_insight_card")(card_id))["approval_handoff"]
     assert handoff["dynamic_scope_requires_separate_acknowledgment"] is True
+    assert "dynamic_scope_acknowledged" in handoff["owner_input_required"]
     assert "dynamic_scope_acknowledged" not in handoff["arguments_after_owner_confirmation"]
     with pytest.raises(ValueError, match="dynamic_scope_acknowledged"):
         await tool(server, "approve_insight_card")(**handoff["arguments_after_owner_confirmation"], source_selection_reason=REASON)
@@ -81,6 +86,7 @@ def test_large_scope_map_is_explicitly_omitted_not_silently_truncated():
     assert handoff["tool"] == "get_insight_card"
     assert handoff["approval_arguments_included"] is False
     assert "arguments_after_owner_confirmation" not in handoff
+    assert "owner_confirmation" not in handoff
     assert len(json.dumps(handoff).encode()) < 8192
 
 
@@ -106,4 +112,5 @@ async def test_already_approved_card_is_not_presented_as_needing_approval_again(
     handoff = _approval_handoff(card, card.onboarding_review, None)
     assert handoff["approval_arguments_included"] is False
     assert "arguments_after_owner_confirmation" not in handoff
+    assert "owner_confirmation" not in handoff
     assert card.model_dump(mode="json") == before

@@ -83,9 +83,14 @@ When the owner answers or corrects a saved brief, use `revise_insight_card` if e
 Show the draft and its source scope, then use `review_insight_card` to surface current bindings and material blockers. Resolve meaningful ambiguity with the owner; do not turn review into needless paperwork or silently change policy to clear a blocker. The default agent profile does not expose draft simulation. Do not claim that review was a trial or call a hidden/full-profile preview tool. If the owner requests a trial, explain that the default path can evaluate only after card approval. Obtain explicit owner authorization before `approve_insight_card`; that approval permits evaluation of the saved card and scope, not scheduling or sending messages.
 
 When `approval_handoff` is returned, show its declared scopes with the policy.
-After the owner confirms them, copy its existing API arguments and add the actual
-`source_selection_reason`; do not reconstruct scope strings from generic metadata
-labels. A scope map omitted for size is not empty. This convenience does not
+Ask one clear question: may you approve this saved policy and these scopes for
+evaluation? An owner or explicitly authorized delegate can confirm in ordinary
+language. After that confirmation, copy the supplied arguments and record the
+confirmed source/definition choice in `source_selection_reason`; do not ask the
+owner to compose an API field or repeat answers already given. Confirmation must
+apply to the current card and displayed scopes; a definition note alone is not
+approval. Do not reconstruct scope strings from generic metadata labels.
+A scope map omitted for size is not empty. This convenience does not
 resolve missing evidence, waive other blockers or supply consent. If the declared
 scope still leaves a material ambiguity, ask about it rather than approving.
 

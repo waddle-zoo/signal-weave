@@ -100,7 +100,9 @@ For example:
 
 When a review returns `approval_handoff`, the agent can show the exact declared
 scopes and populations, then reuse the supplied approval arguments after you
-confirm them. It adds your reason; the handoff does not supply consent or waive
+confirm them. You can answer in ordinary language; the agent records the
+confirmed choice and reason rather than asking you to write API fields.
+The handoff does not supply consent or waive
 checks. A vague population label still needs clarification, even if the metric
 definition looks right. The agent should give you supported findings while that
 question remains open, keeping the recurring card in draft rather than treating
