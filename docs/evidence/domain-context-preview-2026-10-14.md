@@ -69,9 +69,13 @@ Totals include author, policy review and reporter; not installation, cleanup or 
 
 Treatment fetched the receipt after evaluation already supplied usable analyses. Its compact evaluation serialized to 32,404 bytes; the full receipt response was 73,234 bytes because it included the same full result at root and inside receipt metadata. That duplication is a product defect, not a business-policy failure. A separate wire-only correction removes the nested copy; stored evidence, root result, pagination and replay remain intact. The closed paid trial is not rerun or rescored after that repair.
 
+The rebuilt `ae97380` native executable retrieved the **actual retained receipt** in three MCP calls, without importing a card/receipt or rerunning analysis. Serialized result JSON fell from 73,234 to 36,959 bytes (49.53%); the complete root result, receipt metadata and card were unchanged. Zero source reads or model/inference calls. These are JSON-size measurements, not network bytes, billed-token savings or faster business outcomes.
+
+The first probe stopped before any MCP/provider call because the copied live credential had been removed. The corrected probe used `credentials set jev --file` to install a dummy before reconnecting that research home. Both attempts remain separate; neither is another analytical trial. Current source/skill fingerprint: `2d3cbc18b796ca13aa00179172be89880b6794239453f800817fa51ef7b5ed78`; binary SHA-256: `567a666e7a681f08d0f22f5bead9b02490f293b9546c712a7f511603d2ea1bf7`. Corrected replay report/trace SHA-256: `49c3228bea1d376e38c93a9cd34afd447b21816dd733e35cc1bbd15523829d43` / `21df5a4c3250a4f2a1794565a7df784c203a67e9c910f336ee3afca341418c65`. See `evaluations/receipt_replay_probe.py`; the retained home is required, so this is not standalone replay from public Git.
+
 ## Identity and reproduction
 
-The paid trial used native production commit `f5f17f15c67d7d5311067fcc16c468d7cf51f85a`, source/skill fingerprint `f86f49f8a941249406de7e548606265b11866e41600bea81a18c08034268d3ce`, binary SHA-256 `9cd55dfe8773cb3ff61b0d1fc92ebd029427d94f49aa17fa72779a36a56824d2`. This was a local build, not a new published rc3 asset.
+The paid trial used repository commit `f5f17f15c67d7d5311067fcc16c468d7cf51f85a` for the native runner build, source/skill fingerprint `f86f49f8a941249406de7e548606265b11866e41600bea81a18c08034268d3ce`, binary SHA-256 `9cd55dfe8773cb3ff61b0d1fc92ebd029427d94f49aa17fa72779a36a56824d2`. This was a local build, not a new published rc3 asset.
 
 Local report SHA-256: `a1f036455b1f4a9afb1f1ee07c21934a2646d711169bfa1d936b3960cc23f354`.
 Local trace SHA-256: `2dc4dbdb37dda90aedb4dc8f8f558fe74bc2d76adabad185365c462f5b5d07ba`.
@@ -93,6 +97,8 @@ uv run python -m evaluations.public_owner_report_trial \
 Live inference additionally requires `--run --key-file /path/to/private/jev.key` and a new output directory. The runner pins Codex CLI 0.162.0-alpha.2 and checks the current native/skill fingerprints. Caps: six calls, one Jev; between-call stops 1.2M input/220k uncached or unknown usage; no retry. Later source fixes do not recreate the exact older executable or change its recorded outcome.
 
 Before the receipt correction, `make verify` passed 3,644 tests / 11 skipped in 247.19s. The 151 targeted conversation/source/reviewer checks are software contracts, not trial cases. Earlier current-native stdio/HTTP checks passed 12/12 with synthetic auth/local Superset metadata, not customer SSO.
+
+After the correction, final `make verify` again passed 3,644 tests / 11 skipped in 229.39s. The 66 focused payload/persistence/paging/onboarding checks and the current-native retained-receipt replay passed. This verifies the software change; it does not retroactively improve the paid reports or establish enterprise efficacy.
 
 ## Earlier evidence retained, not pooled
 

@@ -180,6 +180,29 @@ nested copy without changing the stored receipt or root result. Verify it with
 offline round trips and a zero-inference current-native retrieval of the actual
 retained receipt, not a paid rerun or a claim of improved business accuracy.
 
+Current-native replay passed: the actual saved receipt's result JSON shrank
+73,234 → 36,959 bytes, with identical full root result and metadata and unchanged
+card. Three MCP calls, zero source/agent/provider calls. An initial probe failed
+before MCP because cleanup had removed its copied credential; the corrected
+probe installs a dummy through the supported CLI. This closes the duplication
+defect, not the broader cost/value gate. All paid cohorts remain closed.
+
+Cost diagnosis from the frozen request inventories: baseline author prompt/tools
+were 1,419/3,071 serialized bytes (9 tools), treatment 21,551/39,296 (26 tools).
+Reporter prompt/tools were 7,608/2,275 versus 25,341/14,106 bytes. These are
+whole-package inputs, not an isolated Jev ablation; treatment includes the
+canonical workflow skill and additional capabilities. They locate overhead,
+not prove billed-token savings from cutting a tool or paragraph. Do not remove
+source tools from either arm to manufacture an advantage. Next prove useful
+shared-context retrieval and recurring outcomes across more than this one
+complete-data branch, while measuring that extra setup work honestly.
+
+Final verification after the receipt correction: 3,644 passed / 11 skipped in
+229.39s; 66 focused payload/storage/page/onboarding checks and current-native
+retained-receipt replay passed. Separate process, A/B message, code and replay
+reviews accepted their bounded claims. Goal remains active; no general memory,
+multi-company, multi-step or enterprise-effectiveness completion is claimed.
+
 ## Fresh public owner-to-report development pair
 
 Freeze `public-owner-report-v1` before inference. Use published retail fixture

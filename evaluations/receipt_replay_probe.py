@@ -48,6 +48,22 @@ async def run(args):
               "prior_report_sha256": hashlib.sha256((root / "report.json").read_bytes()).hexdigest(),
               "scope": __doc__}
     try:
+        # The live credential was deliberately removed after the paid trial.
+        # Use the supported CLI to install a dummy instead of bypassing setup's
+        # existing-key protection or restoring a real credential.
+        process = await asyncio.create_subprocess_exec(
+            str(binary), "credentials", "set", "jev", "--home", str(owned / "native-home"),
+            "--file", str(key), stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL,
+        )
+        try:
+            await asyncio.wait_for(process.wait(), 60)
+        finally:
+            if process.returncode is None:
+                process.kill()
+                await process.wait()
+        if process.returncode != 0:
+            raise RuntimeError("Native dummy-credential installation failed")
+        report["credential_mode"] = "dummy installed through native credentials set; no real key"
         async with native_context(binary, key, public, adapter, audit, owned, request_budget=budget) as (native, _skill):
             native = AuditedNative(native, audit)
             _, before = await native.call_tool("get_insight_card", {"card_id": expected["id"], "response_mode": "full"})
