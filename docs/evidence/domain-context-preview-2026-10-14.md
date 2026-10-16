@@ -24,6 +24,11 @@ partial September separate from the complete-month comparison, avoided currency
 and causal claims, and proposed a next check. These are useful analyses, not
 proof of why Online declined.
 
+The baseline's wording attributes the official management-sales definition to
+the source; that meaning actually came from the fictional owner declaration.
+The chart establishes `SUM(net_sales)`, not the business definition. The exact
+message is retained with this attribution limit, not silently edited.
+
 The owner explicitly required `insufficient_data` to **Data Trust** for the
 latest partial month. Jev selected that outcome with support **0.47**, but Python
 replaced every below-threshold choice with `investigate`, producing the
@@ -50,14 +55,44 @@ The focused fix aligns provider routing with the engine's existing action gate:
 low-support `ignore`, `notify` and `escalate` still fall back to investigation;
 `insufficient_data` and `investigate` remain review handoffs with their original
 support and configured owners. It does not lower the threshold or certify the
-data. Offline regressions are not a corrected live result; this closed study
-must not be rescored after the fix.
+data. A separate native forward regression below verifies that branch; this
+closed agent study must not be rescored after the fix.
 
 The study used scripted approvals and fictional shadow routes, not a fresh
 human onboarding or an actual message send. Separate internal method and outcome
-reviews are not external peer review. The OpenAI Docs skill informed strict
-accounting against [Codex's documented completion-event format](https://developers.openai.com/codex/noninteractive);
+reviews are not external peer review. Strict accounting follows
+[Codex's documented completion-event format](https://developers.openai.com/codex/noninteractive);
 only one unambiguous completion usage record qualified each actor.
+
+### Forward native routing regression
+
+The [separate one-shot check](../../evaluations/data/retained-publication-routing-v1-summary.json)
+used the rebuilt binary and the exact retained analytical publication
+(`4e296376…`), not freshly supplied expected measurements. It repeated the same
+policy and fictional shadow destinations in a new private home. The original
+agent reports, publication and failed comparison remain unchanged.
+
+One live Jev request selected `insufficient_data` with support **0.43**, below
+the unchanged **0.70** floor. This time the native result and delivery-disabled
+receipt preserved **Data Trust**, along with the publication hash and unknown
+source capture time. The new card stayed unchanged. Usage: **6,573 input / 57
+output tokens**, zero frontier contexts, zero retries. Independent code/method
+review and a matching zero-inference preflight preceded inference.
+
+Here 0.43 is the selected-outcome probability used by native routing; Jev's
+separate raw confidence scalar was 0.24. Both are retained. Independent internal
+post-run review checked the artifacts and cleared this narrow regression, not
+broader product readiness or probability calibration.
+
+The repair passed **150 focused checks** and **4,130 full-suite tests / 12
+opt-in skips**. An earlier full run's two legacy assertions expected the owner
+swap; that failed log remains retained. The updated matrix tests every outcome
+below and at the support floor, rather than deleting the data-gap case.
+
+This proves one repaired native branch over a retained real agent publication.
+It does not repair the earlier human message, establish policy reliability at
+scale, prove better onboarding or show a cost/quality advantage over the plain
+agent. Those remain separate product gates.
 
 ## Corrected frontier publisher: quota stop, still no completed report
 

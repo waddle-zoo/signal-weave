@@ -1,5 +1,10 @@
 {
   "protocol": "agent-report-handoff-v1",
+  "independent_internal_review": {
+    "method": "Scoped GO before inference, conditional on matching preflight and green software verification.",
+    "outcome": "Arithmetic and useful analysis pass; business routing acceptance fails. Not external peer review or customer validation.",
+    "baseline_attribution_limit": "The baseline says the source defines net_sales as Executive management sales. The official management-sales meaning comes from the fictional owner declaration; the saved chart establishes SUM(net_sales), not that business definition. Preserve the original wording, but do not treat it as source-proven semantics."
+  },
   "execution_status": "closed",
   "method_commit": "5444ead",
   "scope": "Formative same-conversation agent workflow and conditional plain-agent comparator over the known historical Northstar fixture. Not a new company, holdout, fresh human onboarding, causal study or superiority estimate. This is a different workflow from the closed forced publisher/writer split; their failures and unknown costs remain separate.",

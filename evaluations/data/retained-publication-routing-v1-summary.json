@@ -1,0 +1,156 @@
+{
+  "protocol": "retained-publication-routing-v1",
+  "independent_internal_review": {
+    "code_and_method": "Scoped GO subject to full verification; the operator waited for 4130 passed / 12 skipped before inference.",
+    "outcome": "PASS for the single low-support native data-gap branch; artifact hashes, configured route, unchanged card/publication and unknown capture checked. No broader human-benefit or reliability claim.",
+    "support_interpretation": "0.43 is the selected outcome probability used by the native routing guard, not the provider's separate confidence scalar (0.24). Both raw values are retained. Neither is an accuracy guarantee."
+  },
+  "execution_status": "closed",
+  "scope": "Forward native routing regression using the unchanged actual frontier publication from the failed agent-report-handoff-v1 study. Not a new agent trial, new business scenario, corrected score or comparative benefit claim.",
+  "completed": true,
+  "frontier_invocations": 0,
+  "jev_attempts": 1,
+  "automatic_retries": 0,
+  "native_build": {
+    "dirty": false,
+    "format_version": 1,
+    "frozen": true,
+    "git_commit": "eaf9c1288966e37498770a5df6a856f07699fe39",
+    "python": "3.12.10",
+    "source_sha256": "89f6a067fe8aa93347d24a0cb900a4d0dd4f5039aae24cf4139d74bb22e9ee6b",
+    "version": "0.2.0rc3",
+    "binary_sha256": "37a5da54ddbe416bba7358a3b5930e9f1fa131851e75c1502d8bbfae21c06bce"
+  },
+  "private_runner_sha256": "4c2710cf3884f39fe850a92f29dd6baefdf53cf46714d215c40fd8568a73e06b",
+  "retained_report_sha256": "7c1edcb0b8712b4a43932aff7822294aa7140d34c5cd1da89f8a9aceb7d90fc3",
+  "publication_verified": true,
+  "card_unchanged": true,
+  "routed_result": {
+    "outcome": "insufficient_data",
+    "confidence": 0.43,
+    "probabilities": {
+      "ignore": 0.41,
+      "investigate": 0.16,
+      "insufficient_data": 0.43,
+      "notify": 0.0
+    },
+    "rationale": "Jev evaluated the card's typed watch, question, and outcome judgments; selected=insufficient_data, support=0.43; routed=insufficient_data."
+  },
+  "receipt": {
+    "receipt_id": "receipt-04ce9c93e6fc417985f8099c561618b1",
+    "idempotency_key": "retained-publication-routing-v1",
+    "request_fingerprint": "110ba65dd96d7d283830f93483048a5528b45f096ddd36e5c6180725d219250b",
+    "card_id": "card-historical-sales-investigation-and-human-report-8972d1b9",
+    "card_version": 1,
+    "actor": "historical-sales-owner",
+    "parent_receipt_id": null,
+    "workflow_step_key": null,
+    "context_provider": null,
+    "context_version": null,
+    "delivery_mode": "shadow",
+    "status": "delivery_disabled",
+    "outcome": "insufficient_data",
+    "delivery_enabled": false,
+    "delivery_method_keys": [
+      "data_trust"
+    ],
+    "created_at": "2026-10-16T17:28:09.551195Z"
+  },
+  "source_contracts": [
+    {
+      "source_key": "analysis",
+      "adapter": "analysis_publication",
+      "resource": "report:northstar-sales",
+      "source_url": null,
+      "captured_at": "2026-10-16T17:28:09.999026+00:00",
+      "source_captured_at": null,
+      "contract": {
+        "tenant_id": "local",
+        "domain": "sales",
+        "scope": "Delegated historical sales report, not a guarantee of current BI freshness",
+        "metric_names": [],
+        "metric_definitions": [],
+        "available_comparison_windows": [],
+        "required_comparison_keys": [],
+        "population": "",
+        "grain": "",
+        "freshness_sla_hours": null,
+        "lineage": [],
+        "roles": [],
+        "source_status": "healthy",
+        "authorized": true
+      }
+    }
+  ],
+  "publication_records": [
+    {
+      "source_key": "analysis",
+      "subject_id": "publication-record",
+      "subject_label": "unknown",
+      "statement": "Publication identity and byte hash; not verification of the analyst's claims.",
+      "values": {
+        "claim_kind": "publication_record",
+        "publication_id": "agent-report-handoff-v1",
+        "revision": 1,
+        "publication_sha256": "4e2963767d01407a9a086645310bd8e05ba853560a220bb799d30296e2cbf936",
+        "capture_reason": "Request bounds are a conservative production lower bound only when every provider envelope explicitly confirms uncached; warehouse freshness remains unproven."
+      },
+      "source_url": null,
+      "origin": "source",
+      "provenance": [
+        "analysis-publication-reader"
+      ]
+    }
+  ],
+  "provider_response": {
+    "episode": "retained-publication-routing-v1:coordinator",
+    "kind": "api.response",
+    "model": "jev-1.13.0",
+    "provider": "jev",
+    "request_id": 1,
+    "response": {
+      "answers": {
+        "outcome": {
+          "choice": "insufficient_data",
+          "confidence": 0.24,
+          "probabilities": {
+            "ignore": 0.41,
+            "insufficient_data": 0.43,
+            "investigate": 0.16,
+            "notify": 0.0
+          },
+          "type": "choice"
+        }
+      },
+      "model": "jev-1.13.0",
+      "usage": {
+        "input_tokens": 6573,
+        "output_tokens": 57
+      }
+    },
+    "seconds": 0.2643430409952998,
+    "usage": {
+      "input_tokens": 6573,
+      "output_tokens": 57
+    }
+  },
+  "accounting_known": true,
+  "artifacts": {
+    "report.json": "252f27674c928793c8548e07eae0d47591250e8224cb8a1c3f5dbeeddb127066",
+    "trace.jsonl": "ab55acdb0374c4401e824eeaf9fead10dd213ee5cea04110ffcf1c7ef021a087",
+    "publication.json": "4e2963767d01407a9a086645310bd8e05ba853560a220bb799d30296e2cbf936"
+  },
+  "verification": {
+    "software_tests_passed": 4130,
+    "opt_in_skips": 12,
+    "focused_provider_engine_checks": 150,
+    "source": "artifacts/data-gap-routing-reviewed-full-verify.log",
+    "scope": "Software checks, not business samples. Earlier full run retained with two legacy routing assertions failing; corrected matrix now covers every outcome and boundary."
+  },
+  "limits": [
+    "The original agent pair remains a failed routing comparison with its exact messages and costs unchanged.",
+    "This new check supplies the actual retained frontier publication; no new discovery, agent analysis or human message is generated.",
+    "One low-support native result is a branch regression check, not a reliability, accuracy, calibration or comparative value estimate.",
+    "Approvals and destinations are scripted; delivery remains disabled. No real-human onboarding or enterprise SSO tested."
+  ]
+}
