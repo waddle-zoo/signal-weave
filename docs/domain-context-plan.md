@@ -6,12 +6,12 @@ Feature branch: `feat/domain-context-memory`, based on main `e8842ac`.
 
 | Requirement | Evidence and remaining work |
 | --- | --- |
-| Local and hosted context lifecycle | Native stdio/signed HTTP checks cover review/reuse/restart/change; latest read-only native restart recovered the actual approved v2 card, definition history and saved Jev receipt. Hosted issuer remains synthetic |
+| Local and hosted context lifecycle | Current native CLI opt-in persists without environment injection; stdio review/pins/history survive restart/disable/re-enable. Signed HTTP roles/tenant/restart checks pass with a synthetic issuer. Earlier approved-card/receipt recovery remains separate; customer SSO is unproven |
 | Card-bound meaning and staleness | Contract tests cover exact pins, reapproval, deferred policy and historical receipts; no automatic notification service is claimed |
 | Approved cards with live decisions | V5 authored/approved its own card and evaluated the adverse case with live Jev. A separate retained series reused it for missing-data and quiet observations: both native and final routes matched policy, card unchanged. Not a continuous company history |
 | Human-first, agent-led onboarding | Raw Northstar workflow v2 completed actual discovery, author-created card, separate evidence-reading experts, synthetic owner consent and native approval, then fresh reports/live Jev. One known fixture with noninteractive private CLI setup, not downloaded-binary/real-human usability success. Baseline first-answer currency error escaped its reviewer. Earlier failed/censored cohorts remain |
-| Useful recurring reports and investigations | A new retained Northstar pair completed the monthly readout and matched-day follow-up with both agents; independent arithmetic and message reviews supported the findings. Treatment had one native evaluation, no receipt/card reread and a configured data-gap handoff. Its final message lacked a next step; both lacked chart locators. Earlier courier/retail findings remain separate. General multi-step/causal investigation remains unproven |
-| Comparative business value | No overall lift established. The new pair used 252,904 vs 238,460 frontier input tokens (47,848 vs 44,796 uncached), plus Jev; treatment was slower. Both had twenty successful tools; baseline's four extra calls were recoverable argument errors. Old all-phase v2/courier costs remain separate. Scaled noise/recall, amortized setup value, stronger SQL-capable baselines and realistic query costs remain open |
+| Useful recurring reports and investigations | The latest same-conversation agent workflow completed supported arithmetic and a human message, but routed to the wrong owner. The focused fix passed a separate native-only live check, not a corrected agent score. Earlier retained/courier/retail findings remain separate. General multi-step/causal investigation remains unproven |
+| Comparative business value | No overall lift established. Latest guided pair: treatment 488,780 vs baseline 236,168 CLI input tokens; 204.32s vs 137.91s; three saved-chart queries each. Original treatment routing failed. Earlier costs remain separate. Scaled noise/recall, amortized setup value, stronger SQL-capable baselines and realistic query costs remain open |
 
 These are separate gates. Passing storage, authentication or a scripted decision
 check cannot substitute for complete onboarding and useful final agent outcomes.
@@ -28,7 +28,9 @@ The cached Helio case file is likewise not a local raw warehouse seed.
 Before new paid expansion:
 
 - Prove the normal binary's local setup, optional context enablement, reconnect
-  and source access without research-only environment injection.
+  and source access without research-only environment injection. The native
+  configuration slice now passes; it is not semantic onboarding or usability
+  proof. Help/build-info startup still took about 6–7 seconds locally.
 - Materialize the separate support fixture, including denominator weighting,
   a similarly named but different metric, and incomplete reporting. Keep owner
   policy separate from data generation and independently recompute the answers.

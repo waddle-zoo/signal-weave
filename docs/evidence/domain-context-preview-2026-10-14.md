@@ -6,7 +6,43 @@ Updated 2026-10-16. Feature branch: `feat/domain-context-memory`; [draft PR #19]
 
 **The latest guided agent-to-publication-to-Jev-to-human workflow completed, but failed its routing acceptance check.** Both agents calculated the historical movement correctly; the plain agent followed the owner's Data Trust route while SignalWeave's confidence fallback changed it to Analytics. No comparative business advantage or enterprise-readiness success is established. Earlier studies below remain unchanged.
 
+The subsequent [native context-setup check](../../evaluations/data/context-cli-native-2026-10-16-summary.json)
+verifies persistent CLI enablement and local/hosted lifecycle behavior, not a new
+business result. The current candidate is a source build, not a new release.
+
 The [public excerpt](../../evaluations/data/retained-context-courier-summary.json) preserves the four unchanged prepared messages, final chat acknowledgements, source facts, actual retrieved definition, native results, usage, review findings and artifact hashes. These are two observations of one known fictional company—not four companies, a precision estimate, customer validation or a repaired onboarding result.
+
+## Native context controls: setup and transport, not analytical quality
+
+The current binary accepts `signalweave context enable`, `disable` and `status`
+without manual TOML changes. A fresh private home persisted enablement without
+an environment override; the normal agent guide/tools changed on reconnect.
+The test saved, reviewed and pinned context, restarted, disabled and re-enabled
+it, and recovered the same card bindings and revision history. A separate native
+HTTP journey checked signed roles, tenant boundaries and restart against local
+Superset metadata with a synthetic issuer.
+
+Both journeys used the same fingerprint-checked binary from `0ad2d72`. The
+opt-in command passed two integration journeys plus ten URL-validation cases;
+these are **not twelve companies**. The ordinary suite passed **4,171 tests /
+12 opt-in skips**. A Python 3.11.6 subset passed **198 tests**; these are software
+checks, not independent business observations. No policy inference was requested
+in the native configuration checks. Setup and owner review were scripted, not
+a real-human usability panel or a customer IdP deployment.
+
+This also closes a Python 3.11 CI defect that discarded one chart's returned
+facts after a saved-JSON recursion error. Parsing tolerates broken metadata for
+extraction, but reconstruction rejects undecodable parameters before POST.
+Mock-transport tests cover direct/fallback no-POST behavior and preserve valid
+large parameters and authoritative saved filters. The reviewer rejected an
+earlier reconstruction path before clearing the corrected code. That is not a
+live malformed-chart or all-enterprises guarantee.
+
+There is still visible installation friction: single local invocations of the
+already-used binary's help/build-info paths took roughly **6–7 seconds**.
+Cache state was unassessed. These are diagnostic timings, not a benchmark win;
+startup should improve before calling the experience seamless. New raw-company
+onboarding and recurring analytical value remain separate open gates.
 
 ## Same-conversation agent report: completed process, wrong policy route
 
