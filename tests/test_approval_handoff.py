@@ -40,7 +40,8 @@ async def test_review_handoff_preserves_adapter_and_exact_scopes_without_approvi
     result = await tool(server, "review_insight_card")(card_id, adapter="superset", response_mode="compact")
     handoff = result["approval_handoff"]
     args = handoff["arguments_after_owner_confirmation"]
-    assert args == {"card_id": card_id, "adapter": "superset", "use_current_source_selection_review": True,
+    assert args == {"card_id": card_id, "adapter": "superset",
+                    "source_selection_fingerprint": result["review"]["source_selection_fingerprint"],
                     "source_scope_confirmations": {"superset|dashboard:7": "completed customer sessions"}}
     assert stored(server, card_id)["status"] == "draft"
     assert "source_selection_reason" not in args
@@ -63,6 +64,30 @@ async def test_handoff_does_not_override_a_source_health_change(tmp_path):
     with pytest.raises(ValueError):
         await tool(server, "approve_insight_card")(**handoff["arguments_after_owner_confirmation"], source_selection_reason=REASON)
     assert stored(server, card_id)["status"] == "draft"
+
+
+async def test_old_owner_handoff_cannot_approve_a_later_reviewed_policy(tmp_path):
+    server, card_id, _, _, _ = await reviewed_case(
+        tmp_path, catalog=ScopedSupersetCatalogDouble(), retrieval_mode="fixed",
+    )
+    shown = await tool(server, "review_insight_card")(card_id)
+    old_arguments = shown["approval_handoff"]["arguments_after_owner_confirmation"]
+    version = shown["card"]["version"]
+    tool(server, "revise_insight_card")(
+        card_id=card_id, expected_card_version=version,
+        changes={"decision_guidance": "Notify Growth only for a decline of at least 15%."},
+        reason="Another authorized session revised the policy while the owner was reviewing it.",
+    )
+    new_review = await tool(server, "review_insight_card")(card_id)
+    newer = stored(server, card_id)
+    with pytest.raises(ValueError, match="stale|fingerprint|changed"):
+        await tool(server, "approve_insight_card")(**old_arguments, source_selection_reason=REASON)
+    assert stored(server, card_id) == newer
+    approved = await tool(server, "approve_insight_card")(
+        **new_review["approval_handoff"]["arguments_after_owner_confirmation"],
+        source_selection_reason=REASON,
+    )
+    assert approved["status"] == "approved"
 
 
 async def test_dynamic_handoff_never_asserts_owner_acknowledgment(tmp_path):

@@ -89,7 +89,10 @@ language. After that confirmation, copy the supplied arguments and record the
 confirmed source/definition choice in `source_selection_reason`; do not ask the
 owner to compose an API field or repeat answers already given. Confirmation must
 apply to the current card and displayed scopes; a definition note alone is not
-approval. Do not reconstruct scope strings from generic metadata labels.
+approval. Preserve the returned snapshot fingerprint rather than replacing it
+with a current-review shortcut. If the card changes while waiting for the reply,
+show the changed policy and obtain confirmation again. Do not reconstruct scope
+strings from generic metadata labels.
 A scope map omitted for size is not empty. This convenience does not
 resolve missing evidence, waive other blockers or supply consent. If the declared
 scope still leaves a material ambiguity, ask about it rather than approving.

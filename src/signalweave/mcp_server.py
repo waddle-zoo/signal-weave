@@ -467,7 +467,7 @@ def _approval_handoff(card: InsightCard, review: InsightCardOnboardingReview, ad
     if card.status == InsightCardStatus.APPROVED:
         return {"approval_arguments_included": False, "instruction": "This card is already approved. Review findings may still need attention; this response does not reapprove or certify it."}
     arguments: dict[str, Any] = {
-        "card_id": card.id, "use_current_source_selection_review": True,
+        "card_id": card.id, "source_selection_fingerprint": review.source_selection_fingerprint,
         "source_scope_confirmations": expected_source_scope_confirmations(review),
     }
     if adapter is not None:
@@ -3411,12 +3411,15 @@ def create_mcp(
         source_selection_reason recording the owner-confirmed definitions/populations
         and why. Changed policy/catalog invalidates that confirmation. This cannot
         override source health, permissions, missing policy or other blockers.
+        Copy the fingerprint returned in approval_handoff when asking an owner
+        for confirmation; it binds their reply to that reviewed snapshot.
         Clients that have just reviewed the current card may set
         use_current_source_selection_review=true and record the owner's actual confirmation
         instead of copying the opaque fingerprint. The server binds approval to
         the current stored review and still revalidates its fingerprint against
         the current catalog; this is a convenience for agents and does not waive
-        any blocker or owner confirmation.
+        any blocker or owner confirmation. It resolves the latest stored review,
+        so do not use this convenience to apply a reply to an earlier handoff.
         If the review lists selected source scopes, also pass
         source_scope_confirmations with the exact declared scope text by source ref.
         This makes the scope decision auditable; it does not make an incompatible

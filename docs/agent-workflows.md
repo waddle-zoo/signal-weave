@@ -102,6 +102,9 @@ When a review returns `approval_handoff`, the agent can show the exact declared
 scopes and populations, then reuse the supplied approval arguments after you
 confirm them. You can answer in ordinary language; the agent records the
 confirmed choice and reason rather than asking you to write API fields.
+The supplied fingerprint binds your reply to the reviewed snapshot. If the card
+changes while you are reviewing it, the agent must show the change and ask again;
+it must not substitute the latest stored review for the one you saw.
 The handoff does not supply consent or waive
 checks. A vague population label still needs clarification, even if the metric
 definition looks right. The agent should give you supported findings while that
@@ -110,7 +113,7 @@ the initial readout as approved automation.
 
 After reviewing the draft, give explicit approval only if it is correct:
 
-> I approve card `<card-id>` with the displayed source scope and policy. Run one
+> Yes, I approve this card with the displayed source scope and policy. Run one
 > delivery-disabled evaluation and show me the result and receipt; do not
 > schedule a recurrence or send a message.
 

@@ -25,7 +25,7 @@ pytestmark = pytest.mark.skipif(
     ),
 )
 
-MAX_TOOL_CALLS = 15
+MAX_TOOL_CALLS = 18
 MAX_PROVIDER_POSTS = 0
 PROVIDER_ENDPOINT = re.compile(
     r"POST https://api\.typesafe\.ai/v1/systemone(?:\s|$)"
@@ -307,6 +307,27 @@ async def test_native_agent_context_binding_lifecycle(
                     assert revised["card"]["status"] == "draft"
                     assert revised["card"]["context_bindings"] == bound["context_bindings"]
                     assert revised["card"]["sources"][0]["resource"] == "chart:1"
+
+                    fresh_review = _payload(await call(session, "review_insight_card", {
+                        "card_id": card_id,
+                    }), "review_insight_card")
+                    old_args = approval["arguments_after_owner_confirmation"]
+                    new_args = fresh_review["approval_handoff"]["arguments_after_owner_confirmation"]
+                    assert old_args["source_selection_fingerprint"] != new_args["source_selection_fingerprint"]
+                    stale_approval = await call(session, "approve_insight_card", {
+                        **old_args,
+                        "source_selection_reason": "Confirm only the original displayed fixture policy.",
+                    })
+                    assert stale_approval.isError
+                    assert "stale" in " ".join(
+                        item.text for item in (stale_approval.content or [])
+                        if getattr(item, "text", None)
+                    ).lower()
+                    still_draft = _payload(await call(session, "get_insight_card", {
+                        "card_id": card_id,
+                    }), "get_insight_card")
+                    assert still_draft["status"] == "draft"
+                    assert still_draft["version"] == revised["card"]["version"]
 
                     inspected = _payload(
                         await call(
