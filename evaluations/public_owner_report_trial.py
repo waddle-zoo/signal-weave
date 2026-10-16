@@ -32,6 +32,7 @@ from evaluations.codex_trial_transport import codex_episode
 from evaluations.domain_context_onboarding_trial import (
     Episode,
     approval_digest,
+    clarified_development_scenario,
     failure_detail,
     native_context,
     pinned_codex,
@@ -59,7 +60,9 @@ HANDOFF_PROTOCOL = "public-owner-report-handoff-v2"
 REFERENCE_PROTOCOL = "public-owner-reference-v3"
 STEWARD_PROTOCOL = "public-steward-reference-v4"
 CONVERSATION_PROTOCOL = "public-explicit-owner-v5"
+DEVELOPMENT_OWNER_PROTOCOL = "development-explicit-owner-v6"
 HANDOFF_MANIFEST = Path(__file__).with_name("data") / "public-owner-handoff-v1-manifest.json"
+DEVELOPMENT_OWNER_TOPICS = ("source_scope", "context_review")
 LIMITS = {"agent_invocations": 6, "jev_attempts": 1,
           "between_invocation_input_stop": 1_200_000, "between_invocation_uncached_stop": 220_000}
 AUTHOR = (
@@ -104,6 +107,17 @@ class ConversationAuthorEpisode(ExplicitOwnerMixin, ReferenceAuthorEpisode):
     """Fresh authoring with an explicit, artifact-bound scripted owner reply."""
 
 
+class DevelopmentConversationAuthorEpisode(ConversationAuthorEpisode):
+    """Use only the development fixture's declared answers for known owner topics."""
+
+    async def call(self, name, args):
+        if name == "ask_owner" and args["topic"] in self.public["owner_answers"]:
+            self.owner_requests.append(copy.deepcopy(args))
+            return {"topic": args["topic"], "known": True,
+                    "answer": self.public["owner_answers"][args["topic"]]}
+        return await super().call(name, args)
+
+
 def scenario():
     value = _bridge_identity(build_scenarios(seed=20261001, connector_profile=True)[0])
     value["public"]["brief"] += " Remember the agreed definition for future sales investigations."
@@ -112,6 +126,37 @@ def scenario():
         "Definitions may be shared within this synthetic tenant; review in 30 days. Show the saved draft before requesting approval. Hypotheses stay advisory."
     )
     return value
+
+
+def development_scenario():
+    value = clarified_development_scenario()
+    request = "Remember the agreed definition for future investigations."
+    brief = value["public"]["brief"]
+    if request.casefold() not in brief.casefold():
+        value["public"]["brief"] = f"{brief.rstrip()} {request}"
+    return value
+
+
+def validate_cohort_options(args):
+    reference_mode = getattr(args, "expert_reference", False)
+    notes_path = getattr(args, "expert_notes_file", None)
+    conversation = getattr(args, "explicit_owner_confirmation", False)
+    development_owner = getattr(args, "development_owner", False)
+    handoff_report = getattr(args, "baseline_handoff_report", None)
+    handoff_trace = getattr(args, "baseline_handoff_trace", None)
+    if development_owner:
+        if notes_path:
+            raise ValueError("--development-owner cannot be combined with --expert-notes-file; Pine Courier context is already public")
+        if handoff_report or handoff_trace:
+            raise ValueError("--development-owner cannot resume or import an archived baseline handoff")
+        if not reference_mode or not conversation:
+            raise ValueError("--development-owner requires --expert-reference and --explicit-owner-confirmation")
+    elif conversation and (not reference_mode or not notes_path):
+        raise ValueError("Explicit-owner cohort requires --expert-reference and --expert-notes-file")
+    if notes_path and not reference_mode:
+        raise ValueError("Explicit steward notes require --expert-reference")
+    if reference_mode and handoff_report:
+        raise ValueError("A fresh reference cohort cannot resume or rescore the terminal handoff")
 
 
 def pin_tools(specs):
@@ -168,15 +213,11 @@ def load_baseline_handoff(report_path, trace_path, scenario_hash, identity, code
 
 
 async def run(args):
+    validate_cohort_options(args)
     reference_mode = getattr(args, "expert_reference", False)
     notes_path = getattr(args, "expert_notes_file", None)
     conversation = getattr(args, "explicit_owner_confirmation", False)
-    if conversation and (not reference_mode or not notes_path):
-        raise ValueError("Explicit-owner cohort requires --expert-reference and --expert-notes-file")
-    if notes_path and not reference_mode:
-        raise ValueError("Explicit steward notes require --expert-reference")
-    if reference_mode and getattr(args, "baseline_handoff_report", None):
-        raise ValueError("A fresh reference cohort cannot resume or rescore the terminal handoff")
+    development_owner = getattr(args, "development_owner", False)
     reference_module = None
     episode_type = AuthorEpisode
     if reference_mode:
@@ -184,6 +225,8 @@ async def run(args):
         reference_module = Path(__file__).with_name("source_expert_reference.py")
     if conversation:
         episode_type = ConversationAuthorEpisode
+    if development_owner:
+        episode_type = DevelopmentConversationAuthorEpisode
     binary = Path(args.binary).resolve()
     identity, codex = verify_binary(binary), await pinned_codex(args.codex_executable)
     output = Path(args.output).resolve()
@@ -194,7 +237,8 @@ async def run(args):
         key.chmod(0o600)
     audit = Audit(path=output / "trace.jsonl", secrets=(key.read_text().strip(),))
     budget = RequestBudget(limit=LIMITS["jev_attempts"] if args.run else 0)
-    fixture = scenario()
+    fixture = development_scenario() if development_owner else scenario()
+    period_index = 0 if development_owner else 2
     notes_identity = None
     if notes_path:
         notes_path = Path(notes_path).resolve()
@@ -208,10 +252,12 @@ async def run(args):
     clock = datetime.now(timezone.utc)
     offset, _ = calendar_measurement_rebase(fixture["public"]["periods"], clock)
     report = {"protocol": PROTOCOL, "preflight_only": not args.run, "build": identity,
-              "codex": codex, "limits": LIMITS, "episodes": [], "period_index": 2,
+              "codex": codex, "limits": LIMITS, "episodes": [], "period_index": period_index,
               "runner_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
               "scenario_sha256": hashlib.sha256(json.dumps(fixture, sort_keys=True).encode()).hexdigest(),
-              "scope": "One known synthetic retail development case; historical onboarding examples followed by a later current-period report. Scripted owner facts, normalized company-MCP exports, isolated non-interactive native setup. No real human/vendor/enterprise claim. Both arms retain company tools and own notes; arbitrary scripts disabled. Whole-package comparison, not isolated Jev/context ablation. No schedule or delivery.",
+              "scope": ("One known synthetic Pine Courier development case; fixed onboarding and period-index-0 report. Declared owner answers, normalized company-MCP exports, isolated non-interactive native setup. No real human/vendor/enterprise claim. Both arms retain company tools and own notes; arbitrary scripts disabled. Whole-package comparison, not isolated Jev/context ablation. No schedule or delivery."
+                        if development_owner else
+                        "One known synthetic retail development case; historical onboarding examples followed by a later current-period report. Scripted owner facts, normalized company-MCP exports, isolated non-interactive native setup. No real human/vendor/enterprise claim. Both arms retain company tools and own notes; arbitrary scripts disabled. Whole-package comparison, not isolated Jev/context ablation. No schedule or delivery."),
               "read_clock": clock.isoformat(), "measurement_offset_seconds": offset.total_seconds()}
     zero = {"input_tokens": 0, "cached_input_tokens": 0, "uncached_input_tokens": 0, "output_tokens": 0, "responses": 0}
     if reference_mode:
@@ -228,6 +274,10 @@ async def run(args):
                                        "bootstrap_owner_review.py")}
         report.update(protocol=CONVERSATION_PROTOCOL, frozen_helpers=frozen_helpers,
                       owner_confirmation="Explicit scripted yes to the actual saved artifact; not real-human UX or semantic approval.")
+    if development_owner:
+        report.update(protocol=DEVELOPMENT_OWNER_PROTOCOL,
+                      development_owner_answers=list(DEVELOPMENT_OWNER_TOPICS),
+                      development_memory_request="Remember the agreed definition for future investigations.")
     prior_entry, prior_events = None, []
     handoff_report = getattr(args, "baseline_handoff_report", None)
     if handoff_report:
@@ -311,6 +361,13 @@ async def run(args):
                                     or hashlib.sha256(json.dumps(clarification["reference"], sort_keys=True).encode()).hexdigest() != report["source_reference_sha256"]):
                                 raise RuntimeError("Source reference differs from the shared public declarations")
                             report.setdefault("reference_preflight_arms", []).append(arm)
+                        if development_owner:
+                            for topic in DEVELOPMENT_OWNER_TOPICS:
+                                answer = await session.call("ask_owner", {"topic": topic})
+                                if (answer.get("known") is not True
+                                        or answer.get("answer") != public["owner_answers"][topic]):
+                                    raise RuntimeError("Development owner preflight differs from the declared public answer")
+                            report.setdefault("development_owner_preflight_verified_arms", []).append(arm)
                         assets = (await session.call("list_company_assets", {}))["assets"]
                         asset = (next(item for item in assets if item.get("contract", {}).get("roles") == ["primary"])
                                  if reference_mode else assets[0])
@@ -379,7 +436,7 @@ async def run(args):
                         raise RuntimeError("Treatment still needs owner-confirmed card approval; semantic review does not grant it")
                     setups.append((session, card))
                 if args.run:
-                    period = fixture["public"]["periods"][2]
+                    period = fixture["public"]["periods"][period_index]
                     for treatment, (setup, card) in zip((False, True), setups, strict=True):
                         arm = "signalweave" if treatment else "baseline"
                         audit.episode = arm + ":report"
@@ -433,8 +490,14 @@ def main():
                         help="Fresh development variant: cited source references for free-form questions; retain private state. Not an expert answer or trial resume.")
     parser.add_argument("--expert-notes-file", help="Explicit fictional data-steward notes shared equally through the glossary; requires --expert-reference. Not inferred context or approval.")
     parser.add_argument("--explicit-owner-confirmation", action="store_true",
-                        help="Separate v5 cohort: explicit ordinary-language scripted approval of the saved artifact, with full native operation logs. Requires expert reference/notes; no archived imports or real-human claim.")
+                        help="Separate explicit-owner cohort: scripted approval of the saved artifact, with full native operation logs. The default v5 path requires expert reference/notes; --development-owner uses the public Pine Courier answers.")
+    parser.add_argument("--development-owner", action="store_true",
+                        help="Fresh development-explicit-owner-v6 pair on the clarified Pine Courier fixture; requires --expert-reference and --explicit-owner-confirmation, with no notes file or archived handoff.")
     args = parser.parse_args()
+    try:
+        validate_cohort_options(args)
+    except ValueError as error:
+        parser.error(str(error))
     if args.run and not args.key_file:
         parser.error("--run requires --key-file; preflight uses its own dummy key")
     if bool(args.baseline_handoff_report) != bool(args.baseline_handoff_trace):

@@ -203,6 +203,35 @@ retained-receipt replay passed. Separate process, A/B message, code and replay
 reviews accepted their bounded claims. Goal remains active; no general memory,
 multi-company, multi-step or enterprise-effectiveness completion is claimed.
 
+### Next expansion: retained periods and a courier company
+
+Freeze two separate studies before inference; neither reopens V5 or any failed
+older cohort. `retained-owner-periods-v1` pins the actual V5 report/trace and
+original home. Four fresh reporters reuse each arm's own authored setup on the
+two previously unreported period indices 0/1. Arm order alternates. This is
+retrospective application of current policy, not a claim of continuous company
+history, historical approval or future holdout. No card import, reapproval or
+policy edits. Routing checks are not numerical/message-quality passes. Native
+deferral remains observable and can still support a useful agent report.
+
+Retained-series caps: four Luna-medium calls, at most two Jev requests, 12 tools
+and 180 seconds per report, between-call 600k input / 150k uncached stops. Unknown
+usage, transport or exact-card integration failure stops without retry. Existing
+onboarding costs are reported separately, not erased or charged to this new cap.
+Readiness preflight makes zero model calls. The copied live key is replaced
+with a dummy through the native CLI at exit.
+
+`development-explicit-owner-v6` starts a blank home for the existing clarified
+Pine Courier development fixture (seed 20261015, dev index 1), with fixed report
+period index 0. Both arms get the same declared source-scope and context-review
+answers; no new expert facts, chart IDs, labels or card templates are injected.
+Agents need not repeat a question already answered by the glossary. Six total
+Luna-medium author/reviewer/report calls, at most one Jev request, 1.2M input /
+220k uncached between-call stops and existing per-stage limits. No retries.
+Both studies use current verified native code, public company-MCP exports and
+the normal agent profile. They do not validate a vendor connector, real human
+installation, hosted SSO, delivered alerts or shared-memory benefit by themselves.
+
 ## Fresh public owner-to-report development pair
 
 Freeze `public-owner-report-v1` before inference. Use published retail fixture
