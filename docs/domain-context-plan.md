@@ -141,6 +141,30 @@ feasibility only; varied businesses, recurring noise/recall, investigations and
 comparative value remain later gates. No new live cohort is authorized by a
 closed cohort's leftover allowance.
 
+### Fresh explicit-owner feasibility pair v5
+
+Freeze `public-explicit-owner-v5` before inference. Reuse the public known
+Juniper/steward fixture and later period index 2, not an unseen holdout. Start
+blank native state and baseline notes; agents discover and author their own
+artifacts. Keep all shared source/glossary/owner/calculator/notes tools and the
+normal native agent profile. The fictional owner receives the actual saved
+artifact plus the agent's summary, and returns a plain yes bound to its digest
+and card version. This is scripted authorization, not expert semantic validation
+or evidence that a real person saw a UI. No policy, scope map, reason or card
+template is returned by the consent helper. Independent policy review remains
+a separate model call, with numerical objections checked against actual
+projection semantics rather than accepted as mathematical ground truth.
+
+Caps: six total Luna-medium invocations (two authors, two reviewers, two fresh
+reporters), one live Jev attempt; existing 24-tool/240s author, 12-tool/180s
+report and reviewer limits; between-call stops 1.2M input / 220k uncached, unknown
+usage, failed review/setup/transport. No retries or budget increases. Freeze
+runner, helper/reviewer/Episode, note, skill and native identity; log parent
+native calls too. Run zero-model preflight before live. Prior cohorts stay
+closed; retain new failures and messages without rewriting them. At most this
+one pair is permitted in this series. No scheduling, sending, real vendor,
+human usability, causal improvement, broad accuracy or comparative savings claim.
+
 ## Fresh public owner-to-report development pair
 
 Freeze `public-owner-report-v1` before inference. Use published retail fixture

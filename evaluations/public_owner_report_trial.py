@@ -38,6 +38,7 @@ from evaluations.domain_context_onboarding_trial import (
     public_brief,
     usage_totals,
 )
+from evaluations.explicit_owner_conversation import AuditedNative, ExplicitOwnerMixin
 from evaluations.human_report_episode import HumanReportEpisode
 from evaluations.reviewed_setup_report_trial import (
     before_invocation,
@@ -57,6 +58,7 @@ PROTOCOL = "public-owner-report-v1"
 HANDOFF_PROTOCOL = "public-owner-report-handoff-v2"
 REFERENCE_PROTOCOL = "public-owner-reference-v3"
 STEWARD_PROTOCOL = "public-steward-reference-v4"
+CONVERSATION_PROTOCOL = "public-explicit-owner-v5"
 HANDOFF_MANIFEST = Path(__file__).with_name("data") / "public-owner-handoff-v1-manifest.json"
 LIMITS = {"agent_invocations": 6, "jev_attempts": 1,
           "between_invocation_input_stop": 1_200_000, "between_invocation_uncached_stop": 220_000}
@@ -96,6 +98,10 @@ class AuthorEpisode(Episode):
 
 class ReferenceAuthorEpisode(SourceReferenceMixin, AuthorEpisode):
     """Same author tools plus non-authoritative free-form source references."""
+
+
+class ConversationAuthorEpisode(ExplicitOwnerMixin, ReferenceAuthorEpisode):
+    """Fresh authoring with an explicit, artifact-bound scripted owner reply."""
 
 
 def scenario():
@@ -164,6 +170,9 @@ def load_baseline_handoff(report_path, trace_path, scenario_hash, identity, code
 async def run(args):
     reference_mode = getattr(args, "expert_reference", False)
     notes_path = getattr(args, "expert_notes_file", None)
+    conversation = getattr(args, "explicit_owner_confirmation", False)
+    if conversation and (not reference_mode or not notes_path):
+        raise ValueError("Explicit-owner cohort requires --expert-reference and --expert-notes-file")
     if notes_path and not reference_mode:
         raise ValueError("Explicit steward notes require --expert-reference")
     if reference_mode and getattr(args, "baseline_handoff_report", None):
@@ -173,6 +182,8 @@ async def run(args):
     if reference_mode:
         episode_type = ReferenceAuthorEpisode
         reference_module = Path(__file__).with_name("source_expert_reference.py")
+    if conversation:
+        episode_type = ConversationAuthorEpisode
     binary = Path(args.binary).resolve()
     identity, codex = verify_binary(binary), await pinned_codex(args.codex_executable)
     output = Path(args.output).resolve()
@@ -210,6 +221,13 @@ async def run(args):
             source_reference_sha256=hashlib.sha256(json.dumps(reference, sort_keys=True).encode()).hexdigest())
         if notes_identity:
             report.update(protocol=STEWARD_PROTOCOL, expert_notes=notes_identity)
+    frozen_helpers = {}
+    if conversation:
+        frozen_helpers = {name: hashlib.sha256(Path(__file__).with_name(name).read_bytes()).hexdigest()
+                          for name in ("explicit_owner_conversation.py", "domain_context_onboarding_trial.py",
+                                       "bootstrap_owner_review.py")}
+        report.update(protocol=CONVERSATION_PROTOCOL, frozen_helpers=frozen_helpers,
+                      owner_confirmation="Explicit scripted yes to the actual saved artifact; not real-human UX or semantic approval.")
     prior_entry, prior_events = None, []
     handoff_report = getattr(args, "baseline_handoff_report", None)
     if handoff_report:
@@ -235,6 +253,9 @@ async def run(args):
 
     def check():
         before_invocation(combined_audit(), LIMITS, codex["path"], codex["sha256"])
+        if any(hashlib.sha256(Path(__file__).with_name(name).read_bytes()).hexdigest() != digest
+               for name, digest in frozen_helpers.items()):
+            raise RuntimeError("Frozen conversation/review helper changed; stop without retry")
         if hashlib.sha256(binary.read_bytes()).hexdigest() != identity["binary_sha256"]:
             raise RuntimeError("Native executable changed; stop without retry")
         if (hashlib.sha256(Path(__file__).read_bytes()).hexdigest() != report["runner_sha256"]
@@ -258,6 +279,8 @@ async def run(args):
         with workspace as private:
             root = Path(private)
             async with native_context(binary, key, public, adapter, audit, root, request_budget=budget) as (native, skill):
+                if conversation:
+                    native = AuditedNative(native, audit)
                 report["installed_skill_sha256"] = hashlib.sha256(skill.encode()).hexdigest()
                 canonical = Path(__file__).resolve().parents[1] / "skills/signalweave/SKILL.md"
                 if hashlib.sha256(canonical.read_bytes()).hexdigest() != report["installed_skill_sha256"]:
@@ -409,6 +432,8 @@ def main():
     parser.add_argument("--expert-reference", action="store_true",
                         help="Fresh development variant: cited source references for free-form questions; retain private state. Not an expert answer or trial resume.")
     parser.add_argument("--expert-notes-file", help="Explicit fictional data-steward notes shared equally through the glossary; requires --expert-reference. Not inferred context or approval.")
+    parser.add_argument("--explicit-owner-confirmation", action="store_true",
+                        help="Separate v5 cohort: explicit ordinary-language scripted approval of the saved artifact, with full native operation logs. Requires expert reference/notes; no archived imports or real-human claim.")
     args = parser.parse_args()
     if args.run and not args.key_file:
         parser.error("--run requires --key-file; preflight uses its own dummy key")
