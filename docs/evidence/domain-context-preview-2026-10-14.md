@@ -51,6 +51,10 @@ Treatment's second decline source read was redundant. Its native packet already 
 
 At the paid build, `make verify` passed **3,705 tests / 11 skipped in 280.44s**. The subsequent history/guidance corrections passed **179 focused checks in 10.00s**, lint and bundled-skill validation. Software checks are not additional business trials.
 
+Final clean verification after those corrections: **3,706 passed / 11 skipped in 293.42s**. Independent scoped code review found no remaining blocker. A current-native read check recovered the actual reviewed entry, its two history revisions and the saved live-Jev receipt in six MCP operations, preserving the card and the stored outcome, probabilities, analyses, source contracts and observations. Zero model/provider calls or analytical source reads. This verifies compatibility and the shipped guide, not whether an agent follows the new guidance.
+
+That final local build is `e5ae9ca8c1baafb2dfc899f6f97bcb46af7dd8c4`, source/skill fingerprint `1a6bdb32b192ab710f1e4c7453df83ebacf1f7ee903c9a0c239c73bef81ac400`, binary SHA-256 `06664ecd42571c314b796f23226a74a5c3a8c02eddc3484c16ed5f8b9ce5805c`. The paid study's earlier identity below remains unchanged. Local logs: `artifacts/context-history-guidance-clean-verify.log` and `artifacts/context-final-native-replay.log`.
+
 ## Identity and reproduction
 
 The paid study and its successful zero-inference preflight used clean native build `1c5623561c6f2cdd187768d22c0ac0e365fd7cda`:

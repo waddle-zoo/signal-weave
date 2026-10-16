@@ -88,6 +88,14 @@ frontier reporter tests the latter and cannot establish the former's savings.
 Use a fully defined quiet policy for that separate future study; do not infer it
 from this courier setup or substitute screening for the other acceptance gates.
 
+The history read endpoint had the same current-visibility race; a failing
+regression reproduced it, then the final recheck fixed it while retaining
+authorized historical revisions. Independent scoped review cleared that repair
+and the evidence-first guidance. Final clean suite: 3,706 passed / 11 skipped.
+Current-native read verification recovered the actual context/history/receipt
+without analytical reads or inference and preserved the stored decision fields.
+This does not reopen the paid series or prove new guidance improves agent work.
+
 ## Owner-confirmation forward test
 
 Freeze `owner-confirmation-canary-v1` before inference. Target the real agent
