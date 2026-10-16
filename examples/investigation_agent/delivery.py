@@ -6,13 +6,102 @@ from dataclasses import dataclass
 from typing import Any, Protocol
 
 
+def _notice_identifier(value: Any) -> str | None:
+    if not isinstance(value, str) or not value or len(value) > 160:
+        return None
+    if any(ord(character) < 32 for character in value):
+        return None
+    return value
+
+
+def _format_missing_data_notice(result: Mapping[str, Any]) -> str:
+    """Project only stable card, source, and required-gap fields into a notice."""
+
+    lines = [
+        "*Missing policy evidence*",
+        "",
+        "This is a data-gap notice, not a business regression or causal conclusion.",
+        "The evidence gap remains unresolved. Repair and re-evaluate the source evidence.",
+        "This notice does not authorize remediation or a business action.",
+    ]
+
+    card_id = _notice_identifier(result.get("card_id"))
+    if card_id:
+        lines.extend(["", f"Card ID: `{card_id}`"])
+
+    source_ids: list[str] = []
+
+    def add_source_ids(values: Any) -> None:
+        if not isinstance(values, list):
+            return
+        for value in values:
+            source_id = _notice_identifier(value)
+            if source_id and source_id not in source_ids and len(source_ids) < 50:
+                source_ids.append(source_id)
+
+    add_source_ids(result.get("source_keys"))
+    workflow = result.get("workflow")
+    if isinstance(workflow, Mapping):
+        add_source_ids(workflow.get("required_source_keys"))
+
+    plan = result.get("evidence_plan")
+    slots = plan.get("slots") if isinstance(plan, Mapping) else None
+    missing_keys = plan.get("missing_slot_keys", []) if isinstance(plan, Mapping) else []
+    missing_keys = (
+        {key for key in missing_keys if isinstance(key, str)}
+        if isinstance(missing_keys, list)
+        else set()
+    )
+    pending_checks: list[tuple[str, str | None]] = []
+    if isinstance(slots, list):
+        for slot in slots:
+            if not isinstance(slot, Mapping) or slot.get("required") is not True:
+                continue
+            key = _notice_identifier(slot.get("key"))
+            status = slot.get("status")
+            if status == "fulfilled":
+                continue
+            if key not in missing_keys and status not in {"pending", "unavailable", "conflicting"}:
+                continue
+            if isinstance(slot.get("source_keys"), list):
+                add_source_ids(slot["source_keys"])
+            question = slot.get("question")
+            question = " ".join(question.split()) if isinstance(question, str) else None
+            if question and len(question) > 1000:
+                question = None
+            if key and len(pending_checks) < 25:
+                pending_checks.append((key, question))
+
+    if source_ids:
+        lines.extend(["", "Configured source IDs (shown, up to 50):"])
+        lines.extend(f"• `{source_id}`" for source_id in source_ids)
+    if pending_checks:
+        lines.extend(["", "Required pending checks (shown, up to 25):"])
+        for key, question in pending_checks:
+            suffix = f" — {question}" if question else ""
+            lines.append(f"• `{key}`{suffix}")
+    return "\n".join(lines)
+
+
 def format_evidence_bundle(result: Mapping[str, Any]) -> str:
     """Render SignalWeave's structured result without asking an LLM to rewrite it."""
 
+    if result.get("outcome") == "insufficient_data":
+        return _format_missing_data_notice(result)
+
+    context = result.get("context") or {}
+    context_is_unverified = (
+        isinstance(context, Mapping) and context.get("trust") == "unverified"
+    )
     lines = [
         f"*{str(result.get('summary') or 'SignalWeave investigation')}*",
         f"Outcome: `{result.get('outcome', 'unknown')}`",
     ]
+    if context_is_unverified:
+        lines.insert(
+            0,
+            "*Caller-supplied context is unverified; claims it contributed have not been independently checked.*",
+        )
     if result.get("confidence") is not None:
         lines.append(f"Confidence: `{float(result['confidence']):.2f}`")
     rationale = str(result.get("rationale") or "").strip()
@@ -33,7 +122,12 @@ def format_evidence_bundle(result: Mapping[str, Any]) -> str:
 
     evidence = result.get("evidence") or []
     if evidence:
-        lines.extend(["", "*Evidence*"])
+        evidence_heading = (
+            "*Evidence (may include unverified caller context)*"
+            if context_is_unverified
+            else "*Evidence*"
+        )
+        lines.extend(["", evidence_heading])
         for item in evidence[:20]:
             if not isinstance(item, Mapping):
                 continue
@@ -53,10 +147,14 @@ def format_evidence_bundle(result: Mapping[str, Any]) -> str:
                 f"• {item.get('subject_label') or item.get('metric')}: {float(item['change_pct']):+.1f}%"
             )
 
-    context = result.get("context") or {}
     facts = context.get("facts", []) if isinstance(context, Mapping) else []
     if facts:
-        lines.extend(["", "*Diagnostic context*"])
+        context_heading = (
+            "*Diagnostic context (unverified caller input)*"
+            if context_is_unverified
+            else "*Diagnostic context*"
+        )
+        lines.extend(["", context_heading])
         for fact in facts[:20]:
             if isinstance(fact, Mapping) and fact.get("statement"):
                 source_url = str(fact.get("source_url") or "").strip()
@@ -64,11 +162,18 @@ def format_evidence_bundle(result: Mapping[str, Any]) -> str:
                 lines.append(f"• {fact['statement']}{suffix}")
 
     warnings = result.get("warnings") or []
-    if context.get("warnings") if isinstance(context, Mapping) else False:
+    if (
+        isinstance(context, Mapping)
+        and context.get("warnings")
+        and not context_is_unverified
+    ):
         warnings = [*warnings, *context["warnings"]]
     if warnings:
         lines.extend(["", "*Warnings*"])
         lines.extend(f"• {warning}" for warning in warnings[:10])
+    if context_is_unverified and context.get("warnings"):
+        lines.extend(["", "*Caller-reported limitations (unverified)*"])
+        lines.extend(f"• {warning}" for warning in context["warnings"][:10])
     return "\n".join(lines)
 
 

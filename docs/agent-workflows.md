@@ -179,6 +179,15 @@ sources to the recurring card; ask for an owner-reviewed card update if those
 sources should be read on future runs. Scheduling and external delivery belong
 to separately authorized caller tools, not SignalWeave.
 
+`insufficient_data` limits the affected policy conclusion, not every useful
+answer. The agent can still report supported facts and investigate through its
+authorized BI tools. If the card maps that outcome to a data-owner route, the
+handoff permits only that configured data-gap notice; it does not become a
+business-regression alert. Caller-submitted findings remain unverified for
+automatic policy routing. For a new policy decision, fetch updated approved
+source evidence or use a trusted runtime context provider—do not repeatedly
+resubmit the same caller context expecting it to become trusted.
+
 When the optional domain-context tools appear in the connected guide, agents can
 reuse reviewed definitions and dated findings across cards and poll for review
 reminders. See [shared domain context](domain-context.md). This does not replace

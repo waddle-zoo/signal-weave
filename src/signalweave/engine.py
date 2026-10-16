@@ -712,17 +712,28 @@ class InsightEngine:
                 step_key="suppress",
                 action="suppress",
                 objective=objective,
-                instructions="Record the result and suppress delivery for this run.",
-                completion_criteria="No further workflow step is required unless new evidence arrives.",
+                instructions=(
+                    "Record the result and suppress policy-triggered delivery for this run. "
+                    "This does not cancel a separately requested routine report of supported "
+                    "findings; do not present that report as a triggered alert."
+                ),
+                completion_criteria="No further card policy step is required unless new evidence arrives.",
                 evidence_plan=evidence_plan,
             )
-        if result.outcome in {Outcome.NOTIFY, Outcome.ESCALATE}:
+        missing_data_notice = result.outcome == Outcome.INSUFFICIENT_DATA and bool(delivery_keys)
+        if result.outcome in {Outcome.NOTIFY, Outcome.ESCALATE} or missing_data_notice:
             return WorkflowHandoff(
                 status="ready",
                 step_key="deliver",
                 action="deliver",
                 objective=objective,
                 instructions=(
+                    "Prepare only the configured missing-data notice, explaining what is missing "
+                    "and which conclusions remain unsupported. This is not a business regression "
+                    "alert or evidence repair. Supported analysis may continue with authorized "
+                    "tools; a new policy conclusion still requires the missing evidence. "
+                    "The caller must separately authorize delivery to the configured destination."
+                    if missing_data_notice else
                     "Deliver the evidence bundle to the configured destination. "
                     "Do not invent a destination or change the outcome."
                 ),
@@ -735,11 +746,15 @@ class InsightEngine:
             required_sources = sorted(source.key for source in card.sources if source.required)
             repair_instructions = (
                 "Repair or validate the missing, conflicting, or incomparable required "
-                "evidence before continuing the analysis. Source availability alone does "
+                "evidence before claiming the affected policy question is resolved. "
+                "Report supported findings and limits now; authorized investigation may continue. "
+                "Source availability alone does "
                 "not establish that its evidence is complete or comparable. Use the "
                 "evidence bundle and plan to identify the gap; do not reconstruct missing "
                 "values or invent definitions. Submit corrected evidence for re-evaluation "
-                "of the same card before resuming analytical follow-up."
+                "of the same card before changing its policy conclusion. "
+                "Caller-submitted context stays unverified; use updated approved sources or "
+                "a trusted context provider for policy evidence."
             )
             follow_up = (
                 "\n\nCard follow-up guidance (after evidence repair and re-evaluation):\n"
@@ -807,9 +822,11 @@ class InsightEngine:
             ),
             required_source_keys=sorted(set([*selected_sources, *pending_sources])),
             completion_criteria=(
-                "Submit the follow-up evidence after completing the required evidence slots "
-                "as a versioned context snapshot to the same card for re-evaluation before "
-                "leadership delivery."
+                "Submit the follow-up evidence for review. A new policy evaluation must fetch "
+                "updated approved sources or a trusted context provider. Caller-submitted "
+                "context remains unverified and cannot authorize notify or escalate. Report "
+                "supported analysis separately without claiming the missing policy evidence "
+                "is resolved; any delivery requires the caller's authorization."
                 if has_follow_up_guidance
                 else "A human or caller-owned agent must review the evidence and decide the next retrieval."
             ),

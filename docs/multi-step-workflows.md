@@ -1,7 +1,7 @@
 # Multi-step workflows
 
 SignalWeave does not become a workflow runner. It gives a caller-owned agent a
-small typed handoff after each Jev judgment so the agent knows what to do next
+small typed handoff after each configured policy judgment so the agent knows what to do next
 without turning the card into a hidden prompt or allowing an early notification.
 
 The human-authored card stays free-form:
@@ -20,14 +20,15 @@ Every `InsightResult` now has an additive `workflow` field:
 
 | Outcome | Handoff action | Meaning |
 | --- | --- | --- |
-| `ignore` | `suppress` | Record the result; no delivery is required. |
+| `ignore` | `suppress` | Suppress a triggered alert; a separately requested routine report can still include supported findings. |
 | `investigate` with guidance | `retrieve_evidence` | The agent may gather the named diagnostic context and submit it back for re-evaluation. |
 | `investigate` without guidance and a configured route | `deliver` | Preserve the existing single-step delivery behavior. |
 | `investigate` without guidance or a configured route | `request_review` | The system refuses to invent the next step. |
-| `insufficient_data` | `repair_source` | Fix or validate the source, then re-evaluate. |
+| `insufficient_data` with an eligible configured route | `deliver` | Prepare the configured missing-data notice, not a business regression alert. Repair is still unresolved. |
+| `insufficient_data` without an eligible configured route | `repair_source` | Repair before changing the policy conclusion; supported analysis may continue. |
 | `notify` / `escalate` | `deliver` | The caller may deliver to the card's configured destinations. |
 
-The handoff is derived from the final Jev outcome and safety gates. Jev does
+The handoff is derived from the final policy outcome and safety gates. Jev does
 not get to invent destinations, source keys, or arbitrary actions. The caller
 must still own source access, tool execution, Slack/email/ticketing side
 effects, and any remediation.
@@ -86,12 +87,24 @@ The intended sequence is:
 3. If the action is `retrieve_evidence`, use the caller's authorized tools to
    inspect the sources named by `required_source_keys` and the free-form
    `instructions`.
-4. Create a versioned `ContextSnapshot` containing only the evidence the agent
-   is authorized to return, including provenance for each fact.
-5. Call `evaluate_insight_card` again with that context. Pass the first
-   receipt's `parent_receipt_id` and a stable `workflow_step_key` such as
-   `investigate` when using the MCP server.
-6. Deliver only when the new handoff action is `deliver`.
+4. Use the evidence to produce supported analysis and a focused next request.
+   Missing policy evidence does not require withholding all useful findings.
+5. For a new policy decision, re-evaluate after the approved sources or trusted
+   runtime context provider return the needed evidence. Pass the first receipt
+   ID as `parent_receipt_id`, a new evaluation key, and a stable
+   `workflow_step_key` such as `investigate`.
+6. Follow a `deliver` handoff only with separate caller authorization. A configured
+   missing-data route can deliver a data-gap notice while business analysis
+   remains unresolved; it does not authorize a leadership regression alert.
+
+Caller-submitted `ContextSnapshot` facts can accompany review, but the MCP
+endpoint always marks them **unverified**, regardless of a claimed trust value,
+source URL or slot tag. Such facts cannot promote a result to automatic
+`notify`/`escalate`. A version label is not source verification. For recurring
+policy evidence, bind the source through normal owner review and approval, or
+configure a trusted runtime context provider; do not relabel caller findings as
+trusted. The frontier agent can still investigate through its other authorized
+tools and explain those findings separately.
 
 The caller should use `workflow.evidence_plan.missing_slot_keys` to decide
 which authorized tools to run. A fact can set `slot_key` to the corresponding
@@ -101,8 +114,10 @@ whether the combined evidence answers the question or establishes presence or
 absence. A trusted fact may truthfully describe missing or conflicting evidence.
 
 If the second result is still `retrieve_evidence`, the agent can continue the
-bounded loop. If it is `repair_source` or `request_review`, no leadership
-delivery is implied. A parent receipt mismatch is rejected before evaluation.
+bounded loop when it has a concrete new evidence request. Repeatedly resubmitting
+the same unverified context will not resolve the policy route. If it is
+`repair_source` or `request_review`, no leadership delivery is implied. A parent
+receipt mismatch is rejected before evaluation.
 
 ## Deferred judgment handoff
 

@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from typing import Any, Protocol
 from uuid import uuid4
 
-from signalweave.models import ContextFact, ContextSnapshot
+from signalweave.models import ContextFact, ContextSnapshot, EvidencePlan
 
 
 class SignalWeaveGateway(Protocol):
@@ -97,6 +97,48 @@ def parse_tool_selection(text: str, allowed_keys: set[str]) -> list[str]:
         if key in allowed_keys and key not in deduplicated:
             deduplicated.append(key)
     return deduplicated
+
+
+def _evidence_plan_slots(
+    response: Mapping[str, Any],
+    result: Mapping[str, Any],
+    workflow: Mapping[str, Any],
+) -> tuple[Mapping[str, Any], ...]:
+    """Validate and resolve the complete plan needed by an evidence handoff."""
+
+    if "evidence_plan_ref" in workflow:
+        reference = workflow["evidence_plan_ref"]
+        if (
+            not isinstance(reference, Mapping)
+            or reference.get("result_path") != ["evidence_plan"]
+        ):
+            raise ValueError("workflow evidence_plan_ref must point to result.evidence_plan")
+        plan = result.get("evidence_plan")
+        if not isinstance(plan, Mapping):
+            raise ValueError("workflow evidence_plan_ref has no canonical result.evidence_plan")
+    elif "evidence_plan" in workflow:
+        plan = workflow["evidence_plan"]
+    else:
+        mode = response.get("response_mode")
+        detail = (
+            "compact response omitted its evidence plan"
+            if mode == "compact"
+            else "handoff omitted its evidence plan"
+        )
+        raise ValueError(detail)
+
+    if not isinstance(plan, Mapping):
+        raise ValueError("evidence_plan must be an object")
+    raw_slots = plan.get("slots")
+    if not isinstance(raw_slots, list):
+        raise ValueError("evidence_plan must include a slots array")
+    if any(not isinstance(slot, Mapping) for slot in raw_slots):
+        raise ValueError("evidence_plan slots must all be objects")
+    try:
+        validated = EvidencePlan.model_validate(plan)
+    except (TypeError, ValueError) as error:
+        raise ValueError(f"evidence_plan is invalid: {error}") from error
+    return tuple(slot.model_dump(mode="json") for slot in validated.slots)
 
 
 class OpenAICompatiblePlanner:
@@ -296,9 +338,9 @@ class DeliveryAdapter(Protocol):
 class InvestigationAgent:
     """Run the bounded SignalWeave → evidence → SignalWeave loop.
 
-    SignalWeave owns the outcome and handoff.  This class owns only the loop,
-    tool calls, and delivery adapter.  It will never deliver on an
-    ``investigate`` result, even if a model or tool claims the issue is obvious.
+    SignalWeave owns the outcome and handoff. This class owns only the loop,
+    tool calls, and delivery adapter. Delivery follows SignalWeave's explicit
+    workflow action; the agent does not infer delivery from the business outcome.
     """
 
     def __init__(
@@ -392,6 +434,13 @@ class InvestigationAgent:
                 return run
 
             if action in {"retrieve_evidence", "repair_source"}:
+                try:
+                    evidence_slots = _evidence_plan_slots(response, result, workflow)
+                except ValueError as error:
+                    run.status = "blocked"
+                    run.final_result = result
+                    run.error = f"invalid evidence handoff: {error}"
+                    return run
                 if self.collector is None:
                     run.status = "blocked"
                     run.final_result = result
@@ -405,13 +454,7 @@ class InvestigationAgent:
                     required_source_keys=tuple(
                         str(key) for key in workflow.get("required_source_keys", [])
                     ),
-                    evidence_slots=tuple(
-                        slot
-                        for slot in workflow.get("evidence_plan", {}).get("slots", [])
-                        if isinstance(slot, Mapping)
-                    )
-                    if isinstance(workflow.get("evidence_plan"), Mapping)
-                    else (),
+                    evidence_slots=evidence_slots,
                     previous_result=result,
                 )
                 try:

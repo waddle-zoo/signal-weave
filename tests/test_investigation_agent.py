@@ -39,6 +39,17 @@ class FakeSignalWeave:
                         "objective": "Explain material sales movement.",
                         "instructions": "Inspect authorized acquisition and funnel sources.",
                         "required_source_keys": ["campaign-performance", "purchase-funnel"],
+                        "evidence_plan": {
+                            "objective": "Explain material sales movement.",
+                            "slots": [
+                                {
+                                    "key": "question:1",
+                                    "role": "question",
+                                    "question": "What explains the sales movement?",
+                                    "source_keys": ["campaign-performance", "purchase-funnel"],
+                                }
+                            ],
+                        },
                     },
                 },
             }
@@ -125,6 +136,17 @@ async def test_agent_can_follow_multiple_diagnostic_handoffs() -> None:
                             "objective": "Explain the movement.",
                             "instructions": "Retrieve the next authorized diagnostic source.",
                             "required_source_keys": [f"source-{index}"],
+                            "evidence_plan": {
+                                "objective": "Explain the movement.",
+                                "slots": [
+                                    {
+                                        "key": f"source:{index}",
+                                        "role": "diagnostic",
+                                        "question": "What does the source show?",
+                                        "source_keys": [f"source-{index}"],
+                                    }
+                                ],
+                            },
                         },
                     },
                 }
@@ -209,6 +231,159 @@ async def test_agent_never_delivers_without_terminal_handoff() -> None:
 
     assert run.status == "needs_review"
     assert not delivery.results
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("outcome", ["investigate", "insufficient_data"])
+async def test_agent_delivers_only_when_signalweave_returns_deliver_action(outcome: str) -> None:
+    class DeliveryGateway:
+        async def evaluate(self, _card_id: str, **_kwargs: Any) -> dict[str, Any]:
+            return {
+                "receipt": {"receipt_id": "receipt-terminal"},
+                "result": {
+                    "outcome": outcome,
+                    "delivery_methods": [{"key": "configured-route"}],
+                    "workflow": {
+                        "action": "deliver",
+                        "status": "ready",
+                        "step_key": "deliver",
+                    },
+                },
+            }
+
+    delivery = RecordingDelivery()
+    run = await InvestigationAgent(DeliveryGateway(), delivery=delivery).run("card")
+
+    assert run.status == "delivered"
+    assert run.steps[0].outcome == outcome
+    assert len(delivery.results) == 1
+
+
+@pytest.mark.asyncio
+async def test_agent_repairs_insufficient_data_when_handoff_requests_source_repair() -> None:
+    class RepairGateway:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        async def evaluate(self, _card_id: str, **_kwargs: Any) -> dict[str, Any]:
+            self.calls += 1
+            if self.calls == 1:
+                return {
+                    "receipt": {"receipt_id": "receipt-insufficient"},
+                    "result": {
+                        "outcome": "insufficient_data",
+                        "workflow": {
+                            "action": "repair_source",
+                            "status": "blocked",
+                            "step_key": "repair-source",
+                            "required_source_keys": ["growth"],
+                            "evidence_plan": {
+                                "objective": "Validate required growth evidence.",
+                                "slots": [
+                                    {
+                                        "key": "source:growth",
+                                        "role": "quality",
+                                        "question": "Is the growth source complete and comparable?",
+                                        "source_keys": ["growth"],
+                                    }
+                                ],
+                            },
+                        },
+                    },
+                }
+            return {
+                "receipt": {"receipt_id": "receipt-repaired"},
+                "result": {
+                    "outcome": "ignore",
+                    "workflow": {"action": "suppress", "status": "complete", "step_key": "suppress"},
+                },
+            }
+
+    collector = RecordingCollector()
+    delivery = RecordingDelivery()
+    run = await InvestigationAgent(
+        RepairGateway(), collector=collector, delivery=delivery
+    ).run("card")
+
+    assert run.status == "suppressed"
+    assert run.steps[0].outcome == "insufficient_data"
+    assert collector.requests[0].evidence_slots[0]["key"] == "source:growth"
+    assert not delivery.results
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "response",
+    [
+        {
+            "response_mode": "compact",
+            "receipt": {"receipt_id": "receipt-bad-ref"},
+            "result": {
+                "evidence_plan": {"objective": "Valid canonical plan.", "slots": []},
+                "workflow": {
+                    "action": "retrieve_evidence",
+                    "evidence_plan_ref": {"result_path": ["workflow", "evidence_plan"]},
+                },
+            },
+        },
+        {
+            "response_mode": "compact",
+            "receipt": {"receipt_id": "receipt-missing-canonical"},
+            "result": {
+                "workflow": {
+                    "action": "retrieve_evidence",
+                    "evidence_plan_ref": {"result_path": ["evidence_plan"]},
+                },
+            },
+        },
+        {
+            "response_mode": "compact",
+            "receipt": {"receipt_id": "receipt-malformed-canonical"},
+            "result": {
+                "evidence_plan": {"objective": "Plan has no slots field."},
+                "workflow": {
+                    "action": "retrieve_evidence",
+                    "evidence_plan_ref": {"result_path": ["evidence_plan"]},
+                },
+            },
+        },
+        {
+            "response_mode": "compact",
+            "receipt": {"receipt_id": "receipt-omitted-plan"},
+            "result": {"workflow": {"action": "retrieve_evidence"}},
+        },
+        {
+            "receipt": {"receipt_id": "receipt-malformed-plan"},
+            "result": {
+                "workflow": {
+                    "action": "repair_source",
+                    "evidence_plan": {
+                        "objective": "Malformed plan.",
+                        "slots": ["not an evidence slot"],
+                    },
+                },
+            },
+        },
+    ],
+    ids=[
+        "invalid-reference",
+        "missing-canonical",
+        "malformed-canonical",
+        "omitted-compact-plan",
+        "malformed-slot",
+    ],
+)
+async def test_agent_blocks_invalid_or_omitted_evidence_plan(response: dict[str, Any]) -> None:
+    class PlanGateway:
+        async def evaluate(self, _card_id: str, **_kwargs: Any) -> dict[str, Any]:
+            return response
+
+    collector = RecordingCollector()
+    run = await InvestigationAgent(PlanGateway(), collector=collector).run("card")
+
+    assert run.status == "blocked"
+    assert "evidence" in (run.error or "") or "plan" in (run.error or "")
+    assert not collector.requests
 
 
 @pytest.mark.asyncio

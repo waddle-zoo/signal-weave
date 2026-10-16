@@ -51,6 +51,9 @@ class McpSignalWeaveGateway(SignalWeaveGateway):
                             ),
                             "parent_receipt_id": parent_receipt_id,
                             "workflow_step_key": workflow_step_key,
+                            # This caller needs the validated result and complete
+                            # evidence plan to drive a closed-loop investigation.
+                            "response_mode": "full",
                         },
                     )
         if getattr(result, "isError", False):
