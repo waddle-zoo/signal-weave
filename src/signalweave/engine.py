@@ -36,7 +36,7 @@ from .models import (
     WorkflowHandoff,
 )
 from .retrieval import build_candidate_pool, resource_ref
-from .sources import SourceRegistry
+from .sources import SourceRegistry, _without_agent_query_definitions
 from .typesafe_adapter import (
     DEFAULT_MAX_JEV_PAYLOAD_BYTES,
     InsightJudger,
@@ -76,6 +76,13 @@ _UNCERTAIN_CONTEXT_VALUES = frozenset({
     "unresolved",
     "unverified",
 })
+
+
+def _judgment_source(resource: ResourceSnapshot) -> dict[str, Any]:
+    """Keep agent query provenance in receipts, not recurring policy input."""
+    payload = resource.model_dump(mode="json", exclude={"observations", "evidence", "analytical_comparisons"})
+    payload["metadata"], _ = _without_agent_query_definitions(payload["metadata"])
+    return payload
 
 
 @dataclass
@@ -1211,13 +1218,7 @@ class InsightEngine:
             # Do not send every raw source snapshot a second time: large BI
             # dashboards can otherwise exceed the provider context window even
             # though the local byte budget is still within bounds.
-            "sources": [
-                resource.model_dump(
-                    mode="json",
-                    exclude={"observations", "evidence", "analytical_comparisons"},
-                )
-                for resource in resources
-            ],
+            "sources": [_judgment_source(resource) for resource in resources],
             "observations": [observation.model_dump(mode="json") for observation in observations],
             "priority_observations": [
                 observation.model_dump(mode="json") for observation in priority_observations

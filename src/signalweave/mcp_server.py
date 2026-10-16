@@ -3093,12 +3093,11 @@ def create_mcp(
         ] = "full",
         ctx: Context | None = None,
     ) -> dict[str, Any]:
-        """Review a draft's source coverage before a human approves it.
+        """Review a draft's source coverage, declared comparison contracts, and policy blockers.
 
-        This is an onboarding review, not an automatic policy change. It shows
-        bounded Jev-ranked candidates, why they were surfaced, and which
-        recommendations the draft omitted so a client-owned UI or agent can ask
-        for confirmation or revise the card.
+        Fixed-source review uses the declared sources and bounded adapter metadata without Jev
+        ranking; dynamic discovery or ranked expansion may call the configured Jev evaluator,
+        and its candidate rankings remain recommendations for owner review.
         """
         principal = request_principal(ctx)
         card = get_scoped_card(card_id, principal)

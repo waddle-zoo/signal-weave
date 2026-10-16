@@ -62,6 +62,17 @@ class Native:
 
 
 def patch_runtime(monkeypatch, tmp_path, *, reject=None, unknown=False):
+    # Contract tests use their own fake-only protocol, never reopen the real
+    # closed paid cohort merely to exercise orchestration with test doubles.
+    manifest = json.loads(trial.MANIFEST.read_text())
+    owner = trial.MANIFEST.with_name(manifest["owner_reference_file"]).read_text()
+    manifest["protocol"] = "unit-test-workflow"
+    manifest.pop("execution_status", None)
+    manifest.pop("closed_attempt", None)
+    (tmp_path / manifest["owner_reference_file"]).write_text(owner)
+    isolated_manifest = tmp_path / "unit-workflow.json"
+    isolated_manifest.write_text(json.dumps(manifest))
+    monkeypatch.setattr(trial, "MANIFEST", isolated_manifest)
     native = Native()
     codex = tmp_path / "codex"
     codex.write_text("test executable identity")
@@ -248,3 +259,12 @@ async def test_changed_policy_at_approval_stops_before_either_report(monkeypatch
     with pytest.raises(ValueError, match="does not match"):
         await trial.run(args)
     assert len(state["invocations"]) == 4 and "evaluate_insight_card" not in native.calls
+
+
+async def test_real_closed_workflow_rejected_before_setup(monkeypatch):
+    from unittest.mock import Mock
+    probe = Mock(side_effect=AssertionError("No probing of a closed study"))
+    monkeypatch.setattr(trial, "verify_binary", probe)
+    with pytest.raises(ValueError, match="cohort closed"):
+        await trial.run(SimpleNamespace(run=True))
+    probe.assert_not_called()

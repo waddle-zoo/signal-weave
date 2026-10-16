@@ -62,7 +62,11 @@ runtime evaluation still calls `inspect` and applies freshness, health, and
 payload-budget gates.
 
 The registry also enforces a serialized snapshot byte budget (1 MiB by default).
-An oversized adapter result is stripped of observations, comparisons, evidence, and metadata
+It first removes optional `saved_query_definition` metadata explicitly marked
+`audience="agent"` when that alone makes an oversized snapshot fit. Measurements,
+contracts, quality warnings, and other metadata remain intact; an omission notice
+is included when it fits too. Unmarked query metadata is not treated as optional.
+An adapter result that still exceeds the budget is stripped of observations, comparisons, evidence, and metadata
 and returned as a typed source error. Required sources therefore route to
 `insufficient_data` instead of silently sending an unbounded payload to Jev.
 Deployments can lower the budget with `SourceRegistry(max_snapshot_bytes=...)`.
@@ -219,6 +223,19 @@ returned as `Evidence`; comparable numeric checks can be returned as
 establish their state.
 
 ## Registering an adapter
+
+Superset inspection retains a bounded `saved_query_definition` in chart metadata:
+the saved metric/aggregation, grouping, time grain/range, filters, columns and row
+limit when declared. Dashboard reads carry this from their existing chart
+metadata requests; no additional queries are needed. Missing, invalid or oversized
+definitions are marked unavailable/omitted rather than replaced with invented
+meaning. The projection is limited to 8 KiB per chart, with a 64 KiB serialized
+input limit and bounded nesting. These saved declarations do not establish effective dashboard filters,
+complete periods or a business population. They help the agent choose an
+appropriate aggregate instead of reconstructing it from detail rows. Original
+snapshots retain the declaration when the snapshot budget permits it; recurring
+policy input excludes query definitions marked `audience="agent"`. That marker
+controls payload projection, not authorization or confidentiality.
 
 The local runtime registers `SupersetAdapter` when `SUPERSET_URL` is configured.
 If `SIGNALWEAVE_TENANT_ID` is set, the adapter inherits that tenant binding;

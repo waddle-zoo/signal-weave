@@ -1,5 +1,12 @@
 {
   "protocol": "raw-northstar-workflow-v1",
+  "execution_status": "closed",
+  "closed_attempt": {
+    "method_commit": "37beb80",
+    "report_sha256": "7604a871e8987f8c3282c1ad2c000d19251bba1b395ac909c82be604c28d06a9",
+    "trace_sha256": "d157eed7269474e0eeb032654f684694f506edb17d6de0d4af1d5c90a06223a9",
+    "reason": "Both authors completed; treatment raw-page review packet exceeded 180000 bytes before expert review. No approval, recurring reports or Jev calls. No retry, rescore or unused allowance transfer."
+  },
   "scope": "New formative raw-source discovery, independent expert review, synthetic owner approval and fresh shadow-report cohort. One known local Northstar fixture, not a holdout, customer or enterprise-readiness estimate. Does not reopen the closed author-only v1 attempt.",
   "owner_reference_file": "raw-northstar-onboarding-v1.json",
   "prior_attempt": {

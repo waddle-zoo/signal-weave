@@ -5,7 +5,8 @@ import hashlib
 import inspect
 import json
 import re
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
+from copy import deepcopy
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -17,6 +18,119 @@ from .models import Observation
 from .superset_models import SupersetChartSnapshot, SupersetDashboardSnapshot
 
 DEFAULT_MAX_CONCURRENT_CHART_REQUESTS = 8
+
+
+_SAVED_QUERY_DEFINITION_FIELDS = (
+    "metrics",
+    "groupby",
+    "granularity_sqla",
+    "time_grain_sqla",
+    "time_range",
+    "adhoc_filters",
+    "row_limit",
+    "all_columns",
+)
+_MAX_SAVED_QUERY_DEFINITION_BYTES = 8192
+_MAX_SAVED_QUERY_INPUT_BYTES = 65_536
+_MISSING = object()
+
+
+def _saved_query_definition(chart_id: str, params: Any) -> dict[str, Any]:
+    """Project a bounded, source-declared Superset query definition."""
+    identity = {
+        "source_chart_id": str(chart_id),
+        "source_chart_ref": f"chart:{chart_id}",
+        "audience": "agent",
+    }
+
+    def omitted(reason: str) -> dict[str, Any]:
+        return {**identity, "status": "omitted", "reason": reason}
+
+    if params is _MISSING:
+        return omitted("params_unavailable")
+    if isinstance(params, str):
+        try:
+            if (len(params) > _MAX_SAVED_QUERY_INPUT_BYTES
+                    or len(params.encode("utf-8")) > _MAX_SAVED_QUERY_INPUT_BYTES):
+                return omitted("input_size_limit_exceeded")
+            params = json.loads(params)
+        except (ValueError, RecursionError):
+            return omitted("invalid_params")
+    if not isinstance(params, Mapping):
+        return omitted("invalid_params")
+
+    try:
+        # Validate only selected declarations before copying/serializing them.
+        # Iteration bounds protect against cycles, deep arrays and huge maps
+        # even when a test double or downstream client supplies a Python map.
+        pending = [(params[key], 0) for key in _SAVED_QUERY_DEFINITION_FIELDS if key in params]
+        nodes = 0
+        scalar_bytes = 0
+        while pending:
+            value, depth = pending.pop()
+            nodes += 1
+            if nodes > 4096 or depth > 16:
+                return omitted("structure_limit_exceeded")
+            if isinstance(value, Mapping):
+                if len(value) > 4096 - nodes:
+                    return omitted("structure_limit_exceeded")
+                pending.extend((child, depth + 1) for child in value.values())
+                pending.extend((key, depth + 1) for key in value)
+            elif isinstance(value, (list, tuple)):
+                if len(value) > 4096 - nodes:
+                    return omitted("structure_limit_exceeded")
+                pending.extend((child, depth + 1) for child in value)
+            elif isinstance(value, str):
+                # Bound character count before allocating even a UTF-8 copy.
+                if len(value) > _MAX_SAVED_QUERY_DEFINITION_BYTES:
+                    return omitted("size_limit_exceeded")
+                scalar_bytes += len(value.encode("utf-8"))
+                if scalar_bytes > _MAX_SAVED_QUERY_DEFINITION_BYTES:
+                    return omitted("size_limit_exceeded")
+            elif isinstance(value, int):
+                if value.bit_length() > _MAX_SAVED_QUERY_DEFINITION_BYTES * 3:
+                    return omitted("size_limit_exceeded")
+                # Conservative decimal size without constructing the decimal.
+                scalar_bytes += 5 if isinstance(value, bool) else max(1, (value.bit_length() + 2) // 3 + 1)
+                if scalar_bytes > _MAX_SAVED_QUERY_DEFINITION_BYTES:
+                    return omitted("size_limit_exceeded")
+            elif value is not None and not isinstance(value, float):
+                return omitted("invalid_definition")
+            else:
+                scalar_bytes += 4 if value is None else 32
+                if scalar_bytes > _MAX_SAVED_QUERY_DEFINITION_BYTES:
+                    return omitted("size_limit_exceeded")
+        declared = {
+            key: deepcopy(params[key])
+            for key in _SAVED_QUERY_DEFINITION_FIELDS
+            if key in params
+        }
+        definition = {
+            **identity,
+            "status": "available",
+            "scope": "Saved chart declarations, not effective dashboard filters or period-completeness guarantees.",
+            "parameters": declared,
+        }
+        serialized = json.dumps(
+            definition,
+            ensure_ascii=False,
+            separators=(",", ":"),
+            allow_nan=False,
+        ).encode("utf-8")
+    except (TypeError, ValueError, OverflowError, RecursionError):
+        return omitted("invalid_definition")
+    if len(serialized) > _MAX_SAVED_QUERY_DEFINITION_BYTES:
+        return omitted("size_limit_exceeded")
+    return definition
+
+
+def _chart_for_observation_extraction(chart: dict[str, Any]) -> dict[str, Any]:
+    """Preserve returned rows when saved params cannot be parsed for extraction."""
+    try:
+        SupersetClient._params(chart)
+    except (TypeError, ValueError, RecursionError):
+        return {**chart, "params": {}}
+    return chart
 
 
 @dataclass(frozen=True)
@@ -1118,12 +1232,14 @@ class SupersetClient:
 
         async def load_chart(chart: SupersetChartSnapshot) -> SupersetChartSnapshot:
             async with semaphore:
+                query_definition = None
                 try:
                     chart_metadata = await self.get_chart_metadata(chart.id)
                     if str(chart_metadata.get("id")) != str(chart.id):
                         raise ValueError(
                             "Superset chart response did not match the requested chart ID"
                         )
+                    query_definition = _saved_query_definition(chart.id, chart_metadata.get("params", _MISSING))
                     chart_scope: dict[str, int] = {
                         "dashboard_scoped_requests": 0,
                         "chart_query_fallbacks": 0,
@@ -1144,7 +1260,7 @@ class SupersetClient:
                     if "response_telemetry" in chart_data_parameters:
                         chart_data_kwargs["response_telemetry"] = response_telemetry
                     extraction = self.extract_chart_data(
-                        chart_metadata,
+                        _chart_for_observation_extraction(chart_metadata),
                         await self.chart_data(
                             chart_metadata,
                             **chart_data_kwargs,
@@ -1158,6 +1274,7 @@ class SupersetClient:
                         else "dashboard_scoped"
                     )
                     updates: dict[str, Any] = {
+                        "saved_query_definition": query_definition,
                         "observations": extraction.observations,
                         "metrics": extraction.metrics,
                         "metric": extraction.metrics[0] if extraction.metrics else "unknown",
@@ -1176,10 +1293,11 @@ class SupersetClient:
                         updates["error"] = "; ".join(extraction.notes)
                         updates["description"] = updates["error"]
                     return chart.model_copy(update=updates)
-                except (httpx.HTTPError, KeyError, TypeError, ValueError) as error:
+                except (httpx.HTTPError, KeyError, TypeError, ValueError, RecursionError) as error:
                     return chart.model_copy(
                         update={
                             "error": f"Data unavailable from Superset: {error}",
+                            "saved_query_definition": query_definition,
                             "description": f"Data unavailable from Superset: {error}",
                             "semantic_status": "unsupported",
                             "semantic_notes": [f"Chart normalization failed: {error}"],

@@ -53,6 +53,48 @@ trial hashes and executed method remain unchanged. These are software/method
 checks, not additional business trials. Reproducing raw source access requires
 the existing local Northstar stack; the compact record is not a warehouse export.
 
+## Full raw-source workflow attempt: first answers worked, onboarding unfinished
+
+`raw-northstar-workflow-v1` used the real local Superset catalog and current
+native MCP, not prepared cards or normalized scenario exports. Both authors
+completed a useful first readout. Separate process review verified the numbers:
+August versus July was **+6.2% total sales**, Online **+7.9%**, contributing
+**46.5%** of the total increase. September ends on the 19th; its raw −40.2%
+overall difference is not a comparable full-month decline. Currency is not
+declared; capture time establishes no freshness SLA.
+
+| Observed onboarding work | Company tools + agent | Plus native SignalWeave/skill |
+| --- | ---: | ---: |
+| Tool calls / seconds | 28 / 92.9 | 55 / 221.2 |
+| Input / uncached tokens | 212,614 / 44,934 | 688,837 / 81,349 |
+| Output tokens, including reasoning | 9,094 | 29,187 |
+
+Treatment scanned all 8,937 detail rows and saved a v2 draft using that table
+as its only required numeric source. The prose policy matched the owner, but
+the adapter had no validated recurring comparison for it and its normalized
+numeric value was null. Treatment also skipped formal review: the old tool
+description incorrectly suggested fixed review required Jev ranking. **No
+approved or functioning recurring workflow was established.** This whole-path
+comparison also asks treatment to create a card; it is not an isolated Jev
+speed/cost ablation or a general performance estimate.
+
+The next research stage failed when its review-packet builder tried to copy
+every raw page into a 180k-byte packet. It stopped before expert qualification,
+approval, fresh reports or Jev calls. The cohort is closed without retry,
+rescore or allowance transfer. [Unchanged readouts, draft, usage and hashes](../../evaluations/data/raw-northstar-workflow-summary.json)
+preserve the actual results; exact executed method: `37beb80`. Earlier unknown
+cost remains separate, so there is no end-to-end or amortized savings claim.
+
+The diagnosed repairs now preserve bounded source-owned query declarations,
+including during existing dashboard metadata fetches, without inferring
+business meaning or completeness. Agent-only query provenance remains in the
+snapshot but is excluded from recurring judgment input. Fixed-source review
+guidance now describes its actual no-ranking path, and the skill favors a
+declared aggregate over unnecessary detail scans. These changes still need a
+forward usability test; green software checks do not establish that agents
+will choose an executable recurring source. The expert-review harness also
+needs selective evidence access rather than a larger raw-page prompt.
+
 ## Completed readout study: retained-context-courier-v1
 
 The study reused the **actual** agent-authored notes, saved approved card and separately reviewed definition from v7. Nothing was imported, reconstructed, manually completed or reapproved. The definition remained unbound; this tests standalone retrieval, not automatic card dependency use. Both original onboarding reviews remain rejected and unattended readiness remains unqualified.

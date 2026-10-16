@@ -9,7 +9,7 @@ Feature branch: `feat/domain-context-memory`, based on main `e8842ac`.
 | Local and hosted context lifecycle | Native stdio/signed HTTP checks cover review/reuse/restart/change; latest read-only native restart recovered the actual approved v2 card, definition history and saved Jev receipt. Hosted issuer remains synthetic |
 | Card-bound meaning and staleness | Contract tests cover exact pins, reapproval, deferred policy and historical receipts; no automatic notification service is claimed |
 | Approved cards with live decisions | V5 authored/approved its own card and evaluated the adverse case with live Jev. A separate retained series reused it for missing-data and quiet observations: both native and final routes matched policy, card unchanged. Not a continuous company history |
-| Human-first, agent-led onboarding | One V5 scripted-owner pair completed; no imported cards. V6 courier stopped before treatment. New clarified v7 authored both setups but both model reviews rejected; treatment's comparison-key objection contradicts its supplied descriptor. No later reports or courier/real-human usability success. V4 stays failed |
+| Human-first, agent-led onboarding | One V5 scripted-owner pair completed; no imported cards. V6 courier stopped before treatment. Clarified v7 authored both setups but both model reviews rejected. Raw Northstar later produced two correct first readouts, but treatment chose an unsuitable recurring source and skipped review; the review-packet harness then overflowed. No completed raw-source recurring workflow or real-human usability success. Earlier failures remain |
 | Useful recurring reports and investigations | Retail retained reports remain supported. Two later courier observations now exercised actual retrieval of the saved reviewed definition plus live Jev; both arms' final routes/math checked out. Baseline gave better repair context; treatment's decline breakdown was correct but denser. No card pins or general multi-step/causal investigation claim |
 | Comparative business value | No overall lift established. Latest courier treatment used fewer tools, more input/uncached tokens, and repeated a source read whose facts were already in the bundle. Reader preferred baseline repair detail. Shared-context use is observed, not its causal benefit; scaled noise/recall, amortized setup value and realistic query costs remain open |
 
@@ -77,6 +77,105 @@ unknown even when no error event was emitted. These fixes do not reopen v1 or
 prove that an agent will complete a subsequent study. Test cap adequacy against
 the observed raw-discovery work before preregistering another paid protocol;
 do not mistake an experimental ceiling for a product defect.
+
+## Raw-source full workflow forward study
+
+Preregister `raw-northstar-workflow-v1` separately. This extends the actual
+human job from discovery through a fresh shadow report; it does not reopen
+the closed author-only attempt or transfer its unused allowance. Its unknown
+prior cost stays visible and prevents an end-to-end cost or amortization claim.
+
+Two fresh authors inspect actual saved queries and preserve their own brief.
+Two separate, same-model reviewer contexts assess the actual first answers,
+notes, card and actor-visible source excerpts. They are not a real human panel
+or independent external experts. Only after both setups qualify does a scripted
+owner accept the exact saved card/version/scope for one shadow check. The real
+native approval API remains authoritative. Re-fetch the approved card and
+verify its policy before giving that same policy/destinations to both fresh
+reporting agents; company tools stay available in both arms. Treatment performs
+one real native evaluation with live Jev. Its recurring prompt is focused,
+not a replay of the full onboarding skill; this is not an isolated Jev ablation.
+
+Caps: six total invocations; authors 60 tools/480 seconds, reviewer passes one
+recording tool/180 seconds, reports 24 tools/300 seconds. Disclose work limits
+and reserve final-recording calls. The observed 24-call incomplete discovery
+justifies more headroom, not a guaranteed completion claim. Stop between calls
+at 1.6M input/350k uncached, unknown usage, frozen-input drift, incomplete actors
+or transport errors. Zero upstream Jev before exact approval; at most two
+afterward. No retries, in-cohort repairs, source mutation, scheduling or sending.
+
+Use only the authorized loopback Northstar endpoint. Before inference, require
+new focused contract tests, adversarial method review and a matching zero-model
+native preflight. Scrub copied provider credentials even after partial setup;
+reject symlinks and hard links before truncation. Preserve negative reviews,
+deferred judgments and incomplete messages. Later source/message review must
+establish usefulness separately from API success; one known company and one
+current observation cannot establish general enterprise accuracy.
+
+Terminal: both first-readout authors completed with known usage (B 28 calls /
+92.9s, T 55 / 221.2s). T paged all 8,937 detail rows, saved a v2 draft using
+only that detail chart as a required numeric source, and skipped formal review
+because the tool description implied Jev ranking. Its free-form policy matched
+the owner, but that source's normalized metric was null and its recurring basis
+remained unverified. Building the expert packet from all raw pages then exceeded
+180k bytes; no expert pass, approval, fresh report or Jev request occurred.
+The cohort is closed, with the exact executed method at `37beb80`; the
+[actual readouts and saved artifact](../evaluations/data/raw-northstar-workflow-summary.json)
+remain separate from the earlier failed attempt. This is not a completed
+workflow or an enterprise comparison.
+
+An independent process reviewer verified the first answers' arithmetic and
+confirmed the missing recurring-source basis and misleading review description.
+Current repairs expose bounded source-owned query declarations, preserve them
+during existing dashboard metadata fetches, keep them out of recurring judgment
+payloads, clarify fixed review's no-ranking path, and guide aggregate-first
+source selection. They do not fabricate adapter metric/coverage contracts or
+retroactively complete onboarding. A subsequent forward test must prove that
+agents actually choose suitable recurring sources and complete review. Review
+evidence also needs selective source access or inspectable rollups, not another
+model call containing every raw detail page. Preserve raw traces; do not simply
+raise the completed cohort's packet budget.
+
+### Raw-source readiness is a separate unresolved gate
+
+A zero-inference current-native diagnostic inspected the actual monthly SUM,
+daily coverage chart and ten-chart Executive dashboard. All ten dashboard
+definitions survived; the monthly aggregation, channel grouping and month grain
+were visible to the agent without extra metadata requests. But an explicitly
+reviewed calendar-month proposal with its intended destinations still receives
+`comparison-window-mismatch` and `source-contract-required`. The saved query
+declarations do not supply those business/comparison contracts.
+
+Integrated offline tests now isolate the distinction using the production
+Superset adapter and normal agent-profile dispatch: a no-route card can be
+approved/evaluated with a delivery-disabled receipt; investigate, notify and
+escalate mappings block on incomplete contracts even with a declared window.
+Removing destinations to pass would not solve the requested workflow.
+
+Next, separate a useful, explicitly non-actionable agent analysis/review from
+qualification for unattended routing. First inspect the existing preview and
+review paths rather than add a new framework. Preserve exact source permission,
+the owner's intended periods and destinations, and unresolved source meaning.
+Do not forge provider contracts or mark unverified comparisons certified. Then
+forward-test actual onboarding and fresh recurring reports with the same
+companion BI tools before spending on a larger paired cohort. A draft preview
+alone cannot close the recurring-workflow or business-value gates.
+
+Reproduce the source diagnostic with a freshly built binary:
+
+```sh
+uv run python -m evaluations.superset_source_readiness_probe \
+  --binary dist/signalweave --resource chart:1 --resource chart:10 \
+  --resource dashboard:1 \
+  --proposal evaluations/data/northstar-source-readiness-card.json \
+  --output artifacts/new-source-readiness-probe
+```
+
+This command is restricted to the existing loopback Northstar fixture on 18089,
+not a general connection installer. It uses only a dummy provider credential,
+blocks inference, and never approves, evaluates, sends or schedules. The card
+is operator-selected diagnostic input, not an agent onboarding success. Full
+snapshots remain private artifacts, not another committed warehouse export.
 
 ## Exact reference retrieval and exploratory courier readouts
 

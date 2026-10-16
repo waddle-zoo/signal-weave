@@ -13,7 +13,12 @@ from .models import (
     SourceRef,
 )
 from .source_identity import namespace_fingerprint, namespace_uri
-from .superset_client import SupersetClient
+from .superset_client import (
+    _MISSING,
+    SupersetClient,
+    _chart_for_observation_extraction,
+    _saved_query_definition,
+)
 
 
 class SupersetAdapter:
@@ -318,13 +323,27 @@ class SupersetAdapter:
             "provider": self.provider_name,
             "dashboard_id": dashboard.id,
             "owners": dashboard.owners,
-            "charts": [
-                chart.model_dump(mode="json", exclude={"observations"})
-                for chart in dashboard.charts
-            ],
+            "charts": [],
             "dashboard_scope": dashboard.scope_telemetry,
             "parameters": source.parameters,
         }
+        for chart in dashboard.charts:
+            chart_params = getattr(chart, "params", _MISSING)
+            excluded_fields = {"observations"}
+            if chart_params is not _MISSING:
+                excluded_fields.add("params")
+            chart_metadata = chart.model_dump(
+                mode="json", exclude=excluded_fields
+            )
+            if chart_metadata.get("saved_query_definition") is None:
+                chart_metadata.pop("saved_query_definition", None)
+            if chart_params is _MISSING:
+                chart_params = chart_metadata.pop("params", _MISSING)
+            if chart_params is not _MISSING:
+                chart_metadata["saved_query_definition"] = _saved_query_definition(
+                    chart.id, chart_params
+                )
+            metadata["charts"].append(chart_metadata)
         chart_errors = [
             f"{chart.title}: {chart.error}" for chart in dashboard.charts if chart.error
         ]
@@ -393,7 +412,10 @@ class SupersetAdapter:
             raise ValueError(
                 "Superset chart response did not match the requested chart ID"
             )
-        extraction = self.client.extract_chart_data(chart, await self.client.chart_data(chart))
+        rows = await self.client.chart_data(chart)
+        extraction = self.client.extract_chart_data(
+            _chart_for_observation_extraction(chart), rows
+        )
         observations = extraction.observations
         observations = [
             observation.model_copy(update={"source_key": source.key})
@@ -433,6 +455,9 @@ class SupersetAdapter:
                 "provider": self.provider_name,
                 "chart_id": str(chart_id),
                 "viz_type": self._chart_viz_type(chart),
+                "saved_query_definition": _saved_query_definition(
+                    str(chart_id), chart.get("params", _MISSING)
+                ),
                 "semantic_status": extraction.semantic_status,
                 "semantic_notes": extraction.notes,
                 "result_row_count": extraction.row_count,
