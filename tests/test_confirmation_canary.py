@@ -11,7 +11,9 @@ from tests.test_public_owner_report_trial import FakeNative, _response
 class Native(FakeNative):
     async def call_tool(self, name, args):
         if name == "review_insight_card":
-            return [], {"card": dict(self.card), "approval_handoff": {"owner_confirmation": {"card_id": self.card["id"]}}}
+            return [], {"card": dict(self.card), "approval_handoff": {"owner_confirmation": {
+                "card_id": self.card["id"], "card_version": self.card["version"],
+                "question": "Approve this saved policy and the displayed scopes for evaluation?"}}}
         _, result = await super().call_tool(name, args)
         if name == "evaluate_insight_card":
             result["receipt"]["delivery_enabled"] = False
@@ -45,7 +47,8 @@ def patched(tmp_path, monkeypatch, *, live, fault=None):
         if not live:
             raise AssertionError("preflight must not invoke a model")
         audit = kwargs["audit"]
-        kind = next(k for k, v in canary.REPLIES.items() if v == kwargs["prompt_override"]["latest_owner_reply"])
+        reply = kwargs["prompt_override"]["latest_owner_reply"]
+        kind = "approve" if reply == canary.SHORT_REPLY else next(k for k, v in canary.REPLIES.items() if v == reply)
         state["turns"].append(kind)
         audit.emit("api.request", provider="openai")
         card_id = session.native.card["id"]
@@ -119,3 +122,23 @@ def test_claimed_success_without_actual_approval_or_receipt_does_not_pass():
     card = {"id": "card", "version": 1, "status": "draft"}
     checks = canary.behavior_checks("approve", card, card, [])
     assert not any(checks.values())
+
+
+async def test_short_confirmation_preflight_is_separate_and_shows_exact_question(tmp_path, monkeypatch):
+    args, state = patched(tmp_path, monkeypatch, live=False)
+    args.short_confirmation = True
+    result = await canary.run(args)
+    assert result["completed"] and result["protocol"] == canary.SHORT_PROTOCOL
+    assert len(result["cases"]) == 1 and result["limits"]["agent_invocations"] == 1
+    assert result["cases"][0]["previous_agent_question"]
+    assert result["cases"][0]["owner_reply"] == canary.SHORT_REPLY
+    assert state["turns"] == [] and result["provider_attempts"] == 0
+
+
+async def test_short_confirmation_uses_only_one_fresh_actor_and_provider_attempt(tmp_path, monkeypatch):
+    args, state = patched(tmp_path, monkeypatch, live=True)
+    args.short_confirmation = True
+    result = await canary.run(args)
+    assert result["completed"] and result["behavior_pass"]
+    assert state["turns"] == ["approve"]
+    assert result["agent_invocations_started"] == result["provider_attempts"] == 1

@@ -218,7 +218,9 @@ async def test_native_agent_context_binding_lifecycle(
                     approval = onboarded["approval_handoff"]
                     assert approval["arguments_after_owner_confirmation"]["card_id"] == card_id
                     assert "source_selection_reason" not in approval["arguments_after_owner_confirmation"]
-                    assert "source_selection_reason" in approval["owner_input_required"]
+                    assert "confirm_saved_policy_and_source_scopes" in approval["owner_input_required"]
+                    assert "source_selection_reason" not in approval["owner_input_required"]
+                    assert "source_selection_reason" in approval["agent_input_after_confirmation"]
                     assert any(
                         source["adapter"] == "superset"
                         and source["resource"] == "chart:1"

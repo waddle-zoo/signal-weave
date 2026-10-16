@@ -49,6 +49,49 @@ source/parent native operations, every attempted model tool call, state and usag
 This checks a specific handoff and skill behavior, not four enterprises, an
 LLM-baseline comparison, customer UX, or overall enterprise readiness.
 
+The zero-model preflight and all four live cases completed on clean native
+build `9336068` (source fingerprint `17abbf6a…`, full identity in the evidence
+note). Actual state/call checks passed. Independent review verified the stored
+15% revision and owner-facing draft, not just its version. Positive case used
+approval/evaluation once; clarification and ambiguous replies made neither
+attempt; revision stayed draft. No hidden permission interceptor or retry.
+
+Terminal usage: four agent calls, 342,570 input / 99,370 uncached / 1,435 output;
+one Jev call, 5,534 input / 53 output. Independent review retained receipt-only
+source traceability in the positive message and an unsupported “recorded the
+definition” phrase in the clarification reply. Authority checks are not a
+readout-quality pass or a new-context persistence claim. Full offline verification:
+3,628 passed / 11 skipped in 229.30 seconds; skill validation and 132 targeted
+approval/source/skill checks passed. These totals are not business efficacy.
+
+Next test complete fresh onboarding with an actual clear owner/delegate reply,
+not the ambiguous synthetic-consent response used by earlier cohorts. Keep
+meaning clarification, saved-artifact approval, first-message qualification and
+scheduling/delivery permission distinct. Broader source discovery, multiple
+workflows, long-running alert quality and comparative value remain open.
+
+### Short affirmative after the displayed question
+
+Preregister separate `owner-short-confirmation-v1` before inference. The earlier
+four-case cohort remains closed. Its positive reply repeated a source rationale,
+so it did not establish the minimum "yes, go ahead" experience.
+
+Use one fresh prepared native draft with the current binary/skill. Supply the
+exact `owner_confirmation.question`, bound to its card ID/version, as the prior
+question, then a short yes for one delivery-disabled check with no repeated
+rationale. The question is supplied by the native handoff, not captured from an
+agent-authored UI conversation; this does not test whether the agent visibly
+asks it or prove autonomous onboarding.
+
+Cap one Luna-medium turn, 14 tools/180 seconds, one Jev request, 300k input /
+80k uncached between-call stops (not hard in-flight billing caps). No retries,
+sends, schedules, baseline or before/after claim. Require a separate zero-model
+preflight and the same native build identity before live inference. Observe
+actual approval/evaluation calls, persisted state, receipt and recorded reason;
+do not infer success from the final reply. Method review permits preflight and
+holds live inference until it passes. This is a new permission-language case,
+not a retry of a failed result or an extension of the old four-call budget.
+
 ## Fresh public owner-to-report development pair
 
 Freeze `public-owner-report-v1` before inference. Use published retail fixture

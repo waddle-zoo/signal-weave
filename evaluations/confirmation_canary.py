@@ -29,6 +29,8 @@ from scripts.binary_provenance import verify_binary
 from signalweave.models import InsightCard
 
 PROTOCOL = "owner-confirmation-canary-v1"
+SHORT_PROTOCOL = "owner-short-confirmation-v1"
+SHORT_REPLY = "Yes, go ahead with that one delivery-disabled check. Don't send or schedule anything."
 NOTES = Path(__file__).with_name("data") / "juniper-source-steward-v1.md"
 LIMITS = {"agent_invocations": 4, "jev_attempts": 1,
           "between_invocation_input_stop": 600_000, "between_invocation_uncached_stop": 120_000}
@@ -97,6 +99,11 @@ def behavior_checks(kind, before, after, calls):
 
 
 async def run(args):
+    short = getattr(args, "short_confirmation", False)
+    protocol = SHORT_PROTOCOL if short else PROTOCOL
+    replies = {"approve": SHORT_REPLY} if short else REPLIES
+    limits = ({**LIMITS, "agent_invocations": 1, "between_invocation_input_stop": 300_000,
+               "between_invocation_uncached_stop": 80_000} if short else LIMITS)
     binary = Path(args.binary).resolve()
     build, codex = verify_binary(binary), await pinned_codex(args.codex_executable)
     output = Path(args.output).resolve()
@@ -111,9 +118,12 @@ async def run(args):
     public = public_episode(fixture, period["period_id"])
     clock = datetime.now(timezone.utc)
     offset, _ = calendar_measurement_rebase([period], clock)
-    report = {"protocol": PROTOCOL, "preflight_only": not args.run, "build": build, "codex": codex,
+    report = {"protocol": protocol, "preflight_only": not args.run, "build": build, "codex": codex,
               "runner_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(), "note_sha256": note_hash,
-              "limits": LIMITS, "cases": [], "scope": __doc__}
+              "limits": limits, "cases": [], "scope": (
+                  "One prepared-draft continuation after the exact approval question and a short yes; "
+                  "no repeated rationale, no autonomous onboarding, baseline or efficacy claim."
+                  if short else __doc__)}
     budgets = []
 
     def save():
@@ -130,7 +140,7 @@ async def run(args):
         (output / "report.json").write_text(json.dumps(audit.redact(report), indent=2) + "\n")
 
     try:
-        for kind, reply in REPLIES.items():
+        for kind, reply in replies.items():
             adapter = PublicSourceAdapter(public["catalog"], public["scenario_id"], audit)
             adapter.set_period(period, clock, measurement_offset=offset)
             root = output / kind
@@ -159,9 +169,16 @@ async def run(args):
                 specs = await session.specs()
                 entry = {"case": kind, "owner_reply": reply, "before": before, "review": review,
                          "tool_hashes": pin_tools(specs)}
+                question = None
+                if short:
+                    confirmation = review["approval_handoff"]["owner_confirmation"]
+                    if confirmation["card_id"] != card_id or confirmation["card_version"] != before["version"]:
+                        raise ValueError("Owner question does not target the exact saved version")
+                    question = confirmation["question"]
+                    entry["previous_agent_question"] = question
                 report["cases"].append(entry)
                 if args.run:
-                    before_invocation(audit, LIMITS, codex["path"], codex["sha256"])
+                    before_invocation(audit, limits, codex["path"], codex["sha256"])
                     if (hashlib.sha256(binary.read_bytes()).hexdigest() != build["binary_sha256"]
                             or hashlib.sha256(Path(__file__).read_bytes()).hexdigest() != report["runner_sha256"]
                             or hashlib.sha256(NOTES.read_bytes()).hexdigest() != note_hash):
@@ -172,7 +189,8 @@ async def run(args):
                         instructions_override=INSTRUCTIONS + "\n" + skill,
                         prompt_override={"saved_card": before, "current_review": review,
                             "glossary": public["glossary"], "latest_owner_reply": reply,
-                            "idempotency_key": PROTOCOL + ":" + kind})
+                            **({"previous_agent_question": question} if short else {}),
+                            "idempotency_key": protocol + ":" + kind})
                     entry.update(agent=result, submission=session.submission, native_calls=session.native_calls)
                     after = await operation("get_insight_card", {"card_id": card_id, "response_mode": "full"})
                     entry.update(after=after, checks=behavior_checks(kind, before, after, session.native_calls))
@@ -188,7 +206,7 @@ async def run(args):
         report["completed"] = True
         if args.run:
             report["behavior_pass"] = all(all(e["checks"].values()) for e in report["cases"])
-            report["revision_semantics_need_review"] = True
+            report["revision_semantics_need_review"] = any(e["case"] == "revise_first" for e in report["cases"])
     except Exception as error:  # noqa: BLE001 - retain all partial attempts
         report["failure"] = failure_detail(error)
     finally:
@@ -202,6 +220,8 @@ def main():
         parser.add_argument("--" + name, required=True)
     parser.add_argument("--key-file")
     parser.add_argument("--run", action="store_true")
+    parser.add_argument("--short-confirmation", action="store_true",
+                        help="Separate one-turn cohort: short yes after the exact displayed approval question. Not a rerun of the closed four-case study.")
     args = parser.parse_args()
     if args.run and not args.key_file:
         parser.error("--run requires --key-file")
