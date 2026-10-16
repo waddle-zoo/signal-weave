@@ -196,6 +196,32 @@ def test_manifest_pins_caps_order_key_and_published_source_urls():
     assert {key: {"source_url": item["source_url"]} for key, item in published.items()} == followup.SOURCE_ASSETS
 
 
+@pytest.mark.parametrize("field", [
+    "scope", "comparison", "request", "policy_boundary", "method", "stops", "owner_reference_file",
+])
+def test_complete_preregistration_rejects_changed_method_before_preflight(field):
+    manifest = json.loads(followup.MANIFEST.read_text())
+    manifest["execution_status"] = "planned"
+    manifest[field] = "changed before preflight"
+    with pytest.raises(ValueError, match="complete preregistered protocol"):
+        followup.validate_manifest(manifest)
+
+
+def test_only_reviewed_native_build_and_original_owner_declarations_are_accepted(tmp_path):
+    manifest = json.loads(followup.MANIFEST.read_text())
+    followup.validate_native_build(dict(followup.EXPECTED_NATIVE_BUILD), manifest)
+    for key in followup.EXPECTED_NATIVE_BUILD:
+        changed = {**followup.EXPECTED_NATIVE_BUILD, key: "unreviewed"}
+        with pytest.raises(ValueError, match="preregistered native build"):
+            followup.validate_native_build(changed, manifest)
+    original = followup.MANIFEST.with_name(manifest["owner_reference_file"])
+    assert followup.read_owner_declarations(original)
+    changed_owner = tmp_path / "changed-owner.json"
+    changed_owner.write_text(json.dumps({"owner_declarations": {"new": "unreviewed rule"}}))
+    with pytest.raises(ValueError, match="original declarations"):
+        followup.read_owner_declarations(changed_owner)
+
+
 def test_pinned_query_definitions_and_columns_come_from_public_prior_captures(tmp_path, monkeypatch):
     monkeypatch.setattr(followup, "make_sources", SourceStub)
     profiles = _published_profiles()
@@ -266,6 +292,8 @@ def test_key_metadata_is_stat_only_and_private(tmp_path, monkeypatch):
 
 def test_dynamic_parent_import_does_not_change_helper_fingerprint(monkeypatch):
     before = followup.helper_hashes()
+    assert "src/signalweave/superset_client.py" in before
+    assert "src/signalweave/models.py" in before
     late = ModuleType("evaluations.late_parent_import")
     late.__file__ = str(Path(followup.__file__).resolve().parents[1] / "tests/test_raw_superset_workflow.py")
     monkeypatch.setitem(sys.modules, late.__name__, late)
@@ -500,7 +528,16 @@ def test_source_tool_failure_is_terminal_input():
     }])
     assert followup.has_source_failure([{
         "kind": "tool.result", "name": "aggregate_chart_rows",
+        "arguments": {"id": "1"},
         "result": {"error": "RawSupersetSourceError", "message": "source unavailable"},
+    }])
+    assert not followup.has_source_failure([{
+        "kind": "tool.result", "name": "read_chart_rows", "arguments": {"id": "999999"},
+        "result": {"error": "RawSupersetSourceError", "message": "chart not found"},
+    }])
+    assert not followup.has_source_failure([{
+        "kind": "tool.result", "name": "list_dashboard_charts", "arguments": {"id": "1"},
+        "result": {"error": "RawSupersetSourceError", "message": "dashboard not found"},
     }])
     assert not followup.has_source_failure([{
         "kind": "tool.result", "name": "aggregate_chart_rows",
@@ -583,7 +620,7 @@ def test_complete_preflight_and_mocked_pair_use_only_frozen_bounded_path(tmp_pat
                         lambda *args: ({"protocol": followup.PRIOR_PROTOCOL},
                                        {"baseline": "B's retained note", "signalweave": "T's retained note"},
                                        {"owner": "same owner declaration"}))
-    monkeypatch.setattr(followup, "verify_binary", lambda path: {"binary_sha256": "b" * 64})
+    monkeypatch.setattr(followup, "verify_binary", lambda path: dict(followup.EXPECTED_NATIVE_BUILD))
     async def pinned_codex(_):
         return {"path": str(codex), "sha256": followup.digest(codex)}
     monkeypatch.setattr(followup, "pinned_codex", pinned_codex)
@@ -692,6 +729,8 @@ def test_complete_preflight_and_mocked_pair_use_only_frozen_bounded_path(tmp_pat
     assert "read_working_notes" not in {name for _, name in tool_order}
     assert baseline[2]["accounting_drain"] is treatment[2]["accounting_drain"] is True
     assert baseline[2]["max_tool_calls"] == treatment[2]["max_tool_calls"] == 24
+    assert baseline[2]["max_turns"] is treatment[2]["max_turns"] is None
+    assert baseline[2]["max_output_tokens"] is treatment[2]["max_output_tokens"] is None
     baseline_prompt, treatment_prompt = (actor[2]["prompt_override"] for actor in (baseline, treatment))
     assert baseline_prompt["request"] == treatment_prompt["request"] == followup.REPORT_REQUEST
     assert baseline_prompt["owner_declarations"] == treatment_prompt["owner_declarations"]

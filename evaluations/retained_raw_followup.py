@@ -40,6 +40,13 @@ PRIOR_PROTOCOL = "raw-northstar-workflow-v2"
 PRIOR_REPORT_SHA256 = "2a4c0b4ebbfd09b23fe97b6be3ed89c8857ef347aaaae0fe841e8003a3d712e4"
 PRIOR_TRACE_SHA256 = "d759fdb5f2e2d73f2742409cc0be97fe1eb5ca83f90996c93ee13580906c5c28"
 CARD_POLICY_SHA256 = "970a730838db97e05d31e753f8052d87f7b7fcfb3140bd7dcf44f3a82184e54b"
+OWNER_REFERENCE_SHA256 = "2aa2750d9a57d46fd47ad7abe1cee52a6d1ddc9ad88b90644bf8648e389ce8cf"
+PREREGISTRATION_SHA256 = "8372f5c8463ba13a136d17b64a54bfde4e23e617f83d3cea743c91e2d01c5687"
+EXPECTED_NATIVE_BUILD = {
+    "git_commit": "b7d02c2517c8a708c8d126ec833fd1417148fd6f",
+    "source_sha256": "84682ea7f41e31ccb7b2f9ead53575be95de901c301fa76266fc287f09cc2af8",
+    "binary_sha256": "efea4563c1195f074b82f8406605e1a68f825bbefae07d36a640ebbfab202cf3",
+}
 RUN_KEY = "retained-raw-followup-v1:report"
 ARM_ORDER = ("baseline", "signalweave")
 SOURCE_ASSETS = {
@@ -53,7 +60,6 @@ EXPECTED_LIMITS = {
     "seconds_per_episode": 300,
     "model": "gpt-6-luna",
     "reasoning_effort": "xhigh",
-    "max_output_tokens": 4000,
     "jev_attempts_total": 1,
     "jev_arm": "signalweave",
     "between_invocation_input_stop": 600000,
@@ -61,11 +67,9 @@ EXPECTED_LIMITS = {
     "accounting_drain": True,
     "automatic_retries": 0,
 }
-HELPER_ROOT_NAMES = ("evaluations", "signalweave", "scripts")
-BI_TOOLS = {
-    "find_dashboards", "list_dashboard_charts", "read_chart_rows",
-    "profile_saved_chart", "aggregate_chart_rows",
-}
+HELPER_ROOT_NAMES = ("evaluations", "src/signalweave", "scripts")
+CHART_READ_TOOLS = {"read_chart_rows", "profile_saved_chart", "aggregate_chart_rows"}
+BI_TOOLS = CHART_READ_TOOLS | {"find_dashboards", "list_dashboard_charts"}
 SHARED_TOOLS = BI_TOOLS | {"calculate", "read_working_notes", "record_report"}
 REPORT_REQUEST = (
     "Complete the approved calendar-month sales readout. Then investigate the apparent Online hit "
@@ -105,7 +109,7 @@ class RetainedReportEpisode(ReportEpisode):
             if exact_key == exact_receipt:
                 raise ValueError("Read only this follow-up's receipt")
         result = await super().call(name, args)
-        if name in {"profile_saved_chart", "read_chart_rows", "aggregate_chart_rows"}:
+        if name in CHART_READ_TOOLS:
             self.source_reads.append(validate_actor_source_read(name, args, result, self.source_state))
         if name == "evaluate_insight_card":
             receipt_id = (result.get("receipt") or {}).get("receipt_id")
@@ -146,8 +150,16 @@ def validate_manifest(manifest: dict) -> None:
     if (manifest.get("run_key") != RUN_KEY or manifest.get("arm_order") != list(ARM_ORDER)
             or manifest.get("limits") != EXPECTED_LIMITS
             or manifest.get("source_assets") != SOURCE_ASSETS
-            or manifest.get("row_fingerprint_encoding") != ROW_FINGERPRINT_ENCODING):
+            or manifest.get("row_fingerprint_encoding") != ROW_FINGERPRINT_ENCODING
+            or manifest.get("native_build") != EXPECTED_NATIVE_BUILD):
         raise ValueError("Manifest changed the fixed key, order, limits, or source identity")
+    if json_digest({**manifest, "execution_status": "planned"}) != PREREGISTRATION_SHA256:
+        raise ValueError("Manifest differs from the complete preregistered protocol")
+
+
+def validate_native_build(build: dict, manifest: dict) -> None:
+    if any(build.get(key) != value for key, value in manifest["native_build"].items()):
+        raise ValueError("Binary differs from the reviewed preregistered native build")
 
 
 def validate_preflight(previous: dict, frozen: dict) -> None:
@@ -168,6 +180,15 @@ def validate_preflight(previous: dict, frozen: dict) -> None:
         "output_tokens": 0, "responses": 0,
     }:
         raise ValueError("Preflight must account for zero frontier requests")
+
+
+def read_owner_declarations(owner_file: Path):
+    if digest(owner_file) != OWNER_REFERENCE_SHA256:
+        raise ValueError("Owner reference differs from the original declarations")
+    declarations = json.loads(owner_file.read_text()).get("owner_declarations")
+    if not isinstance(declarations, (dict, list)) or not declarations:
+        raise ValueError("The retained owner declarations are missing")
+    return declarations
 
 
 def validate_prior_record(manifest: dict, root: Path, owner_file: Path):
@@ -211,11 +232,7 @@ def validate_prior_record(manifest: dict, root: Path, owner_file: Path):
             or receipt.get("receipt_id") != prior_spec["receipt_id"]
             or receipt.get("delivery_enabled") is not False):
         raise ValueError("Prior v2 call does not match its pinned card and receipt")
-    owner = json.loads(owner_file.read_text())
-    declarations = owner.get("owner_declarations")
-    if not isinstance(declarations, (dict, list)) or not declarations:
-        raise ValueError("The retained owner declarations are missing")
-    return prior, notes, declarations
+    return prior, notes, read_owner_declarations(owner_file)
 
 
 def key_file_metadata(path: Path) -> dict:
@@ -580,7 +597,8 @@ def ensure_invocation_budget(audit: Audit, report: dict, limits: dict) -> None:
 
 
 def has_source_failure(events: list[dict]) -> bool:
-    return any(event.get("kind") == "tool.result" and event.get("name") in BI_TOOLS
+    return any(event.get("kind") == "tool.result" and event.get("name") in CHART_READ_TOOLS
+               and str(event.get("arguments", {}).get("id", "")) in SOURCE_ASSETS
                and isinstance(event.get("result"), dict)
                and event["result"].get("error") == "RawSupersetSourceError"
                for event in events)
@@ -701,6 +719,7 @@ async def run(args) -> dict:
         home, config_path, dummy_key = retained_home_paths(prior_root)
         binary = Path(args.binary).resolve(strict=True)
         binary_info = verify_binary(binary)
+        validate_native_build(binary_info, manifest)
         codex = await pinned_codex(args.codex_executable)
         frozen = static_frozen(manifest_path, owner_file, prior_root, binary_info, codex,
                                config_path, dummy_key, manifest, notes, source_captures)
@@ -800,9 +819,9 @@ async def run(args) -> dict:
                 try:
                     result = await codex_episode(
                         session, key=None, budget=None, audit=audit, model=limits["model"],
-                        effort=limits["reasoning_effort"], max_turns=limits["tools_per_episode"],
+                        effort=limits["reasoning_effort"], max_turns=None,
                         max_tool_calls=limits["tools_per_episode"],
-                        max_output_tokens=limits["max_output_tokens"],
+                        max_output_tokens=None,  # CLI transport has no model-output/turn cap.
                         timeout_seconds=limits["seconds_per_episode"],
                         codex_executable=args.codex_executable, accounting_drain=True,
                         instructions_override=instructions,
@@ -887,9 +906,10 @@ async def run(args) -> dict:
                 await invoke(
                     "signalweave", treatment_session,
                     REPORT_INSTRUCTIONS
-                    + " First call evaluate_insight_card exactly once with the supplied approved card ID "
-                      "and new key. Then inspect the evaluation evidence and use the same company tools "
-                      "for the matched-day follow-up. A policy result does not establish cause.",
+                    + " Evaluate the supplied approved card exactly once under its new key before "
+                      "recording the report. Choose your own tool order and inspect the returned "
+                      "evidence; the same company tools remain available for investigation. "
+                      "A policy result does not establish cause.",
                     treatment_prompt,
                 )
                 treatment_evaluations = [call for call in treatment_session.native_calls
