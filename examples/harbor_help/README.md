@@ -102,9 +102,19 @@ bytes. Truncated results are explicit; aggregate in SQL instead of summing a
 truncated sample. The tool's retrieval timestamp does not replace the source's
 snapshot cutoff or ingestion ledger.
 
-This company MCP is separate example code, not part of the SignalWeave binary.
-Its raw SQL results are not SignalWeave source snapshots. An approved card needs
-a configured evidence source, such as an explicitly delegated
-[analyst publication](../analysis_publication/README.md); connecting these raw
-tools to an agent does not automatically create that integration. This example
-has not yet established successful agent onboarding or comparative business value.
+The additional `export_query` tool wraps arbitrary bounded SQL result rows as
+SignalWeave source evidence. It preserves column names and values, rejects
+truncation or duplicate aliases, and adds the saved SQL definition. It does not
+choose metrics, interpret changes, supply alert policy, or assert freshness.
+In an operator-reviewed [company MCP manifest](../../docs/mcp-source-bridge.md),
+fix its SQL, resource ID, source key and title as tool arguments. Cards select
+that resource; they cannot rewrite its SQL. Both baseline and treatment retain
+all the raw tools. Source-owned metric views are available to both, not hidden
+evaluation answers.
+
+This company MCP is separate example code, not part of the native binary.
+Connecting raw tools does not automatically configure a SignalWeave source.
+Routine cards can use configured SQL exports directly; a delegated
+[analyst publication](../analysis_publication/README.md) is an alternative for
+deeper findings, not a mandatory LLM pass before every check. This example has
+not yet established successful agent onboarding or comparative business value.

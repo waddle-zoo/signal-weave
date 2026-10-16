@@ -203,7 +203,7 @@ async def test_actual_stdio_mcp_discovers_and_runs_the_same_raw_source_tools(dat
                     assert initialized.serverInfo.name == "Harbor Help raw SQLite company source"
                     discovered = await session.list_tools()
                     names = {tool.name for tool in discovered.tools}
-                    assert names == {"list_assets", "inspect_asset", "query_readonly"}
+                    assert names == {"list_assets", "inspect_asset", "query_readonly", "export_query"}
 
                     catalog = _payload(await session.call_tool("list_assets", {}))
                     asset_names = {asset["name"] for asset in catalog["assets"]}
@@ -233,3 +233,22 @@ async def test_actual_stdio_mcp_discovers_and_runs_the_same_raw_source_tools(dat
             "GROUP BY support_tier ORDER BY support_tier"
         ).fetchall()
     assert result["rows"] == [list(row) for row in direct]
+
+
+def test_export_preserves_arbitrary_source_columns_without_policy_or_freshness(database):
+    from examples.harbor_help.company_mcp import export_query
+    from signalweave.models import ResourceSnapshot
+
+    sql = "SELECT support_tier AS niche_segment, COUNT(*) AS observed FROM tickets GROUP BY support_tier"
+    value = export_query(database, sql, "metric:custom", "custom", "Source counts")
+    parsed = ResourceSnapshot.model_validate(value)
+    direct = query_readonly(database, sql)
+    assert [item.values for item in parsed.evidence] == [dict(zip(direct["columns"], row, strict=True)) for row in direct["rows"]]
+    assert value["source_captured_at"] is None and value["metadata"]["capture_status"] == "unknown"
+    assert value["metadata"]["saved_query_definition"]["sql"] == sql
+    assert not parsed.analytical_comparisons and not parsed.observations
+    assert "outcome" not in value
+    with pytest.raises(ValueError, match="incomplete"):
+        export_query(database, "SELECT ticket_id FROM tickets", "metric:wide", "wide", "Too wide")
+    with pytest.raises(ValueError, match="unique aliases"):
+        export_query(database, "SELECT priority, priority FROM tickets LIMIT 1", "metric:duplicate", "duplicate", "Ambiguous")

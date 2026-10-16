@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import sqlite3
@@ -315,6 +316,33 @@ def query_readonly(
     }
 
 
+def export_query(database_path, sql: str, resource: str, source_key: str, title: str) -> dict[str, Any]:
+    """Wrap a bounded SQL result as source evidence, without policy or interpretation.
+
+    A SignalWeave manifest fixes SQL and identity arguments after operator
+    review. This company tool itself is not an authorization or truth boundary.
+    """
+    if any(not isinstance(value, str) or not value.strip() or len(value) > 500
+           for value in (resource, source_key, title)):
+        raise ValueError("Use nonempty bounded export identifiers and title")
+    result = query_readonly(database_path, sql, MAX_ROW_LIMIT)
+    if result["truncated"]:
+        raise ValueError("SQL export is incomplete; aggregate or narrow the saved query")
+    columns = result["columns"]
+    if len(set(columns)) != len(columns):
+        raise ValueError("Export columns need unique aliases to preserve every value")
+    return {"source_key": source_key, "adapter": "company_sql", "resource": resource, "title": title,
+            "source_captured_at": None, "contract": {"tenant_id": "local", "authorized": True},
+            "metadata": {"saved_query_definition": {"sql": sql, "sha256": hashlib.sha256(sql.encode()).hexdigest()},
+                "retrieval": result["source"], "assets_read": result["assets_read"],
+                "capture_status": "unknown", "capture_reason": "Retrieval time does not attest to source capture or freshness"},
+            "evidence": [{"source_key": source_key, "subject_id": f"row:{index}",
+                "statement": "Source SQL result row; not an alert decision or causal explanation.",
+                "values": dict(zip(columns, row, strict=True)), "origin": "source",
+                "provenance": result["assets_read"]}
+                for index, row in enumerate(result["rows"])]}
+
+
 def build_server(database_path: str | os.PathLike[str]) -> FastMCP:
     """Build the discoverable stdio company-source MCP server."""
     database = validate_database_path(database_path)
@@ -334,6 +362,11 @@ def build_server(database_path: str | os.PathLike[str]) -> FastMCP:
     def query_readonly_tool(sql: str, row_limit: int = DEFAULT_ROW_LIMIT) -> dict[str, Any]:
         """Run one bounded read-only SELECT against raw source tables or views."""
         return query_readonly(database, sql, row_limit)
+
+    @server.tool(name="export_query")
+    def export_query_tool(sql: str, resource: str, source_key: str, title: str) -> dict[str, Any]:
+        """Export bounded source SQL rows, with no policy decision. The operator fixes this tool's arguments in an approved SignalWeave source manifest."""
+        return export_query(database, sql, resource, source_key, title)
 
     return server
 

@@ -30,9 +30,21 @@ exist: source rows, discoverable SQL definitions, weighted completed-clock
 cohorts, open backlog and an ingestion gap, with independent recomputation.
 Review caught and corrected ingestion timestamps preceding supplied events.
 These are final retrospective states, not historical point-in-time snapshots.
-The actual stdio exchange passes; **no new agent onboarding or report comparison
-has run**. Raw tools are not automatically a SignalWeave evidence adapter; the
-study must use and account for the documented approved publication integration.
+The actual stdio exchange passes. The example also exports bounded SQL rows as
+source evidence: operator-fixed saved queries can feed a normal card without
+requiring an LLM-written report first. Raw tool connectivity alone still does
+not configure that bridge. Analyst publications remain an optional investigation
+path, not a mandatory pass before every routine check.
+
+The new [Harbor authoring protocol](../evaluations/data/harbor-raw-onboarding-v1.json)
+starts from a human question and allows two fresh analysts to clarify policy,
+calculate a first answer and save their own brief. Treatment can draft a card
+and shared definition with the real default-profile native tools. Both arms
+receive identical source-owned saved-query definitions and keep SQL, existing
+metric views, owner references, and portable notes/publication tools. Manual
+source preparation is disclosed; this is not inventing every metric from raw
+tables or proof of fresh human setup. Approval, Jev evaluation, recurrence and
+delivery are excluded until expert review of the actual saved artifacts.
 
 Before new paid expansion:
 
