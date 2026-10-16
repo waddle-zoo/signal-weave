@@ -134,6 +134,11 @@ async def test_expert_intervention_keeps_policy_and_charges_four_plus_two(tmp_pa
     assert card["version"] == 2 and card["context_bindings"][0]["required_for_action"]
     assert result["expert_intervention"]["context"]["revision"] == 2
     assert json.loads((tmp_path / "prior/report.json").read_text()) == original
+    operations = [json.loads(line) for line in (tmp_path / "output/trace.jsonl").read_text().splitlines()
+                  if json.loads(line)["kind"] == "native.operation"]
+    assert [e["name"] for e in operations][-5:] == ["review_domain_context", "bind_insight_context",
+                                                   "review_insight_card", "approve_insight_card", "get_insight_card"]
+    assert operations[-2]["arguments"]["source_selection_reason"] == followup.REASON
 
 
 @pytest.mark.parametrize("fault", ["changed-input", "changed-binary", "changed-cli"])
@@ -153,9 +158,9 @@ async def test_changed_native_draft_cannot_be_replaced_or_approved(tmp_path, mon
     args, state, _, _, _ = inputs(tmp_path, monkeypatch)
     original = followup.existing_drafts
 
-    async def changed(native, card, context):
+    async def changed(native, card, context, audit=None):
         native.card["decision_guidance"] = "Changed before sign-off"
-        return await original(native, card, context)
+        return await original(native, card, context, audit)
 
     monkeypatch.setattr(followup, "existing_drafts", changed)
     args.run = True

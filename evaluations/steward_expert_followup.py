@@ -93,9 +93,16 @@ def policy_signature(raw):
             "principal": [card.principal_id, card.principal_tenant]}
 
 
-async def existing_drafts(native, expected_card, expected_context):
-    _, current = await native.call_tool("get_insight_card", {"card_id": expected_card["id"], "response_mode": "full"})
-    _, history = await native.call_tool("get_context_history", {"entry_id": expected_context["id"]})
+async def native_operation(native, audit, name, arguments):
+    _, result = await native.call_tool(name, arguments)
+    if audit is not None:
+        audit.emit("native.operation", name=name, arguments=arguments, result=result)
+    return result
+
+
+async def existing_drafts(native, expected_card, expected_context, audit=None):
+    current = await native_operation(native, audit, "get_insight_card", {"card_id": expected_card["id"], "response_mode": "full"})
+    history = await native_operation(native, audit, "get_context_history", {"entry_id": expected_context["id"]})
     if (current["id"] != expected_card["id"] or current["version"] != expected_card["version"]
             or current["status"] != "draft" or policy_signature(current) != policy_signature(expected_card)
             or current["context_bindings"] != expected_card["context_bindings"]
@@ -104,19 +111,19 @@ async def existing_drafts(native, expected_card, expected_context):
     return current
 
 
-async def expert_signoff(native, expected_card, expected_context):
-    current = await existing_drafts(native, expected_card, expected_context)
-    _, reviewed = await native.call_tool("review_domain_context", {
+async def expert_signoff(native, expected_card, expected_context, audit=None):
+    current = await existing_drafts(native, expected_card, expected_context, audit)
+    reviewed = await native_operation(native, audit, "review_domain_context", {
         "entry_id": expected_context["id"], "expected_revision": expected_context["revision"],
         "action": "approve", "reason": REASON})
-    _, bound = await native.call_tool("bind_insight_context", {
+    bound = await native_operation(native, audit, "bind_insight_context", {
         "card_id": current["id"], "expected_card_version": current["version"],
         "pins": [{"entry_id": reviewed["id"], "revision": reviewed["revision"], "required_for_action": True}],
         "reason": REASON})
-    _, review = await native.call_tool("review_insight_card", {"card_id": current["id"]})
+    review = await native_operation(native, audit, "review_insight_card", {"card_id": current["id"]})
     args = review["approval_handoff"]["arguments_after_owner_confirmation"]
-    await native.call_tool("approve_insight_card", {**args, "source_selection_reason": REASON})
-    _, approved = await native.call_tool("get_insight_card", {"card_id": current["id"], "response_mode": "full"})
+    await native_operation(native, audit, "approve_insight_card", {**args, "source_selection_reason": REASON})
+    approved = await native_operation(native, audit, "get_insight_card", {"card_id": current["id"], "response_mode": "full"})
     pins = approved["context_bindings"]
     if (approved["status"] != "approved" or approved["version"] != current["version"] + 1
             or bound["version"] != approved["version"] or policy_signature(approved) != policy_signature(expected_card)
@@ -173,10 +180,10 @@ async def run(args):
             if hashlib.sha256(skill.encode()).hexdigest() != digest(canonical):
                 raise ValueError("Installed skill differs from current source")
             expected = prior["episodes"][1]["card"]
-            await existing_drafts(native, expected, context)
+            await existing_drafts(native, expected, context, audit)
             report["retained_drafts_verified"] = True
             if args.run:
-                approved, reviewed = await expert_signoff(native, expected, context)
+                approved, reviewed = await expert_signoff(native, expected, context, audit)
                 report["expert_intervention"] = {"reason": REASON, "card": approved, "context": reviewed}
                 period = fixture["public"]["periods"][2]
                 for author, treatment in zip(prior["episodes"], (False, True), strict=True):
