@@ -421,16 +421,22 @@ class SupersetClient:
         )
 
     @staticmethod
-    def _params(chart: dict[str, Any]) -> dict[str, Any]:
+    def _params(chart: dict[str, Any], *, strict: bool = False) -> dict[str, Any]:
         params = chart.get("params", {})
         if isinstance(params, str):
             try:
                 params = json.loads(params)
             except (ValueError, RecursionError):
+                if strict:
+                    raise ValueError("Cannot reconstruct a chart query from undecodable saved parameters") from None
                 # Invalid saved metadata must not discard independently returned
                 # chart rows when later helpers (e.g. viz type) parse it again.
                 params = {}
-        return dict(params) if isinstance(params, Mapping) else {}
+        if not isinstance(params, Mapping):
+            if strict:
+                raise ValueError("Cannot reconstruct a chart query from non-object saved parameters")
+            return {}
+        return dict(params)
 
     @staticmethod
     def _chart_filters(params: dict[str, Any]) -> list[dict[str, Any]]:
@@ -579,7 +585,7 @@ class SupersetClient:
     @classmethod
     def _query_context(cls, chart: dict[str, Any]) -> dict[str, Any]:
         """Build a bounded chart-data request from a saved chart definition."""
-        params = cls._params(chart)
+        params = cls._params(chart, strict=True)
         metrics = cls._query_metrics(params)
         granularity = params.get("granularity") or params.get("granularity_sqla")
         if not isinstance(granularity, str):
