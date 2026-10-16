@@ -46,6 +46,12 @@ A separate Luna-xhigh trace reviewer confirmed the false comparison-key objectio
 
 The final post-trial suite at the frozen v7 code passed **3,673 tests / 11 skipped in 244.75s**; the protocol's 72 targeted checks also passed. These are software checks, not business trials. Paid trials still used the verified `ae97380` native build described below. The next gate is useful source-grounded investigation with actual shared-context retrieval—not another approval-only canary or unrelated policy demands.
 
+### Follow-up instruction correction, not a repaired trial
+
+The optional context introduction and review-tool help now explain the existing order: preserve the rule in card guidance, bind the current reviewed shared revision, then do final card review/approval. Saving/reviewing alone neither links a card nor updates its pins; agents retrieve authorized note text separately. No automatic binding, new gate, provider behavior or approval bypass was added. Context timestamp help also explicitly requires a timezone; date-only values remain invalid rather than receiving a guessed timezone. Independent code review requested the current/shared qualification and excluding retired entries; the final wording includes both.
+
+The full regression run passed **3,677 / 11 skipped in 265.82s**. The final wording qualification was covered by **135 focused checks in 10.26s**, lint and diff checks. A clean native rebuild at `5f76d78` passed fresh isolated setup, installed skill, MCP initialization/tool-schema guidance and blank-state checks with zero agent/provider calls. Source/skill fingerprint: `f49d1a08bdf6bc4ca13fb0de95fa66c715b7782c0fb716b1ff4ee28b246e1f2c`; binary SHA-256: `6fbc7661c05a0257043fc6278c46acf36b60824fee8ba8828ad758fae1df2a87`. This is a local build, not a published release or a live revalidation of agent behavior. Logs: `artifacts/context-link-instructions-final-{verify,targeted}.log` and `artifacts/context-link-native-probe.log` (ignored local files).
+
 ## Latest trial: public-explicit-owner-v5
 
 Runner frozen at `94cf8fa`. Juniper Trail Retail, public seed 20261001, later period index 2. The generator's `holdout` label does not make this unseen data. Sources are synthetic company-MCP exports—not live vendor queries.

@@ -300,6 +300,16 @@ pair. The [public excerpt](../evaluations/data/courier-owner-v7-summary.json)
 matches the original messages, setups, objections, card fields and usage. The
 series is closed, with no retry, rescore or unused allowance transferred.
 
+An independent code audit identified missing binding guidance in the general MCP
+introduction, despite the dynamic guide already describing it. A separate small
+correction aligns the introduction/review-tool help and clarifies timestamp
+timezones; it changes neither lifecycle rules nor provider execution. Final
+focused checks and an isolated current-native zero-inference probe passed. This
+does not retroactively link v7's card or establish agent adherence. Next measure
+actual attributed context retrieval during a useful investigation, with owner
+ambiguities, current supported findings and future automation readiness scored
+separately. A model reviewer opinion must not be mistaken for numerical truth.
+
 Follow-up investigation gate: the optional `examples/investigation_agent`
 currently demonstrates a bounded Jev-handoff/evidence-tool loop, not a general
 frontier-led analyst. Its README and planner boundaries must not substitute for
