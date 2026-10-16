@@ -61,6 +61,7 @@ REFERENCE_PROTOCOL = "public-owner-reference-v3"
 STEWARD_PROTOCOL = "public-steward-reference-v4"
 CONVERSATION_PROTOCOL = "public-explicit-owner-v5"
 DEVELOPMENT_OWNER_PROTOCOL = "development-explicit-owner-v6"
+CLARIFIED_OWNER_PROTOCOL = "courier-owner-clarified-v7"
 HANDOFF_MANIFEST = Path(__file__).with_name("data") / "public-owner-handoff-v1-manifest.json"
 DEVELOPMENT_OWNER_TOPICS = ("source_scope", "context_review")
 LIMITS = {"agent_invocations": 6, "jev_attempts": 1,
@@ -137,13 +138,32 @@ def development_scenario():
     return value
 
 
+def attach_owner_clarification(fixture, path):
+    payload = Path(path).read_bytes()
+    text = payload.decode("utf-8").strip()
+    if not text or len(payload) > 16_000:
+        raise ValueError("Owner clarification must contain 1-16000 UTF-8 bytes")
+    result = copy.deepcopy(fixture)
+    public = result["public"]
+    if "workflow_boundaries" in public["owner_answers"]:
+        raise ValueError("Do not overwrite an existing owner clarification")
+    public["brief"] += "\n\nNew owner clarification:\n" + text
+    public["owner_topics"].append("workflow_boundaries")
+    public["owner_answers"]["workflow_boundaries"] = text
+    return result, {"sha256": hashlib.sha256(payload).hexdigest(), "topic": "workflow_boundaries",
+                    "provenance": "New fictional owner policy supplied equally; not inferred context, measurements or approval."}
+
+
 def validate_cohort_options(args):
     reference_mode = getattr(args, "expert_reference", False)
     notes_path = getattr(args, "expert_notes_file", None)
     conversation = getattr(args, "explicit_owner_confirmation", False)
     development_owner = getattr(args, "development_owner", False)
+    clarification = getattr(args, "owner_clarifications_file", None)
     handoff_report = getattr(args, "baseline_handoff_report", None)
     handoff_trace = getattr(args, "baseline_handoff_trace", None)
+    if clarification and not development_owner:
+        raise ValueError("--owner-clarifications-file requires the fresh --development-owner cohort")
     if development_owner:
         if notes_path:
             raise ValueError("--development-owner cannot be combined with --expert-notes-file; Pine Courier context is already public")
@@ -218,6 +238,7 @@ async def run(args):
     notes_path = getattr(args, "expert_notes_file", None)
     conversation = getattr(args, "explicit_owner_confirmation", False)
     development_owner = getattr(args, "development_owner", False)
+    clarification_path = getattr(args, "owner_clarifications_file", None)
     reference_module = None
     episode_type = AuthorEpisode
     if reference_mode:
@@ -238,6 +259,10 @@ async def run(args):
     audit = Audit(path=output / "trace.jsonl", secrets=(key.read_text().strip(),))
     budget = RequestBudget(limit=LIMITS["jev_attempts"] if args.run else 0)
     fixture = development_scenario() if development_owner else scenario()
+    clarification_identity = None
+    if clarification_path:
+        clarification_path = Path(clarification_path).resolve()
+        fixture, clarification_identity = attach_owner_clarification(fixture, clarification_path)
     period_index = 0 if development_owner else 2
     notes_identity = None
     if notes_path:
@@ -278,6 +303,9 @@ async def run(args):
         report.update(protocol=DEVELOPMENT_OWNER_PROTOCOL,
                       development_owner_answers=list(DEVELOPMENT_OWNER_TOPICS),
                       development_memory_request="Remember the agreed definition for future investigations.")
+    if clarification_identity:
+        report.update(protocol=CLARIFIED_OWNER_PROTOCOL, owner_clarification=clarification_identity,
+                      qualified_arms=[], onboarding_status={}, independent_arms=True)
     prior_entry, prior_events = None, []
     handoff_report = getattr(args, "baseline_handoff_report", None)
     if handoff_report:
@@ -303,6 +331,8 @@ async def run(args):
 
     def check():
         before_invocation(combined_audit(), LIMITS, codex["path"], codex["sha256"])
+        if clarification_path and hashlib.sha256(clarification_path.read_bytes()).hexdigest() != clarification_identity["sha256"]:
+            raise RuntimeError("Frozen owner clarification changed; stop without retry")
         if any(hashlib.sha256(Path(__file__).with_name(name).read_bytes()).hexdigest() != digest
                for name, digest in frozen_helpers.items()):
             raise RuntimeError("Frozen conversation/review helper changed; stop without retry")
@@ -408,6 +438,11 @@ async def run(args):
                                  "notes": session.notes, "owner_requests": session.owner_requests, "native_calls": session.native_calls}
                     report["episodes"].append(entry)
                     save()
+                    if clarification_identity and report["usage_known"] and result["status"] == "complete" and not session.setup:
+                        report["onboarding_status"][arm] = "author_incomplete"
+                        setups.append((session, None))
+                        save()
+                        continue
                     if (not report["usage_known"] or result["status"] != "complete" or not session.setup
                             or (not (handoff_report or reference_mode) and session.setup["unresolved"])):
                         raise RuntimeError("Author setup incomplete or unknown usage; no retry")
@@ -427,18 +462,39 @@ async def run(args):
                         owner_answers=public["owner_answers"], artifact={"notes": review_notes, **({"card": card} if card else {})},
                         source_context=source_context, audit=audit, budget=None, model="gpt-6-luna", effort="medium", codex_executable=codex["path"])
                     save()
+                    if clarification_identity and report["usage_known"] and not entry["independent_review"]["approved"]:
+                        report["onboarding_status"][arm] = "needs_owner_review"
+                        setups.append((session, card))
+                        save()
+                        continue
                     if not report["usage_known"] or not entry["independent_review"]["approved"]:
                         raise RuntimeError("Independent policy review rejected setup or usage unknown; no retry")
                     if reference_mode and not treatment and session.approvals.get(("notes", "working")) != approval_digest("notes", {"notes": session.notes}):
+                        if clarification_identity:
+                            report["onboarding_status"][arm] = "needs_owner_confirmation"
+                            setups.append((session, card))
+                            save()
+                            continue
                         raise RuntimeError("Baseline still needs synthetic owner consent for the exact saved notes; semantic review does not grant it")
                     if treatment and (card["status"] != "approved"
                             or session.approvals.get(("card", card["id"])) != approval_digest("card", card)):
+                        if clarification_identity:
+                            report["onboarding_status"][arm] = "needs_owner_confirmation"
+                            setups.append((session, card))
+                            save()
+                            continue
                         raise RuntimeError("Treatment still needs owner-confirmed card approval; semantic review does not grant it")
                     setups.append((session, card))
+                    if clarification_identity:
+                        report["onboarding_status"][arm] = "qualified_for_shadow_report"
+                        report["qualified_arms"].append(arm)
+                        save()
                 if args.run:
                     period = fixture["public"]["periods"][period_index]
                     for treatment, (setup, card) in zip((False, True), setups, strict=True):
                         arm = "signalweave" if treatment else "baseline"
+                        if clarification_identity and arm not in report["qualified_arms"]:
+                            continue
                         audit.episode = arm + ":report"
                         adapter.set_period(period, clock, measurement_offset=offset)
                         run_key = report["protocol"] + ":" + period["period_id"]
@@ -480,6 +536,10 @@ async def run(args):
                 if args.run and not development_owner and budget.used != LIMITS["jev_attempts"]:
                     raise RuntimeError("Live Jev integration was not exercised; reports remain recorded separately")
                 report["completed"] = True
+                if clarification_identity:
+                    report["paired_reporting_complete"] = (
+                        args.run and len([e for e in report["episodes"] if e["stage"] == "report"]) == 2
+                    )
     except Exception as error:  # noqa: BLE001 - preserve partial paid attempts
         report["failure"] = failure_detail(error)
     finally:
@@ -502,6 +562,8 @@ def main():
                         help="Separate explicit-owner cohort: scripted approval of the saved artifact, with full native operation logs. The default v5 path requires expert reference/notes; --development-owner uses the public Pine Courier answers.")
     parser.add_argument("--development-owner", action="store_true",
                         help="Fresh development-explicit-owner-v6 pair on the clarified Pine Courier fixture; requires --expert-reference and --explicit-owner-confirmation, with no notes file or archived handoff.")
+    parser.add_argument("--owner-clarifications-file",
+                        help="New v7 fresh-input cohort with explicit owner policy and independently qualified arms; requires --development-owner. Does not resume v6.")
     args = parser.parse_args()
     try:
         validate_cohort_options(args)
@@ -512,7 +574,10 @@ def main():
     if bool(args.baseline_handoff_report) != bool(args.baseline_handoff_trace):
         parser.error("Both baseline handoff report and trace are required together")
     result = asyncio.run(run(args))
-    print(json.dumps({k: result.get(k) for k in ("completed", "failure", "agent_invocations_started", "provider_attempts", "usage")}))
+    summary_keys = ("completed", "failure", "agent_invocations_started", "provider_attempts", "usage")
+    if args.owner_clarifications_file:
+        summary_keys += ("paired_reporting_complete", "qualified_arms")
+    print(json.dumps({k: result.get(k) for k in summary_keys}))
     if not result.get("completed"):
         raise SystemExit(1)
 

@@ -260,6 +260,34 @@ shadow analysis from qualification for unattended delivery; obtain only material
 owner/delegate choices and let each arm complete or pause independently. This
 must be tested in a new frozen study, not used to rescore this stopped one.
 
+### Clarified-owner courier study v7
+
+Freeze `courier-owner-clarified-v7` before inference. The [new fictional owner
+statement](../evaluations/data/courier-owner-clarification-v1.md) explicitly
+limits alerts to overall controlling totals, treats tiers as diagnostics and
+routes unusable required comparisons to Data Operations. It does not invent
+freshness expectations or provide measurements, dates, templates or expected
+period outcomes. Both arms receive identical clarified brief/owner answers;
+sources, raw periods and private labels are unchanged. This is new supervised
+policy input, not autonomous inference, a real human trial or a v6 rescore.
+
+Use blank native state and independently authored notes/card, normal native
+agent profile and equal common source tools. Keep the existing courier source
+fixture and fixed report index 0. Each author gets one invocation and each
+finished setup one policy review. Semantic rejection or a complete but unfinished
+author records an unqualified arm instead of censoring the other arm. Later
+reports run only for reviewed, owner-confirmed setups. `completed` describes
+protocol execution; `paired_reporting_complete` requires both reports and is
+still not a quality/correctness score. Unknown usage or invalid transport stops
+globally; no retries or replacement artifacts.
+
+New series cap: six Luna-medium calls maximum, at most one Jev request;
+1.2M input / 220k uncached between-call stops, existing 24-tool/240s author and
+12-tool/180s reporting limits. Freeze owner file/helper/native identities and
+zero-model preflight before live inference. v6 remains terminal after its two
+calls; no unused allowance is transferred. Separate actual message/numerical
+review must assess whatever reports are produced. No scheduling or sending.
+
 ## Fresh public owner-to-report development pair
 
 Freeze `public-owner-report-v1` before inference. Use published retail fixture
