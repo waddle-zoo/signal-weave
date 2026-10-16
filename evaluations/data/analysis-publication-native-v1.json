@@ -1,8 +1,12 @@
 {
   "protocol": "analysis-publication-native-v1",
-  "execution_status": "planned",
+  "execution_status": "closed",
   "scope": "Scripted owner approval, three synthetic publication revisions (pending, hypothesis-only, observed) and at most three live Jev judgments through the current native agent-profile MCP. Source-bridge integration proof only: no frontier analyst, raw BI discovery, human onboarding or comparative business-value claim.",
   "max_jev_attempts": 3,
-  "expected_sequence": ["investigate", "investigate", "notify"],
+  "expected_sequence": [
+    "investigate",
+    "investigate",
+    "notify"
+  ],
   "automatic_retries": 0
 }

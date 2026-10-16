@@ -8,6 +8,52 @@ Updated 2026-10-16. Feature branch: `feat/domain-context-memory`; [draft PR #19]
 
 The [public excerpt](../../evaluations/data/retained-context-courier-summary.json) preserves the four unchanged prepared messages, final chat acknowledgements, source facts, actual retrieved definition, native results, usage, review findings and artifact hashes. These are two observations of one known fictional company—not four companies, a precision estimate, customer validation or a repaired onboarding result.
 
+## Native analyst-publication handoff
+
+The [closed three-revision record](../../evaluations/data/analysis-publication-native-v1-summary.json)
+tests the existing source bridge, not a new analysis API. The actual native
+agent-profile MCP approved one scripted card, fetched successive synthetic
+publications and obtained live Jev outcomes: **pending → investigate;
+hypothesis-only → investigate; observed eight-percentage-point decline → notify**.
+The Growth destination came from the approved card, not the model. No message
+was sent.
+
+All three receipts retain the exact publication revision/byte hash, original
+capture time and parent chain. The card stayed unchanged. Replaying revision 1
+after revision 3 returned its original result/hash without a fourth Jev request;
+the stored original receipt remained delivery-disabled. Jev used **7,229 input /
+165 output tokens**, exactly three requests, zero errors and no retries.
+
+Independent code/method review preceded inference, and a successful matching
+zero-inference preflight inspected all three revisions through the binary. The
+initial preflight failed before MCP startup because the generated manifest had
+`0644` permissions instead of `0600`; that fixture failure is retained, not
+scored as a product/decision failure. Full software verification passed **4,020
+tests / 12 opt-in skips**; the separately enabled live native test passed in
+27.83s, including setup, not a provider-latency benchmark.
+
+The build is `8655029`, source fingerprint
+`ee737966781ca8478cc4f7d3736b1a78ef329943ebffcd56941b50296070a45f`;
+the closed record binds binary and private artifact hashes. Production source
+was unchanged by the preflight's later test-only permission repair. Main and
+the published download remain unchanged.
+
+An independent internal artifact review found no blocker for this integration
+claim: source, provider input, stored receipts, saved card and usage agree. The
+replay response was asserted by the passing test but not separately retained;
+the reviewer checked the unchanged stored original and no fourth Jev attempt.
+Trace events retain a generic `preflight` episode label; their actual live
+HTTP responses and usage identify the three requests. This is not external peer
+review or a test of concurrent publishing or an expired freshness SLA.
+
+This closes the narrow **approved publication → recurring decision → historical
+receipt** integration gap. It does **not** demonstrate a frontier-produced
+analysis, factual verification of a publisher, human onboarding, actual delivery,
+hosted customer deployment or comparative business advantage. A changed claim
+label is not independent evidence that its content is correct. The optional
+[reader example](../../examples/analysis_publication/README.md) documents the
+publisher's responsibilities without adding an agent loop to the service.
+
 ## Retained Northstar follow-up: matched-day investigation completed
 
 The [closed record](../../evaluations/data/retained-raw-followup-v1-summary.json)

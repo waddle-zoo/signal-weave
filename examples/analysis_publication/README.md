@@ -35,6 +35,7 @@ the reader's clock; these checks detect invalid metadata, not a dishonest publis
 3. Register the manifest with the existing local Company MCP setup:
 
    ```sh
+   chmod 600 /private/path/sources.json
    signalweave connections add --source mcp --manifest /private/path/sources.json
    ```
 

@@ -82,7 +82,8 @@ opaque “investigate” instruction.
 
 The intended sequence is:
 
-1. Call `evaluate_insight_card` with the approved card and current source data.
+1. Call `evaluate_insight_card` with the approved card ID and a stable run key.
+   SignalWeave fetches the approved sources; callers need not supply source data.
 2. Inspect `result.workflow`.
 3. If the action is `retrieve_evidence`, use the caller's authorized tools to
    inspect the sources named by `required_source_keys` and the free-form
@@ -183,8 +184,8 @@ Evidence admission policy version **1** is a breaking change. Required semantic
 slots always gate automatic `notify` and `escalate`, whether or not the card has
 `follow_up_guidance`. That prose describes follow-up after an inconclusive result;
 adding or removing it must not change evidence admission. Multi-step handoff
-instructions remain opt-in, and source retrieval and action execution remain
-outside SignalWeave.
+instructions remain opt-in. SignalWeave fetches approved card sources; the caller
+owns additional investigation tools and action execution.
 
 Cards declare `evidence_requirements: dict[str, StrictBool]`, defaulting to `{}`.
 Only exact keys for existing, one-based `question:N` and `watch:N` slots are
@@ -239,4 +240,4 @@ The historical live trial for the earlier handoff contract is in
 `evaluations/northstar_multistep_trial.py` and
 `examples/northstar-multistep-trial.json`. It uses live Jev over the same local
 Northstar rows as the single-step historical replay; expected dispositions stay
-outside the Jev state. Those retained results do not certify the current version 4.
+outside the Jev state. Those retained results do not certify the current version 6.

@@ -193,7 +193,9 @@ async def test_native_approved_publication_advances_same_card_without_caller_tru
     audit.path.touch(mode=0o600)
     budget = RequestBudget(0)  # No inference during setup or scripted owner approval.
     record = {"protocol": PROTOCOL, "scope": protocol["scope"], "fingerprints": frozen,
-              "preflight_complete": False, "completed": False, "packets": []}
+              "preflight_complete": False, "completed": False, "packets": [],
+              "provider_attempts": 0, "provider_errors": 0, "provider_usage_known": True,
+              "phase": "offline_setup"}
     proof_path = output / "proof.json"
     proof_path.write_text(json.dumps(record, indent=2) + "\n")
     proof_path.chmod(0o600)
@@ -204,10 +206,12 @@ async def test_native_approved_publication_advances_same_card_without_caller_tru
     publication_path = output / "publication.json"
     captured = (datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat()
     publication_path.write_text(json.dumps(_publication(1, captured)))
+    publication_path.chmod(0o600)
     manifest = json.loads(READER.with_name("manifest.example.json").read_text())
     manifest["connections"][0]["transport"]["command"] = [sys.executable, str(READER), str(publication_path)]
     source_manifest = output / "sources.json"
     source_manifest.write_text(json.dumps(manifest))
+    source_manifest.chmod(0o600)
     env = {key: value for key, value in os.environ.items() if key in {"PATH", "TMPDIR", "LANG", "LC_ALL"}}
     env["HOME"] = str(output)
     setup = subprocess.run([
@@ -216,6 +220,7 @@ async def test_native_approved_publication_advances_same_card_without_caller_tru
         "--principal", "publication-protocol-owner", "--agent", "codex", "--no-register-agent",
     ], env=env, capture_output=True, timeout=90)
     assert setup.returncode == 0, "Native setup failed; diagnostics withheld"
+    record["phase"] = "source_and_card"
     env.update(TYPESAFE_MAX_RETRIES="0", TYPESAFE_API_KEY_FILE=(str(dummy) if preflight else os.environ["TYPESAFE_API_KEY_FILE"]))
     try:
         async with asyncio.timeout(240), _jev_proxy(audit, budget) as proxy:

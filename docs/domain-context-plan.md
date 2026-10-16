@@ -46,7 +46,7 @@ adds a receipt-visible publication ID/revision/byte hash, not a truth certificat
 Fresh human setup, other connector shapes, actual delivery and a real frontier
 publisher remain separate acceptance gates.
 
-The next native integration check is preregistered in
+The native integration check was preregistered in
 [`analysis-publication-native-v1.json`](../evaluations/data/analysis-publication-native-v1.json):
 scripted source/card approval, then pending, hypothesis-only and observed
 synthetic publications through the same approved card. At most three live Jev
@@ -56,10 +56,26 @@ preflight, exclusive one-shot admission, exact source revision/hash and capture
 time in receipts, correct configured routes, parent chain, historical replay and
 unchanged card. No retry or allowance transfer after inference starts.
 
+It is now closed: the actual binary returned all three expected outcomes with
+exact source revision/hash, unchanged capture time/card, chained receipts and
+no-inference historical replay. Three Jev requests used 7,229 input / 165 output
+tokens, no errors or retries. The first zero-budget preflight exposed a generated
+manifest permission error; it remains retained separately from the successful
+corrected preflight and live run. See the [closed integration evidence](evidence/domain-context-preview-2026-10-14.md#native-analyst-publication-handoff).
+This does not close the real-frontier-publisher, human-message or business-value gates.
+
 The deterministic report now exposes source locators and the handoff asks for
 evidence-justified next steps. Forward-test final agent prose separately before
 claiming the earlier message behavior improved; more correct calculations or
 instruction strings alone do not close the communication gap.
+
+Next, exercise the same boundary with an actual frontier analyst reading
+authorized BI tools, publishing its own compact findings, and a fresh agent
+preparing the human message from the resulting native receipt. Independently
+check its calculations, source references, uncertainty and useful next step.
+Do not substitute supplied synthetic findings for that producer, or call a
+successful wiring check evidence of comparative benefit. Broader equal-context
+reuse trials follow only after that whole path works.
 
 ## Raw Northstar onboarding forward study
 
