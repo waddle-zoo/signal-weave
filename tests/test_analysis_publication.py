@@ -145,13 +145,39 @@ async def test_stdio_bridge_fetch_update_fetch_preserves_revision_and_capture(tm
     assert not InsightEngine._source_errors(card, [second], now=now)
 
 
+async def test_stdio_bridge_preserves_explicit_unknown_capture_reason(tmp_path):
+    item = deepcopy(PUBLICATION)
+    reason = "The archived export does not include the query-result capture time."
+    item["source_captured_at"] = None
+    item["metadata"].update(capture_status="unknown", capture_reason=reason)
+    path = tmp_path / "current.json"
+    path.write_text(json.dumps(item))
+
+    snapshot = await _fetch(_registry(tmp_path, path))
+
+    assert snapshot.error is None
+    assert snapshot.source_captured_at is None
+    assert snapshot.evidence[-1].values == {
+        "claim_kind": "publication_record", "publication_id": "product-growth-weekly", "revision": 1,
+        "publication_sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+        "capture_reason": reason,
+    }
+
+
 @pytest.mark.parametrize("change", [
     lambda item: item["metadata"].pop("publication_schema_version"),
     lambda item: item["metadata"].pop("publication_id"),
     lambda item: item["metadata"].update(revision=0),
     lambda item: item.pop("source_captured_at"),
     lambda item: item.update(source_captured_at="2026-10-15T23:00:00"),
+    lambda item: item.update(source_captured_at="not-a-timestamp"),
+    lambda item: item.update(source_captured_at="2026-02-30T23:00:00Z"),
+    lambda item: item.update(source_captured_at=None),
+    lambda item: item.update(source_captured_at=None, metadata={**item["metadata"], "capture_status": "unknown"}),
+    lambda item: item.update(source_captured_at=None, metadata={**item["metadata"], "capture_status": "unknown", "capture_reason": ""}),
+    lambda item: item.update(source_captured_at=None, metadata={**item["metadata"], "capture_status": "unknown", "capture_reason": "   "}),
     lambda item: item["metadata"].update(published_at="2026-10-15T23:00:00"),
+    lambda item: item["metadata"].update(published_at="2026-02-30T23:00:00Z"),
     lambda item: item["metadata"].update(published_at="2000-01-01T00:00:00Z"),
     lambda item: item["metadata"].update(published_at="2099-01-01T00:00:00Z"),
 ])

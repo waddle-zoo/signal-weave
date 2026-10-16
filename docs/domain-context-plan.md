@@ -77,6 +77,15 @@ Do not substitute supplied synthetic findings for that producer, or call a
 successful wiring check evidence of comparative benefit. Broader equal-context
 reuse trials follow only after that whole path works.
 
+That formative path is preregistered as
+[`frontier-publication-v1`](../evaluations/data/frontier-publication-v1.json):
+two fresh Luna-xhigh actors (raw analyst/publisher, then human-message writer)
+and at most one native Jev request. The historical calendar policy remains
+unchanged; matched-day findings remain a separate diagnostic. Unknown provider
+cache age stays unknown in receipt-visible provenance, without a freshness SLA.
+Source reconstruction follows the existing production client and is labeled,
+not a modified fixture. This is not a comparison or a human onboarding study.
+
 ## Raw Northstar onboarding forward study
 
 The running local Superset now has 48 dashboards, including long-tail catalog

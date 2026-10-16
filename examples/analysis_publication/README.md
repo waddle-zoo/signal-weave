@@ -15,8 +15,19 @@ interpretations as labeled hypotheses. `source_captured_at` is when the underlyi
 source result was produced, not the publication/retrieval time or the end of a
 historical comparison period. Keep measurement windows and data-as-of cutoffs in
 the evidence separately. Republishing old inputs must not refresh their capture
-time. Publication cannot precede capture or be more than five minutes ahead of
-the reader's clock; these checks detect invalid metadata, not a dishonest publisher.
+time. If the input capture time is unavailable, `source_captured_at` may be `null`
+only when metadata explicitly says `"capture_status": "unknown"` and provides a
+nonempty `capture_reason`. That status records uncertainty; it does not establish
+truth, verify a provider or uncached-query capability, or attest to freshness.
+Publication cannot precede a known capture time or be more than five minutes
+ahead of the reader's clock; these checks detect invalid metadata, not a dishonest
+publisher. An unknown capture time supplies no source-age bound. A deployment's
+handling of missing source times is controlled by its existing card policy and
+runtime; if it falls back to retrieval time, that is not evidence of when the
+underlying inputs were captured. Treat this as a historical, owner-reviewed
+publication example: it makes no source-freshness SLA or current-business
+freshness claim. Do not use `null` to imply that a freshness policy is disabled
+or satisfied.
 
 ## Operator quickstart
 
@@ -46,8 +57,10 @@ the reader's clock; these checks detect invalid metadata, not a dishonest publis
    The existing connection wizard validates the manifest and stores its path.
    Review the discovered `analysis_publication / report:product-growth` source,
    then review the actual configured reader response and narrow card policy
-   before approving the card. The normal source bridge checks tenant and source
-   identity and applies card freshness from `source_captured_at`.
+   before approving the card. The source bridge checks tenant and source
+   identity; the reviewed card policy controls freshness handling. An unknown
+   capture time is not source-freshness evidence, and this historical example
+   makes no freshness-SLA claim.
 
 ## Publication shape
 
@@ -56,11 +69,16 @@ freeform publication lineage, not a fixed metric schema; `evidence[].values`
 can contain the analyst's report-specific values. Keep facts, calculations,
 and hypotheses distinguishable in the evidence and its values. The reader
 validates the publication version/identity, explicit publication authority and
-scope, and timezone-aware publication and measurement timestamps, then returns
-the claims without rewriting timestamps or claim labels. It adds one evidence
-record with publication ID, revision and the SHA-256 of the exact file bytes
-read. That record survives in decision receipts; a hash establishes byte
-identity, not a signer, analytical correctness or permission to deliver.
+scope, and timezone-aware publication and known source-capture timestamps, then
+returns the claims without rewriting timestamps or claim labels. For an unknown
+source-capture time it requires the explicit metadata acknowledgement described
+above. It adds one evidence record with publication ID, revision and the SHA-256
+of the exact file bytes read. That record survives in decision receipts; a hash
+establishes byte identity, not a signer, analytical correctness or permission to
+deliver. Only for an explicitly unknown capture time, that existing record also
+carries the publisher's `capture_reason`; known-capture record values retain
+their existing shape. The acknowledgement and reason are publisher-provided
+metadata, not independent verification of the source or its capture capabilities.
 Keep the decision input to relevant findings and rollups, with pointers to raw
 data: fitting the transport budget does not mean a publication fits the decision
 provider's context budget. The dates and values below are illustrative; use the

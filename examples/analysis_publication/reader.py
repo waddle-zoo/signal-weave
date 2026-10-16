@@ -75,6 +75,8 @@ def _read_publication(path: Path) -> dict[str, Any]:
         metadata = publication.get("metadata")
         if not isinstance(metadata, dict):
             raise ValueError("publication metadata is required")
+        source_captured_at = publication.get("source_captured_at")
+        capture_unknown = source_captured_at is None
         if (
             type(metadata.get("publication_schema_version")) is not int
             or metadata["publication_schema_version"] != 1
@@ -88,23 +90,44 @@ def _read_publication(path: Path) -> dict[str, Any]:
             or not isinstance(metadata.get("source_scope"), str)
             or not metadata["source_scope"].strip()
             or not _aware_timestamp(metadata.get("published_at"))
-            or not _aware_timestamp(publication.get("source_captured_at"))
+            or "source_captured_at" not in publication
+            or (
+                capture_unknown
+                and (
+                    metadata.get("capture_status") != "unknown"
+                    or not isinstance(metadata.get("capture_reason"), str)
+                    or not metadata["capture_reason"].strip()
+                )
+            )
+            or (not capture_unknown and not _aware_timestamp(source_captured_at))
         ):
             raise ValueError("publication identity, authority, scope, or timestamps are invalid")
-        captured = datetime.fromisoformat(publication["source_captured_at"].replace("Z", "+00:00"))
         published = datetime.fromisoformat(metadata["published_at"].replace("Z", "+00:00"))
-        if captured > published or published > datetime.now(timezone.utc) + timedelta(minutes=5):
+        if (
+            (
+                not capture_unknown
+                and datetime.fromisoformat(source_captured_at.replace("Z", "+00:00")) > published
+            )
+            or published > datetime.now(timezone.utc) + timedelta(minutes=5)
+        ):
             raise ValueError("publication timestamp order or clock bound is invalid")
         evidence = publication.setdefault("evidence", [])
         if not isinstance(evidence, list) or not isinstance(publication.get("source_key"), str):
             raise ValueError("invalid evidence envelope")
         # Preserve the supplied claims and add a transport audit fact. Metadata
         # alone is not otherwise guaranteed to survive in a decision receipt.
+        record_values = {
+            "claim_kind": "publication_record",
+            "publication_id": metadata["publication_id"],
+            "revision": metadata["revision"],
+            "publication_sha256": hashlib.sha256(raw).hexdigest(),
+        }
+        if capture_unknown:
+            record_values["capture_reason"] = metadata["capture_reason"]
         evidence.append({
             "source_key": publication["source_key"], "subject_id": "publication-record",
             "statement": "Publication identity and byte hash; not verification of the analyst's claims.",
-            "values": {"claim_kind": "publication_record", "publication_id": metadata["publication_id"],
-                       "revision": metadata["revision"], "publication_sha256": hashlib.sha256(raw).hexdigest()},
+            "values": record_values,
             "origin": "source", "provenance": ["analysis-publication-reader"],
         })
         return publication
