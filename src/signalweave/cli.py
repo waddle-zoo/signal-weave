@@ -24,7 +24,19 @@ from .local_setup import (
     validate_decision_configuration,
 )
 from .local_status import local_status
-from .runtime import build_runtime, load_deployment_secret
+
+
+def build_runtime(*args, **kwargs):
+    """Load decision/source dependencies only when a runtime is requested."""
+    from .runtime import build_runtime as create_runtime
+
+    return create_runtime(*args, **kwargs)
+
+
+def load_deployment_secret(name: str) -> str | None:
+    from .runtime import load_deployment_secret as load_secret
+
+    return load_secret(name)
 
 
 def _is_loopback_host(host: str) -> bool:
