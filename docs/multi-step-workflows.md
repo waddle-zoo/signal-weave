@@ -106,6 +106,13 @@ configure a trusted runtime context provider; do not relabel caller findings as
 trusted. The frontier agent can still investigate through its other authorized
 tools and explain those findings separately.
 
+`ContextProvider` is a Python runtime extension (`build_runtime(context_provider=...)`),
+not a stock native-CLI connection setting. The shipped binary's current policy
+follow-up path is updated owner-approved source evidence. A versioned file or a
+reviewed knowledge note is not automatically a trusted runtime provider. Making
+agent-produced analytical findings easy to use for policy evaluation remains a
+separate integration gap; the caller-context field does not solve it.
+
 The caller should use `workflow.evidence_plan.missing_slot_keys` to decide
 which authorized tools to run. A fact can set `slot_key` to the corresponding
 plan key so SignalWeave can associate it with the request. For watch/question

@@ -63,7 +63,8 @@ class ReportEpisode(OnboardingEpisode):
     async def specs(self):
         shared = [s for s in await super().specs()
                   if s["name"] in {"find_dashboards", "list_dashboard_charts", "read_chart_rows",
-                                   "profile_saved_chart", "calculate", "read_working_notes"}]
+                                   "profile_saved_chart", "aggregate_chart_rows", "calculate",
+                                   "read_working_notes"}]
         shared.append(function("record_report", "Record the actual human-facing shadow message and proposed recipients; no sending.", {
             "outcome": {"type": "string", "enum": ["ignore", "notify", "investigate", "insufficient_data"]},
             "recipients": {"type": "array", "items": {"type": "string"}, "maxItems": 20},

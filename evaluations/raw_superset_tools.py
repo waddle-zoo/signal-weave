@@ -7,6 +7,7 @@ assigning business meaning to fields or values.
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 import math
 import re
@@ -20,6 +21,26 @@ MAX_CHART_ROWS = 20_000
 MAX_PAGE_SIZE = 250
 MAX_QUERY_LENGTH = 2_000
 MAX_RESOURCE_ID = 2**63 - 1
+
+
+class RawSupersetSourceError(ValueError):
+    """Saved-source I/O or unusable provider data, not a caller argument error."""
+
+
+def _row_multiset_sha256(rows: list[dict[str, Any]]) -> str | None:
+    """Fingerprint parsed rows without ordering/cache metadata or deduplication."""
+    try:
+        encoded = sorted(json.dumps(row, sort_keys=True, ensure_ascii=False, allow_nan=False,
+                                    separators=(",", ":")).encode("utf-8") for row in rows)
+    except (TypeError, ValueError, UnicodeError):
+        return None
+    digest = hashlib.sha256(b"[")
+    for index, row in enumerate(encoded):
+        if index:
+            digest.update(b",")
+        digest.update(row)
+    digest.update(b"]")
+    return digest.hexdigest()
 
 
 def _finite_number(value: Any) -> bool:
@@ -168,7 +189,7 @@ class RawSupersetTools:
             dashboards, provider_count = await self.client.list_dashboards_page(
                 page=0, page_size=10, query=query)
         except Exception:
-            raise ValueError("Superset dashboard search failed") from None
+            raise RawSupersetSourceError("Superset dashboard search failed") from None
         results = []
         for item in dashboards:
             if not isinstance(item, dict):
@@ -187,12 +208,12 @@ class RawSupersetTools:
                 "GET", f"/api/v1/dashboard/{dashboard_id}/charts", timeout=30)
             payload = response.json()
         except Exception:
-            raise ValueError("Superset dashboard chart listing failed") from None
+            raise RawSupersetSourceError("Superset dashboard chart listing failed") from None
         result = payload.get("result", payload) if isinstance(payload, dict) else payload
         if isinstance(result, dict):
             result = result.get("charts", result.get("result"))
         if not isinstance(result, list):
-            raise ValueError("Superset dashboard chart response had an unsupported shape")
+            raise RawSupersetSourceError("Superset dashboard chart response had an unsupported shape")
         charts = []
         for item in result:
             if not isinstance(item, dict):
@@ -200,7 +221,7 @@ class RawSupersetTools:
             try:
                 chart_id = self._resource_id(str(item.get("id")), "chart")
             except ValueError:
-                raise ValueError("Superset dashboard chart response contained an invalid id") from None
+                raise RawSupersetSourceError("Superset dashboard chart response contained an invalid id") from None
             charts.append(self._project(item, chart_id, "slice_name"))
         return {"dashboard_id": dashboard_id, "charts": copy.deepcopy(charts)}
 
@@ -211,34 +232,35 @@ class RawSupersetTools:
         try:
             metadata = await self.client.get_chart_metadata(chart_id)
         except Exception:
-            raise ValueError("Superset saved chart metadata could not be read") from None
+            raise RawSupersetSourceError("Superset saved chart metadata could not be read") from None
         if not isinstance(metadata, dict):
-            raise ValueError("Superset saved chart metadata had an unsupported shape")
+            raise RawSupersetSourceError("Superset saved chart metadata had an unsupported shape")
         try:
             returned_id = self._resource_id(str(metadata.get("id")), "chart")
         except ValueError:
-            raise ValueError("Superset saved chart metadata contained an invalid id") from None
+            raise RawSupersetSourceError("Superset saved chart metadata contained an invalid id") from None
         if returned_id != chart_id:
-            raise ValueError("Superset saved chart metadata did not match the requested id")
+            raise RawSupersetSourceError("Superset saved chart metadata did not match the requested id")
         before = self._client_request_count()
         try:
             envelopes = await self.client.chart_data(copy.deepcopy(metadata))
         except Exception:
             self._count_chart_query_requests(before)
-            raise ValueError("Superset saved chart query failed") from None
+            raise RawSupersetSourceError("Superset saved chart query failed") from None
         self._count_chart_query_requests(before)
         if not isinstance(envelopes, list) or any(not isinstance(item, dict) for item in envelopes):
-            raise ValueError("Superset saved chart query returned an unsupported envelope")
+            raise RawSupersetSourceError("Superset saved chart query returned an unsupported envelope")
         original_envelopes = copy.deepcopy(envelopes)
         try:
             rows = [row for envelope in original_envelopes
                     for row in self.client._rows_from_result_item(envelope)]
         except Exception:
-            raise ValueError("Superset saved chart rows could not be normalized") from None
+            raise RawSupersetSourceError("Superset saved chart rows could not be normalized") from None
         if len(rows) > MAX_CHART_ROWS:
-            raise ValueError("Superset saved chart query exceeded the 20000-row bound")
+            raise RawSupersetSourceError("Superset saved chart query exceeded the 20000-row bound")
         entry = {"metadata": copy.deepcopy(metadata), "envelopes": original_envelopes,
-                 "rows": copy.deepcopy(rows), "columns": self._columns(original_envelopes, rows)}
+                 "rows": copy.deepcopy(rows), "columns": self._columns(original_envelopes, rows),
+                 "returned_rows_sha256": _row_multiset_sha256(rows)}
         self._chart_cache[chart_id] = copy.deepcopy(entry)
         return copy.deepcopy(entry), False
 
@@ -279,6 +301,8 @@ class RawSupersetTools:
             "chart_id": chart_id, "query_definition": self._query_definition(entry["metadata"]),
             "actual_sql": self._actual_sql(entry["envelopes"]),
             "columns": copy.deepcopy(entry["columns"]),
+            "returned_rows_sha256": entry["returned_rows_sha256"],
+            "returned_rows_fingerprint_encoding": "sorted_json_row_multiset_v1",
             "query_scope": {"kind": "saved_chart_query", "dashboard_filters_applied": False,
                             "warehouse_completeness": "unknown"},
             "declared_row_limits": self._declared_row_limits(entry["metadata"]),

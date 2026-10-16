@@ -5,7 +5,11 @@ import math
 
 import pytest
 
-from evaluations.raw_superset_tools import RawSupersetTools
+from evaluations.raw_superset_tools import (
+    RawSupersetSourceError,
+    RawSupersetTools,
+    _row_multiset_sha256,
+)
 from signalweave.superset_client import SupersetClient
 
 
@@ -15,6 +19,32 @@ class FakeResponse:
 
     def json(self):
         return copy.deepcopy(self.payload)
+
+
+def test_row_fingerprint_is_order_independent_but_preserves_duplicates_and_value_types():
+    first = [{"a": 1, "b": "x"}, {"a": 2, "b": "y"}]
+    reversed_rows = [{"b": "y", "a": 2}, {"b": "x", "a": 1}]
+    assert _row_multiset_sha256(first) == _row_multiset_sha256(reversed_rows)
+    assert _row_multiset_sha256(first) != _row_multiset_sha256(first + [first[0]])
+    assert _row_multiset_sha256([{"a": True}]) != _row_multiset_sha256([{"a": 1}])
+    assert _row_multiset_sha256([{"a": None}]) != _row_multiset_sha256([{}])
+    assert _row_multiset_sha256([]) is not None
+    assert _row_multiset_sha256([{"a": math.nan}]) is None
+    assert _row_multiset_sha256([{"a": object()}]) is None
+
+
+@pytest.mark.asyncio
+async def test_vendor_failure_is_distinct_from_recoverable_caller_argument_error():
+    client = FakeSupersetClient({"id": 42}, [])
+    client.query_error = OSError("simulated vendor failure")
+    tools = RawSupersetTools(client)
+    with pytest.raises(ValueError) as invalid:
+        await tools.call("read_chart_rows", {"id": "42", "limit": 251})
+    assert not isinstance(invalid.value, RawSupersetSourceError)
+    assert client.chart_data_calls == 0
+    with pytest.raises(RawSupersetSourceError):
+        await tools.call("read_chart_rows", {"id": "42"})
+    assert client.chart_data_calls == 1
 
 
 class FakeSupersetClient:

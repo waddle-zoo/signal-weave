@@ -16,6 +16,30 @@ Feature branch: `feat/domain-context-memory`, based on main `e8842ac`.
 These are separate gates. Passing storage, authentication or a scripted decision
 check cannot substitute for complete onboarding and useful final agent outcomes.
 
+## Immediate forward check
+
+Keep the completed cohorts closed. The next bounded retained-report check uses
+the actual owner-approved v2 card, its unchanged calendar-month policy and both
+arms' original notes. Both agents retain the same source tools, including an
+opt-in saved-row aggregation tool for the matched-day investigation. Treatment
+adds one current-native evaluation with live Jev. This tests final useful output,
+not a raw-judgment score, new onboarding or generalized superiority.
+
+Before inference: independent method review, complete software verification, a
+matching current-source native build and a zero-inference source/state preflight.
+Freeze the runner, helper sources, source identities/returned-row fingerprints,
+card, old receipt and binary. Stop on unknown usage, changed inputs or incomplete
+actors; no retries. Record all outcomes and review the actual final messages.
+The exact protocol and budgets are in
+[`retained-raw-followup-v1.json`](../evaluations/data/retained-raw-followup-v1.json).
+
+Current repairs remove an indiscriminate raw-status alert veto and preserve
+useful analysis across policy evidence gaps; they do not make caller findings
+trusted. The stock binary still lacks a configured runtime context-provider
+path for agent-produced analytical findings. That multi-step integration gap,
+fresh human setup, other connector shapes and actual delivery remain separate
+acceptance gates, not implied successes from this retained-card check.
+
 ## Raw Northstar onboarding forward study
 
 The running local Superset now has 48 dashboards, including long-tail catalog

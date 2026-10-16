@@ -149,6 +149,44 @@ Private replay/offline-smoke record SHA-256:
 `24af4fe877c60d58ee8b45581d930609370a52b01a7d94fae5e9fdeab5cbfb30` /
 `8a8f7aef5eb6247eb205495e73b653cff0640b3d3ee43f68bea20e036c5b9f94`.
 
+### Workflow repairs after the closed study
+
+Commit `09ce689` keeps supported frontier analysis available when a policy
+comparison is missing. An explicitly mapped `insufficient_data` notice can use
+the existing delivery handoff; it does not become a business alert or completed
+investigation. The optional example agent now resolves compact evidence-plan
+references and asks for full machine-loop responses. Its data-gap notice excludes
+raw narrative and unverified facts; ordinary reports retain caller-provided
+findings **and their caveats**, labeled unverified. Public MCP caller context
+still cannot promote itself to trusted policy evidence.
+
+[All three native CI builds passed at that commit](https://github.com/waddle-zoo/signal-weave/actions/runs/38892719387).
+The downloaded ARM artifact passed checksum/build verification and an actual
+loopback HTTP MCP check: readiness 200, unauthenticated access 401, authenticated
+card/receipt access and unchanged historical replay, delivery disabled, zero Jev
+attempts. This is transport/history compatibility, not fresh analysis, customer
+SSO, a published release or evidence that the repaired agent is more useful.
+
+A separate control-flow repro found a false veto: raw business values such as
+`approval_status: pending` overrode an alert even when the card explicitly asked
+to notify on overdue pending approvals. Removing that recursive keyword rule
+leaves typed source-quality, required semantic-slot, numeric, confidence,
+unverified-caller and destination checks in place. Twenty plain/nested,
+notify/escalate policy permutations pass with a fake judge; independent scoped
+review accepted the change. These are software contracts, not live decision
+accuracy. The downloaded `09ce689` binary predates this deletion.
+
+Current full verification passed **3,973 tests / 11 opt-in skips in 296.42s**;
+the updated offline method fixtures passed another 20 focused checks. These
+counts do not add business observations or establish enterprise readiness.
+
+The next retained-reporting protocol adds the same bounded aggregation tool to
+both arms for a matched-day follow-up. It is a separate known-fixture forward
+check, not a rerun of v2, new onboarding or a superiority benchmark. Its source
+row fingerprints establish point-in-time parity only; they do not certify an
+atomic or complete warehouse snapshot. No result is claimed before execution
+and independent review of the actual messages.
+
 ## Raw Northstar onboarding attempt: censored, not product evidence
 
 The new `raw-northstar-onboarding-v1` attempted discovery over the running local

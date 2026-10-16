@@ -117,6 +117,12 @@ judgment as that proof.
 without its large catalog audit. They are historical review findings, not fresh
 measurements; check each run's `source_contracts` and evidence as well.
 
+Describe business states in the policy: “notify Operations when an approval has
+been pending for more than 36 hours” is a valid condition, not automatically a
+source failure. If a fact is instead a prerequisite for the decision—such as
+whether an exception was approved for this period—make that a required question
+or comparison. Raw field names like `status` do not establish that distinction.
+
 For example:
 
 > Use my answers to prepare the recurring card. Show me its exact sources,
