@@ -163,3 +163,24 @@ When the optional domain-context tools appear in the connected guide, agents can
 reuse reviewed definitions and dated findings across cards and poll for review
 reminders. See [shared domain context](domain-context.md). This does not replace
 current source evidence, card approval, or workflow certification.
+
+## Choose alerting or routine reporting
+
+These are different jobs. For alert-only monitoring, your existing runner can
+call SignalWeave directly through the CLI or MCP; it need not start a frontier
+agent just to obtain the card's typed judgment. Hand actionable evidence to the
+agent for investigation and a focused message. With Jev configured, that policy
+step uses Jev; it does not invoke Codex or Claude itself.
+
+| Requested job | Valid result | Caller behavior |
+| --- | --- | --- |
+| Alert only | `ignore` | Keep the receipt; do not start an investigation or send an alert |
+| Alert only | Needs attention or more evidence | Give the agent the evidence and relevant stored context to investigate |
+| Routine report | Including a quiet business period | Prepare the requested report; `ignore` does not cancel the separate reporting request |
+
+A deferred judgment, changed required context or unavailable evidence is not
+quiet success. Inspect current action availability and source limitations before
+routing work. Scheduling and sending still require separate authorization in
+your caller-owned runner. This pattern does not establish measured savings:
+source-query cost and frontier work depend on the workflow. Evaluations that
+always generate a report cannot measure the benefit of suppressing quiet alerts.
