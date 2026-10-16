@@ -8,7 +8,8 @@ limitations before reusing a result.
 
 | Question | Start here | What it does—and does not—show |
 | --- | --- | --- |
-| Opt-in domain-context preview | [Current context/card evidence](evidence/domain-context-preview-2026-10-14.md) | V5 authored onboarding completed. A separate actual-card replay covered missing-data and quiet observations; both arms' reports usable and routes correct, preferences split. Fewer treatment tools, same source reads, no general cost/quality lift. New courier study stopped at baseline policy review before treatment; not a SignalWeave result. Reviewed context still unused in reports. [Actual replay messages/source facts](../evaluations/data/retained-owner-periods-summary.json); earlier negatives retained. |
+| Opt-in domain-context preview | [Current context/card evidence](evidence/domain-context-preview-2026-10-14.md) | Two retained courier observations used the actual reviewed context and live Jev; both arms' routes/math supported, no overall quality or cost lift. Baseline gave better repair context; treatment added a correct but denser decline breakdown and one unnecessary reread. Original v7 onboarding remains unqualified. [Actual messages, source facts and usage](../evaluations/data/retained-context-courier-summary.json); retail results and earlier negatives retained. |
+| Raw Northstar onboarding attempt | [Actual censored record](../evaluations/data/raw-northstar-onboarding-summary.json) | Actual local Superset discovery, no prepared card. Baseline hit the 24-call experiment cap before submitting; treatment never started and token cost is unknown. This is a harness failure, not a product comparison or onboarding pass. |
 | Main cards/native release | [October 14 rc3 release evidence](evidence/cards-native-release-2026-10-14.md) | Main merge, all three native runners, and a real GitHub download through scripted human setup, isolated Codex registration, canonical skill, credential update, live local Superset/Jev card, replay, and uninstall. Integration proof, not customer efficacy or broad alert accuracy. |
 | Unpooled October 13 evidence | [Agent workflow study](evidence/agent-workflow-study-2026-10-13.md) | The completed decision-first v4 cohort is 6/6 synthetic families and 108 paired periods: native 108/108, baseline 108/108, treatment 107/108. Treatment took 3,091.2s vs 2,063.6s (+49.8%) despite 36 quiet frontier skips; excludes onboarding/review, with no dollar claim (cached-token billing unknown). The separate Oct 13 Superset payload failure was 150,456 bytes / 50,152 estimated tokens vs a 12,000-token limit; the 2,923-test suite missed it. |
 | October 14 native Superset paired handoff | [Agent workflow study](evidence/agent-workflow-study-2026-10-13.md) | Original-policy treatment completed a report with judgment deferred; explicit-deferred exhausted 60 tool calls with no submission. Post-run source comparison found metadata/contract and quality `cache_status` differences. The reads were not the same input; no superiority or total-cost claim. This remains separate from the October 13 payload failure. |
@@ -46,10 +47,12 @@ into the four-case functional pass.
   replays one human-authored card over eight simulated months (48 workflows).
   Follow-up diagnostic facts and role participants are scripted; this tests
   consuming supplied evidence and handoffs, not autonomous cause discovery.
-- [Northstar Growth Analytics historical replay](https://github.com/waddle-zoo/signal-weave/blob/ca8a10b69c08a81e793a4860538fa7a9e0b80bd0/docs/northstar-growth-history-trial.md)
+- [Northstar Growth Analytics historical replay](northstar-growth-history-trial.md)
   covers 48 synthetic cases with live Jev. The card was revised once after an
   initial miss pattern, so the final 48/48 replay is a repeatability check—not
-  an independent customer holdout.
+  an untouched holdout. Its comparator is a movement-only rule, its handoff
+  checks do not run a frontier agent, and its adversarial gate is a mechanical
+  report script rather than reviewer agents.
 - [Local binary onboarding trials](installed-onboarding-trial-2026-10-03.md):
   useful historical install, source, and transfer evidence; reports explicitly
   limit claims to synthetic traces and disabled delivery. This is separate

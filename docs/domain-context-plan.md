@@ -16,6 +16,58 @@ Feature branch: `feat/domain-context-memory`, based on main `e8842ac`.
 These are separate gates. Passing storage, authentication or a scripted decision
 check cannot substitute for complete onboarding and useful final agent outcomes.
 
+## Raw Northstar onboarding forward study
+
+The running local Superset now has 48 dashboards, including long-tail catalog
+packs with overlapping metric names. A read-only source check found the recent
+sales-month trap: the final monthly bucket is partial, with Executive daily
+records ending September 19, 2026. Earlier closed-month comparisons tell a
+different story. This is a known development case, not an unseen holdout.
+
+Freeze `raw-northstar-onboarding-v1` before inference. Two fresh Luna-xhigh
+authors discover actual saved charts, ask ordinary-language owner questions,
+produce their first useful readout and preserve their own reusable brief.
+Treatment additionally has the current native agent MCP and installed skill;
+it must create and review its own draft, never import or approve one. Both arms
+keep identical catalog, chart-definition, saved-query row/profile, calculator,
+owner-reference and notes tools. Per-arm query caches are separate. SQL is
+shown as provenance, not accepted as arbitrary caller SQL; neither arm has a
+shell. This is not the strongest production Luna baseline or a superiority test.
+
+Unlike earlier exact-topic simulations, a free-form owner request returns all
+explicitly declared policy statements with citations. It does not fabricate an
+answer, fill an undeclared rule, expose future labels or grant approval. The
+fictional steward's coverage declaration must be checked against the actual
+Executive daily query, not borrowed from another model or request time.
+
+Caps: two agent invocations, 24 tools/300 seconds each, zero Jev requests;
+stop between invocations at 700k input/150k uncached, unknown usage or an
+incomplete author. No retries, sending, scheduling or approvals. This author-only
+path uses dummy provider credentials; it cannot prove live Jev or recurring
+value. A later recurring study needs its own reviewed setup and budget.
+
+Independent method/code review found and repaired credential-cleanup and
+vacuous-draft-check gaps before inference. A new matching zero-inference
+preflight is required after those changes. Mechanical draft checks and a
+finished cohort are not semantic qualification: independently examine the
+actual saved card, source facts and human-facing messages before proceeding.
+
+The historical 48-case Northstar report is also corrected in place: the final
+12-case split was already reported before card revision, the comparator was a
+movement-only rule, and its adversarial gate was a mechanical report check.
+All original counts and negative initial results remain. None of those results
+substitutes for this raw-source onboarding or a real frontier-agent comparison.
+
+Terminal result: the baseline made 24 calls and reached the artificial cap
+before saving its report; treatment never ran. Codex was terminated without
+final usage, so cost is unknown, not zero. The source access/preflight and
+3,751-test suite passed, but this is an incomplete, harness-censored comparison,
+not a product result. The cohort is closed without retry or transfer of unused
+allowance. Preserve the [actual partial trace excerpt](../evaluations/data/raw-northstar-onboarding-summary.json).
+Repair future-test accounting and make work limits explicit before another
+paid study; do not adjust this cohort's budget or score intermediate arithmetic
+as a completed report. No new production change is justified by this failure.
+
 ## Exact reference retrieval and exploratory courier readouts
 
 Before spending more model calls, a synthetic 311-note repro showed that an

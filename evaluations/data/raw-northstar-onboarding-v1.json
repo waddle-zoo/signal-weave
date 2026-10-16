@@ -1,0 +1,22 @@
+{
+  "protocol": "raw-northstar-onboarding-v1",
+  "scope": "Formative paired source-discovery/onboarding study on the existing local Northstar Superset. No prepared card or normalized scenario snapshots. Scripted owner declarations, not a real human trial. No approval, recurring evaluation, scheduling, sending, or superiority claim.",
+  "brief": "Our online sales seem to have taken a hit. Explain what actually happened and how it affected overall net sales. Help me set up a reusable check so I do not have to inspect these dashboards every morning. Show a concise first readout and the proposed recurring brief before asking me to approve anything.",
+  "owner_declarations": {
+    "northstar-owner://sales/meaning": "For this exercise, the Executive Command Center's source-reported net_sales is our official management sales figure. Use that model's own reported channel categories. Net sales here means the reported net_sales field, not GAAP revenue, settled cash, marketing-attributed revenue or a unique-customer metric. Inspect the saved definitions and actual chart rows before doing arithmetic.",
+    "northstar-steward://sales/coverage": "This is a historical example dataset. The Executive daily-detail model has complete daily reporting through its latest observed order_date, including all earlier calendar months. The final observed calendar month is complete only if that date reaches its last calendar day. Establish that date from this model, not request time or another dashboard. Do not compare a partial month's total with a full month's total as a business decline. Prior fully covered calendar months may be compared; do not infer that all other models share this completeness guarantee.",
+    "northstar-owner://sales/check": "The recurring check should watch the latest reported Executive sales month against the prior calendar month, first establishing whether both are fully covered and comparable. If the latest month is partial or coverage cannot be established, propose insufficient_data to Data Trust for that comparison; still give a useful readout of the most recent two fully covered months when supported. Do not reinterpret the partial comparison as quiet business success.",
+    "northstar-owner://sales/policy": "For an established complete comparable primary monthly comparison: a net-sales decline of at least 15 percent relative to the prior month means notify Leadership. Otherwise, any absolute net-sales change of at least 10 percent means investigate with Analytics. Smaller absolute changes mean ignore with no triggered recipient. Optional channel/funnel detail explains these findings, not extra required alert conditions. Missing optional context is a reported limit, not grounds to discard valid primary sales facts.",
+    "northstar-owner://sales/investigation": "Look for the contribution of online and other channels to the observed total change. Digital funnel or marketing evidence may suggest follow-up questions, but attributed marketing revenue and digital-commerce revenue are different populations from Executive net_sales. Never add them together or assert a campaign caused a change from correlation alone. Missing diagnostic data should become a specific next question, not a made-up explanation.",
+    "northstar-owner://sales/delivery": "Proposed destinations are Leadership, Analytics and Data Trust. Keep actual messages short: what changed, why it matters, the key evidence, the important limit, and a next step. I have not approved a card or authorized a message or schedule. Prepare a draft only; a designated expert must review it with me before activation."
+  },
+  "limits": {
+    "agent_invocations": 2,
+    "tools_per_episode": 24,
+    "seconds_per_episode": 300,
+    "jev_attempts": 0,
+    "between_invocation_input_stop": 700000,
+    "between_invocation_uncached_stop": 150000
+  },
+  "interpretation": "Compare actual first readouts, source discovery, preserved owner intent and draft readiness. Preserve failures and all usage. This diagnoses onboarding before a separately reviewed recurring trial; it cannot establish Jev effectiveness, amortized cost savings, independent holdout accuracy or enterprise readiness."
+}

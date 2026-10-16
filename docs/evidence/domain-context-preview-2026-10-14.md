@@ -8,7 +8,37 @@ Updated 2026-10-16. Feature branch: `feat/domain-context-memory`; [draft PR #19]
 
 The [public excerpt](../../evaluations/data/retained-context-courier-summary.json) preserves the four unchanged prepared messages, final chat acknowledgements, source facts, actual retrieved definition, native results, usage, review findings and artifact hashes. These are two observations of one known fictional company—not four companies, a precision estimate, customer validation or a repaired onboarding result.
 
-## Latest study: retained-context-courier-v1
+## Raw Northstar onboarding attempt: censored, not product evidence
+
+The new `raw-northstar-onboarding-v1` attempted discovery over the running local
+Superset catalog (48 dashboards), without prepared cards or normalized scenario
+snapshots. Both intended arms had the same saved-query BI tools, calculator,
+owner declarations and notes; treatment would add the current native MCP/skill.
+This was authoring only, not an installer, recurrence or Jev study.
+
+**The baseline reached the preregistered 24-tool ceiling before saving its
+report. The SignalWeave arm never ran.** It had recovered the source's partial
+September cutoff and calculated the closed-month total change, but an unfinished
+analysis is not a useful delivered report or completed onboarding. The transport
+terminated without final usage; observed response counters of zero are not zero
+spending. No cost, accuracy or comparative result can be inferred.
+
+The [compact retained record](../../evaluations/data/raw-northstar-onboarding-summary.json)
+contains the actual partial message, calls, recorded calculations, daily-source
+profile and immutable report/trace hashes. The cohort is closed, with no retry,
+rescore or transfer of its unused allowance. The cap/accounting design is the
+experimenter's defect, not a SignalWeave or baseline quality result. Independent
+preflight review cleared source access and isolation; it did not establish that
+24 calls were adequate. A future study must test that question and graceful
+accounting before paid execution.
+
+Current native/source identity remains `e5ae9ca` as recorded below. Both
+zero-model preflights passed; the full suite passed **3,751 / 11 skipped in
+287.63s** before the attempt. No approvals, Jev requests, schedules or sends
+occurred. Only dummy provider credentials were used; personal settings and
+the live Superset dataset were not changed.
+
+## Completed readout study: retained-context-courier-v1
 
 The study reused the **actual** agent-authored notes, saved approved card and separately reviewed definition from v7. Nothing was imported, reconstructed, manually completed or reapproved. The definition remained unbound; this tests standalone retrieval, not automatic card dependency use. Both original onboarding reviews remain rejected and unattended readiness remains unqualified.
 
