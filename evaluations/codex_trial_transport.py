@@ -45,7 +45,7 @@ def scoped_resource_discovery(item: dict) -> bool:
     arguments = item.get("arguments")
     identifier = item.get("id")
     return (
-        item.get("server") == "codex"
+        item.get("server") in ("codex", "trial")
         and isinstance(item.get("tool"), str)
         and item.get("tool") in {"list_mcp_resources", "list_mcp_resource_templates"}
         and isinstance(identifier, str) and 0 < len(identifier) <= 200
@@ -155,11 +155,12 @@ async def verify_trial_registry(executable, cwd, url):
 
 class TrialMCP:
     def __init__(self, session, audit, specs: list[dict], max_calls: int, *,
-                 accounting_drain: bool = False):
+                 accounting_drain: bool = False, report_remaining_budget: bool = False):
         self.session, self.audit = session, audit
         self.specs = {spec["name"]: spec for spec in specs}
         self.max_calls = max_calls
         self.accounting_drain = accounting_drain
+        self.report_remaining_budget = report_remaining_budget
         self.calls = 0
         self.ingress_calls = 0
         self.exhausted = False
@@ -245,9 +246,14 @@ class TrialMCP:
         self.audit.emit("tool.result", name=name, arguments=audited_arguments, result=result,
                         actor_role=getattr(self.session, "audit_role", "author"),
                         seconds=time.perf_counter() - started)
-        return types.CallToolResult(
-            content=[types.TextContent(type="text", text=json.dumps(result))],
-            isError=failed)
+        content = [types.TextContent(type="text", text=json.dumps(result))]
+        if self.report_remaining_budget:
+            content.append(types.TextContent(type="text", text=(
+                f"Research tool budget: {max(0, self.max_calls - self.calls)} company-tool calls remain. "
+                "The final publication/submission also uses a call; reserve one. "
+                "This is operational status, not business/source evidence."
+            )))
+        return types.CallToolResult(content=content, isError=failed)
 
 
 @asynccontextmanager
@@ -293,7 +299,8 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
                         codex_executable: str = "codex",
                         accounting_drain: bool = False,
                         allow_trial_resource_discovery: bool = False,
-                        expected_registry_sha256: str | None = None) -> dict:
+                        expected_registry_sha256: str | None = None,
+                        report_remaining_budget: bool = False) -> dict:
     from evaluations.bootstrap_agent_trial import (
         COMMON_SYSTEM,
         MODEL,
@@ -385,7 +392,7 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
             "shared_card": shared_card,
             "signalweave_evaluation": bundle})
     bridge = TrialMCP(session, audit, await session.specs(), max_tool_calls,
-                      accounting_drain=accounting_drain)
+                      accounting_drain=accounting_drain, report_remaining_budget=report_remaining_budget)
     # Distinct IDs from positive Jev request IDs. A Codex invocation is NOT an API request.
     request_id = -(1 + sum(e["kind"] == "api.request" and e.get("provider") == "openai"
                           for e in audit.events))
@@ -436,7 +443,10 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
                     foreign_tools.append(item["type"])
                 if item.get("type") == "agent_message" and isinstance(item.get("text"), str):
                     final_message = item["text"]
-                if item.get("type") == "mcp_tool_call" and item.get("server") != "trial":
+                if item.get("type") == "mcp_tool_call" and (
+                    item.get("server") != "trial"
+                    or registry_isolation and (not isinstance(item.get("tool"), str) or item["tool"] not in bridge.specs)
+                ):
                     if registry_isolation and scoped_resource_discovery(item):
                         identifier = item["id"]
                         if identifier not in resource_discovery_attempt_ids:

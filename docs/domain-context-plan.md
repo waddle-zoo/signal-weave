@@ -104,6 +104,16 @@ The native CLI's configuration-only check also accepted those overrides with
 user config ignored; it stopped on a deliberately missing output schema with a
 loopback-only dummy provider, without model inference.
 
+V2 is also closed: configured isolation passed, but 36 calls (including sixteen
+scalar calculations) exhausted the undisclosed research quota before publication.
+Three parallel over-cap calls triggered termination; aggregate usage is unknown.
+No Jev, writer or final report ran. Both censored records and unused slots remain
+closed, with no comparative or product-failure claim. Optional generic batch
+arithmetic and visible quotas are forward-only offline repairs, not evidence of
+completed analysis. UTC calendar conversion and bounded executed-operation
+provenance support checking the observed 20-versus-19-day error; they do not
+certify comparability. Do not admit another paid correction under either protocol.
+
 ## Raw Northstar onboarding forward study
 
 The running local Superset now has 48 dashboards, including long-tail catalog

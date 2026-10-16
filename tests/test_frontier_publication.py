@@ -61,6 +61,20 @@ def test_only_confirmed_uncached_inputs_establish_a_lower_capture_bound(tmp_path
     assert actor.submission["metadata"]["capture_status"] == "known_uncached_lower_bound"
 
 
+def test_publication_retains_executed_aggregation_bounds_not_only_the_claim(tmp_path):
+    actor = analyst(tmp_path)
+    arguments = {"id": "42", "filters": [{"column": "event_epoch", "op": "lt", "value": 17}],
+                 "group_by": ["niche_category"], "aggregations": [{"op": "count"}]}
+    actor.reads += [{"tool": "aggregate_chart_rows", "arguments": arguments,
+                     "result": {"chart_id": "42", "matched_row_count": 3}} for _ in range(9)]
+    actor.publish(findings())
+    provenance = actor.submission["evidence"][1]["values"]
+    assert provenance["analysis_operations"][0]["arguments"] == arguments
+    assert provenance["analysis_operations"][0]["matched_row_count"] == 3
+    assert provenance["analysis_operation_count"] == 9
+    assert len(provenance["analysis_operations"]) == 8 and provenance["analysis_operations_omitted"] == 1
+
+
 @pytest.mark.parametrize("cache", [True, None, "false", 0])
 def test_cached_unknown_and_malformed_flags_cannot_become_fresh(tmp_path, cache):
     actor = analyst(tmp_path)
@@ -160,3 +174,34 @@ def test_unmatched_actor_drops_stale_known_status_and_preserves_observed_subtota
     result = trial.usage_snapshot(events, 2)
     assert result["known"] is False and result["usage"] is None
     assert result["observed"]["input_tokens"] == 50
+
+
+def test_batch_arithmetic_is_generic_bounded_and_does_not_execute_code():
+    assert trial.calculate_many({"delta": "93-127", "ratio": "9/12", "other": "(3+5)*7"}) == {
+        "delta": -34, "ratio": 0.75, "other": 56,
+    }
+    with pytest.raises(ValueError):
+        trial.calculate_many({})
+    with pytest.raises(ValueError):
+        trial.calculate_many({str(i): "1+2" for i in range(33)})
+    with pytest.raises(ValueError):
+        trial.calculate_many({"unsafe": "__import__('os').listdir('/')"})
+
+
+def test_calendar_tool_counts_days_and_returns_matching_exclusive_epoch_bounds():
+    result = trial.calendar_window("2024-02-28", days=3)
+    assert result["end_exclusive"] == "2024-03-02"
+    assert result["last_included_date"] == "2024-03-01" and result["days"] == 3
+    assert result["epoch_milliseconds"]["lt"] - result["epoch_milliseconds"]["gte"] == 3 * 86400000
+    assert result == trial.calendar_window("2024-02-28", end_exclusive="2024-03-02")
+
+
+@pytest.mark.parametrize("arguments", [
+    {"start_date": "2024-02-30", "days": 1}, {"start_date": "20240228", "days": 1},
+    {"start_date": "2024-02-28", "days": True}, {"start_date": "2024-02-28", "days": 0},
+    {"start_date": "2024-02-28", "days": 3, "end_exclusive": "2024-03-02"},
+    {"start_date": "2024-02-28"}, {"start_date": "2024-02-28", "end_exclusive": "2024-02-27"},
+])
+def test_calendar_tool_rejects_ambiguous_or_invalid_bounds(arguments):
+    with pytest.raises(ValueError):
+        trial.calendar_window(**arguments)

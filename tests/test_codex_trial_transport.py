@@ -131,6 +131,17 @@ async def test_completed_onboarding_does_not_block_monitoring():
     session.call.assert_awaited_once()
 
 
+async def test_budget_visibility_does_not_rewrite_the_company_payload():
+    session, audit = session_stub(), trial.Audit()
+    bridge = transport.TrialMCP(session, audit, await session.specs(), max_calls=3,
+                                report_remaining_budget=True)
+    result = await bridge.call("list_catalog", {})
+    assert json.loads(result.content[0].text) == {"ok": True}
+    assert "2 company-tool calls remain" in result.content[1].text
+    assert "reserve one" in result.content[1].text
+    assert "not business/source evidence" in result.content[1].text
+
+
 @pytest.mark.parametrize("max_calls", [0, 2])
 async def test_call_budget_counts_rejected_tools_and_never_dispatches_over_cap(max_calls):
     session, audit = session_stub(), trial.Audit()
@@ -699,10 +710,11 @@ async def test_episode_rejects_failure_and_foreign_tools_even_after_submission(f
 
 
 @pytest.mark.parametrize("tool", ["list_mcp_resources", "list_mcp_resource_templates"])
-async def test_scoped_builtin_resource_discovery_is_explicit_and_counted_once(fake_episode, tool):
+@pytest.mark.parametrize("server", ["codex", "trial"])
+async def test_scoped_builtin_resource_discovery_is_explicit_and_counted_once(fake_episode, tool, server):
     fake = fake_episode
     fake.session.submission = {"summary": "Synthetic completed result"}
-    item = {"type": "mcp_tool_call", "server": "codex", "tool": tool, "id": "metadata-1", "arguments": {}}
+    item = {"type": "mcp_tool_call", "server": server, "tool": tool, "id": "metadata-1", "arguments": {}}
     result = await fake.run([
         {"type": "item.started", "item": item}, {"type": "item.completed", "item": item},
         {"type": "turn.completed", "usage": {"input_tokens": 10, "output_tokens": 2, "cached_input_tokens": 0}},

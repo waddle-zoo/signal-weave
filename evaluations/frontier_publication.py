@@ -16,7 +16,7 @@ import sys
 import tempfile
 from contextlib import asynccontextmanager
 from copy import deepcopy
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 from mcp import ClientSession, StdioServerParameters
@@ -107,6 +107,66 @@ async def writer_with_known_policy(audit, budget, operation):
     return await operation()
 
 
+def batch_arithmetic_tool():
+    return function("calculate_many", "Validate up to 32 independent arithmetic expressions in one call. No SQL, files or arbitrary code; returns named values. All expressions must pass the same bounded calculator.", {
+        "expressions": {"type": "object", "minProperties": 1, "maxProperties": 32,
+                        "additionalProperties": {"type": "string", "minLength": 1, "maxLength": 1000}},
+    }, ("expressions",))
+
+
+def calculate_many(expressions):
+    if not isinstance(expressions, dict) or not 1 <= len(expressions) <= 32:
+        raise ValueError("Use 1-32 named arithmetic expressions")
+    if any(not isinstance(name, str) or not name or len(name) > 200
+           or not isinstance(expression, str) or not expression or len(expression) > 1000
+           for name, expression in expressions.items()):
+        raise ValueError("Use bounded expression names and strings")
+    return {name: calculate(expression) for name, expression in expressions.items()}
+
+
+def calendar_window(start_date, *, days=None, end_exclusive=None):
+    """Convert caller-chosen UTC dates, never infer comparable business periods."""
+    if (days is None) == (end_exclusive is None):
+        raise ValueError("Provide exactly one of days or end_exclusive")
+
+    def parsed(value):
+        if not isinstance(value, str):
+            raise ValueError("Use ISO YYYY-MM-DD dates")
+        result = date.fromisoformat(value)
+        if result.isoformat() != value:
+            raise ValueError("Use ISO YYYY-MM-DD dates")
+        return result
+
+    start = parsed(start_date)
+    if days is not None:
+        if type(days) is not int or not 1 <= days <= 3660:
+            raise ValueError("Use 1-3660 calendar days")
+        try:
+            end = start + timedelta(days=days)
+        except OverflowError:
+            raise ValueError("Calendar range exceeds supported dates") from None
+    else:
+        end = parsed(end_exclusive)
+    span = (end - start).days
+    if not 1 <= span <= 3660:
+        raise ValueError("Use an increasing range of at most 3660 days")
+    start_seconds = int(datetime.combine(start, datetime.min.time(), timezone.utc).timestamp())
+    end_seconds = int(datetime.combine(end, datetime.min.time(), timezone.utc).timestamp())
+    return {"start_inclusive": start.isoformat(), "end_exclusive": end.isoformat(),
+            "last_included_date": (end - timedelta(days=1)).isoformat(), "days": span, "timezone": "UTC",
+            "epoch_seconds": {"gte": start_seconds, "lt": end_seconds},
+            "epoch_milliseconds": {"gte": start_seconds * 1000, "lt": end_seconds * 1000},
+            "scope": "Caller-chosen UTC calendar bounds; not a coverage, timezone or comparability guarantee"}
+
+
+def calendar_tool():
+    return function("calendar_window", "Convert caller-chosen UTC dates to exact ISO and epoch bounds, returning included days. Provide start_date and exactly one of days or end_exclusive. Does not choose valid business periods, source units, coverage or timezone; never queries data.", {
+        "start_date": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
+        "days": {"type": "integer", "minimum": 1, "maximum": 3660},
+        "end_exclusive": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
+    }, ("start_date",))
+
+
 class FreshSavedClient(SupersetClient):
     """Request fresh execution of unchanged saved queries; retain time bounds."""
 
@@ -152,14 +212,17 @@ class Analyst:
     treatment = False
     setup_complete = False
 
-    def __init__(self, sources, path, audit, protocol_id=PROTOCOL):
+    def __init__(self, sources, path, audit, protocol_id=PROTOCOL, *, batch_arithmetic=False, calendar_tools=False):
         self.sources, self.path, self.audit = sources, path, audit
         self.protocol_id = protocol_id
+        self.batch_arithmetic = batch_arithmetic
+        self.calendar_tools = calendar_tools
         self.submission = None
         self.reads = []
 
     async def specs(self):
-        return [*await self.sources.specs(),
+        return [*await self.sources.specs(), *([batch_arithmetic_tool()] if self.batch_arithmetic else []),
+                *([calendar_tool()] if self.calendar_tools else []),
                 function("calculate", "Bounded arithmetic, not SQL or a source.",
                          {"expression": {"type": "string", "maxLength": 1000}}, ("expression",)),
                 function("publish_analysis", "Publish one compact analytical report to the explicitly delegated local report source; stop after success. No sending or scheduling. Values and claims remain your responsibility.", {
@@ -174,6 +237,10 @@ class Analyst:
                 }, ("title", "findings"))]
 
     async def call(self, name, arguments):
+        if name == "calendar_window" and self.calendar_tools:
+            return calendar_window(**arguments)
+        if name == "calculate_many" and self.batch_arithmetic:
+            return {"values": calculate_many(arguments["expressions"])}
         if name == "calculate":
             return {"value": calculate(arguments["expression"])}
         if name == "publish_analysis":
@@ -214,6 +281,12 @@ class Analyst:
                           "provider_cache": cache[chart], "warehouse_freshness": "unknown"}
                   for chart in sorted(used)}
         for chart, details in inputs.items():
+            operations = [{"tool": item["tool"], "arguments": deepcopy(item["arguments"]),
+                           "matched_row_count": item["result"].get("matched_row_count")}
+                          for item in self.reads if item["tool"] == "aggregate_chart_rows"
+                          and item["result"]["chart_id"] == chart]
+            details.update(analysis_operation_count=len(operations), analysis_operations=operations[:8],
+                           analysis_operations_omitted=max(0, len(operations) - 8))
             evidence.append(Evidence(
                 source_key="published-sales", statement="Input query provenance, not proof of warehouse freshness. Unknown cache age stays unknown.",
                 values={"claim_kind": "input_provenance", **details}, origin="source",
@@ -257,12 +330,15 @@ class Writer:
     treatment = True
     setup_complete = False
 
-    def __init__(self, sources):
+    def __init__(self, sources, *, batch_arithmetic=False, calendar_tools=False):
         self.sources, self.submission = sources, None
+        self.batch_arithmetic = batch_arithmetic
+        self.calendar_tools = calendar_tools
         self.reads = []
 
     async def specs(self):
-        return [*await self.sources.specs(),
+        return [*await self.sources.specs(), *([batch_arithmetic_tool()] if self.batch_arithmetic else []),
+                *([calendar_tool()] if self.calendar_tools else []),
                 function("calculate", "Bounded arithmetic.", {"expression": {"type": "string"}}, ("expression",)),
                 function("record_report", "Save the exact proposed human message locally, without sending. Stop after success.", {
                     "outcome": {"type": "string", "enum": ["ignore", "investigate", "insufficient_data", "notify", "escalate"]},
@@ -271,6 +347,10 @@ class Writer:
                 }, ("outcome", "recipients", "message"))]
 
     async def call(self, name, arguments):
+        if name == "calendar_window" and self.calendar_tools:
+            return calendar_window(**arguments)
+        if name == "calculate_many" and self.batch_arithmetic:
+            return {"values": calculate_many(arguments["expressions"])}
         if name == "record_report":
             self.submission = deepcopy(arguments)
             return {"recorded": True, "delivery_enabled": False}
@@ -405,7 +485,9 @@ async def run(args):
                     assert record["source_probe"][key] == prior["source_probe"][key]
                 admit(protocol, manifest_path, ROOT / "artifacts" / f"{protocol_id}.claimed")
                 record["closed_before_inference"] = True
-                analyst = Analyst(sources, publication, audit, protocol_id)
+                analyst = Analyst(sources, publication, audit, protocol_id,
+                                  batch_arithmetic=protocol.get("batch_arithmetic", False),
+                                  calendar_tools=protocol.get("calendar_tools", False))
                 limit = protocol["limits"]
 
                 async def episode(session, stage, prompt, instructions, tools, seconds):
@@ -414,12 +496,19 @@ async def run(args):
                     assert record["frontier_invocations"] < 2
                     record["frontier_invocations"] += 1
                     audit.episode = f"{protocol_id}:{stage}"
+                    if protocol.get("report_remaining_budget"):
+                        prompt = {**prompt, "research_resource_limits": {
+                            "company_tool_calls_including_final_submission": tools,
+                            "reserve_one_call_for_publication_or_report": True,
+                            "batch_independent_calculations_when_available": True,
+                        }}
                     result = await codex_episode(session, key=None, effort=limit["effort"], budget=RequestBudget(2), audit=audit,
                         max_turns=1, max_tool_calls=tools, max_output_tokens=1, timeout_seconds=seconds,
                         instructions_override=instructions, prompt_override=prompt, model=limit["model"],
                         codex_executable=codex["path"], accounting_drain=True,
                         allow_trial_resource_discovery=protocol.get("allow_trial_resource_discovery", False),
-                        expected_registry_sha256=record.get("registry_isolation", {}).get("registry_sha256"))
+                        expected_registry_sha256=record.get("registry_isolation", {}).get("registry_sha256"),
+                        report_remaining_budget=protocol.get("report_remaining_budget", False))
                     record["episodes"].append({"stage": stage, "episode": result, "submission": session.submission})
                     observed = usage_snapshot(audit.events, record["frontier_invocations"])
                     record["usage"] = observed
@@ -443,7 +532,9 @@ async def run(args):
                 pub = next(e["values"] for e in packet["result"]["evidence"] if e.get("values", {}).get("claim_kind") == "publication_record")
                 assert pub["publication_sha256"] == sha(publication) and pub["revision"] == 1
                 assert packet["result"]["source_contracts"][0]["source_captured_at"] == analyst.submission["source_captured_at"]
-                writer = Writer(RawSupersetTools(FreshSavedClient(protocol["source_url"]), enable_aggregation=True))
+                writer = Writer(RawSupersetTools(FreshSavedClient(protocol["source_url"]), enable_aggregation=True),
+                                batch_arithmetic=protocol.get("batch_arithmetic", False),
+                                calendar_tools=protocol.get("calendar_tools", False))
                 await writer_with_known_policy(audit, budget, lambda: episode(writer, "writer", {"request": "Prepare the short human-facing message for this actual card run, using supported findings and its handoff. No sending.", "approved_card": card, "signalweave_evaluation": packet},
                     "You are a fresh report-writing agent. Interpret the supplied current evidence and workflow. The decision is a narrow policy judgment, not analysis or proof. Use the company tools if further evidence is necessary; do not fetch facts already supplied just to repeat them. Do not invent causes, units, comparison coverage or destinations. Record the actual message and proposed recipients through record_report, then stop. No shell, web, SQL, scheduling or sending.",
                     limit["writer_tools"], limit["writer_seconds"]))

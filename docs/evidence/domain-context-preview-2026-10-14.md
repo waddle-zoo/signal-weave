@@ -8,6 +8,56 @@ Updated 2026-10-16. Feature branch: `feat/domain-context-memory`; [draft PR #19]
 
 The [public excerpt](../../evaluations/data/retained-context-courier-summary.json) preserves the four unchanged prepared messages, final chat acknowledgements, source facts, actual retrieved definition, native results, usage, review findings and artifact hashes. These are two observations of one known fictional company—not four companies, a precision estimate, customer validation or a repaired onboarding result.
 
+## Corrected frontier publisher: quota stop, still no completed report
+
+The [closed v2 record](../../evaluations/data/frontier-publication-v2-summary.json)
+retains the first censored attempt and the new raw artifacts. This time native
+configuration checks confirmed only the trial MCP enabled, with seven peers
+disabled through credential-free temporary overrides. Its discovery counter
+recorded zero, but raw CLI events contain a `list_mcp_resources` call resolved to
+server `trial`, which failed with method-not-found. The counter recognized only
+the `codex` namespace and undercounted that call; the original count remains
+unchanged. This was not the termination cause. Forward-only tests cover both
+namespace representations.
+
+The analyst made **36 successful company-tool calls** over six saved-chart
+results, including **16 individual calculator calls**. It recognized the partial
+September coverage and started monthly/matched-day diagnostics. It then hit the
+research quota before publishing. Three additional calculator calls were
+rejected; the guard terminated it at 60.76s before aggregate usage arrived.
+
+The partial analysis also has a concrete period error: it claimed matched
+September 1–19 while its filters selected **August 1–20 against September 1–19**.
+Independent UTC decoding of the recorded epoch bounds confirms the mismatch.
+No corrected calculation or final readout was submitted. Quota censoring does
+not erase this observed analytical defect.
+
+**No publication, Jev judgment, writer or final human report completed.** The
+partial chat update is not a reviewed business answer. There are two attempted
+actors across v1/v2, both with unknown usage; unused slots remain closed. Its
+“dollar contributor” wording is unsupported because currency is undeclared;
+coverage depends on the fictional steward, not a provider guarantee. The
+source tally includes the warm coordinator probe and is not a query-saving or
+speed result. This is censored evidence, not proof that SignalWeave produced a
+correct or incorrect analysis.
+
+The trial did not disclose its numeric tool quota or remaining calls to the
+agent and exposed only scalar arithmetic. Forward-only controls add optional
+batched arithmetic and visible research quotas, without changing company data,
+card policy, caps or decision logic. Optional UTC calendar conversion makes the
+included-day count explicit; publication provenance also retains executed
+aggregation arguments and any omission count, not just a claimed period label.
+The new utilities are disabled in the closed protocols. Offline checks do not
+prove that a future agent will finish or choose comparable dates. The whole
+analyst-publication-policy-human-message workflow remains an open gate, not an
+enterprise-readiness success.
+
+The subsequent controls passed **4,074 software tests / 12 opt-in skips** and
+105 focused checks; an independent internal reviewer cleared code and the
+faithful public record. These are post-run software checks, not additional
+business trials or evidence that the repaired workflow completes. Main and the
+published download remain unchanged.
+
 ## Actual frontier publisher attempt: stopped by the harness
 
 The [closed attempt](../../evaluations/data/frontier-publication-v1-summary.json)
