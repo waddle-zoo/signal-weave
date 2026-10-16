@@ -17,9 +17,9 @@ owner declarations and notes; treatment would add the current native MCP/skill.
 This was authoring only, not an installer, recurrence or Jev study.
 
 **The baseline reached the preregistered 24-tool ceiling before saving its
-report. The SignalWeave arm never ran.** It had recovered the source's partial
-September cutoff and calculated the closed-month total change, but an unfinished
-analysis is not a useful delivered report or completed onboarding. The transport
+report. The SignalWeave arm never ran.** Its captured source profile contains the
+partial September cutoff, and its recorded calculations give the closed-month
+total change; neither constitutes a useful delivered report or completed onboarding. The transport
 terminated without final usage; observed response counters of zero are not zero
 spending. No cost, accuracy or comparative result can be inferred.
 
@@ -32,11 +32,26 @@ preflight review cleared source access and isolation; it did not establish that
 24 calls were adequate. A future study must test that question and graceful
 accounting before paid execution.
 
+The exact executed method is retained at commit `e8f3a6d`. Current code refuses
+live execution of this closed cohort before any source/model work. Subsequent
+inference-free repairs make work limits explicit, opt future episodes into the
+existing bounded accounting drain, and represent missing/duplicate invocation
+receipts as unknown usage rather than zero. They do not raise this cohort's
+cap, complete its missing reports or demonstrate improved agent behavior.
+
 Current native/source identity remains `e5ae9ca` as recorded below. Both
 zero-model preflights passed; the full suite passed **3,751 / 11 skipped in
 287.63s** before the attempt. No approvals, Jev requests, schedules or sends
 occurred. Only dummy provider credentials were used; personal settings and
 the live Superset dataset were not changed.
+
+After the reviewed accounting/closure repairs and helper cleanup, the final full
+suite passed **3,754 / 11 skipped in 280.54s**. The shared helper shrank from
+554 to 367 lines; its twenty unchanged tests pass, and an inference-free replay
+matched the frozen schemas plus five query/profile/page responses. The raw
+trial hashes and executed method remain unchanged. These are software/method
+checks, not additional business trials. Reproducing raw source access requires
+the existing local Northstar stack; the compact record is not a warehouse export.
 
 ## Completed readout study: retained-context-courier-v1
 
@@ -72,6 +87,17 @@ The research sink recorded proposed reports; final chat replies acknowledged the
 All four invocations completed within the fixed cap: 453,995 input / 351,488 cached / 102,507 uncached / 3,267 output. Usage includes each saved-login invocation's internal model/tool turns; “four invocations” does not mean four underlying OpenAI HTTP requests. Original onboarding usage remains separate in the excerpt, not erased or amortized into a claimed win. Provider billing is unknown.
 
 Treatment's second decline source read was redundant. Its native packet already included original totals, tier counts, windows and the declared freshness contract. The agent nevertheless reread the same source “for additional freshness or tier detail.” Fewer tools did not prevent this duplicate, establish a cost advantage, or measure avoided Trino queries. The baseline's extra handbook read improved the repair explanation. Timing samples and synthetic fast sources do not establish general speed.
+
+A subsequent zero-inference audit of those unchanged request records found a
+larger treatment input surface: **16 tools / 14,147 bytes** of canonical
+tool-definition JSON and a **21,934-byte** opening prompt, versus baseline's
+**6 tools / 2,137 bytes** and **3,727-byte** prompt. Both observations used these
+same sizes. Treatment received the full installed workflow skill and native
+instructions, not just a focused recurring brief. These are serialized UTF-8
+sizes, not model tokens, actual internal wire formats or an isolated causal
+explanation of the usage difference. A focused recurring-run handoff is a
+concrete next efficiency experiment; this audit does not establish savings or
+justify removing the agent's company tools.
 
 ## Engineering findings
 

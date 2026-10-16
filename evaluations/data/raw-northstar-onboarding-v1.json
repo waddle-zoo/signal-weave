@@ -1,5 +1,12 @@
 {
   "protocol": "raw-northstar-onboarding-v1",
+  "execution_status": "closed",
+  "closed_attempt": {
+    "method_commit": "e8f3a6d",
+    "report_sha256": "ff1611b19f3caf2d5dd4985ca3a953efeff1108cc63cab191dd316a9d056f232",
+    "trace_sha256": "140636df0daae61273c14b53a3823221e3acb0ba3bd229c44d0ae43e15301545",
+    "reason": "Baseline reached the 24-tool cap before submission; final usage unknown. Treatment never ran. No retry, rescore or transfer of unused allowance."
+  },
   "scope": "Formative paired source-discovery/onboarding study on the existing local Northstar Superset. No prepared card or normalized scenario snapshots. Scripted owner declarations, not a real human trial. No approval, recurring evaluation, scheduling, sending, or superiority claim.",
   "brief": "Our online sales seem to have taken a hit. Explain what actually happened and how it affected overall net sales. Help me set up a reusable check so I do not have to inspect these dashboards every morning. Show a concise first readout and the proposed recurring brief before asking me to approve anything.",
   "owner_declarations": {

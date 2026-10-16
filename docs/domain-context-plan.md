@@ -68,6 +68,16 @@ Repair future-test accounting and make work limits explicit before another
 paid study; do not adjust this cohort's budget or score intermediate arithmetic
 as a completed report. No new production change is justified by this failure.
 
+The executed method is preserved at `e8f3a6d`. Current code hard-rejects another
+live v1 attempt before any binary, auth, state or source work. Inference-free
+repairs expose the future episode's tool/time limit, use the existing bounded
+accounting drain without dispatching extra work, and require unique matching
+invocation receipts before reporting aggregate usage. Missing receipts stay
+unknown even when no error event was emitted. These fixes do not reopen v1 or
+prove that an agent will complete a subsequent study. Test cap adequacy against
+the observed raw-discovery work before preregistering another paid protocol;
+do not mistake an experimental ceiling for a product defect.
+
 ## Exact reference retrieval and exploratory courier readouts
 
 Before spending more model calls, a synthetic 311-note repro showed that an

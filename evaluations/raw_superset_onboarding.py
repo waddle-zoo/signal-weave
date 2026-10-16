@@ -4,6 +4,9 @@ Both arms keep the same actual saved-query BI tools, owner declarations,
 calculator and durable notes. Treatment adds the current native agent MCP and
 packaged skill. A successful run still requires independent semantic review;
 it is not a completed recurring workflow or human install study.
+
+The v1 paid cohort is closed. Current code rejects further live execution;
+Git commit e8f3a6d retains its exact executed method and manifest.
 """
 
 import argparse
@@ -54,6 +57,24 @@ INSTRUCTIONS = (
 
 def digest(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
+def usage_snapshot(events, expected_invocations):
+    """Missing/duplicate invocation accounting is unknown, never zero cost."""
+    try:
+        observed = usage_totals(events)
+    except ValueError:
+        return {"known": False, "usage": None, "observed": None}
+    requests = [e.get("request_id") for e in events
+                if e.get("kind") == "api.request" and e.get("provider") == "openai"]
+    responses = [e.get("request_id") for e in events
+                 if e.get("kind") == "api.response" and e.get("provider") == "openai"]
+    valid_ids = all(type(value) is int for value in (*requests, *responses))
+    known = (valid_ids and len(requests) == expected_invocations == len(responses)
+             and len(set(requests)) == len(requests) and len(set(responses)) == len(responses)
+             and set(requests) == set(responses)
+             and not any(e.get("kind") == "api.error" for e in events))
+    return {"known": known, "usage": observed if known else None, "observed": observed}
 
 
 class OnboardingEpisode:
@@ -183,9 +204,13 @@ def draft_checks(session, cards):
 
 
 async def run(args):
+    manifest = json.loads(MANIFEST.read_text())
+    # Reject a closed live cohort before binary execution, auth lookup, source
+    # access, state creation or a new model attempt. Historical bytes are in Git.
+    if args.run and manifest.get("execution_status") == "closed":
+        raise ValueError("This cohort is closed; no retry, rescore or unused allowance transfer")
     binary = Path(args.binary).resolve()
     imports = verify_capture_imports()
-    manifest = json.loads(MANIFEST.read_text())
     build = verify_binary(binary)
     codex = await pinned_codex(args.codex_executable)
     frozen = {"build": build, "codex": codex, "manifest": digest(MANIFEST), "runner": digest(__file__),
@@ -217,12 +242,10 @@ async def run(args):
 
     def save():
         report["provider_attempts"] = budget.used
-        try:
-            report["usage"] = usage_totals(audit.events)
-            report["usage_known"] = not any(e.get("kind") == "api.error" for e in audit.events)
-        except ValueError:
-            report["usage"] = None
-            report["usage_known"] = False
+        accounting = usage_snapshot(audit.events, report["agent_invocations_started"])
+        report["usage_known"] = accounting["known"]
+        report["usage"] = accounting["usage"]
+        report["observed_response_usage"] = accounting["observed"]
         (output / "report.json").write_text(json.dumps(report, indent=2))
 
     try:
@@ -279,12 +302,9 @@ async def run(args):
                                          + native.instructions + "\nInstalled skill (verbatim):\n" + skill)
                     else:
                         instructions += " You have company BI tools and persistent notes, not SignalWeave. Do not invent a card ID."
-                    result = await codex_episode(session, key=None, effort="xhigh", model="gpt-6-luna", budget=None,
-                                                 audit=audit, max_turns=manifest["limits"]["tools_per_episode"],
-                                                 max_tool_calls=manifest["limits"]["tools_per_episode"], max_output_tokens=4000,
-                                                 timeout_seconds=manifest["limits"]["seconds_per_episode"], codex_executable=args.codex_executable,
-                                                 instructions_override=instructions,
-                                                 prompt_override={"request": manifest["brief"], "historical_shadow": True})
+                    result = await author_episode(session, audit=audit, limits=manifest["limits"],
+                                                  codex_executable=args.codex_executable,
+                                                  instructions=instructions, request=manifest["brief"])
                     report["episodes"].append({"arm": arm, "episode": result, "submission": session.submission,
                                                "notes": session.notes, "native_calls": session.native_calls,
                                                "source_telemetry": session.sources.telemetry})
@@ -302,6 +322,7 @@ async def run(args):
                         raise RuntimeError("Onboarding-only study changed a card beyond draft")
             report["completed"] = True
     except Exception as error:
+        report["completed"] = False
         report["error"] = {"type": type(error).__name__, "message": str(error)[:1000]}
         raise
     finally:
@@ -314,6 +335,26 @@ async def run(args):
         save()
     return {"output": str(output), "completed": report["completed"], "invocations": report["agent_invocations_started"],
             "provider_attempts": budget.used, "usage": report["usage"]}
+
+
+async def author_episode(session, *, audit, limits, codex_executable, instructions, request):
+    """Future-study execution pattern; does not reopen the closed v1 cohort.
+
+    A refusal at the work limit remains failure. Accounting drain only allows a
+    bounded final usage event; it neither dispatches extra work nor guarantees
+    usage when the process stalls. Never score partial arithmetic as a report.
+    """
+    return await codex_episode(
+        session, key=None, effort="xhigh", model="gpt-6-luna", budget=None, audit=audit,
+        max_turns=limits["tools_per_episode"], max_tool_calls=limits["tools_per_episode"],
+        max_output_tokens=4000, timeout_seconds=limits["seconds_per_episode"],
+        codex_executable=codex_executable, accounting_drain=True,
+        instructions_override=instructions,
+        prompt_override={"request": request, "historical_shadow": True,
+                         "execution_budget": {"total_tool_calls_including_save_and_record": limits["tools_per_episode"],
+                                              "seconds": limits["seconds_per_episode"],
+                                              "instruction": "Use the smallest adequate source set; reserve calls to save the brief and record the final readout. A limit is not permission to invent missing evidence."}},
+    )
 
 
 def main():

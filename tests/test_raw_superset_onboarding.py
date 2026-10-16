@@ -12,6 +12,7 @@ from evaluations.raw_superset_onboarding import (
     OnboardingEpisode,
     check_preflight,
     draft_checks,
+    usage_snapshot,
 )
 
 
@@ -116,3 +117,60 @@ def test_missing_wrong_id_or_unreviewed_draft_is_not_qualified():
     episode.native_calls.append({"name": "review_insight_card", "arguments": {"card_id": "saved"}, "result": {}})
     assert all(draft_checks(episode, actual).values())
     assert not all(draft_checks(episode, {"cards": [{"id": "saved", "status": "approved"}]}).values())
+
+
+async def test_closed_live_cohort_rejected_before_any_external_or_state_work(monkeypatch):
+    from types import SimpleNamespace
+    from unittest.mock import Mock
+
+    from evaluations import raw_superset_onboarding as trial
+    probe = Mock(side_effect=AssertionError("Closed cohort must stop before probing"))
+    monkeypatch.setattr(trial, "verify_binary", probe)
+    monkeypatch.setattr(trial, "verify_capture_imports", probe)
+    with pytest.raises(ValueError, match="cohort is closed"):
+        await trial.run(SimpleNamespace(run=True))
+    probe.assert_not_called()
+
+
+async def test_future_author_pattern_uses_accounting_drain_and_explicit_unchanged_limit(monkeypatch):
+    from unittest.mock import AsyncMock
+
+    from evaluations import raw_superset_onboarding as trial
+    transport = AsyncMock(return_value={"status": "failed", "error": "tool_call_budget_exhausted"})
+    monkeypatch.setattr(trial, "codex_episode", transport)
+    limits = {"tools_per_episode": 24, "seconds_per_episode": 300}
+    result = await trial.author_episode(Sources(), audit=object(), limits=limits,
+                                        codex_executable="/codex", instructions="Read sources", request="Sales")
+    assert result["status"] == "failed"
+    kwargs = transport.await_args.kwargs
+    assert kwargs["accounting_drain"] is True
+    assert kwargs["max_tool_calls"] == 24
+    assert kwargs["timeout_seconds"] == 300
+    assert kwargs["prompt_override"]["execution_budget"]["total_tool_calls_including_save_and_record"] == 24
+    assert limits == {"tools_per_episode": 24, "seconds_per_episode": 300}
+
+
+def accounting_pair():
+    return [{"kind": "api.request", "provider": "openai", "request_id": -1},
+            {"kind": "api.response", "provider": "openai", "request_id": -1,
+             "usage": {"input_tokens": 40, "output_tokens": 8, "input_tokens_details": {"cached_tokens": 12}}}]
+
+
+def test_accounting_requires_complete_unique_matching_invocation_receipts():
+    assert usage_snapshot([], 0)["known"]
+    assert not usage_snapshot([], 1)["known"]
+    result = usage_snapshot(accounting_pair(), 1)
+    assert result["known"] and result["usage"]["input_tokens"] == 40
+    events = accounting_pair()
+    events[1]["request_id"] = -2
+    assert not usage_snapshot(events, 1)["known"]
+    assert not usage_snapshot(accounting_pair()[:1], 1)["known"]
+    assert not usage_snapshot(accounting_pair()[1:], 1)["known"]
+    assert not usage_snapshot(accounting_pair() * 2, 2)["known"]
+    events = accounting_pair()
+    events.append({"kind": "api.error", "provider": "openai"})
+    result = usage_snapshot(events, 1)
+    assert result["usage"] is None and result["observed"]["input_tokens"] == 40
+    events = accounting_pair()
+    events[1]["usage"]["input_tokens_details"]["cached_tokens"] = 100
+    assert usage_snapshot(events, 1) == {"known": False, "usage": None, "observed": None}
