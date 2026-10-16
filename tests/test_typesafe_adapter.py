@@ -125,24 +125,27 @@ class FakeClient:
         return FakeResponse(questions)
 
 
-async def test_low_confidence_rationale_separates_jev_selection_from_code_fallback(monkeypatch):
+@pytest.mark.parametrize("selected", list(Outcome))
+@pytest.mark.parametrize("support", [.47, .70])
+async def test_confidence_floor_preserves_review_handoffs_but_gates_business_actions(monkeypatch, selected, support):
     async def transport(self, **kwargs):
+        probabilities = {item.value: (support if item == selected else (1 - support) / (len(Outcome) - 1)) for item in Outcome}
         return SimpleNamespace(
-            choices={"outcome": SimpleNamespace(choice="insufficient_data", probabilities={
-                "ignore": .31, "investigate": .0, "insufficient_data": .69,
-            })}, nouls={}, usage=None,
+            choices={"outcome": SimpleNamespace(choice=selected.value, probabilities=probabilities)}, nouls={}, usage=None,
         )
 
     monkeypatch.setattr(JevJudger, "_system_one_with_retry", transport)
     card = InsightCard(id="uncertain", title="Uncertain evidence", what_to_watch="Supplied context",
-                       why_watch="Review before action", sources=[], action_confidence_threshold=.7)
+                       why_watch="Review before action", sources=[], action_confidence_threshold=.7,
+                       delivery_methods=[DeliveryMethod(key=item.value, label=item.value, outcome=item,
+                                                       destination=f"agent://{item.value}") for item in (Outcome.NOTIFY, Outcome.ESCALATE)])
     result = await JevJudger(api_key="offline-test").judge({"evidence": []}, card, base_plan(card), [])
-    assert result.outcome == Outcome.INVESTIGATE
-    assert result.probabilities["investigate"] == 0
-    assert result.confidence == .69
-    assert "selected=insufficient_data, support=0.69" in result.rationale
-    assert "routed=investigate" in result.rationale
-    assert "confidence threshold" in result.rationale
+    fallback = support < .7 and selected in (Outcome.IGNORE, Outcome.NOTIFY, Outcome.ESCALATE)
+    assert result.outcome == (Outcome.INVESTIGATE if fallback else selected)
+    assert result.probabilities[selected.value] == support
+    assert result.confidence == support
+    assert f"selected={selected.value}, support={support:.2f}" in result.rationale
+    assert ("confidence threshold" in result.rationale) is fallback
 
 
 async def test_computed_contribution_contract_and_action_criteria_are_policy_bound(monkeypatch):

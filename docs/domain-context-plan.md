@@ -36,6 +36,14 @@ onboarding, actual delivery, organizational discovery or comparative superiority
 Independent review must inspect the final message and actual filter arguments,
 not substitute successful infrastructure checks for analytical usefulness.
 
+This study is now closed: two completed agents, one live Jev request and known
+CLI usage, unchanged card, no retries. Both calculated supported historical
+readouts, but the native confidence fallback changed the owner's data-gap route
+to the investigation team; baseline retained the correct route. Business
+acceptance failed. See the [messages, costs and routing defect](evidence/domain-context-preview-2026-10-14.md#same-conversation-agent-report-completed-process-wrong-policy-route).
+The focused routing repair must be verified forward, not used to rescore this
+pair. Broader business-value and human-onboarding gates remain open.
+
 ## Closed forward check and next gaps
 
 Keep the completed cohorts closed. The bounded retained-report check used

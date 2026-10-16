@@ -674,6 +674,34 @@ async def test_low_confidence_notify_is_safely_downgraded():
     assert run.result.delivery_methods == []
 
 
+async def test_low_support_data_gap_keeps_its_configured_review_owner():
+    class GapJudger:
+        name = "test-gap-handoff"
+
+        async def judge(self, state, card, plan, observations):
+            return InsightResult(card_id=card.id, outcome=Outcome.INSUFFICIENT_DATA,
+                                 summary="Comparison coverage needs review", rationale="A supported data gap",
+                                 confidence=.47, probabilities={"insufficient_data": .47, "ignore": .38, "investigate": .15},
+                                 evidence=[Evidence.model_validate(item) for item in state["evidence"]],
+                                 observations=observations, source_keys=plan.selected_source_keys,
+                                 evaluator=self.name)
+
+    source = SourceRef(key="brief", adapter="reviewed", resource="report:coverage", label="Coverage brief")
+    gap_route = DeliveryMethod(key="quality_owner", label="Data quality owner", outcome=Outcome.INSUFFICIENT_DATA,
+                               destination="agent://quality")
+    other_route = DeliveryMethod(key="business_owner", label="Business investigation owner", outcome=Outcome.INVESTIGATE,
+                                 destination="agent://business")
+    card = InsightCard(id="coverage-review", title="Coverage review", what_to_watch="Comparable reporting periods",
+                       why_watch="Route coverage questions to the data owner", sources=[source],
+                       delivery_methods=[gap_route, other_route])
+    snapshot = ResourceSnapshot(source_key=source.key, adapter=source.adapter, resource=source.resource,
+                                title=source.label, evidence=[Evidence(source_key=source.key, statement="Latest period is partial")])
+    run = await InsightEngine(GapJudger()).evaluate(card, [snapshot])
+    assert run.result.outcome == Outcome.INSUFFICIENT_DATA
+    assert run.result.delivery_methods == [gap_route]
+    assert run.result.confidence == .47
+
+
 async def test_missing_baseline_preserves_investigation_instead_of_forcing_insufficient_data():
     source = SourceRef(
         key="current-source",

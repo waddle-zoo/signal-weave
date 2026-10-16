@@ -4,9 +4,60 @@ Updated 2026-10-16. Feature branch: `feat/domain-context-memory`; [draft PR #19]
 
 ## Current result
 
-**Raw-source onboarding completed through a saved, reviewed card, native approval, live Jev and fresh reports. A later retained-card pair also completed the matched-day investigation. A comparative business advantage is not established.** Both agents produced supported reports; SignalWeave used more tokens and took longer in the new pair. The separate earlier studies below remain unchanged.
+**The latest guided agent-to-publication-to-Jev-to-human workflow completed, but failed its routing acceptance check.** Both agents calculated the historical movement correctly; the plain agent followed the owner's Data Trust route while SignalWeave's confidence fallback changed it to Analytics. No comparative business advantage or enterprise-readiness success is established. Earlier studies below remain unchanged.
 
 The [public excerpt](../../evaluations/data/retained-context-courier-summary.json) preserves the four unchanged prepared messages, final chat acknowledgements, source facts, actual retrieved definition, native results, usage, review findings and artifact hashes. These are two observations of one known fictional company—not four companies, a precision estimate, customer validation or a repaired onboarding result.
+
+## Same-conversation agent report: completed process, wrong policy route
+
+The [closed record](../../evaluations/data/agent-report-handoff-v1-summary.json)
+retains both exact human messages and the original negative outcome. The actual
+Luna agent read saved Superset queries, calculated its findings, published a
+compact report, evaluated the approved card through the native binary and live
+Jev, then submitted its message in the same conversation. The baseline retained
+the same source tools, card, owner notes and math/calendar helpers.
+
+Independent post-closure Decimal accumulation verified both agents' source
+hashes, correct 19-day windows and reported movements: July→August **+6.17%**;
+September 1–19 versus August 1–19 **−2.45%**, with Online **−5.40%**. Both kept
+partial September separate from the complete-month comparison, avoided currency
+and causal claims, and proposed a next check. These are useful analyses, not
+proof of why Online declined.
+
+The owner explicitly required `insufficient_data` to **Data Trust** for the
+latest partial month. Jev selected that outcome with support **0.47**, but Python
+replaced every below-threshold choice with `investigate`, producing the
+**Analytics** route. The treatment faithfully explained that fallback; the
+baseline followed the actual owner policy. Process completion is not success.
+
+| Measurement | SignalWeave agent | Plain agent |
+| --- | ---: | ---: |
+| Response elapsed | 204.32s | 137.91s |
+| Admitted tools | 20 | 16 |
+| Saved-chart queries | 3 | 3 |
+| CLI input tokens | 488,780 | 236,168 |
+| CLI uncached input tokens | 79,692 | 62,472 |
+| CLI output tokens | 17,523 | 12,981 |
+
+Treatment additionally used one Jev request: **6,571 input / 57 output tokens**.
+Ten coordinator source probes and three post-closure verification queries are
+separate from actor work. CLI usage is not billed cost; response times exclude
+startup/registry/cleanup. This conditional treatment-first pair is descriptive,
+not an unbiased speed estimate. The two earlier censored attempts remain closed
+with unknown costs; they are not silently excluded from the history.
+
+The focused fix aligns provider routing with the engine's existing action gate:
+low-support `ignore`, `notify` and `escalate` still fall back to investigation;
+`insufficient_data` and `investigate` remain review handoffs with their original
+support and configured owners. It does not lower the threshold or certify the
+data. Offline regressions are not a corrected live result; this closed study
+must not be rescored after the fix.
+
+The study used scripted approvals and fictional shadow routes, not a fresh
+human onboarding or an actual message send. Separate internal method and outcome
+reviews are not external peer review. The OpenAI Docs skill informed strict
+accounting against [Codex's documented completion-event format](https://developers.openai.com/codex/noninteractive);
+only one unambiguous completion usage record qualified each actor.
 
 ## Corrected frontier publisher: quota stop, still no completed report
 

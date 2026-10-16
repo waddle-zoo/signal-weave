@@ -9,6 +9,12 @@ That profile limits SignalWeave's tools, not the whole agent. Keep your other
 authorized BI, glossary, company-knowledge and owner-clarification tools connected
 for onboarding as well as investigation.
 
+The confidence floor gates business conclusions (`ignore`, `notify`, `escalate`).
+A selected `insufficient_data` or `investigate` result remains a review handoff
+with its original support and configured owner; low support must not silently
+swap a data-quality owner for a business-investigation team. Neither handoff
+proves the underlying analysis is correct or grants permission to send a message.
+
 For supported builds and upgrades, see
 [release compatibility](local-install-reference.md#release-compatibility).
 

@@ -684,7 +684,10 @@ class OpenAIDecisionJudger:
         selected = outcome_answer.get("choice") if valid_outcome else Outcome.INVESTIGATE.value
         selected_probability = probabilities.get(selected, 0.0) if valid_outcome else 0.0
         routed_outcome = Outcome(selected)
-        if selected_probability < card.action_confidence_threshold:
+        # Preserve the selected data-gap/investigation handoff, just as the
+        # engine does. The support floor gates business conclusions/actions.
+        if (routed_outcome in (Outcome.IGNORE, Outcome.NOTIFY, Outcome.ESCALATE)
+                and selected_probability < card.action_confidence_threshold):
             routed_outcome = Outcome.INVESTIGATE
         source_keys = plan.selected_source_keys or [source.key for source in card.sources]
         provider_note = (

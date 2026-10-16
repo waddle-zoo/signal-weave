@@ -198,72 +198,136 @@ def test_chatgpt_plan_transport_uses_streaming_nonstored_responses_and_marks_est
     assert answers["outcome"]["probabilities"]["investigate"] == 0.9
 
 
-def test_judger_routes_only_configured_outcome():
-    class FakeTransport:
+@pytest.mark.parametrize(
+    ("selected", "support", "expected"),
+    [
+        pytest.param(Outcome.IGNORE, 0.6, Outcome.INVESTIGATE, id="low-support-ignore"),
+        pytest.param(Outcome.INVESTIGATE, 0.6, Outcome.INVESTIGATE, id="low-support-investigate"),
+        pytest.param(
+            Outcome.INSUFFICIENT_DATA,
+            0.6,
+            Outcome.INSUFFICIENT_DATA,
+            id="low-support-insufficient-data-handoff",
+        ),
+        pytest.param(Outcome.NOTIFY, 0.6, Outcome.INVESTIGATE, id="low-support-notify"),
+        pytest.param(Outcome.ESCALATE, 0.6, Outcome.INVESTIGATE, id="low-support-escalate"),
+        pytest.param(Outcome.IGNORE, 0.7, Outcome.IGNORE, id="threshold-ignore"),
+        pytest.param(Outcome.INVESTIGATE, 0.7, Outcome.INVESTIGATE, id="threshold-investigate"),
+        pytest.param(
+            Outcome.INSUFFICIENT_DATA,
+            0.7,
+            Outcome.INSUFFICIENT_DATA,
+            id="threshold-insufficient-data",
+        ),
+        pytest.param(Outcome.NOTIFY, 0.7, Outcome.NOTIFY, id="threshold-notify"),
+        pytest.param(Outcome.ESCALATE, 0.7, Outcome.ESCALATE, id="threshold-escalate"),
+    ],
+)
+def test_judger_routes_by_support_floor_and_preserves_typed_handoff(
+    selected: Outcome, support: float, expected: Outcome
+):
+    """Route low support safely while preserving the provider's handoff support."""
+
+    configured_outcomes = [
+        Outcome.IGNORE,
+        Outcome.INVESTIGATE,
+        Outcome.INSUFFICIENT_DATA,
+        Outcome.NOTIFY,
+        Outcome.ESCALATE,
+    ]
+    outcome_values = [outcome.value for outcome in configured_outcomes]
+
+    def distribution(values: list[str], choice: str, choice_support: float) -> dict[str, float]:
+        other_support = (1.0 - choice_support) / (len(values) - 1)
+        return {
+            value: choice_support if value == choice else other_support
+            for value in values
+        }
+
+    class FakeTypedTransport:
         name = "test-provider"
 
+        def __init__(self):
+            self.questions: list[dict] = []
+
         async def decide(self, _input: str, questions: list[dict]) -> dict:
+            self.questions = questions
             answers = {}
             for question in questions:
                 name = question["name"]
-                if name == "watch_0":
-                    answers[name] = {
-                        "type": "choice",
-                        "choice": "present",
-                        "probabilities": {"present": 0.9, "absent": 0.05, "unknown": 0.05},
-                    }
-                elif name == "question_0":
+                if question["type"] == "predicate":
                     answers[name] = {"type": "predicate", "probability": 0.8}
-                elif name == "outcome":
-                    answers[name] = {
-                        "type": "choice",
-                        "choice": "notify",
-                        "probabilities": {
-                            "ignore": 0.05,
-                            "investigate": 0.05,
-                            "insufficient_data": 0.05,
-                            "notify": 0.85,
-                        },
-                    }
+                    continue
+
+                choices = [item["value"] for item in question["choices"]]
+                choice = selected.value if name == "outcome" else choices[0]
+                choice_support = support if name == "outcome" else 0.8
+                probabilities = distribution(choices, choice, choice_support)
+                answers[name] = {
+                    "type": "choice",
+                    "choice": choice,
+                    "probabilities": probabilities,
+                    "confidence": probabilities[choice],
+                }
             return answers
 
     card = InsightCard(
-        id="sales-watch",
-        title="Sales watch",
-        what_to_watch="Material online sales decline",
-        why_watch="Alert the owner only when the evidence meets the policy.",
-        watch_for=["Online sales fell materially"],
-        questions=["Is the decline supported by comparable data?"],
-        decision_guidance="Ignore normal movement; notify on a supported material decline.",
-        sources=[SourceRef(key="sales", adapter="superset", resource="chart:1", label="Sales")],
+        id="generic-watch",
+        title="Generic watch",
+        what_to_watch="A generic monitored condition",
+        why_watch="Route only when the typed decision supports it.",
+        watch_for=["A generic condition is present"],
+        questions=["Is the generic condition supported?"],
+        decision_guidance="Apply the configured policy to the supplied evidence.",
+        action_confidence_threshold=0.7,
+        sources=[SourceRef(key="source", adapter="superset", resource="chart:1", label="Source")],
         delivery_methods=[
             DeliveryMethod(
-                key="growth",
+                key="notify-route",
                 outcome=Outcome.NOTIFY,
-                label="Growth",
-                destination="slack://growth",
-                instructions="Notify Growth.",
-            )
+                label="Notify route",
+                destination="slack://generic-notify",
+            ),
+            DeliveryMethod(
+                key="escalate-route",
+                outcome=Outcome.ESCALATE,
+                label="Escalate route",
+                destination="slack://generic-escalate",
+            ),
         ],
     )
     plan = InsightPlan(
         card_id=card.id,
-        selected_source_keys=["sales"],
+        selected_source_keys=["source"],
         comparison_windows=["previous_period"],
         capabilities=[],
-        card_scope="sales",
+        card_scope="generic",
     )
+    transport = FakeTypedTransport()
     result = asyncio.run(
-        OpenAIDecisionJudger(FakeTransport()).judge(
+        OpenAIDecisionJudger(transport).judge(
             {"evidence": [], "analyses": []}, card, plan, []
         )
     )
 
-    assert result.outcome == Outcome.NOTIFY
-    assert result.probabilities["notify"] == 0.85
+    expected_distribution = distribution(outcome_values, selected.value, support)
+    outcome_question = next(item for item in transport.questions if item["name"] == "outcome")
+    assert {item["value"] for item in outcome_question["choices"]} == set(outcome_values)
+    assert result.outcome == expected
+    assert result.confidence == pytest.approx(support)
+    assert result.probabilities == pytest.approx(expected_distribution)
+    assert set(result.probabilities) == set(outcome_values)
+    assert sum(result.probabilities.values()) == pytest.approx(1.0)
     assert result.watch_results[0].status.value == "present"
     assert result.question_results[0].status.value == "supported"
-    assert "not native or calibrated" not in result.rationale
+
+    if selected == Outcome.INSUFFICIENT_DATA and support < card.action_confidence_threshold:
+        # Keep provider support with the data-gap handoff; it is not a business
+        # confidence guarantee.
+        assert result.outcome == Outcome.INSUFFICIENT_DATA
+        assert result.confidence == pytest.approx(0.6)
+        assert result.probabilities == pytest.approx(expected_distribution)
+        assert "selected=insufficient_data, support=0.60; routed=insufficient_data." in result.rationale
 
 
 def test_setup_stores_openai_key_privately_and_selects_requested_provider(tmp_path):

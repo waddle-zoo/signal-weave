@@ -1,16 +1,39 @@
 {
   "protocol": "agent-report-handoff-v1",
-  "execution_status": "planned",
+  "execution_status": "closed",
   "scope": "Formative same-conversation agent workflow and conditional plain-agent comparator over the known historical Northstar fixture. Not a new company, holdout, fresh human onboarding, causal study or superiority estimate. This is a different workflow from the closed forced publisher/writer split; their failures and unknown costs remain separate.",
   "source_url": "http://127.0.0.1:18089",
   "owner_reference": "evaluations/data/raw-northstar-onboarding-v1.json",
   "owner_reference_sha256": "2aa2750d9a57d46fd47ad7abe1cee52a6d1ddc9ad88b90644bf8648e389ce8cf",
   "prior_censored_attempts": [
-    {"protocol": "frontier-publication-v1", "report_path": "artifacts/frontier-publication-v1-live/report.json", "report_sha256": "690b8fea8eb7a1ab985bb9fde5546ac01a02252e07f1fdc1efed3400a788968b", "trace_sha256": "b9de66b596872df2e53539ae39819c16686b8d27c2f93ec58f9744a5dd8cb666"},
-    {"protocol": "frontier-publication-v2", "report_path": "artifacts/frontier-publication-v2-live/report.json", "report_sha256": "10f58626a24d745e2f70bce0f6b474892485d6652082337572edbd3fcb1ffdee", "trace_sha256": "fb139ad7de024a89ed01abbbd6f7c50e5cf93b807cef7b58bd13cb245b1647f9"}
+    {
+      "protocol": "frontier-publication-v1",
+      "report_path": "artifacts/frontier-publication-v1-live/report.json",
+      "report_sha256": "690b8fea8eb7a1ab985bb9fde5546ac01a02252e07f1fdc1efed3400a788968b",
+      "trace_sha256": "b9de66b596872df2e53539ae39819c16686b8d27c2f93ec58f9744a5dd8cb666"
+    },
+    {
+      "protocol": "frontier-publication-v2",
+      "report_path": "artifacts/frontier-publication-v2-live/report.json",
+      "report_sha256": "10f58626a24d745e2f70bce0f6b474892485d6652082337572edbd3fcb1ffdee",
+      "trace_sha256": "fb139ad7de024a89ed01abbbd6f7c50e5cf93b807cef7b58bd13cb245b1647f9"
+    }
   ],
-  "limits": {"frontier_invocations": 2, "tools_per_actor": 75, "seconds_per_actor": 480, "jev_attempts": 1, "model": "gpt-6-luna", "effort": "xhigh", "between_actor_input_stop": 700000, "between_actor_uncached_stop": 150000, "automatic_retries": 0},
-  "order": ["signalweave", "baseline"],
+  "limits": {
+    "frontier_invocations": 2,
+    "tools_per_actor": 75,
+    "seconds_per_actor": 480,
+    "jev_attempts": 1,
+    "model": "gpt-6-luna",
+    "effort": "xhigh",
+    "between_actor_input_stop": 700000,
+    "between_actor_uncached_stop": 150000,
+    "automatic_retries": 0
+  },
+  "order": [
+    "signalweave",
+    "baseline"
+  ],
   "comparison": "Both get the identical actual approved card, owner declarations, BI/calendar/batch-arithmetic/publication/inspection/report tools, source access, explicit quota and independent cold actor caches. Treatment adds the normal native evaluation and receipt-paging tools and their workflow instructions. Baseline may preserve/read its own report artifact but is not forced to publish. Treatment-first and conditional comparator admission preclude an unbiased speed/quality estimate; all counts and source work are reported separately. Neither arm has arbitrary SQL/shell, so this is not the strongest unconstrained agent baseline.",
   "request": "Assess Online sales movement and its contribution to overall net sales. Establish historical coverage from the source, apply the approved calendar-month policy, and separately compare the latest month with the prior month through the same observed day-of-month. Investigate diagnostic assets when helpful, but distinguish populations, observed contributions and causal hypotheses. Prepare a concise source-linked human message, its intended policy route and a useful next check. No sending or scheduling.",
   "freshness": "Historical owner-reviewed scope without a freshness SLA. Explicit unknown source capture and provider cache age remain unknown. Sources use the production saved-context or labeled saved-params reconstruction path; no dashboard-filter or warehouse-completeness claim. Coordinator probes do not warm either actor's private cache.",
