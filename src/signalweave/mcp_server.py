@@ -1225,7 +1225,13 @@ def create_mcp(
         ).replace("Jev", provider_label(decision_provider)) + " " + EVIDENCE_INTERPRETATION + (
             " Optional domain context is enabled. Use retrieve_domain_context before broad discovery "
             "to reuse attributed definitions and findings. Save clarifications as draft context, then "
-            "obtain owner-authorized review. Stale context and hypotheses are not current facts; "
+            "obtain owner-authorized review. Saving or reviewing context does not attach it to a card. "
+            "When a recurring card depends on reviewed shared meaning, put the relevant rule into its "
+            "guidance and use bind_insight_context for the exact reviewed revision before final card "
+            "review and approval. Binding returns the card to draft; it does not rewrite policy or "
+            "retrieve note text. Retrieve authorized context separately when interpretation needs it. "
+            "Only mark a dependency required for action when the owner requires it; supporting "
+            "hypotheses stay advisory. Stale context and hypotheses are not current facts; "
             "retrieval never expands approved card scope. Agents own analysis and review reminders."
             if runtime.knowledge is not None else ""
         ),

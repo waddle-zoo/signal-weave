@@ -131,6 +131,11 @@ def register_knowledge_tools(
         Request-scoped hosts must grant knowledge:review; editing remains owner-only.
         This records the authenticated actor, not proof of a human interaction. A reviewed
         hypothesis is NOT an established fact or a certified analytics workflow.
+        Review does not attach an entry to a card or update existing context pins.
+        For an approved, current, tenant-shared revision a recurring card depends
+        on, preserve the rule in its guidance and bind that exact revision before
+        final card review and approval. Never bind retired context. Binding does not
+        retrieve note text or rewrite the card's policy.
         """
         result = await service.review(entry_id, expected_revision, principal(ctx, "knowledge:review"), action=action, reason=reason)
         return result.model_dump(mode="json")

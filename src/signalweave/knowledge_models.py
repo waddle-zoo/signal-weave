@@ -34,8 +34,14 @@ class KnowledgeContent(BaseModel):
     kind: Literal["definition", "observation", "hypothesis"]
     sources: list[SourceRef] = Field(min_length=1, max_length=12)
     provenance: list[str] = Field(min_length=1, max_length=12)
-    review_after: AwareDatetime
-    valid_from: AwareDatetime | None = None
+    review_after: AwareDatetime = Field(description=(
+        "Review deadline as an ISO 8601 timestamp with an explicit timezone (Z or UTC offset), "
+        "not a date-only value. This reviews the context, not source-data freshness."
+    ))
+    valid_from: AwareDatetime | None = Field(default=None, description=(
+        "Optional effective instant as an ISO 8601 timestamp with an explicit timezone "
+        "(Z or UTC offset), not a date-only value."
+    ))
     reader_principal_ids: list[str] = Field(default_factory=list, max_length=100)
 
     @model_validator(mode="after")

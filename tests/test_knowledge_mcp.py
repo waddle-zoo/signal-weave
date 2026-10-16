@@ -6,6 +6,7 @@ import pytest
 
 from signalweave.knowledge import KnowledgeService
 from signalweave.knowledge_mcp import KNOWLEDGE_TOOLS
+from signalweave.knowledge_models import KnowledgeContent
 from signalweave.knowledge_store import SQLiteKnowledgeStore
 from signalweave.mcp_server import AGENT_PROFILE_TOOLS, create_mcp
 from signalweave.models import PrincipalContext, ResourceContract, ResourceDescriptor
@@ -136,6 +137,31 @@ async def test_extension_is_absent_without_explicit_runtime_configuration(tmp_pa
     assert {x.name for x in await server.list_tools()} == AGENT_PROFILE_TOOLS
     _, guide = await server.call_tool("get_signalweave_guide", {})
     assert "domain_context" not in guide
+    assert "Saving or reviewing context does not attach it to a card" not in server.instructions
+
+
+@pytest.mark.parametrize("profile", ["agent", "full"])
+async def test_context_instructions_place_binding_before_final_card_approval(tmp_path, profile):
+    _, runtime, _, _, _ = setup(tmp_path)
+    server = create_mcp(runtime, profile=profile)
+    assert "Saving or reviewing context does not attach it to a card" in server.instructions
+    assert "before final card review and approval" in server.instructions
+    assert "Retrieve authorized context separately" in server.instructions
+    assert "Only mark a dependency required for action when the owner requires it" in server.instructions
+    tools = {tool.name: tool for tool in await server.list_tools()}
+    assert "Review does not attach an entry to a card or update existing context pins" in tools["review_domain_context"].description
+    properties = tools["save_domain_context"].inputSchema["$defs"]["KnowledgeContent"]["properties"]
+    for field in ("review_after", "valid_from"):
+        assert "explicit timezone" in properties[field]["description"]
+        assert "not a date-only value" in properties[field]["description"]
+
+
+@pytest.mark.parametrize("field", ["review_after", "valid_from"])
+def test_context_timestamp_help_does_not_silently_guess_a_timezone(field):
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError, match="timezone"):
+        KnowledgeContent.model_validate({**content(), field: "2026-11-15"})
 
 
 @pytest.mark.parametrize("permission", ["knowledge:write", "knowledge:review"])
