@@ -39,12 +39,27 @@ message reviews are not external peer review or customer validation.
 
 Current repairs remove an indiscriminate raw-status alert veto and preserve
 useful analysis across policy evidence gaps; they do not make caller findings
-trusted. The stock binary still lacks a configured runtime context-provider
-path for agent-produced analytical findings. That multi-step integration gap,
-fresh human setup, other connector shapes and actual delivery remain separate
-acceptance gates, not implied successes from this retained-card check. Fix and
-forward-test concise, source-inspectable, actionable human messages before scaling
-another cohort; more correct calculations alone do not close the communication gap.
+trusted. The stock binary has no configured runtime context-provider path, but
+its existing approved-source bridge can read an explicitly delegated analyst
+publication. The focused gateway example preserves claims and capture time and
+adds a receipt-visible publication ID/revision/byte hash, not a truth certificate.
+Fresh human setup, other connector shapes, actual delivery and a real frontier
+publisher remain separate acceptance gates.
+
+The next native integration check is preregistered in
+[`analysis-publication-native-v1.json`](../evaluations/data/analysis-publication-native-v1.json):
+scripted source/card approval, then pending, hypothesis-only and observed
+synthetic publications through the same approved card. At most three live Jev
+requests; no frontier invocation or benchmark claim. Require scoped code/method
+review, current native/source fingerprint, successful matching zero-inference
+preflight, exclusive one-shot admission, exact source revision/hash and capture
+time in receipts, correct configured routes, parent chain, historical replay and
+unchanged card. No retry or allowance transfer after inference starts.
+
+The deterministic report now exposes source locators and the handoff asks for
+evidence-justified next steps. Forward-test final agent prose separately before
+claiming the earlier message behavior improved; more correct calculations or
+instruction strings alone do not close the communication gap.
 
 ## Raw Northstar onboarding forward study
 

@@ -107,11 +107,15 @@ trusted. The frontier agent can still investigate through its other authorized
 tools and explain those findings separately.
 
 `ContextProvider` is a Python runtime extension (`build_runtime(context_provider=...)`),
-not a stock native-CLI connection setting. The shipped binary's current policy
-follow-up path is updated owner-approved source evidence. A versioned file or a
-reviewed knowledge note is not automatically a trusted runtime provider. Making
-agent-produced analytical findings easy to use for policy evaluation remains a
-separate integration gap; the caller-context field does not solve it.
+not a stock native-CLI connection setting. The stock CLI can instead read an
+**explicitly approved analyst publication through the company MCP source bridge**.
+The caller's authorized analyst publishes a versioned evidence snapshot; the
+card reads that same approved report resource on its next evaluation. See the
+[publication gateway example](../examples/analysis_publication/README.md).
+That is a declared source delegation, not a `trust=true` switch: the publisher
+owns write authority, scope and the reliability of its claims. A reviewed
+knowledge note does not automatically become current measurement evidence.
+Source capture time must not be refreshed merely by republishing old findings.
 
 The caller should use `workflow.evidence_plan.missing_slot_keys` to decide
 which authorized tools to run. A fact can set `slot_key` to the corresponding
@@ -165,11 +169,13 @@ The first evaluation can return:
 }
 ```
 
-After the agent returns evidence that checkout failures rose after a payment
-deployment, the same card can return `notify` with a `deliver` handoff and the
+After evidence that checkout failures rose after a payment deployment is available
+from the card's approved sources—including a separately approved analyst feed—the
+same card can return `notify` with a `deliver` handoff and the
 configured leadership destination. If the returned evidence instead shows a
 finance posting lag or remains inconclusive, the result stays `investigate`;
-SignalWeave does not manufacture certainty.
+SignalWeave does not manufacture certainty. Raw caller context alone cannot
+make that transition, and correlation still does not establish a cause.
 
 ## Compatibility and boundaries
 

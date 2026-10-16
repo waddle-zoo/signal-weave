@@ -5,6 +5,11 @@ cards and investigations. Domain context holds short, source-linked definitions,
 observations and hypotheses—not raw warehouse data or an automatically generated
 company truth graph.
 
+For a delegated analyst's **current output** to feed a later policy decision,
+use an explicitly approved [publication source](../examples/analysis_publication/README.md).
+Reviewing a memory entry is not a substitute for that source delegation or
+verification of its measurements.
+
 For example, a Finance owner can clarify that net sales excludes refunds and
 marketplace sales, link the relevant charts and definition document, and choose
 when that definition should next be reviewed. A sales-reporting agent and a

@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "connections": [
+    {
+      "name": "analysis_publication",
+      "tenant_id": "local",
+      "read_only": true,
+      "transport": {
+        "type": "stdio",
+        "command": [
+          "/opt/analysis-gateway/.venv/bin/python",
+          "/opt/signalweave/examples/analysis_publication/reader.py",
+          "/var/lib/analysis-publication/current.json"
+        ]
+      },
+      "timeout_seconds": 10,
+      "max_response_bytes": 1000000,
+      "resources": [
+        {
+          "descriptor": {
+            "adapter": "analysis_publication",
+            "resource": "report:product-growth",
+            "kind": "analytical_report",
+            "title": "Product growth analysis publication",
+            "description": "Owner-reviewed source for a versioned analyst publication; inspect its report claims and capture time.",
+            "contract": {
+              "tenant_id": "local",
+              "domain": "product",
+              "scope": "The product-growth report published by the delegated analyst.",
+              "freshness_sla_hours": 24,
+              "authorized": true
+            }
+          },
+          "source_key": "product-growth-publication",
+          "tool": "get_published_analysis",
+          "arguments": {},
+          "snapshot_pointer": ""
+        }
+      ]
+    }
+  ]
+}

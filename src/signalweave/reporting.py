@@ -1168,6 +1168,16 @@ def render_investigation_report(report: InvestigationReport) -> str:
             f"- {_md(report.next_step)} (caller-owned handoff; not a verified fact.)",
         ])
 
+    if report.source_boundaries:
+        shown = report.source_boundaries[:5]
+        lines.extend(["", "## Sources", "Exact resource references; inspect current assets through your connected source tools."])
+        lines.extend(
+            f"- {_md(item.adapter + '|' + item.resource)} (source key {_md(item.source_key)})."
+            for item in shown
+        )
+        if len(report.source_boundaries) > len(shown):
+            lines.append(f"- {len(report.source_boundaries) - len(shown)} more source reference(s) in the audit appendix.")
+
     lines.extend([
         "",
         "<details>",
@@ -1264,7 +1274,9 @@ def render_investigation_report(report: InvestigationReport) -> str:
                    if getattr(boundary, field) is not None else "")
                 for field in ("scope", "population", "grain")
             )
-            lines.append(f"- `{_md(boundary.source_key)}` — {annotations}.")
+            lines.append(
+                f"- `{_md(boundary.source_key)}` — {_md(boundary.adapter + '|' + boundary.resource)}; {annotations}."
+            )
 
     if len(claims) > 3:
         lines.extend(["", "### Additional measured changes"])

@@ -51,6 +51,14 @@ def test_first_use_guide_still_exposes_discovery_and_owner_approval():
             "review_insight_card", "approve_insight_card"} <= steps
 
 
+def test_monitor_guide_explains_existing_publication_source_without_granting_authority():
+    text = agent_getting_started("monitor")["analyst_publications"]
+    assert "already an owner-approved source" in text
+    assert "own authorized tools" in text and "grants no" in text
+    assert "does not verify" in text and "label hypotheses" in text
+    assert "not a trust relabel" in text
+
+
 @pytest.fixture
 def server(tmp_path):
     class NoInference:

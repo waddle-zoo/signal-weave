@@ -701,10 +701,15 @@ class InsightEngine:
                     "and which conclusions remain unsupported. This is not a business regression "
                     "alert or evidence repair. Supported analysis may continue with authorized "
                     "tools; a new policy conclusion still requires the missing evidence. "
+                    "For the human message, cite the relevant source URL or exact adapter|resource "
+                    "reference and state the smallest next check needed to resolve the gap. "
                     "The caller must separately authorize delivery to the configured destination."
                     if missing_data_notice else
                     "Deliver the evidence bundle to the configured destination. "
-                    "Do not invent a destination or change the outcome."
+                    "Lead with the supported finding, cite its source URL or exact adapter|resource "
+                    "reference, and give the next check justified by the evidence or say no further "
+                    "action is needed. Keep uncertainty beside the finding. "
+                    "Do not invent a cause, destination or action, or change the outcome."
                 ),
                 required_source_keys=sorted(set([*result.source_keys, *pending_sources])),
                 completion_criteria="The caller-owned delivery adapter accepted the evidence bundle.",
@@ -773,7 +778,10 @@ class InsightEngine:
                 objective=objective,
                 instructions=(
                     "Deliver the configured investigation route. This card does not define "
-                    "a follow-up step, so the existing single-step behavior is terminal."
+                    "a follow-up step, so the existing single-step behavior is terminal. "
+                    "In the human message, cite the relevant source URL or exact adapter|resource "
+                    "reference, explain what remains uncertain, and suggest only an evidence-justified "
+                    "next check; do not invent a cause, action or recipient."
                 ),
                 required_source_keys=sorted(set([*result.source_keys, *pending_sources])),
                 completion_criteria="The caller-owned delivery adapter accepted the evidence bundle.",

@@ -185,6 +185,14 @@ sources to the recurring card; ask for an owner-reviewed card update if those
 sources should be read on future runs. Scheduling and external delivery belong
 to separately authorized caller tools, not SignalWeave.
 
+For the human readout, lead with the supported finding and the caveat that changes
+its interpretation. Cite the actual source URL or exact `adapter|resource`
+reference—not just the decision receipt—and finish with the smallest justified
+next check, or say that no action is needed. The rendered report includes a
+bounded source-reference overview and the full reference list in its appendix.
+These locators help inspect current assets; the receipt preserves the run's
+evidence. They do not prove that an interpretation or causal explanation is true.
+
 `insufficient_data` limits the affected policy conclusion, not every useful
 answer. The agent can still report supported facts and investigate through its
 authorized BI tools. If the card maps that outcome to a data-owner route, the

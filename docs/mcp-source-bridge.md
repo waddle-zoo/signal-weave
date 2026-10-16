@@ -7,7 +7,7 @@ For local setup, use tenant `local` consistently for the connection, descriptor,
 snapshot, and local principal. Change all four together for another tenant.
 
 The bridge provides reusable company MCP connectivity with an explicit typed
-measurement contract. An MCP server must expose a reviewed read tool returning
+source-evidence envelope. An MCP server must expose a reviewed read tool returning
 a SignalWeave `ResourceSnapshot` in `CallToolResult.structuredContent`. A company
 gateway can perform this normalization when the upstream API has a different
 shape. The bridge does not infer metric definitions, convert arbitrary API
@@ -128,6 +128,17 @@ the empty string selects the whole object; `/data/snapshot` selects a wrapper.
 Object keys support `~0` and `~1`; arrays use nonnegative decimal indices.
 Text content is never parsed as a fallback, and arbitrary field mapping is not
 supported. The server must supply the typed measurement meaning and values.
+
+The envelope can also carry qualitative or agent-produced report evidence in
+`evidence`, without a fixed metric schema or an `AnalyticalComparison` for every
+finding. An owner may explicitly delegate an analyst publication as a source;
+the [publication gateway example](../examples/analysis_publication/README.md)
+shows a fixed read and versioned claims. This does not grant publisher write
+access, validate its claims, or approve all underlying datasets mentioned in
+its lineage. Label interpretations and hypotheses, preserve real input-result
+capture time, and let the already-reviewed card define the decision policy.
+Native quantitative recomputation still requires its applicable typed comparison
+contract; source-supplied prose or values do not become code-verified analysis.
 
 Snapshots may also supply `analytical_comparisons`, the typed
 `list[AnalyticalComparison]` contract in `diagnostics.py`, for additive or rate
