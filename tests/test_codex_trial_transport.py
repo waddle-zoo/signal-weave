@@ -800,6 +800,16 @@ async def test_changed_registry_fails_before_any_frontier_process_is_spawned(fak
     fake_episode.spawn.assert_not_awaited()
 
 
+async def test_strict_single_completion_usage_does_not_silently_replace_a_second_turn(fake_episode):
+    fake_episode.session.submission = {"message": "synthetic report"}
+    completion = {"type": "turn.completed", "usage": {"input_tokens": 20, "cached_input_tokens": 5, "output_tokens": 2}}
+    result = await fake_episode.run([completion, completion], strict_single_turn_usage=True)
+    assert result["status"] == "failed" and result["error"] == "ambiguous_codex_turn_usage"
+    assert len(result["completion_usage_reports"]) == 2
+    assert fake_episode.audit.events[-1]["kind"] == "api.error"
+    assert fake_episode.audit.events[-1]["usage_known"] is False
+
+
 @pytest.mark.parametrize("exit_code,error", [(0, "no_structured_submission"), (7, "codex_exit")])
 async def test_trial_tool_event_alone_is_not_submission(fake_episode, exit_code, error):
     fake_episode.exit_code = exit_code

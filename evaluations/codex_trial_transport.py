@@ -300,7 +300,8 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
                         accounting_drain: bool = False,
                         allow_trial_resource_discovery: bool = False,
                         expected_registry_sha256: str | None = None,
-                        report_remaining_budget: bool = False) -> dict:
+                        report_remaining_budget: bool = False,
+                        strict_single_turn_usage: bool = False) -> dict:
     from evaluations.bootstrap_agent_trial import (
         COMMON_SYSTEM,
         MODEL,
@@ -402,6 +403,7 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
                prompt=prompt, tools=list(bridge.specs.values()))
     started = time.perf_counter()
     usage = None
+    usage_reports = []
     error = None
     foreign_tools = []
     resource_discovery_ids = set()
@@ -436,6 +438,7 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
                 audit.emit("codex.event", event=event)
                 if event.get("type") == "turn.completed":
                     usage = event.get("usage")
+                    usage_reports.append(usage)
                 if event.get("type") in {"turn.failed", "error"}:
                     error = "codex_error"
                 item = event.get("item", {})
@@ -557,6 +560,9 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
                 await errors_task
                 exit_code = process.returncode
     normalized_usage = normalized_codex_usage(usage)
+    if strict_single_turn_usage and len(usage_reports) != 1:
+        normalized_usage = None
+        error = error or "ambiguous_codex_turn_usage"
     if normalized_usage is not None:
         audit.emit("api.response", provider="openai", request_id=request_id,
                    transport="codex_cli", model=selected_model, effort=effort,
@@ -575,6 +581,7 @@ async def codex_episode(session, *, key, effort, budget, audit, max_turns,
             "tool_calls": bridge.calls, "seconds": elapsed,
             "resource_discovery_calls": len(resource_discovery_ids),
             "resource_discovery_attempts": len(resource_discovery_attempt_ids),
+            "completion_usage_reports": usage_reports,
             "registry_isolation": registry_isolation,
             "observed_tool_calls_including_discovery": (
                 bridge.ingress_calls if accounting_drain else bridge.calls

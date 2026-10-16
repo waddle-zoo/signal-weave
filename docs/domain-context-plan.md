@@ -16,6 +16,26 @@ Feature branch: `feat/domain-context-memory`, based on main `e8842ac`.
 These are separate gates. Passing storage, authentication or a scripted decision
 check cannot substitute for complete onboarding and useful final agent outcomes.
 
+### Same-conversation report handoff
+
+The next bounded study is
+[`agent-report-handoff-v1`](../evaluations/data/agent-report-handoff-v1.json).
+One actual analyst discovers and calculates from saved BI sources, publishes its
+own compact findings, evaluates the approved report-backed card through the
+native binary and live Jev, then writes the human report in the same conversation.
+Publication does not terminate the actor. A conditional plain-agent comparator
+gets the same approved policy, owner notes, cold source access, calendar and
+batch-arithmetic tools. Only native evaluation and receipt paging differ.
+
+This deliberately tests a usable workflow before expanding trial scale. At most
+two new frontier contexts and one Jev attempt; no retries. Both earlier censored
+publisher attempts and their unknown costs remain retained, not rescored. Source
+checks are point-in-time pre/post probes, not an atomic warehouse snapshot.
+Approval and shadow destinations are scripted, so this cannot prove human
+onboarding, actual delivery, organizational discovery or comparative superiority.
+Independent review must inspect the final message and actual filter arguments,
+not substitute successful infrastructure checks for analytical usefulness.
+
 ## Closed forward check and next gaps
 
 Keep the completed cohorts closed. The bounded retained-report check used
