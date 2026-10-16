@@ -6,12 +6,12 @@ Feature branch: `feat/domain-context-memory`, based on main `e8842ac`.
 
 | Requirement | Evidence and remaining work |
 | --- | --- |
-| Local and hosted context lifecycle | Native stdio and signed HTTP checks cover review, reuse, restart and changed revisions; hosted issuer is synthetic |
+| Local and hosted context lifecycle | Native stdio/signed HTTP checks cover review/reuse/restart/change; latest read-only native restart recovered the actual approved v2 card, definition history and saved Jev receipt. Hosted issuer remains synthetic |
 | Card-bound meaning and staleness | Contract tests cover exact pins, reapproval, deferred policy and historical receipts; no automatic notification service is claimed |
-| Approved cards with live decisions | Current native clarification v2 matched three supplied retail periods with live Jev, exact routes and receipt versions; changed required meaning preserved facts without another model call. Scripted owner, not autonomous onboarding |
-| Human-first, agent-led onboarding | Earlier V4 completed a scripted-owner pair. Latest fresh public V1/V2 stopped before reports: source questions unanswered by fixed-topic fake owner, context still draft, plus a false numeric reviewer objection. No real-human wizard or varied-company success rate |
-| Useful recurring reports and investigations | Six paired reports and a three-report/live-Jev guidance check retained correct outcomes but showed narrative omission. Six cached layout reporters support a narrow presentation change, not an accuracy claim; multi-step investigations, diverse connectors and changed-context agent behavior remain unproven |
-| Comparative business value | No current context-layer advantage over an equal-information agent baseline has been established; report usefulness, noise/misses, source work and complete costs are still required |
+| Approved cards with live decisions | Latest expert-assisted follow-up used the actual model-authored retained card v2, required context revision 2 and one live Jev request. Both reporters correctly found the complete-period decline and route. Earlier scripted three-period check remains separate |
+| Human-first, agent-led onboarding | Public V4 supplied equal explicit expert notes but still left treatment draft awaiting scope/context approval; semantic review also made a false numeric objection. Expert-assisted reporting did not repair or rescore that onboarding failure. No real-human wizard or varied-company success rate |
+| Useful recurring reports and investigations | One assisted pair has correct quantities and outcomes; independent message review preferred treatment with a retained citation typo and flagged baseline's extra audience. Earlier parcel-volume errors remain. Multi-step/diverse-connector/changed-context outcomes still need proof |
+| Comparative business value | One reader preference is not overall lift: both read two sources; treatment used more time/tokens. Broader quality/noise/recall, repeated-use savings and complete costs remain open |
 
 These are separate gates. Passing storage, authentication or a scripted decision
 check cannot substitute for complete onboarding and useful final agent outcomes.
@@ -140,7 +140,7 @@ or make that configuration production-ready. No paid V3 cohort is authorized by
 a successful preflight alone: freeze its protocol, accounting and review plan
 before inference. V1/V2 results and costs remain terminal and unchanged.
 
-## New owner-workflow development cohort
+## Owner-workflow study protocols
 
 ### Preregistered public steward-reference V4
 
@@ -178,8 +178,6 @@ partial/failing attempts. One known synthetic pair cannot establish comparative
 lift, cross-card reuse, held-out generalization, customer usability or enterprise
 readiness. Further live-Jev multi-period/multi-company gates remain separate.
 
-### Earlier owner-workflow V1
-
 ### Expert-assisted retained-state follow-up
 
 V4 stopped after four invocations (545,504 input / 85,216 uncached / 6,825
@@ -215,7 +213,37 @@ and source access; treatment gets the approved card/context and canonical skill.
 Inspect actual messages and period-specific source traces independently before
 claiming usefulness. Original V4 failure and opinions remain unchanged.
 
-### Earlier owner-workflow V1 (continued)
+The follow-up is now terminal and completed: two fresh reports, one live Jev;
+cumulative six agent calls, 746,252 input / 130,060 uncached / 8,420 output,
+including V4's four calls. Jev used 7,014 input / 109 output. Both reported
+USD 10,000 → 7,000 (-30%), web -3,000 and shop unchanged, without a causal claim.
+Both structured recipients were the commerce owner. Independent reader review
+preferred treatment (usable with one mistyped repeated source citation) over
+baseline (unrequested Data Operations audience in prose). Reports are unchanged.
+
+Treatment took 16.20 vs 14.62 reporter seconds, used 29,649 vs 15,195 uncached
+tokens, and both read two sources. No cost/speed or general quality win is
+claimed. The exact messages, values, review and limits are published in
+`evaluations/data/steward-expert-followup-summary.json`.
+
+Process review found the original expert signoff operations missing from the
+per-operation trace. A separate zero-inference restart read verified persisted
+card v2, unchanged context history revisions 1/2 and the stored v2 receipt; it
+does not recreate that event history. Future operations are now individually
+audited with regression coverage. No paid rerun occurred. Both V4 and this
+follow-up are closed at their original cumulative caps.
+Final verification of frozen code `ed2e54a`: lint passed; 3,622 tests passed,
+11 skipped, in 226.31 seconds; focused current contracts/excerpt: 64 passed.
+
+Next prioritize the genuine owner/delegate approval handoff and continuation:
+show exact selected scopes, ask for explicit permission to approve/run a
+delivery-disabled check, and distinguish that from semantic validation or
+permission to send/schedule. Do not fix a false reviewer objection by changing
+valid business math. Qualify actual first messages for recipient scope and
+canonical citations. A future fresh cohort must test this unassisted path before
+claiming onboarding complete; broader longitudinal/connector gates stay open.
+
+### Earlier owner-workflow V1
 
 Before live execution, freeze `owner-workflow-v1`: existing development fixture
 `split=dev`, seed `20261015`, company index `1` (Pine Courier), and monitoring
