@@ -4,9 +4,66 @@ Updated 2026-10-16. Feature branch: `feat/domain-context-memory`; [draft PR #19]
 
 ## Current result
 
-**Raw-source onboarding now completed through a saved, reviewed card, real native approval, live Jev and fresh agent reports. A comparative business advantage is not established.** Both arms produced supported reports in this one known-company observation; SignalWeave used more tokens overall. The separate retained-context courier results below remain mixed and unchanged.
+**Raw-source onboarding completed through a saved, reviewed card, native approval, live Jev and fresh reports. A later retained-card pair also completed the matched-day investigation. A comparative business advantage is not established.** Both agents produced supported reports; SignalWeave used more tokens and took longer in the new pair. The separate earlier studies below remain unchanged.
 
 The [public excerpt](../../evaluations/data/retained-context-courier-summary.json) preserves the four unchanged prepared messages, final chat acknowledgements, source facts, actual retrieved definition, native results, usage, review findings and artifact hashes. These are two observations of one known fictional company—not four companies, a precision estimate, customer validation or a repaired onboarding result.
+
+## Retained Northstar follow-up: matched-day investigation completed
+
+The [closed record](../../evaluations/data/retained-raw-followup-v1-summary.json)
+preserves both exact human messages, usage and source/artifact fingerprints.
+Two fresh Luna-xhigh reporters reused the actual unchanged v2 approved card and
+their own original notes. Both kept the same eight companion tools, including
+bounded saved-row aggregation; treatment added four native tools and one live
+Jev evaluation. Both used focused recurring prompts, not the full onboarding
+skill. This was not another onboarding or a rerun of the closed v2.
+
+Both completed the requested comparison **and** its follow-up: July–August net
+sales rose **6.17%**; September remained partial, so its calendar-month policy
+route was `insufficient_data` to Data Trust. Separately, September 1–19 versus
+August 1–19 fell **2.45% overall / 5.40% Online**. Treatment quantified Online's
+**80.3%** contribution to that net decline. Neither claimed a cause. Independent
+post-run Decimal accumulation over both saved-query results matched the numbers
+and frozen row hashes; completeness still depends on the fictional steward.
+
+| Observed reporting work | Company tools + agent | Plus SignalWeave |
+| --- | ---: | ---: |
+| Tool calls / successful calls | 24 / 20 | 20 / 20 |
+| Actor seconds | 72.70 | 82.26 |
+| Frontier input / uncached tokens | 238,460 / 44,796 | 252,904 / 47,848 |
+| Frontier output tokens | 8,711 | 8,920 |
+
+Baseline's four extra calls were recoverable numeric-ID schema errors, not
+useful work that SignalWeave saved. Treatment made no redundant receipt/card
+read, but **no overall speed, token or query-cost advantage follows**. Jev added
+10,032 input / 152 output tokens and about 0.27s. Each companion queried two
+charts; those counters exclude native/coordinator work. The independent math
+check made two additional queries after closure. Billing and Trino costs remain
+unknown. Timings are one fixed-order pair, not an estimate of general speed.
+
+Two separate internal readers saw unchanged X/Y messages, policy and source
+checks without arm labels/costs. Both found useful, supported readouts, not an
+unqualified winner. Baseline gave the clearer next step; treatment added the
+Online contribution. Both lacked chart locators and were fairly dense.
+Reviewer currency shorthand and one invented optional-output requirement were
+corrected explicitly; reviewer agreement is not infallible or external peer review.
+
+The actual new native receipt is fresh, delivery-disabled and not replayed; its
+workflow permits only the configured data-gap notice. Original card, old receipt,
+prior report/trace and native configuration stayed unchanged. No notification,
+schedule, causal diagnosis, real-human install or new-company validation ran.
+The original retained artifacts and existing local Northstar instance remain
+reproduction prerequisites—not a standalone public replay dataset.
+
+After closure, full verification passed **3,981 tests / 11 opt-in skips in
+307.56s**. Two separately enabled real-native tests passed in 187.14s: piped
+installer/terminal wizard and installed-path setup/MCP initialization,
+uninstall-preserving-data, reinstall and purge. They use fixture download
+transport, temporary homes and dummy credentials—not real human usability or
+fresh BI onboarding. The exact trial build also passed authenticated loopback
+HTTP historical replay (200 readiness / 401 unauthenticated, zero Jev), preserving
+the old card/receipt. Source and binary hashes are in the closed record. Main,
+personal setup and the published release remain unchanged.
 
 ## Completed raw-source workflow: raw-northstar-workflow-v2
 
@@ -180,12 +237,9 @@ Current full verification passed **3,973 tests / 11 opt-in skips in 296.42s**;
 the updated offline method fixtures passed another 20 focused checks. These
 counts do not add business observations or establish enterprise readiness.
 
-The next retained-reporting protocol adds the same bounded aggregation tool to
-both arms for a matched-day follow-up. It is a separate known-fixture forward
-check, not a rerun of v2, new onboarding or a superiority benchmark. Its source
-row fingerprints establish point-in-time parity only; they do not certify an
-atomic or complete warehouse snapshot. No result is claimed before execution
-and independent review of the actual messages.
+The retained-reporting protocol above subsequently exercised the same bounded
+aggregation tool in both arms. Its source row fingerprints establish point-in-time
+parity only; they do not certify an atomic or complete warehouse snapshot.
 
 ## Raw Northstar onboarding attempt: censored, not product evidence
 

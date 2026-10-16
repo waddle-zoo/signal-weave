@@ -1,6 +1,6 @@
 {
   "protocol": "retained-raw-followup-v1",
-  "execution_status": "planned",
+  "execution_status": "closed",
   "scope": "New separately preregistered, formative forward cohort over the actual retained and owner-approved v2 card. It tests the latest native decision path and equal companion aggregation in one known fixture; it does not reopen, continue, or rescore v2 and is not a superiority estimate.",
   "prior": {
     "protocol": "raw-northstar-workflow-v2",
@@ -19,10 +19,17 @@
     "binary_sha256": "efea4563c1195f074b82f8406605e1a68f825bbefae07d36a640ebbfab202cf3"
   },
   "run_key": "retained-raw-followup-v1:report",
-  "arm_order": ["baseline", "signalweave"],
+  "arm_order": [
+    "baseline",
+    "signalweave"
+  ],
   "source_assets": {
-    "1": {"source_url": "http://127.0.0.1:18089/explore/?slice_id=1"},
-    "10": {"source_url": "http://127.0.0.1:18089/explore/?slice_id=10"}
+    "1": {
+      "source_url": "http://127.0.0.1:18089/explore/?slice_id=1"
+    },
+    "10": {
+      "source_url": "http://127.0.0.1:18089/explore/?slice_id=10"
+    }
   },
   "row_fingerprint_encoding": "sorted_json_row_multiset_v1",
   "comparison": "Both fresh reporters receive the identical approved card execution policy and destinations, their own retained author notes, the same owner declarations, and the same five bounded BI tools, calculator, notes reader and final-report tool. Treatment additionally has the four current native report tools and must evaluate the exact approved card once under the new key before final submission, choosing its own tool order. No arbitrary SQL or shell is available to either arm. Fixed B-then-T order; descriptive single pair.",

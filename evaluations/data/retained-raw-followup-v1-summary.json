@@ -1,0 +1,121 @@
+{
+  "protocol": "retained-raw-followup-v1",
+  "execution_status": "closed_complete",
+  "scope": "One formative retained-card reporting pair on a known fictional company using actual local Superset. Not fresh onboarding, a holdout, a superiority estimate or enterprise certification.",
+  "method_commit": "6a8ae0c",
+  "native_build": {
+    "git_commit": "b7d02c2517c8a708c8d126ec833fd1417148fd6f",
+    "source_sha256": "84682ea7f41e31ccb7b2f9ead53575be95de901c301fa76266fc287f09cc2af8",
+    "binary_sha256": "efea4563c1195f074b82f8406605e1a68f825bbefae07d36a640ebbfab202cf3",
+    "dirty": false,
+    "version": "0.2.0rc3",
+    "published_release": false
+  },
+  "raw_report_sha256": "34212130d88e38591fef4aef56565788e940e3c54fa3f3a4038d30937d4fa26f",
+  "raw_trace_sha256": "3740dc6c511f692cd3f3437dfb848dde66ebd20af4e77d7c0106dc121d92e17e",
+  "request": "Complete the approved calendar-month sales readout. Then investigate the apparent Online hit with a matched first-N-days comparison between the latest month and the prior month, letting source coverage establish N. Keep that diagnostic separate from the approved calendar-month policy result.",
+  "preserved_state": {
+    "prior_protocol": "raw-northstar-workflow-v2",
+    "card_id": "card-executive-monthly-net-sales-and-online-contribution-4da3a6cb",
+    "card_version": 1,
+    "card_policy_sha256": "970a730838db97e05d31e753f8052d87f7b7fcfb3140bd7dcf44f3a82184e54b",
+    "prior_card_receipt_and_artifacts_unchanged": true,
+    "native_config_and_scrubbed_dummy_key_unchanged": true,
+    "fresh_receipt_id": "receipt-720221f9d0f74cf5b40dc33444a9762f",
+    "fresh_receipt_replayed": false,
+    "delivery_enabled": false
+  },
+  "baseline": {
+    "model": "gpt-6-luna",
+    "reasoning_effort": "xhigh",
+    "seconds": 72.70284449998871,
+    "tool_calls": 24,
+    "successful_tool_calls": 20,
+    "recoverable_argument_errors": 4,
+    "input_tokens": 238460,
+    "cached_input_tokens": 193664,
+    "uncached_input_tokens": 44796,
+    "output_tokens": 8711,
+    "companion_chart_query_http_requests": 2,
+    "submission": {
+      "outcome": "insufficient_data",
+      "recipients": ["Data Trust"],
+      "message": "Approved calendar-month result — insufficient_data for September vs August: Executive daily detail is complete through Sep 19, 2026, so September is partial and cannot be treated as a business decline against full August. Intended route: Data Trust. The latest two fully covered months are August vs July: net_sales rose 133,272.76 (+6.17%), from 2,158,994.74 to 2,292,267.50, below the 10% Analytics trigger. Channel contributions to that increase: Online +61,949.94 (46.48%, largest), Mobile +48,226.29 (36.19%), Marketplace +18,701.69 (14.03%), Store +4,394.84 (3.30%); these sum to +133,272.76.\n\nSeparate matched-days follow-up — coverage sets N=19: Sep 1–19 vs Aug 1–19 total net_sales was 1,371,704.27 vs 1,406,132.46, down 34,428.19 (-2.45%). Online was 484,648.16 vs 512,288.35, down 27,640.19 (-5.40%); Store +15,948.77, Marketplace -17,791.95, and Mobile -4,944.82 complete the total movement. This diagnostic does not change the calendar-month outcome and does not establish a cause. Next: rerun the approved comparison once September is fully covered; if investigating the Online movement, check whether order volume or net_sales per order changed over these same 19 days using evidence aligned to Executive net_sales. Values are in source-reported net_sales units; no currency is specified."
+    }
+  },
+  "signalweave": {
+    "model": "gpt-6-luna",
+    "reasoning_effort": "xhigh",
+    "seconds": 82.26400033402024,
+    "tool_calls": 20,
+    "successful_tool_calls": 20,
+    "recoverable_argument_errors": 0,
+    "input_tokens": 252904,
+    "cached_input_tokens": 205056,
+    "uncached_input_tokens": 47848,
+    "output_tokens": 8920,
+    "companion_chart_query_http_requests": 2,
+    "native_evaluations": 1,
+    "receipt_or_card_rereads": 0,
+    "submission": {
+      "message": "Executive calendar-month result — insufficient_data → Data Trust (shadow only). Executive net_sales for September 2026 is 1,371,704.27 through Sep 19; August is a full month at 2,292,267.50, so these periods are not comparable and no September business decline is asserted. The two latest fully covered months, July→August, rose from 2,158,994.74 to 2,292,267.50 (+133,272.76; +6.17%), below the 10% Analytics threshold. Contributions: Online +61,949.94 (46.48%), Mobile +48,226.29 (36.19%), Marketplace +18,701.69 (14.03%), Store +4,394.84 (3.30%).\n\nSeparate matched-day follow-up — source coverage sets N=19. Sep 1–19 versus Aug 1–19: 1,371,704.27 vs 1,406,132.46, down 34,428.19 (-2.45%). Online fell 27,640.19 (-5.40%), 80.3% of the net decline; Store +15,948.77 partly offset Marketplace -17,791.95 and Mobile -4,944.82. These are accounting movements, not causes, and this diagnostic does not change the calendar-month route. Figures are source-reported net_sales units; currency is not declared.",
+      "outcome": "insufficient_data",
+      "recipients": ["Data Trust"]
+    }
+  },
+  "jev": {
+    "requests": 1,
+    "input_tokens": 10032,
+    "output_tokens": 152,
+    "seconds": 0.2700925829994958,
+    "outcome": "insufficient_data",
+    "workflow_action": "deliver",
+    "workflow_scope": "Configured data-gap notice only; not a business-regression alert or completed investigation"
+  },
+  "independent_post_run_check": {
+    "method": "Direct Decimal accumulation over two fresh saved-query results after the closed trial; arithmetic implementation separate from the aggregation tool. Parsed-row fingerprints matched the trial. These extra queries are not actor work or warehouse-completeness proof.",
+    "chart_1_rows": 132,
+    "chart_1_returned_rows_sha256": "8ca2e24cd7708f697de4d89af00df0af8dbc18376eba0710d2664be18e2c1df8",
+    "chart_10_rows": 8937,
+    "chart_10_returned_rows_sha256": "6eb79f7835f3423ba863ec34d7d5c026238e17c34d19201984bed1d69c6c48a2",
+    "closed_month_change_pct": "6.172908045158090565797302498",
+    "matched_days": 19,
+    "matched_total_change_pct": "-2.448431494142450847056044777",
+    "matched_online_change_pct": "-5.395435988345235647072591050",
+    "matched_online_contribution_pct": "80.28359899256975170637782585",
+    "currency": "undeclared"
+  },
+  "internal_content_reviews": {
+    "method": "Two separate Luna-xhigh readers received unchanged X/Y messages, owner policy and independent source checks; arm labels, tooling, timing and token costs withheld. Wording could reveal tooling. Not external peer review.",
+    "findings": [
+      "Both supported arithmetic, units, comparison separation, routing and causal restraint; both considered the drafts useful.",
+      "Treatment adds Online's 80.3% share of the matched decline; baseline explicitly names the largest closed-month contributor and gives a useful next step.",
+      "Neither message includes a chart/source locator. Treatment lacks an explicit next step. The business reader found both fairly dense.",
+      "Both reviewers initially used currency shorthand despite undeclared units, then corrected their own wording. One also withdrew an invented requirement for additional matched-channel percentage shares. Neither was an error in the recorded drafts."
+    ],
+    "overall_winner": "not established"
+  },
+  "independent_internal_process_review": {
+    "result": "Scoped GO for recorded process integrity and accounting only",
+    "checks": "Verified exact report/trace hashes, two completed actors with known usage, one successful Jev request, fresh shadow receipt, unchanged prior state and matching zero-inference preflight/source fingerprints.",
+    "limits": "Baseline completed on its final allowed call; this pair is cap-conditioned. Four native errors were expected unused-key lookups, not provider failures. No business, onboarding or enterprise approval follows."
+  },
+  "software_and_native_checks": {
+    "post_closure_full_suite_passed": 3981,
+    "post_closure_full_suite_skipped": 11,
+    "post_closure_full_suite_seconds": 307.56,
+    "separate_real_native_install_tests_passed": 2,
+    "separate_real_native_install_tests_seconds": 187.14,
+    "native_scope": "Exact trial binary through fixture download and terminal wizard, private setup/MCP initialization, uninstall-preserving-data, reinstall and purge. Separate loopback authenticated HTTP historical replay used zero Jev attempts. Temporary homes/dummy credentials; not human usability or fresh business onboarding."
+  },
+  "limitations": [
+    "Both arms retained identical policy, their own prior notes and eight shared tools. Treatment added four native tools. Fixed baseline-then-treatment order, separate caches, no arbitrary SQL or shell.",
+    "Both used focused recurring-report prompts, not a replay of the full installed onboarding skill; this pair does not test the complete first-use user experience.",
+    "Baseline's four extra calls were recoverable numeric-ID schema errors. Both made twenty successful calls; do not advertise the raw call-count difference as savings.",
+    "Treatment took longer and used more frontier input/uncached/output tokens, plus Jev. Provider billing and general speed/cost effects are unknown.",
+    "Companion query counters exclude native and coordinator queries; no total-query or Trino-cost saving was measured. Source rechecks are point-in-time, not an atomic warehouse snapshot.",
+    "Completeness depends on the fictional steward's declaration, not a provider guarantee. Contribution is not causation. No deployment, traffic or conversion evidence was supplied.",
+    "No real user installed the binary in this pair, no onboarding was repeated, no external notification was sent and no schedule ran. New private receipt persisted; old artifacts and card remained unchanged.",
+    "Original retained private artifacts and the existing local Northstar installation are reproduction prerequisites; this excerpt is not a standalone public replay dataset. The cohort is closed with no retries or allowance transfer."
+  ]
+}

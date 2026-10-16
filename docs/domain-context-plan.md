@@ -10,20 +10,21 @@ Feature branch: `feat/domain-context-memory`, based on main `e8842ac`.
 | Card-bound meaning and staleness | Contract tests cover exact pins, reapproval, deferred policy and historical receipts; no automatic notification service is claimed |
 | Approved cards with live decisions | V5 authored/approved its own card and evaluated the adverse case with live Jev. A separate retained series reused it for missing-data and quiet observations: both native and final routes matched policy, card unchanged. Not a continuous company history |
 | Human-first, agent-led onboarding | Raw Northstar workflow v2 completed actual discovery, author-created card, separate evidence-reading experts, synthetic owner consent and native approval, then fresh reports/live Jev. One known fixture with noninteractive private CLI setup, not downloaded-binary/real-human usability success. Baseline first-answer currency error escaped its reviewer. Earlier failed/censored cohorts remain |
-| Useful recurring reports and investigations | Retail retained reports remain supported. Two later courier observations now exercised actual retrieval of the saved reviewed definition plus live Jev; both arms' final routes/math checked out. Baseline gave better repair context; treatment's decline breakdown was correct but denser. No card pins or general multi-step/causal investigation claim |
-| Comparative business value | No overall lift established. Raw workflow v2 completed both useful final reports but treatment used 948,040 vs 451,681 frontier input tokens (205,512 vs 134,497 uncached), plus one Jev call. Receipt/source-contract rereads were redundant. Courier findings also remain mixed. Scaled noise/recall, amortized setup value, stronger SQL-capable baselines and realistic query costs remain open |
+| Useful recurring reports and investigations | A new retained Northstar pair completed the monthly readout and matched-day follow-up with both agents; independent arithmetic and message reviews supported the findings. Treatment had one native evaluation, no receipt/card reread and a configured data-gap handoff. Its final message lacked a next step; both lacked chart locators. Earlier courier/retail findings remain separate. General multi-step/causal investigation remains unproven |
+| Comparative business value | No overall lift established. The new pair used 252,904 vs 238,460 frontier input tokens (47,848 vs 44,796 uncached), plus Jev; treatment was slower. Both had twenty successful tools; baseline's four extra calls were recoverable argument errors. Old all-phase v2/courier costs remain separate. Scaled noise/recall, amortized setup value, stronger SQL-capable baselines and realistic query costs remain open |
 
 These are separate gates. Passing storage, authentication or a scripted decision
 check cannot substitute for complete onboarding and useful final agent outcomes.
 
-## Immediate forward check
+## Closed forward check and next gaps
 
-Keep the completed cohorts closed. The next bounded retained-report check uses
+Keep the completed cohorts closed. The bounded retained-report check used
 the actual owner-approved v2 card, its unchanged calendar-month policy and both
 arms' original notes. Both agents retain the same source tools, including an
 opt-in saved-row aggregation tool for the matched-day investigation. Treatment
-adds one current-native evaluation with live Jev. This tests final useful output,
-not a raw-judgment score, new onboarding or generalized superiority.
+added one current-native evaluation with live Jev. Both completed useful output;
+no overall superiority was established. See the
+[unaltered messages and evidence](../evaluations/data/retained-raw-followup-v1-summary.json).
 
 Before inference: independent method review, complete software verification, a
 matching current-source native build and a zero-inference source/state preflight.
@@ -32,13 +33,18 @@ card, old receipt and binary. Stop on unknown usage, changed inputs or incomplet
 actors; no retries. Record all outcomes and review the actual final messages.
 The exact protocol and budgets are in
 [`retained-raw-followup-v1.json`](../evaluations/data/retained-raw-followup-v1.json).
+It is now closed with known usage: two completed actors, one successful Jev
+request, no retry or allowance transfer. Separate internal method/process and
+message reviews are not external peer review or customer validation.
 
 Current repairs remove an indiscriminate raw-status alert veto and preserve
 useful analysis across policy evidence gaps; they do not make caller findings
 trusted. The stock binary still lacks a configured runtime context-provider
 path for agent-produced analytical findings. That multi-step integration gap,
 fresh human setup, other connector shapes and actual delivery remain separate
-acceptance gates, not implied successes from this retained-card check.
+acceptance gates, not implied successes from this retained-card check. Fix and
+forward-test concise, source-inspectable, actionable human messages before scaling
+another cohort; more correct calculations alone do not close the communication gap.
 
 ## Raw Northstar onboarding forward study
 
