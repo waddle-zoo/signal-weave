@@ -22,7 +22,7 @@ it, and recovered the same card bindings and revision history. A separate native
 HTTP journey checked signed roles, tenant boundaries and restart against local
 Superset metadata with a synthetic issuer.
 
-Both journeys used the same fingerprint-checked binary from `0ad2d72`. The
+The initial journeys used the same fingerprint-checked binary from `0ad2d72`. The
 opt-in command passed two integration journeys plus ten URL-validation cases;
 these are **not twelve companies**. The ordinary suite passed **4,171 tests /
 12 opt-in skips**. A Python 3.11.6 subset passed **198 tests**; these are software
@@ -43,6 +43,13 @@ already-used binary's help/build-info paths took roughly **6–7 seconds**.
 Cache state was unassessed. These are diagnostic timings, not a benchmark win;
 startup should improve before calling the experience seamless. New raw-company
 onboarding and recurring analytical value remain separate open gates.
+
+The subsequent CLI-only change defers server imports for help/version/build-info.
+The rebuilt `2a9b852` binary passed the same **two native journeys plus ten URL
+checks**, with no provider inference. Its [alternating startup diagnostic](../../evaluations/data/native-cli-startup-2026-10-16.json)
+retains all samples and discloses overlapping fixture tests: help's observed
+median was 9.15s before and 7.34s after, only three samples per binary. Startup
+is still slow; this is not a causal benchmark, seamless setup or a business win.
 
 ## Same-conversation agent report: completed process, wrong policy route
 

@@ -18,19 +18,29 @@ check cannot substitute for complete onboarding and useful final agent outcomes.
 
 ### Next business-evidence gate
 
-The next diverse fixture should use **Harbor Help's ticket SLA** business shape
-from `evaluations/first_report_cases.py`, but expose discoverable, period-varying
-raw company assets rather than hand the agent its existing prepared snapshot.
+The next diverse study builds on **Harbor Help's ticket SLA** business shape
+from `evaluations/first_report_cases.py`, but starts with discoverable raw company
+assets rather than handing the agent its existing prepared snapshot.
 That older study used generated rows, a full-profile in-process adapter and
 scripted owner approval; it is not evidence of clean installed-MCP onboarding.
 The cached Helio case file is likewise not a local raw warehouse seed.
+
+The [raw Harbor fixture and company MCP](../examples/harbor_help/README.md) now
+exist: source rows, discoverable SQL definitions, weighted completed-clock
+cohorts, open backlog and an ingestion gap, with independent recomputation.
+Review caught and corrected ingestion timestamps preceding supplied events.
+These are final retrospective states, not historical point-in-time snapshots.
+The actual stdio exchange passes; **no new agent onboarding or report comparison
+has run**. Raw tools are not automatically a SignalWeave evidence adapter; the
+study must use and account for the documented approved publication integration.
 
 Before new paid expansion:
 
 - Prove the normal binary's local setup, optional context enablement, reconnect
   and source access without research-only environment injection. The native
-  configuration slice now passes; it is not semantic onboarding or usability
-  proof. Help/build-info startup still took about 6–7 seconds locally.
+  configuration slice passes, including after deferred CLI imports; it is not
+  semantic onboarding or usability proof. The [new local diagnostic](../evaluations/data/native-cli-startup-2026-10-16.json)
+  still puts help/build-info medians near seven seconds.
 - Materialize the separate support fixture, including denominator weighting,
   a similarly named but different metric, and incomplete reporting. Keep owner
   policy separate from data generation and independently recompute the answers.
@@ -41,6 +51,12 @@ Before new paid expansion:
   routes. Both arms keep the same BI/context access, approved rules and tool
   capabilities. Retain setup cost, queries, tokens, failures and actual messages;
   an internal decision score is not the primary outcome.
+
+Harbor currently supports retrospective cohort checks only. A genuine daily or
+multi-month operational replay still needs explicit time-varying snapshots,
+including ticket-state transitions and ingestion availability. Do not relabel
+old cohorts as what was known then, rebase capture times to imply freshness, or
+count these engineering tests as new company/onboarding observations.
 
 Keep frontier analysis in the connected tools: [Hex's MCP](https://learn.hex.tech/docs/api-integrations/mcp-server)
 already supports analytical Threads, while [dbt's MCP](https://docs.getdbt.com/docs/dbt-ai/about-mcp)
