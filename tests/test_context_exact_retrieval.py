@@ -220,3 +220,23 @@ async def test_later_authorization_cannot_leave_an_earlier_revoked_entry_in_pack
     assets.authorize = revoke_earlier
     packet = await runtime.knowledge.retrieve(PrincipalContext(principal_id="reader", tenant_id="a"))
     assert [entry.id for entry in packet.entries] == [second.id]
+
+
+async def test_history_hides_text_if_current_visibility_changes_during_authorization(tmp_path):
+    _, runtime, assets, _, _ = make_server(tmp_path)
+    original = seed(runtime, "history")
+    authorize = assets.authorize
+
+    async def make_private(source, **kwargs):
+        result = await authorize(source, **kwargs)
+        runtime.knowledge.store.append(original.model_copy(update={
+            "revision": 2, "content": original.content.model_copy(update={
+                "reader_principal_ids": ["analyst"],
+            }),
+        }), expected_revision=1)
+        return result
+
+    assets.authorize = make_private
+    assert await runtime.knowledge.history(
+        original.id, PrincipalContext(principal_id="reader", tenant_id="a"),
+    ) == []

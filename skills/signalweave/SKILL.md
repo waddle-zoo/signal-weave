@@ -111,6 +111,21 @@ Treat this run as a current observation, not proof of unattended reliability or 
 
 For each run, use the approved policy and current source facts already in the packet; do not fetch the card, guide, or receipt again when they are already available. Reuse the approved card and call `evaluate_insight_card` once with a stable per-run idempotency key when a new evaluation is needed. The normal call fetches approved sources automatically; do not pre-read and resend the same observations as context. Use caller-owned company tools for further investigation when the result warrants it. Check this run's source coverage, comparability, and measurement dates before interpreting movement. For relative windows, use the current run's dates and cutoff; honor an owner-requested fixed period.
 
+With an authorized approved card ID, evaluation returns its active guidance as
+well as current evidence; a preparatory full-card read is not required. When
+present, `result.analyses[].comparison` keeps original totals, segment counts and
+measurement windows; `result.source_contracts` keeps capture dates and declared
+quality/freshness. Check these before rereading the same asset. Page omitted
+receipt details first; query again for genuinely new evidence or an authorized
+refresh, not to recover facts already returned.
+
+For an investigation or data gap, relevant linked sources may contain current
+diagnostic context that makes the next step more specific. A stored definition
+is not a current operational diagnosis. Lead the business message with the
+finding, its meaning, proposed recipient and useful next step. Keep unrelated
+setup/configuration details in operator notes; preserve any uncertainty or
+limitation that actually affects this finding or its permitted action.
+
 Keep reusable memory to owner policy, metric definitions, approved source identities, routing, and agreed reporting expectations. Treat onboarding readouts as dated historical examples: their values, coverage, source health, and initial cutoff do not establish current or future conditions. Approval of a source's scope is not approval of its current measurements or of a comparison between them.
 
 Watch and question judgments are not a measurement inventory. An `unknown` judgment does not make available counts or values disappear. Compact handoffs can label explicitly optional groups in `optional_policy_diagnostics.values`; required or ambiguously mapped groups remain in `result`. Full receipts keep their original paths. Check the current observations/evidence and comparison totals in `analyses`, when present, before describing a quantity as unavailable. Preserve supported facts from one period when another period or the comparison is incomplete, without calling the comparison valid or weakening action requirements. Cite source references for measurements; a receipt ID can support what the workflow decided or did, not substitute for underlying data.

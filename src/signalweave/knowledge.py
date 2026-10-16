@@ -209,4 +209,11 @@ class KnowledgeService:
                 if size > 24_000:
                     break
                 visible.append(entry)
+        # History may include old revisions, but current visibility still applies
+        # after source authorization has yielded. A newly private entry must not
+        # disclose even its formerly shared text.
+        try:
+            self.store.get(principal.tenant_id, entry_id, principal.principal_id)
+        except KeyError:
+            return []
         return visible

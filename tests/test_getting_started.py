@@ -24,9 +24,9 @@ def test_agent_guide_distinguishes_bucket_arithmetic_from_comparable_changes(tas
 def test_recurring_agent_guide_uses_existing_card_bundle_without_repeating_onboarding(provider):
     guide = agent_getting_started("monitor", decision_provider=provider)
     assert [step["tool"] for step in guide["steps"]] == [
-        "get_insight_card", "evaluate_insight_card", "get_decision_receipt",
+        "evaluate_insight_card", "get_insight_card", "get_decision_receipt",
     ]
-    assert "Start here" in guide["steps"][1]["purpose"]
+    assert "Start here" in guide["steps"][0]["purpose"]
     assert "when needed" in guide["repeat"]
     assert "onboarding examples are not permanent date restrictions" in guide["repeat"]
     assert "explicit owner-requested fixed window" in guide["repeat"]

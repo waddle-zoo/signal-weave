@@ -11,6 +11,9 @@ EVIDENCE_INTERPRETATION = (
     "are policy judgments, not an inventory of available data: unknown does not erase measured values. "
     "Report supported facts even when a comparison is unavailable; preserve missing-value, coverage "
     "and action limits. Cite source references for measurements and receipt IDs for workflow outcomes only."
+    " When present, analyses[].comparison retains original totals, segment counts and measurement windows; "
+    "source_contracts retains capture dates and declared quality/freshness. Check these before rereading "
+    "the same source. Page omitted receipt details instead of requerying to recover already-fetched facts."
 )
 
 
@@ -86,8 +89,8 @@ def agent_getting_started(task: str = "start", *, decision_provider: str = "jev-
     if task == "monitor":
         response.pop("next", None)
         response["steps"] = [
-            {"tool": "get_insight_card", "purpose": "Read the approved policy if it is not already available. Reuse its card ID and scope; do not repeat onboarding."},
-            {"tool": "evaluate_insight_card", "purpose": "Fetch the approved sources and obtain the policy decision and evidence in one call. Start here when the approved card is already available."},
+            {"tool": "evaluate_insight_card", "purpose": "Start here with the authorized approved card ID and a new run key. Fetch the approved sources, active card guidance and policy decision in one delivery-disabled call; no preparatory card/source fetch is required."},
+            {"tool": "get_insight_card", "purpose": "Read the card separately when reviewing or changing its policy, not to duplicate the active guidance already returned by evaluation. Use the default compact view unless an audit needs full history."},
             {"tool": "get_decision_receipt", "purpose": "Read only needed omitted evidence pages or recover a completed run; this does not refetch sources or run inference."},
         ]
         response["evaluation_example"] = {
