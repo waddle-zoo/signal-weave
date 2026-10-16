@@ -16,6 +16,56 @@ Feature branch: `feat/domain-context-memory`, based on main `e8842ac`.
 These are separate gates. Passing storage, authentication or a scripted decision
 check cannot substitute for complete onboarding and useful final agent outcomes.
 
+## Exact reference retrieval and exploratory courier readouts
+
+Before spending more model calls, a synthetic 311-note repro showed that an
+opaque stored context ID is not a lexical match and its source-anchor packet
+can omit it behind unrelated notes. History can recover it, so this is retrieval
+friction, not data loss or proof of an incorrect business answer. Add the small
+`entry_ids` filter to the existing retrieval operation, with normal authorization,
+current-revision and response bounds; do not add a new tool or send note text to
+Jev. Update the bundled skill for known references and preserve ordinary search.
+
+Three additional repros exposed a real revision/visibility race while awaiting
+source authorization, including revocation of an entry selected before a later
+authorization call. All three failed before the repair. Retrieval now rechecks
+every selected entry's current visibility/revision after the last asynchronous
+check and drops changed entries without historical fallback or a revealing
+reason. The combined 183 retrieval/storage/source-authorization/HTTP tests pass;
+these are contract checks, not business efficacy.
+
+Preregister `retained-context-courier-v1` separately from closed v7. Reuse its
+actual authored notes/card and reviewed, unbound definition; verify original
+artifact hashes, source fidelity and unchanged state, never import/reconstruct
+them. Install the current skill in a fresh research workspace rather than
+overwrite the old installation. Both original onboarding reviews remain rejected
+and unattended readiness remains unqualified. A supported shadow report is not
+certification or historical approval.
+
+Fix the two known synthetic observation indices at 1 and 2: each arm recovers its
+own stored brief through tools, retains identical company/glossary/calculator
+access and reports current facts and proposed routes. Treatment additionally
+has the current native MCP/skill and its actual saved context ID (not pasted
+note text); it evaluates the saved approved card delivery-disabled. Alternate
+arm order by period. Observe whether context was actually retrieved and whether
+the final analysis is useful separately from the native outcome and setup
+qualification. No private labels enter model inputs. This is a development
+readout check, not a new-company holdout, installer UX trial or superiority study.
+
+Cap four Luna-medium invocations, twelve tools/180 seconds each, at most two
+live Jev requests; stop between invocations at 600k input/150k uncached, unknown
+usage, transport failure or changed frozen inputs. No retries, rescores, budget
+increase, sending or scheduling. Run independent method/code review, software
+regressions and current-native zero-inference preflight before live inference.
+Retain incomplete reports and full usage, inspect final messages/source truth
+with an independent reader, and replace the copied key through the CLI afterward.
+The live command must supply `--preflight` pointing to a matching successful
+zero-call report, including source-fidelity, current context and unchanged-card
+checks. Back up and restore only the three research connection files around
+temporary endpoint/key setup, preserving original modes/bytes and removing the
+backup copies after successful restoration. Keep cards/context and old trial
+artifacts intact; new receipts may persist as this new study's evidence.
+
 ## Owner-confirmation forward test
 
 Freeze `owner-confirmation-canary-v1` before inference. Target the real agent

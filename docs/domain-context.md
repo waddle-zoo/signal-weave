@@ -62,6 +62,14 @@ claims, infer causation, or grant access to a new source. Search/response budget
 are bounded, and detailed source authorization is checked before returning text.
 A rejected source link hides its whole entry rather than leaking the linked text.
 
+For known references, `retrieve_domain_context(entry_ids=[...])` selects up to
+twelve exact context IDs without searching names or loading history. It returns
+currently visible revisions, not the old text of a card pin; compare the revision
+and freshness with the card before relying on it. The ID set restricts any other
+supplied filters. An empty ID list is invalid; omitted IDs retain normal search.
+Hidden and unknown entries are both omitted. Count/byte budgets still apply, so
+an ID request does not promise a complete packet or bypass source authorization.
+
 Edits and reviews append immutable revisions. Editing a reviewed entry creates
 a draft; default retrieval does not silently fall back to its older reviewed
 meaning. Reviewed hypotheses stay hypotheses. Expired and future-effective context

@@ -303,6 +303,7 @@ class SQLiteKnowledgeStore:
         review_due_before: datetime | None = None,
         include_drafts: bool = True,
         offset: int = 0,
+        entry_ids: list[str] | None = None,
     ) -> list[KnowledgeEntry]:
         self._validate_limit(limit, _MAX_SEARCH, "search")
         if not isinstance(offset, int) or isinstance(offset, bool) or not 0 <= offset <= 300:
@@ -313,6 +314,12 @@ class SQLiteKnowledgeStore:
             raise ValueError("query must be at most 2000 UTF-8 bytes")
         if not isinstance(include_drafts, bool):
             raise ValueError("include_drafts must be boolean")
+        if entry_ids is not None and (
+            not isinstance(entry_ids, list) or not 1 <= len(entry_ids) <= 12
+            or any(not isinstance(value, str) or not value.strip() or len(value) > 160 for value in entry_ids)
+            or len(set(entry_ids)) != len(entry_ids)
+        ):
+            raise ValueError("entry_ids must contain one to twelve distinct nonempty IDs of at most 160 characters")
         anchors = source_refs or []
         if len(anchors) > _MAX_SOURCE_REFS:
             raise ValueError(f"source_refs may contain at most {_MAX_SOURCE_REFS} anchors")
@@ -382,6 +389,10 @@ class SQLiteKnowledgeStore:
             + self._visible_sql("c")
         )
         params.extend((tenant_id, principal_id))
+        if entry_ids is not None:
+            placeholders = ", ".join("?" for _ in entry_ids)
+            sql += f" AND c.entry_id IN ({placeholders})"
+            params.extend(entry_ids)
         if not include_drafts:
             sql += " AND c.status != 'draft'"
         # Keep optional filtering in SQL so hidden, retired, or not-yet-due rows

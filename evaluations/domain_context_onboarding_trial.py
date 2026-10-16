@@ -719,7 +719,8 @@ async def pinned_codex(path):
 
 
 @asynccontextmanager
-async def native_context(binary, key_file, public, adapter, audit, root, *, request_budget=None):
+async def native_context(binary, key_file, public, adapter, audit, root, *, request_budget=None,
+                         skill_workspace=None):
     """Explicit private --home; never replace HOME or register a personal agent."""
     private_home = root / "native-home"
     env = {key: value for key, value in os.environ.items() if key in {"PATH", "TMPDIR", "LANG", "LC_ALL"}}
@@ -749,8 +750,9 @@ async def native_context(binary, key_file, public, adapter, audit, root, *, requ
                 await setup.wait()
         if setup.returncode:
             raise RuntimeError("isolated native setup failed")
+        skill_root = skill_workspace if skill_workspace is not None else root
         installed = await asyncio.create_subprocess_exec(str(binary), "skills", "install", "--agent", "codex", "--scope", "project",
-                                                        cwd=root, env=env, stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL)
+                                                        cwd=skill_root, env=env, stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL)
         try:
             await asyncio.wait_for(installed.wait(), 30)
         finally:
@@ -759,7 +761,7 @@ async def native_context(binary, key_file, public, adapter, audit, root, *, requ
                 await installed.wait()
         if installed.returncode:
             raise RuntimeError("project skill installation failed")
-        skill = (root / ".agents" / "skills" / "signalweave" / "SKILL.md").read_text()
+        skill = (skill_root / ".agents" / "skills" / "signalweave" / "SKILL.md").read_text()
         audit.emit("native.setup", seconds=time.perf_counter() - started,
                    skill_sha256=hashlib.sha256(skill.encode()).hexdigest(), agent_registration=False)
         env["TYPESAFE_BASE_URL"] = jev_url

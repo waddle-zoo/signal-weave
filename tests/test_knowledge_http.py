@@ -223,8 +223,17 @@ async def test_signed_http_context_binding_is_owner_scoped_tenant_isolated_and_b
                 assert "context_bindings" not in runtime.card_store.get_card("repeat").execution_payload()
                 assert note_body not in str(bound) + str(checked) + str(card_result)
 
+                shared_context = await call(
+                    "retrieve_domain_context", {"entry_ids": [saved["id"]]},
+                    subject="tenant-a-reader",
+                )
+                assert [(entry["id"], entry["revision"], entry["content"]["body"])
+                        for entry in shared_context["structuredContent"]["entries"]] == [
+                    (saved["id"], reviewed["revision"], note_body),
+                ]
+
                 other_tenant = await call(
-                    "retrieve_domain_context", {"query": "net sales", "include_drafts": True},
+                    "retrieve_domain_context", {"entry_ids": [saved["id"]], "include_drafts": True},
                     tenant="tenant-b", subject="tenant-b-owner",
                 )
                 assert other_tenant["structuredContent"]["entries"] == []

@@ -117,6 +117,7 @@ class KnowledgeService:
         source_refs: list[str] | None = None, include_drafts: bool = False,
         review_due_only: bool = False, limit: int = 10, max_bytes: int = 24_000,
         now: datetime | None = None,
+        entry_ids: list[str] | None = None,
     ) -> KnowledgePacket:
         if (
             len(query) > 2000 or type(limit) is not int or not 1 <= limit <= 30
@@ -140,6 +141,7 @@ class KnowledgeService:
                 principal.tenant_id, principal.principal_id, query=query, domain=domain,
                 source_refs=anchors, limit=100, offset=offset,
                 review_due_before=captured_at if review_due_only else None, include_drafts=include_drafts,
+                entry_ids=entry_ids,
             )
             candidates.extend(page)
             if len(page) < 100:
@@ -166,6 +168,20 @@ class KnowledgeService:
                 truncated = True
                 continue
             entries, freshness = proposed, proposed_freshness
+        # Source authorization can yield while an entry is edited or made private,
+        # including an entry already selected before a later source check. Recheck
+        # all selected revisions/visibility after the last await; never fall back
+        # to formerly reviewed text or reveal why an entry disappeared.
+        current_entries = []
+        for entry in entries:
+            try:
+                current = self.store.get(principal.tenant_id, entry.id, principal.principal_id)
+            except KeyError:
+                continue
+            if current.revision == entry.revision:
+                current_entries.append(entry)
+        entries = current_entries
+        freshness = {entry.id: freshness[entry.id] for entry in entries}
         warnings.append("Context coverage is bounded and source-filtered; an empty packet does not establish absence.")
         if truncated:
             warnings.append("Bounded context packet; refine the task, domain or source anchors for further coverage.")
