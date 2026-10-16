@@ -9,6 +9,7 @@ from __future__ import annotations
 import os
 import random
 import sqlite3
+from contextlib import closing
 from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
 from typing import Any
@@ -295,7 +296,7 @@ def generate_database(output_path: str | os.PathLike[str], *, seed: int = DEFAUL
     rng = random.Random(seed)
     inserted_ticket_count = 0
     try:
-        with sqlite3.connect(path) as connection:
+        with closing(sqlite3.connect(path)) as connection, connection:
             connection.executescript(_SCHEMA)
             connection.executemany(
                 "INSERT INTO support_tier_sla VALUES (?, ?, ?)", TIERS

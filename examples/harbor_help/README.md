@@ -81,3 +81,30 @@ ORDER BY week_start_utc;
 Ticket workloads and clock-miss rates vary by week, tier, and region, so the
 denominators matter. The fixture makes the underlying rows inspectable; it does
 not provide a prepared alert snapshot or an evaluation answer.
+
+## Connect an analyst agent
+
+From a development checkout with dependencies installed (`uv sync --extra dev`),
+start the example company's MCP over stdio:
+
+```sh
+uv run python -m examples.harbor_help.company_mcp /tmp/harbor-help.sqlite3
+```
+
+Configure that command as an additional company MCP in your agent. It exposes
+`list_assets`, `inspect_asset`, and `query_readonly`: discover the actual tables
+and views, inspect their SQL definitions, and query the raw source. New views
+are discovered without adding a scenario-specific tool. Both comparative arms
+must retain these tools and the same company context.
+
+Queries are read-only, with bounded SQL length, execution, rows, and response
+bytes. Truncated results are explicit; aggregate in SQL instead of summing a
+truncated sample. The tool's retrieval timestamp does not replace the source's
+snapshot cutoff or ingestion ledger.
+
+This company MCP is separate example code, not part of the SignalWeave binary.
+Its raw SQL results are not SignalWeave source snapshots. An approved card needs
+a configured evidence source, such as an explicitly delegated
+[analyst publication](../analysis_publication/README.md); connecting these raw
+tools to an agent does not automatically create that integration. This example
+has not yet established successful agent onboarding or comparative business value.
