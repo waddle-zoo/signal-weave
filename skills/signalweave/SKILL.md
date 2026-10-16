@@ -92,6 +92,8 @@ Show the draft and its source scope, then use `review_insight_card` to surface c
 
 A fixed, non-expanding card's source review does not require Jev catalog ranking. Use the available review rather than skip it because optional discovery is unavailable; actual review blockers still need resolution.
 
+Missing custom adapter metric contracts or undeclared windows remain unverified, not automatic reasons to reject an owner-reviewed shadow run. Preserve the owner's confirmed meaning and intended recipients in the card; do not erase routes or invent provider guarantees to clear review. Known incompatible windows and explicitly bound quality requirements still apply. Keep returned `onboarding_warnings` visible as setup-review findings, not current measurements; check the run's source contracts too. Approval permits evaluation, not unattended delivery or certification; test the actual workflow and obtain separate delivery authorization before activation.
+
 When `approval_handoff` is returned, show its declared scopes with the policy.
 Ask one clear question: may you approve this saved policy and these scopes for
 evaluation? An owner or explicitly authorized delegate can confirm in ordinary

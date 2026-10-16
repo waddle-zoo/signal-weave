@@ -215,93 +215,134 @@ def _assert_raw_chart_has_no_business_contract(snapshot: dict[str, Any]) -> None
     assert {item["metric"] for item in snapshot["observations"]} == {"SUM(order_total)"}
 
 
+def _assert_review_keeps_the_adapter_contract_unverified(
+    review: dict[str, Any], expected_windows: list[str],
+) -> None:
+    selected = next(item for item in review["source_candidates"] if item["selected"])
+    contract = selected["metadata"]
+    assert contract["available_comparison_windows"] == expected_windows
+    assert not contract.get("metric_names")
+    assert not contract.get("metric_definitions")
+    assert not contract.get("comparison_contracts")
+    assert not contract.get("required_comparison_keys")
+    assert not contract.get("population")
+    assert not contract.get("grain")
+
+
+@pytest.mark.parametrize(
+    "comparison_windows",
+    [[WINDOW], None],
+    ids=["provider-declared-window", "window-undeclared"],
+)
+@pytest.mark.parametrize(
+    "outcome",
+    [None, "investigate", "notify", "escalate"],
+    ids=["no-route", "investigate-route", "notify-route", "escalate-route"],
+)
 @pytest.mark.asyncio
-async def test_raw_superset_chart_without_routes_can_run_agent_shadow_without_business_contract(tmp_path):
-    server, judge, requests = _server(
-        tmp_path, comparison_windows=[WINDOW]
-    )
+async def test_raw_superset_contract_gaps_warn_but_allow_owner_authorized_shadow(
+    tmp_path, comparison_windows: list[str] | None, outcome: str | None,
+):
+    server, judge, requests = _server(tmp_path, comparison_windows=comparison_windows)
     public_tools = {item.name for item in await server.list_tools()}
     assert {"inspect_resource", "onboard_insight_card", "review_insight_card",
             "approve_insight_card", "evaluate_insight_card", "get_decision_receipt"} <= public_tools
 
     snapshot = await _inspect_chart(server)
     _assert_raw_chart_has_no_business_contract(snapshot)
-    assert snapshot["contract"]["available_comparison_windows"] == [WINDOW]
+    expected_windows = comparison_windows or []
+    assert snapshot["contract"]["available_comparison_windows"] == expected_windows
 
-    draft = await _onboard(server)
-    assert draft["card"]["delivery_methods"] == []
+    draft = await _onboard(server, outcome)
     card_id = draft["card"]["id"]
+    recipients = draft["card"]["delivery_methods"]
+    expected_recipients = [] if outcome is None else [{
+        "key": outcome,
+        "outcome": outcome,
+        "label": outcome.title(),
+        "destination": f"agent://{outcome}",
+        "instructions": "",
+    }]
+    assert recipients == expected_recipients
+
     reviewed = await _dispatch_json(server, "review_insight_card", {"card_id": card_id})
     review = reviewed.get("review", reviewed)
+    blocker_codes = {item["code"] for item in review["blockers"]}
     assert review["readiness_status"] == "ready_for_approval"
-    assert "source-contract-required" not in {
-        item["code"] for item in review["blockers"]
-    }
+    assert "source-contract-required" not in blocker_codes
+    assert "comparison-window-mismatch" not in blocker_codes
+    _assert_review_keeps_the_adapter_contract_unverified(review, expected_windows)
+
+    if comparison_windows is None:
+        assert any("undeclared" in warning and "unverified" in warning
+                   for warning in review["warnings"])
+    if outcome is not None:
+        contract_warning = next(
+            warning for warning in review["warnings"]
+            if "metric/comparison meaning is unverified" in warning
+        )
+        assert SOURCE_REF in contract_warning
+        assert "does not certify unattended delivery" in contract_warning
+    review_warnings = review["warnings"]
 
     approved = await _dispatch_json(server, "approve_insight_card", {"card_id": card_id})
     assert approved["status"] == "approved"
+    assert approved["workflow_acceptance"]["status"] == "unassessed"
+    assert approved["card"]["status"] == "approved"
+    assert approved["card"]["approved_by"] == "offline-agent-principal"
+    assert approved["card"]["principal_id"] == "offline-agent-principal"
+    assert approved["card"]["principal_tenant"] == TENANT_ID
+    assert approved["card"]["delivery_methods"] == recipients
+    assert approved["onboarding_review"]["warnings"] == review_warnings
+    if review_warnings:
+        assert approved["card"]["onboarding_warnings"] == review_warnings
+    else:
+        assert "onboarding_warnings" not in approved["card"]
+
+    compact_card = await _dispatch_json(server, "get_insight_card", {"card_id": card_id})
+    assert compact_card["status"] == "approved"
+    assert compact_card["delivery_methods"] == recipients
+    assert "onboarding_review" not in compact_card
+    if review_warnings:
+        assert compact_card["onboarding_warnings"] == review_warnings
+    else:
+        assert "onboarding_warnings" not in compact_card
+    full_card = await _dispatch_json(server, "get_insight_card", {
+        "card_id": card_id,
+        "response_mode": "full",
+    })
+    assert full_card["delivery_methods"] == recipients
+    assert full_card["onboarding_review"]["warnings"] == review_warnings
+    assert "onboarding_warnings" not in full_card
+
     evaluated = await _dispatch_json(server, "evaluate_insight_card", {
         "card_id": card_id,
-        "idempotency_key": IDEMPOTENCY_KEY,
+        "idempotency_key": f"{IDEMPOTENCY_KEY}:{outcome or 'none'}:{comparison_windows is not None}",
     })
     assert evaluated["receipt"]["delivery_mode"] == "shadow"
     assert evaluated["receipt"]["status"] == "delivery_disabled"
     assert evaluated["receipt"]["delivery_enabled"] is False
     assert evaluated["receipt"]["delivery_method_keys"] == []
     assert evaluated["result"]["delivery_methods"] == []
+    assert evaluated["result"]["analyses"] == []
+    assert evaluated["card"]["status"] == "approved"
+    assert evaluated["card"]["delivery_methods"] == recipients
+    # Review caveats stay attached to the card envelope, not recast as fresh
+    # observations or an adapter-supplied metric/comparison contract.
+    if review_warnings:
+        assert evaluated["card"]["onboarding_warnings"] == review_warnings
+    else:
+        assert "onboarding_warnings" not in evaluated["card"]
     assert judge.judge_calls == 1
 
     persisted = await _dispatch_json(server, "get_decision_receipt", {
-        "idempotency_key": IDEMPOTENCY_KEY,
+        "idempotency_key": evaluated["receipt"]["idempotency_key"],
     })
     assert persisted["receipt"]["status"] == "delivery_disabled"
     assert persisted["receipt"]["delivery_mode"] == "shadow"
+    assert (await _dispatch_json(server, "get_insight_card", {"card_id": card_id}))["delivery_methods"] == recipients
     assert requests
-
-
-@pytest.mark.parametrize("outcome", ["notify", "investigate", "escalate"])
-@pytest.mark.asyncio
-async def test_raw_superset_chart_declared_window_still_blocks_each_action_route_without_typed_contract(
-    tmp_path, outcome: str,
-):
-    server, judge, _requests = _server(tmp_path, comparison_windows=[WINDOW])
-    snapshot = await _inspect_chart(server)
-    _assert_raw_chart_has_no_business_contract(snapshot)
-    assert snapshot["contract"]["available_comparison_windows"] == [WINDOW]
-
-    draft = await _onboard(server, outcome)
-    card_id = draft["card"]["id"]
-    reviewed = await _dispatch_json(server, "review_insight_card", {"card_id": card_id})
-    review = reviewed.get("review", reviewed)
-    blocker_codes = {item["code"] for item in review["blockers"]}
-    assert review["readiness_status"] == "blocked"
-    assert "source-contract-required" in blocker_codes
-    assert "comparison-window-mismatch" not in blocker_codes
-    assert any(item["refs"] == [SOURCE_REF] for item in review["blockers"]
-               if item["code"] == "source-contract-required")
-
-    with pytest.raises(Exception, match="source-contract-required"):
-        await _dispatch_json(server, "approve_insight_card", {"card_id": card_id})
-    stored = await _dispatch_json(server, "get_insight_card", {"card_id": card_id})
-    assert stored["status"] == "draft"
-    assert judge.judge_calls == 0
-
-
-@pytest.mark.asyncio
-async def test_raw_superset_undeclared_window_is_a_distinct_route_blocker(tmp_path):
-    server, judge, _requests = _server(tmp_path, comparison_windows=None)
-    snapshot = await _inspect_chart(server)
-    _assert_raw_chart_has_no_business_contract(snapshot)
-    assert snapshot["contract"]["available_comparison_windows"] == []
-
-    draft = await _onboard(server, "notify")
-    card_id = draft["card"]["id"]
-    reviewed = await _dispatch_json(server, "review_insight_card", {"card_id": card_id})
-    review = reviewed.get("review", reviewed)
-    blocker_codes = {item["code"] for item in review["blockers"]}
-    assert "comparison-window-mismatch" in blocker_codes
-    assert "source-contract-required" in blocker_codes
-
-    with pytest.raises(Exception, match="comparison-window-mismatch"):
-        await _dispatch_json(server, "approve_insight_card", {"card_id": card_id})
-    assert judge.judge_calls == 0
+    assert {path for _method, path in requests} <= {
+        "/api/v1/chart/1",
+        "/api/v1/chart/data",
+    }

@@ -61,7 +61,7 @@ class Native:
         return [], {}
 
 
-def patch_runtime(monkeypatch, tmp_path, *, reject=None, unknown=False):
+def patch_runtime(monkeypatch, tmp_path, *, reject=None, unknown=False, author_review=True, submitted_state=None):
     # Contract tests use their own fake-only protocol, never reopen the real
     # closed paid cohort merely to exercise orchestration with test doubles.
     manifest = json.loads(trial.MANIFEST.read_text())
@@ -108,10 +108,17 @@ def patch_runtime(monkeypatch, tmp_path, *, reject=None, unknown=False):
             if session.treatment:
                 created = await session.call("onboard_insight_card", {})
                 card_id = created["card"]["id"]
-                await session.call("review_insight_card", {"card_id": card_id})
+                if author_review:
+                    await session.call("review_insight_card", {"card_id": card_id})
+                if submitted_state == "missing":
+                    native.card = None
+                elif submitted_state == "not-draft":
+                    native.card["status"] = "approved"
             await session.call("record_setup", {"message": "Supported source readout", "card_id": card_id, "unresolved": []})
             audit.emit("tool.result", name="profile_saved_chart", arguments={"id": "42"}, result={"source_fact": "captured"})
         elif audit.episode.startswith("review"):
+            if hasattr(session, "evidence_reads") and audit.episode != reject:
+                await session.call("read_review_evidence", {"capture_index": 0})
             await session.call("record_review", {"ready_for_shadow": audit.episode != reject,
                                                  "issues": ["Material gap"] if audit.episode == reject else [],
                                                  "owner_message": "Expert assessed this exact saved proposal"})
@@ -172,6 +179,124 @@ def test_source_excerpts_are_actual_and_fail_without_silent_truncation():
     assert "MUST NOT LEAK" not in json.dumps(trial.source_excerpts(events, 1000))
     with pytest.raises(ValueError, match="budget exceeded"):
         trial.source_excerpts(events, 1)
+
+
+def test_indexed_capture_keeps_full_source_without_unrelated_labels():
+    result = {"rows": [{"value": index} for index in range(9000)]}
+    captures = trial.source_excerpts([
+        {"kind": "tool.result", "name": "read_chart_rows", "arguments": {"id": "1"}, "result": result},
+        {"kind": "private.label", "name": "expected", "result": "NOT EVIDENCE"},
+    ], None)
+    assert captures == [{"tool": "read_chart_rows", "arguments": {"id": "1"}, "result": result}]
+    assert captures[0]["result"]["rows"][-1] == {"value": 8999}
+
+
+def test_review_policy_projection_keeps_active_semantics_not_repeated_catalog_history():
+    card = {"id": "current", "sources": [{"key": "main"}], "decision_guidance": "Owner policy",
+            "compiled_plan": {"comparison_windows": ["owner-window"]},
+            "onboarding_review": {"readiness_status": "ready_for_approval", "warnings": ["unverified"],
+                                  "source_candidates": ["large audit packet"]},
+            "onboarding_review_history": ["historical raw evidence"], "onboarding_corrections": ["old edits"]}
+    before = copy.deepcopy(card)
+    view = trial.review_policy_view(card)
+    assert view == {"id": "current", "sources": [{"key": "main"}], "decision_guidance": "Owner policy",
+                    "compiled_plan": {"comparison_windows": ["owner-window"]},
+                    "onboarding_review": {"readiness_status": "ready_for_approval", "warnings": ["unverified"]}}
+    view["sources"].clear()
+    assert card == before
+    assert trial.review_policy_view(None) is None
+
+
+async def test_closed_protocol_cannot_be_reopened_with_a_copied_manifest(monkeypatch, tmp_path):
+    args, state, _ = patch_runtime(monkeypatch, tmp_path)
+    original = json.loads(trial.MANIFEST.read_text())
+    original["protocol"] = "raw-northstar-workflow-v1"
+    original["execution_status"] = "planned"
+    copied = tmp_path / "copied-manifest.json"
+    copied.write_text(json.dumps(original))
+    args.manifest, args.run = str(copied), True
+    with pytest.raises(ValueError, match="cohort closed"):
+        await trial.run(args)
+    assert state["invocations"] == []
+    assert not (tmp_path / "preflight").exists()
+
+
+def indexed_manifest(args, tmp_path, *, prompt_bytes=180000):
+    manifest = json.loads(trial.MANIFEST.read_text())
+    manifest["protocol"] = "unit-test-indexed-workflow"
+    manifest["review_mode"] = "indexed"
+    manifest["limits"]["review_materials_bytes"] = prompt_bytes
+    path = tmp_path / "indexed-unit-manifest.json"
+    path.write_text(json.dumps(manifest))
+    args.manifest = str(path)
+
+
+async def test_explicit_new_indexed_cohort_uses_real_saved_card_and_frozen_reader(monkeypatch, tmp_path):
+    args, state, native = patch_runtime(monkeypatch, tmp_path)
+    indexed_manifest(args, tmp_path)
+    await trial.run(args)
+    preflight = json.loads((tmp_path / "preflight/report.json").read_text())
+    assert "raw_review_evidence.py" in preflight["frozen"]["helpers"]
+    args.preflight, args.output, args.run = str(tmp_path / "preflight/report.json"), str(tmp_path / "live"), True
+    result = await trial.run(args)
+    assert result["paired_reporting_complete"] is True
+    assert len(state["invocations"]) == 6
+    assert native.calls.count("approve_insight_card") == 1
+
+
+async def test_superseded_draft_is_diagnostic_not_failure_of_actual_current_workflow(monkeypatch, tmp_path):
+    args, _state, native = patch_runtime(monkeypatch, tmp_path, author_review=False)
+    original = native.call_tool
+
+    async def with_earlier_draft(name, arguments):
+        content, value = await original(name, arguments)
+        if name == "list_insight_cards" and value["cards"]:
+            earlier = {**copy.deepcopy(native.card), "id": "earlier-abandoned-draft"}
+            value["cards"].append(earlier)
+        return content, value
+
+    monkeypatch.setattr(native, "call_tool", with_earlier_draft)
+    indexed_manifest(args, tmp_path)
+    await trial.run(args)
+    args.preflight, args.output, args.run = str(tmp_path / "preflight/report.json"), str(tmp_path / "live"), True
+    result = await trial.run(args)
+    assert result["paired_reporting_complete"] is True
+    report = json.loads((tmp_path / "live/report.json").read_text())
+    author = next(item for item in report["episodes"] if item["stage"] == "author" and item["arm"] == "signalweave")
+    assert author["draft_checks"] == {"submitted_saved_draft": True}
+    assert author["legacy_draft_diagnostics"]["exactly_one_saved_draft"] is False
+    assert author["legacy_draft_diagnostics"]["explicit_review_returned"] is False
+    assert author["stored_card_count"] == 2
+    assert report["approval"]["card"]["id"] == "actual-saved-card"
+
+
+@pytest.mark.parametrize("submitted_state", ["missing", "not-draft"])
+async def test_invalid_submitted_card_cannot_qualify_even_with_a_positive_expert(monkeypatch, tmp_path, submitted_state):
+    args, _state, native = patch_runtime(monkeypatch, tmp_path, author_review=False, submitted_state=submitted_state)
+    indexed_manifest(args, tmp_path)
+    await trial.run(args)
+    args.preflight, args.output, args.run = str(tmp_path / "preflight/report.json"), str(tmp_path / "live"), True
+    result = await trial.run(args)
+    assert result["paired_reporting_complete"] is False and result["invocations"] == 4
+    report = json.loads((tmp_path / "live/report.json").read_text())
+    author = next(item for item in report["episodes"] if item["stage"] == "author" and item["arm"] == "signalweave")
+    assert author["draft_checks"] == {"submitted_saved_draft": False}
+    assert report["qualified_arms"] == ["baseline"]
+    assert "approve_insight_card" not in native.calls
+    assert "evaluate_insight_card" not in native.calls
+
+
+async def test_review_prompt_budget_stops_before_expert_or_approval(monkeypatch, tmp_path):
+    args, state, native = patch_runtime(monkeypatch, tmp_path)
+    indexed_manifest(args, tmp_path, prompt_bytes=1)
+    await trial.run(args)
+    args.preflight, args.output, args.run = str(tmp_path / "preflight/report.json"), str(tmp_path / "live"), True
+    with pytest.raises(ValueError, match="Review materials exceed initial-materials budget"):
+        await trial.run(args)
+    assert state["invocations"] == ["author:baseline", "author:signalweave"]
+    assert "approve_insight_card" not in native.calls
+    report = json.loads((tmp_path / "live/report.json").read_text())
+    assert report["usage_known"] is True and report["upstream_jev_requests"] == 0
 
 
 async def test_report_tools_retain_company_access_and_cannot_edit_or_approve():

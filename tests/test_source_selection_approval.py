@@ -187,7 +187,9 @@ async def test_confirmation_persists_exact_scope_and_audit_after_restart(tmp_pat
     )
     approved = stored(server, card_id)
     omitted = {"onboarding_review", "onboarding_review_history", "onboarding_corrections", "compiled_plan"}
-    assert result["card"] == {k: v for k, v in approved.items() if k not in omitted}
+    expected_card = {k: v for k, v in approved.items() if k not in omitted}
+    expected_card["onboarding_warnings"] = approved["onboarding_review"]["warnings"]
+    assert result["card"] == expected_card
     audit = result["onboarding_review"]
     assert result["status"] == approved["status"] == "approved"
     assert approved["approved_by"] == "test-principal"

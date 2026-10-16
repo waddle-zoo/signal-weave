@@ -31,6 +31,7 @@ from signalweave.models import InsightCard
 from signalweave.superset_client import SupersetClient
 
 MANIFEST = Path(__file__).with_name("data") / "raw-northstar-workflow-v1.json"
+CLOSED_PROTOCOLS = frozenset({"raw-northstar-workflow-v1"})
 HELPERS = ("raw_superset_onboarding.py", "raw_superset_tools.py", "raw_workflow_review.py",
            "declared_owner_reference.py", "codex_trial_transport.py", "installed_trial_transport.py",
            "domain_context_onboarding_trial.py", "retained_owner_periods.py", "native_superset_card_journey.py",
@@ -108,8 +109,23 @@ def source_excerpts(events, byte_limit):
     result = [{"tool": e["name"], "arguments": e["arguments"], "result": e["result"]}
               for e in events if e.get("kind") == "tool.result"
               and e.get("name") in {"read_chart_rows", "profile_saved_chart", "inspect_resource"}]
-    if len(json.dumps(result).encode()) > byte_limit:
+    if byte_limit is not None and len(json.dumps(result).encode()) > byte_limit:
         raise ValueError("Review excerpt budget exceeded; no silent truncation")
+    return result
+
+
+def review_policy_view(card):
+    """Active saved policy plus review findings, without repeated audit history."""
+    if card is None:
+        return None
+    result = {key: copy.deepcopy(value) for key, value in card.items()
+              if key not in {"onboarding_review_history", "onboarding_corrections", "onboarding_review"}}
+    review = card.get("onboarding_review")
+    if isinstance(review, dict):
+        result["onboarding_review"] = {key: copy.deepcopy(review[key]) for key in (
+            "readiness_status", "blockers", "questions", "warnings", "selected_source_refs",
+            "source_selection_fingerprint", "source_scope_confirmations",
+        ) if key in review}
     return result
 
 
@@ -146,18 +162,20 @@ def scrub_copied_key(root):
 
 
 async def run(args):
-    manifest = json.loads(MANIFEST.read_text())
-    owner_file = MANIFEST.with_name(manifest["owner_reference_file"])
+    manifest_path = Path(getattr(args, "manifest", None) or MANIFEST).resolve()
+    manifest = json.loads(manifest_path.read_text())
+    owner_file = manifest_path.with_name(manifest["owner_reference_file"])
     owner = json.loads(owner_file.read_text())
-    if manifest.get("execution_status") == "closed" and args.run:
+    if args.run and (manifest.get("execution_status") == "closed" or manifest["protocol"] in CLOSED_PROTOCOLS):
         raise ValueError("Workflow cohort closed; no retry or unused allowance transfer")
     if args.superset_url != "http://127.0.0.1:18089":
         raise ValueError("This protocol authorizes only the existing loopback Northstar endpoint")
     verify_capture_imports()
     binary = Path(args.binary).resolve()
     build, codex = verify_binary(binary), await pinned_codex(args.codex_executable)
-    frozen = {"build": build, "codex": codex, "manifest": digest(MANIFEST), "owner": digest(owner_file),
-              "runner": digest(__file__), "helpers": {n: digest(Path(__file__).with_name(n)) for n in HELPERS},
+    helper_names = (*HELPERS, "raw_review_evidence.py") if manifest.get("review_mode") == "indexed" else HELPERS
+    frozen = {"build": build, "codex": codex, "manifest": digest(manifest_path), "owner": digest(owner_file),
+              "runner": digest(__file__), "helpers": {n: digest(Path(__file__).with_name(n)) for n in helper_names},
               "control_files": {"scripts/binary_provenance.py": digest(Path(__file__).resolve().parents[1] / "scripts/binary_provenance.py")},
               "superset_url": args.superset_url}
     if args.run:
@@ -192,7 +210,7 @@ async def run(args):
                 or report["invocations"] >= limits["agent_invocations"]):
             raise RuntimeError("Terminal invocation/usage stop; no retry")
         if (verify_binary(binary) != build or digest(__file__) != frozen["runner"]
-                or digest(MANIFEST) != frozen["manifest"] or digest(owner_file) != frozen["owner"]
+                or digest(manifest_path) != frozen["manifest"] or digest(owner_file) != frozen["owner"]
                 or any(digest(Path(__file__).with_name(n)) != value for n, value in frozen["helpers"].items())
                 or any(digest(Path(__file__).resolve().parents[1] / n) != value for n, value in frozen["control_files"].items())
                 or digest(codex["path"]) != codex["sha256"]):
@@ -239,6 +257,8 @@ async def run(args):
                 authored = {}
                 for arm, session in authors.items():
                     instruction = INSTRUCTIONS + " Establish primary sales and coverage first; diagnostic exploration stays optional."
+                    if manifest.get("review_mode") == "indexed":
+                        instruction += " Prefer an existing relevant aggregate to reconstructing totals from all detail rows; use detail or profiles for a specific missing check. Preserve the owner's requested period rather than substitute a default."
                     if session.treatment:
                         instruction += " Use the native guide and installed skill to author/review one draft, with explicit selected_sources; no Jev catalog ranking is authorized.\n" + native.instructions + "\n" + skill
                     entry, events = await episode(session, "author", arm, instruction,
@@ -252,16 +272,53 @@ async def run(args):
                             _, card = await native.call_tool("get_insight_card", {"card_id": card_id, "response_mode": "full"})
                         _, stored = await native.call_tool("list_insight_cards", {})
                         entry["draft_checks"] = draft_checks(session, stored)
+                        if manifest.get("review_mode") == "indexed":
+                            # People may leave superseded drafts, and onboarding
+                            # can already return a review packet. Neither a
+                            # single-card store nor an extra formal tool call is
+                            # proof of semantics. Experts assess the actual saved
+                            # artifact; native approval still revalidates it.
+                            entry["legacy_draft_diagnostics"] = entry["draft_checks"]
+                            entry["stored_card_count"] = stored.get("count", len(stored["cards"]))
+                            entry["draft_checks"] = {"submitted_saved_draft": bool(
+                                card and card.get("id") == card_id and card.get("status") == "draft"
+                            )}
                     entry["saved_card"] = card
-                    authored[arm] = entry, source_excerpts(events, limits["review_source_excerpt_bytes"])
+                    excerpts = source_excerpts(events, limits["review_source_excerpt_bytes"]
+                                               if manifest.get("review_mode") != "indexed" else None)
+                    if manifest.get("review_mode") == "indexed" and card is not None:
+                        excerpts.append({"tool": "saved_native_card", "arguments": {"card_id": card["id"]}, "result": card})
+                    authored[arm] = entry, excerpts
                     save()
                 qualified = []
                 for arm, (entry, excerpts) in authored.items():
-                    reviewer = WorkflowReviewSession(owner["owner_declarations"], owner["brief"],
-                                                     {"notes": entry["notes"], "first_readout": entry["submission"]},
-                                                     entry["saved_card"], excerpts)
-                    reviewed, _ = await episode(reviewer, "review", arm, REVIEW_INSTRUCTIONS,
+                    review_class = WorkflowReviewSession
+                    saved_policy = entry["saved_card"]
+                    review_options = {}
+                    if manifest.get("review_mode") == "indexed":
+                        from evaluations.raw_review_evidence import IndexedWorkflowReviewSession
+                        review_class = IndexedWorkflowReviewSession
+                        saved_policy = review_policy_view(saved_policy)
+                        review_options["byte_limit"] = limits["review_source_excerpt_bytes"]
+                    reviewer = review_class(owner["owner_declarations"], owner["brief"],
+                                            {"notes": entry["notes"], "first_readout": entry["submission"]},
+                                            saved_policy, excerpts, **review_options)
+                    if (manifest.get("review_mode") == "indexed"
+                            and len(json.dumps(reviewer.review_materials).encode()) > limits["review_materials_bytes"]):
+                        raise ValueError("Review materials exceed initial-materials budget; no truncation or model call")
+                    review_instructions = REVIEW_INSTRUCTIONS
+                    if manifest.get("review_mode") == "indexed":
+                        review_instructions += (
+                            " The source excerpt field is an index, not the actual values. Read the captured "
+                            "evidence needed to verify each material claim and required recurring source; "
+                            "an unrelated page or the author's notes are not sufficient. Cite capture indices "
+                            "where useful in your issues or owner message. Evidence-access checks are necessary "
+                            "but do not prove your conclusion. Do not invent missing evidence to accept a setup."
+                        )
+                    reviewed, _ = await episode(reviewer, "review", arm, review_instructions,
                                                reviewer.review_materials, limits["review_tools"], limits["review_seconds"])
+                    if manifest.get("review_mode") == "indexed":
+                        reviewed["evidence_reads"] = reviewer.evidence_reads
                     accepted = reviewed["submission"]["ready_for_shadow"]
                     if arm == "signalweave":
                         accepted = accepted and all(entry["draft_checks"].values())
@@ -335,6 +392,7 @@ def main():
     for name in ("binary", "codex-executable", "output"):
         parser.add_argument("--" + name, required=True)
     parser.add_argument("--superset-url", default="http://127.0.0.1:18089")
+    parser.add_argument("--manifest", help="Explicit new preregistered cohort; closed protocols remain closed")
     parser.add_argument("--preflight")
     parser.add_argument("--key-file")
     parser.add_argument("--run", action="store_true")

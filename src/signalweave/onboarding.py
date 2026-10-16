@@ -755,7 +755,6 @@ class InsightAuthoringService:
         window_issues: list[str] = []
         window_refs: list[str] = []
         undeclared_refs: list[str] = []
-        required_undeclared_refs: list[str] = []
         optional_window_issues: list[str] = []
         for source in card.sources:
             ref = f"{source.adapter}|{source.resource}"
@@ -763,8 +762,6 @@ class InsightAuthoringService:
             comparison_required = _comparison_window_required(source, matches)
             if not available:
                 undeclared_refs.append(ref)
-                if source.required and comparison_required:
-                    required_undeclared_refs.append(ref)
             elif comparison_required and not set(card.comparison_windows).issubset(available):
                 message = f"{ref}: requested {card.comparison_windows!r}; available {available!r}."
                 if source.required:
@@ -775,18 +772,6 @@ class InsightAuthoringService:
         if undeclared_refs:
             warnings.append("Comparison windows are undeclared; compatibility is unverified for: "
                             + ", ".join(undeclared_refs))
-            automatic_routes = [
-                method for method in card.delivery_methods
-                if method.outcome in {Outcome.INVESTIGATE, Outcome.NOTIFY, Outcome.ESCALATE}
-            ]
-            if required_undeclared_refs and automatic_routes:
-                route_names = ", ".join(method.outcome.value for method in automatic_routes)
-                window_issues.append(
-                    "Required sources do not declare compatible comparison windows for "
-                    f"automatic {route_names} routes. Verify a source-owned comparison "
-                    "contract before approval."
-                )
-                window_refs.extend(required_undeclared_refs)
         if optional_window_issues:
             warnings.append("Optional source comparison-window mismatch: " + " ".join(optional_window_issues))
         if not card.comparison_windows:
@@ -805,23 +790,18 @@ class InsightAuthoringService:
                 " ".join(window_issues)[:2000], question, window_refs,
             )
 
-        # A source that advertises a metric but only carries a title/scope is
-        # not enough evidence for an unattended action. The frontier agent may
-        # discover and interpret arbitrary assets, but the recurring card still
-        # needs an adapter-owned contract tying the measurement to a comparison
-        # key, population, grain, and window. Do not let a caller-owned scope
-        # acknowledgement turn a noisy regional/archive/reference asset into a
-        # safe automatic route. This applies to externally delivered
-        # investigation routes as well as notify/escalate: an investigation
-        # destination is still an automated action and must not be triggered by
-        # an untyped source. Generic non-metric context sources are exempt; their
-        # typed role does not define the recurring measurement.
-        automatic_routes = [
+        # Destination mappings preserve the owner's policy; they are not
+        # authorization or certification for unattended delivery. Ordinary BI
+        # APIs often omit these custom contracts. Keep absent meaning explicit
+        # for the owner/frontier agent, rather than forbid a shadow evaluation
+        # or fabricate a provider guarantee. Known incompatible windows above
+        # and explicitly bound comparison requirements remain enforced.
+        routed_outcomes = [
             method for method in card.delivery_methods
             if method.outcome in {Outcome.INVESTIGATE, Outcome.NOTIFY, Outcome.ESCALATE}
         ]
         incomplete_contract_refs: list[str] = []
-        if automatic_routes:
+        if routed_outcomes:
             for source in card.sources:
                 if not source.required:
                     continue
@@ -893,23 +873,13 @@ class InsightAuthoringService:
                 ):
                     incomplete_contract_refs.append(ref)
         if incomplete_contract_refs:
-            route_names = ", ".join(method.outcome.value for method in automatic_routes)
-            question = (
-                "Select or inspect a source with a versioned metric/comparison contract before "
-                "enabling automatic " + route_names + " routing. The contract must declare the "
-                "metric meaning, comparison key/window, population, and grain; owner scope "
-                "confirmation cannot supply those missing facts."
-            )
-            questions.append(question)
-            add_blocker(
-                OnboardingBlockerCode.SOURCE_CONTRACT_REQUIRED,
-                OnboardingBlockerSeverity.BLOCK,
-                "source-contract",
-                "Required metric sources advertise a measurement but do not provide a complete "
-                "adapter-owned definition, comparison binding, population, grain, and window: "
-                + ", ".join(sorted(incomplete_contract_refs)),
-                question,
-                incomplete_contract_refs,
+            warnings.append(
+                "Source metric/comparison meaning is unverified by an adapter-owned "
+                "definition, comparison binding, population, grain and window for: "
+                + ", ".join(sorted(incomplete_contract_refs))
+                + ". Preserve the owner's reviewed meaning in the card and verify each run's "
+                "evidence. A destination mapping or card approval does not certify "
+                "unattended delivery or establish missing source guarantees."
             )
 
         principal_tenant = principal.tenant_id if principal else discovery.authorized_tenant

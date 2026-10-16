@@ -124,10 +124,13 @@ def _evaluation_fingerprint(
 
 def _evaluation_card(card: InsightCard) -> dict[str, Any]:
     """Keep active policy; authoring history remains available through get_insight_card."""
-    return card.model_dump(
+    payload = card.model_dump(
         mode="json",
         exclude={"onboarding_review", "onboarding_review_history", "onboarding_corrections", "compiled_plan"},
     )
+    if card.onboarding_review and card.onboarding_review.warnings:
+        payload["onboarding_warnings"] = list(card.onboarding_review.warnings)
+    return payload
 
 
 ResponseMode = Literal["compact", "full"]
@@ -454,7 +457,9 @@ def _compact_card(card: Any) -> dict[str, Any]:
     if result.get("status") == InsightCardStatus.APPROVED.value:
         # The approval review can contain the full discovery candidate catalog.
         # It remains in storage and is available through response_mode="full".
-        result.pop("onboarding_review", None)
+        review = result.pop("onboarding_review", None)
+        if isinstance(review, dict) and review.get("warnings"):
+            result["onboarding_warnings"] = review["warnings"]
     elif result.get("onboarding_review"):
         result["onboarding_review"] = _compact_review(result["onboarding_review"])
     if result.get("compiled_plan"):
@@ -3405,9 +3410,12 @@ def create_mcp(
 
         For a fixed card with no dynamic investigation, an owner may confirm its
         exact selected sources despite duplicate titles or omitted recommendations. A
-        source-owned comparison contract is still required for automatic notify or
-        escalate routes; owner prose cannot create a missing window, comparison key,
-        population, or grain. For a card that explicitly requests bounded related-source
+        missing adapter definition or comparison window stays unverified, but does not
+        prevent an owner-authorized shadow run merely because recipients are mapped.
+        Owner prose cannot create a provider guarantee about a comparison key,
+        population, grain or coverage; approval is not unattended-delivery certification.
+        An explicitly incompatible declared window still blocks approval.
+        For a card that explicitly requests bounded related-source
         retrieval or investigation, pass dynamic_scope_acknowledged=true alongside the
         current review fingerprint and owner reason. This acknowledges the bounded runtime
         expansion; it does not authorize unbounded discovery. These confirmations do not

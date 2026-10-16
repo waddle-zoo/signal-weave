@@ -136,7 +136,7 @@ evidence also needs selective source access or inspectable rollups, not another
 model call containing every raw detail page. Preserve raw traces; do not simply
 raise the completed cohort's packet budget.
 
-### Raw-source readiness is a separate unresolved gate
+### Raw-source readiness: initial failure and forward repair
 
 A zero-inference current-native diagnostic inspected the actual monthly SUM,
 daily coverage chart and ten-chart Executive dashboard. All ten dashboard
@@ -146,20 +146,25 @@ reviewed calendar-month proposal with its intended destinations still receives
 `comparison-window-mismatch` and `source-contract-required`. The saved query
 declarations do not supply those business/comparison contracts.
 
-Integrated offline tests now isolate the distinction using the production
+The initial integrated offline tests isolated the distinction using the production
 Superset adapter and normal agent-profile dispatch: a no-route card can be
 approved/evaluated with a delivery-disabled receipt; investigate, notify and
 escalate mappings block on incomplete contracts even with a declared window.
 Removing destinations to pass would not solve the requested workflow.
 
-Next, separate a useful, explicitly non-actionable agent analysis/review from
-qualification for unattended routing. First inspect the existing preview and
-review paths rather than add a new framework. Preserve exact source permission,
-the owner's intended periods and destinations, and unresolved source meaning.
-Do not forge provider contracts or mark unverified comparisons certified. Then
-forward-test actual onboarding and fresh recurring reports with the same
-companion BI tools before spending on a larger paired cohort. A draft preview
-alone cannot close the recurring-workflow or business-value gates.
+The forward repair does not introduce a preview tool, approval mode or card
+schema. Missing-only adapter contracts and window declarations become explicit
+review warnings, including on approved compact cards and evaluation handoffs.
+The owner's reviewed card owns business meaning; that does not fabricate a
+provider guarantee. Known incompatible windows, authorization, source health,
+explicit bound comparisons and normal owner approval remain enforced. Recipient
+mappings alone are not delivery permission or workflow certification.
+
+Updated production-adapter tests cover no route and investigate/notify/escalate
+with both declared and undeclared windows, preserving actual destinations and
+unverified contracts. These checks do not prove business accuracy. Neither
+erasing destinations nor an optional draft preview would solve the original
+recurring workflow.
 
 Reproduce the source diagnostic with a freshly built binary:
 
@@ -176,6 +181,57 @@ not a general connection installer. It uses only a dummy provider credential,
 blocks inference, and never approves, evaluates, sends or schedules. The card
 is operator-selected diagnostic input, not an agent onboarding success. Full
 snapshots remain private artifacts, not another committed warehouse export.
+
+### New forward cohort: raw-northstar-workflow-v2
+
+The explicit v2 manifest preregisters a new known-fixture study, not a resumption
+of either closed v1. Keep the actual agent-authored card and independently saved
+notes; do not import the operator diagnostic card. Both authors keep identical
+saved-query/profile/calculator/owner tools and receive aggregate-first,
+period-preserving guidance. Treatment adds the current native MCP and installed
+skill. The source-only fixture has 48 dashboards and overlapping names, but
+there is one requested business workflow here, not 48 independent trials.
+The submitted artifact must be an actual saved draft fetched by ID. Superseded
+draft count and a redundant formal-review call are recorded diagnostics, not
+semantic qualification gates; onboarding itself can return a review packet.
+Experts assess the saved policy and actual evidence, and native approval
+subsequently revalidates it. Real approval blockers are not waived.
+
+Two fresh same-model reviewers receive each actual readout and a policy view,
+plus an index of all captured source evidence and the complete saved-card
+artifact. Bounded, lossless reads and arithmetic tools replace the raw-page
+prompt. No oracle values, report labels, new sources or edited answers are
+supplied. The complete card and raw source traces remain private for inspection.
+An unavailable oversized scalar is not silently summarized or treated as proof.
+
+Only after both self-authored setups qualify may the scripted owner consent to
+the exact treatment card, followed by real native approval. Fresh report arms
+then receive the identical saved policy and destinations, retain their own
+notes and company tools, and fetch evidence anew. Treatment evaluates once with
+live Jev. The baseline still lacks arbitrary SQL/shell, so this is not the
+strongest production agent baseline or an isolated Jev/memory ablation.
+
+Caps remain six invocations, 60 tools/480s per author, 24/300s per report,
+1.6M input and 350k uncached between invocations, zero Jev before approval and
+at most two afterward. Indexed experts have 12 tools/180s, including their
+final record (24 tool calls maximum across both reviewers). Initial serialized
+materials are bounded to 180k bytes and the index to 48k; this does not bound
+instructions, schemas or accumulated context. Acceptance requires actual logged
+source reads, including each required card source, not just seeing the index.
+This is an access check, not proof that the review's conclusions are correct.
+The token stops are between-invocation admissions, not hard total-token ceilings.
+No retries, in-cohort repair, rescore or allowance transfer. Unknown usage,
+incomplete actors, changed frozen inputs or transport failures stop the cohort.
+Require current software checks, independent method review and matching
+zero-model native preflight before inference.
+
+Review final usefulness separately from API success: the supported comparison,
+online contribution, coverage limits, owner-policy route, concise proposed
+message and a grounded next investigation. A correct typed outcome without a
+useful final message is not success. Source captures are read-only live queries,
+not an atomic warehouse snapshot. No sends, scheduling, real-human-install
+claim, statistical generalization or enterprise-completion claim follow from
+one completed pair. Broader companies, connectors and histories remain gates.
 
 ## Exact reference retrieval and exploratory courier readouts
 

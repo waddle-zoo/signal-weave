@@ -103,6 +103,20 @@ The default profile does not require a hidden simulation tool before approval;
 its first delivery-disabled evaluation follows explicit owner approval. That
 single check is not certification for unattended operation.
 
+Ordinary BI sources need not publish SignalWeave-specific metric contracts to
+support this owner-reviewed path. Missing adapter definitions or comparison
+windows remain explicitly **unverified**; your reviewed card preserves business
+meaning, not a fabricated source guarantee. Adding intended recipients does not
+turn approval into delivery permission. Known incompatible windows, source
+permissions, health checks and explicit required-comparison bindings still apply.
+Before unattended delivery, separately test the actual workflow against the
+owner's examples, including partial periods and missing context, and authorize
+the caller's delivery tools. Do not treat an approved card or a high-confidence
+judgment as that proof.
+`onboarding_warnings` on an approved card retain the setup review's caveats
+without its large catalog audit. They are historical review findings, not fresh
+measurements; check each run's `source_contracts` and evidence as well.
+
 For example:
 
 > Use my answers to prepare the recurring card. Show me its exact sources,
