@@ -97,6 +97,7 @@ async def run(args):
     frozen.update({"runner": digest(__file__), "manifest": digest(MANIFEST), "notes": digest(NOTES)})
     report = {"protocol": manifest["protocol"], "scope": manifest["scope"], "preflight_only": not args.run,
               "build": build, "codex": codex, "limits": manifest["limits"], "frozen": frozen, "episodes": [],
+              "read_clock": clock.isoformat(), "measurement_offset_seconds": offset.total_seconds(),
               "prior_report_sha256": manifest["prior_report_sha256"], "prior_study_usage_not_recharged": prior["usage"]}
 
     def save():
@@ -125,9 +126,9 @@ async def run(args):
             native = AuditedNative(native, audit)
             expected = authors["signalweave"]["card"]
             _, before = await native.call_tool("get_insight_card", {"card_id": expected["id"], "response_mode": "full"})
-            assert before["status"] == "approved" and before["version"] == expected["version"]
-            assert InsightCard.model_validate(before).execution_payload() == InsightCard.model_validate(expected).execution_payload()
-            assert hashlib.sha256(skill.encode()).hexdigest() == prior["installed_skill_sha256"]
+            assert before["status"] == "approved" and before["version"] == expected["version"], "Retained approval/version changed"
+            assert InsightCard.model_validate(before).execution_payload() == InsightCard.model_validate(expected).execution_payload(), "Retained policy changed"
+            assert hashlib.sha256(skill.encode()).hexdigest() == prior["installed_skill_sha256"], "Installed skill changed"
             for position, index in enumerate(manifest["period_indices"]):
                 period = fixture["public"]["periods"][index]
                 adapter.set_period(period, clock, measurement_offset=offset)
@@ -136,7 +137,16 @@ async def run(args):
                     _, actual = await native.call_tool("inspect_resource", {"adapter": source["adapter"], "resource": source["resource"]})
                     reference_source = SourceRef.model_validate(source).model_copy(update={"key": actual["source_key"]})
                     reference = (await adapter.inspect(reference_source)).model_dump(mode="json")
-                    assert all(actual[field] == reference[field] for field in ("contract", "observations", "evidence", "analytical_comparisons"))
+                    assert all(actual[field] == reference[field] for field in ("observations", "evidence", "analytical_comparisons")), "Native source facts differ from export"
+                    # The bridge enriches an export's minimal contract with its
+                    # catalog declaration; an empty export stub is not the
+                    # expected normalized business scope.
+                    declared = next(a["contract"] for a in public["catalog"]
+                                    if a["adapter"] == source["adapter"] and a["resource"] == source["resource"])
+                    assert actual["contract"]["tenant_id"] == public["scenario_id"], "Native tenant differs"
+                    assert all(actual["contract"].get(field) == declared.get(field) for field in (
+                        "scope", "population", "grain", "metric_names", "available_comparison_windows",
+                    )), "Native declared business scope differs from catalog"
                     continue
                 for arm in manifest["arms_by_period"][position]:
                     treatment, author = arm == "signalweave", authors[arm]
@@ -174,7 +184,7 @@ async def run(args):
                         "matches": session.submission["outcome"] == label["outcome"]
                         and set(session.submission["recipients"]) == set(label["recipients"])}
             _, after = await native.call_tool("get_insight_card", {"card_id": expected["id"], "response_mode": "full"})
-            assert after == before
+            assert after == before, "Reporting mutated the saved card"
             report.update(completed=True, card_unchanged=True)
     except Exception as error:  # noqa: BLE001 - retain failed paid calls
         report["failure"] = failure_detail(error)

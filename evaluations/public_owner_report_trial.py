@@ -464,11 +464,20 @@ async def run(args):
                         if (not report["usage_known"] or not report["provider_usage_known"] or result["status"] != "complete"
                                 or session.submission is None):
                             raise RuntimeError("Report incomplete or usage unknown; no retry")
-                        if treatment and not session.evaluation_verified:
+                        if treatment and development_owner:
+                            evaluations = [call for call in session.native_calls if call["name"] == "evaluate_insight_card"]
+                            receipt = evaluations[0]["result"].get("receipt", {}) if len(evaluations) == 1 else {}
+                            if (receipt.get("card_id") != card["id"] or receipt.get("card_version") != card["version"]
+                                    or receipt.get("idempotency_key") != run_key or receipt.get("delivery_enabled") is not False
+                                    or receipt.get("status") not in {"delivery_disabled", "decision_deferred"}):
+                                raise RuntimeError("Exact-card shadow/deferred integration was not exercised; no retry")
+                            report["episodes"][-1]["native_evaluation_status"] = receipt["status"]
+                            report["live_policy_exercised"] = budget.used > 0
+                        elif treatment and not session.evaluation_verified:
                             raise RuntimeError("Live-policy integration gate not achieved; inspect the recorded report separately for usefulness")
                 if not args.run and (budget.used or budget.exhausted):
                     raise RuntimeError("Preflight attempted provider inference")
-                if args.run and budget.used != LIMITS["jev_attempts"]:
+                if args.run and not development_owner and budget.used != LIMITS["jev_attempts"]:
                     raise RuntimeError("Live Jev integration was not exercised; reports remain recorded separately")
                 report["completed"] = True
     except Exception as error:  # noqa: BLE001 - preserve partial paid attempts

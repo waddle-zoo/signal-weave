@@ -231,6 +231,9 @@ Luna-medium author/reviewer/report calls, at most one Jev request, 1.2M input /
 Both studies use current verified native code, public company-MCP exports and
 the normal agent profile. They do not validate a vendor connector, real human
 installation, hosted SSO, delivered alerts or shared-memory benefit by themselves.
+Both record valid exact-card deferral separately from live policy exercise;
+unusable inputs need not consume a Jev request. Execution completion never
+implies correct routing, numerical claims or message quality.
 
 ## Fresh public owner-to-report development pair
 

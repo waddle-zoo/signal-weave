@@ -12,6 +12,19 @@ from evaluations.domain_context_onboarding_trial import clarified_development_sc
 from tests.test_public_owner_report_trial import FakeNative, _patch_offline
 
 
+@pytest.fixture(autouse=True)
+def native_shadow_receipt_shape(monkeypatch):
+    original = FakeNative.call_tool
+
+    async def shadow(native, name, args):
+        content, result = await original(native, name, args)
+        if name == "evaluate_insight_card":
+            result["receipt"]["delivery_enabled"] = False
+        return content, result
+
+    monkeypatch.setattr(FakeNative, "call_tool", shadow)
+
+
 def _select_development_owner(args):
     args.development_owner = True
     args.expert_reference = True
@@ -181,7 +194,6 @@ async def test_default_and_v5_protocols_keep_legacy_fixture_and_period(tmp_path,
     assert trial.scenario()["public"]["brief"].endswith(
         "Remember the agreed definition for future sales investigations."
     )
-
     v5_root = tmp_path / "v5"
     v5_root.mkdir()
     args, _state, _binary, _codex = _patch_offline(monkeypatch, v5_root, live=False)
@@ -191,8 +203,47 @@ async def test_default_and_v5_protocols_keep_legacy_fixture_and_period(tmp_path,
     args.expert_notes_file = str(notes)
     args.explicit_owner_confirmation = True
     v5_report = await trial.run(args)
-
     assert v5_report["protocol"] == trial.CONVERSATION_PROTOCOL
     assert v5_report["period_index"] == 2
     assert v5_report["expert_notes"]["sha256"]
     assert trial.scenario()["public"]["company"] == "Juniper Trail Retail"
+
+
+async def test_development_records_native_deferral_without_forcing_jev(tmp_path, monkeypatch):
+    args, state, _, _ = _patch_offline(monkeypatch, tmp_path, live=True)
+    _select_development_owner(args)
+    original_actor, original_native = trial.codex_episode, FakeNative.call_tool
+
+    async def deferred(native, name, arguments):
+        content, result = await original_native(native, name, arguments)
+        if name == "evaluate_insight_card":
+            result["receipt"]["status"] = "decision_deferred"
+        return content, result
+
+    async def actor(session, **kwargs):
+        if isinstance(session, trial.AuthorEpisode):
+            return await original_actor(session, **kwargs)
+        audit = kwargs["audit"]
+        audit.emit("api.request", provider="openai")
+        if session.native:
+            await session.call("evaluate_insight_card", {"card_id": session.approved_card_id, "idempotency_key": session.run_key})
+        await session.call("record_report", {"outcome": "insufficient_data", "recipients": [], "summary": "Mock source-gap report, not business evidence"})
+        audit.emit("api.response", provider="openai", usage={"input_tokens": 20, "output_tokens": 3, "input_tokens_details": {"cached_tokens": 5}})
+        return {"status": "complete"}
+
+    monkeypatch.setattr(FakeNative, "call_tool", deferred)
+    monkeypatch.setattr(trial, "codex_episode", actor)
+    result = await trial.run(args)
+    assert result["completed"] is True and result["agent_invocations_started"] == 6
+    assert result["provider_attempts"] == state["budget"].used == 0
+    assert result["live_policy_exercised"] is False
+    report = result["episodes"][-1]
+    assert report["native_evaluation_status"] == "decision_deferred"
+    assert report["approved_card_execution_verified"] is False
+
+
+async def test_development_does_not_accept_report_without_native_attempt(tmp_path, monkeypatch):
+    args, _, _, _ = _patch_offline(monkeypatch, tmp_path, live=True, verify_execution=False)
+    _select_development_owner(args)
+    result = await trial.run(args)
+    assert not result.get("completed") and "integration" in result["failure"]["message"]

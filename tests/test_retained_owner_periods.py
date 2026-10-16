@@ -70,7 +70,9 @@ def patch_trial(tmp_path, monkeypatch, *, live=True, unknown_usage=False):
                     return [], card.model_dump(mode="json")
                 if name == "inspect_resource":
                     result = await adapter.inspect(card.sources[0])
-                    return [], result.model_dump(mode="json")
+                    payload = result.model_dump(mode="json")
+                    payload["contract"].update(asset["contract"])
+                    return [], payload
                 if name == "evaluate_insight_card":
                     request_budget.claim()
                     audit.emit("api.request", provider="jev")
