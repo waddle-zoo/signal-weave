@@ -10,8 +10,8 @@ Feature branch: `feat/domain-context-memory`, based on main `e8842ac`.
 | Card-bound meaning and staleness | Contract tests cover exact pins, reapproval, deferred policy and historical receipts; no automatic notification service is claimed |
 | Approved cards with live decisions | V5 authored/approved its own card and evaluated the adverse case with live Jev. A separate retained series reused it for missing-data and quiet observations: both native and final routes matched policy, card unchanged. Not a continuous company history |
 | Human-first, agent-led onboarding | One V5 scripted-owner pair completed; no imported cards. V6 courier stopped before treatment. New clarified v7 authored both setups but both model reviews rejected; treatment's comparison-key objection contradicts its supplied descriptor. No later reports or courier/real-human usability success. V4 stays failed |
-| Useful recurring reports and investigations | Both arms' two retained-period report pairs usable; reader preferences split. Four reports cover two observations of one workflow, not four companies. Reviewed context still not bound/retrieved for reporting. Parcel-volume errors and multi-step/diverse-connector/changed-context gaps remain |
-| Comparative business value | No overall lift established: V5 used fewer reporter tools but the same source reads and more total time/tokens. The two single-pair reader preferences differ and are not pooled. Noise/recall, repeated-use savings, memory reuse and complete costs remain open |
+| Useful recurring reports and investigations | Retail retained reports remain supported. Two later courier observations now exercised actual retrieval of the saved reviewed definition plus live Jev; both arms' final routes/math checked out. Baseline gave better repair context; treatment's decline breakdown was correct but denser. No card pins or general multi-step/causal investigation claim |
+| Comparative business value | No overall lift established. Latest courier treatment used fewer tools, more input/uncached tokens, and repeated a source read whose facts were already in the bundle. Reader preferred baseline repair detail. Shared-context use is observed, not its causal benefit; scaled noise/recall, amortized setup value and realistic query costs remain open |
 
 These are separate gates. Passing storage, authentication or a scripted decision
 check cannot substitute for complete onboarding and useful final agent outcomes.
@@ -65,6 +65,28 @@ checks. Back up and restore only the three research connection files around
 temporary endpoint/key setup, preserving original modes/bytes and removing the
 backup copies after successful restoration. Keep cards/context and old trial
 artifacts intact; new receipts may persist as this new study's evidence.
+
+Terminal: zero-inference preflight and all four fresh reporting invocations
+completed on clean native build `1c56235`, using two live Jev requests. Both
+treatment reporters actually retrieved the original reviewed entry. Both final
+routes matched policy and the independent reader verified the numbers. Baseline
+provided more useful missing-export context; treatment's decline decomposition
+was correct but more verbose. One treatment source reread was unnecessary: the
+needed counts and freshness declaration were already returned. Agent usage:
+453,995 input / 102,507 uncached / 3,267 output; Jev 12,317 input / 262 output.
+Card/context stayed unchanged; connection files were restored and private backup
+copies removed. V7 onboarding remains unqualified. The series is closed, with
+no retry, rescore or transfer of unused allowance. See the [compact evidence
+report](evidence/domain-context-preview-2026-10-14.md) and its public excerpt.
+
+Follow-up guidance names the existing comparison/source-contract fields before
+a repeat read and keeps unrelated operator settings out of the business message;
+its behavioral effect is not yet measured. Subsequent comparisons must distinguish
+alert-only screening (a valid quiet policy can suppress frontier investigation)
+from routine reporting (a report may still be requested). Always launching a
+frontier reporter tests the latter and cannot establish the former's savings.
+Use a fully defined quiet policy for that separate future study; do not infer it
+from this courier setup or substitute screening for the other acceptance gates.
 
 ## Owner-confirmation forward test
 

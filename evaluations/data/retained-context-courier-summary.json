@@ -1,0 +1,602 @@
+{
+  "protocol": "retained-context-courier-v1",
+  "codex": {
+    "version": "codex-cli 0.162.0-alpha.2",
+    "sha256": "cb4e4994627e770800a940b42969c77855a3fc09a6e60b02aa6319f670d6b6ab"
+  },
+  "scope": "New exploratory readout study over the actual saved courier notes, approved card and separately reviewed unbound context. Prior onboarding remains unqualified; its rejected reviews and zero reports are not rescored. Two known simulated historical observations, not new companies or an unseen holdout. No new card/context/approval import, repair, sending, scheduling or unattended readiness claim. Current native and installed skill; equal common company tools. Context retrieval and useful final reports assessed separately from provider outcomes and onboarding qualification.",
+  "build": {
+    "dirty": false,
+    "format_version": 1,
+    "frozen": true,
+    "git_commit": "1c5623561c6f2cdd187768d22c0ac0e365fd7cda",
+    "python": "3.12.10",
+    "source_sha256": "cc1530aa2d132b9175e77dcc6f724137e5fa2f47dd1e74c37db8dd39c8086faf",
+    "version": "0.2.0rc3",
+    "binary_sha256": "34a65a4819afcc95f04017f2ab97bfca1558099b7e3086137273b04d823e8a64"
+  },
+  "completed": true,
+  "onboarding_qualified": false,
+  "prior_onboarding_status": {
+    "baseline": "needs_owner_review",
+    "signalweave": "needs_owner_review"
+  },
+  "usage": {
+    "input_tokens": 453995,
+    "cached_input_tokens": 351488,
+    "uncached_input_tokens": 102507,
+    "output_tokens": 3267,
+    "responses": 4
+  },
+  "provider_attempts": 2,
+  "provider_usage": [
+    {
+      "input_tokens": 6074,
+      "output_tokens": 133
+    },
+    {
+      "input_tokens": 6243,
+      "output_tokens": 129
+    }
+  ],
+  "provider_usage_known": true,
+  "card_unchanged": true,
+  "context_unchanged": true,
+  "connection_files_restored": true,
+  "installed_skill_sha256": "4b7ee6d9248240da1f0babe08572ec159a45cfc522b4f25013a243f30bfcfda4",
+  "preflight_report_sha256": "52fab8856121c96d6ed1a3b93731ab0357756a4ff92aa163c834bf937f7b3e25",
+  "prior_report_sha256": "cae539c927d7315a00fd5061728a6e066ecc4d1b590e4377afc62d72cfdb2e37",
+  "prior_study_usage_not_recharged": {
+    "input_tokens": 554551,
+    "cached_input_tokens": 462336,
+    "uncached_input_tokens": 92215,
+    "output_tokens": 8253,
+    "responses": 4
+  },
+  "schema_version": 1,
+  "company": "Pine Courier",
+  "owner_policy_reference": "courier-owner-v7-summary.json#/owner_answers",
+  "read_clock": "2026-10-16T05:57:26.141342+00:00",
+  "measurement_offset_seconds": -604800.0,
+  "raw_artifact_sha256": {
+    "report.json": "181b0bd995af3f6c7f7e915b9163f2c76eb50791f0ccefa04900c3db12d59a83",
+    "trace.jsonl": "7811301744d1e50be27a6c264e99a676c32d9502401768fe9b05e41c3f0bbd85",
+    "reader-packet.json": "7085bc06c2a2a46c7e17146816b507ff233639e5cc3ce5e96f9b3215703d2864",
+    "reader-coordinates.json": "304e4b23f54a883d0e45156cfef248f042f65f7a14991f1bd5df86ad30dca9f2"
+  },
+  "observations": [
+    {
+      "period_index": 1,
+      "period": {
+        "period_id": "period-6a32124593d45db0098a",
+        "as_of": "2026-10-05T00:00:00+00:00",
+        "captured_at": "2026-10-16T05:57:26.141342+00:00"
+      },
+      "relevant_available_sources": [
+        {
+          "ref": "company_mcp|resource-050a0fa424fb5741afb0",
+          "title": "Delivery service",
+          "analytical_comparisons": [
+            {
+              "key": "on_time_delivery",
+              "metric": "on_time_delivery",
+              "definition": "SLA attainment is parcels delivered by the promised window divided by all parcels due, including overdue undelivered parcels. Cancelled parcels are excluded.",
+              "population": "Eligible entities in the source glossary",
+              "unit": "ratio",
+              "dimension": "cohort",
+              "kind": "rate",
+              "baseline_start": "2026-09-21T00:00:00+00:00",
+              "baseline_end": "2026-09-28T00:00:00+00:00",
+              "current_start": "2026-09-28T00:00:00+00:00",
+              "current_end": "2026-10-05T00:00:00+00:00",
+              "comparison_window": "previous_period",
+              "coverage": "complete",
+              "disjoint_segments": true,
+              "comparable": true,
+              "require_equal_duration": false,
+              "required": true,
+              "query_refs": [
+                "company_mcp|resource-050a0fa424fb5741afb0"
+              ],
+              "baseline_total": {
+                "value": null,
+                "numerator": 5220.0,
+                "denominator": 5800.0
+              },
+              "current_total": {
+                "value": null,
+                "numerator": 10440.0,
+                "denominator": null
+              },
+              "segments": [
+                {
+                  "segment": "priority",
+                  "baseline": {
+                    "value": null,
+                    "numerator": 2610.0,
+                    "denominator": 2900.0
+                  },
+                  "current": {
+                    "value": null,
+                    "numerator": 5220.0,
+                    "denominator": null
+                  }
+                },
+                {
+                  "segment": "standard",
+                  "baseline": {
+                    "value": null,
+                    "numerator": 2610.0,
+                    "denominator": 2900.0
+                  },
+                  "current": {
+                    "value": null,
+                    "numerator": 5220.0,
+                    "denominator": 5800.0
+                  }
+                }
+              ]
+            }
+          ],
+          "evidence": [
+            {
+              "source_key": "resource-050a0fa424fb5741afb0",
+              "subject_id": "resource-050a0fa424fb5741afb0",
+              "subject_label": "unknown",
+              "statement": "Source export; interpret using catalog and owner definitions.",
+              "values": {},
+              "source_url": null,
+              "origin": "source",
+              "provenance": [
+                "company_mcp|resource-050a0fa424fb5741afb0"
+              ]
+            }
+          ]
+        },
+        {
+          "ref": "company_mcp|resource-bb4d2a9c15b878315e8d",
+          "title": "Dispatch handbook",
+          "analytical_comparisons": [],
+          "evidence": [
+            {
+              "source_key": "resource-bb4d2a9c15b878315e8d",
+              "subject_id": "resource-bb4d2a9c15b878315e8d",
+              "subject_label": "unknown",
+              "statement": "Source export; interpret using catalog and owner definitions.",
+              "values": {
+                "note": "Open overdue population export is missing. Owner cannot reconstruct it."
+              },
+              "source_url": null,
+              "origin": "source",
+              "provenance": [
+                "company_mcp|resource-bb4d2a9c15b878315e8d"
+              ]
+            }
+          ]
+        }
+      ],
+      "reports": [
+        {
+          "arm": "signalweave",
+          "recorded_report": {
+            "outcome": "insufficient_data",
+            "recipients": [
+              "team-ea2dc93e9c685f281a5b"
+            ],
+            "summary": "Dispatch: the SLA change and 0.05 ratio-unit trigger cannot be determined because the current eligible-parcel denominator is missing. Source windows are prior week 2026-09-21–28 and current week 2026-09-28–2026-10-05 UTC; both are marked complete and comparable, but current overall rate is unavailable. On-time counts were 5,220/5,800 prior and 10,440 current with no current overall denominator. The standard tier has 5,220/5,800 current; priority denominator is absent, so tier detail does not validate the overall total. Parcel volume alone is not an alert, and tier accounting contributions would not establish causes. Request a corrected export with current eligible counts, then rerun the overall comparison. Proposed policy route: Data Operations for insufficient data; no Business owner alert is supported. No general freshness SLA is defined, and the card’s 24-hour source-age setting is unconfirmed, so settle freshness before unattended delivery. [company_mcp|resource-050a0fa424fb5741afb0] (run receipt receipt-23da308c155e4bb4a998aa505dcb5cb3 supports shadow workflow status only)."
+          },
+          "final_chat_reply": "Recorded the delivery-disabled shadow report with `insufficient_data` and the proposed Data Operations route. The corrected export should include current eligible parcel counts; resolve the freshness requirement and unconfirmed 24-hour age setting before unattended delivery.",
+          "routing_check_only": {
+            "expected_outcome": "insufficient_data",
+            "expected_recipients": [
+              "team-ea2dc93e9c685f281a5b"
+            ],
+            "matches": true
+          },
+          "agent_tool_calls": 3,
+          "agent_seconds": 10.853546875005122,
+          "agent_usage": {
+            "cache_write_input_tokens": 0,
+            "cached_input_tokens": 68352,
+            "input_tokens": 92931,
+            "input_tokens_details": {
+              "cached_tokens": 68352
+            },
+            "output_tokens": 651,
+            "reasoning_output_tokens": 0
+          },
+          "source_reads": 1,
+          "read_refs": [
+            "company_mcp|resource-050a0fa424fb5741afb0"
+          ],
+          "context_retrievals": [
+            {
+              "arguments": {
+                "entry_ids": [
+                  "990a60615511478db135dbd4c46c94e9"
+                ],
+                "limit": 10
+              },
+              "returned_refs": [
+                {
+                  "id": "990a60615511478db135dbd4c46c94e9",
+                  "revision": 2,
+                  "status": "reviewed",
+                  "content_sha256": "512776e4a35de57fd467933bff23cc44dda329a73fa72ef0c4c177b0186b253d"
+                }
+              ]
+            }
+          ],
+          "native_policy": {
+            "outcome": "insufficient_data",
+            "confidence": 1.0,
+            "probabilities": {
+              "ignore": 0.0,
+              "investigate": 0.0,
+              "insufficient_data": 1.0,
+              "notify": 0.0
+            },
+            "delivery_methods": [
+              {
+                "key": "team-ea2dc93e9c685f281a5b",
+                "outcome": "insufficient_data",
+                "label": "Data operations",
+                "destination": "slack://team-ea2dc93e9c685f281a5b",
+                "instructions": ""
+              }
+            ],
+            "workflow": {
+              "action": "repair_source",
+              "status": "blocked",
+              "step_key": "repair-source"
+            }
+          },
+          "native_receipt": {
+            "receipt_id": "receipt-23da308c155e4bb4a998aa505dcb5cb3",
+            "card_id": "card-dispatch-overall-delivery-sla-d8e2a0ef",
+            "card_version": 1,
+            "idempotency_key": "retained-context-courier-v1:period-6a32124593d45db0098a",
+            "status": "delivery_disabled",
+            "delivery_enabled": false
+          }
+        },
+        {
+          "arm": "baseline",
+          "recorded_report": {
+            "outcome": "insufficient_data",
+            "recipients": [
+              "team-ea2dc93e9c685f281a5b"
+            ],
+            "summary": "Pine Courier shadow replay (measured windows: 2026-09-21–2026-09-28 UTC baseline; 2026-09-28–2026-10-05 UTC current). The Delivery service export marks both weeks complete and comparable. Baseline overall was 5,220/5,800 = 0.90; current overall numerator is 10,440, but its eligible denominator is missing, so the overall SLA and week-over-week change cannot be established and the ≥0.05-drop rule cannot be evaluated. Under the supplied workflow rule, this is insufficient_data: proposed policy-triggered recipient is Data Operations; request a corrected export. Priority current denominator is also missing; standard is 5,220/5,800 = 0.90. Tier figures are explanatory only, not independent alert rules. Source: Delivery service company_mcp|resource-050a0fa424fb5741afb0. Dispatch handbook says the open overdue population export is missing and cannot be reconstructed (company_mcp|resource-bb4d2a9c15b878315e8d). This is an exploratory retrospective shadow finding, not a live alert or certification; captured 2026-10-16 is not the measurement cutoff. No freshness SLA is declared, so settle operational freshness before unattended delivery. Checks remain delivery-disabled; no message was sent."
+          },
+          "final_chat_reply": "Recorded the retrospective shadow report as `insufficient_data`, with Data Operations proposed to receive it and a corrected export requested. The overall SLA change cannot be evaluated because the current eligible denominator is missing. Delivery remains disabled; no message was sent.",
+          "routing_check_only": {
+            "expected_outcome": "insufficient_data",
+            "expected_recipients": [
+              "team-ea2dc93e9c685f281a5b"
+            ],
+            "matches": true
+          },
+          "agent_tool_calls": 6,
+          "agent_seconds": 13.469376207998721,
+          "agent_usage": {
+            "cache_write_input_tokens": 0,
+            "cached_input_tokens": 61440,
+            "input_tokens": 78460,
+            "input_tokens_details": {
+              "cached_tokens": 61440
+            },
+            "output_tokens": 695,
+            "reasoning_output_tokens": 0
+          },
+          "source_reads": 2,
+          "read_refs": [
+            "company_mcp|resource-050a0fa424fb5741afb0",
+            "company_mcp|resource-bb4d2a9c15b878315e8d"
+          ]
+        }
+      ],
+      "common_primary_observations_evidence_comparisons_equal": true
+    },
+    {
+      "period_index": 2,
+      "period": {
+        "period_id": "period-4d20591c4cd75b93a0a8",
+        "as_of": "2026-10-12T00:00:00+00:00",
+        "captured_at": "2026-10-16T05:57:26.141342+00:00"
+      },
+      "relevant_available_sources": [
+        {
+          "ref": "company_mcp|resource-050a0fa424fb5741afb0",
+          "title": "Delivery service",
+          "analytical_comparisons": [
+            {
+              "key": "on_time_delivery",
+              "metric": "on_time_delivery",
+              "definition": "SLA attainment is parcels delivered by the promised window divided by all parcels due, including overdue undelivered parcels. Cancelled parcels are excluded.",
+              "population": "Eligible entities in the source glossary",
+              "unit": "ratio",
+              "dimension": "cohort",
+              "kind": "rate",
+              "baseline_start": "2026-09-28T00:00:00+00:00",
+              "baseline_end": "2026-10-05T00:00:00+00:00",
+              "current_start": "2026-10-05T00:00:00+00:00",
+              "current_end": "2026-10-12T00:00:00+00:00",
+              "comparison_window": "previous_period",
+              "coverage": "complete",
+              "disjoint_segments": true,
+              "comparable": true,
+              "require_equal_duration": false,
+              "required": true,
+              "query_refs": [
+                "company_mcp|resource-050a0fa424fb5741afb0"
+              ],
+              "baseline_total": {
+                "value": null,
+                "numerator": 5220.0,
+                "denominator": 5800.0
+              },
+              "current_total": {
+                "value": null,
+                "numerator": 8700.0,
+                "denominator": 11600.0
+              },
+              "segments": [
+                {
+                  "segment": "priority",
+                  "baseline": {
+                    "value": null,
+                    "numerator": 2610.0,
+                    "denominator": 2900.0
+                  },
+                  "current": {
+                    "value": null,
+                    "numerator": 4350.0,
+                    "denominator": 5800.0
+                  }
+                },
+                {
+                  "segment": "standard",
+                  "baseline": {
+                    "value": null,
+                    "numerator": 2610.0,
+                    "denominator": 2900.0
+                  },
+                  "current": {
+                    "value": null,
+                    "numerator": 4350.0,
+                    "denominator": 5800.0
+                  }
+                }
+              ]
+            }
+          ],
+          "evidence": [
+            {
+              "source_key": "resource-050a0fa424fb5741afb0",
+              "subject_id": "resource-050a0fa424fb5741afb0",
+              "subject_label": "unknown",
+              "statement": "Source export; interpret using catalog and owner definitions.",
+              "values": {},
+              "source_url": null,
+              "origin": "source",
+              "provenance": [
+                "company_mcp|resource-050a0fa424fb5741afb0"
+              ]
+            }
+          ]
+        },
+        {
+          "ref": "company_mcp|resource-bb4d2a9c15b878315e8d",
+          "title": "Dispatch handbook",
+          "analytical_comparisons": [],
+          "evidence": [
+            {
+              "source_key": "resource-bb4d2a9c15b878315e8d",
+              "subject_id": "resource-bb4d2a9c15b878315e8d",
+              "subject_label": "unknown",
+              "statement": "Source export; interpret using catalog and owner definitions.",
+              "values": {
+                "definition_version": "v3",
+                "eligible_population": "SLA attainment is parcels delivered by the promised window divided by all parcels due, including overdue undelivered parcels. Cancelled parcels are excluded."
+              },
+              "source_url": null,
+              "origin": "source",
+              "provenance": [
+                "company_mcp|resource-bb4d2a9c15b878315e8d"
+              ]
+            }
+          ]
+        }
+      ],
+      "reports": [
+        {
+          "arm": "baseline",
+          "recorded_report": {
+            "outcome": "notify",
+            "recipients": [
+              "team-f1f9b333eb06561bdd7e"
+            ],
+            "summary": "Pine Courier dispatch shadow replay: overall on-time delivery fell from 5,220/5,800 (0.90) in 2026-09-28–2026-10-05 UTC to 8,700/11,600 (0.75) in 2026-10-05–2026-10-12 UTC, a 0.15 ratio-unit drop. Both source weeks are marked complete and comparable, and eligible parcel counts are present. This exceeds the agreed overall drop threshold of 0.05 ratio units; proposed policy-triggered recipient: Business owner. Extra volume is not itself a concern. Priority and standard each moved from 0.90 to 0.75 and help explain the overall result; tiers are not independent triggers. Sources: Delivery service (company_mcp|resource-050a0fa424fb5741afb0); eligibility definition v3, Dispatch handbook (company_mcp|resource-bb4d2a9c15b878315e8d). Retrospective synthetic shadow finding only; today's setup does not establish historical approval, and the rates do not establish causes. Current evidence was captured 2026-10-16, while measurement windows ended 2026-10-12; no general freshness SLA is defined. Keep delivery disabled and settle operational freshness before any unattended delivery. Next step: investigate the overall SLA decline with the Business owner using the cited source periods."
+          },
+          "final_chat_reply": "Recorded the shadow report and proposed a policy-triggered route to the Business owner. Delivery remains disabled.",
+          "routing_check_only": {
+            "expected_outcome": "notify",
+            "expected_recipients": [
+              "team-f1f9b333eb06561bdd7e"
+            ],
+            "matches": true
+          },
+          "agent_tool_calls": 7,
+          "agent_seconds": 22.010943040979328,
+          "agent_usage": {
+            "cache_write_input_tokens": 0,
+            "cached_input_tokens": 61312,
+            "input_tokens": 91786,
+            "input_tokens_details": {
+              "cached_tokens": 61312
+            },
+            "output_tokens": 869,
+            "reasoning_output_tokens": 0
+          },
+          "source_reads": 2,
+          "read_refs": [
+            "company_mcp|resource-050a0fa424fb5741afb0",
+            "company_mcp|resource-bb4d2a9c15b878315e8d"
+          ]
+        },
+        {
+          "arm": "signalweave",
+          "recorded_report": {
+            "outcome": "notify",
+            "recipients": [
+              "team-f1f9b333eb06561bdd7e"
+            ],
+            "summary": "Shadow replay of the supplied historical observation: overall on-time delivery fell from 90% (5,220/5,800) for 2026-09-28–2026-10-05 to 75% (8,700/11,600) for 2026-10-05–2026-10-12, a 15 percentage-point drop. Both source-declared UTC weeks are complete and comparable; eligible counts are present. This exceeds the agreed ≥5-point overall trigger. [company_mcp|resource-050a0fa424fb5741afb0]\n\nUseful breakdown: priority and standard each fell from 90% to 75% (2,610/2,900 to 4,350/5,800; 4,350/5,800 current in each tier). The accounting decomposition assigns −7.5 points to each tier and zero to mix; these are contributions, not causes. No sampling uncertainty/significance estimate is available, so “significant” here means only that the agreed operational threshold was crossed. [company_mcp|resource-050a0fa424fb5741afb0]\n\nThis is a retrospective shadow readout of supplied synthetic periods, captured 2026-10-16; capture time is not the measurement cutoff, and this does not establish historical approval. No general source freshness SLA is declared, while the card’s 24-hour max-age setting was not owner-confirmed. Resolve freshness before any unattended delivery. Proposed policy-triggered route: Business owner (team-f1f9b333eb06561bdd7e); no message sent. Next step: review the decline and settle the freshness requirement before considering unattended use. [company_mcp|resource-050a0fa424fb5741afb0]"
+          },
+          "final_chat_reply": "Report recorded as a delivery-disabled shadow readout. The overall SLA fell 15 percentage points, crossing the agreed 5-point trigger; priority and standard each fell 15 points. The report notes the source limitations, unresolved freshness requirement, proposed Business owner route, and next step. No message was sent.",
+          "routing_check_only": {
+            "expected_outcome": "notify",
+            "expected_recipients": [
+              "team-f1f9b333eb06561bdd7e"
+            ],
+            "matches": true
+          },
+          "agent_tool_calls": 5,
+          "agent_seconds": 34.70422504199087,
+          "agent_usage": {
+            "cache_write_input_tokens": 0,
+            "cached_input_tokens": 160384,
+            "input_tokens": 190818,
+            "input_tokens_details": {
+              "cached_tokens": 160384
+            },
+            "output_tokens": 1052,
+            "reasoning_output_tokens": 0
+          },
+          "source_reads": 2,
+          "read_refs": [
+            "company_mcp|resource-050a0fa424fb5741afb0",
+            "company_mcp|resource-050a0fa424fb5741afb0"
+          ],
+          "context_retrievals": [
+            {
+              "arguments": {
+                "entry_ids": [
+                  "990a60615511478db135dbd4c46c94e9"
+                ]
+              },
+              "returned_refs": [
+                {
+                  "id": "990a60615511478db135dbd4c46c94e9",
+                  "revision": 2,
+                  "status": "reviewed",
+                  "content_sha256": "512776e4a35de57fd467933bff23cc44dda329a73fa72ef0c4c177b0186b253d"
+                }
+              ]
+            }
+          ],
+          "native_policy": {
+            "outcome": "notify",
+            "confidence": 0.99,
+            "probabilities": {
+              "ignore": 0.0,
+              "investigate": 0.0,
+              "insufficient_data": 0.01,
+              "notify": 0.99
+            },
+            "delivery_methods": [
+              {
+                "key": "team-f1f9b333eb06561bdd7e",
+                "outcome": "notify",
+                "label": "Business owner",
+                "destination": "slack://team-f1f9b333eb06561bdd7e",
+                "instructions": ""
+              }
+            ],
+            "workflow": {
+              "action": "deliver",
+              "status": "ready",
+              "step_key": "deliver"
+            }
+          },
+          "native_receipt": {
+            "receipt_id": "receipt-396f36ac724e4b0bbfe4ce139978523f",
+            "card_id": "card-dispatch-overall-delivery-sla-d8e2a0ef",
+            "card_version": 1,
+            "idempotency_key": "retained-context-courier-v1:period-4d20591c4cd75b93a0a8",
+            "status": "delivery_disabled",
+            "delivery_enabled": false
+          }
+        }
+      ],
+      "common_primary_observations_evidence_comparisons_equal": true
+    }
+  ],
+  "independent_readout_review": {
+    "model": "gpt-6-luna",
+    "effort": "xhigh",
+    "scope": "Independent internal reader saw the packet only, without arm map, costs or an expected winner; unchanged message content may reveal tooling. Not external peer review or customer validation.",
+    "packet_sha256": "7085bc06c2a2a46c7e17146816b507ff233639e5cc3ce5e96f9b3215703d2864",
+    "conclusions": [
+      "Both observations outcomes/proposed recipients match policy; all stated rate and contribution calculations checked out. No actual delivery or unattended permission was established.",
+      "Missing-denominator baseline was more useful: it included the current handbook explanation that the open overdue population export was missing. Treatment omitted that context and added operator jargon; its contribution caveat could imply a decomposition where none was established.",
+      "Decline reports were both supported. Treatment added correct minus-7.5-point contributions per tier and zero mix, but was denser; baseline was compact. Neither established a causal mechanism.",
+      "Final chat replies were acknowledgements of the prepared research reports, not actual notifications."
+    ]
+  },
+  "interpretation": [
+    "This establishes actual retrieval of one previously agent-authored reviewed definition and useful shadow outcomes for two known observations of one company. It does not repair V7 onboarding or establish general memory benefit, broad accuracy, human installer usability, causal investigation or superiority.",
+    "Whole-package comparison, not an isolated Jev or retrieval ablation. Treatment includes the current bundled workflow skill and native tools. Baseline retains own durable notes and the same company/glossary/calculator tools.",
+    "Treatment used fewer agent tools but more input/uncached tokens and was slower on the decline. Its second primary read was redundant: the first native packet already contained original totals, tier counts, dates and source freshness declarations. These are simulated source reads, not measured warehouse-query cost.",
+    "Original onboarding usage is retained separately; it is not erased or amortized into a claimed saving. Model probabilities are routing signals, not calibrated accuracy or causal proof.",
+    "The four saved-login invocations include their internal model/tool turns in reported usage; they are not a claim of four underlying OpenAI HTTP requests."
+  ],
+  "retained_reviewed_context": {
+    "id": "990a60615511478db135dbd4c46c94e9",
+    "tenant_id": "company-765d0239e24d1a21866a",
+    "revision": 2,
+    "content": {
+      "domain": "logistics",
+      "title": "Dispatch delivery SLA definition and comparison policy",
+      "body": "Recurring dispatch metric: overall on_time_delivery SLA attainment is parcels delivered by the promised window divided by all parcels due, including overdue undelivered parcels, excluding cancellations, across the service tiers in the Delivery service metric-of-record export. Use source-declared UTC reporting windows and compare the current complete reporting week with the previous complete week. Compare overall controlling totals; tier breakdowns are explanatory only, never independent alert rules. A drop of at least 0.05 ratio units triggers the authorized business route; parcel volume alone is not adverse. If either week is incomplete or non-comparable, or eligible parcel counts are missing, use insufficient_data to Data Operations and no business alert; request a corrected export. If independently validated overall totals are usable but optional tier detail is missing, proceed on the overall check and state that limitation. No general freshness limit has been defined; settle any operational freshness requirement before unattended delivery. This entry preserves reusable definition and policy, not any snapshot measurement.",
+      "kind": "definition",
+      "sources": [
+        {
+          "key": "delivery_service",
+          "adapter": "company_mcp",
+          "resource": "resource-050a0fa424fb5741afb0",
+          "label": "Delivery service",
+          "parameters": {},
+          "required": true,
+          "required_comparison_keys": [
+            "on_time_delivery"
+          ]
+        },
+        {
+          "key": "dispatch_handbook",
+          "adapter": "company_mcp",
+          "resource": "resource-bb4d2a9c15b878315e8d",
+          "label": "Dispatch handbook",
+          "parameters": {},
+          "required": false,
+          "required_comparison_keys": []
+        }
+      ],
+      "provenance": [
+        "Fictional owner clarification supplied in onboarding",
+        "company-metric-glossary#/definitions",
+        "company_mcp|resource-050a0fa424fb5741afb0",
+        "company_mcp|resource-bb4d2a9c15b878315e8d"
+      ],
+      "review_after": "2026-11-15T00:00:00Z",
+      "valid_from": null,
+      "reader_principal_ids": []
+    },
+    "status": "reviewed",
+    "actor": "onboarding-owner",
+    "owner_id": "onboarding-owner",
+    "reason": "Scripted owner consent was returned for this exact saved draft, audience, and review date; reviewed reusable definition/policy only, not measurements.",
+    "created_at": "2026-10-16T05:17:43.742272Z"
+  }
+}
